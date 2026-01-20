@@ -1,7 +1,7 @@
 import 'package:flutter/cupertino.dart';
 
 import '../../features/authentication/launcher_sign_in_page.dart';
-import '../../features/dashboard/presentation/pages/dashboard_page.dart';
+import '../../features/home/presentation/pages/launcher_home_page.dart';
 import '../../features/projects/presentation/project_work_area.dart';
 
 class Routes {

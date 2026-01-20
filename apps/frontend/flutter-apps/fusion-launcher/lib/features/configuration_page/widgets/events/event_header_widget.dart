@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:fusion_lib/fusion_theme/app_theme.dart';
 import 'package:fusion_lib/fusion_widgets/others/fusion_toast.dart';
+import 'package:fusion_lib/fusion_widgets/semantics/semantic_helper.dart';
+import 'package:fusion_lib/fusion_widgets/semantics/semantic_type.dart';
 import 'package:fusion_lib/fusion_widgets/text_views/fusion_app_text.dart';
 
 /// A widget that displays an event header with an editable snapshot name.
@@ -101,7 +103,7 @@ class _EventHeaderWidgetState extends State<EventHeaderWidget> {
         vertical: 6,
       ),
       decoration: BoxDecoration(
-        color: context.colorScheme.primaryWhite,
+        color: context.colorScheme.elevation1,
         border: Border(
           bottom: BorderSide(width: 1, color: context.colorScheme.primaryBlack),
         ),
@@ -114,24 +116,30 @@ class _EventHeaderWidgetState extends State<EventHeaderWidget> {
             width: MediaQuery.of(context).size.width * 0.25,
             child:
                 _isEditing
-                    ? TextField(
-                      controller: _textController,
-                      focusNode: _focusNode,
-                      style: context.textTheme.bodyMedium?.copyWith(fontSize: 14, fontWeight: FontWeight.w700),
-                      decoration: const InputDecoration(
-                        border: InputBorder.none,
-                        contentPadding: EdgeInsets.zero,
-                        isDense: true,
-                      ),
-                      onSubmitted: (_) => _stopEditing(),
-                      onTapOutside: (_) => _stopEditing(),
-                    )
-                    : GestureDetector(
-                      onTap: _startEditing,
-                      child: FusionAppText(
-                        text: widget.eventName.isNotEmpty ? widget.eventName[0].toUpperCase() + widget.eventName.substring(1) : widget.eventName,
+                    ? SemanticHelper.button(
+                      testId: SemanticHelper.createTestId(SemanticTypes.button, "event_header_edit_field"),
+                      child: TextField(
+                        controller: _textController,
+                        focusNode: _focusNode,
                         style: context.textTheme.bodyMedium?.copyWith(fontSize: 14, fontWeight: FontWeight.w700),
-                        maxLine: 1,
+                        decoration: const InputDecoration(
+                          border: InputBorder.none,
+                          contentPadding: EdgeInsets.zero,
+                          isDense: true,
+                        ),
+                        onSubmitted: (_) => _stopEditing(),
+                        onTapOutside: (_) => _stopEditing(),
+                      ),
+                    )
+                    : SemanticHelper.button(
+                      testId: SemanticHelper.createTestId(SemanticTypes.button, "event_start_editing"),
+                      child: GestureDetector(
+                        onTap: _startEditing,
+                        child: FusionAppText(
+                          text: widget.eventName.isNotEmpty ? widget.eventName[0].toUpperCase() + widget.eventName.substring(1) : widget.eventName,
+                          style: context.textTheme.bodyMedium?.copyWith(fontSize: 14, fontWeight: FontWeight.w700),
+                          maxLine: 1,
+                        ),
                       ),
                     ),
           ),

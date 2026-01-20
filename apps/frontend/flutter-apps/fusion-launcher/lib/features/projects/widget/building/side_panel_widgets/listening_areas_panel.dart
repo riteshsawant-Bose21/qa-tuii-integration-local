@@ -82,11 +82,7 @@ class ListeningAreasPanelState extends State<ListeningAreasPanel> with TickerPro
             ...listeningAreas.map(
               (ListeningArea area) {
                 final int index = listeningAreas.indexOf(area);
-                return SemanticHelper.listItem(
-                  testId: SemanticHelper.createTestId(SemanticTypes.listItem, "listening_area_item_$index"),
-                  index: index,
-                  child: _buildListeningAreaCard(area),
-                );
+                return _buildListeningAreaCard(area, index);
               },
             ),
             const SizedBox(height: 8),
@@ -123,7 +119,7 @@ class ListeningAreasPanelState extends State<ListeningAreasPanel> with TickerPro
     );
   }
 
-  Widget _buildListeningAreaCard(ListeningArea area) {
+  Widget _buildListeningAreaCard(ListeningArea area, int index) {
     final bool isSelected = serviceLocator<ProjectViewModel>().currentSelectedListeningAreaId == area.id;
     final bool isExpanded = _expandedListeningAreas.contains(area.id);
     final String floorName = serviceLocator<ProjectViewModel>().getFloorForListeningArea(areaId: area.id)?.name ?? '';
@@ -132,141 +128,147 @@ class ListeningAreasPanelState extends State<ListeningAreasPanel> with TickerPro
     final List<HardwareComponent> allHardware = serviceLocator<ProjectViewModel>().getHardwareForListeningArea(listeningAreaId: area.id);
     final List<Speaker> speakers = allHardware.whereType<Speaker>().where((Speaker element) => element.pos != null).toList();
 
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: <Widget>[
-        // Listening Area Header
-        ValueListenableBuilder<bool>(
-          valueListenable: widget.floorCanvasController.isDrawing,
-          builder: (BuildContext context, bool isDrawingValue, Widget? child) {
-            return Container(
-              decoration: BoxDecoration(
-                color: isSelected ? Colors.grey[200] : Colors.transparent,
-              ),
-              child: Container(
-                padding: const EdgeInsets.fromLTRB(8, 6, 8, 6),
-                child: GestureDetector(
-                  onTap: () {
-                    print("outside single");
-
-                    serviceLocator<ProjectViewModel>().setCurrentSelectedListeningArea(area.id);
-                    serviceLocator<ProjectViewModel>().setCurrentSelectedHardware(null);
-                    print("Selected listening area: ${area.name}");
-                    if (!area.isDrawn) {
-                      widget.floorCanvasController.setDraw(true);
-                    } else if (area.isDrawn && widget.floorCanvasController.isDrawing.value) {
-                      widget.floorCanvasController.setDraw(false);
-                    }
-                  },
-                  child: Row(
-                    children: <Widget>[
-                      // Expand/Collapse icon
-                      GestureDetector(
-                        onTap: () => _toggleListeningAreaExpansion(area.id),
-                        child: AnimatedRotation(
-                          duration: const Duration(milliseconds: 200),
-                          turns: isExpanded ? 0.25 : 0.0,
-                          child: SemanticHelper.toggle(
-                            testId: SemanticHelper.createTestId(SemanticTypes.toggle, "listening_area_expand_collapse"),
-                            value: isExpanded,
-                            child: Icon(
-                              Icons.keyboard_arrow_right,
-                              size: 16,
-                              color: Colors.grey[600],
+    return SemanticHelper.container(
+      testId: SemanticHelper.createTestId(SemanticTypes.container, "listening_area_card_$index"),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          // Listening Area Header
+          ValueListenableBuilder<bool>(
+            valueListenable: widget.floorCanvasController.isDrawing,
+            builder: (BuildContext context, bool isDrawingValue, Widget? child) {
+              return Container(
+                decoration: BoxDecoration(
+                  color: isSelected ? Colors.grey[200] : Colors.transparent,
+                ),
+                child: Container(
+                  padding: const EdgeInsets.fromLTRB(8, 6, 8, 6),
+                  child: GestureDetector(
+                    onTap: () {
+                      serviceLocator<ProjectViewModel>().setCurrentSelectedListeningArea(area.id);
+                      serviceLocator<ProjectViewModel>().setCurrentSelectedHardware(null);
+                      if (!area.isDrawn) {
+                        widget.floorCanvasController.setDraw(true);
+                      } else if (area.isDrawn && widget.floorCanvasController.isDrawing.value) {
+                        widget.floorCanvasController.setDraw(false);
+                      }
+                    },
+                    child: Row(
+                      children: <Widget>[
+                        // Expand/Collapse icon
+                        GestureDetector(
+                          onTap: () => _toggleListeningAreaExpansion(area.id),
+                          child: AnimatedRotation(
+                            duration: const Duration(milliseconds: 200),
+                            turns: isExpanded ? 0.25 : 0.0,
+                            child: SemanticHelper.toggle(
+                              testId: SemanticHelper.createTestId(SemanticTypes.toggle, "listening_area_expand_collapse_$index"),
+                              value: isExpanded,
+                              child: Icon(
+                                Icons.keyboard_arrow_right,
+                                size: 16,
+                                color: Colors.grey[600],
+                              ),
                             ),
                           ),
                         ),
-                      ),
-                      const SizedBox(width: 4),
-                      Icon(
-                        LucideIcons.maximize200,
-                        size: 12,
-                        color: context.colorScheme.onSurface,
-                      ),
-                      const SizedBox(width: 4),
+                        const SizedBox(width: 4),
+                        Icon(
+                          LucideIcons.maximize200,
+                          size: 12,
+                          color: context.colorScheme.onSurface,
+                        ),
+                        const SizedBox(width: 4),
 
-                      /// Listening area name display
-                      Expanded(
-                        child: Row(
-                          children: <Widget>[
-                            FusionAppText(
-                              text: "$floorName /",
-                              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                fontSize: 11,
-                                fontWeight: isSelected ? FontWeight.w500 : FontWeight.w400,
-                                color: (!area.isDrawn) ? context.colorScheme.error : null,
-                              ),
-                            ),
-                            Expanded(
-                              child: TitleTextFieldSwitcher(
-                                value: area.name,
-                                hintText: "listening area name",
-                                style: Theme.of(context).textTheme.bodySmall!.copyWith(
+                        /// Listening area name display
+                        Expanded(
+                          child: Row(
+                            children: <Widget>[
+                              FusionAppText(
+                                text: "$floorName /",
+                                style: Theme.of(context).textTheme.bodySmall?.copyWith(
                                   fontSize: 11,
                                   fontWeight: isSelected ? FontWeight.w500 : FontWeight.w400,
                                   color: (!area.isDrawn) ? context.colorScheme.error : null,
                                 ),
-                                save: (String value) {
-                                  if (value.trim().isNotEmpty) {
-                                    final ListeningArea updatedLA = area.copyWith(name: value.trim());
-                                    _projectViewModel.updateListeningArea(area: updatedLA);
-                                  }
-                                },
                               ),
-                            ),
-                          ],
-                        ),
-                      ),
-
-                      if (!area.isDrawn) ...<Widget>[
-                        Tooltip(
-                          message: 'Start drawing to place this listening area',
-                          child: Container(
-                            padding: const EdgeInsets.all(4),
-                            color: (isSelected && widget.floorCanvasController.isDrawing.value) ? context.colorScheme.errorContainer : Colors.transparent,
-                            child: Icon(
-                              Icons.info_outline_rounded,
-                              size: 12,
-                              color: context.colorScheme.error,
-                            ),
+                              Expanded(
+                                child: SemanticHelper.formControl(
+                                  testId: SemanticHelper.createTestId(SemanticTypes.textInput, "listening_area_name_input_$index"),
+                                  child: TitleTextFieldSwitcher(
+                                    value: area.name,
+                                    hintText: "listening area name",
+                                    style: Theme.of(context).textTheme.bodySmall!.copyWith(
+                                      fontSize: 11,
+                                      fontWeight: isSelected ? FontWeight.w500 : FontWeight.w400,
+                                      color: (!area.isDrawn) ? context.colorScheme.error : null,
+                                    ),
+                                    save: (String value) {
+                                      if (value.trim().isNotEmpty) {
+                                        final ListeningArea updatedLA = area.copyWith(name: value.trim());
+                                        _projectViewModel.updateListeningArea(area: updatedLA);
+                                      }
+                                    },
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
                         ),
+
+                        if (!area.isDrawn) ...<Widget>[
+                          SemanticHelper.button(
+                            testId: SemanticHelper.createTestId(SemanticTypes.button, "listening_area_draw_$index"),
+                            child: Tooltip(
+                              message: 'Start drawing to place this listening area',
+                              child: Container(
+                                padding: const EdgeInsets.all(4),
+                                color: (isSelected && widget.floorCanvasController.isDrawing.value) ? context.colorScheme.errorContainer : Colors.transparent,
+                                child: Icon(
+                                  Icons.info_outline_rounded,
+                                  size: 12,
+                                  color: context.colorScheme.error,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
                       ],
-                    ],
+                    ),
                   ),
                 ),
-              ),
-            );
-          },
-        ),
-
-        // Expandable Speakers Section
-        AnimatedCrossFade(
-          duration: const Duration(milliseconds: 250),
-          crossFadeState: isExpanded ? CrossFadeState.showFirst : CrossFadeState.showSecond,
-          firstChild: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: <Widget>[
-              if (speakers.isNotEmpty) ...<Widget>[
-                ...speakers.map(
-                  (Speaker speaker) {
-                    final int index = speakers.indexOf(speaker);
-                    return SemanticHelper.container(
-                      testId: SemanticHelper.createTestId(SemanticTypes.container, "listening_area_speaker_$index"),
-                      child: _buildSpeakerItem(speaker),
-                    );
-                  },
-                ),
-              ] else
-                SemanticHelper.staticText(
-                  testId: SemanticHelper.createTestId(SemanticTypes.text, "no_speakers_message"),
-                  child: _buildNoSpeakersMessage(),
-                ),
-            ],
+              );
+            },
           ),
-          secondChild: const SizedBox.shrink(),
-        ),
-      ],
+
+          // Expandable Speakers Section
+          AnimatedCrossFade(
+            duration: const Duration(milliseconds: 250),
+            crossFadeState: isExpanded ? CrossFadeState.showFirst : CrossFadeState.showSecond,
+            firstChild: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: <Widget>[
+                if (speakers.isNotEmpty) ...<Widget>[
+                  ...speakers.map(
+                    (Speaker speaker) {
+                      final int index = speakers.indexOf(speaker);
+                      return SemanticHelper.container(
+                        testId: SemanticHelper.createTestId(SemanticTypes.container, "listening_area_speaker_$index"),
+                        child: _buildSpeakerItem(speaker),
+                      );
+                    },
+                  ),
+                ] else
+                  SemanticHelper.staticText(
+                    testId: SemanticHelper.createTestId(SemanticTypes.text, "no_speakers_message"),
+                    child: _buildNoSpeakersMessage(),
+                  ),
+              ],
+            ),
+            secondChild: const SizedBox.shrink(),
+          ),
+        ],
+      ),
     );
   }
 

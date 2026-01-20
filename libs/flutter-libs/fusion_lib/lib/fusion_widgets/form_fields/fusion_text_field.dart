@@ -74,6 +74,7 @@ class FusionTextField extends StatelessWidget {
   final bool autofocus;
 
   final Color? color;
+  final String? semanticFieldId;
 
   const FusionTextField({
     super.key,
@@ -95,6 +96,7 @@ class FusionTextField extends StatelessWidget {
     this.inputFormatters,
     this.autofocus = false,
     this.color,
+    this.semanticFieldId,
   });
 
   @override
@@ -116,19 +118,22 @@ class FusionTextField extends StatelessWidget {
       contentPadding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
     );
 
-    return TextField(
-      maxLength: maxLength,
-      controller: controller,
-      focusNode: focusNode,
-      obscureText: obscureText,
-      keyboardType: keyboardType,
-      onChanged: onChanged,
-      enabled: enabled,
-      autofocus: autofocus,
-      style: style ?? theme.textTheme.bodySmall,
-      textAlign: textAlign,
-      inputFormatters: inputFormatters,
-      decoration: decoration ?? defaultDecoration,
+    return SemanticHelper.formControl(
+      testId: SemanticHelper.createTestId(SemanticTypes.textInput, semanticFieldId ?? "fusion_text_field"),
+      child: TextField(
+        maxLength: maxLength,
+        controller: controller,
+        focusNode: focusNode,
+        obscureText: obscureText,
+        keyboardType: keyboardType,
+        onChanged: onChanged,
+        enabled: enabled,
+        autofocus: autofocus,
+        style: style ?? theme.textTheme.bodySmall,
+        textAlign: textAlign,
+        inputFormatters: inputFormatters,
+        decoration: decoration ?? defaultDecoration,
+      ),
     );
   }
 }

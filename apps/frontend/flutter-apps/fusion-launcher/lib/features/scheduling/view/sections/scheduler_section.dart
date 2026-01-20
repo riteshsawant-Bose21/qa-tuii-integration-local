@@ -119,47 +119,53 @@ class _SchedulerSection extends StatelessWidget {
                 ),
               ),
               FusionButton(label: "Test", onTap: () {}),
-              InkWell(
-                onTap: () {
-                  /// Check if an event already exists for this schedule
-                  final FusionEvent? eventsForScheduler = serviceLocator<ProjectViewModel>().getEventsForSchedule(
-                    scheduleId: schedule.id,
-                  );
-                  if (eventsForScheduler != null) {
-                    WidgetsBinding.instance.addPostFrameCallback((_) {
-                      /// Set the selected event ID to the existing event for this schedule
-                      serviceLocator<ProjectViewModel>().setSelectedEventId(eventsForScheduler.id);
-                    });
-                  } else {
-                    /// Add the event to the project
-                    serviceLocator<ProjectViewModel>().addEventForSchedule(
+              SemanticHelper.button(
+                testId: SemanticHelper.createTestId(SemanticTypes.button, "scheduler_run_button_$index"),
+                child: InkWell(
+                  onTap: () {
+                    /// Check if an event already exists for this schedule
+                    final FusionEvent? eventsForScheduler = serviceLocator<ProjectViewModel>().getEventsForSchedule(
                       scheduleId: schedule.id,
                     );
-                  }
+                    if (eventsForScheduler != null) {
+                      WidgetsBinding.instance.addPostFrameCallback((_) {
+                        /// Set the selected event ID to the existing event for this schedule
+                        serviceLocator<ProjectViewModel>().setSelectedEventId(eventsForScheduler.id);
+                      });
+                    } else {
+                      /// Add the event to the project
+                      serviceLocator<ProjectViewModel>().addEventForSchedule(
+                        scheduleId: schedule.id,
+                      );
+                    }
 
-                  /// Navigate to Configuration tab (index 3)
-                  projectTabBroadcastController.add(3);
+                    /// Navigate to Configuration tab (index 3)
+                    projectTabBroadcastController.add(3);
 
-                  /// Switch to Events sub-tab within Configuration
-                  serviceLocator<ProjectViewModel>().setConfigurationMenuMode(
-                    ConfigurationMenuMode.events,
-                  );
-                },
-                child: Center(
-                  child: SvgPicture.asset(
-                    "assets/icons/scheduler/run.svg",
-                    width: 25,
-                    height: 25,
+                    /// Switch to Events sub-tab within Configuration
+                    serviceLocator<ProjectViewModel>().setConfigurationMenuMode(
+                      ConfigurationMenuMode.events,
+                    );
+                  },
+                  child: Center(
+                    child: SvgPicture.asset(
+                      "assets/icons/scheduler/run.svg",
+                      width: 25,
+                      height: 25,
+                    ),
                   ),
                 ),
               ),
-              IconButton(
-                onPressed: () {
-                  context.read<SchedulerViewmodel>().removeSchedule(schedule);
-                },
-                icon: const Icon(
-                  Icons.delete_outline,
-                  color: Colors.grey,
+              SemanticHelper.button(
+                testId: SemanticHelper.createTestId(SemanticTypes.button, "scheduler_delete_button_$index"),
+                child: IconButton(
+                  onPressed: () {
+                    context.read<SchedulerViewmodel>().removeSchedule(schedule);
+                  },
+                  icon: const Icon(
+                    Icons.delete_outline,
+                    color: Colors.grey,
+                  ),
                 ),
               ),
             ];
@@ -205,8 +211,8 @@ class FusionTable extends StatelessWidget {
                           flex: e.flex,
                           child: Align(
                             alignment: e.aligment,
-                            child: Text(
-                              e.title,
+                            child: FusionAppText(
+                              text: e.title,
                               style: context.textTheme.labelLarge?.copyWith(fontWeight: FontWeight.bold),
                             ),
                           ),
@@ -240,28 +246,31 @@ class FusionTable extends StatelessWidget {
                         bottom: index != itemCount - 1 ? BorderSide(color: Colors.grey.withOpacity(0.3), width: 1) : BorderSide.none,
                       ),
                     ),
-                    child: InkWell(
-                      onTap: onRowTap != null ? () => onRowTap!(index) : null,
-                      child: Row(
-                        spacing: spacing,
-                        children: <Widget>[
-                          ReorderableDragStartListener(
-                            key: ValueKey<String>(key),
-                            index: index,
-                            child: Icon(
-                              Icons.drag_handle,
-                              size: 16,
-                              color: Colors.grey[600],
+                    child: SemanticHelper.button(
+                      testId: SemanticHelper.createTestId(SemanticTypes.button, "fusion_table_row_$index"),
+                      child: InkWell(
+                        onTap: onRowTap != null ? () => onRowTap!(index) : null,
+                        child: Row(
+                          spacing: spacing,
+                          children: <Widget>[
+                            ReorderableDragStartListener(
+                              key: ValueKey<String>(key),
+                              index: index,
+                              child: Icon(
+                                Icons.drag_handle,
+                                size: 16,
+                                color: Colors.grey[600],
+                              ),
                             ),
-                          ),
-                          ...List<Widget>.generate(
-                            headers.length,
-                            (int i) => Expanded(
-                              flex: headers[i].flex,
-                              child: Align(alignment: headers[i].aligment, child: rowItems[i]),
+                            ...List<Widget>.generate(
+                              headers.length,
+                              (int i) => Expanded(
+                                flex: headers[i].flex,
+                                child: Align(alignment: headers[i].aligment, child: rowItems[i]),
+                              ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
                     ),
                   );

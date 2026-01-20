@@ -74,142 +74,148 @@ class _MiniMatrixZoneControlPanelState extends State<MiniMatrixZoneControlPanel>
             zoneFunction = projectViewModel.getZoneFunctionForZone(zoneId: widget.zoneID)!;
           },
           builder: (BuildContext context, ProjectViewModelState state) {
-            return ClipRRect(
-              borderRadius: const BorderRadius.all(Radius.circular(6)),
-              child: Stack(
-                children: <Widget>[
-                  Container(
-                    color: Colors.black,
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: <Widget>[
-                        const SizedBox(height: 35),
-                        Flexible(
-                          fit: FlexFit.loose,
-                          child: Container(
-                            color: const Color(0xFFF5F5F5),
+            return SemanticHelper.container(
+              testId: SemanticHelper.createTestId(SemanticTypes.container, "mini_matrix_zone_control_panel"),
+              child: ClipRRect(
+                borderRadius: const BorderRadius.all(Radius.circular(6)),
+                child: Stack(
+                  children: <Widget>[
+                    Container(
+                      color: Colors.black,
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: <Widget>[
+                          const SizedBox(height: 35),
+                          Flexible(
+                            fit: FlexFit.loose,
+                            child: Container(
+                              color: const Color(0xFFF5F5F5),
 
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: <Widget>[
-                                // Left scrollable section
-                                Flexible(
-                                  fit: FlexFit.loose,
-                                  child: MiniMatrixControls(
-                                    zoneID: widget.zoneID,
-                                    zoneFunctions: zoneFunction,
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: <Widget>[
+                                  // Left scrollable section
+                                  Flexible(
+                                    fit: FlexFit.loose,
+                                    child: MiniMatrixControls(
+                                      zoneID: widget.zoneID,
+                                      zoneFunctions: zoneFunction,
+                                    ),
                                   ),
-                                ),
-                                const VerticalDivider(width: 1, color: Colors.black12),
+                                  const VerticalDivider(width: 1, color: Colors.black12),
 
-                                MixScenes(
-                                  selectedMixSceneName: selectedMixScene(zoneFunction)?.name,
-                                  zoneId: widget.zoneID,
-                                  onStoreTap: (String? value) {
-                                    if (value == null || value.isEmpty) {
-                                      return FusionToast.error(
-                                        context,
-                                        message: "Please enter a name for the mix scene",
-                                      );
-                                    } else {
-                                      projectViewModel.saveCurrentSettingsAsMixScene(
-                                        functionId: zoneFunction.id,
-                                        sceneName: value,
-                                      );
-                                    }
-                                  },
-                                  mixScenes: zoneFunction.mixScenes.map((MixScene e) => e.name).toList(),
-                                  onMixSceneSelect: (String value) {
-                                    try {
-                                      final MixScene scene = zoneFunction.mixScenes.firstWhere((MixScene scene) => scene.name == value);
-                                      projectViewModel.applyMixSceneToFunction(
-                                        functionId: zoneFunction.id,
-                                        sceneId: scene.id,
-                                      );
-                                    } catch (e) {
-                                      // We might get StateError if the scene is not found.
-                                    }
-                                  },
-                                  onDeleteTap: () {
-                                    try {
-                                      final MixScene? scene = selectedMixScene(zoneFunction);
-                                      if (scene != null) {
-                                        projectViewModel.removeMixScene(
+                                  MixScenes(
+                                    selectedMixSceneName: selectedMixScene(zoneFunction)?.name,
+                                    zoneId: widget.zoneID,
+                                    onStoreTap: (String? value) {
+                                      if (value == null || value.isEmpty) {
+                                        return FusionToast.error(
+                                          context,
+                                          message: "Please enter a name for the mix scene",
+                                        );
+                                      } else {
+                                        projectViewModel.saveCurrentSettingsAsMixScene(
+                                          functionId: zoneFunction.id,
+                                          sceneName: value,
+                                        );
+                                      }
+                                    },
+                                    mixScenes: zoneFunction.mixScenes.map((MixScene e) => e.name).toList(),
+                                    onMixSceneSelect: (String value) {
+                                      try {
+                                        final MixScene scene = zoneFunction.mixScenes.firstWhere((MixScene scene) => scene.name == value);
+                                        projectViewModel.applyMixSceneToFunction(
                                           functionId: zoneFunction.id,
                                           sceneId: scene.id,
                                         );
+                                      } catch (e) {
+                                        // We might get StateError if the scene is not found.
                                       }
-                                    } catch (e) {
-                                      // We might get StateError if the scene is not found.
-                                    }
-                                  },
-                                ),
+                                    },
+                                    onDeleteTap: () {
+                                      try {
+                                        final MixScene? scene = selectedMixScene(zoneFunction);
+                                        if (scene != null) {
+                                          projectViewModel.removeMixScene(
+                                            functionId: zoneFunction.id,
+                                            sceneId: scene.id,
+                                          );
+                                        }
+                                      } catch (e) {
+                                        // We might get StateError if the scene is not found.
+                                      }
+                                    },
+                                  ),
 
-                                const VerticalDivider(width: 1, color: Colors.black12),
-                                Container(
-                                  color: Colors.white,
-                                  child: PrioritySelectionWidget(zoneId: widget.zoneID),
-                                ),
-                                // const VerticalDivider(width: 1, color: Colors.black12),
-                                // Right side (only one widget)
-                                Flexible(
-                                  fit: FlexFit.loose,
-                                  child: ColoredBox(
+                                  const VerticalDivider(width: 1, color: Colors.black12),
+                                  Container(
                                     color: Colors.white,
-                                    child: ZoneControlSliderBuilder(
-                                      zoneID: widget.zoneID,
+                                    child: PrioritySelectionWidget(zoneId: widget.zoneID),
+                                  ),
+                                  // const VerticalDivider(width: 1, color: Colors.black12),
+                                  // Right side (only one widget)
+                                  Flexible(
+                                    fit: FlexFit.loose,
+                                    child: ColoredBox(
+                                      color: Colors.white,
+                                      child: ZoneControlSliderBuilder(
+                                        zoneID: widget.zoneID,
+                                      ),
                                     ),
                                   ),
-                                ),
-                              ],
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    // Used Stack to fit content according to content size.
+                    // HEADERS
+                    Positioned(
+                      left: 0,
+                      child: Container(
+                        height: 35,
+                        color: Colors.black,
+                        alignment: Alignment.centerLeft,
+                        padding: const EdgeInsets.symmetric(horizontal: 12.0),
+                        child: Text(
+                          "ZONE CONTROL PANEL -  MINI MATRIX",
+                          style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                            color: Colors.white,
+                            fontSize: 11,
+                          ),
+                        ),
+                      ),
+                    ),
+
+                    Positioned(
+                      right: 0,
+                      child: SemanticHelper.button(
+                        testId: SemanticHelper.createTestId(SemanticTypes.button, "mini_matrix_close_button"),
+                        child: Container(
+                          height: 35,
+                          color: Colors.black,
+                          alignment: Alignment.centerRight,
+                          padding: const EdgeInsets.symmetric(horizontal: 12.0),
+                          child: MouseRegion(
+                            cursor: SystemMouseCursors.click,
+                            child: GestureDetector(
+                              onTap: Navigator.of(context).pop,
+                              child: const Icon(
+                                Icons.close,
+                                color: Colors.white,
+                                size: 16,
+                              ),
                             ),
                           ),
                         ),
-                      ],
-                    ),
-                  ),
-
-                  // Used Stack to fit content according to content size.
-                  // HEADERS
-                  Positioned(
-                    left: 0,
-                    child: Container(
-                      height: 35,
-                      color: Colors.black,
-                      alignment: Alignment.centerLeft,
-                      padding: const EdgeInsets.symmetric(horizontal: 12.0),
-                      child: Text(
-                        "ZONE CONTROL PANEL -  MINI MATRIX",
-                        style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                          color: Colors.white,
-                          fontSize: 11,
-                        ),
                       ),
                     ),
-                  ),
-
-                  Positioned(
-                    right: 0,
-                    child: Container(
-                      height: 35,
-                      color: Colors.black,
-                      alignment: Alignment.centerRight,
-                      padding: const EdgeInsets.symmetric(horizontal: 12.0),
-                      child: MouseRegion(
-                        cursor: SystemMouseCursors.click,
-                        child: GestureDetector(
-                          onTap: Navigator.of(context).pop,
-                          child: const Icon(
-                            Icons.close,
-                            color: Colors.white,
-                            size: 16,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             );
           },

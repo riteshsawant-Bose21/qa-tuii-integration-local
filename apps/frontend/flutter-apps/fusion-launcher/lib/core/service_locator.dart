@@ -20,12 +20,12 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../features/authentication/viewmodel/session_view_model.dart';
 import '../features/configuration/presentation/viewmodel/project_view_model.dart';
-import '../features/dashboard/domain/usecases/create_project_usecase.dart';
-import '../features/dashboard/domain/usecases/delete_project_usecase.dart';
-import '../features/dashboard/domain/usecases/fetch_file_usecase.dart';
-import '../features/dashboard/domain/usecases/get_projects_data_usecase.dart';
-import '../features/dashboard/domain/usecases/update_project_usecase.dart';
-import '../features/dashboard/domain/usecases/upload_file_usecase.dart';
+import '../features/home/domain/usecases/create_project_usecase.dart';
+import '../features/home/domain/usecases/delete_project_usecase.dart';
+import '../features/home/domain/usecases/fetch_file_usecase.dart';
+import '../features/home/domain/usecases/get_projects_data_usecase.dart';
+import '../features/home/domain/usecases/update_project_usecase.dart';
+import '../features/home/domain/usecases/upload_file_usecase.dart';
 import '../features/dynamic_config/data/datasources/panel_datasource.dart';
 import '../features/dynamic_config/data/datasources/panel_datasource_impl.dart';
 import '../features/dynamic_config/data/repositories/panel_repository_impl.dart';

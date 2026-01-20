@@ -176,7 +176,7 @@ class _SnapshotValueWidgetState extends State<SnapshotValueWidget> {
               materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
               thumbColor: MaterialStateProperty.resolveWith<Color>((Set<MaterialState> states) {
                 if (states.contains(MaterialState.selected)) {
-                  return Theme.of(context).colorScheme.primaryWhite;
+                  return Theme.of(context).colorScheme.onPrimary;
                 }
                 return context.colorScheme.primaryBlack;
               }),

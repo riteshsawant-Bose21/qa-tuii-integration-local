@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:fusion_lib/fusion_theme/app_theme.dart';
+import 'package:fusion_lib/fusion_widgets/semantics/semantic_helper.dart';
+import 'package:fusion_lib/fusion_widgets/semantics/semantic_type.dart';
 import 'package:fusion_lib/fusion_widgets/text_views/fusion_app_text.dart';
 import 'package:fusion_lib/models/project_entities/non_processing/fusion_event.dart';
 
@@ -89,18 +91,21 @@ class _TriggerTypeDropdown extends StatelessWidget {
             maxLine: 1,
           ),
           const SizedBox(height: 8),
-          FusionDropdown<EventTriggerType>(
-            value: selectedEvent.triggerType,
-            hint: "Select Trigger Type",
-            items: projectViewModel.getEventTriggers(),
-            display: (EventTriggerType e) => e.displayName,
-            onChanged: (EventTriggerType? triggerType) {
-              if (triggerType != null) {
-                // Clear all dependent values when trigger type changes
-                // projectViewModel.clearEventDependentValues(eventId: eventId);
-                projectViewModel.updateEventTrigger(eventId: eventId, newTrigger: triggerType);
-              }
-            },
+          SemanticHelper.button(
+            testId: SemanticHelper.createTestId(SemanticTypes.button, "event_trigger_type"),
+            child: FusionDropdown<EventTriggerType>(
+              value: selectedEvent.triggerType,
+              hint: "Select Trigger Type",
+              items: projectViewModel.getEventTriggers(),
+              display: (EventTriggerType e) => e.displayName,
+              onChanged: (EventTriggerType? triggerType) {
+                if (triggerType != null) {
+                  // Clear all dependent values when trigger type changes
+                  // projectViewModel.clearEventDependentValues(eventId: eventId);
+                  projectViewModel.updateEventTrigger(eventId: eventId, newTrigger: triggerType);
+                }
+              },
+            ),
           ),
         ],
       ),
@@ -147,21 +152,24 @@ class _TriggerItemDropdown extends StatelessWidget {
             maxLine: 1,
           ),
           const SizedBox(height: 8),
-          FusionDropdown<EventTriggerItemDropdown>(
-            value: currentValue,
-            hint: "Select Item",
-            items: availableItems,
-            display: (EventTriggerItemDropdown e) => e.name,
-            onChanged: (EventTriggerItemDropdown? item) {
-              if (item != null) {
-                projectViewModel.updateEventTriggerItem(
-                  eventId: eventId,
-                  newItem: EventTriggerItem(
-                    itemId: item.id,
-                  ),
-                );
-              }
-            },
+          SemanticHelper.button(
+            testId: SemanticHelper.createTestId(SemanticTypes.button, "event_trigger_item"),
+            child: FusionDropdown<EventTriggerItemDropdown>(
+              value: currentValue,
+              hint: "Select Item",
+              items: availableItems,
+              display: (EventTriggerItemDropdown e) => e.name,
+              onChanged: (EventTriggerItemDropdown? item) {
+                if (item != null) {
+                  projectViewModel.updateEventTriggerItem(
+                    eventId: eventId,
+                    newItem: EventTriggerItem(
+                      itemId: item.id,
+                    ),
+                  );
+                }
+              },
+            ),
           ),
         ],
       ),
@@ -193,23 +201,26 @@ class _ActionTypeDropdown extends StatelessWidget {
             maxLine: 1,
           ),
           const SizedBox(height: 8),
-          FusionDropdown<EventActionType>(
-            value: selectedEvent.action != null && availableActions.contains(selectedEvent.action) ? selectedEvent.action : null,
-            hint: "Select Action",
-            items: availableActions,
-            display: (EventActionType e) => e.displayName,
-            onChanged: (EventActionType? actionType) {
-              if (actionType != null) {
-                /// Clear item selection when action type changes to schedule
-                if (actionType.displayName.toLowerCase() == 'schedule') {
-                  projectViewModel.updateEventTriggerItem(
-                    eventId: eventId,
-                    newItem: EventTriggerItem(itemId: ''),
-                  );
+          SemanticHelper.button(
+            testId: SemanticHelper.createTestId(SemanticTypes.button, "event_action_type"),
+            child: FusionDropdown<EventActionType>(
+              value: selectedEvent.action != null && availableActions.contains(selectedEvent.action) ? selectedEvent.action : null,
+              hint: "Select Action",
+              items: availableActions,
+              display: (EventActionType e) => e.displayName,
+              onChanged: (EventActionType? actionType) {
+                if (actionType != null) {
+                  /// Clear item selection when action type changes to schedule
+                  if (actionType.displayName.toLowerCase() == 'schedule') {
+                    projectViewModel.updateEventTriggerItem(
+                      eventId: eventId,
+                      newItem: EventTriggerItem(itemId: ''),
+                    );
+                  }
+                  projectViewModel.updateEventAction(eventId: eventId, newAction: actionType);
                 }
-                projectViewModel.updateEventAction(eventId: eventId, newAction: actionType);
-              }
-            },
+              },
+            ),
           ),
         ],
       ),
@@ -241,19 +252,22 @@ class _ConditionDropdown extends StatelessWidget {
             maxLine: 1,
           ),
           const SizedBox(height: 8),
-          FusionDropdown<EventConditionType>(
-            value:
-                selectedEvent.condition?.conditionType != null && availableConditions.contains(selectedEvent.condition!.conditionType)
-                    ? selectedEvent.condition!.conditionType
-                    : null,
-            hint: "Select Condition",
-            items: availableConditions,
-            display: (EventConditionType e) => e.displayName,
-            onChanged: (EventConditionType? conditionType) {
-              if (conditionType != null) {
-                projectViewModel.updateEventConditionType(eventId: eventId, newConditionType: conditionType);
-              }
-            },
+          SemanticHelper.button(
+            testId: SemanticHelper.createTestId(SemanticTypes.button, "event_condition_type"),
+            child: FusionDropdown<EventConditionType>(
+              value:
+                  selectedEvent.condition?.conditionType != null && availableConditions.contains(selectedEvent.condition!.conditionType)
+                      ? selectedEvent.condition!.conditionType
+                      : null,
+              hint: "Select Condition",
+              items: availableConditions,
+              display: (EventConditionType e) => e.displayName,
+              onChanged: (EventConditionType? conditionType) {
+                if (conditionType != null) {
+                  projectViewModel.updateEventConditionType(eventId: eventId, newConditionType: conditionType);
+                }
+              },
+            ),
           ),
         ],
       ),

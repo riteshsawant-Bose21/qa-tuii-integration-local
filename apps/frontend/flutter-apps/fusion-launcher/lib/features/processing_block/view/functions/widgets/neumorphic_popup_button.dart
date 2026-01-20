@@ -67,18 +67,21 @@ class _NeumorphicPopupButtonState extends State<NeumorphicPopupButton> {
         child: Row(
           children: <Widget>[
             Expanded(
-              child: Center(
-                child: TextField(
-                  controller: widget.controller,
-                  textAlign: TextAlign.center,
-                  focusNode: _focusNode,
-                  style: Theme.of(context).textTheme.labelLarge,
-                  decoration: InputDecoration(
-                    border: InputBorder.none,
-                    hintText: widget.hintText ?? 'Scene name',
-                    hintStyle: Theme.of(context).textTheme.labelSmall?.copyWith(color: Colors.grey),
-                    isDense: true,
-                    contentPadding: const EdgeInsets.all(0),
+              child: SemanticHelper.button(
+                testId: SemanticHelper.createTestId(SemanticTypes.button, "mix_scenes_textfield"),
+                child: Center(
+                  child: TextField(
+                    controller: widget.controller,
+                    textAlign: TextAlign.center,
+                    focusNode: _focusNode,
+                    style: Theme.of(context).textTheme.labelLarge,
+                    decoration: InputDecoration(
+                      border: InputBorder.none,
+                      hintText: widget.hintText ?? 'Scene name',
+                      hintStyle: Theme.of(context).textTheme.labelSmall?.copyWith(color: Colors.grey),
+                      isDense: true,
+                      contentPadding: const EdgeInsets.all(0),
+                    ),
                   ),
                 ),
               ),
@@ -154,12 +157,15 @@ class _NeumorphicPopupButtonState extends State<NeumorphicPopupButton> {
                     ),
                   ];
                 },
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 4.0).copyWith(right: 8),
-                  child: Icon(
-                    Icons.keyboard_arrow_down,
-                    color: Colors.grey[600],
-                    size: 16,
+                child: SemanticHelper.button(
+                  testId: SemanticHelper.createTestId(SemanticTypes.button, "mix_scenes_dropdown"),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 4.0).copyWith(right: 8),
+                    child: Icon(
+                      Icons.keyboard_arrow_down,
+                      color: Colors.grey[600],
+                      size: 16,
+                    ),
                   ),
                 ),
               ),

@@ -28,24 +28,27 @@ class _FilterOptions extends StatelessWidget {
 
                 const SizedBox(height: 8),
 
-                FusionRadio<EQLDeviceType>(
-                  selected: state.filters.deviceType,
-                  options: currentFilter != null ? <EQLDeviceType>[currentFilter!] : EQLDeviceType.values,
-                  labelBuilder: (EQLDeviceType mountingType) {
-                    return FusionAppText(
-                      text: mountingType.displayName,
-                      style: context.textTheme.bodySmall?.copyWith(
-                        color: context.colorScheme.onSurface,
-                      ),
-                    );
-                  },
-                  onChanged: (EQLDeviceType value) {
-                    vm.updateFilters(
-                      state.filters.copyWith(
-                        deviceType: value,
-                      ),
-                    );
-                  },
+                SemanticHelper.container(
+                  testId: SemanticHelper.createTestId(SemanticTypes.container, "equipment_location_dialog_filter_option_device_type"),
+                  child: FusionRadio<EQLDeviceType>(
+                    selected: state.filters.deviceType,
+                    options: currentFilter != null ? <EQLDeviceType>[currentFilter!] : EQLDeviceType.values,
+                    labelBuilder: (EQLDeviceType mountingType) {
+                      return FusionAppText(
+                        text: mountingType.displayName,
+                        style: context.textTheme.bodySmall?.copyWith(
+                          color: context.colorScheme.onSurface,
+                        ),
+                      );
+                    },
+                    onChanged: (EQLDeviceType value) {
+                      vm.updateFilters(
+                        state.filters.copyWith(
+                          deviceType: value,
+                        ),
+                      );
+                    },
+                  ),
                 ),
               ],
             ),

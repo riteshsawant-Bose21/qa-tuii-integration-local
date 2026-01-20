@@ -4,8 +4,8 @@ import 'package:fusion_launcher/core/service_locator.dart';
 import 'package:fusion_launcher/features/configuration_page/widgets/section_header.dart';
 import 'package:fusion_launcher/features/configuration_page/widgets/snapshots/scenes_expandable_card.dart';
 import 'package:fusion_launcher/features/configuration_page/widgets/snapshots/snapshot_list.dart';
-import 'package:fusion_lib/fusion_theme/app_theme.dart';
 import 'package:fusion_lib/fusion_lib.dart';
+import 'package:fusion_lib/fusion_theme/app_theme.dart';
 
 import '../../../configuration/presentation/viewmodel/project_view_model.dart';
 import '../drag_divider.dart';

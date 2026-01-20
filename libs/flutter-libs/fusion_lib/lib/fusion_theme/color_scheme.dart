@@ -212,6 +212,15 @@ extension ColorExtends on ColorScheme {
   static const Color _expressiveShadowLightD = Color(0xFFFFFFFF);
   static const Color _expressiveShadowDarkL = Color(0xFF000000);
   static const Color _expressiveShadowLightL = Color(0xFFFFFFFF);
+  // Commission Colors
+  static const Color _cardDarkL = const Color(0xFF111111);
+  static const Color _cardDarkD = const Color(0xFFFFFFFF);
+
+  static const Color _borderGreyL = const Color(0xFF333333);
+  static const Color _borderGreyD = const Color(0xFFE0E0E0);
+
+  static const Color _textGreyL = const Color(0xFF9E9E9E);
+  static const Color _textGreyD = const Color(0xFF616161);
 
   /// Dark and light mode switch
   bool get isDarkMode => brightness == Brightness.dark;
@@ -323,6 +332,11 @@ extension ColorExtends on ColorScheme {
   Color get spl400 => isDarkMode ? _spl400D : _spl400L;
   Color get spl500 => isDarkMode ? _spl500D : _spl500L;
   Color get spl600 => isDarkMode ? _spl600D : _spl600L;
+
+  // Commission Colors
+  Color get cardDark => isDarkMode ? _cardDarkD : _cardDarkL;
+  Color get borderGrey => isDarkMode ? _borderGreyD : _borderGreyL;
+  Color get textGrey => isDarkMode ? _textGreyD : _textGreyL;
 
   ///
   /// Wiring view color scheme
