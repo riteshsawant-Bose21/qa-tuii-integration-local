@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:fusion_launcher/core/assets/asset_svg.dart';
 import 'package:fusion_launcher/core/service_locator.dart';
 import 'package:fusion_launcher/features/create_zone_popup/view/create_zone_popup.dart';
 import 'package:fusion_lib/fusion_lib.dart';
-import 'package:fusion_lib/fusion_theme/app_theme.dart';
 
 import '../../../../core/models/products_data.dart';
 import '../../../configuration/presentation/viewmodel/project_view_model.dart';
@@ -114,7 +114,11 @@ class _AddDeviceExpandablePopupMenuWidgetState extends State<AddDeviceExpandable
             testId: SemanticHelper.createTestId(SemanticTypes.button, "add_zone_button_${widget.sectionTitle}"),
             child: Row(
               children: <Widget>[
-                Icon(Icons.add_sharp, size: 12, color: context.colorScheme.primaryBlack),
+                FusionSvgIcon(
+                  icon: AssetSvg.expandUp,
+                  size: FusionSizes.iconSize16,
+                  color: context.colorScheme.iconWhite,
+                ),
                 const SizedBox(width: 2),
                 FusionAppText(
                   text: "Add Zone",

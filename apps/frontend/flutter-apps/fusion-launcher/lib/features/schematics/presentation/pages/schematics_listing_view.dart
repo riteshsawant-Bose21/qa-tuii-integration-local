@@ -197,8 +197,9 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
         return SemanticHelper.container(
           testId: SemanticHelper.createTestId(SemanticTypes.container, "schematic_listing_view_area"),
           child: Container(
-            color: Colors.white,
+            color: context.colorScheme.primaryBlack,
             child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
                 /// Sources & Endpoints
                 CommonDevicesSectionWidget(
@@ -797,7 +798,6 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
               zoneColor: getZoneColor(endpoint.id),
               location: getLocationName(endpoint.locationEntity.listeningAreaId) ?? "Add location",
               equipmentLocation: getEquipmentLocationForHardware(endpoint.id),
-
               isSelected: isSelected,
               onTap:
                   () => _projectViewModel.setSelectedDevice(

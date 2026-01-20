@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:fusion_launcher/features/add_source_popup/view/add_source_popup.dart';
 import 'package:fusion_launcher/features/projects/widget/building/side_panel_widgets/equipment_location/equipment_location_dialog.dart';
 import 'package:fusion_lib/fusion_lib.dart';
-import 'package:fusion_lib/fusion_theme/app_theme.dart';
 
 import '../../../projects/viewmodel/eql_products_vm.dart';
 import 'add_device_expandable_popup_menu_widget.dart';
@@ -299,14 +298,12 @@ class _CommonDevicesSectionWidgetState extends State<CommonDevicesSectionWidget>
     return SemanticHelper.container(
       testId: SemanticHelper.createTestId(SemanticTypes.container, "expandable_section_container_${widget.title.toLowerCase()}"),
       child: Container(
-        clipBehavior: Clip.none,
-        width: widget.width,
-        height: widget.height,
+        margin: const EdgeInsets.all(4),
+        padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: widget.backgroundColor,
-          border: Border(
-            right: BorderSide(width: 1, color: context.colorScheme.primaryBlack),
-          ),
+          color: context.colorScheme.elevation1,
+          border: Border.all(color: context.colorScheme.elevation2, width: 1),
+          borderRadius: const BorderRadius.all(Radius.circular(8)),
         ),
         child: Column(
           children: <Widget>[
@@ -318,9 +315,8 @@ class _CommonDevicesSectionWidgetState extends State<CommonDevicesSectionWidget>
                 height: 44,
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                 decoration: BoxDecoration(
-                  color: Colors.white,
                   border: Border(
-                    bottom: BorderSide(width: 1, color: context.colorScheme.primaryBlack),
+                    bottom: BorderSide(width: 1, color: context.colorScheme.elevation2),
                   ),
                 ),
                 child: AnimatedBuilder(

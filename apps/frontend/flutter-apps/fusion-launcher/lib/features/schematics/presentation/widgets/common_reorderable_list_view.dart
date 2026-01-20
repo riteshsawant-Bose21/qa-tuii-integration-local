@@ -27,9 +27,10 @@ class CommonReorderableListView<T> extends StatelessWidget {
         child: Center(
           child: FusionAppText(
             text: emptyMessage,
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              fontSize: 12,
-              color: Colors.grey[600],
+            textAlign: TextAlign.center,
+            style: context.textTheme.bodySmall?.copyWith(
+              fontSize: FusionSizes.fontSize12,
+              color: context.colorScheme.textBody,
             ),
           ),
         ),
