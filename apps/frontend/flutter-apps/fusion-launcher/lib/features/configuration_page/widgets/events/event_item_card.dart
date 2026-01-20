@@ -54,14 +54,14 @@ class _EventItemCardState extends State<EventItemCard> {
           /// Card container
           child: Container(
             decoration: BoxDecoration(
-              color: widget.isSelected ? Colors.grey[200] : (_isHovered ? Colors.grey[200] : null),
+              color: widget.isSelected ? context.colorScheme.elevation3 : (_isHovered ? context.colorScheme.elevation2 : null),
               borderRadius: BorderRadius.circular(8),
               border: Border.all(
-                color: widget.isSelected ? context.colorScheme.primaryBlack : Colors.transparent,
+                color: widget.isSelected ? context.colorScheme.elevation5 : Colors.transparent,
                 width: 1.0,
               ),
             ),
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
             child: Row(
               children: <Widget>[
                 /// snapshot item draggable icon
@@ -70,17 +70,18 @@ class _EventItemCardState extends State<EventItemCard> {
                   child: Opacity(
                     opacity: 0.4,
                     child: Icon(
-                      Icons.drag_handle,
+                      Icons.drag_indicator,
                       size: 16,
-                      color: Colors.grey[600],
+                      color: context.colorScheme.textPlaceholder,
                     ),
                   ),
                 ),
                 const SizedBox(width: 8),
-                const FusionImage.asset(
+                FusionImage.asset(
                   Assets.playIcon,
                   width: 24,
                   height: 24,
+                  assetColor: context.colorScheme.iconWhite,
                   fit: BoxFit.contain,
                 ),
                 const SizedBox(width: 12),
@@ -140,10 +141,12 @@ class _EventItemCardState extends State<EventItemCard> {
                               ),
                         );
                       },
-                      child: const FusionImage.asset(
+                      child: FusionImage.asset(
                         Assets.deleteIcon,
                         width: 17,
                         height: 17,
+                        assetColor: context.colorScheme.iconWhite,
+
                         fit: BoxFit.contain,
                       ),
                     ),

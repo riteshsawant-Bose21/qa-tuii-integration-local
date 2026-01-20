@@ -67,7 +67,7 @@ class _SnapshotItemCardState extends State<SnapshotItemCard> {
                 width: 1.0,
               ),
             ),
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
             child: Row(
               children: <Widget>[
                 /// snapshot item draggable icon

@@ -105,7 +105,7 @@ class _EventHeaderWidgetState extends State<EventHeaderWidget> {
       decoration: BoxDecoration(
         color: context.colorScheme.elevation1,
         border: Border(
-          bottom: BorderSide(width: 1, color: context.colorScheme.primaryBlack),
+          bottom: BorderSide(width: 1, color: context.colorScheme.elevation2),
         ),
       ),
       child: Row(
@@ -124,6 +124,10 @@ class _EventHeaderWidgetState extends State<EventHeaderWidget> {
                         style: context.textTheme.bodyMedium?.copyWith(fontSize: 14, fontWeight: FontWeight.w700),
                         decoration: const InputDecoration(
                           border: InputBorder.none,
+                          filled: false,
+                          focusedBorder: InputBorder.none,
+                          errorBorder: InputBorder.none,
+                          enabledBorder: InputBorder.none,
                           contentPadding: EdgeInsets.zero,
                           isDense: true,
                         ),

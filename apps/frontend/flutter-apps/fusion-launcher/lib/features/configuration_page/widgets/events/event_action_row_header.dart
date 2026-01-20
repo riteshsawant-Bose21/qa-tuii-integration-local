@@ -23,7 +23,7 @@ class EventActionRowHeader extends StatelessWidget {
           decoration: BoxDecoration(
             border: Border(
               bottom: BorderSide(
-                color: context.colorScheme.primaryBlack.withAlpha(100),
+                color: context.colorScheme.elevation2,
                 width: 1,
               ),
             ),
@@ -36,7 +36,6 @@ class EventActionRowHeader extends StatelessWidget {
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                   fontWeight: FontWeight.w600,
                   fontSize: 12,
-                  color: Theme.of(context).colorScheme.textPrimary,
                 ),
               ),
 
@@ -133,7 +132,7 @@ class EventActionRowHeader extends StatelessWidget {
         ),
         Container(
           padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
-          color: context.colorScheme.primaryBlack.withAlpha(40),
+          color: context.colorScheme.elevation2.withAlpha(120),
           child: Row(
             spacing: screenWidth * 0.01,
 

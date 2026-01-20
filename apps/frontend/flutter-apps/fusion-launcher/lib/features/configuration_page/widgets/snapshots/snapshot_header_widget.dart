@@ -94,7 +94,6 @@ class _SnapshotHeaderWidgetState extends State<SnapshotHeaderWidget> {
         ),
         decoration: BoxDecoration(
           color: context.colorScheme.elevation1,
-          // border bottom
           borderRadius: const BorderRadius.only(
             topRight: Radius.circular(12),
             topLeft: Radius.circular(12),

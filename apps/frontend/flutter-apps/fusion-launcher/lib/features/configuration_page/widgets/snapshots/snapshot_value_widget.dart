@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:fusion_lib/fusion_lib.dart';
-import 'package:fusion_lib/fusion_theme/app_theme.dart';
 
 import '../../../../core/service_locator.dart';
 import '../../../configuration/presentation/viewmodel/project_view_model.dart';
@@ -78,7 +77,6 @@ class _SnapshotValueWidgetState extends State<SnapshotValueWidget> {
                   min: 0,
                   max: 100,
                   divisions: 100,
-
                   label: currentValue.toStringAsFixed(0),
                   onChanged: (double v) {
                     final SceneValue updated = value.copyWith(value: v.toString());

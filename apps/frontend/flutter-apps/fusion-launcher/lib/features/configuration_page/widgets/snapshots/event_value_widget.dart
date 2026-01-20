@@ -75,7 +75,7 @@ class _EventValueWidgetState extends State<EventValueWidget> {
                 Icon(
                   isMute ? Icons.volume_off : Icons.volume_up,
                   size: 20,
-                  color: context.colorScheme.primaryBlack,
+                  color: context.colorScheme.primaryWhite,
                 ),
                 const SizedBox(width: 8),
                 FusionAppText(
@@ -101,13 +101,13 @@ class _EventValueWidgetState extends State<EventValueWidget> {
                     thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6),
                     overlayShape: const RoundSliderOverlayShape(overlayRadius: 4),
                     trackHeight: 1,
-                    thumbColor: context.colorScheme.primaryBlack,
+                    thumbColor: context.colorScheme.primaryWhite,
                   ),
                   child: Slider(
                     value: currentValue,
                     padding: EdgeInsets.zero,
-                    activeColor: context.colorScheme.primaryBlack,
-                    inactiveColor: context.colorScheme.primaryBlack,
+                    activeColor: context.colorScheme.elevation2,
+                    inactiveColor: context.colorScheme.primaryWhite,
                     min: 0,
                     max: 100,
                     divisions: 100,
@@ -152,7 +152,7 @@ class _EventValueWidgetState extends State<EventValueWidget> {
               alignment: Alignment.center,
               padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 3),
               decoration: BoxDecoration(
-                color: context.colorScheme.primaryBlack,
+                color: context.colorScheme.elevation1,
                 borderRadius: BorderRadius.circular(2),
               ),
               child: FusionAppText(text: currentValue.toStringAsFixed(0), style: Theme.of(context).textTheme.bodySmall?.copyWith(fontSize: 9)),
@@ -398,7 +398,7 @@ class _EventValueWidgetState extends State<EventValueWidget> {
                       // enabled: isEnabled,
                       keyboardType: TextInputType.number,
                       decoration: InputDecoration(
-                        border: OutlineInputBorder(borderSide: BorderSide(color: context.colorScheme.primaryBlack)),
+                        border: OutlineInputBorder(borderSide: BorderSide(color: context.colorScheme.elevation1)),
                         isDense: true,
                         labelText: "Duration (ms)",
                         labelStyle: const TextStyle(fontSize: 10),

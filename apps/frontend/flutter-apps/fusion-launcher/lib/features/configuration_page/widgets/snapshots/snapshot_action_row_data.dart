@@ -140,7 +140,7 @@ class _SnapshotActionRowDataState extends State<SnapshotActionRowData> {
         width: 30,
         child: Opacity(
           opacity: 0.4,
-          child: Icon(Icons.drag_indicator, size: 16, color: Colors.grey[600]),
+          child: Icon(Icons.drag_indicator, size: 16, color: context.colorScheme.iconWhite),
         ),
       ),
     );
