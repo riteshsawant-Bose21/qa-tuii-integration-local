@@ -13,11 +13,13 @@
 #include <HostInterfaceLite/OCA/OCP.1/ZeroConf/IOcp1LiteService.h>
 #include <HostInterfaceLite/OCA/OCF/OcfLiteHostInterface.h>
 
+#ifndef OCA_DISABLE_DNSSD
 // Platform-specific DNS-SD includes
 #if defined(__APPLE__) || defined(FUSION)
 #include <dns_sd.h>
 #else
 #include <avahi-compat-libdns_sd/dns_sd.h>
+#endif
 #endif
 
 // ---- FileInfo Macro ----
@@ -33,18 +35,39 @@
 #define MAXIMUM_TXT_RECORD_LENGTH 255
 // ---- Class Implementation ----
 
-static DNSServiceRef m_dnsService = NULL;
+static
+#ifndef OCA_DISABLE_DNSSD
+DNSServiceRef
+#else
+void *
+#endif
+m_dnsService = NULL;
 
 /**
  * Registration reply callback. Dummy implementation.
  */
-static void DNSSD_API DNSServiceRegisterReply2(DNSServiceRef sdRef, DNSServiceFlags flags, DNSServiceErrorType errorCode, const char *name, const char *regtype, const char *domain, void *context)
+#ifndef OCA_DISABLE_DNSSD
+static void DNSSD_API DNSServiceRegisterReply2(DNSServiceRef sdRef, DNSServiceFlags flags, DNSServiceErrorType errorCode,
+                                               const char *name, const char *regtype, const char *domain, void *context)
 {
+    (void)sdRef; (void)flags; (void)errorCode; (void)name; (void)regtype; (void)domain; (void)context;
 }
+#else
+static void DNSServiceRegisterReply2(void *sdRef, unsigned int flags, int errorCode,
+                                     const char *name, const char *regtype, const char *domain, void *context)
+{
+    (void)sdRef; (void)flags; (void)errorCode; (void)name; (void)regtype; (void)domain; (void)context;
+}
+#endif
 
 bool Ocp1LiteServiceRegister(const std::string &name, const std::string &registrationType,
                              UINT16 port, const std::vector<std::string> &txtRecordList, const std::string &domain)
 {
+#ifdef OCA_DISABLE_DNSSD
+    (void)name; (void)registrationType; (void)port; (void)txtRecordList; (void)domain;
+    OCA_LOG_INFO("DNS-SD disabled: skipping service registration");
+    return true; // Pretend success to keep network startup happy
+#else
     OCA_LOG_TRACE_PARAMS("Register(name = %s, registrationType = %s, port = %u, txtRecordList.size() = %u, domain = %s)",
                          name.c_str(), registrationType.c_str(), port, txtRecordList.size(), domain.c_str());
 
@@ -94,20 +117,29 @@ bool Ocp1LiteServiceRegister(const std::string &name, const std::string &registr
         }
     }
     return (kDNSServiceErr_NoError == error) ? true : false;
+#endif
 }
 
 int Ocp1LiteServiceGetSocket()
 {
+#ifdef OCA_DISABLE_DNSSD
+    return -1;
+#else
     int socketFd = -1;
     if (NULL != m_dnsService)
     {
         socketFd = static_cast<int>(::DNSServiceRefSockFD(m_dnsService));
     }
     return socketFd;
+#endif
 }
 
 void Ocp1LiteServiceRunWithFdSet(fd_set *readSet)
 {
+#ifdef OCA_DISABLE_DNSSD
+    (void)readSet;
+    return;
+#else
     if (NULL != m_dnsService)
     {
         int dnsServiceSocket(static_cast<int>(::DNSServiceRefSockFD(m_dnsService)));
@@ -121,10 +153,14 @@ void Ocp1LiteServiceRunWithFdSet(fd_set *readSet)
             }
         }
     }
+#endif
 }
 
 void Ocp1LiteServiceRun()
 {
+#ifdef OCA_DISABLE_DNSSD
+    return;
+#else
     if (NULL != m_dnsService)
     {
         fd_set readFds;
@@ -144,13 +180,18 @@ void Ocp1LiteServiceRun()
             }
         }
     }
+#endif
 }
 
 void Ocp1LiteServiceDispose(void)
 {
+#ifdef OCA_DISABLE_DNSSD
+    m_dnsService = NULL;
+#else
     if (NULL != m_dnsService)
     {
         DNSServiceRefDeallocate(m_dnsService);
         m_dnsService = NULL;
     }
+#endif
 }

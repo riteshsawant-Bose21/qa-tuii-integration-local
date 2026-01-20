@@ -87,10 +87,15 @@ endif
 PKG_CFLAGS += $(BOOST_CFLAGS)
 PKG_LIBS += $(BOOST_LIBS)
 
+
+# Disable DNS-SD (Bonjour/Avahi) across the device build
+DISABLE_DNSSD_FLAGS := -DOCA_DISABLE_DNSSD
+
 CXXFLAGS := -Wall -Wextra -std=c++17 -g -O0 $(PKG_CFLAGS) \
 	    $(PKG_CDEFS) \
 	    -DOCA_RUN \
 	    -D_DEBUG \
+    $(DISABLE_DNSSD_FLAGS) \
     -I../common \
     -I../../common \
     -I../../common/HostInterfaceLite \
