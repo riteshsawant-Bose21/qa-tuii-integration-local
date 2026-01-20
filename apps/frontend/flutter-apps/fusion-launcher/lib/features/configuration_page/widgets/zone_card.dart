@@ -1168,6 +1168,7 @@ class _ZoneCardState extends State<ZoneCard> {
         ),
       ),
       child:
+          /// circuit and subzone list
           (subZonesForZone.isEmpty && zoneCircuit.isEmpty)
               ? Center(
                 child: Padding(
@@ -1186,6 +1187,7 @@ class _ZoneCardState extends State<ZoneCard> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: <Widget>[
+                    /// if no subzones then show available circuits
                     if (zoneCircuit.isNotEmpty)
                       ListView.builder(
                         scrollDirection: Axis.vertical,
@@ -1206,9 +1208,11 @@ class _ZoneCardState extends State<ZoneCard> {
                           );
                         },
                       ),
+
+                    /// else show subzones in reorderable list
                     ReorderableListView.builder(
                       shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(), // parent scroll
+                      physics: const NeverScrollableScrollPhysics(),
                       buildDefaultDragHandles: false,
                       itemCount: subZonesForZone.length,
                       onReorder: (int oldIndex, int newIndex) {
@@ -1224,20 +1228,17 @@ class _ZoneCardState extends State<ZoneCard> {
                         return ReorderableDragStartListener(
                           key: ValueKey<String>(subZone.id),
                           index: index,
-                          child: Padding(
-                            padding: const EdgeInsets.only(bottom: 8.0),
-                            child: SubZoneCard(
-                              subZoneId: subZone.id,
-                              subZoneName: subZone.name,
-                              subZoneData: subZone,
-                              onExpansionChanged: (bool isExpanded) {
-                                if (isExpanded) {
-                                  /// Trigger the zone's expansion callback to scroll the zone into view
-                                  /// when a subzone expands
-                                  widget.onExpansionChanged?.call(true);
-                                }
-                              },
-                            ),
+                          child: SubZoneCard(
+                            subZoneId: subZone.id,
+                            subZoneName: subZone.name,
+                            subZoneData: subZone,
+                            onExpansionChanged: (bool isExpanded) {
+                              if (isExpanded) {
+                                /// Trigger the zone's expansion callback to scroll the zone into view
+                                /// when a subzone expands
+                                widget.onExpansionChanged?.call(true);
+                              }
+                            },
                           ),
                         );
                       },
@@ -1248,12 +1249,13 @@ class _ZoneCardState extends State<ZoneCard> {
     );
   }
 
+  /// Circuit card widget
   Widget _buildCircuitCard({required int index, required CircuitModel circuitData, required List<Speaker> speakersList}) {
     final bool isThisCircuitHovered = _hoveredCircuitIndex == index;
 
     return Container(
       decoration: BoxDecoration(
-        color: isThisCircuitHovered ? Colors.grey[200] : null,
+        color: isThisCircuitHovered ? context.colorScheme.elevation2 : null,
         borderRadius: BorderRadius.circular(8),
       ),
       padding: const EdgeInsets.only(top: 4, bottom: 4, left: 10, right: 13),
@@ -1278,10 +1280,11 @@ class _ZoneCardState extends State<ZoneCard> {
             onTap: () {
               ProcessingChainView.showForCircuit(context, circuitData);
             },
-            child: const FusionImage.asset(
+            child: FusionImage.asset(
               Assets.processingBlocksFilledIcon,
               width: 24,
               height: 24,
+              assetColor: context.colorScheme.primaryWhite,
               fit: BoxFit.contain,
             ),
           ),
