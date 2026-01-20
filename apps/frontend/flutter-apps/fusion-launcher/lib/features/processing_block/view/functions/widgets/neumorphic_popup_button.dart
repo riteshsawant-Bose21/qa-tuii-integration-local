@@ -1,7 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
-import '../../common/neumorphic_button.dart';
+List<BoxShadow> getNeumorphismBoxShadows({bool inner = false, Color? color}) {
+  color ??= const Color(0xFFF5F5F5);
+  return <BoxShadow>[
+    if (inner) ...<BoxShadow>[
+      const BoxShadow(color: Colors.black12, blurRadius: 0),
+      // const BoxShadow(color: Colors.white, spreadRadius: -2, offset: Offset(2, 2)),
+      BoxShadow(color: color, blurRadius: 4, offset: const Offset(3, 3)),
+    ] else ...<BoxShadow>[
+      const BoxShadow(color: Colors.black12, blurRadius: 2, offset: Offset(2, 2)),
+      const BoxShadow(color: Colors.white, blurRadius: 2, offset: Offset(-2, -2)),
+      BoxShadow(color: color),
+    ],
+  ];
+}
 
 class NeumorphicPopupButton extends StatefulWidget {
   final TextEditingController? controller;
