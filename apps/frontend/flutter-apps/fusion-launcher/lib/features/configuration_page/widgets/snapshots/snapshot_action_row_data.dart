@@ -116,7 +116,7 @@ class _SnapshotActionRowDataState extends State<SnapshotActionRowData> {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
       decoration: BoxDecoration(
-        color: colorScheme.elevation1,
+        color: colorScheme.primaryBlack,
         border: Border(bottom: BorderSide(color: colorScheme.elevation1)),
       ),
       child: Row(
@@ -140,7 +140,7 @@ class _SnapshotActionRowDataState extends State<SnapshotActionRowData> {
         width: 30,
         child: Opacity(
           opacity: 0.4,
-          child: Icon(Icons.drag_handle, size: 16, color: Colors.grey[600]),
+          child: Icon(Icons.drag_indicator, size: 16, color: Colors.grey[600]),
         ),
       ),
     );
@@ -251,10 +251,11 @@ class _SnapshotActionRowDataState extends State<SnapshotActionRowData> {
             testId: SemanticHelper.createTestId(SemanticTypes.button, "snapshot_action_delete_${widget.index}"),
             child: GestureDetector(
               onTap: _deleteAction,
-              child: const FusionImage.asset(
+              child: FusionImage.asset(
                 Assets.deleteIcon,
                 width: 20,
                 height: 20,
+                assetColor: context.colorScheme.iconWhite,
                 fit: BoxFit.contain,
               ),
             ),
@@ -264,10 +265,12 @@ class _SnapshotActionRowDataState extends State<SnapshotActionRowData> {
             testId: SemanticHelper.createTestId(SemanticTypes.button, "snapshot_action_duplicate_${widget.index}"),
             child: GestureDetector(
               onTap: _duplicateAction,
-              child: const FusionImage.asset(
+              child: FusionImage.asset(
                 Assets.duplicateIcon,
                 width: 20,
                 height: 20,
+                assetColor: context.colorScheme.iconWhite,
+
                 fit: BoxFit.contain,
               ),
             ),

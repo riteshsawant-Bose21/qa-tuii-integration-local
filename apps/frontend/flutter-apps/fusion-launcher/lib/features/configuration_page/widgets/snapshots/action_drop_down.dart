@@ -28,37 +28,37 @@ class FusionDropdown<T> extends StatelessWidget {
       hint: FusionAppText(
         text: hint,
         style: Theme.of(context).textTheme.bodySmall?.copyWith(
-          color: isEnabled ? context.colorScheme.primaryBlack.withAlpha(200) : context.colorScheme.primaryBlack.withAlpha(100),
+          color: isEnabled ? context.colorScheme.primaryWhite.withAlpha(100) : context.colorScheme.primaryWhite.withAlpha(100),
         ),
         maxLine: 1,
       ),
       decoration: InputDecoration(
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(3),
-          borderSide: BorderSide(
-            color: isEnabled ? context.colorScheme.primaryBlack.withAlpha(200) : context.colorScheme.primaryBlack.withAlpha(100),
+          borderRadius: BorderRadius.circular(8),
+          borderSide: const BorderSide(
+            color: Colors.transparent,
           ),
         ),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(3),
-          borderSide: BorderSide(
-            color: isEnabled ? context.colorScheme.primaryBlack.withAlpha(200) : context.colorScheme.primaryBlack.withAlpha(100),
+          borderRadius: BorderRadius.circular(8),
+          borderSide: const BorderSide(
+            color: Colors.transparent,
           ),
         ),
         disabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(3),
-          borderSide: BorderSide(
-            color: context.colorScheme.primaryBlack.withAlpha(200),
+          borderRadius: BorderRadius.circular(8),
+          borderSide: const BorderSide(
+            color: Colors.transparent,
           ),
         ),
         isDense: true,
         filled: true,
-        fillColor: isEnabled ? Theme.of(context).colorScheme.elevation1 : context.colorScheme.primaryBlack.withAlpha(100),
+        fillColor: isEnabled ? Theme.of(context).colorScheme.elevation1 : context.colorScheme.elevation2.withAlpha(100),
         contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       ),
       dropdownColor: Theme.of(context).colorScheme.elevation1,
       style: Theme.of(context).textTheme.bodySmall?.copyWith(
-        color: isEnabled ? null : context.colorScheme.primaryBlack.withAlpha(100),
+        color: isEnabled ? null : context.colorScheme.primaryWhite.withAlpha(100),
       ),
       items:
           isEnabled
