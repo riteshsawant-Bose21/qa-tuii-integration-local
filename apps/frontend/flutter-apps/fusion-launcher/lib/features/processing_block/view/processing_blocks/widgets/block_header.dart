@@ -32,6 +32,7 @@ class BlockHeader extends StatelessWidget {
             fontWeight: FontWeight.bold,
           ),
         ),
+        const Spacer(),
         if (actions != null) actions!,
       ],
     );

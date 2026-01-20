@@ -7,12 +7,12 @@ class _PeqBandSection extends StatelessWidget {
   Widget build(BuildContext context) {
     return Consumer<PEQController>(
       builder: (BuildContext context, PEQController controller, Widget? child) {
-        final List<({num frequency, num gain, num q, String type, bool bypass})> tableData = controller.tableMappedData;
+        final List<_PEQDataPoint> tableData = controller.tableMappedData;
         return Container(
           decoration: BoxDecoration(
             color: context.colorScheme.elevation2,
           ),
-          padding: const EdgeInsets.only(right: 8),
+          padding: const EdgeInsets.only(right: 8, left: 8),
           child: ListView.builder(
             itemCount: tableData.length + 1,
             itemBuilder: (BuildContext context, int index) {
@@ -20,8 +20,11 @@ class _PeqBandSection extends StatelessWidget {
                 return Padding(
                   padding: const EdgeInsets.symmetric(vertical: 10),
                   child: Row(
-                    spacing: 8,
+                    spacing: 5,
                     children: <Widget>[
+                      const SizedBox(
+                        width: 20,
+                      ),
                       Expanded(
                         flex: 2,
                         child: Text(
@@ -30,7 +33,7 @@ class _PeqBandSection extends StatelessWidget {
                           textAlign: TextAlign.center,
                         ),
                       ),
-                      ...<String>["FREQUENCY", "Q", "GAIN", "BYPASS"].map(
+                      ...<String>["FREQUENCY", controller.isInBW ? "BW" : "Q", "GAIN(db)", "BYPASS"].map(
                         (String data) => Expanded(
                           child: Text(
                             data,
@@ -45,74 +48,121 @@ class _PeqBandSection extends StatelessWidget {
                 );
               }
               index -= 1;
-              return Row(
-                spacing: 8,
-                children: <Widget>[
-                  Expanded(
-                    flex: 2,
-                    child: PBDropdown<String>(
-                      hintText: "Type",
-                      onChanged: (String value) {
-                        controller.updateBandType(index, value);
-                      },
-                      value: tableData[index].type.titleCase,
-                      itemBuilder: (BuildContext context) {
-                        return <PopupMenuEntry<String>>[
-                          ...<String>["peq", "high_shelf", "low_shelf", "hpf", "lpf", "notch"].map(
-                            (String type) => PopupMenuItem<String>(
-                              value: type.titleCase,
-                              child: Text(type.titleCase),
+              final _PEQDataPoint row = tableData[index];
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 8.0),
+                child: Row(
+                  spacing: 5,
+                  children: <Widget>[
+                    Container(
+                      width: 20,
+
+                      decoration: BoxDecoration(
+                        color: context.colorScheme.primary,
+                        shape: BoxShape.circle,
+                      ),
+                      padding: const EdgeInsets.all(4),
+                      child: Center(
+                        child: Text(
+                          (index + 1).toString(),
+                          style: context.textTheme.bodySmall?.copyWith(color: Colors.white),
+                        ),
+                      ),
+                    ),
+                    Expanded(
+                      flex: 20,
+                      child: PBDropdown<String>(
+                        hintText: "Type",
+                        onChanged: (String value) {
+                          controller.updateBandType(index, value);
+                        },
+                        value: row.bandType.label,
+                        itemBuilder: (BuildContext context) {
+                          return <PopupMenuEntry<String>>[
+                            ..._BandType.values.map(
+                              (_BandType type) => PopupMenuItem<String>(
+                                value: type.value,
+                                child: Text(type.label),
+                              ),
                             ),
+                          ];
+                        },
+                      ),
+                    ),
+                    Expanded(
+                      flex: 10,
+                      child: FusionContainer(
+                        color: context.colorScheme.elevation2,
+                        child: PBNumberTextField(
+                          value: row.frequency,
+                          onChanged: (num value) {
+                            controller.updateBandFrequency(index, value);
+                          },
+                          min: 20,
+                          max: 20000,
+                        ),
+                      ),
+                    ),
+                    Expanded(
+                      flex: 10,
+                      child: DisabledWidgetWrapper(
+                        isDisabled: row.isQDisabled,
+                        child: FusionContainer(
+                          color: context.colorScheme.elevation2,
+                          child: PBNumberTextField(
+                            value: row.q,
+                            onChanged: (num value) {
+                              controller.updateQ(index, value);
+                            },
+                            min: 0.1,
+                            max: 10,
                           ),
-                        ];
-                      },
-                    ),
-                  ),
-                  Expanded(
-                    child: FusionContainer(
-                      color: context.colorScheme.elevation2,
-                      child: PBNumberTextField(
-                        value: tableData[index].frequency,
-                        onChanged: (num value) {
-                          controller.updateBandFrequency(index, value);
-                        },
-                        min: 20,
-                        max: 20000,
+                        ),
                       ),
                     ),
-                  ),
-                  Expanded(
-                    child: FusionContainer(
-                      color: context.colorScheme.elevation2,
-                      child: PBNumberTextField(
-                        value: tableData[index].q,
-                        onChanged: (num value) {
-                          controller.updateQ(index, value);
-                        },
-                        min: 0.1,
-                        max: 10,
+                    Expanded(
+                      flex: 13,
+                      child: DisabledWidgetWrapper(
+                        isDisabled: row.isGainDisabled,
+                        child:
+                            row.isGainDropdown
+                                ? PBDropdown<_CutType>(
+                                  hintText: "0.0",
+                                  onChanged: (_CutType value) {
+                                    controller.updateGain(index, value.value);
+                                  },
+                                  value: row.cutType?.label ?? row.gain.toString(),
+                                  itemBuilder: (BuildContext context) {
+                                    return <PopupMenuEntry<_CutType>>[
+                                      ..._CutType.values.map(
+                                        (_CutType type) => PopupMenuItem<_CutType>(
+                                          value: type,
+                                          child: Text(type.label),
+                                        ),
+                                      ),
+                                    ];
+                                  },
+                                )
+                                : FusionContainer(
+                                  color: context.colorScheme.elevation2,
+                                  child: PBNumberTextField(
+                                    value: row.gain,
+                                    onChanged: (num value) {
+                                      controller.updateGain(index, value);
+                                    },
+                                    min: -24,
+                                    max: 24,
+                                  ),
+                                ),
                       ),
                     ),
-                  ),
-                  Expanded(
-                    child: FusionContainer(
-                      color: context.colorScheme.elevation2,
-                      child: PBNumberTextField(
-                        value: tableData[index].gain,
-                        onChanged: (num value) {
-                          controller.updateGain(index, value);
-                        },
-                        min: -24,
-                        max: 24,
-                      ),
-                    ),
-                  ),
-                  Expanded(
-                    child: Center(
+                    Expanded(
+                      flex: 7,
                       child: FusionSwitch(
-                        value: tableData[index].bypass,
+                        value: row.bypass,
                         inactiveTrackColor: context.colorScheme.elevation2,
                         inactiveThumbColor: context.colorScheme.elevation3,
+
                         width: 60,
                         height: 35,
                         onChanged: (bool value) {
@@ -120,17 +170,17 @@ class _PeqBandSection extends StatelessWidget {
                         },
                       ),
                     ),
-                  ),
-                  InkWell(
-                    onTap: () {
-                      controller.removeBand(index);
-                    },
-                    child: Icon(
-                      Icons.delete_outline,
-                      color: controller.canDelete ? context.colorScheme.iconDefault : context.colorScheme.iconDisabled,
+                    InkWell(
+                      onTap: () {
+                        controller.removeBand(index);
+                      },
+                      child: Icon(
+                        Icons.delete_outline,
+                        color: controller.canDelete ? context.colorScheme.iconDefault : context.colorScheme.iconDisabled,
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               );
             },
           ),

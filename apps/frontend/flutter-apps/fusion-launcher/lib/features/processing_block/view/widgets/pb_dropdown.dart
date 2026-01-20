@@ -56,29 +56,32 @@ class PBDropdown<T> extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.all(8.0),
-      child: FusionContainer(
-        raised: true,
-        color: context.colorScheme.elevation2,
-        child: ClipRRect(
-          borderRadius: BorderRadiusGeometry.circular(_bRadius),
-          child: Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: PopupMenuButton<T>(
-              // color: context.colorScheme.elevation2,
-              elevation: 1,
-              position: PopupMenuPosition.under,
-              itemBuilder: itemBuilder,
-              onSelected: onChanged,
-              child: Padding(
-                padding: const EdgeInsets.only(left: 10),
-                child: Row(
-                  children: <Widget>[
-                    Expanded(child: FusionAppText(text: value ?? hintText, maxLine: 1)),
-                    const Icon(Icons.keyboard_arrow_down),
-                  ],
-                ),
+    return FusionContainer(
+      raised: true,
+      color: context.colorScheme.elevation2,
+      child: ClipRRect(
+        borderRadius: BorderRadiusGeometry.circular(_bRadius),
+        child: Padding(
+          padding: const EdgeInsets.all(8.0),
+          child: PopupMenuButton<T>(
+            // color: context.colorScheme.elevation2,
+            elevation: 1,
+            position: PopupMenuPosition.under,
+            itemBuilder: itemBuilder,
+            onSelected: onChanged,
+            child: Padding(
+              padding: const EdgeInsets.only(left: 10),
+              child: Row(
+                children: <Widget>[
+                  Expanded(
+                    child: FusionAppText(
+                      text: value ?? hintText,
+                      maxLine: 1,
+                      style: context.textTheme.bodySmall,
+                    ),
+                  ),
+                  const Icon(Icons.keyboard_arrow_down),
+                ],
               ),
             ),
           ),
