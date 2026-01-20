@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
-class DashboardPage extends StatelessWidget {
-  const DashboardPage({super.key});
+class SettingsPage extends StatelessWidget {
+  const SettingsPage({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -11,14 +11,14 @@ class DashboardPage extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Dashboard',
+            'Settings',
             style: Theme.of(
               context,
             ).textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 16),
           Text(
-            'This is the main Dashboard page. Welcome to the application!',
+            'This is a Settings page',
             style: Theme.of(context).textTheme.bodyLarge,
           ),
         ],

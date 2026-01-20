@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:fusion_lib/fusion_theme/app_theme.dart';
-import 'package:fusion_web/features/dashboard/presentation/pages/dashboard_page.dart';
+import 'package:fusion_web/core/navigation/app_router.dart';
+import 'package:fusion_web/core/constants/app_constants.dart';
 
 void main() {
   runApp(const MyApp());
@@ -9,17 +10,16 @@ void main() {
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
-  // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Fusion Web',
+      title: AppConstants.appName,
       debugShowCheckedModeBanner: false,
       theme: FusionAppTheme.lightTheme,
       darkTheme: FusionAppTheme.darkTheme,
       themeMode: ThemeMode.light,
-
-      home: const DashboardPage(),
+      onGenerateRoute: AppRouter.generateRoute,
+      initialRoute: AppConstants.dashboardRoute,
     );
   }
 }
