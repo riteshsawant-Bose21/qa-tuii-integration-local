@@ -21,8 +21,8 @@ class FusionContainer extends StatelessWidget {
   final AlignmentGeometry? alignment;
   @override
   Widget build(BuildContext context) {
-    final container = AnimatedContainer(
-      duration: const Duration(milliseconds: 200),
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 100),
       width: width,
       height: height,
       alignment: alignment,
@@ -52,14 +52,5 @@ class FusionContainer extends StatelessWidget {
         child: child,
       ),
     );
-
-    if (raised) {
-      return container;
-    } else {
-      return ClipRRect(
-        borderRadius: BorderRadius.circular(borderRadius),
-        child: container,
-      );
-    }
   }
 }

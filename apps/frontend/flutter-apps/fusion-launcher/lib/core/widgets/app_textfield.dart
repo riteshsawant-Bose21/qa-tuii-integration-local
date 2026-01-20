@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:fusion_launcher/core/theme/app_theme.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
 import 'app_text_view.dart';
@@ -110,7 +109,7 @@ class _AppTextFieldState extends State<AppTextField> {
                 obscureText: widget.obscureText,
                 initialValue: widget.value,
                 decoration: InputDecoration(
-                  fillColor: Theme.of(context).colorScheme.softGrey.withValues(alpha: 0.8),
+                  fillColor: Theme.of(context).colorScheme.elevation2.withValues(alpha: 0.8),
                   filled: true,
                   hintText: widget.hintText,
                   suffixIcon: widget.suffixIcon,

@@ -212,6 +212,7 @@ extension ColorExtends on ColorScheme {
   static const Color _expressiveShadowLightD = Color(0xFFFFFFFF);
   static const Color _expressiveShadowDarkL = Color(0xFF000000);
   static const Color _expressiveShadowLightL = Color(0xFFFFFFFF);
+
   // Commission Colors
   static const Color _cardDarkL = const Color(0xFF111111);
   static const Color _cardDarkD = const Color(0xFFFFFFFF);
@@ -335,6 +336,7 @@ extension ColorExtends on ColorScheme {
 
   // Commission Colors
   Color get cardDark => isDarkMode ? _cardDarkD : _cardDarkL;
+  Color get greyLight => isDarkMode ? _cardDarkD : _cardDarkL;
   Color get borderGrey => isDarkMode ? _borderGreyD : _borderGreyL;
   Color get textGrey => isDarkMode ? _textGreyD : _textGreyL;
 
