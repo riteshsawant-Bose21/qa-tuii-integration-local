@@ -462,25 +462,6 @@ static bool nl_set_phc_anchor(NetlinkClient& c, uint64_t phc_ns_at_pps) {
     return reply.err == 0;
 }
 
-static bool nl_get_phc_status(NetlinkClient& c, fc_get_phc_status_reply* out) {
-    if (!out) return false;
-    fusion_cn_ctrl_msg reply{};
-    if (!c.send_message(FUSION_CN_CTRL_CMD_GET_PHC_STATUS, nullptr, 0, &reply)) return false;
-    if (reply.err != 0) {
-        SPDLOG_ERROR("GET_PHC_STATUS err={}", reply.err);
-        if (reply.data) free(reply.data);
-        return false;
-    }
-    if (reply.data_size != sizeof(fc_get_phc_status_reply) || !reply.data) {
-        SPDLOG_ERROR("GET_PHC_STATUS bad payload size={}", reply.data_size);
-        if (reply.data) free(reply.data);
-        return false;
-    }
-    memcpy(out, reply.data, sizeof(*out));
-    if (reply.data) free(reply.data);
-    return true;
-}
-
 static bool nl_set_debug(NetlinkClient& c, bool enable) {
     fusion_cn_ctrl_msg reply{};
     uint8_t v = enable ? 1 : 0;
@@ -499,6 +480,34 @@ static bool nl_set_eth_iface(NetlinkClient& c, const std::string& iface) {
     if (reply.err != 0) SPDLOG_ERROR("SET_ETH_IFACE({}) err={}", iface, reply.err);
     if (reply.data) free(reply.data);
     return reply.err == 0;
+}
+
+struct fc_get_phc_status_reply
+{
+    bool epoch_valid;
+    bool aligned;
+    uint32_t pps_seq;
+} __attribute__((packed));
+
+static bool nl_get_phc_status(NetlinkClient& c, fc_get_phc_status_reply *out)
+{
+    if (!out) return false;
+    fusion_cn_ctrl_msg reply{};
+    if (!c.send_message(FUSION_CN_CTRL_CMD_GET_PHC_STATUS, nullptr, 0, &reply)) return false;
+    if (reply.err != 0) {
+        SPDLOG_ERROR("GET_PHC_STATUS err={}", reply.err);
+        if (reply.data) free(reply.data);
+        return false;
+    }
+    if (reply.data_size != sizeof(*out) || !reply.data) {
+        SPDLOG_ERROR("GET_PHC_STATUS bad payload size={} data={}",
+                     reply.data_size, reply.data ? "present" : "null");
+        if (reply.data) free(reply.data);
+        return false;
+    }
+    memcpy(out, reply.data, sizeof(*out));
+    if (reply.data) free(reply.data);
+    return true;
 }
 
 static bool read_phc_ns(uint64_t *out_ns)
@@ -538,6 +547,7 @@ static bool poll_time_status_np(bool *gm_present, bool *gm_present_valid,
     if (!fp) return false;
 
     char buf[512];
+    bool found_any = false;
     auto trim = [](std::string s){
         const char* ws = " \t\r\n";
         size_t a = s.find_first_not_of(ws);
@@ -554,9 +564,11 @@ static bool poll_time_status_np(bool *gm_present, bool *gm_present_valid,
             if (v.find("true") != std::string::npos) {
                 *gm_present = true;
                 *gm_present_valid = true;
+                found_any = true;
             } else if (v.find("false") != std::string::npos) {
                 *gm_present = false;
                 *gm_present_valid = true;
+                found_any = true;
             }
         }
 
@@ -570,11 +582,20 @@ static bool poll_time_status_np(bool *gm_present, bool *gm_present_valid,
             if (errno == 0 && endp != s) {
                 *master_offset = val;
                 *master_offset_valid = true;
+                found_any = true;
             }
         }
     }
 
-    pclose(fp);
+    int rc = pclose(fp);
+    if (rc != 0) {
+        SPDLOG_WARN("pmc GET TIME_STATUS_NP exited with status {}", rc);
+        return false;
+    }
+    if (!found_any) {
+        SPDLOG_WARN("pmc GET TIME_STATUS_NP returned no usable fields");
+        return false;
+    }
     return true;
 }
 
@@ -1247,7 +1268,10 @@ void FusionConnectClient::update_ptp_state()
     bool gm_present_valid = false;
     long long master_offset = 0;
     bool master_offset_valid = false;
-    poll_time_status_np(&gm_present, &gm_present_valid, &master_offset, &master_offset_valid);
+    if (!poll_time_status_np(&gm_present, &gm_present_valid, &master_offset, &master_offset_valid)) {
+        SPDLOG_WARN("PTP status poll failed; keeping previous sync state");
+        return;
+    }
 
     if (gm_present_valid) {
         if (gm_present) {
@@ -1295,26 +1319,22 @@ void FusionConnectClient::maybe_set_phc_anchor()
 {
     constexpr uint64_t ONE_SEC_NS = 1000000000ULL;
     constexpr uint64_t MIN_LEAD_NS = 500000000ULL; // 500 ms
-    constexpr auto REANCHOR_INTERVAL = std::chrono::seconds(60);
-
+    constexpr auto MIN_ANCHOR_INTERVAL = std::chrono::seconds(5);
     if (!ptp_sync_good) return;
 
     const auto now = std::chrono::steady_clock::now();
 
-    if (now - ptp_last_status_poll > std::chrono::seconds(1)) {
-        fc_get_phc_status_reply st{};
-        if (nl_get_phc_status(client, &st)) {
-            if (!st.epoch_valid || !st.aligned) {
-                ptp_anchor_pending = true;
-            }
-            const uint32_t pps_seq = st.pps_seq;
-            SPDLOG_DEBUG("PHC status: epoch_valid={} aligned={} pps_seq={}",
-                         st.epoch_valid, st.aligned, pps_seq);
-        }
-        ptp_last_status_poll = now;
-    }
+    if (!ptp_anchor_pending) return;
+    if (now - ptp_last_anchor < MIN_ANCHOR_INTERVAL) return;
 
-    if (!ptp_anchor_pending && (now - ptp_last_anchor < REANCHOR_INTERVAL)) return;
+    fc_get_phc_status_reply st{};
+    if (nl_get_phc_status(client, &st)) {
+        if (st.epoch_valid) {
+            ptp_anchor_pending = false;
+            SPDLOG_DEBUG("PHC anchor already valid (aligned={}); skipping re-arm", st.aligned);
+            return;
+        }
+    }
 
     uint64_t phc_ns = 0;
     if (!read_phc_ns(&phc_ns)) return;
