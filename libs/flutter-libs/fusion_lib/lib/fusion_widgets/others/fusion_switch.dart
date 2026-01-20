@@ -81,7 +81,7 @@ class _FusionSwitchState extends State<FusionSwitch> with SingleTickerProviderSt
 
     _thumbColorAnimation = ColorTween(
       begin: widget.inactiveThumbColor ?? context.colorScheme.elevation3,
-      end: widget.activeThumbColor ?? context.colorScheme.primaryWhite,
+      end: widget.activeThumbColor ?? Colors.grey.shade200, //context.colorScheme.primaryWhite,
     ).animate(_animationController);
   }
 
@@ -171,6 +171,8 @@ class _FusionSwitchState extends State<FusionSwitch> with SingleTickerProviderSt
     final trackWidth = widget.width;
     final trackHeight = widget.height;
 
+    final padding = trackHeight - thumbHeight;
+
     return GestureDetector(
       onTap: _onTap,
       onPanStart: _onPanStart,
@@ -182,7 +184,7 @@ class _FusionSwitchState extends State<FusionSwitch> with SingleTickerProviderSt
         child: AnimatedBuilder(
           animation: _animationController,
           builder: (context, child) {
-            final thumbPosition = _positionAnimation.value * (trackWidth - thumbWidth - 8); // 8 for padding (4px on each side)
+            final thumbPosition = _positionAnimation.value * (trackWidth - thumbWidth - (padding / 2)); // 8 for padding (4px on each side)
 
             return Stack(
               children: [
@@ -202,15 +204,18 @@ class _FusionSwitchState extends State<FusionSwitch> with SingleTickerProviderSt
                 ),
                 // Thumb
                 Positioned(
-                  left: 4 + thumbPosition, // 4px padding from left
-                  top: 3, // 4px padding from top
+                  left: (padding / 2) + thumbPosition, // 4px padding from left
+                  top: padding / 2, // 4px padding from top
                   child: AnimatedSize(
                     duration: const Duration(milliseconds: 100),
                     curve: Curves.elasticInOut,
-                    child: FusionContainer(
-                      raised: true,
-                      borderRadius: min(thumbHeight, thumbWidth) / 4,
-                      color: _thumbColorAnimation.value,
+                    child: Container(
+                      // raised: true,
+                      // borderRadius: min(thumbHeight, thumbWidth) / 4,
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(min(thumbHeight, thumbWidth) / 4),
+                        color: _thumbColorAnimation.value,
+                      ),
                       child: SizedBox(
                         width: thumbWidth,
                         height: thumbHeight,
