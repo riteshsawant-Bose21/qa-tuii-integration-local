@@ -231,10 +231,10 @@ class _FusionDockableAreaState extends State<FusionDockableArea> {
               child: LayoutBuilder(
                 builder: (BuildContext context, BoxConstraints constraints) {
                   return Container(
+                    clipBehavior: Clip.hardEdge,
+
                     margin: const EdgeInsets.symmetric(horizontal: 2, vertical: 4),
                     decoration: BoxDecoration(
-                      color: context.colorScheme.primaryWhite,
-                      // border: Border.all(color: context.colorScheme.elevation2, width: 1),
                       borderRadius: const BorderRadius.all(Radius.circular(12)),
                     ),
                     width: constraints.maxWidth,

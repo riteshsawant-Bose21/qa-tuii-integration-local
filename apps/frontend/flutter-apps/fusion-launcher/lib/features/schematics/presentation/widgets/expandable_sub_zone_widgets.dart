@@ -141,7 +141,6 @@ class _ExpandableSubZoneWidgetState extends State<ExpandableSubZoneWidget> {
   /// SubZone content - properl    _isSubZoneExpanded.value = true; // <-- Corrected to use the correct variableReorderableListView
   Widget _buildSubZoneContent() {
     if (widget.subZoneCircuit.isEmpty) {
-      print("no devices in subzone ${widget.subZoneId}");
       return Container(
         color: context.colorScheme.primaryBlack.withAlpha(50),
         padding: const EdgeInsets.only(left: 46, right: 8, top: 8, bottom: 8),
