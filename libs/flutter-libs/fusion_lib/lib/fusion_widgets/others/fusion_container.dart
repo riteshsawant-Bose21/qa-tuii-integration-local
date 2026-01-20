@@ -17,20 +17,26 @@ class FusionContainer extends StatelessWidget {
   final Color? color;
   @override
   Widget build(BuildContext context) {
-    final container = Container(
+    final container = AnimatedContainer(
+      duration: const Duration(milliseconds: 200),
       width: width,
       margin: const EdgeInsets.all(2),
       decoration: BoxDecoration(
         // color: context.colorScheme.shadowDark,
         boxShadow: raised
             ? <BoxShadow>[
-                BoxShadow(color: context.colorScheme.shadowLight.withAlpha((0.1 * 255).toInt()), blurRadius: 2, offset: const Offset(-2, -2)),
-                BoxShadow(color: context.colorScheme.shadowDark.withValues(alpha: 0.84), blurRadius: 4, offset: const Offset(2, 2)),
+                BoxShadow(color: context.colorScheme.shadowLight, blurRadius: 2, offset: const Offset(-2, -2)),
+                BoxShadow(color: context.colorScheme.shadowDark, blurRadius: 4, offset: const Offset(2, 2)),
                 BoxShadow(color: color ?? context.colorScheme.elevation1),
               ]
             : <BoxShadow>[
-                const BoxShadow(color: Colors.black54, blurRadius: 1, offset: Offset(-2, -2), blurStyle: BlurStyle.inner),
-                const BoxShadow(color: Colors.white12, blurRadius: 1, offset: Offset(2, 2), blurStyle: BlurStyle.inner),
+                BoxShadow(color: context.colorScheme.shadowDark, blurRadius: 1, offset: Offset(-2, -2), blurStyle: BlurStyle.inner),
+                BoxShadow(
+                  color: context.colorScheme.shadowLight,
+                  blurRadius: 1,
+                  offset: Offset(2, 2),
+                  blurStyle: BlurStyle.inner,
+                ),
                 BoxShadow(color: color ?? context.colorScheme.elevation1, blurRadius: 4, blurStyle: BlurStyle.inner),
               ],
         borderRadius: BorderRadius.circular(borderRadius),

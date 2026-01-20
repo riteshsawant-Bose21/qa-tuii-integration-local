@@ -45,9 +45,9 @@ class FusionDockSidebar extends StatelessWidget {
           testId: SemanticHelper.createTestId(SemanticTypes.container, side == "left" ? FusionTestKeys.dockLeftSideBar : FusionTestKeys.dockRightSideBar),
           child: Container(
             width: 240,
+            clipBehavior: Clip.hardEdge,
             height: double.infinity,
             margin: const EdgeInsets.symmetric(horizontal: 1, vertical: 4),
-
             decoration: BoxDecoration(
               color: hasIncomingData ? const Color(0xFF80C7FF) : context.colorScheme.elevation1,
               border: Border.all(color: context.colorScheme.elevation2, width: 1),

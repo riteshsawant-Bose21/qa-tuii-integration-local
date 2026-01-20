@@ -94,19 +94,12 @@ class _SubZoneCardState extends State<SubZoneCard> {
         padding: const EdgeInsets.only(left: 12, right: 12),
         height: 32,
         decoration: BoxDecoration(
-          color: isHovered ? context.colorScheme.primaryBlack.withAlpha(200) : context.colorScheme.primaryBlack.withAlpha(110),
-          border: Border.all(
-            // color: /*isSelected ? context.colorScheme.primaryBlack :*/ Colors.transparent,
-            color: Colors.transparent,
-          ),
+          color: isHovered ? context.colorScheme.elevation3 : context.colorScheme.elevation2,
         ),
         child: Row(
           children: <Widget>[
             /// Expand/collapse icon
-            Icon(
-              expanded ? Icons.arrow_drop_up_rounded : Icons.arrow_drop_down_rounded,
-              color: Theme.of(context).colorScheme.textPrimary.withAlpha(90),
-            ),
+            Icon(expanded ? Icons.arrow_drop_up_rounded : Icons.arrow_drop_down_rounded, color: Theme.of(context).colorScheme.primaryWhite),
             const SizedBox(width: 6),
 
             /// Sub Zone icon
@@ -133,10 +126,11 @@ class _SubZoneCardState extends State<SubZoneCard> {
               onTap: () {
                 ProcessingChainView.showForSubzone(context, widget.subZoneData);
               },
-              child: const FusionImage.asset(
+              child: FusionImage.asset(
                 Assets.processingBlocksFilledIcon,
                 width: 24,
                 height: 24,
+                assetColor: context.colorScheme.primaryWhite,
                 fit: BoxFit.contain,
               ),
             ),
@@ -156,7 +150,6 @@ class _SubZoneCardState extends State<SubZoneCard> {
           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
             fontSize: 12,
             fontWeight: FontWeight.w500,
-            color: Theme.of(context).colorScheme.onSurfaceVariant,
           ),
         ),
       ),

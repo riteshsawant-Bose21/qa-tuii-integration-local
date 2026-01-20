@@ -14,57 +14,74 @@ class ProcessingBlockModel {
   /// Output processing blocks
   /// "peq", "gain", "delay", "limiter"
 
+  static final delay = ProcessingBlockModel(
+    id: 'delay',
+    name: 'Delay',
+    algorithmId: "delay",
+  );
+  static final limiter = ProcessingBlockModel(
+    id: 'limiter',
+    name: 'Limiter',
+    algorithmId: "limiter",
+  );
+  static final feedbackSuppression = ProcessingBlockModel(
+    id: 'feedback_suppression',
+    name: 'Feedback Suppression',
+    algorithmId: "feedback_suppression",
+  );
+  static final gate = ProcessingBlockModel(
+    id: 'gate',
+    name: 'Gate',
+    algorithmId: "gate",
+  );
+  static final ducker = ProcessingBlockModel(
+    id: 'ducker',
+    name: 'Ducker',
+    algorithmId: "ducker",
+  );
+  static final toneControl = ProcessingBlockModel(
+    id: 'tone_control',
+    name: 'Tone Control',
+    algorithmId: "tone_control",
+  );
+  static final graphicEq = ProcessingBlockModel(
+    id: 'graphic_eq',
+    name: 'Graphic EQ',
+    algorithmId: "graphic_eq",
+  );
+
+  static final compressor = ProcessingBlockModel(
+    id: 'compressor',
+    name: 'Compressor',
+    algorithmId: "compressor",
+  );
+  static final agc = ProcessingBlockModel(
+    id: 'agc',
+    name: 'AGC',
+    algorithmId: "agc",
+  );
+  static final gain = ProcessingBlockModel(
+    id: 'gain',
+    name: 'Gain',
+    algorithmId: "gain",
+  );
+  static final peq = ProcessingBlockModel(
+    id: 'peq',
+    name: 'PEQ',
+    algorithmId: "peq",
+  );
+
   static final List<ProcessingBlockModel> sourceBlocks = <ProcessingBlockModel>[
-    ProcessingBlockModel(
-      id: 'delay',
-      name: 'Delay',
-      algorithmId: "delay",
-    ),
-    ProcessingBlockModel(
-      id: 'agc',
-      name: 'AGC',
-      algorithmId: "agc",
-    ),
-    ProcessingBlockModel(
-      id: 'compressor',
-      name: 'Compressor',
-      algorithmId: "compressor",
-    ),
-    ProcessingBlockModel(
-      id: 'limiter',
-      name: 'Limiter',
-      algorithmId: "limiter",
-    ),
-    ProcessingBlockModel(
-      id: 'gate',
-      name: 'Gate',
-      algorithmId: "gate",
-    ),
-    ProcessingBlockModel(
-      id: 'graphic_eq',
-      name: 'Graphic EQ',
-      algorithmId: "graphic_eq",
-    ),
-    ProcessingBlockModel(
-      id: 'peq',
-      name: 'PEQ',
-      algorithmId: "peq",
-    ),
-    ProcessingBlockModel(
-      id: 'tone_control',
-      name: 'Tone Control',
-      algorithmId: "tone_control",
-    ),
-    ProcessingBlockModel(
-      id: 'feedback_suppression',
-      name: 'Feedback Suppression',
-      algorithmId: "feedback_suppression",
-    ),
-    ProcessingBlockModel(
-      id: 'gain',
-      name: 'Gain',
-      algorithmId: "gain",
-    ),
+    delay,
+    agc,
+    compressor,
+    limiter,
+    gate,
+    graphicEq,
+    peq,
+    toneControl,
+    feedbackSuppression,
+    gain,
   ];
 
   static final List<ProcessingBlockModel> zoneBlocks = <ProcessingBlockModel>[
@@ -238,6 +255,16 @@ class ProcessingBlockModel {
     } else {
       properties.add(newProperty);
     }
+    return this;
+  }
+
+  ProcessingBlockModel addProperty(PropertySetting property) {
+    properties.removeWhere((PropertySetting p) => p.name == property.name && p.dimension == property.dimension);
+    properties.add(property);
+    return this;
+  }
+  ProcessingBlockModel removeProperty(PropertySetting property) {
+    properties.removeWhere((PropertySetting p) => p.name == property.name && p.dimension == property.dimension);
     return this;
   }
 

@@ -260,7 +260,11 @@ class _ConfigurationProcessingPageState extends State<ConfigurationProcessingPag
                             color: Theme.of(context).colorScheme.primary.withOpacity(0.3),
                             width: 2,
                           )
-                          : null,
+                          : Border.symmetric(
+                            vertical: BorderSide(color: context.colorScheme.elevation2, width: 1),
+                            // color: Theme.of(context).colorScheme.elevation2,
+                            // width: 1,
+                          ),
                 ),
                 child: BlocBuilder<ProjectViewModel, ProjectViewModelState>(
                   builder: (BuildContext context, ProjectViewModelState state) {
@@ -414,115 +418,122 @@ class _ConfigurationProcessingPageState extends State<ConfigurationProcessingPag
 
           /// Source sets section takes remaining space
           Expanded(
-            child: BlocBuilder<ProjectViewModel, ProjectViewModelState>(
-              builder: (BuildContext context, ProjectViewModelState state) {
-                if (_projectViewModel.sourceSets.isEmpty) {
-                  /// Show informational text when no source sets exist
-                  return SingleChildScrollView(
-                    child: Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: <Widget>[
-                          FusionAppText(
-                            text: 'Create Source Sets',
-                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w500,
+            child: Container(
+              decoration: BoxDecoration(
+                border: Border.symmetric(
+                  vertical: BorderSide(color: context.colorScheme.elevation2, width: 1),
+                ),
+              ),
+              child: BlocBuilder<ProjectViewModel, ProjectViewModelState>(
+                builder: (BuildContext context, ProjectViewModelState state) {
+                  if (_projectViewModel.sourceSets.isEmpty) {
+                    /// Show informational text when no source sets exist
+                    return SingleChildScrollView(
+                      child: Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: <Widget>[
+                            FusionAppText(
+                              text: 'Create Source Sets',
+                              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w500,
+                              ),
                             ),
-                          ),
-                          const SizedBox(height: 8),
-                          FusionAppText(
-                            text: 'Combine multiple audio sources into a single source set for simplified routing and control.',
+                            const SizedBox(height: 8),
+                            FusionAppText(
+                              text: 'Combine multiple audio sources into a single source set for simplified routing and control.',
 
-                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              fontSize: 10,
-                              fontWeight: FontWeight.w400,
+                              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                fontSize: 10,
+                                fontWeight: FontWeight.w400,
+                              ),
                             ),
-                          ),
 
-                          const SizedBox(height: 8),
-                          FusionAppText(
-                            text:
-                                'Select from available sources, group them as needed, and assign a clear name to the set. Source sets help streamline system configuration and enable flexible audio distribution.',
-                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              fontSize: 10,
-                              fontWeight: FontWeight.w400,
+                            const SizedBox(height: 8),
+                            FusionAppText(
+                              text:
+                                  'Select from available sources, group them as needed, and assign a clear name to the set. Source sets help streamline system configuration and enable flexible audio distribution.',
+                              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                fontSize: 10,
+                                fontWeight: FontWeight.w400,
+                              ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
+                    );
+                  }
+                  return Container(
+                    clipBehavior: Clip.none,
+                    child: ReorderableListView.builder(
+                      shrinkWrap: true,
+                      proxyDecorator: (Widget child, int index, Animation<double> animation) {
+                        return Material(
+                          color: context.colorScheme.elevation1,
+                          child: SizedBox(
+                            width: 220,
+                            child: child,
+                          ),
+                        );
+                      },
+                      physics: const ClampingScrollPhysics(),
+                      buildDefaultDragHandles: false,
+                      itemCount: _projectViewModel.sourceSets.length,
+                      onReorder: (int oldIndex, int newIndex) {
+                        if (oldIndex < newIndex) {
+                          newIndex -= 1;
+                        }
+                        final String sourceSetToMove = _projectViewModel.sourceSets[oldIndex].id;
+                        final String sourceSetAtNewIndex = _projectViewModel.sourceSets[newIndex].id;
+                        _projectViewModel.reOrderSourceSet(sourceSetIdToMove: sourceSetToMove, sourceSetAtNewIndex: sourceSetAtNewIndex);
+                      },
+                      itemBuilder: (BuildContext context, int index) {
+                        final SourceSet sourceSet = _projectViewModel.sourceSets[index];
+
+                        /// Create or get the GlobalKey for this source set
+                        _sourceSetKeys.putIfAbsent(sourceSet.id, () => GlobalKey());
+                        final GlobalKey<State<StatefulWidget>> sourceSetKey = _sourceSetKeys[sourceSet.id]!;
+
+                        return DragTarget<Source>(
+                          key: ValueKey<String>(sourceSet.id),
+                          onWillAccept: (Source? data) {
+                            if (data == null) return false;
+
+                            /// Check if source is not already in this source set
+                            final List<Source> sourcesInSet = _projectViewModel.getSourcesInSourceSet(sourceSetId: sourceSet.id);
+                            return !sourcesInSet.any((Source source) => source.id == data.id);
+                          },
+                          onLeave: (Source? data) {},
+                          onAccept: (Source data) {
+                            _projectViewModel.addSourceToSourceSet(sourceId: data.id, sourceSetId: sourceSet.id);
+
+                            /// Expand the source set after dropping
+                            final dynamic sourceSetState = sourceSetKey.currentState as dynamic;
+                            sourceSetState?.expandSourceSet();
+
+                            setState(() {
+                              _draggingSourceId = null;
+                            });
+                          },
+                          builder: (BuildContext context, List<Source?> candidateData, List<dynamic> rejectedData) {
+                            final bool isHovered = candidateData.isNotEmpty;
+                            return ReorderableDragStartListener(
+                              index: index,
+                              child: SourceSetItem(
+                                key: sourceSetKey,
+                                sourceSet: sourceSet,
+                                isDragHovered: isHovered,
+                              ),
+                            );
+                          },
+                        );
+                      },
                     ),
                   );
-                }
-                return Container(
-                  clipBehavior: Clip.none,
-                  child: ReorderableListView.builder(
-                    shrinkWrap: true,
-                    proxyDecorator: (Widget child, int index, Animation<double> animation) {
-                      return Material(
-                        color: context.colorScheme.primaryBlack,
-                        child: SizedBox(
-                          width: 220,
-                          child: child,
-                        ),
-                      );
-                    },
-                    physics: const ClampingScrollPhysics(),
-                    buildDefaultDragHandles: false,
-                    itemCount: _projectViewModel.sourceSets.length,
-                    onReorder: (int oldIndex, int newIndex) {
-                      if (oldIndex < newIndex) {
-                        newIndex -= 1;
-                      }
-                      final String sourceSetToMove = _projectViewModel.sourceSets[oldIndex].id;
-                      final String sourceSetAtNewIndex = _projectViewModel.sourceSets[newIndex].id;
-                      _projectViewModel.reOrderSourceSet(sourceSetIdToMove: sourceSetToMove, sourceSetAtNewIndex: sourceSetAtNewIndex);
-                    },
-                    itemBuilder: (BuildContext context, int index) {
-                      final SourceSet sourceSet = _projectViewModel.sourceSets[index];
-
-                      /// Create or get the GlobalKey for this source set
-                      _sourceSetKeys.putIfAbsent(sourceSet.id, () => GlobalKey());
-                      final GlobalKey<State<StatefulWidget>> sourceSetKey = _sourceSetKeys[sourceSet.id]!;
-
-                      return DragTarget<Source>(
-                        key: ValueKey<String>(sourceSet.id),
-                        onWillAccept: (Source? data) {
-                          if (data == null) return false;
-
-                          /// Check if source is not already in this source set
-                          final List<Source> sourcesInSet = _projectViewModel.getSourcesInSourceSet(sourceSetId: sourceSet.id);
-                          return !sourcesInSet.any((Source source) => source.id == data.id);
-                        },
-                        onLeave: (Source? data) {},
-                        onAccept: (Source data) {
-                          _projectViewModel.addSourceToSourceSet(sourceId: data.id, sourceSetId: sourceSet.id);
-
-                          /// Expand the source set after dropping
-                          final dynamic sourceSetState = sourceSetKey.currentState as dynamic;
-                          sourceSetState?.expandSourceSet();
-
-                          setState(() {
-                            _draggingSourceId = null;
-                          });
-                        },
-                        builder: (BuildContext context, List<Source?> candidateData, List<dynamic> rejectedData) {
-                          final bool isHovered = candidateData.isNotEmpty;
-                          return ReorderableDragStartListener(
-                            index: index,
-                            child: SourceSetItem(
-                              key: sourceSetKey,
-                              sourceSet: sourceSet,
-                              isDragHovered: isHovered,
-                            ),
-                          );
-                        },
-                      );
-                    },
-                  ),
-                );
-              },
+                },
+              ),
             ),
           ),
         ],
@@ -565,12 +576,14 @@ class _ConfigurationProcessingPageState extends State<ConfigurationProcessingPag
       decoration: BoxDecoration(
         color: context.colorScheme.elevation1,
         borderRadius: const BorderRadius.all(Radius.circular(12)),
+        border: Border(
+          left: BorderSide(color: context.colorScheme.elevation2, width: 1),
+          right: BorderSide(color: context.colorScheme.elevation2, width: 1),
+          bottom: BorderSide(color: context.colorScheme.elevation2, width: 1),
+        ),
       ),
       child: Column(
         children: <Widget>[
-          /// Output Panel Header
-          // const PanelHeader(title: 'OUTPUT'),
-
           /// Zones Section
           const SectionHeader(
             title: 'Zones',
