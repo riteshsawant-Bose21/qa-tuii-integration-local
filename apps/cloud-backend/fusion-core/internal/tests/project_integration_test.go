@@ -1247,7 +1247,7 @@ func (suite *ProjectIntegrationTestSuite) TestArchivedProjectRestrictions() {
 		lockRequest := types.ProjectLockRequest{IsLocked: true}
 		w, err = suite.makeRequest("POST", "/api/v1/projects/"+projectID+"/lock?"+userID, lockRequest)
 		require.NoError(t, err)
-		assert.Equal(t, http.StatusInternalServerError, w.Code)
+		assert.Equal(t, http.StatusForbidden, w.Code)
 
 		// Unarchive should work
 		unarchiveRequest := types.ProjectArchiveRequest{Archive: false}
