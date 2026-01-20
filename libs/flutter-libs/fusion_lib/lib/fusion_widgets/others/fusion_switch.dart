@@ -14,6 +14,11 @@ class FusionSwitch extends StatefulWidget {
   final Color? activeThumbColor;
   final Color? inactiveThumbColor;
 
+  ///
+  /// [radiusFactor] Value should be between 0.0 and 1 where 0.0 means no rounding and 1 means fully rounded corners.
+  ///
+  final double radiusFactor;
+
   const FusionSwitch({
     super.key,
     required this.value,
@@ -24,6 +29,7 @@ class FusionSwitch extends StatefulWidget {
     this.inactiveTrackColor,
     this.activeThumbColor,
     this.inactiveThumbColor,
+    this.radiusFactor = 0.25,
   });
 
   @override
@@ -173,6 +179,8 @@ class _FusionSwitchState extends State<FusionSwitch> with SingleTickerProviderSt
 
     final padding = trackHeight - thumbHeight;
 
+    final radius = min(thumbHeight, thumbWidth) * widget.radiusFactor;
+
     return GestureDetector(
       onTap: _onTap,
       onPanStart: _onPanStart,
@@ -191,7 +199,7 @@ class _FusionSwitchState extends State<FusionSwitch> with SingleTickerProviderSt
                 // Track
                 FusionContainer(
                   width: trackWidth,
-                  borderRadius: min(thumbHeight, thumbWidth) / 4,
+                  borderRadius: radius,
                   // height: trackHeight,
                   // decoration: BoxDecoration(
                   color: _trackColorAnimation.value,
@@ -213,7 +221,7 @@ class _FusionSwitchState extends State<FusionSwitch> with SingleTickerProviderSt
                       // raised: true,
                       // borderRadius: min(thumbHeight, thumbWidth) / 4,
                       decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(min(thumbHeight, thumbWidth) / 4),
+                        borderRadius: BorderRadius.circular(radius),
                         color: _thumbColorAnimation.value,
                       ),
                       child: SizedBox(
