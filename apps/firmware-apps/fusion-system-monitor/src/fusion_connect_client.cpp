@@ -482,13 +482,6 @@ static bool nl_set_eth_iface(NetlinkClient& c, const std::string& iface) {
     return reply.err == 0;
 }
 
-struct fc_get_phc_status_reply
-{
-    bool epoch_valid;
-    bool aligned;
-    uint32_t pps_seq;
-} __attribute__((packed));
-
 static bool nl_get_phc_status(NetlinkClient& c, fc_get_phc_status_reply *out)
 {
     if (!out) return false;
