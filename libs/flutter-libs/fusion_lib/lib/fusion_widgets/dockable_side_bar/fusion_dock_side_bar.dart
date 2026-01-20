@@ -51,7 +51,7 @@ class FusionDockSidebar extends StatelessWidget {
             decoration: BoxDecoration(
               color: hasIncomingData ? const Color(0xFF80C7FF) : context.colorScheme.elevation1,
               border: Border.all(color: context.colorScheme.elevation2, width: 1),
-              borderRadius: const BorderRadius.all(Radius.circular(8)),
+              borderRadius: const BorderRadius.all(Radius.circular(12)),
               // border: Border(
               //   right: side == "left" ? BorderSide(color: Theme.of(context).colorScheme.primaryBlack, width: 1) : BorderSide.none,
               //   left: side == "right" ? BorderSide(color: Theme.of(context).colorScheme.primaryBlack, width: 1) : BorderSide.none,

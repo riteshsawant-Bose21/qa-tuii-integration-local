@@ -5,8 +5,9 @@ class SectionHeader extends StatelessWidget {
   final String title;
   final String? assetPath;
   final Widget? trailing;
+  final bool isRounded;
 
-  const SectionHeader({required this.title, this.trailing, super.key, this.assetPath});
+  const SectionHeader({required this.title, this.trailing, super.key, this.assetPath, this.isRounded = true});
 
   @override
   Widget build(BuildContext context) {
@@ -17,8 +18,16 @@ class SectionHeader extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
         decoration: BoxDecoration(
           color: context.colorScheme.elevation1,
-          border: Border(
-            bottom: BorderSide(width: 1, color: context.colorScheme.elevation2),
+          borderRadius:
+              isRounded
+                  ? const BorderRadius.only(
+                    topLeft: Radius.circular(12),
+                    topRight: Radius.circular(12),
+                  )
+                  : null,
+          border: Border.all(
+            width: 1,
+            color: context.colorScheme.elevation2,
           ),
         ),
         child: Row(

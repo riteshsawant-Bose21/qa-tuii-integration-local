@@ -183,6 +183,8 @@ class _ConfigurationProcessingPageState extends State<ConfigurationProcessingPag
             return Row(
               children: <Widget>[
                 SizedBox(width: constraints.maxWidth * 0.3, child: _buildInputPanel(context)),
+                const SizedBox(width: 4),
+
                 Expanded(child: _buildOutputPanel()),
               ],
             );
@@ -202,12 +204,9 @@ class _ConfigurationProcessingPageState extends State<ConfigurationProcessingPag
   /// Build Input Panel
   Widget _buildInputPanel(BuildContext context) {
     return Container(
-      clipBehavior: Clip.hardEdge,
-      margin: const EdgeInsets.symmetric(horizontal: 1, vertical: 4),
       decoration: BoxDecoration(
         color: context.colorScheme.elevation1,
-        border: Border.all(color: context.colorScheme.elevation2, width: 1),
-        borderRadius: const BorderRadius.all(Radius.circular(8)),
+        borderRadius: const BorderRadius.all(Radius.circular(12)),
       ),
       child: Column(
         children: <Widget>[
@@ -340,6 +339,7 @@ class _ConfigurationProcessingPageState extends State<ConfigurationProcessingPag
 
           SectionHeader(
             title: 'Source Sets',
+            isRounded: false,
             assetPath: 'assets/images/source_set_icon.png',
             trailing: PopupMenuButton<dynamic>(
               onCanceled: () {
@@ -564,10 +564,7 @@ class _ConfigurationProcessingPageState extends State<ConfigurationProcessingPag
     return Container(
       decoration: BoxDecoration(
         color: context.colorScheme.elevation1,
-
-        border: Border(
-          left: BorderSide(width: 1, color: context.colorScheme.strokeDark),
-        ),
+        borderRadius: const BorderRadius.all(Radius.circular(12)),
       ),
       child: Column(
         children: <Widget>[
