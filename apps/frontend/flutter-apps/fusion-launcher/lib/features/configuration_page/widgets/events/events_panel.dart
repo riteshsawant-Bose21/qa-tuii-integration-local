@@ -41,7 +41,7 @@ class _EventsPanelState extends State<EventsPanel> {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.primaryWhite,
+        color: Theme.of(context).colorScheme.elevation1,
       ),
       child: Column(
         children: <Widget>[
@@ -138,7 +138,7 @@ class CreateSnapshotsOrScenesWidgetState extends State<CreateSnapshotsOrScenesWi
   @override
   Widget build(BuildContext context) {
     return Container(
-      color: Theme.of(context).colorScheme.primaryWhite,
+      color: Theme.of(context).colorScheme.elevation1,
       width: 250,
       padding: const EdgeInsets.all(12),
       child: Column(

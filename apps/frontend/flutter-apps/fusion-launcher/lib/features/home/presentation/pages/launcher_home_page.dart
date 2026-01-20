@@ -4,12 +4,12 @@ import 'package:fusion_launcher/core/router/routes.dart';
 import 'package:fusion_launcher/core/services/user_profile_manager.dart';
 import 'package:fusion_launcher/core/utils/fusion_utils.dart';
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
-import 'package:fusion_launcher/features/dashboard/presentation/widgets/home_tab_content.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/fusion_theme/fusion_theme_notifier.dart';
 
 import '../../../../core/service_locator.dart';
 import '../widgets/fusion_side_bar.dart';
+import '../widgets/home_tab_content.dart';
 import '../widgets/profile_tab_content.dart';
 import '../widgets/saved_projects_tab.dart';
 

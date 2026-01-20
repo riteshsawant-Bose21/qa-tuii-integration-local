@@ -1,6 +1,6 @@
 import 'dart:typed_data';
 
-import 'package:fusion_launcher/features/dashboard/domain/entities/get_projects_entity.dart';
+import 'package:fusion_launcher/features/home/domain/entities/get_projects_entity.dart';
 import 'package:fusion_lib/models/response_callback.dart';
 
 import '../entities/create_project_entity.dart';

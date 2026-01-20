@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:fusion_lib/fusion_lib.dart';
-import 'package:fusion_lib/fusion_widgets/semantics/semantic_helper.dart';
-import 'package:fusion_lib/fusion_widgets/semantics/semantic_type.dart';
 
 /// A customizable and reusable text field for the Fusion design system.
 ///

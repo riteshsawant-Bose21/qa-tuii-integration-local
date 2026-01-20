@@ -54,72 +54,66 @@ class _ConfigurationTabSwitcherState extends State<ConfigurationTabSwitcher> {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: 240,
-      decoration: BoxDecoration(
-        // color: colorSche,
-        border: Border(
-          right: BorderSide(color: context.colorScheme.primaryBlack),
-        ),
-      ),
-      child: Column(
-        children:
-            ConfigurationMenuMode.values.map((ConfigurationMenuMode mode) {
-              final TabConfig config = tabConfigs[mode]!;
-              final bool isSelected = widget.selectedMode == mode;
-              final bool isHovered = hoveredMode == mode;
+    return Column(
+      children:
+          ConfigurationMenuMode.values.map((ConfigurationMenuMode mode) {
+            final TabConfig config = tabConfigs[mode]!;
+            final bool isSelected = widget.selectedMode == mode;
+            final bool isHovered = hoveredMode == mode;
 
-              return MouseRegion(
-                onEnter: (_) => setState(() => hoveredMode = mode),
-                onExit: (_) => setState(() => hoveredMode = null),
-                child: SemanticHelper.button(
-                  testId: SemanticHelper.createTestId(SemanticTypes.button, "configuration_tab_switcher_${mode.name}"),
-                  child: GestureDetector(
-                    onTap: () => widget.onModeChanged(mode),
-                    child: Container(
-                      height: 32,
-
-                      margin: const EdgeInsets.only(top: 4),
-                      padding: const EdgeInsets.only(right: 16, left: 16, bottom: 4, top: 4),
-                      decoration: BoxDecoration(
-                        color:
-                            isSelected
-                                ? context.colorScheme.primaryBlack
-                                : isHovered
-                                ? context.colorScheme.primaryBlack.withAlpha(50)
-                                : Colors.transparent,
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Row(
-                        children: <Widget>[
-                          FusionImage.asset(
-                            config.assetsName,
-                            width: 24,
-                            height: 24,
+            return MouseRegion(
+              onEnter: (_) => setState(() => hoveredMode = mode),
+              onExit: (_) => setState(() => hoveredMode = null),
+              child: SemanticHelper.button(
+                testId: SemanticHelper.createTestId(SemanticTypes.button, "configuration_tab_switcher_${mode.name}"),
+                child: GestureDetector(
+                  onTap: () => widget.onModeChanged(mode),
+                  child: Container(
+                    height: 32,
+                    margin: const EdgeInsets.only(right: 8, left: 8, top: 8),
+                    padding: const EdgeInsets.only(right: 16, left: 16, top: 4, bottom: 4),
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      color:
+                          isSelected
+                              ? context.colorScheme.elevation4
+                              : isHovered
+                              ? context.colorScheme.elevation2
+                              : Colors.transparent,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      mainAxisAlignment: MainAxisAlignment.start,
+                      children: <Widget>[
+                        FusionImage.asset(
+                          config.assetsName,
+                          width: 24,
+                          height: 24,
+                          assetColor: context.colorScheme.primaryWhite,
+                        ),
+                        const SizedBox(width: 16),
+                        FusionAppText(
+                          text: config.label,
+                          maxLine: 1,
+                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            fontSize: 11,
+                            fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
+                            color:
+                                isSelected
+                                    ? context.colorScheme.primaryWhite
+                                    : isHovered
+                                    ? context.colorScheme.onSurface.withOpacity(0.9)
+                                    : context.colorScheme.onSurface.withOpacity(0.7),
                           ),
-                          const SizedBox(width: 16),
-                          FusionAppText(
-                            text: config.label,
-                            maxLine: 1,
-                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              fontSize: 11,
-                              fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
-                              color:
-                                  isSelected
-                                      ? context.colorScheme.onPrimaryContainer
-                                      : isHovered
-                                      ? context.colorScheme.onSurface.withOpacity(0.9)
-                                      : context.colorScheme.onSurface.withOpacity(0.7),
-                            ),
-                          ),
-                        ],
-                      ),
+                        ),
+                      ],
                     ),
                   ),
                 ),
-              );
-            }).toList(),
-      ),
+              ),
+            );
+          }).toList(),
     );
   }
 }

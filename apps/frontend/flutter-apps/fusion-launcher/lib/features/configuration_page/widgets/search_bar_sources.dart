@@ -119,7 +119,7 @@ class SearchBarSources extends StatelessWidget {
   }) {
     return PopupMenuButton<void>(
       tooltip: tooltip,
-      color: context.colorScheme.primaryWhite,
+      color: context.colorScheme.elevation1,
       offset: const Offset(0, 30),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(8),

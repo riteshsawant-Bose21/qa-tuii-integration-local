@@ -9,6 +9,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:fusion_launcher/core/spl_calculation/isolate_mace_calculation_manager.dart';
 import 'package:fusion_launcher/core/utils/fusion_utils.dart';
+import 'package:fusion_launcher/features/commission/presentation/pages/device_setup_wizard.dart';
 import 'package:fusion_launcher/features/configuration_page/pages/configuration_events.dart';
 import 'package:fusion_launcher/features/media_files/view/configuration_media_files_pages.dart';
 import 'package:fusion_launcher/features/media_files/viewModel/media_files_view_model.dart';
@@ -39,6 +40,8 @@ import '../../cloud_ui/presentation/pages/cloud_web_view.dart';
 import '../../configuration/presentation/viewmodel/project_view_model.dart';
 import '../../configuration_page/pages/configuration_processing_page.dart';
 import '../../configuration_page/pages/configuration_snapshots.dart';
+import '../../control_dashboard/presentation/pages/fusion_control_dashboard.dart';
+import '../../devices/presentation/pages/fusion_devices_page.dart';
 import '../../gpio/view/gpio_page.dart';
 import '../../schematics/presentation/pages/schematics_page.dart';
 import '../../schematics/presentation/widgets/cost_calculator_widget.dart';
@@ -76,7 +79,9 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
   bool get isListingViewMode => _projectViewModel.currentProjectMode == ProjectMode.systemListingMode;
   String _appVersion = '1.0.0';
 
-  final List<Widget> _tabs = const <Widget>[
+  bool get isInDesignMode => !serviceLocator<ProjectViewModel>().isInControlMode;
+
+  final List<Widget> _designTabs = const <Widget>[
     Tab(text: 'Building'),
     Tab(text: 'Schematic'),
     Tab(text: 'Cost'),
@@ -84,16 +89,25 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
     Tab(text: 'Cloud'),
   ];
 
-  late List<Widget> _tabWidgets;
+  final List<Widget> _controlTabs = const <Widget>[
+    Tab(text: 'Dashboard'),
+    Tab(text: 'Devices'),
+    Tab(text: 'Building'),
+    Tab(text: 'Configuration'),
+  ];
+
+  late List<Widget> _designWidgets;
+
+  late List<Widget> _controlWidgets;
+
+  List<Widget> get _currentTabs => isInDesignMode ? _designTabs : _controlTabs;
+
+  List<Widget> get _currentWidgets => isInDesignMode ? _designWidgets : _controlWidgets;
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(
-      length: _tabs.length,
-      vsync: this,
-      animationDuration: Duration.zero,
-    );
+    _initController();
     FusionLogger.log(
       message: "Opened Project ",
       tag: LogTag.project,
@@ -121,7 +135,23 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
     _initAppVersion();
 
     // Initialize tab widgets to preserve state
-    _tabWidgets = _createTabWidgets();
+    _createTabWidgets();
+  }
+
+  void _initController() {
+    _tabController = TabController(
+      length: _currentTabs.length,
+      vsync: this,
+      animationDuration: Duration.zero,
+      initialIndex: 0, // Always reset to 0 when switching modes to avoid index out of bounds
+    );
+
+    // Since you are using IndexedStack, we need to rebuild when tab changes
+    _tabController.addListener(() {
+      if (!_tabController.indexIsChanging) {
+        setState(() {});
+      }
+    });
   }
 
   Future<void> _initMace() async {
@@ -466,46 +496,91 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
     ];
   }
 
-  List<Widget> _createTabWidgets() {
-    return <Widget>[
-      /// Building tab
-      BlocBuilder<ProjectViewModel, ProjectViewModelState>(
-        builder: (BuildContext context, ProjectViewModelState state) {
-          return FusionDockableArea(
-            tabKey: "building_tab",
-            showLeft: true,
-            showRight: true,
-            mainArea: BlocBuilder<ProjectViewModel, ProjectViewModelState>(
-              builder: (BuildContext context, ProjectViewModelState state) {
-                return SemanticHelper.container(
-                  testId: SemanticHelper.createTestId(SemanticTypes.container, FusionTestKeys.buildingCanvas),
-                  child: BuildingCanvas(
-                    splRangeController: _splRangeController,
-                    onSplStateChanged: (bool value) {
-                      if (value) {
-                        productsController.collapse();
-                        splController.expand();
-                      } else {
-                        splController.collapse();
-                      }
-                    },
-                    floorCanvasController: _floorCanvasController,
-                    onCalculateSpl: calculateSPL,
-                    splPanelData: _lastPanelData!,
-                    onProductSelected: () {
-                      productsController.expand();
-                    },
-                    onProductDeselected: () {
+  void _createTabWidgets() {
+    /// Building tab
+    final Widget buildingPage = BlocBuilder<ProjectViewModel, ProjectViewModelState>(
+      builder: (BuildContext context, ProjectViewModelState state) {
+        return FusionDockableArea(
+          tabKey: "building_tab",
+          showLeft: true,
+          showRight: true,
+          mainArea: BlocBuilder<ProjectViewModel, ProjectViewModelState>(
+            builder: (BuildContext context, ProjectViewModelState state) {
+              return SemanticHelper.container(
+                testId: SemanticHelper.createTestId(SemanticTypes.container, FusionTestKeys.buildingCanvas),
+                child: BuildingCanvas(
+                  splRangeController: _splRangeController,
+                  onSplStateChanged: (bool value) {
+                    if (value) {
                       productsController.collapse();
-                    },
-                  ),
-                );
-              },
+                      splController.expand();
+                    } else {
+                      splController.collapse();
+                    }
+                  },
+                  floorCanvasController: _floorCanvasController,
+                  onCalculateSpl: calculateSPL,
+                  splPanelData: _lastPanelData!,
+                  onProductSelected: () {
+                    productsController.expand();
+                  },
+                  onProductDeselected: () {
+                    productsController.collapse();
+                  },
+                ),
+              );
+            },
+          ),
+          dockItemList: _createBuildingDockItems(serviceLocator<ProjectViewModel>().currentToolbarMode, _floorCanvasController),
+        );
+      },
+    );
+
+    /// Config tab without docking area
+    final Widget configurationPage = FusionDockableArea(
+      tabKey: "configuration_tab",
+      showLeft: true,
+      showRight: false,
+      mainArea: BlocBuilder<ProjectViewModel, ProjectViewModelState>(
+        builder: (BuildContext context, ProjectViewModelState state) {
+          return switch (_projectViewModel.currentConfigurationMenuMode) {
+            ConfigurationMenuMode.processing => const ConfigurationProcessingPage(),
+            ConfigurationMenuMode.snapshots => const ConfigurationSnapshots(),
+            // add all othere
+            ConfigurationMenuMode.events => const ConfigurationEvents(),
+            ConfigurationMenuMode.gpio => const GpioPage(),
+            ConfigurationMenuMode.scheduling => const SchedulingPage(),
+            ConfigurationMenuMode.mediaFiles => BlocProvider<MediaFilesViewModel>(
+              create: (_) => MediaFilesViewModel(),
+              child: const ConfigurationMediaFilesPage(),
             ),
-            dockItemList: _createBuildingDockItems(serviceLocator<ProjectViewModel>().currentToolbarMode, _floorCanvasController),
-          );
+          };
         },
       ),
+
+      dockItemList: <DockItemConfig>[
+        DockItemConfig(
+          id: "1",
+          title: "FLOORS",
+          side: "left",
+          allowUndock: true,
+          isCollapsibleSection: false,
+          dockItemWidget: BlocBuilder<ProjectViewModel, ProjectViewModelState>(
+            builder: (BuildContext context, ProjectViewModelState state) {
+              return ConfigurationTabSwitcher(
+                selectedMode: _projectViewModel.currentConfigurationMenuMode,
+                onModeChanged: (ConfigurationMenuMode mode) {
+                  _projectViewModel.setConfigurationMenuMode(mode);
+                },
+              );
+            },
+          ),
+        ),
+      ],
+    );
+
+    _designWidgets = <Widget>[
+      buildingPage,
 
       /// Schematics tab
       BlocBuilder<ProjectViewModel, ProjectViewModelState>(
@@ -585,51 +660,7 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
         dockItemList: <DockItemConfig>[],
       ),
 
-      /// Config tab without docking area
-      FusionDockableArea(
-        tabKey: "configuration_tab",
-        showLeft: true,
-        showRight: false,
-        mainArea: Theme(
-          data: ThemeData.light(),
-          child: BlocBuilder<ProjectViewModel, ProjectViewModelState>(
-            builder: (BuildContext context, ProjectViewModelState state) {
-              return switch (_projectViewModel.currentConfigurationMenuMode) {
-                ConfigurationMenuMode.processing => const ConfigurationProcessingPage(),
-                ConfigurationMenuMode.snapshots => const ConfigurationSnapshots(),
-                // add all othere
-                ConfigurationMenuMode.events => const ConfigurationEvents(),
-                ConfigurationMenuMode.gpio => const GpioPage(),
-                ConfigurationMenuMode.scheduling => const SchedulingPage(),
-                ConfigurationMenuMode.mediaFiles => BlocProvider<MediaFilesViewModel>(
-                  create: (_) => MediaFilesViewModel(),
-                  child: const ConfigurationMediaFilesPage(),
-                ),
-              };
-            },
-          ),
-        ),
-
-        dockItemList: <DockItemConfig>[
-          DockItemConfig(
-            id: "1",
-            title: "FLOORS",
-            side: "left",
-            allowUndock: true,
-            isCollapsibleSection: false,
-            dockItemWidget: BlocBuilder<ProjectViewModel, ProjectViewModelState>(
-              builder: (BuildContext context, ProjectViewModelState state) {
-                return ConfigurationTabSwitcher(
-                  selectedMode: _projectViewModel.currentConfigurationMenuMode,
-                  onModeChanged: (ConfigurationMenuMode mode) {
-                    _projectViewModel.setConfigurationMenuMode(mode);
-                  },
-                );
-              },
-            ),
-          ),
-        ],
-      ),
+      configurationPage,
 
       /// Cloud tab without docking area
       const FusionDockableArea(
@@ -641,6 +672,24 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
         ),
         dockItemList: <DockItemConfig>[],
       ),
+    ];
+
+    _controlWidgets = <Widget>[
+      serviceLocator<ProjectViewModel>().virtualIP == null
+          ? DeviceSetupWizard(
+            onFinish: () {
+              // After finishing device setup, navigate to Devices tab
+              _tabController.animateTo(1);
+              _createTabWidgets();
+            },
+          )
+          : const FusionControlDashboardPage(),
+
+      const FusionDevicesPage(),
+
+      buildingPage,
+
+      configurationPage,
     ];
   }
 
@@ -654,74 +703,59 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
         listener: (BuildContext context, ProjectViewModelState state) {},
         builder: (BuildContext context, ProjectViewModelState state) {
           return Scaffold(
-            // appBar: FusionAppBar(
-            //   backgroundColor: Colors.black87,
-            //   leading: Padding(
-            //     padding: const EdgeInsets.symmetric(horizontal: 12),
-            //     child: SizedBox(
-            //       width: 50,
-            //       height: 50,
-            //       child: IconButton(
-            //         icon: Icon(
-            //           Icons.arrow_back_ios,
-            //           color: Theme.of(context).colorScheme.primaryWhite,
-            //           size: 20,
-            //         ),
-            //         onPressed: () {
-            //           serviceLocator<ProjectViewModel>().closeProject();
-            //           Navigator.of(context).pop();
-            //         },
-            //         tooltip: 'Back to projects',
-            //       ),
-            //     ),
-            //   ), // List icon
-            //   actions: <Widget>[
-            //     const FusionProfileImage(
-            //       assetPath: "assets/images/fusion_default_icon.png",
-            //       size: 24,
-            //     ),
-            //   ],
-            //   title: const SizedBox(),
-            // ),
+            backgroundColor: context.colorScheme.primaryBlack,
             body: Column(
               children: <Widget>[
                 /// Tab Bar Section
-                Container(
+                SizedBox(
                   height: 48,
-                  decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.primaryWhite,
-                    border: Border.all(color: Theme.of(context).colorScheme.primaryWhite, width: 1),
-                  ),
                   child: Row(
                     children: <Widget>[
                       /// Project Name Section
                       _projectNameSection(),
+                      const SizedBox(width: 5),
 
                       /// Tabs Section
+                      /// Tabs Section
                       Expanded(
-                        child: TabBar(
-                          labelColor: Colors.black87,
-                          unselectedLabelColor: Theme.of(context).colorScheme.elevation1,
-                          dividerColor: Colors.transparent,
-                          controller: _tabController,
-                          isScrollable: true,
-                          tabAlignment: TabAlignment.start,
-                          indicatorColor: Colors.black,
-                          indicatorWeight: 3,
-                          indicatorSize: TabBarIndicatorSize.label,
-                          labelStyle: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: context.colorScheme.elevation1,
+                            borderRadius: const BorderRadius.only(
+                              topLeft: Radius.circular(12),
+                              bottomLeft: Radius.circular(12),
+                            ),
+                            border: Border(
+                              left: BorderSide(width: 1, color: context.colorScheme.elevation2),
+                              top: BorderSide(width: 1, color: context.colorScheme.elevation2),
+                              bottom: BorderSide(width: 1, color: context.colorScheme.elevation2),
+                            ),
                           ),
-                          unselectedLabelStyle: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w400,
+                          child: TabBar(
+                            labelColor: context.colorScheme.primaryWhite,
+                            unselectedLabelColor: context.colorScheme.elevation5,
+                            dividerColor: Colors.transparent,
+                            controller: _tabController,
+                            isScrollable: true,
+                            tabAlignment: TabAlignment.start,
+
+                            indicator: BoxDecoration(color: context.colorScheme.elevation2, borderRadius: const BorderRadius.all(Radius.circular(8))),
+                            indicatorPadding: const EdgeInsets.only(
+                              top: 6,
+                              bottom: 6,
+                              left: 6,
+                              right: 6,
+                            ),
+                            indicatorSize: TabBarIndicatorSize.tab,
+
+                            labelStyle: context.textTheme.bodyMedium,
+                            unselectedLabelStyle: context.textTheme.bodyMedium,
+                            tabs: _currentTabs,
                           ),
-                          labelPadding: const EdgeInsets.only(left: 32),
-                          tabs: _tabs,
                         ),
                       ),
 
+                      /// tool bar section
                       // /// Undo Icon Section
                       // Visibility(
                       //   visible: true,
@@ -790,179 +824,197 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
                       //     ),
                       //   ),
                       // ),
-                      /// Theme Change Icon Section (Debug Only)
-                      if (kDebugMode)
-                        Container(
-                          width: 56,
-                          height: 48,
-                          decoration: BoxDecoration(
-                            color: Theme.of(context).colorScheme.primaryWhite,
-                          ),
-                          child: ValueListenableBuilder<ThemeMode>(
-                            valueListenable: FusionThemeController.themeModeNotifier,
-                            builder: (BuildContext context, ThemeMode themeMode, Widget? child) {
-                              return IconButton(
-                                icon: Icon(
-                                  themeMode == ThemeMode.dark ? Icons.light_mode : Icons.dark_mode,
-                                  size: 24,
-                                  color: Theme.of(context).colorScheme.primaryBlack,
+                      Row(
+                        children: <Widget>[
+                          if (kDebugMode)
+                            /// Theme Change Icon Section (Debug Only)
+                            Container(
+                              width: 56,
+                              height: 48,
+                              decoration: BoxDecoration(
+                                color: context.colorScheme.elevation1,
+                                border: Border(
+                                  top: BorderSide(width: 1, color: context.colorScheme.elevation2),
+                                  bottom: BorderSide(width: 1, color: context.colorScheme.elevation2),
                                 ),
-                                tooltip: themeMode == ThemeMode.dark ? 'Switch to Light Mode' : 'Switch to Dark Mode',
-                                onPressed: () {
-                                  final bool isLight = FusionThemeController.themeModeNotifier.value == ThemeMode.light;
-                                  FusionThemeController.setThemeMode(
-                                    isLight ? ThemeMode.dark : ThemeMode.light,
+                              ),
+                              child: ValueListenableBuilder<ThemeMode>(
+                                valueListenable: FusionThemeController.themeModeNotifier,
+                                builder: (BuildContext context, ThemeMode themeMode, Widget? child) {
+                                  return IconButton(
+                                    icon: Icon(
+                                      themeMode == ThemeMode.dark ? Icons.light_mode : Icons.dark_mode,
+                                      size: 24,
+                                      color: Theme.of(context).colorScheme.primaryWhite,
+                                    ),
+                                    tooltip: themeMode == ThemeMode.dark ? 'Switch to Light Mode' : 'Switch to Dark Mode',
+                                    onPressed: () {
+                                      final bool isLight = FusionThemeController.themeModeNotifier.value == ThemeMode.light;
+                                      FusionThemeController.setThemeMode(
+                                        isLight ? ThemeMode.dark : ThemeMode.light,
+                                      );
+                                    },
                                   );
                                 },
-                              );
-                            },
-                          ),
-                        ),
-
-                      /// Save Icon Section
-                      SemanticHelper.button(
-                        testId: SemanticHelper.createTestId(SemanticTypes.button, FusionTestKeys.saveProject),
-                        child: Container(
-                          width: 56,
-                          height: 48,
-                          // padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-                          decoration: BoxDecoration(
-                            color: Theme.of(context).colorScheme.primaryWhite,
-                          ),
-                          child: IconButton(
-                            icon: Icon(
-                              Icons.save,
-                              size: 24,
-                              color: Theme.of(context).colorScheme.primaryBlack,
+                              ),
                             ),
-                            tooltip: 'Save project',
-                            onPressed: () => _showProjectJsonDialog(context),
-                            onLongPress: () => serviceLocator<ProjectViewModel>().deleteCurrentProjectFromLocal(),
-                          ),
-                        ),
-                      ),
 
-                      /// Save Icon Section
-                      Container(
-                        width: 56,
-                        height: 48,
-                        // padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-                        decoration: BoxDecoration(
-                          color: Theme.of(context).colorScheme.primaryWhite,
-                        ),
-                        child: IconButton(
-                          icon: Icon(
-                            LucideIcons.cloudUpload,
-                            size: 24,
-                            color: Theme.of(context).colorScheme.primaryWhite,
-                          ),
-                          tooltip: 'Upload project',
-                          onPressed: () async {
-                            FusionUiUtils.showLoader(context);
-
-                            await serviceLocator<ProjectSyncViewModel>().uploadProject(
-                              projectData: serviceLocator<ProjectViewModel>().getCurrentProjectData()!,
-                            );
-                            if (context.mounted) {
-                              FusionUiUtils.hideLoader(context);
-                            }
-                          },
-                        ),
-                      ),
-
-                      /// Share Icon Section
-                      // SemanticHelper.button(
-                      //   testId: SemanticHelper.createTestId(SemanticTypes.button, FusionTestKeys.bugReport),
-                      //   child: Container(
-                      //     width: 56,
-                      //     height: 48,
-                      //     padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-                      //     decoration: BoxDecoration(
-                      //       color: Theme.of(context).colorScheme.primaryWhite,
-                      //       // border horizontal
-                      //       border: Border(
-                      //         left: BorderSide(color: Theme.of(context).colorScheme.dividerColor, width: 1),
-                      //         right: BorderSide(color: Theme.of(context).colorScheme.dividerColor, width: 1),
-                      //       ),
-                      //     ),
-                      //     child: Tooltip(
-                      //       message: 'Give Feedback',
-                      //       child: InkWell(
-                      //         child: Icon(
-                      //           Icons.feedback_outlined,
-                      //           size: 24,
-                      //           color: Theme.of(context).colorScheme.primaryBlack,
-                      //         ),
-                      //         onTap: () async {
-                      //           showDialog(
-                      //             context: context,
-                      //             builder:
-                      //                 (BuildContext context) => const Dialog(
-                      //                   child: _FeedbackWebView(),
-                      //                 ),
-                      //           );
-                      //         },
-                      //       ),
-                      //     ),
-                      // child: Image.asset(
-                      //   "assets/images/share_icon.png",
-                      //   width: 24,
-                      //   height: 24,
-                      // ),
-                      // ),
-                      // ),
-
-                      /// Share Icon Section
-                      Container(
-                        width: 56,
-                        height: 48,
-                        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-                        decoration: BoxDecoration(
-                          color: Theme.of(context).colorScheme.primaryWhite,
-                          border: Border(
-                            // left: BorderSide(color: Theme.of(context).colorScheme.dividerColor, width: 1),
-                            right: BorderSide(color: Theme.of(context).colorScheme.primaryBlack, width: 1),
-                          ),
-                        ),
-                        child: Tooltip(
-                          message: 'Feedback and bug reports',
-                          child: InkWell(
-                            child: Icon(
-                              Icons.feedback_outlined,
-                              size: 24,
-                              color: Theme.of(context).colorScheme.primaryBlack,
+                          /// Save Icon Section
+                          SemanticHelper.button(
+                            testId: SemanticHelper.createTestId(SemanticTypes.button, FusionTestKeys.saveProject),
+                            child: Container(
+                              width: 56,
+                              height: 48,
+                              decoration: BoxDecoration(
+                                color: context.colorScheme.elevation1,
+                                border: Border(
+                                  top: BorderSide(width: 1, color: context.colorScheme.elevation2),
+                                  bottom: BorderSide(width: 1, color: context.colorScheme.elevation2),
+                                ),
+                              ),
+                              child: IconButton(
+                                icon: Icon(
+                                  Icons.save,
+                                  size: 24,
+                                  color: Theme.of(context).colorScheme.primaryWhite,
+                                ),
+                                tooltip: 'Save project',
+                                onPressed: () => _showProjectJsonDialog(context),
+                                onLongPress: () => serviceLocator<ProjectViewModel>().deleteCurrentProjectFromLocal(),
+                              ),
                             ),
-                            onTap: () async {
-                              handleExportLogs(context);
-                            },
                           ),
-                        ),
-                        // child: Image.asset(
-                        //   "assets/images/share_icon.png",
-                        //   width: 24,
-                        //   height: 24,
-                        // ),
-                      ),
 
-                      const ControlDesignTabSwitcher(),
-                      // App Build Version
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
-                        decoration: BoxDecoration(
-                          color: Theme.of(context).colorScheme.primaryWhite,
-                          border: Border(
-                            left: BorderSide(color: Theme.of(context).colorScheme.primaryBlack, width: 1),
-                            // right: BorderSide(color: Theme.of(context).colorScheme.primaryBlack, width: 1),
+                          /// Save Icon Section
+                          Container(
+                            width: 56,
+                            height: 48,
+                            decoration: BoxDecoration(
+                              color: context.colorScheme.elevation1,
+                              border: Border(
+                                top: BorderSide(width: 1, color: context.colorScheme.elevation2),
+                                bottom: BorderSide(width: 1, color: context.colorScheme.elevation2),
+                              ),
+                            ),
+                            child: IconButton(
+                              icon: Icon(
+                                LucideIcons.cloudUpload,
+                                size: 24,
+                                color: Theme.of(context).colorScheme.primaryWhite,
+                              ),
+                              tooltip: 'Upload project',
+                              onPressed: () async {
+                                FusionUiUtils.showLoader(context);
+
+                                await serviceLocator<ProjectSyncViewModel>().uploadProject(
+                                  projectData: serviceLocator<ProjectViewModel>().getCurrentProjectData()!,
+                                );
+                                if (context.mounted) {
+                                  FusionUiUtils.hideLoader(context);
+                                }
+                              },
+                            ),
                           ),
-                        ),
-                        child: FusionAppText(
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Theme.of(context).colorScheme.primaryBlack,
-                            fontWeight: FontWeight.w400,
+
+                          /// Share Icon Section
+                          // SemanticHelper.button(
+                          //   testId: SemanticHelper.createTestId(SemanticTypes.button, FusionTestKeys.bugReport),
+                          //   child: Container(
+                          //     width: 56,
+                          //     height: 48,
+                          //     padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                          //     decoration: BoxDecoration(
+                          //       color: Theme.of(context).colorScheme.primaryWhite,
+                          //       // border horizontal
+                          //       border: Border(
+                          //         left: BorderSide(color: Theme.of(context).colorScheme.dividerColor, width: 1),
+                          //         right: BorderSide(color: Theme.of(context).colorScheme.dividerColor, width: 1),
+                          //       ),
+                          //     ),
+                          //     child: Tooltip(
+                          //       message: 'Give Feedback',
+                          //       child: InkWell(
+                          //         child: Icon(
+                          //           Icons.feedback_outlined,
+                          //           size: 24,
+                          //           color: Theme.of(context).colorScheme.primaryBlack,
+                          //         ),
+                          //         onTap: () async {
+                          //           showDialog(
+                          //             context: context,
+                          //             builder:
+                          //                 (BuildContext context) => const Dialog(
+                          //                   child: _FeedbackWebView(),
+                          //                 ),
+                          //           );
+                          //         },
+                          //       ),
+                          //     ),
+                          // child: Image.asset(
+                          //   "assets/images/share_icon.png",
+                          //   width: 24,
+                          //   height: 24,
+                          // ),
+                          // ),
+                          // ),
+
+                          /// Share Icon Section
+                          Container(
+                            width: 56,
+                            height: 48,
+                            padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                            decoration: BoxDecoration(
+                              color: context.colorScheme.elevation1,
+                              border: Border(
+                                top: BorderSide(width: 1, color: context.colorScheme.elevation2),
+                                bottom: BorderSide(width: 1, color: context.colorScheme.elevation2),
+                              ),
+                            ),
+                            child: Tooltip(
+                              message: 'Feedback and bug reports',
+                              child: InkWell(
+                                child: Icon(
+                                  Icons.feedback_outlined,
+                                  size: 24,
+                                  color: Theme.of(context).colorScheme.primaryWhite,
+                                ),
+                                onTap: () async {
+                                  handleExportLogs(context);
+                                },
+                              ),
+                            ),
+                            // child: Image.asset(
+                            //   "assets/images/share_icon.png",
+                            //   width: 24,
+                            //   height: 24,
+                            // ),
                           ),
-                          text: "Build- $_appVersion",
-                        ),
+                          const ControlDesignTabSwitcher(),
+
+                          /// App Build Version
+                          Container(
+                            height: 48,
+                            alignment: Alignment.center,
+                            padding: const EdgeInsets.symmetric(horizontal: 12),
+
+                            decoration: BoxDecoration(
+                              color: context.colorScheme.elevation1,
+                              borderRadius: const BorderRadius.only(
+                                topRight: Radius.circular(12),
+                                bottomRight: Radius.circular(12),
+                              ),
+                              border: Border(
+                                right: BorderSide(width: 1, color: context.colorScheme.elevation2),
+                                top: BorderSide(width: 1, color: context.colorScheme.elevation2),
+                                bottom: BorderSide(width: 1, color: context.colorScheme.elevation2),
+                              ),
+                            ),
+                            child: FusionAppText(
+                              style: context.textTheme.bodySmall,
+                              text: "Build- $_appVersion",
+                            ),
+                          ),
+                        ],
                       ),
                     ],
                   ),
@@ -970,7 +1022,7 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
                 Expanded(
                   child: IndexedStack(
                     index: _tabController.index,
-                    children: _tabWidgets,
+                    children: _currentWidgets,
                   ),
                 ),
               ],
@@ -983,94 +1035,85 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
 
   /// Project Name Section with Back Button
   Widget _projectNameSection() {
-    return Row(
-      children: <Widget>[
-        // Back Button
-        Container(
-          width: 40,
-          height: 40,
-          decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.primaryWhite,
-            // border: Border(
-            //   right: BorderSide(
-            //     color: Theme.of(context).colorScheme.primaryBlack,
-            //     width: 1,
-            //   ),
-            // ),
-          ),
-          child: IconButton(
-            icon: Icon(
-              Icons.arrow_back_ios,
-              color: Theme.of(context).colorScheme.primaryWhite,
-              size: 20,
+    return Container(
+      decoration: BoxDecoration(
+        color: context.colorScheme.elevation1,
+        border: Border.all(color: context.colorScheme.elevation2, width: 1),
+        borderRadius: const BorderRadius.all(Radius.circular(12)),
+      ),
+      child: Row(
+        children: <Widget>[
+          /// Back Button
+          SizedBox(
+            width: 38,
+            height: 48,
+
+            child: IconButton(
+              icon: Icon(
+                Icons.arrow_back_ios,
+                color: Theme.of(context).colorScheme.primaryWhite,
+                size: 20,
+              ),
+              onPressed: () {
+                serviceLocator<ProjectViewModel>().closeProject();
+                Navigator.of(context).pop();
+              },
+              tooltip: 'Back to projects',
             ),
-            onPressed: () {
-              serviceLocator<ProjectViewModel>().closeProject();
-              Navigator.of(context).pop();
-            },
-            tooltip: 'Back to projects',
           ),
-        ),
-        // Project Name Section
-        InkWell(
-          onTap: _showEditProjectNameDropdown,
-          child: Container(
-            key: _projectNameKey,
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-            width: 197,
-            // Reduced width to account for back button
-            decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.primaryWhite,
-              border: Border(
-                right: BorderSide(
-                  color: Theme.of(context).colorScheme.primaryBlack,
-                  width: 1,
-                ),
+
+          /// Project Name Section
+          InkWell(
+            onTap: _showEditProjectNameDropdown,
+            child: Container(
+              key: _projectNameKey,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+              width: 197,
+
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  Expanded(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.start,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: <Widget>[
+                        BlocBuilder<ProjectViewModel, ProjectViewModelState>(
+                          builder: (
+                            BuildContext context,
+                            ProjectViewModelState state,
+                          ) {
+                            return FusionAppText(
+                              text: serviceLocator<ProjectViewModel>().projectName,
+                              semanticId: FusionTestKeys.projectName,
+                              textOverflow: TextOverflow.ellipsis,
+                              maxLine: 1,
+                              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                fontWeight: FontWeight.w900,
+                              ),
+                            );
+                          },
+                        ),
+                        const SizedBox(height: 2),
+                        FusionAppText(
+                          text: "1.0.0",
+                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontSize: 10),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 2),
+                  const Icon(
+                    Icons.arrow_drop_down_rounded,
+                    size: 20,
+                  ),
+                ],
               ),
             ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                Expanded(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.start,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: <Widget>[
-                      BlocBuilder<ProjectViewModel, ProjectViewModelState>(
-                        builder: (
-                          BuildContext context,
-                          ProjectViewModelState state,
-                        ) {
-                          return FusionAppText(
-                            text: serviceLocator<ProjectViewModel>().projectName,
-                            semanticId: FusionTestKeys.projectName,
-                            textOverflow: TextOverflow.ellipsis,
-                            maxLine: 1,
-                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              fontWeight: FontWeight.w900,
-                            ),
-                          );
-                        },
-                      ),
-                      const SizedBox(height: 2),
-                      FusionAppText(
-                        text: "1.0.0",
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontSize: 10, color: Theme.of(context).colorScheme.primaryBlack),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 2),
-                const Icon(
-                  Icons.arrow_drop_down_rounded,
-                  size: 20,
-                ),
-              ],
-            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 

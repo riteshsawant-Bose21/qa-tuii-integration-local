@@ -138,6 +138,7 @@ flutter:
     - assets/icons/gpio/
     # - packages/fusion_lib/lib/assets/
     - assets/svg/
+    - assets/images/commission/
 
 
   # An image asset can refer to one or more resolution-specific "variants", see

@@ -1,4 +1,4 @@
-import 'package:fusion_launcher/features/dashboard/domain/repositories/home_page_repository.dart';
+import 'package:fusion_launcher/features/home/domain/repositories/home_page_repository.dart';
 import 'package:fusion_lib/models/response_callback.dart';
 
 import '../../../../core/service_locator.dart';

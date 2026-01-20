@@ -17,12 +17,12 @@
 // import 'package:fusion_lib/fusion_widgets/text_views/fusion_gradient_text.dart';
 // import 'package:fusion_lib/fusion_widgets/text_views/fusion_rich_text.dart';
 //
-// import '../../features/dashboard/presentation/widgets/algorithms/amplifier_matching_widget.dart';
-// import '../../features/dashboard/presentation/widgets/algorithms/circuiting_widget.dart';
-// import '../../features/dashboard/presentation/widgets/algorithms/device_recommender_widget.dart';
-// import '../../features/dashboard/presentation/widgets/algorithms/spl_calculation_widget.dart';
-// import '../../features/dashboard/presentation/widgets/algorithms/tap_setting_widget.dart';
-// import '../../features/dashboard/presentation/widgets/products_filter/product_filter.dart';
+// import '../../features/home/presentation/widgets/algorithms/amplifier_matching_widget.dart';
+// import '../../features/home/presentation/widgets/algorithms/circuiting_widget.dart';
+// import '../../features/home/presentation/widgets/algorithms/device_recommender_widget.dart';
+// import '../../features/home/presentation/widgets/algorithms/spl_calculation_widget.dart';
+// import '../../features/home/presentation/widgets/algorithms/tap_setting_widget.dart';
+// import '../../features/home/presentation/widgets/products_filter/product_filter.dart';
 //
 // class TestLibraryScreen extends StatelessWidget {
 //   // text editing controller for the email field

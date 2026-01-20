@@ -14,12 +14,12 @@ class DragDivider extends StatelessWidget {
         cursor: SystemMouseCursors.resizeRow,
         child: Center(
           child: Container(
-            height: 2,
+            height: 1,
             decoration: BoxDecoration(
               color: context.colorScheme.elevation3,
               boxShadow: <BoxShadow>[
                 BoxShadow(
-                  color: context.colorScheme.elevation3,
+                  color: context.colorScheme.strokeDark,
                   blurRadius: 1,
                 ),
               ],
