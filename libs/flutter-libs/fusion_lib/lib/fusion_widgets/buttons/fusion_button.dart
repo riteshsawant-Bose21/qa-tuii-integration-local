@@ -102,7 +102,7 @@ class FusionButton extends StatelessWidget {
     required this.label,
     required this.onTap,
     this.gradient,
-    this.height = 32,
+    this.height = 35,
     this.width = 100,
     this.topMargin = 0,
     this.bottomMargin = 0,

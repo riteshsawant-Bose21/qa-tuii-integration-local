@@ -124,7 +124,9 @@ class _MixScenesState extends State<MixScenes> {
                   width: 72,
                   height: 28,
                   borderRadius: 8,
-                  textColor: isNewMixSceneName ? Colors.black12 : Colors.black87,
+                  textStyle: context.textTheme.bodySmall!.copyWith(
+                    color: isNewMixSceneName ? Colors.black12 : Colors.black87,
+                  ),
                   onTap: widget.onDeleteTap,
                 );
               },

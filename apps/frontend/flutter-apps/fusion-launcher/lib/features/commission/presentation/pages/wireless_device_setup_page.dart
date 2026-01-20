@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:fusion_launcher/core/theme/app_theme.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
 // Assuming you have the Ripple Widget from the previous step

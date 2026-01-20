@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:fusion_launcher/core/theme/app_theme.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
 import 'app_text_view.dart';
@@ -67,7 +66,7 @@ class _AppButtonState extends State<AppButton> {
                 style:
                     widget.buttonStyle ??
                     ElevatedButton.styleFrom(
-                      backgroundColor: widget.isEnabled ? widget.buttonColor ?? Theme.of(context).colorScheme.black : context.colorScheme.primaryBlack,
+                      backgroundColor: widget.isEnabled ? widget.buttonColor ?? Theme.of(context).colorScheme.primaryBlack : context.colorScheme.primaryBlack,
                     ),
                 child:
                     widget.child ??

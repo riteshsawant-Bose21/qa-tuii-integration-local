@@ -336,6 +336,7 @@ extension ColorExtends on ColorScheme {
 
   // Commission Colors
   Color get cardDark => isDarkMode ? _cardDarkD : _cardDarkL;
+  Color get greyLight => isDarkMode ? _cardDarkD : _cardDarkL;
   Color get borderGrey => isDarkMode ? _borderGreyD : _borderGreyL;
   Color get textGrey => isDarkMode ? _textGreyD : _textGreyL;
 

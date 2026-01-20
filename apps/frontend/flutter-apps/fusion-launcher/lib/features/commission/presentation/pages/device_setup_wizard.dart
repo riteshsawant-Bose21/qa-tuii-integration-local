@@ -59,7 +59,7 @@ class _DeviceSetupWizardState extends State<DeviceSetupWizard> {
     print("DeviceSetupWizard: canPop = $canPop, currentPage = $_currentPage");
 
     return Scaffold(
-      backgroundColor: context.colorScheme.primaryWhite,
+      backgroundColor: context.colorScheme.elevation1,
       // ---------------------------------------------------------
       // DYNAMIC BODY: Swaps content without losing the header
       // ---------------------------------------------------------

@@ -2,7 +2,6 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:fusion_launcher/core/service_locator.dart';
-import 'package:fusion_launcher/core/theme/app_theme.dart';
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
@@ -117,34 +116,16 @@ class _FusionMdnsSearchPageState extends State<FusionMdnsSearchPage> {
                 style: TextStyle(
                   fontSize: 14,
                   // Assuming dark background based on screenshots, using white/grey
-                  color: context.colorScheme.primaryBlack.withOpacity(0.7),
+                  color: context.colorScheme.textPrimary,
                 ),
               ),
               const SizedBox(height: 16),
 
-              SizedBox(
-                // width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: widget.onWirelessConfigPressed,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF1A1A1A),
-                    foregroundColor: context.colorScheme.primaryWhite,
-                    padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 20),
-                    side: BorderSide(
-                      color: context.colorScheme.greyLight.withOpacity(0.3),
-                    ),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                  ),
-                  child: FusionAppText(
-                    text: 'Configure Wireless Devices',
-                    style: TextStyle(
-                      fontWeight: FontWeight.w600,
-                      color: context.colorScheme.primaryBlack,
-                    ),
-                  ),
-                ),
+              FusionNeumorphicButton(
+                text: 'Configure Wireless Devices',
+                onTap: widget.onWirelessConfigPressed,
+                textStyle: context.textTheme.bodyMedium,
+                width: 0.2 * MediaQuery.of(context).size.width,
               ),
             ],
           ),
@@ -154,6 +135,8 @@ class _FusionMdnsSearchPageState extends State<FusionMdnsSearchPage> {
   }
 
   Widget _buildCurrentStateView() {
+    // return _buildVipConfigView();
+
     switch (_currentState) {
       case SearchState.searching:
         return _buildSearchingView();
@@ -175,7 +158,7 @@ class _FusionMdnsSearchPageState extends State<FusionMdnsSearchPage> {
       key: const ValueKey<String>('searching'),
       children: <Widget>[
         NeumorphicRippleWidget(
-          backgroundColor: context.colorScheme.primaryBlack,
+          backgroundColor: context.colorScheme.primaryWhite,
           animationDuration: const Duration(seconds: 4),
           ripplesCount: 4,
           minRadius: 25,
@@ -184,11 +167,11 @@ class _FusionMdnsSearchPageState extends State<FusionMdnsSearchPage> {
             width: 50,
             height: 50,
             decoration: BoxDecoration(
-              color: context.colorScheme.primaryWhite,
+              color: context.colorScheme.elevation1,
               shape: BoxShape.circle,
               boxShadow: <BoxShadow>[
                 BoxShadow(
-                  color: context.colorScheme.primaryWhite.withAlpha((0.8 * 255).toInt()),
+                  color: context.colorScheme.elevation1.withAlpha((0.8 * 255).toInt()),
                   offset: const Offset(-4, -4),
                   blurRadius: 10,
                 ),
@@ -197,20 +180,15 @@ class _FusionMdnsSearchPageState extends State<FusionMdnsSearchPage> {
             child: Icon(
               Icons.cell_tower_rounded, // Or auto_awesome for "Fusion" feel
               size: 24,
-              color: context.colorScheme.primaryBlack,
+              color: context.colorScheme.primaryWhite,
             ),
           ),
         ),
         const SizedBox(height: 100),
-        Text(
-          'Hold on, searching network for Fusion devices...',
+        FusionAppText(
+          text: 'Hold on, searching network for Fusion devices...',
           textAlign: TextAlign.center,
-          style: TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.w500,
-            color: context.colorScheme.primaryBlack,
-            height: 1.2,
-          ),
+          style: context.textTheme.titleLarge,
         ),
         const SizedBox(height: 16),
         _buildInfoChip(),
@@ -227,38 +205,24 @@ class _FusionMdnsSearchPageState extends State<FusionMdnsSearchPage> {
       key: const ValueKey<String>('notFound'),
       children: <Widget>[
         // Placeholder for the "Sad Face" dashed icon
-        Image.asset(
+        FusionImage.asset(
           Assets.errorFace,
           height: 80,
-          color: context.colorScheme.greyLight,
+          assetColor: context.colorScheme.primaryWhite,
         ),
         const SizedBox(height: 32),
-        Text(
-          'Sorry, We could not detect any hardwares on\nthe network',
+        FusionAppText(
+          text: 'Sorry, We could not detect any hardwares on\nthe network',
           textAlign: TextAlign.center,
-          style: TextStyle(
-            fontSize: 16,
-            color: context.colorScheme.primaryBlack,
-            height: 1.5,
-          ),
+          style: context.textTheme.bodyLarge,
         ),
         const SizedBox(height: 40),
 
         // Retry Button
-        SizedBox(
+        FusionNeumorphicButton(
+          onTap: _handleRetry,
+          text: 'Retry',
           width: 200,
-          child: ElevatedButton(
-            onPressed: _handleRetry,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF2C2C2C), // Dark grey
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(vertical: 16),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10),
-              ),
-            ),
-            child: const Text('Retry'),
-          ),
         ),
         const SizedBox(height: 24),
         _buildInfoChip(),
@@ -276,14 +240,10 @@ class _FusionMdnsSearchPageState extends State<FusionMdnsSearchPage> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
         Center(
-          child: Text(
-            'You are not initiating the connection with\nthe network. Please set a VIP address for\ncommunicating with fusion hardwares',
+          child: FusionAppText(
+            text: 'You are not initiating the connection with\nthe network. Please set a VIP address for\ncommunicating with fusion hardwares',
             textAlign: TextAlign.center,
-            style: TextStyle(
-              fontSize: 16,
-              color: context.colorScheme.primaryBlack,
-              height: 1.5,
-            ),
+            style: context.textTheme.bodyLarge,
           ),
         ),
         const SizedBox(height: 40),
@@ -308,7 +268,7 @@ class _FusionMdnsSearchPageState extends State<FusionMdnsSearchPage> {
                     filled: true,
                     fillColor: const Color(0xFF111111),
                     hintText: '192.168.0.100',
-                    hintStyle: TextStyle(color: context.colorScheme.greyLight),
+                    hintStyle: TextStyle(color: context.colorScheme.elevation4, fontSize: 14),
                     contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(8),
@@ -328,27 +288,16 @@ class _FusionMdnsSearchPageState extends State<FusionMdnsSearchPage> {
                 const SizedBox(height: 24),
 
                 // Verify Button
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    onPressed: () {
-                      //validate VIP is not empty
-                      if (_vipController.text.isNotEmpty) {
-                        _handleVipVerification();
-                      } else {
-                        FusionToast.error(context, message: "Please enter a valid VIP address");
-                      }
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF2C2C2C),
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                    ),
-                    child: const Text('Verify and Proceed'),
-                  ),
+                FusionNeumorphicButton(
+                  onTap: () {
+                    //validate VIP is not empty
+                    if (_vipController.text.isNotEmpty) {
+                      _handleVipVerification();
+                    } else {
+                      FusionToast.error(context, message: "Please enter a valid VIP address");
+                    }
+                  },
+                  text: 'Verify and Proceed',
                 ),
               ],
             ),
@@ -404,20 +353,12 @@ class _FusionMdnsSearchPageState extends State<FusionMdnsSearchPage> {
         const SizedBox(height: 24),
 
         // Finish Button
-        SizedBox(
-          width: 300,
-          child: ElevatedButton(
-            onPressed: widget.onFinish,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF2C2C2C),
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(vertical: 16),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10),
-              ),
-            ),
-            child: const Text('Finish'),
-          ),
+        FusionNeumorphicButton(
+          onTap: widget.onFinish,
+          borderRadius: 12,
+          text: "Finish",
+          textStyle: context.textTheme.bodyMedium,
+          width: 200,
         ),
       ],
     );
@@ -427,12 +368,12 @@ class _FusionMdnsSearchPageState extends State<FusionMdnsSearchPage> {
   Widget _buildInfoChip() {
     return Container(
       padding: const EdgeInsets.symmetric(
-        horizontal: 16,
-        vertical: 8,
+        horizontal: 14,
+        vertical: 6,
       ),
       decoration: BoxDecoration(
         border: Border.all(
-          color: context.colorScheme.greyLight.withOpacity(0.3),
+          color: context.colorScheme.elevation5,
         ),
         borderRadius: BorderRadius.circular(10), // Rounded pill shape
       ),
@@ -441,16 +382,13 @@ class _FusionMdnsSearchPageState extends State<FusionMdnsSearchPage> {
         children: <Widget>[
           Icon(
             Icons.info_outline,
-            color: context.colorScheme.greyLight,
+            color: context.colorScheme.primaryWhite,
             size: 16,
           ),
           const SizedBox(width: 8),
-          Text(
-            'Make sure you are connected to right network',
-            style: TextStyle(
-              fontSize: 12,
-              color: context.colorScheme.greyLight,
-            ),
+          FusionAppText(
+            text: 'Make sure you are connected to right network',
+            style: context.textTheme.bodySmall,
           ),
         ],
       ),

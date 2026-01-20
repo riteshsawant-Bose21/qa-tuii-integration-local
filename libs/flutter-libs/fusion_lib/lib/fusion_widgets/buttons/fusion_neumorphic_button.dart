@@ -1,24 +1,22 @@
 import 'package:flutter/material.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
-
-
 class FusionNeumorphicButton extends StatefulWidget {
   final String text;
-  final double width;
+  final double? width;
   final double height;
   final double borderRadius;
   final VoidCallback onTap;
-  final Color textColor;
+  final TextStyle? textStyle;
 
   const FusionNeumorphicButton({
     super.key,
     required this.text,
-    required this.width,
-    required this.height,
+    this.width,
+    this.height = 35,
     required this.onTap,
     this.borderRadius = 12,
-    this.textColor = Colors.black,
+    this.textStyle,
   });
 
   @override
@@ -46,19 +44,11 @@ class _FusionNeumorphicButtonState extends State<FusionNeumorphicButton> {
             width: widget.width,
             raised: !_isPressed,
             borderRadius: widget.borderRadius,
-            // height: widget.height,
-            // alignment: Alignment.center,
-            // decoration: BoxDecoration(
-            //   color: Colors.transparent,
-            //   borderRadius: BorderRadius.circular(widget.borderRadius),
-            //   boxShadow: getNeumorphismBoxShadows(inner: _isPressed),
-            // ),
+            height: widget.height,
+            alignment: Alignment.center,
             child: FusionAppText(
               text: widget.text,
-              style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                fontSize: 10,
-                color: widget.textColor,
-              ),
+              style: widget.textStyle ?? Theme.of(context).textTheme.bodyMedium,
             ),
           ),
         ),
