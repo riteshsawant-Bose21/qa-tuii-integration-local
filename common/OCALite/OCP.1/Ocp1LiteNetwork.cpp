@@ -791,8 +791,8 @@ OcaSessionID Ocp1LiteNetwork::Connect(const ::OcaLiteConnectParameters &connectP
                                                    ocp1ConnectParameters->GetbKeepAliveTimeoutInMs());
 
         OCA_LOG_INFO_PARAMS("✓ About to call Ocp1LiteSocketConnect with %s:%d",
-                             ocp1ConnectParameters->GetHostOrIp().c_str(),
-                             ocp1ConnectParameters->GetPort());
+                            ocp1ConnectParameters->GetHostOrIp().c_str(),
+                            ocp1ConnectParameters->GetPort());
 
         if (Ocp1LiteSocketConnect(ocp1ConnectParameters->GetHostOrIp().c_str(),
                                   ocp1ConnectParameters->GetPort(),
@@ -902,6 +902,8 @@ bool Ocp1LiteNetwork::Disconnect(::OcaSessionID sessionID)
 
 ::OcaLiteStatus Ocp1LiteNetwork::SetIdAdvertisedValue(const ::OcaLiteNetworkNodeID &nodeId)
 {
+    return OCASTATUS_OK;
+
     ::OcaLiteStatus result(OCASTATUS_PARAMETER_ERROR);
     ::Ocp1LiteNetworkNodeID *ocp1LiteNetworkNodeID(::Ocp1LiteNetworkNodeID::CreateFromBase(nodeId));
     if (ocp1LiteNetworkNodeID != NULL)
@@ -1109,6 +1111,8 @@ void Ocp1LiteNetwork::HandleDevices(OcaSocketList &deviceList, const OcfLiteSele
 
 ::OcaLiteStatus Ocp1LiteNetwork::RegisterRegistrationServices()
 {
+    return OCASTATUS_OK;
+
     std::vector<std::string> txtRecords;
     ::OcaLiteStatus rc(FillTxtRecords(txtRecords));
     if (OCASTATUS_OK == rc)
@@ -1129,4 +1133,3 @@ void Ocp1LiteNetwork::HandleDevices(OcaSocketList &deviceList, const OcfLiteSele
 
     return rc;
 }
-
