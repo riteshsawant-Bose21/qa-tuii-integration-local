@@ -94,7 +94,8 @@ int main(int argc, const char *argv[])
     g_connectionPort = connectionPort;
 
     // Set log level to show INFO messages (including client connection logs)
-    ::OcfLiteLogSetLogLevel(OCA_LOG_LVL_TRACE);
+    // ::OcfLiteLogSetLogLevel(OCA_LOG_LVL_TRACE);
+    ::OcfLiteLogSetLogLevel(OCA_LOG_LVL_ERROR);
 
     // Initialize the host interfaces
     g_bSuccess = InitializeHostInterfaces();
