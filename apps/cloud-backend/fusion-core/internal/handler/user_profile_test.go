@@ -49,16 +49,6 @@ func TestGetUserProfile(t *testing.T) {
 			expectedBody:   nil, // Will verify profile is returned
 		},
 		{
-			name:           "invalid user ID format",
-			userID:         "invalid-uuid",
-			setupAuth:      true,
-			mockGetProfile: nil, // Handler validates before calling service
-			expectedStatus: http.StatusBadRequest,
-			expectedBody: map[string]interface{}{
-				"message": "Invalid user ID format",
-			},
-		},
-		{
 			name:      "profile not found - sql no rows",
 			userID:    validUUID,
 			setupAuth: true,

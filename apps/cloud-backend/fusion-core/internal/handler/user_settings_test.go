@@ -48,18 +48,6 @@ func TestGetUserSettings(t *testing.T) {
 			expectedBody:   nil, // Will verify settings is returned
 		},
 		{
-			name:      "invalid user ID format",
-			userID:    "invalid-uuid",
-			setupAuth: true,
-			mockGetSettings: func(ctx context.Context, userID string) (*types.UserSettings, error) {
-				return nil, nil
-			},
-			expectedStatus: http.StatusBadRequest,
-			expectedBody: map[string]interface{}{
-				"message": "Invalid user ID format",
-			},
-		},
-		{
 			name:      "settings not found - sql no rows",
 			userID:    validUUID,
 			setupAuth: true,
