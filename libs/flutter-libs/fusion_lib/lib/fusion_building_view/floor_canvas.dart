@@ -530,7 +530,9 @@ class FloorCanvasState extends State<FloorCanvas> with SingleTickerProviderState
             _current.clear();
             _isDrawing = false;
             widget.controller.isDrawing.value = _isDrawing;
+            if ( widget.listeningAreas.isNotEmpty) {
             highlightedAreaId = widget.listeningAreas.last.id;
+            }
           });
         } else {
           setState(() => _current.add(worldPos));

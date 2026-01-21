@@ -308,7 +308,9 @@ class _AddDeviceExpandablePopupMenuWidgetState extends State<AddDeviceExpandable
     final bool isExpanded = _isSectionExpanded(sectionKey);
     final bool canAddDevice = _selectedPopupDevice != null && _selectedListeningAreaIds.isNotEmpty;
 
-    return Column(
+    return SemanticHelper.button(
+          testId: SemanticHelper.createTestId(SemanticTypes.container, "add_device_menu"),
+          child:Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
         /// Section Header
@@ -465,6 +467,7 @@ class _AddDeviceExpandablePopupMenuWidgetState extends State<AddDeviceExpandable
           const SizedBox(height: 4),
         ],
       ],
+          ),
     );
   }
 
