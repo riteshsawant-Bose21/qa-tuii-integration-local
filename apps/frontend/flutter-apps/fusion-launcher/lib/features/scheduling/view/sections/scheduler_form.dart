@@ -26,22 +26,30 @@ class SchedulerForm extends StatelessWidget {
             ),
 
         child: Material(
-          color: context.colorScheme.primaryWhite,
+          color: Colors.transparent,
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: <Widget>[
+              /// Header
               Container(
-                color: Colors.black,
+                decoration: BoxDecoration(
+                  color: context.colorScheme.elevation1,
+                  borderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(12),
+                    topRight: Radius.circular(12),
+                  ),
+                  border: Border.all(
+                    width: 1,
+                    color: context.colorScheme.elevation2,
+                  ),
+                ),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.end,
                   children: <Widget>[
                     const SizedBox(
                       width: 10,
                     ),
-                    FusionAppText(
-                      text: initial == null ? "Create Schedule" : "Edit Schedule",
-                      style: context.textTheme.titleMedium?.copyWith(color: Colors.white),
-                    ),
+                    FusionAppText(text: initial == null ? "Create Schedule" : "Edit Schedule", style: context.textTheme.bodyMedium),
                     const Spacer(),
                     SemanticHelper.button(
                       testId: SemanticHelper.createTestId(SemanticTypes.button, "scheduler_form_close_button"),
@@ -49,6 +57,7 @@ class SchedulerForm extends StatelessWidget {
                         icon: const Icon(
                           Icons.close,
                           color: Colors.white,
+                          size: 16,
                         ),
                         onPressed: () {
                           Navigator.of(context).pop();
@@ -61,8 +70,21 @@ class SchedulerForm extends StatelessWidget {
               Flexible(
                 child: Consumer<SchedulerFormViewModel>(
                   builder: (BuildContext context, SchedulerFormViewModel viewModel, Widget? child) {
-                    return Padding(
+                    return Container(
                       padding: const EdgeInsets.all(15.0),
+                      decoration: BoxDecoration(
+                        color: context.colorScheme.elevation1.withAlpha(120),
+                        borderRadius: const BorderRadius.only(
+                          bottomLeft: Radius.circular(12),
+                          bottomRight: Radius.circular(12),
+                        ),
+                        border: Border(
+                          bottom: BorderSide(width: 1, color: context.colorScheme.elevation2),
+                          left: BorderSide(width: 1, color: context.colorScheme.elevation2),
+                          right: BorderSide(width: 1, color: context.colorScheme.elevation2),
+                        ),
+                      ),
+
                       child: SingleChildScrollView(
                         child: Form(
                           key: viewModel.key,
@@ -84,14 +106,21 @@ class SchedulerForm extends StatelessWidget {
                                             fontWeight: FontWeight.w500,
                                           ),
                                         ),
+                                        const SizedBox(height: 8),
                                         FusionTextField(
                                           controller: viewModel.name,
                                           hintText: "Enter schedule name",
-                                          decoration: FusionInputDecoration.fusionDense(
-                                            colorScheme: Theme.of(context).colorScheme,
-                                            hintText: 'Enter schedule name',
+                                          decoration: InputDecoration(
+                                            hintStyle: Theme.of(context).inputDecorationTheme.hintStyle,
+                                            counterText: '',
+                                            fillColor: context.colorScheme.elevation2,
+                                            filled: true,
+                                            border: const OutlineInputBorder(borderSide: BorderSide(color: Colors.transparent)),
+                                            enabledBorder: const OutlineInputBorder(borderSide: BorderSide(color: Colors.transparent)),
+                                            focusedBorder: const OutlineInputBorder(borderSide: BorderSide(color: Colors.transparent)),
+                                            isDense: true,
+                                            contentPadding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
                                           ),
-
                                           onChanged: (String value) {},
                                         ),
                                       ],
@@ -203,7 +232,7 @@ class SchedulerForm extends StatelessWidget {
                                               children: <Widget>[
                                                 Radio<RecurrenceType>(
                                                   value: type,
-                                                  fillColor: WidgetStateColor.resolveWith((Set<WidgetState> states) => Colors.black),
+                                                  fillColor: WidgetStateColor.resolveWith((Set<WidgetState> states) => context.colorScheme.iconWhite),
                                                 ),
                                                 Text(
                                                   type.label,
@@ -297,6 +326,8 @@ class SchedulerForm extends StatelessWidget {
                                 mainAxisAlignment: MainAxisAlignment.end,
                                 children: <Widget>[
                                   FusionOutlinedButton(
+                                    textStyle: context.textTheme.bodySmall,
+
                                     label: "Cancel",
                                     onTap: () {
                                       Navigator.pop(context);
@@ -306,6 +337,9 @@ class SchedulerForm extends StatelessWidget {
                                   FusionButton(
                                     label: "Done",
                                     isActive: viewModel.canEnableSubmit,
+                                    textStyle: context.textTheme.bodySmall?.copyWith(
+                                      color: viewModel.canEnableSubmit ? context.colorScheme.primaryWhite : context.colorScheme.primaryWhite.withAlpha(120),
+                                    ),
                                     onTap: () async {
                                       try {
                                         final bool value = await viewModel.submit(initial);
@@ -359,7 +393,7 @@ class _TimePicker extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final bool isAM = time.period == DayPeriod.am;
-    final Color borderColor = Colors.grey.shade400;
+    final Color borderColor = context.colorScheme.elevation4;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
@@ -376,7 +410,7 @@ class _TimePicker extends StatelessWidget {
             borderRadius: BorderRadius.circular(14),
           ),
           clipBehavior: Clip.hardEdge,
-          height: 50,
+          height: 40,
           child: Row(
             children: <Widget>[
               InkWell(
@@ -414,7 +448,7 @@ class _TimePicker extends StatelessWidget {
                         },
                         child: Container(
                           decoration: BoxDecoration(
-                            color: isAM ? Colors.black : Colors.transparent,
+                            color: !isAM ? Colors.transparent : context.colorScheme.primaryBlack,
                             border: Border(
                               left: BorderSide(color: borderColor),
                               bottom: BorderSide(color: borderColor),
@@ -423,9 +457,7 @@ class _TimePicker extends StatelessWidget {
                           child: Center(
                             child: Text(
                               "AM",
-                              style: context.textTheme.bodySmall?.copyWith(
-                                color: isAM ? Colors.white : Colors.black,
-                              ),
+                              style: context.textTheme.bodySmall?.copyWith(color: context.colorScheme.textPrimary),
                             ),
                           ),
                         ),
@@ -445,14 +477,12 @@ class _TimePicker extends StatelessWidget {
                         child: Container(
                           decoration: BoxDecoration(
                             border: Border(left: BorderSide(color: borderColor)),
-                            color: !isAM ? Colors.black : Colors.transparent,
+                            color: !isAM ? context.colorScheme.primaryBlack : Colors.transparent,
                           ),
                           child: Center(
                             child: Text(
                               "PM",
-                              style: context.textTheme.bodySmall?.copyWith(
-                                color: !isAM ? Colors.white : Colors.black,
-                              ),
+                              style: context.textTheme.bodySmall?.copyWith(color: context.colorScheme.textPrimary),
                             ),
                           ),
                         ),
@@ -482,6 +512,7 @@ class _WeeklyDaySelection extends StatelessWidget {
           children: <Widget>[
             FusionAppText(text: "On Days", style: context.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w500)),
             Row(
+              spacing: 6,
               children: <Widget>[
                 for (final RecurrenceDay day in RecurrenceDay.values)
                   Builder(
@@ -490,7 +521,6 @@ class _WeeklyDaySelection extends StatelessWidget {
                       return Column(
                         children: <Widget>[
                           Checkbox(
-                            activeColor: Colors.black,
                             value: isSelected,
                             onChanged: (_) {
                               if (viewModel.recurrenceDays.contains(day)) {
@@ -499,6 +529,26 @@ class _WeeklyDaySelection extends StatelessWidget {
                                 viewModel.addRecurrenceDay(day);
                               }
                             },
+                            materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                            visualDensity: VisualDensity.compact,
+                            side: MaterialStateBorderSide.resolveWith(
+                              (Set<WidgetState> states) {
+                                if (states.contains(MaterialState.selected)) {
+                                  return BorderSide(
+                                    color: context.colorScheme.elevation4,
+                                    width: 1,
+                                  );
+                                }
+                                return BorderSide(
+                                  color: context.colorScheme.elevation4,
+                                  width: 1,
+                                );
+                              },
+                            ),
+                            activeColor: context.colorScheme.elevation2,
+                            shape: const RoundedRectangleBorder(
+                              borderRadius: BorderRadius.zero,
+                            ),
                           ),
                           Text(
                             day.name.substring(0, 3).toUpperCase(),
@@ -543,11 +593,12 @@ class _DatePickerField extends StatelessWidget {
             const SizedBox(height: 8),
             Container(
               decoration: BoxDecoration(
-                border: Border.all(color: state.hasError ? Colors.red : Colors.grey),
+                color: context.colorScheme.elevation1,
+                border: Border.all(color: state.hasError ? Colors.red : context.colorScheme.elevation4),
                 borderRadius: BorderRadius.circular(14),
               ),
               clipBehavior: Clip.hardEdge,
-              height: 50,
+              height: 40,
               child: PopupMenuButton<dynamic>(
                 position: PopupMenuPosition.under,
                 tooltip: 'Select Date',
@@ -590,16 +641,19 @@ class _DatePickerField extends StatelessWidget {
                       ),
                     ],
                 child: Container(
+                  alignment: Alignment.center,
                   // constraints: const BoxConstraints(maxWidth: 300),
                   padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 12),
                   child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    mainAxisAlignment: MainAxisAlignment.center,
                     spacing: 18,
                     children: <Widget>[
                       Text(
                         selectedDate != null ? DateFormat('dd-MM-yyyy').format(selectedDate!) : "Select Date",
                         style: context.textTheme.bodySmall,
                       ),
-                      const Icon(Icons.calendar_month, color: Colors.black),
+                      Icon(Icons.calendar_month, size: 16, color: context.colorScheme.iconWhite),
                     ],
                   ),
                 ),

@@ -23,6 +23,7 @@ class GpioPage extends StatelessWidget {
     return Container(
       decoration: BoxDecoration(
         border: Border.all(width: 1, color: context.colorScheme.elevation2),
+        borderRadius: BorderRadius.circular(12),
       ),
       child: BlocProvider<GpioViewmodel>(
         create:
@@ -48,12 +49,12 @@ class GpioPage extends StatelessWidget {
                           child: Row(
                             spacing: 10,
                             children: <Widget>[
-                              SvgPicture.asset(
-                                'assets/icons/gpio/gpio.svg',
-                                width: 25,
-                                height: 25,
-                                color: context.colorScheme.iconWhite,
-                              ),
+                              // SvgPicture.asset(
+                              //   'assets/icons/gpio/gpio.svg',
+                              //   width: 25,
+                              //   height: 25,
+                              //   color: context.colorScheme.iconWhite,
+                              // ),
                               Text(
                                 "GPIO",
                                 style: context.textTheme.titleMedium,
