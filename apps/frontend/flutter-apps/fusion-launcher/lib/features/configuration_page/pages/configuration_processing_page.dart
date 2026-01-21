@@ -315,20 +315,28 @@ class _ConfigurationProcessingPageState extends State<ConfigurationProcessingPag
                             child: Opacity(
                               opacity: 0.8,
                               child: Container(
+                                width: 220,
                                 decoration: BoxDecoration(
                                   color: context.colorScheme.primary.withAlpha(150),
                                   borderRadius: BorderRadius.circular(8),
                                 ),
-                                width: 220,
-                                child: SourceItem(index: index, source: source, isDragging: true),
+                                child: SourceItem(
+                                  index: index,
+                                  source: source,
+                                  isDragging: true,
+                                ),
                               ),
                             ),
                           ),
                           childWhenDragging: Opacity(
-                            opacity: 0.8,
+                            opacity: 0.5,
                             child: SourceItem(index: index, source: source, isDragging: true),
                           ),
-                          child: SourceItem(index: index, source: source, isDragging: _draggingSourceId == source.id),
+                          child: SourceItem(
+                            index: index,
+                            source: source,
+                            isDragging: _draggingSourceId == source.id,
+                          ),
                         );
                       },
                     );

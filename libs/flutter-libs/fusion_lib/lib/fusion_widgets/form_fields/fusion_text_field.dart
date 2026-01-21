@@ -76,6 +76,7 @@ class FusionTextField extends StatelessWidget {
   final Color? color;
   final String? semanticFieldId;
 
+
   const FusionTextField({
     super.key,
     required this.hintText,
@@ -105,7 +106,11 @@ class FusionTextField extends StatelessWidget {
 
     final defaultDecoration = InputDecoration(
       hintText: hintText,
-      hintStyle: hintStyle ?? theme.inputDecorationTheme.hintStyle,
+      hintStyle:
+          hintStyle ??
+          theme.inputDecorationTheme.hintStyle?.copyWith(
+            color: theme.colorScheme.elevation5,
+          ),
       prefixIcon: prefixIcon,
       suffixIcon: suffixIcon,
       counterText: '',
@@ -115,7 +120,7 @@ class FusionTextField extends StatelessWidget {
       enabledBorder: border ?? const OutlineInputBorder(borderSide: BorderSide(color: Colors.transparent)),
       focusedBorder: border ?? const OutlineInputBorder(borderSide: BorderSide(color: Colors.transparent)),
       isDense: true,
-      contentPadding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+      contentPadding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
     );
 
     return SemanticHelper.formControl(

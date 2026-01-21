@@ -1,12 +1,10 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart' show TextInputFormatter, FilteringTextInputFormatter;
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:fusion_launcher/core/assets/asset_svg.dart';
 import 'package:fusion_launcher/core/service_locator.dart';
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
 import 'package:fusion_lib/fusion_lib.dart';
-import 'package:fusion_lib/fusion_theme/app_theme.dart';
-import 'package:fusion_lib/fusion_theme/color_scheme.dart';
 
 // ignore: constant_identifier_names
 const int _MAX_SPEAKER_COUNT = 25;
@@ -129,7 +127,7 @@ class SchematicPropertiesState extends State<SchematicProperties> {
             : '1';
 
     return Padding(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(16.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         spacing: 10,
@@ -168,10 +166,9 @@ class SchematicPropertiesState extends State<SchematicProperties> {
               Expanded(
                 child: Builder(
                   builder: (BuildContext context) {
-                    return TextField(
+                    return PropertyTextField(
                       controller: propertyModelNameController,
-                      maxLines: 1,
-                      textInputAction: TextInputAction.done,
+                      hintText: 'Enter name',
                       onTapOutside: (PointerDownEvent event) {
                         final String value = propertyModelNameController.text.trim();
                         if (value.isEmpty) return FusionToast.error(context, message: "Name should not be empty");
@@ -204,8 +201,6 @@ class SchematicPropertiesState extends State<SchematicProperties> {
                           projectViewModel.updateHardware(hardware: hardware);
                         }
                       },
-                      style: Theme.of(context).textTheme.bodySmall,
-                      decoration: const InputDecoration.collapsed(hintText: 'Enter model name'),
                     );
                   },
                 ),
@@ -350,39 +345,25 @@ class SchematicPropertiesState extends State<SchematicProperties> {
                         child: const Icon(Icons.remove, size: 17),
                         onTap: () => speakerQtyModify(shouldIncrement: false),
                       ),
-                      Flexible(
-                        child: Container(
-                          width: 36,
-                          height: 26,
-                          alignment: Alignment.center,
-                          decoration: BoxDecoration(
-                            border: Border.all(color: Colors.grey.shade300),
-                            borderRadius: BorderRadius.circular(6),
-                            color: Colors.white,
-                          ),
-                          child: TextField(
-                            controller: speakerQtyController,
-                            keyboardType: TextInputType.number,
-                            maxLines: 1,
-                            textAlign: TextAlign.center,
-                            onSubmitted: (String value) {
-                              if (value.isEmpty) return;
-                              final int? modifiedQty = int.tryParse(value);
-                              if (modifiedQty == null) return;
-                              if (modifiedQty > _MAX_SPEAKER_COUNT) {
-                                return FusionToast.error(
-                                  context,
-                                  message: "Count should be between 1 and $_MAX_SPEAKER_COUNT",
-                                );
-                              }
-                              speakerQtyModify(qty: modifiedQty);
-                            },
-                            style: Theme.of(context).textTheme.bodySmall,
-                            inputFormatters: <TextInputFormatter>[
-                              FilteringTextInputFormatter.digitsOnly,
-                            ],
-                            decoration: const InputDecoration.collapsed(hintText: '0'),
-                          ),
+                      SizedBox(
+                        width: 36,
+                        child: PropertyTextField(
+                          controller: speakerQtyController,
+                          keyboardType: TextInputType.number,
+                          maxLines: 1,
+                          textAlign: TextAlign.center,
+                          onSubmitted: (String value) {
+                            if (value.isEmpty) return;
+                            final int? modifiedQty = int.tryParse(value);
+                            if (modifiedQty == null) return;
+                            if (modifiedQty > _MAX_SPEAKER_COUNT) {
+                              return FusionToast.error(
+                                context,
+                                message: "Count should be between 1 and $_MAX_SPEAKER_COUNT",
+                              );
+                            }
+                            speakerQtyModify(qty: modifiedQty);
+                          },
                         ),
                       ),
                       GestureDetector(
@@ -499,6 +480,62 @@ class SchematicPropertiesState extends State<SchematicProperties> {
   }
 }
 
+class PropertyTextField extends StatelessWidget {
+  final TextEditingController controller;
+  final String? hintText;
+  final Function(String)? onSubmitted;
+  final Function(String)? onChanged;
+  final Function(PointerDownEvent event)? onTapOutside;
+  final TextInputType? keyboardType;
+  final int? maxLines;
+  final TextAlign? textAlign;
+
+  const PropertyTextField({
+    super.key,
+    required this.controller,
+    this.hintText,
+    this.onSubmitted,
+    this.onChanged,
+    this.onTapOutside,
+    this.keyboardType,
+    this.maxLines,
+    this.textAlign,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return TextField(
+      controller: controller,
+      maxLines: maxLines ?? 1,
+      keyboardType: keyboardType,
+      textAlign: textAlign ?? TextAlign.start,
+      onChanged: onChanged,
+      textInputAction: TextInputAction.done,
+      onTapOutside: onTapOutside,
+      onSubmitted: onSubmitted,
+      style: Theme.of(context).textTheme.bodySmall,
+      decoration: InputDecoration(
+        hintText: hintText,
+        hintStyle: Theme.of(context).textTheme.bodySmall?.copyWith(
+          color: context.colorScheme.elevation5,
+        ),
+        isDense: true,
+        fillColor: context.colorScheme.elevation1,
+        contentPadding: const EdgeInsets.all(8),
+        border: InputBorder.none,
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(6),
+          borderSide: BorderSide(color: context.colorScheme.elevation5, width: 1),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(6),
+          borderSide: BorderSide(color: context.colorScheme.elevation2, width: 1),
+        ),
+      ),
+    );
+  }
+}
+
 /// Convert hex string to Color
 Color hexToColor(String hexString) {
   final StringBuffer buffer = StringBuffer();
@@ -531,7 +568,7 @@ class _NoPropertiesWidget extends StatelessWidget {
       child: Padding(
         padding: const EdgeInsets.all(16.0),
         child: FusionAppText(
-          text: 'Select a device to view its properties',
+          text: 'Select device, zone or subzone to view properties',
           textAlign: TextAlign.center,
           style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey),
         ),
@@ -582,12 +619,16 @@ class _LocationSelecDropDown extends StatelessWidget {
 
     return PopupMenuButton<void>(
       tooltip: "Select Location",
-      constraints: const BoxConstraints(
-        maxHeight: 400,
-        maxWidth: 300,
-      ),
+      constraints: const BoxConstraints(maxHeight: 400, maxWidth: 300),
       position: PopupMenuPosition.under,
-      color: Colors.white,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(FusionSizes.borderRadius12),
+        side: BorderSide(color: context.colorScheme.elevation4),
+      ),
+      offset: const Offset(100, 20),
+      padding: EdgeInsets.zero,
+      color: context.colorScheme.elevation1,
+      menuPadding: EdgeInsets.zero,
       child: Row(
         mainAxisSize: MainAxisSize.min,
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -621,7 +662,7 @@ class _LocationSelecDropDown extends StatelessWidget {
             Icon(
               Icons.keyboard_arrow_down,
               size: 16,
-              color: Theme.of(context).colorScheme.textPrimary,
+              color: context.colorScheme.primaryWhite,
             ),
         ],
       ),
@@ -643,7 +684,13 @@ class _LocationSelecDropDown extends StatelessWidget {
                         /// Header
                         Container(
                           padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(border: Border(bottom: BorderSide(color: Colors.grey[300]!))),
+                          decoration: BoxDecoration(
+                            border: Border(
+                              bottom: BorderSide(
+                                color: context.colorScheme.elevation2,
+                              ),
+                            ),
+                          ),
                           child: Row(
                             children: <Widget>[
                               Expanded(
@@ -684,22 +731,19 @@ class _LocationSelecDropDown extends StatelessWidget {
                                       return InkWell(
                                         onTap: () => _toggleListeningAreaSelection(context, area.id),
                                         child: Container(
-                                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+                                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                                           decoration: BoxDecoration(
-                                            color: isSelected ? context.colorScheme.primaryBlack : null,
+                                            color: isSelected ? context.colorScheme.elevation2 : null,
                                           ),
                                           child: Row(
                                             children: <Widget>[
                                               /// Radio Button
-                                              Radio<String>(
-                                                value: area.id,
-                                                activeColor: context.colorScheme.primaryBlack,
-                                                groupValue: selectedListeningAreaIds.isNotEmpty ? selectedListeningAreaIds.first : null,
-                                                onChanged: (String? value) {
-                                                  if (value != null) _toggleListeningAreaSelection(context, value);
-                                                },
-                                                materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                              Icon(
+                                                isSelected ? Icons.radio_button_checked : Icons.radio_button_unchecked,
+                                                size: 16,
+                                                color: isSelected ? context.colorScheme.primaryWhite : null,
                                               ),
+
                                               const SizedBox(width: 8),
                                               Expanded(
                                                 child: FusionAppText(
@@ -759,8 +803,17 @@ class _ZonesListeningAreaSelectionWidget extends StatelessWidget {
     final ProjectViewModel projectViewModel = context.watch<ProjectViewModel>();
 
     return PopupMenuButton<String>(
-      color: Theme.of(context).colorScheme.primaryWhite,
       position: PopupMenuPosition.under,
+      tooltip: "Select Location",
+      constraints: const BoxConstraints(maxHeight: 400, maxWidth: 300),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(FusionSizes.borderRadius12),
+        side: BorderSide(color: context.colorScheme.elevation4),
+      ),
+      offset: const Offset(100, 20),
+      padding: EdgeInsets.zero,
+      color: context.colorScheme.elevation1,
+      menuPadding: EdgeInsets.zero,
       child: Row(
         children: <Widget>[
           Expanded(
@@ -784,7 +837,15 @@ class _ZonesListeningAreaSelectionWidget extends StatelessWidget {
               },
             ),
           ),
-          Icon(Icons.keyboard_arrow_down, size: 20, color: context.colorScheme.primaryBlack),
+          const SizedBox(width: 4),
+          RotatedBox(
+            quarterTurns: 2,
+            child: FusionSvgIcon(
+              icon: AssetSvg.expandUp,
+              size: FusionSizes.iconSize12,
+              color: context.colorScheme.iconWhite,
+            ),
+          ),
         ],
       ),
       itemBuilder: (BuildContext context) {
@@ -900,7 +961,7 @@ class _SelectListeningAreaForZoneAndSubzonePopupWidgetState extends State<Select
         /// Header with close button
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-          decoration: BoxDecoration(border: Border(bottom: BorderSide(color: Colors.grey[300]!))),
+
           child: Row(
             children: <Widget>[
               Expanded(
@@ -923,6 +984,8 @@ class _SelectListeningAreaForZoneAndSubzonePopupWidgetState extends State<Select
             ],
           ),
         ),
+
+        Divider(height: 1, color: context.colorScheme.elevation2),
 
         /// Scrollable list of listening areas
         Flexible(
@@ -959,7 +1022,7 @@ class _SelectListeningAreaForZoneAndSubzonePopupWidgetState extends State<Select
                                 height: 4,
                                 child: Checkbox(
                                   value: !isAvailableToSelectOrDeselect ? true : isSelected,
-                                  activeColor: context.colorScheme.primaryBlack,
+                                  activeColor: context.colorScheme.elevation5,
                                   onChanged: !isAvailableToSelectOrDeselect ? null : (_) => onListeningAreaTap(area.id),
                                   materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                                   visualDensity: VisualDensity.compact,
@@ -978,7 +1041,7 @@ class _SelectListeningAreaForZoneAndSubzonePopupWidgetState extends State<Select
                                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
                                     fontWeight: FontWeight.w500,
                                     fontSize: 10,
-                                    color: !isAvailableToSelectOrDeselect ? Colors.grey[400] : Theme.of(context).textTheme.bodySmall?.color,
+                                    color: !isAvailableToSelectOrDeselect ? context.colorScheme.elevation5 : context.colorScheme.textPrimary,
                                   ),
                                 ),
                               ),
@@ -986,7 +1049,7 @@ class _SelectListeningAreaForZoneAndSubzonePopupWidgetState extends State<Select
                                 text: zoneName ?? "No zone",
                                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
                                   fontSize: 9,
-                                  color: !isAvailableToSelectOrDeselect ? context.colorScheme.primaryBlack : context.colorScheme.primaryBlack,
+                                  color: context.colorScheme.elevation5,
                                   fontWeight: FontWeight.w600,
                                 ),
                               ),
@@ -1100,7 +1163,7 @@ class _AddNewLocationWidgetState extends State<AddNewLocationWidget> {
           if (_isExpanded) ...<Widget>[
             Container(
               padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(color: Colors.grey[50]),
+              decoration: BoxDecoration(color: context.colorScheme.elevation1),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: <Widget>[
@@ -1118,13 +1181,13 @@ class _AddNewLocationWidgetState extends State<AddNewLocationWidget> {
                   Container(
                     height: 26,
                     decoration: BoxDecoration(
-                      color: Theme.of(context).colorScheme.primaryWhite,
-                      border: Border.all(color: Colors.grey[300]!),
+                      color: Theme.of(context).colorScheme.elevation1,
+                      border: Border.all(color: Theme.of(context).colorScheme.elevation3),
                       borderRadius: BorderRadius.circular(4),
                     ),
                     child: DropdownButtonHideUnderline(
                       child: DropdownButton<String>(
-                        dropdownColor: Theme.of(context).colorScheme.primaryWhite,
+                        dropdownColor: Theme.of(context).colorScheme.elevation1,
                         hint: FusionAppText(
                           text: "Select floor",
                           style: Theme.of(context).textTheme.bodySmall?.copyWith(
@@ -1168,13 +1231,9 @@ class _AddNewLocationWidgetState extends State<AddNewLocationWidget> {
                   ),
                   const SizedBox(height: 4),
 
-                  FusionTextField(
+                  PropertyTextField(
                     controller: locationNameController,
                     hintText: "Enter location name",
-                    decoration: FusionInputDecoration.fusionDense(
-                      colorScheme: Theme.of(context).colorScheme,
-                      hintText: 'Enter location name',
-                    ),
                   ),
                   const SizedBox(height: 12),
 

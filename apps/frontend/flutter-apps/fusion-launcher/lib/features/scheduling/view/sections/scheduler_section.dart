@@ -211,7 +211,7 @@ class FusionTable extends StatelessWidget {
 
           child: Row(
             spacing: spacing,
-            children: [
+            children: <Widget>[
               Visibility(
                 maintainSize: true,
                 maintainAnimation: true,
@@ -223,20 +223,18 @@ class FusionTable extends StatelessWidget {
                   color: context.colorScheme.iconDefault,
                 ),
               ),
-              ...headers
-                  .map(
-                    (final FusionTableHeader e) => Expanded(
-                      flex: e.flex,
-                      child: Align(
-                        alignment: e.aligment,
-                        child: FusionAppText(
-                          text: e.title,
-                          style: context.textTheme.labelLarge?.copyWith(fontWeight: FontWeight.bold),
-                        ),
-                      ),
+              ...headers.map(
+                (final FusionTableHeader e) => Expanded(
+                  flex: e.flex,
+                  child: Align(
+                    alignment: e.aligment,
+                    child: FusionAppText(
+                      text: e.title,
+                      style: context.textTheme.labelLarge?.copyWith(fontWeight: FontWeight.bold),
                     ),
-                  )
-                  .toList(),
+                  ),
+                ),
+              ),
             ],
           ),
         ),
