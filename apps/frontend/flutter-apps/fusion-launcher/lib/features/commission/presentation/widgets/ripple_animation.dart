@@ -102,7 +102,7 @@ class _NeumorphicRipplePainter extends CustomPainter {
         // 1. Light Shadow (Top-Left)
         final Paint lightPaint =
             Paint()
-              ..color = Colors.white.withOpacity(opacity * 0.6)
+              ..color = backgroundColor.withOpacity(opacity * 0.6)
               ..style = PaintingStyle.stroke
               ..strokeWidth = strokeWidth
               ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 10);

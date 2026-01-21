@@ -1,10 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show TextInputFormatter, FilteringTextInputFormatter;
-import 'package:fusion_lib/fusion_widgets/others/fusion_toast.dart';
-import 'package:fusion_lib/fusion_widgets/semantics/semantic_helper.dart';
-import 'package:fusion_lib/fusion_widgets/semantics/semantic_type.dart';
-
-import '../../common/neumorphic_button.dart';
+import 'package:fusion_lib/fusion_lib.dart';
 
 class NeumorphicGainTextField extends StatefulWidget {
   final double? controllerValue;
@@ -80,16 +76,11 @@ class _NeumorphicGainTextFieldState extends State<NeumorphicGainTextField> {
       testId: SemanticHelper.createTestId(SemanticTypes.formControl, "neumorphic_gain_text_field"),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(widget.borderRadius),
-        child: Container(
+        child: FusionContainer(
           width: widget.width,
           height: widget.height,
           alignment: Alignment.center,
-          decoration: BoxDecoration(
-            color: Colors.transparent,
-            borderRadius: BorderRadius.circular(widget.borderRadius),
-            boxShadow: isFocused ? null : getNeumorphismBoxShadows(inner: true),
-            border: isFocused ? Border.all(color: Colors.black12, width: 1.5) : null,
-          ),
+          raised: false,
           child: TextField(
             controller: controller,
             textAlign: TextAlign.center,

@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
-import '../../common/neumorphic_button.dart';
 import '../../widgets/pb_slider.dart';
 
 class NeumorphicTextWithPopupSliderButton extends StatefulWidget {
@@ -38,16 +37,16 @@ class _NeumorphicTextWithPopupSliderButtonState extends State<NeumorphicTextWith
     return ClipRRect(
       borderRadius: BorderRadiusGeometry.circular(widget.borderRadius),
       clipBehavior: widget.isActive ? Clip.hardEdge : Clip.none,
-      child: Container(
+      child: FusionContainer(
         height: widget.height ?? 28,
         width: widget.width ?? double.infinity,
-        clipBehavior: widget.isActive ? Clip.hardEdge : Clip.none,
+        raised: !widget.isActive,
         alignment: Alignment.center,
-        decoration: BoxDecoration(
-          color: Colors.transparent,
-          borderRadius: BorderRadius.circular(widget.borderRadius),
-          boxShadow: getNeumorphismBoxShadows(inner: widget.isActive, color: const Color(0xFFF9F7F6)),
-        ),
+        // decoration: BoxDecoration(
+        //   color: Colors.transparent,
+        //   borderRadius: BorderRadius.circular(widget.borderRadius),
+        //   boxShadow: getNeumorphismBoxShadows(inner: widget.isActive, color: const Color(0xFFF9F7F6)),
+        // ),
         child: Row(
           children: <Widget>[
             Expanded(

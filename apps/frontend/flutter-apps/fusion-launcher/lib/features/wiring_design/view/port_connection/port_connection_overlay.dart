@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:fusion_launcher/core/theme/app_theme.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_launcher/features/wiring_design/controller/component_db.dart';
 import 'package:fusion_launcher/features/wiring_design/controller/helpers/connection_methods_extension.dart';
@@ -65,7 +64,7 @@ class _PortConnectionOverlayState extends State<PortConnectionOverlay> {
           decoration: BoxDecoration(
             border: Border(
               bottom: BorderSide(
-                color: context.colorScheme.borderColorL,
+                color: context.colorScheme.elevation2,
                 width: 2,
               ),
             ),

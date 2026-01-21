@@ -40,7 +40,7 @@ class PbWidgets {
     ),
     PbWidgets(
       type: 'textfield',
-      builder: (BuildContext context, PBItem item, PBWidgetValueHandler? handler) => PBTextfield(item: item, handler: handler),
+      builder: (BuildContext context, PBItem item, PBWidgetValueHandler? handler) => PBItemTextfield(item: item, handler: handler),
       paramFactory: PBTextfieldParam.fromMap,
       fromParameter: (Parameter data) => PBTextfieldParam(label: data.name, max: 100, min: 0, unit: "db"),
       fromTelemetry: (Telemetry data) => PBTextfieldParam(label: data.name, max: 100, min: 0, unit: "db"),
@@ -101,7 +101,7 @@ class PbWidgets {
   static List<PbWidgets> selectWidgets = <PbWidgets>[
     PbWidgets(
       type: 'dropdown',
-      builder: (BuildContext context, PBItem item, PBWidgetValueHandler? handler) => PBDropdown(item: item, handler: handler),
+      builder: (BuildContext context, PBItem item, PBWidgetValueHandler? handler) => PBItemDropdown(item: item, handler: handler),
       paramFactory: PBDropdownParam.fromMap,
       fromParameter: (Parameter data) => PBDropdownParam(label: data.name, options: <String>[]),
       fromTelemetry:

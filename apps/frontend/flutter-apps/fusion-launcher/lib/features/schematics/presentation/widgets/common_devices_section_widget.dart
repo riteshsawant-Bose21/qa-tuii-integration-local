@@ -395,7 +395,7 @@ class _CommonDevicesSectionWidgetState extends State<CommonDevicesSectionWidget>
                                           child: SemanticHelper.formControl(
                                             testId: SemanticHelper.createTestId(SemanticTypes.textInput, "section_search_${widget.title.toLowerCase()}"),
                                             child: FusionTextField(
-                                              fillColor: context.colorScheme.elevation2,
+                                              color: context.colorScheme.elevation2,
                                               controller: searchController,
                                               hintText: widget.title == 'Speakers' ? 'Search zones' : 'Search devices',
                                               focusNode: _searchFocusNode,

@@ -1,10 +1,8 @@
 import 'package:flutter/cupertino.dart';
-import 'package:flutter/material.dart';
-import 'package:fusion_lib/fusion_theme/app_theme.dart';
 
+import '../../features/authentication/launcher_sign_in_page.dart';
 import '../../features/home/presentation/pages/launcher_home_page.dart';
 import '../../features/projects/presentation/project_work_area.dart';
-import '../../features/authentication/launcher_sign_in_page.dart';
 
 class Routes {
   static const String launcherSignInPage = '/launcherSignInPage';

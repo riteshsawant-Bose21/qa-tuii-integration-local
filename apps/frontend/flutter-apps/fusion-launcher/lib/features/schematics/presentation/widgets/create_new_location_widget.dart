@@ -169,7 +169,7 @@ class _CreateNewLocationWidgetState extends State<CreateNewLocationWidget> {
                       child: FusionTextField(
                         controller: widget.areaNameController,
                         hintText: "Enter location name",
-                        fillColor: context.colorScheme.elevation2,
+                        color: context.colorScheme.elevation2,
                         onChanged: (String value) {
                           widget.setDropdownState(() {});
                         },

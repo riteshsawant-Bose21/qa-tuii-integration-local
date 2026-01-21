@@ -376,7 +376,7 @@ class _ListeningAreaDropdownWidgetState extends State<ListeningAreaDropdownWidge
                                         child: FusionTextField(
                                           controller: _areaNameController,
                                           hintText: "Enter location name",
-                                          fillColor: context.colorScheme.primaryBlack,
+                                          color: context.colorScheme.primaryBlack,
                                           onChanged: (String value) {
                                             setDropdownState(() {}); // Update button state
                                           },

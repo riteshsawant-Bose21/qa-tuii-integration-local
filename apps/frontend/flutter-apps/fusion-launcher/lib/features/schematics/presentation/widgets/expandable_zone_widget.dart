@@ -621,7 +621,7 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
                 child: FusionTextField(
                   controller: _zoneNameController,
                   hintText: "Enter subzone name",
-                  fillColor: Theme.of(context).colorScheme.primaryBlack,
+                  color: Theme.of(context).colorScheme.primaryBlack,
                   onChanged: (String value) => updateAllStates(),
                 ),
               ),

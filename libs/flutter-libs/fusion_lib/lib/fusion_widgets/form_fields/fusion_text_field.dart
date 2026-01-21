@@ -73,9 +73,9 @@ class FusionTextField extends StatelessWidget {
 
   final bool autofocus;
 
+  final Color? color;
   final String? semanticFieldId;
 
-  final Color? fillColor;
 
   const FusionTextField({
     super.key,
@@ -96,8 +96,8 @@ class FusionTextField extends StatelessWidget {
     this.maxLength = 24,
     this.inputFormatters,
     this.autofocus = false,
+    this.color,
     this.semanticFieldId,
-    this.fillColor,
   });
 
   @override
@@ -114,7 +114,7 @@ class FusionTextField extends StatelessWidget {
       prefixIcon: prefixIcon,
       suffixIcon: suffixIcon,
       counterText: '',
-      fillColor: fillColor ?? theme.colorScheme.elevation1,
+      fillColor: color?? theme.colorScheme.elevation1,
       filled: true,
       border: border ?? const OutlineInputBorder(borderSide: BorderSide(color: Colors.transparent)),
       enabledBorder: border ?? const OutlineInputBorder(borderSide: BorderSide(color: Colors.transparent)),
