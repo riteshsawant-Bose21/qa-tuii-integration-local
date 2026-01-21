@@ -80,7 +80,7 @@ struct fusion_gpt
 	u64  phc_epoch_ns;            /* PHC time at the anchored PPS */
 	u64  pps_epoch_cnt64;         /* 64-bit CNT at the anchored PPS */
 	bool phc_epoch_valid;
-	spinlock_t pps_lock;          /* protects the PPS/epoch fields */
+	raw_spinlock_t pps_lock;      /* protects the PPS/epoch fields */
 
 	bool phc_aligned;             /* true after one-shot phase align */
 
@@ -211,7 +211,7 @@ int fusion_gpt_set_phc_anchor(u64 phc_ns_at_pps)
     if (!g)
         return -ENODEV;
 
-    spin_lock_irqsave(&g->pps_lock, flags);
+    raw_spin_lock_irqsave(&g->pps_lock, flags);
 
     if (phc_ns_at_pps == 0) {
         g->pending_future_anchor = false;
@@ -222,7 +222,7 @@ int fusion_gpt_set_phc_anchor(u64 phc_ns_at_pps)
         g->phc_aligned = false;
         pr_info("fusion_gpt: phc anchor cleared\n");
         rc = 0;
-        spin_unlock_irqrestore(&g->pps_lock, flags);
+        raw_spin_unlock_irqrestore(&g->pps_lock, flags);
         return rc;
     }
 
@@ -238,7 +238,7 @@ int fusion_gpt_set_phc_anchor(u64 phc_ns_at_pps)
 
     pr_info("fusion_gpt: phc anchor armed %llu\n", phc_ns_at_pps);
     rc = 0;
-    spin_unlock_irqrestore(&g->pps_lock, flags);
+    raw_spin_unlock_irqrestore(&g->pps_lock, flags);
 
     return rc;
 }
@@ -256,11 +256,11 @@ int fusion_gpt_get_phc_status(bool *epoch_valid, bool *aligned, u32 *pps_seq)
 	if (!g) return -ENODEV;
 
 	/* single spin-locked snapshot */
-	spin_lock_irqsave(&g->pps_lock, flags);
+	raw_spin_lock_irqsave(&g->pps_lock, flags);
 	*epoch_valid = g->phc_epoch_valid;
 	*aligned     = READ_ONCE(g->phc_aligned);
 	*pps_seq     = g->pps_seq;
-	spin_unlock_irqrestore(&g->pps_lock, flags);
+	raw_spin_unlock_irqrestore(&g->pps_lock, flags);
 	return 0;
 }
 EXPORT_SYMBOL(fusion_gpt_get_phc_status);
@@ -278,11 +278,11 @@ u64 fusion_gpt_read_phc_ns(void)
 	if (!g) return 0;
 
 	/* Snapshot epoch under pps_lock */
-	spin_lock_irqsave(&g->pps_lock, flags);
+	raw_spin_lock_irqsave(&g->pps_lock, flags);
 	valid       = g->phc_epoch_valid;
 	epoch_ns    = g->phc_epoch_ns;
 	epoch_cnt64 = g->pps_epoch_cnt64;
-	spin_unlock_irqrestore(&g->pps_lock, flags);
+	raw_spin_unlock_irqrestore(&g->pps_lock, flags);
 	if (!valid) return 0;
 
 	/* Read current 64-bit counter safely */
@@ -338,7 +338,7 @@ static irqreturn_t gpt_irq(int irq, void *dev_id)
 		if (cap64 > now64)
 			cap64 -= 1ULL << 32;
 
-		spin_lock(&g->pps_lock);
+		raw_spin_lock(&g->pps_lock);
 		g->pps_seq++;
 		g->pps_icr1_last32 = cap;
 		g->pps_icr1_last64 = cap64;
@@ -354,7 +354,7 @@ static irqreturn_t gpt_irq(int irq, void *dev_id)
             pr_info("fusion_gpt: phc anchor latched epoch=%llu cnt=%llu\n",
                     g->phc_epoch_ns, g->pps_epoch_cnt64);
         }
-		spin_unlock(&g->pps_lock);
+		raw_spin_unlock(&g->pps_lock);
 
 		clr |= SR_IF1;
 	}
@@ -374,11 +374,11 @@ static irqreturn_t gpt_irq(int irq, void *dev_id)
 			bool valid;
 
 			/* Snapshot epoch under pps_lock */
-			spin_lock_irqsave(&g->pps_lock, flags);
+			raw_spin_lock_irqsave(&g->pps_lock, flags);
 			valid       = g->phc_epoch_valid;
 			epoch_ns    = g->phc_epoch_ns;
 			epoch_cnt64 = g->pps_epoch_cnt64;
-			spin_unlock_irqrestore(&g->pps_lock, flags);
+			raw_spin_unlock_irqrestore(&g->pps_lock, flags);
 
 			do_align = valid;
 		}
@@ -451,7 +451,7 @@ static int gpt_start(struct fusion_gpt *g)
 	g->hi = 0;
 	seqlock_init(&g->ticks_sl);
 
-	spin_lock_init(&g->pps_lock);
+	raw_spin_lock_init(&g->pps_lock);
 	g->pps_seq = 0;
 	g->pps_icr1_last32 = 0;
 	g->pps_icr1_last64 = 0;
