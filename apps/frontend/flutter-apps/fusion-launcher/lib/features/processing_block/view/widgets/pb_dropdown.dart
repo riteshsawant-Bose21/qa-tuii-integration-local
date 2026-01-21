@@ -22,15 +22,9 @@ class PBItemDropdown extends StatelessWidget {
       onChanged: (String? value) {
         handler?.onValueChanged(item, value);
       },
-      itemBuilder: (BuildContext context) {
-        return data.options
-            .map<PopupMenuEntry<String>>(
-              (String option) => PopupMenuItem<String>(
-                value: option,
-                child: Text(option),
-              ),
-            )
-            .toList();
+      items: data.options,
+      itemBuilder: (BuildContext context, String option) {
+        return Text(option);
       },
     );
   }
@@ -39,7 +33,9 @@ class PBItemDropdown extends StatelessWidget {
 class PBDropdown<T> extends StatelessWidget {
   final String? value;
   final String hintText;
-  final PopupMenuItemBuilder<T> itemBuilder;
+  // final PopupMenuItemBuilder<T> itemBuilder;
+  final List<T> items;
+  final Widget Function(BuildContext, T) itemBuilder;
   final ValueChanged<T> onChanged;
   final double? height;
   final double? width;
@@ -48,6 +44,7 @@ class PBDropdown<T> extends StatelessWidget {
     super.key,
     this.value,
     required this.hintText,
+    required this.items,
     required this.itemBuilder,
     required this.onChanged,
     this.height,
@@ -63,10 +60,12 @@ class PBDropdown<T> extends StatelessWidget {
         borderRadius: BorderRadiusGeometry.circular(_bRadius),
         child: Padding(
           padding: const EdgeInsets.all(8.0),
-          child: PopupMenuButton<T>(
+          child: FusionPopupMenu<T>(
+            items: items,
+
             // color: context.colorScheme.elevation2,
-            elevation: 1,
-            position: PopupMenuPosition.under,
+            // elevation: 1,
+            // position: PopupMenuPosition.under,
             itemBuilder: itemBuilder,
             onSelected: onChanged,
             child: Padding(

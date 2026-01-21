@@ -2,7 +2,9 @@ import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:fusion_launcher/features/add_source_popup/view_model/add_source_viewmodel.dart';
+import 'package:fusion_launcher/features/processing_block/view/widgets/pb_meter.dart';
 import 'package:fusion_lib/fusion_lib.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:provider/provider.dart';
 
 import '../../../viewmodel/algorithm_data_viewmodel.dart';
@@ -14,6 +16,7 @@ import '../widgets/disabled_widget_wrapper.dart';
 part '_peq_band_section.dart';
 part '_peq_controller.dart';
 part '_peq_graph.dart';
+part '_peq_out_meter.dart';
 
 class PeqBlock extends StatelessWidget {
   const PeqBlock({super.key});
@@ -77,11 +80,7 @@ class PeqBlock extends StatelessWidget {
                       height: 30,
                       width: 50,
                     ),
-                    const SizedBox(width: 20),
-                    Icon(
-                      Icons.delete_outline_rounded,
-                      color: context.colorScheme.iconDefault,
-                    ),
+                   
                   ],
                 ),
               ),
@@ -93,6 +92,7 @@ class PeqBlock extends StatelessWidget {
                     children: <Widget>[
                       Expanded(child: _PeqGraphSection()),
                       SizedBox(width: 600, child: _PeqBandSection()),
+                      _PeqOutMeter(),
                     ],
                   ),
                 ),

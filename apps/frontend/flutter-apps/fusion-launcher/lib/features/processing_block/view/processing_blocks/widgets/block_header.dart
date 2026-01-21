@@ -1,5 +1,8 @@
-import 'package:flutter/cupertino.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:fusion_launcher/features/processing_block/viewmodel/processing_chain_cubit.dart';
 import 'package:fusion_lib/fusion_lib.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 class BlockHeader extends StatelessWidget {
   const BlockHeader({
@@ -34,6 +37,20 @@ class BlockHeader extends StatelessWidget {
         ),
         const Spacer(),
         if (actions != null) actions!,
+        const SizedBox(width: 20),
+        InkWell(
+          onTap: () {
+            context.read<ProcessingChainCubit>().deleteSelectedProcessingBlock();
+          },
+          child: Tooltip(
+            message: "Delete processing block",
+            child: Icon(
+              LucideIcons.trash200,
+              size: 16,
+              color: context.colorScheme.iconDefault,
+            ),
+          ),
+        ),
       ],
     );
   }

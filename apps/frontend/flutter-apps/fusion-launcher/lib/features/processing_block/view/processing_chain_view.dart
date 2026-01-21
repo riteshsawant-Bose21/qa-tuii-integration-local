@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/core/service_locator.dart';
 import 'package:fusion_lib/fusion_lib.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:provider/provider.dart';
 
 import '../../configuration/presentation/viewmodel/project_view_model.dart';
@@ -83,9 +84,9 @@ class ProcessingChainView extends StatelessWidget {
                           onTap: () {
                             Navigator.pop(context);
                           },
-                          child: const Icon(
-                            Icons.close,
-                            color: Colors.white,
+                          child: Icon(
+                            LucideIcons.x200,
+                            color: context.colorScheme.iconDefault,
                           ),
                         ),
                       ],
@@ -349,38 +350,61 @@ class AddProcessingBlockButton extends StatelessWidget {
   final Widget child;
   @override
   Widget build(BuildContext context) {
-    return PopupMenuButton<ProcessingBlockModel>(
+    return FusionPopupMenu<ProcessingBlockModel>(
       tooltip: "Add Processing Block",
-      position: PopupMenuPosition.under,
+      matchChildWidth: false,
+      items: switch (params.type) {
+        ProcessingChainDeviceType.source || ProcessingChainDeviceType.sourceSet => ProcessingBlockModel.sourceBlocks,
+        ProcessingChainDeviceType.zone || ProcessingChainDeviceType.subzone => ProcessingBlockModel.zoneBlocks,
+        ProcessingChainDeviceType.circuit => ProcessingBlockModel.circuitBlocks,
+      },
       itemBuilder:
-          (BuildContext context) =>
-              switch (params.type) {
-                    ProcessingChainDeviceType.source || ProcessingChainDeviceType.sourceSet => ProcessingBlockModel.sourceBlocks,
-                    ProcessingChainDeviceType.zone || ProcessingChainDeviceType.subzone => ProcessingBlockModel.zoneBlocks,
-                    ProcessingChainDeviceType.circuit => ProcessingBlockModel.circuitBlocks,
-                  }
-                  .map(
-                    (ProcessingBlockModel block) => PopupMenuItem<ProcessingBlockModel>(
-                      height: 40,
-                      value: block,
-                      child: Row(
-                        children: <Widget>[
-                          Image.asset(
-                            block.iconAsset,
-                            color: Colors.black,
-                            height: 18,
-                            width: 18,
-                          ),
-                          const SizedBox(width: 15),
-                          FusionAppText(
-                            text: block.name,
-                            style: context.textTheme.bodySmall,
-                          ),
-                        ],
-                      ),
-                    ),
-                  )
-                  .toList(),
+          (BuildContext context, ProcessingBlockModel block) => Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8.0),
+            child: Row(
+              children: <Widget>[
+                Image.asset(
+                  block.iconAsset,
+                  color: context.colorScheme.iconDefault,
+                  height: 18,
+                  width: 18,
+                ),
+                const SizedBox(width: 15),
+                FusionAppText(
+                  text: block.name,
+                  style: context.textTheme.bodySmall,
+                ),
+              ],
+            ),
+          ),
+      // (BuildContext context) =>
+      //     switch (params.type) {
+      //           ProcessingChainDeviceType.source || ProcessingChainDeviceType.sourceSet => ProcessingBlockModel.sourceBlocks,
+      //           ProcessingChainDeviceType.zone || ProcessingChainDeviceType.subzone => ProcessingBlockModel.zoneBlocks,
+      //           ProcessingChainDeviceType.circuit => ProcessingBlockModel.circuitBlocks,
+      //         }
+      //         .map(
+      //           (ProcessingBlockModel block) => PopupMenuItem<ProcessingBlockModel>(
+      //             height: 40,
+      //             value: block,
+      //             child: Row(
+      //               children: <Widget>[
+      //                 Image.asset(
+      //                   block.iconAsset,
+      //                   color: Colors.black,
+      //                   height: 18,
+      //                   width: 18,
+      //                 ),
+      //                 const SizedBox(width: 15),
+      //                 FusionAppText(
+      //                   text: block.name,
+      //                   style: context.textTheme.bodySmall,
+      //                 ),
+      //               ],
+      //             ),
+      //           ),
+      //         )
+      //         .toList(),
       onSelected: (ProcessingBlockModel block) {
         // if (params.type == ProcessingChainDeviceType.source) {
         //   viewModel.addProcessingBlockToSource(block);

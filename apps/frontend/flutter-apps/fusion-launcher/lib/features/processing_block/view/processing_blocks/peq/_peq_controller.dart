@@ -50,7 +50,14 @@ class _PEQDataPoint {
 class PEQController {
   final AlgorithmDataViewmodel valueHandler;
 
-  PEQController(this.valueHandler);
+  PEQController(this.valueHandler) {
+    if (frequencyProperties.length < 3) {
+      // Initialize with 3 bands if less than 3 bands exist
+      for (int i = frequencyProperties.length; i < 3; i++) {
+        addBand();
+      }
+    }
+  }
 
   List<PropertySetting> get allProperties {
     return valueHandler.processingBlock.properties;
@@ -77,6 +84,9 @@ class PEQController {
   }
 
   void addBand() {
+    if (bands.length >= 16) {
+      return;
+    }
     final int newBandIndex = bandCount;
     valueHandler.addProperty(PropertySetting(name: 'type', value: 'peq', dimension: newBandIndex));
     valueHandler.addProperty(PropertySetting(name: 'frequency', value: 1000.0, dimension: newBandIndex));
@@ -86,6 +96,9 @@ class PEQController {
   }
 
   void removeBand(int bandIndex) {
+    if (bands.length <= 3) {
+      return;
+    }
     final int bandToRemove = bands[bandIndex];
 
     for (final int index in bands) {
@@ -138,7 +151,7 @@ class PEQController {
       final List<PropertySetting> allBWValues = allProperties.where((PropertySetting e) => e.name == 'q').toList();
       for (final PropertySetting bwProperty in allBWValues) {
         final double bwValue = bwProperty.value?.toDouble();
-        final double qValue = bwToQ(bwValue);
+        final num qValue = bwToQ(bwValue);
         valueHandler.updateValue(field: 'q', dimension: bwProperty.dimension, value: qValue);
       }
     }
@@ -155,13 +168,21 @@ class PEQController {
 
     final double d = pow(c / q2, 2) / 4 - 1;
 
-    final double e = log(sqrt(d) + c / b) / 0.301;
+    final double e = log10(sqrt(d) + c / b) / 0.301;
 
     return roundToPrecision(e, 3);
   }
 
-  double bwToQ(double bw) {
-    return pow(2.0, bw * 0.5) / (pow(2.0, bw) - 1.0);
+  num bwToQ(double bw) {
+    return roundTo2Digits(pow(2.0, bw * 0.5) / (pow(2.0, bw) - 1.0));
+  }
+
+  double log10(num x) {
+    if (x <= 0) {
+      // Handle invalid input for logarithm (e.g., return NaN or throw an error)
+      return double.nan;
+    }
+    return log(x) / ln10;
   }
 
   ///
@@ -186,6 +207,20 @@ class PEQController {
 
   (List<double>, List<double>) get graphData {
     final List<_PEQDataPoint> tableData = tableMappedData;
+
+    if (isInBW || isGloballyBypassed) {
+      final List<_PEQDataPoint> oldTD = tableData.toList();
+      for (int i = 0; i < oldTD.length; i++) {
+        final _PEQDataPoint oldBand = oldTD[i];
+        tableData[i] = _PEQDataPoint(
+          type: oldBand.type,
+          frequency: oldBand.frequency,
+          q: isInBW ? bwToQ(oldBand.q.toDouble()) : oldBand.q,
+          gain: oldBand.gain,
+          bypass: isGloballyBypassed || oldBand.bypass,
+        );
+      }
+    }
     return graphDataMapper.updateGraph(tableData);
   }
 
@@ -193,6 +228,10 @@ class PEQController {
     final int bandIndex = bands[index];
 
     valueHandler.updateValue(field: 'type', dimension: bandIndex, value: value);
+    if (value == _BandType.lowPass.value || value == _BandType.highPass.value) {
+      // Set gain to -12 for lowPass and highPass
+      valueHandler.updateValue(field: 'gain', dimension: bandIndex, value: -6);
+    }
   }
 
   void updateBandFrequency(int index, num value) {
@@ -221,6 +260,23 @@ class PEQController {
 
   num roundTo2Digits(num value) {
     return (value * 100).round() / 100;
+  }
+
+  void resetAllBands() {
+    for (final int bandIndex in bands) {
+      valueHandler.updateValue(field: 'type', dimension: bandIndex, value: 'peq');
+      valueHandler.updateValue(field: 'frequency', dimension: bandIndex, value: 1000.0);
+      valueHandler.updateValue(field: 'gain', dimension: bandIndex, value: 0.0);
+      valueHandler.updateValue(field: 'q', dimension: bandIndex, value: 1.0);
+      valueHandler.updateValue(field: 'bypass', dimension: bandIndex, value: false);
+    }
+  }
+
+  void deleteAllBands() {
+    final int totalBands = bandCount;
+    for (int i = totalBands - 1; i >= 0; i--) {
+      removeBand(i);
+    }
   }
 }
 

@@ -12,8 +12,8 @@ class _PeqBandSection extends StatelessWidget {
           decoration: BoxDecoration(
             color: context.colorScheme.elevation2,
           ),
-          padding: const EdgeInsets.only(right: 8, left: 8),
           child: ListView.builder(
+            padding: const EdgeInsets.only(right: 8, left: 8),
             itemCount: tableData.length + 1,
             itemBuilder: (BuildContext context, int index) {
               if (index == 0) {
@@ -23,7 +23,7 @@ class _PeqBandSection extends StatelessWidget {
                     spacing: 5,
                     children: <Widget>[
                       const SizedBox(
-                        width: 20,
+                        width: 25,
                       ),
                       Expanded(
                         flex: 2,
@@ -42,7 +42,26 @@ class _PeqBandSection extends StatelessWidget {
                           ),
                         ),
                       ),
-                      Opacity(opacity: 0, child: Icon(Icons.delete, color: context.colorScheme.error)),
+                      FusionPopupMenu<String>(
+                        onSelected: (String? value) {
+                          // Handle menu item selection
+                          if('reset' == value) {
+                            controller.resetAllBands();
+                          } else if('delete' == value) {
+                            controller.deleteAllBands();
+                          }
+                        },
+                        matchChildWidth: false,
+                        items: <String>['reset', 'delete'],
+                        itemLabels: <String, String>{
+                          "reset": "Reset all",
+                          "delete": "Delete all",
+                        },
+                        child: Icon(
+                          Icons.more_vert,
+                          color: context.colorScheme.iconDefault,
+                        ),
+                      ),
                     ],
                   ),
                 );
@@ -55,7 +74,7 @@ class _PeqBandSection extends StatelessWidget {
                   spacing: 5,
                   children: <Widget>[
                     Container(
-                      width: 20,
+                      width: 25,
 
                       decoration: BoxDecoration(
                         color: context.colorScheme.primary,
@@ -71,21 +90,19 @@ class _PeqBandSection extends StatelessWidget {
                     ),
                     Expanded(
                       flex: 20,
-                      child: PBDropdown<String>(
+                      child: PBDropdown<_BandType>(
                         hintText: "Type",
-                        onChanged: (String value) {
-                          controller.updateBandType(index, value);
+                        onChanged: (_BandType value) {
+                          controller.updateBandType(index, value.value);
                         },
+                        items: _BandType.values,
                         value: row.bandType.label,
-                        itemBuilder: (BuildContext context) {
-                          return <PopupMenuEntry<String>>[
-                            ..._BandType.values.map(
-                              (_BandType type) => PopupMenuItem<String>(
-                                value: type.value,
-                                child: Text(type.label),
-                              ),
-                            ),
-                          ];
+
+                        itemBuilder: (BuildContext context, _BandType option) {
+                          return Text(
+                            option.label,
+                            style: context.textTheme.bodySmall,
+                          );
                         },
                       ),
                     ),
@@ -131,16 +148,13 @@ class _PeqBandSection extends StatelessWidget {
                                   onChanged: (_CutType value) {
                                     controller.updateGain(index, value.value);
                                   },
+                                  items: _CutType.values,
                                   value: row.cutType?.label ?? row.gain.toString(),
-                                  itemBuilder: (BuildContext context) {
-                                    return <PopupMenuEntry<_CutType>>[
-                                      ..._CutType.values.map(
-                                        (_CutType type) => PopupMenuItem<_CutType>(
-                                          value: type,
-                                          child: Text(type.label),
-                                        ),
-                                      ),
-                                    ];
+                                  itemBuilder: (BuildContext context, _CutType option) {
+                                    return Text(
+                                      option.label,
+                                      style: context.textTheme.bodySmall,
+                                    );
                                   },
                                 )
                                 : FusionContainer(
@@ -175,7 +189,8 @@ class _PeqBandSection extends StatelessWidget {
                         controller.removeBand(index);
                       },
                       child: Icon(
-                        Icons.delete_outline,
+                        LucideIcons.trash200,
+                        size: 16,
                         color: controller.canDelete ? context.colorScheme.iconDefault : context.colorScheme.iconDisabled,
                       ),
                     ),

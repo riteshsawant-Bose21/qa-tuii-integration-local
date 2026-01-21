@@ -121,12 +121,13 @@ class _FusionSwitchState extends State<FusionSwitch> with SingleTickerProviderSt
     _dragStartValue = _animationController.value;
   }
 
+  num get padding => (widget.height - (widget.height * 0.7));
   void _onPanUpdate(DragUpdateDetails details) {
     if (!_isDragging) return;
 
     final thumbWidth = widget.height * 0.7;
     final trackWidth = widget.width;
-    final dragDistance = trackWidth - thumbWidth - 8; // Available drag distance (4px padding on each side)
+    final dragDistance = trackWidth - thumbWidth - padding; // Available drag distance (4px padding on each side)
 
     final newValue = (_dragStartValue! + (details.localPosition.dx - thumbWidth / 2 - 4) / dragDistance).clamp(0.0, 1.0);
 
@@ -192,7 +193,7 @@ class _FusionSwitchState extends State<FusionSwitch> with SingleTickerProviderSt
         child: AnimatedBuilder(
           animation: _animationController,
           builder: (context, child) {
-            final thumbPosition = _positionAnimation.value * (trackWidth - thumbWidth - (padding / 2)); // 8 for padding (4px on each side)
+            final thumbPosition = _positionAnimation.value * (trackWidth - thumbWidth - (padding)); // 8 for padding (4px on each side)
 
             return Stack(
               children: [
