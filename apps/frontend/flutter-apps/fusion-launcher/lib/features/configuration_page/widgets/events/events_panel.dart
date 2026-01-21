@@ -39,25 +39,35 @@ class _EventsPanelState extends State<EventsPanel> {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.elevation1,
-      ),
-      child: Column(
-        children: <Widget>[
-          /// Events Section
-          SectionHeader(
-            title: 'Events',
-            trailing: GestureDetector(
-              onTap: () {
-                _addNewEvents();
-              },
-              child: Icon(Icons.add_sharp, size: 16, color: context.colorScheme.primaryBlack),
-            ),
+    return Column(
+      children: <Widget>[
+        /// Events Section
+        SectionHeader(
+          title: 'Events',
+          trailing: GestureDetector(
+            onTap: () {
+              _addNewEvents();
+            },
+            child: Icon(Icons.add_sharp, size: 16, color: context.colorScheme.iconWhite),
           ),
+        ),
 
-          /// Event list
-          Expanded(
+        /// Event list
+        Expanded(
+          child: Container(
+            clipBehavior: Clip.hardEdge,
+            decoration: BoxDecoration(
+              borderRadius: const BorderRadius.only(
+                bottomLeft: Radius.circular(12),
+                bottomRight: Radius.circular(12),
+              ),
+              border: Border(
+                bottom: BorderSide(color: context.colorScheme.elevation2, width: 1),
+                left: BorderSide(color: context.colorScheme.elevation2, width: 1),
+                right: BorderSide(color: context.colorScheme.elevation2, width: 1),
+              ),
+              color: Theme.of(context).colorScheme.elevation1,
+            ),
             child: BlocBuilder<ProjectViewModel, ProjectViewModelState>(
               builder: (BuildContext context, ProjectViewModelState state) {
                 final List<FusionEvent> eventList = _projectViewModel.getAllEvents();
@@ -107,8 +117,8 @@ class _EventsPanelState extends State<EventsPanel> {
               },
             ),
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }

@@ -9,7 +9,7 @@ class SnapshotActionRowHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
-      color: context.colorScheme.primaryBlack.withAlpha(40),
+      color: context.colorScheme.elevation2.withAlpha(120),
       child: const Row(
         spacing: 12,
 

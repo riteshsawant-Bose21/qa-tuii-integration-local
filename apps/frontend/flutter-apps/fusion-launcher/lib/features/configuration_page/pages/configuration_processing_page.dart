@@ -582,7 +582,7 @@ class _ConfigurationProcessingPageState extends State<ConfigurationProcessingPag
   Widget _buildOutputPanel() {
     return Container(
       decoration: BoxDecoration(
-        color: context.colorScheme.elevation1,
+        color: context.colorScheme.primaryBlack,
         borderRadius: const BorderRadius.all(Radius.circular(12)),
         border: Border(
           left: BorderSide(color: context.colorScheme.elevation2, width: 1),

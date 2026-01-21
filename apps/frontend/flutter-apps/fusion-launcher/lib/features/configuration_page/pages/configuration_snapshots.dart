@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:fusion_launcher/core/service_locator.dart';
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
 import 'package:fusion_launcher/features/configuration_page/widgets/snapshots/snapshots_and_scenes_panel.dart';
+import 'package:fusion_lib/fusion_lib.dart';
 
 import '../widgets/snapshots/action_list.dart';
 
@@ -25,7 +26,7 @@ class _ConfigurationSnapshotsState extends State<ConfigurationSnapshots> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey[100],
+      backgroundColor: context.colorScheme.primaryBlack,
       body: LayoutBuilder(
         builder: (BuildContext context, BoxConstraints constraints) {
           final bool isWideScreen = constraints.maxWidth > 600;
@@ -34,6 +35,7 @@ class _ConfigurationSnapshotsState extends State<ConfigurationSnapshots> {
             return Row(
               children: <Widget>[
                 SizedBox(width: constraints.maxWidth * 0.3, child: const SnapshotsAndScenesPanel()),
+                const SizedBox(width: 4),
                 const Expanded(child: ActionList()),
               ],
             );
