@@ -87,6 +87,10 @@ struct fusion_gpt
 	/* "Arm-next-PPS" anchor from userspace (pps_seq == 0 mode) */
 	bool pending_future_anchor;
 	u64  pending_future_phc_ns;
+
+	/* Debug: detect missing PPS capture */
+	unsigned long last_pps_jiffies;
+	unsigned long last_pps_warn_jiffies;
 };
 
 static struct fusion_gpt *gpt_singleton;
@@ -236,7 +240,8 @@ int fusion_gpt_set_phc_anchor(u64 phc_ns_at_pps)
     /* Epoch becomes valid at the next ICR1 edge (when we bind cap64 -> PHC) */
     g->phc_epoch_valid   = false;
 
-    pr_info("fusion_gpt: phc anchor armed %llu\n", phc_ns_at_pps);
+    pr_info("fusion_gpt: phc anchor armed %llu (pps_seq=%u pps_valid=%d)\n",
+            phc_ns_at_pps, g->pps_seq, g->pps_valid ? 1 : 0);
     rc = 0;
     spin_unlock_irqrestore(&g->pps_lock, flags);
 
@@ -340,6 +345,7 @@ static irqreturn_t gpt_irq(int irq, void *dev_id)
 
 		spin_lock(&g->pps_lock);
 		g->pps_seq++;
+		g->last_pps_jiffies = jiffies;
 		g->pps_icr1_last32 = cap;
 		g->pps_icr1_last64 = cap64;
 		g->pps_valid       = true;
@@ -353,6 +359,9 @@ static irqreturn_t gpt_irq(int irq, void *dev_id)
             g->pending_future_anchor = false;
             pr_info("fusion_gpt: phc anchor latched epoch=%llu cnt=%llu\n",
                     g->phc_epoch_ns, g->pps_epoch_cnt64);
+        } else {
+            pr_info_ratelimited("fusion_gpt: PPS capture without pending anchor (seq=%u)\n",
+                                g->pps_seq);
         }
 		spin_unlock(&g->pps_lock);
 
@@ -381,6 +390,16 @@ static irqreturn_t gpt_irq(int irq, void *dev_id)
 			spin_unlock_irqrestore(&g->pps_lock, flags);
 
 			do_align = valid;
+			if (!valid) {
+				pr_info_ratelimited("fusion_gpt: OF1 align skipped (epoch_valid=0)\n");
+			}
+		}
+
+		/* Periodic warning if PPS capture is missing */
+		if (time_after(jiffies, g->last_pps_warn_jiffies + HZ)) {
+			if (time_after(jiffies, g->last_pps_jiffies + 2 * HZ))
+				pr_info("fusion_gpt: no PPS capture for >2s\n");
+			g->last_pps_warn_jiffies = jiffies;
 		}
 
 		if (do_align) {
@@ -456,6 +475,8 @@ static int gpt_start(struct fusion_gpt *g)
 	g->pps_icr1_last32 = 0;
 	g->pps_icr1_last64 = 0;
 	g->pps_valid = false;
+	g->last_pps_jiffies = jiffies;
+	g->last_pps_warn_jiffies = jiffies;
 	g->phc_epoch_ns = 0;
 	g->pps_epoch_cnt64 = 0;
 	g->phc_epoch_valid = false;
