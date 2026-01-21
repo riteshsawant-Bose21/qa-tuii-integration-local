@@ -458,7 +458,7 @@ class _SourceSetItemState extends State<SourceSetItem> {
                           label: "Delete",
                           textStyle: Theme.of(ctx).textTheme.labelLarge?.copyWith(
                             fontSize: 11,
-                            color: scheme.primary,
+                            color: scheme.primaryWhite,
                           ),
                           isActive: true,
                           onTap: () {
@@ -535,9 +535,18 @@ class _SourceSetCreationWidgetState extends State<_SourceSetCreationWidget> {
             controller: widget.sourceSetNameController,
             hintText: "Enter source set name",
             semanticFieldId: "source_set_name_input",
-            decoration: FusionInputDecoration.fusionDense(
-              colorScheme: Theme.of(context).colorScheme,
-              hintText: 'Enter source set name',
+            decoration: InputDecoration(
+              hintText: "Enter source set name",
+
+              hintStyle: Theme.of(context).inputDecorationTheme.hintStyle,
+              counterText: '',
+              fillColor: context.colorScheme.elevation2,
+              filled: true,
+              border: const OutlineInputBorder(borderSide: BorderSide(color: Colors.transparent)),
+              enabledBorder: const OutlineInputBorder(borderSide: BorderSide(color: Colors.transparent)),
+              focusedBorder: const OutlineInputBorder(borderSide: BorderSide(color: Colors.transparent)),
+              isDense: true,
+              contentPadding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
             ),
             onChanged: (String value) {
               setState(() {});
@@ -559,7 +568,8 @@ class _SourceSetCreationWidgetState extends State<_SourceSetCreationWidget> {
           Container(
             height: 28,
             decoration: BoxDecoration(
-              border: Border.all(color: Colors.grey[300]!),
+              color: context.colorScheme.elevation2,
+              border: Border.all(color: context.colorScheme.elevation4),
               borderRadius: BorderRadius.circular(4),
             ),
             child: PopupMenuButton<String>(
@@ -573,7 +583,7 @@ class _SourceSetCreationWidgetState extends State<_SourceSetCreationWidget> {
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(8),
               ),
-              color: context.colorScheme.elevation1,
+              color: context.colorScheme.elevation2,
               offset: const Offset(0, 35),
               itemBuilder: (BuildContext context) {
                 return <PopupMenuEntry<String>>[
@@ -583,6 +593,9 @@ class _SourceSetCreationWidgetState extends State<_SourceSetCreationWidget> {
                     child: StatefulBuilder(
                       builder: (BuildContext context, StateSetter setPopupState) {
                         return Container(
+                          decoration: BoxDecoration(
+                            color: context.colorScheme.elevation2,
+                          ),
                           width: 240,
                           constraints: const BoxConstraints(maxHeight: 460),
                           child: Column(
@@ -593,7 +606,9 @@ class _SourceSetCreationWidgetState extends State<_SourceSetCreationWidget> {
                                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                                 decoration: BoxDecoration(
                                   border: Border(
-                                    bottom: BorderSide(color: Colors.grey[300]!),
+                                    bottom: BorderSide(
+                                      color: context.colorScheme.elevation4,
+                                    ),
                                   ),
                                 ),
                                 child: Row(
@@ -615,7 +630,7 @@ class _SourceSetCreationWidgetState extends State<_SourceSetCreationWidget> {
                                         child: Icon(
                                           Icons.close,
                                           size: 16,
-                                          color: Theme.of(context).colorScheme.textPrimary,
+                                          color: Theme.of(context).colorScheme.iconWhite,
                                         ),
                                       ),
                                     ),
@@ -636,7 +651,7 @@ class _SourceSetCreationWidgetState extends State<_SourceSetCreationWidget> {
                                                 Container(
                                                   width: double.infinity,
                                                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                                                  color: context.colorScheme.primaryBlack.withAlpha(40),
+                                                  // color: context.colorScheme.primaryBlack.withAlpha(40),
                                                   child: FusionAppText(
                                                     text: "Selected (${widget.selectedSources.length})",
                                                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
@@ -673,10 +688,28 @@ class _SourceSetCreationWidgetState extends State<_SourceSetCreationWidget> {
                                                                 setPopupState(() {});
                                                                 setState(() {});
                                                               },
-                                                              activeColor: context.colorScheme.primaryBlack,
+                                                              activeColor: context.colorScheme.elevation4,
                                                               materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                                                               visualDensity: VisualDensity.compact,
-                                                              shape: const RoundedRectangleBorder(borderRadius: BorderRadius.zero),
+                                                              shape: const RoundedRectangleBorder(
+                                                                borderRadius: BorderRadius.zero,
+                                                                side: BorderSide(width: 0.5),
+                                                              ),
+
+                                                              side: MaterialStateBorderSide.resolveWith(
+                                                                (Set<WidgetState> states) {
+                                                                  if (states.contains(MaterialState.selected)) {
+                                                                    return BorderSide(
+                                                                      color: context.colorScheme.primaryWhite,
+                                                                      width: 1,
+                                                                    );
+                                                                  }
+                                                                  return BorderSide(
+                                                                    color: context.colorScheme.primaryWhite,
+                                                                    width: 1,
+                                                                  );
+                                                                },
+                                                              ),
                                                             ),
                                                           ),
                                                           const SizedBox(width: 12),
@@ -786,14 +819,14 @@ class _SourceSetCreationWidgetState extends State<_SourceSetCreationWidget> {
                                   ? "Select Sources"
                                   : "${widget.selectedSources.length} source${widget.selectedSources.length > 1 ? 's' : ''} selected",
                           style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: widget.selectedSources.isEmpty ? context.colorScheme.primaryBlack : Theme.of(context).textTheme.bodySmall?.color,
+                            color: widget.selectedSources.isEmpty ? context.colorScheme.textSecondary : Theme.of(context).textTheme.bodySmall?.color,
                           ),
                         ),
                       ),
                       Icon(
                         Icons.keyboard_arrow_down,
                         size: 20,
-                        color: context.colorScheme.primaryBlack,
+                        color: context.colorScheme.iconWhite,
                       ),
                     ],
                   ),
@@ -821,7 +854,9 @@ class _SourceSetCreationWidgetState extends State<_SourceSetCreationWidget> {
               Flexible(
                 child: FusionButton(
                   width: double.infinity,
-                  textStyle: Theme.of(context).textTheme.labelLarge?.copyWith(fontSize: 10, color: context.colorScheme.primaryBlack),
+                  textStyle: Theme.of(context).textTheme.labelLarge?.copyWith(
+                    fontSize: 10 /*color: context.colorScheme.primaryBlack*/,
+                  ),
 
                   label: "Edit",
                   isActive: widget.sourceSetNameController.text.trim().isNotEmpty && widget.selectedSources.length >= 2,
