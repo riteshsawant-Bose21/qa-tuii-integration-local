@@ -87,7 +87,7 @@ class _HomePageState extends State<HomePage> {
                     listener: (BuildContext context, ProjectViewModelState state) {
                       if (state is ProjectLoaded && context.mounted) {
                         if (state.currentProject != null) {
-                          FusionThemeController.setThemeMode(ThemeMode.light);
+                          // FusionThemeController.setThemeMode(ThemeMode.light);
 
                           FusionUiUtils.hideLoader(context);
                           Navigator.pushNamed(context, Routes.projectPage).then((_) async {

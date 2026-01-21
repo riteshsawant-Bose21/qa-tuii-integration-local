@@ -474,32 +474,35 @@ class _CommonDevicesSectionWidgetState extends State<CommonDevicesSectionWidget>
                           if (isSearchVisible && (widget.searchQuery != null && widget.searchQuery!.isNotEmpty)) ...<Widget>[
                             SemanticHelper.container(
                               testId: SemanticHelper.createTestId(SemanticTypes.container, "search_results_message_container"),
-                              child: RichText(
-                                text: TextSpan(
-                                  style: Theme.of(context).textTheme.bodySmall?.copyWith(fontSize: 11, color: Colors.black87),
-                                  children: <InlineSpan>[
-                                    TextSpan(
-                                      text: '${widget.searchResultCount ?? 0} results found for ',
-                                      style: context.textTheme.bodySmall?.copyWith(
-                                        fontSize: 11,
-                                        fontWeight: FontWeight.w600,
-                                        color: context.colorScheme.primaryWhite,
+                              child: Padding(
+                                padding: const EdgeInsets.only(left: 16.0, bottom: 6.0, right: 16.0),
+                                child: RichText(
+                                  text: TextSpan(
+                                    style: Theme.of(context).textTheme.bodySmall?.copyWith(fontSize: 11, color: Colors.black87),
+                                    children: <InlineSpan>[
+                                      TextSpan(
+                                        text: '${widget.searchResultCount ?? 0} results found for ',
+                                        style: context.textTheme.bodySmall?.copyWith(
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.w600,
+                                          color: context.colorScheme.primaryWhite,
+                                        ),
                                       ),
-                                    ),
-                                    TextSpan(
-                                      text: '"${widget.searchQuery}"',
-                                      style: context.textTheme.bodySmall?.copyWith(
-                                        fontSize: 11,
-                                        fontWeight: FontWeight.w600,
-                                        backgroundColor: Colors.orange[200],
-                                        color: Colors.black,
+                                      TextSpan(
+                                        text: '"${widget.searchQuery}"',
+                                        style: context.textTheme.bodySmall?.copyWith(
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.w600,
+                                          backgroundColor: Colors.orange[200],
+                                          color: Colors.black,
+                                        ),
                                       ),
-                                    ),
-                                  ],
+                                    ],
+                                  ),
                                 ),
                               ),
                             ),
-                            const SizedBox(height: 8),
+                            // const SizedBox(height: 8),
                           ],
 
                           /// Original content (expandable / static)
