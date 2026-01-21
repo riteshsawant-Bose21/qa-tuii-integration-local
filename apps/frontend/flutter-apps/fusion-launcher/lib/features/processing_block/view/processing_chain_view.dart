@@ -334,7 +334,7 @@ class _PBIcon extends StatelessWidget {
       padding: const EdgeInsets.all(10),
       child: Image.asset(
         icon,
-        color: context.colorScheme.iconDefault,
+        color: isActive ? Colors.white : context.colorScheme.iconDefault,
         height: 18,
         width: 18,
         // package: '',

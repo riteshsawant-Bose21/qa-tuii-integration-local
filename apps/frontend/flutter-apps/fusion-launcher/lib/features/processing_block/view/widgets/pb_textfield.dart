@@ -32,36 +32,36 @@ class PBItemTextfield extends StatelessWidget {
             width: constraints.maxWidth,
             height: constraints.maxHeight,
             child: Center(
-              child: Padding(
-                padding: EdgeInsets.all(widthPerCell),
-                child: TextFormField(
-                  key: ValueKey<String>('${item.id}_textfield${value?.toString() ?? ''}'),
-                  decoration: InputDecoration.collapsed(
-                    border: InputBorder.none,
+              child: TextFormField(
+                key: ValueKey<String>('${item.id}_textfield${value?.toString() ?? ''}'),
 
-                    fillColor: Colors.transparent,
-                    filled: true,
-                    // contentPadding: EdgeInsets.symmetric(horizontal: widthPerCell * 0.2, vertical: widthPerCell * 0.1),
-                    hintText: data.label,
-                    // suffixText: data.unit ?? '',
-                    // isDense: true,
-                    // isCollapsed: true,
-                  ),
-                  style: TextStyle(
-                    fontSize: widthPerCell * 2,
-                  ),
-                  textAlign: TextAlign.center,
-                  textAlignVertical: TextAlignVertical.top,
-                  initialValue: value?.toString() ?? '',
-                  keyboardType: TextInputType.number,
+                decoration: InputDecoration(
+                  border: InputBorder.none,
+                  focusedBorder: InputBorder.none,
+                  enabledBorder: InputBorder.none,
+                  errorBorder: InputBorder.none,
+                  disabledBorder: InputBorder.none,
+                  fillColor: Colors.transparent,
 
-                  onFieldSubmitted: (String value) {
-                    final num? parsedValue = num.tryParse(value);
-                    if (parsedValue != null) {
-                      handler?.onValueChanged(item, parsedValue.clamp(data.min, data.max));
-                    }
-                  },
+                  filled: true,
+                  // contentPadding: EdgeInsets.symmetric(horizontal: widthPerCell * 0.2, vertical: widthPerCell * 0.1),
+                  hintText: data.label,
+                  // suffixText: data.unit ?? '',
+                  // isDense: true,
+                  // isCollapsed: true,
                 ),
+                style: context.textTheme.bodySmall,
+                textAlign: TextAlign.center,
+                textAlignVertical: TextAlignVertical.top,
+                initialValue: value?.toString() ?? '',
+                keyboardType: TextInputType.number,
+
+                onFieldSubmitted: (String value) {
+                  final num? parsedValue = num.tryParse(value);
+                  if (parsedValue != null) {
+                    handler?.onValueChanged(item, parsedValue.clamp(data.min, data.max));
+                  }
+                },
               ),
             ),
           ),

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:fusion_lib/fusion_lib.dart';
 
 import '../../dto/pb_item.dart';
 import '../../dto/pb_item_param.dart';
@@ -38,6 +39,8 @@ class PBSlider extends StatelessWidget {
             min: data.min,
             max: data.max,
             showIntervals: showIntervals,
+            thumbColor: context.colorScheme.primary,
+            activeColor: context.colorScheme.primary,
             onChanged:
                 onChanged ??
                 (num value) {
