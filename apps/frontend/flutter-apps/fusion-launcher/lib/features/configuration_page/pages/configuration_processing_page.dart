@@ -315,7 +315,6 @@ class _ConfigurationProcessingPageState extends State<ConfigurationProcessingPag
                             child: Opacity(
                               opacity: 0.8,
                               child: Container(
-                                color: context.colorScheme.primaryWhite,
                                 width: 220,
                                 decoration: BoxDecoration(
                                   color: context.colorScheme.primary.withAlpha(150),

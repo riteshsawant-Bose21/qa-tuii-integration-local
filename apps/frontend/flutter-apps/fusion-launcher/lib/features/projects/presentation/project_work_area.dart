@@ -7,6 +7,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
+import 'package:fusion_launcher/core/assets/asset_svg.dart';
 import 'package:fusion_launcher/core/spl_calculation/isolate_mace_calculation_manager.dart';
 import 'package:fusion_launcher/core/utils/fusion_utils.dart';
 import 'package:fusion_launcher/features/commission/presentation/pages/device_setup_wizard.dart';
@@ -21,7 +22,6 @@ import 'package:fusion_lib/constants/test_keys.dart';
 import 'package:fusion_lib/fusion_building_view/floor_canvas_controller.dart';
 import 'package:fusion_lib/fusion_building_view/spl_range_controller.dart';
 import 'package:fusion_lib/fusion_lib.dart';
-import 'package:fusion_lib/fusion_theme/color_scheme.dart';
 import 'package:fusion_lib/fusion_theme/fusion_theme_notifier.dart';
 import 'package:fusion_lib/models/dock_item_config.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
@@ -591,6 +591,65 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
             showRight: true,
             mainArea: const SchematicsPage(),
             dockItemList: <DockItemConfig>[
+              DockItemConfig(
+                id: "11",
+                title: "PROPERTIES",
+                side: "right",
+                initiallyExpanded: true,
+                allowUndock: false,
+                isCollapsibleSection: false,
+                dockItemWidget: Padding(
+                  padding: const EdgeInsets.all(8.0),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: <Widget>[
+                      GestureDetector(
+                        onTap: () {
+                          _projectViewModel.setProjectMode(ProjectMode.systemListingMode);
+                        },
+                        child: SemanticHelper.button(
+                          testId: SemanticHelper.createTestId(SemanticTypes.button, FusionTestKeys.listingViewIcon),
+                          child: Container(
+                            width: 40,
+                            height: 40,
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(2),
+                              color: isListingViewMode ? context.colorScheme.elevation3 : Colors.transparent,
+                            ),
+                            child: FusionSvgIcon(
+                              icon: AssetSvg.listingViewIcon,
+                              size: 40,
+                              color: context.colorScheme.primaryWhite,
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      GestureDetector(
+                        onTap: () {
+                          _projectViewModel.setProjectMode(ProjectMode.systemWiringMode);
+                        },
+                        child: SemanticHelper.button(
+                          testId: SemanticHelper.createTestId(SemanticTypes.button, FusionTestKeys.wiringViewIcon),
+                          child: Container(
+                            width: 40,
+                            height: 40,
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(2),
+                              color: isListingViewMode ? Colors.transparent : context.colorScheme.elevation3,
+                            ),
+                            child: FusionSvgIcon(
+                              icon: AssetSvg.wiringViewIcon,
+                              size: 40,
+                              color: context.colorScheme.primaryWhite,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
               const DockItemConfig(
                 id: "5",
                 title: "PROPERTIES",

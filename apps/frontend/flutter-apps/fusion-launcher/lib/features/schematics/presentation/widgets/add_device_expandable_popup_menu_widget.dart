@@ -4,6 +4,7 @@ import 'package:fusion_launcher/core/assets/asset_svg.dart';
 import 'package:fusion_launcher/core/service_locator.dart';
 import 'package:fusion_launcher/features/create_zone_popup/view/create_zone_popup.dart';
 import 'package:fusion_lib/fusion_lib.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../../core/models/products_data.dart';
 import '../../../configuration/presentation/viewmodel/project_view_model.dart';
@@ -40,24 +41,6 @@ class _AddDeviceExpandablePopupMenuWidgetState extends State<AddDeviceExpandable
   dynamic _selectedPopupDevice;
   List<String> _selectedListeningAreaIds = <String>[];
   String? _selectedColorHex;
-
-  /// Returns tooltip text based on the section title
-  String getSectionToolTip() {
-    switch (widget.sectionTitle) {
-      case "Sources & Endpoints":
-        return "Add Source or Endpoint";
-      case "Processors & Amplifiers":
-        return "Add Processor or Amplifier";
-      case "Speakers":
-        return "Add Speaker";
-      case "Controllers":
-        return "Add Controller";
-      case "Accessories":
-        return "Add Accessory";
-      default:
-        return "Add Device";
-    }
-  }
 
   void _addDeviceToSelectedAreas() {
     print('Add device added - Device: $_selectedPopupDevice, Areas: $_selectedListeningAreaIds');
@@ -114,12 +97,12 @@ class _AddDeviceExpandablePopupMenuWidgetState extends State<AddDeviceExpandable
             testId: SemanticHelper.createTestId(SemanticTypes.button, "add_zone_button_${widget.sectionTitle}"),
             child: Row(
               children: <Widget>[
-                FusionSvgIcon(
-                  icon: AssetSvg.expandUp,
-                  size: FusionSizes.iconSize16,
+                Icon(
+                  LucideIcons.plus200,
+                  size: FusionSizes.iconSize12,
                   color: context.colorScheme.iconWhite,
                 ),
-                const SizedBox(width: 2),
+                const SizedBox(width: 6),
                 FusionAppText(
                   text: "Add Zone",
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
@@ -127,6 +110,7 @@ class _AddDeviceExpandablePopupMenuWidgetState extends State<AddDeviceExpandable
                     color: Theme.of(context).colorScheme.textPrimary,
                   ),
                 ),
+                const SizedBox(width: 6),
               ],
             ),
           ),
@@ -142,29 +126,22 @@ class _AddDeviceExpandablePopupMenuWidgetState extends State<AddDeviceExpandable
               _selectedColorHex = null;
             });
           },
-          tooltip: getSectionToolTip(),
+          tooltip: "",
           padding: EdgeInsets.zero,
-          constraints: const BoxConstraints(
-            maxHeight: 500,
-            maxWidth: 300,
-          ),
+          constraints: const BoxConstraints(maxHeight: 500, maxWidth: 300),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(8),
+            borderRadius: BorderRadius.circular(FusionSizes.borderRadius16),
+            side: BorderSide(color: context.colorScheme.elevation2),
           ),
-          color: context.colorScheme.primaryWhite,
+          color: context.colorScheme.elevation1,
           menuPadding: EdgeInsets.zero,
-
           itemBuilder: (BuildContext context) {
             return <PopupMenuItem<dynamic>>[
               PopupMenuItem<dynamic>(
                 enabled: false,
                 padding: EdgeInsets.zero,
-                child: Container(
-                  width: 300,
-                  constraints: const BoxConstraints(
-                    maxHeight: 460,
-                    maxWidth: 300,
-                  ),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(FusionSizes.borderRadius16),
                   child: StatefulBuilder(
                     builder: (BuildContext context, StateSetter setMenuState) {
                       return SingleChildScrollView(
@@ -180,18 +157,25 @@ class _AddDeviceExpandablePopupMenuWidgetState extends State<AddDeviceExpandable
               ),
             ];
           },
-          child:
-              (widget.sectionTitle == "Processors & Amplifiers" || widget.sectionTitle == "Sources & Endpoints")
-                  ? const SizedBox()
-                  : SemanticHelper.button(
-                    testId: SemanticHelper.createTestId(SemanticTypes.button, "add_${widget.sectionTitle}"),
-                    child: IconButton(
-                      icon: Icon(Icons.add_sharp, size: 16, color: context.colorScheme.primaryBlack),
-                      onPressed: null,
-                      padding: EdgeInsets.zero,
-                      constraints: const BoxConstraints(),
+          child: Builder(
+            builder: (BuildContext context) {
+              if ((widget.sectionTitle == "Processors & Amplifiers" || widget.sectionTitle == "Sources & Endpoints")) {
+                return const SizedBox();
+              } else {
+                return SemanticHelper.button(
+                  testId: SemanticHelper.createTestId(SemanticTypes.button, "add_${widget.sectionTitle}"),
+                  child: Padding(
+                    padding: const EdgeInsets.only(right: 6),
+                    child: Icon(
+                      LucideIcons.plus200,
+                      size: FusionSizes.iconSize12,
+                      color: context.colorScheme.iconWhite,
                     ),
                   ),
+                );
+              }
+            },
+          ),
         );
   }
 
@@ -312,163 +296,179 @@ class _AddDeviceExpandablePopupMenuWidgetState extends State<AddDeviceExpandable
     final bool isExpanded = _isSectionExpanded(sectionKey);
     final bool canAddDevice = _selectedPopupDevice != null && _selectedListeningAreaIds.isNotEmpty;
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: <Widget>[
-        /// Section Header
-        InkWell(
-          onTap: () => _toggleSection(sectionKey, setMenuState),
-          child: Container(
-            height: 40,
-            width: 300,
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            child: Row(
-              children: <Widget>[
-                Icon(
-                  isExpanded ? Icons.arrow_drop_up_rounded : Icons.arrow_drop_down_rounded,
-                  size: 22,
-                  color: Theme.of(context).colorScheme.textPrimary,
-                ),
-                const SizedBox(width: 6),
-                Expanded(
-                  child: FusionAppText(
-                    text: title,
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(fontSize: 11),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-
-        /// Section Items (conditionally shown)
-        if (isExpanded) ...<Widget>[
-          ...items.map(
-            (T item) => InkWell(
-              onTap: () {
-                setState(() {
-                  _selectedPopupDevice = item;
-                });
-                setMenuState(() {});
-              },
-              child: Container(
-                height: 30,
-                margin: const EdgeInsets.only(left: 16, right: 16, bottom: 4),
-                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(4),
-                  border: Border.all(
-                    color: _isDeviceSelected(_selectedPopupDevice, item) ? Colors.black : context.colorScheme.primaryBlack,
-                    width: _isDeviceSelected(_selectedPopupDevice, item) ? 1 : 1,
-                  ),
-                  color: _isDeviceSelected(_selectedPopupDevice, item) ? context.colorScheme.primaryBlack : null,
-                ),
-                child: Row(
-                  children: <Widget>[
-                    if (item is SourceData)
-                      Image.asset(
-                        item.assetPath,
-                        height: 14,
-                        width: 14,
-                      )
-                    else if (item is RackData)
-                      Image.asset(
-                        item.assetPath,
-                        height: 14,
-                        width: 14,
-                      )
-                    else if (item is SwitchData)
-                      Image.asset(
-                        item.assetPath,
-                        height: 14,
-                        width: 14,
-                      )
-                    else if (item is ProductQueryModel)
-                      FusionImage.asset(
-                        item.image.isNotEmpty ? item.image : _getDefaultImageForProductType(item.type),
-                        height: 14,
-                        width: 14,
-                        fit: BoxFit.contain,
-                      )
-                    else
-                      Container(
-                        height: 14,
-                        width: 14,
-                        decoration: BoxDecoration(
-                          color: Colors.grey[400],
-                          borderRadius: BorderRadius.circular(2),
-                        ),
-                      ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: FusionAppText(
-                        text: _getDisplayName(item),
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          fontSize: 11,
-                          fontWeight: _isDeviceSelected(_selectedPopupDevice, item) ? FontWeight.w600 : null,
-                        ),
-                      ),
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(FusionSizes.borderRadius8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          /// Section Header
+          InkWell(
+            onTap: () => _toggleSection(sectionKey, setMenuState),
+            splashColor: Colors.transparent,
+            hoverColor: Colors.transparent,
+            highlightColor: Colors.transparent,
+            child: Container(
+              height: 40,
+              width: 300,
+              // color: context.colorScheme.primaryBlack,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              child: Row(
+                children: <Widget>[
+                  RotatedBox(
+                    quarterTurns: isExpanded ? 0 : 2,
+                    child: FusionSvgIcon(
+                      icon: AssetSvg.expandUp,
+                      size: FusionSizes.iconSize12,
+                      color: context.colorScheme.iconWhite,
                     ),
-                    if (_isDeviceSelected(_selectedPopupDevice, item))
-                      const Icon(
-                        Icons.check_circle,
-                        size: 16,
-                        color: Colors.black,
-                      ),
-                  ],
-                ),
+                  ),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: FusionAppText(
+                      text: title,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(fontSize: 11),
+                    ),
+                  ),
+                ],
               ),
             ),
           ),
 
-          /// Location Selection Section
-          Container(
-            margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                FusionAppText(
-                  text: "Select Location",
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    fontSize: 10,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                const SizedBox(height: 6),
-                SizedBox(
-                  width: double.infinity,
-                  child: ListeningAreaDropdownWidget(
-                    key: UniqueKey(),
-                    listeningAreas: serviceLocator<ProjectViewModel>().listeningAreas,
-                    selectedListeningAreaIds: _selectedListeningAreaIds,
-                    onSelectionChanged: (List<String> selectedIds, String floorId) {
-                      _selectedListeningAreaIds = selectedIds;
-                      setMenuState(() {});
-                    },
-                  ),
-                ),
-              ],
-            ),
-          ),
-
-          Container(
-            margin: const EdgeInsets.only(left: 16, right: 16, bottom: 8),
-            child: SizedBox(
-              width: double.infinity,
-              height: 36,
-              child: FusionButton(
-                label: "Add Device",
-                isActive: canAddDevice,
+          /// Section Items (conditionally shown)
+          if (isExpanded) ...<Widget>[
+            ...items.map(
+              (T item) => GestureDetector(
                 onTap: () {
-                  _addDeviceToSelectedAreas();
+                  setState(() {
+                    _selectedPopupDevice = item;
+                  });
+                  setMenuState(() {});
                 },
+                child: MouseRegion(
+                  cursor: SystemMouseCursors.click,
+                  child: Container(
+                    width: double.infinity,
+                    margin: const EdgeInsets.only(left: 16, right: 16, bottom: 4),
+                    padding: const EdgeInsets.all(4),
+                    alignment: Alignment.centerLeft,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(4),
+                      border: Border.all(
+                        color: context.colorScheme.elevation2,
+                        width: _isDeviceSelected(_selectedPopupDevice, item) ? 1 : 1,
+                      ),
+                      color: _isDeviceSelected(_selectedPopupDevice, item) ? context.colorScheme.primaryBlack : null,
+                    ),
+                    child: Row(
+                      children: <Widget>[
+                        if (item is SourceData)
+                          Image.asset(
+                            item.assetPath,
+                            height: 14,
+                            width: 14,
+                          )
+                        else if (item is RackData)
+                          Image.asset(
+                            item.assetPath,
+                            height: 14,
+                            width: 14,
+                          )
+                        else if (item is SwitchData)
+                          Image.asset(
+                            item.assetPath,
+                            height: 14,
+                            width: 14,
+                          )
+                        else if (item is ProductQueryModel)
+                          FusionImage.asset(
+                            item.image.isNotEmpty ? item.image : _getDefaultImageForProductType(item.type),
+                            height: 14,
+                            width: 14,
+                            fit: BoxFit.contain,
+                          )
+                        else
+                          Container(
+                            height: 14,
+                            width: 14,
+                            decoration: BoxDecoration(
+                              color: Colors.grey[400],
+                              borderRadius: BorderRadius.circular(2),
+                            ),
+                          ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: FusionAppText(
+                            text: _getDisplayName(item),
+                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              fontSize: 11,
+                              fontWeight: _isDeviceSelected(_selectedPopupDevice, item) ? FontWeight.w600 : null,
+                            ),
+                          ),
+                        ),
+                        if (_isDeviceSelected(_selectedPopupDevice, item))
+                          Icon(
+                            Icons.check_circle,
+                            size: FusionSizes.iconSize16,
+                            color: context.colorScheme.primaryWhite,
+                          ),
+                      ],
+                    ),
+                  ),
+                ),
               ),
             ),
-          ),
 
-          const SizedBox(height: 4),
+            const SizedBox(height: 8),
+
+            /// Location Selection Section
+            Container(
+              margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  FusionAppText(
+                    text: "Select Location",
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      fontSize: 10,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ListeningAreaDropdownWidget(
+                      key: UniqueKey(),
+                      listeningAreas: serviceLocator<ProjectViewModel>().listeningAreas,
+                      selectedListeningAreaIds: _selectedListeningAreaIds,
+                      onSelectionChanged: (List<String> selectedIds, String floorId) {
+                        _selectedListeningAreaIds = selectedIds;
+                        setMenuState(() {});
+                      },
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            Container(
+              margin: const EdgeInsets.only(left: 16, right: 16, bottom: 8),
+              child: SizedBox(
+                width: double.infinity,
+                height: 36,
+                child: FusionButton(
+                  label: "Add Device",
+                  isActive: canAddDevice,
+                  onTap: () {
+                    _addDeviceToSelectedAreas();
+                  },
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 4),
+          ],
         ],
-      ],
+      ),
     );
   }
 

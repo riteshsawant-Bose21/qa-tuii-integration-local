@@ -97,7 +97,7 @@ class _HardwareItemCardState extends State<HardwareItemCard> {
         child: SemanticHelper.container(
           testId: SemanticHelper.createTestId(SemanticTypes.card, "hardware_item_card_${widget.index}"),
           child: Container(
-            // margin: const EdgeInsets.only(bottom: 4),
+            margin: const EdgeInsets.only(bottom: 4),
             padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
             decoration: BoxDecoration(
               color: _isHovered ? context.colorScheme.elevation2 : Colors.transparent,
@@ -111,8 +111,8 @@ class _HardwareItemCardState extends State<HardwareItemCard> {
                   testId: SemanticHelper.createTestId(SemanticTypes.card, "hardware_item_card_drag_handle_${widget.index}"),
                   child: Icon(
                     Icons.drag_indicator,
-                    size: FusionSizes.iconSize12,
-                    color: Colors.grey[600],
+                    size: FusionSizes.iconSize16,
+                    color: context.colorScheme.textPlaceholder,
                   ),
                 ),
                 const SizedBox(width: 6),

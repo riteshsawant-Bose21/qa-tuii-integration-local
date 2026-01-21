@@ -14,6 +14,7 @@ class FusionSizes {
   static const double padding24 = 24.0;
 
   static const double iconSize8 = 8.0;
+  static const double iconSize10 = 10.0;
   static const double iconSize12 = 12.0;
   static const double iconSize16 = 16.0;
   static const double iconSize24 = 24.0;

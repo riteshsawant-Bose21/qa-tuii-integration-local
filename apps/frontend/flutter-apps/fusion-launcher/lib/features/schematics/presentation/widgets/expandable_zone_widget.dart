@@ -2,8 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/features/projects/widget/building/speaker_selection_section/parts/select_speaker_popup.dart';
 import 'package:fusion_lib/fusion_lib.dart';
-import 'package:fusion_lib/fusion_theme/app_theme.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
+import '../../../../core/assets/asset_svg.dart';
 import '../../../../core/service_locator.dart';
 import '../../../configuration/presentation/viewmodel/project_view_model.dart';
 import 'circuit_device_widget.dart';
@@ -104,18 +105,20 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
     return SemanticHelper.container(
       testId: SemanticHelper.createTestId(SemanticTypes.container, "zone_header_container_$index"),
       child: Container(
-        padding: const EdgeInsets.only(left: 14, right: 14),
         height: 36,
+        width: double.infinity,
         decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(FusionSizes.borderRadius8),
           color: isHovered ? widget.bgColor.withAlpha(80) : widget.bgColor.withAlpha(100),
-          border: Border.all(
-            color: isSelected ? context.colorScheme.primaryBlack : Colors.transparent,
-          ),
+          border: Border.all(color: isSelected ? context.colorScheme.elevation5 : Colors.transparent),
         ),
         child: Row(
           children: <Widget>[
-            /// Drag handle
-            _buildDragHandle(),
+            Icon(
+              Icons.drag_indicator,
+              size: FusionSizes.iconSize16,
+              color: context.colorScheme.textPlaceholder,
+            ),
             const SizedBox(width: 4),
 
             /// Expand/collapse icon
@@ -149,17 +152,20 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
                 testId: SemanticHelper.createTestId(SemanticTypes.container, "add_speakers_menu_container_$index"),
                 child: FusionArrowPopup(
                   content: SpeakerQueryPopup(isFromBuildingPage: false, zoneId: widget.zoneId),
-
                   child: Row(
                     children: <Widget>[
-                      const Icon(Icons.add, size: 10, color: Colors.black87),
+                      Icon(
+                        LucideIcons.plus200,
+                        size: FusionSizes.fontSize12,
+                        color: context.colorScheme.primaryWhite,
+                      ),
                       const SizedBox(width: 4),
                       FusionAppText(
                         text: "Speaker",
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
                           fontSize: 8,
                           fontWeight: FontWeight.w400,
-                          color: Colors.grey[800],
+                          color: context.colorScheme.primaryWhite,
                         ),
                       ),
                     ],
@@ -173,6 +179,7 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
               testId: SemanticHelper.createTestId(SemanticTypes.container, "zone_kebab_menu_container_$index"),
               child: _buildKebabMenu(context: context, zoneId: widget.zoneId),
             ),
+            const SizedBox(width: 8),
           ],
         ),
       ),
@@ -182,7 +189,6 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
   /// Zone content (visible when expanded) - contains reorderable subzones
   Widget _buildZoneContent() {
     if (widget.subZones.isEmpty && widget.zoneCircuits.isEmpty) {
-      // print("widget.subZones = ")
       return Container(
         color: widget.bgColor.withAlpha(60),
         padding: const EdgeInsets.all(30),
@@ -195,20 +201,27 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
       );
     }
 
-    return Column(
-      children: <Widget>[
-        /// Zone devices list
-        if (widget.zoneCircuits.isNotEmpty) ...<Widget>[
-          BlocBuilder<ProjectViewModel, ProjectViewModelState>(
-            builder: (BuildContext context, ProjectViewModelState state) {
-              return Container(
-                color: context.colorScheme.primaryBlack.withAlpha(50),
-                padding: const EdgeInsets.only(left: 46, right: 8, top: 8, bottom: 8),
-                child: ReorderableListView.builder(
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 4),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: context.colorScheme.elevation3.withAlpha(50),
+        borderRadius: const BorderRadius.vertical(
+          bottom: Radius.circular(FusionSizes.borderRadius16),
+        ),
+      ),
+      child: Column(
+        children: <Widget>[
+          /// Zone devices list
+          if (widget.zoneCircuits.isNotEmpty) ...<Widget>[
+            BlocBuilder<ProjectViewModel, ProjectViewModelState>(
+              builder: (BuildContext context, ProjectViewModelState state) {
+                return ReorderableListView.builder(
                   shrinkWrap: true,
                   physics: const NeverScrollableScrollPhysics(),
                   buildDefaultDragHandles: false,
                   itemCount: widget.zoneCircuits.length,
+                  padding: EdgeInsets.zero,
                   onReorder: (int oldIndex, int newIndex) {
                     if (oldIndex < newIndex) {
                       newIndex -= 1;
@@ -216,6 +229,7 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
                     _projectViewModel.reOrderCircuitInZone(parentId: widget.zoneId, oldIndex: oldIndex, newIndex: newIndex);
                     _projectViewModel.setSelectedDevice(widget.zoneCircuits[oldIndex].id, SelectedItemType.circuit);
                   },
+                  proxyDecorator: (Widget child, int index, Animation<double> animation) => child,
                   itemBuilder: (BuildContext context, int index) {
                     final CircuitModel circuitData = widget.zoneCircuits[index];
                     final List<Speaker> speakers = _projectViewModel.getHardwareForCircuit(circuitId: circuitData.id).whereType<Speaker>().toList();
@@ -234,7 +248,7 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
                         if (circuitData.addedInBuildingPage || incoming.addedInBuildingPage) {
                           return false;
                         }
-                        final List<Speaker> incomingSpeakers = _projectViewModel.getHardwareForCircuit(circuitId: incoming!.id).whereType<Speaker>().toList();
+                        final List<Speaker> incomingSpeakers = _projectViewModel.getHardwareForCircuit(circuitId: incoming.id).whereType<Speaker>().toList();
                         final List<Speaker> currentData = _projectViewModel.getHardwareForCircuit(circuitId: circuitData.id).whereType<Speaker>().toList();
 
                         final Zone? incomingZone = _projectViewModel.getZoneForCircuit(circuitId: incoming.id);
@@ -348,22 +362,19 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
                       },
                     );
                   },
-                ),
-              );
-            },
-          ),
-          const SizedBox(height: 8),
-        ],
+                );
+              },
+            ),
+            const SizedBox(height: 8),
+          ],
 
-        /// Subzones list
-        Container(
-          clipBehavior: Clip.none,
-          color: widget.bgColor.withAlpha(30),
-          child: ReorderableListView.builder(
+          /// Subzones list
+          ReorderableListView.builder(
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
             buildDefaultDragHandles: false,
             itemCount: widget.subZones.length,
+            padding: EdgeInsets.zero,
             onReorder: (int oldIndex, int newIndex) {
               if (oldIndex < newIndex) {
                 newIndex -= 1;
@@ -373,32 +384,37 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
             },
             itemBuilder: (BuildContext context, int index) {
               final SubZone subZone = widget.subZones[index];
+
+              final bool isLast = index == widget.subZones.length - 1;
+
               return ReorderableDragStartListener(
                 key: ValueKey<String>(subZone.id),
                 index: index,
-                child: ExpandableSubZoneWidget(
-                  name: subZone.name,
-                  subZoneId: subZone.id,
-                  zoneId: widget.zoneId,
-                  subZoneCircuit: _projectViewModel.getCircuitsInSubZone(subZoneId: subZone.id),
-                  onDelete: (String subZoneId) {
-                    _projectViewModel.removeSubZoneFromZone(subZoneId: subZoneId, parentZoneId: widget.zoneId);
-                  },
+                child: Container(
+                  width: double.infinity,
+                  decoration: BoxDecoration(
+                    border: Border(
+                      bottom: BorderSide(
+                        color: isLast ? Colors.transparent : context.colorScheme.elevation2,
+                        width: 1,
+                      ),
+                    ),
+                  ),
+                  child: ExpandableSubZoneWidget(
+                    name: subZone.name,
+                    subZoneId: subZone.id,
+                    zoneId: widget.zoneId,
+                    subZoneCircuit: _projectViewModel.getCircuitsInSubZone(subZoneId: subZone.id),
+                    onDelete: (String subZoneId) {
+                      _projectViewModel.removeSubZoneFromZone(subZoneId: subZoneId, parentZoneId: widget.zoneId);
+                    },
+                  ),
                 ),
               );
             },
           ),
-        ),
-      ],
-    );
-  }
-
-  /// Drag handle widget
-  Widget _buildDragHandle() {
-    return Icon(
-      Icons.drag_handle,
-      size: 16,
-      color: Colors.grey[600],
+        ],
+      ),
     );
   }
 
@@ -422,47 +438,49 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
 
   Widget _buildKebabMenu({required BuildContext context, required String zoneId}) {
     return PopupMenuButton<ZoneMenuAction>(
-      style: const ButtonStyle(
-        overlayColor: WidgetStatePropertyAll<Color>(Colors.transparent),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(FusionSizes.borderRadius12),
+        side: BorderSide(color: context.colorScheme.elevation4),
       ),
+      tooltip: "",
       offset: const Offset(100, 20),
       padding: EdgeInsets.zero,
-      constraints: const BoxConstraints(maxHeight: 550, maxWidth: 140),
-      color: Theme.of(context).colorScheme.primaryWhite,
+      constraints: const BoxConstraints(maxHeight: 550, maxWidth: 200),
+      color: context.colorScheme.elevation1,
       menuPadding: EdgeInsets.zero,
+      itemBuilder: (BuildContext context) {
+        return <PopupMenuEntry<ZoneMenuAction>>[
+          /// --- Sub zone (with nested PopupMenuButton) ---
+          PopupMenuItem<ZoneMenuAction>(
+            height: 30,
+            enabled: false,
+            padding: EdgeInsets.zero,
+            child: _buildSubzoneMenuItem(context, zoneId),
+          ),
 
-      itemBuilder:
-          (BuildContext context) => <PopupMenuEntry<ZoneMenuAction>>[
-            /// --- Sub zone (with nested PopupMenuButton) ---
-            PopupMenuItem<ZoneMenuAction>(
-              height: 30,
-              enabled: false,
-              padding: EdgeInsets.zero,
-              child: _buildSubzoneMenuItem(context, zoneId),
-            ),
-
-            // --- Delete ---
-            PopupMenuItem<ZoneMenuAction>(
-              height: 26,
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
-              onTap: () {
-                widget.onDelete?.call(widget.zoneId);
-              },
-              child: FusionAppText(
-                text: "Delete",
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  fontSize: 12,
-                  color: Theme.of(context).colorScheme.textPrimary,
-                ),
+          // --- Delete ---
+          PopupMenuItem<ZoneMenuAction>(
+            height: 26,
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+            onTap: () {
+              widget.onDelete?.call(widget.zoneId);
+            },
+            child: FusionAppText(
+              text: "Delete",
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                fontSize: 12,
+                color: Theme.of(context).colorScheme.textPrimary,
               ),
             ),
-          ],
+          ),
+        ];
+      },
       child: SemanticHelper.button(
         testId: SemanticHelper.createTestId(SemanticTypes.button, "zone_item_kebab_menu"),
         child: Icon(
           Icons.more_vert,
-          size: 14,
-          color: Colors.grey[600],
+          size: FusionSizes.fontSize16,
+          color: context.colorScheme.textPrimary,
         ),
       ),
     );
@@ -471,23 +489,28 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
   /// Subzone menu item with nested popup
   Widget _buildSubzoneMenuItem(BuildContext context, String zoneId) {
     return PopupMenuButton<void>(
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(FusionSizes.borderRadius12),
+        side: BorderSide(color: context.colorScheme.elevation4),
+      ),
       tooltip: "",
       offset: const Offset(254, 16),
       constraints: const BoxConstraints(maxWidth: 250),
-      color: Theme.of(context).colorScheme.primaryWhite,
+      color: context.colorScheme.elevation1,
       elevation: 8,
       padding: EdgeInsets.zero,
       onOpened: () => setState(() => showSubzonePopup = true),
       onCanceled: () {
         setState(() => showSubzonePopup = false);
       },
-      itemBuilder:
-          (BuildContext context) => <PopupMenuEntry<void>>[
-            PopupMenuItem<void>(
-              enabled: false,
-              child: _buildSubzoneContent(context, zoneId),
-            ),
-          ],
+      itemBuilder: (BuildContext context) {
+        return <PopupMenuEntry<void>>[
+          PopupMenuItem<void>(
+            enabled: false,
+            child: _buildSubzoneContent(context, zoneId),
+          ),
+        ];
+      },
       child: SemanticHelper.button(
         testId: SemanticHelper.createTestId(SemanticTypes.button, "add_subzone_menu"),
         child: Container(
@@ -497,17 +520,19 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: <Widget>[
-              FusionAppText(
-                text: "Sub zone",
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  fontSize: 12,
-                  color: Theme.of(context).colorScheme.textPrimary,
+              Expanded(
+                child: FusionAppText(
+                  text: "Sub zone",
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    fontSize: 12,
+                    color: context.colorScheme.textPrimary,
+                  ),
                 ),
               ),
               Icon(
                 Icons.keyboard_arrow_right_sharp,
-                size: 12,
-                color: Theme.of(context).colorScheme.textPrimary,
+                size: FusionSizes.fontSize12,
+                color: context.colorScheme.textPrimary,
               ),
             ],
           ),
@@ -533,14 +558,17 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
             mainAxisSize: MainAxisSize.min,
             children: <Widget>[
               /// Section Header
+              const SizedBox(height: 8),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: <Widget>[
-                  FusionAppText(
-                    text: "Create Sub Zone",
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
+                  Expanded(
+                    child: FusionAppText(
+                      text: "Create Sub Zone",
+                      style: context.textTheme.bodySmall?.copyWith(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                   ),
                   InkWell(
@@ -564,10 +592,8 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
                   ),
                 ],
               ),
-              Divider(
-                color: Theme.of(context).colorScheme.primaryBlack,
-                thickness: 1,
-              ),
+              const SizedBox(height: 8),
+              Divider(color: Theme.of(context).colorScheme.elevation2, thickness: 1),
               const SizedBox(height: 8),
 
               /// SubZone Name Input
@@ -584,10 +610,7 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
                 child: FusionTextField(
                   controller: _zoneNameController,
                   hintText: "Enter subzone name",
-                  decoration: FusionInputDecoration.fusionDense(
-                    colorScheme: Theme.of(context).colorScheme,
-                    hintText: 'Enter subzone name',
-                  ),
+                  fillColor: Theme.of(context).colorScheme.primaryBlack,
                   onChanged: (String value) => updateAllStates(),
                 ),
               ),
@@ -634,9 +657,10 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
                       testId: SemanticHelper.createTestId(SemanticTypes.button, "add_subzone_save_button"),
                       child: FusionButton(
                         width: double.infinity,
+                        activeBackgroundColor: context.colorScheme.primaryColor,
                         textStyle: Theme.of(context).textTheme.labelLarge?.copyWith(
                           fontSize: 10,
-                          color: context.colorScheme.primaryBlack,
+                          color: context.colorScheme.textPrimary,
                         ),
                         label: "Save",
                         isActive: _zoneNameController.text.trim().isNotEmpty && _selectedListeningAreaIds.isNotEmpty,
@@ -660,22 +684,27 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
       child: Container(
         height: 28,
         decoration: BoxDecoration(
-          border: Border.all(color: Colors.grey[300]!),
+          border: Border.all(color: context.colorScheme.elevation2),
           borderRadius: BorderRadius.circular(4),
         ),
         child: PopupMenuButton<String>(
           constraints: const BoxConstraints(maxHeight: 250, maxWidth: 236),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-          color: Theme.of(context).colorScheme.primaryWhite,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(FusionSizes.borderRadius12),
+            side: BorderSide(color: context.colorScheme.elevation4),
+          ),
+          tooltip: "",
+          color: Theme.of(context).colorScheme.elevation1,
           offset: const Offset(6, 35),
-          itemBuilder:
-              (BuildContext context) => <PopupMenuEntry<String>>[
-                PopupMenuItem<String>(
-                  enabled: false,
-                  padding: EdgeInsets.zero,
-                  child: _buildLocationList(context, zoneId, onStateUpdate),
-                ),
-              ],
+          itemBuilder: (BuildContext context) {
+            return <PopupMenuEntry<String>>[
+              PopupMenuItem<String>(
+                enabled: false,
+                padding: EdgeInsets.zero,
+                child: _buildLocationList(context, zoneId, onStateUpdate),
+              ),
+            ];
+          },
           child: SemanticHelper.button(
             testId: SemanticHelper.createTestId(SemanticTypes.button, "location_selector_button"),
             child: Container(
@@ -690,14 +719,17 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
                               ? "Select Location"
                               : "${_selectedListeningAreaIds.length} location${_selectedListeningAreaIds.length > 1 ? '(s)' : ''} selected",
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: _selectedListeningAreaIds.isEmpty ? context.colorScheme.primaryBlack : Theme.of(context).textTheme.bodySmall?.color,
+                        color: _selectedListeningAreaIds.isEmpty ? context.colorScheme.elevation5 : Theme.of(context).textTheme.bodySmall?.color,
                       ),
                     ),
                   ),
-                  Icon(
-                    Icons.keyboard_arrow_down,
-                    size: 20,
-                    color: context.colorScheme.primaryBlack,
+                  RotatedBox(
+                    quarterTurns: 2,
+                    child: FusionSvgIcon(
+                      icon: AssetSvg.expandUp,
+                      size: FusionSizes.iconSize12,
+                      color: context.colorScheme.primaryWhite,
+                    ),
                   ),
                 ],
               ),
@@ -757,11 +789,10 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: <Widget>[
-                /// Header
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                   decoration: BoxDecoration(
-                    border: Border(bottom: BorderSide(color: Colors.grey[300]!)),
+                    border: Border(bottom: BorderSide(color: context.colorScheme.elevation2)),
                   ),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -771,6 +802,7 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
                           fontSize: 12,
                           fontWeight: FontWeight.w600,
+                          color: context.colorScheme.primaryWhite,
                         ),
                       ),
                       InkWell(
@@ -949,7 +981,7 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     fontWeight: FontWeight.w500,
                     fontSize: 10,
-                    color: isAvailable ? Theme.of(context).textTheme.bodySmall?.color : Colors.grey[400],
+                    color: isAvailable ? context.colorScheme.primaryWhite : context.colorScheme.elevation5,
                   ),
                 ),
               ),
@@ -957,7 +989,7 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
                 text: zoneData?.name ?? "No zone",
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
                   fontSize: 9,
-                  color: isAvailable ? context.colorScheme.primaryBlack : context.colorScheme.primaryBlack,
+                  color: context.colorScheme.elevation5,
                   fontWeight: FontWeight.w600,
                 ),
               ),
