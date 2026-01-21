@@ -1,11 +1,5 @@
 package types
 
-// JsonResponse represents a generic JSON response type
-type JsonResponse struct {
-	Message string `json:"message" example:"Operation completed successfully"`
-	Data    any    `json:"data"`
-}
-
 // SuccessResponse represents a successful API response with generic data
 type SuccessResponse struct {
 	Message string `json:"message" example:"Operation completed successfully"`

@@ -10,21 +10,18 @@ import (
 )
 
 // SendJSON sends a standard JSON response
-func SendJSON(c *gin.Context, code int, message string, data any) {
-	c.JSON(code, types.JsonResponse{
-		Message: message,
-		Data:    data,
-	})
+func SendJSON(c *gin.Context, code int, data any) {
+	c.JSON(code, data)
 }
 
 // OK sends a 200 OK response
-func OK(c *gin.Context, message string, data any) {
-	SendJSON(c, http.StatusOK, message, data)
+func OK(c *gin.Context, data any) {
+	SendJSON(c, http.StatusOK, data)
 }
 
 // Created sends a 201 Created response
-func Created(c *gin.Context, message string, data any) {
-	SendJSON(c, http.StatusCreated, message, data)
+func Created(c *gin.Context, data any) {
+	SendJSON(c, http.StatusCreated, data)
 }
 
 // NoContent sends a 204 No Content response
@@ -33,28 +30,28 @@ func NoContent(c *gin.Context) {
 }
 
 // BadRequest sends a 400 Bad Request response
-func BadRequest(c *gin.Context, message string, data any) {
-	SendJSON(c, http.StatusBadRequest, message, data)
+func BadRequest(c *gin.Context, message string) {
+	SendJSON(c, http.StatusBadRequest, types.ErrorResponse{Message: message})
 }
 
 // Unauthorized sends a 401 Unauthorized response
 func Unauthorized(c *gin.Context, message string) {
-	SendJSON(c, http.StatusUnauthorized, message, nil)
+	SendJSON(c, http.StatusUnauthorized, types.ErrorResponse{Message: message})
 }
 
 // Forbidden sends a 403 Forbidden response
 func Forbidden(c *gin.Context, message string) {
-	SendJSON(c, http.StatusForbidden, message, nil)
+	SendJSON(c, http.StatusForbidden, types.ErrorResponse{Message: message})
 }
 
 // NotFound sends a 404 Not Found response
 func NotFound(c *gin.Context, message string) {
-	SendJSON(c, http.StatusNotFound, message, nil)
+	SendJSON(c, http.StatusNotFound, types.ErrorResponse{Message: message})
 }
 
 // InternalError sends a 500 Internal Server Error response
 func InternalError(c *gin.Context) {
-	SendJSON(c, http.StatusInternalServerError, constants.MsgInternalServerError, nil)
+	SendJSON(c, http.StatusInternalServerError, types.ErrorResponse{Message: constants.MsgInternalServerError})
 }
 
 // RespondWithSuccess sends a success response with generic data

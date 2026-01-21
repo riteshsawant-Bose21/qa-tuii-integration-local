@@ -56,13 +56,13 @@ func (h *ProjectHandler) CreateProject(ctx *gin.Context) {
 
 	var p types.ProjectCreateRequest
 	if err := ctx.ShouldBindJSON(&p); err != nil {
-		response.BadRequest(ctx, err.Error(), nil)
+		response.BadRequest(ctx, err.Error())
 		return
 	}
 
 	// Validate request
 	if err := validation.ValidateProjectCreateRequest(&p); err != nil {
-		response.BadRequest(ctx, err.Error(), nil)
+		response.BadRequest(ctx, err.Error())
 		return
 	}
 
@@ -70,7 +70,7 @@ func (h *ProjectHandler) CreateProject(ctx *gin.Context) {
 
 	if err != nil {
 		if err.Error() == types.ErrMsgProjectAlreadyExists {
-			response.BadRequest(ctx, err.Error(), nil)
+			response.BadRequest(ctx, err.Error())
 			return
 		}
 		// Internal server errors
@@ -78,7 +78,7 @@ func (h *ProjectHandler) CreateProject(ctx *gin.Context) {
 		return
 	}
 
-	response.Created(ctx, "Successfully created project", res)
+	response.Created(ctx, res)
 }
 
 // GetProjects retrieves all projects.
@@ -119,13 +119,13 @@ func (h *ProjectHandler) GetAllProjects(ctx *gin.Context) {
 	}
 
 	if err := ctx.ShouldBindQuery(&params); err != nil {
-		response.BadRequest(ctx, err.Error(), nil)
+		response.BadRequest(ctx, err.Error())
 		return
 	}
 
 	// Validate query parameters
 	if err := validation.ValidateGetAllProjectsParams(&params); err != nil {
-		response.BadRequest(ctx, err.Error(), nil)
+		response.BadRequest(ctx, err.Error())
 		return
 	}
 
@@ -143,7 +143,7 @@ func (h *ProjectHandler) GetAllProjects(ctx *gin.Context) {
 		return
 	}
 
-	response.OK(ctx, "Successfully retrieved all projects", res)
+	response.OK(ctx, res)
 }
 
 // UpdateProject updates an existing project.
@@ -188,13 +188,13 @@ func (h *ProjectHandler) UpdateProject(ctx *gin.Context) {
 
 	var p types.ProjectUpdateRequest
 	if err := ctx.ShouldBindJSON(&p); err != nil {
-		response.BadRequest(ctx, err.Error(), nil)
+		response.BadRequest(ctx, err.Error())
 		return
 	}
 
 	// Validate request
 	if err := validation.ValidateProjectUpdateRequest(&p); err != nil {
-		response.BadRequest(ctx, err.Error(), nil)
+		response.BadRequest(ctx, err.Error())
 		return
 	}
 
@@ -227,7 +227,7 @@ func (h *ProjectHandler) UpdateProject(ctx *gin.Context) {
 		response.InternalError(ctx)
 		return
 	}
-	response.OK(ctx, "Successfully updated project", res)
+	response.OK(ctx, res)
 }
 
 // DeleteProject deletes a project by ID.
@@ -324,7 +324,7 @@ func (h *ProjectHandler) AssignUserToProject(ctx *gin.Context) {
 
 	// Validate projectID UUID
 	if !validation.IsValidUUID(projectID) {
-		response.BadRequest(ctx, "Invalid project ID format", nil)
+		response.BadRequest(ctx, "Invalid project ID format")
 		return
 	}
 
@@ -377,7 +377,7 @@ func (h *ProjectHandler) RemoveUserFromProject(ctx *gin.Context) {
 
 	// Validate projectID UUID
 	if !validation.IsValidUUID(projectID) {
-		response.BadRequest(ctx, "Invalid project ID format", nil)
+		response.BadRequest(ctx, "Invalid project ID format")
 		return
 	}
 
@@ -441,13 +441,13 @@ func (h *ProjectHandler) UpdateProjectStar(ctx *gin.Context) {
 
 	var req types.ProjectStarRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
-		response.BadRequest(ctx, err.Error(), nil)
+		response.BadRequest(ctx, err.Error())
 		return
 	}
 
 	// Validate request
 	if err := validation.ValidateProjectStarRequest(&req); err != nil {
-		response.BadRequest(ctx, err.Error(), nil)
+		response.BadRequest(ctx, err.Error())
 		return
 	}
 
@@ -517,13 +517,13 @@ func (h *ProjectHandler) UpdateProjectArchive(ctx *gin.Context) {
 
 	var req types.ProjectArchiveRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
-		response.BadRequest(ctx, err.Error(), nil)
+		response.BadRequest(ctx, err.Error())
 		return
 	}
 
 	// Validate request
 	if err := validation.ValidateProjectArchiveRequest(&req); err != nil {
-		response.BadRequest(ctx, err.Error(), nil)
+		response.BadRequest(ctx, err.Error())
 		return
 	}
 
@@ -596,13 +596,13 @@ func (h *ProjectHandler) UpdateProjectLock(ctx *gin.Context) {
 
 	var req types.ProjectLockRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
-		response.BadRequest(ctx, err.Error(), nil)
+		response.BadRequest(ctx, err.Error())
 		return
 	}
 
 	// Validate request
 	if err := validation.ValidateProjectLockRequest(&req); err != nil {
-		response.BadRequest(ctx, err.Error(), nil)
+		response.BadRequest(ctx, err.Error())
 		return
 	}
 
