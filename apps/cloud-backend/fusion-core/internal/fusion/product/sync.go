@@ -1213,12 +1213,8 @@ func (s *Service) SyncPrices(ctx context.Context, data []byte, validationCfg *co
 		if containerErr != nil {
 			errMsg := fmt.Sprintf("failed to parse JSON data as array (%v) or container (%v)", arrayErr, containerErr)
 			result.Errors = append(result.Errors, errMsg)
-			syncErr := errors.NewError(errors.ParseError, errors.SeverityCritical, errMsg).
-				WithOriginalError(arrayErr).
-				WithContext(errors.ErrorContext{
-					SyncType: "price",
-				}).
-				Build()
+			syncErr := errors.NewSyncError(errors.ValidationError, errors.SeverityCritical, errMsg, arrayErr.Error(), nil, "")
+			syncErr.Context.SyncType = "price"
 			errorCollector.Add(syncErr)
 			result.Duration = time.Since(startTime)
 			result.ErrorSummary = s.getErrorSummary(errorCollector)
@@ -1228,12 +1224,8 @@ func (s *Service) SyncPrices(ctx context.Context, data []byte, validationCfg *co
 
 		// Validate version if container format is used
 		if err := s.validatePriceVersion(&container, validationCfg); err != nil {
-			syncErr := errors.NewError(errors.ValidationError, errors.SeverityCritical, "Price data version validation failed").
-				WithOriginalError(err).
-				WithContext(errors.ErrorContext{
-					SyncType: "price",
-				}).
-				Build()
+			syncErr := errors.NewSyncError(errors.ValidationError, errors.SeverityCritical, "Price data version validation failed", err.Error(), nil, "")
+			syncErr.Context.SyncType = "price"
 			errorCollector.Add(syncErr)
 			result.Duration = time.Since(startTime)
 			result.ErrorSummary = s.getErrorSummary(errorCollector)
@@ -1348,14 +1340,18 @@ func (s *Service) processPricesBatch(ctx context.Context, prices []validation.Pr
 		hasErrors := false
 		if validationResult != nil && !validationResult.IsValid {
 			for _, reqErr := range validationResult.RequiredErrors {
-				errorCollector.AddMissingRequiredFieldError(price.ProductID, reqErr.FieldName, reqErr.JSONPath, reqErr.Description)
+				errorCollector.AddFieldValidationError(errors.ValidationError, errors.SeverityHigh, price.ProductID, reqErr.FieldName, reqErr.JSONPath,
+					fmt.Sprintf("Product ID %d: Missing required field '%s' (%s)", price.ProductID, reqErr.FieldName, reqErr.Description),
+					fmt.Sprintf("Add field '%s' to product %d data", reqErr.JSONPath, price.ProductID))
 				hasErrors = true
 			}
 
 			for _, optWarn := range validationResult.OptionalWarnings {
 				warnMsg := fmt.Sprintf("price for product %d: optional field '%s' %s", price.ProductID, optWarn.FieldName, optWarn.Issue)
 				result.ValidationWarnings = append(result.ValidationWarnings, warnMsg)
-				errorCollector.AddMissingOptionalFieldError(price.ProductID, optWarn.FieldName, optWarn.JSONPath, optWarn.Description)
+				errorCollector.AddFieldValidationError(errors.ValidationError, errors.SeverityLow, price.ProductID, optWarn.FieldName, optWarn.JSONPath,
+					fmt.Sprintf("Product ID %d: Missing recommended field '%s' (%s)", price.ProductID, optWarn.FieldName, optWarn.Description),
+					fmt.Sprintf("Consider adding field '%s' to product %d to improve data completeness", optWarn.JSONPath, price.ProductID))
 			}
 		}
 

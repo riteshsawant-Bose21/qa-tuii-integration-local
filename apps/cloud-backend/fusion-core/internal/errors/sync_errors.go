@@ -13,34 +13,6 @@ type ErrorCategory string
 const (
 	// Data-related errors
 	ValidationError ErrorCategory = "VALIDATION"
-	ParseError      ErrorCategory = "PARSE"
-	TransformError  ErrorCategory = "TRANSFORM"
-
-	// Field validation specific errors
-	MissingRequiredFieldError ErrorCategory = "MISSING_REQUIRED_FIELD"
-	MissingOptionalFieldError ErrorCategory = "MISSING_OPTIONAL_FIELD"
-	InvalidFieldTypeError     ErrorCategory = "INVALID_FIELD_TYPE"
-	InvalidFieldValueError    ErrorCategory = "INVALID_FIELD_VALUE"
-	FieldConstraintError      ErrorCategory = "FIELD_CONSTRAINT_VIOLATION"
-
-	// Database-related errors
-	DatabaseError    ErrorCategory = "DATABASE"
-	ConnectionError  ErrorCategory = "CONNECTION"
-	TransactionError ErrorCategory = "TRANSACTION"
-
-	// External service errors
-	NetworkError ErrorCategory = "NETWORK"
-	TimeoutError ErrorCategory = "TIMEOUT"
-	AuthError    ErrorCategory = "AUTH"
-
-	// Business logic errors
-	BusinessRuleError ErrorCategory = "BUSINESS_RULE"
-	DuplicateError    ErrorCategory = "DUPLICATE"
-	NotFoundError     ErrorCategory = "NOT_FOUND"
-
-	// System errors
-	ConfigError ErrorCategory = "CONFIG"
-	SystemError ErrorCategory = "SYSTEM"
 )
 
 // Sentinel errors for common operations
@@ -64,16 +36,15 @@ const (
 
 // SyncError represents a detailed error with context
 type SyncError struct {
-	ID          string        `json:"id"`          // Unique error ID for tracking
-	Category    ErrorCategory `json:"category"`    // Error type
-	Severity    ErrorSeverity `json:"severity"`    // How critical
-	Message     string        `json:"message"`     // Human readable message
-	Details     string        `json:"details"`     // Technical details
-	Context     ErrorContext  `json:"context"`     // Where/when it happened
-	OriginalErr error         `json:"-"`           // Original error (not serialized)
-	Timestamp   time.Time     `json:"timestamp"`   // When it occurred
-	Retryable   bool          `json:"retryable"`   // Can this be retried?
-	RetryCount  int           `json:"retry_count"` // How many times retried
+	ID          string        `json:"id"`        // Unique error ID for tracking
+	Category    ErrorCategory `json:"category"`  // Error type
+	Severity    ErrorSeverity `json:"severity"`  // How critical
+	Message     string        `json:"message"`   // Human readable message
+	Details     string        `json:"details"`   // Technical details
+	Context     ErrorContext  `json:"context"`   // Where/when it happened
+	OriginalErr error         `json:"-"`         // Original error (not serialized)
+	Timestamp   time.Time     `json:"timestamp"` // When it occurred
+	Retryable   bool          `json:"retryable"` // Can this be retried?
 }
 
 // ErrorContext provides detailed information about where the error occurred
@@ -107,7 +78,6 @@ func (se *SyncError) ToZapFields() []zap.Field {
 		zap.String("error_details", se.Details),
 		zap.Time("error_timestamp", se.Timestamp),
 		zap.Bool("retryable", se.Retryable),
-		zap.Int("retry_count", se.RetryCount),
 	}
 
 	// Add context fields
@@ -150,102 +120,32 @@ func (se *SyncError) ToZapFields() []zap.Field {
 	return fields
 }
 
-// IsRetryable determines if this error should trigger a retry
-func (se *SyncError) IsRetryable() bool {
-	if !se.Retryable {
-		return false
-	}
-
-	// Don't retry validation errors
-	if se.Category == ValidationError || se.Category == ParseError {
-		return false
-	}
-
-	// Don't retry business rule violations
-	if se.Category == BusinessRuleError || se.Category == DuplicateError {
-		return false
-	}
-
-	// Don't retry auth errors
-	if se.Category == AuthError {
-		return false
-	}
-
-	return se.RetryCount < 3 // Max 3 retries
-}
-
 // ShouldAlert determines if this error should trigger an alert
 func (se *SyncError) ShouldAlert() bool {
 	return se.Severity == SeverityCritical || se.Severity == SeverityHigh
 }
 
-// ErrorBuilder helps create SyncError instances
-type ErrorBuilder struct {
-	err *SyncError
-}
-
-// NewError creates a new error builder
-func NewError(category ErrorCategory, severity ErrorSeverity, message string) *ErrorBuilder {
-	return &ErrorBuilder{
-		err: &SyncError{
-			ID:        generateErrorID(),
-			Category:  category,
-			Severity:  severity,
-			Message:   message,
-			Timestamp: time.Now().UTC(),
-			Context:   ErrorContext{},
-		},
+// NewSyncError creates a new SyncError with the given parameters
+func NewSyncError(category ErrorCategory, severity ErrorSeverity, message, details string, productID *int, fieldName string) *SyncError {
+	syncErr := &SyncError{
+		ID:        generateErrorID(),
+		Category:  category,
+		Severity:  severity,
+		Message:   message,
+		Details:   details,
+		Timestamp: time.Now().UTC(),
+		Context:   ErrorContext{},
 	}
-}
 
-// WithDetails adds technical details
-func (eb *ErrorBuilder) WithDetails(details string) *ErrorBuilder {
-	eb.err.Details = details
-	return eb
-}
-
-// WithOriginalError adds the underlying error
-func (eb *ErrorBuilder) WithOriginalError(err error) *ErrorBuilder {
-	eb.err.OriginalErr = err
-	if eb.err.Details == "" {
-		eb.err.Details = err.Error()
+	if productID != nil {
+		syncErr.Context.ProductID = productID
 	}
-	return eb
-}
 
-// WithContext sets the error context
-func (eb *ErrorBuilder) WithContext(ctx ErrorContext) *ErrorBuilder {
-	eb.err.Context = ctx
-	return eb
-}
+	if fieldName != "" {
+		syncErr.Context.FieldName = fieldName
+	}
 
-// WithProductID adds product context
-func (eb *ErrorBuilder) WithProductID(productID int) *ErrorBuilder {
-	eb.err.Context.ProductID = &productID
-	return eb
-}
-
-// WithSKU adds SKU context
-func (eb *ErrorBuilder) WithSKU(sku int) *ErrorBuilder {
-	eb.err.Context.SKU = &sku
-	return eb
-}
-
-// WithField adds field context
-func (eb *ErrorBuilder) WithField(fieldName string) *ErrorBuilder {
-	eb.err.Context.FieldName = fieldName
-	return eb
-}
-
-// AsRetryable marks the error as retryable
-func (eb *ErrorBuilder) AsRetryable() *ErrorBuilder {
-	eb.err.Retryable = true
-	return eb
-}
-
-// Build creates the final SyncError
-func (eb *ErrorBuilder) Build() *SyncError {
-	return eb.err
+	return syncErr
 }
 
 // generateErrorID creates a unique error ID for tracking
