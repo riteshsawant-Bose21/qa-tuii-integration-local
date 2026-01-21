@@ -196,90 +196,111 @@ class FusionTable extends StatelessWidget {
   final String Function(int index)? keyExtractor;
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.all(8.0),
-      child: Column(
-        children: <Widget>[
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
-            child: Row(
-              spacing: spacing,
-              children:
-                  headers
-                      .map(
-                        (final FusionTableHeader e) => Expanded(
-                          flex: e.flex,
-                          child: Align(
-                            alignment: e.aligment,
-                            child: FusionAppText(
-                              text: e.title,
-                              style: context.textTheme.labelLarge?.copyWith(fontWeight: FontWeight.bold),
+    return Column(
+      children: <Widget>[
+        /// table headers
+        Container(
+          padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+          decoration: BoxDecoration(
+            color: context.colorScheme.elevation1.withAlpha(120),
+            border: Border(
+              top: BorderSide(color: context.colorScheme.elevation2, width: 1),
+              bottom: BorderSide(color: context.colorScheme.elevation2, width: 1),
+            ),
+          ),
+
+          child: Row(
+            spacing: spacing,
+            children: [
+              Visibility(
+                maintainSize: true,
+                maintainAnimation: true,
+                maintainState: true,
+                visible: false,
+                child: Icon(
+                  Icons.drag_indicator,
+                  size: 16,
+                  color: context.colorScheme.iconDefault,
+                ),
+              ),
+              ...headers
+                  .map(
+                    (final FusionTableHeader e) => Expanded(
+                      flex: e.flex,
+                      child: Align(
+                        alignment: e.aligment,
+                        child: FusionAppText(
+                          text: e.title,
+                          style: context.textTheme.labelLarge?.copyWith(fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                    ),
+                  )
+                  .toList(),
+            ],
+          ),
+        ),
+        Flexible(
+          child: Container(
+            decoration: BoxDecoration(
+              border: Border(
+                bottom: BorderSide(color: context.colorScheme.elevation1, width: 1),
+              ),
+            ),
+            child: ReorderableListView.builder(
+              shrinkWrap: true,
+              itemCount: itemCount,
+              onReorder: (int oldIndex, int newIndex) {
+                if (oldIndex < newIndex) newIndex -= 1;
+                onReorder?.call(oldIndex, newIndex);
+              },
+              buildDefaultDragHandles: false,
+              itemBuilder: (BuildContext context, int index) {
+                final List<Widget> rowItems = itemBuilder(context, index);
+                final String key = keyExtractor != null ? keyExtractor!(index) : 'fusion_table_row_$index';
+                return Container(
+                  key: ValueKey<String>(key),
+                  padding: const EdgeInsets.symmetric(vertical: 0, horizontal: 16),
+                  decoration: BoxDecoration(
+                    border: Border(
+                      bottom: BorderSide(color: context.colorScheme.elevation2, width: 1),
+
+                      // bottom: index != itemCount - 1 ? BorderSide(color: Colors.grey.withOpacity(0.3), width: 1) : BorderSide.none,
+                    ),
+                  ),
+                  child: SemanticHelper.button(
+                    testId: SemanticHelper.createTestId(SemanticTypes.button, "fusion_table_row_$index"),
+                    child: InkWell(
+                      onTap: onRowTap != null ? () => onRowTap!(index) : null,
+                      child: Row(
+                        spacing: spacing,
+                        children: <Widget>[
+                          ReorderableDragStartListener(
+                            key: ValueKey<String>(key),
+                            index: index,
+                            child: Icon(
+                              Icons.drag_indicator,
+                              size: 16,
+                              color: context.colorScheme.iconDefault,
                             ),
                           ),
-                        ),
-                      )
-                      .toList(),
-            ),
-          ),
-          const SizedBox(height: 8),
-          Flexible(
-            child: Container(
-              decoration: BoxDecoration(
-                border: Border.all(color: Colors.grey.withOpacity(0.3), width: 1),
-              ),
-              child: ReorderableListView.builder(
-                shrinkWrap: true,
-                itemCount: itemCount,
-                onReorder: (int oldIndex, int newIndex) {
-                  if (oldIndex < newIndex) newIndex -= 1;
-                  onReorder?.call(oldIndex, newIndex);
-                },
-                buildDefaultDragHandles: false,
-                itemBuilder: (BuildContext context, int index) {
-                  final List<Widget> rowItems = itemBuilder(context, index);
-                  final String key = keyExtractor != null ? keyExtractor!(index) : 'fusion_table_row_$index';
-                  return Container(
-                    key: ValueKey<String>(key),
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      border: Border(
-                        bottom: index != itemCount - 1 ? BorderSide(color: Colors.grey.withOpacity(0.3), width: 1) : BorderSide.none,
+                          ...List<Widget>.generate(
+                            headers.length,
+                            (int i) => Expanded(
+                              flex: headers[i].flex,
+                              child: Align(alignment: headers[i].aligment, child: rowItems[i]),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
-                    child: SemanticHelper.button(
-                      testId: SemanticHelper.createTestId(SemanticTypes.button, "fusion_table_row_$index"),
-                      child: InkWell(
-                        onTap: onRowTap != null ? () => onRowTap!(index) : null,
-                        child: Row(
-                          spacing: spacing,
-                          children: <Widget>[
-                            ReorderableDragStartListener(
-                              key: ValueKey<String>(key),
-                              index: index,
-                              child: Icon(
-                                Icons.drag_handle,
-                                size: 16,
-                                color: Colors.grey[600],
-                              ),
-                            ),
-                            ...List<Widget>.generate(
-                              headers.length,
-                              (int i) => Expanded(
-                                flex: headers[i].flex,
-                                child: Align(alignment: headers[i].aligment, child: rowItems[i]),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  );
-                },
-              ),
+                  ),
+                );
+              },
             ),
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }
