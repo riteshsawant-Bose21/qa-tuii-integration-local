@@ -791,8 +791,8 @@ OcaSessionID Ocp1LiteNetwork::Connect(const ::OcaLiteConnectParameters &connectP
                                                    ocp1ConnectParameters->GetbKeepAliveTimeoutInMs());
 
         OCA_LOG_INFO_PARAMS("✓ About to call Ocp1LiteSocketConnect with %s:%d",
-                             ocp1ConnectParameters->GetHostOrIp().c_str(),
-                             ocp1ConnectParameters->GetPort());
+                            ocp1ConnectParameters->GetHostOrIp().c_str(),
+                            ocp1ConnectParameters->GetPort());
 
         if (Ocp1LiteSocketConnect(ocp1ConnectParameters->GetHostOrIp().c_str(),
                                   ocp1ConnectParameters->GetPort(),
@@ -902,24 +902,27 @@ bool Ocp1LiteNetwork::Disconnect(::OcaSessionID sessionID)
 
 ::OcaLiteStatus Ocp1LiteNetwork::SetIdAdvertisedValue(const ::OcaLiteNetworkNodeID &nodeId)
 {
-    ::OcaLiteStatus result(OCASTATUS_PARAMETER_ERROR);
-    ::Ocp1LiteNetworkNodeID *ocp1LiteNetworkNodeID(::Ocp1LiteNetworkNodeID::CreateFromBase(nodeId));
-    if (ocp1LiteNetworkNodeID != NULL)
-    {
-        m_nodeID = ocp1LiteNetworkNodeID->GetStringValue();
+    return OCASTATUS_OK;
+    // Commenting out DNS-SD to disable it as it has been moved to FusionServices
 
-        // Reregister with the new node id
-        Ocp1LiteServiceDispose();
+    // ::OcaLiteStatus result(OCASTATUS_PARAMETER_ERROR);
+    // ::Ocp1LiteNetworkNodeID *ocp1LiteNetworkNodeID(::Ocp1LiteNetworkNodeID::CreateFromBase(nodeId));
+    // if (ocp1LiteNetworkNodeID != NULL)
+    // {
+    //     m_nodeID = ocp1LiteNetworkNodeID->GetStringValue();
 
-        result = RegisterRegistrationServices();
-        if (OCASTATUS_OK != result)
-        {
-            Ocp1LiteServiceDispose();
-        }
-        delete ocp1LiteNetworkNodeID;
-    }
+    //     // Reregister with the new node id
+    //     Ocp1LiteServiceDispose();
 
-    return result;
+    //     result = RegisterRegistrationServices();
+    //     if (OCASTATUS_OK != result)
+    //     {
+    //         Ocp1LiteServiceDispose();
+    //     }
+    //     delete ocp1LiteNetworkNodeID;
+    // }
+
+    // return result;
 }
 
 void Ocp1LiteNetwork::HandleControllers(OcaSocketList &controllerList, const OcfLiteSelectableSet &readSet)
@@ -1109,24 +1112,25 @@ void Ocp1LiteNetwork::HandleDevices(OcaSocketList &deviceList, const OcfLiteSele
 
 ::OcaLiteStatus Ocp1LiteNetwork::RegisterRegistrationServices()
 {
-    std::vector<std::string> txtRecords;
-    ::OcaLiteStatus rc(FillTxtRecords(txtRecords));
-    if (OCASTATUS_OK == rc)
-    {
-        if (!Ocp1LiteServiceRegister(m_nodeID.GetString(),
-                                     INSECURE_REGISTRATION_TYPE,
-                                     static_cast<UINT16>(m_requestedInsecurePort),
-                                     txtRecords,
-                                     m_domainName.GetLength() > static_cast<::OcaUint16>(0) ? m_domainName.GetString() : m_ocp1Interface.GetDnsDomainName().GetString()))
-        {
-            OCA_LOG_ERROR("Failed to register service");
+    return OCASTATUS_OK;
+    // Commenting out DNS-SD to disable it as it has been moved to FusionServices
+    // std::vector<std::string> txtRecords;
+    // ::OcaLiteStatus rc(FillTxtRecords(txtRecords));
+    // if (OCASTATUS_OK == rc)
+    // {
+    //     if (!Ocp1LiteServiceRegister(m_nodeID.GetString(),
+    //                                  INSECURE_REGISTRATION_TYPE,
+    //                                  static_cast<UINT16>(m_requestedInsecurePort),
+    //                                  txtRecords,
+    //                                  m_domainName.GetLength() > static_cast<::OcaUint16>(0) ? m_domainName.GetString() : m_ocp1Interface.GetDnsDomainName().GetString()))
+    //     {
+    //         OCA_LOG_ERROR("Failed to register service");
 
-            Ocp1LiteServiceDispose();
+    //         Ocp1LiteServiceDispose();
 
-            rc = OCASTATUS_PROCESSING_FAILED;
-        }
-    }
+    //         rc = OCASTATUS_PROCESSING_FAILED;
+    //     }
+    // }
 
-    return rc;
+    // return rc;
 }
-

@@ -67,30 +67,32 @@ void OcaLiteNetwork::Teardown()
 
 ::OcaLiteStatus OcaLiteNetwork::SetIdAdvertised(const ::OcaLiteNetworkNodeID& idAdvertised)
 {
-    ::OcaLiteNetworkNodeID oldIDAdvertised;
-    ::OcaLiteStatus rc(GetIdAdvertisedValue(oldIDAdvertised));
-    if ((OCASTATUS_OK == rc) && (oldIDAdvertised != idAdvertised))
-    {
-        rc = SetIdAdvertisedValue(idAdvertised);
-        if (OCASTATUS_OK == rc)
-        {
-            m_idAdvertised = idAdvertised;
-            ::OcaLiteNetworkNodeID actualIDAdvertised;
-            rc = GetIdAdvertisedValue(actualIDAdvertised);
-            if (OCASTATUS_OK == rc)
-            {
+    return OCASTATUS_OK;
 
-                ::OcaLitePropertyID propertyID(CLASS_ID.GetFieldCount(), static_cast< ::OcaUint16>(OCA_PROP_ID_ADVERTISED));
-                ::OcaLitePropertyChangedEventData< ::OcaLiteNetworkNodeID> eventData(GetObjectNumber(),
-                                                                             propertyID,
-                                                                             actualIDAdvertised,
-                                                                             OCAPROPERTYCHANGETYPE_CURRENT_CHANGED);
-                PropertyChanged(eventData, propertyID);
-            }
-        }
-    }
+    // ::OcaLiteNetworkNodeID oldIDAdvertised;
+    // ::OcaLiteStatus rc(GetIdAdvertisedValue(oldIDAdvertised));
+    // if ((OCASTATUS_OK == rc) && (oldIDAdvertised != idAdvertised))
+    // {
+    //     rc = SetIdAdvertisedValue(idAdvertised);
+    //     if (OCASTATUS_OK == rc)
+    //     {
+    //         m_idAdvertised = idAdvertised;
+    //         ::OcaLiteNetworkNodeID actualIDAdvertised;
+    //         rc = GetIdAdvertisedValue(actualIDAdvertised);
+    //         if (OCASTATUS_OK == rc)
+    //         {
 
-    return rc;
+    //             ::OcaLitePropertyID propertyID(CLASS_ID.GetFieldCount(), static_cast< ::OcaUint16>(OCA_PROP_ID_ADVERTISED));
+    //             ::OcaLitePropertyChangedEventData< ::OcaLiteNetworkNodeID> eventData(GetObjectNumber(),
+    //                                                                          propertyID,
+    //                                                                          actualIDAdvertised,
+    //                                                                          OCAPROPERTYCHANGETYPE_CURRENT_CHANGED);
+    //             PropertyChanged(eventData, propertyID);
+    //         }
+    //     }
+    // }
+
+    // return rc;
 }
 
 ::OcaLiteStatus OcaLiteNetwork::GetSystemInterfaces(::OcaLiteList< ::OcaLiteNetworkSystemInterfaceID>& interfaces) const
