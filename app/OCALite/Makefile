@@ -5,7 +5,6 @@ BUILD_DIR := build
 UNAME_S := $(shell uname -s)
 ifeq ($(UNAME_S),Darwin)
     CXX := g++
-    # macOS: Use native DNS-SD framework
     PKG_CFLAGS :=
     PKG_CDEFS  :=
     PKG_LIBS :=
@@ -14,13 +13,13 @@ else ifeq ($(ARCH),arm64)
     PKG_LIBS   := -L ${SDK_DIR}/sysroots/cortexa53-crypto-poky-linux/usr/lib
     PKG_CFLAGS := -I ${SDK_DIR}/sysroots/cortexa53-crypto-poky-linux/usr/include
     PKG_CDEFS  := -DFUSION
-    LDFLAGS    := -ldns_sd
+#     LDFLAGS    := -ldns_sd
 else
     CXX=g++
     PKG_CFLAGS :=
     PKG_LIBS :=
     PKG_CDEFS  :=
-    LDFLAGS := -ldns_sd
+#     LDFLAGS := -ldns_sd
 endif
 
 # ================================
@@ -87,12 +86,10 @@ endif
 PKG_CFLAGS += $(BOOST_CFLAGS)
 PKG_LIBS += $(BOOST_LIBS)
 
-
 CXXFLAGS := -Wall -Wextra -std=c++17 -g -O0 $(PKG_CFLAGS) \
 	    $(PKG_CDEFS) \
 	    -DOCA_RUN \
 	    -D_DEBUG \
-    $(DISABLE_DNSSD_FLAGS) \
     -I../common \
     -I../../common \
     -I../../common/HostInterfaceLite \
