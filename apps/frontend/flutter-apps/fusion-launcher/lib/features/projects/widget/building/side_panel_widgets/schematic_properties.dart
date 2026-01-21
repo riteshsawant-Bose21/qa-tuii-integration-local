@@ -481,30 +481,45 @@ class SchematicPropertiesState extends State<SchematicProperties> {
 }
 
 class PropertyTextField extends StatelessWidget {
-  final TextEditingController controller;
+  final String? initialValue;
+  final TextEditingController? controller;
   final String? hintText;
   final Function(String)? onSubmitted;
   final Function(String)? onChanged;
   final Function(PointerDownEvent event)? onTapOutside;
   final TextInputType? keyboardType;
   final int? maxLines;
+  final int? maxLength;
   final TextAlign? textAlign;
+  final String? suffixText;
+  final FocusNode? focusNode;
+  final bool enabled;
+  final bool autofocus;
 
   const PropertyTextField({
     super.key,
-    required this.controller,
+    this.initialValue,
+    this.controller,
     this.hintText,
     this.onSubmitted,
     this.onChanged,
     this.onTapOutside,
     this.keyboardType,
     this.maxLines,
+    this.maxLength,
     this.textAlign,
+    this.suffixText,
+    this.focusNode,
+    this.enabled = true,
+    this.autofocus = false,
   });
 
   @override
   Widget build(BuildContext context) {
-    return TextField(
+    return TextFormField(
+      autofocus: autofocus,
+      focusNode: focusNode,
+      initialValue: initialValue,
       controller: controller,
       maxLines: maxLines ?? 1,
       keyboardType: keyboardType,
@@ -512,13 +527,15 @@ class PropertyTextField extends StatelessWidget {
       onChanged: onChanged,
       textInputAction: TextInputAction.done,
       onTapOutside: onTapOutside,
-      onSubmitted: onSubmitted,
+      onFieldSubmitted: onSubmitted,
       style: Theme.of(context).textTheme.bodySmall,
+      maxLength: maxLength,
+      enabled: enabled,
       decoration: InputDecoration(
+        counterText: '',
+        suffixText: suffixText,
         hintText: hintText,
-        hintStyle: Theme.of(context).textTheme.bodySmall?.copyWith(
-          color: context.colorScheme.elevation5,
-        ),
+        hintStyle: Theme.of(context).textTheme.bodySmall?.copyWith(color: context.colorScheme.elevation5),
         isDense: true,
         fillColor: context.colorScheme.elevation1,
         contentPadding: const EdgeInsets.all(8),

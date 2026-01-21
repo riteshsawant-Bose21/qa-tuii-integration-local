@@ -683,21 +683,21 @@ class _SplPanelState extends State<SplPanel> {
       child: DropdownButton<T>(
         value: value,
         isExpanded: true,
-        style: const TextStyle(fontSize: 12, color: Colors.black),
-        items: items
-            .map(
-              (T e) => DropdownMenuItem<T>(
-                value: e,
-                child: SemanticHelper.button(
-                  testId: SemanticHelper.createTestId(SemanticTypes.button, (e as dynamic).displayName),
-                  child: FusionAppText(
-                    text: (e as dynamic).displayName,
-                    style: const TextStyle(fontSize: 12),
-                  ),
+        style: TextStyle(fontSize: 12, color: context.colorScheme.textPrimary),
+        items: items.map(
+          (T e) {
+            return DropdownMenuItem<T>(
+              value: e,
+              child: SemanticHelper.button(
+                testId: SemanticHelper.createTestId(SemanticTypes.button, (e as dynamic).displayName),
+                child: FusionAppText(
+                  text: (e as dynamic).displayName,
+                  style: const TextStyle(fontSize: 12),
                 ),
               ),
-            )
-            .toList(),
+            );
+          },
+        ).toList(),
         onChanged: onChanged,
         underline: Container(),
         icon: const Icon(Icons.arrow_drop_down, size: 16),

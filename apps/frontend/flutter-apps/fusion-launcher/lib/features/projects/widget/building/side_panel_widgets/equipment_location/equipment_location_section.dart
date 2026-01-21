@@ -197,7 +197,7 @@ class EquipmentLocationSection extends StatelessWidget {
                                       },
                                       child: SemanticHelper.button(
                                         testId: SemanticHelper.createTestId(SemanticTypes.button, "equipment_location_section_item_remove_button_$index"),
-                                        child: Icon(Icons.delete_outline_rounded, size: 12, color: Colors.red[600]),
+                                        child: Icon(LucideIcons.trash200, size: 12, color: Colors.red[600]),
                                       ),
                                     ),
                                   ],
