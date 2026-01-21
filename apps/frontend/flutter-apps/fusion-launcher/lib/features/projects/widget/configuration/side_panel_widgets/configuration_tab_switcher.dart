@@ -76,11 +76,15 @@ class _ConfigurationTabSwitcherState extends State<ConfigurationTabSwitcher> {
                     decoration: BoxDecoration(
                       color:
                           isSelected
-                              ? context.colorScheme.elevation4
+                              ? context.colorScheme.elevation3
                               : isHovered
                               ? context.colorScheme.elevation2
                               : Colors.transparent,
                       borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                        color: isSelected ? context.colorScheme.elevation5 : Colors.transparent,
+                        width: 1.0,
+                      ),
                     ),
                     child: Row(
                       crossAxisAlignment: CrossAxisAlignment.center,

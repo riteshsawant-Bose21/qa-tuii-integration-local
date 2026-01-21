@@ -142,15 +142,15 @@ class FusionOutlinedButton extends StatelessWidget {
                 borderRadius: BorderRadius.circular(borderRadius),
                 border: Border.all(
                   color: isActive
-                      ? activeBorderColor ?? Theme.of(context).colorScheme.primaryBlack
-                      : activeBorderColor?.withOpacity(0.5) ?? Theme.of(context).colorScheme.primaryBlack.withOpacity(0.5),
+                      ? activeBorderColor ?? Theme.of(context).colorScheme.elevation4
+                      : activeBorderColor?.withOpacity(0.5) ?? Theme.of(context).colorScheme.elevation2,
                 ),
               ),
               child: isLoading
-                  ? const SizedBox(
+                  ? SizedBox(
                       width: 24,
                       height: 24,
-                      child: CircularProgressIndicator(strokeWidth: 2, valueColor: AlwaysStoppedAnimation<Color>(Colors.black)),
+                      child: CircularProgressIndicator(strokeWidth: 2, valueColor: AlwaysStoppedAnimation<Color>(context.colorScheme.primary)),
                     )
                   : Row(
                       mainAxisSize: MainAxisSize.min,
@@ -161,12 +161,12 @@ class FusionOutlinedButton extends StatelessWidget {
                           const SizedBox(width: 8),
                         ],
                         Expanded(
-                          child: Text(
-                            label,
+                          child: FusionAppText(
+                            text: label,
                             textAlign: TextAlign.center,
                             style: textStyle ?? Theme.of(context).textTheme.labelLarge,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
+                            maxLine: 1,
+                            textOverflow: TextOverflow.ellipsis,
                           ),
                         ),
                         if (showSuffixIcon && suffixIcon != null) ...[

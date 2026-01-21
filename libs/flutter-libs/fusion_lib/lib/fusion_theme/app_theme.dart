@@ -258,6 +258,13 @@ class FusionAppTheme {
         color: lightColorScheme.onSurface,
       ),
 
+      tooltipTheme: TooltipThemeData(
+        decoration: BoxDecoration(
+          color: lightColorScheme.primaryWhite,
+          borderRadius: BorderRadius.circular(4),
+        ),
+      ),
+
       /// App bar styling with primary color background
       appBarTheme: AppBarTheme(
         backgroundColor: lightColorScheme.primaryColor,
@@ -364,6 +371,13 @@ class FusionAppTheme {
             fontFamily: GoogleFonts.montserrat().fontFamily,
             fontWeight: FontWeight.w500,
           ),
+        ),
+      ),
+
+      tooltipTheme: TooltipThemeData(
+        decoration: BoxDecoration(
+          color: darkColorScheme.primaryWhite,
+          borderRadius: BorderRadius.circular(4),
         ),
       ),
 

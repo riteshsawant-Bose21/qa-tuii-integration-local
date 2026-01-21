@@ -101,7 +101,7 @@ class FusionDialog extends StatelessWidget {
   Widget build(BuildContext context) {
     return Dialog(
       shape: roundedCorners ? RoundedRectangleBorder(borderRadius: BorderRadius.circular(borderRadius)) : null,
-      backgroundColor: backgroundColor ?? context.colorScheme.primaryWhite,
+      backgroundColor: backgroundColor ?? context.colorScheme.elevation1,
       insetPadding: const EdgeInsets.symmetric(horizontal: 40, vertical: 24),
 
       child: ConstrainedBox(
@@ -112,7 +112,7 @@ class FusionDialog extends StatelessWidget {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                if (icon != null) ...[Icon(icon, size: 48, color: iconColor ?? Theme.of(context).primaryColor), const SizedBox(height: 16)],
+                if (icon != null) ...[Icon(icon, size: 48, color: iconColor ?? Theme.of(context).colorScheme.primaryWhite), const SizedBox(height: 16)],
                 FusionAppText(
                   text: title,
                   textAlign: TextAlign.center,

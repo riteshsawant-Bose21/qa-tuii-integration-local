@@ -42,9 +42,9 @@ class _SourceItemState extends State<SourceItem> {
         testId: SemanticHelper.createTestId(SemanticTypes.container, "source_item_${widget.index}"),
         child: Container(
           decoration: BoxDecoration(
-            color: widget.isDragging ? Theme.of(context).colorScheme.primary.withAlpha(150) : (_isHovered ? context.colorScheme.elevation2 : null),
+            color: widget.isDragging ? context.colorScheme.primary.withAlpha(150) : (_isHovered ? context.colorScheme.elevation2 : null),
             borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: widget.isDragging ? Theme.of(context).colorScheme.primary : Colors.transparent, width: 1.0),
+            border: Border.all(color: widget.isDragging ? context.colorScheme.primary : Colors.transparent, width: 1.0),
           ),
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
           child: Row(

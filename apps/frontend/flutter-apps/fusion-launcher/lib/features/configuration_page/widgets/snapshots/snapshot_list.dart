@@ -61,13 +61,11 @@ class SnapshotList extends StatelessWidget {
         return FadeTransition(
           opacity: animation.drive(Tween<double>(begin: 0.95, end: 1.0)),
           child: Material(
-            color: Colors.white,
             child: child,
           ),
         );
       },
       buildDefaultDragHandles: false,
-      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
       itemCount: snapShotList.length,
@@ -104,7 +102,11 @@ class SnapshotList extends StatelessWidget {
             feedback: Material(
               color: Colors.transparent,
               child: Container(
-                width: 200,
+                decoration: BoxDecoration(
+                  color: context.colorScheme.primary.withAlpha(150),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                width: 220,
                 constraints: const BoxConstraints(
                   minHeight: 36,
                   maxHeight: 36,
