@@ -1,10 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:fusion_lib/fusion_theme/app_theme.dart';
-import 'package:fusion_lib/fusion_utils/app_enums.dart';
-import 'package:fusion_lib/fusion_widgets/others/fusion_image.dart';
-import 'package:fusion_lib/fusion_widgets/semantics/semantic_helper.dart';
-import 'package:fusion_lib/fusion_widgets/semantics/semantic_type.dart';
-import 'package:fusion_lib/fusion_widgets/text_views/fusion_app_text.dart';
+import 'package:fusion_lib/fusion_lib.dart';
 
 import '../../../../core/service_locator.dart';
 import '../../../configuration/presentation/viewmodel/project_view_model.dart';
@@ -103,27 +98,25 @@ class _HardwareItemCardState extends State<HardwareItemCard> {
           testId: SemanticHelper.createTestId(SemanticTypes.card, "hardware_item_card_${widget.index}"),
           child: Container(
             margin: const EdgeInsets.only(bottom: 4),
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
             decoration: BoxDecoration(
-              color: _isHovered ? Colors.white.withOpacity(0.5) : (widget.isSelected ? Colors.transparent : Colors.white),
-              border: Border.all(color: widget.isSelected ? Colors.black : Colors.transparent, width: 1),
-              borderRadius: BorderRadius.circular(4),
+              color: _isHovered ? context.colorScheme.elevation2 : Colors.transparent,
+              border: Border.all(color: widget.isSelected ? context.colorScheme.elevation4 : Colors.transparent, width: 1),
+              borderRadius: BorderRadius.circular(FusionSizes.borderRadius8),
             ),
             child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
                 /// draggable icon
                 SemanticHelper.container(
                   testId: SemanticHelper.createTestId(SemanticTypes.card, "hardware_item_card_drag_handle_${widget.index}"),
                   child: Icon(
-                    Icons.drag_handle,
-                    size: 16,
-                    color: Colors.grey[600],
+                    Icons.drag_indicator,
+                    size: FusionSizes.iconSize16,
+                    color: context.colorScheme.textPlaceholder,
                   ),
                 ),
                 const SizedBox(width: 6),
 
-                /// device icon, name and location
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -174,8 +167,8 @@ class _HardwareItemCardState extends State<HardwareItemCard> {
                                 crossAxisAlignment: CrossAxisAlignment.center,
                                 children: <Widget>[
                                   Container(
-                                    width: 7,
-                                    height: 16,
+                                    width: 8,
+                                    height: 8,
                                     decoration: BoxDecoration(
                                       color: widget.zoneColor ?? Colors.transparent,
                                       borderRadius: BorderRadius.circular(2),
@@ -248,12 +241,11 @@ class _HardwareItemCardState extends State<HardwareItemCard> {
                         )
                       else if (((widget.location == null || widget.location == "Add location") && widget.zoneName == null) && widget.equipmentLocation != null)
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                          padding: const EdgeInsets.all(4),
                           decoration: BoxDecoration(
-                            color: _isHovered ? Colors.white.withOpacity(0.5) : (widget.isSelected ? Colors.transparent : context.colorScheme.primaryWhite),
                             borderRadius: BorderRadius.circular(2),
                             border: Border.all(
-                              color: context.colorScheme.primaryBlack,
+                              color: context.colorScheme.elevation2,
                               width: 1,
                             ),
                           ),
@@ -296,25 +288,36 @@ class _HardwareItemCardState extends State<HardwareItemCard> {
                       offset: const Offset(0, 20),
                       padding: EdgeInsets.zero,
                       constraints: const BoxConstraints(maxHeight: 550, maxWidth: 140),
-                      color: context.colorScheme.primaryWhite,
+                      color: context.colorScheme.elevation1,
                       menuPadding: EdgeInsets.zero,
-                      itemBuilder:
-                          (BuildContext context) => <PopupMenuEntry<ZoneMenuAction>>[
-                            PopupMenuItem<ZoneMenuAction>(
-                              height: 26,
-                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
-                              onTap: () {
-                                widget.onDelete?.call(widget.itemId!);
-                              },
-                              child: FusionAppText(
-                                text: "Delete",
-                                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                  fontSize: 12,
-                                  color: Theme.of(context).colorScheme.textPrimary,
-                                ),
+                      tooltip: "",
+                      borderRadius: BorderRadius.circular(FusionSizes.borderRadius12),
+                      position: PopupMenuPosition.under,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(9),
+                        side: BorderSide(
+                          color: context.colorScheme.onSurface.withValues(alpha: 0.3),
+                        ),
+                      ),
+                      itemBuilder: (BuildContext context) {
+                        return <PopupMenuEntry<ZoneMenuAction>>[
+                          PopupMenuItem<ZoneMenuAction>(
+                            height: 26,
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                            onTap: () {
+                              widget.onDelete?.call(widget.itemId!);
+                            },
+                            child: FusionAppText(
+                              text: "Delete",
+                              lineHeight: FusionSizes.lineHeight16,
+                              style: context.textTheme.bodySmall?.copyWith(
+                                fontSize: FusionSizes.fontSize12,
+                                color: context.colorScheme.textPrimary,
                               ),
                             ),
-                          ],
+                          ),
+                        ];
+                      },
                       child: SemanticHelper.button(
                         testId: SemanticHelper.createTestId(SemanticTypes.button, "hardware_item_card_more_options_${widget.index}"),
                         child: Icon(
