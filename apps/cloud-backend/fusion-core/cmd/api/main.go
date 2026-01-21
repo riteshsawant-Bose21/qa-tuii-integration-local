@@ -128,19 +128,18 @@ func main() {
 		loggers.AppLogger.Fatal("Failed to get processing config", zap.Error(err))
 	}
 
-	//Initialize Product Service (now includes sync functionality)
-	productSVC := product.NewService(productDBSvc, validationCfg.DefaultVersion, validationCfg, processingCfg, loggers.AppLogger)
-	if productSVC == nil {
-		loggers.AppLogger.Fatal("Failed to initialize product service")
-	}
-	loggers.AppLogger.Info("Initialized Product Service.")
-
 	s3Handler, err := cloudfs.NewS3Client(ctx, cfg.S3.Region)
-
 	if err != nil {
 		loggers.AppLogger.Fatal("Failed to initialize S3 client", zap.Error(err))
 	}
 	loggers.AppLogger.Info("Initialized S3 client")
+
+	//Initialize Product Service (now includes sync functionality)
+	productSVC := product.NewService(productDBSvc, validationCfg.DefaultVersion, validationCfg, processingCfg, s3Handler, loggers.AppLogger)
+	if productSVC == nil {
+		loggers.AppLogger.Fatal("Failed to initialize product service")
+	}
+	loggers.AppLogger.Info("Initialized Product Service.")
 
 	// Initialize Project DB Service
 	projectDBSvc := projectdb.NewService(pgs)

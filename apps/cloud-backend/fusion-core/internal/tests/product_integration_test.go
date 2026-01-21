@@ -25,6 +25,7 @@ import (
 	userdb "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/user/db"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/handler"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/log"
+	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/storage/cloudfs"
 	sqlpkg "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/storage/sql"
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
@@ -184,7 +185,11 @@ func (suite *ProductIntegrationTestSuite) setupAPI() error {
 		RetryDelay:    "5s",
 	}
 
-	productSVC := product.NewService(productDBSvc, "v1", validationCfg, processingCfg, zapLogger)
+	// Create a mock S3 client for testing
+	s3Client, err := cloudfs.NewS3Client(context.Background(), "us-east-1")
+	require.NoError(suite.T(), err, "Failed to create S3 client for testing")
+
+	productSVC := product.NewService(productDBSvc, "v1", validationCfg, processingCfg, s3Client, zapLogger)
 	require.NotNil(suite.T(), productSVC, "Failed to initialize product service")
 
 	// Initialize Project services (required for API but not used in product tests)
