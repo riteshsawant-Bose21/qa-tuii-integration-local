@@ -40,67 +40,82 @@ class _SchedulerSection extends StatelessWidget {
           itemBuilder: (BuildContext context, int index) {
             final ScheduleConfig schedule = state.schedules[index];
             return <Widget>[
+              /// Name
               Text(schedule.name),
+
+              /// Occurrence
               Container(
                 decoration: BoxDecoration(
-                  border: Border.all(color: Colors.black),
+                  border: Border.all(color: context.colorScheme.primaryWhite),
                   borderRadius: BorderRadius.circular(10),
                 ),
-                height: 40,
+                height: 32,
                 alignment: Alignment.center,
                 padding: const EdgeInsets.symmetric(horizontal: 10),
                 child: Row(
                   children: <Widget>[
-                    Expanded(child: Text(schedule.recurrence.label)),
+                    Expanded(
+                      child: FusionAppText(
+                        text: schedule.recurrence.label,
+                        style: context.textTheme.bodySmall,
+                      ),
+                    ),
                     const Icon(Icons.keyboard_arrow_down_rounded, size: 16),
                   ],
                 ),
               ),
-              Column(
-                spacing: 10,
-                children: <Widget>[
-                  Text.rich(
-                    TextSpan(
-                      children: <InlineSpan>[
-                        TextSpan(text: DateFormat("MMM dd, yyyy").format(schedule.startDate)),
-                        if (schedule.recurrence != RecurrenceType.none && schedule.endDate != null) ...<InlineSpan>[
-                          const TextSpan(text: " - "),
-                          TextSpan(text: DateFormat("MMM dd, yyyy").format(schedule.endDate!)),
+
+              /// Dates
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 4),
+                child: Column(
+                  spacing: 8,
+                  children: <Widget>[
+                    Text.rich(
+                      style: context.textTheme.bodySmall,
+                      TextSpan(
+                        children: <InlineSpan>[
+                          TextSpan(text: DateFormat("MMM dd, yyyy").format(schedule.startDate)),
+                          if (schedule.recurrence != RecurrenceType.none && schedule.endDate != null) ...<InlineSpan>[
+                            const TextSpan(text: " - "),
+                            TextSpan(text: DateFormat("MMM dd, yyyy").format(schedule.endDate!)),
+                          ],
                         ],
-                      ],
+                      ),
                     ),
-                  ),
-                  if (RecurrenceType.weekly == schedule.recurrence)
-                    Row(
-                      children: <Widget>[
-                        ...RecurrenceDay.values.map(
-                          (RecurrenceDay e) => Expanded(
-                            child: Column(
-                              children: <Widget>[
-                                Icon(
-                                  schedule.weeklyDays.contains(e.value) ? Icons.check_box : Icons.check_box_outline_blank,
-                                  color: schedule.weeklyDays.contains(e.value) ? Colors.black : Colors.grey,
-                                  // size: 16,
-                                ),
-                                Text(
-                                  e.name.substring(0, 3).toUpperCase(),
-                                  style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold),
-                                ),
-                              ],
+                    if (RecurrenceType.weekly == schedule.recurrence)
+                      Row(
+                        children: <Widget>[
+                          ...RecurrenceDay.values.map(
+                            (RecurrenceDay e) => Expanded(
+                              child: Column(
+                                children: <Widget>[
+                                  Icon(
+                                    schedule.weeklyDays.contains(e.value) ? Icons.check_box : Icons.check_box_outline_blank,
+                                    size: 14,
+                                    color: schedule.weeklyDays.contains(e.value) ? context.colorScheme.primaryWhite : context.colorScheme.primaryWhite,
+                                    // size: 16,
+                                  ),
+                                  FusionAppText(
+                                    text: e.name.substring(0, 3).toUpperCase(),
+                                    style: const TextStyle(fontSize: 10),
+                                  ),
+                                ],
+                              ),
                             ),
                           ),
-                        ),
-                      ],
-                    ),
-                ],
+                        ],
+                      ),
+                  ],
+                ),
               ),
 
               Container(
                 decoration: BoxDecoration(
-                  border: Border.all(color: Colors.black),
+                  border: Border.all(color: context.colorScheme.primaryWhite),
                   borderRadius: BorderRadius.circular(10),
                 ),
-                height: 40,
+                height: 32,
                 alignment: Alignment.center,
                 padding: const EdgeInsets.symmetric(horizontal: 10),
                 child: Row(
@@ -152,6 +167,7 @@ class _SchedulerSection extends StatelessWidget {
                       "assets/icons/scheduler/run.svg",
                       width: 25,
                       height: 25,
+                      color: context.colorScheme.iconWhite,
                     ),
                   ),
                 ),

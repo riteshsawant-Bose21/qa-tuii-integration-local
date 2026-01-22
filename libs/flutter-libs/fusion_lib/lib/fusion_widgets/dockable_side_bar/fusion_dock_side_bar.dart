@@ -48,7 +48,7 @@ class FusionDockSidebar extends StatelessWidget {
             clipBehavior: Clip.hardEdge,
             height: double.infinity,
             margin: const EdgeInsets.symmetric(horizontal: 1, vertical: 4),
-            
+
             decoration: BoxDecoration(
               color: hasIncomingData ? context.colorScheme.elevation1.withAlpha(80) : Colors.transparent,
               // border: Border.all(color: context.colorScheme.elevation2, width: 1),

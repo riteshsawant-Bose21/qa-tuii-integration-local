@@ -107,6 +107,7 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
       child: Container(
         height: 36,
         width: double.infinity,
+        padding: const EdgeInsets.only(left: 8),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(FusionSizes.borderRadius8),
           color: isHovered ? widget.bgColor.withAlpha(80) : widget.bgColor.withAlpha(100),
@@ -145,6 +146,7 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
                 ),
               ),
             ),
+            const SizedBox(width: 4),
 
             /// Add device button
             if (widget.subZones.isEmpty)
@@ -190,8 +192,15 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
   Widget _buildZoneContent() {
     if (widget.subZones.isEmpty && widget.zoneCircuits.isEmpty) {
       return Container(
-        color: widget.bgColor.withAlpha(60),
-        padding: const EdgeInsets.all(30),
+        margin: const EdgeInsets.symmetric(horizontal: 4),
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: widget.bgColor.withAlpha(60),
+          borderRadius: const BorderRadius.vertical(
+            bottom: Radius.circular(FusionSizes.borderRadius4),
+          ),
+        ),
+        // padding: const EdgeInsets.all(30),
         child: const Center(
           child: Text(
             'No devices / subzones added yet',
@@ -207,7 +216,7 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
       decoration: BoxDecoration(
         color: context.colorScheme.elevation3.withAlpha(50),
         borderRadius: const BorderRadius.vertical(
-          bottom: Radius.circular(FusionSizes.borderRadius16),
+          bottom: Radius.circular(FusionSizes.borderRadius4),
         ),
       ),
       child: Column(
@@ -429,6 +438,8 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
   Widget _buildZoneName({required BuildContext context, required String name}) {
     return FusionAppText(
       text: name,
+      maxLine: 1,
+      textOverflow: TextOverflow.ellipsis,
       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
         fontSize: 11,
         fontWeight: FontWeight.w600,
