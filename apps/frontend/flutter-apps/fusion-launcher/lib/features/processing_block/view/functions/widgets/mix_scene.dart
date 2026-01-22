@@ -70,21 +70,21 @@ class _MixScenesState extends State<MixScenes> {
 
     return SemanticHelper.button(
       testId: SemanticHelper.createTestId(SemanticTypes.button, "mix_scenes_container"),
-      child: Container(
+      child: SizedBox(
         width: 150,
-        color: const Color(0xFFF5F5F5),
+
         child: Column(
           children: <Widget>[
             Container(
               height: 28,
-              color: const Color(0xFFF5F5F5),
+
               alignment: Alignment.center,
               child: FusionAppText(
                 text: "MIX SCENES",
                 style: Theme.of(context).textTheme.labelSmall,
               ),
             ),
-            const Divider(color: Colors.black12, height: 0),
+            Divider(color: context.colorScheme.strokeLight, height: 0),
             const SizedBox(height: 10),
 
             Padding(
@@ -125,7 +125,8 @@ class _MixScenesState extends State<MixScenes> {
                   height: 28,
                   borderRadius: 8,
                   textStyle: context.textTheme.bodySmall!.copyWith(
-                    color: isNewMixSceneName ? Colors.black12 : Colors.black87,
+                    color:
+                        isNewMixSceneName ? context.colorScheme.primaryWhite.withValues(alpha: 0.4) : context.colorScheme.primaryWhite.withValues(alpha: 0.87),
                   ),
                   onTap: widget.onDeleteTap,
                 );

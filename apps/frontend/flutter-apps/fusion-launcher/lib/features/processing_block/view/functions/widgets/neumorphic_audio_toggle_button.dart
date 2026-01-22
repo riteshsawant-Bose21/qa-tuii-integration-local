@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/svg.dart';
-import 'package:fusion_lib/fusion_widgets/fusion_widgets.dart';
-import 'package:fusion_lib/fusion_widgets/semantics/semantic_helper.dart';
-import 'package:fusion_lib/fusion_widgets/semantics/semantic_type.dart';
+import 'package:fusion_lib/fusion_lib.dart';
 
 class NeumorphicAudioToggleButton extends StatefulWidget {
   final bool isActive;
@@ -55,7 +53,7 @@ class _NeumorphicAudioToggleButtonState extends State<NeumorphicAudioToggleButto
                   height: widget.iconSize,
                   width: widget.iconSize,
                   // ignore: deprecated_member_use
-                  color: widget.isActive ? Colors.black : const Color(0xFFE2E2E2),
+                  color: widget.isActive ? context.colorScheme.iconDefault : context.colorScheme.iconDisabled,
                 ),
               ),
             ),

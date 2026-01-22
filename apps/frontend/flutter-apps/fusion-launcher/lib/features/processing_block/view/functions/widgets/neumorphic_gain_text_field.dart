@@ -92,7 +92,12 @@ class _NeumorphicGainTextFieldState extends State<NeumorphicGainTextField> {
               hintText: "0",
               suffixText: hasValue ? "db" : null,
               isDense: true,
-              hintStyle: Theme.of(context).textTheme.labelLarge?.copyWith(color: Colors.grey),
+              filled: false,
+              focusedBorder: InputBorder.none,
+              enabledBorder: InputBorder.none,
+              errorBorder: InputBorder.none,
+              disabledBorder: InputBorder.none,
+              hintStyle: Theme.of(context).textTheme.labelLarge?.copyWith(color: context.colorScheme.greyLight),
               contentPadding: const EdgeInsets.all(0).copyWith(right: hasValue ? 6 : 0),
             ),
             onSubmitted: (String value) {
