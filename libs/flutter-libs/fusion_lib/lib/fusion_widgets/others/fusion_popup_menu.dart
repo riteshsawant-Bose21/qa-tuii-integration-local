@@ -11,6 +11,7 @@ class FusionPopupMenu<T> extends StatelessWidget {
     this.matchChildWidth = true,
     required this.child,
     this.tooltip,
+    this.popupOffset = const Offset(10, 10),
   });
   final List<T> items;
   final ValueChanged<T> onSelected;
@@ -19,6 +20,7 @@ class FusionPopupMenu<T> extends StatelessWidget {
   final bool matchChildWidth;
   final Widget child;
   final String? tooltip;
+  final Offset popupOffset;
   @override
   Widget build(BuildContext context) {
     final childKey = GlobalKey();
@@ -26,7 +28,7 @@ class FusionPopupMenu<T> extends StatelessWidget {
       tooltip: tooltip,
       position: PopupMenuPosition.under,
       menuPadding: EdgeInsets.zero,
-      offset: Offset(10, 10),
+      offset: popupOffset,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12.0),
         side: BorderSide(color: context.colorScheme.strokeLight, width: 2),
@@ -36,18 +38,20 @@ class FusionPopupMenu<T> extends StatelessWidget {
         items.length,
         (index) {
           final T item = items[index];
+          var findRenderObject = (childKey.currentContext?.findRenderObject() as RenderBox?);
+          var width2 = matchChildWidth ? findRenderObject?.size.width : null;
           return PopupMenuItem<T>(
             value: item,
 
             padding: EdgeInsets.all(0),
             child: SizedBox(
-              width: matchChildWidth ? (childKey.currentContext?.findRenderObject() as RenderBox?)?.size.width : null,
+              width: width2,
               child: Padding(
                 padding: const EdgeInsets.all(16.0),
                 child: itemBuilder != null
                     ? itemBuilder!(context, item)
-                    : Text(
-                        itemLabels != null && itemLabels!.containsKey(item) ? itemLabels![item]! : item.toString(),
+                    : FusionAppText(
+                        text: itemLabels != null && itemLabels!.containsKey(item) ? itemLabels![item]! : item.toString(),
                         style: context.textTheme.bodySmall,
                       ),
               ),

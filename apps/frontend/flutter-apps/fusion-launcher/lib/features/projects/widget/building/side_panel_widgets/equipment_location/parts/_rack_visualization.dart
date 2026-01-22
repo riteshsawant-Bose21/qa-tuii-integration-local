@@ -128,7 +128,7 @@ class _EQLRackPreview extends StatelessWidget {
                                                                   text: hardware.name,
                                                                   maxLine: 1,
                                                                   style: context.textTheme.bodySmall?.copyWith(
-                                                                    color: context.colorScheme.onSurface,
+                                                                    color: Colors.white,
                                                                   ),
                                                                 ),
                                                               ),
@@ -165,13 +165,13 @@ class _EQLRackPreview extends StatelessWidget {
                             Container(
                               height: 20,
                               width: 30,
-                              color: Colors.grey.shade400,
+                              color: context.colorScheme.strokeLight,
                             ),
                             const SizedBox(),
                             Container(
                               height: 20,
                               width: 30,
-                              color: Colors.grey.shade400,
+                              color: context.colorScheme.strokeLight,
                             ),
                           ],
                         ),

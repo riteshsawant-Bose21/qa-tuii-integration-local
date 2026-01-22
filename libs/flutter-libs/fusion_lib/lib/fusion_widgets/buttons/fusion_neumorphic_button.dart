@@ -4,11 +4,11 @@ import 'package:fusion_lib/fusion_lib.dart';
 class FusionNeumorphicButton extends StatefulWidget {
   final String text;
   final double? width;
-  final double height;
+  final double? height;
   final double borderRadius;
   final VoidCallback onTap;
   final TextStyle? textStyle;
-
+  final Widget? child;
   const FusionNeumorphicButton({
     super.key,
     required this.text,
@@ -17,6 +17,7 @@ class FusionNeumorphicButton extends StatefulWidget {
     required this.onTap,
     this.borderRadius = 12,
     this.textStyle,
+    this.child,
   });
 
   @override
@@ -46,10 +47,12 @@ class _FusionNeumorphicButtonState extends State<FusionNeumorphicButton> {
             borderRadius: widget.borderRadius,
             height: widget.height,
             alignment: Alignment.center,
-            child: FusionAppText(
-              text: widget.text,
-              style: widget.textStyle ?? Theme.of(context).textTheme.bodyMedium,
-            ),
+            child:
+                widget.child ??
+                FusionAppText(
+                  text: widget.text,
+                  style: widget.textStyle ?? Theme.of(context).textTheme.bodyMedium,
+                ),
           ),
         ),
       ),
