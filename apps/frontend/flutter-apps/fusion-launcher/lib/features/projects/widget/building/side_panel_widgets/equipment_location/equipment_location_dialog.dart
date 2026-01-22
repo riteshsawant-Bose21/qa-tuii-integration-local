@@ -7,7 +7,6 @@ import 'package:fusion_launcher/features/authentication/launcher_sign_in_page.da
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
 import 'package:fusion_launcher/features/projects/viewmodel/eql_products_vm.dart';
 import 'package:fusion_lib/fusion_lib.dart';
-import 'package:fusion_lib/fusion_theme/app_theme.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:nested/nested.dart';
 
@@ -61,7 +60,7 @@ class EquipmentLocationDialog extends StatelessWidget {
           height: MediaQuery.of(context).size.height * 0.8,
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
-            color: context.colorScheme.surface,
+            color: context.colorScheme.elevation1,
             borderRadius: BorderRadius.circular(20),
           ),
           child: BlocBuilder<EqlProductsVm, EQLProductsState>(
@@ -98,7 +97,7 @@ class EquipmentLocationDialog extends StatelessWidget {
                                     padding: const EdgeInsets.symmetric(horizontal: 6),
                                     child: Icon(
                                       LucideIcons.search200,
-                                      color: Colors.grey[500],
+                                      color: context.colorScheme.iconDefault,
                                     ),
                                   ),
                                   borderRadius: 8,
@@ -216,7 +215,7 @@ class EquipmentLocationDialog extends StatelessWidget {
                   Expanded(
                     child: Container(
                       decoration: BoxDecoration(
-                        color: const Color(0xFF292826),
+                        color: context.colorScheme.elevation2,
                         borderRadius: BorderRadius.circular(16),
                       ),
                       child: ListView(
@@ -249,44 +248,50 @@ class EquipmentLocationDialog extends StatelessWidget {
                               ],
                             ),
                           ),
-                          const Divider(thickness: 0.5, height: 0),
+                          Divider(
+                            thickness: 0.5,
+                            height: 0,
+                            color: context.colorScheme.strokeDark,
+                          ),
                           const SizedBox(height: 16),
                           Center(
-                            child: Container(
-                              padding: const EdgeInsets.all(8),
-                              decoration: BoxDecoration(
-                                color: context.colorScheme.surface,
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: Row(
-                                spacing: 10,
-                                mainAxisSize: MainAxisSize.min,
-                                children: <Widget>[
-                                  ...<String>["Select", "Suggest"].map((String mode) {
-                                    final bool isSelected = "Select" == mode;
+                            child: FusionContainer(
+                              // padding: const EdgeInsets.all(8),
+                              // decoration: BoxDecoration(
+                              //   color: context.colorScheme.elevation1,
+                              //   borderRadius: BorderRadius.circular(12),
+                              // ),
+                              raised: false,
+                              color: context.colorScheme.elevation1,
+                              child: Padding(
+                                padding: const EdgeInsets.all(8.0),
+                                child: Row(
+                                  spacing: 10,
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: <Widget>[
+                                    ...<String>["Select", "Suggest"].map((String mode) {
+                                      final bool isSelected = "Select" == mode;
 
-                                    return SemanticHelper.container(
-                                      testId: SemanticHelper.createTestId(SemanticTypes.container, "equipment_location_dialog_filter_option_$mode"),
-                                      child: Container(
-                                        width: 89,
-                                        padding: const EdgeInsets.all(8),
-                                        decoration: BoxDecoration(
-                                          color: isSelected ? context.colorScheme.surfaceBright : null,
-                                          borderRadius: BorderRadius.circular(8),
-                                        ),
-                                        child: Center(
-                                          child: FusionAppText(
-                                            text: mode,
-                                            style: context.textTheme.bodySmall?.copyWith(
-                                              color: context.colorScheme.onSurface,
-                                              fontWeight: FontWeight.normal,
+                                      return SemanticHelper.container(
+                                        testId: SemanticHelper.createTestId(SemanticTypes.container, "equipment_location_dialog_filter_option_$mode"),
+                                        child: Container(
+                                          width: 89,
+                                          padding: const EdgeInsets.all(8),
+                                          decoration: BoxDecoration(
+                                            color: isSelected ? context.colorScheme.elevation3 : null,
+                                            borderRadius: BorderRadius.circular(8),
+                                          ),
+                                          child: Center(
+                                            child: FusionAppText(
+                                              text: mode,
+                                              style: context.textTheme.bodySmall,
                                             ),
                                           ),
                                         ),
-                                      ),
-                                    );
-                                  }),
-                                ],
+                                      );
+                                    }),
+                                  ],
+                                ),
                               ),
                             ),
                           ),
@@ -302,7 +307,12 @@ class EquipmentLocationDialog extends StatelessWidget {
                           ),
                           const SizedBox(height: 24),
 
-                          const Divider(thickness: 0.5, height: 0),
+                          Divider(
+                            thickness: 0.5,
+                            height: 0,
+                            color: context.colorScheme.strokeDark,
+                          ),
+
                           const SizedBox(height: 16),
                           const SizedBox(height: 16),
                           const _EqlSystemRequirementSection(),

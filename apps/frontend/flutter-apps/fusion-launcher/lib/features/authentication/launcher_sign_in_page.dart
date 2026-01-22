@@ -185,29 +185,20 @@ class NeumorphicDarkTextField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(borderRadius),
-      child: Container(
+    return Padding(
+      padding: const EdgeInsets.all(2.0),
+      child: FusionContainer(
         width: width,
-        margin: const EdgeInsets.all(2),
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-          boxShadow: <BoxShadow>[
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.48),
-              blurRadius: 5,
-              offset: const Offset(-1.5, -1.5),
-              blurStyle: BlurStyle.inner,
-            ),
-            BoxShadow(
-              color: Colors.white.withValues(alpha: 0.08),
-              blurRadius: 5,
-              offset: const Offset(1.5, 1.5),
-              blurStyle: BlurStyle.inner,
-            ),
-          ],
-          borderRadius: BorderRadius.circular(borderRadius),
-        ),
+        borderRadius: borderRadius,
+        // margin: const EdgeInsets.all(2),
+        // decoration: BoxDecoration(
+        //   boxShadow: <BoxShadow>[
+        //     const BoxShadow(color: Colors.black54, blurRadius: 1, offset: Offset(-2, -2), blurStyle: BlurStyle.inner),
+        //     const BoxShadow(color: Colors.white12, blurRadius: 1, offset: Offset(2, 2), blurStyle: BlurStyle.inner),
+        //     const BoxShadow(color: FusionDarkColorPallette.dark70, blurRadius: 4, blurStyle: BlurStyle.inner),
+        //   ],
+        //   borderRadius: BorderRadius.circular(borderRadius),
+        // ),
         child: ClipRRect(
           borderRadius: BorderRadius.circular(borderRadius),
           child: TextFormField(
@@ -222,9 +213,8 @@ class NeumorphicDarkTextField extends StatelessWidget {
               prefixIconConstraints: const BoxConstraints(minWidth: 0, minHeight: 0),
               suffixIcon: suffix,
               suffixIconConstraints: const BoxConstraints(minWidth: 0, minHeight: 0),
-              filled: true,
+              filled: false,
               isDense: true,
-              fillColor: context.colorScheme.elevation2,
               border: InputBorder.none,
               enabledBorder: InputBorder.none,
               focusedBorder: InputBorder.none,
@@ -272,40 +262,23 @@ class _NeumorphicDarkButtonState extends State<NeumorphicDarkButton> {
   Widget build(BuildContext context) {
     assert(widget.text != null || widget.child != null);
 
-    return GestureDetector(
-      onTapDown: (_) => setState(() => isPressed = true),
-      onTapCancel: () => setState(() => isPressed = false),
-      onTapUp: (_) {
-        setState(() => isPressed = false);
-        widget.onTap?.call();
-      },
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 100),
+    return Padding(
+      padding: const EdgeInsets.all(2.0),
+      child: FusionNeumorphicButton(
+        onTap: widget.onTap ?? () {},
         width: widget.width,
         height: widget.height ?? 44,
-        margin: const EdgeInsets.all(2),
-        decoration: BoxDecoration(
-          boxShadow: <BoxShadow>[
-            if (isPressed) ...<BoxShadow>[
-              const BoxShadow(color: Colors.black54, blurRadius: 1, offset: Offset(-2, -2), blurStyle: BlurStyle.inner),
-              const BoxShadow(color: Colors.white12, blurRadius: 1, offset: Offset(2, 2), blurStyle: BlurStyle.inner),
-              const BoxShadow(color: FusionDarkColorPallette.dark70, blurRadius: 4, blurStyle: BlurStyle.inner),
-            ] else ...<BoxShadow>[
-              const BoxShadow(color: Colors.black, blurRadius: 1, offset: Offset(0.5, 1)),
-              const BoxShadow(color: Colors.white24, blurRadius: 1, offset: Offset(-0.5, -1)),
-            ],
-          ],
-          borderRadius: BorderRadius.circular(widget.borderRadius),
-        ),
+        borderRadius: widget.borderRadius,
+        text: widget.text ?? "",
         child: ClipRRect(
           borderRadius: BorderRadius.circular(widget.borderRadius),
           child: Container(
             decoration: BoxDecoration(
-              color: widget.backgroundColor ?? const Color(0xFF232523),
+              color: widget.backgroundColor,
               borderRadius: BorderRadius.circular(widget.borderRadius),
             ),
             child: Center(
-              child: widget.child ?? FusionAppText(text: widget.text!),
+              child: widget.child ?? FusionAppText(text: widget.text ?? ""),
             ),
           ),
         ),
