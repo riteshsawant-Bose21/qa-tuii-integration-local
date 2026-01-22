@@ -1,5 +1,6 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/core/assets/asset_svg.dart';
 import 'package:fusion_launcher/core/service_locator.dart';
@@ -495,6 +496,10 @@ class PropertyTextField extends StatelessWidget {
   final FocusNode? focusNode;
   final bool enabled;
   final bool autofocus;
+  final List<TextInputFormatter>? inputFormatters;
+  final FormFieldValidator<String>? validator;
+  final EdgeInsetsGeometry? contentPadding;
+  final Color? fillColor;
 
   const PropertyTextField({
     super.key,
@@ -512,6 +517,10 @@ class PropertyTextField extends StatelessWidget {
     this.focusNode,
     this.enabled = true,
     this.autofocus = false,
+    this.inputFormatters,
+    this.validator,
+    this.contentPadding,
+    this.fillColor,
   });
 
   @override
@@ -531,14 +540,16 @@ class PropertyTextField extends StatelessWidget {
       style: Theme.of(context).textTheme.bodySmall,
       maxLength: maxLength,
       enabled: enabled,
+      inputFormatters: inputFormatters,
+      validator: validator,
       decoration: InputDecoration(
         counterText: '',
         suffixText: suffixText,
         hintText: hintText,
         hintStyle: Theme.of(context).textTheme.bodySmall?.copyWith(color: context.colorScheme.elevation5),
         isDense: true,
-        fillColor: context.colorScheme.elevation1,
-        contentPadding: const EdgeInsets.all(8),
+        fillColor: fillColor ?? context.colorScheme.elevation1,
+        contentPadding: contentPadding ?? const EdgeInsets.all(8),
         border: InputBorder.none,
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(6),

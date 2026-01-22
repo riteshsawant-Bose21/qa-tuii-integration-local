@@ -97,7 +97,7 @@ class _ExpandableSubZoneWidgetState extends State<ExpandableSubZoneWidget> {
                         // ),
                         FusionArrowPopup(
                           content: SpeakerQueryPopup(isFromBuildingPage: false, zoneId: widget.zoneId, subZoneId: widget.subZoneId),
-    
+                          backgroundColor: context.colorScheme.elevation1,
                           child: Row(
                             children: <Widget>[
                               Icon(Icons.add, size: 10, color: context.colorScheme.iconWhite),

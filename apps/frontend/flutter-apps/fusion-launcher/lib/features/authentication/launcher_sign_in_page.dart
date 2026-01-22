@@ -3,7 +3,6 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/core/router/routes.dart';
 import 'package:fusion_launcher/features/authentication/viewmodel/auth_view_model.dart';
 import 'package:fusion_lib/fusion_lib.dart';
-import 'package:fusion_lib/fusion_theme/app_theme.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../core/service_locator.dart';
@@ -191,11 +190,21 @@ class NeumorphicDarkTextField extends StatelessWidget {
       child: Container(
         width: width,
         margin: const EdgeInsets.all(2),
+        alignment: Alignment.center,
         decoration: BoxDecoration(
           boxShadow: <BoxShadow>[
-            const BoxShadow(color: Colors.black54, blurRadius: 1, offset: Offset(-2, -2), blurStyle: BlurStyle.inner),
-            const BoxShadow(color: Colors.white12, blurRadius: 1, offset: Offset(2, 2), blurStyle: BlurStyle.inner),
-            const BoxShadow(color: FusionDarkColorPallette.dark70, blurRadius: 4, blurStyle: BlurStyle.inner),
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.48),
+              blurRadius: 5,
+              offset: const Offset(-1.5, -1.5),
+              blurStyle: BlurStyle.inner,
+            ),
+            BoxShadow(
+              color: Colors.white.withValues(alpha: 0.08),
+              blurRadius: 5,
+              offset: const Offset(1.5, 1.5),
+              blurStyle: BlurStyle.inner,
+            ),
           ],
           borderRadius: BorderRadius.circular(borderRadius),
         ),
@@ -215,7 +224,7 @@ class NeumorphicDarkTextField extends StatelessWidget {
               suffixIconConstraints: const BoxConstraints(minWidth: 0, minHeight: 0),
               filled: true,
               isDense: true,
-              fillColor: const Color(0xFF282826),
+              fillColor: context.colorScheme.elevation2,
               border: InputBorder.none,
               enabledBorder: InputBorder.none,
               focusedBorder: InputBorder.none,

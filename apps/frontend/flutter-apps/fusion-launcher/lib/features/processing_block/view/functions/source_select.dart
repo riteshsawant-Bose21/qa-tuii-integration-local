@@ -163,9 +163,11 @@ class _SourceSelectZoneControlPanelState extends State<SourceSelectZoneControlPa
                                                         key: ValueKey<String>(source.id),
                                                         margin: const EdgeInsets.symmetric(vertical: 2),
                                                         decoration: BoxDecoration(
-                                                          border: Border.all(color: isSelected ? Colors.black54 : const Color(0xFFE5E5E5)),
+                                                          border: Border.all(
+                                                            color: isSelected ? context.colorScheme.primaryWhite : context.colorScheme.strokeLight,
+                                                          ),
                                                           borderRadius: BorderRadius.circular(4),
-                                                          color: Colors.white,
+                                                          color: context.colorScheme.elevation1,
                                                         ),
                                                         child: Row(
                                                           children: <Widget>[
@@ -176,7 +178,7 @@ class _SourceSelectZoneControlPanelState extends State<SourceSelectZoneControlPa
                                                                 alignment: Alignment.center,
                                                                 padding: const EdgeInsets.all(2),
                                                                 decoration: BoxDecoration(
-                                                                  color: const Color(0xFFF5F5F5),
+                                                                  color: context.colorScheme.elevation1,
                                                                   borderRadius: BorderRadius.circular(4),
                                                                 ),
                                                                 child: FusionAppText(

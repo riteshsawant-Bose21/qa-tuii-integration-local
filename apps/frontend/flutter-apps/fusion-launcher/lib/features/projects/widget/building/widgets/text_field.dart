@@ -3,6 +3,8 @@ import 'package:flutter/services.dart';
 import 'package:fusion_lib/fusion_theme/app_theme.dart';
 import 'package:fusion_lib/fusion_widgets/text_views/fusion_app_text.dart';
 
+import '../side_panel_widgets/schematic_properties.dart';
+
 class BuildingPageTextField extends StatelessWidget {
   final String label;
   final TextEditingController controller;
@@ -39,26 +41,16 @@ class BuildingPageTextField extends StatelessWidget {
         ),
         const SizedBox(width: 8),
         Expanded(
-          child: TextFormField(
+          child: PropertyTextField(
             controller: controller,
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            style: context.textTheme.bodySmall?.copyWith(color: context.colorScheme.onSurface),
-            decoration: InputDecoration(
-              isDense: true,
-              contentPadding: const EdgeInsets.symmetric(vertical: 10, horizontal: 10),
-              hintText: hintText,
-              hintStyle: context.textTheme.bodySmall?.copyWith(color: context.colorScheme.onSurface.withAlpha(100)),
-              fillColor: context.colorScheme.surface,
-              filled: true,
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(6)),
-              focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(6)),
-              enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(6)),
-              errorBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(6)),
-            ),
+            hintText: hintText,
+            fillColor: context.colorScheme.elevation2,
+            contentPadding: const EdgeInsets.symmetric(vertical: 10, horizontal: 10),
             inputFormatters: inputFormatters,
             validator: validator,
             onChanged: onChanged,
-            onFieldSubmitted: onFieldSubmitted,
+            onSubmitted: onFieldSubmitted,
           ),
         ),
       ],

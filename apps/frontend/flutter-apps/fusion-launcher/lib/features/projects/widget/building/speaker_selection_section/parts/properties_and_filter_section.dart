@@ -7,8 +7,6 @@ import 'package:fusion_launcher/features/projects/widget/building/speaker_select
 import 'package:fusion_launcher/features/projects/widget/building/widgets/drop_down.dart';
 import 'package:fusion_launcher/features/projects/widget/building/widgets/text_field.dart';
 import 'package:fusion_lib/fusion_lib.dart';
-import 'package:fusion_lib/fusion_theme/app_theme.dart';
-import 'package:fusion_lib/fusion_widgets/others/fusion_checkbox_group.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../view_model/add_speaker_view_model.dart';
@@ -37,7 +35,7 @@ class SpeakerListeningAreaPropertiesState extends State<SpeakerListeningAreaProp
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: const Color(0xFF292826),
+        color: context.colorScheme.elevation2,
         borderRadius: BorderRadius.circular(16),
       ),
       child: BlocBuilder<ProjectViewModel, ProjectViewModelState>(
@@ -79,7 +77,7 @@ class SpeakerListeningAreaPropertiesState extends State<SpeakerListeningAreaProp
                   ],
                 ),
               ),
-              const Divider(thickness: 0.5, height: 0),
+              Divider(thickness: 0.5, height: 0, color: context.colorScheme.strokeLight),
 
               Flexible(
                 child: SingleChildScrollView(
