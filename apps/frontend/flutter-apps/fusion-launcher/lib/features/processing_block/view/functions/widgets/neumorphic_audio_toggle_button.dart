@@ -53,7 +53,7 @@ class _NeumorphicAudioToggleButtonState extends State<NeumorphicAudioToggleButto
                   height: widget.iconSize,
                   width: widget.iconSize,
                   // ignore: deprecated_member_use
-                  color: widget.isActive ? context.colorScheme.primaryWhite : context.colorScheme.elevation5,
+                  color: widget.isActive ? context.colorScheme.iconDefault : context.colorScheme.iconDisabled,
                 ),
               ),
             ),

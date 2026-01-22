@@ -69,9 +69,14 @@ class _NeumorphicPopupButtonState extends State<NeumorphicPopupButton> {
       borderRadius: BorderRadius.circular(widget.borderRadius),
       child: FusionContainer(
         width: widget.width,
-        height: 32,
+        height: widget.height ?? 32,
         alignment: Alignment.center,
-
+        // decoration: BoxDecoration(
+        //   color: Colors.transparent,
+        //   borderRadius: BorderRadius.circular(widget.borderRadius),
+        //   boxShadow: isFocused ? null : getNeumorphismBoxShadows(inner: true),
+        //   border: isFocused ? Border.all(color: Colors.black12, width: 2) : null,
+        // ),
         child: Row(
           children: <Widget>[
             Expanded(
@@ -92,19 +97,20 @@ class _NeumorphicPopupButtonState extends State<NeumorphicPopupButton> {
                       disabledBorder: InputBorder.none,
                       hoverColor: Colors.transparent,
                       hintText: widget.hintText ?? 'Scene name',
-                      hintStyle: Theme.of(context).textTheme.labelSmall?.copyWith(color: Colors.grey),
+                      hintStyle: Theme.of(context).textTheme.labelSmall?.copyWith(color: context.colorScheme.iconDisabled),
                       isDense: true,
+                      filled: false,
                       contentPadding: const EdgeInsets.all(0),
                     ),
                   ),
                 ),
               ),
             ),
-            const VerticalDivider(color: Colors.black12, thickness: 1, width: 1),
+            VerticalDivider(color: context.colorScheme.strokeLight, thickness: 1, width: 1),
             Theme(
               data: Theme.of(context).copyWith(
-                popupMenuTheme: const PopupMenuThemeData(
-                  color: Color(0xFFF5F5F5),
+                popupMenuTheme: PopupMenuThemeData(
+                  color: context.colorScheme.elevation1,
                   elevation: 0,
                   shadowColor: Colors.transparent,
                   surfaceTintColor: Colors.transparent,
@@ -114,7 +120,7 @@ class _NeumorphicPopupButtonState extends State<NeumorphicPopupButton> {
                 hoverColor: Colors.transparent, // Disable hover color
               ),
               child: PopupMenuButton<String>(
-                color: context.colorScheme.elevation1,
+                color: context.colorScheme.elevation2,
                 shadowColor: Colors.transparent,
                 position: PopupMenuPosition.under,
                 tooltip: '',
@@ -177,7 +183,7 @@ class _NeumorphicPopupButtonState extends State<NeumorphicPopupButton> {
                     padding: const EdgeInsets.symmetric(horizontal: 4.0).copyWith(right: 8),
                     child: Icon(
                       Icons.keyboard_arrow_down,
-                      color: Colors.grey[600],
+                      color: context.colorScheme.iconDefault,
                       size: 16,
                     ),
                   ),

@@ -65,7 +65,10 @@ class _MiniMatrixZoneControlPanelState extends State<MiniMatrixZoneControlPanel>
         maxHeight: MediaQuery.sizeOf(context).height * 0.5,
       ),
       backgroundColor: context.colorScheme.elevation1,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(FusionSizes.borderRadius16))),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.all(Radius.circular(context.mediumRadius)),
+        side: BorderSide(color: context.colorScheme.strokeLight, width: 1),
+      ),
       child: BlocConsumer<ProjectViewModel, ProjectViewModelState>(
         listener: (BuildContext context, ProjectViewModelState state) {
           zoneFunction = projectViewModel.getZoneFunctionForZone(zoneId: widget.zoneID)!;
@@ -73,148 +76,146 @@ class _MiniMatrixZoneControlPanelState extends State<MiniMatrixZoneControlPanel>
         builder: (BuildContext context, ProjectViewModelState state) {
           return SemanticHelper.container(
             testId: SemanticHelper.createTestId(SemanticTypes.container, "mini_matrix_zone_control_panel"),
-            child: Container(
-              decoration: BoxDecoration(
-                color: context.colorScheme.elevation1,
-                border: Border.all(
-                  color: context.colorScheme.strokeLight,
-                ),
-                borderRadius: BorderRadius.circular(FusionSizes.borderRadius16),
-              ),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(FusionSizes.borderRadius16),
-                child: Stack(
-                  children: <Widget>[
-                    Container(
-                      color: Colors.black,
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: <Widget>[
-                          const SizedBox(height: 35),
-                          Flexible(
-                            fit: FlexFit.loose,
-                            child: Container(
-                              color: context.colorScheme.elevation1,
-
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: <Widget>[
-                                  // Left scrollable section
-                                  Flexible(
-                                    fit: FlexFit.loose,
-                                    child: MiniMatrixControls(
-                                      zoneID: widget.zoneID,
-                                      zoneFunctions: zoneFunction,
-                                    ),
-                                  ),
-                                  VerticalDivider(width: 1, color: context.colorScheme.strokeLight),
-
-                                  MixScenes(
-                                    selectedMixSceneName: selectedMixScene(zoneFunction)?.name,
-                                    zoneId: widget.zoneID,
-                                    onStoreTap: (String? value) {
-                                      if (value == null || value.isEmpty) {
-                                        return FusionToast.error(
-                                          context,
-                                          message: "Please enter a name for the mix scene",
-                                        );
-                                      } else {
-                                        projectViewModel.saveCurrentSettingsAsMixScene(
-                                          functionId: zoneFunction.id,
-                                          sceneName: value,
-                                        );
-                                      }
-                                    },
-                                    mixScenes: zoneFunction.mixScenes.map((MixScene e) => e.name).toList(),
-                                    onMixSceneSelect: (String value) {
-                                      try {
-                                        final MixScene scene = zoneFunction.mixScenes.firstWhere((MixScene scene) => scene.name == value);
-                                        projectViewModel.applyMixSceneToFunction(
-                                          functionId: zoneFunction.id,
-                                          sceneId: scene.id,
-                                        );
-                                      } catch (e) {
-                                        // We might get StateError if the scene is not found.
-                                      }
-                                    },
-                                    onDeleteTap: () {
-                                      try {
-                                        final MixScene? scene = selectedMixScene(zoneFunction);
-                                        if (scene != null) {
-                                          projectViewModel.removeMixScene(
-                                            functionId: zoneFunction.id,
-                                            sceneId: scene.id,
-                                          );
-                                        }
-                                      } catch (e) {
-                                        // We might get StateError if the scene is not found.
-                                      }
-                                    },
-                                  ),
-
-                                  VerticalDivider(width: 1, color: context.colorScheme.strokeLight),
-                                  PrioritySelectionWidget(zoneId: widget.zoneID),
-                                  // const VerticalDivider(width: 1, color: Colors.black12),
-                                  // Right side (only one widget)
-                                  Flexible(
-                                    fit: FlexFit.loose,
-                                    child: ZoneControlSliderBuilder(
-                                      zoneID: widget.zoneID,
-                                    ),
-                                  ),
-                                ],
+            child: ClipRRect(
+              borderRadius: BorderRadius.all(Radius.circular(context.mediumRadius)),
+              child: Stack(
+                children: <Widget>[
+                  Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: <Widget>[
+                      const SizedBox(height: 35),
+                      Flexible(
+                        fit: FlexFit.loose,
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: <Widget>[
+                            // Left scrollable section
+                            Flexible(
+                              fit: FlexFit.loose,
+                              child: MiniMatrixControls(
+                                zoneID: widget.zoneID,
+                                zoneFunctions: zoneFunction,
                               ),
                             ),
+                            VerticalDivider(width: 1, color: context.colorScheme.strokeLight),
+
+                            MixScenes(
+                              selectedMixSceneName: selectedMixScene(zoneFunction)?.name,
+                              zoneId: widget.zoneID,
+                              onStoreTap: (String? value) {
+                                if (value == null || value.isEmpty) {
+                                  return FusionToast.error(
+                                    context,
+                                    message: "Please enter a name for the mix scene",
+                                  );
+                                } else {
+                                  projectViewModel.saveCurrentSettingsAsMixScene(
+                                    functionId: zoneFunction.id,
+                                    sceneName: value,
+                                  );
+                                }
+                              },
+                              mixScenes: zoneFunction.mixScenes.map((MixScene e) => e.name).toList(),
+                              onMixSceneSelect: (String value) {
+                                try {
+                                  final MixScene scene = zoneFunction.mixScenes.firstWhere((MixScene scene) => scene.name == value);
+                                  projectViewModel.applyMixSceneToFunction(
+                                    functionId: zoneFunction.id,
+                                    sceneId: scene.id,
+                                  );
+                                } catch (e) {
+                                  // We might get StateError if the scene is not found.
+                                }
+                              },
+                              onDeleteTap: () {
+                                try {
+                                  final MixScene? scene = selectedMixScene(zoneFunction);
+                                  if (scene != null) {
+                                    projectViewModel.removeMixScene(
+                                      functionId: zoneFunction.id,
+                                      sceneId: scene.id,
+                                    );
+                                  }
+                                } catch (e) {
+                                  // We might get StateError if the scene is not found.
+                                }
+                              },
+                            ),
+
+                            VerticalDivider(width: 1, color: context.colorScheme.strokeLight),
+                            PrioritySelectionWidget(zoneId: widget.zoneID),
+                            // const VerticalDivider(width: 1, color: Colors.black12),
+                            // Right side (only one widget)
+                            Flexible(
+                              fit: FlexFit.loose,
+                              child: ZoneControlSliderBuilder(
+                                zoneID: widget.zoneID,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  Positioned(
+                    left: 0,
+                    right: 0,
+                    child: Container(
+                      height: 35,
+                      decoration: BoxDecoration(
+                        color: context.colorScheme.elevation2,
+                        border: Border(
+                          bottom: BorderSide(
+                            color: context.colorScheme.strokeLight,
+                            width: 1,
                           ),
-                        ],
+                        ),
                       ),
                     ),
+                  ),
+                  // Used Stack to fit content according to content size.
+                  // HEADERS
+                  Positioned(
+                    left: 0,
+                    child: Container(
+                      height: 35,
 
-                    // Used Stack to fit content according to content size.
-                    // HEADERS
-                    Positioned(
-                      left: 0,
+                      alignment: Alignment.centerLeft,
+                      padding: const EdgeInsets.symmetric(horizontal: 12.0),
+                      child: Text(
+                        "ZONE CONTROL PANEL -  MINI MATRIX",
+                        style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                          fontSize: 11,
+                        ),
+                      ),
+                    ),
+                  ),
+
+                  Positioned(
+                    right: 0,
+                    child: SemanticHelper.button(
+                      testId: SemanticHelper.createTestId(SemanticTypes.button, "mini_matrix_close_button"),
                       child: Container(
                         height: 35,
-                        color: Colors.black,
-                        alignment: Alignment.centerLeft,
-                        padding: const EdgeInsets.symmetric(horizontal: 12.0),
-                        child: Text(
-                          "ZONE CONTROL PANEL -  MINI MATRIX",
-                          style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                            color: Colors.white,
-                            fontSize: 11,
-                          ),
-                        ),
-                      ),
-                    ),
 
-                    Positioned(
-                      right: 0,
-                      child: SemanticHelper.button(
-                        testId: SemanticHelper.createTestId(SemanticTypes.button, "mini_matrix_close_button"),
-                        child: Container(
-                          height: 35,
-                          color: Colors.black,
-                          alignment: Alignment.centerRight,
-                          padding: const EdgeInsets.symmetric(horizontal: 12.0),
-                          child: MouseRegion(
-                            cursor: SystemMouseCursors.click,
-                            child: GestureDetector(
-                              onTap: Navigator.of(context).pop,
-                              child: const Icon(
-                                Icons.close,
-                                color: Colors.white,
-                                size: 16,
-                              ),
+                        alignment: Alignment.centerRight,
+                        padding: const EdgeInsets.symmetric(horizontal: 12.0),
+                        child: MouseRegion(
+                          cursor: SystemMouseCursors.click,
+                          child: GestureDetector(
+                            onTap: Navigator.of(context).pop,
+                            child: const Icon(
+                              Icons.close,
+
+                              size: 16,
                             ),
                           ),
                         ),
                       ),
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
             ),
           );
@@ -239,11 +240,12 @@ class MiniMatrixControls extends StatelessWidget {
     final ProjectViewModel projectViewModel = serviceLocator<ProjectViewModel>();
     final List<Source> sources = projectViewModel.getSourcesAndSourceSetSourcesInZone(zoneId: zoneID);
 
+    final BorderSide borderSide = BorderSide(color: context.colorScheme.strokeLight, width: 1);
+
     const int sourcesFlex = 3;
 
-    return Container(
+    return SizedBox(
       width: 400,
-      color: context.colorScheme.elevation1,
       height: double.infinity,
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -259,7 +261,6 @@ class MiniMatrixControls extends StatelessWidget {
                     height: 28,
                     width: double.infinity,
                     alignment: Alignment.center,
-                    color: context.colorScheme.elevation2,
                     child: FusionAppText(
                       text: "SOURCES",
                       style: Theme.of(context).textTheme.labelSmall,
@@ -272,7 +273,6 @@ class MiniMatrixControls extends StatelessWidget {
                     height: 28,
                     width: double.infinity,
                     alignment: Alignment.center,
-                    color: context.colorScheme.elevation2,
                     child: FusionAppText(
                       text: "OUT",
                       style: Theme.of(context).textTheme.labelSmall,
@@ -289,7 +289,7 @@ class MiniMatrixControls extends StatelessWidget {
               child: Center(
                 child: FusionAppText(
                   text: "No sources selected for this function",
-                  style: Theme.of(context).textTheme.labelSmall?.copyWith(color: Colors.black26),
+                  style: Theme.of(context).textTheme.labelSmall?.copyWith(color: context.colorScheme.textGrey),
                 ),
               ),
             ),
@@ -385,7 +385,15 @@ class MiniMatrixControls extends StatelessWidget {
                                     width: double.infinity,
                                     alignment: Alignment.center,
                                     padding: const EdgeInsets.all(4),
-                                    color: context.colorScheme.elevation2,
+                                    decoration: BoxDecoration(
+                                      border: Border(
+                                        right: borderSide,
+                                        left: borderSide,
+                                        top: isLast ? BorderSide.none : borderSide,
+                                        bottom: isLast ? borderSide : BorderSide.none,
+                                      ),
+                                      borderRadius: const BorderRadius.all(Radius.circular(4)),
+                                    ),
                                     child: Center(
                                       child: FusionAppText(
                                         text: source.name,
@@ -409,7 +417,7 @@ class MiniMatrixControls extends StatelessWidget {
                                     width: 28,
                                     alignment: Alignment.center,
                                     decoration: BoxDecoration(
-                                      color: context.colorScheme.elevation2,
+                                      color: context.colorScheme.elevation1,
                                       borderRadius: BorderRadius.circular(4),
                                       border: Border.all(color: context.colorScheme.strokeLight),
                                     ),
@@ -418,7 +426,7 @@ class MiniMatrixControls extends StatelessWidget {
                                       width: 16,
                                       height: 16,
                                       // ignore: deprecated_member_use
-                                      color: matrixSetting.muted ? context.colorScheme.strokeLight : context.colorScheme.textPrimary,
+                                      color: matrixSetting.muted ? context.colorScheme.iconDisabled : context.colorScheme.primaryWhite,
                                     ),
                                   ),
                                 ),
@@ -447,8 +455,12 @@ class MiniMatrixControls extends StatelessWidget {
                             padding: const EdgeInsets.all(4),
                             margin: const EdgeInsets.only(left: 4, right: 4),
                             decoration: BoxDecoration(
-                              color: context.colorScheme.elevation1,
-                              border: Border.all(color: context.colorScheme.strokeLight, width: 1),
+                              border: Border(
+                                right: borderSide,
+                                left: borderSide,
+                                top: isLast ? BorderSide.none : borderSide,
+                                bottom: isLast ? borderSide : BorderSide.none,
+                              ),
                             ),
                             child: NeumorphicTextWithPopupSliderButton(
                               isActive: false,

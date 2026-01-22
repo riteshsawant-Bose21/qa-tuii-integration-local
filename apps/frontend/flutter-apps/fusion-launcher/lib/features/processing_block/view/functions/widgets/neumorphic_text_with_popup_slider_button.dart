@@ -65,11 +65,11 @@ class _NeumorphicTextWithPopupSliderButtonState extends State<NeumorphicTextWith
               ),
             ),
 
-            const VerticalDivider(color: Colors.black12, thickness: 1, width: 1),
+            VerticalDivider(color: context.colorScheme.strokeLight, thickness: 1, width: 1),
             Theme(
               data: Theme.of(context).copyWith(
-                popupMenuTheme: const PopupMenuThemeData(
-                  color: Color(0xFFF5F5F5),
+                popupMenuTheme: PopupMenuThemeData(
+                  color: context.colorScheme.elevation2,
                   elevation: 0,
                   shadowColor: Colors.transparent,
                   surfaceTintColor: Colors.transparent,
@@ -79,7 +79,7 @@ class _NeumorphicTextWithPopupSliderButtonState extends State<NeumorphicTextWith
                 hoverColor: Colors.transparent, // Disable hover color
               ),
               child: PopupMenuButton<String>(
-                color: context.colorScheme.elevation1,
+                color: context.colorScheme.elevation2,
                 shadowColor: Colors.transparent,
                 position: PopupMenuPosition.under,
                 tooltip: '',

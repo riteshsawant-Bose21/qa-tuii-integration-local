@@ -17,6 +17,9 @@ class PBRadio extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final Color bgColor = context.colorScheme.elevation2;
+    final Color activeColor = context.colorScheme.primaryWhite;
+    final Color inactiveColor = context.colorScheme.elevation5;
     return LayoutBuilder(
       builder: (BuildContext context, BoxConstraints constraints) {
         final double radioSize = (constraints.maxWidth * 0.3).clamp(36, 44);

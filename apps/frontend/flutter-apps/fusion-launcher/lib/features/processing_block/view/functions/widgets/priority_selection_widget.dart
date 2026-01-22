@@ -67,7 +67,6 @@ class _PrioritySelectionWidgetState extends State<PrioritySelectionWidget> {
             height: 28,
             width: double.infinity,
             alignment: Alignment.center,
-            color: context.colorScheme.elevation2,
             child: FusionAppText(
               text: "PRIORITY",
               style: Theme.of(context).textTheme.labelSmall,
@@ -96,9 +95,12 @@ class _PrioritySelectionWidgetState extends State<PrioritySelectionWidget> {
       color: Colors.transparent,
       child: ReorderableListView.builder(
         proxyDecorator: (Widget child, int index, Animation<double> animation) {
-          return Material(
-            color: context.colorScheme.elevation1,
-            child: child,
+          return FadeTransition(
+            opacity: animation.drive(Tween<double>(begin: 0.95, end: 1.0)),
+            child: Material(
+              color: context.colorScheme.elevation2,
+              child: child,
+            ),
           );
         },
         shrinkWrap: true,
@@ -181,7 +183,7 @@ class _PrioritySelectionWidgetState extends State<PrioritySelectionWidget> {
                                     width: double.infinity,
                                     padding: const EdgeInsets.all(4),
                                     decoration: BoxDecoration(
-                                      color: const Color(0xFFF4F4F4),
+                                      color: context.colorScheme.elevation3,
                                       borderRadius: BorderRadius.circular(3),
                                     ),
                                     child: Row(
@@ -217,9 +219,9 @@ class _PrioritySelectionWidgetState extends State<PrioritySelectionWidget> {
                                   ),
                                 ),
 
-                                const Icon(
+                                Icon(
                                   Icons.circle,
-                                  color: Color(0xFFF4F4F4),
+                                  color: context.colorScheme.elevation5,
                                   size: 16,
                                 ),
 
@@ -246,7 +248,6 @@ class _PrioritySelectionWidgetState extends State<PrioritySelectionWidget> {
                                   text: "Volume",
                                   style: Theme.of(context).textTheme.labelSmall?.copyWith(
                                     fontSize: 10,
-                                    color: const Color(0xFF171717),
                                   ),
                                 ),
 

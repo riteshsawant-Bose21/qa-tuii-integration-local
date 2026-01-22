@@ -23,8 +23,12 @@ class PeqBlock extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final AlgorithmDataViewmodel watch = context.watch<AlgorithmDataViewmodel>();
     return ProxyProvider<AlgorithmDataViewmodel, PEQController>(
-      create: (BuildContext context) => PEQController(context.read<AlgorithmDataViewmodel>()),
+      key: ValueKey<String>(watch.processingBlock.id),
+      create: (BuildContext context) {
+        return PEQController(watch);
+      },
       update: (BuildContext context, AlgorithmDataViewmodel valueHandler, PEQController? previous) => PEQController(valueHandler),
       child: Builder(
         builder: (BuildContext context) {
@@ -80,7 +84,6 @@ class PeqBlock extends StatelessWidget {
                       height: 30,
                       width: 50,
                     ),
-                   
                   ],
                 ),
               ),
