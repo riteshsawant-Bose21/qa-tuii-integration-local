@@ -81,36 +81,45 @@ class _NeumorphicGainTextFieldState extends State<NeumorphicGainTextField> {
           height: widget.height,
           alignment: Alignment.center,
           raised: false,
-          child: TextField(
-            controller: controller,
-            textAlign: TextAlign.center,
-            focusNode: _focusNode,
-            style: Theme.of(context).textTheme.labelLarge,
-            inputFormatters: <TextInputFormatter>[FilteringTextInputFormatter.allow(RegExp(r'^-?\d*\.?\d{0,2}$'))],
-            decoration: InputDecoration(
-              border: InputBorder.none,
-              hintText: "0",
-              suffixText: hasValue ? "db" : null,
-              isDense: true,
-              hintStyle: Theme.of(context).textTheme.labelLarge?.copyWith(color: Colors.grey),
-              contentPadding: const EdgeInsets.all(0).copyWith(right: hasValue ? 6 : 0),
-            ),
-            onSubmitted: (String value) {
-              final double? gain = double.tryParse(value);
+          child: IntrinsicWidth(
+            child: TextField(
+              controller: controller,
+              textAlign: TextAlign.center,
+              focusNode: _focusNode,
+              style: Theme.of(context).textTheme.labelLarge,
+              inputFormatters: <TextInputFormatter>[FilteringTextInputFormatter.allow(RegExp(r'^-?\d*\.?\d{0,2}$'))],
+              decoration: InputDecoration(
+                fillColor: context.colorScheme.elevation1,
+                border: InputBorder.none,
+                enabledBorder: InputBorder.none,
+                focusedBorder: InputBorder.none,
+                errorBorder: InputBorder.none,
+                disabledBorder: InputBorder.none,
+                hoverColor: Colors.transparent,
+                hintText: "0",
+                suffixText: hasValue ? " db" : null,
+                suffixStyle: Theme.of(context).textTheme.labelLarge,
+                isDense: true,
+                hintStyle: Theme.of(context).textTheme.labelLarge?.copyWith(color: Colors.grey),
+                contentPadding: const EdgeInsets.all(0).copyWith(right: hasValue ? 6 : 0),
+              ),
+              onSubmitted: (String value) {
+                final double? gain = double.tryParse(value);
 
-              if (gain != null) {
-                if (gain > widget.maxGain) {
-                  if (widget.controllerValue != null) controller.text = widget.controllerValue.toString();
+                if (gain != null) {
+                  if (gain > widget.maxGain) {
+                    if (widget.controllerValue != null) controller.text = widget.controllerValue.toString();
 
-                  return FusionToast.error(context, message: "Gain cannot be greater than ${widget.maxGain}db");
-                } else if (gain < widget.minGain) {
-                  if (widget.controllerValue != null) controller.text = widget.controllerValue.toString();
-                  return FusionToast.error(context, message: "Gain cannot be less than ${widget.minGain}db");
-                } else {
-                  widget.onSubmitted?.call(gain);
+                    return FusionToast.error(context, message: "Gain cannot be greater than ${widget.maxGain}db");
+                  } else if (gain < widget.minGain) {
+                    if (widget.controllerValue != null) controller.text = widget.controllerValue.toString();
+                    return FusionToast.error(context, message: "Gain cannot be less than ${widget.minGain}db");
+                  } else {
+                    widget.onSubmitted?.call(gain);
+                  }
                 }
-              }
-            },
+              },
+            ),
           ),
         ),
       ),

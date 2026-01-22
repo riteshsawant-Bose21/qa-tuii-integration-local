@@ -3,7 +3,6 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_svg/svg.dart' show SvgPicture;
 import 'package:fusion_launcher/features/processing_block/view/functions/source_mix.dart';
 import 'package:fusion_lib/fusion_lib.dart';
-import 'package:fusion_lib/fusion_theme/app_theme.dart';
 
 import '../../../../core/service_locator.dart';
 import '../../../configuration/presentation/viewmodel/project_view_model.dart';
@@ -60,24 +59,30 @@ class _MiniMatrixZoneControlPanelState extends State<MiniMatrixZoneControlPanel>
   Widget build(BuildContext context) {
     final double controlScreenWidth = MediaQuery.sizeOf(context).width * 0.85;
 
-    return Theme(
-      data: FusionAppTheme.lightTheme,
-      child: Dialog(
-        constraints: BoxConstraints(
-          maxWidth: controlScreenWidth,
-          maxHeight: MediaQuery.sizeOf(context).height * 0.5,
-        ),
-        backgroundColor: Colors.white,
-        shape: const RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(6))),
-        child: BlocConsumer<ProjectViewModel, ProjectViewModelState>(
-          listener: (BuildContext context, ProjectViewModelState state) {
-            zoneFunction = projectViewModel.getZoneFunctionForZone(zoneId: widget.zoneID)!;
-          },
-          builder: (BuildContext context, ProjectViewModelState state) {
-            return SemanticHelper.container(
-              testId: SemanticHelper.createTestId(SemanticTypes.container, "mini_matrix_zone_control_panel"),
+    return Dialog(
+      constraints: BoxConstraints(
+        maxWidth: controlScreenWidth,
+        maxHeight: MediaQuery.sizeOf(context).height * 0.5,
+      ),
+      backgroundColor: context.colorScheme.elevation1,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(FusionSizes.borderRadius16))),
+      child: BlocConsumer<ProjectViewModel, ProjectViewModelState>(
+        listener: (BuildContext context, ProjectViewModelState state) {
+          zoneFunction = projectViewModel.getZoneFunctionForZone(zoneId: widget.zoneID)!;
+        },
+        builder: (BuildContext context, ProjectViewModelState state) {
+          return SemanticHelper.container(
+            testId: SemanticHelper.createTestId(SemanticTypes.container, "mini_matrix_zone_control_panel"),
+            child: Container(
+              decoration: BoxDecoration(
+                color: context.colorScheme.elevation1,
+                border: Border.all(
+                  color: context.colorScheme.strokeLight,
+                ),
+                borderRadius: BorderRadius.circular(FusionSizes.borderRadius16),
+              ),
               child: ClipRRect(
-                borderRadius: const BorderRadius.all(Radius.circular(6)),
+                borderRadius: BorderRadius.circular(FusionSizes.borderRadius16),
                 child: Stack(
                   children: <Widget>[
                     Container(
@@ -89,7 +94,7 @@ class _MiniMatrixZoneControlPanelState extends State<MiniMatrixZoneControlPanel>
                           Flexible(
                             fit: FlexFit.loose,
                             child: Container(
-                              color: const Color(0xFFF5F5F5),
+                              color: context.colorScheme.elevation1,
 
                               child: Row(
                                 mainAxisSize: MainAxisSize.min,
@@ -103,7 +108,7 @@ class _MiniMatrixZoneControlPanelState extends State<MiniMatrixZoneControlPanel>
                                       zoneFunctions: zoneFunction,
                                     ),
                                   ),
-                                  const VerticalDivider(width: 1, color: Colors.black12),
+                                  VerticalDivider(width: 1, color: context.colorScheme.strokeLight),
 
                                   MixScenes(
                                     selectedMixSceneName: selectedMixScene(zoneFunction)?.name,
@@ -148,20 +153,14 @@ class _MiniMatrixZoneControlPanelState extends State<MiniMatrixZoneControlPanel>
                                     },
                                   ),
 
-                                  const VerticalDivider(width: 1, color: Colors.black12),
-                                  Container(
-                                    color: Colors.white,
-                                    child: PrioritySelectionWidget(zoneId: widget.zoneID),
-                                  ),
+                                  VerticalDivider(width: 1, color: context.colorScheme.strokeLight),
+                                  PrioritySelectionWidget(zoneId: widget.zoneID),
                                   // const VerticalDivider(width: 1, color: Colors.black12),
                                   // Right side (only one widget)
                                   Flexible(
                                     fit: FlexFit.loose,
-                                    child: ColoredBox(
-                                      color: Colors.white,
-                                      child: ZoneControlSliderBuilder(
-                                        zoneID: widget.zoneID,
-                                      ),
+                                    child: ZoneControlSliderBuilder(
+                                      zoneID: widget.zoneID,
                                     ),
                                   ),
                                 ],
@@ -217,9 +216,9 @@ class _MiniMatrixZoneControlPanelState extends State<MiniMatrixZoneControlPanel>
                   ],
                 ),
               ),
-            );
-          },
-        ),
+            ),
+          );
+        },
       ),
     );
   }
@@ -240,13 +239,11 @@ class MiniMatrixControls extends StatelessWidget {
     final ProjectViewModel projectViewModel = serviceLocator<ProjectViewModel>();
     final List<Source> sources = projectViewModel.getSourcesAndSourceSetSourcesInZone(zoneId: zoneID);
 
-    const BorderSide borderSide = BorderSide(color: Color(0xFFE5E5E5), width: 1);
-
     const int sourcesFlex = 3;
 
     return Container(
       width: 400,
-      color: const Color(0xFFF5F5F5),
+      color: context.colorScheme.elevation1,
       height: double.infinity,
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -262,20 +259,20 @@ class MiniMatrixControls extends StatelessWidget {
                     height: 28,
                     width: double.infinity,
                     alignment: Alignment.center,
-                    color: const Color(0xFFF5F5F5),
+                    color: context.colorScheme.elevation2,
                     child: FusionAppText(
                       text: "SOURCES",
                       style: Theme.of(context).textTheme.labelSmall,
                     ),
                   ),
                 ),
-                const VerticalDivider(width: 1, color: Colors.black12),
+                VerticalDivider(width: 1, color: context.colorScheme.strokeLight),
                 Expanded(
                   child: Container(
                     height: 28,
                     width: double.infinity,
                     alignment: Alignment.center,
-                    color: const Color(0xFFF5F5F5),
+                    color: context.colorScheme.elevation2,
                     child: FusionAppText(
                       text: "OUT",
                       style: Theme.of(context).textTheme.labelSmall,
@@ -285,7 +282,7 @@ class MiniMatrixControls extends StatelessWidget {
               ],
             ),
           ),
-          const Divider(color: Colors.black12, height: 0),
+          Divider(color: context.colorScheme.strokeLight, height: 0),
 
           if (sources.isEmpty) ...<Widget>[
             Expanded(
@@ -375,7 +372,7 @@ class MiniMatrixControls extends StatelessWidget {
                             margin: const EdgeInsets.only(left: 4, right: 4),
                             padding: const EdgeInsets.all(4),
                             decoration: BoxDecoration(
-                              border: Border.all(color: const Color(0xFFE5E5E5), width: 1),
+                              border: Border.all(color: context.colorScheme.strokeLight, width: 1),
                             ),
                             child: Row(
                               spacing: 6,
@@ -388,16 +385,7 @@ class MiniMatrixControls extends StatelessWidget {
                                     width: double.infinity,
                                     alignment: Alignment.center,
                                     padding: const EdgeInsets.all(4),
-                                    decoration: BoxDecoration(
-                                      color: const Color(0xFFF5F5F5),
-                                      border: Border(
-                                        right: borderSide,
-                                        left: borderSide,
-                                        top: isLast ? BorderSide.none : borderSide,
-                                        bottom: isLast ? borderSide : BorderSide.none,
-                                      ),
-                                      borderRadius: const BorderRadius.all(Radius.circular(4)),
-                                    ),
+                                    color: context.colorScheme.elevation2,
                                     child: Center(
                                       child: FusionAppText(
                                         text: source.name,
@@ -421,16 +409,16 @@ class MiniMatrixControls extends StatelessWidget {
                                     width: 28,
                                     alignment: Alignment.center,
                                     decoration: BoxDecoration(
-                                      color: const Color(0xFFF5F5F5),
+                                      color: context.colorScheme.elevation2,
                                       borderRadius: BorderRadius.circular(4),
-                                      border: Border.all(color: Colors.black12),
+                                      border: Border.all(color: context.colorScheme.strokeLight),
                                     ),
                                     child: SvgPicture.asset(
                                       'assets/svg/volume.svg',
                                       width: 16,
                                       height: 16,
                                       // ignore: deprecated_member_use
-                                      color: matrixSetting.muted ? Colors.black12 : Colors.black,
+                                      color: matrixSetting.muted ? context.colorScheme.strokeLight : context.colorScheme.textPrimary,
                                     ),
                                   ),
                                 ),
@@ -438,6 +426,7 @@ class MiniMatrixControls extends StatelessWidget {
                                   child: NeumorphicTextWithPopupSliderButton(
                                     isActive: false, // DONT ALLOW ACTIVE STATE.
                                     value: matrixSetting.gain,
+                                    borderRadius: 6,
                                     onChanged: (double value) {
                                       projectViewModel.updateMatrixSettings(
                                         matrixSettings: matrixSetting.copyWith(
@@ -458,18 +447,14 @@ class MiniMatrixControls extends StatelessWidget {
                             padding: const EdgeInsets.all(4),
                             margin: const EdgeInsets.only(left: 4, right: 4),
                             decoration: BoxDecoration(
-                              color: const Color(0xFFF5F5F5),
-                              border: Border(
-                                right: borderSide,
-                                left: borderSide,
-                                top: isLast ? BorderSide.none : borderSide,
-                                bottom: isLast ? borderSide : BorderSide.none,
-                              ),
+                              color: context.colorScheme.elevation1,
+                              border: Border.all(color: context.colorScheme.strokeLight, width: 1),
                             ),
                             child: NeumorphicTextWithPopupSliderButton(
                               isActive: false,
                               value: matrixSetting.mixLevel,
                               height: 30,
+                              borderRadius: 6,
                               onChanged: (double value) {
                                 projectViewModel.updateMatrixSettings(
                                   matrixSettings: matrixSetting.copyWith(

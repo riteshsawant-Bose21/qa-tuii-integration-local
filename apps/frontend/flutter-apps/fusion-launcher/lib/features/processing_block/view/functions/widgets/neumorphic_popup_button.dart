@@ -67,16 +67,11 @@ class _NeumorphicPopupButtonState extends State<NeumorphicPopupButton> {
   Widget build(BuildContext context) {
     return ClipRRect(
       borderRadius: BorderRadius.circular(widget.borderRadius),
-      child: Container(
+      child: FusionContainer(
         width: widget.width,
         height: 32,
         alignment: Alignment.center,
-        decoration: BoxDecoration(
-          color: Colors.transparent,
-          borderRadius: BorderRadius.circular(widget.borderRadius),
-          boxShadow: isFocused ? null : getNeumorphismBoxShadows(inner: true),
-          border: isFocused ? Border.all(color: Colors.black12, width: 2) : null,
-        ),
+
         child: Row(
           children: <Widget>[
             Expanded(
@@ -89,7 +84,13 @@ class _NeumorphicPopupButtonState extends State<NeumorphicPopupButton> {
                     focusNode: _focusNode,
                     style: Theme.of(context).textTheme.labelLarge,
                     decoration: InputDecoration(
+                      fillColor: widget.backgroundColor ?? context.colorScheme.elevation1,
                       border: InputBorder.none,
+                      enabledBorder: InputBorder.none,
+                      focusedBorder: InputBorder.none,
+                      errorBorder: InputBorder.none,
+                      disabledBorder: InputBorder.none,
+                      hoverColor: Colors.transparent,
                       hintText: widget.hintText ?? 'Scene name',
                       hintStyle: Theme.of(context).textTheme.labelSmall?.copyWith(color: Colors.grey),
                       isDense: true,
@@ -113,13 +114,13 @@ class _NeumorphicPopupButtonState extends State<NeumorphicPopupButton> {
                 hoverColor: Colors.transparent, // Disable hover color
               ),
               child: PopupMenuButton<String>(
-                color: const Color(0xFFF5F5F5),
+                color: context.colorScheme.elevation1,
                 shadowColor: Colors.transparent,
                 position: PopupMenuPosition.under,
                 tooltip: '',
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(9),
-                  side: const BorderSide(color: Color(0xFFE5E5E5), width: 1),
+                  side: BorderSide(color: context.colorScheme.strokeLight, width: 1),
                 ),
                 offset: const Offset(0, 10),
                 padding: EdgeInsets.zero,

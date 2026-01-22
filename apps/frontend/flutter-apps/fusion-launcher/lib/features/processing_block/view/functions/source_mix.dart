@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/features/processing_block/view/functions/widgets/priority_selection_widget.dart';
 import 'package:fusion_lib/fusion_lib.dart';
-import 'package:fusion_lib/fusion_theme/app_theme.dart';
 
 import '../../../../core/service_locator.dart';
 import '../../../configuration/presentation/viewmodel/project_view_model.dart';
@@ -62,24 +61,34 @@ class _SourceMixZoneControlPanelState extends State<SourceMixZoneControlPanel> {
   Widget build(BuildContext context) {
     final double controlScreenWidth = MediaQuery.sizeOf(context).width * 0.8;
 
-    return Theme(
-      data: FusionAppTheme.lightTheme,
-      child: Dialog(
-        constraints: BoxConstraints(
-          maxWidth: controlScreenWidth,
-          maxHeight: MediaQuery.sizeOf(context).height * 0.45,
+    return Dialog(
+      constraints: BoxConstraints(
+        maxWidth: controlScreenWidth,
+        maxHeight: MediaQuery.sizeOf(context).height * 0.45,
+      ),
+      backgroundColor: context.colorScheme.elevation1,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.all(
+          Radius.circular(FusionSizes.borderRadius16),
         ),
-        backgroundColor: Colors.white,
-        shape: const RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(6))),
-        child: BlocConsumer<ProjectViewModel, ProjectViewModelState>(
-          listener: (BuildContext context, ProjectViewModelState state) {
-            zoneFunction = projectViewModel.getZoneFunctionForZone(zoneId: widget.zoneID)!;
-          },
-          builder: (BuildContext context, ProjectViewModelState state) {
-            return SemanticHelper.container(
-              testId: SemanticHelper.createTestId(SemanticTypes.container, "source_mix_zone_control_panel"),
+      ),
+      child: BlocConsumer<ProjectViewModel, ProjectViewModelState>(
+        listener: (BuildContext context, ProjectViewModelState state) {
+          zoneFunction = projectViewModel.getZoneFunctionForZone(zoneId: widget.zoneID)!;
+        },
+        builder: (BuildContext context, ProjectViewModelState state) {
+          return SemanticHelper.container(
+            testId: SemanticHelper.createTestId(SemanticTypes.container, "source_mix_zone_control_panel"),
+            child: Container(
+              decoration: BoxDecoration(
+                color: context.colorScheme.elevation1,
+                border: Border.all(
+                  color: context.colorScheme.strokeLight,
+                ),
+                borderRadius: BorderRadius.circular(FusionSizes.borderRadius16),
+              ),
               child: ClipRRect(
-                borderRadius: const BorderRadius.all(Radius.circular(6)),
+                borderRadius: BorderRadius.circular(FusionSizes.borderRadius16),
                 child: Stack(
                   children: <Widget>[
                     Container(
@@ -91,7 +100,7 @@ class _SourceMixZoneControlPanelState extends State<SourceMixZoneControlPanel> {
                           Flexible(
                             fit: FlexFit.loose,
                             child: Container(
-                              color: const Color(0xFFF5F5F5),
+                              color: context.colorScheme.elevation1,
                               child: Row(
                                 mainAxisSize: MainAxisSize.min,
                                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -105,7 +114,7 @@ class _SourceMixZoneControlPanelState extends State<SourceMixZoneControlPanel> {
                                     ),
                                   ),
 
-                                  const VerticalDivider(width: 1, color: Colors.black12),
+                                  VerticalDivider(width: 1, color: context.colorScheme.strokeLight),
 
                                   MixScenes(
                                     selectedMixSceneName: selectedMixScene(zoneFunction)?.name,
@@ -147,21 +156,15 @@ class _SourceMixZoneControlPanelState extends State<SourceMixZoneControlPanel> {
                                     },
                                   ),
 
-                                  const VerticalDivider(width: 1, color: Colors.black12),
-                                  Container(
-                                    color: Colors.white,
-                                    child: PrioritySelectionWidget(zoneId: widget.zoneID),
-                                  ),
+                                  VerticalDivider(width: 1, color: context.colorScheme.strokeLight),
+                                  PrioritySelectionWidget(zoneId: widget.zoneID),
                                   // const VerticalDivider(width: 1, color: Colors.black12),
 
                                   // Right side (only one widget)
                                   Flexible(
                                     fit: FlexFit.loose,
-                                    child: ColoredBox(
-                                      color: Colors.white,
-                                      child: ZoneControlSliderBuilder(
-                                        zoneID: widget.zoneID,
-                                      ),
+                                    child: ZoneControlSliderBuilder(
+                                      zoneID: widget.zoneID,
                                     ),
                                   ),
                                 ],
@@ -217,9 +220,9 @@ class _SourceMixZoneControlPanelState extends State<SourceMixZoneControlPanel> {
                   ],
                 ),
               ),
-            );
-          },
-        ),
+            ),
+          );
+        },
       ),
     );
   }
@@ -264,7 +267,7 @@ class _SourceMixLeftWidgetState extends State<SourceMixLeftWidget> {
 
     if (sources.isEmpty) {
       return ColoredBox(
-        color: const Color(0xFFF5F5F5),
+        color: context.colorScheme.elevation1,
         child: Padding(
           padding: const EdgeInsets.all(12.0),
           child: Column(
@@ -285,7 +288,7 @@ class _SourceMixLeftWidgetState extends State<SourceMixLeftWidget> {
     return HorizontalScrollWithShadows(
       controller: _scrollController,
       child: ColoredBox(
-        color: const Color(0xFFF5F5F5),
+        color: context.colorScheme.elevation1,
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: List<Widget>.generate(sources.length, (int index) {
@@ -298,10 +301,10 @@ class _SourceMixLeftWidgetState extends State<SourceMixLeftWidget> {
 
             return Container(
               width: 150,
-              decoration: const BoxDecoration(
+              decoration: BoxDecoration(
                 border: Border(
                   right: BorderSide(
-                    color: Colors.black12,
+                    color: context.colorScheme.strokeLight,
                   ),
                 ),
               ),
@@ -309,7 +312,7 @@ class _SourceMixLeftWidgetState extends State<SourceMixLeftWidget> {
                 children: <Widget>[
                   Container(
                     height: 28,
-                    color: const Color(0xFFF5F5F5),
+                    color: context.colorScheme.elevation2,
                     child: Center(
                       child: FusionAppText(
                         text: source.name,
@@ -319,7 +322,7 @@ class _SourceMixLeftWidgetState extends State<SourceMixLeftWidget> {
                       ),
                     ),
                   ),
-                  const Divider(color: Colors.black12, height: 0),
+                  Divider(color: context.colorScheme.strokeLight, height: 0),
                   const SizedBox(height: 10),
                   SemanticHelper.formControl(
                     testId: SemanticHelper.createTestId(SemanticTypes.textInput, "source_mix_gain_text_field"),
@@ -370,7 +373,6 @@ class _SourceMixLeftWidgetState extends State<SourceMixLeftWidget> {
                                 functionId: widget.zoneFunctions.id,
                               );
                             },
-                            backgroundColor: const Color(0xFFF5F5F5),
                           ),
                         ),
                         const SizedBox(height: 10),
@@ -447,16 +449,16 @@ class _ZoneControlSliderBuilderState extends State<ZoneControlSliderBuilder> {
 
             return Container(
               width: 150,
-              decoration: const BoxDecoration(
+              decoration: BoxDecoration(
                 border: Border(
-                  left: BorderSide(color: Colors.black12),
+                  left: BorderSide(color: context.colorScheme.strokeLight),
                 ),
               ),
               child: Column(
                 children: <Widget>[
                   Container(
                     height: 28,
-                    color: widget.headerBackgroundColor ?? const Color(0xFFF5F5F5),
+                    color: widget.headerBackgroundColor ?? context.colorScheme.elevation2,
                     alignment: Alignment.center,
                     child: FusionAppText(
                       text: title,
@@ -464,7 +466,7 @@ class _ZoneControlSliderBuilderState extends State<ZoneControlSliderBuilder> {
                       style: Theme.of(context).textTheme.labelMedium,
                     ),
                   ),
-                  const Divider(color: Colors.black12, height: 0),
+                  Divider(color: context.colorScheme.strokeLight, height: 0),
                   const SizedBox(height: 10),
                   SemanticHelper.formControl(
                     testId: SemanticHelper.createTestId(SemanticTypes.formControl, "source_mix_zone_gain_text_field"),
@@ -508,7 +510,6 @@ class _ZoneControlSliderBuilderState extends State<ZoneControlSliderBuilder> {
                                 isMuted: !isMuted,
                               );
                             },
-                            backgroundColor: const Color(0xFFF5F5F5),
                           ),
                         ),
                         const SizedBox(height: 10),

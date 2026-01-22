@@ -42,11 +42,7 @@ class _NeumorphicTextWithPopupSliderButtonState extends State<NeumorphicTextWith
         width: widget.width ?? double.infinity,
         raised: !widget.isActive,
         alignment: Alignment.center,
-        // decoration: BoxDecoration(
-        //   color: Colors.transparent,
-        //   borderRadius: BorderRadius.circular(widget.borderRadius),
-        //   boxShadow: getNeumorphismBoxShadows(inner: widget.isActive, color: const Color(0xFFF9F7F6)),
-        // ),
+        borderRadius: widget.borderRadius,
         child: Row(
           children: <Widget>[
             Expanded(
@@ -83,13 +79,13 @@ class _NeumorphicTextWithPopupSliderButtonState extends State<NeumorphicTextWith
                 hoverColor: Colors.transparent, // Disable hover color
               ),
               child: PopupMenuButton<String>(
-                color: const Color(0xFFF5F5F5),
+                color: context.colorScheme.elevation1,
                 shadowColor: Colors.transparent,
                 position: PopupMenuPosition.under,
                 tooltip: '',
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(9),
-                  side: const BorderSide(color: Color(0xFFB2B2B2), width: 1),
+                  side: BorderSide(color: context.colorScheme.strokeLight, width: 1),
                 ),
                 offset: const Offset(0, 10),
                 padding: EdgeInsets.zero,

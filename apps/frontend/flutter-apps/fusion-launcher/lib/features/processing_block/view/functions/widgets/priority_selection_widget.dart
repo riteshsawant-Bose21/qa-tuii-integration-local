@@ -67,14 +67,14 @@ class _PrioritySelectionWidgetState extends State<PrioritySelectionWidget> {
             height: 28,
             width: double.infinity,
             alignment: Alignment.center,
-            color: const Color(0xFFF5F5F5),
+            color: context.colorScheme.elevation2,
             child: FusionAppText(
               text: "PRIORITY",
               style: Theme.of(context).textTheme.labelSmall,
             ),
           ),
 
-          const Divider(color: Colors.black12, height: 0),
+          Divider(color: context.colorScheme.strokeLight, height: 0),
 
           _buildReorderablePriorityWidgets(),
         ],
@@ -96,12 +96,9 @@ class _PrioritySelectionWidgetState extends State<PrioritySelectionWidget> {
       color: Colors.transparent,
       child: ReorderableListView.builder(
         proxyDecorator: (Widget child, int index, Animation<double> animation) {
-          return FadeTransition(
-            opacity: animation.drive(Tween<double>(begin: 0.95, end: 1.0)),
-            child: Material(
-              color: Colors.white,
-              child: child,
-            ),
+          return Material(
+            color: context.colorScheme.elevation1,
+            child: child,
           );
         },
         shrinkWrap: true,
