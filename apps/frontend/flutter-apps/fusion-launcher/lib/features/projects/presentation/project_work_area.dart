@@ -84,9 +84,9 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
   final List<Widget> _designTabs = const <Widget>[
     Tab(text: 'Building'),
     Tab(text: 'Schematic'),
-    Tab(text: 'Cost'),
+    // Tab(text: 'Cost'),
     Tab(text: 'Configuration'),
-    Tab(text: 'Cloud'),
+    // Tab(text: 'Cloud'),
   ];
 
   final List<Widget> _controlTabs = const <Widget>[
@@ -560,8 +560,8 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
 
       dockItemList: <DockItemConfig>[
         DockItemConfig(
-          id: "1",
-          title: "FLOORS",
+          id: "19",
+          title: "CONFIG",
           side: "left",
           allowUndock: true,
           isCollapsibleSection: false,
@@ -700,6 +700,7 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
           );
         },
       ),
+
       //
       // if (kDebugMode)
       //   const FusionDockableArea(
@@ -710,27 +711,26 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
       //     dockItemList: <DockItemConfig>[],
       //   ),
 
-      /// budget tab with docking area
-      const FusionDockableArea(
-        tabKey: "budget_tab",
-        showLeft: false,
-        showRight: false,
-        mainArea: BillOfMaterialsPage(),
-        dockItemList: <DockItemConfig>[],
-      ),
-
+      // /// budget tab with docking area
+      // const FusionDockableArea(
+      //   tabKey: "budget_tab",
+      //   showLeft: false,
+      //   showRight: false,
+      //   mainArea: BillOfMaterialsPage(),
+      //   dockItemList: <DockItemConfig>[],
+      // ),
       configurationPage,
 
-      /// Cloud tab without docking area
-      const FusionDockableArea(
-        tabKey: "cloud_tab",
-        showLeft: false,
-        showRight: false,
-        mainArea: FusionCloudWebView(
-          pageToRedirect: "google.com",
-        ),
-        dockItemList: <DockItemConfig>[],
-      ),
+      // /// Cloud tab without docking area
+      // const FusionDockableArea(
+      //   tabKey: "cloud_tab",
+      //   showLeft: false,
+      //   showRight: false,
+      //   mainArea: FusionCloudWebView(
+      //     pageToRedirect: "google.com",
+      //   ),
+      //   dockItemList: <DockItemConfig>[],
+      // ),
     ];
 
     _controlWidgets = <Widget>[
