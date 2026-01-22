@@ -606,7 +606,7 @@ class _SpeakerCardState extends State<SpeakerCard> {
                         child: Icon(
                           LucideIcons.plus,
                           size: 12,
-                          color: context.colorScheme.textPrimary,
+                          color: widget.isSelected ? Colors.white : context.colorScheme.textPrimary,
                         ),
                         // text: "Add Speaker",
                         onTap: () {

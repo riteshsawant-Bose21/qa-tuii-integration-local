@@ -13,6 +13,7 @@ class BuildingPageTextField extends StatelessWidget {
   final ValueChanged<String>? onChanged;
   final FormFieldValidator<String>? validator;
   final ValueChanged<String>? onFieldSubmitted;
+  final Color? fillColor;
 
   const BuildingPageTextField({
     super.key,
@@ -23,6 +24,7 @@ class BuildingPageTextField extends StatelessWidget {
     this.onChanged,
     this.validator,
     this.onFieldSubmitted,
+    this.fillColor,
   });
 
   @override
@@ -41,16 +43,22 @@ class BuildingPageTextField extends StatelessWidget {
         ),
         const SizedBox(width: 8),
         Expanded(
-          child: PropertyTextField(
-            controller: controller,
-            keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            hintText: hintText,
-            fillColor: context.colorScheme.elevation2,
-            contentPadding: const EdgeInsets.symmetric(vertical: 10, horizontal: 10),
-            inputFormatters: inputFormatters,
-            validator: validator,
-            onChanged: onChanged,
-            onSubmitted: onFieldSubmitted,
+          child: Container(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(6),
+              color: context.colorScheme.elevation1,
+            ),
+            child: PropertyTextField(
+              controller: controller,
+              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              hintText: hintText,
+              fillColor: fillColor ?? context.colorScheme.elevation2,
+              contentPadding: const EdgeInsets.symmetric(vertical: 12, horizontal: 12),
+              inputFormatters: inputFormatters,
+              validator: validator,
+              onChanged: onChanged,
+              onSubmitted: onFieldSubmitted,
+            ),
           ),
         ),
       ],

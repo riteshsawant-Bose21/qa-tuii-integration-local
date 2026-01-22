@@ -4,11 +4,10 @@ import 'package:fusion_launcher/core/models/products_data.dart';
 import 'package:fusion_launcher/core/service_locator.dart';
 import 'package:fusion_launcher/features/authentication/launcher_sign_in_page.dart';
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
+import 'package:fusion_launcher/features/projects/widget/building/side_panel_widgets/schematic_properties.dart';
 import 'package:fusion_launcher/features/projects/widget/building/speaker_selection_section/parts/properties_and_filter_section.dart';
 import 'package:fusion_launcher/features/projects/widget/building/widgets/drop_down.dart';
 import 'package:fusion_lib/fusion_lib.dart';
-import 'package:fusion_lib/fusion_theme/app_theme.dart';
-import 'package:fusion_lib/fusion_theme/color_scheme.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../view_model/add_source_viewmodel.dart';
@@ -28,7 +27,7 @@ class AddSourcePopup extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return FusionArrowPopup(
-      backgroundColor: const Color(0xFF292826),
+      backgroundColor: context.colorScheme.elevation1,
       content: BlocProvider<AddSourceViewModel>(
         create: (BuildContext context) {
           return AddSourceViewModel()..init(
@@ -39,7 +38,6 @@ class AddSourcePopup extends StatelessWidget {
         child: Container(
           width: 350,
           decoration: BoxDecoration(
-            color: const Color(0xFF292826),
             borderRadius: BorderRadius.circular(16),
           ),
           child: Column(
@@ -66,9 +64,13 @@ class AddSourcePopup extends StatelessWidget {
                         cursor: SystemMouseCursors.click,
                         child: GestureDetector(
                           onTap: Navigator.of(context).pop,
-                          child: const Padding(
-                            padding: EdgeInsets.all(2.0),
-                            child: Icon(LucideIcons.x200, size: 16),
+                          child: Padding(
+                            padding: const EdgeInsets.all(2.0),
+                            child: Icon(
+                              LucideIcons.x200,
+                              size: 16,
+                              color: context.colorScheme.iconDefault,
+                            ),
                           ),
                         ),
                       ),
@@ -397,23 +399,11 @@ class AddSourcePopup extends StatelessWidget {
                               Expanded(
                                 child: SemanticHelper.container(
                                   testId: SemanticHelper.createTestId(SemanticTypes.container, "add_source_section_name_input"),
-                                  child: TextFormField(
+                                  child: PropertyTextField(
                                     onChanged: (String value) => addSourceViewModel.setSelectedSourceName(value),
                                     maxLength: 24,
-                                    decoration: InputDecoration(
-                                      hintText: 'Enter name',
-                                      counterText: '',
-                                      hintStyle: context.textTheme.bodySmall?.copyWith(color: context.colorScheme.onSurface.withAlpha(100)),
-                                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(4), borderSide: BorderSide.none),
-                                      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(4), borderSide: BorderSide.none),
-                                      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(4), borderSide: BorderSide.none),
-                                      errorBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(4), borderSide: BorderSide.none),
-                                      hoverColor: Colors.transparent,
-                                      contentPadding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
-                                      fillColor: context.colorScheme.surface,
-                                      isDense: true,
-                                    ),
-                                    style: context.textTheme.bodySmall?.copyWith(color: context.colorScheme.onSurface),
+                                    contentPadding: const EdgeInsets.symmetric(vertical: 12, horizontal: 10),
+                                    hintText: 'Enter name',
                                   ),
                                 ),
                               ),
@@ -441,7 +431,7 @@ class AddSourcePopup extends StatelessWidget {
                               const SizedBox(width: 15),
                               SemanticHelper.button(
                                 testId: SemanticHelper.createTestId(SemanticTypes.button, "add_source_save_button"),
-                                child: NeumorphicDarkButton(
+                                child: FusionNeumorphicButton(
                                   onTap: () {
                                     context.read<AddSourceViewModel>().onSaveTap(context);
                                   },

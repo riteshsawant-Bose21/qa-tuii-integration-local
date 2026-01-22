@@ -259,6 +259,7 @@ class SpeakerListeningAreaPropertiesState extends State<SpeakerListeningAreaProp
                                     label: "Ceiling Ht",
                                     controller: ceilingHeightController,
                                     hintText: "e.g., 10 ft",
+                                    fillColor: context.colorScheme.elevation1,
                                     inputFormatters: <TextInputFormatter>[FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*'))],
                                     onFieldSubmitted: (String newValue) {
                                       final ListeningArea updatedLA = selectedListeningArea.copyWith(ceilingHeight: newValue);
@@ -539,7 +540,7 @@ class BuildRowPropertyWidget<T> extends StatelessWidget {
   final void Function(int selectedIndex, T value) onOptionSelected;
   final Widget Function(T option) labelBuilder;
   final Widget Function(T option)? valueBuilder;
-
+ 
   const BuildRowPropertyWidget({
     super.key,
     required this.label,
@@ -548,7 +549,7 @@ class BuildRowPropertyWidget<T> extends StatelessWidget {
     required this.onOptionSelected,
     required this.labelBuilder,
     this.valueBuilder,
-  });
+   });
 
   @override
   Widget build(BuildContext context) {
@@ -568,7 +569,7 @@ class BuildRowPropertyWidget<T> extends StatelessWidget {
         Expanded(
           child: BuildingPageDronDown<T>(
             value: value,
-            hintText: "Select ${label.toLowerCase()}",
+             hintText: "Select ${label.toLowerCase()}",
             items: options,
             onSelect: (T newValue) {
               final int selectedIndex = options.indexOf(newValue);

@@ -52,6 +52,7 @@ class _BuildingPageDronDownState<T> extends State<BuildingPageDronDown<T>> {
       decoration: BoxDecoration(
         color: context.colorScheme.elevation1,
         borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: context.colorScheme.strokeLight, width: 1),
       ),
       child: PopupMenuButton<String>(
         color: context.colorScheme.elevation2,

@@ -553,11 +553,11 @@ class PropertyTextField extends StatelessWidget {
         border: InputBorder.none,
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(6),
-          borderSide: BorderSide(color: context.colorScheme.elevation5, width: 1),
+          borderSide: BorderSide(color: context.colorScheme.strokeLight, width: 1),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(6),
-          borderSide: BorderSide(color: context.colorScheme.elevation2, width: 1),
+          borderSide: BorderSide(color: context.colorScheme.strokeLight, width: 1),
         ),
       ),
     );
