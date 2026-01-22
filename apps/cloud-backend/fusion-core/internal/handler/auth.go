@@ -34,7 +34,7 @@ func NewAuthHandler(authService fusion.Auth) *AuthHandler {
 // @Failure 400 {object} types.ErrorResponse2 "Bad request - invalid input"
 // @Failure 403 {object} types.ErrorResponse2 "QA auth endpoint is disabled"
 // @Failure 500 {object} types.ErrorResponse2 "Internal server error"
-// @Router /qa/auth/tokens [get]
+// @Router /auth/automation/tokens [get]
 func (h *AuthHandler) GetAuthTokensByResourceOwnerPassword(c *gin.Context) {
 	// Parse request body
 	var req types.AuthTokenRequest
