@@ -36,25 +36,6 @@ func (e *Environment) ReqString(key string) (string, error) {
 	return val, nil
 }
 
-// ReqBool retrieves the boolean value for the given key from the environment.
-func (e *Environment) ReqBool(key string) (bool, error) {
-	val, ok := e.loadLookuper.Lookup(key)
-	if !ok {
-		return false, fmt.Errorf("key %s not found in environment", key)
-	}
-
-	boolVal := false
-	switch val {
-	case "true", "TRUE", "1":
-		boolVal = true
-	case "false", "FALSE", "0":
-		boolVal = false
-	default:
-		return false, fmt.Errorf("failed to convert key %s with value %s to bool", key, val)
-	}
-	return boolVal, nil
-}
-
 //Enable if needed in future
 // func (e *Environment) Int(key string) (*int, error) {
 // 	val, ok := e.loadLookuper.Lookup(key)

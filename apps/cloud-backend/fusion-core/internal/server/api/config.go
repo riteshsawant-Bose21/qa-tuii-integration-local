@@ -11,7 +11,7 @@ type APIconfig struct {
 	Server   *config.APIConfig
 	Postgres *config.Postgres
 	S3       *config.S3Config
-	Auth0    *config.Auth0
+	AuthZero   *config.AuthZero
 }
 
 // NewAPIConfig initializes and returns the API configuration by loading necessary settings.
@@ -37,12 +37,11 @@ func NewAPIConfig(svc ConfigService) (*APIconfig, error) {
 	}
 	cfg.S3 = s3Config
 
-	auth0Config, err := svc.Auth0()
+	authZeroConfig, err := svc.AuthZero()
 	if err != nil {
 		return nil, fmt.Errorf("failed to load auth0 config: %w", err)
 	}
-	cfg.Auth0 = auth0Config
-
+	cfg.AuthZero = authZeroConfig
 	return cfg, nil
 }
 
@@ -51,5 +50,5 @@ type ConfigService interface {
 	APIConfig() (*config.APIConfig, error)
 	Postgres() (*config.Postgres, error)
 	S3() (*config.S3Config, error)
-	Auth0() (*config.Auth0, error)
+	AuthZero() (*config.AuthZero, error)
 }

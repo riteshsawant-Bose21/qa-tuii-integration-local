@@ -10,23 +10,24 @@ import (
 
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/api/types"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/config"
+	authutils "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/utils/auth"
 	"go.uber.org/zap"
 )
 
 type Service struct {
-	auth0Config *config.Auth0
+	authZeroConfig *config.AuthZero
 	logger      *zap.Logger
 }
 
-func NewService(auth0Config *config.Auth0, logger *zap.Logger) *Service {
-	if auth0Config == nil {
+func NewService(authZeroConfig *config.AuthZero, logger *zap.Logger) *Service {
+	if authZeroConfig == nil {
 		panic("auth0Config cannot be nil")
 	}
 	if logger == nil {
 		panic("logger cannot be nil")
 	}
 	return &Service{
-		auth0Config: auth0Config,
+		authZeroConfig: authZeroConfig,
 		logger:      logger,
 	}
 }
@@ -34,23 +35,29 @@ func NewService(auth0Config *config.Auth0, logger *zap.Logger) *Service {
 // GetAuthTokensByResourceOwnerPassword gets Auth0 tokens for a user using Resource Owner Password flow
 func (s *Service) GetAuthTokensByResourceOwnerPassword(ctx context.Context, username string) (*types.AuthTokenResponse, error) {
 	// Check if Resource Owner Password flow is enabled
-	if !s.auth0Config.ResourceOwnerPasswordFlowEnabled {
+	enabled, err := authutils.IsResourceOwnerPasswordFlowEnabled(s.authZeroConfig.ResourceOwnerPasswordFlowEnabled)
+	if err != nil {
+		s.logger.Error("Error checking Resource Owner Password flow status", zap.Error(err))
+		return nil, err
+	}
+
+	if !enabled {
 		s.logger.Warn("Resource Owner Password flow is disabled")
 		return nil, fmt.Errorf("Resource Owner Password flow is disabled")
 	}
 
 	s.logger.Info("Generating Auth0 tokens", zap.String("username", username))
 
-	url := fmt.Sprintf("https://%s/oauth/token", s.auth0Config.Domain)
+	url := s.authZeroConfig.AccessTokenEndpoint
 	s.logger.Info("Auth0 URL", zap.String("url", url))
 
 	// Prepare the request payload for Auth0 Resource Owner Password flow
 	payload := map[string]string{
 		"grant_type":    "password",
 		"username":      username,
-		"password":      s.auth0Config.DefaultResourceOwnerPassword,
-		"client_id":     s.auth0Config.ClientID,
-		"client_secret": s.auth0Config.ClientSecret,
+		"password":      s.authZeroConfig.DefaultResourceOwnerPassword,
+		"client_id":     s.authZeroConfig.ClientID,
+		"client_secret": s.authZeroConfig.ClientSecret,
 		"scope":         "openid profile email",
 	}
 

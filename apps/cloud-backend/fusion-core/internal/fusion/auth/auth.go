@@ -7,5 +7,5 @@ import (
 )
 
 func (s *Service) GetAuthTokensByResourceOwnerPassword(ctx context.Context, username string) (*types.AuthTokenResponse, error) {
-	return s.auth0Service.GetAuthTokensByResourceOwnerPassword(ctx, username)
+	return s.authZeroService.GetAuthTokensByResourceOwnerPassword(ctx, username)
 }

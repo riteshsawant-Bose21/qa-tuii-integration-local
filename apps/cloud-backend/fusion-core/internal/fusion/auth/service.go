@@ -7,18 +7,18 @@ import (
 )
 
 type Service struct {
-	auth0Service Auth0Service
+	authZeroService AuthZeroService
 }
 
-type Auth0Service interface {
+type AuthZeroService interface {
 	GetAuthTokensByResourceOwnerPassword(ctx context.Context, username string) (*types.AuthTokenResponse, error)
 }
 
-func NewService(auth0Service Auth0Service) *Service {
-	if auth0Service == nil {
+func NewService(authZeroService AuthZeroService) *Service {
+	if authZeroService == nil {
 		panic("auth0Service cannot be nil")
 	}
 	return &Service{
-		auth0Service: auth0Service,
+		authZeroService: authZeroService,
 	}
 }

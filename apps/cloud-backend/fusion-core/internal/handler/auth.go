@@ -24,7 +24,7 @@ func NewAuthHandler(authService fusion.Auth) *AuthHandler {
 }
 
 // GetAuthTokensByResourceOwnerPassword retrieves Auth0 tokens for QA automation testing.
-// @Summary Get Auth0 tokens for QA testing
+// @Summary Get Auth0 tokens for QA automation testing
 // @Description Get access and ID tokens for a user using Resource Owner Password flow (QA environment only)
 // @Tags qa-auth
 // @Accept json
