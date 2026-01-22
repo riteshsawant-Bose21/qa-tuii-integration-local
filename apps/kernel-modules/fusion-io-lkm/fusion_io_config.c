@@ -73,7 +73,8 @@ const struct base_device bd_fusion_powersmart = {
             .name = "gpio_amp_rstn",
             .type = EP_GPIO_TYPE_PHYS,
             .export = true,
-            .num = 8 // GPIO1_IO8
+            .num = 8, // GPIO1_IO8
+            .default_val = EP_GPIO_VAL_HI
         },
         {
             .name = "gpio_amp_mute",
@@ -134,7 +135,8 @@ const struct base_device bd_fusion_c1_evk = {
             .name = "gpio_amp_rstn",
             .type = EP_GPIO_TYPE_PHYS,
             .export = true,
-            .num = 8 // GPIO1_IO8
+            .num = 8, // GPIO1_IO8
+            .default_val = EP_GPIO_VAL_HI
         },
         {
             .name = "gpio_amp_mute",
