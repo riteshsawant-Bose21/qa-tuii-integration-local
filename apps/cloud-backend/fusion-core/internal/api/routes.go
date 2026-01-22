@@ -72,8 +72,16 @@ func (a *API) registerRoutes() {
 		users.PATCH("/:userID", userHandler.UpdateUser)
 	}
 
-	// Auth status endpoint
+	// Auth endpoints
 	auth := v1.Group("/auth")
+	
+	// Auth automation route (no authentication required)
+	if a.auth != nil {
+		authHandler := handler.NewAuthHandler(a.auth)
+		auth.GET("/automation/tokens", authHandler.GetAuthTokensByResourceOwnerPassword)
+	}
+	
+	// Apply auth middleware for protected auth endpoints
 	auth.Use(a.authMiddleware.Middleware())
 	{
 		auth.GET("/status", userHandler.CheckAuthStatus)
@@ -92,13 +100,5 @@ func (a *API) registerRoutes() {
 		organization.PUT("/users/:userID/role", roleManagementHandler.UpdateUserRole)
 		organization.PUT("/roles/:roleID/permissions", roleManagementHandler.UpdateRolePermissions)
 		organization.GET("/users", roleManagementHandler.GetOrganizationUsers)
-	}
-
-	// QA Auth routes (no authentication required, enabled only in QA environments)
-	if a.qaAuthHandler != nil {
-		qa := v1.Group("/qa")
-		{
-			qa.POST("/auth/tokens", a.qaAuthHandler.GetTokens)
-		}
 	}
 }

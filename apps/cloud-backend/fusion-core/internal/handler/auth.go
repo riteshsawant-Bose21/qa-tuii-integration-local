@@ -6,49 +6,38 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/api/types"
-	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/auth"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/constants"
+	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion"
 	httputils "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/utils/http"
 )
 
-// QAAuthHandler handles QA authentication requests
-type QAAuthHandler struct {
-	qaTokenService *auth.QATokenService
-	enabled        bool
+// AuthHandler handles authentication requests
+type AuthHandler struct {
+	authService fusion.Auth
 }
 
-// NewQAAuthHandler creates a new QA authentication handler
-func NewQAAuthHandler(qaTokenService *auth.QATokenService, enabled bool) *QAAuthHandler {
-	return &QAAuthHandler{
-		qaTokenService: qaTokenService,
-		enabled:        enabled,
+// NewAuthHandler creates a new authentication handler
+func NewAuthHandler(authService fusion.Auth) *AuthHandler {
+	return &AuthHandler{
+		authService: authService,
 	}
 }
 
-// GetTokens retrieves Auth0 tokens for QA testing.
+// GetAuthTokensByResourceOwnerPassword retrieves Auth0 tokens for QA automation testing.
 // @Summary Get Auth0 tokens for QA testing
 // @Description Get access and ID tokens for a user using Resource Owner Password flow (QA environment only)
 // @Tags qa-auth
 // @Accept json
 // @Produce json
-// @Param request body types.QATokenRequest true "Token Request"
-// @Success 200 {object} types.QATokenSuccessResponse "Tokens generated successfully"
+// @Param request body types.AuthTokenRequest true "Token Request"
+// @Success 200 {object} types.AuthTokenSuccessResponse "Tokens generated successfully"
 // @Failure 400 {object} types.ErrorResponse2 "Bad request - invalid input"
 // @Failure 403 {object} types.ErrorResponse2 "QA auth endpoint is disabled"
 // @Failure 500 {object} types.ErrorResponse2 "Internal server error"
-// @Router /qa/auth/tokens [post]
-func (h *QAAuthHandler) GetTokens(c *gin.Context) {
-	// Check if QA auth is enabled
-	if !h.enabled {
-		c.JSON(http.StatusForbidden, types.ErrorResponse2{
-			Message: "QA authentication endpoint is disabled",
-			Code:    constants.CodeForbidden,
-		})
-		return
-	}
-
+// @Router /qa/auth/tokens [get]
+func (h *AuthHandler) GetAuthTokensByResourceOwnerPassword(c *gin.Context) {
 	// Parse request body
-	var req types.QATokenRequest
+	var req types.AuthTokenRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		httputils.RespondWithBadRequest(c, "Invalid request body: "+err.Error())
 		return
@@ -60,9 +49,18 @@ func (h *QAAuthHandler) GetTokens(c *gin.Context) {
 		return
 	}
 
-	// Get tokens from Auth0
-	tokens, err := h.qaTokenService.GetTokensForUser(c.Request.Context(), req.Username)
+	// Get tokens from auth service
+	tokens, err := h.authService.GetAuthTokensByResourceOwnerPassword(c.Request.Context(), req.Username)
 	if err != nil {
+		// Check if it's a "disabled" error and return 403, otherwise 500
+		if err.Error() == "Resource Owner Password flow is disabled" {
+			c.JSON(http.StatusForbidden, types.ErrorResponse2{
+				Message: "Resource Owner Password flow is disabled",
+				Code:    constants.CodeForbidden,
+			})
+			return
+		}
+
 		c.JSON(http.StatusInternalServerError, types.ErrorResponse2{
 			Message: "Failed to generate tokens: " + err.Error(),
 			Code:    constants.CodeInternalServerError,
@@ -71,7 +69,7 @@ func (h *QAAuthHandler) GetTokens(c *gin.Context) {
 	}
 
 	// Return successful response
-	c.JSON(http.StatusOK, types.QATokenSuccessResponse{
+	c.JSON(http.StatusOK, types.AuthTokenSuccessResponse{
 		Message: "Tokens generated successfully",
 		Data:    tokens,
 	})

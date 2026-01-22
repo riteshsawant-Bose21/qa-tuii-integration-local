@@ -12,6 +12,7 @@ type Service struct {
 // Store defines the interface for configuration storage.
 type Store interface {
 	ReqString(key string) (string, error)
+	ReqBool(key string) (bool, error)
 }
 
 // NewService creates a new configuration service with the provided store.
