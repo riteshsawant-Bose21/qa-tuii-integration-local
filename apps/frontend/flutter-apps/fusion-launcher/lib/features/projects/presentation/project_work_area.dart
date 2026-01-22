@@ -35,8 +35,6 @@ import '../../../core/spl_calculation/mace_engine_provider.dart';
 import '../../../core/utils/broadcast_controllers.dart';
 import '../../../core/utils/bug_report_popup.dart';
 import '../../../core/widgets/clean_widgets.dart';
-import '../../bill_of_materials/presentation/bill_of_materials_page.dart';
-import '../../cloud_ui/presentation/pages/cloud_web_view.dart';
 import '../../configuration/presentation/viewmodel/project_view_model.dart';
 import '../../configuration_page/pages/configuration_processing_page.dart';
 import '../../configuration_page/pages/configuration_snapshots.dart';

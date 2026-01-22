@@ -7,8 +7,6 @@ import 'package:fusion_launcher/core/widgets/title_text_field_switcher.dart';
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/gpio/gpio_view_model.dart';
 import 'package:fusion_launcher/features/scheduling/view/scheduling_page.dart';
 import 'package:fusion_lib/fusion_lib.dart';
-import 'package:fusion_lib/fusion_theme/app_theme.dart';
-import 'package:fusion_lib/fusion_theme/color_scheme.dart';
 
 import '../../configuration/presentation/viewmodel/project_view_model.dart';
 import '../../configuration_page/widgets/snapshots/action_drop_down.dart';
@@ -268,9 +266,9 @@ class GpioPage extends StatelessWidget {
                                         },
                                         materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                                         visualDensity: VisualDensity.compact,
-                                        side: MaterialStateBorderSide.resolveWith(
+                                        side: WidgetStateBorderSide.resolveWith(
                                           (Set<WidgetState> states) {
-                                            if (states.contains(MaterialState.selected)) {
+                                            if (states.contains(WidgetState.selected)) {
                                               return BorderSide(
                                                 color: context.colorScheme.primaryWhite,
                                                 width: 1,
@@ -305,24 +303,28 @@ class GpioPage extends StatelessWidget {
                                   if (gpio.direction == GpioDirection.output)
                                     SemanticHelper.button(
                                       testId: SemanticHelper.createTestId(SemanticTypes.button, "gpio_output_status_switch_$index"),
-                                      child: Switch(
-                                        value: false,
-                                        onChanged: (_) {},
+                                      child: FusionSwitch(
+                                        value: gpio.isEnabled ?? false,
+                                        height: 30,
+                                        width: 50,
+                                        onChanged: (_) {
+                                          context.read<GpioViewmodel>().updateGpio(gpio.copyWith(isEnabled: !(gpio.isEnabled ?? false)));
+                                        },
                                         // activeThumbColor: Colors.black,
-                                        materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                                        thumbColor: WidgetStateProperty.resolveWith<Color>((Set<WidgetState> states) {
-                                          if (states.contains(WidgetState.selected)) {
-                                            return Theme.of(context).colorScheme.primaryWhite;
-                                          }
-                                          return context.colorScheme.primaryBlack;
-                                        }),
-                                        trackColor: WidgetStateProperty.resolveWith<Color>((Set<WidgetState> states) {
-                                          if (states.contains(WidgetState.selected)) {
-                                            return Theme.of(context).colorScheme.primaryBlack;
-                                          }
-                                          return context.colorScheme.primaryBlack;
-                                        }),
-                                        trackOutlineColor: WidgetStateProperty.all(Colors.transparent),
+                                        // materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                        // thumbColor: WidgetStateProperty.resolveWith<Color>((Set<WidgetState> states) {
+                                        //   if (states.contains(WidgetState.selected)) {
+                                        //     return Theme.of(context).colorScheme.primaryWhite;
+                                        //   }
+                                        //   return context.colorScheme.primaryBlack;
+                                        // }),
+                                        // trackColor: WidgetStateProperty.resolveWith<Color>((Set<WidgetState> states) {
+                                        //   if (states.contains(WidgetState.selected)) {
+                                        //     return Theme.of(context).colorScheme.primaryBlack;
+                                        //   }
+                                        //   return context.colorScheme.primaryBlack;
+                                        // }),
+                                        // trackOutlineColor: WidgetStateProperty.all(Colors.transparent),
                                       ),
                                     )
                                   else
