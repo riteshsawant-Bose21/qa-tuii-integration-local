@@ -12,11 +12,12 @@ import '../widgets/fusion_side_bar.dart';
 import '../widgets/home_tab_content.dart';
 import '../widgets/profile_tab_content.dart';
 import '../widgets/saved_projects_tab.dart';
+import '../widgets/settings_tab_content.dart';
 
 enum DashboardTabs {
   home("Home"),
   profile("Profile"),
-  // settings("Settings"),
+  settings("Settings"),
   // community("Community"),
   // testLibrady("Test Library"),
   savedProjects("Saved Projects");
@@ -56,7 +57,7 @@ class _HomePageState extends State<HomePage> {
         final bool isWide = constraints.maxWidth >= 800;
 
         return Scaffold(
-          backgroundColor: Colors.black,
+          backgroundColor: context.colorScheme.elevation1,
           body: SafeArea(
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -110,8 +111,8 @@ class _HomePageState extends State<HomePage> {
                               return const HomeTabContent();
                             case DashboardTabs.profile:
                               return const ProfileTabContent();
-                            // case DashboardTabs.settings:
-                            //   return const SettingsTabContent();
+                            case DashboardTabs.settings:
+                              return const SettingsTabContent();
                             // case DashboardTabs.community:
                             //   return const CommunityTabContent();
                             case DashboardTabs.savedProjects:

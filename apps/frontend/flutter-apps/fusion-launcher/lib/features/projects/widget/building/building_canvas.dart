@@ -722,60 +722,63 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
   }
 
   Widget _buildEmptyFloorWidget() {
-    return Center(
-      child: SizedBox(
-        width: double.infinity,
-        height: 400,
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            /// icon
-            ColorFiltered(
-              colorFilter: ColorFilter.mode(
-                Theme.of(context).colorScheme.primaryWhite,
-                BlendMode.srcIn,
-              ),
-              child: const FusionImage.asset(
-                "assets/images/upload_floor_plan.png",
-                width: 64,
-                height: 64,
-              ),
+    return Container(
+      width: double.infinity,
+      height: double.infinity,
+      decoration: BoxDecoration(
+        color: context.colorScheme.elevation1,
+        border: Border.all(color: context.colorScheme.elevation2, width: 1),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: <Widget>[
+          /// icon
+          ColorFiltered(
+            colorFilter: ColorFilter.mode(
+              Theme.of(context).colorScheme.primaryWhite,
+              BlendMode.srcIn,
             ),
-
-            const SizedBox(height: 24),
-
-            /// Title
-            FusionAppText(
-              text: "Getting Started",
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
+            child: const FusionImage.asset(
+              "assets/images/upload_floor_plan.png",
+              width: 64,
+              height: 64,
             ),
-            const SizedBox(height: 16),
+          ),
 
-            /// Subtitle
-            FusionAppText(
-              text: "Start with a pre-built structure.\nChoose how you want to shape your sound space.",
-              textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.titleSmall,
-            ),
-            const SizedBox(height: 28),
+          const SizedBox(height: 24),
 
-            /// Upload Button
-            GuideShowcaseWrapper(
-              step: GuideShowCaseSteps.uploadFloorPlan,
-              onHighlightedSpotTap: (TapDownDetails details) => _showFloorPlanPicker(),
-              child: FusionOutlinedButton(
-                height: 32,
-                width: 160,
-                semanticsId: FusionTestKeys.uploadFloorPlan,
-                label: "Upload Floor-plan",
-                textStyle: Theme.of(context).textTheme.titleSmall,
-                onTap: () {
-                  _showFloorPlanPicker();
-                },
-              ),
+          /// Title
+          FusionAppText(
+            text: "Getting Started",
+            style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
+          ),
+          const SizedBox(height: 16),
+
+          /// Subtitle
+          FusionAppText(
+            text: "Start with a pre-built structure.\nChoose how you want to shape your sound space.",
+            textAlign: TextAlign.center,
+            style: Theme.of(context).textTheme.titleSmall,
+          ),
+          const SizedBox(height: 28),
+
+          /// Upload Button
+          GuideShowcaseWrapper(
+            step: GuideShowCaseSteps.uploadFloorPlan,
+            onHighlightedSpotTap: (TapDownDetails details) => _showFloorPlanPicker(),
+            child: FusionOutlinedButton(
+              height: 32,
+              width: 160,
+              semanticsId: FusionTestKeys.uploadFloorPlan,
+              label: "Upload Floor-plan",
+              textStyle: Theme.of(context).textTheme.titleSmall,
+              onTap: () {
+                _showFloorPlanPicker();
+              },
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }

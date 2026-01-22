@@ -6,7 +6,6 @@ import 'package:fusion_launcher/features/authentication/viewmodel/auth_view_mode
 import 'package:fusion_launcher/features/home/presentation/pages/launcher_home_page.dart';
 import 'package:fusion_launcher/features/home/presentation/widgets/saved_projects_tab.dart';
 import 'package:fusion_lib/fusion_lib.dart';
-import 'package:fusion_lib/fusion_theme/app_theme.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 
@@ -65,7 +64,7 @@ class _FusionSidebarState extends State<FusionSidebar> {
               // ========== Notification Icon ==========
               Container(
                 decoration: BoxDecoration(
-                  color: context.colorScheme.surface,
+                  color: context.colorScheme.elevation2,
                   borderRadius: BorderRadius.circular(12),
                 ),
                 padding: const EdgeInsets.all(16.0),
@@ -89,10 +88,14 @@ class _FusionSidebarState extends State<FusionSidebar> {
                               height: 36,
                               width: 36,
                               decoration: BoxDecoration(
-                                color: FusionDarkColorPallette.dark80,
+                                color: context.colorScheme.elevation4,
                                 borderRadius: BorderRadius.circular(8),
                               ),
-                              child: const Icon(LucideIcons.bell, size: 16),
+                              child: Icon(
+                                LucideIcons.bell,
+                                size: 16,
+                                color: context.colorScheme.primaryWhite,
+                              ),
                             ),
                           ),
                         ),
@@ -159,7 +162,7 @@ class _FusionSidebarState extends State<FusionSidebar> {
               Expanded(
                 child: Container(
                   decoration: BoxDecoration(
-                    color: context.colorScheme.surface,
+                    color: context.colorScheme.elevation2,
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Column(
@@ -198,13 +201,13 @@ class _FusionSidebarState extends State<FusionSidebar> {
                               isSelected: widget.selectedTab == DashboardTabs.profile,
                               onTap: () => widget.onTabChanged?.call(DashboardTabs.profile),
                             ),
-                            // _HoverNavItem(
-                            //   icon: Icons.settings_sharp,
-                            //   title: DashboardTabs.settings.name,
-                            //   semanticsId: 'settings_tab',
-                            //   isSelected: widget.selectedTab == DashboardTabs.settings,
-                            //   onTap: () => widget.onTabChanged?.call(DashboardTabs.settings),
-                            // ),
+                            _HoverNavItem(
+                              icon: Icons.settings_sharp,
+                              title: DashboardTabs.settings.name,
+                              semanticsId: 'settings_tab',
+                              isSelected: widget.selectedTab == DashboardTabs.settings,
+                              onTap: () => widget.onTabChanged?.call(DashboardTabs.settings),
+                            ),
                           ],
                         ),
                       ),

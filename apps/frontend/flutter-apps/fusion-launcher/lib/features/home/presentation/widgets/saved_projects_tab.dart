@@ -6,7 +6,6 @@ import 'package:fusion_launcher/features/home/presentation/widgets/project_card.
 import 'package:fusion_launcher/features/projects/view_model/project_sync_view_model.dart';
 import 'package:fusion_lib/fusion_building_view/floor_plan_calibrator.dart';
 import 'package:fusion_lib/fusion_lib.dart' hide FusionUtils;
-import 'package:fusion_lib/fusion_theme/app_theme.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../../core/service_locator.dart';
@@ -42,7 +41,7 @@ class SavedProjectsTabContent extends StatelessWidget {
                   width: double.infinity,
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: context.colorScheme.surface,
+                    color: context.colorScheme.elevation1,
                     borderRadius: BorderRadius.circular(12),
                     border: _getBorder(context),
                   ),
@@ -60,7 +59,7 @@ class SavedProjectsTabContent extends StatelessWidget {
                         cursor: SystemMouseCursors.click,
                         child: SemanticHelper.button(
                           testId: SemanticHelper.createTestId(SemanticTypes.button, "create_new_project_button"),
-                          child: NeumorphicDarkButton(
+                          child: FusionNeumorphicButton(
                             onTap: () {
                               CreateNewProjectDialog.show(context);
                             },
@@ -236,7 +235,7 @@ class _SavedProjectListState extends State<_SavedProjectList> {
                   child: Container(
                     width: double.infinity,
                     decoration: BoxDecoration(
-                      color: context.colorScheme.surface,
+                      color: context.colorScheme.elevation1,
                       borderRadius: BorderRadius.circular(12),
                       border: _getBorder(context),
                     ),
