@@ -95,6 +95,8 @@ class AuthViewModel extends Cubit<AuthViewModelState> {
 
       final Credentials credentials = await _authService.login();
 
+      await serviceLocator<SharedPreferencesHandler>().setBool(SharedPreferenceKeys.skipLogin, false);
+
       await _handleLoginSuccess(credentials);
     } on Exception catch (e) {
       // Web redirect initiated - this is expected
@@ -135,6 +137,7 @@ class AuthViewModel extends Cubit<AuthViewModelState> {
           ),
         );
       } else {
+        await serviceLocator<FusionSecureStorage>().clearAll();
         logout();
         // _emitError('Failed to get user details: ${authDataResponse.message}'));
       }
@@ -149,7 +152,12 @@ class AuthViewModel extends Cubit<AuthViewModelState> {
     try {
       _emitLoading();
 
-      await _authService.logout();
+      final bool hasCloudAccess = serviceLocator<SessionViewModel>().hasCloudAccess();
+
+      if (hasCloudAccess) {
+        await _authService.logout();
+      }
+      await serviceLocator<FusionSecureStorage>().clearAll();
       await serviceLocator<SharedPreferencesHandler>().clearAll();
       await serviceLocator<ProjectViewModel>().deleteFusionProjectDirectory();
 

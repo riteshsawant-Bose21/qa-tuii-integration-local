@@ -602,7 +602,7 @@ class _SpeakerCardState extends State<SpeakerCard> {
                         height: 24,
                         width: 24,
                         borderRadius: 6,
-                        backgroundColor: widget.isSelected ? FusionDarkColorPallette.green20 : context.colorScheme.elevation2,
+                        color: widget.isSelected ? FusionDarkColorPallette.green20 : context.colorScheme.elevation2,
                         child: Icon(
                           LucideIcons.plus,
                           size: 12,

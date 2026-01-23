@@ -35,6 +35,7 @@ import '../../../core/spl_calculation/mace_engine_provider.dart';
 import '../../../core/utils/broadcast_controllers.dart';
 import '../../../core/utils/bug_report_popup.dart';
 import '../../../core/widgets/clean_widgets.dart';
+import '../../authentication/viewmodel/session_view_model.dart';
 import '../../configuration/presentation/viewmodel/project_view_model.dart';
 import '../../configuration_page/pages/configuration_processing_page.dart';
 import '../../configuration_page/pages/configuration_snapshots.dart';
@@ -375,6 +376,10 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
 
   @override
   bool get wantKeepAlive => true;
+
+  bool get hasCloudAccess {
+    return serviceLocator<SessionViewModel>().hasCloudAccess();
+  }
 
   final ExpansibleController productsController = ExpansibleController();
   final ExpansibleController splController = ExpansibleController();
@@ -937,35 +942,36 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
                           ),
 
                           /// Save Icon Section
-                          Container(
-                            width: 56,
-                            height: 48,
-                            decoration: BoxDecoration(
-                              color: context.colorScheme.elevation1,
-                              border: Border(
-                                top: BorderSide(width: 1, color: context.colorScheme.elevation2),
-                                bottom: BorderSide(width: 1, color: context.colorScheme.elevation2),
+                          if (hasCloudAccess)
+                            Container(
+                              width: 56,
+                              height: 48,
+                              decoration: BoxDecoration(
+                                color: context.colorScheme.elevation1,
+                                border: Border(
+                                  top: BorderSide(width: 1, color: context.colorScheme.elevation2),
+                                  bottom: BorderSide(width: 1, color: context.colorScheme.elevation2),
+                                ),
                               ),
-                            ),
-                            child: IconButton(
-                              icon: Icon(
-                                LucideIcons.cloudUpload,
-                                size: 24,
-                                color: Theme.of(context).colorScheme.primaryWhite,
-                              ),
-                              tooltip: 'Upload project',
-                              onPressed: () async {
-                                FusionUiUtils.showLoader(context);
+                              child: IconButton(
+                                icon: Icon(
+                                  LucideIcons.cloudUpload,
+                                  size: 24,
+                                  color: Theme.of(context).colorScheme.primaryWhite,
+                                ),
+                                tooltip: 'Upload project',
+                                onPressed: () async {
+                                  FusionUiUtils.showLoader(context);
 
-                                await serviceLocator<ProjectSyncViewModel>().uploadProject(
-                                  projectData: serviceLocator<ProjectViewModel>().getCurrentProjectData()!,
-                                );
-                                if (context.mounted) {
-                                  FusionUiUtils.hideLoader(context);
-                                }
-                              },
+                                  await serviceLocator<ProjectSyncViewModel>().uploadProject(
+                                    projectData: serviceLocator<ProjectViewModel>().getCurrentProjectData()!,
+                                  );
+                                  if (context.mounted) {
+                                    FusionUiUtils.hideLoader(context);
+                                  }
+                                },
+                              ),
                             ),
-                          ),
 
                           /// Share Icon Section
                           // SemanticHelper.button(
