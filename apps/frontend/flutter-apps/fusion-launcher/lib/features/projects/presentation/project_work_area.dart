@@ -788,7 +788,7 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
                             dividerColor: Colors.transparent,
                             controller: _tabController,
                             isScrollable: true,
-                            tabAlignment: TabAlignment.start,
+                            tabAlignment: TabAlignment.center,
 
                             indicator: BoxDecoration(color: context.colorScheme.elevation2, borderRadius: const BorderRadius.all(Radius.circular(8))),
                             indicatorPadding: const EdgeInsets.only(
