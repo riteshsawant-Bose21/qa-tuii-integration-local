@@ -1,3 +1,5 @@
+import 'dart:developer';
+
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -451,7 +453,9 @@ class SchematicPropertiesState extends State<SchematicProperties> {
                       child: Builder(
                         builder: (BuildContext context) {
                           if (selectedItem.type == SelectedItemType.zone || selectedItem.type == SelectedItemType.subzone) {
-                            return _ZonesListeningAreaSelectionWidget(selectedItem: selectedItem);
+                            return _ZonesListeningAreaSelectionWidget(
+                              selectedItem: selectedItem,
+                            );
                           }
 
                           return _LocationSelecDropDown(
@@ -465,6 +469,9 @@ class SchematicPropertiesState extends State<SchematicProperties> {
                               final String? floorID = projectViewModel.getFloorForListeningArea(areaId: value.first)?.id;
                               final LocationModel newLocation = LocationModel(listeningAreaId: value.first, floorId: floorID);
                               projectViewModel.updateHardwareLocation(hardwareId: selectedDevice!.id, newLocation: newLocation);
+                              setState(() {});
+
+                              log("Selected Listening Areas: $value");
                             },
                           );
                         },
@@ -668,20 +675,26 @@ class _LocationSelecDropDown extends StatelessWidget {
                   return FusionAppText(
                     text: '${listeningAreas.length} zones selected',
                     maxLine: 1,
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey),
+                    style: context.textTheme.bodySmall?.copyWith(
+                      color: context.colorScheme.primaryWhite,
+                    ),
                   );
                 } else if (selectedItemType == SelectedItemType.subzone) {
                   return FusionAppText(
                     text: '${listeningAreas.length} zones selected',
                     maxLine: 1,
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey),
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: context.colorScheme.primaryWhite,
+                    ),
                   );
                 }
 
                 return FusionAppText(
                   text: _getSelectedAreaDisplayText(context),
                   maxLine: 1,
-                  style: Theme.of(context).textTheme.bodySmall,
+                  style: context.textTheme.bodySmall?.copyWith(
+                    color: context.colorScheme.elevation5,
+                  ),
                 );
               },
             ),
@@ -858,8 +871,8 @@ class _ZonesListeningAreaSelectionWidget extends StatelessWidget {
                 return FusionAppText(
                   text: listeningAreas.isEmpty ? "Select Location" : "${listeningAreas.length} location${listeningAreas.length > 1 ? '(s)' : ''} selected",
                   maxLine: 1,
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: listeningAreas.isEmpty ? context.colorScheme.primaryBlack : Theme.of(context).textTheme.bodySmall?.color,
+                  style: context.textTheme.bodySmall?.copyWith(
+                    color: listeningAreas.isEmpty ? context.colorScheme.elevation5 : context.colorScheme.primaryWhite,
                   ),
                 );
               },
