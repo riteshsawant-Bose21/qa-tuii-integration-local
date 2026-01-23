@@ -435,7 +435,7 @@ class AddSourcePopup extends StatelessWidget {
                                   onTap: () {
                                     context.read<AddSourceViewModel>().onSaveTap(context);
                                   },
-                                  backgroundColor: context.colorScheme.surface,
+                                  color: context.colorScheme.surface,
                                   text: "Save",
                                   width: 69,
                                   height: 32,

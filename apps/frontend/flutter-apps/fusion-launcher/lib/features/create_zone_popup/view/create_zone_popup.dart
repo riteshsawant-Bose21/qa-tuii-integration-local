@@ -264,7 +264,7 @@ class _NewWidgetState extends State<NewWidget> {
                             const SizedBox(width: 15),
                             FusionNeumorphicButton(
                               onTap: () => context.read<CreateZoneViewModel>().createZone(context),
-                              backgroundColor: context.colorScheme.surface,
+                              color: context.colorScheme.surface,
                               text: "Save",
                               width: 69,
                               height: 32,
