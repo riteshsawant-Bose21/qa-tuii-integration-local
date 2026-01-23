@@ -3,7 +3,6 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
 import 'package:fusion_launcher/features/home/presentation/widgets/project_card.dart';
 import 'package:fusion_lib/fusion_lib.dart' hide FusionUtils;
-import 'package:fusion_lib/fusion_theme/app_theme.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../../core/service_locator.dart';
@@ -155,7 +154,7 @@ class _RecentProjects extends StatelessWidget {
       child: Container(
         width: double.infinity,
         decoration: BoxDecoration(
-          color: context.colorScheme.surface,
+          color: context.colorScheme.elevation2,
           borderRadius: BorderRadius.circular(12),
         ),
         child: Column(

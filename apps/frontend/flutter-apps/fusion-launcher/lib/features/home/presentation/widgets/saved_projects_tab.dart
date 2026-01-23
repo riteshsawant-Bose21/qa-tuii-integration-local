@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:fusion_launcher/features/authentication/launcher_sign_in_page.dart';
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
 import 'package:fusion_launcher/features/home/presentation/widgets/project_card.dart';
 import 'package:fusion_launcher/features/projects/view_model/project_sync_view_model.dart';
@@ -737,8 +736,8 @@ class _CreateNewProjectDialogState extends State<CreateNewProjectDialog> {
           constraints: BoxConstraints(maxWidth: cardWidth),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(borderRadius),
-            color: context.colorScheme.surface,
-            border: Border.all(color: context.colorScheme.onSurface.withValues(alpha: 0.3)),
+            color: context.colorScheme.elevation1,
+            border: Border.all(color: context.colorScheme.elevation2),
           ),
           child: Padding(
             padding: const EdgeInsets.all(12),
@@ -759,8 +758,8 @@ class _CreateNewProjectDialogState extends State<CreateNewProjectDialog> {
                     child: Container(
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(borderRadius),
-                        color: context.colorScheme.surface,
-                        border: Border.all(color: context.colorScheme.onSurface.withValues(alpha: 0.1)),
+                        color: context.colorScheme.elevation1,
+                        border: Border.all(color: context.colorScheme.elevation2),
                       ),
                       child: ClipRRect(
                         borderRadius: BorderRadius.circular(borderRadius),
@@ -1040,7 +1039,7 @@ class _CreateNewProjectDialogState extends State<CreateNewProjectDialog> {
                                   alignment: Alignment.centerRight,
                                   child: SemanticHelper.button(
                                     testId: SemanticHelper.createTestId(SemanticTypes.button, "create_new_project_button"),
-                                    child: NeumorphicDarkButton(
+                                    child: FusionNeumorphicButton(
                                       onTap: () async {
                                         final bool isFormFilled = _formKey.currentState?.validate() ?? false;
                                         if (!isFormFilled) return;
@@ -1062,13 +1061,9 @@ class _CreateNewProjectDialogState extends State<CreateNewProjectDialog> {
                                         }
                                       },
                                       width: 160,
-                                      child: Container(
-                                        height: 60,
-                                        padding: const EdgeInsets.symmetric(horizontal: 12),
-                                        decoration: BoxDecoration(
-                                          color: context.colorScheme.surface,
-                                          borderRadius: BorderRadius.circular(12),
-                                        ),
+                                      height: 40,
+                                      child: Padding(
+                                        padding: const EdgeInsets.symmetric(horizontal: 8),
                                         child: Row(
                                           children: <Widget>[
                                             Expanded(
@@ -1208,15 +1203,15 @@ class _BorderedTextfieldState extends State<BorderedTextfield> {
               suffixIcon: widget.isObscured ? obsecuredWidget : null,
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(borderRadius),
-                borderSide: BorderSide(color: context.colorScheme.surfaceDim.withValues(alpha: 0.3)),
+                borderSide: BorderSide(color: context.colorScheme.elevation4),
               ),
               disabledBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(borderRadius),
-                borderSide: BorderSide(color: context.colorScheme.surfaceDim.withValues(alpha: 0.3)),
+                borderSide: BorderSide(color: context.colorScheme.elevation4),
               ),
               enabledBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(borderRadius),
-                borderSide: BorderSide(color: context.colorScheme.surfaceDim.withValues(alpha: 0.3)),
+                borderSide: BorderSide(color: context.colorScheme.elevation4),
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(borderRadius),

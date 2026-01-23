@@ -3,7 +3,6 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/features/configuration_page/widgets/sub_zone_card.dart';
 import 'package:fusion_launcher/features/processing_block/view/functions/source_select.dart';
 import 'package:fusion_lib/fusion_lib.dart';
-import 'package:fusion_lib/fusion_theme/app_theme.dart';
 
 import '../../../core/constants/assets_constants.dart';
 import '../../../core/service_locator.dart';
@@ -426,6 +425,7 @@ class _ZoneCardState extends State<ZoneCard> {
                           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                             fontSize: 10,
                             fontWeight: FontWeight.w600,
+                            color: context.colorScheme.textPrimary,
                           ),
                         ),
                       ),
@@ -442,7 +442,10 @@ class _ZoneCardState extends State<ZoneCard> {
                             child: FusionAppText(
                               text: 'No available sources',
                               maxLine: 1,
-                              style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontSize: 10),
+                              style: context.textTheme.bodyMedium?.copyWith(
+                                fontSize: 10,
+                                color: context.colorScheme.textPrimary,
+                              ),
                             ),
                           ),
                         ),
@@ -470,7 +473,7 @@ class _ZoneCardState extends State<ZoneCard> {
                                       groupValue: isAlreadyInPriority && !isCurrentSelection ? value : selectedSourceId,
                                       materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                                       visualDensity: const VisualDensity(horizontal: -4, vertical: -4),
-                                      activeColor: context.colorScheme.primaryBlack,
+                                      activeColor: context.colorScheme.primaryWhite,
                                       onChanged:
                                           isAlreadyInPriority && !isCurrentSelection
                                               ? null
@@ -494,7 +497,7 @@ class _ZoneCardState extends State<ZoneCard> {
                                       maxLine: 1,
                                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                                         fontSize: 10,
-                                        color: isAlreadyInPriority && !isCurrentSelection ? context.colorScheme.primaryBlack.withAlpha(150) : null,
+                                        color: isAlreadyInPriority && !isCurrentSelection ? context.colorScheme.elevation5 : context.colorScheme.primaryWhite,
                                       ),
                                     ),
                                   ),

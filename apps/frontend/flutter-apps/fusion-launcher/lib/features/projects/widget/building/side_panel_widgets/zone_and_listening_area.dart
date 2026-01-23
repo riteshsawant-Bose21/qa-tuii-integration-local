@@ -139,18 +139,18 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
             onHighlightedSpotTap: (TapDownDetails details) => _addNewZone(),
             child: CreateZonePopup(
               isFromBuildingPage: true,
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: context.colorScheme.primaryWhite,
-                  borderRadius: BorderRadius.circular(6),
-                ),
-                child: FusionAppText(
-                  text: '+ Add Zone',
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w500,
-                    color: context.colorScheme.primaryBlack,
+              child: FusionContainer(
+                height: 32,
+                width: 100,
+                raised: true,
+                child: Center(
+                  child: FusionAppText(
+                    text: '+ Add Zone',
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w500,
+                      color: context.colorScheme.primaryWhite,
+                    ),
                   ),
                 ),
               ),

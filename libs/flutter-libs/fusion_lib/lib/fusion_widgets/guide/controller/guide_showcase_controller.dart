@@ -56,7 +56,7 @@ class GuideShowCaseController extends Cubit<GuideShowCaseState> {
   final BuildContext context;
 
   GuideShowCaseController(this.context) : super(GuideShowCaseState.initial()) {
-    _initialize();
+    // _initialize();
   }
 
   Future<void> guideNeeded() async {

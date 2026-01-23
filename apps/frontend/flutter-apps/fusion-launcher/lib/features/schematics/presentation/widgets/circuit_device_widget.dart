@@ -194,7 +194,11 @@ class _CircuitDeviceWidgetState extends State<CircuitDeviceWidget> {
             onTap: () {
               _showSpeakerDetailsPopup(context, isAdd: false);
             },
-            child: const Icon(Icons.remove, size: 10),
+            child: Icon(
+              Icons.remove,
+              size: 10,
+              color: context.colorScheme.iconDefault,
+            ),
           ),
           const SizedBox(width: 2),
           Container(
@@ -202,7 +206,10 @@ class _CircuitDeviceWidgetState extends State<CircuitDeviceWidget> {
             width: 20,
             alignment: Alignment.center,
             decoration: BoxDecoration(
-              border: Border.all(color: context.colorScheme.primaryBlack, width: 1),
+              border: Border.all(
+                color: context.colorScheme.elevation2,
+                width: 1,
+              ),
               borderRadius: BorderRadius.circular(2),
             ),
             child: FusionAppText(
@@ -216,7 +223,11 @@ class _CircuitDeviceWidgetState extends State<CircuitDeviceWidget> {
             onTap: () {
               _showSpeakerDetailsPopup(context, isAdd: true);
             },
-            child: const Icon(Icons.add, size: 10),
+            child: Icon(
+              Icons.add,
+              size: 10,
+              color: context.colorScheme.iconDefault,
+            ),
           ),
         ],
       );
@@ -228,7 +239,11 @@ class _CircuitDeviceWidgetState extends State<CircuitDeviceWidget> {
             onTap: () {
               widget.onDecrementHardwareInCircuit();
             },
-            child: const Icon(Icons.remove, size: 10),
+            child: Icon(
+              Icons.remove,
+              size: 10,
+              color: context.colorScheme.iconDefault,
+            ),
           ),
           const SizedBox(width: 2),
           Container(
@@ -236,7 +251,7 @@ class _CircuitDeviceWidgetState extends State<CircuitDeviceWidget> {
             width: 20,
             alignment: Alignment.center,
             decoration: BoxDecoration(
-              border: Border.all(color: context.colorScheme.primaryBlack, width: 1),
+              border: Border.all(color: context.colorScheme.elevation5, width: 1),
               borderRadius: BorderRadius.circular(2),
             ),
             child: FusionAppText(
@@ -250,7 +265,11 @@ class _CircuitDeviceWidgetState extends State<CircuitDeviceWidget> {
             onTap: () {
               widget.onIncrementHardwareInCircuit();
             },
-            child: const Icon(Icons.add, size: 10),
+            child: Icon(
+              Icons.add,
+              size: 10,
+              color: context.colorScheme.iconDefault,
+            ),
           ),
         ],
       );
@@ -433,13 +452,15 @@ class _CircuitDeviceWidgetState extends State<CircuitDeviceWidget> {
 
   Widget _buildKebabMenu(BuildContext context) {
     return PopupMenuButton<ZoneMenuAction>(
-      style: const ButtonStyle(
-        overlayColor: WidgetStatePropertyAll<Color>(Colors.transparent),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(FusionSizes.borderRadius12),
+        side: BorderSide(color: context.colorScheme.elevation4),
       ),
+      tooltip: "",
       offset: const Offset(100, 20),
       padding: EdgeInsets.zero,
-      constraints: const BoxConstraints(maxHeight: 550, maxWidth: 140),
-      color: context.colorScheme.primaryWhite,
+      constraints: const BoxConstraints(maxHeight: 550, maxWidth: 200),
+      color: context.colorScheme.elevation1,
       menuPadding: EdgeInsets.zero,
       itemBuilder:
           (BuildContext context) => <PopupMenuEntry<ZoneMenuAction>>[

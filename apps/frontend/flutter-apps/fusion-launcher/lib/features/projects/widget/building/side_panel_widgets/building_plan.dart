@@ -570,7 +570,7 @@ class _BuildingPlanState extends State<BuildingPlan> {
               height: 32,
               width: 80,
               label: "Delete",
-              activeBackgroundColor: Theme.of(context).colorScheme.error,
+              activeBackgroundColor: context.colorScheme.volumeRed,
               textStyle: Theme.of(context).textTheme.labelLarge?.copyWith(
                 fontSize: 12,
                 color: Colors.white,
