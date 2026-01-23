@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:fusion_launcher/core/assets/asset_svg.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/fusion_theme/app_theme.dart';
 import '../../../configuration/presentation/viewmodel/project_view_model.dart';
@@ -56,23 +57,17 @@ class _ExpandableSubZoneWidgetState extends State<ExpandableSubZoneWidget> {
         return BlocBuilder<ProjectViewModel, ProjectViewModelState>(
           builder: (BuildContext context, ProjectViewModelState state) {
             final SelectedItem? selectedDevice = _projectViewModel.selectedDevice;
-
+    
             final bool isSelected = selectedDevice?.id == widget.subZoneId && selectedDevice?.type == SelectedItemType.subzone;
-
+    
             return Column(
               children: <Widget>[
                 MouseRegion(
                   onEnter: (_) => setState(() => _isHovered = true),
                   onExit: (_) => setState(() => _isHovered = false),
-                  child: Container(
-                    padding: const EdgeInsets.only(left: 30, right: 14),
+                  child: SizedBox(
                     height: 36,
-                    decoration: BoxDecoration(
-                      border: Border.all(
-                        color: isSelected ? context.colorScheme.primaryBlack : Colors.transparent,
-                      ),
-                      color: _isHovered ? context.colorScheme.primaryBlack.withAlpha(200) : context.colorScheme.primaryBlack,
-                    ),
+                    width: double.infinity,
                     child: Row(
                       children: <Widget>[
                         _buildDragHandle(),
@@ -93,7 +88,7 @@ class _ExpandableSubZoneWidgetState extends State<ExpandableSubZoneWidget> {
                             child: _buildZoneName(context, widget.name),
                           ),
                         ),
-
+    
                         // /// Add device button
                         // AddSpeakersMenu(
                         //   zoneId: widget.zoneId ?? "",
@@ -102,17 +97,17 @@ class _ExpandableSubZoneWidgetState extends State<ExpandableSubZoneWidget> {
                         // ),
                         FusionArrowPopup(
                           content: SpeakerQueryPopup(isFromBuildingPage: false, zoneId: widget.zoneId, subZoneId: widget.subZoneId),
-
+    
                           child: Row(
                             children: <Widget>[
-                              const Icon(Icons.add, size: 10, color: Colors.black87),
+                              Icon(Icons.add, size: 10, color: context.colorScheme.iconWhite),
                               const SizedBox(width: 4),
                               FusionAppText(
                                 text: "Speaker",
                                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
                                   fontSize: 8,
                                   fontWeight: FontWeight.w400,
-                                  color: Colors.grey[800],
+                                  color: context.colorScheme.textPrimary,
                                 ),
                               ),
                             ],
@@ -141,11 +136,9 @@ class _ExpandableSubZoneWidgetState extends State<ExpandableSubZoneWidget> {
   /// SubZone content - properl    _isSubZoneExpanded.value = true; // <-- Corrected to use the correct variableReorderableListView
   Widget _buildSubZoneContent() {
     if (widget.subZoneCircuit.isEmpty) {
-      print("no devices in subzone ${widget.subZoneId}");
-      return Container(
-        color: context.colorScheme.primaryBlack.withAlpha(50),
-        padding: const EdgeInsets.only(left: 46, right: 8, top: 8, bottom: 8),
-        child: const Center(
+      return const Padding(
+        padding: EdgeInsets.all(16),
+        child: Center(
           child: Text(
             'No devices added yet',
             style: TextStyle(fontSize: 12, color: Colors.grey),
@@ -157,8 +150,11 @@ class _ExpandableSubZoneWidgetState extends State<ExpandableSubZoneWidget> {
     return BlocBuilder<ProjectViewModel, ProjectViewModelState>(
       builder: (BuildContext context, ProjectViewModelState state) {
         return Container(
-          color: context.colorScheme.primaryBlack.withAlpha(50),
-          padding: const EdgeInsets.only(left: 46, right: 8, top: 8, bottom: 8),
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            // color: context.colorScheme.primaryBlack.withAlpha(50),
+            borderRadius: BorderRadius.circular(12),
+          ),
           child: ReorderableListView.builder(
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
@@ -315,16 +311,20 @@ class _ExpandableSubZoneWidgetState extends State<ExpandableSubZoneWidget> {
   /// drag handle icon
   Widget _buildDragHandle() {
     return Icon(
-      Icons.drag_handle,
+      Icons.drag_indicator,
       size: 16,
       color: Colors.grey[600],
     );
   }
 
   Widget _buildExpandIcon(BuildContext context, bool expanded) {
-    return Icon(
-      expanded ? Icons.arrow_drop_up_rounded : Icons.arrow_drop_down_rounded,
-      color: Theme.of(context).colorScheme.textPrimary.withAlpha(90),
+    return RotatedBox(
+      quarterTurns: expanded ? 0 : 2,
+      child: FusionSvgIcon(
+        icon: AssetSvg.expandUp,
+        size: FusionSizes.iconSize12,
+        color: context.colorScheme.iconWhite,
+      ),
     );
   }
 
@@ -341,14 +341,17 @@ class _ExpandableSubZoneWidgetState extends State<ExpandableSubZoneWidget> {
   /// Kebab menu for subzone actions
   Widget _buildKebabMenu(BuildContext context) {
     return PopupMenuButton<ZoneMenuAction>(
-      style: const ButtonStyle(
-        overlayColor: WidgetStatePropertyAll<Color>(Colors.transparent),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(FusionSizes.borderRadius12),
+        side: BorderSide(color: context.colorScheme.elevation4),
       ),
+      tooltip: "",
       offset: const Offset(100, 20),
       padding: EdgeInsets.zero,
-      constraints: const BoxConstraints(maxHeight: 550, maxWidth: 140),
-      color: Theme.of(context).colorScheme.primaryWhite,
+      constraints: const BoxConstraints(maxHeight: 550, maxWidth: 200),
+      color: context.colorScheme.elevation1,
       menuPadding: EdgeInsets.zero,
+      shadowColor: Colors.transparent,
       itemBuilder:
           (BuildContext context) => <PopupMenuEntry<ZoneMenuAction>>[
             /// --- Delete ---
@@ -372,7 +375,7 @@ class _ExpandableSubZoneWidgetState extends State<ExpandableSubZoneWidget> {
         child: Icon(
           Icons.more_vert,
           size: 14,
-          color: Colors.grey[600],
+          color: context.colorScheme.textPrimary,
         ),
       ),
     );

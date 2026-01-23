@@ -45,16 +45,22 @@ class FusionDockSidebar extends StatelessWidget {
           testId: SemanticHelper.createTestId(SemanticTypes.container, side == "left" ? FusionTestKeys.dockLeftSideBar : FusionTestKeys.dockRightSideBar),
           child: Container(
             width: 240,
+            clipBehavior: Clip.hardEdge,
             height: double.infinity,
+            margin: const EdgeInsets.symmetric(horizontal: 1, vertical: 4),
+
             decoration: BoxDecoration(
-              color: hasIncomingData ? const Color(0xFF80C7FF) : context.colorScheme.primaryWhite,
-              border: Border(
-                right: side == "left" ? BorderSide(color: Theme.of(context).colorScheme.primaryBlack, width: 1) : BorderSide.none,
-                left: side == "right" ? BorderSide(color: Theme.of(context).colorScheme.primaryBlack, width: 1) : BorderSide.none,
-              ),
+              color: hasIncomingData ? context.colorScheme.elevation1.withAlpha(80) : Colors.transparent,
+              // border: Border.all(color: context.colorScheme.elevation2, width: 1),
+              // borderRadius: const BorderRadius.all(Radius.circular(12)),
+              // border: Border(
+              //   right: side == "left" ? BorderSide(color: Theme.of(context).colorScheme.primaryBlack, width: 1) : BorderSide.none,
+              //   left: side == "right" ? BorderSide(color: Theme.of(context).colorScheme.primaryBlack, width: 1) : BorderSide.none,
+              // ),
             ),
             child: ListView(
               physics: const ClampingScrollPhysics(),
+              padding: EdgeInsets.zero,
               children: items.map((item) {
                 final config = getConfigForItem(item.id);
                 if (config == null || !config.isVisible) {
@@ -72,16 +78,34 @@ class FusionDockSidebar extends StatelessWidget {
                   return SemanticHelper.listItem(
                     testId: SemanticHelper.createTestId(SemanticTypes.listItem, "${config.title}_$index"),
                     index: index,
-                    child: FusionExpandableTileWidget(
-                      item: item,
-                      config: config,
-                      onUndock: onItemUndock,
-                      onExpansionChanged: onExpansionChanged,
-                      controller: config.controller,
+                    child: Container(
+                      margin: const EdgeInsets.only(bottom: 4),
+                      padding: const EdgeInsets.symmetric(vertical: 8),
+                      decoration: BoxDecoration(
+                        color: context.colorScheme.elevation1,
+                        borderRadius: BorderRadius.circular(FusionSizes.borderRadius16),
+                      ),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(FusionSizes.borderRadius16),
+                        child: FusionExpandableTileWidget(
+                          item: item,
+                          config: config,
+                          onUndock: onItemUndock,
+                          onExpansionChanged: onExpansionChanged,
+                          controller: config.controller,
+                        ),
+                      ),
                     ),
                   );
                 } else {
-                  return config.dockItemWidget;
+                  return Container(
+                    margin: const EdgeInsets.only(bottom: 4),
+                    decoration: BoxDecoration(
+                      color: context.colorScheme.elevation1,
+                      borderRadius: BorderRadius.circular(FusionSizes.borderRadius16),
+                    ),
+                    child: config.dockItemWidget,
+                  );
                 }
               }).toList(),
             ),

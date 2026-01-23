@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:fusion_lib/fusion_widgets/semantics/semantic_helper.dart';
-import 'package:fusion_lib/fusion_widgets/semantics/semantic_type.dart';
+import 'package:fusion_lib/fusion_lib.dart';
 
 /// A customizable and reusable text field for the Fusion design system.
 ///
@@ -74,7 +73,9 @@ class FusionTextField extends StatelessWidget {
 
   final bool autofocus;
 
+  final Color? color;
   final String? semanticFieldId;
+
 
   const FusionTextField({
     super.key,
@@ -95,6 +96,7 @@ class FusionTextField extends StatelessWidget {
     this.maxLength = 24,
     this.inputFormatters,
     this.autofocus = false,
+    this.color,
     this.semanticFieldId,
   });
 
@@ -104,15 +106,21 @@ class FusionTextField extends StatelessWidget {
 
     final defaultDecoration = InputDecoration(
       hintText: hintText,
-      hintStyle: hintStyle ?? theme.inputDecorationTheme.hintStyle,
+      hintStyle:
+          hintStyle ??
+          theme.inputDecorationTheme.hintStyle?.copyWith(
+            color: theme.colorScheme.elevation5,
+          ),
       prefixIcon: prefixIcon,
       suffixIcon: suffixIcon,
       counterText: '',
+      fillColor: color?? theme.colorScheme.elevation1,
+      filled: true,
       border: border ?? const OutlineInputBorder(borderSide: BorderSide(color: Colors.transparent)),
       enabledBorder: border ?? const OutlineInputBorder(borderSide: BorderSide(color: Colors.transparent)),
       focusedBorder: border ?? const OutlineInputBorder(borderSide: BorderSide(color: Colors.transparent)),
       isDense: true,
-      contentPadding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+      contentPadding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
     );
 
     return SemanticHelper.formControl(

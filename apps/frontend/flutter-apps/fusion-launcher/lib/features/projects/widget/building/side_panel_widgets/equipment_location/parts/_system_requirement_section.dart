@@ -18,7 +18,12 @@ class _EqlSystemRequirementSection extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 16),
-        const Divider(thickness: 0.5, height: 0),
+        Divider(
+          thickness: 0.5,
+          height: 0,
+          color: context.colorScheme.strokeDark,
+        ),
+
         const SizedBox(height: 16),
         Padding(
           padding: const EdgeInsets.all(8.0),
@@ -81,7 +86,12 @@ class _EqlSystemRequirementSection extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 16),
-        const Divider(thickness: 0.5, height: 0),
+        Divider(
+          thickness: 0.5,
+          height: 0,
+          color: context.colorScheme.strokeDark,
+        ),
+
         const SizedBox(height: 16),
         Padding(
           padding: const EdgeInsets.all(8.0),
@@ -116,7 +126,12 @@ class _EqlSystemRequirementSection extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 16),
-        const Divider(thickness: 0.5, height: 0),
+        Divider(
+          thickness: 0.5,
+          height: 0,
+          color: context.colorScheme.strokeDark,
+        ),
+
         const SizedBox(height: 16),
         Padding(
           padding: const EdgeInsets.all(8.0),
@@ -149,7 +164,7 @@ class _EqlSystemRequirementSection extends StatelessWidget {
                                 child: FusionAppText(
                                   text: input.$1,
                                   style: context.textTheme.bodySmall?.copyWith(
-                                    color: Colors.grey,
+                                    color: context.colorScheme.textGrey,
                                   ),
                                 ),
                               ),
@@ -158,7 +173,7 @@ class _EqlSystemRequirementSection extends StatelessWidget {
                                   text: "Hi-Z",
                                   textAlign: TextAlign.right,
                                   style: context.textTheme.bodySmall?.copyWith(
-                                    color: Colors.grey,
+                                    color: context.colorScheme.textGrey,
                                   ),
                                 ),
                               ),
@@ -167,7 +182,7 @@ class _EqlSystemRequirementSection extends StatelessWidget {
                                   text: input.$2,
                                   textAlign: TextAlign.right,
                                   style: context.textTheme.bodySmall?.copyWith(
-                                    color: Colors.grey,
+                                    color: context.colorScheme.textGrey,
                                   ),
                                 ),
                               ),
@@ -176,7 +191,7 @@ class _EqlSystemRequirementSection extends StatelessWidget {
                                   text: input.$2,
                                   textAlign: TextAlign.right,
                                   style: context.textTheme.bodySmall?.copyWith(
-                                    color: context.colorScheme.primaryBlack,
+                                    color: context.colorScheme.primaryWhite,
                                     fontWeight: FontWeight.bold,
                                   ),
                                 ),
@@ -215,7 +230,7 @@ class _SrRow extends StatelessWidget {
           child: FusionAppText(
             text: title,
             style: context.textTheme.bodySmall?.copyWith(
-              color: Colors.grey,
+              color: context.colorScheme.textGrey,
             ),
           ),
         ),
@@ -225,7 +240,7 @@ class _SrRow extends StatelessWidget {
             text: value,
             textAlign: TextAlign.right,
             style: context.textTheme.bodySmall?.copyWith(
-              color: Colors.grey,
+              color: context.colorScheme.textGrey,
             ),
           ),
         ),
@@ -235,7 +250,7 @@ class _SrRow extends StatelessWidget {
             text: baseValue,
             textAlign: TextAlign.right,
             style: context.textTheme.bodySmall?.copyWith(
-              color: context.colorScheme.primaryBlack,
+              color: context.colorScheme.primaryWhite,
 
               fontWeight: FontWeight.bold,
             ),

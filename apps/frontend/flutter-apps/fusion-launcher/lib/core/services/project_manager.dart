@@ -11,8 +11,8 @@ import 'package:fusion_lib/fusion_utils/shared_preference_handler.dart';
 import 'package:fusion_lib/models/fusion_models.dart';
 import 'package:path_provider/path_provider.dart';
 
-import '../../features/dashboard/data/models/upload_file_response_dto.dart';
-import '../../features/dashboard/domain/entities/create_project_entity.dart';
+import '../../features/home/data/models/upload_file_response_dto.dart';
+import '../../features/home/domain/entities/create_project_entity.dart';
 import '../service_locator.dart';
 import '../utils/helper.dart';
 

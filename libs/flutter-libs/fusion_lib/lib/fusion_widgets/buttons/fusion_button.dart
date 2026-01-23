@@ -102,7 +102,7 @@ class FusionButton extends StatelessWidget {
     required this.label,
     required this.onTap,
     this.gradient,
-    this.height = 32,
+    this.height = 35,
     this.width = 100,
     this.topMargin = 0,
     this.bottomMargin = 0,
@@ -148,8 +148,8 @@ class FusionButton extends StatelessWidget {
                 decoration: BoxDecoration(
                   gradient: isActive ? gradient : gradient?.withOpacity(0.3),
                   color: isActive
-                      ? (activeBackgroundColor ?? Theme.of(context).colorScheme.primaryBlack)
-                      : (activeBackgroundColor?.withOpacity(0.3) ?? Theme.of(context).colorScheme.primaryBlack).withOpacity(0.3),
+                      ? (activeBackgroundColor ?? Theme.of(context).colorScheme.elevation5)
+                      : (activeBackgroundColor?.withOpacity(0.3) ?? Theme.of(context).colorScheme.elevation5).withOpacity(0.3),
                   borderRadius: BorderRadius.circular(borderRadius),
                   border: Border.all(color: isActive || borderColor == Colors.transparent ? borderColor : borderColor.withOpacity(0.4)),
                 ),

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:fusion_launcher/core/service_locator.dart';
-import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_properties/project_properties_view_model.dart';
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
+import 'package:fusion_lib/fusion_lib.dart';
 
 class ControlDesignTabSwitcher extends StatefulWidget {
   const ControlDesignTabSwitcher({super.key});
@@ -33,74 +33,84 @@ class ControlDesignTabSwitcherState extends State<ControlDesignTabSwitcher> {
     final double individualTabWidth = tabWidth / 2;
 
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 14),
       width: tabWidth,
-      height: 32,
+      padding: const EdgeInsets.only(top: 6, bottom: 6),
+
+      height: 48,
       decoration: BoxDecoration(
-        color: Colors.grey.shade200,
-        borderRadius: BorderRadius.circular(6),
+        color: context.colorScheme.elevation1,
+        border: Border(
+          top: BorderSide(width: 1, color: context.colorScheme.elevation2),
+          bottom: BorderSide(width: 1, color: context.colorScheme.elevation2),
+        ),
       ),
-      child: Stack(
-        children: <Widget>[
-          AnimatedPositioned(
-            duration: const Duration(milliseconds: 300),
-            curve: Curves.easeInOut,
-            left: selectedIndex == 0 ? 2 : individualTabWidth,
-            top: 2,
-            child: Container(
-              width: individualTabWidth - 4, // Account for padding on both sides
-              height: 28, // Fit within parent container (35 - 4 for top/bottom padding)
-              decoration: BoxDecoration(
-                color: Colors.black87,
-                borderRadius: BorderRadius.circular(4),
+      child: Container(
+        width: tabWidth,
+        alignment: Alignment.center,
+        height: 32,
+        decoration: BoxDecoration(borderRadius: BorderRadius.circular(8), color: context.colorScheme.elevation2),
+        child: Stack(
+          children: <Widget>[
+            AnimatedPositioned(
+              duration: const Duration(milliseconds: 300),
+              curve: Curves.easeInOut,
+              left: selectedIndex == 0 ? 2 : individualTabWidth,
+              top: 2,
+              child: Container(
+                width: individualTabWidth - 4, // Account for padding on both sides
+                height: 28, // Fit within parent container (35 - 4 for top/bottom padding)
+                decoration: BoxDecoration(
+                  color: Colors.black87,
+                  borderRadius: BorderRadius.circular(4),
+                ),
               ),
             ),
-          ),
-          Row(
-            children: <Widget>[
-              Expanded(
-                child: GestureDetector(
-                  onTap: () {
-                    setState(() {
-                      selectedIndex = 0;
-                      serviceLocator<ProjectViewModel>().toggleControlMode(); // Set to Design mode
-                    });
-                  },
-                  child: SizedBox(
-                    height: 32, // Match parent height
-                    child: Center(
-                      child: Icon(
-                        Icons.design_services,
-                        size: 18,
-                        color: selectedIndex == 0 ? Colors.white : Colors.grey[600],
+            Row(
+              children: <Widget>[
+                Expanded(
+                  child: GestureDetector(
+                    onTap: () {
+                      setState(() {
+                        selectedIndex = 0;
+                        serviceLocator<ProjectViewModel>().toggleControlMode(); // Set to Design mode
+                      });
+                    },
+                    child: SizedBox(
+                      height: 32, // Match parent height
+                      child: Center(
+                        child: Icon(
+                          Icons.design_services,
+                          size: 18,
+                          color: selectedIndex == 0 ? Colors.white : Colors.grey[600],
+                        ),
                       ),
                     ),
                   ),
                 ),
-              ),
-              Expanded(
-                child: GestureDetector(
-                  onTap: () {
-                    setState(() {
-                      selectedIndex = 1;
-                      serviceLocator<ProjectViewModel>().toggleControlMode(); // Set to Control mode
-                    });
-                  },
-                  child: SizedBox(
-                    height: 32, // Match parent height
-                    child: Center(
-                      child: Icon(
-                        Icons.tune,
-                        size: 18,
-                        color: selectedIndex == 1 ? Colors.white : Colors.grey[600],
+                Expanded(
+                  child: GestureDetector(
+                    onTap: () {
+                      setState(() {
+                        selectedIndex = 1;
+                        serviceLocator<ProjectViewModel>().toggleControlMode(); // Set to Control mode
+                      });
+                    },
+                    child: SizedBox(
+                      height: 32, // Match parent height
+                      child: Center(
+                        child: Icon(
+                          Icons.tune,
+                          size: 18,
+                          color: selectedIndex == 1 ? Colors.white : Colors.grey[600],
+                        ),
                       ),
                     ),
                   ),
                 ),
-              ),
-            ],
-          ),
-        ],
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }

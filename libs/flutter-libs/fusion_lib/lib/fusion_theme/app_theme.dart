@@ -253,6 +253,18 @@ class FusionAppTheme {
         unselectedLabelColor: lightColorScheme.elevation1,
       ),
 
+      iconTheme: IconThemeData(
+        size: 20,
+        color: lightColorScheme.onSurface,
+      ),
+
+      tooltipTheme: TooltipThemeData(
+        decoration: BoxDecoration(
+          color: lightColorScheme.primaryWhite,
+          borderRadius: BorderRadius.circular(4),
+        ),
+      ),
+
       /// App bar styling with primary color background
       appBarTheme: AppBarTheme(
         backgroundColor: lightColorScheme.primaryColor,
@@ -362,6 +374,13 @@ class FusionAppTheme {
         ),
       ),
 
+      tooltipTheme: TooltipThemeData(
+        decoration: BoxDecoration(
+          color: darkColorScheme.primaryWhite,
+          borderRadius: BorderRadius.circular(4),
+        ),
+      ),
+
       /// Text button styling with primary color text for dark theme
       textButtonTheme: TextButtonThemeData(
         style: TextButton.styleFrom(
@@ -380,7 +399,7 @@ class FusionAppTheme {
       ),
 
       iconTheme: IconThemeData(
-        size: 16,
+        size: 20,
         color: darkColorScheme.onSurface,
       ),
 

@@ -1,12 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutter_svg/svg.dart';
 import 'package:fusion_launcher/features/schematics/presentation/pages/schematics_listing_view.dart';
 import 'package:fusion_launcher/features/wiring_design/view/wiring_page.dart';
-import 'package:fusion_lib/constants/test_keys.dart';
 import 'package:fusion_lib/fusion_lib.dart';
-import 'package:fusion_lib/fusion_theme/app_theme.dart';
-import 'package:fusion_lib/fusion_theme/color_scheme.dart';
 
 import '../../../../core/service_locator.dart';
 import '../../../configuration/presentation/viewmodel/project_view_model.dart';
@@ -71,74 +67,7 @@ class _SchematicsPageState extends State<SchematicsPage> {
               );
             }
           },
-          child: Column(
-            children: <Widget>[
-              Container(
-                height: 44,
-                decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.primaryWhite,
-                  border: Border(
-                    bottom: BorderSide(width: 1, color: context.colorScheme.primaryBlack),
-                  ),
-                ),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  mainAxisAlignment: MainAxisAlignment.end,
-                  children: <Widget>[
-                    GestureDetector(
-                      onTap: () {
-                        _projectViewModel.setProjectMode(ProjectMode.systemListingMode);
-                      },
-                      child: SemanticHelper.button(
-                        testId: SemanticHelper.createTestId(SemanticTypes.button, FusionTestKeys.listingViewIcon),
-                        child: Container(
-                          width: 40,
-                          height: 40,
-                          color: isListingViewMode ? Colors.black87 : Colors.transparent,
-                          child: SvgPicture.asset(
-                            "assets/svg/listing_view_icon.svg",
-                            width: 40,
-                            height: 40,
-                            colorFilter: ColorFilter.mode(
-                              isListingViewMode ? Colors.white : Colors.black87,
-                              BlendMode.srcIn,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                    GestureDetector(
-                      onTap: () {
-                        _projectViewModel.setProjectMode(ProjectMode.systemWiringMode);
-                      },
-                      child: SemanticHelper.button(
-                        testId: SemanticHelper.createTestId(SemanticTypes.button, FusionTestKeys.wiringViewIcon),
-                        child: Container(
-                          width: 40,
-                          height: 40,
-                          color: !isListingViewMode ? Colors.black87 : Colors.transparent,
-                          child: SvgPicture.asset(
-                            "assets/svg/wiring_view_icon.svg",
-                            width: 40,
-                            height: 40,
-                            colorFilter: ColorFilter.mode(
-                              !isListingViewMode ? Colors.white : Colors.black87,
-                              BlendMode.srcIn,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
-              /// Main Panel
-              Expanded(
-                child: isListingViewMode ? const SchematicsListingview() : const WiringPage(),
-              ),
-            ],
-          ),
+          child: isListingViewMode ? const SchematicsListingview() : const WiringPage(),
         );
       },
     );

@@ -36,7 +36,7 @@ class _EventTriggerRowHeaderState extends State<EventTriggerRowHeader> {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
-      color: context.colorScheme.primaryBlack.withAlpha(40),
+      color: context.colorScheme.elevation2.withAlpha(120),
       child: Row(
         children: <Widget>[
           // const SizedBox(width: 30),
@@ -86,7 +86,6 @@ class _TriggerTypeDropdown extends StatelessWidget {
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
               fontWeight: FontWeight.w600,
               fontSize: 13,
-              color: Theme.of(context).colorScheme.textPrimary,
             ),
             maxLine: 1,
           ),
@@ -147,7 +146,6 @@ class _TriggerItemDropdown extends StatelessWidget {
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
               fontWeight: FontWeight.w600,
               fontSize: 13,
-              color: Theme.of(context).colorScheme.textPrimary,
             ),
             maxLine: 1,
           ),
@@ -196,7 +194,6 @@ class _ActionTypeDropdown extends StatelessWidget {
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
               fontWeight: FontWeight.w600,
               fontSize: 13,
-              color: Theme.of(context).colorScheme.textPrimary,
             ),
             maxLine: 1,
           ),
@@ -247,7 +244,6 @@ class _ConditionDropdown extends StatelessWidget {
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
               fontWeight: FontWeight.w600,
               fontSize: 13,
-              color: Theme.of(context).colorScheme.textPrimary,
             ),
             maxLine: 1,
           ),
@@ -298,7 +294,6 @@ class _ValueColumn extends StatelessWidget {
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
               fontWeight: FontWeight.w600,
               fontSize: 13,
-              color: Theme.of(context).colorScheme.textPrimary,
             ),
             maxLine: 1,
           ),

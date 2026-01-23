@@ -1,13 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:fusion_lib/fusion_lib.dart';
-import 'package:fusion_lib/fusion_theme/app_theme.dart';
 
 import '../../models/dock_item_config.dart';
 import '../../models/fusion_dock_item.dart';
-import '../dockable_side_bar/fusion_dock_floating_panel.dart';
-import '../semantics/semantic_helper.dart';
-import '../semantics/semantic_type.dart';
-import '../text_views/fusion_app_text.dart';
 
 /// A custom expandable tile widget with drag gesture support for Fusion applications.
 ///
@@ -106,10 +101,7 @@ class _FusionExpandableTileWidgetState extends State<FusionExpandableTileWidget>
     return Theme(
       data: theme.copyWith(dividerColor: Colors.transparent),
       child: Container(
-        decoration: BoxDecoration(
-          color: theme.colorScheme.primaryWhite,
-          border: Border(bottom: BorderSide(color: theme.colorScheme.primaryBlack, width: 1)),
-        ),
+        color: theme.colorScheme.elevation1,
         child: ExpansionTile(
           key: ValueKey<String>(widget.config.title),
           minTileHeight: 24,
@@ -145,7 +137,10 @@ class _FusionExpandableTileWidgetState extends State<FusionExpandableTileWidget>
           ),
 
           initiallyExpanded: widget.config.initiallyExpanded,
-          children: <Widget>[widget.config.dockItemWidget],
+          children: <Widget>[
+            Divider(height: 1, color: theme.colorScheme.elevation2),
+            widget.config.dockItemWidget,
+          ],
         ),
       ),
     );

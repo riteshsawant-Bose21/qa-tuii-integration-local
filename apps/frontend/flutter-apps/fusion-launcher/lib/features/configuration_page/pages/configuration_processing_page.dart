@@ -3,8 +3,6 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/features/configuration_page/widgets/search_bar_sources.dart';
 import 'package:fusion_launcher/features/configuration_page/widgets/section_header.dart';
 import 'package:fusion_lib/fusion_lib.dart';
-import 'package:fusion_lib/fusion_theme/app_theme.dart';
-import 'package:fusion_lib/fusion_theme/color_scheme.dart';
 import '../../../core/service_locator.dart';
 import '../../configuration/presentation/viewmodel/project_view_model.dart';
 import '../widgets/drag_divider.dart';
@@ -176,7 +174,7 @@ class _ConfigurationProcessingPageState extends State<ConfigurationProcessingPag
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey[100],
+      backgroundColor: Theme.of(context).colorScheme.primaryBlack,
       body: LayoutBuilder(
         builder: (BuildContext context, BoxConstraints constraints) {
           final bool isWideScreen = constraints.maxWidth > 600;
@@ -184,14 +182,16 @@ class _ConfigurationProcessingPageState extends State<ConfigurationProcessingPag
           if (isWideScreen) {
             return Row(
               children: <Widget>[
-                SizedBox(width: constraints.maxWidth * 0.3, child: _buildInputPanel()),
+                SizedBox(width: constraints.maxWidth * 0.3, child: _buildInputPanel(context)),
+                const SizedBox(width: 4),
+
                 Expanded(child: _buildOutputPanel()),
               ],
             );
           } else {
             return Column(
               children: <Widget>[
-                Expanded(flex: 1, child: _buildInputPanel()),
+                Expanded(flex: 1, child: _buildInputPanel(context)),
                 Expanded(flex: 2, child: _buildOutputPanel()),
               ],
             );
@@ -202,12 +202,14 @@ class _ConfigurationProcessingPageState extends State<ConfigurationProcessingPag
   }
 
   /// Build Input Panel
-  Widget _buildInputPanel() {
+  Widget _buildInputPanel(BuildContext context) {
     return Container(
-      color: Colors.white,
+      decoration: BoxDecoration(
+        color: context.colorScheme.elevation1,
+        borderRadius: const BorderRadius.all(Radius.circular(12)),
+      ),
       child: Column(
         children: <Widget>[
-          // const PanelHeader(title: 'INPUT'),
           const SectionHeader(
             title: 'Sources',
             assetPath: 'assets/images/source_icon.png',
@@ -227,7 +229,6 @@ class _ConfigurationProcessingPageState extends State<ConfigurationProcessingPag
               setState(() {});
             },
           ),
-          const SizedBox(height: 8),
 
           /// Sources list with controlled height
           DragTarget<Source>(
@@ -249,6 +250,7 @@ class _ConfigurationProcessingPageState extends State<ConfigurationProcessingPag
             builder: (BuildContext context, List<Source?> candidateData, List<dynamic> rejectedData) {
               final bool isHovered = candidateData.isNotEmpty;
               return Container(
+                padding: const EdgeInsets.all(10),
                 height: _sourcesHeight,
                 decoration: BoxDecoration(
                   color: isHovered ? Theme.of(context).colorScheme.primary.withOpacity(0.1) : Colors.transparent,
@@ -258,7 +260,11 @@ class _ConfigurationProcessingPageState extends State<ConfigurationProcessingPag
                             color: Theme.of(context).colorScheme.primary.withOpacity(0.3),
                             width: 2,
                           )
-                          : null,
+                          : Border.symmetric(
+                            vertical: BorderSide(color: context.colorScheme.elevation2, width: 1),
+                            // color: Theme.of(context).colorScheme.elevation2,
+                            // width: 1,
+                          ),
                 ),
                 child: BlocBuilder<ProjectViewModel, ProjectViewModelState>(
                   builder: (BuildContext context, ProjectViewModelState state) {
@@ -281,8 +287,9 @@ class _ConfigurationProcessingPageState extends State<ConfigurationProcessingPag
                         ),
                       );
                     }
-                    return ListView.builder(
+                    return ListView.separated(
                       itemCount: _filteredSources.length,
+                      separatorBuilder: (BuildContext context, int index) => const SizedBox(height: 4),
                       itemBuilder: (BuildContext context, int index) {
                         final Source source = _filteredSources[index];
                         return Draggable<Source>(
@@ -308,8 +315,11 @@ class _ConfigurationProcessingPageState extends State<ConfigurationProcessingPag
                             child: Opacity(
                               opacity: 0.8,
                               child: Container(
-                                color: context.colorScheme.primaryWhite,
                                 width: 220,
+                                decoration: BoxDecoration(
+                                  color: context.colorScheme.primary.withAlpha(150),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
                                 child: SourceItem(
                                   index: index,
                                   source: source,
@@ -341,6 +351,7 @@ class _ConfigurationProcessingPageState extends State<ConfigurationProcessingPag
 
           SectionHeader(
             title: 'Source Sets',
+            isRounded: false,
             assetPath: 'assets/images/source_set_icon.png',
             trailing: PopupMenuButton<dynamic>(
               onCanceled: () {
@@ -356,7 +367,7 @@ class _ConfigurationProcessingPageState extends State<ConfigurationProcessingPag
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(8),
               ),
-              color: context.colorScheme.primaryWhite,
+              color: context.colorScheme.elevation1,
               menuPadding: EdgeInsets.zero,
 
               itemBuilder: (BuildContext context) {
@@ -404,7 +415,7 @@ class _ConfigurationProcessingPageState extends State<ConfigurationProcessingPag
               child: SemanticHelper.button(
                 testId: SemanticHelper.createTestId(SemanticTypes.button, "add_source_button"),
                 child: IconButton(
-                  icon: Icon(Icons.add_sharp, size: 16, color: context.colorScheme.primaryBlack),
+                  icon: Icon(Icons.add_sharp, size: 16, color: context.colorScheme.primaryWhite),
                   onPressed: null,
                   padding: EdgeInsets.zero,
                   constraints: const BoxConstraints(),
@@ -415,117 +426,122 @@ class _ConfigurationProcessingPageState extends State<ConfigurationProcessingPag
 
           /// Source sets section takes remaining space
           Expanded(
-            child: BlocBuilder<ProjectViewModel, ProjectViewModelState>(
-              builder: (BuildContext context, ProjectViewModelState state) {
-                if (_projectViewModel.sourceSets.isEmpty) {
-                  /// Show informational text when no source sets exist
-                  return SingleChildScrollView(
-                    child: Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: <Widget>[
-                          FusionAppText(
-                            text: 'Create Source Sets',
-                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w500,
+            child: Container(
+              decoration: BoxDecoration(
+                border: Border.symmetric(
+                  vertical: BorderSide(color: context.colorScheme.elevation2, width: 1),
+                ),
+              ),
+              child: BlocBuilder<ProjectViewModel, ProjectViewModelState>(
+                builder: (BuildContext context, ProjectViewModelState state) {
+                  if (_projectViewModel.sourceSets.isEmpty) {
+                    /// Show informational text when no source sets exist
+                    return SingleChildScrollView(
+                      child: Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: <Widget>[
+                            FusionAppText(
+                              text: 'Create Source Sets',
+                              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w500,
+                              ),
                             ),
-                          ),
-                          const SizedBox(height: 8),
-                          FusionAppText(
-                            text: 'Combine multiple audio sources into a single source set for simplified routing and control.',
+                            const SizedBox(height: 8),
+                            FusionAppText(
+                              text: 'Combine multiple audio sources into a single source set for simplified routing and control.',
 
-                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              fontSize: 10,
-                              fontWeight: FontWeight.w400,
-                              color: context.colorScheme.primaryBlack,
+                              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                fontSize: 10,
+                                fontWeight: FontWeight.w400,
+                              ),
                             ),
-                          ),
 
-                          const SizedBox(height: 8),
-                          FusionAppText(
-                            text:
-                                'Select from available sources, group them as needed, and assign a clear name to the set. Source sets help streamline system configuration and enable flexible audio distribution.',
-                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              fontSize: 10,
-                              fontWeight: FontWeight.w400,
-                              color: context.colorScheme.primaryBlack,
+                            const SizedBox(height: 8),
+                            FusionAppText(
+                              text:
+                                  'Select from available sources, group them as needed, and assign a clear name to the set. Source sets help streamline system configuration and enable flexible audio distribution.',
+                              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                fontSize: 10,
+                                fontWeight: FontWeight.w400,
+                              ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
+                    );
+                  }
+                  return Container(
+                    clipBehavior: Clip.none,
+                    child: ReorderableListView.builder(
+                      shrinkWrap: true,
+                      proxyDecorator: (Widget child, int index, Animation<double> animation) {
+                        return Material(
+                          color: context.colorScheme.elevation1,
+                          child: SizedBox(
+                            width: 220,
+                            child: child,
+                          ),
+                        );
+                      },
+                      physics: const ClampingScrollPhysics(),
+                      buildDefaultDragHandles: false,
+                      itemCount: _projectViewModel.sourceSets.length,
+                      onReorder: (int oldIndex, int newIndex) {
+                        if (oldIndex < newIndex) {
+                          newIndex -= 1;
+                        }
+                        final String sourceSetToMove = _projectViewModel.sourceSets[oldIndex].id;
+                        final String sourceSetAtNewIndex = _projectViewModel.sourceSets[newIndex].id;
+                        _projectViewModel.reOrderSourceSet(sourceSetIdToMove: sourceSetToMove, sourceSetAtNewIndex: sourceSetAtNewIndex);
+                      },
+                      itemBuilder: (BuildContext context, int index) {
+                        final SourceSet sourceSet = _projectViewModel.sourceSets[index];
+
+                        /// Create or get the GlobalKey for this source set
+                        _sourceSetKeys.putIfAbsent(sourceSet.id, () => GlobalKey());
+                        final GlobalKey<State<StatefulWidget>> sourceSetKey = _sourceSetKeys[sourceSet.id]!;
+
+                        return DragTarget<Source>(
+                          key: ValueKey<String>(sourceSet.id),
+                          onWillAccept: (Source? data) {
+                            if (data == null) return false;
+
+                            /// Check if source is not already in this source set
+                            final List<Source> sourcesInSet = _projectViewModel.getSourcesInSourceSet(sourceSetId: sourceSet.id);
+                            return !sourcesInSet.any((Source source) => source.id == data.id);
+                          },
+                          onLeave: (Source? data) {},
+                          onAccept: (Source data) {
+                            _projectViewModel.addSourceToSourceSet(sourceId: data.id, sourceSetId: sourceSet.id);
+
+                            /// Expand the source set after dropping
+                            final dynamic sourceSetState = sourceSetKey.currentState as dynamic;
+                            sourceSetState?.expandSourceSet();
+
+                            setState(() {
+                              _draggingSourceId = null;
+                            });
+                          },
+                          builder: (BuildContext context, List<Source?> candidateData, List<dynamic> rejectedData) {
+                            final bool isHovered = candidateData.isNotEmpty;
+                            return ReorderableDragStartListener(
+                              index: index,
+                              child: SourceSetItem(
+                                key: sourceSetKey,
+                                sourceSet: sourceSet,
+                                isDragHovered: isHovered,
+                              ),
+                            );
+                          },
+                        );
+                      },
                     ),
                   );
-                }
-                return Container(
-                  clipBehavior: Clip.none,
-                  child: ReorderableListView.builder(
-                    shrinkWrap: true,
-                    proxyDecorator: (Widget child, int index, Animation<double> animation) {
-                      return Material(
-                        color: Colors.white,
-                        child: SizedBox(
-                          width: 220,
-                          child: child,
-                        ),
-                      );
-                    },
-                    physics: const ClampingScrollPhysics(),
-                    buildDefaultDragHandles: false,
-                    itemCount: _projectViewModel.sourceSets.length,
-                    onReorder: (int oldIndex, int newIndex) {
-                      if (oldIndex < newIndex) {
-                        newIndex -= 1;
-                      }
-                      final String sourceSetToMove = _projectViewModel.sourceSets[oldIndex].id;
-                      final String sourceSetAtNewIndex = _projectViewModel.sourceSets[newIndex].id;
-                      _projectViewModel.reOrderSourceSet(sourceSetIdToMove: sourceSetToMove, sourceSetAtNewIndex: sourceSetAtNewIndex);
-                    },
-                    itemBuilder: (BuildContext context, int index) {
-                      final SourceSet sourceSet = _projectViewModel.sourceSets[index];
-
-                      /// Create or get the GlobalKey for this source set
-                      _sourceSetKeys.putIfAbsent(sourceSet.id, () => GlobalKey());
-                      final GlobalKey<State<StatefulWidget>> sourceSetKey = _sourceSetKeys[sourceSet.id]!;
-
-                      return DragTarget<Source>(
-                        key: ValueKey<String>(sourceSet.id),
-                        onWillAccept: (Source? data) {
-                          if (data == null) return false;
-
-                          /// Check if source is not already in this source set
-                          final List<Source> sourcesInSet = _projectViewModel.getSourcesInSourceSet(sourceSetId: sourceSet.id);
-                          return !sourcesInSet.any((Source source) => source.id == data.id);
-                        },
-                        onLeave: (Source? data) {},
-                        onAccept: (Source data) {
-                          _projectViewModel.addSourceToSourceSet(sourceId: data.id, sourceSetId: sourceSet.id);
-
-                          /// Expand the source set after dropping
-                          final dynamic sourceSetState = sourceSetKey.currentState as dynamic;
-                          sourceSetState?.expandSourceSet();
-
-                          setState(() {
-                            _draggingSourceId = null;
-                          });
-                        },
-                        builder: (BuildContext context, List<Source?> candidateData, List<dynamic> rejectedData) {
-                          final bool isHovered = candidateData.isNotEmpty;
-                          return ReorderableDragStartListener(
-                            index: index,
-                            child: SourceSetItem(
-                              key: sourceSetKey,
-                              sourceSet: sourceSet,
-                              isDragHovered: isHovered,
-                            ),
-                          );
-                        },
-                      );
-                    },
-                  ),
-                );
-              },
+                },
+              ),
             ),
           ),
         ],
@@ -566,17 +582,16 @@ class _ConfigurationProcessingPageState extends State<ConfigurationProcessingPag
   Widget _buildOutputPanel() {
     return Container(
       decoration: BoxDecoration(
-        color: context.colorScheme.primaryWhite,
-
+        color: context.colorScheme.primaryBlack,
+        borderRadius: const BorderRadius.all(Radius.circular(12)),
         border: Border(
-          left: BorderSide(width: 1, color: context.colorScheme.primaryBlack),
+          left: BorderSide(color: context.colorScheme.elevation2, width: 1),
+          right: BorderSide(color: context.colorScheme.elevation2, width: 1),
+          bottom: BorderSide(color: context.colorScheme.elevation2, width: 1),
         ),
       ),
       child: Column(
         children: <Widget>[
-          /// Output Panel Header
-          // const PanelHeader(title: 'OUTPUT'),
-
           /// Zones Section
           const SectionHeader(
             title: 'Zones',
@@ -694,7 +709,7 @@ class _SourceSetCreationWidgetState extends State<_SourceSetCreationWidget> {
     return SemanticHelper.container(
       testId: SemanticHelper.createTestId(SemanticTypes.container, "source_set_creation_widget"),
       child: Container(
-        color: context.colorScheme.primaryWhite,
+        color: context.colorScheme.elevation1,
         width: 250,
         padding: const EdgeInsets.all(12),
         child: Column(
@@ -724,9 +739,18 @@ class _SourceSetCreationWidgetState extends State<_SourceSetCreationWidget> {
               controller: widget.sourceSetNameController,
               hintText: "Enter source set name",
               semanticFieldId: "source_set_name_input",
-              decoration: FusionInputDecoration.fusionDense(
-                colorScheme: Theme.of(context).colorScheme,
+              decoration: InputDecoration(
                 hintText: 'Enter source set name',
+
+                hintStyle: Theme.of(context).inputDecorationTheme.hintStyle,
+                counterText: '',
+                fillColor: context.colorScheme.elevation2,
+                filled: true,
+                border: const OutlineInputBorder(borderSide: BorderSide(color: Colors.transparent)),
+                enabledBorder: const OutlineInputBorder(borderSide: BorderSide(color: Colors.transparent)),
+                focusedBorder: const OutlineInputBorder(borderSide: BorderSide(color: Colors.transparent)),
+                isDense: true,
+                contentPadding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
               ),
               onChanged: (String value) {
                 setState(() {});
@@ -748,7 +772,8 @@ class _SourceSetCreationWidgetState extends State<_SourceSetCreationWidget> {
             Container(
               height: 28,
               decoration: BoxDecoration(
-                border: Border.all(color: Colors.grey[300]!),
+                color: context.colorScheme.elevation2,
+                border: Border.all(color: context.colorScheme.elevation4),
                 borderRadius: BorderRadius.circular(4),
               ),
               child: PopupMenuButton<String>(
@@ -762,7 +787,7 @@ class _SourceSetCreationWidgetState extends State<_SourceSetCreationWidget> {
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(8),
                 ),
-                color: context.colorScheme.primaryWhite,
+                color: context.colorScheme.elevation2,
                 offset: const Offset(0, 35),
                 itemBuilder: (BuildContext context) {
                   return <PopupMenuEntry<String>>[
@@ -784,7 +809,9 @@ class _SourceSetCreationWidgetState extends State<_SourceSetCreationWidget> {
                                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                                     decoration: BoxDecoration(
                                       border: Border(
-                                        bottom: BorderSide(color: Colors.grey[300]!),
+                                        bottom: BorderSide(
+                                          color: context.colorScheme.elevation4,
+                                        ),
                                       ),
                                     ),
                                     child: Row(
@@ -806,7 +833,7 @@ class _SourceSetCreationWidgetState extends State<_SourceSetCreationWidget> {
                                             child: Icon(
                                               Icons.close,
                                               size: 16,
-                                              color: Theme.of(context).colorScheme.textPrimary,
+                                              color: Theme.of(context).colorScheme.iconWhite,
                                             ),
                                           ),
                                         ),
@@ -861,12 +888,28 @@ class _SourceSetCreationWidgetState extends State<_SourceSetCreationWidget> {
                                                                         setPopupState(() {}); // Update popup state
                                                                         setState(() {}); // Update main widget state
                                                                       },
-                                                                      activeColor: context.colorScheme.primaryBlack,
+
+                                                                      activeColor: context.colorScheme.elevation4,
                                                                       materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                                                                       visualDensity: VisualDensity.compact,
                                                                       shape: const RoundedRectangleBorder(
                                                                         borderRadius: BorderRadius.zero,
                                                                         side: BorderSide(width: 0.5),
+                                                                      ),
+
+                                                                      side: MaterialStateBorderSide.resolveWith(
+                                                                        (Set<WidgetState> states) {
+                                                                          if (states.contains(MaterialState.selected)) {
+                                                                            return BorderSide(
+                                                                              color: context.colorScheme.primaryWhite,
+                                                                              width: 1,
+                                                                            );
+                                                                          }
+                                                                          return BorderSide(
+                                                                            color: context.colorScheme.primaryWhite,
+                                                                            width: 1,
+                                                                          );
+                                                                        },
                                                                       ),
                                                                     ),
                                                                   ),
@@ -925,14 +968,14 @@ class _SourceSetCreationWidgetState extends State<_SourceSetCreationWidget> {
                                     ? "Select Sources"
                                     : "${widget.selectedSources.length} source${widget.selectedSources.length > 1 ? 's' : ''} selected",
                             style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: widget.selectedSources.isEmpty ? context.colorScheme.primaryBlack : Theme.of(context).textTheme.bodySmall?.color,
+                              color: widget.selectedSources.isEmpty ? context.colorScheme.textSecondary : Theme.of(context).textTheme.bodySmall?.color,
                             ),
                           ),
                         ),
                         Icon(
                           Icons.keyboard_arrow_down,
                           size: 20,
-                          color: context.colorScheme.primaryBlack,
+                          color: context.colorScheme.iconWhite,
                         ),
                       ],
                     ),
@@ -960,7 +1003,9 @@ class _SourceSetCreationWidgetState extends State<_SourceSetCreationWidget> {
                 Flexible(
                   child: FusionButton(
                     width: double.infinity,
-                    textStyle: Theme.of(context).textTheme.labelLarge?.copyWith(fontSize: 10, color: context.colorScheme.primaryBlack),
+                    textStyle: Theme.of(context).textTheme.labelLarge?.copyWith(
+                      fontSize: 10,
+                    ),
 
                     label: "Create",
                     isActive: widget.sourceSetNameController.text.trim().isNotEmpty && widget.selectedSources.length >= 2,

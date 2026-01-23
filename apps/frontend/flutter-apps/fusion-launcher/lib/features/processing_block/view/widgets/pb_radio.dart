@@ -1,8 +1,5 @@
 import 'package:flutter/material.dart';
-
-const Color bgColor = Color(0xFFF5F5F5);
-const Color activeColor = Color(0xFF333333);
-const Color inactiveColor = Color(0xFFE5E5E5);
+import 'package:fusion_lib/fusion_lib.dart';
 
 class PBRadio extends StatelessWidget {
   final bool value;
@@ -20,6 +17,9 @@ class PBRadio extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final Color bgColor = context.colorScheme.elevation2;
+    final Color activeColor = context.colorScheme.primaryWhite;
+    final Color inactiveColor = context.colorScheme.elevation5;
     return LayoutBuilder(
       builder: (BuildContext context, BoxConstraints constraints) {
         final double radioSize = (constraints.maxWidth * 0.3).clamp(36, 44);

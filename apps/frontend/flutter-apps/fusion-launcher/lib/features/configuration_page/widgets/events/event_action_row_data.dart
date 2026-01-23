@@ -96,7 +96,7 @@ class _EventActionRowDataState extends State<EventActionRowData> {
           child: Container(
             padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
             decoration: BoxDecoration(
-              color: colorScheme.primaryWhite,
+              color: colorScheme.primaryBlack,
               border: Border(bottom: BorderSide(color: colorScheme.elevation1)),
             ),
             child: Row(
@@ -129,7 +129,7 @@ class _EventActionRowDataState extends State<EventActionRowData> {
         width: context.screenWidth * 0.01,
         child: Opacity(
           opacity: 0.4,
-          child: Icon(Icons.drag_handle, size: 16, color: Colors.grey[600]),
+          child: Icon(Icons.drag_indicator, size: 16, color: context.colorScheme.iconWhite),
         ),
       ),
     );
@@ -259,10 +259,12 @@ class _EventActionRowDataState extends State<EventActionRowData> {
             testId: SemanticHelper.createTestId(SemanticTypes.button, "delete_event_action_${widget.index}"),
             child: GestureDetector(
               onTap: _deleteAction,
-              child: const FusionImage.asset(
+              child: FusionImage.asset(
                 Assets.deleteIcon,
                 width: 20,
                 height: 20,
+                assetColor: context.colorScheme.iconWhite,
+
                 fit: BoxFit.contain,
               ),
             ),
@@ -272,10 +274,12 @@ class _EventActionRowDataState extends State<EventActionRowData> {
             testId: SemanticHelper.createTestId(SemanticTypes.button, "duplicate_event_action_${widget.index}"),
             child: GestureDetector(
               onTap: _duplicateAction,
-              child: const FusionImage.asset(
+              child: FusionImage.asset(
                 Assets.duplicateIcon,
                 width: 20,
                 height: 20,
+                assetColor: context.colorScheme.iconWhite,
+
                 fit: BoxFit.contain,
               ),
             ),

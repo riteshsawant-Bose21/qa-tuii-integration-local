@@ -1089,8 +1089,8 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
                     ),
                     Icon(
                       Icons.drag_indicator,
-                      size: 12,
-                      color: Colors.grey[500],
+                      size: FusionSizes.iconSize16,
+                      color: context.colorScheme.textPlaceholder,
                     ),
                   ],
                 ),

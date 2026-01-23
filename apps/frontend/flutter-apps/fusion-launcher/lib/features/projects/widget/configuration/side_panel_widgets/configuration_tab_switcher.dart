@@ -55,13 +55,7 @@ class _ConfigurationTabSwitcherState extends State<ConfigurationTabSwitcher> {
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 240,
-      decoration: BoxDecoration(
-        // color: colorSche,
-        border: Border(
-          right: BorderSide(color: context.colorScheme.primaryBlack),
-        ),
-      ),
+      margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
       child: Column(
         children:
             ConfigurationMenuMode.values.map((ConfigurationMenuMode mode) {
@@ -78,24 +72,31 @@ class _ConfigurationTabSwitcherState extends State<ConfigurationTabSwitcher> {
                     onTap: () => widget.onModeChanged(mode),
                     child: Container(
                       height: 32,
-
-                      margin: const EdgeInsets.only(top: 4),
-                      padding: const EdgeInsets.only(right: 16, left: 16, bottom: 4, top: 4),
+                      margin: const EdgeInsets.only(bottom: 4),
+                      padding: const EdgeInsets.only(right: 8, left: 8, top: 4, bottom: 4),
+                      alignment: Alignment.center,
                       decoration: BoxDecoration(
                         color:
                             isSelected
-                                ? context.colorScheme.primaryBlack
+                                ? context.colorScheme.elevation3
                                 : isHovered
-                                ? context.colorScheme.primaryBlack.withAlpha(50)
+                                ? context.colorScheme.elevation2
                                 : Colors.transparent,
                         borderRadius: BorderRadius.circular(8),
+                        border: Border.all(
+                          color: isSelected ? context.colorScheme.elevation5 : Colors.transparent,
+                          width: 1.0,
+                        ),
                       ),
                       child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        mainAxisAlignment: MainAxisAlignment.start,
                         children: <Widget>[
                           FusionImage.asset(
                             config.assetsName,
                             width: 24,
                             height: 24,
+                            assetColor: context.colorScheme.primaryWhite,
                           ),
                           const SizedBox(width: 16),
                           FusionAppText(
@@ -106,7 +107,7 @@ class _ConfigurationTabSwitcherState extends State<ConfigurationTabSwitcher> {
                               fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
                               color:
                                   isSelected
-                                      ? context.colorScheme.onPrimaryContainer
+                                      ? context.colorScheme.primaryWhite
                                       : isHovered
                                       ? context.colorScheme.onSurface.withOpacity(0.9)
                                       : context.colorScheme.onSurface.withOpacity(0.7),
