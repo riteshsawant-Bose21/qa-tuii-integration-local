@@ -138,8 +138,10 @@ class ListeningAreasPanelState extends State<ListeningAreasPanel> with TickerPro
             valueListenable: widget.floorCanvasController.isDrawing,
             builder: (BuildContext context, bool isDrawingValue, Widget? child) {
               return Container(
+                margin: const EdgeInsets.symmetric(horizontal: 8),
                 decoration: BoxDecoration(
                   color: isSelected ? context.colorScheme.elevation4 : Colors.transparent,
+                  borderRadius: BorderRadius.circular(4),
                 ),
                 child: Container(
                   padding: const EdgeInsets.fromLTRB(8, 6, 8, 6),
@@ -222,7 +224,11 @@ class ListeningAreasPanelState extends State<ListeningAreasPanel> with TickerPro
                               message: 'Start drawing to place this listening area',
                               child: Container(
                                 padding: const EdgeInsets.all(4),
-                                color: (isSelected && widget.floorCanvasController.isDrawing.value) ? context.colorScheme.errorContainer : Colors.transparent,
+                                decoration: BoxDecoration(
+                                  color: (isSelected && widget.floorCanvasController.isDrawing.value) ? context.colorScheme.errorContainer : Colors.transparent,
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
+
                                 child: Icon(
                                   Icons.info_outline_rounded,
                                   size: 12,

@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:fusion_lib/fusion_widgets/others/hover_dropdown.dart';
 
 import '../constants/test_keys.dart';
 import '../fusion_lib.dart';
@@ -526,7 +525,13 @@ class _SplPanelState extends State<SplPanel> {
                                 .map(
                                   (SplFrequency e) => DropdownMenuItem<SplFrequency>(
                                     value: e,
-                                    child: FusionAppText(text: e.displayName, style: const TextStyle(fontSize: 12)),
+                                    child: FusionAppText(
+                                      text: e.displayName,
+                                      style: context.textTheme.bodyMedium!.copyWith(
+                                        fontSize: 12,
+                                        color: context.colorScheme.textPrimary,
+                                      ),
+                                    ),
                                   ),
                                 )
                                 .toList(),
@@ -554,8 +559,12 @@ class _SplPanelState extends State<SplPanel> {
                               errorBorder: InputBorder.none,
                               disabledBorder: InputBorder.none,
                             ),
-                            icon: const Icon(Icons.arrow_drop_down, size: 16),
-                            style: const TextStyle(fontSize: 12, color: Colors.black),
+                            icon: Icon(
+                              Icons.arrow_drop_down,
+                              size: 16,
+                              color: context.colorScheme.iconDefault,
+                            ),
+                            style: context.textTheme.bodyMedium!.copyWith(color: context.colorScheme.iconDefault),
                           ),
                         ),
                       ),
