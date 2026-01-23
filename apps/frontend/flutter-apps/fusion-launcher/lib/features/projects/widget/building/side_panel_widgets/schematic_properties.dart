@@ -407,9 +407,9 @@ class SchematicPropertiesState extends State<SchematicProperties> {
             ),
           ],
 
-          if (!<SelectedItemType>[
-            SelectedItemType.processor,
-            SelectedItemType.amplifier,
+          if (<SelectedItemType>[
+            SelectedItemType.zone,
+            SelectedItemType.subzone,
           ].contains(selectedItem.type)) ...<Widget>[
             Builder(
               builder: (BuildContext context) {
@@ -556,7 +556,7 @@ class PropertyTextField extends StatelessWidget {
         hintStyle: Theme.of(context).textTheme.bodySmall?.copyWith(color: context.colorScheme.elevation5),
         isDense: true,
         fillColor: fillColor ?? context.colorScheme.elevation1,
-        contentPadding: contentPadding ?? const EdgeInsets.all(8),
+        contentPadding: contentPadding ?? const EdgeInsets.symmetric(horizontal: 6, vertical: 10),
         border: InputBorder.none,
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(6),
@@ -1034,7 +1034,9 @@ class _SelectListeningAreaForZoneAndSubzonePopupWidgetState extends State<Select
             constraints: BoxConstraints(maxHeight: MediaQuery.sizeOf(context).height / 3),
             child: SingleChildScrollView(
               physics: const ClampingScrollPhysics(),
+              padding: const EdgeInsets.all(4),
               child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: <Widget>[
                   ...allListeningAreas.map(
                     (ListeningArea area) {
@@ -1053,49 +1055,45 @@ class _SelectListeningAreaForZoneAndSubzonePopupWidgetState extends State<Select
 
                       return InkWell(
                         onTap: isSelected || isAvailableToSelectOrDeselect ? () => onListeningAreaTap(area.id) : null,
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
-                          child: Row(
-                            children: <Widget>[
-                              /// Checkbox for selection
-                              SizedBox(
-                                width: 14,
-                                height: 4,
-                                child: Checkbox(
-                                  value: !isAvailableToSelectOrDeselect ? true : isSelected,
-                                  activeColor: context.colorScheme.elevation5,
-                                  onChanged: !isAvailableToSelectOrDeselect ? null : (_) => onListeningAreaTap(area.id),
-                                  materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                                  visualDensity: VisualDensity.compact,
-                                  shape: const RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.zero,
-                                    side: BorderSide(width: 0.5),
-                                  ),
+                        child: Row(
+                          children: <Widget>[
+                            Transform.scale(
+                              scale: 0.7, // 👈 try 0.6–0.8
+                              child: Checkbox(
+                                value: !isAvailableToSelectOrDeselect ? true : isSelected,
+                                activeColor: context.colorScheme.primaryWhite,
+                                onChanged: !isAvailableToSelectOrDeselect ? null : (_) => onListeningAreaTap(area.id),
+                                materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                visualDensity: VisualDensity.compact,
+                                checkColor: context.colorScheme.primaryBlack,
+                                shape: const RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.zero,
+                                  side: BorderSide(width: 0.5),
                                 ),
                               ),
-                              const SizedBox(width: 12),
+                            ),
+                            const SizedBox(width: 12),
 
-                              /// Area and zone names
-                              Expanded(
-                                child: FusionAppText(
-                                  text: area.name.isNotEmpty ? "${floorName?.name}/${area.name}" : 'Unnamed Area',
-                                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                    fontWeight: FontWeight.w500,
-                                    fontSize: 10,
-                                    color: !isAvailableToSelectOrDeselect ? context.colorScheme.elevation5 : context.colorScheme.textPrimary,
-                                  ),
-                                ),
-                              ),
-                              FusionAppText(
-                                text: zoneName ?? "No zone",
+                            /// Area and zone names
+                            Expanded(
+                              child: FusionAppText(
+                                text: area.name.isNotEmpty ? "${floorName?.name}/${area.name}" : 'Unnamed Area',
                                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                  fontSize: 9,
-                                  color: context.colorScheme.elevation5,
-                                  fontWeight: FontWeight.w600,
+                                  fontWeight: FontWeight.w500,
+                                  fontSize: 10,
+                                  color: !isAvailableToSelectOrDeselect ? context.colorScheme.elevation5 : context.colorScheme.textPrimary,
                                 ),
                               ),
-                            ],
-                          ),
+                            ),
+                            FusionAppText(
+                              text: zoneName ?? "No zone",
+                              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                fontSize: 9,
+                                color: context.colorScheme.elevation5,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
                         ),
                       );
                     },
@@ -1129,9 +1127,15 @@ class _SelectListeningAreaForZoneAndSubzonePopupWidgetState extends State<Select
                     ),
                   ),
                   FusionButton(
-                    width: 100,
+                    width: 80,
+                    height: 32,
                     label: "Save",
                     onTap: onSaveTap,
+                    activeBackgroundColor: context.colorScheme.primaryColor,
+                    textStyle: context.textTheme.bodySmall?.copyWith(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                 ],
               ),
@@ -1282,6 +1286,11 @@ class _AddNewLocationWidgetState extends State<AddNewLocationWidget> {
                     height: 32,
                     width: double.infinity,
                     label: "Add",
+                    activeBackgroundColor: context.colorScheme.primaryColor,
+                    textStyle: context.textTheme.bodySmall?.copyWith(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w600,
+                    ),
                     onTap: () {
                       if (isDetailsFilled) {
                         final String locationName = locationNameController.text.trim();

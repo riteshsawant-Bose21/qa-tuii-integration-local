@@ -46,7 +46,10 @@ class _BuildingPageDronDownState<T> extends State<BuildingPageDronDown<T>> {
 
   @override
   Widget build(BuildContext context) {
+    final GlobalKey<State<StatefulWidget>> childKey = GlobalKey();
+
     return Container(
+      key: childKey,
       height: 32,
       alignment: Alignment.center,
       decoration: BoxDecoration(
@@ -87,28 +90,31 @@ class _BuildingPageDronDownState<T> extends State<BuildingPageDronDown<T>> {
                     );
                   }
 
-                  return Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: <Widget>[
-                      ...widget.items.map(
-                        (T value) => MouseRegion(
-                          cursor: SystemMouseCursors.click,
-                          child: GestureDetector(
-                            onTap: () {
-                              widget.onSelect(value);
-                              Navigator.of(context).pop();
-                            },
-                            behavior: HitTestBehavior.translucent,
-                            child: Container(
-                              width: double.infinity,
-                              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
-                              child: widget.valueBuilder != null ? widget.valueBuilder!(value) : widget.labelBuilder(value),
+                  return SizedBox(
+                    width: (childKey.currentContext?.findRenderObject() as RenderBox?)?.size.width, // Match trigger width
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: <Widget>[
+                        ...widget.items.map(
+                          (T value) => MouseRegion(
+                            cursor: SystemMouseCursors.click,
+                            child: GestureDetector(
+                              onTap: () {
+                                widget.onSelect(value);
+                                Navigator.of(context).pop();
+                              },
+                              behavior: HitTestBehavior.translucent,
+                              child: Container(
+                                width: double.infinity,
+                                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+                                child: widget.valueBuilder != null ? widget.valueBuilder!(value) : widget.labelBuilder(value),
+                              ),
                             ),
                           ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   );
                 },
               ),
