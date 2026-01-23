@@ -44,7 +44,7 @@ class _ProfileTabContentState extends State<ProfileTabContent> with SingleTicker
               Container(
                 width: 250,
                 decoration: BoxDecoration(
-                  color: context.colorScheme.surface,
+                  color: context.colorScheme.elevation2,
                   borderRadius: BorderRadius.circular(12),
                 ),
                 padding: const EdgeInsets.all(16.0),

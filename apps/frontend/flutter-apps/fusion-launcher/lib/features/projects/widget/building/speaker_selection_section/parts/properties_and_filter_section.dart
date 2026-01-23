@@ -7,8 +7,6 @@ import 'package:fusion_launcher/features/projects/widget/building/speaker_select
 import 'package:fusion_launcher/features/projects/widget/building/widgets/drop_down.dart';
 import 'package:fusion_launcher/features/projects/widget/building/widgets/text_field.dart';
 import 'package:fusion_lib/fusion_lib.dart';
-import 'package:fusion_lib/fusion_theme/app_theme.dart';
-import 'package:fusion_lib/fusion_widgets/others/fusion_checkbox_group.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../view_model/add_speaker_view_model.dart';
@@ -37,7 +35,7 @@ class SpeakerListeningAreaPropertiesState extends State<SpeakerListeningAreaProp
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: const Color(0xFF292826),
+        color: context.colorScheme.elevation2,
         borderRadius: BorderRadius.circular(16),
       ),
       child: BlocBuilder<ProjectViewModel, ProjectViewModelState>(
@@ -79,7 +77,7 @@ class SpeakerListeningAreaPropertiesState extends State<SpeakerListeningAreaProp
                   ],
                 ),
               ),
-              const Divider(thickness: 0.5, height: 0),
+              Divider(thickness: 0.5, height: 0, color: context.colorScheme.strokeLight),
 
               Flexible(
                 child: SingleChildScrollView(
@@ -261,6 +259,7 @@ class SpeakerListeningAreaPropertiesState extends State<SpeakerListeningAreaProp
                                     label: "Ceiling Ht",
                                     controller: ceilingHeightController,
                                     hintText: "e.g., 10 ft",
+                                    fillColor: context.colorScheme.elevation1,
                                     inputFormatters: <TextInputFormatter>[FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*'))],
                                     onFieldSubmitted: (String newValue) {
                                       final ListeningArea updatedLA = selectedListeningArea.copyWith(ceilingHeight: newValue);
@@ -541,7 +540,7 @@ class BuildRowPropertyWidget<T> extends StatelessWidget {
   final void Function(int selectedIndex, T value) onOptionSelected;
   final Widget Function(T option) labelBuilder;
   final Widget Function(T option)? valueBuilder;
-
+ 
   const BuildRowPropertyWidget({
     super.key,
     required this.label,
@@ -550,7 +549,7 @@ class BuildRowPropertyWidget<T> extends StatelessWidget {
     required this.onOptionSelected,
     required this.labelBuilder,
     this.valueBuilder,
-  });
+   });
 
   @override
   Widget build(BuildContext context) {
@@ -570,7 +569,7 @@ class BuildRowPropertyWidget<T> extends StatelessWidget {
         Expanded(
           child: BuildingPageDronDown<T>(
             value: value,
-            hintText: "Select ${label.toLowerCase()}",
+             hintText: "Select ${label.toLowerCase()}",
             items: options,
             onSelect: (T newValue) {
               final int selectedIndex = options.indexOf(newValue);

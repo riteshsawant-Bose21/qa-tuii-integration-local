@@ -4,7 +4,6 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/core/service_locator.dart';
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
 import 'package:fusion_lib/fusion_lib.dart';
-import 'package:fusion_lib/fusion_theme/app_theme.dart';
 
 class ListeningAreaProperties extends StatelessWidget {
   final ListeningArea selectedListeningArea;
@@ -631,7 +630,7 @@ class _PropertyRowWidget extends StatelessWidget {
     );
     final TextStyle? textStyleBlack = Theme.of(context).textTheme.bodySmall?.copyWith(
       fontSize: 9,
-      color: Colors.black87,
+      color: context.colorScheme.textPrimary,
       fontWeight: FontWeight.w400,
     );
 
@@ -649,7 +648,7 @@ class _PropertyRowWidget extends StatelessWidget {
             flex: 2,
             child: Row(
               children: <Widget>[
-                FusionAppText(text: "X", style: textStyleGrey),
+                FusionAppText(text: "X:", style: textStyleGrey),
                 const SizedBox(width: 4),
                 FusionAppText(
                   text: "${row.x}",
@@ -664,7 +663,7 @@ class _PropertyRowWidget extends StatelessWidget {
             flex: 2,
             child: Row(
               children: <Widget>[
-                FusionAppText(text: "Y", style: textStyleGrey),
+                FusionAppText(text: "Y:", style: textStyleGrey),
                 const SizedBox(width: 4),
                 FusionAppText(
                   text: "${row.y}",
@@ -679,7 +678,7 @@ class _PropertyRowWidget extends StatelessWidget {
             flex: 2,
             child: Row(
               children: <Widget>[
-                FusionAppText(text: "Z", style: textStyleGrey),
+                FusionAppText(text: "Z:", style: textStyleGrey),
                 const SizedBox(width: 4),
                 FusionAppText(
                   text: "${row.z}",

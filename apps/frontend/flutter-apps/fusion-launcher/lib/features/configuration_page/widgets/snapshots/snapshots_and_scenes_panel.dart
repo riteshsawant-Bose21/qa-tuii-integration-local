@@ -261,8 +261,9 @@ class _SnapshotsAndScenesPanelState extends State<SnapshotsAndScenesPanel> {
                 builder: (BuildContext context, ProjectViewModelState state) {
                   final List<SceneSetModel> scenesSetList = _projectViewModel.getAllSceneSets();
                   if (scenesSetList.isEmpty) {
-                    return Padding(
-                      padding: EdgeInsets.only(top: _sourcesHeight * 0.4),
+                    return Container(
+                      alignment: Alignment.center,
+
                       child: FusionAppText(
                         text: 'No scenes available',
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(

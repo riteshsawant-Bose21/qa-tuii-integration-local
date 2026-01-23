@@ -125,21 +125,10 @@ class __CreateNewListeningAreaWidgetState extends State<_CreateNewListeningAreaW
 
                 SemanticHelper.formControl(
                   testId: SemanticHelper.createTestId(SemanticTypes.textInput, "create_new_listening_area_input"),
-                  child: TextFormField(
+                  child: PropertyTextField(
                     controller: listeningAreaNameController,
-                    decoration: InputDecoration(
-                      isDense: true,
-                      hintText: 'Enter location name',
-                      hintStyle: context.textTheme.bodySmall?.copyWith(color: context.colorScheme.onSurface.withAlpha(100)),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide.none),
-                      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide.none),
-                      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide.none),
-                      hoverColor: Colors.transparent,
-                      errorBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide.none),
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
-                      fillColor: context.colorScheme.surface,
-                    ),
-                    style: context.textTheme.bodySmall?.copyWith(color: context.colorScheme.onSurface),
+                    hintText: 'Enter location name',
+                    contentPadding: const EdgeInsets.symmetric(vertical: 12, horizontal: 10),
                   ),
                 ),
                 const SizedBox(height: 12),

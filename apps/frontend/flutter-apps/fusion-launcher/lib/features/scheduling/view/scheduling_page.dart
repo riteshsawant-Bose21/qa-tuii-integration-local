@@ -8,6 +8,7 @@ import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/fusion_theme/app_theme.dart';
 import 'package:fusion_lib/fusion_widgets/buttons/fusion_text_button.dart';
 import 'package:intl/intl.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../configuration/presentation/viewmodel/project_view_model.dart';
 import '../state/scheduler_state.dart';

@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:fusion_launcher/core/assets/asset_svg.dart';
 import 'package:fusion_launcher/core/service_locator.dart';
 import 'package:fusion_launcher/core/widgets/title_text_field_switcher.dart';
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
 import 'package:fusion_lib/fusion_building_view/floor_canvas_controller.dart';
 import 'package:fusion_lib/fusion_lib.dart';
-import 'package:fusion_lib/fusion_theme/app_theme.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 class ListeningAreasPanel extends StatefulWidget {
@@ -139,7 +139,7 @@ class ListeningAreasPanelState extends State<ListeningAreasPanel> with TickerPro
             builder: (BuildContext context, bool isDrawingValue, Widget? child) {
               return Container(
                 decoration: BoxDecoration(
-                  color: isSelected ? Colors.grey[200] : Colors.transparent,
+                  color: isSelected ? context.colorScheme.elevation4 : Colors.transparent,
                 ),
                 child: Container(
                   padding: const EdgeInsets.fromLTRB(8, 6, 8, 6),
@@ -160,14 +160,13 @@ class ListeningAreasPanelState extends State<ListeningAreasPanel> with TickerPro
                           onTap: () => _toggleListeningAreaExpansion(area.id),
                           child: AnimatedRotation(
                             duration: const Duration(milliseconds: 200),
-                            turns: isExpanded ? 0.25 : 0.0,
+                            turns: isExpanded ? 0.5 : 0.25,
                             child: SemanticHelper.toggle(
                               testId: SemanticHelper.createTestId(SemanticTypes.toggle, "listening_area_expand_collapse_$index"),
                               value: isExpanded,
-                              child: Icon(
-                                Icons.keyboard_arrow_right,
-                                size: 16,
-                                color: Colors.grey[600],
+                              child: FusionSvgIcon(
+                                icon: AssetSvg.expandUp,
+                                color: context.colorScheme.elevation5,
                               ),
                             ),
                           ),
@@ -280,7 +279,7 @@ class ListeningAreasPanelState extends State<ListeningAreasPanel> with TickerPro
         return Container(
           margin: const EdgeInsets.only(left: 24, top: 2),
           decoration: BoxDecoration(
-            color: isSelected ? Colors.grey[200] : Colors.transparent,
+            color: isSelected ? context.colorScheme.elevation4 : Colors.transparent,
             borderRadius: BorderRadius.circular(4),
           ),
           child: GestureDetector(
@@ -317,7 +316,7 @@ class ListeningAreasPanelState extends State<ListeningAreasPanel> with TickerPro
                       style: Theme.of(context).textTheme.bodySmall!.copyWith(
                         fontSize: 11,
                         fontWeight: isSelected ? FontWeight.w500 : FontWeight.w400,
-                        color: Colors.grey[700],
+                        color: context.colorScheme.textPrimary,
                       ),
                       save: (String value) {
                         if (value.trim().isNotEmpty) {
@@ -338,13 +337,7 @@ class ListeningAreasPanelState extends State<ListeningAreasPanel> with TickerPro
 
   Widget _buildNoSpeakersMessage() {
     return Container(
-      margin: const EdgeInsets.only(left: 24, right: 16, top: 4, bottom: 8),
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
-      decoration: BoxDecoration(
-        color: Colors.grey[50],
-        borderRadius: BorderRadius.circular(4),
-        border: Border.all(color: Colors.grey[200]!, width: 1),
-      ),
+      padding: const EdgeInsets.all(8.0).copyWith(left: 32.0),
       child: Row(
         mainAxisSize: MainAxisSize.max,
         children: <Widget>[

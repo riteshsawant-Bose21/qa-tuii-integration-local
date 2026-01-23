@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:fusion_launcher/features/projects/widget/building/side_panel_widgets/schematic_properties.dart';
 import 'package:fusion_lib/constants/test_keys.dart';
 import 'package:fusion_lib/fusion_lib.dart';
-import 'package:fusion_lib/fusion_theme/app_theme.dart';
-import 'package:fusion_lib/fusion_theme/color_scheme.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../../../core/service_locator.dart';
 import '../../../../configuration/presentation/viewmodel/project_view_model.dart';
@@ -187,38 +187,35 @@ class _BuildingPlanState extends State<BuildingPlan> {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 16),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.primaryWhite,
-        border: Border(
-          bottom: BorderSide(color: Theme.of(context).colorScheme.primaryBlack, width: 1),
-        ),
-      ),
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisAlignment: MainAxisAlignment.start,
         children: <Widget>[
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: <Widget>[
-                FusionAppText(text: "FLOORS", style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontSize: 11)),
-                SemanticHelper.button(
-                  testId: SemanticHelper.createTestId(SemanticTypes.button, FusionTestKeys.addFloorPlusButton),
-                  child: GestureDetector(
-                    onTap: _showAddFloorDropdown,
-                    child: Icon(
-                      Icons.add_sharp,
-                      size: 14,
-                      color: Theme.of(context).colorScheme.textPrimary,
-                    ),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: <Widget>[
+              FusionAppText(
+                text: "FLOORS",
+                style: context.textTheme.bodyMedium?.copyWith(
+                  fontSize: 11,
+                  color: context.colorScheme.textPrimary,
+                ),
+              ),
+              SemanticHelper.button(
+                testId: SemanticHelper.createTestId(SemanticTypes.button, FusionTestKeys.addFloorPlusButton),
+                child: GestureDetector(
+                  onTap: _showAddFloorDropdown,
+                  child: Icon(
+                    Icons.add_sharp,
+                    size: 14,
+                    color: Theme.of(context).colorScheme.textPrimary,
                   ),
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
 
           const SizedBox(height: 10),
@@ -241,15 +238,16 @@ class _BuildingPlanState extends State<BuildingPlan> {
               }
 
               if (floors.isEmpty) {
-                return Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                  decoration: BoxDecoration(
-                    color: context.colorScheme.primaryBlack,
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                  child: FusionAppText(
-                    text: "No floors available",
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontSize: 12),
+                return Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: FusionAppText(
+                      text: "No floors available",
+                      textAlign: TextAlign.center,
+                      style: context.textTheme.bodySmall?.copyWith(
+                        color: context.colorScheme.primaryWhite,
+                      ),
+                    ),
                   ),
                 );
               }
@@ -266,9 +264,10 @@ class _BuildingPlanState extends State<BuildingPlan> {
                         index: index,
                         testId: SemanticHelper.createTestId(SemanticTypes.listItem, "floor_item_$index"),
                         child: Container(
+                          margin: const EdgeInsets.symmetric(vertical: 2),
                           decoration: BoxDecoration(
-                            color: isSelected ? context.colorScheme.primaryBlack.withOpacity(0.3) : Colors.transparent,
-                            borderRadius: BorderRadius.circular(1),
+                            color: isSelected ? context.colorScheme.elevation2 : Colors.transparent,
+                            borderRadius: BorderRadius.circular(FusionSizes.borderRadius8),
                           ),
                           child: Material(
                             color: Colors.transparent,
@@ -282,9 +281,8 @@ class _BuildingPlanState extends State<BuildingPlan> {
                                         });
                                         viewModel.setCurrentFloorIndex(index);
                                       },
-                              borderRadius: BorderRadius.circular(4),
+                              borderRadius: BorderRadius.circular(FusionSizes.borderRadius8),
                               child: Container(
-                                margin: const EdgeInsets.symmetric(horizontal: 8),
                                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                                 child: Column(
                                   children: <Widget>[
@@ -292,16 +290,12 @@ class _BuildingPlanState extends State<BuildingPlan> {
                                       children: <Widget>[
                                         // Floor icon
                                         Container(
-                                          width: 18,
-                                          height: 18,
+                                          width: 20,
+                                          height: 20,
                                           alignment: Alignment.center,
                                           decoration: BoxDecoration(
-                                            color: context.colorScheme.primaryBlack,
-                                            borderRadius: BorderRadius.circular(2),
-                                            border: Border.all(
-                                              color: Theme.of(context).colorScheme.primaryBlack,
-                                              width: 1,
-                                            ),
+                                            color: context.colorScheme.primaryWhite,
+                                            borderRadius: BorderRadius.circular(4),
                                           ),
                                           child: FusionAppText(
                                             text: floor.name.length >= 2 ? floor.name.substring(0, 2).toUpperCase() : floor.name.toUpperCase(),
@@ -313,61 +307,53 @@ class _BuildingPlanState extends State<BuildingPlan> {
                                             ),
                                           ),
                                         ),
-                                        const SizedBox(width: 12),
-
+                                        const SizedBox(width: 8),
                                         // Floor name - editable or display
                                         Expanded(
-                                          child:
-                                              isEditing
-                                                  ? SemanticHelper.formControl(
-                                                    testId: SemanticHelper.createTestId(SemanticTypes.formControl, "floor_name_edit_input_$index"),
-                                                    child: TextField(
-                                                      controller: _editControllers[index],
-                                                      focusNode: _editFocusNodes[index],
-                                                      maxLength: 24,
-                                                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                                        fontSize: 12,
-                                                        fontWeight: FontWeight.w600,
-                                                        color: Theme.of(context).colorScheme.textPrimary,
-                                                      ),
-                                                      decoration: InputDecoration(
-                                                        counterText: "",
-                                                        border: InputBorder.none,
-                                                        contentPadding: EdgeInsets.zero,
-                                                        isDense: true,
-                                                        enabledBorder:
-                                                            _errorMessage != null
-                                                                ? const UnderlineInputBorder(
-                                                                  borderSide: BorderSide(color: Colors.red),
-                                                                )
-                                                                : null,
-                                                        focusedBorder:
-                                                            _errorMessage != null
-                                                                ? const UnderlineInputBorder(
-                                                                  borderSide: BorderSide(color: Colors.red),
-                                                                )
-                                                                : null,
-                                                      ),
-                                                      onChanged: (_) {
-                                                        if (_errorMessage != null) {
-                                                          setState(() {
-                                                            _errorMessage = null;
-                                                          });
-                                                        }
-                                                      },
-                                                      onSubmitted: (_) => _saveFloorName(index),
-                                                      onTapOutside: (_) => _saveFloorName(index),
-                                                    ),
-                                                  )
-                                                  : FusionAppText(
-                                                    text: floor.name,
-                                                    maxLine: 2,
-                                                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                                      fontSize: 12,
-                                                      fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
-                                                      color: Theme.of(context).colorScheme.textPrimary,
-                                                    ),
+                                          child: Builder(
+                                            builder: (BuildContext context) {
+                                              if (isEditing) {
+                                                return SemanticHelper.formControl(
+                                                  testId: SemanticHelper.createTestId(SemanticTypes.formControl, "floor_name_edit_input_$index"),
+                                                  child: PropertyTextField(
+                                                    hintText: "Enter floor name",
+                                                    controller: _editControllers[index],
+                                                    focusNode: _editFocusNodes[index],
+                                                    maxLength: 24,
+                                                    // decoration: InputDecoration(
+                                                    //   counterText: "",
+                                                    //   border: InputBorder.none,
+                                                    //   contentPadding: EdgeInsets.zero,
+                                                    //   isDense: true,
+                                                    //   enabledBorder:
+                                                    //       _errorMessage != null ? const UnderlineInputBorder(borderSide: BorderSide(color: Colors.red)) : null,
+                                                    //   focusedBorder:
+                                                    //       _errorMessage != null ? const UnderlineInputBorder(borderSide: BorderSide(color: Colors.red)) : null,
+                                                    // ),
+                                                    onChanged: (_) {
+                                                      if (_errorMessage != null) {
+                                                        setState(() {
+                                                          _errorMessage = null;
+                                                        });
+                                                      }
+                                                    },
+                                                    onSubmitted: (_) => _saveFloorName(index),
+                                                    onTapOutside: (_) => _saveFloorName(index),
                                                   ),
+                                                );
+                                              } else {
+                                                return FusionAppText(
+                                                  text: floor.name,
+                                                  maxLine: 2,
+                                                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                                    fontSize: 12,
+                                                    fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                                                    color: Theme.of(context).colorScheme.textPrimary,
+                                                  ),
+                                                );
+                                              }
+                                            },
+                                          ),
                                         ),
 
                                         // Edit icon and delete button for selected floor
@@ -424,10 +410,10 @@ class _BuildingPlanState extends State<BuildingPlan> {
                                               testId: SemanticHelper.createTestId(SemanticTypes.button, "delete_floor_button_$index"),
                                               child: GestureDetector(
                                                 onTap: () => _showDeleteConfirmDialog(index),
-                                                child: Icon(
-                                                  Icons.delete_outline,
+                                                child: const Icon(
+                                                  LucideIcons.trash200,
                                                   size: 16,
-                                                  color: Theme.of(context).colorScheme.error,
+                                                  color: Colors.red,
                                                 ),
                                               ),
                                             ),
@@ -436,10 +422,10 @@ class _BuildingPlanState extends State<BuildingPlan> {
                                               testId: SemanticHelper.createTestId(SemanticTypes.button, "delete_floor_button_$index"),
                                               child: GestureDetector(
                                                 onTap: () => _showRestConfirmDialog(index),
-                                                child: Icon(
-                                                  Icons.delete_outline,
+                                                child: const Icon(
+                                                  LucideIcons.trash200,
                                                   size: 16,
-                                                  color: Theme.of(context).colorScheme.error,
+                                                  color: Colors.red,
                                                 ),
                                               ),
                                             ),
@@ -619,11 +605,11 @@ class _BuildingPlanState extends State<BuildingPlan> {
       position: position,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(6),
-        side: BorderSide(color: Theme.of(context).colorScheme.primaryBlack),
+        side: BorderSide(color: Theme.of(context).colorScheme.elevation2),
       ),
-      color: Theme.of(context).colorScheme.primaryWhite,
+      color: Theme.of(context).colorScheme.elevation1,
       elevation: 1,
-      constraints: const BoxConstraints(minWidth: 250, maxWidth: 300),
+      constraints: const BoxConstraints(minWidth: 200, maxWidth: 200),
       items: <PopupMenuEntry<String>>[
         PopupMenuItem<String>(
           enabled: false,
@@ -636,7 +622,7 @@ class _BuildingPlanState extends State<BuildingPlan> {
               });
 
               return Container(
-                padding: const EdgeInsets.all(12),
+                padding: const EdgeInsets.all(8),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisSize: MainAxisSize.min,
@@ -646,42 +632,18 @@ class _BuildingPlanState extends State<BuildingPlan> {
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                         fontSize: 12,
                         fontWeight: FontWeight.w600,
+                        color: context.colorScheme.textPrimary,
                       ),
                     ),
                     const SizedBox(height: 12),
                     SemanticHelper.formControl(
                       testId: SemanticHelper.createTestId(SemanticTypes.textInput, FusionTestKeys.floorName),
-                      child: TextField(
+                      child: PropertyTextField(
                         controller: _floorNameController,
                         focusNode: _floorNameFocusNode,
                         maxLength: 24,
                         autofocus: true,
-                        style: TextStyle(
-                          color: Theme.of(context).colorScheme.textPrimary,
-                          fontSize: 12,
-                        ),
-                        decoration: InputDecoration(
-                          counterText: "",
-                          hintText: 'Enter floor name',
-                          hintStyle: TextStyle(
-                            color: context.colorScheme.primaryBlack,
-                            fontSize: 12,
-                          ),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(4),
-                            borderSide: BorderSide(color: _errorMessage != null ? Colors.red : Theme.of(context).colorScheme.primaryBlack),
-                          ),
-                          enabledBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(4),
-                            borderSide: BorderSide(color: _errorMessage != null ? Colors.red : Theme.of(context).colorScheme.primaryBlack),
-                          ),
-                          focusedBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(4),
-                            borderSide: BorderSide(color: _errorMessage != null ? Colors.red : Theme.of(context).colorScheme.textPrimary),
-                          ),
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-                          isDense: true,
-                        ),
+                        hintText: 'Enter floor name',
                         onChanged: (_) {
                           if (_errorMessage != null) {
                             setMenuState(() {
@@ -729,8 +691,8 @@ class _BuildingPlanState extends State<BuildingPlan> {
                           height: 28,
                           width: 80,
                           textStyle: Theme.of(context).textTheme.labelLarge?.copyWith(fontSize: 10, color: context.colorScheme.primaryBlack),
-
                           label: "Add Floor",
+                          activeBackgroundColor: context.colorScheme.primaryWhite,
                           onTap: () {
                             _addFloor();
                             if (_errorMessage == null) {

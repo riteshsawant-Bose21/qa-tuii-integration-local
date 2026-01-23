@@ -215,7 +215,6 @@ class NeumorphicDarkTextField extends StatelessWidget {
               suffixIconConstraints: const BoxConstraints(minWidth: 0, minHeight: 0),
               filled: false,
               isDense: true,
-
               border: InputBorder.none,
               enabledBorder: InputBorder.none,
               focusedBorder: InputBorder.none,

@@ -179,7 +179,7 @@ class _SchedulerSection extends StatelessWidget {
                     context.read<SchedulerViewmodel>().removeSchedule(schedule);
                   },
                   icon: const Icon(
-                    Icons.delete_outline,
+                    LucideIcons.trash200,
                     color: Colors.grey,
                   ),
                 ),

@@ -1,5 +1,6 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/core/assets/asset_svg.dart';
 import 'package:fusion_launcher/core/service_locator.dart';
@@ -481,30 +482,53 @@ class SchematicPropertiesState extends State<SchematicProperties> {
 }
 
 class PropertyTextField extends StatelessWidget {
-  final TextEditingController controller;
+  final String? initialValue;
+  final TextEditingController? controller;
   final String? hintText;
   final Function(String)? onSubmitted;
   final Function(String)? onChanged;
   final Function(PointerDownEvent event)? onTapOutside;
   final TextInputType? keyboardType;
   final int? maxLines;
+  final int? maxLength;
   final TextAlign? textAlign;
+  final String? suffixText;
+  final FocusNode? focusNode;
+  final bool enabled;
+  final bool autofocus;
+  final List<TextInputFormatter>? inputFormatters;
+  final FormFieldValidator<String>? validator;
+  final EdgeInsetsGeometry? contentPadding;
+  final Color? fillColor;
 
   const PropertyTextField({
     super.key,
-    required this.controller,
+    this.initialValue,
+    this.controller,
     this.hintText,
     this.onSubmitted,
     this.onChanged,
     this.onTapOutside,
     this.keyboardType,
     this.maxLines,
+    this.maxLength,
     this.textAlign,
+    this.suffixText,
+    this.focusNode,
+    this.enabled = true,
+    this.autofocus = false,
+    this.inputFormatters,
+    this.validator,
+    this.contentPadding,
+    this.fillColor,
   });
 
   @override
   Widget build(BuildContext context) {
-    return TextField(
+    return TextFormField(
+      autofocus: autofocus,
+      focusNode: focusNode,
+      initialValue: initialValue,
       controller: controller,
       maxLines: maxLines ?? 1,
       keyboardType: keyboardType,
@@ -512,24 +536,28 @@ class PropertyTextField extends StatelessWidget {
       onChanged: onChanged,
       textInputAction: TextInputAction.done,
       onTapOutside: onTapOutside,
-      onSubmitted: onSubmitted,
+      onFieldSubmitted: onSubmitted,
       style: Theme.of(context).textTheme.bodySmall,
+      maxLength: maxLength,
+      enabled: enabled,
+      inputFormatters: inputFormatters,
+      validator: validator,
       decoration: InputDecoration(
+        counterText: '',
+        suffixText: suffixText,
         hintText: hintText,
-        hintStyle: Theme.of(context).textTheme.bodySmall?.copyWith(
-          color: context.colorScheme.elevation5,
-        ),
+        hintStyle: Theme.of(context).textTheme.bodySmall?.copyWith(color: context.colorScheme.elevation5),
         isDense: true,
-        fillColor: context.colorScheme.elevation1,
-        contentPadding: const EdgeInsets.all(8),
+        fillColor: fillColor ?? context.colorScheme.elevation1,
+        contentPadding: contentPadding ?? const EdgeInsets.all(8),
         border: InputBorder.none,
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(6),
-          borderSide: BorderSide(color: context.colorScheme.elevation5, width: 1),
+          borderSide: BorderSide(color: context.colorScheme.strokeLight, width: 1),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(6),
-          borderSide: BorderSide(color: context.colorScheme.elevation2, width: 1),
+          borderSide: BorderSide(color: context.colorScheme.strokeLight, width: 1),
         ),
       ),
     );

@@ -353,12 +353,6 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
     setState(() {});
   }
 
-  /// Clear input fields
-  void _clearFields() {
-    _projectNameController.clear();
-    _projectNameError = null;
-  }
-
   @override
   void dispose() {
     _tabController.dispose();
@@ -1195,9 +1189,9 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
       position: position,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(6),
-        side: BorderSide(color: Theme.of(context).colorScheme.primaryBlack),
+        side: BorderSide(color: Theme.of(context).colorScheme.elevation2),
       ),
-      color: Theme.of(context).colorScheme.primaryWhite,
+      color: Theme.of(context).colorScheme.elevation1,
       elevation: 1,
       constraints: const BoxConstraints(minWidth: 189, maxWidth: 189),
       // Match container width
@@ -1229,46 +1223,12 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
                     const SizedBox(height: 12),
                     SemanticHelper.formControl(
                       testId: SemanticHelper.createTestId(SemanticTypes.textInput, FusionTestKeys.projectNameInput),
-                      child: TextField(
+                      child: PropertyTextField(
                         controller: _projectNameController,
                         focusNode: _projectNameFocusNode,
                         maxLength: 24,
                         autofocus: true,
-                        style: TextStyle(
-                          color: Theme.of(context).colorScheme.textPrimary,
-                          fontSize: 12,
-                        ),
-                        decoration: InputDecoration(
-                          counterText: "",
-                          hintText: 'Enter project name',
-                          hintStyle: TextStyle(
-                            color: Theme.of(context).colorScheme.primaryBlack,
-                            fontSize: 12,
-                          ),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(4),
-                            borderSide: BorderSide(
-                              color: Theme.of(context).colorScheme.primaryBlack,
-                            ),
-                          ),
-                          enabledBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(4),
-                            borderSide: BorderSide(
-                              color: Theme.of(context).colorScheme.primaryBlack,
-                            ),
-                          ),
-                          focusedBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(4),
-                            borderSide: BorderSide(
-                              color: _projectNameError != null ? Colors.red : Theme.of(context).colorScheme.textPrimary,
-                            ),
-                          ),
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 8,
-                          ),
-                          isDense: true,
-                        ),
+                        hintText: 'Enter project name',
                         onChanged: (String value) {
                           if (_projectNameError != null) {
                             setMenuState(() {
@@ -1312,7 +1272,6 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
                             context,
                           ).textTheme.labelLarge?.copyWith(fontSize: 10),
                           onTap: () {
-                            _clearFields();
                             Navigator.of(context).pop();
                           },
                         ),

@@ -42,11 +42,7 @@ class _NeumorphicTextWithPopupSliderButtonState extends State<NeumorphicTextWith
         width: widget.width ?? double.infinity,
         raised: !widget.isActive,
         alignment: Alignment.center,
-        // decoration: BoxDecoration(
-        //   color: Colors.transparent,
-        //   borderRadius: BorderRadius.circular(widget.borderRadius),
-        //   boxShadow: getNeumorphismBoxShadows(inner: widget.isActive, color: const Color(0xFFF9F7F6)),
-        // ),
+        borderRadius: widget.borderRadius,
         child: Row(
           children: <Widget>[
             Expanded(

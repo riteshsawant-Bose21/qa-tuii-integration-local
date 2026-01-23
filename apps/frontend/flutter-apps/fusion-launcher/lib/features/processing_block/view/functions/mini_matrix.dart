@@ -246,7 +246,6 @@ class MiniMatrixControls extends StatelessWidget {
 
     return SizedBox(
       width: 400,
-
       height: double.infinity,
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -262,7 +261,6 @@ class MiniMatrixControls extends StatelessWidget {
                     height: 28,
                     width: double.infinity,
                     alignment: Alignment.center,
-
                     child: FusionAppText(
                       text: "SOURCES",
                       style: Theme.of(context).textTheme.labelSmall,
@@ -275,7 +273,6 @@ class MiniMatrixControls extends StatelessWidget {
                     height: 28,
                     width: double.infinity,
                     alignment: Alignment.center,
-
                     child: FusionAppText(
                       text: "OUT",
                       style: Theme.of(context).textTheme.labelSmall,
@@ -437,6 +434,7 @@ class MiniMatrixControls extends StatelessWidget {
                                   child: NeumorphicTextWithPopupSliderButton(
                                     isActive: false, // DONT ALLOW ACTIVE STATE.
                                     value: matrixSetting.gain,
+                                    borderRadius: 6,
                                     onChanged: (double value) {
                                       projectViewModel.updateMatrixSettings(
                                         matrixSettings: matrixSetting.copyWith(
@@ -468,6 +466,7 @@ class MiniMatrixControls extends StatelessWidget {
                               isActive: false,
                               value: matrixSetting.mixLevel,
                               height: 30,
+                              borderRadius: 6,
                               onChanged: (double value) {
                                 projectViewModel.updateMatrixSettings(
                                   matrixSettings: matrixSetting.copyWith(

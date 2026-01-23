@@ -72,12 +72,10 @@ class _MixScenesState extends State<MixScenes> {
       testId: SemanticHelper.createTestId(SemanticTypes.button, "mix_scenes_container"),
       child: SizedBox(
         width: 150,
-
         child: Column(
           children: <Widget>[
             Container(
               height: 28,
-
               alignment: Alignment.center,
               child: FusionAppText(
                 text: "MIX SCENES",
