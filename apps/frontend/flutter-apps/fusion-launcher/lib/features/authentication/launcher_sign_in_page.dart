@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/core/router/routes.dart';
 import 'package:fusion_launcher/features/authentication/viewmodel/auth_view_model.dart';
+import 'package:fusion_launcher/features/authentication/viewmodel/session_view_model.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
@@ -91,6 +92,7 @@ class _LauncherSignInPageView extends StatelessWidget {
                       constraints: const BoxConstraints(maxWidth: 500),
                       child: Column(
                         spacing: 10,
+                        crossAxisAlignment: CrossAxisAlignment.end,
                         children: <Widget>[
                           NeumorphicDarkButton(
                             onTap: () => _handleAuthAction(context, isAuthenticated),
@@ -126,6 +128,28 @@ class _LauncherSignInPageView extends StatelessWidget {
                                     ),
                                   ),
                                 ],
+                              ),
+                            ),
+                          ),
+                          // skip login Ui
+                          const SizedBox(
+                            height: 44,
+                          ),
+                          Padding(
+                            padding: const EdgeInsets.only(right: 10.0),
+                            child: TextButton(
+                              onPressed: () {
+                                serviceLocator<SessionViewModel>().skipLogin();
+                                Navigator.pushNamedAndRemoveUntil(
+                                  context,
+                                  Routes.launcherHomePage,
+                                  (Route<dynamic> route) => false,
+                                );
+                              },
+                              child: FusionAppText(
+                                text: 'Skip login',
+                                textAlign: TextAlign.start,
+                                style: context.textTheme.bodyMedium,
                               ),
                             ),
                           ),

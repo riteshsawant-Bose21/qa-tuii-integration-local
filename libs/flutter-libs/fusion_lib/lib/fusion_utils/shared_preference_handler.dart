@@ -68,6 +68,7 @@ enum SharedPreferenceKeys {
   appSettings, //TODO: need to rename this key
   themeMode,
   lastProjectSyncTime,
+  skipLogin,
 }
 
 extension SharedPreferenceKeysExtension on SharedPreferenceKeys {
@@ -79,6 +80,8 @@ extension SharedPreferenceKeysExtension on SharedPreferenceKeys {
         return 'theme_mode';
       case SharedPreferenceKeys.lastProjectSyncTime:
         return 'last_project_sync_time';
+      case SharedPreferenceKeys.skipLogin:
+        return 'skip_login';
     }
   }
 }

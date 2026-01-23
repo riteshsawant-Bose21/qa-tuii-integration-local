@@ -9,6 +9,7 @@ import 'package:intl/intl.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../../core/service_locator.dart';
+import '../../../authentication/viewmodel/session_view_model.dart';
 import '../../../configuration/presentation/viewmodel/project_view_model.dart';
 
 class ProjectCard extends StatelessWidget {
@@ -32,6 +33,10 @@ class ProjectCard extends StatelessWidget {
     this.height,
     this.borderRadius,
   });
+
+  bool get hasCloudAccess {
+    return serviceLocator<SessionViewModel>().hasCloudAccess();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -129,7 +134,9 @@ class ProjectCard extends StatelessWidget {
                                 ),
                               ],
 
-                              if (projectData.isSyncNeeded && !(state is ProjectUploadInProgress && state.projectId == projectData.id)) ...<Widget>[
+                              if (hasCloudAccess &&
+                                  projectData.isSyncNeeded &&
+                                  !(state is ProjectUploadInProgress && state.projectId == projectData.id)) ...<Widget>[
                                 const SizedBox(height: 4),
                                 FusionAppText(
                                   text: "Modified",
@@ -207,7 +214,7 @@ class ProjectCard extends StatelessWidget {
                     ),
                   ),
 
-                  if (!projectData.isCloudInstance && projectData.isSyncNeeded)
+                  if (hasCloudAccess && !projectData.isCloudInstance && projectData.isSyncNeeded)
                     Positioned(
                       top: 40,
                       right: 6,
@@ -226,7 +233,7 @@ class ProjectCard extends StatelessWidget {
                       ),
                     ),
 
-                  if (projectData.isCloudInstance)
+                  if (hasCloudAccess && projectData.isCloudInstance)
                     Positioned(
                       top: 40,
                       right: 6,

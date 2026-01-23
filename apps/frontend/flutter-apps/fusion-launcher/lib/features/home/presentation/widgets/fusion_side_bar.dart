@@ -144,6 +144,28 @@ class _FusionSidebarState extends State<FusionSidebar> {
                               ),
                             ],
                           );
+                        } else {
+                          return Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: <Widget>[
+                              FusionAppText(
+                                text: 'Fusion User',
+                                style: context.textTheme.headlineMedium?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                ),
+                                maxLine: 2,
+                              ),
+                              // const SizedBox(height: 8),
+                              // Tooltip(
+                              //   message: user.user?.email ?? '',
+                              //   child: FusionAppText(
+                              //     maxLine: 1,
+                              //     text: user.user?.email ?? '--',
+                              //     style: context.textTheme.titleSmall,
+                              //   ),
+                              // ),
+                            ],
+                          );
                         }
 
                         return FusionShimmer(
@@ -328,7 +350,9 @@ class _FusionSidebarState extends State<FusionSidebar> {
       builder: (BuildContext ctx) {
         return AlertDialog(
           title: FusionAppText(text: "Sign Out", style: context.textTheme.titleMedium),
-          content: const FusionAppText(text: "Are you sure you want to sign out?"),
+          content: const FusionAppText(
+            text: "Are you sure you want to sign out? ",
+          ),
           actions: <Widget>[
             SemanticHelper.button(
               testId: SemanticHelper.createTestId(SemanticTypes.button, "dashboard_sidebar_signout_button"),

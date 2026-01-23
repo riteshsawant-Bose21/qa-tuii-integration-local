@@ -7,6 +7,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../../core/service_locator.dart';
 import '../../../../core/utils/fusion_utils.dart';
+import '../../../authentication/viewmodel/session_view_model.dart';
 import '../../../projects/view_model/project_sync_view_model.dart';
 
 class HomeTabContent extends StatefulWidget {
@@ -28,8 +29,14 @@ class _HomeTabContentState extends State<HomeTabContent> {
     });
   }
 
+  bool get hasCloudAccess {
+    return serviceLocator<SessionViewModel>().hasCloudAccess();
+  }
+
   void _initProjects() async {
-    await serviceLocator<ProjectSyncViewModel>().getAllProjects();
+    if (hasCloudAccess) {
+      await serviceLocator<ProjectSyncViewModel>().getAllProjects();
+    }
   }
 
   @override

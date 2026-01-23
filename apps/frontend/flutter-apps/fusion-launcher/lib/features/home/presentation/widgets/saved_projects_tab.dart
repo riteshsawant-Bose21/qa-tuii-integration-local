@@ -9,6 +9,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../../core/service_locator.dart';
 import '../../../../core/utils/fusion_utils.dart';
+import '../../../authentication/viewmodel/session_view_model.dart';
 
 Border _getBorder(BuildContext context) => Border.all(color: context.colorScheme.onSurface.withValues(alpha: 0.3), width: 0.3);
 
@@ -208,6 +209,10 @@ class _SavedProjectListState extends State<_SavedProjectList> {
     return projects;
   }
 
+  bool get hasCloudAccess {
+    return serviceLocator<SessionViewModel>().hasCloudAccess();
+  }
+
   @override
   Widget build(BuildContext context) {
     return BlocConsumer<ProjectSyncViewModel, ProjectSyncViewModelState>(
@@ -259,35 +264,37 @@ class _SavedProjectListState extends State<_SavedProjectList> {
                                     ),
                                     const Spacer(),
                                     //cloud sync icon button
-                                    SemanticHelper.button(
-                                      testId: SemanticHelper.createTestId(SemanticTypes.button, "saved_projects_section_item_upload"),
-                                      child: IconButton(
-                                        onPressed: () {
-                                          serviceLocator<ProjectSyncViewModel>().uploadAllProjects();
-                                        },
-                                        tooltip: "Upload All Projects to Cloud",
-                                        icon: Icon(
-                                          LucideIcons.cloudUpload,
-                                          size: 18,
-                                          color: context.colorScheme.onSurface.withValues(alpha: 0.6),
+                                    if (hasCloudAccess)
+                                      SemanticHelper.button(
+                                        testId: SemanticHelper.createTestId(SemanticTypes.button, "saved_projects_section_item_upload"),
+                                        child: IconButton(
+                                          onPressed: () {
+                                            serviceLocator<ProjectSyncViewModel>().uploadAllProjects();
+                                          },
+                                          tooltip: "Upload All Projects to Cloud",
+                                          icon: Icon(
+                                            LucideIcons.cloudUpload,
+                                            size: 18,
+                                            color: context.colorScheme.onSurface.withValues(alpha: 0.6),
+                                          ),
                                         ),
                                       ),
-                                    ),
                                     //cloud download icon button
-                                    SemanticHelper.button(
-                                      testId: SemanticHelper.createTestId(SemanticTypes.button, "saved_projects_section_item_download"),
-                                      child: IconButton(
-                                        onPressed: () {
-                                          serviceLocator<ProjectSyncViewModel>().getAllProjects(forceFetch: true);
-                                        },
-                                        tooltip: "Download All Projects from Cloud",
-                                        icon: Icon(
-                                          LucideIcons.cloudDownload,
-                                          size: 18,
-                                          color: context.colorScheme.onSurface.withValues(alpha: 0.6),
+                                    if (hasCloudAccess)
+                                      SemanticHelper.button(
+                                        testId: SemanticHelper.createTestId(SemanticTypes.button, "saved_projects_section_item_download"),
+                                        child: IconButton(
+                                          onPressed: () {
+                                            serviceLocator<ProjectSyncViewModel>().getAllProjects(forceFetch: true);
+                                          },
+                                          tooltip: "Download All Projects from Cloud",
+                                          icon: Icon(
+                                            LucideIcons.cloudDownload,
+                                            size: 18,
+                                            color: context.colorScheme.onSurface.withValues(alpha: 0.6),
+                                          ),
                                         ),
                                       ),
-                                    ),
                                   ],
                                 ),
                               ),

@@ -139,6 +139,7 @@ flutter:
     # - packages/fusion_lib/lib/assets/
     - assets/svg/
     - assets/images/commission/
+    - assets/zip/product_cache.zip
 
 
   # An image asset can refer to one or more resolution-specific "variants", see
