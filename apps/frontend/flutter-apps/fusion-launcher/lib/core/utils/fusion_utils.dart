@@ -136,29 +136,29 @@ class FusionUiUtils {
         return StatefulBuilder(
           builder: (BuildContext context, StateSetter setState) {
             final List<Widget> contentChildren = <Widget>[
-              _buildErrorSection('Request URL', '$method $url'),
+              _buildErrorSection(context, 'Request URL', '$method $url'),
             ];
 
             if (showDetails) {
               contentChildren.addAll(<Widget>[
                 const SizedBox(height: 16),
-                _buildErrorSection('Request Headers', const JsonEncoder.withIndent('  ').convert(headers)),
+                _buildErrorSection(context, 'Request Headers', const JsonEncoder.withIndent('  ').convert(headers)),
                 const SizedBox(height: 16),
-                _buildErrorSection('Request Payload', formattedRequestData),
+                _buildErrorSection(context, 'Request Payload', formattedRequestData),
                 const SizedBox(height: 16),
-                _buildErrorSection('Response Data', formattedResponseData),
+                _buildErrorSection(context, 'Response Data', formattedResponseData),
               ]);
               if (errorMessage != null) {
                 contentChildren.addAll(<Widget>[
                   const SizedBox(height: 16),
-                  _buildErrorSection('Error Message', errorMessage),
+                  _buildErrorSection(context, 'Error Message', errorMessage),
                 ]);
               }
             } else {
               if (errorMessage != null) {
                 contentChildren.addAll(<Widget>[
                   const SizedBox(height: 16),
-                  _buildErrorSection('Error Message', errorMessage),
+                  _buildErrorSection(context, 'Error Message', errorMessage),
                 ]);
               }
             }
@@ -262,7 +262,7 @@ Status Code: ${statusCode ?? 'None'}
     // Navigator.of(context).pop();
   }
 
-  static Widget _buildErrorSection(String title, String content) {
+  static Widget _buildErrorSection(BuildContext context, String title, String content) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
@@ -278,9 +278,9 @@ Status Code: ${statusCode ?? 'None'}
           width: double.infinity,
           padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
-            color: Colors.black,
+            color: context.colorScheme.elevation1,
             borderRadius: BorderRadius.circular(4),
-            border: Border.all(color: Colors.black),
+            border: Border.all(color: context.colorScheme.textPrimary),
           ),
           child: SelectableText(
             content,

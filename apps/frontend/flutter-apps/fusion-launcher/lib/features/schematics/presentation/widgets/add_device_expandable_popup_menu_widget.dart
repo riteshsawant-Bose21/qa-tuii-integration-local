@@ -457,6 +457,7 @@ class _AddDeviceExpandablePopupMenuWidgetState extends State<AddDeviceExpandable
                 height: 36,
                 child: FusionButton(
                   label: "Add Device",
+                  activeBackgroundColor: context.colorScheme.primaryWhite,
                   isActive: canAddDevice,
                   onTap: () {
                     _addDeviceToSelectedAreas();
