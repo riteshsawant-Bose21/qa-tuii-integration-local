@@ -339,50 +339,48 @@ class SpeakerListeningAreaPropertiesState extends State<SpeakerListeningAreaProp
                                   child: Center(
                                     child: MouseRegion(
                                       cursor: SystemMouseCursors.forbidden,
-                                      child: IgnorePointer(
-                                        child: Container(
-                                          padding: const EdgeInsets.all(8),
-                                          decoration: BoxDecoration(
-                                            color: context.colorScheme.surface,
-                                            borderRadius: BorderRadius.circular(12),
-                                          ),
-                                          child: Row(
-                                            spacing: 10,
-                                            mainAxisSize: MainAxisSize.min,
-                                            children: <Widget>[
-                                              ...SpeakerSelectionMode.values.map((SpeakerSelectionMode mode) {
-                                                final bool isSelected = vmState.mode == mode;
+                                      child: Container(
+                                        padding: const EdgeInsets.all(8.0),
+                                        decoration: BoxDecoration(
+                                          color: context.colorScheme.elevation1,
+                                          borderRadius: BorderRadius.circular(12),
+                                        ),
+                                        child: Row(
+                                          spacing: 10,
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: <Widget>[
+                                            ...SpeakerSelectionMode.values.map((SpeakerSelectionMode mode) {
+                                              final bool isSelected = vmState.mode == mode;
 
-                                                return GestureDetector(
-                                                  onTap: () {
-                                                    // setState(() {
-                                                    //   SpeakerselectionMode = mode;
-                                                    // });
-                                                  },
-                                                  child: SemanticHelper.container(
-                                                    testId: SemanticHelper.createTestId(SemanticTypes.container, "speaker_selection_mode_${mode.name}"),
-                                                    child: Container(
-                                                      width: 89,
-                                                      padding: const EdgeInsets.all(8),
-                                                      decoration: BoxDecoration(
-                                                        color: isSelected ? context.colorScheme.surfaceBright : null,
-                                                        borderRadius: BorderRadius.circular(8),
-                                                      ),
-                                                      child: Center(
-                                                        child: FusionAppText(
-                                                          text: mode.displayName,
-                                                          style: context.textTheme.bodySmall?.copyWith(
-                                                            color: context.colorScheme.onSurface,
-                                                            fontWeight: FontWeight.normal,
-                                                          ),
+                                              return GestureDetector(
+                                                onTap: () {
+                                                  // setState(() {
+                                                  //   SpeakerselectionMode = mode;
+                                                  // });
+                                                },
+                                                child: SemanticHelper.container(
+                                                  testId: SemanticHelper.createTestId(SemanticTypes.container, "speaker_selection_mode_${mode.name}"),
+                                                  child: Container(
+                                                    width: 89,
+                                                    padding: const EdgeInsets.all(8),
+                                                    decoration: BoxDecoration(
+                                                      color: isSelected ? context.colorScheme.elevation3 : null,
+                                                      borderRadius: BorderRadius.circular(8),
+                                                    ),
+                                                    child: Center(
+                                                      child: FusionAppText(
+                                                        text: mode.displayName,
+                                                        style: context.textTheme.bodySmall?.copyWith(
+                                                          color: context.colorScheme.onSurface,
+                                                          fontWeight: FontWeight.normal,
                                                         ),
                                                       ),
                                                     ),
                                                   ),
-                                                );
-                                              }),
-                                            ],
-                                          ),
+                                                ),
+                                              );
+                                            }),
+                                          ],
                                         ),
                                       ),
                                     ),
@@ -540,7 +538,7 @@ class BuildRowPropertyWidget<T> extends StatelessWidget {
   final void Function(int selectedIndex, T value) onOptionSelected;
   final Widget Function(T option) labelBuilder;
   final Widget Function(T option)? valueBuilder;
- 
+
   const BuildRowPropertyWidget({
     super.key,
     required this.label,
@@ -549,7 +547,7 @@ class BuildRowPropertyWidget<T> extends StatelessWidget {
     required this.onOptionSelected,
     required this.labelBuilder,
     this.valueBuilder,
-   });
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -569,7 +567,7 @@ class BuildRowPropertyWidget<T> extends StatelessWidget {
         Expanded(
           child: BuildingPageDronDown<T>(
             value: value,
-             hintText: "Select ${label.toLowerCase()}",
+            hintText: "Select ${label.toLowerCase()}",
             items: options,
             onSelect: (T newValue) {
               final int selectedIndex = options.indexOf(newValue);

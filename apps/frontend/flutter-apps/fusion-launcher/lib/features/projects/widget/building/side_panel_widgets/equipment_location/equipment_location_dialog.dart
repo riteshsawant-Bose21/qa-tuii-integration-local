@@ -255,43 +255,38 @@ class EquipmentLocationDialog extends StatelessWidget {
                           ),
                           const SizedBox(height: 16),
                           Center(
-                            child: FusionContainer(
-                              // padding: const EdgeInsets.all(8),
-                              // decoration: BoxDecoration(
-                              //   color: context.colorScheme.elevation1,
-                              //   borderRadius: BorderRadius.circular(12),
-                              // ),
-                              raised: false,
-                              color: context.colorScheme.elevation1,
-                              child: Padding(
-                                padding: const EdgeInsets.all(8.0),
-                                child: Row(
-                                  spacing: 10,
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: <Widget>[
-                                    ...<String>["Select", "Suggest"].map((String mode) {
-                                      final bool isSelected = "Select" == mode;
+                            child: Container(
+                              padding: const EdgeInsets.all(8.0),
+                              decoration: BoxDecoration(
+                                color: context.colorScheme.elevation1,
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Row(
+                                spacing: 10,
+                                mainAxisSize: MainAxisSize.min,
+                                children: <Widget>[
+                                  ...<String>["Select", "Suggest"].map((String mode) {
+                                    final bool isSelected = "Select" == mode;
 
-                                      return SemanticHelper.container(
-                                        testId: SemanticHelper.createTestId(SemanticTypes.container, "equipment_location_dialog_filter_option_$mode"),
-                                        child: Container(
-                                          width: 89,
-                                          padding: const EdgeInsets.all(8),
-                                          decoration: BoxDecoration(
-                                            color: isSelected ? context.colorScheme.elevation3 : null,
-                                            borderRadius: BorderRadius.circular(8),
-                                          ),
-                                          child: Center(
-                                            child: FusionAppText(
-                                              text: mode,
-                                              style: context.textTheme.bodySmall,
-                                            ),
+                                    return SemanticHelper.container(
+                                      testId: SemanticHelper.createTestId(SemanticTypes.container, "equipment_location_dialog_filter_option_$mode"),
+                                      child: Container(
+                                        width: 89,
+                                        padding: const EdgeInsets.all(8),
+                                        decoration: BoxDecoration(
+                                          color: isSelected ? context.colorScheme.elevation3 : null,
+                                          borderRadius: BorderRadius.circular(8),
+                                        ),
+                                        child: Center(
+                                          child: FusionAppText(
+                                            text: mode,
+                                            style: context.textTheme.bodySmall,
                                           ),
                                         ),
-                                      );
-                                    }),
-                                  ],
-                                ),
+                                      ),
+                                    );
+                                  }),
+                                ],
                               ),
                             ),
                           ),
