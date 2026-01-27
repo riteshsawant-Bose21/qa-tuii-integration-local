@@ -52,7 +52,7 @@ const docTemplate = `{
                     "401": {
                         "description": "User is not authenticated",
                         "schema": {
-                            "$ref": "#/definitions/types.UnauthorizedResponse"
+                            "$ref": "#/definitions/types.ErrorResponse"
                         }
                     }
                 }
@@ -609,13 +609,13 @@ const docTemplate = `{
                     "400": {
                         "description": "Bad request - Invalid query parameters",
                         "schema": {
-                            "$ref": "#/definitions/types.BadRequestError"
+                            "$ref": "#/definitions/types.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal server error",
                         "schema": {
-                            "$ref": "#/definitions/types.InternalServerError"
+                            "$ref": "#/definitions/types.ErrorResponse"
                         }
                     }
                 }
@@ -658,13 +658,13 @@ const docTemplate = `{
                     "400": {
                         "description": "Bad request - Invalid payload or user not found or project Id already exists",
                         "schema": {
-                            "$ref": "#/definitions/types.BadRequestError"
+                            "$ref": "#/definitions/types.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal server error",
                         "schema": {
-                            "$ref": "#/definitions/types.InternalServerError"
+                            "$ref": "#/definitions/types.ErrorResponse"
                         }
                     }
                 }
@@ -704,25 +704,25 @@ const docTemplate = `{
                     "400": {
                         "description": "Bad request - Missing user ID",
                         "schema": {
-                            "$ref": "#/definitions/types.BadRequestError"
+                            "$ref": "#/definitions/types.ErrorResponse"
                         }
                     },
                     "403": {
                         "description": "Forbidden - User not assigned to project, project archived, or locked by another user",
                         "schema": {
-                            "$ref": "#/definitions/types.ForbiddenError"
+                            "$ref": "#/definitions/types.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Project or user not found",
                         "schema": {
-                            "$ref": "#/definitions/types.NotFoundError"
+                            "$ref": "#/definitions/types.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal server error",
                         "schema": {
-                            "$ref": "#/definitions/types.InternalServerError"
+                            "$ref": "#/definitions/types.ErrorResponse"
                         }
                     }
                 }
@@ -772,25 +772,25 @@ const docTemplate = `{
                     "400": {
                         "description": "Bad request - Invalid payload",
                         "schema": {
-                            "$ref": "#/definitions/types.BadRequestError"
+                            "$ref": "#/definitions/types.ErrorResponse"
                         }
                     },
                     "403": {
                         "description": "Forbidden - User not assigned to project, project archived, or locked by another user",
                         "schema": {
-                            "$ref": "#/definitions/types.ForbiddenError"
+                            "$ref": "#/definitions/types.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Project or user not found",
                         "schema": {
-                            "$ref": "#/definitions/types.NotFoundError"
+                            "$ref": "#/definitions/types.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal server error",
                         "schema": {
-                            "$ref": "#/definitions/types.InternalServerError"
+                            "$ref": "#/definitions/types.ErrorResponse"
                         }
                     }
                 }
@@ -839,25 +839,25 @@ const docTemplate = `{
                     "400": {
                         "description": "Bad request - Invalid payload",
                         "schema": {
-                            "$ref": "#/definitions/types.BadRequestError"
+                            "$ref": "#/definitions/types.ErrorResponse"
                         }
                     },
                     "403": {
                         "description": "Forbidden - User not assigned to project or project locked by another user",
                         "schema": {
-                            "$ref": "#/definitions/types.ForbiddenError"
+                            "$ref": "#/definitions/types.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Project not found",
                         "schema": {
-                            "$ref": "#/definitions/types.NotFoundError"
+                            "$ref": "#/definitions/types.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal server error",
                         "schema": {
-                            "$ref": "#/definitions/types.InternalServerError"
+                            "$ref": "#/definitions/types.ErrorResponse"
                         }
                     }
                 }
@@ -906,25 +906,25 @@ const docTemplate = `{
                     "400": {
                         "description": "Bad request - Invalid payload",
                         "schema": {
-                            "$ref": "#/definitions/types.BadRequestError"
+                            "$ref": "#/definitions/types.ErrorResponse"
                         }
                     },
                     "403": {
                         "description": "Forbidden - User not assigned to project or project already locked by another user",
                         "schema": {
-                            "$ref": "#/definitions/types.ForbiddenError"
+                            "$ref": "#/definitions/types.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Project not found",
                         "schema": {
-                            "$ref": "#/definitions/types.NotFoundError"
+                            "$ref": "#/definitions/types.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal server error",
                         "schema": {
-                            "$ref": "#/definitions/types.InternalServerError"
+                            "$ref": "#/definitions/types.ErrorResponse"
                         }
                     }
                 }
@@ -973,25 +973,25 @@ const docTemplate = `{
                     "400": {
                         "description": "Bad request - Invalid payload",
                         "schema": {
-                            "$ref": "#/definitions/types.BadRequestError"
+                            "$ref": "#/definitions/types.ErrorResponse"
                         }
                     },
                     "403": {
                         "description": "Forbidden - User not assigned to project, project archived, or locked by another user",
                         "schema": {
-                            "$ref": "#/definitions/types.ForbiddenError"
+                            "$ref": "#/definitions/types.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Project or User not found",
                         "schema": {
-                            "$ref": "#/definitions/types.NotFoundError"
+                            "$ref": "#/definitions/types.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal server error",
                         "schema": {
-                            "$ref": "#/definitions/types.InternalServerError"
+                            "$ref": "#/definitions/types.ErrorResponse"
                         }
                     }
                 }
@@ -1038,13 +1038,13 @@ const docTemplate = `{
                     "404": {
                         "description": "Project or User not found",
                         "schema": {
-                            "$ref": "#/definitions/types.NotFoundError"
+                            "$ref": "#/definitions/types.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal server error",
                         "schema": {
-                            "$ref": "#/definitions/types.InternalServerError"
+                            "$ref": "#/definitions/types.ErrorResponse"
                         }
                     }
                 }
@@ -1089,13 +1089,13 @@ const docTemplate = `{
                     "404": {
                         "description": "Project or User not found, or user not assigned to the project",
                         "schema": {
-                            "$ref": "#/definitions/types.NotFoundError"
+                            "$ref": "#/definitions/types.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal server error",
                         "schema": {
-                            "$ref": "#/definitions/types.InternalServerError"
+                            "$ref": "#/definitions/types.ErrorResponse"
                         }
                     }
                 }
@@ -1140,13 +1140,13 @@ const docTemplate = `{
                     "400": {
                         "description": "Bad request - Invalid JSON payload",
                         "schema": {
-                            "$ref": "#/definitions/types.BadRequestResponse"
+                            "$ref": "#/definitions/types.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal server error",
                         "schema": {
-                            "$ref": "#/definitions/types.InternalServerErrorResponse"
+                            "$ref": "#/definitions/types.ErrorResponse"
                         }
                     }
                 }
@@ -1180,19 +1180,19 @@ const docTemplate = `{
                     "401": {
                         "description": "Unauthorized - User email not found in token",
                         "schema": {
-                            "$ref": "#/definitions/types.UnauthorizedResponse"
+                            "$ref": "#/definitions/types.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "User not found in the system",
                         "schema": {
-                            "$ref": "#/definitions/types.NotFoundResponse"
+                            "$ref": "#/definitions/types.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal server error",
                         "schema": {
-                            "$ref": "#/definitions/types.InternalServerErrorResponse"
+                            "$ref": "#/definitions/types.ErrorResponse"
                         }
                     }
                 }
@@ -1226,19 +1226,19 @@ const docTemplate = `{
                     "401": {
                         "description": "Unauthorized - User email not found in token",
                         "schema": {
-                            "$ref": "#/definitions/types.UnauthorizedResponse"
+                            "$ref": "#/definitions/types.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "User not found in the system",
                         "schema": {
-                            "$ref": "#/definitions/types.NotFoundResponse"
+                            "$ref": "#/definitions/types.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal server error",
                         "schema": {
-                            "$ref": "#/definitions/types.InternalServerErrorResponse"
+                            "$ref": "#/definitions/types.ErrorResponse"
                         }
                     }
                 }
@@ -1281,13 +1281,13 @@ const docTemplate = `{
                     "404": {
                         "description": "User not found",
                         "schema": {
-                            "$ref": "#/definitions/types.NotFoundResponse"
+                            "$ref": "#/definitions/types.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal server error",
                         "schema": {
-                            "$ref": "#/definitions/types.InternalServerErrorResponse"
+                            "$ref": "#/definitions/types.ErrorResponse"
                         }
                     }
                 }
@@ -1339,19 +1339,19 @@ const docTemplate = `{
                     "400": {
                         "description": "Bad request - Invalid JSON payload",
                         "schema": {
-                            "$ref": "#/definitions/types.BadRequestResponse"
+                            "$ref": "#/definitions/types.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "User not found",
                         "schema": {
-                            "$ref": "#/definitions/types.NotFoundResponse"
+                            "$ref": "#/definitions/types.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal server error",
                         "schema": {
-                            "$ref": "#/definitions/types.InternalServerErrorResponse"
+                            "$ref": "#/definitions/types.ErrorResponse"
                         }
                     }
                 }
@@ -1417,13 +1417,12 @@ const docTemplate = `{
         "types.AuthStatusSuccessResponse": {
             "type": "object",
             "properties": {
-                "data": {
-                    "type": "object",
-                    "additionalProperties": true
+                "authenticated": {
+                    "type": "boolean"
                 },
-                "message": {
+                "email": {
                     "type": "string",
-                    "example": "Authentication status retrieved successfully"
+                    "example": "john.doe@company.com"
                 }
             }
         },
@@ -1433,19 +1432,6 @@ const docTemplate = `{
                 "message": {
                     "type": "string",
                     "example": "Bad Request"
-                }
-            }
-        },
-        "types.BadRequestResponse": {
-            "type": "object",
-            "properties": {
-                "error": {
-                    "type": "string",
-                    "example": "Bad Request"
-                },
-                "message": {
-                    "type": "string",
-                    "example": "Invalid JSON payload"
                 }
             }
         },
@@ -1526,6 +1512,15 @@ const docTemplate = `{
                 "EnvironmentTypeHybrid"
             ]
         },
+        "types.ErrorResponse": {
+            "type": "object",
+            "properties": {
+                "error": {
+                    "type": "string",
+                    "example": "Error message"
+                }
+            }
+        },
         "types.Feature": {
             "type": "object",
             "properties": {
@@ -1568,15 +1563,6 @@ const docTemplate = `{
                 }
             }
         },
-        "types.ForbiddenError": {
-            "type": "object",
-            "properties": {
-                "message": {
-                    "type": "string",
-                    "example": "Forbidden"
-                }
-            }
-        },
         "types.GetAllProjectsResponse": {
             "type": "object",
             "properties": {
@@ -1609,38 +1595,12 @@ const docTemplate = `{
                 }
             }
         },
-        "types.InternalServerErrorResponse": {
-            "type": "object",
-            "properties": {
-                "error": {
-                    "type": "string",
-                    "example": "Internal Server Error"
-                },
-                "message": {
-                    "type": "string",
-                    "example": "Internal server error"
-                }
-            }
-        },
         "types.NotFoundError": {
             "type": "object",
             "properties": {
                 "message": {
                     "type": "string",
                     "example": "Not Found"
-                }
-            }
-        },
-        "types.NotFoundResponse": {
-            "type": "object",
-            "properties": {
-                "error": {
-                    "type": "string",
-                    "example": "Not Found"
-                },
-                "message": {
-                    "type": "string",
-                    "example": "User not found in the system"
                 }
             }
         },
@@ -2147,19 +2107,6 @@ const docTemplate = `{
                 },
                 "version": {
                     "type": "string"
-                }
-            }
-        },
-        "types.UnauthorizedResponse": {
-            "type": "object",
-            "properties": {
-                "error": {
-                    "type": "string",
-                    "example": "Unauthorized"
-                },
-                "message": {
-                    "type": "string",
-                    "example": "User email not found in token"
                 }
             }
         },

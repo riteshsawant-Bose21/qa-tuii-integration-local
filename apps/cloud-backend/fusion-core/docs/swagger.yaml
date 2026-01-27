@@ -41,26 +41,16 @@ definitions:
     type: object
   types.AuthStatusSuccessResponse:
     properties:
-      data:
-        additionalProperties: true
-        type: object
-      message:
-        example: Authentication status retrieved successfully
+      authenticated:
+        type: boolean
+      email:
+        example: john.doe@company.com
         type: string
     type: object
   types.BadRequestError:
     properties:
       message:
         example: Bad Request
-        type: string
-    type: object
-  types.BadRequestResponse:
-    properties:
-      error:
-        example: Bad Request
-        type: string
-      message:
-        example: Invalid JSON payload
         type: string
     type: object
   types.Budget:
@@ -120,6 +110,12 @@ definitions:
     - EnvironmentTypeIndoor
     - EnvironmentTypeOutdoor
     - EnvironmentTypeHybrid
+  types.ErrorResponse:
+    properties:
+      error:
+        example: Error message
+        type: string
+    type: object
   types.Feature:
     properties:
       description:
@@ -150,12 +146,6 @@ definitions:
         example: launcher.project.create
         type: string
     type: object
-  types.ForbiddenError:
-    properties:
-      message:
-        example: Forbidden
-        type: string
-    type: object
   types.GetAllProjectsResponse:
     properties:
       data:
@@ -178,28 +168,10 @@ definitions:
         example: Internal Server Error
         type: string
     type: object
-  types.InternalServerErrorResponse:
-    properties:
-      error:
-        example: Internal Server Error
-        type: string
-      message:
-        example: Internal server error
-        type: string
-    type: object
   types.NotFoundError:
     properties:
       message:
         example: Not Found
-        type: string
-    type: object
-  types.NotFoundResponse:
-    properties:
-      error:
-        example: Not Found
-        type: string
-      message:
-        example: User not found in the system
         type: string
     type: object
   types.OrganizationUsersResponse:
@@ -548,15 +520,6 @@ definitions:
       version:
         type: string
     type: object
-  types.UnauthorizedResponse:
-    properties:
-      error:
-        example: Unauthorized
-        type: string
-      message:
-        example: User email not found in token
-        type: string
-    type: object
   types.UpdateUserRequest:
     properties:
       account_id:
@@ -684,7 +647,7 @@ paths:
         "401":
           description: User is not authenticated
           schema:
-            $ref: '#/definitions/types.UnauthorizedResponse'
+            $ref: '#/definitions/types.ErrorResponse'
       security:
       - BearerAuth: []
       summary: Check authentication status
@@ -1048,11 +1011,11 @@ paths:
         "400":
           description: Bad request - Invalid query parameters
           schema:
-            $ref: '#/definitions/types.BadRequestError'
+            $ref: '#/definitions/types.ErrorResponse'
         "500":
           description: Internal server error
           schema:
-            $ref: '#/definitions/types.InternalServerError'
+            $ref: '#/definitions/types.ErrorResponse'
       security:
       - BearerAuth: []
       summary: Get all projects
@@ -1080,11 +1043,11 @@ paths:
           description: Bad request - Invalid payload or user not found or project
             Id already exists
           schema:
-            $ref: '#/definitions/types.BadRequestError'
+            $ref: '#/definitions/types.ErrorResponse'
         "500":
           description: Internal server error
           schema:
-            $ref: '#/definitions/types.InternalServerError'
+            $ref: '#/definitions/types.ErrorResponse'
       security:
       - BearerAuth: []
       summary: Create a new project
@@ -1109,20 +1072,20 @@ paths:
         "400":
           description: Bad request - Missing user ID
           schema:
-            $ref: '#/definitions/types.BadRequestError'
+            $ref: '#/definitions/types.ErrorResponse'
         "403":
           description: Forbidden - User not assigned to project, project archived,
             or locked by another user
           schema:
-            $ref: '#/definitions/types.ForbiddenError'
+            $ref: '#/definitions/types.ErrorResponse'
         "404":
           description: Project or user not found
           schema:
-            $ref: '#/definitions/types.NotFoundError'
+            $ref: '#/definitions/types.ErrorResponse'
         "500":
           description: Internal server error
           schema:
-            $ref: '#/definitions/types.InternalServerError'
+            $ref: '#/definitions/types.ErrorResponse'
       security:
       - BearerAuth: []
       summary: Delete project
@@ -1154,20 +1117,20 @@ paths:
         "400":
           description: Bad request - Invalid payload
           schema:
-            $ref: '#/definitions/types.BadRequestError'
+            $ref: '#/definitions/types.ErrorResponse'
         "403":
           description: Forbidden - User not assigned to project, project archived,
             or locked by another user
           schema:
-            $ref: '#/definitions/types.ForbiddenError'
+            $ref: '#/definitions/types.ErrorResponse'
         "404":
           description: Project or user not found
           schema:
-            $ref: '#/definitions/types.NotFoundError'
+            $ref: '#/definitions/types.ErrorResponse'
         "500":
           description: Internal server error
           schema:
-            $ref: '#/definitions/types.InternalServerError'
+            $ref: '#/definitions/types.ErrorResponse'
       security:
       - BearerAuth: []
       summary: Update project
@@ -1198,20 +1161,20 @@ paths:
         "400":
           description: Bad request - Invalid payload
           schema:
-            $ref: '#/definitions/types.BadRequestError'
+            $ref: '#/definitions/types.ErrorResponse'
         "403":
           description: Forbidden - User not assigned to project or project locked
             by another user
           schema:
-            $ref: '#/definitions/types.ForbiddenError'
+            $ref: '#/definitions/types.ErrorResponse'
         "404":
           description: Project not found
           schema:
-            $ref: '#/definitions/types.NotFoundError'
+            $ref: '#/definitions/types.ErrorResponse'
         "500":
           description: Internal server error
           schema:
-            $ref: '#/definitions/types.InternalServerError'
+            $ref: '#/definitions/types.ErrorResponse'
       security:
       - BearerAuth: []
       summary: Update project archive status
@@ -1242,20 +1205,20 @@ paths:
         "400":
           description: Bad request - Invalid payload
           schema:
-            $ref: '#/definitions/types.BadRequestError'
+            $ref: '#/definitions/types.ErrorResponse'
         "403":
           description: Forbidden - User not assigned to project or project already
             locked by another user
           schema:
-            $ref: '#/definitions/types.ForbiddenError'
+            $ref: '#/definitions/types.ErrorResponse'
         "404":
           description: Project not found
           schema:
-            $ref: '#/definitions/types.NotFoundError'
+            $ref: '#/definitions/types.ErrorResponse'
         "500":
           description: Internal server error
           schema:
-            $ref: '#/definitions/types.InternalServerError'
+            $ref: '#/definitions/types.ErrorResponse'
       security:
       - BearerAuth: []
       summary: Update project lock status
@@ -1286,20 +1249,20 @@ paths:
         "400":
           description: Bad request - Invalid payload
           schema:
-            $ref: '#/definitions/types.BadRequestError'
+            $ref: '#/definitions/types.ErrorResponse'
         "403":
           description: Forbidden - User not assigned to project, project archived,
             or locked by another user
           schema:
-            $ref: '#/definitions/types.ForbiddenError'
+            $ref: '#/definitions/types.ErrorResponse'
         "404":
           description: Project or User not found
           schema:
-            $ref: '#/definitions/types.NotFoundError'
+            $ref: '#/definitions/types.ErrorResponse'
         "500":
           description: Internal server error
           schema:
-            $ref: '#/definitions/types.InternalServerError'
+            $ref: '#/definitions/types.ErrorResponse'
       security:
       - BearerAuth: []
       summary: Update project star status
@@ -1329,11 +1292,11 @@ paths:
         "404":
           description: Project or User not found, or user not assigned to the project
           schema:
-            $ref: '#/definitions/types.NotFoundError'
+            $ref: '#/definitions/types.ErrorResponse'
         "500":
           description: Internal server error
           schema:
-            $ref: '#/definitions/types.InternalServerError'
+            $ref: '#/definitions/types.ErrorResponse'
       security:
       - BearerAuth: []
       summary: Remove a user from a project
@@ -1362,11 +1325,11 @@ paths:
         "404":
           description: Project or User not found
           schema:
-            $ref: '#/definitions/types.NotFoundError'
+            $ref: '#/definitions/types.ErrorResponse'
         "500":
           description: Internal server error
           schema:
-            $ref: '#/definitions/types.InternalServerError'
+            $ref: '#/definitions/types.ErrorResponse'
       security:
       - BearerAuth: []
       summary: Assign a user to a project
@@ -1394,11 +1357,11 @@ paths:
         "400":
           description: Bad request - Invalid JSON payload
           schema:
-            $ref: '#/definitions/types.BadRequestResponse'
+            $ref: '#/definitions/types.ErrorResponse'
         "500":
           description: Internal server error
           schema:
-            $ref: '#/definitions/types.InternalServerErrorResponse'
+            $ref: '#/definitions/types.ErrorResponse'
       security:
       - BearerAuth: []
       summary: Create a new user
@@ -1425,11 +1388,11 @@ paths:
         "404":
           description: User not found
           schema:
-            $ref: '#/definitions/types.NotFoundResponse'
+            $ref: '#/definitions/types.ErrorResponse'
         "500":
           description: Internal server error
           schema:
-            $ref: '#/definitions/types.InternalServerErrorResponse'
+            $ref: '#/definitions/types.ErrorResponse'
       security:
       - BearerAuth: []
       summary: Get user by email
@@ -1462,15 +1425,15 @@ paths:
         "400":
           description: Bad request - Invalid JSON payload
           schema:
-            $ref: '#/definitions/types.BadRequestResponse'
+            $ref: '#/definitions/types.ErrorResponse'
         "404":
           description: User not found
           schema:
-            $ref: '#/definitions/types.NotFoundResponse'
+            $ref: '#/definitions/types.ErrorResponse'
         "500":
           description: Internal server error
           schema:
-            $ref: '#/definitions/types.InternalServerErrorResponse'
+            $ref: '#/definitions/types.ErrorResponse'
       security:
       - BearerAuth: []
       summary: Update user
@@ -1492,15 +1455,15 @@ paths:
         "401":
           description: Unauthorized - User email not found in token
           schema:
-            $ref: '#/definitions/types.UnauthorizedResponse'
+            $ref: '#/definitions/types.ErrorResponse'
         "404":
           description: User not found in the system
           schema:
-            $ref: '#/definitions/types.NotFoundResponse'
+            $ref: '#/definitions/types.ErrorResponse'
         "500":
           description: Internal server error
           schema:
-            $ref: '#/definitions/types.InternalServerErrorResponse'
+            $ref: '#/definitions/types.ErrorResponse'
       security:
       - BearerAuth: []
       summary: Get user authorization details
@@ -1521,15 +1484,15 @@ paths:
         "401":
           description: Unauthorized - User email not found in token
           schema:
-            $ref: '#/definitions/types.UnauthorizedResponse'
+            $ref: '#/definitions/types.ErrorResponse'
         "404":
           description: User not found in the system
           schema:
-            $ref: '#/definitions/types.NotFoundResponse'
+            $ref: '#/definitions/types.ErrorResponse'
         "500":
           description: Internal server error
           schema:
-            $ref: '#/definitions/types.InternalServerErrorResponse'
+            $ref: '#/definitions/types.ErrorResponse'
       security:
       - BearerAuth: []
       summary: Get user profile

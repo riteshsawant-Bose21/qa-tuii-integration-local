@@ -71,12 +71,12 @@ func RespondWithUserSuccess(c *gin.Context, message string, data *types.User) {
 }
 
 // RespondWithAuthStatusSuccess sends a success response with auth status
-func RespondWithAuthStatusSuccess(c *gin.Context, message string, data map[string]interface{}) {
-	c.JSON(http.StatusOK, types.AuthStatusSuccessResponse{
-		Message: message,
-		Data:    data,
-	})
-}
+// func RespondWithAuthStatusSuccess(c *gin.Context, message string, data map[string]interface{}) {
+// 	c.JSON(http.StatusOK, types.AuthStatusSuccessResponse{
+// 		Message: message,
+// 		Data:    data,
+// 	})
+// }
 
 // RespondWithBadRequest sends a bad request response
 func RespondWithBadRequest(c *gin.Context, message string) {

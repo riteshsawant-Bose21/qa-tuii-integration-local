@@ -14,8 +14,8 @@ type UserSuccessResponse struct {
 
 // AuthStatusSuccessResponse represents a successful auth status response
 type AuthStatusSuccessResponse struct {
-	Message string                 `json:"message" example:"Authentication status retrieved successfully"`
-	Data    map[string]interface{} `json:"data"`
+	Authenticated bool   `json:"authenticated" example:true`
+	Email         string `json:"email" example:"john.doe@company.com"`
 }
 
 // ErrorResponse represents an error API response

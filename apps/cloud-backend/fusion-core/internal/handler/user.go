@@ -6,8 +6,8 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/api/types"
+	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/constants"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion"
-	authutils "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/utils/auth"
 	httputils "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/utils/http"
 )
 
@@ -29,9 +29,9 @@ func NewUserHandler(userSvc fusion.User) *UserHandler {
 // @Produce json
 // @Security BearerAuth
 // @Success 200 {object} types.UserAuthorizationResponse "Successfully retrieved user authorization details"
-// @Failure 401 {object} types.UnauthorizedResponse "Unauthorized - User email not found in token"
-// @Failure 404 {object} types.NotFoundResponse "User not found in the system"
-// @Failure 500 {object} types.InternalServerErrorResponse "Internal server error"
+// @Failure 401 {object} types.ErrorResponse "Unauthorized - User email not found in token"
+// @Failure 404 {object} types.ErrorResponse "User not found in the system"
+// @Failure 500 {object} types.ErrorResponse "Internal server error"
 // @Router /users/authorization [get]
 func (h *UserHandler) GetUserAuthorization(ctx *gin.Context) {
 	// Get user email from JWT token (set by Auth0 middleware)
@@ -40,13 +40,13 @@ func (h *UserHandler) GetUserAuthorization(ctx *gin.Context) {
 		email, exists = ctx.Get("email")
 	}
 	if !exists {
-		authutils.RespondWithUnauthorized(ctx)
+		httputils.Unauthorized(ctx, constants.MsgUserEmailNotFoundInToken)
 		return
 	}
 
 	emailStr, ok := email.(string)
 	if !ok {
-		authutils.RespondWithInvalidToken(ctx)
+		httputils.Unauthorized(ctx, constants.MsgInvalidToken)
 		return
 	}
 
@@ -55,15 +55,15 @@ func (h *UserHandler) GetUserAuthorization(ctx *gin.Context) {
 	if err != nil {
 		// Check if it's a "user not found" error
 		if strings.Contains(err.Error(), "user not found") {
-			httputils.RespondWithNotFound(ctx, "User account not found in the system. Please contact your administrator to set up your account.")
+			httputils.NotFound(ctx, "User account not found in the system. Please contact your administrator to set up your account.")
 			return
 		}
 		// All other errors are internal server errors
-		httputils.RespondWithInternalServerError(ctx)
+		httputils.InternalError(ctx)
 		return
 	}
 
-	httputils.RespondWithSuccess(ctx, "Successfully retrieved user authorization details", authDetails)
+	httputils.OK(ctx, authDetails)
 }
 
 // GetUserProfile retrieves the current user's profile information.
@@ -74,9 +74,9 @@ func (h *UserHandler) GetUserAuthorization(ctx *gin.Context) {
 // @Produce json
 // @Security BearerAuth
 // @Success 200 {object} types.User "Successfully retrieved user profile"
-// @Failure 401 {object} types.UnauthorizedResponse "Unauthorized - User email not found in token"
-// @Failure 404 {object} types.NotFoundResponse "User not found in the system"
-// @Failure 500 {object} types.InternalServerErrorResponse "Internal server error"
+// @Failure 401 {object} types.ErrorResponse "Unauthorized - User email not found in token"
+// @Failure 404 {object} types.ErrorResponse "User not found in the system"
+// @Failure 500 {object} types.ErrorResponse "Internal server error"
 // @Router /users/profile [get]
 func (h *UserHandler) GetUserProfile(ctx *gin.Context) {
 	// Get user email from JWT token (set by Auth0 middleware)
@@ -85,13 +85,13 @@ func (h *UserHandler) GetUserProfile(ctx *gin.Context) {
 		email, exists = ctx.Get("email")
 	}
 	if !exists {
-		authutils.RespondWithUnauthorized(ctx)
+		httputils.Unauthorized(ctx, constants.MsgUnauthorized)
 		return
 	}
 
 	emailStr, ok := email.(string)
 	if !ok {
-		authutils.RespondWithInvalidToken(ctx)
+		httputils.Unauthorized(ctx, constants.MsgInvalidToken)
 		return
 	}
 
@@ -100,15 +100,15 @@ func (h *UserHandler) GetUserProfile(ctx *gin.Context) {
 	if err != nil {
 		// Check if it's a "user not found" error
 		if strings.Contains(err.Error(), "user not found") {
-			httputils.RespondWithNotFound(ctx, "User account not found in the system. Please contact your administrator to set up your account.")
+			httputils.NotFound(ctx, "User account not found in the system. Please contact your administrator to set up your account.")
 			return
 		}
 		// All other errors are internal server errors
-		httputils.RespondWithInternalServerError(ctx)
+		httputils.InternalError(ctx)
 		return
 	}
 
-	httputils.RespondWithUserSuccess(ctx, "Successfully retrieved user profile", user)
+	httputils.OK(ctx, user)
 }
 
 // CreateUser creates a new user in the system.
@@ -120,23 +120,23 @@ func (h *UserHandler) GetUserProfile(ctx *gin.Context) {
 // @Security BearerAuth
 // @Param user body types.CreateUserRequest true "User creation details"
 // @Success 201 {object} types.User "Successfully created user"
-// @Failure 400 {object} types.BadRequestResponse "Bad request - Invalid JSON payload"
-// @Failure 500 {object} types.InternalServerErrorResponse "Internal server error"
+// @Failure 400 {object} types.ErrorResponse "Bad request - Invalid JSON payload"
+// @Failure 500 {object} types.ErrorResponse "Internal server error"
 // @Router /users [post]
 func (h *UserHandler) CreateUser(ctx *gin.Context) {
 	var req types.CreateUserRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
-		httputils.RespondWithBadRequest(ctx, "Invalid request body: "+err.Error())
+		httputils.BadRequest(ctx, "Invalid request body: "+err.Error())
 		return
 	}
 
 	user, err := h.user.CreateUser(ctx, &req)
 	if err != nil {
-		httputils.RespondWithInternalServerError(ctx)
+		httputils.InternalError(ctx)
 		return
 	}
 
-	httputils.RespondWithUserCreated(ctx, "User created successfully", user)
+	httputils.Created(ctx, user)
 }
 
 // GetUserByEmail retrieves a user by their email address.
@@ -148,13 +148,13 @@ func (h *UserHandler) CreateUser(ctx *gin.Context) {
 // @Security BearerAuth
 // @Param email path string true "User email address"
 // @Success 200 {object} types.User "Successfully retrieved user"
-// @Failure 404 {object} types.NotFoundResponse "User not found"
-// @Failure 500 {object} types.InternalServerErrorResponse "Internal server error"
+// @Failure 404 {object} types.ErrorResponse "User not found"
+// @Failure 500 {object} types.ErrorResponse "Internal server error"
 // @Router /users/{email} [get]
 func (h *UserHandler) GetUserByEmail(ctx *gin.Context) {
 	email := ctx.Param("email")
 	if email == "" {
-		httputils.RespondWithBadRequest(ctx, "Email parameter is required")
+		httputils.BadRequest(ctx, "Email parameter is required")
 		return
 	}
 
@@ -162,15 +162,15 @@ func (h *UserHandler) GetUserByEmail(ctx *gin.Context) {
 	if err != nil {
 		// Check if it's a "not found" error
 		if strings.Contains(err.Error(), "user not found") {
-			httputils.RespondWithNotFound(ctx, "User account not found in the system")
+			httputils.NotFound(ctx, "User account not found in the system")
 			return
 		}
 		// All other errors are internal server errors
-		httputils.RespondWithInternalServerError(ctx)
+		httputils.InternalError(ctx)
 		return
 	}
 
-	httputils.RespondWithUserSuccess(ctx, "Successfully retrieved user", user)
+	httputils.OK(ctx, user)
 }
 
 // UpdateUser updates an existing user's information.
@@ -183,20 +183,20 @@ func (h *UserHandler) GetUserByEmail(ctx *gin.Context) {
 // @Param userID path string true "User ID"
 // @Param user body types.UpdateUserRequest true "Updated user details"
 // @Success 200 {object} types.User "Successfully updated user"
-// @Failure 400 {object} types.BadRequestResponse "Bad request - Invalid JSON payload"
-// @Failure 404 {object} types.NotFoundResponse "User not found"
-// @Failure 500 {object} types.InternalServerErrorResponse "Internal server error"
+// @Failure 400 {object} types.ErrorResponse "Bad request - Invalid JSON payload"
+// @Failure 404 {object} types.ErrorResponse "User not found"
+// @Failure 500 {object} types.ErrorResponse "Internal server error"
 // @Router /users/{userID} [patch]
 func (h *UserHandler) UpdateUser(ctx *gin.Context) {
 	userID := ctx.Param("userID")
 	if userID == "" {
-		httputils.RespondWithBadRequest(ctx, "User ID parameter is required")
+		httputils.BadRequest(ctx, "User ID parameter is required")
 		return
 	}
 
 	var req types.UpdateUserRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
-		httputils.RespondWithBadRequest(ctx, "Invalid request body: "+err.Error())
+		httputils.BadRequest(ctx, "Invalid request body: "+err.Error())
 		return
 	}
 
@@ -204,15 +204,15 @@ func (h *UserHandler) UpdateUser(ctx *gin.Context) {
 	if err != nil {
 		// Check if it's a "not found" error
 		if strings.Contains(err.Error(), "user not found") {
-			httputils.RespondWithNotFound(ctx, "User account not found in the system")
+			httputils.NotFound(ctx, "User account not found in the system")
 			return
 		}
 		// All other errors are internal server errors
-		httputils.RespondWithInternalServerError(ctx)
+		httputils.InternalError(ctx)
 		return
 	}
 
-	httputils.RespondWithUserSuccess(ctx, "User updated successfully", user)
+	httputils.OK(ctx, user)
 }
 
 // CheckAuthStatus checks if the current user is authenticated.
@@ -223,25 +223,24 @@ func (h *UserHandler) UpdateUser(ctx *gin.Context) {
 // @Produce json
 // @Security BearerAuth
 // @Success 200 {object} types.AuthStatusSuccessResponse "User is authenticated"
-// @Failure 401 {object} types.UnauthorizedResponse "User is not authenticated"
+// @Failure 401 {object} types.ErrorResponse "User is not authenticated"
 // @Router /auth/status [get]
 func (h *UserHandler) CheckAuthStatus(ctx *gin.Context) {
 	// Get user email from JWT token (set by Auth0 middleware)
 	email, exists := ctx.Get("user_email")
 	if !exists {
-		authutils.RespondWithUnauthorized(ctx)
+		httputils.Unauthorized(ctx, constants.MsgUnauthorized)
 		return
 	}
 
 	emailStr, ok := email.(string)
 	if !ok {
-		authutils.RespondWithInvalidToken(ctx)
+		httputils.Unauthorized(ctx, constants.MsgInvalidToken)
 		return
 	}
 
-	authStatus := map[string]interface{}{
-		"authenticated": true,
-		"email":         emailStr,
-	}
-	httputils.RespondWithAuthStatusSuccess(ctx, "User is authenticated", authStatus)
+	httputils.OK(ctx, types.AuthStatusSuccessResponse{
+		Authenticated: true,
+		Email:         emailStr,
+	})
 }
