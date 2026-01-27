@@ -6,17 +6,18 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/api/types"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/config"
-	authutils "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/utils/auth"
 	"go.uber.org/zap"
 )
 
 type Service struct {
 	authZeroConfig *config.AuthZero
-	logger      *zap.Logger
+	logger         *zap.Logger
 }
 
 func NewService(authZeroConfig *config.AuthZero, logger *zap.Logger) *Service {
@@ -28,14 +29,14 @@ func NewService(authZeroConfig *config.AuthZero, logger *zap.Logger) *Service {
 	}
 	return &Service{
 		authZeroConfig: authZeroConfig,
-		logger:      logger,
+		logger:         logger,
 	}
 }
 
 // GetAuthTokensByResourceOwnerPassword gets Auth0 tokens for a user using Resource Owner Password flow
 func (s *Service) GetAuthTokensByResourceOwnerPassword(ctx context.Context, username string) (*types.AuthTokenResponse, error) {
 	// Check if Resource Owner Password flow is enabled
-	enabled, err := authutils.IsResourceOwnerPasswordFlowEnabled(s.authZeroConfig.ResourceOwnerPasswordFlowEnabled)
+	enabled, err := strconv.ParseBool(strings.ToLower(s.authZeroConfig.ResourceOwnerPasswordFlowEnabled))
 	if err != nil {
 		s.logger.Error("Error checking Resource Owner Password flow status", zap.Error(err))
 		return nil, err

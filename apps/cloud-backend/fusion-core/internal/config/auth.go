@@ -12,7 +12,7 @@ type AuthZero struct {
 
 // Auth0 retrieves the Auth0 configuration from the store.
 func (c *Service) AuthZero() (*AuthZero, error) {
-	domain, err := c.store.ReqString(authZeroDomain)
+	domain, err := c.store.ReqString(keyAuthZeroDomain)
 	if err != nil {
 		return nil, err
 	}
@@ -54,7 +54,7 @@ func (c *Service) AuthZero() (*AuthZero, error) {
 
 const (
 	// Auth0 configuration keys
-	authZeroDomain string = "AUTH0_DOMAIN"
+	keyAuthZeroDomain string = "AUTH0_DOMAIN"
 	keyAuthZeroAccessTokenEndpoint string = "AUTH0_ACCESS_TOKEN_ENDPOINT"
 	keyAuthZeroClientID     string = "AUTH0_CLIENT_ID"
 	keyAuthZeroClientSecret string = "AUTH0_CLIENT_SECRET"

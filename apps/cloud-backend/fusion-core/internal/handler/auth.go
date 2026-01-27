@@ -23,34 +23,28 @@ func NewAuthHandler(authService fusion.Auth) *AuthHandler {
 	}
 }
 
-// GetAuthTokensByResourceOwnerPassword retrieves Auth0 tokens for QA automation testing.
-// @Summary Get Auth0 tokens for QA automation testing
-// @Description Get access and ID tokens for a user using Resource Owner Password flow (QA environment only)
-// @Tags qa-auth
+// GetAuthTokensByResourceOwnerPassword retrieves Auth0 tokens for automation testing.
+// @Summary Get Auth0 tokens for automation testing
+// @Description Get access and ID tokens for a user using Resource Owner Password flow (QA/Staging environment only)
+// @Tags auth
 // @Accept json
 // @Produce json
-// @Param request body types.AuthTokenRequest true "Token Request"
+// @Param username query string true "Username for token generation"
 // @Success 200 {object} types.AuthTokenSuccessResponse "Tokens generated successfully"
-// @Failure 400 {object} types.ErrorResponse2 "Bad request - invalid input"
-// @Failure 403 {object} types.ErrorResponse2 "QA auth endpoint is disabled"
+// @Failure 400 {object} types.ErrorResponse2 "Bad request - username is required"
+// @Failure 403 {object} types.ErrorResponse2 "auth automation endpoint is disabled"
 // @Failure 500 {object} types.ErrorResponse2 "Internal server error"
 // @Router /auth/automation/tokens [get]
 func (h *AuthHandler) GetAuthTokensByResourceOwnerPassword(c *gin.Context) {
-	// Parse request body
-	var req types.AuthTokenRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		httputils.RespondWithBadRequest(c, "Invalid request body: "+err.Error())
-		return
-	}
-
-	// Validate username
-	if req.Username == "" {
-		httputils.RespondWithBadRequest(c, "Username is required")
+	// Get username from query parameter
+	username := c.Query("username")
+	if username == "" {
+		httputils.RespondWithBadRequest(c, "Username query parameter is required")
 		return
 	}
 
 	// Get tokens from auth service
-	tokens, err := h.authService.GetAuthTokensByResourceOwnerPassword(c.Request.Context(), req.Username)
+	tokens, err := h.authService.GetAuthTokensByResourceOwnerPassword(c.Request.Context(), username)
 	if err != nil {
 		// Check if it's a "disabled" error and return 403, otherwise 500
 		if err.Error() == "Resource Owner Password flow is disabled" {
