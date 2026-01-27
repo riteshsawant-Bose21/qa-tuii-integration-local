@@ -27,6 +27,7 @@ import (
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/handler"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/log"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/middleware"
+	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/storage/cloudfs"
 	sqlpkg "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/storage/sql"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -36,7 +37,6 @@ import (
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/modules/postgres"
 	"github.com/testcontainers/testcontainers-go/wait"
-	"go.uber.org/zap"
 )
 
 // Constants for frequently used literals
@@ -219,19 +219,19 @@ func (suite *ProjectIntegrationTestSuite) setupAPI() error {
 	// Set Gin to test mode
 	gin.SetMode(gin.TestMode)
 
-	// Create loggers for tests first (needed by multiple services)
-	zapLogger, err := zap.NewDevelopment()
-	require.NoError(suite.T(), err, "Failed to create zap logger")
-
-	wrappedLogger, err := log.NewProduction()
-	require.NoError(suite.T(), err, "Failed to create wrapped logger")
+	// Initialize dual loggers with test configuration
+	loggerConfig := log.DefaultLoggerConfig()
+	loggerConfig.Mode = "debug"
+	loggerConfig.LogDir = "/tmp/fusion-test-logs" // Use temp directory for tests
+	loggers, err := log.NewLoggers(loggerConfig)
+	require.NoError(suite.T(), err, "Failed to create dual loggers")
 
 	// Initialize services
 	idSVC := id.NewService()
 	require.NotNil(suite.T(), idSVC, "Failed to initialize ID service")
 
 	// Initialize Product services (using mock S3 for tests)
-	productDBSvc := productdb.NewService(suite.db, zapLogger)
+	productDBSvc := productdb.NewService(suite.db, loggers.AppLogger)
 	require.NotNil(suite.T(), productDBSvc, "Failed to initialize product database service")
 
 	// Create test configurations for product service
@@ -247,11 +247,15 @@ func (suite *ProjectIntegrationTestSuite) setupAPI() error {
 		RetryDelay:    "5s",
 	}
 
-	productSVC := product.NewService(productDBSvc, "v1", validationCfg, processingCfg, zapLogger)
+	// Create a mock S3 client for testing
+	s3Client, err := cloudfs.NewS3Client(context.Background(), "us-east-1")
+	require.NoError(suite.T(), err, "Failed to create S3 client for testing")
+
+	productSVC := product.NewService(productDBSvc, "v1", validationCfg, processingCfg, s3Client, loggers.AppLogger)
 	require.NotNil(suite.T(), productSVC, "Failed to initialize product service")
 
 	// Initialize Project services
-	projectDBSvc := projectdb.NewService(suite.db, wrappedLogger)
+	projectDBSvc := projectdb.NewService(suite.db)
 	require.NotNil(suite.T(), projectDBSvc, "Failed to initialize project database service")
 
 	// For integration testing, we disable S3 operations by passing nil presigner
@@ -278,7 +282,7 @@ func (suite *ProjectIntegrationTestSuite) setupAPI() error {
 		Auth0Domain: "test-domain.auth0.com", // Mock Auth0 domain for testing
 	}
 
-	apiServer, err := api.New(apiConfig, productSVC, projectSVC, userSVC)
+	apiServer, err := api.New(apiConfig, productSVC, projectSVC, userSVC, loggers)
 	if err != nil {
 		return fmt.Errorf("failed to initialize API server: %w", err)
 	}
@@ -286,25 +290,20 @@ func (suite *ProjectIntegrationTestSuite) setupAPI() error {
 	suite.api = apiServer
 
 	// Create a separate test router without auth middleware for integration testing
-	suite.ginRouter = suite.createTestRouter(projectSVC, productSVC, userSVC, userDBSvc, roleManagementSvc)
+	suite.ginRouter = suite.createTestRouter(projectSVC, productSVC, userSVC, userDBSvc, roleManagementSvc, loggers)
 
 	return nil
 }
 
 // createTestRouter creates a Gin router with handlers but mocked authentication for testing
-func (suite *ProjectIntegrationTestSuite) createTestRouter(projectSVC *project.Service, productSVC *product.Service, userSVC *user.Service, userDBSvc *userdb.Service, roleManagementSvc *userdb.RoleManagementService) *gin.Engine {
+func (suite *ProjectIntegrationTestSuite) createTestRouter(projectSVC *project.Service, productSVC *product.Service, userSVC *user.Service, userDBSvc *userdb.Service, roleManagementSvc *userdb.RoleManagementService, loggers *log.Loggers) *gin.Engine {
 	gin.SetMode(gin.TestMode)
 	router := gin.New()
 
-	// Create a logger for the router middleware
-	zapLogger, err := zap.NewDevelopment()
-	if err != nil {
-		suite.T().Fatalf("Failed to create logger for test router: %v", err)
-	}
-
 	// Add middleware for testing
 	router.Use(gin.Recovery())
-	router.Use(middleware.RequestLoggerMiddleware(zapLogger)) // Add logger middleware
+	router.Use(middleware.RequestLoggerMiddleware(loggers.AuditLogger))   // Use audit logger for requests
+	router.Use(middleware.ApplicationLoggerMiddleware(loggers.AppLogger)) // Add app logger to context
 	router.Use(suite.createMockAuthMiddleware())
 	router.Use(suite.createMockAccessControlMiddleware(userSVC))
 
@@ -1253,7 +1252,7 @@ func (suite *ProjectIntegrationTestSuite) TestArchivedProjectRestrictions() {
 		lockRequest := types.ProjectLockRequest{IsLocked: true}
 		w, err = suite.makeRequest("POST", "/api/v1/projects/"+projectID+"/lock?"+userID, lockRequest)
 		require.NoError(t, err)
-		assert.Equal(t, http.StatusInternalServerError, w.Code)
+		assert.Equal(t, http.StatusForbidden, w.Code)
 
 		// Unarchive should work
 		unarchiveRequest := types.ProjectArchiveRequest{Archive: false}

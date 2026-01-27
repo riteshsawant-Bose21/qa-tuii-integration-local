@@ -69,50 +69,13 @@ func (ec *ErrorCollector) Add(err *SyncError) {
 
 // AddFieldValidationError adds a field-specific validation error
 func (ec *ErrorCollector) AddFieldValidationError(category ErrorCategory, severity ErrorSeverity, productID int, fieldName, fieldPath, message string, suggestion string) {
-	syncErr := NewError(category, severity, message).
-		WithProductID(productID).
-		WithField(fieldName).
-		WithDetails(fmt.Sprintf("Field path: %s. Suggestion: %s", fieldPath, suggestion)).
-		WithContext(ErrorContext{
-			JobID:     ec.jobID,
-			SyncType:  ec.syncType,
-			FieldName: fieldName,
-		}).
-		Build()
+	details := fmt.Sprintf("Field path: %s. Suggestion: %s", fieldPath, suggestion)
+	syncErr := NewSyncError(category, severity, message, details, &productID, fieldName)
+
+	syncErr.Context.JobID = ec.jobID
+	syncErr.Context.SyncType = ec.syncType
 
 	ec.Add(syncErr)
-}
-
-// AddMissingRequiredFieldError adds an error for missing required fields
-func (ec *ErrorCollector) AddMissingRequiredFieldError(productID int, fieldName, fieldPath, description string) {
-	message := fmt.Sprintf("Product ID %d: Missing required field '%s' (%s)", productID, fieldName, description)
-	suggestion := fmt.Sprintf("Add field '%s' to product %d data", fieldPath, productID)
-
-	ec.AddFieldValidationError(MissingRequiredFieldError, SeverityHigh, productID, fieldName, fieldPath, message, suggestion)
-}
-
-// AddMissingOptionalFieldError adds a warning for missing optional fields
-func (ec *ErrorCollector) AddMissingOptionalFieldError(productID int, fieldName, fieldPath, description string) {
-	message := fmt.Sprintf("Product ID %d: Missing recommended field '%s' (%s)", productID, fieldName, description)
-	suggestion := fmt.Sprintf("Consider adding field '%s' to product %d to improve data completeness", fieldPath, productID)
-
-	ec.AddFieldValidationError(MissingOptionalFieldError, SeverityLow, productID, fieldName, fieldPath, message, suggestion)
-}
-
-// AddInvalidFieldTypeError adds an error for wrong field types
-func (ec *ErrorCollector) AddInvalidFieldTypeError(productID int, fieldName, fieldPath, expectedType, actualType string, actualValue interface{}) {
-	message := fmt.Sprintf("Product ID %d: Field '%s' has wrong type: expected %s, got %s", productID, fieldName, expectedType, actualType)
-	suggestion := fmt.Sprintf("Convert field '%s' in product %d to type %s (current value: %v)", fieldPath, productID, expectedType, actualValue)
-
-	ec.AddFieldValidationError(InvalidFieldTypeError, SeverityMedium, productID, fieldName, fieldPath, message, suggestion)
-}
-
-// AddFieldConstraintError adds an error for constraint violations
-func (ec *ErrorCollector) AddFieldConstraintError(productID int, fieldName, fieldPath, constraintDescription string, actualValue interface{}) {
-	message := fmt.Sprintf("Product ID %d: Field '%s' violates constraint: %s", productID, fieldName, constraintDescription)
-	suggestion := fmt.Sprintf("Fix field '%s' in product %d to meet constraint requirements (current value: %v)", fieldPath, productID, actualValue)
-
-	ec.AddFieldValidationError(FieldConstraintError, SeverityMedium, productID, fieldName, fieldPath, message, suggestion)
 }
 
 // logError logs the error with appropriate level and structured fields
@@ -153,78 +116,9 @@ func (ec *ErrorCollector) GetAllErrors() []*SyncError {
 	ec.mu.RLock()
 	defer ec.mu.RUnlock()
 
-	// Return a copy to prevent external modification
 	errors := make([]*SyncError, len(ec.errors))
 	copy(errors, ec.errors)
 	return errors
-}
-
-// GetErrorsForRetry returns errors that should be retried
-func (ec *ErrorCollector) GetErrorsForRetry() []*SyncError {
-	ec.mu.RLock()
-	defer ec.mu.RUnlock()
-
-	var retryable []*SyncError
-	for _, err := range ec.errors {
-		if err.IsRetryable() {
-			retryable = append(retryable, err)
-		}
-	}
-	return retryable
-}
-
-// GetAlertsRequired returns errors that need alerting
-func (ec *ErrorCollector) GetAlertsRequired() []*SyncError {
-	ec.mu.RLock()
-	defer ec.mu.RUnlock()
-
-	alerts := make([]*SyncError, len(ec.alerts))
-	copy(alerts, ec.alerts)
-	return alerts
-}
-
-// LogSummary logs a comprehensive error summary
-func (ec *ErrorCollector) LogSummary() {
-	summary := ec.GetSummary()
-
-	if summary.TotalErrors == 0 {
-		ec.logger.Info("Sync completed successfully with no errors",
-			zap.String("job_id", ec.jobID),
-			zap.String("sync_type", ec.syncType),
-		)
-		return
-	}
-
-	fields := []zap.Field{
-		zap.String("job_id", ec.jobID),
-		zap.String("sync_type", ec.syncType),
-		zap.Int("total_errors", summary.TotalErrors),
-		zap.Int("retryable_errors", summary.RetryableCount),
-		zap.Int("alert_errors", summary.AlertCount),
-		zap.Any("errors_by_type", summary.ErrorsByType),
-		zap.Any("errors_by_severity", summary.ErrorsBySev),
-	}
-
-	if summary.AlertCount > 0 {
-		ec.logger.Error("Sync completed with CRITICAL/HIGH severity errors requiring attention", fields...)
-	} else if summary.TotalErrors > 0 {
-		ec.logger.Warn("Sync completed with errors", fields...)
-	}
-
-	// Log top error patterns
-	if len(summary.CriticalErrors) > 0 {
-		ec.logger.Error("Critical errors detected",
-			zap.String("job_id", ec.jobID),
-			zap.Any("critical_errors", summary.CriticalErrors),
-		)
-	}
-}
-
-// GetJobID returns the job ID for this error collector
-func (ec *ErrorCollector) GetJobID() string {
-	ec.mu.RLock()
-	defer ec.mu.RUnlock()
-	return ec.jobID
 }
 
 // getCriticalErrors returns critical error messages for summary

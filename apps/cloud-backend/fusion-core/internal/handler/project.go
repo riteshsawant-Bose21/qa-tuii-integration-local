@@ -12,8 +12,6 @@ import (
 	"go.uber.org/zap"
 )
 
-const ()
-
 // ProjectHandler handles HTTP requests for project management.
 type ProjectHandler struct {
 	project fusion.Project
@@ -625,6 +623,7 @@ func (h *ProjectHandler) UpdateProjectLock(ctx *gin.Context) {
 			errorMsg == types.ErrMsgProjectNotLockedByUser ||
 			errorMsg == types.ErrMsgFailedToGetUserByEmail ||
 			errorMsg == types.ErrMsgForbidden ||
+			errorMsg == types.ErrMsgProjectArchived ||
 			strings.Contains(errorMsg, types.ErrMsgProjectLockedByUser) {
 			response.Forbidden(ctx, errorMsg)
 			return

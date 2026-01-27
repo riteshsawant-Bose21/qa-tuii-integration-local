@@ -25,6 +25,7 @@ import (
 	userdb "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/user/db"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/handler"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/log"
+	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/storage/cloudfs"
 	sqlpkg "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/storage/sql"
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
@@ -163,9 +164,6 @@ func (suite *ProductIntegrationTestSuite) setupAPI() error {
 	zapLogger, err := zap.NewDevelopment()
 	require.NoError(suite.T(), err, "Failed to create zap logger")
 
-	wrappedLogger, err := log.NewProduction()
-	require.NoError(suite.T(), err, "Failed to create wrapped logger")
-
 	// Initialize services
 	idSVC := id.NewService()
 	require.NotNil(suite.T(), idSVC, "Failed to initialize ID service")
@@ -187,11 +185,15 @@ func (suite *ProductIntegrationTestSuite) setupAPI() error {
 		RetryDelay:    "5s",
 	}
 
-	productSVC := product.NewService(productDBSvc, "v1", validationCfg, processingCfg, zapLogger)
+	// Create a mock S3 client for testing
+	s3Client, err := cloudfs.NewS3Client(context.Background(), "us-east-1")
+	require.NoError(suite.T(), err, "Failed to create S3 client for testing")
+
+	productSVC := product.NewService(productDBSvc, "v1", validationCfg, processingCfg, s3Client, zapLogger)
 	require.NotNil(suite.T(), productSVC, "Failed to initialize product service")
 
 	// Initialize Project services (required for API but not used in product tests)
-	projectDBSvc := projectdb.NewService(suite.db, wrappedLogger)
+	projectDBSvc := projectdb.NewService(suite.db)
 	require.NotNil(suite.T(), projectDBSvc, "Failed to initialize project database service")
 
 	projectSVC := project.NewService(projectDBSvc, nil)
@@ -204,6 +206,13 @@ func (suite *ProductIntegrationTestSuite) setupAPI() error {
 	userSVC := user.NewService(userDBSvc)
 	require.NotNil(suite.T(), userSVC, "Failed to initialize user service")
 
+	// Initialize dual loggers with test configuration
+	loggerConfig := log.DefaultLoggerConfig()
+	loggerConfig.Mode = "debug"
+	loggerConfig.LogDir = "/tmp/fusion-test-logs" // Use temp directory for tests
+	loggers, err := log.NewLoggers(loggerConfig)
+	require.NoError(suite.T(), err, "Failed to create dual loggers")
+
 	// Initialize API server (for completeness, though we use test router)
 	apiConfig := &api.Config{
 		Mode:        "test",
@@ -212,7 +221,7 @@ func (suite *ProductIntegrationTestSuite) setupAPI() error {
 		Auth0Domain: "test-domain.auth0.com", // Mock Auth0 domain for testing
 	}
 
-	apiServer, err := api.New(apiConfig, productSVC, projectSVC, userSVC)
+	apiServer, err := api.New(apiConfig, productSVC, projectSVC, userSVC, loggers)
 	if err != nil {
 		return fmt.Errorf("failed to initialize API server: %w", err)
 	}
@@ -231,6 +240,13 @@ func (suite *ProductIntegrationTestSuite) createTestRouter(productSVC *product.S
 
 	// Add middleware for testing
 	router.Use(gin.Recovery())
+
+	// Add logger middleware to provide logger in gin context
+	router.Use(func(c *gin.Context) {
+		logger, _ := zap.NewDevelopment()
+		c.Set("logger", logger)
+		c.Next()
+	})
 
 	// Setup routes
 	suite.setupRoutes(router, productSVC)

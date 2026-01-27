@@ -22,7 +22,6 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	inbuiltlog "log"
 	"os"
 	"os/signal"
 	"syscall"
@@ -53,45 +52,48 @@ import (
 func main() {
 	ctx := context.Background()
 
-	// Load logger
-	logger, err := log.NewProduction() // Move it to cmd parallel
-	if err != nil {
-		inbuiltlog.Fatalf("Error while initializing the logger: %v\n", err)
-	}
-
 	// Parse the flags
 	envFile := flag.String("c", ".env", "config environment file")
 	envName := flag.String("e", "local", "application environment (e.g. local, dev, staging, prod)")
 	flag.Parse()
 
 	env := environment.New(environment.DefaultLoadLookuper)
-	logger.Info("Loading environment file", zap.String("file", *envFile))
+
+	fmt.Println("Loading environment file", *envFile)
 	if *envName == "local" {
 		if err := env.Load(*envFile); err != nil {
-			logger.Fatal("error loading environment vars", zap.String("file", *envName), zap.Error(err))
+			fmt.Println("error loading environment vars", zap.String("file", *envName), zap.Error(err))
 		}
 	}
 
 	// Initialize configuration service
 	configSVC, err := config.NewService(env)
 	if err != nil {
-		logger.Fatal("Failed to initialize config service", zap.Error(err))
+		fmt.Printf("Failed to initialize config service: %v\n", err)
+		panic(err)
 	}
 
 	// Load API configuration
 	cfg, err := serverapi.NewAPIConfig(configSVC)
 	if err != nil {
-		logger.Fatal("Failed to load API config", zap.Error(err))
+		fmt.Printf("Failed to load API config: %v\n", err)
+		panic(err)
+	}
+
+	// Initialize dual loggers with lumberjack rotation
+	loggerConfig := log.DefaultLoggerConfig()
+	loggerConfig.Mode = cfg.Server.LogLevel
+	if cfg.Server.LogDir != "" {
+		loggerConfig.LogDir = cfg.Server.LogDir
+	}
+
+	loggers, err := log.NewLoggers(loggerConfig)
+	if err != nil {
+		panic(fmt.Errorf("failed to initialize loggers: %w", err))
 	}
 
 	// // Set host dynamically from configuration
 	docs.SwaggerInfo.Host = cfg.Server.SwaggerHost
-
-	// Load general application configuration
-	appConfig, err := config.Load()
-	if err != nil {
-		logger.Fatal("Failed to load application config", zap.Error(err))
-	}
 
 	// Initialize the database connection.
 	pgs, err := sql.New(
@@ -103,83 +105,81 @@ func main() {
 		cfg.Postgres.Database, // instance (example: database name)
 		cfg.Postgres.SSLMode,  // sslmode
 	)
+
 	if err != nil {
-		logger.Fatal("Failed to connect to the database", zap.Error(err))
+		loggers.AppLogger.Fatal("Failed to connect to the database", zap.Error(err))
 	}
 
-	logger.Info("Database connection established successfully")
+	loggers.AppLogger.Info("Database connection established successfully")
 
 	//Initialize Product DB Service
-	productDBSvc := productdb.NewService(pgs, logger.JobSyncLog())
+	productDBSvc := productdb.NewService(pgs, loggers.AppLogger)
 	if productDBSvc == nil {
-		logger.Fatal("Failed to initialize product database service")
+		loggers.AppLogger.Fatal("Failed to initialize product database service")
 	}
-	logger.Info("Initialized Product DB Service.")
-
+	loggers.AppLogger.Info("Initialized Product DB Service.")
 	validationCfg, err := configSVC.Validation()
 	if err != nil {
-		logger.Fatal("Failed to get validation config", zap.Error(err))
+		loggers.AppLogger.Fatal("Failed to get validation config", zap.Error(err))
 	}
 
 	processingCfg, err := configSVC.Processing()
 	if err != nil {
-		logger.Fatal("Failed to get processing config", zap.Error(err))
+		loggers.AppLogger.Fatal("Failed to get processing config", zap.Error(err))
 	}
-
-	//Initialize Product Service (now includes sync functionality)
-	productSVC := product.NewService(productDBSvc, validationCfg.DefaultVersion, validationCfg, processingCfg, logger.JobSyncLog())
-	if productSVC == nil {
-		logger.Fatal("Failed to initialize product service")
-	}
-	logger.Info("Initialized Product Service.")
 
 	s3Handler, err := cloudfs.NewS3Client(ctx, cfg.S3.Region)
-
 	if err != nil {
-		logger.Fatal("Failed to initialize S3 client", zap.Error(err))
+		loggers.AppLogger.Fatal("Failed to initialize S3 client", zap.Error(err))
 	}
-	logger.Info("Initialized S3 client")
+	loggers.AppLogger.Info("Initialized S3 client")
+
+	//Initialize Product Service (now includes sync functionality)
+	productSVC := product.NewService(productDBSvc, validationCfg.DefaultVersion, validationCfg, processingCfg, s3Handler, loggers.AppLogger)
+	if productSVC == nil {
+		loggers.AppLogger.Fatal("Failed to initialize product service")
+	}
+	loggers.AppLogger.Info("Initialized Product Service.")
 
 	// Initialize Project DB Service
-	projectDBSvc := projectdb.NewService(pgs, logger)
+	projectDBSvc := projectdb.NewService(pgs)
 	if projectDBSvc == nil {
-		logger.Fatal("Failed to initialize project service")
+		loggers.AppLogger.Fatal("Failed to initialize project service")
 	}
 
 	//Initialize Project Service
 	projectSVC := project.NewService(projectDBSvc, s3Handler.Bucket(cfg.S3.ProjectBucket))
 	if projectSVC == nil {
-		logger.Fatal("Failed to initialize project service")
+		loggers.AppLogger.Fatal("Failed to initialize project service")
 	}
-	logger.Info("Initialized Project Service.")
-
+	loggers.AppLogger.Info("Initialized Project Service.")
 	// Initialize User DB Service
 	userDBSvc := userdb.NewService(pgs)
 	if userDBSvc == nil {
-		logger.Fatal("Failed to initialize user service")
+		loggers.AppLogger.Fatal("Failed to initialize user service")
 	}
-	logger.Info("Initialized User DB Service.")
+	loggers.AppLogger.Info("Initialized User DB Service.")
 
 	// Initialize User Service
 	userSVC := user.NewService(userDBSvc)
 	if userSVC == nil {
-		logger.Fatal("Failed to initialize user service")
+		loggers.AppLogger.Fatal("Failed to initialize user service")
 	}
-	logger.Info("Initialized User Service.")
+	loggers.AppLogger.Info("Initialized User Service.")
 
 	// Initialize API Server (with configurable host and port)
 	server, err := api.New(&api.Config{
-		Host:        appConfig.Server.APIHost,
-		Port:        appConfig.Server.APIPort,
+		Host:        cfg.Server.APIHost,
+		Port:        cfg.Server.APIPort,
 		Auth0Domain: cfg.Auth0.Domain,
-	}, productSVC, projectSVC, userSVC)
+	}, productSVC, projectSVC, userSVC, loggers)
 	if err != nil {
-		logger.Fatal(fmt.Sprintf("Error while initializing API: %v", err))
+		loggers.AppLogger.Fatal(fmt.Sprintf("Error while initializing API: %v", err))
 	}
-	logger.Info("Initialized the API.",
-		zap.String("host", appConfig.Server.APIHost),
-		zap.String("port", appConfig.Server.APIPort))
 
+	loggers.AppLogger.Info("Initialized the API.",
+		zap.String("host", cfg.Server.APIHost),
+		zap.String("port", cfg.Server.APIPort))
 	// Setup graceful shutdown
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
@@ -190,7 +190,7 @@ func main() {
 	// Start server in goroutine
 	serverDoneChan := make(chan error, 1)
 	go func() {
-		logger.Info("Starting server...")
+		loggers.AppLogger.Info("Starting server...")
 		err := server.Start(ctx)
 		serverDoneChan <- err // Send result regardless of error or nil
 	}()
@@ -198,7 +198,7 @@ func main() {
 	// Wait for shutdown signal or server error
 	select {
 	case <-shutdownChan:
-		logger.Info("Received shutdown signal, initiating graceful shutdown...")
+		loggers.AppLogger.Info("Received shutdown signal, initiating graceful shutdown...")
 		cancel()
 
 		// Give server time to shutdown gracefully
@@ -208,23 +208,22 @@ func main() {
 		select {
 		case err := <-serverDoneChan:
 			if err != nil {
-				logger.Error("Server shutdown with error", zap.Error(err))
+				loggers.AppLogger.Error("Server shutdown with error", zap.Error(err))
 			} else {
-				logger.Info("Server shutdown completed successfully")
+				loggers.AppLogger.Info("Server shutdown completed successfully")
 			}
 		case <-shutdownTimeout.C:
-			logger.Info("Server shutdown timeout exceeded - forcing exit")
+			loggers.AppLogger.Info("Server shutdown timeout exceeded - forcing exit")
 		}
 
 	case err := <-serverDoneChan:
 		if err != nil {
-			logger.Error("Server error", zap.Error(err))
+			loggers.AppLogger.Error("Server error", zap.Error(err))
 		} else {
-			logger.Info("Server exited normally")
+			loggers.AppLogger.Info("Server exited normally")
 		}
 		cancel()
 	}
 
-	logger.Info("Application stopped gracefully")
-
+	loggers.AppLogger.Info("Application stopped gracefully")
 }

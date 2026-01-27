@@ -9,6 +9,7 @@ import (
 
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/api/types"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/model/models"
+	"go.uber.org/zap"
 
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/log"
 	"github.com/DATA-DOG/go-sqlmock"
@@ -35,34 +36,20 @@ func setupTestDB(t *testing.T) (*sql.DB, sqlmock.Sqlmock, *Service) {
 	db, mock, err := sqlmock.New()
 	require.NoError(t, err)
 
-	logger, err := log.NewProduction()
-	require.NoError(t, err)
-
-	service := NewService(db, logger)
+	service := NewService(db)
 	return db, mock, service
 }
 
 func TestNewService(t *testing.T) {
 	t.Run("successfully creates new service", func(t *testing.T) {
 		db, _, _ := sqlmock.New()
-		logger, err := log.NewProduction()
-		require.NoError(t, err)
-		service := NewService(db, logger)
+		service := NewService(db)
 		assert.NotNil(t, service)
 	})
 
 	t.Run("panics when db is nil", func(t *testing.T) {
-		logger, err := log.NewProduction()
-		require.NoError(t, err)
 		assert.Panics(t, func() {
-			NewService(nil, logger)
-		})
-	})
-
-	t.Run("panics when logger is nil", func(t *testing.T) {
-		db, _, _ := sqlmock.New()
-		assert.Panics(t, func() {
-			NewService(db, nil)
+			NewService(nil)
 		})
 	})
 }
@@ -586,7 +573,7 @@ func TestService_UserStarLockFunctions(t *testing.T) {
 	t.Run("project exists true", func(t *testing.T) {
 		mock.ExpectQuery(`SELECT COUNT\(\*\) FROM "project"`).
 			WillReturnRows(sqlmock.NewRows([]string{"count"}).AddRow(1))
-		exists, err := service.ProjectExists(ctx, testProjectID)
+		exists, err := service.ProjectExists(ctx, testProjectID, zap.NewNop())
 		assert.NoError(t, err)
 		assert.True(t, exists)
 	})
@@ -594,7 +581,7 @@ func TestService_UserStarLockFunctions(t *testing.T) {
 	t.Run("project exists false", func(t *testing.T) {
 		mock.ExpectQuery(`SELECT COUNT\(\*\) FROM "project"`).
 			WillReturnRows(sqlmock.NewRows([]string{"count"}).AddRow(0))
-		exists, err := service.ProjectExists(ctx, testNonExistentID)
+		exists, err := service.ProjectExists(ctx, testNonExistentID, zap.NewNop())
 		assert.NoError(t, err)
 		assert.False(t, exists)
 	})
@@ -602,7 +589,7 @@ func TestService_UserStarLockFunctions(t *testing.T) {
 	t.Run("user exists true", func(t *testing.T) {
 		mock.ExpectQuery(`SELECT COUNT\(\*\) FROM "app_user"`).
 			WillReturnRows(sqlmock.NewRows([]string{"count"}).AddRow(1))
-		exists, err := service.UserExists(ctx, testUserID)
+		exists, err := service.UserExists(ctx, testUserID, zap.NewNop())
 		assert.NoError(t, err)
 		assert.True(t, exists)
 	})
@@ -610,7 +597,7 @@ func TestService_UserStarLockFunctions(t *testing.T) {
 	t.Run("user exists false", func(t *testing.T) {
 		mock.ExpectQuery(`SELECT COUNT\(\*\) FROM "app_user"`).
 			WillReturnRows(sqlmock.NewRows([]string{"count"}).AddRow(0))
-		exists, err := service.UserExists(ctx, testUserID)
+		exists, err := service.UserExists(ctx, testUserID, zap.NewNop())
 		assert.NoError(t, err)
 		assert.False(t, exists)
 	})
@@ -620,7 +607,7 @@ func TestService_UserStarLockFunctions(t *testing.T) {
 			WithArgs(testEmail).
 			WillReturnRows(sqlmock.NewRows([]string{"id", "email", "full_name", "password_hash", "role_id", "account_id", "created_at", "updated_at"}).
 				AddRow(testUserID, testEmail, nil, nil, 1, 1, time.Now(), time.Now()))
-		id, err := service.GetUserIDByEmail(ctx, testEmail)
+		id, err := service.GetUserIDByEmail(ctx, testEmail, zap.NewNop())
 		assert.NoError(t, err)
 		assert.Equal(t, testUserID, id)
 	})
@@ -629,7 +616,7 @@ func TestService_UserStarLockFunctions(t *testing.T) {
 		mock.ExpectQuery(`SELECT "app_user"\.\* FROM "app_user" WHERE \("app_user"\."email" = \$1\) LIMIT 1`).
 			WithArgs(testEmail).
 			WillReturnError(sql.ErrNoRows)
-		id, err := service.GetUserIDByEmail(ctx, testEmail)
+		id, err := service.GetUserIDByEmail(ctx, testEmail, zap.NewNop())
 		assert.Error(t, err)
 		assert.Empty(t, id)
 	})
@@ -738,7 +725,7 @@ func TestService_UserStarLockFunctions(t *testing.T) {
 	t.Run("project exists query error", func(t *testing.T) {
 		mock.ExpectQuery(`SELECT COUNT\(\*\) FROM "project"`).
 			WillReturnError(errors.New("count error"))
-		exists, err := service.ProjectExists(ctx, testProjectID)
+		exists, err := service.ProjectExists(ctx, testProjectID, zap.NewNop())
 		assert.Error(t, err)
 		assert.False(t, exists)
 	})
@@ -746,7 +733,7 @@ func TestService_UserStarLockFunctions(t *testing.T) {
 	t.Run("user exists query error", func(t *testing.T) {
 		mock.ExpectQuery(`SELECT COUNT\(\*\) FROM "app_user"`).
 			WillReturnError(errors.New("count error"))
-		exists, err := service.UserExists(ctx, testUserID)
+		exists, err := service.UserExists(ctx, testUserID, zap.NewNop())
 		assert.Error(t, err)
 		assert.False(t, exists)
 	})
@@ -754,7 +741,7 @@ func TestService_UserStarLockFunctions(t *testing.T) {
 		mock.ExpectQuery(`SELECT "app_user"\.\* FROM "app_user" WHERE \("app_user"\."email" = \$1\) LIMIT 1`).
 			WithArgs(testEmail).
 			WillReturnError(errors.New("query failed"))
-		id, err := service.GetUserIDByEmail(ctx, testEmail)
+		id, err := service.GetUserIDByEmail(ctx, testEmail, zap.NewNop())
 		assert.Error(t, err)
 		assert.Empty(t, id)
 	})

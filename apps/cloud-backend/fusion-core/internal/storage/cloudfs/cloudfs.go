@@ -4,6 +4,8 @@ import (
 	"context"
 	"io"
 	"time"
+
+	"go.uber.org/zap"
 )
 
 // define interface for cloud storages
@@ -14,8 +16,8 @@ type Store interface {
 }
 
 type PresignHandle interface {
-	PresignGet(ctx context.Context, objectKey string, ttl time.Duration) (string, error)
-	PresignPut(ctx context.Context, objectKey string, ttl time.Duration) (string, error)
+	PresignGet(ctx context.Context, objectKey string, ttl time.Duration, logger *zap.Logger) (string, error)
+	PresignPut(ctx context.Context, objectKey string, ttl time.Duration, logger *zap.Logger) (string, error)
 }
 
 // BucketHandle provides methods to operate on a bucket in the cloud file storage.

@@ -128,8 +128,8 @@ func (m *MockProjectService) GetUserEmailByID(ctx context.Context, userID string
 	return args.String(0), args.Error(1)
 }
 
-func (m *MockProjectService) ProjectExists(ctx context.Context, projectID string) (bool, error) {
-	args := m.Called(ctx, projectID)
+func (m *MockProjectService) ProjectExists(ctx context.Context, projectID string, logger *zap.Logger) (bool, error) {
+	args := m.Called(ctx, projectID, logger)
 	return args.Bool(0), args.Error(1)
 }
 

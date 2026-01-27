@@ -10,6 +10,7 @@ import (
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/auth"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion"
 	userdb "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/user/db"
+	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/log"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/middleware"
 	"go.uber.org/zap"
 
@@ -25,6 +26,7 @@ type API struct {
 	user                  fusion.User
 	roleManagementService *userdb.RoleManagementService
 	authMiddleware        middleware.AuthMiddleware
+	appLog                *zap.Logger
 }
 
 type Config struct {
@@ -39,6 +41,7 @@ func New(cfg *Config,
 	productSvc fusion.Product,
 	project fusion.Project,
 	userSvc fusion.User,
+	loggers *log.Loggers,
 ) (*API, error) {
 
 	if cfg.Mode == "release" {
@@ -48,22 +51,11 @@ func New(cfg *Config,
 	// Initialize engine with proper configuration
 	engine := gin.New()
 
-	// Initialize logger first
-	var logger *zap.Logger
-	var err error
-	if cfg.Mode == "release" {
-		logger, err = zap.NewProduction()
-	} else {
-		logger, err = zap.NewDevelopment()
-	}
-	if err != nil {
-		return nil, fmt.Errorf("failed to initialize logger: %w", err)
-	}
-
 	// Add middleware in proper order
 	engine.Use(gin.Recovery())
-	engine.Use(corsMiddleware())                           // CORS if needed
-	engine.Use(middleware.RequestLoggerMiddleware(logger)) // Add request logging middleware
+	engine.Use(corsMiddleware())                                          // CORS if needed
+	engine.Use(middleware.RequestLoggerMiddleware(loggers.AuditLogger))   // Use audit logger for requests
+	engine.Use(middleware.ApplicationLoggerMiddleware(loggers.AppLogger)) // Add app logger to context
 
 	if productSvc == nil {
 		return nil, errors.New("missing product service")
@@ -89,14 +81,12 @@ func New(cfg *Config,
 	authMiddleware := middleware.NewAuth0Middleware(auth0Validator)
 
 	api := &API{
-		engine:  engine,
-		product: productSvc,
-		project: project,
-		user:    userSvc,
-
-		// userDBService:         userDBSvc,
-		// roleManagementService: roleManagementSvc,
+		engine:         engine,
+		product:        productSvc,
+		project:        project,
+		user:           userSvc,
 		authMiddleware: authMiddleware,
+		appLog:         loggers.AppLogger,
 	}
 
 	api.registerRoutes()
@@ -113,7 +103,7 @@ func New(cfg *Config,
 }
 
 func (s *API) Start(ctx context.Context) error {
-	// s.logger.Info("Starting HTTP server", zap.String("addr", s.server.Addr))
+	s.appLog.Info("Starting HTTP server", zap.String("addr", s.server.Addr))
 
 	// Start server in goroutine
 	errChan := make(chan error, 1)
@@ -128,22 +118,35 @@ func (s *API) Start(ctx context.Context) error {
 	case <-ctx.Done():
 		return s.shutdown()
 	case err := <-errChan:
+		s.appLog.Error("HTTP server error", zap.Error(err))
 		return err
 	}
 }
 
 // shutdown gracefully shuts down the server.
 func (s *API) shutdown() error {
-	// s.logger.Info("Shutting down HTTP server...")
+	s.appLog.Info("Shutting down HTTP server...")
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	return s.server.Shutdown(ctx)
+	err := s.server.Shutdown(ctx)
+	s.appLog.Sync() // Ensure logs are flushed before shutdown
+	return err
 }
 
 // Engine returns the underlying Gin engine for testing purposes
 func (s *API) Engine() *gin.Engine {
 	return s.engine
+}
+
+// AuditLogger returns the audit logger for external use
+func (s *API) AuditLogger() *zap.Logger {
+	return s.appLog
+}
+
+// AppLogger returns the application logger for external use
+func (s *API) AppLogger() *zap.Logger {
+	return s.appLog
 }
 
 // corsMiddleware adds CORS headers

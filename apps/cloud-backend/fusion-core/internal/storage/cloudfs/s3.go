@@ -7,10 +7,9 @@ import (
 	"io"
 	"time"
 
-	"os"
-
 	"github.com/aws/aws-sdk-go-v2/aws"
 	v4 "github.com/aws/aws-sdk-go-v2/aws/signer/v4"
+	"go.uber.org/zap"
 
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
@@ -92,7 +91,7 @@ func (b *S3BucketHandle) Upload(ctx context.Context, name string, content io.Rea
 	return nil
 }
 
-func (b *S3BucketHandle) ObjectExists(ctx context.Context, name string) (bool, error) {
+func (b *S3BucketHandle) ObjectExists(ctx context.Context, name string, logger *zap.Logger) (bool, error) {
 	_, err := b.client.HeadObject(ctx, &s3.HeadObjectInput{
 		Bucket: aws.String(b.bucketName),
 		Key:    aws.String(name),
@@ -104,17 +103,19 @@ func (b *S3BucketHandle) ObjectExists(ctx context.Context, name string) (bool, e
 			case *types.NotFound:
 				return false, nil
 			default:
+				logger.Error("Failed to check if object exists", zap.Error(err))
 				return false, fmt.Errorf("failed to check if object exists: %w", err)
 			}
 		}
+		logger.Error("Failed to check if object exists", zap.Error(err))
 		return false, fmt.Errorf("failed to check if object exists: %w", err)
 	}
 	return true, nil
 }
 
-func (b *S3BucketHandle) PresignGet(ctx context.Context, objectKey string, ttl time.Duration) (string, error) {
+func (b *S3BucketHandle) PresignGet(ctx context.Context, objectKey string, ttl time.Duration, logger *zap.Logger) (string, error) {
 
-	exists, err := b.ObjectExists(ctx, objectKey)
+	exists, err := b.ObjectExists(ctx, objectKey, logger)
 	if err != nil {
 		return "", err
 	}
@@ -127,18 +128,20 @@ func (b *S3BucketHandle) PresignGet(ctx context.Context, objectKey string, ttl t
 		Key:    aws.String(objectKey),
 	}, func(po *s3.PresignOptions) { po.Expires = ttl })
 	if err != nil {
+		logger.Error("Failed to presign get object request", zap.Error(err))
 		return "", fmt.Errorf("failed to presign get object request: %w", err)
 	}
 	return req.URL, nil
 }
 
-func (b *S3BucketHandle) PresignPut(ctx context.Context, objectKey string, ttl time.Duration) (string, error) {
+func (b *S3BucketHandle) PresignPut(ctx context.Context, objectKey string, ttl time.Duration, logger *zap.Logger) (string, error) {
 
 	req, err := b.presignClient.PresignPutObject(ctx, &s3.PutObjectInput{
 		Bucket: aws.String(b.bucketName),
 		Key:    aws.String(objectKey),
 	}, func(po *s3.PresignOptions) { po.Expires = ttl })
 	if err != nil {
+		logger.Error("Failed to presign put object request", zap.Error(err))
 		return "", fmt.Errorf("failed to presign put object request: %w", err)
 	}
 	return req.URL, nil
@@ -190,48 +193,38 @@ func (o *S3ObjectHandle) NewReader(ctx context.Context) (io.ReadCloser, error) {
 
 // S3Source implements DataSource for AWS S3
 type S3Source struct {
-	bucket string
-	key    string
-	region string
+	bucket   string
+	key      string
+	region   string
+	s3Client *S3
 }
 
-func NewS3Source(bucket, key, region string) (*S3Source, error) {
+func NewS3Source(s3Client *S3, bucket, key, region string) (*S3Source, error) {
 	if bucket == "" || key == "" {
 		return nil, fmt.Errorf("bucket and key are required for S3 source")
 	}
+	if s3Client == nil {
+		return nil, fmt.Errorf("s3Client is required for S3 source")
+	}
 
 	return &S3Source{
-		bucket: bucket,
-		key:    key,
-		region: region,
+		bucket:   bucket,
+		key:      key,
+		region:   region,
+		s3Client: s3Client,
 	}, nil
 }
 
 func (s *S3Source) ReadAll() ([]byte, error) {
-	// Create S3 client using the NewS3Client function
 	ctx := context.Background()
 
-	// Default region if not provided
-	region := s.region
-	if region == "" {
-		region = os.Getenv("AWS_REGION")
-		if region == "" {
-			region = "us-east-1" // Default region
-		}
-	}
-
-	s3Client, err := NewS3Client(ctx, region)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create S3 client: %w", err)
-	}
-
-	// Use the S3 client directly to get the object
+	// Use the existing S3 client
 	input := &s3.GetObjectInput{
 		Bucket: &s.bucket,
 		Key:    &s.key,
 	}
 
-	resp, err := s3Client.Client.GetObject(ctx, input)
+	resp, err := s.s3Client.Client.GetObject(ctx, input)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get S3 object %s/%s: %w", s.bucket, s.key, err)
 	}

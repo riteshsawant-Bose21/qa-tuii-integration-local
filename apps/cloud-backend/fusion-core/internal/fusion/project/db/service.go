@@ -15,7 +15,6 @@ import (
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/api/types"
 	customModel "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/model"
 	model "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/model/models"
-	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/log"
 	boilerTypes "github.com/aarondl/sqlboiler/v4/types"
 
 	ericDecimal "github.com/ericlagergren/decimal"
@@ -23,22 +22,18 @@ import (
 
 // Service is a service for managing projects in the database.
 type Service struct {
-	db     customModel.DBWithTransactions
-	logger *log.Logger
+	db customModel.DBWithTransactions
 }
 
 // NewService creates a new database service.
-func NewService(db customModel.DBWithTransactions, logger *log.Logger) *Service {
+func NewService(db customModel.DBWithTransactions) *Service {
 	if db == nil {
 		panic("db cannot be nil")
 	}
-	if logger == nil {
-		panic("logger cannot be nil")
-	}
+
 	// Initialize the database connection here and return an instance of Service.
 	return &Service{
-		db:     db,
-		logger: logger,
+		db: db,
 	}
 }
 
@@ -188,9 +183,7 @@ func (s *Service) SelectAll(ctx context.Context, queryParams *types.GetAllProjec
 
 	defer func() {
 		if err := rows.Close(); err != nil {
-			if s.logger != nil {
-				s.logger.Error("failed to close rows", zap.Error(err))
-			}
+			logger.Error("failed to close rows", zap.Error(err))
 		}
 	}()
 
@@ -381,14 +374,14 @@ func (s *Service) IsUserAssigned(ctx context.Context, projectID, userID string, 
 }
 
 // ProjectExists checks if a project exists.
-func (s *Service) ProjectExists(ctx context.Context, projectID string) (bool, error) {
+func (s *Service) ProjectExists(ctx context.Context, projectID string, logger *zap.Logger) (bool, error) {
 	exists, err := model.Projects(
 		model.ProjectWhere.ID.EQ(projectID),
 		model.ProjectWhere.IsDeleted.EQ(false),
 	).Exists(ctx, s.db)
 
 	if err != nil {
-		s.logger.Error(types.ErrMsgFailedToCheckProjectExistence,
+		logger.Error(types.ErrMsgFailedToCheckProjectExistence,
 			zap.Error(err),
 			zap.String("project_id", projectID))
 		return false, errors.New(types.ErrMsgFailedToCheckProjectExistence)
@@ -397,13 +390,13 @@ func (s *Service) ProjectExists(ctx context.Context, projectID string) (bool, er
 }
 
 // UserExists checks if a user exists.
-func (s *Service) UserExists(ctx context.Context, userID string) (bool, error) {
+func (s *Service) UserExists(ctx context.Context, userID string, logger *zap.Logger) (bool, error) {
 	exists, err := model.AppUsers(
 		model.AppUserWhere.ID.EQ(userID),
 	).Exists(ctx, s.db)
 
 	if err != nil {
-		s.logger.Error(types.ErrMsgFailedToCheckUserExistence,
+		logger.Error(types.ErrMsgFailedToCheckUserExistence,
 			zap.Error(err),
 			zap.String("user_id", userID))
 		return false, errors.New(types.ErrMsgFailedToCheckUserExistence)
@@ -412,7 +405,7 @@ func (s *Service) UserExists(ctx context.Context, userID string) (bool, error) {
 }
 
 // GetUserIDByEmail gets user ID by email address.
-func (s *Service) GetUserIDByEmail(ctx context.Context, email string) (string, error) {
+func (s *Service) GetUserIDByEmail(ctx context.Context, email string, logger *zap.Logger) (string, error) {
 	user, err := model.AppUsers(
 		model.AppUserWhere.Email.EQ(email),
 	).One(ctx, s.db)
@@ -421,7 +414,7 @@ func (s *Service) GetUserIDByEmail(ctx context.Context, email string) (string, e
 		if errors.Is(err, sql.ErrNoRows) {
 			return "", errors.New(types.ErrMsgUserNotFound)
 		}
-		s.logger.Error(types.ErrMsgFailedToGetUserByEmail,
+		logger.Error(types.ErrMsgFailedToGetUserByEmail,
 			zap.Error(err),
 			zap.String("email", email))
 		return "", errors.New(types.ErrMsgFailedToGetUserByEmail)

@@ -11,6 +11,7 @@ import (
 	v4 "github.com/aws/aws-sdk-go-v2/aws/signer/v4"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/stretchr/testify/assert"
+	"go.uber.org/zap"
 )
 
 const (
@@ -65,7 +66,8 @@ func TestPresignGet(t *testing.T) {
 		client:        mockClient,
 		presignClient: mockPresign,
 	}
-	url, err := bucket.PresignGet(context.Background(), testObjectKey, time.Minute)
+	logger := zap.NewNop()
+	url, err := bucket.PresignGet(context.Background(), testObjectKey, time.Minute, logger)
 	assert.NoError(t, err)
 	assert.Equal(t, "https://example.com/get", url)
 }
@@ -80,7 +82,8 @@ func TestPresignPut(t *testing.T) {
 		bucketName:    testBucketName,
 		presignClient: mockPresign,
 	}
-	url, err := bucket.PresignPut(context.Background(), testObjectKey, time.Minute)
+	logger := zap.NewNop()
+	url, err := bucket.PresignPut(context.Background(), testObjectKey, time.Minute, logger)
 	assert.NoError(t, err)
 	assert.Equal(t, "https://example.com/put", url)
 }
