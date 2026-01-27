@@ -80,12 +80,6 @@ func (a *API) registerRoutes() {
 		authHandler := handler.NewAuthHandler(a.auth)
 		auth.GET("/automation/tokens", authHandler.GetAuthTokensByResourceOwnerPassword)
 	}
-	
-	// Apply auth middleware for protected auth endpoints
-	auth.Use(a.authMiddleware.Middleware())
-	{
-		auth.GET("/status", userHandler.CheckAuthStatus)
-	}
 
 	// Role Management routes for organization admins
 	roleManagementHandler := handler.NewRoleManagementHandler(a.user, a.roleManagementService)
