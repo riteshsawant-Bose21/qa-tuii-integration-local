@@ -155,15 +155,6 @@ class _FusionSidebarState extends State<FusionSidebar> {
                                 ),
                                 maxLine: 2,
                               ),
-                              // const SizedBox(height: 8),
-                              // Tooltip(
-                              //   message: user.user?.email ?? '',
-                              //   child: FusionAppText(
-                              //     maxLine: 1,
-                              //     text: user.user?.email ?? '--',
-                              //     style: context.textTheme.titleSmall,
-                              //   ),
-                              // ),
                             ],
                           );
                         }
