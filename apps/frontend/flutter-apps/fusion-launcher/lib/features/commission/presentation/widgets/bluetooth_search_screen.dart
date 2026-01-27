@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:fusion_lib/fusion_widgets/buttons/secondary_button.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
 import 'info_text.dart';
@@ -39,7 +38,7 @@ class BluetoothSearchScreen extends StatelessWidget {
             text: 'Make sure you Bluetooth devices aew turned on',
           ),
           const SizedBox(height: 24),
-          SecondaryButton(
+          FusionSecondaryButton(
             text: 'Go back',
             onPressed: onGoBack,
           ),
