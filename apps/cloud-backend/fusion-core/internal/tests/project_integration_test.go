@@ -27,6 +27,7 @@ import (
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/handler"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/log"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/middleware"
+	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/storage/cloudfs"
 	sqlpkg "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/storage/sql"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -246,7 +247,11 @@ func (suite *ProjectIntegrationTestSuite) setupAPI() error {
 		RetryDelay:    "5s",
 	}
 
-	productSVC := product.NewService(productDBSvc, "v1", validationCfg, processingCfg, loggers.AppLogger)
+	// Create a mock S3 client for testing
+	s3Client, err := cloudfs.NewS3Client(context.Background(), "us-east-1")
+	require.NoError(suite.T(), err, "Failed to create S3 client for testing")
+
+	productSVC := product.NewService(productDBSvc, "v1", validationCfg, processingCfg, s3Client, loggers.AppLogger)
 	require.NotNil(suite.T(), productSVC, "Failed to initialize product service")
 
 	// Initialize Project services
@@ -1247,7 +1252,7 @@ func (suite *ProjectIntegrationTestSuite) TestArchivedProjectRestrictions() {
 		lockRequest := types.ProjectLockRequest{IsLocked: true}
 		w, err = suite.makeRequest("POST", "/api/v1/projects/"+projectID+"/lock?"+userID, lockRequest)
 		require.NoError(t, err)
-		assert.Equal(t, http.StatusInternalServerError, w.Code)
+		assert.Equal(t, http.StatusForbidden, w.Code)
 
 		// Unarchive should work
 		unarchiveRequest := types.ProjectArchiveRequest{Archive: false}

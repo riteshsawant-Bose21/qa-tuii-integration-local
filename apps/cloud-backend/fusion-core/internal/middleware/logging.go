@@ -45,7 +45,6 @@ func RequestLoggerMiddleware(auditLogger *zap.Logger) gin.HandlerFunc {
 
 		// Build audit log fields for request/response tracking
 		logFields := []zap.Field{
-			zap.String("type", "http_request"),
 			zap.String("method", method),
 			zap.String("path", path),
 			zap.String("clientIP", clientIP),
@@ -94,7 +93,6 @@ func ApplicationLoggerMiddleware(appLogger *zap.Logger) gin.HandlerFunc {
 
 		// Build audit log fields for request/response tracking
 		logFields := []zap.Field{
-			zap.String("type", "http_request"),
 			zap.String("method", method),
 			zap.String("path", path),
 			zap.String("clientIP", clientIP),

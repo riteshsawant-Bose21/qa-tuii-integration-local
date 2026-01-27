@@ -6,13 +6,14 @@ import (
 
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/api/types"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/config"
+	"go.uber.org/zap"
 )
 
 // Product defines the interface for product operations
 type Product interface {
-	GetProductByID(ctx context.Context, id string) (*types.SingleProductResponse, error)
-	GetAllProducts(ctx context.Context) (*types.ProductResponse, error)
-	GetProductPrices(ctx context.Context, id string, currency string, variant string) (*types.PriceResponse, error)
+	GetProductByID(ctx context.Context, id string, logger *zap.Logger) (*types.SingleProductResponse, error)
+	GetAllProducts(ctx context.Context, logger *zap.Logger) (*types.ProductResponse, error)
+	GetProductPrices(ctx context.Context, id string, currency string, variant string, logger *zap.Logger) (*types.PriceResponse, error)
 
 	// Job management methods
 	CreateJob(ctx context.Context, job *types.DBSyncJob) (string, error)
