@@ -47,12 +47,6 @@ definitions:
         example: john.doe@company.com
         type: string
     type: object
-  types.BadRequestError:
-    properties:
-      message:
-        example: Bad Request
-        type: string
-    type: object
   types.Budget:
     properties:
       amount:
@@ -162,18 +156,6 @@ definitions:
         example: 3
         type: integer
     type: object
-  types.InternalServerError:
-    properties:
-      message:
-        example: Internal Server Error
-        type: string
-    type: object
-  types.NotFoundError:
-    properties:
-      message:
-        example: Not Found
-        type: string
-    type: object
   types.OrganizationUsersResponse:
     properties:
       account:
@@ -234,7 +216,7 @@ definitions:
         type: string
       model_name:
         type: string
-      productid:
+      product_id:
         type: integer
       specifications: {}
     type: object
@@ -901,7 +883,7 @@ paths:
         "500":
           description: Internal server error
           schema:
-            $ref: '#/definitions/types.InternalServerError'
+            $ref: '#/definitions/types.ErrorResponse'
       summary: Get all products
       tags:
       - products
@@ -926,15 +908,15 @@ paths:
         "400":
           description: Bad request - Product ID is required
           schema:
-            $ref: '#/definitions/types.BadRequestError'
+            $ref: '#/definitions/types.ErrorResponse'
         "404":
           description: Product not found
           schema:
-            $ref: '#/definitions/types.NotFoundError'
+            $ref: '#/definitions/types.ErrorResponse'
         "500":
           description: Internal server error
           schema:
-            $ref: '#/definitions/types.InternalServerError'
+            $ref: '#/definitions/types.ErrorResponse'
       summary: Get product by ID
       tags:
       - products
@@ -968,15 +950,15 @@ paths:
         "400":
           description: Bad request - Product ID is required
           schema:
-            $ref: '#/definitions/types.BadRequestError'
+            $ref: '#/definitions/types.ErrorResponse'
         "404":
           description: Product not found
           schema:
-            $ref: '#/definitions/types.NotFoundError'
+            $ref: '#/definitions/types.ErrorResponse'
         "500":
           description: Internal server error
           schema:
-            $ref: '#/definitions/types.InternalServerError'
+            $ref: '#/definitions/types.ErrorResponse'
       summary: Get product prices by ID
       tags:
       - products

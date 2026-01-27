@@ -17,7 +17,7 @@ var (
 
 // Generic product item response used for all product types
 type ProductItemResponse struct {
-	ProductID          int         `json:"productid"`
+	ProductID          int         `json:"product_id"`
 	Assets             interface{} `json:"assets"`
 	ModelName          string      `json:"model_name"`
 	ModelFamily        string      `json:"model_family,omitempty"`

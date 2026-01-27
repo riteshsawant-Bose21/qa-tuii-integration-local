@@ -348,14 +348,14 @@ func (suite *ProjectIntegrationTestSuite) createMockAccessControlMiddleware(user
 	return func(c *gin.Context) {
 		userEmail, exists := c.Get("user_email")
 		if !exists {
-			c.JSON(http.StatusUnauthorized, types.ErrorResponse{Message: types.ErrMsgUnauthorized})
+			c.JSON(http.StatusUnauthorized, types.ErrorResponse{ErrorMessage: types.ErrMsgUnauthorized})
 			c.Abort()
 			return
 		}
 
 		email, ok := userEmail.(string)
 		if !ok {
-			c.JSON(http.StatusUnauthorized, types.ErrorResponse{Message: types.ErrMsgUnauthorized})
+			c.JSON(http.StatusUnauthorized, types.ErrorResponse{ErrorMessage: types.ErrMsgUnauthorized})
 			c.Abort()
 			return
 		}
@@ -2387,7 +2387,7 @@ func (suite *ProjectIntegrationTestSuite) TestErrorResponseFormats() {
 		var errorResponse types.ErrorResponse
 		err = json.Unmarshal(w.Body.Bytes(), &errorResponse)
 		require.NoError(t, err)
-		assert.NotEmpty(t, errorResponse.Message)
+		assert.NotEmpty(t, errorResponse.ErrorMessage)
 	})
 
 	suite.T().Run("should return consistent error format for not found errors", func(t *testing.T) {
@@ -2398,7 +2398,7 @@ func (suite *ProjectIntegrationTestSuite) TestErrorResponseFormats() {
 		var errorResponse types.ErrorResponse
 		err = json.Unmarshal(w.Body.Bytes(), &errorResponse)
 		require.NoError(t, err)
-		assert.NotEmpty(t, errorResponse.Message)
+		assert.NotEmpty(t, errorResponse.ErrorMessage)
 	})
 }
 
@@ -2726,7 +2726,7 @@ func (suite *ProjectIntegrationTestSuite) TestAPIResponseConsistency() {
 					var errorResponse types.ErrorResponse
 					err = json.Unmarshal(w.Body.Bytes(), &errorResponse)
 					require.NoError(t, err)
-					assert.NotEmpty(t, errorResponse.Message, "Error response should have a message")
+					assert.NotEmpty(t, errorResponse.ErrorMessage, "Error response should have a message")
 				}
 			})
 		}
@@ -2826,7 +2826,7 @@ func (suite *ProjectIntegrationTestSuite) TestMissingEndpoints() {
 				var errorResponse types.ErrorResponse
 				err = json.Unmarshal(w.Body.Bytes(), &errorResponse)
 				require.NoError(t, err)
-				assert.NotEmpty(t, errorResponse.Message)
+				assert.NotEmpty(t, errorResponse.ErrorMessage)
 			})
 		}
 	})

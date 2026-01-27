@@ -439,7 +439,7 @@ const docTemplate = `{
                     "500": {
                         "description": "Internal server error",
                         "schema": {
-                            "$ref": "#/definitions/types.InternalServerError"
+                            "$ref": "#/definitions/types.ErrorResponse"
                         }
                     }
                 }
@@ -477,19 +477,19 @@ const docTemplate = `{
                     "400": {
                         "description": "Bad request - Product ID is required",
                         "schema": {
-                            "$ref": "#/definitions/types.BadRequestError"
+                            "$ref": "#/definitions/types.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Product not found",
                         "schema": {
-                            "$ref": "#/definitions/types.NotFoundError"
+                            "$ref": "#/definitions/types.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal server error",
                         "schema": {
-                            "$ref": "#/definitions/types.InternalServerError"
+                            "$ref": "#/definitions/types.ErrorResponse"
                         }
                     }
                 }
@@ -539,19 +539,19 @@ const docTemplate = `{
                     "400": {
                         "description": "Bad request - Product ID is required",
                         "schema": {
-                            "$ref": "#/definitions/types.BadRequestError"
+                            "$ref": "#/definitions/types.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Product not found",
                         "schema": {
-                            "$ref": "#/definitions/types.NotFoundError"
+                            "$ref": "#/definitions/types.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal server error",
                         "schema": {
-                            "$ref": "#/definitions/types.InternalServerError"
+                            "$ref": "#/definitions/types.ErrorResponse"
                         }
                     }
                 }
@@ -1426,15 +1426,6 @@ const docTemplate = `{
                 }
             }
         },
-        "types.BadRequestError": {
-            "type": "object",
-            "properties": {
-                "message": {
-                    "type": "string",
-                    "example": "Bad Request"
-                }
-            }
-        },
         "types.Budget": {
             "type": "object",
             "required": [
@@ -1586,24 +1577,6 @@ const docTemplate = `{
                 }
             }
         },
-        "types.InternalServerError": {
-            "type": "object",
-            "properties": {
-                "message": {
-                    "type": "string",
-                    "example": "Internal Server Error"
-                }
-            }
-        },
-        "types.NotFoundError": {
-            "type": "object",
-            "properties": {
-                "message": {
-                    "type": "string",
-                    "example": "Not Found"
-                }
-            }
-        },
         "types.OrganizationUsersResponse": {
             "type": "object",
             "properties": {
@@ -1692,7 +1665,7 @@ const docTemplate = `{
                 "model_name": {
                     "type": "string"
                 },
-                "productid": {
+                "product_id": {
                     "type": "integer"
                 },
                 "specifications": {}

@@ -2,7 +2,7 @@ package types
 
 // ErrorResponse represents the standard error response structure.
 type ErrorResponse struct {
-	Message string `json:"error" example:"Error message"`
+	ErrorMessage string `json:"error" example:"Error message"`
 }
 
 // BadRequestError represents a 400 Bad Request error.

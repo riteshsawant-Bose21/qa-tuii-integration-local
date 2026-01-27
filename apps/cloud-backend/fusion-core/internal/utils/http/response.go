@@ -31,27 +31,27 @@ func NoContent(c *gin.Context) {
 
 // BadRequest sends a 400 Bad Request response
 func BadRequest(c *gin.Context, message string) {
-	SendJSON(c, http.StatusBadRequest, types.ErrorResponse{Message: message})
+	SendJSON(c, http.StatusBadRequest, types.ErrorResponse{ErrorMessage: message})
 }
 
 // Unauthorized sends a 401 Unauthorized response
 func Unauthorized(c *gin.Context, message string) {
-	SendJSON(c, http.StatusUnauthorized, types.ErrorResponse{Message: message})
+	SendJSON(c, http.StatusUnauthorized, types.ErrorResponse{ErrorMessage: message})
 }
 
 // Forbidden sends a 403 Forbidden response
 func Forbidden(c *gin.Context, message string) {
-	SendJSON(c, http.StatusForbidden, types.ErrorResponse{Message: message})
+	SendJSON(c, http.StatusForbidden, types.ErrorResponse{ErrorMessage: message})
 }
 
 // NotFound sends a 404 Not Found response
 func NotFound(c *gin.Context, message string) {
-	SendJSON(c, http.StatusNotFound, types.ErrorResponse{Message: message})
+	SendJSON(c, http.StatusNotFound, types.ErrorResponse{ErrorMessage: message})
 }
 
 // InternalError sends a 500 Internal Server Error response
 func InternalError(c *gin.Context) {
-	SendJSON(c, http.StatusInternalServerError, types.ErrorResponse{Message: constants.MsgInternalServerError})
+	SendJSON(c, http.StatusInternalServerError, types.ErrorResponse{ErrorMessage: constants.MsgInternalServerError})
 }
 
 // RespondWithSuccess sends a success response with generic data
