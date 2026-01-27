@@ -27,3 +27,22 @@ type AuthContext struct {
 	Username string   `json:"username,omitempty" example:"john.doe"`
 	Roles    []string `json:"roles,omitempty"`
 }
+
+// AuthTokenRequest represents a request for authentication tokens
+type AuthTokenRequest struct {
+	Username string `json:"username" binding:"required" example:"test-user@company.com"`
+}
+
+// AuthTokenResponse represents the response containing Auth0 tokens
+type AuthTokenResponse struct {
+	AccessToken string `json:"access_token" example:"eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9..."`
+	IDToken     string `json:"id_token" example:"eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9..."`
+	TokenType   string `json:"token_type" example:"Bearer"`
+	ExpiresIn   int    `json:"expires_in" example:"86400"`
+}
+
+// AuthTokenSuccessResponse represents a successful auth token response
+type AuthTokenSuccessResponse struct {
+	Message string             `json:"message" example:"Tokens generated successfully"`
+	Data    *AuthTokenResponse `json:"data"`
+}
