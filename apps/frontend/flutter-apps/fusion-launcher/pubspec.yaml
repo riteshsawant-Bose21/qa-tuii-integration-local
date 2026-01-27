@@ -100,6 +100,8 @@ dev_dependencies:
   integration_test:
     sdk: flutter
   permission_handler: ^11.0.1
+  lottie: ^3.3.2
+  visibility_detector: ^0.4.0+2
 
   # The "flutter_lints" package below contains a set of recommended lints to
   # encourage good coding practices. The lint set provided by the package is
@@ -140,6 +142,7 @@ flutter:
     - assets/svg/
     - assets/images/commission/
     - assets/zip/product_cache.zip
+    - assets/lottie/
 
 
   # An image asset can refer to one or more resolution-specific "variants", see
