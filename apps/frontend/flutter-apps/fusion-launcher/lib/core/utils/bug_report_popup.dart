@@ -216,7 +216,7 @@ Future<bool> downloadFilesLocally(
 }) async {
   try {
     // Let user pick a directory to save files
-    final String? selectedDirectory = await FilePicker.platform.getDirectoryPath(
+    final String? selectedDirectory = await FilePicker.getDirectoryPath(
       dialogTitle: 'Select Download Location',
     );
 
@@ -333,7 +333,7 @@ Future<bool> downloadAsZip(
     final List<int> zipData = encoder.encode(archive);
 
     // Let user choose save location
-    String? outputPath = await FilePicker.platform.saveFile(
+    String? outputPath = await FilePicker.saveFile(
       dialogTitle: 'Save Export Archive',
       fileName: 'fusion_export_${DateTime.now().millisecondsSinceEpoch}.zip',
       type: FileType.custom,
