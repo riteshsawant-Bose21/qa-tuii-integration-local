@@ -34,8 +34,8 @@ func NewProjectHandler(project fusion.Project) *ProjectHandler {
 // @Security BearerAuth
 // @Param body body types.ProjectCreateRequest true "Project details"
 // @Success 201 {object} types.ProjectCreateResponse "Successfully created project"
-// @Failure 400 {object} types.BadRequestError "Bad request - Invalid payload or user not found or project Id already exists"
-// @Failure 500 {object} types.InternalServerError "Internal server error"
+// @Failure 400 {object} types.ErrorResponse "Bad request - Invalid payload or user not found or project Id already exists"
+// @Failure 500 {object} types.ErrorResponse "Internal server error"
 // @Router /projects [post]
 func (h *ProjectHandler) CreateProject(ctx *gin.Context) {
 	loggerFromContext, exists := ctx.Get("logger")
@@ -92,8 +92,8 @@ func (h *ProjectHandler) CreateProject(ctx *gin.Context) {
 // @Param sort_by query string false "Field to sort projects by (e.g., created_at, updated_at)"
 // @Param sort_order query string false "Sort order (ascending or descending)" Enums(asc, desc)
 // @Success 200 {object} types.GetAllProjectsResponse "Successfully retrieved all projects"
-// @Failure 400 {object} types.BadRequestError "Bad request - Invalid query parameters"
-// @Failure 500 {object} types.InternalServerError "Internal server error"
+// @Failure 400 {object} types.ErrorResponse "Bad request - Invalid query parameters"
+// @Failure 500 {object} types.ErrorResponse "Internal server error"
 // @Router /projects [get]
 func (h *ProjectHandler) GetAllProjects(ctx *gin.Context) {
 
@@ -156,10 +156,10 @@ func (h *ProjectHandler) GetAllProjects(ctx *gin.Context) {
 // @Param projectId path string true "Project ID"
 // @Param body body types.ProjectUpdateRequest true "Updated project details"
 // @Success 200 {object} types.ProjectUpdateResponse "Successfully updated project"
-// @Failure 400 {object} types.BadRequestError "Bad request - Invalid payload"
-// @Failure 403 {object} types.ForbiddenError "Forbidden - User not assigned to project, project archived, or locked by another user"
-// @Failure 404 {object} types.NotFoundError "Project or user not found"
-// @Failure 500 {object} types.InternalServerError "Internal server error"
+// @Failure 400 {object} types.ErrorResponse "Bad request - Invalid payload"
+// @Failure 403 {object} types.ErrorResponse "Forbidden - User not assigned to project, project archived, or locked by another user"
+// @Failure 404 {object} types.ErrorResponse "Project or user not found"
+// @Failure 500 {object} types.ErrorResponse "Internal server error"
 // @Router /projects/{projectId} [patch]
 func (h *ProjectHandler) UpdateProject(ctx *gin.Context) {
 	loggerFromContext, exists := ctx.Get("logger")
@@ -239,10 +239,10 @@ func (h *ProjectHandler) UpdateProject(ctx *gin.Context) {
 // @Security BearerAuth
 // @Param projectId path string true "Project ID"
 // @Success 204 "Successfully deleted project"
-// @Failure 400 {object} types.BadRequestError "Bad request - Missing user ID"
-// @Failure 403 {object} types.ForbiddenError "Forbidden - User not assigned to project, project archived, or locked by another user"
-// @Failure 404 {object} types.NotFoundError "Project or user not found"
-// @Failure 500 {object} types.InternalServerError "Internal server error"
+// @Failure 400 {object} types.ErrorResponse "Bad request - Missing user ID"
+// @Failure 403 {object} types.ErrorResponse "Forbidden - User not assigned to project, project archived, or locked by another user"
+// @Failure 404 {object} types.ErrorResponse "Project or user not found"
+// @Failure 500 {object} types.ErrorResponse "Internal server error"
 // @Router /projects/{projectId} [delete]
 func (h *ProjectHandler) DeleteProject(ctx *gin.Context) {
 	loggerFromContext, exists := ctx.Get("logger")
@@ -302,8 +302,8 @@ func (h *ProjectHandler) DeleteProject(ctx *gin.Context) {
 // @Param projectId path string true "Project ID"
 // @Param userEmail path string true "User Email"
 // @Success 204 "User successfully assigned to the project"
-// @Failure 404 {object} types.NotFoundError "Project or User not found"
-// @Failure 500 {object} types.InternalServerError "Internal server error"
+// @Failure 404 {object} types.ErrorResponse "Project or User not found"
+// @Failure 500 {object} types.ErrorResponse "Internal server error"
 // @Router /projects/{projectId}/users/{userEmail} [put]
 func (h *ProjectHandler) AssignUserToProject(ctx *gin.Context) {
 	loggerFromContext, exists := ctx.Get("logger")
@@ -354,8 +354,8 @@ func (h *ProjectHandler) AssignUserToProject(ctx *gin.Context) {
 // @Param projectId path string true "Project ID"
 // @Param userEmail path string true "User Email"
 // @Success 204 "User successfully removed from the project"
-// @Failure 404 {object} types.NotFoundError "Project or User not found, or user not assigned to the project"
-// @Failure 500 {object} types.InternalServerError "Internal server error"
+// @Failure 404 {object} types.ErrorResponse "Project or User not found, or user not assigned to the project"
+// @Failure 500 {object} types.ErrorResponse "Internal server error"
 // @Router /projects/{projectId}/users/{userEmail} [delete]
 func (h *ProjectHandler) RemoveUserFromProject(ctx *gin.Context) {
 	loggerFromContext, exists := ctx.Get("logger")
@@ -411,10 +411,10 @@ func (h *ProjectHandler) RemoveUserFromProject(ctx *gin.Context) {
 // @Param projectId path string true "Project ID"
 // @Param body body types.ProjectStarRequest true "Star/unstar request"
 // @Success 204 "Successfully updated project star status"
-// @Failure 400 {object} types.BadRequestError "Bad request - Invalid payload"
-// @Failure 403 {object} types.ForbiddenError "Forbidden - User not assigned to project, project archived, or locked by another user"
-// @Failure 404 {object} types.NotFoundError "Project or User not found"
-// @Failure 500 {object} types.InternalServerError "Internal server error"
+// @Failure 400 {object} types.ErrorResponse "Bad request - Invalid payload"
+// @Failure 403 {object} types.ErrorResponse "Forbidden - User not assigned to project, project archived, or locked by another user"
+// @Failure 404 {object} types.ErrorResponse "Project or User not found"
+// @Failure 500 {object} types.ErrorResponse "Internal server error"
 // @Router /projects/{projectId}/star/{userId} [post]
 func (h *ProjectHandler) UpdateProjectStar(ctx *gin.Context) {
 	loggerFromContext, exists := ctx.Get("logger")
@@ -487,10 +487,10 @@ func (h *ProjectHandler) UpdateProjectStar(ctx *gin.Context) {
 // @Param projectId path string true "Project ID"
 // @Param body body types.ProjectArchiveRequest true "Archive/unarchive request"
 // @Success 204 "Project archive status updated successfully"
-// @Failure 400 {object} types.BadRequestError "Bad request - Invalid payload"
-// @Failure 403 {object} types.ForbiddenError "Forbidden - User not assigned to project or project locked by another user"
-// @Failure 404 {object} types.NotFoundError "Project not found"
-// @Failure 500 {object} types.InternalServerError "Internal server error"
+// @Failure 400 {object} types.ErrorResponse "Bad request - Invalid payload"
+// @Failure 403 {object} types.ErrorResponse "Forbidden - User not assigned to project or project locked by another user"
+// @Failure 404 {object} types.ErrorResponse "Project not found"
+// @Failure 500 {object} types.ErrorResponse "Internal server error"
 // @Router /projects/{projectId}/archive [post]
 func (h *ProjectHandler) UpdateProjectArchive(ctx *gin.Context) {
 	loggerFromContext, exists := ctx.Get("logger")
@@ -566,10 +566,10 @@ func (h *ProjectHandler) UpdateProjectArchive(ctx *gin.Context) {
 // @Param projectId path string true "Project ID"
 // @Param body body types.ProjectLockRequest true "Lock/unlock request"
 // @Success 204 "Successfully updated project lock status"
-// @Failure 400 {object} types.BadRequestError "Bad request - Invalid payload"
-// @Failure 403 {object} types.ForbiddenError "Forbidden - User not assigned to project or project already locked by another user"
-// @Failure 404 {object} types.NotFoundError "Project not found"
-// @Failure 500 {object} types.InternalServerError "Internal server error"
+// @Failure 400 {object} types.ErrorResponse "Bad request - Invalid payload"
+// @Failure 403 {object} types.ErrorResponse "Forbidden - User not assigned to project or project already locked by another user"
+// @Failure 404 {object} types.ErrorResponse "Project not found"
+// @Failure 500 {object} types.ErrorResponse "Internal server error"
 // @Router /projects/{projectId}/lock [post]
 func (h *ProjectHandler) UpdateProjectLock(ctx *gin.Context) {
 	loggerFromContext, exists := ctx.Get("logger")
