@@ -28,7 +28,7 @@ class CircuitPainter extends CustomPainter {
     ///
     /// Background Dotted grid
     ///
-    DottedGridPainter(color: colorScheme.outlineVariant.withAlpha(125)).paint(
+    DottedGridPainter(color: Colors.grey.shade300).paint(
       canvas,
       size,
       offset,
@@ -58,16 +58,14 @@ class CircuitPainter extends CustomPainter {
     }
 
     if (controller.state is ConnectionProgressWiringState) {
-      final ConnectionProgressWiringState state =
-          (controller.state as ConnectionProgressWiringState);
-      final IntermediateWirePainter intermediateWirePainter =
-          IntermediateWirePainter(
-            start: state.port,
-            end: state.destination,
-            controller: controller,
-            joints: state.path,
-            colorScheme: colorScheme,
-          );
+      final ConnectionProgressWiringState state = (controller.state as ConnectionProgressWiringState);
+      final IntermediateWirePainter intermediateWirePainter = IntermediateWirePainter(
+        start: state.port,
+        end: state.destination,
+        controller: controller,
+        joints: state.path,
+        colorScheme: colorScheme,
+      );
       intermediateWirePainter.paint(canvas, size);
     }
 

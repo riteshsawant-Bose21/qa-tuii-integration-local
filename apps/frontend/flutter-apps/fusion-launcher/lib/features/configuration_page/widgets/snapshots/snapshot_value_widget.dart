@@ -164,34 +164,14 @@ class _SnapshotValueWidgetState extends State<SnapshotValueWidget> {
       case SceneParamValueType.onOffButton:
         final bool isOn = value.value == "on";
 
-        return SizedBox(
-          height: 12,
-          child: Transform.scale(
-            scale: 0.8,
-            child: Switch(
-              value: isOn,
-              padding: EdgeInsets.zero,
-              materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-              thumbColor: MaterialStateProperty.resolveWith<Color>((Set<MaterialState> states) {
-                if (states.contains(MaterialState.selected)) {
-                  return Theme.of(context).colorScheme.onPrimary;
-                }
-                return context.colorScheme.primaryBlack;
-              }),
-              trackColor: MaterialStateProperty.resolveWith<Color>((Set<MaterialState> states) {
-                if (states.contains(MaterialState.selected)) {
-                  return context.colorScheme.primaryBlack;
-                }
-                return context.colorScheme.primaryBlack;
-              }),
-              trackOutlineColor: MaterialStateProperty.all(Colors.transparent),
-              onChanged: (bool v) {
-                final SceneValue updated = value.copyWith(value: v ? "on" : "off");
-                widget.onChanged(updated);
-                setState(() {});
-              },
-            ),
-          ),
+        return FusionSwitch(
+          value: isOn,
+          height: 22,
+          width: 36,
+          onChanged: (bool v) {
+            final SceneValue updated = value.copyWith(value: v ? "on" : "off");
+            widget.onChanged(updated);
+          },
         );
       case SceneParamValueType.pulse:
 
@@ -204,37 +184,17 @@ class _SnapshotValueWidgetState extends State<SnapshotValueWidget> {
         return Row(
           children: <Widget>[
             /// Enable/Disable Switch
-            SizedBox(
-              height: 12,
-              child: Transform.scale(
-                scale: 0.8,
-                child: Switch(
-                  value: isEnabled,
-                  padding: EdgeInsets.zero,
-                  materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                  thumbColor: MaterialStateProperty.resolveWith<Color>((Set<MaterialState> states) {
-                    if (states.contains(MaterialState.selected)) {
-                      return Theme.of(context).colorScheme.primaryWhite;
-                    }
-                    return context.colorScheme.primaryBlack;
-                  }),
-                  trackColor: MaterialStateProperty.resolveWith<Color>((Set<MaterialState> states) {
-                    if (states.contains(MaterialState.selected)) {
-                      return context.colorScheme.primaryBlack;
-                    }
-                    return context.colorScheme.primaryBlack;
-                  }),
-                  trackOutlineColor: MaterialStateProperty.all(Colors.transparent),
-                  onChanged: (bool val) {
-                    final String newValue = "${val ? 'true' : 'false'}:$duration";
-                    print("new vwaluw = = > $newValue");
+            FusionSwitch(
+              value: isEnabled,
+              height: 22,
+              width: 36,
+              onChanged: (bool val) {
+                final String newValue = "${val ? 'true' : 'false'}:$duration";
+                print("new vwaluw = = > $newValue");
 
-                    final SceneValue updated = value.copyWith(value: newValue);
-                    widget.onChanged(updated);
-                    setState(() {});
-                  },
-                ),
-              ),
+                final SceneValue updated = value.copyWith(value: newValue);
+                widget.onChanged(updated);
+              },
             ),
 
             const SizedBox(width: 8),
@@ -251,12 +211,25 @@ class _SnapshotValueWidgetState extends State<SnapshotValueWidget> {
                     // enabled: isEnabled,
                     keyboardType: TextInputType.number,
                     decoration: InputDecoration(
-                      border: OutlineInputBorder(borderSide: BorderSide(color: context.colorScheme.elevation1)),
-                      isDense: true,
-                      labelText: "Duration (ms)",
+                      hintStyle: Theme.of(context).inputDecorationTheme.hintStyle,
+                      counterText: '',
+                      fillColor: context.colorScheme.elevation2,
+                      filled: true,
                       labelStyle: context.textTheme.bodySmall,
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    ),
+                      labelText: "Duration (ms)",
+
+                      border: const OutlineInputBorder(borderSide: BorderSide(color: Colors.transparent)),
+                      enabledBorder: const OutlineInputBorder(borderSide: BorderSide(color: Colors.transparent)),
+                      focusedBorder: const OutlineInputBorder(borderSide: BorderSide(color: Colors.transparent)),
+                      isDense: true,
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 2, vertical: 4),
+                    ), // decoration: InputDecoration(
+                    //   border: OutlineInputBorder(borderSide: BorderSide(color: context.colorScheme.elevation1)),
+                    //   isDense: true,
+                    //   labelText: "Duration (ms)",
+                    //   labelStyle: context.textTheme.bodySmall,
+                    //   contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    // ),
                     onChanged: (String v) {
                       /// Ensure only valid numbers are accepted
                       final String sanitizedValue = v.replaceAll(RegExp(r'[^0-9]'), '');

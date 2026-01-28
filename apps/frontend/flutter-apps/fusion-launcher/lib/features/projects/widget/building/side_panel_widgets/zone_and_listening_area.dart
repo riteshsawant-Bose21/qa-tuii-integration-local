@@ -435,7 +435,7 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
                                         child: Row(
                                           mainAxisSize: MainAxisSize.min,
                                           children: <Widget>[
-                                            const Icon(Icons.add, size: 16, color: Colors.black54),
+                                            Icon(Icons.add, size: 16, color: context.colorScheme.iconWhite),
                                             const SizedBox(width: 8),
                                             FusionAppText(
                                               text: 'Select Listening Areas',
