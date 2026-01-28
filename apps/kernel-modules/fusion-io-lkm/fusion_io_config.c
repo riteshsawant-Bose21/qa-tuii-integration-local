@@ -43,7 +43,7 @@ const struct base_device bd_fusion_powersmart = {
         .sn = "tbd",
         .type = BD_TYPE_FUSION_POWERSMART
     },
-    .num_gpios = 9,
+    .num_gpios = 8,
     .gpios = (struct endpoint_gpio[]) {
         {
             .name = "gpio_GPIO1_IO1",
@@ -68,13 +68,6 @@ const struct base_device bd_fusion_powersmart = {
             .type = EP_GPIO_TYPE_PHYS,
             .export = true,
             .num = 7 // GPIO1_IO7
-        },
-        {
-            .name = "gpio_amp_rstn",
-            .type = EP_GPIO_TYPE_PHYS,
-            .export = true,
-            .num = 8, // GPIO1_IO8
-            .default_val = EP_GPIO_VAL_HI
         },
         {
             .name = "gpio_amp_mute",

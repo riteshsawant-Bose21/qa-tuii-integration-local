@@ -48,6 +48,8 @@
 
 /* 10 MHz -> 100 ns/tick; 1/3 ms = 333333.333 ns -> 3333,3333,3334 ticks */
 #define PERIOD_TICKS_BASE 3333U
+/* 10 MHz -> 10,000,000 ticks per second for 1PPS capture cadence */
+#define PPS_TICKS 10000000ULL
 
 struct fusion_gpt
 {
@@ -331,6 +333,11 @@ static irqreturn_t gpt_irq(int irq, void *dev_id)
 
 	if (sr & SR_IF1) {
 		u32 cap = rdl(g, GPT_ICR1);   /* latches & clears capture1 */
+		u64 prev_cap64 = 0;
+		bool had_prev = false;
+		bool epoch_valid = false;
+		u64 epoch_ns = 0;
+		u64 epoch_cnt64 = 0;
 
 		/* Build a monotonic 64-bit capture close to 'now' */
 		u64 now64 = gpt_read_ticks64(g);                /* seq-safe read */
@@ -339,6 +346,11 @@ static irqreturn_t gpt_irq(int irq, void *dev_id)
 			cap64 -= 1ULL << 32;
 
 		raw_spin_lock(&g->pps_lock);
+		had_prev = g->pps_valid;
+		prev_cap64 = g->pps_icr1_last64;
+		epoch_valid = g->phc_epoch_valid;
+		epoch_ns = g->phc_epoch_ns;
+		epoch_cnt64 = g->pps_epoch_cnt64;
 		g->pps_seq++;
 		g->pps_icr1_last32 = cap;
 		g->pps_icr1_last64 = cap64;
@@ -355,6 +367,28 @@ static irqreturn_t gpt_irq(int irq, void *dev_id)
                     g->phc_epoch_ns, g->pps_epoch_cnt64);
         }
 		raw_spin_unlock(&g->pps_lock);
+
+		/* Unconditional PPS capture log for timing/health */
+		{
+			u64 missed = 0;
+			u64 delta_ticks = 0;
+			u64 phc_ns = 0;
+
+			if (had_prev) {
+				u64 intervals;
+				delta_ticks = cap64 - prev_cap64;
+				intervals = (delta_ticks + (PPS_TICKS / 2)) / PPS_TICKS;
+				if (intervals == 0)
+					intervals = 1;
+				missed = intervals - 1;
+			}
+
+			if (epoch_valid && cap64 >= epoch_cnt64)
+				phc_ns = epoch_ns + (cap64 - epoch_cnt64) * 100ULL;
+
+			printk(KERN_DEBUG "fusion_gpt: 1pps cap_ticks=%llu phc_ns=%llu missed=%llu delta_ticks=%llu\n",
+			       cap64, phc_ns, missed, delta_ticks);
+		}
 
 		clr |= SR_IF1;
 	}
@@ -440,7 +474,7 @@ static int gpt_start(struct fusion_gpt *g)
 	wrl(g, 0, GPT_CR);
 	wrl(g, 0, GPT_PR);
 	wrl(g, SR_OF1 | SR_IF1 | SR_IF2, GPT_SR);
-	wrl(g, IR_OF1IE | IR_IF1IE | IR_IF2IE, GPT_IR);
+	wrl(g, IR_OF1IE | IR_IF1IE, GPT_IR);
 
 	cr = CR_ENMOD | CR_FRR | CR_CLKSRC_EXT | CR_DBGEN | CR_WAITEN |
 	      CR_IM1_RISING | CR_IM2_RISING;
