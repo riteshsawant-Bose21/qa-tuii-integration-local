@@ -40,8 +40,13 @@ TEST(UDPValueMonitorTest, AsynchronousUpdatesAndNetworking) {
       Json::Value nested;
       nested["value"] = 42;
       response["test"] = nested;
+
+      // Send as "initial state" envelope so version checks are skipped.
+      Json::Value envelope;
+      envelope["status"] = "ok";
+      envelope["data"] = response;
       Json::FastWriter writer;
-      std::string responseStr = writer.write(response);
+      std::string responseStr = writer.write(envelope);
 
       sendto(sock, responseStr.c_str(), responseStr.size(), 0,
              (struct sockaddr *)&clientAddr, clientLen);
