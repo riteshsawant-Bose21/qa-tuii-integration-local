@@ -59,25 +59,8 @@ class ProductQueryViewModel extends Cubit<ProductQueryViewModelState> {
 
   late String localProductDirPath;
 
-  // productId: {variant: localImagePath}
-  final Map<int, Map<String, String>> _cachedImages = <int, Map<String, String>>{};
-
   bool get hasCloudAccess {
     return serviceLocator<SessionViewModel>().hasCloudAccess();
-  }
-
-  // ---------- get image ----------
-  String? getImagePath(int productId, String key) => _cachedImages[productId]?[key]; // e.g. key: 'black'
-
-  void _doCacheProductImages(int productId, Map<String, List<String>> images) {
-    final Map<String, String> productImages = <String, String>{};
-    for (final String key in images.keys) {
-      final String firstLocalImagePath = _productsApi.getImagePath(images[key]!.first);
-      if (firstLocalImagePath.isEmpty) continue;
-      productImages[key] = firstLocalImagePath; // [productId][variant] = firstLocalImagePath
-    }
-
-    _cachedImages[productId] = productImages;
   }
 
   Future<void> loadProducts({int attempt = 1, bool refresh = false}) async {
@@ -91,27 +74,21 @@ class ProductQueryViewModel extends Cubit<ProductQueryViewModelState> {
       if (hasCloudAccess) {
         for (SpeakerProduct element in speakers) {
           _fetchProductPrices(element.productId);
-          _doCacheProductImages(element.productId, element.assets.assets);
         }
         for (AmplifierProduct element in amplifiers) {
           _fetchProductPrices(element.productId);
-          _doCacheProductImages(element.productId, element.assets.assets);
         }
         for (IoEndpointProduct element in ioEndpoints) {
           _fetchProductPrices(element.productId);
-          _doCacheProductImages(element.productId, element.assets.assets);
         }
         for (DspProduct element in dsps) {
           _fetchProductPrices(element.productId);
-          _doCacheProductImages(element.productId, element.assets.assets);
         }
         for (ControllerProduct element in controllers) {
           _fetchProductPrices(element.productId);
-          _doCacheProductImages(element.productId, element.assets.assets);
         }
         for (AccessoryProduct element in accessories) {
           _fetchProductPrices(element.productId);
-          _doCacheProductImages(element.productId, element.assets.assets);
         }
       }
     } catch (e) {
@@ -128,7 +105,11 @@ class ProductQueryViewModel extends Cubit<ProductQueryViewModelState> {
 
   void refresh() => loadProducts(refresh: true);
 
+  // ---------- get image ----------
+  String getImagePath(String imageUrl) => _productsApi.getImagePath(imageUrl);
+
   bool get isLoading => state.isLoading;
+  String get errorMessage => state.errorMessage;
 
   // ---------- Convenience getters ----------
   List<SpeakerProduct> get speakers => state.products?.speakers ?? const <SpeakerProduct>[];
