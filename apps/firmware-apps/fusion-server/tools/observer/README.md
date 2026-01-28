@@ -106,6 +106,14 @@ GTEST_FILTER=UDPValueMonitorTest.AsynchronousUpdatesAndNetworking \
 make -C tools/observer test
 ```
 
+Run the fusion-server integration test (requires a local server running):
+```bash
+FUSION_UDP_INTEGRATION=1 \
+FUSION_UDP_ADDR=127.0.0.1:7947 \
+GTEST_FILTER=UDPValueMonitorTest.IntegrationWithFusionServer \
+make -C tools/observer test
+```
+
 ## Notes
 
 - Array indices start at 0

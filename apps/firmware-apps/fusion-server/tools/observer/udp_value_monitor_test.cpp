@@ -2,6 +2,7 @@
 #include <arpa/inet.h>
 #include <atomic>
 #include <chrono>
+#include <cstdlib>
 #include <cstring>
 #include <gtest/gtest.h>
 #include <thread>
@@ -75,4 +76,89 @@ TEST(UDPValueMonitorTest, AsynchronousUpdatesAndNetworking) {
   if (serverThread.joinable()) {
     serverThread.join();
   }
+}
+
+namespace {
+bool isEnvEnabled(const char *name) {
+  const char *value = std::getenv(name);
+  return value != nullptr && value[0] != '\0' && std::string(value) != "0";
+}
+
+bool parseHostPort(const std::string &addr, std::string *host, int *port) {
+  const auto pos = addr.rfind(':');
+  if (pos == std::string::npos) {
+    return false;
+  }
+  *host = addr.substr(0, pos);
+  if (host->empty()) {
+    return false;
+  }
+  try {
+    *port = std::stoi(addr.substr(pos + 1));
+  } catch (...) {
+    return false;
+  }
+  return *port > 0;
+}
+} // namespace
+
+TEST(UDPValueMonitorTest, IntegrationWithFusionServer) {
+  if (!isEnvEnabled("FUSION_UDP_INTEGRATION")) {
+    GTEST_SKIP() << "Set FUSION_UDP_INTEGRATION=1 to enable this test.";
+  }
+
+  const char *addrEnv = std::getenv("FUSION_UDP_ADDR");
+  std::string addr = addrEnv ? addrEnv : "127.0.0.1:7947";
+
+  std::string host;
+  int port = 0;
+  ASSERT_TRUE(parseHostPort(addr, &host, &port))
+      << "Invalid FUSION_UDP_ADDR (expected host:port): " << addr;
+
+  if (host == "localhost") {
+    host = "127.0.0.1";
+  }
+
+  const std::vector<std::string> targetPaths = {"observer_test.value"};
+  UDPValueMonitor monitorUDP(host, port, targetPaths, false);
+
+  const int expected = 42;
+  Json::Value update;
+  update["action"] = "set";
+  update["payload"]["observer_test"]["value"] = expected;
+
+  int sock = socket(AF_INET, SOCK_DGRAM, 0);
+  ASSERT_NE(sock, -1) << "Failed to create UDP client socket";
+
+  sockaddr_in serverAddr;
+  std::memset(&serverAddr, 0, sizeof(serverAddr));
+  serverAddr.sin_family = AF_INET;
+  serverAddr.sin_port = htons(port);
+  ASSERT_GT(inet_pton(AF_INET, host.c_str(), &serverAddr.sin_addr), 0)
+      << "Invalid server address: " << host;
+
+  Json::StreamWriterBuilder writerBuilder;
+  writerBuilder["indentation"] = "";
+  const std::string payload = Json::writeString(writerBuilder, update);
+  const ssize_t sent =
+      sendto(sock, payload.c_str(), payload.size(), 0,
+             reinterpret_cast<const sockaddr *>(&serverAddr),
+             sizeof(serverAddr));
+  close(sock);
+  ASSERT_EQ(sent, static_cast<ssize_t>(payload.size()))
+      << "Failed to send UDP update";
+
+  Json::Value val;
+  const auto deadline =
+      std::chrono::steady_clock::now() + std::chrono::seconds(2);
+  while (std::chrono::steady_clock::now() < deadline) {
+    val = monitorUDP.get("observer_test.value");
+    if (val.isInt() && val.asInt() == expected) {
+      break;
+    }
+    std::this_thread::sleep_for(std::chrono::milliseconds(50));
+  }
+
+  EXPECT_EQ(val.asInt(), expected);
+  monitorUDP.stop();
 }

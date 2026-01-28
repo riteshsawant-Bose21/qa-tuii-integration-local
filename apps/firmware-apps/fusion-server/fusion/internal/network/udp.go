@@ -402,7 +402,7 @@ func (s *UDPServer) pruneClients() {
 
 		lastSeen := time.Unix(0, state.lastSeen.Load())
 		if lastSeen.Before(cutoff) {
-			logging.GetLogger().Warn("udp client stale; removing %s (last seen %s)", k, lastSeen.Format(time.RFC3339))
+			logging.GetLogger().Warn("Removing stale UDP client: %s (last seen %s)", k, lastSeen.Format(time.RFC3339))
 			s.clients.Delete(k)
 			s.removeClientFromPending(k.(string))
 		}
