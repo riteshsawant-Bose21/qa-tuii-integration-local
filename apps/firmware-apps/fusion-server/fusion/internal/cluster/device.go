@@ -198,7 +198,12 @@ func (c *Cluster) GetVIP(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set(api.ContentType, api.JsonMIMEType)
 
-	if isVip := c.isLocalVIP(vip); isVip {
+	isVip, err := c.isLocalVIP(vip)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	if isVip {
 
 		local, vip, ok := c.getLocalForVIP(vip)
 		if !ok {

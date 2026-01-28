@@ -72,9 +72,10 @@ type Cluster struct {
 	Metrics          *MetricsCollector
 	networkLatencies *NetworkLatencyStore
 	vipMu            sync.Mutex
+	mdnsManager      *network.MDNSManager
 }
 
-func NewCluster(appConfig *api.AppConfig, delegate *ClusterDelegate, memberlist *memberlist.Memberlist) *Cluster {
+func NewCluster(appConfig *api.AppConfig, delegate *ClusterDelegate, memberlist *memberlist.Memberlist, mdnsManager *network.MDNSManager) *Cluster {
 
 	cluster := &Cluster{
 		appConfig:        appConfig,
@@ -84,6 +85,7 @@ func NewCluster(appConfig *api.AppConfig, delegate *ClusterDelegate, memberlist 
 		configPath:       configPath,
 		Metrics:          NewMetricsCollector(memberlist, delegate.stateManager),
 		networkLatencies: NewNetworkLatencyStore(maxLatencyCount, latencyPruneTime),
+		mdnsManager:      mdnsManager,
 	}
 
 	logger := logging.GetLogger()
@@ -198,10 +200,11 @@ func (c *Cluster) listenerUpdated(vip, srcIP string) {
 	if newVIP == "" {
 		if oldVIP == "" {
 			// no change
+			logger.Warn("[CLUSTER] Both oldVIP and newVIP are empty - no change.")
 			return
 		}
 
-		logger.Info("VIP %s removed (old holder %s)", oldVIP, oldHolder)
+		logger.Debug("[CLUSTER] VIP %s removed (old holder %s)", oldVIP, oldHolder)
 
 		c.vip = ""
 		c.vipHolder = ""
@@ -216,11 +219,15 @@ func (c *Cluster) listenerUpdated(vip, srcIP string) {
 	}
 
 	// Determine ownership
-	oldLocal := c.isLocalVIP(oldHolder)
-	newLocal := c.isLocalVIP(srcIP)
+	oldLocal, err := c.isLocalVIP(oldHolder)
+	if err != nil {
+		logger.Error("isLocalVIP(oldHolder): %v", err)
+	}
 
-	logger.Debug("VIP update: oldVIP=%s newVIP=%s oldHolder=%s newHolder=%s oldLocal=%v newLocal=%v",
-		oldVIP, newVIP, oldHolder, srcIP, oldLocal, newLocal)
+	newLocal, err := c.isLocalVIP(srcIP)
+	if err != nil {
+		logger.Error("isLocalVIP(srcIP): %v", err)
+	}
 
 	// VIP address changed
 	if newVIP != oldVIP {
@@ -234,16 +241,29 @@ func (c *Cluster) listenerUpdated(vip, srcIP string) {
 			logger.Error("reloadVIP: %v", err)
 			return
 		}
+
+		// Parse the VIP string into net.IP before passing to mDNS manager
+		if ip := net.ParseIP(newVIP); ip == nil {
+			logger.Error("[MDNS] Invalid VIP %s for mDNS", newVIP)
+		} else {
+			if err := c.mdnsManager.StartWithVIP(ip); err != nil {
+				logger.Error("[MDNS] Failed to start mDNS service: %v", err)
+			}
+		}
 	}
 
 	c.vip = newVIP
 	c.vipHolder = srcIP
+
+	logger.Debug("VIP update: oldVIP=%s newVIP=%s oldHolder=%s newHolder=%s oldLocal=%v newLocal=%v",
+		oldVIP, newVIP, oldHolder, srcIP, oldLocal, newLocal)
 
 	// Handle ownership transition
 	switch {
 	case oldLocal && !newLocal:
 		logger.Info("VIP %s moved (was %s, now %s)", newVIP, oldHolder, srcIP)
 		c.notifyLocalVIPChange(false)
+		c.handleMDNSLifecycleWithVIP(false, net.ParseIP(c.vip)) //FIXME: cluster vip should be net.IP remove parsing here
 
 	case !oldLocal && newLocal:
 		logger.Debug("VIP %s gained locally (holder %s)", newVIP, srcIP)
@@ -258,14 +278,15 @@ func (c *Cluster) listenerUpdated(vip, srcIP string) {
 				logger.Info("Joined memberlist with VIP %s", newVIP)
 			}
 		}
-
 		c.notifyLocalVIPChange(true)
+		c.handleMDNSLifecycleWithVIP(true, net.ParseIP(c.vip)) //FIXME: cluster vip should be net.IP remove parsing here
+
 	}
 }
 
 func (c *Cluster) startVRRPListener(iface string) error {
 	if err := network.StartVRRPListener(c.listenerUpdated); err != nil {
-		return fmt.Errorf("unable to start keepalived listener: %v", err)
+		return fmt.Errorf("unable to start VRRP listener: %v", err)
 	}
 
 	go c.watchLocalVIP(iface)
@@ -274,19 +295,26 @@ func (c *Cluster) startVRRPListener(iface string) error {
 }
 
 // isLocalVIP compares the VIP (which might be in CIDR format) to the IPs on local interfaces.
-func (c *Cluster) isLocalVIP(vip string) bool {
+func (c *Cluster) isLocalVIP(vip string) (bool, error) {
+	logger := logging.GetLogger()
+
+	if vip == "" {
+		return false, fmt.Errorf("empty VIP provided to isLocalVIP")
+	}
 	expectedIP := net.ParseIP(vip)
 	if expectedIP == nil {
 		ip, _, err := net.ParseCIDR(vip)
 		if err != nil {
-			return false
+			logger.Warn("[CLUSTER] isLocalVIP: unable to parse VIP %q as IP or CIDR: %v", vip, err)
+			return false, err
 		}
 		expectedIP = ip
 	}
 
 	addrs, err := net.InterfaceAddrs()
 	if err != nil {
-		return false
+		logger.Error("[CLUSTER] isLocalVIP: net.InterfaceAddrs failed: %v", err)
+		return false, err
 	}
 
 	for _, addr := range addrs {
@@ -297,11 +325,12 @@ func (c *Cluster) isLocalVIP(vip string) bool {
 				continue
 			}
 			if ip4.Equal(expectedIP) {
-				return true
+				return true, nil
 			}
 		}
 	}
-	return false
+	logger.Debug("[CLUSTER] isLocalVIP: no match found for expectedIP=%s", expectedIP.String())
+	return false, fmt.Errorf("no match found for expectedIP=%s", expectedIP.String())
 }
 
 // getLocalAndVIP checks whether `vip` (CIDR or plain IP) is assigned on any local interface.
@@ -645,6 +674,8 @@ func getLocalURL(addr, endpoint string) string {
 func (c *Cluster) notifyLocalVIPChange(gained bool) {
 	logger := logging.GetLogger()
 	event := ternary(gained, "gained", "lost")
+
+	logger.Info("[Cluster] VIP ownership change detected: %s (VIP: %s)", event, c.vip)
 
 	msg := map[string]any{
 		"vip":       c.vip,

@@ -5,8 +5,8 @@ go 1.23.1
 require (
 	github.com/gibson042/canonicaljson-go v1.0.3
 	github.com/go-ble/ble v0.0.0-20240122180141-8c5522f54333
-	github.com/goccy/go-json v0.10.5
 	github.com/go-ping/ping v1.2.0
+	github.com/goccy/go-json v0.10.5
 	github.com/gorilla/mux v1.8.1
 	github.com/gorilla/websocket v1.5.3
 	github.com/hashicorp/memberlist v0.5.1
@@ -23,6 +23,7 @@ replace github.com/go-ble/ble => ../third-party/go-ble
 require (
 	github.com/JuulLabs-OSS/cbgo v0.0.1 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
+	github.com/brutella/dnssd v1.2.14 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/hashicorp/go-msgpack/v2 v2.1.2 // indirect
 	github.com/konsorten/go-windows-terminal-sequences v1.0.1 // indirect
