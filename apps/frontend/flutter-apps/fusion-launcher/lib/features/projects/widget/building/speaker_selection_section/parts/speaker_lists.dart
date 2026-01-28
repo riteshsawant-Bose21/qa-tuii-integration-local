@@ -312,6 +312,10 @@ class _SpeakerCardState extends State<SpeakerCard> {
       (String key, List<String> values) {
         if (values.isNotEmpty) {
           final String assetImagePath = context.read<ProductQueryViewModel>().getImagePath(values.first);
+          // log("key: $key : ${values.first}");
+          // final String? assetImagePath = context.read<ProductQueryViewModel>().getImagePath(widget.product.productId, key);
+          // final String assetImagePath = context.read<ProductQueryViewModel>().cachedImages[widget.product.productId]?[key] ?? '';
+          // final String assetImageName = context.read<ProductQueryViewModel>().getImageName(values.first);
 
           final SpeakerColor speakerColor = SpeakerColor.getValueBasedOnKey(key);
           if (filterColors.isEmpty || filterColors.contains(speakerColor)) {

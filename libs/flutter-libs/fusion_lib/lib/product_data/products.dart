@@ -371,6 +371,15 @@ class Products {
     return imageUrl; // Return original if not cached
   }
 
+  String getImageName(String imageUrl) {
+    if (imageUrl.startsWith('http')) {
+      final uri = Uri.parse(imageUrl);
+      final fileName = _sanitizeFileName(uri.pathSegments.last);
+      return fileName;
+    }
+    return imageUrl; // Return original if not cached
+  }
+
   /// Check if an image is cached locally
   bool isImageCached(String imageUrl) {
     if (imageUrl.startsWith('http')) {

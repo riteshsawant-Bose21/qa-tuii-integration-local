@@ -10,6 +10,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../../../core/service_locator.dart';
 import '../../../../core/utils/fusion_utils.dart';
 import '../../../authentication/viewmodel/session_view_model.dart';
+import 'import_project_dialog.dart';
 
 Border _getBorder(BuildContext context) => Border.all(color: context.colorScheme.onSurface.withValues(alpha: 0.3), width: 0.3);
 
@@ -55,6 +56,20 @@ class SavedProjectsTabContent extends StatelessWidget {
                           ),
                         ),
                       ),
+                      FusionNeumorphicButton(
+                        onTap: () {
+                          showDialog(
+                            context: context,
+                            builder: (BuildContext context) => const ZipImportDialog(),
+                          );
+                        },
+                        height: 50,
+                        width: 100,
+
+                        borderRadius: 10,
+                        child: const FusionAppText(text: "Import"),
+                      ),
+                      const SizedBox(width: 12),
                       MouseRegion(
                         cursor: SystemMouseCursors.click,
                         child: SemanticHelper.button(

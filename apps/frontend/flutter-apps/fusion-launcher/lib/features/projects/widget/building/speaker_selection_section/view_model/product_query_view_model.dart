@@ -108,6 +108,9 @@ class ProductQueryViewModel extends Cubit<ProductQueryViewModelState> {
   // ---------- get image ----------
   String getImagePath(String imageUrl) => _productsApi.getImagePath(imageUrl);
 
+  // ---------- get image name ----------
+  String getImageName(String imageUrl) => _productsApi.getImageName(imageUrl);
+
   bool get isLoading => state.isLoading;
   String get errorMessage => state.errorMessage;
 

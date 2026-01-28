@@ -80,6 +80,7 @@ dependencies:
   date_picker_plus: ^4.2.0
 
   universal_platform: ^1.1.0
+  desktop_drop: ^0.7.0
 
   fusion_lib:
     path: ../../../../libs/flutter-libs/fusion_lib
