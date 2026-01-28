@@ -142,9 +142,8 @@ class __CreateNewListeningAreaWidgetState extends State<_CreateNewListeningAreaW
                     width: 60,
                     label: "Add",
                     accessIdentifier: "create_new_listening_area_add_button",
-                    textStyle: context.textTheme.labelMedium?.copyWith(
-                      color: context.colorScheme.surface,
-                    ),
+                    activeBackgroundColor: context.colorScheme.primaryColor,
+                    textStyle: context.textTheme.labelMedium?.copyWith(color: Colors.white),
                     onTap: _addNewLocationToFloor,
                   ),
                 ),

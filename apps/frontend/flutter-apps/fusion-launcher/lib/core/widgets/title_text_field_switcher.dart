@@ -38,6 +38,15 @@ class _TitleTextFieldSwitcherState extends State<TitleTextFieldSwitcher> {
   }
 
   @override
+  void didUpdateWidget(covariant TitleTextFieldSwitcher oldWidget) {
+    if (widget.value != oldWidget.value) {
+      currentValue = widget.value;
+      controller.text = widget.value;
+    }
+    super.didUpdateWidget(oldWidget);
+  }
+
+  @override
   void dispose() {
     controller.dispose();
     focusNode.dispose();

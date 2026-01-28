@@ -3,8 +3,6 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
 import 'package:fusion_launcher/features/projects/widget/building/speaker_selection_section/view_model/product_query_view_model.dart';
 import 'package:fusion_lib/fusion_lib.dart';
-import 'package:fusion_lib/fusion_theme/app_theme.dart';
-import 'package:fusion_lib/fusion_theme/color_scheme.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../../../core/service_locator.dart';
@@ -205,7 +203,7 @@ class _SpeakerSelectionWidgetState extends State<SpeakerSelectionWidget> {
                                             const SizedBox(width: 12),
                                             Expanded(
                                               child: FusionAppText(
-                                                text: allSpeaekers.first.name,
+                                                text: allSpeaekers.first.speakerSKU,
                                                 style: context.textTheme.bodySmall?.copyWith(
                                                   fontWeight: FontWeight.w500,
                                                 ),
@@ -274,6 +272,29 @@ class _SpeakerSelectionWidgetState extends State<SpeakerSelectionWidget> {
                                                 color: context.colorScheme.onSurface,
                                               ),
                                             ),
+
+                                            if (nonPlacedSpeakers.isEmpty) ...<Widget>[
+                                              const SizedBox(width: 8),
+                                              MouseRegion(
+                                                cursor: SystemMouseCursors.click,
+                                                child: GestureDetector(
+                                                  onTap: () {
+                                                    final ProjectViewModel projectViewModel = context.read<ProjectViewModel>();
+                                                    final Speaker clonedSpeaker = placedSpeakers.last.getClone();
+                                                    clonedSpeaker.pos = null;
+                                                    projectViewModel.addHardware(hardware: clonedSpeaker);
+                                                  },
+                                                  child: SemanticHelper.button(
+                                                    testId: SemanticHelper.createTestId(SemanticTypes.button, "add_one_more_placed_speaker_to_non_placed"),
+                                                    child: Icon(
+                                                      LucideIcons.plus200,
+                                                      size: 12,
+                                                      color: context.colorScheme.onSurface,
+                                                    ),
+                                                  ),
+                                                ),
+                                              ),
+                                            ],
                                           ],
                                         ),
                                       ),
@@ -287,7 +308,7 @@ class _SpeakerSelectionWidgetState extends State<SpeakerSelectionWidget> {
                                           children: <Widget>[
                                             Expanded(
                                               child: FusionAppText(
-                                                text: 'Non-placed',
+                                                text: 'Unplaced',
                                                 style: context.textTheme.bodySmall?.copyWith(
                                                   color: context.colorScheme.onSurface,
                                                 ),

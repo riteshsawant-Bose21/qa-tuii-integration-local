@@ -366,7 +366,14 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
                             height: 24,
                             width: 24,
                             child: PopupMenuButton<String>(
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(FusionSizes.borderRadius12),
+                                side: BorderSide(color: context.colorScheme.elevation4),
+                              ),
                               padding: EdgeInsets.zero,
+                              color: context.colorScheme.elevation1,
+                              menuPadding: EdgeInsets.zero,
+                              shadowColor: Colors.transparent,
                               iconSize: 12,
                               position: PopupMenuPosition.under,
                               icon: SemanticHelper.button(
@@ -397,16 +404,21 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
                                     value: 'add_subzone',
                                     child: SemanticHelper.container(
                                       testId: SemanticHelper.createTestId(SemanticTypes.container, "add_subzone_menu_item_$index"),
-                                      child: const Row(
+                                      child: Row(
                                         mainAxisSize: MainAxisSize.min,
                                         children: <Widget>[
                                           Icon(
                                             Icons.crop_free_sharp,
                                             size: 16,
-                                            color: Colors.green,
+                                            color: context.colorScheme.textPrimary,
                                           ),
-                                          SizedBox(width: 8),
-                                          Text('Add Subzone'),
+                                          const SizedBox(width: 8),
+                                          FusionAppText(
+                                            text: 'Add Subzone',
+                                            style: context.textTheme.bodySmall?.copyWith(
+                                              color: context.colorScheme.textPrimary,
+                                            ),
+                                          ),
                                         ],
                                       ),
                                     ),
@@ -420,30 +432,38 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
                                       value: 'add_listening_area',
                                       child: SemanticHelper.container(
                                         testId: SemanticHelper.createTestId(SemanticTypes.container, "add_listening_area_menu_item_$index"),
-                                        child: const Row(
+                                        child: Row(
                                           mainAxisSize: MainAxisSize.min,
                                           children: <Widget>[
-                                            Icon(Icons.add, size: 16, color: Colors.black54),
-                                            SizedBox(width: 8),
-                                            Text('Select Listening Areas'),
+                                            const Icon(Icons.add, size: 16, color: Colors.black54),
+                                            const SizedBox(width: 8),
+                                            FusionAppText(
+                                              text: 'Select Listening Areas',
+                                              style: context.textTheme.bodySmall?.copyWith(
+                                                color: context.colorScheme.textPrimary,
+                                              ),
+                                            ),
                                           ],
                                         ),
                                       ),
                                     ),
                                   );
                                 }
-                                items.add(const PopupMenuDivider());
+                                items.add(const PopupMenuDivider(height: 0));
                                 items.add(
                                   PopupMenuItem<String>(
                                     value: 'delete',
                                     child: SemanticHelper.container(
                                       testId: SemanticHelper.createTestId(SemanticTypes.container, "delete_zone_menu_item_$index"),
-                                      child: const Row(
+                                      child: Row(
                                         mainAxisSize: MainAxisSize.min,
                                         children: <Widget>[
-                                          Icon(LucideIcons.trash200, size: 16, color: Colors.red),
-                                          SizedBox(width: 8),
-                                          Text('Delete Zone', style: TextStyle(color: Colors.red)),
+                                          const Icon(LucideIcons.trash200, size: 16, color: Colors.red),
+                                          const SizedBox(width: 8),
+                                          FusionAppText(
+                                            text: 'Delete Zone',
+                                            style: context.textTheme.bodySmall?.copyWith(color: Colors.red),
+                                          ),
                                         ],
                                       ),
                                     ),
@@ -854,7 +874,14 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
                         height: 24,
                         width: 24,
                         child: PopupMenuButton<String>(
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(FusionSizes.borderRadius12),
+                            side: BorderSide(color: context.colorScheme.elevation4),
+                          ),
                           padding: EdgeInsets.zero,
+                          color: context.colorScheme.elevation1,
+                          menuPadding: EdgeInsets.zero,
+                          shadowColor: Colors.transparent,
                           iconSize: 12,
                           position: PopupMenuPosition.under,
                           icon: const Icon(
@@ -875,26 +902,29 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
                           },
                           itemBuilder:
                               (BuildContext context) => <PopupMenuEntry<String>>[
-                                const PopupMenuItem<String>(
+                                PopupMenuItem<String>(
                                   value: 'rename',
                                   child: Row(
                                     mainAxisSize: MainAxisSize.min,
                                     children: <Widget>[
-                                      Icon(Icons.edit, size: 14, color: Colors.black54),
-                                      SizedBox(width: 6),
-                                      Text('Rename'),
+                                      Icon(Icons.edit, size: 14, color: context.colorScheme.textPrimary),
+                                      const SizedBox(width: 6),
+                                      FusionAppText(
+                                        text: 'Rename',
+                                        style: context.textTheme.bodySmall?.copyWith(color: context.colorScheme.textPrimary),
+                                      ),
                                     ],
                                   ),
                                 ),
-                                const PopupMenuDivider(),
-                                const PopupMenuItem<String>(
+                                const PopupMenuDivider(height: 0),
+                                PopupMenuItem<String>(
                                   value: 'delete',
                                   child: Row(
                                     mainAxisSize: MainAxisSize.min,
                                     children: <Widget>[
-                                      Icon(LucideIcons.trash200, size: 14, color: Colors.red),
-                                      SizedBox(width: 6),
-                                      Text('Delete', style: TextStyle(color: Colors.red)),
+                                      const Icon(LucideIcons.trash200, size: 14, color: Colors.red),
+                                      const SizedBox(width: 6),
+                                      FusionAppText(text: 'Delete', style: context.textTheme.bodySmall?.copyWith(color: Colors.red)),
                                     ],
                                   ),
                                 ),
@@ -1021,7 +1051,14 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
                       height: 20,
                       width: 20,
                       child: PopupMenuButton<String>(
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(FusionSizes.borderRadius12),
+                          side: BorderSide(color: context.colorScheme.elevation4),
+                        ),
                         padding: EdgeInsets.zero,
+                        color: context.colorScheme.elevation1,
+                        menuPadding: EdgeInsets.zero,
+                        shadowColor: Colors.transparent,
                         iconSize: 12,
                         position: PopupMenuPosition.under,
                         icon: const Icon(
@@ -1037,14 +1074,14 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
                         },
                         itemBuilder:
                             (BuildContext context) => <PopupMenuEntry<String>>[
-                              const PopupMenuItem<String>(
+                              PopupMenuItem<String>(
                                 value: 'remove',
                                 child: Row(
                                   mainAxisSize: MainAxisSize.min,
                                   children: <Widget>[
-                                    Icon(Icons.remove_circle_outline, size: 14, color: Colors.red),
-                                    SizedBox(width: 6),
-                                    Text('Remove from Circuit', style: TextStyle(color: Colors.red)),
+                                    const Icon(Icons.remove_circle_outline, size: 14, color: Colors.red),
+                                    const SizedBox(width: 6),
+                                    FusionAppText(text: 'Remove from Circuit', style: context.textTheme.bodySmall?.copyWith(color: Colors.red)),
                                   ],
                                 ),
                               ),
@@ -1321,12 +1358,20 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
 
     return Column(
       mainAxisSize: MainAxisSize.min,
-      children: subZones.map((SubZone subZone) => _buildSubZoneItem(subZone, zone)).toList(),
+      children: <Widget>[
+        ...List<Widget>.generate(
+          subZones.length,
+          (int index) {
+            final SubZone subZone = subZones[index];
+            return _buildSubZoneItem(subZone, zone, index);
+          },
+        ),
+      ],
     );
   }
 
   /// Build subzone item
-  Widget _buildSubZoneItem(SubZone subZone, Zone zone) {
+  Widget _buildSubZoneItem(SubZone subZone, Zone zone, int index) {
     final bool isExpanded = _expandedSubZones.contains(subZone.id);
 
     return DragTarget<ListeningArea>(
@@ -1419,13 +1464,23 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
                               height: 24,
                               width: 24,
                               child: PopupMenuButton<String>(
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(FusionSizes.borderRadius12),
+                                  side: BorderSide(color: context.colorScheme.elevation4),
+                                ),
                                 padding: EdgeInsets.zero,
-                                iconSize: 14,
+                                color: context.colorScheme.elevation1,
+                                menuPadding: EdgeInsets.zero,
+                                shadowColor: Colors.transparent,
+                                iconSize: 12,
                                 position: PopupMenuPosition.under,
-                                icon: const Icon(
-                                  Icons.more_vert,
-                                  size: 14,
-                                  color: Colors.grey,
+                                icon: SemanticHelper.button(
+                                  testId: SemanticHelper.createTestId(SemanticTypes.button, "subzone_actions_$index"),
+                                  child: const Icon(
+                                    Icons.more_vert,
+                                    size: 12,
+                                    color: Colors.grey,
+                                  ),
                                 ),
                                 tooltip: 'Subzone actions',
                                 onSelected: (String value) {
@@ -1440,26 +1495,38 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
                                 },
                                 itemBuilder:
                                     (BuildContext context) => <PopupMenuEntry<String>>[
-                                      const PopupMenuItem<String>(
+                                      PopupMenuItem<String>(
                                         value: 'select_listening_areas_subzone',
                                         child: Row(
                                           mainAxisSize: MainAxisSize.min,
                                           children: <Widget>[
-                                            Icon(Icons.add, size: 16, color: Colors.black54),
-                                            SizedBox(width: 8),
-                                            Text('Select Listening Areas'),
+                                            Icon(
+                                              Icons.add,
+                                              size: 16,
+                                              color: context.colorScheme.textPrimary,
+                                            ),
+                                            const SizedBox(width: 8),
+                                            FusionAppText(
+                                              text: 'Select Listening Areas',
+                                              style: context.textTheme.bodySmall?.copyWith(
+                                                color: context.colorScheme.textPrimary,
+                                              ),
+                                            ),
                                           ],
                                         ),
                                       ),
-                                      const PopupMenuDivider(),
-                                      const PopupMenuItem<String>(
+                                      const PopupMenuDivider(height: 0),
+                                      PopupMenuItem<String>(
                                         value: 'delete',
                                         child: Row(
                                           mainAxisSize: MainAxisSize.min,
                                           children: <Widget>[
-                                            Icon(LucideIcons.trash200, size: 16, color: Colors.red),
-                                            SizedBox(width: 8),
-                                            Text('Delete Subzone', style: TextStyle(color: Colors.red)),
+                                            const Icon(LucideIcons.trash200, size: 16, color: Colors.red),
+                                            const SizedBox(width: 8),
+                                            FusionAppText(
+                                              text: 'Delete Subzone',
+                                              style: context.textTheme.bodySmall?.copyWith(color: Colors.red),
+                                            ),
                                           ],
                                         ),
                                       ),

@@ -413,31 +413,10 @@ class SchematicPropertiesState extends State<SchematicProperties> {
           ].contains(selectedItem.type)) ...<Widget>[
             Builder(
               builder: (BuildContext context) {
-                List<ListeningArea> listeningAreas = <ListeningArea>[];
-
-                if (selectedItem.type == SelectedItemType.circuit && selectedDevice is Speaker) {
-                  final SubZone? subZone = projectViewModel.getSubZoneForHardware(hardwareId: selectedDevice.id);
-                  if (subZone?.id != null) {
-                    listeningAreas = projectViewModel.getListeningAreasInSubZone(subZoneId: subZone!.id);
-                  } else {
-                    final Zone? zone = projectViewModel.getZoneForHardware(hardwareId: selectedDevice.id);
-                    if (zone?.id != null) listeningAreas = projectViewModel.getListeningAreasForZone(zoneId: zone!.id);
-                  }
-                } else {
-                  if (selectedItem.type == SelectedItemType.zone) {
-                    listeningAreas = projectViewModel.getAvailableListeningAreasForZone(zoneId: selectedItem.id);
-                  } else if (selectedItem.type == SelectedItemType.subzone) {
-                    listeningAreas = projectViewModel.getAvailableListeningAreasForZone();
-                  } else {
-                    listeningAreas = projectViewModel.getAllListeningAreas();
-                  }
+                // if selected zone has subzones, return SizedBox.shrink
+                if (selectedItem.type == SelectedItemType.zone && projectViewModel.getSubZonesForZone(parentZoneId: selectedItem.id).isNotEmpty) {
+                  return const SizedBox.shrink();
                 }
-
-                final List<String> selectedListeningAreaIds =
-                    listeningAreas
-                        .where((ListeningArea area) => area.id == selectedDevice?.locationEntity.listeningAreaId)
-                        .map((ListeningArea area) => area.id)
-                        .toList();
 
                 return Row(
                   spacing: 3,
@@ -457,6 +436,32 @@ class SchematicPropertiesState extends State<SchematicProperties> {
                               selectedItem: selectedItem,
                             );
                           }
+
+                          List<ListeningArea> listeningAreas = <ListeningArea>[];
+
+                          if (selectedItem.type == SelectedItemType.circuit && selectedDevice is Speaker) {
+                            final SubZone? subZone = projectViewModel.getSubZoneForHardware(hardwareId: selectedDevice.id);
+                            if (subZone?.id != null) {
+                              listeningAreas = projectViewModel.getListeningAreasInSubZone(subZoneId: subZone!.id);
+                            } else {
+                              final Zone? zone = projectViewModel.getZoneForHardware(hardwareId: selectedDevice.id);
+                              if (zone?.id != null) listeningAreas = projectViewModel.getListeningAreasForZone(zoneId: zone!.id);
+                            }
+                          } else {
+                            if (selectedItem.type == SelectedItemType.zone) {
+                              listeningAreas = projectViewModel.getAvailableListeningAreasForZone(zoneId: selectedItem.id);
+                            } else if (selectedItem.type == SelectedItemType.subzone) {
+                              listeningAreas = projectViewModel.getAvailableListeningAreasForZone();
+                            } else {
+                              listeningAreas = projectViewModel.getAllListeningAreas();
+                            }
+                          }
+
+                          final List<String> selectedListeningAreaIds =
+                              listeningAreas
+                                  .where((ListeningArea area) => area.id == selectedDevice?.locationEntity.listeningAreaId)
+                                  .map((ListeningArea area) => area.id)
+                                  .toList();
 
                           return _LocationSelecDropDown(
                             selectedItemType: selectedItem.type,
@@ -1287,10 +1292,7 @@ class _AddNewLocationWidgetState extends State<AddNewLocationWidget> {
                     width: double.infinity,
                     label: "Add",
                     activeBackgroundColor: context.colorScheme.primaryColor,
-                    textStyle: context.textTheme.bodySmall?.copyWith(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w600,
-                    ),
+                    textStyle: context.textTheme.labelMedium?.copyWith(color: Colors.white),
                     onTap: () {
                       if (isDetailsFilled) {
                         final String locationName = locationNameController.text.trim();

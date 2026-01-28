@@ -65,7 +65,7 @@ class ListeningAreasPanelState extends State<ListeningAreasPanel> with TickerPro
   }
 
   Widget _buildListeningAreasList() {
-    final List<ListeningArea> listeningAreas = serviceLocator<ProjectViewModel>().getAllListeningAreas();
+    final List<ListeningArea> listeningAreas = serviceLocator<ProjectViewModel>().getListeningAreasForCurrentFloor();
 
     if (listeningAreas.isEmpty) {
       return _buildEmptyState();
