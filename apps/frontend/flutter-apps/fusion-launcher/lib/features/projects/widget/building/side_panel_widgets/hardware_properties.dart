@@ -95,8 +95,13 @@ class _HardwareComponentPropertiesState extends State<HardwareComponentPropertie
                     // Speaker image from selected hardware assetPath
                     SemanticHelper.container(
                       testId: SemanticHelper.createTestId(SemanticTypes.container, "hardware_image"),
-                      child: Image.asset(
-                        widget.selectedHardware.assetImagePath,
+                      child: FusionImage.asset(
+                        (widget.selectedHardware is Speaker)
+                            ? serviceLocator<ProjectViewModel>().getHardwareImage(
+                              productId: (widget.selectedHardware as Speaker).productId ?? 0,
+                              currentImagePath: widget.selectedHardware.assetImagePath,
+                            )
+                            : widget.selectedHardware.assetImagePath,
                         width: 28,
                         height: 28,
                         fit: BoxFit.contain,

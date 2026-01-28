@@ -296,7 +296,12 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
                               deviceId: deviceId,
                               circuitModel: circuitData,
                               circuitDeviceName: circuitData.name,
-                              assetImagePath: speakers.isNotEmpty ? speakers.first.assetImagePath : '',
+                              assetImagePath:
+                                  serviceLocator<ProjectViewModel>().getHardwareImage(
+                                    productId: speakers.isNotEmpty ? speakers.first.productId ?? 0 : 0,
+                                    currentImagePath: speakers.isNotEmpty ? speakers.first.assetImagePath : '',
+                                  ) ??
+                                  "",
                               location: location,
                               speakers: speakers,
                               projectViewModel: _projectViewModel,
@@ -319,7 +324,12 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
                                   deviceId: deviceId,
                                   circuitModel: circuitData,
                                   circuitDeviceName: circuitData.name,
-                                  assetImagePath: speakers.isNotEmpty ? speakers.first.assetImagePath : '',
+                                  assetImagePath:
+                                      serviceLocator<ProjectViewModel>().getHardwareImage(
+                                        productId: speakers.isNotEmpty ? speakers.first.productId ?? 0 : 0,
+                                        currentImagePath: speakers.isNotEmpty ? speakers.first.assetImagePath : '',
+                                      ) ??
+                                      "",
                                   location: location,
                                   speakers: speakers,
                                   projectViewModel: _projectViewModel,
@@ -338,7 +348,12 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
                             deviceId: deviceId,
                             circuitModel: circuitData,
                             circuitDeviceName: circuitData.name,
-                            assetImagePath: speakers.isNotEmpty ? speakers.first.assetImagePath : '',
+                            assetImagePath:
+                                serviceLocator<ProjectViewModel>().getHardwareImage(
+                                  productId: speakers.isNotEmpty ? speakers.first.productId ?? 0 : 0,
+                                  currentImagePath: speakers.isNotEmpty ? speakers.first.assetImagePath : '',
+                                ) ??
+                                "",
                             location: location,
                             speakers: speakers,
                             projectViewModel: _projectViewModel,

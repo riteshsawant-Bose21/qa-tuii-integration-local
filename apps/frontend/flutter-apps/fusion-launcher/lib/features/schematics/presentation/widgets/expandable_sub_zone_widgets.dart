@@ -57,9 +57,9 @@ class _ExpandableSubZoneWidgetState extends State<ExpandableSubZoneWidget> {
         return BlocBuilder<ProjectViewModel, ProjectViewModelState>(
           builder: (BuildContext context, ProjectViewModelState state) {
             final SelectedItem? selectedDevice = _projectViewModel.selectedDevice;
-    
+
             final bool isSelected = selectedDevice?.id == widget.subZoneId && selectedDevice?.type == SelectedItemType.subzone;
-    
+
             return Container(
               margin: const EdgeInsets.only(bottom: 4),
               decoration: BoxDecoration(
@@ -94,7 +94,7 @@ class _ExpandableSubZoneWidgetState extends State<ExpandableSubZoneWidget> {
                               child: _buildZoneName(context, widget.name),
                             ),
                           ),
-                  
+
                           // /// Add device button
                           // AddSpeakersMenu(
                           //   zoneId: widget.zoneId ?? "",
@@ -230,7 +230,12 @@ class _ExpandableSubZoneWidgetState extends State<ExpandableSubZoneWidget> {
                             location: location,
                             speakers: speakers,
                             circuitDeviceName: circuitData.name,
-                            assetImagePath: speakers.first.assetImagePath,
+                            assetImagePath:
+                                serviceLocator<ProjectViewModel>().getHardwareImage(
+                                  productId: speakers.first.productId ?? 0,
+                                  currentImagePath: speakers.first.assetImagePath,
+                                ) ??
+                                "",
                             circuitDeviceCount: speakers.length,
                             onDecrementHardwareInCircuit: () {
                               final Speaker speaker = speakers.last;
@@ -247,7 +252,6 @@ class _ExpandableSubZoneWidgetState extends State<ExpandableSubZoneWidget> {
                             onDuplicate: () {},
                             onDelete: () {
                               _projectViewModel.removeCircuitFromSubZone(subZoneId: widget.subZoneId, circuitId: deviceId);
-                              ;
                             },
                           ),
                         ),
@@ -266,7 +270,12 @@ class _ExpandableSubZoneWidgetState extends State<ExpandableSubZoneWidget> {
                             location: location,
                             speakers: speakers,
                             circuitDeviceName: circuitData.name,
-                            assetImagePath: speakers.first.assetImagePath,
+                            assetImagePath:
+                                serviceLocator<ProjectViewModel>().getHardwareImage(
+                                  productId: speakers.isNotEmpty ? speakers.first.productId ?? 0 : 0,
+                                  currentImagePath: speakers.isNotEmpty ? speakers.first.assetImagePath : '',
+                                ) ??
+                                "",
                             circuitDeviceCount: speakers.length,
                             onDecrementHardwareInCircuit: () {},
                             onIncrementHardwareInCircuit: () {},
@@ -285,7 +294,12 @@ class _ExpandableSubZoneWidgetState extends State<ExpandableSubZoneWidget> {
                       speakers: speakers,
                       circuitModel: circuitData,
                       circuitDeviceName: circuitData.name,
-                      assetImagePath: speakers.first.assetImagePath,
+                      assetImagePath:
+                          serviceLocator<ProjectViewModel>().getHardwareImage(
+                            productId: speakers.isNotEmpty ? speakers.first.productId ?? 0 : 0,
+                            currentImagePath: speakers.isNotEmpty ? speakers.first.assetImagePath : '',
+                          ) ??
+                          "",
                       circuitDeviceCount: speakers.length,
                       onDecrementHardwareInCircuit: () {
                         final Speaker speaker = speakers.last;
@@ -302,7 +316,6 @@ class _ExpandableSubZoneWidgetState extends State<ExpandableSubZoneWidget> {
                       onDuplicate: () {},
                       onDelete: () {
                         _projectViewModel.removeCircuitFromSubZone(subZoneId: widget.subZoneId, circuitId: deviceId);
-                        ;
                       },
                     ),
                   );

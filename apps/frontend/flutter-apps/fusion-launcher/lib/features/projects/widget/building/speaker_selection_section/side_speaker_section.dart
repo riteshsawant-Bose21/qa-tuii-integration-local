@@ -198,7 +198,12 @@ class _SpeakerSelectionWidgetState extends State<SpeakerSelectionWidget> {
                                                 color: Colors.white,
                                                 borderRadius: BorderRadius.circular(6),
                                               ),
-                                              child: Image.asset(allSpeaekers.first.assetImagePath),
+                                              child: FusionImage.asset(
+                                                serviceLocator<ProjectViewModel>().getHardwareImage(
+                                                  productId: allSpeaekers.first.productId ?? 0,
+                                                  currentImagePath: allSpeaekers.first.assetImagePath,
+                                                ),
+                                              ),
                                             ),
                                             const SizedBox(width: 12),
                                             Expanded(

@@ -108,7 +108,13 @@ class SchematicPropertiesState extends State<SchematicProperties> {
 
       if (speakers.isEmpty) return const _NoPropertiesWidget();
       selectedDevice = speakers.first;
-      assetImagePath = selectedDevice.assetImagePath;
+      // assetImagePath = selectedDevice.assetImagePath;
+      assetImagePath =
+          serviceLocator<ProjectViewModel>().getHardwareImage(
+            productId: speakers.first.productId ?? 0,
+            currentImagePath: speakers.isNotEmpty ? speakers.first.assetImagePath : '',
+          ) ??
+          "";
     } else {
       selectedDevice = projectViewModel.getHardware(hardwareId: selectedItem.id);
       assetImagePath = selectedDevice?.assetImagePath;

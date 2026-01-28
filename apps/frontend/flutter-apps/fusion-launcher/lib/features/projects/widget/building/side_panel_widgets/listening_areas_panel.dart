@@ -298,8 +298,11 @@ class ListeningAreasPanelState extends State<ListeningAreasPanel> with TickerPro
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               child: Row(
                 children: <Widget>[
-                  Image.asset(
-                    speaker.assetImagePath,
+                  FusionImage.asset(
+                    serviceLocator<ProjectViewModel>().getHardwareImage(
+                      productId: speaker.productId ?? 0,
+                      currentImagePath: speaker.assetImagePath,
+                    ),
                     width: 14,
                     height: 14,
                   ),
