@@ -8,6 +8,7 @@ import (
 
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/api/types"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/model/models"
+	"go.uber.org/zap"
 )
 
 const (
@@ -16,7 +17,7 @@ const (
 )
 
 // generateProjectFileURL generates a presigned URL for project file operations
-func (s *Service) generateProjectFileURL(ctx context.Context, projectID string, fileType types.ProjectFileType, ttl time.Duration, operation string) (string, error) {
+func (s *Service) generateProjectFileURL(ctx context.Context, projectID string, fileType types.ProjectFileType, ttl time.Duration, operation string, logger *zap.Logger) (string, error) {
 	// If no presigner is configured (e.g., in tests), return empty string
 	if s.presigner == nil {
 		return "", nil
@@ -26,9 +27,9 @@ func (s *Service) generateProjectFileURL(ctx context.Context, projectID string, 
 
 	switch operation {
 	case "get":
-		return s.presigner.PresignGet(ctx, key, ttl)
+		return s.presigner.PresignGet(ctx, key, ttl, logger)
 	case "put":
-		return s.presigner.PresignPut(ctx, key, ttl)
+		return s.presigner.PresignPut(ctx, key, ttl, logger)
 	default:
 		return "", fmt.Errorf("unsupported operation: %s", operation)
 	}
@@ -46,9 +47,9 @@ type ValidationOptions struct {
 }
 
 // validateProject performs common project validations
-func (s *Service) validateProject(ctx context.Context, projectID string, opts ValidationOptions) (*models.Project, error) {
+func (s *Service) validateProject(ctx context.Context, projectID string, opts ValidationOptions, logger *zap.Logger) (*models.Project, error) {
 
-	projectRow, err := s.dbService.GetProjectByID(ctx, projectID)
+	projectRow, err := s.dbService.GetProjectByID(ctx, projectID, logger)
 	if err != nil {
 		return nil, err
 	}
@@ -62,7 +63,7 @@ func (s *Service) validateProject(ctx context.Context, projectID string, opts Va
 	}
 
 	if opts.CheckUserAssigned {
-		if err := s.validateUserAssignment(ctx, projectID, opts.UserID); err != nil {
+		if err := s.validateUserAssignment(ctx, projectID, opts.UserID, logger); err != nil {
 			return nil, err
 		}
 	}
@@ -74,7 +75,7 @@ func (s *Service) validateProject(ctx context.Context, projectID string, opts Va
 	}
 
 	if opts.CheckNotLockedByOtherUser {
-		if err := s.validateProjectNotLockedByOtherUser(ctx, projectRow, opts.UserID); err != nil {
+		if err := s.validateProjectNotLockedByOtherUser(ctx, projectRow, opts.UserID, logger); err != nil {
 			return nil, err
 		}
 	}
@@ -83,8 +84,8 @@ func (s *Service) validateProject(ctx context.Context, projectID string, opts Va
 }
 
 // validateUserAssignment checks if user is assigned to project
-func (s *Service) validateUserAssignment(ctx context.Context, projectID, userID string) error {
-	isAssigned, err := s.dbService.IsUserAssigned(ctx, projectID, userID)
+func (s *Service) validateUserAssignment(ctx context.Context, projectID, userID string, logger *zap.Logger) error {
+	isAssigned, err := s.dbService.IsUserAssigned(ctx, projectID, userID, logger)
 	if err != nil {
 		return fmt.Errorf(errorWithDetailsFormat, types.ErrMsgFailedUserAssignmentCheck, err)
 	}
@@ -95,7 +96,7 @@ func (s *Service) validateUserAssignment(ctx context.Context, projectID, userID 
 }
 
 // validateProjectNotLockedByOtherUser checks if project is not locked by another user
-func (s *Service) validateProjectNotLockedByOtherUser(ctx context.Context, projectRow *models.Project, userID string) error {
+func (s *Service) validateProjectNotLockedByOtherUser(ctx context.Context, projectRow *models.Project, userID string, logger *zap.Logger) error {
 	if projectRow.LockedByUserID.Valid && projectRow.LockedByUserID.String != userID {
 		lockedByEmail, err := s.dbService.GetUserEmailByID(ctx, projectRow.LockedByUserID.String)
 		if err != nil {
@@ -116,9 +117,9 @@ func (s *Service) validatePrimaryOwner(projectRow *models.Project, accountID str
 }
 
 // CreateProject adds a new project to the database.
-func (s *Service) CreateProject(ctx context.Context, project *types.ProjectCreateRequest, userAuth types.UserAuthorizationResponse) (*types.ProjectCreateResponse, error) {
+func (s *Service) CreateProject(ctx context.Context, project *types.ProjectCreateRequest, userAuth types.UserAuthorizationResponse, logger *zap.Logger) (*types.ProjectCreateResponse, error) {
 
-	projectRow, err := s.dbService.GetProjectByID(ctx, project.ID)
+	projectRow, err := s.dbService.GetProjectByID(ctx, project.ID, logger)
 
 	if err == nil && projectRow != nil {
 		return nil, errors.New(types.ErrMsgProjectAlreadyExists)
@@ -131,7 +132,7 @@ func (s *Service) CreateProject(ctx context.Context, project *types.ProjectCreat
 		return nil, fmt.Errorf("failed to begin transaction: %v", err)
 	}
 
-	id, err := s.dbService.Insert(ctx, project, userAuth.Account.ID, tx)
+	id, err := s.dbService.Insert(ctx, project, userAuth.Account.ID, tx, logger)
 	if err != nil {
 		if rollbackErr := tx.Rollback(); rollbackErr != nil {
 			return nil, fmt.Errorf(errorWithDetailsFormat, types.ErrMsgFailedToInsertProject, err)
@@ -141,7 +142,7 @@ func (s *Service) CreateProject(ctx context.Context, project *types.ProjectCreat
 	}
 
 	// Assign user to project
-	if err := s.dbService.InsertProjectUser(ctx, id, userAuth.User.ID, tx); err != nil {
+	if err := s.dbService.InsertProjectUser(ctx, id, userAuth.User.ID, tx, logger); err != nil {
 		if rollbackErr := tx.Rollback(); rollbackErr != nil {
 			return nil, fmt.Errorf(errorWithDetailsFormat, types.ErrMsgFailedToInsertProject, err)
 		}
@@ -157,7 +158,7 @@ func (s *Service) CreateProject(ctx context.Context, project *types.ProjectCreat
 	}
 
 	if project.IsProjectFileCreated {
-		presignURL, err := s.generateProjectFileURL(ctx, id, types.ProjectFileTypeProjectFile, time.Minute*15, "put")
+		presignURL, err := s.generateProjectFileURL(ctx, id, types.ProjectFileTypeProjectFile, time.Minute*15, "put", logger)
 		if err != nil {
 			return nil, fmt.Errorf("failed to generate presign URL: %v", err)
 		}
@@ -165,7 +166,7 @@ func (s *Service) CreateProject(ctx context.Context, project *types.ProjectCreat
 	}
 
 	if project.IsProjectThumbnailCreated {
-		presignURL, err := s.generateProjectFileURL(ctx, id, types.ProjectFileTypeProjectThumbnail, time.Minute*15, "put")
+		presignURL, err := s.generateProjectFileURL(ctx, id, types.ProjectFileTypeProjectThumbnail, time.Minute*15, "put", logger)
 		if err != nil {
 			return nil, fmt.Errorf("failed to generate presign URL: %v", err)
 		}
@@ -176,15 +177,15 @@ func (s *Service) CreateProject(ctx context.Context, project *types.ProjectCreat
 }
 
 // GetAllProjects retrieves all projects.
-func (s *Service) GetAllProjects(ctx context.Context, queryParams *types.GetAllProjectsParams, userAuth types.UserAuthorizationResponse) (*types.GetAllProjectsResponse, error) {
-	projects, err := s.dbService.SelectAll(ctx, queryParams, userAuth)
+func (s *Service) GetAllProjects(ctx context.Context, queryParams *types.GetAllProjectsParams, userAuth types.UserAuthorizationResponse, logger *zap.Logger) (*types.GetAllProjectsResponse, error) {
+	projects, err := s.dbService.SelectAll(ctx, queryParams, userAuth, logger)
 	if err != nil {
 		return nil, err
 	}
 
 	// Generate presigned URLs for all projects
 	for i := range projects {
-		presignURL, err := s.generateProjectFileURL(ctx, projects[i].ID, types.ProjectFileTypeProjectFile, time.Minute*5, "get")
+		presignURL, err := s.generateProjectFileURL(ctx, projects[i].ID, types.ProjectFileTypeProjectFile, time.Minute*5, "get", logger)
 		if err != nil {
 			return nil, fmt.Errorf("failed to generate presign URL for project %s: %v", projects[i].ID, err)
 		}
@@ -193,7 +194,7 @@ func (s *Service) GetAllProjects(ctx context.Context, queryParams *types.GetAllP
 			projects[i].ProjectFileURL = &presignURL
 		}
 
-		thumbnailURL, err := s.generateProjectFileURL(ctx, projects[i].ID, types.ProjectFileTypeProjectThumbnail, time.Minute*5, "get")
+		thumbnailURL, err := s.generateProjectFileURL(ctx, projects[i].ID, types.ProjectFileTypeProjectThumbnail, time.Minute*5, "get", logger)
 		if err != nil {
 			return nil, fmt.Errorf("failed to generate thumbnail URL for project %s: %v", projects[i].ID, err)
 		}
@@ -211,7 +212,7 @@ func (s *Service) GetAllProjects(ctx context.Context, queryParams *types.GetAllP
 }
 
 // UpdateProject modifies an existing project.
-func (s *Service) UpdateProject(ctx context.Context, project *types.ProjectUpdateRequest, userAuth types.UserAuthorizationResponse) (*types.ProjectUpdateResponse, error) {
+func (s *Service) UpdateProject(ctx context.Context, project *types.ProjectUpdateRequest, userAuth types.UserAuthorizationResponse, logger *zap.Logger) (*types.ProjectUpdateResponse, error) {
 
 	opts := ValidationOptions{
 		CheckDeleted:  true,
@@ -228,12 +229,12 @@ func (s *Service) UpdateProject(ctx context.Context, project *types.ProjectUpdat
 		opts.CheckNotLockedByOtherUser = true
 	}
 
-	projectRow, err := s.validateProject(ctx, project.ID, opts)
+	projectRow, err := s.validateProject(ctx, project.ID, opts, logger)
 	if err != nil {
 		return nil, err
 	}
 
-	err = s.dbService.Update(ctx, projectRow, project)
+	err = s.dbService.Update(ctx, projectRow, project, logger)
 	if err != nil {
 		return nil, fmt.Errorf(errorWithDetailsFormat, types.ErrMsgFailedToUpdateProject, err)
 	}
@@ -241,7 +242,7 @@ func (s *Service) UpdateProject(ctx context.Context, project *types.ProjectUpdat
 	response := &types.ProjectUpdateResponse{}
 
 	if project.IsProjectFileDirty {
-		presignURL, err := s.generateProjectFileURL(ctx, projectRow.ID, types.ProjectFileTypeProjectFile, time.Minute*15, "put")
+		presignURL, err := s.generateProjectFileURL(ctx, projectRow.ID, types.ProjectFileTypeProjectFile, time.Minute*15, "put", logger)
 		if err != nil {
 			return nil, fmt.Errorf("failed to generate presign URL: %v", err)
 		}
@@ -249,7 +250,7 @@ func (s *Service) UpdateProject(ctx context.Context, project *types.ProjectUpdat
 	}
 
 	if project.IsProjectThumbnailDirty {
-		presignURL, err := s.generateProjectFileURL(ctx, projectRow.ID, types.ProjectFileTypeProjectThumbnail, time.Minute*15, "put")
+		presignURL, err := s.generateProjectFileURL(ctx, projectRow.ID, types.ProjectFileTypeProjectThumbnail, time.Minute*15, "put", logger)
 		if err != nil {
 			return nil, fmt.Errorf("failed to generate presign URL: %v", err)
 		}
@@ -261,7 +262,7 @@ func (s *Service) UpdateProject(ctx context.Context, project *types.ProjectUpdat
 
 // DeleteProject removes a project by its ID.
 // Note: This method should be called with userID for validation when invoked from handlers
-func (s *Service) DeleteProject(ctx context.Context, projectID string, userAuth types.UserAuthorizationResponse) error {
+func (s *Service) DeleteProject(ctx context.Context, projectID string, userAuth types.UserAuthorizationResponse, logger *zap.Logger) error {
 
 	opts := ValidationOptions{
 		CheckDeleted:  true,
@@ -277,7 +278,7 @@ func (s *Service) DeleteProject(ctx context.Context, projectID string, userAuth 
 		opts.CheckNotLockedByOtherUser = true
 	}
 
-	projectRow, err := s.validateProject(ctx, projectID, opts)
+	projectRow, err := s.validateProject(ctx, projectID, opts, logger)
 
 	if err != nil {
 		return err
@@ -287,11 +288,11 @@ func (s *Service) DeleteProject(ctx context.Context, projectID string, userAuth 
 		return nil // Idempotent behavior
 	}
 
-	return s.dbService.Delete(ctx, projectRow)
+	return s.dbService.Delete(ctx, projectRow, logger)
 }
 
 // AssignUserToProject assigns a user to a project.
-func (s *Service) AssignUserToProject(ctx context.Context, projectID, userEmail string, userAuth types.UserAuthorizationResponse) (*types.UserAssignmentResponse, error) {
+func (s *Service) AssignUserToProject(ctx context.Context, projectID, userEmail string, userAuth types.UserAuthorizationResponse, logger *zap.Logger) (*types.UserAssignmentResponse, error) {
 
 	opts := ValidationOptions{
 		CheckDeleted:              true,
@@ -307,20 +308,20 @@ func (s *Service) AssignUserToProject(ctx context.Context, projectID, userEmail 
 		opts.UserID = userAuth.User.ID
 	}
 
-	_, err := s.validateProject(ctx, projectID, opts)
+	_, err := s.validateProject(ctx, projectID, opts, logger)
 
 	if err != nil {
 		return nil, err
 	}
 
 	// Get user ID by email
-	userID, err := s.dbService.GetUserIDByEmail(ctx, userEmail)
+	userID, err := s.dbService.GetUserIDByEmail(ctx, userEmail, logger)
 	if err != nil {
 		return nil, err // This will return "user not found" from the database service
 	}
 
 	// Check if user is already assigned to the project
-	isAssigned, err := s.dbService.IsUserAssigned(ctx, projectID, userID)
+	isAssigned, err := s.dbService.IsUserAssigned(ctx, projectID, userID, logger)
 	if err != nil {
 		return nil, fmt.Errorf(errorWithDetailsFormat, types.ErrMsgFailedUserAssignmentCheck, err)
 	}
@@ -332,7 +333,7 @@ func (s *Service) AssignUserToProject(ctx context.Context, projectID, userEmail 
 	}
 
 	// Assign the user to the project
-	if err := s.dbService.AssignUser(ctx, projectID, userID); err != nil {
+	if err := s.dbService.AssignUser(ctx, projectID, userID, logger); err != nil {
 		return nil, fmt.Errorf(errorWithDetailsFormat, types.ErrMsgFailedToAssignUser, err)
 	}
 
@@ -342,7 +343,7 @@ func (s *Service) AssignUserToProject(ctx context.Context, projectID, userEmail 
 }
 
 // RemoveUserFromProject removes a user from a project.
-func (s *Service) RemoveUserFromProject(ctx context.Context, projectID, userEmail string, userAuth types.UserAuthorizationResponse) (*types.UserAssignmentResponse, error) {
+func (s *Service) RemoveUserFromProject(ctx context.Context, projectID, userEmail string, userAuth types.UserAuthorizationResponse, logger *zap.Logger) (*types.UserAssignmentResponse, error) {
 
 	opts := ValidationOptions{
 		CheckDeleted:              true,
@@ -358,19 +359,19 @@ func (s *Service) RemoveUserFromProject(ctx context.Context, projectID, userEmai
 		opts.UserID = userAuth.User.ID
 	}
 
-	_, err := s.validateProject(ctx, projectID, opts)
+	_, err := s.validateProject(ctx, projectID, opts, logger)
 	if err != nil {
 		return nil, err
 	}
 
 	// Get user ID by email
-	userID, err := s.dbService.GetUserIDByEmail(ctx, userEmail)
+	userID, err := s.dbService.GetUserIDByEmail(ctx, userEmail, logger)
 	if err != nil {
 		return nil, err // This will return "user not found" from the database service
 	}
 
 	// Check if user is assigned to the project
-	isAssigned, err := s.dbService.IsUserAssigned(ctx, projectID, userID)
+	isAssigned, err := s.dbService.IsUserAssigned(ctx, projectID, userID, logger)
 	if err != nil {
 		return nil, fmt.Errorf(errorWithDetailsFormat, types.ErrMsgFailedUserAssignmentCheck, err)
 	}
@@ -381,7 +382,7 @@ func (s *Service) RemoveUserFromProject(ctx context.Context, projectID, userEmai
 	}
 
 	// Remove the user from the project
-	if err := s.dbService.RemoveUser(ctx, projectID, userID); err != nil {
+	if err := s.dbService.RemoveUser(ctx, projectID, userID, logger); err != nil {
 		return nil, fmt.Errorf(errorWithDetailsFormat, types.ErrMsgFailedToRemoveUser, err)
 	}
 
@@ -391,7 +392,7 @@ func (s *Service) RemoveUserFromProject(ctx context.Context, projectID, userEmai
 }
 
 // StarProject stars a project for a user.
-func (s *Service) StarProject(ctx context.Context, projectID, userID string) error {
+func (s *Service) StarProject(ctx context.Context, projectID, userID string, logger *zap.Logger) error {
 
 	opts := ValidationOptions{
 		CheckUserAssigned:         true,
@@ -401,14 +402,14 @@ func (s *Service) StarProject(ctx context.Context, projectID, userID string) err
 		CheckNotLockedByOtherUser: false,
 	}
 
-	_, err := s.validateProject(ctx, projectID, opts)
+	_, err := s.validateProject(ctx, projectID, opts, logger)
 
 	if err != nil {
 		return err
 	}
 
 	// Star the project
-	if err := s.dbService.StarProject(ctx, projectID, userID); err != nil {
+	if err := s.dbService.StarProject(ctx, projectID, userID, logger); err != nil {
 		return err
 	}
 
@@ -416,7 +417,7 @@ func (s *Service) StarProject(ctx context.Context, projectID, userID string) err
 }
 
 // UnstarProject unstars a project for a user.
-func (s *Service) UnstarProject(ctx context.Context, projectID, userID string) error {
+func (s *Service) UnstarProject(ctx context.Context, projectID, userID string, logger *zap.Logger) error {
 	opts := ValidationOptions{
 		CheckUserAssigned:         true,
 		UserID:                    userID,
@@ -425,13 +426,13 @@ func (s *Service) UnstarProject(ctx context.Context, projectID, userID string) e
 		CheckNotLockedByOtherUser: false,
 	}
 
-	_, err := s.validateProject(ctx, projectID, opts)
+	_, err := s.validateProject(ctx, projectID, opts, logger)
 	if err != nil {
 		return err
 	}
 
 	// Unstar the project
-	if err := s.dbService.UnstarProject(ctx, projectID, userID); err != nil {
+	if err := s.dbService.UnstarProject(ctx, projectID, userID, logger); err != nil {
 		return err
 	}
 
@@ -439,7 +440,7 @@ func (s *Service) UnstarProject(ctx context.Context, projectID, userID string) e
 }
 
 // ArchiveProject archives a project.
-func (s *Service) ArchiveProject(ctx context.Context, projectID string, userAuth types.UserAuthorizationResponse) error {
+func (s *Service) ArchiveProject(ctx context.Context, projectID string, userAuth types.UserAuthorizationResponse, logger *zap.Logger) error {
 
 	opts := ValidationOptions{
 		CheckDeleted:  true,
@@ -456,7 +457,7 @@ func (s *Service) ArchiveProject(ctx context.Context, projectID string, userAuth
 		opts.CheckNotLockedByOtherUser = true
 	}
 
-	projectRow, err := s.validateProject(ctx, projectID, opts)
+	projectRow, err := s.validateProject(ctx, projectID, opts, logger)
 	if err != nil {
 		return err
 	}
@@ -466,7 +467,7 @@ func (s *Service) ArchiveProject(ctx context.Context, projectID string, userAuth
 	}
 
 	// Archive the project
-	if err := s.dbService.ArchiveProject(ctx, projectID); err != nil {
+	if err := s.dbService.ArchiveProject(ctx, projectID, logger); err != nil {
 		return err
 	}
 
@@ -474,7 +475,7 @@ func (s *Service) ArchiveProject(ctx context.Context, projectID string, userAuth
 }
 
 // UnarchiveProject unarchives a project.
-func (s *Service) UnarchiveProject(ctx context.Context, projectID string, userAuth types.UserAuthorizationResponse) error {
+func (s *Service) UnarchiveProject(ctx context.Context, projectID string, userAuth types.UserAuthorizationResponse, logger *zap.Logger) error {
 	opts := ValidationOptions{
 		CheckDeleted:  true,
 		CheckArchived: false,
@@ -489,7 +490,7 @@ func (s *Service) UnarchiveProject(ctx context.Context, projectID string, userAu
 		opts.CheckNotLockedByOtherUser = true
 	}
 
-	projectRow, err := s.validateProject(ctx, projectID, opts)
+	projectRow, err := s.validateProject(ctx, projectID, opts, logger)
 	if err != nil {
 		return err
 	}
@@ -499,7 +500,7 @@ func (s *Service) UnarchiveProject(ctx context.Context, projectID string, userAu
 	}
 
 	// Unarchive the project
-	if err := s.dbService.UnarchiveProject(ctx, projectID); err != nil {
+	if err := s.dbService.UnarchiveProject(ctx, projectID, logger); err != nil {
 		return err
 	}
 
@@ -507,17 +508,17 @@ func (s *Service) UnarchiveProject(ctx context.Context, projectID string, userAu
 }
 
 // ProjectExists checks if a project exists.
-func (s *Service) ProjectExists(ctx context.Context, projectID string) (bool, error) {
-	return s.dbService.ProjectExists(ctx, projectID)
+func (s *Service) ProjectExists(ctx context.Context, projectID string, logger *zap.Logger) (bool, error) {
+	return s.dbService.ProjectExists(ctx, projectID, logger)
 }
 
 // IsUserAssigned checks if a user is assigned to a project.
-func (s *Service) IsUserAssigned(ctx context.Context, projectID, userID string) (bool, error) {
-	return s.dbService.IsUserAssigned(ctx, projectID, userID)
+func (s *Service) IsUserAssigned(ctx context.Context, projectID, userID string, logger *zap.Logger) (bool, error) {
+	return s.dbService.IsUserAssigned(ctx, projectID, userID, logger)
 }
 
 // LockProject locks a project for a user.
-func (s *Service) LockProject(ctx context.Context, projectID string, userAuth types.UserAuthorizationResponse) error {
+func (s *Service) LockProject(ctx context.Context, projectID string, userAuth types.UserAuthorizationResponse, logger *zap.Logger) error {
 
 	opts := ValidationOptions{
 		CheckDeleted:              true,
@@ -533,7 +534,7 @@ func (s *Service) LockProject(ctx context.Context, projectID string, userAuth ty
 		opts.CheckUserAssigned = true
 	}
 
-	projectRow, err := s.validateProject(ctx, projectID, opts)
+	projectRow, err := s.validateProject(ctx, projectID, opts, logger)
 	if err != nil {
 		return err
 	}
@@ -551,7 +552,7 @@ func (s *Service) LockProject(ctx context.Context, projectID string, userAuth ty
 	}
 
 	// Lock the project
-	if err := s.dbService.LockProject(ctx, projectID, userAuth.User.ID); err != nil {
+	if err := s.dbService.LockProject(ctx, projectID, userAuth.User.ID, logger); err != nil {
 		return err
 	}
 
@@ -559,7 +560,7 @@ func (s *Service) LockProject(ctx context.Context, projectID string, userAuth ty
 }
 
 // UnlockProject unlocks a project for a user.
-func (s *Service) UnlockProject(ctx context.Context, projectID string, userAuth types.UserAuthorizationResponse) error {
+func (s *Service) UnlockProject(ctx context.Context, projectID string, userAuth types.UserAuthorizationResponse, logger *zap.Logger) error {
 	opts := ValidationOptions{
 		CheckDeleted:  true,
 		CheckArchived: true,
@@ -575,7 +576,7 @@ func (s *Service) UnlockProject(ctx context.Context, projectID string, userAuth 
 		opts.CheckNotLockedByOtherUser = true
 	}
 
-	projectRow, err := s.validateProject(ctx, projectID, opts)
+	projectRow, err := s.validateProject(ctx, projectID, opts, logger)
 	if err != nil {
 		return err
 	}
@@ -585,7 +586,7 @@ func (s *Service) UnlockProject(ctx context.Context, projectID string, userAuth 
 	}
 
 	// Unlock the project
-	if err := s.dbService.UnlockProject(ctx, projectID); err != nil {
+	if err := s.dbService.UnlockProject(ctx, projectID, logger); err != nil {
 		return err
 	}
 

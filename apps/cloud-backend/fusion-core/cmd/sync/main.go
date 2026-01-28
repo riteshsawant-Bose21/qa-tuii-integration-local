@@ -15,6 +15,7 @@ import (
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/product"
 	productdb "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/product/db"
 	serverSync "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/server/sync"
+	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/storage/cloudfs"
 	sql "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/storage/sql"
 )
 
@@ -38,9 +39,6 @@ func main() {
 	bucket := flag.String("bucket", "", "S3 bucket name (required for s3 source)")
 	key := flag.String("key", "", "S3 object key (required for s3 source)")
 	region := flag.String("region", "", "AWS region (optional, uses config default)")
-	flag.Parse()
-
-	// Parse the flags
 	flag.Parse()
 
 	env := environment.New(environment.DefaultLoadLookuper)
@@ -116,8 +114,15 @@ func main() {
 		logger.Fatal("Failed to get processing config", zap.Error(err))
 	}
 
+	// Initialize S3 client
+	s3Handler, err := cloudfs.NewS3Client(context.Background(), syncCfg.S3.Region)
+	if err != nil {
+		logger.Fatal("Failed to initialize S3 client", zap.Error(err))
+	}
+	logger.Info("Initialized S3 client")
+
 	//Initialize Product Service (now includes sync functionality)
-	productSVC := product.NewService(productDBSvc, validationCfg.DefaultVersion, validationCfg, processingCfg, logger.JobSyncLog())
+	productSVC := product.NewService(productDBSvc, validationCfg.DefaultVersion, validationCfg, processingCfg, s3Handler, logger.JobSyncLog())
 	if productSVC == nil {
 		logger.Fatal("Failed to initialize product service")
 	}
@@ -125,7 +130,7 @@ func main() {
 
 	syncRequestRegion := *region
 	if syncRequestRegion == "" {
-		syncRequestRegion = syncCfg.AWS.Region
+		syncRequestRegion = syncCfg.S3.Region
 	}
 
 	syncRequest := &types.SyncRequest{

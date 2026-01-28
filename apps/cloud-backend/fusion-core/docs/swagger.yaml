@@ -39,10 +39,28 @@ definitions:
     - role_id
     - user_id
     type: object
+  types.AuthStatusSuccessResponse:
+    properties:
+      data:
+        additionalProperties: true
+        type: object
+      message:
+        example: Authentication status retrieved successfully
+        type: string
+    type: object
   types.BadRequestError:
     properties:
       message:
         example: Bad Request
+        type: string
+    type: object
+  types.BadRequestResponse:
+    properties:
+      error:
+        example: Bad Request
+        type: string
+      message:
+        example: Invalid JSON payload
         type: string
     type: object
   types.Budget:
@@ -160,10 +178,28 @@ definitions:
         example: Internal Server Error
         type: string
     type: object
+  types.InternalServerErrorResponse:
+    properties:
+      error:
+        example: Internal Server Error
+        type: string
+      message:
+        example: Internal server error
+        type: string
+    type: object
   types.NotFoundError:
     properties:
       message:
         example: Not Found
+        type: string
+    type: object
+  types.NotFoundResponse:
+    properties:
+      error:
+        example: Not Found
+        type: string
+      message:
+        example: User not found in the system
         type: string
     type: object
   types.OrganizationUsersResponse:
@@ -618,7 +654,6 @@ definitions:
         example: active
         type: string
     type: object
-host: fusionapi.cloud-dev-external-bpro.in:8080
 info:
   contact:
     email: support@swagger.io
@@ -903,9 +938,7 @@ paths:
         "500":
           description: Internal server error
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/types.InternalServerError'
       summary: Get all products
       tags:
       - products
@@ -930,21 +963,15 @@ paths:
         "400":
           description: Bad request - Product ID is required
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/types.BadRequestError'
         "404":
           description: Product not found
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/types.NotFoundError'
         "500":
           description: Internal server error
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/types.InternalServerError'
       summary: Get product by ID
       tags:
       - products
@@ -964,6 +991,10 @@ paths:
         in: query
         name: currency
         type: string
+      - description: Product variant to filter prices
+        in: query
+        name: variant
+        type: string
       produces:
       - application/json
       responses:
@@ -974,21 +1005,15 @@ paths:
         "400":
           description: Bad request - Product ID is required
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/types.BadRequestError'
         "404":
           description: Product not found
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/types.NotFoundError'
         "500":
           description: Internal server error
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/types.InternalServerError'
       summary: Get product prices by ID
       tags:
       - products
@@ -1052,7 +1077,8 @@ paths:
           schema:
             $ref: '#/definitions/types.ProjectCreateResponse'
         "400":
-          description: Bad request - Invalid payload or user not found
+          description: Bad request - Invalid payload or user not found or project
+            Id already exists
           schema:
             $ref: '#/definitions/types.BadRequestError'
         "500":
@@ -1346,77 +1372,6 @@ paths:
       summary: Assign a user to a project
       tags:
       - projects
-  /user/me/authorization:
-    get:
-      consumes:
-      - application/json
-      description: Get authorization details including user info, account, role, and
-        permissions for the current authenticated user
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: Successfully retrieved user authorization details
-          schema:
-            $ref: '#/definitions/types.UserAuthorizationResponse'
-        "401":
-          description: Unauthorized - User email not found in token
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "404":
-          description: User not found in the system
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "500":
-          description: Internal server error
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-      security:
-      - BearerAuth: []
-      summary: Get user authorization details
-      tags:
-      - auth
-  /user/me/profile:
-    get:
-      consumes:
-      - application/json
-      description: Get the current authenticated user's profile information
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: Successfully retrieved user profile
-          schema:
-            $ref: '#/definitions/types.User'
-        "401":
-          description: Unauthorized - User email not found in token
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "404":
-          description: User not found in the system
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "500":
-          description: Internal server error
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-      security:
-      - BearerAuth: []
-      summary: Get user profile
-      tags:
-      - users
   /users:
     post:
       consumes:

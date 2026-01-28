@@ -48,10 +48,11 @@ func NewService(db *sql.DB, logger *zap.Logger) *Service {
 // ============================================================================
 
 // SelectByID retrieves a product by ID using SQLBoiler.
-func (s *Service) SelectByID(ctx context.Context, id string, version string) (*types.SingleProductResponse, error) {
+func (s *Service) SelectByID(ctx context.Context, id string, version string, logger *zap.Logger) (*types.SingleProductResponse, error) {
 	// Convert id string to int
 	productID, err := strconv.Atoi(id)
 	if err != nil {
+		logger.Error("invalid product ID", zap.String("id", id), zap.Error(err))
 		return nil, fmt.Errorf("invalid product ID: %w", err)
 	}
 
@@ -64,21 +65,23 @@ func (s *Service) SelectByID(ctx context.Context, id string, version string) (*t
 		if err == sql.ErrNoRows {
 			return nil, errorspkg.ErrProductNotFound
 		}
+		logger.Error("failed to get product by ID", zap.Int("product_id", productID), zap.Error(err))
 		return nil, fmt.Errorf("failed to get product: %w", err)
 	}
-
+	logger.Info("retrieved product by ID", zap.Int("product_id", productID))
 	// Transform to API response format
-	return s.transformToSingleProductResponse(product, version)
+	return s.transformToSingleProductResponse(product, version, logger)
 }
 
 // SelectAll retrieves all products using SQLBoiler.
-func (s *Service) SelectAll(ctx context.Context, version string) (*types.ProductResponse, error) {
+func (s *Service) SelectAll(ctx context.Context, version string, logger *zap.Logger) (*types.ProductResponse, error) {
 	// Query all products using SQLBoiler
 	products, err := models.Products(
 		qm.OrderBy(models.ProductColumns.ProductID),
 	).All(ctx, s.db)
 
 	if err != nil {
+		logger.Error("failed to query products", zap.Error(err))
 		return nil, fmt.Errorf("failed to query products: %w", err)
 	}
 
@@ -92,12 +95,13 @@ func (s *Service) SelectAll(ctx context.Context, version string) (*types.Product
 	}
 
 	for _, product := range products {
-		err = s.appendToProductResponse(response, product)
+		err = s.appendToProductResponse(response, product, logger)
 		if err != nil {
+			logger.Error("failed to transform product", zap.Int("product_id", product.ProductID), zap.Error(err))
 			return nil, fmt.Errorf("failed to transform product %d: %w", product.ProductID, err)
 		}
 	}
-
+	logger.Info("retrieved all products", zap.Int("count", len(products)))
 	return response, nil
 }
 
@@ -106,7 +110,7 @@ func (s *Service) SelectAll(ctx context.Context, version string) (*types.Product
 // ============================================================================
 
 // GetPricesByProductID retrieves prices for a product by product ID, optionally filtered by currency and variant
-func (s *Service) GetPricesByProductID(ctx context.Context, productID int, currency, variant string) (*types.PriceResponse, error) {
+func (s *Service) GetPricesByProductID(ctx context.Context, productID int, currency, variant string, logger *zap.Logger) (*types.PriceResponse, error) {
 	// Build query conditions
 	queryMods := []qm.QueryMod{
 		models.ProductPriceWhere.ProductID.EQ(productID),
@@ -129,6 +133,7 @@ func (s *Service) GetPricesByProductID(ctx context.Context, productID int, curre
 	// Query using SQLBoiler
 	prices, err := models.ProductPrices(queryMods...).All(ctx, s.db)
 	if err != nil {
+		logger.Error("failed to query prices", zap.Int("product_id", productID), zap.Error(err))
 		return nil, fmt.Errorf("failed to query prices for product %d: %w", productID, err)
 	}
 
@@ -156,7 +161,7 @@ func (s *Service) GetPricesByProductID(ctx context.Context, productID int, curre
 	}
 
 	// Get the latest sync version for price data
-	version, err := s.GetLatestSyncVersion(ctx, "price")
+	version, err := s.GetLatestSyncVersion(ctx, "price", logger)
 	if err != nil {
 		// If we can't get the version, log a warning but continue
 		// This ensures the API doesn't fail completely if version lookup fails
@@ -168,7 +173,7 @@ func (s *Service) GetPricesByProductID(ctx context.Context, productID int, curre
 		ProductID: productID,
 		Prices:    priceDetails,
 	}
-
+	logger.Info("retrieved prices for product", zap.Int("product_id", productID), zap.Int("price_count", len(priceDetails)))
 	return response, nil
 }
 
@@ -177,7 +182,7 @@ func (s *Service) GetPricesByProductID(ctx context.Context, productID int, curre
 // ============================================================================
 
 // GetLatestSyncVersion retrieves the latest successful sync version for a given sync type
-func (s *Service) GetLatestSyncVersion(ctx context.Context, syncType string) (string, error) {
+func (s *Service) GetLatestSyncVersion(ctx context.Context, syncType string, logger *zap.Logger) (string, error) {
 	// Query the latest successful sync job for the given type
 	job, err := models.ProductSyncJobs(
 		models.ProductSyncJobWhere.SyncType.EQ(null.StringFrom(syncType)),
@@ -188,16 +193,19 @@ func (s *Service) GetLatestSyncVersion(ctx context.Context, syncType string) (st
 
 	if err != nil {
 		if err == sql.ErrNoRows {
+			logger.Warn("no successful sync found", zap.String("sync_type", syncType))
 			return "", fmt.Errorf("no successful sync found for type: %s", syncType)
 		}
+		logger.Error("failed to get latest sync version", zap.String("sync_type", syncType), zap.Error(err))
 		return "", fmt.Errorf("failed to get latest sync version: %w", err)
 	}
 
 	// Return the version if available
 	if job.Version != "" {
+		logger.Info("retrieved latest sync version", zap.String("sync_type", syncType), zap.String("version", job.Version))
 		return job.Version, nil
 	}
-
+	logger.Warn("no version information found in sync job", zap.String("sync_type", syncType))
 	return "", fmt.Errorf("no version information found in sync job")
 }
 
@@ -206,7 +214,7 @@ func (s *Service) GetLatestSyncVersion(ctx context.Context, syncType string) (st
 // ============================================================================
 
 // transformToSingleProductResponse transforms a SQLBoiler Product model to SingleProductResponse
-func (s *Service) transformToSingleProductResponse(product *models.Product, version string) (*types.SingleProductResponse, error) {
+func (s *Service) transformToSingleProductResponse(product *models.Product, version string, logger *zap.Logger) (*types.SingleProductResponse, error) {
 	// Parse images JSON
 	var imagesData interface{}
 	if product.Images.Valid {
@@ -324,13 +332,14 @@ func (s *Service) transformToSingleProductResponse(product *models.Product, vers
 		}, nil
 
 	default:
+		logger.Error("unknown product type", zap.String("product_type", product.ProductType))
 		return nil, fmt.Errorf("unknown product type: %s", product.ProductType)
 	}
 }
 
 // appendToProductResponse adds a product to the appropriate slice in ProductResponse
-func (s *Service) appendToProductResponse(response *types.ProductResponse, product *models.Product) error {
-	itemResponse := s.buildProductItemResponse(product)
+func (s *Service) appendToProductResponse(response *types.ProductResponse, product *models.Product, logger *zap.Logger) error {
+	itemResponse := s.buildProductItemResponse(product, logger)
 
 	switch product.ProductType {
 	case "speaker":
@@ -346,55 +355,62 @@ func (s *Service) appendToProductResponse(response *types.ProductResponse, produ
 	case "accessory":
 		response.Accessory = append(response.Accessory, *itemResponse)
 	default:
+		logger.Error("unknown product type", zap.String("product_type", product.ProductType))
 		return fmt.Errorf("unknown product type: %s", product.ProductType)
 	}
-
+	logger.Info("appended product to response", zap.Int("product_id", product.ProductID), zap.String("product_type", product.ProductType))
 	return nil
 }
 
 // buildProductItemResponse creates a ProductItemResponse from a SQLBoiler model
-func (s *Service) buildProductItemResponse(product *models.Product) *types.ProductItemResponse {
-	imagesData := s.parseJSONField(product.Images, []map[string]interface{}{{"black": []string{""}}})
-	specs := s.parseJSONField(product.Specifications, make(map[string]interface{}))
-
+func (s *Service) buildProductItemResponse(product *models.Product, logger *zap.Logger) *types.ProductItemResponse {
+	imagesData := s.parseJSONField(product.Images, []map[string]interface{}{{"black": []string{""}}}, logger)
+	specs := s.parseJSONField(product.Specifications, make(map[string]interface{}), logger)
+	logger.Info("built product item response", zap.Int("product_id", product.ProductID))
 	return &types.ProductItemResponse{
 		ProductID:          product.ProductID,
 		Assets:             imagesData,
 		ModelName:          product.ModelName,
-		ModelFamily:        s.getStringValue(product.ModelFamily),
-		Description:        s.getStringValue(product.Description),
+		ModelFamily:        s.getStringValue(product.ModelFamily, logger),
+		Description:        s.getStringValue(product.Description, logger),
 		Specifications:     specs,
-		IsFusionCompatible: s.getBoolValue(product.Isfusioncompatible),
+		IsFusionCompatible: s.getBoolValue(product.Isfusioncompatible, logger),
 	}
 }
 
 // parseJSONField safely parses a null JSON field with fallback
-func (s *Service) parseJSONField(field null.JSON, fallback interface{}) interface{} {
+func (s *Service) parseJSONField(field null.JSON, fallback interface{}, logger *zap.Logger) interface{} {
 	if !field.Valid {
+		logger.Info("JSON field is null, using fallback")
 		return fallback
 	}
 
 	var jsonData interface{}
 	if err := json.Unmarshal(field.JSON, &jsonData); err != nil {
+		logger.Warn("failed to unmarshal JSON field, using fallback", zap.Error(err))
 		return fallback
 	}
-
+	logger.Info("successfully parsed JSON field")
 	return jsonData
 }
 
 // getStringValue safely extracts string from null.String
-func (s *Service) getStringValue(field null.String) string {
+func (s *Service) getStringValue(field null.String, logger *zap.Logger) string {
 	if field.Valid {
+		logger.Info("extracted string value from null.String")
 		return field.String
 	}
+	logger.Info("null.String is invalid, returning empty string")
 	return ""
 }
 
 // getBoolValue safely extracts bool from null.Bool
-func (s *Service) getBoolValue(field null.Bool) bool {
+func (s *Service) getBoolValue(field null.Bool, logger *zap.Logger) bool {
 	if field.Valid {
+		logger.Info("extracted bool value from null.Bool")
 		return field.Bool
 	}
+	logger.Info("null.Bool is invalid, returning false")
 	return false
 }
 
@@ -403,42 +419,48 @@ func (s *Service) getBoolValue(field null.Bool) bool {
 // ============================================================================
 
 // Insert inserts a single product into the database
-func (s *Service) Insert(ctx context.Context, product *types.DBProduct) error {
-	return s.insertProduct(ctx, s.db, product)
+func (s *Service) Insert(ctx context.Context, product *types.DBProduct, logger *zap.Logger) error {
+	logger.Info("inserting product", zap.Int("product_id", product.ProductID))
+	return s.insertProduct(ctx, s.db, product, logger)
 }
 
 // Upsert inserts or updates a single product in the database
-func (s *Service) Upsert(ctx context.Context, product *types.DBProduct) error {
-	return s.insertProduct(ctx, s.db, product)
+func (s *Service) Upsert(ctx context.Context, product *types.DBProduct, logger *zap.Logger) error {
+	logger.Info("upserting product", zap.Int("product_id", product.ProductID))
+	return s.insertProduct(ctx, s.db, product, logger)
 }
 
 // InsertBatch inserts multiple products within a single transaction
-func (s *Service) InsertBatch(ctx context.Context, products []*types.DBProduct) error {
+func (s *Service) InsertBatch(ctx context.Context, products []*types.DBProduct, logger *zap.Logger) error {
 	if len(products) == 0 {
+		logger.Info("no products to insert in batch")
 		return nil
 	}
 
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
+		logger.Error("failed to begin transaction for batch insert", zap.Error(err))
 		return fmt.Errorf("failed to begin transaction: %w", err)
 	}
 	defer tx.Rollback()
 
 	for _, product := range products {
-		if err := s.insertProduct(ctx, tx, product); err != nil {
+		if err := s.insertProduct(ctx, tx, product, logger); err != nil {
+			logger.Error("failed to insert product in batch", zap.Int("product_id", product.ProductID), zap.Error(err))
 			return err
 		}
 	}
-
+	logger.Info("successfully inserted batch of products", zap.Int("count", len(products)))
 	return tx.Commit()
 }
 
 // InsertWithRetry inserts a product with retry logic
-func (s *Service) InsertWithRetry(ctx context.Context, product *types.DBProduct, maxRetries int, retryDelay time.Duration) error {
+func (s *Service) InsertWithRetry(ctx context.Context, product *types.DBProduct, maxRetries int, retryDelay time.Duration, logger *zap.Logger) error {
 	var lastErr error
 	for i := 0; i <= maxRetries; i++ {
-		err := s.Insert(ctx, product)
+		err := s.Insert(ctx, product, logger)
 		if err == nil {
+			logger.Info("successfully inserted product with retry", zap.Int("product_id", product.ProductID), zap.Int("attempt", i+1))
 			return nil
 		}
 		lastErr = err
@@ -447,27 +469,32 @@ func (s *Service) InsertWithRetry(ctx context.Context, product *types.DBProduct,
 			time.Sleep(retryDelay)
 		}
 	}
+	logger.Error("failed to insert product after retries", zap.Int("product_id", product.ProductID), zap.Int("max_retries", maxRetries), zap.Error(lastErr))
 	return lastErr
 }
 
 // LookupProductIDBySKU looks up a product ID by SKU
-func (s *Service) LookupProductIDBySKU(ctx context.Context, sku int) (int, bool, error) {
+func (s *Service) LookupProductIDBySKU(ctx context.Context, sku int, logger *zap.Logger) (int, bool, error) {
 	product, err := models.Products(qm.Where("product_id = ?", sku)).One(ctx, s.db)
 	if err == sql.ErrNoRows {
+		logger.Info("product not found by SKU", zap.Int("sku", sku))
 		return 0, false, nil
 	}
 	if err != nil {
+		logger.Error("failed to lookup product by SKU", zap.Int("sku", sku), zap.Error(err))
 		return 0, false, err
 	}
+	logger.Info("found product by SKU", zap.Int("sku", sku), zap.Int("product_id", product.ProductID))
 	return product.ProductID, true, nil
 }
 
 // BatchLookupExistingProductIDs checks which product IDs exist in the database
 // Returns a set (map) of existing product IDs for O(1) lookups
-func (s *Service) BatchLookupExistingProductIDs(ctx context.Context, productIDs []int) (map[int]bool, error) {
+func (s *Service) BatchLookupExistingProductIDs(ctx context.Context, productIDs []int, logger *zap.Logger) (map[int]bool, error) {
 	result := make(map[int]bool)
 
 	if len(productIDs) == 0 {
+		logger.Info("no product IDs provided for batch lookup")
 		return result, nil
 	}
 
@@ -505,6 +532,7 @@ func (s *Service) BatchLookupExistingProductIDs(ctx context.Context, productIDs 
 
 		rows, err := s.db.QueryContext(ctx, query, args...)
 		if err != nil {
+			logger.Error("failed to batch lookup product IDs", zap.Error(err))
 			return nil, fmt.Errorf("failed to batch lookup product IDs: %w", err)
 		}
 
@@ -512,6 +540,7 @@ func (s *Service) BatchLookupExistingProductIDs(ctx context.Context, productIDs 
 			var productID int
 			if err := rows.Scan(&productID); err != nil {
 				rows.Close()
+				logger.Error("failed to scan product ID during batch lookup", zap.Error(err))
 				return nil, fmt.Errorf("failed to scan product ID: %w", err)
 			}
 			result[productID] = true
@@ -519,16 +548,18 @@ func (s *Service) BatchLookupExistingProductIDs(ctx context.Context, productIDs 
 		rows.Close()
 
 		if err := rows.Err(); err != nil {
+			logger.Error("error iterating product IDs during batch lookup", zap.Error(err))
 			return nil, fmt.Errorf("error iterating product IDs: %w", err)
 		}
 	}
-
+	logger.Info("completed batch lookup of product IDs", zap.Int("requested_count", len(productIDs)), zap.Int("found_count", len(result)))
 	return result, nil
 }
 
 // GetProductTimestamps retrieves updated_at timestamps for multiple products
-func (s *Service) GetProductTimestamps(ctx context.Context, productIDs []int) (map[int]*int64, error) {
+func (s *Service) GetProductTimestamps(ctx context.Context, productIDs []int, logger *zap.Logger) (map[int]*int64, error) {
 	if len(productIDs) == 0 {
+		logger.Info("no product IDs provided for timestamp retrieval")
 		return make(map[int]*int64), nil
 	}
 
@@ -544,6 +575,7 @@ func (s *Service) GetProductTimestamps(ctx context.Context, productIDs []int) (m
 
 	rows, err := s.db.QueryContext(ctx, query, args...)
 	if err != nil {
+		logger.Error("failed to query product timestamps", zap.Error(err))
 		return nil, fmt.Errorf("failed to query product timestamps: %w", err)
 	}
 	defer rows.Close()
@@ -554,6 +586,7 @@ func (s *Service) GetProductTimestamps(ctx context.Context, productIDs []int) (m
 		var updatedAt null.Time
 
 		if err := rows.Scan(&productID, &updatedAt); err != nil {
+			logger.Error("failed to scan product timestamp", zap.Error(err))
 			return nil, fmt.Errorf("failed to scan product timestamp: %w", err)
 		}
 
@@ -566,19 +599,22 @@ func (s *Service) GetProductTimestamps(ctx context.Context, productIDs []int) (m
 	}
 
 	if err := rows.Err(); err != nil {
+		logger.Error("error iterating product timestamp rows", zap.Error(err))
 		return nil, fmt.Errorf("error iterating product timestamp rows: %w", err)
 	}
-
+	logger.Info("retrieved product timestamps", zap.Int("count", len(result)))
 	return result, nil
 }
 
 // GetExistingProduct retrieves an existing product by product ID
-func (s *Service) GetExistingProduct(ctx context.Context, productID int) (*types.DBProduct, error) {
+func (s *Service) GetExistingProduct(ctx context.Context, productID int, logger *zap.Logger) (*types.DBProduct, error) {
 	product, err := models.Products(qm.Where("product_id = ?", productID)).One(ctx, s.db)
 	if err == sql.ErrNoRows {
+		logger.Info("product does not exist", zap.Int("product_id", productID))
 		return nil, nil // Product doesn't exist
 	}
 	if err != nil {
+		logger.Error("failed to get product", zap.Int("product_id", productID), zap.Error(err))
 		return nil, fmt.Errorf("failed to get product %d: %w", productID, err)
 	}
 
@@ -609,7 +645,7 @@ func (s *Service) GetExistingProduct(ctx context.Context, productID int) (*types
 		updatedStr := product.UpdatedAt.Time.Format(time.RFC3339)
 		dbProduct.UpdatedAt = &updatedStr
 	}
-
+	logger.Info("retrieved existing product", zap.Int("product_id", productID))
 	return dbProduct, nil
 }
 
@@ -618,35 +654,40 @@ func (s *Service) GetExistingProduct(ctx context.Context, productID int) (*types
 // ============================================================================
 
 // UpsertPrice inserts or updates a price record
-func (s *Service) UpsertPrice(ctx context.Context, price *types.DBPrice) error {
-	return s.upsertPrice(ctx, s.db, price)
+func (s *Service) UpsertPrice(ctx context.Context, price *types.DBPrice, logger *zap.Logger) error {
+	logger.Info("upserting price", zap.Int("product_id", price.ProductID), zap.String("currency", price.Currency))
+	return s.upsertPrice(ctx, s.db, price, logger)
 }
 
 // UpsertBatch inserts or updates multiple price records within a single transaction
-func (s *Service) UpsertBatch(ctx context.Context, prices []*types.DBPrice) error {
+func (s *Service) UpsertBatch(ctx context.Context, prices []*types.DBPrice, logger *zap.Logger) error {
 	if len(prices) == 0 {
+		logger.Info("no prices to upsert in batch")
 		return nil
 	}
 
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
+		logger.Error("failed to begin transaction for batch upsert", zap.Error(err))
 		return fmt.Errorf("failed to begin transaction: %w", err)
 	}
 	defer tx.Rollback()
 
 	for _, price := range prices {
-		if err := s.upsertPrice(ctx, tx, price); err != nil {
+		if err := s.upsertPrice(ctx, tx, price, logger); err != nil {
+			logger.Error("failed to upsert price in batch", zap.Int("product_id", price.ProductID), zap.String("currency", price.Currency), zap.Error(err))
 			return err
 		}
 	}
-
+	logger.Info("successfully upserted batch of prices", zap.Int("count", len(prices)))
 	return tx.Commit()
 }
 
 // InsertPriceBatch inserts multiple new price records using a single bulk INSERT statement
 // Uses ON CONFLICT DO UPDATE to handle existing prices (upsert behavior)
-func (s *Service) InsertPriceBatch(ctx context.Context, prices []*types.DBPrice) error {
+func (s *Service) InsertPriceBatch(ctx context.Context, prices []*types.DBPrice, logger *zap.Logger) error {
 	if len(prices) == 0 {
+		logger.Info("no prices to insert in batch")
 		return nil
 	}
 
@@ -660,24 +701,27 @@ func (s *Service) InsertPriceBatch(ctx context.Context, prices []*types.DBPrice)
 		}
 		batch := prices[i:end]
 
-		if err := s.bulkInsertPrices(ctx, batch); err != nil {
+		if err := s.bulkInsertPrices(ctx, batch, logger); err != nil {
+			logger.Error("failed to bulk insert prices", zap.Int("batch_size", len(batch)), zap.Error(err))
 			return err
 		}
 	}
-
+	logger.Info("successfully inserted batch of prices", zap.Int("total_count", len(prices)))
 	return nil
 }
 
 // bulkInsertPrices inserts a batch of prices using a single SQL statement
 // Since there's no unique constraint, we use DELETE + INSERT pattern
-func (s *Service) bulkInsertPrices(ctx context.Context, prices []*types.DBPrice) error {
+func (s *Service) bulkInsertPrices(ctx context.Context, prices []*types.DBPrice, logger *zap.Logger) error {
 	if len(prices) == 0 {
+		logger.Info("no prices to bulk insert")
 		return nil
 	}
 
 	// Start a transaction for atomicity
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
+		logger.Error("failed to begin transaction for bulk insert", zap.Error(err))
 		return fmt.Errorf("failed to begin transaction: %w", err)
 	}
 	defer tx.Rollback()
@@ -706,6 +750,7 @@ func (s *Service) bulkInsertPrices(ctx context.Context, prices []*types.DBPrice)
 	deleteQuery := fmt.Sprintf("DELETE FROM product_price WHERE %s", strings.Join(deleteConditions, " OR "))
 	_, err = tx.ExecContext(ctx, deleteQuery, deleteArgs...)
 	if err != nil {
+		logger.Error("failed to delete existing prices before bulk insert", zap.Error(err))
 		return fmt.Errorf("failed to delete existing prices: %w", err)
 	}
 
@@ -734,19 +779,22 @@ func (s *Service) bulkInsertPrices(ctx context.Context, prices []*types.DBPrice)
 
 	_, err = tx.ExecContext(ctx, insertQuery, insertArgs...)
 	if err != nil {
+		logger.Error("failed to bulk insert prices", zap.Error(err))
 		return fmt.Errorf("failed to bulk insert prices: %w", err)
 	}
-
+	logger.Info("successfully bulk inserted prices", zap.Int("count", len(prices)))
 	return tx.Commit()
 }
 
 // GetPriceByProductID retrieves a price by product ID (implements the interface requirement)
-func (s *Service) GetPriceByProductID(ctx context.Context, productID int) (*types.DBPrice, error) {
+func (s *Service) GetPriceByProductID(ctx context.Context, productID int, logger *zap.Logger) (*types.DBPrice, error) {
 	price, err := models.ProductPrices(qm.Where("product_id = ?", productID)).One(ctx, s.db)
 	if err == sql.ErrNoRows {
+		logger.Info("price does not exist for product", zap.Int("product_id", productID))
 		return nil, nil // Price doesn't exist
 	}
 	if err != nil {
+		logger.Error("failed to get price for product", zap.Int("product_id", productID), zap.Error(err))
 		return nil, fmt.Errorf("failed to get price for product %d: %w", productID, err)
 	}
 
@@ -762,16 +810,17 @@ func (s *Service) GetPriceByProductID(ctx context.Context, productID int) (*type
 		variantStr := price.Variant.String
 		dbPrice.Variant = &variantStr
 	}
-
+	logger.Info("retrieved price for product", zap.Int("product_id", productID))
 	return dbPrice, nil
 }
 
 // GetPriceTimestamps retrieves updated_at timestamps for multiple prices using batch queries
 // This is optimized to avoid N+1 query problem by fetching all prices in batches
-func (s *Service) GetPriceTimestamps(ctx context.Context, priceKeys []types.PriceKey) (map[types.PriceKey]*int64, error) {
+func (s *Service) GetPriceTimestamps(ctx context.Context, priceKeys []types.PriceKey, logger *zap.Logger) (map[types.PriceKey]*int64, error) {
 	result := make(map[types.PriceKey]*int64)
 
 	if len(priceKeys) == 0 {
+		logger.Info("no price keys provided for timestamp retrieval")
 		return result, nil
 	}
 
@@ -815,6 +864,7 @@ func (s *Service) GetPriceTimestamps(ctx context.Context, priceKeys []types.Pric
 
 		rows, err := s.db.QueryContext(ctx, query, args...)
 		if err != nil {
+			logger.Error("failed to batch query price timestamps", zap.Error(err))
 			return nil, fmt.Errorf("failed to batch query price timestamps: %w", err)
 		}
 
@@ -826,6 +876,7 @@ func (s *Service) GetPriceTimestamps(ctx context.Context, priceKeys []types.Pric
 
 			if err := rows.Scan(&productID, &currency, &variant, &updatedAt); err != nil {
 				rows.Close()
+				logger.Error("failed to scan price timestamp", zap.Error(err))
 				return nil, fmt.Errorf("failed to scan price timestamp: %w", err)
 			}
 
@@ -845,10 +896,11 @@ func (s *Service) GetPriceTimestamps(ctx context.Context, priceKeys []types.Pric
 		rows.Close()
 
 		if err := rows.Err(); err != nil {
+			logger.Error("error iterating price timestamp rows", zap.Error(err))
 			return nil, fmt.Errorf("error iterating price timestamp rows: %w", err)
 		}
 	}
-
+	logger.Info("retrieved price timestamps", zap.Int("count", len(result)))
 	// Keys not found in DB will not be in result map - caller handles this as nil
 	return result, nil
 }
@@ -858,7 +910,7 @@ func (s *Service) GetPriceTimestamps(ctx context.Context, priceKeys []types.Pric
 // ============================================================================
 
 // Create creates a new sync job and returns the job ID
-func (s *Service) Create(ctx context.Context, syncOperation, syncType, version, sourcePath, s3Bucket, s3Key string) (string, error) {
+func (s *Service) Create(ctx context.Context, syncOperation, syncType, version, sourcePath, s3Bucket, s3Key string, logger *zap.Logger) (string, error) {
 	jobID := uuid.New().String()
 
 	// Use a default sync operation if empty
@@ -892,16 +944,18 @@ func (s *Service) Create(ctx context.Context, syncOperation, syncType, version, 
 
 	err := job.Insert(ctx, s.db, boil.Infer())
 	if err != nil {
+		logger.Error("failed to create sync job", zap.Error(err))
 		return "", fmt.Errorf("failed to create sync job: %w", err)
 	}
-
+	logger.Info("created new sync job", zap.String("job_id", jobID), zap.String("sync_type", syncType))
 	return jobID, nil
 }
 
 // UpdateStatus updates the status of a sync job
-func (s *Service) UpdateStatus(ctx context.Context, jobID, status string, startedAt *time.Time, errorMsg *string) error {
+func (s *Service) UpdateStatus(ctx context.Context, jobID, status string, startedAt *time.Time, errorMsg *string, logger *zap.Logger) error {
 	job, err := models.ProductSyncJobs(qm.Where("job_id = ?", jobID)).One(ctx, s.db)
 	if err != nil {
+		logger.Error("failed to find sync job for status update", zap.String("job_id", jobID), zap.Error(err))
 		return fmt.Errorf("failed to find job %s: %w", jobID, err)
 	}
 
@@ -917,13 +971,15 @@ func (s *Service) UpdateStatus(ctx context.Context, jobID, status string, starte
 	}
 
 	_, err = job.Update(ctx, s.db, boil.Infer())
+	logger.Info("updated sync job status", zap.String("job_id", jobID), zap.String("status", status))
 	return err
 }
 
 // UpdateWithResults updates a job with processing results
-func (s *Service) UpdateWithResults(ctx context.Context, jobID, status string, totalItems, successful, failed int, validationWarnings []string, errorMsg *string) error {
+func (s *Service) UpdateWithResults(ctx context.Context, jobID, status string, totalItems, successful, failed int, validationWarnings []string, errorMsg *string, logger *zap.Logger) error {
 	job, err := models.ProductSyncJobs(qm.Where("job_id = ?", jobID)).One(ctx, s.db)
 	if err != nil {
+		logger.Error("failed to find sync job for results update", zap.String("job_id", jobID), zap.Error(err))
 		return fmt.Errorf("failed to find job %s: %w", jobID, err)
 	}
 
@@ -955,18 +1011,21 @@ func (s *Service) UpdateWithResults(ctx context.Context, jobID, status string, t
 	}
 
 	_, err = job.Update(ctx, s.db, boil.Infer())
+	logger.Info("updated sync job with results", zap.String("job_id", jobID), zap.String("status", status))
 	return err
 }
 
 // UpdateStatusAndResults updates job status and results atomically
-func (s *Service) UpdateStatusAndResults(ctx context.Context, jobID, status string, totalItems, successful, failed int, validationWarnings []string, errorMsg *string) error {
-	return s.UpdateWithResults(ctx, jobID, status, totalItems, successful, failed, validationWarnings, errorMsg)
+func (s *Service) UpdateStatusAndResults(ctx context.Context, jobID, status string, totalItems, successful, failed int, validationWarnings []string, errorMsg *string, logger *zap.Logger) error {
+	logger.Info("updating sync job status and results", zap.String("job_id", jobID), zap.String("status", status))
+	return s.UpdateWithResults(ctx, jobID, status, totalItems, successful, failed, validationWarnings, errorMsg, logger)
 }
 
 // GetByID retrieves a sync job result by ID
-func (s *Service) GetByID(ctx context.Context, jobID string) (*types.SyncJobResult, error) {
+func (s *Service) GetByID(ctx context.Context, jobID string, logger *zap.Logger) (*types.SyncJobResult, error) {
 	job, err := models.ProductSyncJobs(qm.Where("job_id = ?", jobID)).One(ctx, s.db)
 	if err != nil {
+		logger.Error("failed to find sync job by ID", zap.String("job_id", jobID), zap.Error(err))
 		return nil, fmt.Errorf("failed to find job %s: %w", jobID, err)
 	}
 
@@ -994,24 +1053,27 @@ func (s *Service) GetByID(ctx context.Context, jobID string) (*types.SyncJobResu
 		failed := job.FailedItems.Int
 		result.FailedItems = &failed
 	}
-
+	logger.Info("retrieved sync job by ID", zap.String("job_id", jobID))
 	return result, nil
 }
 
 // StoreValidationErrors stores validation errors for a job
-func (s *Service) StoreValidationErrors(ctx context.Context, jobID string, errorCollector *errorspkg.ErrorCollector) error {
+func (s *Service) StoreValidationErrors(ctx context.Context, jobID string, errorCollector *errorspkg.ErrorCollector, logger *zap.Logger) error {
 	if errorCollector == nil {
+		logger.Info("no error collector provided, skipping storing validation errors", zap.String("job_id", jobID))
 		return nil
 	}
 
 	summary := errorCollector.GetSummary()
 	if summary.TotalErrors == 0 {
+		logger.Info("no validation errors to store", zap.String("job_id", jobID))
 		return nil
 	}
 
 	// Store errors in job record with structured data to distinguish from warnings
 	job, err := models.ProductSyncJobs(qm.Where("job_id = ?", jobID)).One(ctx, s.db)
 	if err != nil {
+		logger.Error("failed to find sync job for storing validation errors", zap.String("job_id", jobID), zap.Error(err))
 		return fmt.Errorf("failed to find job %s: %w", jobID, err)
 	}
 
@@ -1027,19 +1089,21 @@ func (s *Service) StoreValidationErrors(ctx context.Context, jobID string, error
 
 	errorsJSON, err := json.Marshal(errorData)
 	if err != nil {
+		logger.Error("failed to marshal validation errors", zap.String("job_id", jobID), zap.Error(err))
 		return fmt.Errorf("failed to marshal errors: %w", err)
 	}
 
 	job.ValidationErrors = null.JSONFrom(errorsJSON)
 	_, err = job.Update(ctx, s.db, boil.Infer())
-
+	logger.Info("stored validation errors for sync job", zap.String("job_id", jobID))
 	return err
 }
 
 // StoreValidationData stores both validation warnings and errors in a combined format
-func (s *Service) StoreValidationData(ctx context.Context, jobID string, validationWarnings []string, errorCollector *errorspkg.ErrorCollector) error {
+func (s *Service) StoreValidationData(ctx context.Context, jobID string, validationWarnings []string, errorCollector *errorspkg.ErrorCollector, logger *zap.Logger) error {
 	job, err := models.ProductSyncJobs(qm.Where("job_id = ?", jobID)).One(ctx, s.db)
 	if err != nil {
+		logger.Error("failed to find sync job for storing validation data", zap.String("job_id", jobID), zap.Error(err))
 		return fmt.Errorf("failed to find job %s: %w", jobID, err)
 	}
 
@@ -1069,13 +1133,15 @@ func (s *Service) StoreValidationData(ctx context.Context, jobID string, validat
 	if len(validationWarnings) > 0 || (errorCollector != nil && errorCollector.GetSummary().TotalErrors > 0) {
 		validationJSON, err := json.Marshal(validationData)
 		if err != nil {
+			logger.Error("failed to marshal validation data", zap.String("job_id", jobID), zap.Error(err))
 			return fmt.Errorf("failed to marshal validation data: %w", err)
 		}
 		job.ValidationErrors = null.JSONFrom(validationJSON)
 		_, err = job.Update(ctx, s.db, boil.Infer())
+		logger.Info("stored validation data for sync job", zap.String("job_id", jobID))
 		return err
 	}
-
+	logger.Info("no validation data to store", zap.String("job_id", jobID))
 	return nil
 }
 
@@ -1084,8 +1150,9 @@ func (s *Service) StoreValidationData(ctx context.Context, jobID string, validat
 // ============================================================================
 
 // insertProduct handles the actual product insertion logic
-func (s *Service) insertProduct(ctx context.Context, exec boil.ContextExecutor, product *types.DBProduct) error {
+func (s *Service) insertProduct(ctx context.Context, exec boil.ContextExecutor, product *types.DBProduct, logger *zap.Logger) error {
 	if product == nil {
+		logger.Error("product cannot be nil")
 		return fmt.Errorf("product cannot be nil")
 	}
 
@@ -1128,15 +1195,17 @@ func (s *Service) insertProduct(ctx context.Context, exec boil.ContextExecutor, 
 	)
 
 	if err != nil {
+		logger.Error("failed to upsert product", zap.Int("product_id", product.ProductID), zap.Error(err))
 		return fmt.Errorf("failed to upsert product %d: %w", product.ProductID, err)
 	}
-
+	logger.Info("successfully upserted product", zap.Int("product_id", product.ProductID))
 	return nil
 }
 
 // upsertPrice handles the actual price upsert logic
-func (s *Service) upsertPrice(ctx context.Context, exec boil.ContextExecutor, price *types.DBPrice) error {
+func (s *Service) upsertPrice(ctx context.Context, exec boil.ContextExecutor, price *types.DBPrice, logger *zap.Logger) error {
 	if price == nil {
+		logger.Error("price cannot be nil")
 		return fmt.Errorf("price cannot be nil")
 	}
 
@@ -1172,8 +1241,9 @@ func (s *Service) upsertPrice(ctx context.Context, exec boil.ContextExecutor, pr
 	)
 
 	if err != nil {
+		logger.Error("failed to upsert price", zap.Int("product_id", price.ProductID), zap.String("currency", price.Currency), zap.Error(err))
 		return fmt.Errorf("failed to upsert price for product %d: %w", price.ProductID, err)
 	}
-
+	logger.Info("successfully upserted price", zap.Int("product_id", price.ProductID), zap.String("currency", price.Currency))
 	return nil
 }

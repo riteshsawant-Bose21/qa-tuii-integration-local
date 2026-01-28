@@ -92,6 +92,15 @@ func (a *API) registerRoutes() {
 		users.PATCH("/:userID", userHandler.UpdateUser)
 	}
 
+	// Auth endpoints
+	auth := v1.Group("/auth")
+	
+	// Auth automation route (no authentication required)
+	if a.auth != nil {
+		authHandler := handler.NewAuthHandler(a.auth)
+		auth.GET("/automation/tokens", authHandler.GetAuthTokensByResourceOwnerPassword)
+	}
+
 	// Role Management routes for organization admins
 	roleManagementHandler := handler.NewRoleManagementHandler(a.user, a.roleManagementService)
 	organization := v1.Group("/organization")
