@@ -137,19 +137,22 @@ class _LauncherSignInPageView extends StatelessWidget {
                           ),
                           Padding(
                             padding: const EdgeInsets.only(right: 10.0),
-                            child: TextButton(
-                              onPressed: () {
-                                serviceLocator<SessionViewModel>().skipLogin();
-                                Navigator.pushNamedAndRemoveUntil(
-                                  context,
-                                  Routes.launcherHomePage,
-                                  (Route<dynamic> route) => false,
-                                );
-                              },
-                              child: FusionAppText(
-                                text: 'Skip login',
-                                textAlign: TextAlign.start,
-                                style: context.textTheme.bodyMedium,
+                            child: SemanticHelper.button(
+                              testId: SemanticHelper.createTestId(SemanticTypes.button, "skip_login_button"),
+                              child: TextButton(
+                                onPressed: () {
+                                  serviceLocator<SessionViewModel>().skipLogin();
+                                  Navigator.pushNamedAndRemoveUntil(
+                                    context,
+                                    Routes.launcherHomePage,
+                                    (Route<dynamic> route) => false,
+                                  );
+                                },
+                                child: FusionAppText(
+                                  text: 'Skip login',
+                                  textAlign: TextAlign.start,
+                                  style: context.textTheme.bodyMedium,
+                                ),
                               ),
                             ),
                           ),

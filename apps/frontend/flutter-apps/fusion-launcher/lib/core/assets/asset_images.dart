@@ -39,4 +39,5 @@ class AssetImages {
   static const String uploadFloorPlan = '$_path/upload_floor_plan.png';
   static const String venueType = '$_path/venue_type.png';
   static const String zoneIcon = '$_path/zone_icon.png';
+  static const String notFound = '$_path/commission/not_found.webp';
 }

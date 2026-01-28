@@ -1,11 +1,11 @@
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:fusion_lib/fusion_lib.dart';
 
 import '../../../devices/presentation/pages/device_listing_page.dart';
 import '../../../devices/presentation/widgets/themostat_painter.dart';
 import '../widgets/dashboard_scroll_wrapper.dart';
-import '../widgets/neumorphic_container.dart';
 
 class FusionControlDashboardPage extends StatelessWidget {
   const FusionControlDashboardPage({super.key});
@@ -351,11 +351,11 @@ class FusionControlDashboardPage extends StatelessWidget {
   Widget _buildDash() => const Align(alignment: Alignment.centerLeft, child: Text("-", style: TextStyle(color: Colors.grey)));
 
   Widget _buildMiniControl(IconData icon) {
-    return FusionNeumorphicContainer(
+    return FusionNeumorphicButton(
       width: 26,
       height: 26,
       borderRadius: 6,
-      onPressed: () {
+      onTap: () {
         // Handle click action here
         print("Clicked $icon");
       },
@@ -433,11 +433,16 @@ class FusionControlDashboardPage extends StatelessWidget {
                 Row(
                   children: <Widget>[
                     // Neumorphic Mute Button
-                    const FusionNeumorphicContainer(
+                    FusionNeumorphicButton(
                       width: 32,
                       height: 32,
                       borderRadius: 8,
-                      child: Icon(Icons.volume_off, color: Colors.grey, size: 16),
+                      onTap: () {},
+                      child: const Icon(
+                        Icons.volume_off,
+                        color: Colors.grey,
+                        size: 16,
+                      ),
                     ),
 
                     const SizedBox(width: 12),
@@ -554,11 +559,11 @@ class FusionControlDashboardPage extends StatelessWidget {
                         Text(title, style: const TextStyle(color: textColor, fontSize: 14, fontWeight: FontWeight.w600, letterSpacing: 0.5)),
                         // Neumorphic Edit Icon (using your existing wrapper if available)
                         // Or standard icon for now:
-                        FusionNeumorphicContainer(
+                        FusionNeumorphicButton(
                           width: 26,
                           height: 26,
                           borderRadius: 6,
-                          onPressed: () {
+                          onTap: () {
                             // Handle click action here
                             print("Clicked Edit Event");
                           },
@@ -577,11 +582,11 @@ class FusionControlDashboardPage extends StatelessWidget {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: <Widget>[
-                          FusionNeumorphicContainer(
+                          FusionNeumorphicButton(
                             width: 100,
                             height: 26,
                             borderRadius: 6,
-                            onPressed: () {
+                            onTap: () {
                               // Handle click action here
                               print("Clicked Run Now");
                             },

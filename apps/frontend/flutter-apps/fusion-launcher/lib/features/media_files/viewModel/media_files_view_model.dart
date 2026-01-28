@@ -55,7 +55,7 @@ class MediaFilesViewModel extends Cubit<ConfigurationMediaFilesState> {
     try {
       emit(state.copyWith(isLoading: true, clearError: true));
 
-      final FilePickerResult? result = await FilePicker.platform.pickFiles(
+      final FilePickerResult? result = await FilePicker.pickFiles(
         type: FileType.audio,
         allowMultiple: false,
       );

@@ -364,6 +364,8 @@ extension ColorExtends on ColorScheme {
   Color get portOverlayTitle => Color(0xFF929292);
 
   Color get green => Color(0xFF78B899);
+  Color get white => Color(0xFFFFFFFF);
+  Color get black => Color(0xFF000000);
 
   ///
   /// Shadow Colors

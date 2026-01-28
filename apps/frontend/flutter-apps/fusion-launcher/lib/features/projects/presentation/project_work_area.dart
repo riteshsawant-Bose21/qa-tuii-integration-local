@@ -10,7 +10,6 @@ import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:fusion_launcher/core/assets/asset_svg.dart';
 import 'package:fusion_launcher/core/spl_calculation/isolate_mace_calculation_manager.dart';
 import 'package:fusion_launcher/core/utils/fusion_utils.dart';
-import 'package:fusion_launcher/features/commission/presentation/pages/device_setup_wizard.dart';
 import 'package:fusion_launcher/features/configuration_page/pages/configuration_events.dart';
 import 'package:fusion_launcher/features/media_files/view/configuration_media_files_pages.dart';
 import 'package:fusion_launcher/features/media_files/viewModel/media_files_view_model.dart';
@@ -36,6 +35,7 @@ import '../../../core/utils/broadcast_controllers.dart';
 import '../../../core/utils/bug_report_popup.dart';
 import '../../../core/widgets/clean_widgets.dart';
 import '../../authentication/viewmodel/session_view_model.dart';
+import '../../commission/presentation/pages/network_config_trigger_page.dart';
 import '../../configuration/presentation/viewmodel/project_view_model.dart';
 import '../../configuration_page/pages/configuration_processing_page.dart';
 import '../../configuration_page/pages/configuration_snapshots.dart';
@@ -61,7 +61,7 @@ class ProjectWorkArea extends StatefulWidget {
   State<ProjectWorkArea> createState() => _ProjectWorkAreaState();
 }
 
-class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProviderStateMixin, AutomaticKeepAliveClientMixin {
+class _ProjectWorkAreaState extends State<ProjectWorkArea> with TickerProviderStateMixin, AutomaticKeepAliveClientMixin {
   late TabController _tabController;
   StreamSubscription<int>? subscription;
   late TextEditingController _projectNameController;
@@ -106,7 +106,7 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
   @override
   void initState() {
     super.initState();
-    _initController();
+    _initController(isInDesignMode);
     FusionLogger.log(
       message: "Opened Project ",
       tag: LogTag.project,
@@ -137,9 +137,10 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
     _createTabWidgets();
   }
 
-  void _initController() {
+  void _initController(bool isDesignMode) {
+    final int length = isDesignMode ? _designTabs.length : _controlTabs.length;
     _tabController = TabController(
-      length: _currentTabs.length,
+      length: length,
       vsync: this,
       animationDuration: Duration.zero,
       initialIndex: 0, // Always reset to 0 when switching modes to avoid index out of bounds
@@ -151,6 +152,19 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
         setState(() {});
       }
     });
+  }
+
+  void toggleFusionModes() {
+    _initController(!isInDesignMode);
+
+    serviceLocator<ProjectViewModel>().toggleControlMode();
+
+    // Verify tab controller index is valid, reset to 0 if invalid
+    // if (_tabController.index >= currentWidget.length) {
+    //   WidgetsBinding.instance.addPostFrameCallback((_) {
+    //     _tabController.animateTo(0);
+    //   });
+    // }
   }
 
   Future<void> _initMace() async {
@@ -698,54 +712,14 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
         },
       ),
 
-      //
-      // if (kDebugMode)
-      //   const FusionDockableArea(
-      //     tabKey: "zone_config_tab",
-      //     showLeft: false,
-      //     showRight: false,
-      //     mainArea: ProcessingBlockCustomizer(), //ProcessingBlockPage(),
-      //     dockItemList: <DockItemConfig>[],
-      //   ),
-
-      // /// budget tab with docking area
-      // const FusionDockableArea(
-      //   tabKey: "budget_tab",
-      //   showLeft: false,
-      //   showRight: false,
-      //   mainArea: BillOfMaterialsPage(),
-      //   dockItemList: <DockItemConfig>[],
-      // ),
       configurationPage,
-
-      // /// Cloud tab without docking area
-      // const FusionDockableArea(
-      //   tabKey: "cloud_tab",
-      //   showLeft: false,
-      //   showRight: false,
-      //   mainArea: FusionCloudWebView(
-      //     pageToRedirect: "google.com",
-      //   ),
-      //   dockItemList: <DockItemConfig>[],
-      // ),
     ];
 
     _controlWidgets = <Widget>[
-      serviceLocator<ProjectViewModel>().virtualIP == null
-          ? DeviceSetupWizard(
-            onFinish: () {
-              // After finishing device setup, navigate to Devices tab
-              _tabController.animateTo(1);
-              _createTabWidgets();
-            },
-          )
-          : const FusionControlDashboardPage(),
-
-      const FusionDevicesPage(),
-
-      buildingPage,
-
-      configurationPage,
+      serviceLocator<ProjectViewModel>().virtualIP == null ? const NetworkConfigTrigger() : const FusionControlDashboardPage(),
+      serviceLocator<ProjectViewModel>().virtualIP == null ? const NetworkConfigTrigger() : const FusionDevicesPage(),
+      serviceLocator<ProjectViewModel>().virtualIP == null ? const NetworkConfigTrigger() : buildingPage,
+      serviceLocator<ProjectViewModel>().virtualIP == null ? const NetworkConfigTrigger() : configurationPage,
     ];
   }
 
@@ -1046,7 +1020,11 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
                             //   height: 24,
                             // ),
                           ),
-                          const ControlDesignTabSwitcher(),
+                          ControlDesignTabSwitcher(
+                            onTabChanged: (int index) {
+                              toggleFusionModes();
+                            },
+                          ),
 
                           /// App Build Version
                           Container(

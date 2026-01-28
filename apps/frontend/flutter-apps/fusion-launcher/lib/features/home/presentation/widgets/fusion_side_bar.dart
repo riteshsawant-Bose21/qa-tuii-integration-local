@@ -158,6 +158,14 @@ class _FusionSidebarState extends State<FusionSidebar> {
                             ],
                           );
                         }
+
+                        // return FusionShimmer(
+                        //   baseColor: context.colorScheme.surface.withAlpha(50),
+                        //   highlightColor: context.colorScheme.onSurface.withOpacity(0.1),
+                        //   height: 25,
+                        //   width: double.infinity,
+                        //   radius: 8,
+                        // );
                       },
                     ),
                   ],

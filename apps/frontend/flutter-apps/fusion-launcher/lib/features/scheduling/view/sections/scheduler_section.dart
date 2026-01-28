@@ -17,7 +17,7 @@ class _SchedulerSection extends StatelessWidget {
             ),
           );
         }
-        return FusionTable(
+        return FusionAppTable(
           spacing: 20,
           headers: <FusionTableHeader>[
             FusionTableHeader(title: "Name", flex: 3),
@@ -192,8 +192,8 @@ class _SchedulerSection extends StatelessWidget {
   }
 }
 
-class FusionTable extends StatelessWidget {
-  const FusionTable({
+class FusionAppTable extends StatelessWidget {
+  const FusionAppTable({
     super.key,
     required this.headers,
     required this.itemCount,
