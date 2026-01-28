@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:fusion_launcher/features/projects/widget/building/side_panel_widgets/schematic_properties.dart';
 import 'package:fusion_launcher/features/projects/widget/building/speaker_selection_section/parts/select_speaker_popup.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
@@ -290,27 +291,21 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
                           data: circuitData,
                           feedback: Material(
                             color: Colors.transparent,
-                            child: Opacity(
-                              opacity: 0.8,
-                              child: SizedBox(
-                                width: 220,
-                                child: CircuitDeviceWidget(
-                                  index: index,
-                                  deviceId: deviceId,
-                                  circuitModel: circuitData,
-                                  circuitDeviceName: circuitData.name,
-                                  assetImagePath: speakers.isNotEmpty ? speakers.first.assetImagePath : '',
-                                  location: location,
-                                  speakers: speakers,
-                                  projectViewModel: _projectViewModel,
-                                  circuitDeviceCount: speakers.length,
-                                  onDecrementHardwareInCircuit: () {},
-                                  onIncrementHardwareInCircuit: () {},
-                                  onRename: () {},
-                                  onDuplicate: () {},
-                                  onDelete: () {},
-                                ),
-                              ),
+                            child: CircuitDeviceWidget(
+                              index: index,
+                              deviceId: deviceId,
+                              circuitModel: circuitData,
+                              circuitDeviceName: circuitData.name,
+                              assetImagePath: speakers.isNotEmpty ? speakers.first.assetImagePath : '',
+                              location: location,
+                              speakers: speakers,
+                              projectViewModel: _projectViewModel,
+                              circuitDeviceCount: speakers.length,
+                              onDecrementHardwareInCircuit: () {},
+                              onIncrementHardwareInCircuit: () {},
+                              onRename: () {},
+                              onDuplicate: () {},
+                              onDelete: () {},
                             ),
                           ),
                           childWhenDragging: Material(
@@ -618,10 +613,10 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
               const SizedBox(height: 4),
               SemanticHelper.formControl(
                 testId: SemanticHelper.createTestId(SemanticTypes.textInput, "add_subzone_name_field"),
-                child: FusionTextField(
+                child: PropertyTextField(
                   controller: _zoneNameController,
                   hintText: "Enter subzone name",
-                  color: Theme.of(context).colorScheme.primaryBlack,
+                  // color: Theme.of(context).colorScheme.primaryBlack,
                   onChanged: (String value) => updateAllStates(),
                 ),
               ),
@@ -671,7 +666,7 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
                         activeBackgroundColor: context.colorScheme.primaryColor,
                         textStyle: Theme.of(context).textTheme.labelLarge?.copyWith(
                           fontSize: 10,
-                          color: context.colorScheme.textPrimary,
+                          color: Colors.white,
                         ),
                         label: "Save",
                         isActive: _zoneNameController.text.trim().isNotEmpty && _selectedListeningAreaIds.isNotEmpty,
@@ -970,15 +965,18 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
                 child: SemanticHelper.toggle(
                   testId: SemanticHelper.createTestId(SemanticTypes.toggle, "location_item_checkbox_$index"),
                   value: isAvailable ? !_selectedListeningAreaIds.contains(area.id) : true,
-                  child: Checkbox(
-                    value: !isAvailable ? true : _selectedListeningAreaIds.contains(area.id),
-                    activeColor: context.colorScheme.primaryBlack,
-                    onChanged: isAvailable ? (bool? checked) => toggleSelection() : null,
-                    materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                    visualDensity: VisualDensity.compact,
-                    shape: const RoundedRectangleBorder(
-                      borderRadius: BorderRadius.zero,
-                      side: BorderSide(width: 0.5),
+                  child: Transform.scale(
+                    scale: 0.8,
+                    child: Checkbox(
+                      value: !isAvailable ? true : _selectedListeningAreaIds.contains(area.id),
+                      activeColor: context.colorScheme.primaryWhite,
+                      onChanged: isAvailable ? (bool? checked) => toggleSelection() : null,
+                      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      visualDensity: VisualDensity.compact,
+                      shape: const RoundedRectangleBorder(
+                        borderRadius: BorderRadius.zero,
+                        side: BorderSide(width: 0.5),
+                      ),
                     ),
                   ),
                 ),

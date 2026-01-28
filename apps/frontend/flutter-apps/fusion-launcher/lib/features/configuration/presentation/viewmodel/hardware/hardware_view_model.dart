@@ -492,7 +492,7 @@ extension HardwareViewModel on ProjectViewModel {
       addedFromBuildingPage: isFromBuildingPage,
       assetImagePath: assetImagePath,
       type: OutputType.analogOutput,
-      price: 300,
+      price: 0,
       mountingType: mountingType,
       pitch: mountingType == MountingType.pendant || mountingType == MountingType.ceiling ? 90.0 : 0.0,
       inputPortsData: <PortData>[

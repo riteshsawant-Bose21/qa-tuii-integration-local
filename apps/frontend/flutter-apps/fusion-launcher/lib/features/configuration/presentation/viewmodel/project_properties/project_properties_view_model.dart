@@ -200,6 +200,13 @@ extension ProjectPropertiesViewModel on ProjectViewModel {
   //update current floor index
   void setCurrentFloorIndex(int index) {
     try {
+      // clear the selections when changing floor
+      currentSelectedHardwareId = null;
+      currentSelectedListeningAreaId = null;
+      currentSelectedZoneId = null;
+      currentSelectedSubZoneId = null;
+      setShouldPlaceNonPlacedSpeakers(false);
+
       projectManager.setCurrentFloorIndex(index);
       updateProject();
     } catch (e) {
