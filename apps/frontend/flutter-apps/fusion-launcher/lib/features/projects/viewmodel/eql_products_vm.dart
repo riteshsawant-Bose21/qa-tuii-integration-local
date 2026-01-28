@@ -32,9 +32,10 @@ class EqlProductsVm extends Cubit<EQLProductsState> {
       final String key = element.assets.assets.keys.firstOrNull ?? '';
       allProducts.add(
         EQLProduct(
+          priductId: element.productId,
           name: element.modelName,
-          modelFamily: element.modelFamily ?? '',
-          assetPath: datasource.getImagePath(element.assets.assets[key]?.firstOrNull ?? ''),
+          modelFamily: element.modelFamily,
+          assetPath: datasource.getImagePath(element.productId, element.assets.assets[key]?.firstOrNull ?? ''),
           description: element.description,
           data: element,
           searchingFields: '${element.modelName} ${element.description}',
@@ -56,9 +57,10 @@ class EqlProductsVm extends Cubit<EQLProductsState> {
       final String key = element.assets.assets.keys.firstOrNull ?? '';
       allProducts.add(
         EQLProduct(
+          priductId: element.productId,
           name: element.modelName,
-          modelFamily: element.modelFamily ?? '',
-          assetPath: datasource.getImagePath(element.assets.assets[key]?.firstOrNull ?? ''),
+          modelFamily: element.modelFamily,
+          assetPath: datasource.getImagePath(element.productId, element.assets.assets[key]?.firstOrNull ?? ''),
           data: element,
           //TODO: Check Endpoint Port Data
           portData: element.numberOfInputsAndOutputs,
@@ -81,9 +83,10 @@ class EqlProductsVm extends Cubit<EQLProductsState> {
 
       allProducts.add(
         EQLProduct(
+          priductId: element.productId,
           portData: element.numberOfInputsAndOutputs ?? ProductPortData(),
           name: element.modelName,
-          assetPath: datasource.getImagePath(element.assets.assets[key]?.firstOrNull ?? ''),
+          assetPath: datasource.getImagePath(element.productId, element.assets.assets[key]?.firstOrNull ?? ''),
           modelFamily: element.modelFamily,
           data: element,
           searchingFields: '${element.modelName} ${element.description}',
@@ -91,8 +94,8 @@ class EqlProductsVm extends Cubit<EQLProductsState> {
           price: datasource.getPrice(element.productId),
           description: element.shortDescription ?? element.description,
           specifications: <String, String>{
-            "Max Analog Control": element.maxNumberOfAnalogControl.toString() ?? "0",
-            "Max Digital Control": element.maxNumberOfDigitalControl.toString() ?? "0",
+            "Max Analog Control": element.maxNumberOfAnalogControl.toString(),
+            "Max Digital Control": element.maxNumberOfDigitalControl.toString(),
             "GPIO Logic Ports":
                 element.gpioLogicPorts != null ? "${element.gpioLogicPorts!.inputs} in / ${element.gpioLogicPorts!.outputs} out" : "0 in / 0 out",
             "Analog Inputs": element.numberOfInputsAndOutputs?.analog?.inputs.toString() ?? "0",
@@ -283,6 +286,7 @@ class EQLProductsError extends EQLProductDataState {
 }
 
 class EQLProduct {
+  final int priductId;
   final String name;
   final String? assetPath;
   final String description;
@@ -294,6 +298,7 @@ class EQLProduct {
   final Map<String, String> specifications;
   final ProductPortData portData;
   EQLProduct({
+    required this.priductId,
     required this.name,
     required this.assetPath,
     required this.description,

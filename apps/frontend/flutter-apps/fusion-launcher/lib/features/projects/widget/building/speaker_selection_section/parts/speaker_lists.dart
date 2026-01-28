@@ -1,3 +1,5 @@
+import 'dart:developer';
+
 import 'package:flutter/cupertino.dart' show CupertinoActivityIndicator;
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -311,7 +313,9 @@ class _SpeakerCardState extends State<SpeakerCard> {
     widget.product.assets.assets.forEach(
       (String key, List<String> values) {
         if (values.isNotEmpty) {
-          final String assetImagePath = context.read<ProductQueryViewModel>().getImagePath(values.first);
+          log("key: $key : ${values.first}");
+          final String? assetImagePath = context.read<ProductQueryViewModel>().getImagePath(widget.product.productId, key);
+          // final String assetImagePath = context.read<ProductQueryViewModel>().cachedImages[widget.product.productId]?[key] ?? '';
 
           final SpeakerColor speakerColor = SpeakerColor.getValueBasedOnKey(key);
           if (filterColors.isEmpty || filterColors.contains(speakerColor)) {
