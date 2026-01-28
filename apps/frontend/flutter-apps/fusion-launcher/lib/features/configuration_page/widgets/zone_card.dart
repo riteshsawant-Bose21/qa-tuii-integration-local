@@ -747,7 +747,7 @@ class _ZoneCardState extends State<ZoneCard> {
                 padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                 decoration: BoxDecoration(
                   border: Border.all(
-                    color: context.colorScheme.primaryBlack,
+                    color: context.colorScheme.elevation5,
                   ),
                   borderRadius: BorderRadius.circular(3),
                 ),
@@ -755,14 +755,13 @@ class _ZoneCardState extends State<ZoneCard> {
                   crossAxisAlignment: CrossAxisAlignment.center,
                   mainAxisAlignment: MainAxisAlignment.start,
                   children: <Widget>[
-                    Icon(Icons.add, color: context.colorScheme.primaryWhite, size: 12),
+                    Icon(Icons.add, color: context.colorScheme.iconWhite, size: 12),
                     const SizedBox(width: 4),
                     FusionAppText(
                       text: 'Add Function',
                       maxLine: 1,
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                         fontSize: 10,
-                        color: context.colorScheme.primaryBlack,
                       ),
                     ),
                   ],
