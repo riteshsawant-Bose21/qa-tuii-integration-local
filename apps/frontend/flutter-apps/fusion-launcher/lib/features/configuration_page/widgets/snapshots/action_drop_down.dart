@@ -32,6 +32,7 @@ class FusionDropdown<T> extends StatelessWidget {
         ),
         maxLine: 1,
       ),
+
       decoration: InputDecoration(
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(8),
