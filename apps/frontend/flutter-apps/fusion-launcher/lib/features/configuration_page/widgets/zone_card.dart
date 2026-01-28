@@ -705,6 +705,17 @@ class _ZoneCardState extends State<ZoneCard> {
   /// Add Function button (Popup Menu)
   Widget buildAddFunctionButton({bool isEdit = false}) {
     return PopupMenuButton<ZoneFunctionsType>(
+      shadowColor: Colors.transparent,
+      position: PopupMenuPosition.under,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(9),
+        side: BorderSide(
+          color: context.colorScheme.strokeLight,
+        ),
+      ),
+      padding: EdgeInsets.zero,
+      menuPadding: EdgeInsets.zero,
+      clipBehavior: Clip.none,
       onSelected: (ZoneFunctionsType value) {
         setState(() => selectedFunction = value);
         _projectViewModel.addFunctionToZone(
@@ -714,7 +725,6 @@ class _ZoneCardState extends State<ZoneCard> {
       },
       offset: const Offset(0, 10),
       tooltip: isEdit ? "Edit Function" : "Add Function",
-      padding: EdgeInsets.zero,
       color: context.colorScheme.elevation1,
       itemBuilder: (BuildContext context) {
         return ZoneFunctionsType.values.map((ZoneFunctionsType function) {
@@ -736,33 +746,31 @@ class _ZoneCardState extends State<ZoneCard> {
       },
       child:
           isEdit
-              ? Icon(
-                Icons.edit,
-                size: 14,
-                color: Theme.of(context).colorScheme.primaryWhite,
-              )
+              ? Icon(Icons.edit, size: 14, color: context.colorScheme.textPrimary)
               : Container(
                 height: 22,
                 width: 170,
                 padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                 decoration: BoxDecoration(
-                  border: Border.all(
-                    color: context.colorScheme.primaryBlack,
-                  ),
+                  border: Border.all(color: context.colorScheme.strokeLight),
                   borderRadius: BorderRadius.circular(3),
                 ),
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.center,
                   mainAxisAlignment: MainAxisAlignment.start,
                   children: <Widget>[
-                    Icon(Icons.add, color: context.colorScheme.primaryWhite, size: 12),
+                    Icon(
+                      Icons.add,
+                      color: context.colorScheme.textPrimary,
+                      size: 14,
+                    ),
                     const SizedBox(width: 4),
                     FusionAppText(
                       text: 'Add Function',
                       maxLine: 1,
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      style: context.textTheme.bodyMedium?.copyWith(
                         fontSize: 10,
-                        color: context.colorScheme.primaryBlack,
+                        color: context.colorScheme.textPrimary,
                       ),
                     ),
                   ],
