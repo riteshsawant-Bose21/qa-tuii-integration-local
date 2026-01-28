@@ -1,9 +1,9 @@
 # sqlboiler.toml
 [psql]
-  dbname = "fusion_cloud"
+  dbname = "postgres"
   host = "localhost"
   port = 5432
-  user = "fusion_cloud"
-  pass = "bose123"
+  user = "postgres"
+  pass = "admin123"
   sslmode = "disable"
   schema = "public"

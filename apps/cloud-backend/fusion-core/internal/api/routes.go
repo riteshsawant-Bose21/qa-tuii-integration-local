@@ -60,7 +60,27 @@ func (a *API) registerRoutes() {
 
 	{
 		user.GET("/authorization", userHandler.GetUserAuthorization)
-		user.GET("/profile", userHandler.GetUserProfile)
+		// user.GET("/profile", userHandler.GetUserProfile)
+	}
+
+	// user profile management routes (/user/profile/*)
+	userProfile := user.Group("/profile")
+	{
+		userProfile.Use(accessControl.GlobalAccessControlMiddleware())
+
+		userProfile.GET("", userHandler.GetUserProfileDetails)
+		userProfile.POST("", userHandler.CreateUserProfile)
+		userProfile.PUT("/:profileID", userHandler.UpdateUserProfile)
+	}
+
+	// user settings management routes (/user/settings/*)
+	userSettings := user.Group("/settings")
+	{
+		userSettings.Use(accessControl.GlobalAccessControlMiddleware())
+
+		userSettings.GET("", userHandler.GetUserSettings)
+		userSettings.POST("", userHandler.CreateUserSettings)
+		userSettings.PUT("/:settingsID", userHandler.UpdateUserSettings)
 	}
 
 	// Additional user management routes
@@ -72,11 +92,13 @@ func (a *API) registerRoutes() {
 		users.PATCH("/:userID", userHandler.UpdateUser)
 	}
 
-	// Auth status endpoint
+	// Auth endpoints
 	auth := v1.Group("/auth")
-	auth.Use(a.authMiddleware.Middleware())
-	{
-		auth.GET("/status", userHandler.CheckAuthStatus)
+	
+	// Auth automation route (no authentication required)
+	if a.auth != nil {
+		authHandler := handler.NewAuthHandler(a.auth)
+		auth.GET("/automation/tokens", authHandler.GetAuthTokensByResourceOwnerPassword)
 	}
 
 	// Role Management routes for organization admins
@@ -93,4 +115,5 @@ func (a *API) registerRoutes() {
 		organization.PUT("/roles/:roleID/permissions", roleManagementHandler.UpdateRolePermissions)
 		organization.GET("/users", roleManagementHandler.GetOrganizationUsers)
 	}
+
 }

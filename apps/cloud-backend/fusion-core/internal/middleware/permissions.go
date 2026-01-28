@@ -15,6 +15,16 @@ const (
 	UserUpdate = "user.update"
 	UserDelete = "user.delete"
 
+	// User profile permissions
+	UserProfileRead   = "users.profile.read"
+	UserProfileCreate = "users.profile.create"
+	UserProfileUpdate = "users.profile.update"
+
+	// User settings permissions
+	UserSettingsRead   = "users.settings.read"
+	UserSettingsCreate = "users.settings.create"
+	UserSettingsUpdate = "users.settings.update"
+
 	// Admin permissions
 	AdminFull = "admin"
 	AdminUser = "user.manage"
@@ -51,9 +61,27 @@ func SetupProjectPermissions(acc *AccessControlConfig) {
 	acc.RegisterPermission("POST", "/api/v1/projects/:projectId/lock", ProjectUpdate, PermissionWrite, "Lock or unlock project")
 }
 
+// SetupUserProfilePermissions configures access control permissions for user profile endpoints
+func SetupUserProfilePermissions(acc *AccessControlConfig) {
+	// User Profile endpoints
+	acc.RegisterPermission("GET", "/api/v1/users/profile", UserProfileRead, PermissionRead, "View user profile")
+	acc.RegisterPermission("POST", "/api/v1/users/profile", UserProfileCreate, PermissionWrite, "Create user profile")
+	acc.RegisterPermission("PUT", "/api/v1/users/profile/:profileID", UserProfileUpdate, PermissionWrite, "Update user profile")
+}
+
+// SetupUserSettingsPermissions configures access control permissions for user settings endpoints
+func SetupUserSettingsPermissions(acc *AccessControlConfig) {
+	// User Settings endpoints
+	acc.RegisterPermission("GET", "/api/v1/users/settings", UserSettingsRead, PermissionRead, "View user settings")
+	acc.RegisterPermission("POST", "/api/v1/users/settings", UserSettingsCreate, PermissionWrite, "Create user settings")
+	acc.RegisterPermission("PUT", "/api/v1/users/settings/:settingsID", UserSettingsUpdate, PermissionWrite, "Update user settings")
+}
+
 // SetupCommonPermissions configures common permission patterns
 func SetupCommonPermissions(acc *AccessControlConfig) {
 	SetupProjectPermissions(acc)
+	SetupUserProfilePermissions(acc)
+	SetupUserSettingsPermissions(acc)
 
 	// Add more permission setups here as needed
 	// SetupUserPermissions(acc)

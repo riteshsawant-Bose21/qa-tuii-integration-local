@@ -24,6 +24,7 @@ type API struct {
 	product               fusion.Product
 	project               fusion.Project
 	user                  fusion.User
+	auth                  fusion.Auth
 	roleManagementService *userdb.RoleManagementService
 	authMiddleware        middleware.AuthMiddleware
 	appLog                *zap.Logger
@@ -41,6 +42,7 @@ func New(cfg *Config,
 	productSvc fusion.Product,
 	project fusion.Project,
 	userSvc fusion.User,
+	authSvc fusion.Auth,
 	loggers *log.Loggers,
 ) (*API, error) {
 
@@ -69,6 +71,10 @@ func New(cfg *Config,
 		return nil, errors.New("missing user service")
 	}
 
+	if authSvc == nil {
+		return nil, errors.New("missing auth service")
+	}
+
 	// Initialize Auth0 validator and middleware
 	if cfg.Auth0Domain == "" {
 		return nil, errors.New("Auth0Domain is required for authentication")
@@ -85,6 +91,7 @@ func New(cfg *Config,
 		product:        productSvc,
 		project:        project,
 		user:           userSvc,
+		auth:           authSvc,
 		authMiddleware: authMiddleware,
 		appLog:         loggers.AppLogger,
 	}
