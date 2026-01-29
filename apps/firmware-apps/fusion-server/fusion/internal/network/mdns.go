@@ -85,10 +85,10 @@ func (m *MDNSManager) StartWithVIP(vipAddr net.IP) error {
 	}
 	m.fusionServiceHandle = fusionServiceHandle
 
-	ocaServiceHandle, err1 := m.addOcaMdnsService(vipAddr)
-	if err1 != nil {
-		logger.Error("[Discovery] Failed to add OCA mDNS service: %v", err1)
-		return fmt.Errorf("failed to add OCA mDNS service: %w", err1)
+	ocaServiceHandle, err := m.addOcaMdnsService(vipAddr)
+	if err != nil {
+		logger.Error("[Discovery] Failed to add OCA mDNS service: %v", err)
+		return fmt.Errorf("failed to add OCA mDNS service: %w", err)
 	}
 	m.ocaServiceHandle = ocaServiceHandle
 
