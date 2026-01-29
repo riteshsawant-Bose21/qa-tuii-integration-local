@@ -408,7 +408,7 @@ class SpeakerListeningAreaPropertiesState extends State<SpeakerListeningAreaProp
                                     labelBuilder: (BuildContext context, MountingType option) {
                                       return FusionAppText(
                                         semanticId: "speaker_selection_section_mounting_type_${option.name}",
-                                        text: option.name,
+                                        text: option.displayName,
                                         style: context.textTheme.bodySmall?.copyWith(
                                           color: context.colorScheme.onSurface,
                                         ),
