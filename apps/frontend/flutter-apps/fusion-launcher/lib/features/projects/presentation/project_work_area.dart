@@ -155,8 +155,6 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with TickerProviderSt
   }
 
   void toggleFusionModes() {
-    _initController(!isInDesignMode);
-
     serviceLocator<ProjectViewModel>().toggleControlMode();
 
     // Verify tab controller index is valid, reset to 0 if invalid
@@ -730,7 +728,11 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with TickerProviderSt
       animationDuration: Duration.zero,
       length: 4,
       child: BlocConsumer<ProjectViewModel, ProjectViewModelState>(
-        listener: (BuildContext context, ProjectViewModelState state) {},
+        listener: (BuildContext context, ProjectViewModelState state) {
+          if (state is TabChanged) {
+            _initController(state.tab == 0);
+          }
+        },
         builder: (BuildContext context, ProjectViewModelState state) {
           return Scaffold(
             backgroundColor: context.colorScheme.primaryBlack,

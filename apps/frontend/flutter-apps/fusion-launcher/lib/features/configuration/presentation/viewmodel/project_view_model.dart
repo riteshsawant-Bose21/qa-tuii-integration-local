@@ -340,6 +340,10 @@ class ProjectViewModel extends Cubit<ProjectViewModelState> {
     }
   }
 
+  void emitTabChanged(int tabIndex) {
+    emit(TabChanged(tab: tabIndex));
+  }
+
   void emitFloorUpdated() {
     emit(FloorsUpdated());
   }

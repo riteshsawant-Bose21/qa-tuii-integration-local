@@ -314,13 +314,15 @@ class FloorCanvasState extends State<FloorCanvas> with SingleTickerProviderState
   void _loadAllHardwareImages() {
     final ImageLoaderService loader = fusionLibLocator<ImageLoaderService>();
     for (final HardwareComponent comp in widget.hardwareComponents) {
-      final String path = comp.assetImagePath;
-      if (!_hardwareImages.containsKey(path)) {
-        loader.loadImage(path).then((ui.Image img) {
-          setState(() {
-            _hardwareImages[path] = img;
+      if (comp is! Speaker) {
+        final String path = comp.assetImagePath;
+        if (!_hardwareImages.containsKey(path)) {
+          loader.loadImage(path).then((ui.Image img) {
+            setState(() {
+              _hardwareImages[path] = img;
+            });
           });
-        });
+        }
       }
     }
   }
@@ -530,8 +532,8 @@ class FloorCanvasState extends State<FloorCanvas> with SingleTickerProviderState
             _current.clear();
             _isDrawing = false;
             widget.controller.isDrawing.value = _isDrawing;
-            if ( widget.listeningAreas.isNotEmpty) {
-            highlightedAreaId = widget.listeningAreas.last.id;
+            if (widget.listeningAreas.isNotEmpty) {
+              highlightedAreaId = widget.listeningAreas.last.id;
             }
           });
         } else {
