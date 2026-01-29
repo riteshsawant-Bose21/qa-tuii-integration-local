@@ -39,7 +39,7 @@ class Products {
   bool _syncedFromApi = false;
   bool _imageCachingInProgress = false;
 
-  String? localProductDirPath;
+  static String? localProductDirPath;
 
   Products({
     required this.baseUrl,
@@ -48,11 +48,13 @@ class Products {
   }) : cacheDir = cacheDir ?? _getDefaultCacheDir();
 
   static String _getDefaultCacheDir() {
-    return '${Directory.current.path}/.product_cache';
+    return '${Directory.current.path}/.product_cache_temp';
   }
 
   File get _cacheFile => File('$cacheDir/products.json');
+
   File get _versionFile => File('$cacheDir/version.txt');
+
   Directory get _imagesDir => Directory('$cacheDir/images');
 
   /// Initialize products - offline first
@@ -67,21 +69,21 @@ class Products {
       debugPrint("Extracting local product assets...");
       await extractLocalProductsZip();
       debugPrint("Syncing from API...");
-      await _syncFromApi();
-      _syncedFromApi = true;
+      // await _syncFromApi();
+      _syncedFromApi = false;
     } catch (e) {
       // API failed - that's okay, we'll use cache
       _syncedFromApi = false;
     }
 
     // Load from cache
-    if (await _cacheFile.exists()) {
-      debugPrint("Loading products from cache...");
-      await _loadFromCache();
-    } else {
-      debugPrint("No cached data found, loading from local asset...");
-      loadFromLocalAsset();
-    }
+    // if (await _cacheFile.exists()) {
+    //   debugPrint("Loading products from cache...");
+    //   await _loadFromCache();
+    // } else {
+    debugPrint("No cached data found, loading from local asset...");
+    loadFromLocalAsset();
+    // }
     if (!_syncedFromApi) {
       // throw Exception('No cached data and API is unavailable');
     }
@@ -90,9 +92,9 @@ class Products {
   /// Force refresh from API (with fallback to cache)
   Future<void> refresh() async {
     try {
-      await _syncFromApi();
+      // await _syncFromApi();
       await _loadFromCache();
-      _syncedFromApi = true;
+      _syncedFromApi = false;
     } catch (e) {
       // API failed - load from cache if available
       if (await _cacheFile.exists()) {
@@ -106,13 +108,12 @@ class Products {
   }
 
   Future<String> getCachedProductDirectoryPath() async {
-    final Directory dir = await getApplicationDocumentsDirectory();
+    final Directory dir = await FusionUtils.getFusionAppDirectory();
     final String localPath = dir.path;
 
     //create a directory named 'extracted_images' inside localPath
-    final String localProductDirPath = p.join(localPath, 'localProductCache');
-    this.localProductDirPath = localProductDirPath;
-    return localProductDirPath;
+    localProductDirPath = p.join(localPath, 'localProductCache');
+    return localProductDirPath!;
   }
 
   Future<void> extractLocalProductsZip() async {
@@ -358,15 +359,15 @@ class Products {
     if (imageUrl.startsWith('http')) {
       final uri = Uri.parse(imageUrl);
       final fileName = _sanitizeFileName(uri.pathSegments.last);
-      final localPath = '${_imagesDir.path}/$fileName';
-      if (File(localPath).existsSync()) {
-        return localPath;
-      } else {
-        final fallbackPath = p.join(localProductDirPath ?? '', 'product_cache/images/$fileName');
-        if (File(fallbackPath).existsSync()) {
-          return fallbackPath;
-        }
+      // final localPath = '${_imagesDir.path}/$fileName';
+      // if (File(localPath).existsSync()) {
+      //   return localPath;
+      // } else {
+      final fallbackPath = p.join(localProductDirPath ?? '', 'product_cache/images/$fileName');
+      if (File(fallbackPath).existsSync()) {
+        return fallbackPath;
       }
+      // }
     }
     return imageUrl; // Return original if not cached
   }
@@ -401,7 +402,9 @@ class Products {
   // ============= Getters (from local cache) =============
 
   bool get isLoaded => _catalog != null;
+
   String get version => _catalog?.version ?? '';
+
   int get totalCount =>
       fusionOnly ? speakers.length + amplifiers.length + controllers.length + dsps.length + accessories.length + ioEndpoints.length : _catalog?.totalCount ?? 0;
 

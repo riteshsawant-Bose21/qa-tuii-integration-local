@@ -6,8 +6,8 @@ class DottedGridPainter {
   DottedGridPainter({required this.color});
 
   void paint(Canvas canvas, Size size, Offset offset, double scale) {
-    const double baseSpacing = 100.0; // 100 pixels spacing same as building page.
-    const double dotRadius = 10;
+    const double baseSpacing = 80.0; // 100 pixels spacing same as building page.
+    const double dotRadius = 1;
 
     final Paint paint = Paint();
     paint.color = color;
@@ -26,7 +26,7 @@ class DottedGridPainter {
 
     for (double x = startX; x < right; x += spacing) {
       for (double y = startY; y < bottom; y += spacing) {
-        final double r = (dotRadius / scale).clamp(6.0, 8.0); // clamp to avoid oversized dots
+        final double r = (dotRadius / scale).clamp(4.0, 8.0); // clamp to avoid oversized dots
         canvas.drawCircle(Offset(x, y), r, paint);
       }
     }
