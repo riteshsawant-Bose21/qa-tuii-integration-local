@@ -195,7 +195,9 @@ func (c *Cluster) listenerUpdated(vip, srcIP string) {
 
 	oldVIP := c.vip
 	oldHolder := c.vipHolder
-
+	// logger.Debug("[CLUSTER] listenerUpdated called: oldVIP=%s oldHolder=%s vip=%s srcIP=%s",
+	// oldVIP, oldHolder, vip, srcIP,
+	// )
 	// VIP has been removed entirely
 	if newVIP == "" {
 		if oldVIP == "" {
@@ -231,7 +233,7 @@ func (c *Cluster) listenerUpdated(vip, srcIP string) {
 
 	// VIP address changed
 	if newVIP != oldVIP {
-
+		logger.Info("VIP changed: oldVIP=%s newVIP=%s", oldVIP, newVIP)
 		if err := c.updateVIP(newVIP); err != nil {
 			logger.Error("updateVIP(%q): %v", newVIP, err)
 			return
