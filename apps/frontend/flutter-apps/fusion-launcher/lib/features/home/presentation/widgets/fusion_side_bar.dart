@@ -181,111 +181,120 @@ class _FusionSidebarState extends State<FusionSidebar> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: <Widget>[
-                      Padding(
-                        padding: const EdgeInsets.all(16.0),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: <Widget>[
-                            SemanticHelper.formControl(
-                              testId: SemanticHelper.createTestId(SemanticTypes.textInput, "dashboard_sidebar_search_input"),
-                              child: const NeumorphicDarkTextField(
-                                hintText: 'Search',
-                                prefix: Padding(
-                                  padding: EdgeInsets.symmetric(horizontal: 8),
-                                  child: Icon(LucideIcons.search, size: 10),
+                      Expanded(
+                        child: SingleChildScrollView(
+                          physics: const ClampingScrollPhysics(),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: <Widget>[
+                              Padding(
+                                padding: const EdgeInsets.all(16.0),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: <Widget>[
+                                    SemanticHelper.formControl(
+                                      testId: SemanticHelper.createTestId(SemanticTypes.textInput, "dashboard_sidebar_search_input"),
+                                      child: const NeumorphicDarkTextField(
+                                        hintText: 'Search',
+                                        prefix: Padding(
+                                          padding: EdgeInsets.symmetric(horizontal: 8),
+                                          child: Icon(LucideIcons.search, size: 10),
+                                        ),
+                                        borderRadius: 8,
+                                        contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                                      ),
+                                    ),
+                                    const SizedBox(height: 10),
+
+                                    _HoverNavItem(
+                                      icon: Icons.home_filled,
+                                      title: DashboardTabs.home.name,
+                                      semanticsId: 'home_tab',
+                                      isSelected: widget.selectedTab == DashboardTabs.home,
+                                      onTap: () => widget.onTabChanged?.call(DashboardTabs.home),
+                                    ),
+                                    _HoverNavItem(
+                                      icon: Icons.account_circle,
+                                      title: DashboardTabs.profile.name,
+                                      semanticsId: 'profile_tab',
+                                      isSelected: widget.selectedTab == DashboardTabs.profile,
+                                      onTap: () => widget.onTabChanged?.call(DashboardTabs.profile),
+                                    ),
+                                    _HoverNavItem(
+                                      icon: Icons.settings_sharp,
+                                      title: DashboardTabs.settings.name,
+                                      semanticsId: 'settings_tab',
+                                      isSelected: widget.selectedTab == DashboardTabs.settings,
+                                      onTap: () => widget.onTabChanged?.call(DashboardTabs.settings),
+                                    ),
+                                  ],
                                 ),
-                                borderRadius: 8,
-                                contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 8),
                               ),
-                            ),
-                            const SizedBox(height: 10),
 
-                            _HoverNavItem(
-                              icon: Icons.home_filled,
-                              title: DashboardTabs.home.name,
-                              semanticsId: 'home_tab',
-                              isSelected: widget.selectedTab == DashboardTabs.home,
-                              onTap: () => widget.onTabChanged?.call(DashboardTabs.home),
-                            ),
-                            _HoverNavItem(
-                              icon: Icons.account_circle,
-                              title: DashboardTabs.profile.name,
-                              semanticsId: 'profile_tab',
-                              isSelected: widget.selectedTab == DashboardTabs.profile,
-                              onTap: () => widget.onTabChanged?.call(DashboardTabs.profile),
-                            ),
-                            _HoverNavItem(
-                              icon: Icons.settings_sharp,
-                              title: DashboardTabs.settings.name,
-                              semanticsId: 'settings_tab',
-                              isSelected: widget.selectedTab == DashboardTabs.settings,
-                              onTap: () => widget.onTabChanged?.call(DashboardTabs.settings),
-                            ),
-                          ],
+                              // const Divider(height: 0),
+                              // Padding(
+                              //   padding: const EdgeInsets.all(16.0),
+                              //   child: Column(
+                              //     crossAxisAlignment: CrossAxisAlignment.start,
+                              //     children: <Widget>[
+                              //       _HoverNavItem(
+                              //         icon: Icons.public,
+                              //         title: DashboardTabs.community.name,
+                              //         semanticsId: 'community_tab',
+                              //         isSelected: widget.selectedTab == DashboardTabs.community,
+                              //         onTap: () => widget.onTabChanged?.call(DashboardTabs.community),
+                              //       ),
+                              //       // show only in debug mode
+                              //       if (kDebugMode) ...<Widget>[
+                              //         _HoverNavItem(
+                              //           icon: Icons.library_books_sharp,
+                              //           title: DashboardTabs.testLibrady.name,
+                              //           semanticsId: 'library_tab',
+                              //           isSelected: widget.selectedTab == DashboardTabs.testLibrady,
+                              //           onTap: () => Navigator.pushNamed(context, Routes.mylibraryPage),
+                              //         ),
+                              //       ],
+                              //     ],
+                              //   ),
+                              // ),
+                              const Divider(height: 0),
+
+                              Padding(
+                                padding: const EdgeInsets.all(16.0),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: <Widget>[
+                                    GuideShowcaseWrapper(
+                                      step: GuideShowCaseSteps.myProjects,
+                                      onHighlightedSpotTap: (TapDownDetails details) => CreateNewProjectDialog.show(context),
+                                      // onHighlightedSpotTap: (TapDownDetails details) => _showNewProjectDialog(context),
+                                      child: _HoverNavItem(
+                                        icon: Icons.description,
+                                        title: 'New Project',
+                                        semanticsId: 'my_projects_section',
+                                        trailing: Icons.add_sharp,
+                                        // onTap: () => _showNewProjectDialog(context),
+                                        onTap: () => CreateNewProjectDialog.show(context),
+                                      ),
+                                    ),
+                                    _HoverNavItem(
+                                      icon: Icons.save,
+                                      title: DashboardTabs.savedProjects.name,
+                                      isSelected: widget.selectedTab == DashboardTabs.savedProjects,
+                                      semanticsId: 'saved_projects_section',
+                                      onTap: () {
+                                        widget.onTabChanged?.call(DashboardTabs.savedProjects);
+                                      },
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
-
-                      // const Divider(height: 0),
-                      // Padding(
-                      //   padding: const EdgeInsets.all(16.0),
-                      //   child: Column(
-                      //     crossAxisAlignment: CrossAxisAlignment.start,
-                      //     children: <Widget>[
-                      //       _HoverNavItem(
-                      //         icon: Icons.public,
-                      //         title: DashboardTabs.community.name,
-                      //         semanticsId: 'community_tab',
-                      //         isSelected: widget.selectedTab == DashboardTabs.community,
-                      //         onTap: () => widget.onTabChanged?.call(DashboardTabs.community),
-                      //       ),
-                      //       // show only in debug mode
-                      //       if (kDebugMode) ...<Widget>[
-                      //         _HoverNavItem(
-                      //           icon: Icons.library_books_sharp,
-                      //           title: DashboardTabs.testLibrady.name,
-                      //           semanticsId: 'library_tab',
-                      //           isSelected: widget.selectedTab == DashboardTabs.testLibrady,
-                      //           onTap: () => Navigator.pushNamed(context, Routes.mylibraryPage),
-                      //         ),
-                      //       ],
-                      //     ],
-                      //   ),
-                      // ),
-                      const Divider(height: 0),
-
-                      Padding(
-                        padding: const EdgeInsets.all(16.0),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: <Widget>[
-                            GuideShowcaseWrapper(
-                              step: GuideShowCaseSteps.myProjects,
-                              onHighlightedSpotTap: (TapDownDetails details) => CreateNewProjectDialog.show(context),
-                              // onHighlightedSpotTap: (TapDownDetails details) => _showNewProjectDialog(context),
-                              child: _HoverNavItem(
-                                icon: Icons.description,
-                                title: 'New Project',
-                                semanticsId: 'my_projects_section',
-                                trailing: Icons.add_sharp,
-                                // onTap: () => _showNewProjectDialog(context),
-                                onTap: () => CreateNewProjectDialog.show(context),
-                              ),
-                            ),
-                            _HoverNavItem(
-                              icon: Icons.save,
-                              title: DashboardTabs.savedProjects.name,
-                              isSelected: widget.selectedTab == DashboardTabs.savedProjects,
-                              semanticsId: 'saved_projects_section',
-                              onTap: () {
-                                widget.onTabChanged?.call(DashboardTabs.savedProjects);
-                              },
-                            ),
-                          ],
-                        ),
-                      ),
-
-                      const Spacer(),
                       // Build number text
+                      const Divider(height: 0),
                       Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 16.0),
                         child: Text(
