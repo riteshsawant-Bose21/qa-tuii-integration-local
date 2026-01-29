@@ -90,6 +90,7 @@ class _SnapshotsAndScenesPanelState extends State<SnapshotsAndScenesPanel> {
       oldIndex: oldIndex,
       newIndex: newIndex,
     );
+    _projectViewModel.setSelectedSnapshotId(_draggingSnapshotId);
   }
 
   @override
@@ -135,6 +136,7 @@ class _SnapshotsAndScenesPanelState extends State<SnapshotsAndScenesPanel> {
                   /// Add to snapshots section first
                   _projectViewModel.addNewSnapshots(scene: details.data);
                 }
+                _projectViewModel.setSelectedSnapshotId(details.data.id);
 
                 /// Remove from all scene sets (since it's now in snapshots)
                 final List<SceneSetModel> allSceneSets = _projectViewModel.getAllSceneSets();
@@ -204,7 +206,13 @@ class _SnapshotsAndScenesPanelState extends State<SnapshotsAndScenesPanel> {
                           _projectViewModel.duplicateSnapshot(sceneId: sceneId);
                           FusionToast.success(context, message: "Snapshot duplicated successfully");
                         },
-                        onReorder: _handleSnapshotReorder,
+                        onReorder: (int oldIndex, int newIndex) {
+                          if (oldIndex < newIndex) newIndex -= 1;
+                          final String snapshotToMove = snapShotList[oldIndex].id;
+                          final String snapshotAtNewIndex = snapShotList[newIndex].id;
+                          _projectViewModel.reOderSnapshots(sceneIdToMove: snapshotToMove.toString(), sceneIdAtNewIndex: snapshotAtNewIndex.toString());
+                          _projectViewModel.setSelectedSnapshotId(snapshotToMove);
+                        },
                         onDragStarted: (String sceneId) {
                           setState(() {
                             _draggingSnapshotId = sceneId;

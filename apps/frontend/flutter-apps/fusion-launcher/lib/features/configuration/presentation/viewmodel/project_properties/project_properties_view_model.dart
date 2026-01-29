@@ -179,7 +179,9 @@ extension ProjectPropertiesViewModel on ProjectViewModel {
       if (autoSave) {
         saveProject();
       }
-      updateProject();
+      emitTabChanged(
+        projectManager.inControlMode() ? 1 : 0,
+      );
     } catch (e) {
       FusionLogger.log(tag: LogTag.project, message: "Failed to set control mode: $e");
       throwError("Failed to set control mode: $e");
