@@ -21,14 +21,9 @@
     },
     "basePath": "/api/v1",
     "paths": {
-        "/auth/status": {
+        "/auth/automation/tokens": {
             "get": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Check if the current user is properly authenticated and return basic status",
+                "description": "Get access and ID tokens for a user using Resource Owner Password flow (QA/Staging environment only)",
                 "consumes": [
                     "application/json"
                 ],
@@ -38,18 +33,39 @@
                 "tags": [
                     "auth"
                 ],
-                "summary": "Check authentication status",
+                "summary": "Get Auth0 tokens for automation testing",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Username for token generation",
+                        "name": "username",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
                 "responses": {
                     "200": {
-                        "description": "User is authenticated",
+                        "description": "Tokens generated successfully",
                         "schema": {
-                            "$ref": "#/definitions/types.AuthStatusSuccessResponse"
+                            "$ref": "#/definitions/types.AuthTokenSuccessResponse"
                         }
                     },
-                    "401": {
-                        "description": "User is not authenticated",
+                    "400": {
+                        "description": "Bad request - username is required",
                         "schema": {
-                            "$ref": "#/definitions/types.ErrorResponse"
+                            "$ref": "#/definitions/types.ErrorResponse2"
+                        }
+                    },
+                    "403": {
+                        "description": "auth automation endpoint is disabled",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse2"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse2"
                         }
                     }
                 }
@@ -1202,7 +1218,7 @@
                         "BearerAuth": []
                     }
                 ],
-                "description": "Get the current authenticated user's profile information",
+                "description": "Get profile for a specific user",
                 "consumes": [
                     "application/json"
                 ],
@@ -1210,24 +1226,267 @@
                     "application/json"
                 ],
                 "tags": [
-                    "users"
+                    "users/profile"
                 ],
-                "summary": "Get user profile",
+                "summary": "Get user profile by user ID",
                 "responses": {
                     "200": {
                         "description": "Successfully retrieved user profile",
                         "schema": {
-                            "$ref": "#/definitions/types.User"
+                            "$ref": "#/definitions/types.UserProfile"
                         }
                     },
-                    "401": {
-                        "description": "Unauthorized - User email not found in token",
+                    "404": {
+                        "description": "User profile not found / Invalid user ID format",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Create a new user profile with the provided details",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "users/profile"
+                ],
+                "summary": "Create a new user profile",
+                "parameters": [
+                    {
+                        "description": "User profile data",
+                        "name": "profile",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/types.UserProfile"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Successfully created user profile",
+                        "schema": {
+                            "$ref": "#/definitions/types.StatusOkForCreateUserProfile"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid request body",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/users/profile/:profileID": {
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Update an existing user profile with the provided details",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "users/profile"
+                ],
+                "summary": "Update an existing user profile",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Profile ID",
+                        "name": "profileID",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "User profile data",
+                        "name": "profile",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/types.UserProfileUpdateRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successfully updated user profile"
+                    },
+                    "400": {
+                        "description": "Invalid request body",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/users/settings": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Get settings for a specific user",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "users/settings"
+                ],
+                "summary": "Get user settings by user ID",
+                "responses": {
+                    "200": {
+                        "description": "Successfully retrieved user settings",
+                        "schema": {
+                            "$ref": "#/definitions/types.UserSettings"
+                        }
+                    },
+                    "404": {
+                        "description": "User settings not found / Invalid user ID format",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "description": "Create a new user settings with the provided details",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "users/settings"
+                ],
+                "summary": "Create a new user settings",
+                "parameters": [
+                    {
+                        "description": "User settings data",
+                        "name": "settings",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/types.UserSettings"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Successfully created user settings",
+                        "schema": {
+                            "$ref": "#/definitions/types.StatusOkForCreateUserSettings"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid request body",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/users/settings/:settingsID": {
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Update an existing user settings with the provided details",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "users/settings"
+                ],
+                "summary": "Update an existing user settings",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Profile ID",
+                        "name": "profileID",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "User settings data",
+                        "name": "settings",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/types.UpdateUserSettingsRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successfully updated user settings"
+                    },
+                    "400": {
+                        "description": "Invalid request body",
                         "schema": {
                             "$ref": "#/definitions/types.ErrorResponse"
                         }
                     },
                     "404": {
-                        "description": "User not found in the system",
+                        "description": "User settings not found",
                         "schema": {
                             "$ref": "#/definitions/types.ErrorResponse"
                         }
@@ -1411,15 +1670,36 @@
                 }
             }
         },
-        "types.AuthStatusSuccessResponse": {
+        "types.AuthTokenResponse": {
             "type": "object",
             "properties": {
-                "authenticated": {
-                    "type": "boolean"
-                },
-                "email": {
+                "access_token": {
                     "type": "string",
-                    "example": "john.doe@company.com"
+                    "example": "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9..."
+                },
+                "expires_in": {
+                    "type": "integer",
+                    "example": 86400
+                },
+                "id_token": {
+                    "type": "string",
+                    "example": "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9..."
+                },
+                "token_type": {
+                    "type": "string",
+                    "example": "Bearer"
+                }
+            }
+        },
+        "types.AuthTokenSuccessResponse": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/types.AuthTokenResponse"
+                },
+                "message": {
+                    "type": "string",
+                    "example": "Tokens generated successfully"
                 }
             }
         },
@@ -1506,6 +1786,19 @@
                 "error": {
                     "type": "string",
                     "example": "Error message"
+                }
+            }
+        },
+        "types.ErrorResponse2": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "string",
+                    "example": "VALIDATION_ERROR"
+                },
+                "message": {
+                    "type": "string",
+                    "example": "Invalid request parameters"
                 }
             }
         },
@@ -2080,6 +2373,24 @@
                 }
             }
         },
+        "types.StatusOkForCreateUserProfile": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "string",
+                    "example": "53437319-7a5b-4462-bc7c-9e7f9a057a1a"
+                }
+            }
+        },
+        "types.StatusOkForCreateUserSettings": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "string",
+                    "example": "53437319-7a5b-4462-bc7c-9e7f9a057a1a"
+                }
+            }
+        },
         "types.UpdateUserRequest": {
             "type": "object",
             "properties": {
@@ -2094,6 +2405,17 @@
                 "full_name": {
                     "type": "string",
                     "example": "John Smith"
+                }
+            }
+        },
+        "types.UpdateUserSettingsRequest": {
+            "type": "object",
+            "properties": {
+                "language": {
+                    "type": "string"
+                },
+                "theme": {
+                    "type": "string"
                 }
             }
         },
@@ -2185,6 +2507,189 @@
                 "id": {
                     "type": "string",
                     "example": "usr_123456789"
+                }
+            }
+        },
+        "types.UserProfile": {
+            "type": "object",
+            "properties": {
+                "address_line_1": {
+                    "type": "string"
+                },
+                "city": {
+                    "type": "string"
+                },
+                "client_type": {
+                    "type": "string"
+                },
+                "company_name": {
+                    "type": "string"
+                },
+                "company_website": {
+                    "type": "string"
+                },
+                "country": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "currency": {
+                    "type": "string"
+                },
+                "customer_type": {
+                    "type": "string"
+                },
+                "email": {
+                    "type": "string"
+                },
+                "first_name": {
+                    "type": "string"
+                },
+                "gdpr_opt_out": {
+                    "type": "boolean"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "job_title": {
+                    "type": "string"
+                },
+                "last_name": {
+                    "type": "string"
+                },
+                "linked_profiles": {
+                    "type": "object"
+                },
+                "netsuite_customer_id": {
+                    "type": "string"
+                },
+                "phone": {
+                    "type": "string"
+                },
+                "price_list": {
+                    "type": "object"
+                },
+                "privacy_policy_accepted": {
+                    "type": "boolean"
+                },
+                "profile_photo_url": {
+                    "type": "string"
+                },
+                "state_province": {
+                    "type": "string"
+                },
+                "timezone": {
+                    "type": "string"
+                },
+                "unit_system": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                },
+                "user_id": {
+                    "type": "string"
+                },
+                "zip_postal_code": {
+                    "type": "string"
+                }
+            }
+        },
+        "types.UserProfileUpdateRequest": {
+            "type": "object",
+            "properties": {
+                "address_line_1": {
+                    "type": "string"
+                },
+                "city": {
+                    "type": "string"
+                },
+                "client_type": {
+                    "type": "string"
+                },
+                "company_name": {
+                    "type": "string"
+                },
+                "company_website": {
+                    "type": "string"
+                },
+                "country": {
+                    "type": "string"
+                },
+                "currency": {
+                    "type": "string"
+                },
+                "customer_type": {
+                    "type": "string"
+                },
+                "email": {
+                    "type": "string"
+                },
+                "first_name": {
+                    "type": "string"
+                },
+                "gdpr_opt_out": {
+                    "type": "boolean"
+                },
+                "job_title": {
+                    "type": "string"
+                },
+                "last_name": {
+                    "type": "string"
+                },
+                "linked_profiles": {
+                    "type": "object"
+                },
+                "netsuite_customer_id": {
+                    "type": "string"
+                },
+                "phone": {
+                    "type": "string"
+                },
+                "price_list": {
+                    "type": "object"
+                },
+                "privacy_policy_accepted": {
+                    "type": "boolean"
+                },
+                "profile_photo_url": {
+                    "type": "string"
+                },
+                "state_province": {
+                    "type": "string"
+                },
+                "timezone": {
+                    "type": "string"
+                },
+                "unit_system": {
+                    "type": "string"
+                },
+                "zip_postal_code": {
+                    "type": "string"
+                }
+            }
+        },
+        "types.UserSettings": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "language": {
+                    "type": "string"
+                },
+                "theme": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                },
+                "user_id": {
+                    "type": "string"
                 }
             }
         },
