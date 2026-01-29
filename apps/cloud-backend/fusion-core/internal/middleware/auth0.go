@@ -3,7 +3,7 @@ package middleware
 import (
 	"github.com/gin-gonic/gin"
 
-	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/auth"
+	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion"
 	authutils "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/utils/auth"
 )
 
@@ -15,13 +15,13 @@ type AuthMiddleware interface {
 
 // Auth0MiddlewareImpl implements the AuthMiddleware interface using Auth0
 type Auth0MiddlewareImpl struct {
-	validator *auth.Auth0Validator
+	authService fusion.Auth
 }
 
 // NewAuth0Middleware creates a new Auth0 middleware implementation
-func NewAuth0Middleware(validator *auth.Auth0Validator) AuthMiddleware {
+func NewAuth0Middleware(authService fusion.Auth) AuthMiddleware {
 	return &Auth0MiddlewareImpl{
-		validator: validator,
+		authService: authService,
 	}
 }
 
@@ -37,7 +37,7 @@ func (a *Auth0MiddlewareImpl) Middleware() gin.HandlerFunc {
 		}
 
 		// Extract token from header
-		token, err := auth.ExtractTokenFromHeader(authHeader)
+		token, err := a.authService.ExtractTokenFromHeader(authHeader)
 		if err != nil {
 			authutils.RespondWithInvalidToken(c)
 			c.Abort()
@@ -45,7 +45,7 @@ func (a *Auth0MiddlewareImpl) Middleware() gin.HandlerFunc {
 		}
 
 		// Validate the token
-		claims, err := a.validator.ValidateToken(token)
+		claims, err := a.authService.ValidateToken(token)
 		if err != nil {
 			// Check error type and respond accordingly
 			if authutils.IsTokenExpired(err.Error()) {
@@ -58,7 +58,7 @@ func (a *Auth0MiddlewareImpl) Middleware() gin.HandlerFunc {
 		}
 
 		// Extract user information from claims
-		userID, err := auth.ExtractUserID(claims)
+		userID, err := a.authService.ExtractUserID(claims)
 		if err != nil {
 			authutils.RespondWithInvalidToken(c)
 			c.Abort()
@@ -70,7 +70,7 @@ func (a *Auth0MiddlewareImpl) Middleware() gin.HandlerFunc {
 		c.Set("claims", claims)
 
 		// Extract email if available and store with the key expected by role management handlers
-		if email, err := auth.ExtractUserEmail(claims); err == nil {
+		if email, err := a.authService.ExtractUserEmail(claims); err == nil {
 			c.Set("email", email)
 			c.Set("user_email", email) // Set the key expected by access control middleware
 		}
@@ -81,7 +81,7 @@ func (a *Auth0MiddlewareImpl) Middleware() gin.HandlerFunc {
 }
 
 // Auth0Middleware creates a middleware for Auth0 JWT token validation (backward compatibility)
-func Auth0Middleware(validator *auth.Auth0Validator) gin.HandlerFunc {
-	authMiddleware := NewAuth0Middleware(validator)
+func Auth0Middleware(authService fusion.Auth) gin.HandlerFunc {
+	authMiddleware := NewAuth0Middleware(authService)
 	return authMiddleware.Middleware()
 }

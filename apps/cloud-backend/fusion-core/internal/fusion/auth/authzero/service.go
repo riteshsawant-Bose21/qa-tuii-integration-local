@@ -12,12 +12,14 @@ import (
 
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/api/types"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/config"
+	"github.com/golang-jwt/jwt/v5"
 	"go.uber.org/zap"
 )
 
 type Service struct {
 	authZeroConfig *config.AuthZero
 	logger         *zap.Logger
+	validator      *Auth0Validator
 }
 
 func NewService(authZeroConfig *config.AuthZero, logger *zap.Logger) *Service {
@@ -27,10 +29,35 @@ func NewService(authZeroConfig *config.AuthZero, logger *zap.Logger) *Service {
 	if logger == nil {
 		panic("logger cannot be nil")
 	}
+
+	// Initialize validator with domain from config
+	validator := NewAuth0Validator(authZeroConfig.Domain)
+
 	return &Service{
 		authZeroConfig: authZeroConfig,
 		logger:         logger,
+		validator:      validator,
 	}
+}
+
+// ValidateToken validates an Auth0 JWT token and returns claims
+func (s *Service) ValidateToken(tokenString string) (*jwt.MapClaims, error) {
+	return s.validator.ValidateToken(tokenString)
+}
+
+// ExtractUserID extracts user ID from JWT claims
+func (s *Service) ExtractUserID(claims *jwt.MapClaims) (string, error) {
+	return ExtractUserID(claims)
+}
+
+// ExtractUserEmail extracts user email from JWT claims
+func (s *Service) ExtractUserEmail(claims *jwt.MapClaims) (string, error) {
+	return ExtractUserEmail(claims)
+}
+
+// ExtractTokenFromHeader extracts Bearer token from Authorization header
+func (s *Service) ExtractTokenFromHeader(authHeader string) (string, error) {
+	return ExtractTokenFromHeader(authHeader)
 }
 
 // GetAuthTokensByResourceOwnerPassword gets Auth0 tokens for a user using Resource Owner Password flow
