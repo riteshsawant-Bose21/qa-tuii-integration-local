@@ -43,6 +43,8 @@ class BuildingCanvas extends StatefulWidget {
 class _BuildingCanvasState extends State<BuildingCanvas> {
   Offset viewPortCenter = Offset.zero;
 
+  bool showLiveSpl = false;
+
   @override
   void initState() {
     super.initState();
@@ -324,6 +326,7 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
                                         listeningAreaToSubZoneMap: serviceLocator<ProjectViewModel>().getListeningAreaToSubZoneMap(),
                                         isAcousticsMode: serviceLocator<ProjectViewModel>().currentToolbarMode == ToolbarMode.acoustics,
                                         isInSpeakerPlacementMode: projectViewModel.shouldPlaceNonPlacedSpeakers,
+                                        showLiveSpl: showLiveSpl,
                                       ),
                                     ),
                                   ),
@@ -699,12 +702,22 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
                                 // debugPrint("SPL Range changed: ${min.round()} - ${max.round()}");
                                 serviceLocator<ProjectViewModel>().setMinSPL(minSPL: min, autoSave: false);
                                 serviceLocator<ProjectViewModel>().setMaxSPL(maxSPL: max);
+                                if (!showLiveSpl) {
+                                  setState(() {
+                                    showLiveSpl = true;
+                                  });
+                                }
                               },
                               onChangeEnd: (double min, double max) {
                                 // debugPrint("SPL Range change ended: ${min.round()} - ${max.round()}");
                                 serviceLocator<ProjectViewModel>().setMinSPL(minSPL: min, autoSave: false);
                                 serviceLocator<ProjectViewModel>().setMaxSPL(maxSPL: max);
                                 // serviceLocator<ProjectViewModel>().saveProjectToLocal();
+                                if (showLiveSpl) {
+                                  setState(() {
+                                    showLiveSpl = false;
+                                  });
+                                }
                               },
                             ),
                           );

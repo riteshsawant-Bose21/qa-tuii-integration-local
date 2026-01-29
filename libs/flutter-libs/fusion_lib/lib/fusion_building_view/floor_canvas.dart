@@ -24,6 +24,7 @@ class FloorCanvas extends StatefulWidget {
   final double splMin;
   final double splMax;
   final SplPanelData splPanelData;
+  final bool showLiveSpl;
 
   // selection state
   final String? selectedHardwareId;
@@ -92,6 +93,7 @@ class FloorCanvas extends StatefulWidget {
     this.selectedListeningAreaId,
     required this.onRightClick,
     required this.isInSpeakerPlacementMode,
+    required this.showLiveSpl,
   });
 
   @override
@@ -299,6 +301,7 @@ class FloorCanvasState extends State<FloorCanvas> with SingleTickerProviderState
                         listeningAreaToSubZoneMap: widget.listeningAreaToSubZoneMap,
                         subZoneToZoneMap: widget.subZoneToZoneMap,
                         isAcousticsMode: widget.isAcousticsMode,
+                        showLiveSpl: widget.showLiveSpl,
                       ),
                     );
                   },
