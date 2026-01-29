@@ -132,6 +132,7 @@ class _ScenesExpandableCardState extends State<ScenesExpandableCard> {
 
                   // Try using the exact same scene object
                   _projectViewModel.addNewSnapshotToSceneSet(sceneSetId: widget.sceneSetData.id, scene: details.data);
+                  _projectViewModel.setSelectedSnapshotId(details.data.id);
                 }
               } else if (widget.draggingFromSection == 'scenes') {
                 /// Move from another scene set to this one
@@ -143,6 +144,7 @@ class _ScenesExpandableCardState extends State<ScenesExpandableCard> {
 
                   /// Add to this scene set first
                   _projectViewModel.addNewSnapshotToSceneSet(sceneSetId: widget.sceneSetData.id, scene: details.data);
+                  _projectViewModel.setSelectedSnapshotId(details.data.id);
 
                   /// Remove from all other scene sets
                   final List<SceneSetModel> allSceneSets = _projectViewModel.getAllSceneSets();
@@ -325,9 +327,15 @@ class _ScenesExpandableCardState extends State<ScenesExpandableCard> {
                                   }
                                 },
                                 onReorder: (int oldIndex, int newIndex) {
-                                  if (widget.onReorderScenes != null) {
-                                    widget.onReorderScenes!(widget.sceneSetData.id, oldIndex, newIndex);
-                                  }
+                                  // if (widget.onReorderScenes != null) {
+                                  //   widget.onReorderScenes!(widget.sceneSetData.id, oldIndex, newIndex);
+                                  // }
+                                  _projectViewModel.reOrderSnapshotInSceneSet(
+                                    sceneSetId: widget.sceneSetData.id,
+                                    oldIndex: oldIndex,
+                                    newIndex: newIndex,
+                                  );
+                                  _projectViewModel.setSelectedSnapshotId(widget.snapShotList[oldIndex].id);
                                 },
                                 onDragStarted: widget.onDragStarted,
                                 onDragEnd: widget.onDragEnd,

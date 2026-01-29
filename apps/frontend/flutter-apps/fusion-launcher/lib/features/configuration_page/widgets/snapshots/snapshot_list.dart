@@ -61,6 +61,7 @@ class SnapshotList extends StatelessWidget {
         return FadeTransition(
           opacity: animation.drive(Tween<double>(begin: 0.95, end: 1.0)),
           child: Material(
+            color: Colors.transparent,
             child: child,
           ),
         );
