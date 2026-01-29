@@ -1,4 +1,4 @@
-package auth
+package auth0
 
 import (
 	"context"
@@ -14,11 +14,6 @@ import (
 
 	"github.com/golang-jwt/jwt/v5"
 )
-
-// Auth0Config holds the configuration for Auth0 JWT validation
-type Auth0Config struct {
-	Domain string
-}
 
 // JWKS represents the JSON Web Key Set
 type JWKS struct {
@@ -37,7 +32,7 @@ type JWK struct {
 
 // Auth0Validator handles Auth0 JWT token validation
 type Auth0Validator struct {
-	config    Auth0Config
+	domain    string
 	jwksCache map[string]*rsa.PublicKey
 	cacheMu   sync.RWMutex
 	cacheTime time.Time
@@ -46,9 +41,9 @@ type Auth0Validator struct {
 }
 
 // NewAuth0Validator creates a new Auth0 validator
-func NewAuth0Validator(config Auth0Config) *Auth0Validator {
+func NewAuth0Validator(domain string) *Auth0Validator {
 	return &Auth0Validator{
-		config:    config,
+		domain:    domain,
 		jwksCache: make(map[string]*rsa.PublicKey),
 		cacheExp:  time.Hour, // Cache JWKS for 1 hour
 	}
@@ -161,7 +156,7 @@ func (a *Auth0Validator) getPublicKey(kid string) (*rsa.PublicKey, error) {
 
 // fetchJWKS fetches the JWKS from Auth0
 func (a *Auth0Validator) fetchJWKS() (*JWKS, error) {
-	url := fmt.Sprintf("https://%s/.well-known/jwks.json", a.config.Domain)
+	url := fmt.Sprintf("https://%s/.well-known/jwks.json", a.domain)
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
@@ -223,7 +218,7 @@ func (a *Auth0Validator) validateIssuer(claims jwt.MapClaims) error {
 		return fmt.Errorf("token missing issuer claim")
 	}
 
-	expectedIssuer := fmt.Sprintf("https://%s/", a.config.Domain)
+	expectedIssuer := fmt.Sprintf("https://%s/", a.domain)
 	if iss != expectedIssuer {
 		return fmt.Errorf("invalid issuer: expected %s, got %s", expectedIssuer, iss)
 	}

@@ -48,6 +48,7 @@ import (
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/auth"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/user"
 	userdb "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/user/db"
+	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/middleware"
 
 	authZero "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/auth/authzero"
 )
@@ -184,12 +185,15 @@ func main() {
 	}
 	loggers.AppLogger.Info("Initialized Auth Service.")
 
+	// Initialize Auth middleware using Auth service (consolidates all authentication functionality)
+	authMiddleware := middleware.NewAuth0Middleware(authSVC)
+	loggers.AppLogger.Info("Initialized Auth0 middleware")
+
 	// Initialize API Server (with configurable host and port)
 	server, err := api.New(&api.Config{
-		Host:        cfg.Server.APIHost,
-		Port:        cfg.Server.APIPort,
-		Auth0Domain: cfg.AuthZero.Domain,
-	}, productSVC, projectSVC, userSVC, authSVC, loggers)
+		Host: cfg.Server.APIHost,
+		Port: cfg.Server.APIPort,
+	}, productSVC, projectSVC, userSVC, authSVC, authMiddleware, loggers)
 	if err != nil {
 		loggers.AppLogger.Fatal(fmt.Sprintf("Error while initializing API: %v", err))
 	}

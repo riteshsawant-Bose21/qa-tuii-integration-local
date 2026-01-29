@@ -7,7 +7,6 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/auth"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion"
 	userdb "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/user/db"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/log"
@@ -31,10 +30,9 @@ type API struct {
 }
 
 type Config struct {
-	Mode        string // "debug" or "release"
-	Host        string
-	Port        string
-	Auth0Domain string
+	Mode string // "debug" or "release"
+	Host string
+	Port string
 }
 
 // New returns a new API from the given services.
@@ -43,6 +41,7 @@ func New(cfg *Config,
 	project fusion.Project,
 	userSvc fusion.User,
 	authSvc fusion.Auth,
+	authMiddleware middleware.AuthMiddleware,
 	loggers *log.Loggers,
 ) (*API, error) {
 
@@ -75,16 +74,9 @@ func New(cfg *Config,
 		return nil, errors.New("missing auth service")
 	}
 
-	// Initialize Auth0 validator and middleware
-	if cfg.Auth0Domain == "" {
-		return nil, errors.New("Auth0Domain is required for authentication")
+	if authMiddleware == nil {
+		return nil, errors.New("missing auth middleware")
 	}
-	auth0Config := auth.Auth0Config{
-		Domain: cfg.Auth0Domain,
-	}
-
-	auth0Validator := auth.NewAuth0Validator(auth0Config)
-	authMiddleware := middleware.NewAuth0Middleware(auth0Validator)
 
 	api := &API{
 		engine:         engine,
