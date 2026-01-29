@@ -72,7 +72,7 @@ func (c *Cluster) watchLocalVIP(iface string) {
 				return
 			case update, ok := <-updates:
 				if !ok {
-					logger.Warn("netlink updates channel closed")
+					logger.Warn("[VIP watcher] netlink updates channel closed")
 					return
 				}
 				ip := update.LinkAddress.IP
