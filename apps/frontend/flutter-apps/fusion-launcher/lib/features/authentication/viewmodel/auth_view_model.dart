@@ -1,9 +1,13 @@
 import 'package:auth0_flutter/auth0_flutter.dart';
 import 'package:bloc/bloc.dart';
 import 'package:flutter/foundation.dart';
+import 'package:fusion_launcher/core/service_locator.dart';
 import 'package:fusion_launcher/features/authentication/viewmodel/session_view_model.dart';
+import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/service/auth/fusion_auth_service.dart';
+
+import '../../../core/services/user_session_manager.dart';
 
 part 'auth_view_model_state.dart';
 
@@ -107,23 +111,33 @@ class AuthViewModel extends Cubit<AuthViewModelState> {
   /// Handle login success
   Future<void> _handleLoginSuccess(Credentials credentials) async {
     try {
-      //todo: remove this temporary implementation
-      _emitAuthenticated();
-
-      //Todo: uncomment and implement user details fetching from backend
       // Get user authorization from backend
-      // final ResponseCallback<UserModel> authDataResponse = await getUserDetails();
-      //
-      // FusionLogger.log(tag: LogTag.exceptions, message: "User authorization: response received ${authDataResponse.success} ");
-      //
-      // if (authDataResponse.success) {
-      //   emit(
-      //     Authenticated(),
-      //   );
-      // } else {
-      //   logout();
-      //   // _emitError('Failed to get user details: ${authDataResponse.message}'));
-      // }
+      final ResponseCallback<UserModel> authDataResponse = await getUserDetails();
+
+      FusionLogger.log(tag: LogTag.exceptions, message: "User authorization: response received ${authDataResponse.success} ");
+
+      if (authDataResponse.success) {
+        emit(Authenticated());
+
+        // ==== TEMPORARY IMPLEMENTATION ====
+        UserSessionManager().saveUserProfile(
+          UserModel(
+            account: UserAccount(
+              id: credentials.user.sub,
+              description: credentials.user.email,
+              name: credentials.user.name,
+              type: 'email',
+            ),
+            user: UserData(
+              id: credentials.user.sub,
+              email: credentials.user.email,
+            ),
+          ),
+        );
+      } else {
+        logout();
+        // _emitError('Failed to get user details: ${authDataResponse.message}'));
+      }
     } catch (e) {
       FusionLogger.log(tag: LogTag.exceptions, message: 'Get user authorization error: $e');
       _emitError('Failed to get user details: ${e.toString()}');
@@ -136,6 +150,8 @@ class AuthViewModel extends Cubit<AuthViewModelState> {
       _emitLoading();
 
       await _authService.logout();
+      await serviceLocator<SharedPreferencesHandler>().clearAll();
+      await serviceLocator<ProjectViewModel>().deleteFusionProjectDirectory();
 
       _emitUnauthenticated();
     } catch (e) {

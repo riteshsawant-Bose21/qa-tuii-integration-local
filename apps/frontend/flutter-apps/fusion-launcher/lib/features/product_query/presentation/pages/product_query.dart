@@ -1,365 +1,343 @@
 import 'dart:convert';
 
-import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_lib/fusion_lib.dart';
-import 'package:fusion_lib/fusion_theme/app_theme.dart';
 
-import '../../../../core/service_locator.dart';
-import '../../../configuration/presentation/viewmodel/project_view_model.dart';
-import '../../../projects/widget/product_search_widget.dart';
-import '../viewModel/product_query_view_model_cubit.dart';
-import '../viewModel/product_query_view_model_state.dart';
+// class ProductQueryView extends StatefulWidget {
+//   const ProductQueryView({super.key});
 
-class ProductQueryView extends StatefulWidget {
-  const ProductQueryView({super.key});
+//   @override
+//   State<ProductQueryView> createState() => _ProductQueryViewState();
+// }
 
-  @override
-  State<ProductQueryView> createState() => _ProductQueryViewState();
-}
+// class _ProductQueryViewState extends State<ProductQueryView> {
+//   ProductType? getCurrentProductType(int index) {
+//     if (index == -1) return null;
+//     if (index == 0) return ProductType.speaker;
+//     if (index == 2) return ProductType.endpoints;
+//     if (index == 3) return ProductType.amplifier;
+//     if (index == 4) return ProductType.dsps;
+//     if (index == 5) return ProductType.controllers;
+//     return null;
+//   }
 
-class _ProductQueryViewState extends State<ProductQueryView> {
-  ProductType? getCurrentProductType(int index) {
-    if (index == -1) return null;
-    if (index == 0) return ProductType.speaker;
-    if (index == 2) return ProductType.endpoints;
-    if (index == 3) return ProductType.amplifier;
-    if (index == 4) return ProductType.dsps;
-    if (index == 5) return ProductType.controllers;
-    return null;
-  }
+//   @override
+//   void initState() {
+//     super.initState();
+//     serviceLocator<ProductQueryCubit>().onProductTypeChanged(getCurrentProductType(serviceLocator<ProjectViewModel>().currentDeviceTypeIndex));
+//   }
 
-  @override
-  void initState() {
-    super.initState();
-    serviceLocator<ProductQueryCubit>().onProductTypeChanged(getCurrentProductType(serviceLocator<ProjectViewModel>().currentDeviceTypeIndex));
-  }
+//   @override
+//   Widget build(BuildContext context) {
+//     return BlocListener<ProjectViewModel, ProjectViewModelState>(
+//       listener: (BuildContext context, ProjectViewModelState state) {
+//         if (state is DeviceTypeIndexChanged) {
+//           // print getCurrentProductType(state.index)
+//           print("Product type changed to: ${getCurrentProductType(state.index)}");
+//           serviceLocator<ProductQueryCubit>().onProductTypeChanged(getCurrentProductType(state.index));
+//         }
+//       },
+//       child: BlocBuilder<ProductQueryCubit, ProductQueryState>(
+//         builder: (BuildContext context, ProductQueryState state) {
+//           final ProductQueryCubit cubit = serviceLocator<ProductQueryCubit>();
 
-  @override
-  Widget build(BuildContext context) {
-    return BlocListener<ProjectViewModel, ProjectViewModelState>(
-      listener: (BuildContext context, ProjectViewModelState state) {
-        if (state is DeviceTypeIndexChanged) {
-          // print getCurrentProductType(state.index)
-          print("Product type changed to: ${getCurrentProductType(state.index)}");
-          serviceLocator<ProductQueryCubit>().onProductTypeChanged(getCurrentProductType(state.index));
-        }
-      },
-      child: BlocBuilder<ProductQueryCubit, ProductQueryState>(
-        builder: (BuildContext context, ProductQueryState state) {
-          final ProductQueryCubit cubit = serviceLocator<ProductQueryCubit>();
+//           print("Rebuilding ProductQueryView with ${state.filteredProducts.length} products ${state.selectedProductTypes}");
 
-          print("Rebuilding ProductQueryView with ${state.filteredProducts.length} products ${state.selectedProductTypes}");
+//           return Column(
+//             crossAxisAlignment: CrossAxisAlignment.start,
+//             mainAxisSize: MainAxisSize.min,
+//             children: <Widget>[
+//               ProductSearchWidget(
+//                 searchController: state.searchController,
+//                 selectedSortOption: state.selectedSortOption,
+//                 selectedProductTypes: state.selectedProductTypes,
+//                 selectedMountTypes: state.selectedMountTypes,
+//                 selectedVenueTypes: state.selectedVenueTypes,
+//                 selectedColors: state.selectedColors,
+//                 selectedCoverages: state.selectedCoverages,
+//                 selectedImpedances: state.selectedImpedances,
+//                 onClearSearch: cubit.clearSearch,
+//                 // onProductTypeChanged: cubit.onProductTypeChanged,
+//                 onSortOptionChanged: cubit.onSortOptionChanged,
+//                 onFiltersChanged: cubit.onFiltersChanged,
+//               ),
+//               const SizedBox(height: 8),
+//               if (state.searchQuery.isNotEmpty) ...<Widget>[
+//                 Padding(
+//                   padding: const EdgeInsets.symmetric(horizontal: 16),
+//                   child: FusionAppText(
+//                     text: 'Found ${state.filteredProducts.length} results for "${state.searchQuery}"',
+//                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
+//                       fontSize: 12,
+//                       color: Colors.grey[600],
+//                       fontStyle: FontStyle.italic,
+//                     ),
+//                   ),
+//                 ),
+//                 const SizedBox(height: 8),
+//               ],
+//               state.filteredProducts.isEmpty
+//                   ? _buildEmptyState(context)
+//                   : ListView.separated(
+//                     separatorBuilder: (_, __) => const SizedBox(height: 16),
+//                     shrinkWrap: true,
+//                     physics: const ClampingScrollPhysics(),
+//                     padding: const EdgeInsets.symmetric(horizontal: 16),
+//                     itemCount: state.filteredProducts.length,
+//                     itemBuilder: (BuildContext context, int index) {
+//                       final ProductQueryModel product = state.filteredProducts[index];
 
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: <Widget>[
-              ProductSearchWidget(
-                searchController: state.searchController,
-                selectedSortOption: state.selectedSortOption,
-                selectedProductTypes: state.selectedProductTypes,
-                selectedMountTypes: state.selectedMountTypes,
-                selectedVenueTypes: state.selectedVenueTypes,
-                selectedColors: state.selectedColors,
-                selectedCoverages: state.selectedCoverages,
-                selectedImpedances: state.selectedImpedances,
-                onClearSearch: cubit.clearSearch,
-                // onProductTypeChanged: cubit.onProductTypeChanged,
-                onSortOptionChanged: cubit.onSortOptionChanged,
-                onFiltersChanged: cubit.onFiltersChanged,
-              ),
-              const SizedBox(height: 8),
-              if (state.searchQuery.isNotEmpty) ...<Widget>[
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: FusionAppText(
-                    text: 'Found ${state.filteredProducts.length} results for "${state.searchQuery}"',
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      fontSize: 12,
-                      color: Colors.grey[600],
-                      fontStyle: FontStyle.italic,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 8),
-              ],
-              state.filteredProducts.isEmpty
-                  ? _buildEmptyState(context)
-                  : ListView.separated(
-                    separatorBuilder: (_, __) => const SizedBox(height: 16),
-                    shrinkWrap: true,
-                    physics: const ClampingScrollPhysics(),
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    itemCount: state.filteredProducts.length,
-                    itemBuilder: (BuildContext context, int index) {
-                      final ProductQueryModel product = state.filteredProducts[index];
+//                       return GuideShowcaseWrapper(
+//                         show: index == 0, // show guide only for first child in a list.
+//                         step: GuideShowCaseSteps.addSpeakers,
+//                         onHighlightedSpotTap: (TapDownDetails details) => serviceLocator<ProjectViewModel>().setSelectedProductToAdd(product),
+//                         child: InkWell(
+//                           onTap: () => serviceLocator<ProjectViewModel>().setSelectedProductToAdd(product),
+//                           child: ProductCard(
+//                             product: product,
+//                             searchQuery: state.searchQuery,
+//                           ),
+//                         ),
+//                       );
+//                     },
+//                   ),
+//             ],
+//           );
+//         },
+//       ),
+//     );
+//   }
 
-                      return GuideShowcaseWrapper(
-                        show: index == 0, // show guide only for first child in a list.
-                        step: GuideShowCaseSteps.addSpeakers,
-                        onHighlightedSpotTap: (TapDownDetails details) => serviceLocator<ProjectViewModel>().setSelectedProductToAdd(product),
-                        child: InkWell(
-                          onTap: () => serviceLocator<ProjectViewModel>().setSelectedProductToAdd(product),
-                          child: ProductCard(
-                            index: index,
-                            product: product,
-                            searchQuery: state.searchQuery,
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-            ],
-          );
-        },
-      ),
-    );
-  }
+//   Widget _buildEmptyState(BuildContext context) {
+//     return Container(
+//       padding: const EdgeInsets.all(32),
+//       alignment: Alignment.center,
+//       child: Column(
+//         children: <Widget>[
+//           Icon(Icons.search_off, size: 64, color: Colors.grey[400]),
+//           const SizedBox(height: 16),
+//           FusionAppText(
+//             text: 'No products found',
+//             style: Theme.of(context).textTheme.headlineSmall?.copyWith(color: Colors.grey[600]),
+//           ),
+//           const SizedBox(height: 8),
+//           FusionAppText(
+//             text: 'Try adjusting your search terms or filters',
+//             style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.grey[500]),
+//           ),
+//         ],
+//       ),
+//     );
+//   }
+// }
 
-  Widget _buildEmptyState(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(32),
-      alignment: Alignment.center,
-      child: Column(
-        children: <Widget>[
-          Icon(Icons.search_off, size: 64, color: Colors.grey[400]),
-          const SizedBox(height: 16),
-          FusionAppText(
-            text: 'No products found',
-            style: Theme.of(context).textTheme.headlineSmall?.copyWith(color: Colors.grey[600]),
-          ),
-          const SizedBox(height: 8),
-          FusionAppText(
-            text: 'Try adjusting your search terms or filters',
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.grey[500]),
-          ),
-        ],
-      ),
-    );
-  }
-}
+// /// Product card widget
+// /// Updated ProductCard with search term highlighting
+// class ProductCard extends StatelessWidget {
+//   final ProductQueryModel product;
+//   final String searchQuery;
 
-/// Product card widget
-/// Updated ProductCard with search term highlighting
-class ProductCard extends StatelessWidget {
-  final int index;
-  final ProductQueryModel product;
-  final String searchQuery;
+//   const ProductCard({
+//     super.key,
+//     required this.product,
+//     this.searchQuery = '',
+//   });
 
-  const ProductCard({
-    super.key,
-    required this.index,
-    required this.product,
-    this.searchQuery = '',
-  });
+//   @override
+//   Widget build(BuildContext context) {
+//     return Container(
+//       margin: const EdgeInsets.only(bottom: 16),
+//       child: Row(
+//         crossAxisAlignment: CrossAxisAlignment.start,
+//         children: <Widget>[
+//           /// Product image
+//           FusionImage.asset(
+//             product.image.isNotEmpty ? product.image : _getDefaultImage(product.type),
+//             width: 58,
+//             height: 58,
+//             fit: BoxFit.contain,
+//           ),
+//           const SizedBox(width: 16),
+//           Expanded(
+//             child: Column(
+//               crossAxisAlignment: CrossAxisAlignment.start,
+//               children: <Widget>[
+//                 /// Product information with highlighting
+//                 _buildProductInfo(context, product, searchQuery),
+//                 const SizedBox(height: 10),
 
-  @override
-  Widget build(BuildContext context) {
-    return SemanticHelper.button(
-      testId: SemanticHelper.createTestId(SemanticTypes.button, product.name),
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 16),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: <Widget>[
-            /// Product image
-            FusionImage.asset(
-              product.image.isNotEmpty ? product.image : _getDefaultImage(product.type),
-              width: 58,
-              height: 58,
-              fit: BoxFit.contain,
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: <Widget>[
-                  /// Product information with highlighting
-                  _buildProductInfo(context, product, searchQuery),
-                  const SizedBox(height: 10),
+//                 /// Product price
+//                 FusionCurrencyText(
+//                   text: product.price.toString(),
+//                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
+//                     fontSize: 11,
+//                     color: Theme.of(context).colorScheme.greyDark,
+//                     fontWeight: FontWeight.w400,
+//                   ),
+//                 ),
+//               ],
+//             ),
+//           ),
+//         ],
+//       ),
+//     );
+//   }
 
-                  /// Product price
-                  FusionCurrencyText(
-                    text: product.price.toString(),
-                    accessIdentifier: 'product_price_$index',
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      fontSize: 11,
-                      color: Theme.of(context).colorScheme.greyDark,
-                      fontWeight: FontWeight.w400,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
+//   /// Build highlighted product information with series and type
+//   Widget _buildProductInfo(BuildContext context, ProductQueryModel product, String searchQuery) {
+//     return Column(
+//       crossAxisAlignment: CrossAxisAlignment.start,
+//       children: <Widget>[
+//         /// Product name with highlighting
+//         _buildHighlightedText(
+//           style: Theme.of(context).textTheme.bodySmall!.copyWith(
+//             fontSize: 11,
+//             fontWeight: FontWeight.w600,
+//           ),
+//           text: product.name,
+//           query: searchQuery,
+//         ),
 
-  /// Build highlighted product information with series and type
-  Widget _buildProductInfo(BuildContext context, ProductQueryModel product, String searchQuery) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: <Widget>[
-        /// Product name with highlighting
-        SemanticHelper.staticText(
-          testId: SemanticHelper.createTestId(SemanticTypes.text, 'product_name_index_$index'),
-          child: _buildHighlightedText(
-            style: Theme.of(context).textTheme.bodySmall!.copyWith(
-              fontSize: 11,
-              fontWeight: FontWeight.w600,
-            ),
-            text: product.name,
-            query: searchQuery,
-          ),
-        ),
+//         const SizedBox(height: 2),
 
-        const SizedBox(height: 2),
+//         // /// Series with highlighting (if available)
+//         // if (product.series != null && product.series!.isNotEmpty) ...<Widget>[
+//         //   _buildHighlightedText(
+//         //     style: Theme.of(context).textTheme.bodySmall!.copyWith(
+//         //       fontSize: 10,
+//         //       fontWeight: FontWeight.w500,
+//         //       color: Theme.of(context).primaryColor,
+//         //     ),
+//         //     text: 'Series: ${product.series!}',
+//         //     query: searchQuery,
+//         //   ),
+//         //   const SizedBox(height: 2),
+//         // ],
 
-        // /// Series with highlighting (if available)
-        // if (product.series != null && product.series!.isNotEmpty) ...<Widget>[
-        //   _buildHighlightedText(
-        //     style: Theme.of(context).textTheme.bodySmall!.copyWith(
-        //       fontSize: 10,
-        //       fontWeight: FontWeight.w500,
-        //       color: Theme.of(context).primaryColor,
-        //     ),
-        //     text: 'Series: ${product.series!}',
-        //     query: searchQuery,
-        //   ),
-        //   const SizedBox(height: 2),
-        // ],
+//         /// Product type with highlighting
+//         _buildHighlightedText(
+//           style: Theme.of(context).textTheme.bodySmall!.copyWith(
+//             fontSize: 11,
+//             fontWeight: FontWeight.w600,
+//           ),
+//           text: _getProductTypeAndSpecs(product),
+//           query: searchQuery,
+//         ),
+//       ],
+//     );
+//   }
 
-        /// Product type with highlighting
-        SemanticHelper.staticText(
-          testId: SemanticHelper.createTestId(SemanticTypes.text, 'product_type_index_$index'),
-          child: _buildHighlightedText(
-            style: Theme.of(context).textTheme.bodySmall!.copyWith(
-              fontSize: 11,
-              fontWeight: FontWeight.w600,
-            ),
-            text: _getProductTypeAndSpecs(product),
-            query: searchQuery,
-          ),
-        ),
-      ],
-    );
-  }
+//   // Move the methods from ProductQueryView to ProductCard
+//   String _getDefaultImage(ProductType type) {
+//     switch (type) {
+//       case ProductType.speaker:
+//         return "assets/images/speakers/DM_pendant.png";
+//       case ProductType.amplifier:
+//         return "assets/images/amps/default_amp.png";
+//       case ProductType.dsps:
+//       case ProductType.endpoints:
+//         return "assets/images/devices/default_device.png";
+//       case ProductType.sources:
+//         return "assets/images/products/mic1.png";
+//       case ProductType.controllers:
+//         return "assets/images/products/bose_dsp.png";
 
-  // Move the methods from ProductQueryView to ProductCard
-  String _getDefaultImage(ProductType type) {
-    switch (type) {
-      case ProductType.speaker:
-        return "assets/images/speakers/DM_pendant.png";
-      case ProductType.amplifier:
-        return "assets/images/amps/default_amp.png";
-      case ProductType.dsps:
-      case ProductType.endpoints:
-        return "assets/images/devices/default_device.png";
-      case ProductType.sources:
-        return "assets/images/products/mic1.png";
-      case ProductType.controllers:
-        return "assets/images/products/bose_dsp.png";
+//       case ProductType.racks:
+//         return "assets/images/products/rack.png";
+//     }
+//   }
 
-      case ProductType.racks:
-        return "assets/images/products/rack.png";
-    }
-  }
+//   String _getProductTypeAndSpecs(ProductQueryModel product) {
+//     switch (product.type) {
+//       case ProductType.speaker:
+//         return 'Speaker';
+//       case ProductType.amplifier:
+//         return 'Amplifier';
+//       case ProductType.controllers:
+//         return 'Controller';
+//       case ProductType.endpoints:
+//         return 'Endpoint';
+//       case ProductType.sources:
+//         return 'Source';
+//       case ProductType.dsps:
+//         return 'DSP';
+//       case ProductType.racks:
+//         return 'Rack';
+//     }
+//   }
 
-  String _getProductTypeAndSpecs(ProductQueryModel product) {
-    switch (product.type) {
-      case ProductType.speaker:
-        return 'Speaker';
-      case ProductType.amplifier:
-        return 'Amplifier';
-      case ProductType.controllers:
-        return 'Controller';
-      case ProductType.endpoints:
-        return 'Endpoint';
-      case ProductType.sources:
-        return 'Source';
-      case ProductType.dsps:
-        return 'DSP';
-      case ProductType.racks:
-        return 'Rack';
-    }
-  }
+//   /// Highlight search terms in text (enhanced for multiple fields)
+//   Widget _buildHighlightedText({
+//     /// If style is null, default to bodyMedium
+//     required String text,
 
-  /// Highlight search terms in text (enhanced for multiple fields)
-  Widget _buildHighlightedText({
-    /// If style is null, default to bodyMedium
-    required String text,
+//     /// The search query to highlight
+//     required String query,
 
-    /// The search query to highlight
-    required String query,
+//     /// Text style for normal text
+//     required TextStyle style,
+//   }) {
+//     /// If query is empty, return normal text
+//     if (query.isEmpty) {
+//       return FusionAppText(text: text, style: style, maxLine: 1);
+//     }
 
-    /// Text style for normal text
-    required TextStyle style,
-  }) {
-    /// If query is empty, return normal text
-    if (query.isEmpty) {
-      return FusionAppText(text: text, style: style, maxLine: 1);
-    }
+//     /// Case-insensitive search
+//     /// Convert both text and query to lower case for comparison
+//     /// Find all matches in the text
+//     final String lowerText = text.toLowerCase();
+//     final String lowerQuery = query.toLowerCase();
 
-    /// Case-insensitive search
-    /// Convert both text and query to lower case for comparison
-    /// Find all matches in the text
-    final String lowerText = text.toLowerCase();
-    final String lowerQuery = query.toLowerCase();
+//     // Find all occurrences of the query in the text
+//     final List<int> matches = <int>[];
+//     int startIndex = 0;
+//     while (true) {
+//       final int index = lowerText.indexOf(lowerQuery, startIndex);
+//       if (index == -1) break;
+//       matches.add(index);
+//       startIndex = index + 1;
+//     }
 
-    // Find all occurrences of the query in the text
-    final List<int> matches = <int>[];
-    int startIndex = 0;
-    while (true) {
-      final int index = lowerText.indexOf(lowerQuery, startIndex);
-      if (index == -1) break;
-      matches.add(index);
-      startIndex = index + 1;
-    }
+//     /// If query not found, return normal text
+//     if (matches.isEmpty) {
+//       return FusionAppText(text: text, style: style, maxLine: 1);
+//     }
 
-    /// If query not found, return normal text
-    if (matches.isEmpty) {
-      return FusionAppText(text: text, style: style, maxLine: 1);
-    }
+//     /// Build highlighted text spans
+//     final List<InlineSpan> spans = <InlineSpan>[];
+//     int currentIndex = 0;
 
-    /// Build highlighted text spans
-    final List<InlineSpan> spans = <InlineSpan>[];
-    int currentIndex = 0;
+//     for (final int matchIndex in matches) {
+//       // Add text before the match
+//       if (matchIndex > currentIndex) {
+//         spans.add(TextSpan(text: text.substring(currentIndex, matchIndex)));
+//       }
 
-    for (final int matchIndex in matches) {
-      // Add text before the match
-      if (matchIndex > currentIndex) {
-        spans.add(TextSpan(text: text.substring(currentIndex, matchIndex)));
-      }
+//       // Add highlighted match
+//       spans.add(
+//         TextSpan(
+//           text: text.substring(matchIndex, matchIndex + query.length),
+//           style: style.copyWith(
+//             backgroundColor: Colors.yellow.withAlpha(100),
+//             fontWeight: FontWeight.bold,
+//           ),
+//         ),
+//       );
 
-      // Add highlighted match
-      spans.add(
-        TextSpan(
-          text: text.substring(matchIndex, matchIndex + query.length),
-          style: style.copyWith(
-            backgroundColor: Colors.yellow.withAlpha(100),
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-      );
+//       currentIndex = matchIndex + query.length;
+//     }
 
-      currentIndex = matchIndex + query.length;
-    }
+//     // Add remaining text after the last match
+//     if (currentIndex < text.length) {
+//       spans.add(TextSpan(text: text.substring(currentIndex)));
+//     }
 
-    // Add remaining text after the last match
-    if (currentIndex < text.length) {
-      spans.add(TextSpan(text: text.substring(currentIndex)));
-    }
-
-    return RichText(
-      maxLines: 1,
-      overflow: TextOverflow.ellipsis,
-      text: TextSpan(style: style, children: spans),
-    );
-  }
-}
+//     return RichText(
+//       maxLines: 1,
+//       overflow: TextOverflow.ellipsis,
+//       text: TextSpan(style: style, children: spans),
+//     );
+//   }
+// }
 
 /// Product service to manage different product types
 class ProductAPI {

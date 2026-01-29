@@ -26,6 +26,18 @@ extension SceneService on ProjectService {
     if (parentId != null) {
       relationships.unlink(RelationshipType.sceneActions, parentId, actionId);
     }
+
+    final itemIds = relationships.getChildren(RelationshipType.actionItemMapping, actionId);
+    final copyOfItemIds = List<String>.from(itemIds);
+    for (var itemId in copyOfItemIds) {
+      relationships.unlink(RelationshipType.actionItemMapping, actionId, itemId);
+    }
+
+    final valueIds = relationships.getChildren(RelationshipType.actionValueMapping, actionId);
+    final copyOfValueIds = List<String>.from(valueIds);
+    for (var valueId in copyOfValueIds) {
+      relationships.unlink(RelationshipType.actionValueMapping, actionId, valueId);
+    }
   }
 
   void addSceneActionToSnapshot({required String sceneId, required SceneActionModel action}) {
@@ -42,7 +54,7 @@ extension SceneService on ProjectService {
       throw Exception("Scene Action with id $actionId does not exist.");
     }
     relationships.unlink(RelationshipType.sceneActions, sceneId, actionId);
-    sceneActions.remove(actionId);
+    removeSceneAction(actionId);
   }
 
   List<SceneActionModel> getSceneActionsForSnapshot(String sceneId) {
@@ -55,7 +67,7 @@ extension SceneService on ProjectService {
     if (sceneAction == null) {
       throw Exception("Scene Action with id $actionId does not exist ");
     }
-    final updatedScene = sceneAction.copyWith(actionType: actionType, item: null, param: null, value: null);
+    final updatedScene = sceneAction.updateActionType(actionType);
     sceneActions.add(actionId, updatedScene);
   }
 
@@ -64,19 +76,54 @@ extension SceneService on ProjectService {
     if (action == null) {
       throw Exception("SceneAction with id $action does not exist.");
     }
-    final updatedScene = action.copyWith(item: item, param: null, value: null);
+    final updatedScene = action.updateItem(item);
+    //check and unlink old item relationship
+    final oldItemId = relationships.getChildren(RelationshipType.actionItemMapping, actionId);
+    if (oldItemId.isNotEmpty) {
+      relationships.unlink(RelationshipType.actionItemMapping, actionId, oldItemId.first);
+    }
+    //link new item relationship
+    relationships.link(RelationshipType.actionItemMapping, actionId, item.itemId);
     sceneActions.add(actionId, updatedScene);
   }
 
-  void updateSceneActionParam({required String actionId, required SceneParam param}) {
+  void updateSceneActionParam({required String actionId, required SceneParam param, String? eventId}) {
     final scene = sceneActions.get(actionId);
     if (scene == null) {
       throw Exception("SceneAction with id $actionId does not exist.");
     }
+    bool enalbled = true;
+
+    bool hasStates = false;
+    print("Event ID in updateSceneActionParam: $eventId");
+    //for events with threshold or state change condition, we need  save value for two states
+    if (eventId != null) {
+      final event = events.get(eventId);
+      if (event != null && event.condition != null && (event.condition is ThresholdCondition || event.condition is StateChangeCondition)) {
+        hasStates = true;
+      } else if (event != null && event.condition != null && (event.condition is ValueChangeCondition)) {
+        //only for value change condition, we do not give option to edit value, because values are set based on analog voltage value levels
+        enalbled = false;
+      }
+    }
+
+    if (param.type == SceneParamType.inputLevel && param.associatedId != null) {
+      final oldValueIds = relationships.getChildren(RelationshipType.actionValueMapping, actionId);
+      final copyOfOldValueIds = List<String>.from(oldValueIds);
+      for (var oldValueId in copyOfOldValueIds) {
+        relationships.unlink(RelationshipType.actionValueMapping, actionId, oldValueId);
+      }
+
+      relationships.link(RelationshipType.actionValueMapping, actionId, param.associatedId!);
+    }
+
     //add a empty value based on param type for rendering purposes
     SceneValue value = SceneValue(
       valueType: param.type.valueType,
       label: param.type.valueLabel,
+      hasStates: hasStates,
+      enabled: enalbled,
+      states: hasStates ? SceneStateValue() : null,
     );
     final updatedScene = scene.copyWith(param: param, value: value);
     sceneActions.add(actionId, updatedScene);
@@ -87,31 +134,81 @@ extension SceneService on ProjectService {
     if (scene == null) {
       throw Exception("SceneAction with id $actionId does not exist.");
     }
+    //save dropdown value for mapping
+    if (value.valueType == SceneParamValueType.dropdownSingle) {
+      //remove old mapping
+      final oldValueIds = relationships.getChildren(RelationshipType.actionValueMapping, actionId);
+      final copyOfOldValueIds = List<String>.from(oldValueIds);
+      for (var oldValueId in copyOfOldValueIds) {
+        relationships.unlink(RelationshipType.actionValueMapping, actionId, oldValueId);
+      }
+
+      //link new value
+      if (value.hasStates && value.states != null) {
+        //link both states
+        if (value.states!.value1 != null) {
+          relationships.link(RelationshipType.actionValueMapping, actionId, value.states!.value1!);
+        }
+
+        if (value.states!.value2 != null) {
+          relationships.link(RelationshipType.actionValueMapping, actionId, value.states!.value2!);
+        }
+      } else {
+        if (value.value != null) {
+          relationships.link(RelationshipType.actionValueMapping, actionId, value.value!);
+        }
+      }
+    }
+
     final updatedScene = scene.copyWith(value: value);
     sceneActions.add(actionId, updatedScene);
   }
 
-  void removeSnapshots(String sceneId) {
-    if (!snapshots.exists(sceneId)) {
-      throw Exception("Scene with id $sceneId does not exist.");
+  void removeSnapshots(String snapshotId) {
+    if (!snapshots.exists(snapshotId)) {
+      throw Exception("Scene with id $snapshotId does not exist.");
     }
 
     //remove all scene actions linked to this scene
-    final actionIds = relationships.getChildren(RelationshipType.sceneActions, sceneId);
+    final actionIds = relationships.getChildren(RelationshipType.sceneActions, snapshotId);
     final List<String> actionsToRemove = List.from(actionIds);
     for (var actionId in actionsToRemove) {
-      removeSceneActionFromSnapshot(sceneId: sceneId, actionId: actionId);
+      removeSceneActionFromSnapshot(sceneId: snapshotId, actionId: actionId);
     }
     //check if scene is in any scene set
-    final parentSets = relationships.getParent(RelationshipType.sceneSetScenes, sceneId);
+    final parentSets = relationships.getParent(RelationshipType.sceneSetScenes, snapshotId);
     if (parentSets != null) {
-      removeSnapshotFromSceneSet(sceneSetId: parentSets, sceneId: sceneId);
+      removeSnapshotFromSceneSet(sceneSetId: parentSets, sceneId: snapshotId);
     }
-    snapshots.remove(sceneId);
+    snapshots.remove(snapshotId);
   }
 
-  List<SceneActionType> getSceneActionTypes() {
+  List<SceneActionType> getSceneActionTypes({String? eventId, required bool isFromSnapshot}) {
+    //for events return values based on condition
+    if (eventId != null) {
+      //get event to check if its value change condition
+      final event = events.get(eventId);
+      if (event != null && event.condition != null && event.condition is ValueChangeCondition) {
+        //for value change condition, only allow zone control actions
+        return [
+          SceneActionType.zoneControl,
+        ];
+      }
+    }
+    if (isFromSnapshot) {
+      //if action is being added from snapshot, do not allow snapshot action type
+      return SceneActionType.values.where((type) => type != SceneActionType.snapshot).toList();
+    }
+
     return SceneActionType.values;
+  }
+
+  SceneSetModel? getSceneSetForSnapshot(String snapshotId) {
+    final parentSetId = relationships.getParent(RelationshipType.sceneSetScenes, snapshotId);
+    if (parentSetId != null) {
+      return sceneSets.get(parentSetId);
+    }
+    return null;
   }
 
   //Get Action Items based on Action Type
@@ -174,10 +271,10 @@ extension SceneService on ProjectService {
     }
   }
 
-  List<SceneParam> getParamsByActionTypeAndItem(SceneActionType actionType, SceneItem item) {
+  List<SceneParam> getParamsByActionTypeAndItem({required SceneActionType actionType, required SceneItem item, String? eventId}) {
     switch (actionType) {
       case SceneActionType.zoneControl:
-        return _getZoneControlParams(item);
+        return _getZoneControlParams(item: item, eventId: eventId);
       case SceneActionType.deviceControl:
         return [_createParam(SceneParamType.standby)];
       case SceneActionType.gpOut:
@@ -201,10 +298,18 @@ extension SceneService on ProjectService {
   }
 
   // Helper method to get common zone parameters
-  List<SceneParam> _getCommonZoneParams() {
+  List<SceneParam> _getCommonZoneParams(bool addOnlyLevelParam, String zoneOrSubZoneId) {
+    //check if it is subzone or zone
+    final bool isZone = zones.exists(zoneOrSubZoneId);
+    //check if zone has subzones
+    final bool hasSubZones = isZone && relationships.getChildren(RelationshipType.zoneSubZones, zoneOrSubZoneId).isNotEmpty;
+    if (hasSubZones) {
+      //if zone has subzones, do not allow volume/mute control at zone level
+      return [];
+    }
     return [
       _createParam(SceneParamType.volume),
-      _createParam(SceneParamType.mute),
+      if (!addOnlyLevelParam) _createParam(SceneParamType.mute),
     ];
   }
 
@@ -217,8 +322,10 @@ extension SceneService on ProjectService {
   }
 
   // Helper method to get source mix parameters
-  List<SceneParam> _getSourceMixParams(String zoneId) {
-    final params = <SceneParam>[_createParam(SceneParamType.mixScene)];
+  List<SceneParam> _getSourceMixParams(String zoneId, bool addOnlyLevelParam) {
+    final params = <SceneParam>[
+      if (!addOnlyLevelParam) _createParam(SceneParamType.mixScene),
+    ];
     final sourcesInZone = getSourcesAndSourceSetSourcesInZone(zoneId: zoneId);
 
     for (var source in sourcesInZone) {
@@ -228,11 +335,12 @@ extension SceneService on ProjectService {
           type: SceneParamType.inputLevel,
           associatedId: source.id,
         ),
-        SceneParam(
-          label: '${source.name} mute',
-          type: SceneParamType.inputMute,
-          associatedId: source.id,
-        ),
+        if (!addOnlyLevelParam)
+          SceneParam(
+            label: '${source.name} mute',
+            type: SceneParamType.inputMute,
+            associatedId: source.id,
+          ),
       ]);
     }
 
@@ -240,31 +348,46 @@ extension SceneService on ProjectService {
   }
 
   // Main zone control logic
-  List<SceneParam> _getZoneControlParams(SceneItem item) {
-    final params = _getCommonZoneParams();
+  List<SceneParam> _getZoneControlParams({required SceneItem item, String? eventId}) {
+    bool addOnlyLevelParam = false;
+    //for events with value change condition, only add volume level
+    if (eventId != null) {
+      final event = events.get(eventId);
+      if (event != null && event.condition != null && event.condition is ValueChangeCondition) {
+        addOnlyLevelParam = true;
+      }
+    }
+
+    final params = _getCommonZoneParams(addOnlyLevelParam, item.itemId);
     final zoneFunction = getZoneFunction(zoneOrSubZoneId: item.itemId);
 
     if (zoneFunction == null) return params;
 
     switch (zoneFunction.type) {
       case ZoneFunctionsType.sourceSelect:
+        if (addOnlyLevelParam) break;
         params.add(_createParam(SceneParamType.sourceSelect));
 
       case ZoneFunctionsType.sourceSelectWithPriority:
+        if (addOnlyLevelParam) break;
         params.add(_createParam(SceneParamType.sourceSelect));
         params.addAll(_getPriorityParams());
 
       case ZoneFunctionsType.sourceMix:
-        params.addAll(_getSourceMixParams(item.itemId));
+        params.addAll(_getSourceMixParams(item.itemId, addOnlyLevelParam));
 
       case ZoneFunctionsType.sourceMixWithPriority:
-        params.addAll(_getSourceMixParams(item.itemId));
-        params.addAll(_getPriorityParams());
+        params.addAll(_getSourceMixParams(item.itemId, addOnlyLevelParam));
+        if (!addOnlyLevelParam) {
+          params.addAll(_getPriorityParams());
+        }
 
       case ZoneFunctionsType.miniMatrix:
+        if (addOnlyLevelParam) break;
         params.add(_createParam(SceneParamType.mixScene));
 
       case ZoneFunctionsType.miniMatrixWithPriority:
+        if (addOnlyLevelParam) break;
         params.add(_createParam(SceneParamType.mixScene));
         params.addAll(_getPriorityParams());
     }
@@ -275,7 +398,7 @@ extension SceneService on ProjectService {
   //get Dropdown value for a SceneParam
   List<SceneValueDropdown> getSceneActionValueDropdownItems(String actionId) {
     final scene = sceneActions.get(actionId);
-    if (scene == null || scene.item == null || scene.param == null) {
+    if (scene == null || (scene.actionType != SceneActionType.snapshot && scene.item == null) || scene.param == null) {
       throw Exception("SceneAction or SceneParam or SceneItem with id $actionId does not exist.");
     }
 
@@ -329,19 +452,6 @@ extension SceneService on ProjectService {
           return [];
         }
 
-      case SceneParamType.prioritySelect1:
-      case SceneParamType.prioritySelect2:
-        final zoneFunction = getZoneFunction(zoneOrSubZoneId: scene.item!.itemId);
-        if (zoneFunction == null) return [];
-        final sourcesInZone = getSourcesAndSourceSetSourcesInZone(zoneId: scene.item!.itemId);
-        return sourcesInZone
-            .map(
-              (source) => SceneValueDropdown(
-                label: source.name,
-                value: source.id,
-              ),
-            )
-            .toList();
       default:
         return [];
     }
@@ -379,9 +489,22 @@ extension SceneService on ProjectService {
     if (!sceneSets.exists(sceneSetId)) {
       throw Exception("Scene Set with id $sceneSetId does not exist.");
     }
+
+    //remove all snapshots linked to this scene set
+    final snapshotIds = relationships.getChildren(RelationshipType.sceneSetScenes, sceneSetId);
+    final List<String> snapshotsToRemove = List.from(snapshotIds);
+    for (var snapshotId in snapshotsToRemove) {
+      removeSnapshots(snapshotId);
+    }
+
+    //remove actions associated with scene set
+    final actionIds = relationships.getParents(RelationshipType.actionItemMapping, sceneSetId);
+    final List<String> actionsToRemove = List.from(actionIds);
+    for (var actionId in actionsToRemove) {
+      removeSceneAction(actionId);
+    }
+
     sceneSets.remove(sceneSetId);
-    // Optionally, also remove all relationships
-    relationships.removeAllRelationships(sceneSetId);
   }
 
   List<SceneSetModel> getAllSceneSets() {
@@ -405,6 +528,13 @@ extension SceneService on ProjectService {
     if (!snapshots.exists(sceneId)) {
       throw Exception("Scene with id $sceneId does not exist.");
     }
+
+    //check if any action has snapshot recall with this snapshot and remove it
+    final actionIds = relationships.getParents(RelationshipType.actionValueMapping, sceneId);
+    for (var actionId in actionIds) {
+      removeSceneAction(actionId);
+    }
+
     relationships.link(RelationshipType.sceneSetScenes, sceneSetId, sceneId);
   }
 
@@ -416,6 +546,13 @@ extension SceneService on ProjectService {
     if (!snapshots.exists(sceneId)) {
       throw Exception("Scene with id $sceneId does not exist.");
     }
+
+    //check if any action has scene recall with this snapshot and remove it
+    final actionIds = relationships.getParents(RelationshipType.actionValueMapping, sceneId);
+    for (var actionId in actionIds) {
+      removeSceneAction(actionId);
+    }
+
     relationships.unlink(RelationshipType.sceneSetScenes, sceneSetId, sceneId);
   }
 

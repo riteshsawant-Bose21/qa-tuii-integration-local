@@ -63,6 +63,7 @@ class ComponentPainter extends BasePainter {
     if (location2 == null) return;
     final Zone? zone = getZoneData(component.data.id);
     final String? locationName = getLocationName(location2.listeningAreaId);
+    final String? eqLocationName = getEquipmentLocationName(component.data.id);
     final Offset offset = Offset(
       component.position.dx,
       component.position.dy + (component.size).height + 10,
@@ -76,7 +77,7 @@ class ComponentPainter extends BasePainter {
 
     drawText(
       canvas: canvas,
-      text: zone?.name ?? locationName ?? "Eq. Location",
+      text: zone?.name ?? locationName ?? eqLocationName ?? "Eq. Location",
       position: offset + const Offset(15, 5),
       positionAlignment: Alignment.topLeft,
     );
@@ -84,12 +85,21 @@ class ComponentPainter extends BasePainter {
 
   /// Get location name from listeningAreaId
   String? getLocationName(String? listeningAreaId) {
+    // if (listeningAreaId == null)
+    return null;
+
+    // final ListeningArea area = serviceLocator<ProjectViewModel>().getListeningArea(areaId: listeningAreaId);
+    //
+    // return area.name;
+  }
+
+  /// Get Eqipm location id
+  String? getEquipmentLocationName(String? listeningAreaId) {
     if (listeningAreaId == null) return null;
 
-    final ListeningArea area = serviceLocator<ProjectViewModel>()
-        .getListeningArea(areaId: listeningAreaId);
-
-    return area.name;
+    final EquipLocation? area = serviceLocator<ProjectViewModel>().getEquipLocationForHardware(hardwareId: listeningAreaId);
+    print("Equipment Location Area: ${area?.name}");
+    return area?.name;
   }
 
   /// Get zone data from hardwareId

@@ -11,19 +11,18 @@ class SnapshotActionRowHeader extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
       color: Theme.of(context).colorScheme.grey.withAlpha(40),
       child: const Row(
+        spacing: 12,
+
         children: <Widget>[
           SizedBox(width: 30),
           _HeaderCell("Action Type"),
-          SizedBox(width: 16),
 
           _HeaderCell("Action Item"),
-          SizedBox(width: 16),
 
           _HeaderCell("Param / Action"),
-          SizedBox(width: 16),
 
           _HeaderCell("Value"),
-          SizedBox(width: 64),
+          SizedBox(width: 46),
         ],
       ),
     );

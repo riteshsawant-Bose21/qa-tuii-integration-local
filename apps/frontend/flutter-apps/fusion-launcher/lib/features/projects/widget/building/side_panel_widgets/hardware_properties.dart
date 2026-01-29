@@ -71,9 +71,15 @@ class _HardwareComponentPropertiesState extends State<HardwareComponentPropertie
         rollController.text = widget.selectedHardware is Speaker ? (widget.selectedHardware as Speaker).roll.toString() : '0.0';
 
         // Divide by 100 for display
-        xController.text = (widget.selectedHardware.pos.dx / 100).toStringAsFixed(2);
-        yController.text = (widget.selectedHardware.pos.dy / 100).toStringAsFixed(2);
-        zController.text = (widget.selectedHardware.zAxis / 100).toStringAsFixed(2);
+
+        if (widget.selectedHardware.pos != null) {
+          xController.text = (widget.selectedHardware.pos!.dx / 100).toStringAsFixed(2);
+          yController.text = (widget.selectedHardware.pos!.dy / 100).toStringAsFixed(2);
+        }
+
+        if (widget.selectedHardware.zAxis != null) {
+          zController.text = (widget.selectedHardware.zAxis! / 100).toStringAsFixed(2);
+        }
 
         return SemanticHelper.container(
           testId: SemanticHelper.createTestId(SemanticTypes.container, "hardware_properties_panel"),
@@ -131,9 +137,13 @@ class _HardwareComponentPropertiesState extends State<HardwareComponentPropertie
                           color: Theme.of(context).colorScheme.error,
                         ),
                         onPressed: () {
+                          final bool isSpeaker = widget.selectedHardware is Speaker;
                           viewModel.removeHardware(
                             hardwareId: widget.selectedHardware.id,
                           );
+                          if (isSpeaker) {
+                            widget.onSpeakerDeleted!();
+                          }
                         },
                       ),
                     ),
@@ -217,7 +227,7 @@ class _HardwareComponentPropertiesState extends State<HardwareComponentPropertie
                                         final HardwareComponent updated = widget.selectedHardware.copyWith(
                                           pos: Offset(
                                             xValue * 100,
-                                            widget.selectedHardware.pos.dy,
+                                            widget.selectedHardware.pos?.dy ?? 0.0,
                                           ),
                                         );
                                         viewModel.updateHardware(hardware: updated);
@@ -226,7 +236,9 @@ class _HardwareComponentPropertiesState extends State<HardwareComponentPropertie
                                         }
                                       } else {
                                         // Reset to previous value if invalid
-                                        xController.text = (widget.selectedHardware.pos.dx / 100).toStringAsFixed(2);
+                                        if (widget.selectedHardware.pos != null) {
+                                          xController.text = (widget.selectedHardware.pos!.dx / 100).toStringAsFixed(2);
+                                        }
                                         // Show validation error
                                         ScaffoldMessenger.of(context).showSnackBar(
                                           const SnackBar(
@@ -273,7 +285,7 @@ class _HardwareComponentPropertiesState extends State<HardwareComponentPropertie
                                         // Multiply by 100 when submitting
                                         final HardwareComponent updated = widget.selectedHardware.copyWith(
                                           pos: Offset(
-                                            widget.selectedHardware.pos.dx,
+                                            widget.selectedHardware.pos?.dx ?? 0.0,
                                             yValue * 100,
                                           ),
                                         );
@@ -283,7 +295,9 @@ class _HardwareComponentPropertiesState extends State<HardwareComponentPropertie
                                         }
                                       } else {
                                         // Reset to previous value if invalid
-                                        yController.text = (widget.selectedHardware.pos.dy / 100).toStringAsFixed(2);
+                                        if (widget.selectedHardware.pos != null) {
+                                          yController.text = (widget.selectedHardware.pos!.dy / 100).toStringAsFixed(2);
+                                        }
                                         // Show validation error
                                         ScaffoldMessenger.of(context).showSnackBar(
                                           const SnackBar(
@@ -335,7 +349,9 @@ class _HardwareComponentPropertiesState extends State<HardwareComponentPropertie
                                         }
                                       } else {
                                         // Reset to previous value if invalid
-                                        zController.text = (widget.selectedHardware.zAxis / 100).toStringAsFixed(2);
+                                        if (widget.selectedHardware.zAxis != null) {
+                                          zController.text = (widget.selectedHardware.zAxis! / 100).toStringAsFixed(2);
+                                        }
                                         // Show validation error
                                         ScaffoldMessenger.of(context).showSnackBar(
                                           const SnackBar(
@@ -574,13 +590,13 @@ class _HardwareComponentPropertiesState extends State<HardwareComponentPropertie
                     ],
                   ),
 
-                  const SizedBox(height: 12),
+                  // const SizedBox(height: 12),
 
-                  if (serviceLocator<ProjectViewModel>().getZoneForHardware(hardwareId: widget.selectedHardware.id) != null ||
-                      serviceLocator<ProjectViewModel>().getSubZoneForHardware(hardwareId: widget.selectedHardware.id) != null)
-                    _CircuitSelection(
-                      speaker: (widget.selectedHardware as Speaker),
-                    ),
+                  // if (serviceLocator<ProjectViewModel>().getZoneForHardware(hardwareId: widget.selectedHardware.id) != null ||
+                  //     serviceLocator<ProjectViewModel>().getSubZoneForHardware(hardwareId: widget.selectedHardware.id) != null)
+                  //   _CircuitSelection(
+                  //     speaker: (widget.selectedHardware as Speaker),
+                  //   ),
                 ],
 
                 // Properties section
@@ -588,133 +604,133 @@ class _HardwareComponentPropertiesState extends State<HardwareComponentPropertie
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: <Widget>[
                     const SizedBox(height: 12),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: <Widget>[
-                        if (widget.selectedHardware.lockListeningArea) ...<Widget>[
-                          Expanded(
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: <Widget>[
-                                // Left: Label
-                                FusionAppText(
-                                  text: "Area",
-                                  style: Theme.of(
-                                    context,
-                                  ).textTheme.bodySmall?.copyWith(
-                                    fontSize: 11,
-                                    color: Theme.of(context).colorScheme.fusionTextViewColor.withOpacity(0.5),
-                                  ),
-                                ),
-                                // Right: Value + Arrow
-                                Tooltip(
-                                  message: "Listening area is locked",
-                                  child: Container(
-                                    alignment: Alignment.centerLeft,
-                                    child: Row(
-                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                      children: <Widget>[
-                                        FusionAppText(
-                                          text:
-                                              viewModel
-                                                  .getListeningAreaForHardware(
-                                                    hardwareId: widget.selectedHardware.id,
-                                                  )
-                                                  ?.name ??
-                                              "N/A",
-                                          textAlign: TextAlign.left,
-                                          style: Theme.of(
-                                            context,
-                                          ).textTheme.bodySmall?.copyWith(
-                                            fontSize: 11,
-                                          ),
-                                        ),
-                                        const SizedBox(width: 6),
-                                      ],
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ] else ...<Widget>[
-                          Expanded(
-                            child: _buildHardwarePropertyRow(
-                              context: context,
-                              label: "Area ",
-                              value:
-                                  viewModel
-                                      .getListeningAreaForHardware(
-                                        hardwareId: widget.selectedHardware.id,
-                                      )
-                                      ?.name ??
-                                  "N/A",
-                              options:
-                                  widget.selectedHardware.lockListeningArea
-                                      ? <String>[]
-                                      : viewModel.listeningAreas
-                                          .map(
-                                            (ListeningArea listeningArea) => listeningArea.name,
-                                          )
-                                          .toList(),
-                              onOptionSelected: (int selectedIndex) {
-                                if (!widget.selectedHardware.lockListeningArea) {
-                                  final ListeningArea? selectedArea = viewModel.listeningAreas.isNotEmpty ? viewModel.listeningAreas[selectedIndex] : null;
-                                  if (selectedArea != null) {
-                                    print("Selected Area: ${selectedArea.name}");
-                                    final LocationModel updated = widget.selectedHardware.locationEntity.copyWith(
-                                      listeningAreaId: selectedArea.id,
-                                    );
-                                    viewModel.updateHardwareLocation(
-                                      hardwareId: widget.selectedHardware.id,
-                                      newLocation: updated,
-                                    );
-                                  }
-                                }
-                              },
-                            ),
-                          ),
-                        ],
-                        const SizedBox(width: 8),
-                        Tooltip(
-                          message: "Lock Listening Area",
-                          child: GestureDetector(
-                            onTap: () {
-                              viewModel.updateHardware(
-                                hardware: widget.selectedHardware.copyWith(
-                                  lockListeningArea: !widget.selectedHardware.lockListeningArea,
-                                ),
-                              );
-                            },
-                            child: SemanticHelper.toggle(
-                              value: widget.selectedHardware.lockListeningArea,
-                              testId: SemanticHelper.createTestId(SemanticTypes.toggle, "lock_listening_area_toggle"),
-                              child: Container(
-                                padding: const EdgeInsets.all(6),
-                                decoration: BoxDecoration(
-                                  color:
-                                      widget.selectedHardware.lockListeningArea
-                                          ? Theme.of(
-                                            context,
-                                          ).colorScheme.primary.withOpacity(0.1)
-                                          : Colors.transparent,
-                                  borderRadius: BorderRadius.circular(4),
-                                  border: Border.all(
-                                    color: widget.selectedHardware.lockListeningArea ? Theme.of(context).colorScheme.primary : Colors.grey.withOpacity(0.3),
-                                    width: 1,
-                                  ),
-                                ),
-                                child: Icon(
-                                  widget.selectedHardware.lockListeningArea ? Icons.lock : Icons.lock_open,
-                                  size: 16,
-                                  color: widget.selectedHardware.lockListeningArea ? Theme.of(context).colorScheme.primary : Colors.grey,
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
+                    // Row(
+                    //   mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    //   children: <Widget>[
+                    //     if (widget.selectedHardware.lockListeningArea) ...<Widget>[
+                    //       Expanded(
+                    //         child: Row(
+                    //           mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    //           children: <Widget>[
+                    //             // Left: Label
+                    //             FusionAppText(
+                    //               text: "Area",
+                    //               style: Theme.of(
+                    //                 context,
+                    //               ).textTheme.bodySmall?.copyWith(
+                    //                 fontSize: 11,
+                    //                 color: Theme.of(context).colorScheme.fusionTextViewColor.withOpacity(0.5),
+                    //               ),
+                    //             ),
+                    //             // Right: Value + Arrow
+                    //             Tooltip(
+                    //               message: "Listening area is locked",
+                    //               child: Container(
+                    //                 alignment: Alignment.centerLeft,
+                    //                 child: Row(
+                    //                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    //                   children: <Widget>[
+                    //                     FusionAppText(
+                    //                       text:
+                    //                           viewModel
+                    //                               .getListeningAreaForHardware(
+                    //                                 hardwareId: widget.selectedHardware.id,
+                    //                               )
+                    //                               ?.name ??
+                    //                           "N/A",
+                    //                       textAlign: TextAlign.left,
+                    //                       style: Theme.of(
+                    //                         context,
+                    //                       ).textTheme.bodySmall?.copyWith(
+                    //                         fontSize: 11,
+                    //                       ),
+                    //                     ),
+                    //                     const SizedBox(width: 6),
+                    //                   ],
+                    //                 ),
+                    //               ),
+                    //             ),
+                    //           ],
+                    //         ),
+                    //       ),
+                    //     ] else ...<Widget>[
+                    //       Expanded(
+                    //         child: _buildHardwarePropertyRow(
+                    //           context: context,
+                    //           label: "Area ",
+                    //           value:
+                    //               viewModel
+                    //                   .getListeningAreaForHardware(
+                    //                     hardwareId: widget.selectedHardware.id,
+                    //                   )
+                    //                   ?.name ??
+                    //               "N/A",
+                    //           options:
+                    //               widget.selectedHardware.lockListeningArea
+                    //                   ? <String>[]
+                    //                   : viewModel.listeningAreas
+                    //                       .map(
+                    //                         (ListeningArea listeningArea) => listeningArea.name,
+                    //                       )
+                    //                       .toList(),
+                    //           onOptionSelected: (int selectedIndex) {
+                    //             if (!widget.selectedHardware.lockListeningArea) {
+                    //               final ListeningArea? selectedArea = viewModel.listeningAreas.isNotEmpty ? viewModel.listeningAreas[selectedIndex] : null;
+                    //               if (selectedArea != null) {
+                    //                 print("Selected Area: ${selectedArea.name}");
+                    //                 final LocationModel updated = widget.selectedHardware.locationEntity.copyWith(
+                    //                   listeningAreaId: selectedArea.id,
+                    //                 );
+                    //                 viewModel.updateHardwareLocation(
+                    //                   hardwareId: widget.selectedHardware.id,
+                    //                   newLocation: updated,
+                    //                 );
+                    //               }
+                    //             }
+                    //           },
+                    //         ),
+                    //       ),
+                    //     ],
+                    //     const SizedBox(width: 8),
+                    //     Tooltip(
+                    //       message: "Lock Listening Area",
+                    //       child: GestureDetector(
+                    //         onTap: () {
+                    //           viewModel.updateHardware(
+                    //             hardware: widget.selectedHardware.copyWith(
+                    //               lockListeningArea: !widget.selectedHardware.lockListeningArea,
+                    //             ),
+                    //           );
+                    //         },
+                    //         child: SemanticHelper.toggle(
+                    //           value: widget.selectedHardware.lockListeningArea,
+                    //           testId: SemanticHelper.createTestId(SemanticTypes.toggle, "lock_listening_area_toggle"),
+                    //           child: Container(
+                    //             padding: const EdgeInsets.all(6),
+                    //             decoration: BoxDecoration(
+                    //               color:
+                    //                   widget.selectedHardware.lockListeningArea
+                    //                       ? Theme.of(
+                    //                         context,
+                    //                       ).colorScheme.primary.withOpacity(0.1)
+                    //                       : Colors.transparent,
+                    //               borderRadius: BorderRadius.circular(4),
+                    //               border: Border.all(
+                    //                 color: widget.selectedHardware.lockListeningArea ? Theme.of(context).colorScheme.primary : Colors.grey.withOpacity(0.3),
+                    //                 width: 1,
+                    //               ),
+                    //             ),
+                    //             child: Icon(
+                    //               widget.selectedHardware.lockListeningArea ? Icons.lock : Icons.lock_open,
+                    //               size: 16,
+                    //               color: widget.selectedHardware.lockListeningArea ? Theme.of(context).colorScheme.primary : Colors.grey,
+                    //             ),
+                    //           ),
+                    //         ),
+                    //       ),
+                    //     ),
+                    //   ],
+                    // ),
 
                     const SizedBox(height: 8),
                     _buildHardwarePropertyTextRow(

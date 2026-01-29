@@ -145,7 +145,6 @@ class AudioSystemDesignPageState extends State<AudioSystemDesignPage> {
                                       },
                                       onSpeakerAdded: (Speaker speaker, String zoneId) {
                                         serviceLocator<ProjectViewModel>().addHardware(hardware: speaker, autoSave: false);
-                                        serviceLocator<ProjectViewModel>().addSpeakerToZone(hardwareId: speaker.id, zoneId: zoneId);
                                       },
                                       onFloorUpdated: (FloorModel updatedFloor) {
                                         serviceLocator<ProjectViewModel>().updateFloor(floor: updatedFloor);

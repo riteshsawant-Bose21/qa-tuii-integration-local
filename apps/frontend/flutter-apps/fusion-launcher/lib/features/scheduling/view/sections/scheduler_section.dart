@@ -1,7 +1,7 @@
 part of '../scheduling_page.dart';
 
 class _SchedulerSection extends StatelessWidget {
-  const _SchedulerSection({super.key});
+  const _SchedulerSection();
 
   @override
   Widget build(BuildContext context) {
@@ -19,20 +19,23 @@ class _SchedulerSection extends StatelessWidget {
         }
         return FusionTable(
           spacing: 20,
-          headers: <({String title, int flex})>[
-            (title: "Name", flex: 3),
-            (title: "Occurrence", flex: 2),
-            (title: "", flex: 4),
-            (title: "Time", flex: 2),
-            (title: "Status", flex: 1),
-            (title: "", flex: 1),
-            (title: "", flex: 1),
-            (title: "", flex: 1),
+          headers: <FusionTableHeader>[
+            FusionTableHeader(title: "Name", flex: 3),
+            FusionTableHeader(title: "Occurrence", flex: 2),
+            FusionTableHeader(title: "", flex: 4),
+            FusionTableHeader(title: "Time", flex: 2),
+            FusionTableHeader(title: "Status", flex: 1),
+            FusionTableHeader(title: "", flex: 1),
+            FusionTableHeader(title: "", flex: 1),
+            FusionTableHeader(title: "", flex: 1),
           ],
           itemCount: state.schedules.length,
           onRowTap: (int value) {
             final ScheduleConfig schedule = state.schedules[value];
             SchedulerForm.show(context, context.read<SchedulerViewmodel>(), initial: schedule);
+          },
+          onReorder: (int oldIndex, int newIndex) {
+            context.read<SchedulerViewmodel>().reOrderSchedules(oldIndex, newIndex);
           },
           itemBuilder: (BuildContext context, int index) {
             final ScheduleConfig schedule = state.schedules[index];
@@ -60,9 +63,9 @@ class _SchedulerSection extends StatelessWidget {
                     TextSpan(
                       children: <InlineSpan>[
                         TextSpan(text: DateFormat("MMM dd, yyyy").format(schedule.startDate)),
-                        if (schedule.recurrence != RecurrenceType.none) ...<InlineSpan>[
+                        if (schedule.recurrence != RecurrenceType.none && schedule.endDate != null) ...<InlineSpan>[
                           const TextSpan(text: " - "),
-                          TextSpan(text: DateFormat("MMM dd, yyyy").format(schedule.endDate)),
+                          TextSpan(text: DateFormat("MMM dd, yyyy").format(schedule.endDate!)),
                         ],
                       ],
                     ),
@@ -111,25 +114,58 @@ class _SchedulerSection extends StatelessWidget {
                 width: 10,
                 height: 10,
                 decoration: BoxDecoration(
-                  color: schedule.status ? Colors.green : Colors.red,
+                  color: schedule.status ? Colors.grey : Colors.blue,
                   shape: BoxShape.circle,
                 ),
               ),
               FusionButton(label: "Test", onTap: () {}),
-              Center(
-                child: SvgPicture.asset(
-                  "assets/icons/scheduler/run.svg",
-                  width: 25,
-                  height: 25,
+              SemanticHelper.button(
+                testId: SemanticHelper.createTestId(SemanticTypes.button, "scheduler_run_button_$index"),
+                child: InkWell(
+                  onTap: () {
+                    /// Check if an event already exists for this schedule
+                    final FusionEvent? eventsForScheduler = serviceLocator<ProjectViewModel>().getEventsForSchedule(
+                      scheduleId: schedule.id,
+                    );
+                    if (eventsForScheduler != null) {
+                      WidgetsBinding.instance.addPostFrameCallback((_) {
+                        /// Set the selected event ID to the existing event for this schedule
+                        serviceLocator<ProjectViewModel>().setSelectedEventId(eventsForScheduler.id);
+                      });
+                    } else {
+                      /// Add the event to the project
+                      serviceLocator<ProjectViewModel>().addEventForSchedule(
+                        scheduleId: schedule.id,
+                      );
+                    }
+
+                    /// Navigate to Configuration tab (index 3)
+                    projectTabBroadcastController.add(3);
+
+                    /// Switch to Events sub-tab within Configuration
+                    serviceLocator<ProjectViewModel>().setConfigurationMenuMode(
+                      ConfigurationMenuMode.events,
+                    );
+                  },
+                  child: Center(
+                    child: SvgPicture.asset(
+                      "assets/icons/scheduler/run.svg",
+                      width: 25,
+                      height: 25,
+                    ),
+                  ),
                 ),
               ),
-              IconButton(
-                onPressed: () {
-                  context.read<SchedulerViewmodel>().removeSchedule(schedule);
-                },
-                icon: const Icon(
-                  Icons.delete_outline,
-                  color: Colors.grey,
+              SemanticHelper.button(
+                testId: SemanticHelper.createTestId(SemanticTypes.button, "scheduler_delete_button_$index"),
+                child: IconButton(
+                  onPressed: () {
+                    context.read<SchedulerViewmodel>().removeSchedule(schedule);
+                  },
+                  icon: const Icon(
+                    Icons.delete_outline,
+                    color: Colors.grey,
+                  ),
                 ),
               ),
             ];
@@ -148,12 +184,16 @@ class FusionTable extends StatelessWidget {
     required this.itemBuilder,
     this.spacing = 10,
     this.onRowTap,
+    this.onReorder,
+    this.keyExtractor,
   });
-  final List<({String title, int flex})> headers;
+  final List<FusionTableHeader> headers;
   final int itemCount;
   final List<Widget> Function(BuildContext context, int index) itemBuilder;
   final double spacing;
   final ValueChanged<int>? onRowTap;
+  final void Function(int oldIndex, int newIndex)? onReorder;
+  final String Function(int index)? keyExtractor;
   @override
   Widget build(BuildContext context) {
     return Padding(
@@ -167,11 +207,14 @@ class FusionTable extends StatelessWidget {
               children:
                   headers
                       .map(
-                        (final ({String title, int flex}) e) => Expanded(
+                        (final FusionTableHeader e) => Expanded(
                           flex: e.flex,
-                          child: Text(
-                            e.title,
-                            style: context.textTheme.labelLarge?.copyWith(fontWeight: FontWeight.bold),
+                          child: Align(
+                            alignment: e.aligment,
+                            child: FusionAppText(
+                              text: e.title,
+                              style: context.textTheme.labelLarge?.copyWith(fontWeight: FontWeight.bold),
+                            ),
                           ),
                         ),
                       )
@@ -184,28 +227,49 @@ class FusionTable extends StatelessWidget {
               decoration: BoxDecoration(
                 border: Border.all(color: Colors.grey.withOpacity(0.3), width: 1),
               ),
-              child: ListView.builder(
+              child: ReorderableListView.builder(
                 shrinkWrap: true,
                 itemCount: itemCount,
+                onReorder: (int oldIndex, int newIndex) {
+                  if (oldIndex < newIndex) newIndex -= 1;
+                  onReorder?.call(oldIndex, newIndex);
+                },
+                buildDefaultDragHandles: false,
                 itemBuilder: (BuildContext context, int index) {
                   final List<Widget> rowItems = itemBuilder(context, index);
+                  final String key = keyExtractor != null ? keyExtractor!(index) : 'fusion_table_row_$index';
                   return Container(
+                    key: ValueKey<String>(key),
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
                       border: Border(
                         bottom: index != itemCount - 1 ? BorderSide(color: Colors.grey.withOpacity(0.3), width: 1) : BorderSide.none,
                       ),
                     ),
-                    child: InkWell(
-                      onTap: onRowTap != null ? () => onRowTap!(index) : null,
-                      child: Row(
-                        spacing: spacing,
-                        children: List<Widget>.generate(
-                          headers.length,
-                          (int i) => Expanded(
-                            flex: headers[i].flex,
-                            child: rowItems[i],
-                          ),
+                    child: SemanticHelper.button(
+                      testId: SemanticHelper.createTestId(SemanticTypes.button, "fusion_table_row_$index"),
+                      child: InkWell(
+                        onTap: onRowTap != null ? () => onRowTap!(index) : null,
+                        child: Row(
+                          spacing: spacing,
+                          children: <Widget>[
+                            ReorderableDragStartListener(
+                              key: ValueKey<String>(key),
+                              index: index,
+                              child: Icon(
+                                Icons.drag_handle,
+                                size: 16,
+                                color: Colors.grey[600],
+                              ),
+                            ),
+                            ...List<Widget>.generate(
+                              headers.length,
+                              (int i) => Expanded(
+                                flex: headers[i].flex,
+                                child: Align(alignment: headers[i].aligment, child: rowItems[i]),
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ),
@@ -218,4 +282,12 @@ class FusionTable extends StatelessWidget {
       ),
     );
   }
+}
+
+class FusionTableHeader {
+  final String title;
+  final int flex;
+  final Alignment aligment;
+
+  FusionTableHeader({required this.title, required this.flex, this.aligment = Alignment.centerLeft});
 }

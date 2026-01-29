@@ -26,4 +26,8 @@ class SchedulerViewmodel extends Cubit<SchedulerState> {
   void idle() {
     emit(state.refreshSchedules());
   }
+
+  void reOrderSchedules(int oldIndex, int newIndex) {
+    emit(state.reOrderSchedules(oldIndex, newIndex));
+  }
 }

@@ -90,36 +90,17 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
 
   Offset? cursorPosition;
 
-  bool isCustomCursorNeeded() {
-    return serviceLocator<ProjectViewModel>().selectedProductToAdd != null;
-    // ||
-    // serviceLocator<ProjectViewModel>().isInListeningAreaSelectionMode ||
-    // serviceLocator<ProjectViewModel>().isInZoneSelectionMode;
-  }
+  final ProjectViewModel projectViewModel = serviceLocator<ProjectViewModel>();
 
-  Widget getCustomCursor() {
-    if (serviceLocator<ProjectViewModel>().selectedProductToAdd != null) {
-      return Image.asset(
-        serviceLocator<ProjectViewModel>().selectedProductToAdd!.image, // Your asset icon path
-        width: 32,
-        height: 32,
-      );
-    }
-    // else if (serviceLocator<ProjectViewModel>().isInListeningAreaSelectionMode) {
-    //   return Icon(
-    //     Icons.edit,
-    //     size: 20,
-    //     color: Theme.of(context).colorScheme.primary,
-    //   );
-    // } else if (serviceLocator<ProjectViewModel>().isInZoneSelectionMode) {
-    //   return Icon(
-    //     Icons.layers,
-    //     size: 20,
-    //     color: Theme.of(context).colorScheme.primary,
-    //   );
-    // }
-    else {
-      return const SizedBox.shrink();
+  bool get shouldUseCustomCursor => projectViewModel.selectedProductToAdd != null || projectViewModel.shouldPlaceNonPlacedSpeakers;
+
+  MouseCursor get cursorType {
+    if (widget.floorCanvasController.isDrawing.value) {
+      return SystemMouseCursors.precise;
+    } else if (projectViewModel.selectedProductToAdd != null || projectViewModel.shouldPlaceNonPlacedSpeakers) {
+      return SystemMouseCursors.none;
+    } else {
+      return SystemMouseCursors.basic;
     }
   }
 
@@ -127,14 +108,14 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
   Widget build(BuildContext context) {
     return FusionKeyboardWrapper(
       onUndo: () {
-        if (serviceLocator<ProjectViewModel>().canUndo) {
-          serviceLocator<ProjectViewModel>().undo();
-        }
+        // if (serviceLocator<ProjectViewModel>().canUndo) {
+        //   serviceLocator<ProjectViewModel>().undo();
+        // }
       },
       onRedo: () {
-        if (serviceLocator<ProjectViewModel>().canRedo) {
-          serviceLocator<ProjectViewModel>().redo();
-        }
+        // if (serviceLocator<ProjectViewModel>().canRedo) {
+        //   serviceLocator<ProjectViewModel>().redo();
+        // }
       },
       onDelete: () {
         //IN Building page
@@ -185,16 +166,10 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
                         return ValueListenableBuilder<bool>(
                           valueListenable: widget.floorCanvasController.isDrawing,
                           builder: (BuildContext context, bool isDrawingValue, Widget? child) {
-                            final bool useCustomCursor = isCustomCursorNeeded();
                             return Stack(
                               children: <Widget>[
                                 MouseRegion(
-                                  cursor:
-                                      widget.floorCanvasController.isDrawing.value
-                                          ? SystemMouseCursors.precise
-                                          : (serviceLocator<ProjectViewModel>().selectedProductToAdd != null
-                                              ? SystemMouseCursors.none
-                                              : SystemMouseCursors.basic),
+                                  cursor: cursorType,
                                   onHover: (PointerHoverEvent event) {
                                     setState(() {
                                       cursorPosition = event.localPosition;
@@ -212,7 +187,7 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
                                       child: FloorCanvas(
                                         gridSize: 100,
                                         controller: widget.floorCanvasController,
-                                        hardwareComponents: serviceLocator<ProjectViewModel>().getHardwareForFloor(
+                                        hardwareComponents: serviceLocator<ProjectViewModel>().getHardwareInFloorWithPosition(
                                           floorId: floor.id,
                                         ),
                                         listeningAreas: serviceLocator<ProjectViewModel>().getListeningAreasForFloor(
@@ -248,6 +223,14 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
                                           serviceLocator<ProjectViewModel>().updateFloor(
                                             floor: floor.copyWith(floorPlan: floor.floorPlan.copyWith(canvasPan: p)),
                                           );
+                                        },
+                                        onRightClick: (PointerDownEvent e) {
+                                          if (widget.floorCanvasController.isDrawing.value) {
+                                            widget.floorCanvasController.toggleDraw();
+                                          }
+                                          if (projectViewModel.shouldPlaceNonPlacedSpeakers) {
+                                            projectViewModel.setShouldPlaceNonPlacedSpeakers(false);
+                                          }
                                         },
                                         moveHardware: (
                                           HardwareComponent hardware,
@@ -319,15 +302,20 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
                                         },
                                         splMin: serviceLocator<ProjectViewModel>().minSPL,
                                         splMax: serviceLocator<ProjectViewModel>().maxSPL,
-                                        addNewHardwareComponent: (Offset speakerPosition, String? listeningAreaId) {
-                                          if (serviceLocator<ProjectViewModel>().selectedProductToAdd == null) {
-                                            debugPrint("No product selected to add");
-                                            return;
+                                        addNewHardwareComponent: (Offset speakerPosition) {
+                                          final ProjectViewModel projectViewModel = serviceLocator<ProjectViewModel>();
+
+                                          if (projectViewModel.shouldPlaceNonPlacedSpeakers) {
+                                            projectViewModel.placeSelectedSpeaker(position: speakerPosition, isFromBuildingPage: true);
                                           }
-                                          serviceLocator<ProjectViewModel>().addSelectedProduct(
-                                            position: speakerPosition,
-                                            listeningAreaId: listeningAreaId,
-                                          );
+                                          // else {
+                                          //   if (projectViewModel.selectedProductToAdd == null) return;
+                                          //   projectViewModel.addSelectedProduct(
+                                          //     position: speakerPosition,
+                                          //     listeningAreaId: listeningAreaId,
+                                          //     isFromBuildingPage: true,
+                                          //   );
+                                          // }
 
                                           serviceLocator<GuideShowCaseController>().completeStep(GuideShowCaseSteps.addSpeakers);
 
@@ -340,19 +328,94 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
                                         subZoneToZoneMap: serviceLocator<ProjectViewModel>().getSubZoneToZoneMap(),
                                         listeningAreaToSubZoneMap: serviceLocator<ProjectViewModel>().getListeningAreaToSubZoneMap(),
                                         isAcousticsMode: serviceLocator<ProjectViewModel>().currentToolbarMode == ToolbarMode.acoustics,
+                                        isInSpeakerPlacementMode: projectViewModel.shouldPlaceNonPlacedSpeakers,
                                       ),
                                     ),
                                   ),
                                 ),
 
-                                if (useCustomCursor && cursorPosition != null)
+                                if (shouldUseCustomCursor && cursorPosition != null) ...<Widget>[
                                   Positioned(
                                     left: cursorPosition!.dx - 12,
                                     top: cursorPosition!.dy - 12,
                                     child: IgnorePointer(
-                                      child: getCustomCursor(),
+                                      child: Builder(
+                                        builder: (BuildContext context) {
+                                          if (serviceLocator<ProjectViewModel>().shouldPlaceNonPlacedSpeakers) {
+                                            final List<Speaker> nonPlacedSpeakers = projectViewModel.getNonPlacedSpeakersForCurrentListeningArea();
+
+                                            if (nonPlacedSpeakers.isEmpty) return const SizedBox();
+
+                                            final MountingType? speakerMountType = nonPlacedSpeakers.first.mountingType;
+
+                                            return Stack(
+                                              clipBehavior: Clip.none,
+                                              children: <Widget>[
+                                                Builder(
+                                                  builder: (BuildContext context) {
+                                                    if (speakerMountType == MountingType.surface) {
+                                                      return const RotatedBox(
+                                                        quarterTurns: 1,
+                                                        child: Icon(
+                                                          Icons.rectangle,
+                                                          size: 32,
+                                                          color: Colors.black,
+                                                        ),
+                                                      );
+                                                    } else if (speakerMountType == MountingType.pendant) {
+                                                      return SizedBox(
+                                                        width: 24,
+                                                        height: 24,
+                                                        child: CustomPaint(
+                                                          painter: TrianglePainter(
+                                                            color: Colors.black,
+                                                            isUp: true,
+                                                          ),
+                                                        ),
+                                                      );
+                                                    } else {
+                                                      return const Icon(
+                                                        Icons.circle,
+                                                        size: 32,
+                                                        color: Colors.black,
+                                                      );
+                                                    }
+                                                  },
+                                                ),
+                                                Positioned(
+                                                  bottom: -10,
+                                                  right: -10,
+                                                  child: Container(
+                                                    decoration: const BoxDecoration(
+                                                      color: Colors.black,
+                                                      shape: BoxShape.circle,
+                                                    ),
+                                                    padding: const EdgeInsets.all(5),
+                                                    child: FusionAppText(
+                                                      text: '${nonPlacedSpeakers.length}',
+                                                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                                                        color: context.colorScheme.onPrimary,
+                                                        fontSize: 10,
+                                                      ),
+                                                    ),
+                                                  ),
+                                                ),
+                                              ],
+                                            );
+                                          } else if (serviceLocator<ProjectViewModel>().selectedProductToAdd != null) {
+                                            return Image.asset(
+                                              serviceLocator<ProjectViewModel>().selectedProductToAdd!.image,
+                                              width: 32,
+                                              height: 32,
+                                            );
+                                          } else {
+                                            return const SizedBox.shrink();
+                                          }
+                                        },
+                                      ),
                                     ),
                                   ),
+                                ],
                               ],
                             );
                           },
@@ -377,10 +440,12 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
                       }
 
                       if (state is ListeningAreaSelectionMode) {
-                        widget.floorCanvasController.toggleDraw();
+                        widget.floorCanvasController.setDraw(true);
                       }
 
-                      if (!serviceLocator<ProjectViewModel>().isInListeningAreaMode && widget.floorCanvasController.isDrawing.value) {
+                      if (serviceLocator<ProjectViewModel>().currentToolbarMode == ToolbarMode.system &&
+                          !serviceLocator<ProjectViewModel>().isInListeningAreaMode &&
+                          widget.floorCanvasController.isDrawing.value) {
                         widget.floorCanvasController.toggleDraw();
                       }
 
@@ -434,58 +499,12 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
                                           ),
                                         ),
                                         const SizedBox(width: 16),
-                                        SemanticHelper.button(testId: SemanticHelper.createTestId(SemanticTypes.button, FusionTestKeys.close),
-                                        child:
-                                        InkWell(
-                                          onTap: () {
-                                            serviceLocator<ProjectViewModel>().clearSelectedZone();
-                                            widget.floorCanvasController.cancelListeningAreaSelection();
-                                          },
-                                          borderRadius: BorderRadius.circular(12),
-                                          child: Container(
-                                            padding: const EdgeInsets.all(5),
-                                            decoration: BoxDecoration(
-                                              border: Border.all(
-                                                color:
-                                                    ThemeData.estimateBrightnessForColor(
-                                                              serviceLocator<ProjectViewModel>().getCurrentSelectionZoneColor(),
-                                                            ) ==
-                                                            Brightness.light
-                                                        ? Colors.grey.shade800
-                                                        : Colors.white,
-                                                width: 1,
-                                              ),
-                                              borderRadius: BorderRadius.circular(10),
-                                            ),
-
-                                            child: Icon(
-                                              Icons.close,
-                                              size: 16,
-                                              color:
-                                                  ThemeData.estimateBrightnessForColor(
-                                                            serviceLocator<ProjectViewModel>().getCurrentSelectionZoneColor(),
-                                                          ) ==
-                                                          Brightness.light
-                                                      ? Colors.grey.shade800
-                                                      : Colors.white,
-                                            ),
-                                          ),
-                                        ),
-                                        ),
-                                        const SizedBox(width: 12),
-                                        GuideShowcaseWrapper(
-                                          step: GuideShowCaseSteps.confirmSelectListeningArea,
-                                          onHighlightedSpotTap: (TapDownDetails details) {
-                                            serviceLocator<ProjectViewModel>().clearSelectedZone();
-                                            serviceLocator<ProjectViewModel>().clearSelectedSubZone();
-                                            widget.floorCanvasController.completeListeningAreaSelection();
-                                            serviceLocator<GuideShowCaseController>().completeStep(GuideShowCaseSteps.confirmSelectListeningArea);
-                                          },
-                                          child:SemanticHelper.button(testId: SemanticHelper.createTestId(SemanticTypes.button, FusionTestKeys.check),
-                                           child: InkWell(
+                                        SemanticHelper.button(
+                                          testId: SemanticHelper.createTestId(SemanticTypes.button, FusionTestKeys.close),
+                                          child: InkWell(
                                             onTap: () {
                                               serviceLocator<ProjectViewModel>().clearSelectedZone();
-                                              widget.floorCanvasController.completeListeningAreaSelection();
+                                              widget.floorCanvasController.cancelListeningAreaSelection();
                                             },
                                             borderRadius: BorderRadius.circular(12),
                                             child: Container(
@@ -503,8 +522,9 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
                                                 ),
                                                 borderRadius: BorderRadius.circular(10),
                                               ),
+
                                               child: Icon(
-                                                Icons.check,
+                                                Icons.close,
                                                 size: 16,
                                                 color:
                                                     ThemeData.estimateBrightnessForColor(
@@ -517,7 +537,53 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
                                             ),
                                           ),
                                         ),
-                                      ),
+                                        const SizedBox(width: 12),
+                                        GuideShowcaseWrapper(
+                                          step: GuideShowCaseSteps.confirmSelectListeningArea,
+                                          onHighlightedSpotTap: (TapDownDetails details) {
+                                            serviceLocator<ProjectViewModel>().clearSelectedZone();
+                                            serviceLocator<ProjectViewModel>().clearSelectedSubZone();
+                                            widget.floorCanvasController.completeListeningAreaSelection();
+                                            serviceLocator<GuideShowCaseController>().completeStep(GuideShowCaseSteps.confirmSelectListeningArea);
+                                          },
+                                          child: SemanticHelper.button(
+                                            testId: SemanticHelper.createTestId(SemanticTypes.button, FusionTestKeys.check),
+                                            child: InkWell(
+                                              onTap: () {
+                                                serviceLocator<ProjectViewModel>().clearSelectedZone();
+                                                widget.floorCanvasController.completeListeningAreaSelection();
+                                              },
+                                              borderRadius: BorderRadius.circular(12),
+                                              child: Container(
+                                                padding: const EdgeInsets.all(5),
+                                                decoration: BoxDecoration(
+                                                  border: Border.all(
+                                                    color:
+                                                        ThemeData.estimateBrightnessForColor(
+                                                                  serviceLocator<ProjectViewModel>().getCurrentSelectionZoneColor(),
+                                                                ) ==
+                                                                Brightness.light
+                                                            ? Colors.grey.shade800
+                                                            : Colors.white,
+                                                    width: 1,
+                                                  ),
+                                                  borderRadius: BorderRadius.circular(10),
+                                                ),
+                                                child: Icon(
+                                                  Icons.check,
+                                                  size: 16,
+                                                  color:
+                                                      ThemeData.estimateBrightnessForColor(
+                                                                serviceLocator<ProjectViewModel>().getCurrentSelectionZoneColor(),
+                                                              ) ==
+                                                              Brightness.light
+                                                          ? Colors.grey.shade800
+                                                          : Colors.white,
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                        ),
                                       ],
                                     ),
                                   );
@@ -967,7 +1033,7 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
 
   Future<void> _importFloorPlan() async {
     try {
-      final FilePickerResult? result = await FilePicker.platform.pickFiles(
+      final FilePickerResult? result = await FilePicker.pickFiles(
         type: FileType.custom,
         allowMultiple: false,
         allowedExtensions: <String>['png', 'jpg', 'jpeg'],
@@ -1200,4 +1266,40 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
       throw Exception('Failed to save cropped image to project storage');
     }
   }
+}
+
+class TrianglePainter extends CustomPainter {
+  final Color color;
+  final bool isUp;
+
+  TrianglePainter({required this.color, this.isUp = true});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final ui.Paint paint =
+        Paint()
+          ..color = color
+          ..style = PaintingStyle.fill
+          ..isAntiAlias = true;
+
+    final ui.Path path = Path();
+
+    if (isUp) {
+      path
+        ..moveTo(size.width / 2, 0) // top center
+        ..lineTo(0, size.height) // bottom left
+        ..lineTo(size.width, size.height); // bottom right
+    } else {
+      path
+        ..moveTo(0, 0)
+        ..lineTo(size.width, 0)
+        ..lineTo(size.width / 2, size.height);
+    }
+
+    path.close();
+    canvas.drawPath(path, paint);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }

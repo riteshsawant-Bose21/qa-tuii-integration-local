@@ -29,6 +29,22 @@ extension SchedulerStateMethods on SchedulerState {
     return refreshSchedules();
   }
 
+  SchedulerState reOrderSchedules(int oldIndex, int newIndex) {
+    if (oldIndex < 0 || oldIndex >= schedules.length || newIndex < 0 || newIndex >= schedules.length) {
+      throw ArgumentError('Invalid indices for reordering schedules');
+    }
+
+    final String scheduleIdToMove = schedules[oldIndex].id;
+    final String scheduleAtNewIndexId = schedules[newIndex].id;
+
+    serviceLocator<ProjectViewModel>().reOrderSchedules(
+      scheduleIdToMove: scheduleIdToMove,
+      scheduleAtNewIndexId: scheduleAtNewIndexId,
+    );
+
+    return refreshSchedules();
+  }
+
   SchedulerState searchSchedules(String query) {
     final List<ScheduleConfig> allSchedules = switch (this) {
       final SearchingSchedulerState searchingState => searchingState.allSchedules,
