@@ -92,7 +92,6 @@ class AuthViewModel extends Cubit<AuthViewModelState> {
   Future<void> login() async {
     try {
       _emitLoading();
-
       final Credentials credentials = await _authService.login();
 
       await serviceLocator<SharedPreferencesHandler>().setBool(SharedPreferenceKeys.skipLogin, false);
