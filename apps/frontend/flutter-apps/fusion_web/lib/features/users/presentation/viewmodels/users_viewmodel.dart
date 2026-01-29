@@ -25,8 +25,13 @@ class UsersViewModel extends BaseViewModel {
     required this.searchUsersUseCase,
   });
 
-  List<UserEntity> get users =>
-      _filteredUsers.isNotEmpty ? _filteredUsers : _users;
+  List<UserEntity> get users {
+    if (_filteredUsers.isNotEmpty) {
+      return _filteredUsers;
+    }
+    return _users;
+  }
+
   UserEntity? get selectedUser => _selectedUser;
   String get searchQuery => _searchQuery;
 
@@ -38,6 +43,8 @@ class UsersViewModel extends BaseViewModel {
       _filteredUsers = [];
       setLoaded(users);
     } catch (e) {
+      _users = [];
+      _filteredUsers = [];
       setError('Failed to load users: ${e.toString()}');
     }
   }

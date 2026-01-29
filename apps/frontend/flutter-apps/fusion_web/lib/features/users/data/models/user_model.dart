@@ -15,18 +15,78 @@ class UserModel extends UserEntity {
   });
 
   factory UserModel.fromJson(Map<String, dynamic> json) {
+    // Helper function to safely parse DateTime from various formats
+    DateTime? parseDateTime(dynamic value) {
+      if (value == null) return null;
+      if (value is String) {
+        // Handle the specific "0001-01-01T00:00:00Z" case as null (invalid date)
+        if (value.startsWith('0001-01-01')) return null;
+        try {
+          return DateTime.parse(value);
+        } catch (e) {
+          print('Failed to parse DateTime: $value');
+          return null;
+        }
+      }
+      return null;
+    }
+
+    // Helper function to safely get string value
+    String getString(dynamic value, String defaultValue) {
+      if (value == null) return defaultValue;
+      return value.toString();
+    }
+
+    // Helper function to extract role name from role object
+    String getRoleName(dynamic roleValue) {
+      if (roleValue == null) return 'User';
+      if (roleValue is Map<String, dynamic>) {
+        return getString(roleValue['role_name'] ?? roleValue['name'], 'User');
+      }
+      return getString(roleValue, 'User');
+    }
+
+    // Helper function to safely get list of strings
+    List<String> getStringList(dynamic value) {
+      if (value == null) return [];
+      if (value is List) {
+        return value.map((e) => e.toString()).toList();
+      }
+      if (value is String) {
+        // Handle comma-separated string
+        return value
+            .split(',')
+            .map((e) => e.trim())
+            .where((e) => e.isNotEmpty)
+            .toList();
+      }
+      return [];
+    }
+
     return UserModel(
-      id: json['id'] as String,
-      name: json['name'] as String,
-      email: json['email'] as String,
-      role: json['role'] as String,
-      status: json['status'] as String,
-      createdAt: DateTime.parse(json['created_at'] as String),
-      lastLoginAt: json['last_login_at'] != null
-          ? DateTime.parse(json['last_login_at'] as String)
-          : null,
-      avatar: json['avatar'] as String?,
-      permissions: List<String>.from(json['permissions'] ?? []),
+      id: getString(json['id'], ''),
+      name: getString(
+        json['full_name'] ?? json['name'] ?? json['display_name'],
+        'Unknown User',
+      ),
+      email: getString(json['email'] ?? json['emailAddress'], ''),
+      role: getRoleName(json['role']),
+      status: getString(json['status'], 'active').toLowerCase() == 'active'
+          ? 'Active'
+          : 'Inactive',
+      createdAt:
+          parseDateTime(json['joined_at'] ?? json['created_at']) ??
+          DateTime.now(),
+      lastLoginAt: parseDateTime(
+        json['lastLoginAt'] ?? json['last_login_at'] ?? json['lastLogin'],
+      ),
+      avatar:
+          json['avatar'] as String? ??
+          json['profilePicture'] as String? ??
+          json['photo'] as String?,
+      permissions: getStringList(
+        json['permissions'] ?? json['roles'] ?? json['scopes'],
+      ),
     );
   }
 

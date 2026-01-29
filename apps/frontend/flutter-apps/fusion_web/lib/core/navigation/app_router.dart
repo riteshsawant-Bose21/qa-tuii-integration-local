@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:fusion_web/core/constants/app_constants.dart';
 import 'package:fusion_web/core/widgets/main_layout.dart';
+import 'package:fusion_web/features/auth/presentation/pages/login_page.dart';
 
 enum DashboardTabs {
   dashboard("Dashboard"),
@@ -33,7 +34,15 @@ enum DashboardTabs {
 
 class AppRouter {
   static Route<dynamic> generateRoute(RouteSettings settings) {
-    // Extract tab from route name
+    // Handle login route
+    if (settings.name == AppConstants.loginRoute) {
+      return MaterialPageRoute(
+        builder: (_) => const LoginPage(),
+        settings: settings,
+      );
+    }
+
+    // Extract tab from route name for authenticated routes
     DashboardTabs? initialTab;
     switch (settings.name) {
       case AppConstants.dashboardRoute:

@@ -1,6 +1,7 @@
 // Core constants for the application
 class AppConstants {
   // Navigation
+  static const String loginRoute = '/login';
   static const String dashboardRoute = '/dashboard';
   static const String projectsRoute = '/projects';
   static const String usersRoute = '/users';

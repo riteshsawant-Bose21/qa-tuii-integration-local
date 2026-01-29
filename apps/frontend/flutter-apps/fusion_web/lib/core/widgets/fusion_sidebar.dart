@@ -4,6 +4,9 @@ import 'package:fusion_lib/fusion_theme/app_theme.dart';
 import 'package:fusion_web/core/navigation/app_router.dart';
 import 'package:fusion_web/core/constants/app_constants.dart';
 import 'package:fusion_web/core/widgets/viewmodels/sidebar_viewmodel.dart';
+import 'package:fusion_web/features/auth/data/datasources/auth0_datasource.dart';
+import 'package:fusion_web/features/auth/data/repositories/auth_repository_impl.dart';
+import 'package:fusion_web/features/auth/domain/usecases/auth_usecases.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 class FusionSidebar extends StatefulWidget {
@@ -45,6 +48,29 @@ class _FusionSidebarState extends State<FusionSidebar> {
     super.dispose();
   }
 
+  void _handleLogout() async {
+    try {
+      // Initialize Auth0 for logout
+      final dataSource = Auth0DataSource();
+      final repository = AuthRepositoryImpl(dataSource: dataSource);
+      final logoutUseCase = LogoutUseCase(repository);
+
+      // Perform logout
+      await logoutUseCase();
+
+      // Navigate to login page
+      if (mounted) {
+        Navigator.pushReplacementNamed(context, AppConstants.loginRoute);
+      }
+    } catch (e) {
+      print('Logout error: $e');
+      // Still navigate to login page even if logout fails
+      if (mounted) {
+        Navigator.pushReplacementNamed(context, AppConstants.loginRoute);
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -57,6 +83,19 @@ class _FusionSidebarState extends State<FusionSidebar> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
+              // Bose Professional Logo
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(16),
+                child: Center(
+                  child: Image.asset(
+                    'assets/images/bose_professional_logo.png',
+                    height: 32,
+                    fit: BoxFit.contain,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
               _buildUserSection(context),
               const SizedBox(height: 16),
               _buildNavigationSection(context),
@@ -142,7 +181,7 @@ class _FusionSidebarState extends State<FusionSidebar> {
           color: context.colorScheme.surface,
           borderRadius: BorderRadius.circular(AppConstants.borderRadius),
           border: Border.all(
-            color: context.colorScheme.outline.withOpacity(0.1),
+            color: context.colorScheme.outline.withValues(alpha: 0.1),
           ),
         ),
         child: Column(
@@ -183,7 +222,7 @@ class _FusionSidebarState extends State<FusionSidebar> {
                 icon: LucideIcons.logOut,
                 title: 'Sign Out',
                 semanticsId: 'signout_section',
-                onTap: _viewModel.signOut,
+                onTap: _handleLogout,
               ),
             ),
           ],
