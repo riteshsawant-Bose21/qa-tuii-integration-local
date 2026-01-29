@@ -1033,7 +1033,7 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
 
   Future<void> _importFloorPlan() async {
     try {
-      final FilePickerResult? result = await FilePicker.pickFiles(
+      final FilePickerResult? result = await FilePicker.platform.pickFiles(
         type: FileType.custom,
         allowMultiple: false,
         allowedExtensions: <String>['png', 'jpg', 'jpeg'],
