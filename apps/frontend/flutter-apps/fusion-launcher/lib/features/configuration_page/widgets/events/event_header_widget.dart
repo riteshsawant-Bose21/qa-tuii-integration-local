@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:fusion_lib/fusion_theme/app_theme.dart';
 import 'package:fusion_lib/fusion_widgets/others/fusion_toast.dart';
+import 'package:fusion_lib/fusion_widgets/semantics/semantic_helper.dart';
+import 'package:fusion_lib/fusion_widgets/semantics/semantic_type.dart';
 import 'package:fusion_lib/fusion_widgets/text_views/fusion_app_text.dart';
 
 /// A widget that displays an event header with an editable snapshot name.
@@ -16,19 +18,19 @@ import 'package:fusion_lib/fusion_widgets/text_views/fusion_app_text.dart';
 /// );
 /// ```
 /// Parameters:
-/// - [snapshotName]: The current name of the snapshot to be displayed.
+/// - [eventName]: The current name of the snapshot to be displayed.
 /// - [onNameChanged]: A callback function that is triggered when the snapshot name is changed.
 /// Returns:
 /// A [Container] widget containing the event header with editable snapshot name.
 ///
 
 class EventHeaderWidget extends StatefulWidget {
-  final String snapshotName;
+  final String eventName;
   final Function(String)? onNameChanged;
 
   const EventHeaderWidget({
     super.key,
-    required this.snapshotName,
+    required this.eventName,
     this.onNameChanged,
   });
 
@@ -44,8 +46,7 @@ class _EventHeaderWidgetState extends State<EventHeaderWidget> {
   @override
   void initState() {
     super.initState();
-    final String capitalizedName =
-        widget.snapshotName.isNotEmpty ? widget.snapshotName[0].toUpperCase() + widget.snapshotName.substring(1) : widget.snapshotName;
+    final String capitalizedName = widget.eventName.isNotEmpty ? widget.eventName[0].toUpperCase() + widget.eventName.substring(1) : widget.eventName;
     _textController = TextEditingController(text: capitalizedName);
     _focusNode = FocusNode();
   }
@@ -54,10 +55,9 @@ class _EventHeaderWidgetState extends State<EventHeaderWidget> {
   @override
   void didUpdateWidget(EventHeaderWidget oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.snapshotName != widget.snapshotName) {
+    if (oldWidget.eventName != widget.eventName) {
       // make widget.snapshotName first letter caps
-      final String capitalizedName =
-          widget.snapshotName.isNotEmpty ? widget.snapshotName[0].toUpperCase() + widget.snapshotName.substring(1) : widget.snapshotName;
+      final String capitalizedName = widget.eventName.isNotEmpty ? widget.eventName[0].toUpperCase() + widget.eventName.substring(1) : widget.eventName;
 
       _textController.text = capitalizedName;
     }
@@ -81,13 +81,12 @@ class _EventHeaderWidgetState extends State<EventHeaderWidget> {
     setState(() {
       _isEditing = false;
     });
-    if (widget.onNameChanged != null && _textController.text.trim().isNotEmpty && _textController.text.trim() != widget.snapshotName) {
+    if (widget.onNameChanged != null && _textController.text.trim().isNotEmpty && _textController.text.trim() != widget.eventName) {
       widget.onNameChanged!(_textController.text.trim());
       FusionToast.success(context, message: 'Event renamed to "${_textController.text.trim()}"');
     } else {
       /// name cannot same and cant be empty, revert to old name and show toast
-      final String capitalizedName =
-          widget.snapshotName.isNotEmpty ? widget.snapshotName[0].toUpperCase() + widget.snapshotName.substring(1) : widget.snapshotName;
+      final String capitalizedName = widget.eventName.isNotEmpty ? widget.eventName[0].toUpperCase() + widget.eventName.substring(1) : widget.eventName;
       _textController.text = capitalizedName;
       if (_textController.text.trim().isEmpty) {
         FusionToast.error(context, message: 'Event name cannot be empty.');
@@ -98,13 +97,13 @@ class _EventHeaderWidgetState extends State<EventHeaderWidget> {
   @override
   Widget build(BuildContext context) {
     return Container(
+      height: 44,
       padding: const EdgeInsets.symmetric(
         horizontal: 16,
         vertical: 6,
       ),
       decoration: BoxDecoration(
-        color: context.colorScheme.greyLight,
-        // border bottom
+        color: context.colorScheme.white,
         border: Border(
           bottom: BorderSide(width: 1, color: context.colorScheme.grey),
         ),
@@ -117,24 +116,30 @@ class _EventHeaderWidgetState extends State<EventHeaderWidget> {
             width: MediaQuery.of(context).size.width * 0.25,
             child:
                 _isEditing
-                    ? TextField(
-                      controller: _textController,
-                      focusNode: _focusNode,
-                      style: context.textTheme.bodyMedium?.copyWith(fontSize: 12, fontWeight: FontWeight.w600),
-                      decoration: const InputDecoration(
-                        border: InputBorder.none,
-                        contentPadding: EdgeInsets.zero,
-                        isDense: true,
+                    ? SemanticHelper.button(
+                      testId: SemanticHelper.createTestId(SemanticTypes.button, "event_header_edit_field"),
+                      child: TextField(
+                        controller: _textController,
+                        focusNode: _focusNode,
+                        style: context.textTheme.bodyMedium?.copyWith(fontSize: 14, fontWeight: FontWeight.w700),
+                        decoration: const InputDecoration(
+                          border: InputBorder.none,
+                          contentPadding: EdgeInsets.zero,
+                          isDense: true,
+                        ),
+                        onSubmitted: (_) => _stopEditing(),
+                        onTapOutside: (_) => _stopEditing(),
                       ),
-                      onSubmitted: (_) => _stopEditing(),
-                      onTapOutside: (_) => _stopEditing(),
                     )
-                    : GestureDetector(
-                      onTap: _startEditing,
-                      child: FusionAppText(
-                        text: widget.snapshotName.isNotEmpty ? widget.snapshotName[0].toUpperCase() + widget.snapshotName.substring(1) : widget.snapshotName,
-                        style: context.textTheme.bodyMedium?.copyWith(fontSize: 12, fontWeight: FontWeight.w600),
-                        maxLine: 1,
+                    : SemanticHelper.button(
+                      testId: SemanticHelper.createTestId(SemanticTypes.button, "event_start_editing"),
+                      child: GestureDetector(
+                        onTap: _startEditing,
+                        child: FusionAppText(
+                          text: widget.eventName.isNotEmpty ? widget.eventName[0].toUpperCase() + widget.eventName.substring(1) : widget.eventName,
+                          style: context.textTheme.bodyMedium?.copyWith(fontSize: 14, fontWeight: FontWeight.w700),
+                          maxLine: 1,
+                        ),
                       ),
                     ),
           ),

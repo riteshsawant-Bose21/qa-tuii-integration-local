@@ -34,11 +34,14 @@ class GpioForm extends StatelessWidget {
                       style: context.textTheme.titleMedium?.copyWith(color: Colors.white),
                     ),
                     const Spacer(),
-                    IconButton(
-                      icon: const Icon(Icons.close, color: Colors.white),
-                      onPressed: () {
-                        Navigator.of(context).pop();
-                      },
+                    SemanticHelper.button(
+                      testId: SemanticHelper.createTestId(SemanticTypes.button, "close_gpio_form_button"),
+                      child: IconButton(
+                        icon: const Icon(Icons.close, color: Colors.white),
+                        onPressed: () {
+                          Navigator.of(context).pop();
+                        },
+                      ),
                     ),
                   ],
                 ),
@@ -174,27 +177,30 @@ class GpioForm extends StatelessWidget {
                                       const SizedBox(height: 8),
                                       SizedBox(
                                         width: 400,
-                                        child: DropdownButtonFormField<GpoAction>(
-                                          initialValue: vm.gpoAction,
-                                          items:
-                                              vm.gpoActions
-                                                  .map(
-                                                    (GpoAction e) => DropdownMenuItem<GpoAction>(
-                                                      value: e,
-                                                      child: Text(e.displayName, style: context.textTheme.bodySmall),
-                                                    ),
-                                                  )
-                                                  .toList(),
-                                          decoration: InputDecoration(
-                                            border: OutlineInputBorder(
-                                              borderRadius: BorderRadius.circular(4.0),
+                                        child: SemanticHelper.button(
+                                          testId: SemanticHelper.createTestId(SemanticTypes.button, "gpo_action_dropdown_button"),
+                                          child: DropdownButtonFormField<GpoAction>(
+                                            initialValue: vm.gpoAction,
+                                            items:
+                                                vm.gpoActions
+                                                    .map(
+                                                      (GpoAction e) => DropdownMenuItem<GpoAction>(
+                                                        value: e,
+                                                        child: Text(e.displayName, style: context.textTheme.bodySmall),
+                                                      ),
+                                                    )
+                                                    .toList(),
+                                            decoration: InputDecoration(
+                                              border: OutlineInputBorder(
+                                                borderRadius: BorderRadius.circular(4.0),
+                                              ),
                                             ),
+                                            onChanged: (GpoAction? value) => vm.gpoAction = value,
+                                            validator: (GpoAction? value) {
+                                              if (value == null) return 'Please select a GPO action';
+                                              return null;
+                                            },
                                           ),
-                                          onChanged: (GpoAction? value) => vm.gpoAction = value,
-                                          validator: (GpoAction? value) {
-                                            if (value == null) return 'Please select a GPO action';
-                                            return null;
-                                          },
                                         ),
                                       ),
                                     ],

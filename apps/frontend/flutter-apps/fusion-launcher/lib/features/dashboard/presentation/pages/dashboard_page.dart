@@ -1,22 +1,24 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:fusion_launcher/core/router/routes.dart';
 import 'package:fusion_launcher/core/services/user_profile_manager.dart';
+import 'package:fusion_launcher/core/utils/fusion_utils.dart';
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
 import 'package:fusion_launcher/features/dashboard/presentation/widgets/home_tab_content.dart';
 import 'package:fusion_lib/fusion_lib.dart';
+import 'package:fusion_lib/fusion_theme/fusion_theme_notifier.dart';
 
 import '../../../../core/service_locator.dart';
-import '../widgets/community_tab_content.dart';
 import '../widgets/fusion_side_bar.dart';
 import '../widgets/profile_tab_content.dart';
 import '../widgets/saved_projects_tab.dart';
-import '../widgets/settings_tab_content.dart';
 
 enum DashboardTabs {
   home("Home"),
   profile("Profile"),
-  settings("Settings"),
-  community("Community"),
-  testLibrady("Test Library"),
+  // settings("Settings"),
+  // community("Community"),
+  // testLibrady("Test Library"),
   savedProjects("Saved Projects");
 
   final String name;
@@ -81,23 +83,44 @@ class _HomePageState extends State<HomePage> {
                 //          Tab Content
                 // ==================================
                 Expanded(
-                  child: ValueListenableBuilder<DashboardTabs>(
-                    valueListenable: _currentTabNotifier,
-                    builder: (BuildContext context, DashboardTabs currentTab, Widget? child) {
-                      switch (currentTab) {
-                        case DashboardTabs.home:
-                          return const HomeTabContent();
-                        case DashboardTabs.profile:
-                          return const ProfileTabContent();
-                        case DashboardTabs.settings:
-                          return const SettingsTabContent();
-                        case DashboardTabs.community:
-                          return const CommunityTabContent();
-                        case DashboardTabs.savedProjects:
-                          return const SavedProjectsTabContent();
-                        case DashboardTabs.testLibrady:
-                          return const SizedBox.shrink();
+                  child: BlocConsumer<ProjectViewModel, ProjectViewModelState>(
+                    listener: (BuildContext context, ProjectViewModelState state) {
+                      if (state is ProjectLoaded && context.mounted) {
+                        if (state.currentProject != null) {
+                          FusionThemeController.setThemeMode(ThemeMode.light);
+
+                          FusionUiUtils.hideLoader(context);
+                          Navigator.pushNamed(context, Routes.projectPage).then((_) async {
+                            FusionThemeController.setThemeMode(ThemeMode.dark);
+                            await serviceLocator<ProjectViewModel>().loadAllLocalProjects();
+                          });
+                        }
                       }
+                      if (state is OpenProjectError && context.mounted) {
+                        FusionUiUtils.hideLoader(context);
+                        FusionToast.show(context, message: state.message);
+                      }
+                    },
+                    builder: (BuildContext context, ProjectViewModelState state) {
+                      return ValueListenableBuilder<DashboardTabs>(
+                        valueListenable: _currentTabNotifier,
+                        builder: (BuildContext context, DashboardTabs currentTab, Widget? child) {
+                          switch (currentTab) {
+                            case DashboardTabs.home:
+                              return const HomeTabContent();
+                            case DashboardTabs.profile:
+                              return const ProfileTabContent();
+                            // case DashboardTabs.settings:
+                            //   return const SettingsTabContent();
+                            // case DashboardTabs.community:
+                            //   return const CommunityTabContent();
+                            case DashboardTabs.savedProjects:
+                              return const SavedProjectsTabContent();
+                            // case DashboardTabs.testLibrady:
+                            //   return const SizedBox.shrink();
+                          }
+                        },
+                      );
                     },
                   ),
                 ),

@@ -11,7 +11,7 @@ class FloorCanvasPainter extends CustomPainter {
   final Offset panOffset;
   final List<Offset> current;
   final Offset? previewPoint;
-  final int? highlightedIndex;
+  final String? highlightedAreaId;
   final String? selectedHardwareComponentId;
   final bool showSpl;
   final bool floorPlanImageSelected;
@@ -63,7 +63,7 @@ class FloorCanvasPainter extends CustomPainter {
     required this.splMin,
     required this.isAcousticsMode,
     this.previewPoint,
-    this.highlightedIndex,
+    this.highlightedAreaId,
     this.selectedHardwareComponentId,
     required this.splPanelData,
     required this.listeningAreaToZoneMap,
@@ -368,7 +368,7 @@ class FloorCanvasPainter extends CustomPainter {
           zoneColor = defaultListeningAreaColor;
         }
       } else {
-        selected = i == highlightedIndex;
+        selected = listeningAreas[i].id == highlightedAreaId;
       }
 
       final ui.Paint fill = Paint()
@@ -407,16 +407,18 @@ class FloorCanvasPainter extends CustomPainter {
       }
 
       final anchor = _leftMostVertex(poly, zoomScale);
-      String label = listeningAreas[i].name;
+      String label = "";
 
       // Add zone/subzone information to the label
+      if (parentZone != null) {
+        // Listening area belongs directly to a zone
+        label = '${parentZone.name}/';
+      }
       if (parentSubZone != null) {
         // Listening area belongs to a subzone
-        label = '$label (${parentSubZone.name})';
-      } else if (parentZone != null) {
-        // Listening area belongs directly to a zone
-        label = '$label (${parentZone.name})';
+        label += '${parentSubZone.name}/';
       }
+      label += listeningAreas[i].name;
 
       _drawBadgeAtLeftMostVertexAuto(
         canvas: canvas,
@@ -474,7 +476,17 @@ class FloorCanvasPainter extends CustomPainter {
     final double zs = (zoomScale <= 0.35) ? 0.35 : zoomScale;
 
     // UI sizing (zoom-invariant)
-    final double fontSize = 11.0 / zs;
+    late double fontSize;
+    if (zoomScale <= 0.2) {
+      fontSize = 24.0 / zs;
+    } else if (zoomScale <= 0.4) {
+      fontSize = 24.0 / zs;
+    } else if (zoomScale <= 0.6) {
+      fontSize = 20.0 / zs;
+    } else {
+      fontSize = 16.0 / zs;
+    }
+
     final double padH = 8.0 / zs;
     final double padV = 4.0 / zs;
     final double radius = 4.0 / zs;
@@ -483,7 +495,7 @@ class FloorCanvasPainter extends CustomPainter {
     final Rect bounds = path.getBounds();
 
     // Width capped by space to the RIGHT of the left-most vertex
-    final double maxBadgeWidth = (bounds.right - anchor.dx - 2 * margin).clamp(40.0 / zs, 220.0 / zs);
+    final double maxBadgeWidth = (bounds.right - anchor.dx - 2 * margin).clamp(40.0 / zs, 350.0 / zs);
 
     final TextPainter tp = TextPainter(
       text: TextSpan(
@@ -562,49 +574,52 @@ class FloorCanvasPainter extends CustomPainter {
 
       final Rect dst = Rect.fromCenter(
         center: comp.pos!,
-        width: comp is SpeakerModel ? iconSize / 1.5 : iconSize,
-        height: comp is SpeakerModel ? iconSize / 1.5 : iconSize,
+        width: comp is SpeakerModel
+            ? iconSize / 1.5
+            : comp is Source
+            ? iconSize * 2
+            : iconSize,
+        height: comp is SpeakerModel
+            ? iconSize / 1.5
+            : comp is Source
+            ? iconSize * 2
+            : iconSize,
       );
 
       if (comp is Speaker) {
-        final double radius = (dst.width / 2) * 0.5;
-        final SpeakerModel? speakerModel = SpeakerCatalog.findByModel(comp.speakerSKU);
+        final double radius = (dst.width / 2) * 0.8;
 
-        if (speakerModel != null) {
-          final Paint fillPaint = Paint()
-            ..color = Colors.black
-            ..style = PaintingStyle.fill;
+        final Paint fillPaint = Paint()
+          ..color = Colors.black
+          ..style = PaintingStyle.fill;
 
-          final Paint outlinePaint = Paint()
-            ..color = Colors.black
-            ..style = PaintingStyle.stroke
-            ..strokeWidth = 1.5 / zoomScale;
+        final Paint outlinePaint = Paint()
+          ..color = Colors.black
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 1.5 / zoomScale;
 
+        if (comp.mountingType == MountingType.surface) {
           // --- SURFACE-MOUNTED (Rectangle) ---
-          if (speakerModel.mountingType == 'surface') {
-            final Rect rect = Rect.fromCenter(
-              center: comp.pos!,
-              width: radius * 1.5,
-              height: radius * 2,
-            );
-            canvas.drawRect(rect, fillPaint);
-            canvas.drawRect(rect, outlinePaint);
-          }
+          final Rect rect = Rect.fromCenter(
+            center: comp.pos!,
+            width: radius * 1.5,
+            height: radius * 2,
+          );
+          canvas.drawRect(rect, fillPaint);
+          canvas.drawRect(rect, outlinePaint);
+        } else if (comp.mountingType == MountingType.pendant) {
           // --- PENDANT (Triangle) ---
-          else if (speakerModel.mountingType == 'pendant') {
-            final Path path = Path()
-              ..moveTo(comp.pos!.dx, comp.pos!.dy - radius)
-              ..lineTo(comp.pos!.dx - radius * 0.866, comp.pos!.dy + radius * 0.75)
-              ..lineTo(comp.pos!.dx + radius * 0.866, comp.pos!.dy + radius * 0.75)
-              ..close();
-            canvas.drawPath(path, fillPaint);
-            canvas.drawPath(path, outlinePaint);
-          }
+          final Path path = Path()
+            ..moveTo(comp.pos!.dx, comp.pos!.dy - radius)
+            ..lineTo(comp.pos!.dx - radius * 0.866, comp.pos!.dy + radius * 0.75)
+            ..lineTo(comp.pos!.dx + radius * 0.866, comp.pos!.dy + radius * 0.75)
+            ..close();
+          canvas.drawPath(path, fillPaint);
+          canvas.drawPath(path, outlinePaint);
+        } else {
           // --- DEFAULT (Circle) ---
-          else {
-            canvas.drawCircle(comp.pos!, radius, fillPaint);
-            canvas.drawCircle(comp.pos!, radius, outlinePaint);
-          }
+          canvas.drawCircle(comp.pos!, radius, fillPaint);
+          canvas.drawCircle(comp.pos!, radius, outlinePaint);
         }
       } else {
         if (!showSpl) {
@@ -612,27 +627,29 @@ class FloorCanvasPainter extends CustomPainter {
           if (img != null) {
             // draw the loaded image, scaling it into dst
             final ui.Rect src = Rect.fromLTWH(0, 0, img.width.toDouble(), img.height.toDouble());
+            dst.intersect(Rect.fromLTWH(0, 0, double.infinity, double.infinity));
             canvas.drawImageRect(img, src, dst, Paint());
           } else {
             // fallback: draw a grey box until the image is ready
-            canvas.drawRect(
-              dst,
-              Paint()
-                ..color = Colors.grey.shade700.withValues(alpha: 0.5)
-                ..style = PaintingStyle.fill,
-            );
+            final Paint paint = Paint();
+            paint.color = Colors.grey.shade700.withValues(alpha: 0.5);
+            paint.style = PaintingStyle.fill;
+            canvas.drawRect(dst, paint);
           }
         }
       }
 
       // draw selection border - in acoustics mode, only show selection for speakers
       if (comp.id == selectedHardwareComponentId && (!isAcousticsMode || comp is Speaker)) {
+        final Paint paint = Paint();
+        paint.color = Colors.pinkAccent;
+        paint.style = PaintingStyle.stroke;
+        paint.strokeWidth = 2 / zoomScale;
         canvas.drawRect(
-          Rect.fromCenter(center: comp.pos!, width: gridSize, height: gridSize),
-          Paint()
-            ..color = Colors.pinkAccent
-            ..style = PaintingStyle.stroke
-            ..strokeWidth = 2 / zoomScale,
+          comp is Source
+              ? Rect.fromCenter(center: comp.pos!, width: gridSize * 2, height: gridSize * 2)
+              : Rect.fromCenter(center: comp.pos!, width: gridSize, height: gridSize),
+          paint,
         );
       }
     }
@@ -758,7 +775,7 @@ class FloorCanvasPainter extends CustomPainter {
         old.subZones != subZones ||
         old.current != current ||
         old.previewPoint != previewPoint ||
-        old.highlightedIndex != highlightedIndex ||
+        old.highlightedAreaId != highlightedAreaId ||
         old.floorPlanEntity != floorPlanEntity ||
         old.floorPlanImageSelected != floorPlanImageSelected ||
         old.showSpl != showSpl ||

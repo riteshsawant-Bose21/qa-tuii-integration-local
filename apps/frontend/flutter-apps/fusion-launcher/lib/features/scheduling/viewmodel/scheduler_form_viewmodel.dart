@@ -93,10 +93,10 @@ class SchedulerFormViewModel extends ChangeNotifier {
     if (!key.currentState!.validate()) {
       return false;
     }
-
-    if (initial != null) {
+    final DateTime? end = recurrenceType == RecurrenceType.none ? startDate! : endDate;
+    if (initial?.id != null) {
       viewModel.updateSchedule(
-        initial.copyWith(
+        initial!.copyWith(
           name: name.text,
           colorHex: color!,
           startDate: startDate!,
@@ -107,35 +107,35 @@ class SchedulerFormViewModel extends ChangeNotifier {
             startTime.hour,
             startTime.minute,
           ),
-          endDate: endDate!,
+          endDate: end,
           recurrence: recurrenceType,
           weeklyDays: recurrenceDays.map((RecurrenceDay e) => e.value).toList(),
         ),
       );
-      return true;
-    }
-    viewModel.addSchedule(
-      ScheduleConfig(
-        id: "SCHEDULE_${FusionUtils.shortUUID()}",
-        name: name.text,
-        colorHex: color!,
-        startDate: startDate!,
-        time: DateTime(
-          startDate!.year,
-          startDate!.month,
-          startDate!.day,
-          startTime.hour,
-          startTime.minute,
+    } else {
+      viewModel.addSchedule(
+        ScheduleConfig(
+          id: "SCHEDULE_${FusionUtils.shortUUID()}",
+          name: name.text,
+          colorHex: color!,
+          startDate: startDate!,
+          time: DateTime(
+            startDate!.year,
+            startDate!.month,
+            startDate!.day,
+            startTime.hour,
+            startTime.minute,
+          ),
+          endDate: end,
+          recurrence: recurrenceType,
+          weeklyDays: recurrenceDays.map((RecurrenceDay e) => e.value).toList(),
         ),
-        endDate: endDate!,
-        recurrence: recurrenceType,
-        weeklyDays: recurrenceDays.map((RecurrenceDay e) => e.value).toList(),
-      ),
-    );
+      );
+    }
     return true;
   }
 
   bool get canEnableSubmit {
-    return name.text.isNotEmpty && color != null && startDate != null && endDate != null;
+    return name.text.isNotEmpty && color != null && startDate != null; // && endDate != null;
   }
 }

@@ -106,4 +106,12 @@ extension GpioViewModel on ProjectViewModel {
       return 0;
     }
   }
+
+  void reOrderGpioConfigs({required String gpioIdToMove, required String gpioAtNewIndexId}) {
+    try {
+      projectManager.reOrderGpio(gpioIdToMove: gpioIdToMove, gpioAtNewIndexId: gpioAtNewIndexId);
+    } catch (e) {
+      throwError("Reorder GPIO Configs Error  ${e.toString()}");
+    }
+  }
 }

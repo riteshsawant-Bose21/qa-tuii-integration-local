@@ -46,13 +46,16 @@ class FloorCanvas extends StatefulWidget {
   final Function onSelectedFloorPlanIdChanged;
   final Function(HardwareComponent, String? listeningAreaId, String? floorId) moveHardware;
   final Function(ListeningArea newArea, List<HardwareComponent>? hardwaresInsideArea) onAddListeningArea;
-  final Function(Offset speakerPosition, String? listeningAreaId) addNewHardwareComponent;
+  final Function(Offset speakerPosition) addNewHardwareComponent;
   final Map<String, String> listeningAreaToZoneMap;
   final Map<String, String> subZoneToZoneMap;
   final Map<String, String> listeningAreaToSubZoneMap;
+  final bool isInSpeakerPlacementMode;
 
   // Mode state
   final bool isAcousticsMode;
+
+  final Function(PointerDownEvent e)? onRightClick;
 
   const FloorCanvas({
     super.key,
@@ -87,6 +90,8 @@ class FloorCanvas extends StatefulWidget {
     required this.isAcousticsMode,
     this.selectedHardwareId,
     this.selectedListeningAreaId,
+    required this.onRightClick,
+    required this.isInSpeakerPlacementMode,
   });
 
   @override
@@ -113,7 +118,7 @@ class FloorCanvasState extends State<FloorCanvas> with SingleTickerProviderState
   int? _dragVertexIndex;
   Offset? _dragStartWorld;
   List<Offset>? _dragOriginal;
-  int? _highlightIndex;
+  String? highlightedAreaId;
 
   FloorPlanModel? _tempFloorPlan;
 
@@ -181,7 +186,7 @@ class FloorCanvasState extends State<FloorCanvas> with SingleTickerProviderState
         setState(() {
           _isDrawing = !_isDrawing;
           _current.clear();
-          _highlightIndex = null;
+          highlightedAreaId = null;
           _selectedHardwareComponentId = null;
         });
       },
@@ -201,7 +206,7 @@ class FloorCanvasState extends State<FloorCanvas> with SingleTickerProviderState
         });
         // }
       },
-      setHardwareComponentListeningAreaId: (HardwareComponent hardwareComponent) => _updateHardwareComponentListeningAreaId(hardwareComponent),
+      // setHardwareComponentListeningAreaId: (HardwareComponent hardwareComponent) => _updateHardwareComponentListeningAreaId(hardwareComponent),
     );
   }
 
@@ -255,6 +260,7 @@ class FloorCanvasState extends State<FloorCanvas> with SingleTickerProviderState
                 onPointerMove: _handleMove,
                 onPointerUp: _handleUp,
                 onPointerHover: _handleHover,
+
                 child: AnimatedBuilder(
                   animation: animationController,
                   builder: (context, asyncSnapshot) {
@@ -265,12 +271,12 @@ class FloorCanvasState extends State<FloorCanvas> with SingleTickerProviderState
                         gridSize: widget.gridSize,
                         zoomScale: _zoomScale,
                         panOffset: _panOffset,
-                        listeningAreas: widget.listeningAreas,
+                        listeningAreas: widget.listeningAreas.where((ListeningArea area) => area.isDrawn).toList(),
                         zones: widget.zones,
                         subZones: widget.subZones,
                         current: _current,
                         previewPoint: _isDrawing && _current.isNotEmpty ? _hoverWorldPos : null,
-                        highlightedIndex: _highlightIndex,
+                        highlightedAreaId: highlightedAreaId,
                         floorPlanImageSelected: _isImageSelected || _isImageVertexDrag,
                         hardwareComponents: widget.hardwareComponents,
                         selectedHardwareComponentId: _selectedHardwareComponentId,
@@ -337,14 +343,10 @@ class FloorCanvasState extends State<FloorCanvas> with SingleTickerProviderState
   }
 
   Future<void> _loadPlanImage() async {
-    print("Load Plan Image method called @#@#@@#@#@#@#");
     final String imagePath = widget.floorPlanEntity.imagePath;
     if (imagePath.isNotEmpty) {
-      print("Loading image *&*&*&*&*&*&*& $imagePath");
       final ui.Image img = await fusionLibLocator<ImageLoaderService>().loadImage(imagePath);
-      print("Image Loaded **********");
       if (!mounted) return;
-      print("Updating the state ####################");
       setState(() {
         _floorPlanImage = img;
         _fitToViewport();
@@ -374,14 +376,14 @@ class FloorCanvasState extends State<FloorCanvas> with SingleTickerProviderState
       _isListeningAreaDragging = false;
       _dragIndex = null;
       _dragVertexIndex = null;
-      _highlightIndex = null;
+      highlightedAreaId = null;
     });
   }
 
   void _stopListeningAreaSelection() {
     widget.controller.cancelListeningAreaSelection();
     setState(() {
-      _highlightIndex = null;
+      highlightedAreaId = null;
     });
   }
 
@@ -441,16 +443,22 @@ class FloorCanvasState extends State<FloorCanvas> with SingleTickerProviderState
   }
 
   void _handleDown(PointerDownEvent e) {
+    if (e.kind == PointerDeviceKind.mouse && e.buttons == kSecondaryMouseButton) {
+      widget.onRightClick?.call(e);
+      return;
+    }
+
     if (_isScaling) return;
     if (e.kind != PointerDeviceKind.mouse && e.kind != PointerDeviceKind.touch) {
       return;
     }
-
     final Offset worldPos = (e.localPosition - _panOffset) / _zoomScale;
-
-    //just calls add new hardware component
-    final ListeningArea? hit = _findListeningAreaAt(worldPos);
-    widget.addNewHardwareComponent(worldPos, hit?.id);
+    if (widget.isInSpeakerPlacementMode) {
+      //To check what is under the cursor
+      // final ListeningArea? hit = _findListeningAreaAt(worldPos);
+      widget.addNewHardwareComponent(worldPos);
+      return;
+    }
 
     // PAN
     if (e.buttons == kMiddleMouseButton) {
@@ -474,7 +482,7 @@ class FloorCanvasState extends State<FloorCanvas> with SingleTickerProviderState
         }
 
         // simplest circular hit‐test:
-        final double hitRadius = widget.gridSize * 0.3;
+        final double hitRadius = sp is Source ? widget.gridSize : widget.gridSize * 0.3;
         if ((worldPos - sp.pos!).distance < hitRadius) {
           _stopListeningAreaSelection();
           widget.onSelectedHardwareComponentIdChanged(sp.id);
@@ -497,19 +505,34 @@ class FloorCanvasState extends State<FloorCanvas> with SingleTickerProviderState
       if (e.buttons == kPrimaryMouseButton) {
         if (_current.isNotEmpty && (worldPos - _current.first).distance < 10.0 / _zoomScale) {
           if (_current.length >= 3) {
-            final ListeningArea newArea = ListeningArea(
-              name: "Area ${widget.listeningAreas.length + 1}",
-              vertices: List<Offset>.of(_current),
-            );
-            final List<HardwareComponent> hardwareForArea = _getHardwareComponentsInListeningAreas(newArea);
-            widget.onAddListeningArea(newArea, hardwareForArea);
+            if (widget.selectedListeningAreaId != null &&
+                widget.listeningAreas.any((area) => (area.id == widget.selectedListeningAreaId && area.vertices.isEmpty))) {
+              // Update existing listening area
+              final ListeningArea areaToUpdate = widget.listeningAreas.firstWhere((area) => area.id == widget.selectedListeningAreaId);
+              final ListeningArea updatedArea = areaToUpdate.copyWith(
+                vertices: List<Offset>.of(_current),
+                isDrawn: true,
+              );
+              widget.onUpdateListeningArea(updatedArea);
+            } else {
+              // Add new listening area
+              final ListeningArea newArea = ListeningArea(
+                name: "Area ${widget.listeningAreas.length + 1}",
+                vertices: List<Offset>.of(_current),
+                isDrawn: true,
+              );
+              // final List<HardwareComponent> hardwareForArea = _getHardwareComponentsInListeningAreas(newArea);
+              widget.onAddListeningArea(newArea, []);
+            }
           }
 
           setState(() {
             _current.clear();
             _isDrawing = false;
             widget.controller.isDrawing.value = _isDrawing;
-            _highlightIndex = widget.listeningAreas.length - 1;
+            if ( widget.listeningAreas.isNotEmpty) {
+            highlightedAreaId = widget.listeningAreas.last.id;
+            }
           });
         } else {
           setState(() => _current.add(worldPos));
@@ -556,7 +579,7 @@ class FloorCanvasState extends State<FloorCanvas> with SingleTickerProviderState
 
             // Update highlight for visual feedback
             setState(() {
-              _highlightIndex = i;
+              highlightedAreaId = area.id;
             });
             return;
           }
@@ -580,7 +603,7 @@ class FloorCanvasState extends State<FloorCanvas> with SingleTickerProviderState
               _isListeningAreaVertexDragging = true;
               _dragIndex = i;
               _dragVertexIndex = j;
-              _highlightIndex = i;
+              highlightedAreaId = widget.listeningAreas[i].id;
             });
             return;
           }
@@ -589,7 +612,7 @@ class FloorCanvasState extends State<FloorCanvas> with SingleTickerProviderState
     }
 
     // POLY DRAG - only allow in acoustics mode
-    if (e.buttons == kPrimaryMouseButton && widget.isAcousticsMode) {
+    if (e.buttons == kPrimaryMouseButton) {
       for (int i = widget.listeningAreas.length - 1; i >= 0; i--) {
         final List<ui.Offset> poly = widget.listeningAreas[i].vertices;
         final ui.Path path = Path()..addPolygon(poly, true);
@@ -600,7 +623,7 @@ class FloorCanvasState extends State<FloorCanvas> with SingleTickerProviderState
             _dragIndex = i;
             _dragStartWorld = worldPos;
             _dragOriginal = List<Offset>.of(poly);
-            _highlightIndex = i;
+            highlightedAreaId = widget.listeningAreas[i].id;
           });
           return;
         }
@@ -658,7 +681,7 @@ class FloorCanvasState extends State<FloorCanvas> with SingleTickerProviderState
         if (path.contains(worldPos)) {
           widget.onSelectedListeningAreaIdChanged(widget.listeningAreas[i].id);
           setState(() {
-            _highlightIndex = i;
+            highlightedAreaId = widget.listeningAreas[i].id;
           });
           return;
         }
@@ -807,13 +830,13 @@ class FloorCanvasState extends State<FloorCanvas> with SingleTickerProviderState
       });
     }
     if (_isHardwareComponentDragging) {
-      print("is dragging up $_isHardwareComponentDragging is true, calling _updateHardwareComponentListeningAreaId ");
+      // print("is dragging up $_isHardwareComponentDragging is true, calling _updateHardwareComponentListeningAreaId ");
       final HardwareComponent hardwareComponent = widget.hardwareComponents.firstWhere(
         (HardwareComponent sp) => sp.id == _selectedHardwareComponentId,
       );
       setState(() {
         _isHardwareComponentDragging = false;
-        _updateHardwareComponentListeningAreaId(hardwareComponent);
+        // _updateHardwareComponentListeningAreaId(hardwareComponent);
         widget.onComponentTransformed(hardwareComponent);
       });
     }
@@ -893,31 +916,31 @@ class FloorCanvasState extends State<FloorCanvas> with SingleTickerProviderState
     return worldCenter;
   }
 
-  void _updateHardwareComponentListeningAreaId(HardwareComponent hardwareComponent) {
-    // Find the listening area at the component’s position (if any)
-    final ListeningArea? hit = _findListeningAreaAt(hardwareComponent.pos!);
+  // void _updateHardwareComponentListeningAreaId(HardwareComponent hardwareComponent) {
+  //   // Find the listening area at the component’s position (if any)
+  //   final ListeningArea? hit = _findListeningAreaAt(hardwareComponent.pos!);
 
-    // Determine the new listeningAreaId (use empty string when none)
-    final String newListeningAreaId = hit?.id ?? '';
+  //   // Determine the new listeningAreaId (use empty string when none)
+  //   final String newListeningAreaId = hit?.id ?? '';
 
-    final HardwareComponent originalHardware = originalHardwareList.firstWhere(
-      (comp) => comp.id == hardwareComponent.id,
-    );
+  //   final HardwareComponent originalHardware = originalHardwareList.firstWhere(
+  //     (comp) => comp.id == hardwareComponent.id,
+  //   );
 
-    print(
-      "Original hardware listeningAreaId: ${originalHardware.locationEntity.listeningAreaId}, New listeningAreaId: $newListeningAreaId, pos: ${hardwareComponent.pos} vs original pos: ${originalHardware.pos}",
-    );
-    if (newListeningAreaId != originalHardware.locationEntity.listeningAreaId || hardwareComponent.pos != originalHardware.pos) {
-      print("Calling moveHardware with listeningAreaId: $newListeningAreaId , && pos: ${hardwareComponent.pos}");
+  //   print(
+  //     "Original hardware listeningAreaId: ${originalHardware.locationEntity.listeningAreaId}, New listeningAreaId: $newListeningAreaId, pos: ${hardwareComponent.pos} vs original pos: ${originalHardware.pos}",
+  //   );
+  //   if (newListeningAreaId != originalHardware.locationEntity.listeningAreaId || hardwareComponent.pos != originalHardware.pos) {
+  //     print("Calling moveHardware with listeningAreaId: $newListeningAreaId , && pos: ${hardwareComponent.pos}");
 
-      //new logic
-      widget.moveHardware(
-        hardwareComponent,
-        newListeningAreaId.isNotEmpty ? newListeningAreaId : null,
-        widget.floor.id,
-      );
-    }
-  }
+  //     //new logic
+  //     widget.moveHardware(
+  //       hardwareComponent,
+  //       newListeningAreaId.isNotEmpty ? newListeningAreaId : null,
+  //       widget.floor.id,
+  //     );
+  //   }
+  // }
 
   ListeningArea? _findListeningAreaAt(Offset worldPos) {
     for (final ListeningArea area in widget.listeningAreas) {
@@ -953,17 +976,21 @@ class FloorCanvasState extends State<FloorCanvas> with SingleTickerProviderState
 
   /// Update the internal highlight index based on the external selected listening area ID
   void _updateHighlightIndexFromSelectedListeningArea() {
+    print("Updating highlight index from selected listening area id: ${widget.selectedListeningAreaId}");
     if (widget.selectedListeningAreaId != null) {
       // Find the index of the selected listening area
       final int index = widget.listeningAreas.indexWhere(
         (ListeningArea area) => area.id == widget.selectedListeningAreaId,
       );
       if (index != -1) {
-        _highlightIndex = index;
+        highlightedAreaId = widget.selectedListeningAreaId;
+      } else {
+        // Selected listening area ID not found, clear highlight
+        highlightedAreaId = null;
       }
     } else {
       // No listening area selected externally, clear highlight
-      _highlightIndex = null;
+      highlightedAreaId = null;
     }
   }
 }

@@ -6,8 +6,11 @@ enum MixSceneType {
 }
 
 enum SignalType {
-  mono,
-  stereo,
+  mono("Mono"),
+  stereo("Stereo");
+
+  const SignalType(this.displayName);
+  final String displayName;
 }
 
 // ============================================================================

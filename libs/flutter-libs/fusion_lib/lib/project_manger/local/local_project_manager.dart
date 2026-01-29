@@ -62,11 +62,15 @@ class LocalProjectManager {
         final File jsonFile = File('${folder.path}/$kProjectDataFileName');
         if (!await jsonFile.exists()) continue;
 
-        final String jsonStr = await jsonFile.readAsString();
-        final Map<String, dynamic> projectData = jsonDecode(jsonStr);
-        ProjectData project = ProjectData.fromJson(projectData);
-        if (!project.isDeleted) {
-          allProjects.add(project);
+        try {
+          final String jsonStr = await jsonFile.readAsString();
+          final Map<String, dynamic> projectData = jsonDecode(jsonStr);
+          ProjectData project = ProjectData.fromJson(projectData);
+          if (!project.isDeleted) {
+            allProjects.add(project);
+          }
+        } catch (e) {
+          FusionLogger.log(tag: LogTag.project, message: "Error reading project data from folder ${folder.path}: $e", logLevel: LogLevel.error);
         }
       }
 

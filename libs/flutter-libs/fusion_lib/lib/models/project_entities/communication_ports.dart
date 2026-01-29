@@ -14,6 +14,8 @@ enum PortPosition {
 enum PortType {
   analogInput('Input'),
   analogOutput('Output'),
+  aes67Input('Input'),
+  aes67Output('Output'),
   ethernet('Ethernet'),
   networkSwitchIn('Ethernet'),
   networkSwitchOut('Ethernet'),
@@ -30,7 +32,8 @@ enum PortType {
   wifiOut('Wifi'),
   hdmiIn('Hdmi'),
   hdmiOut('Hdmi'),
-  audioJack('Audio Jack'),
+  audioJackInput('Audio Jack'),
+  audioJackOutput('Audio Jack'),
   amplifierInput('Input'),
   amplifierOutput('Output'),
   dspAnalogInput('Input'),
@@ -40,9 +43,20 @@ enum PortType {
   controllerOutput('Output'),
   sourceData('Source Data'),
   speakerData('Speaker Data'),
+  speakerInput('Input'),
+  speakerOutput('Output'),
   digitalInput('Input'),
   digitalOutput('Output'),
-  circuitInput('Input');
+  circuitInput('Input'),
+
+  gpioInput('Input'),
+  gpioOutput('Output'),
+
+  fusionConnectInput('Input'),
+  fusionConnectOutput('Output'),
+
+  xlrInput('Input'),
+  xlrOutput('Output');
 
   const PortType(this.description);
 

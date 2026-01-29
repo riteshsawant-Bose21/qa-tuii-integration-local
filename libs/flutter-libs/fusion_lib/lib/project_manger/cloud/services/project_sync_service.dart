@@ -375,6 +375,8 @@ class ProjectSyncService {
               data: CloudSyncStatus.urlExpired,
             );
           }
+        } else {
+          return ResponseCallback.failure(downloadResult.message, data: CloudSyncStatus.failed);
         }
       }
 

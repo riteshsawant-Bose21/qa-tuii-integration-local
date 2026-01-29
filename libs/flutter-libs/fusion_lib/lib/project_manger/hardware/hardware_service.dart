@@ -16,11 +16,50 @@ extension HardwareService on ProjectService {
     }
 
     if (loc.listeningAreaId != null) {
+      if (hw is Speaker) {
+        List<Speaker> existingHardwareInLa = getHardwareForListeningArea(loc.listeningAreaId!).whereType<Speaker>().toList();
+        if (existingHardwareInLa.isNotEmpty) {
+          String skuOfExistingHardware = existingHardwareInLa.first.speakerSKU;
+
+          bool isSameSku = hw.speakerSKU == skuOfExistingHardware;
+
+          if (!isSameSku) {
+            FusionLogger.log(
+              tag: LogTag.project,
+              message:
+                  'Warning: Adding speaker with SKU ${hw.speakerSKU} to listening area ${loc.listeningAreaId} which already has speakers with SKU $skuOfExistingHardware. This may lead to configuration issues.',
+            );
+
+            migrateAllSpeakersTo(speaker: hw, targetListeningAreaId: loc.listeningAreaId!);
+          }
+        }
+      }
+
       relationships.link(RelationshipType.hardwareLocation, loc.listeningAreaId!, hw.id);
     }
 
     if (addToCircuit) {
       checkAndAddHardwareForCircuit(hw.id, hw.addedFromBuildingPage);
+    }
+  }
+
+  void migrateAllSpeakersTo({required Speaker speaker, required String targetListeningAreaId}) {
+    final List<Speaker> speakersToMigrate = getHardwareForListeningArea(targetListeningAreaId).whereType<Speaker>().toList();
+
+    for (final spk in speakersToMigrate) {
+      final updatedSpeaker = spk.migrateSpeakerTo(
+        speaker: speaker,
+      );
+
+      CircuitModel? circuitForHw = getCircuitForHardware(spk.id);
+      if (circuitForHw != null) {
+        //update circuit speakerSKU if different
+        if (circuitForHw.speakerSKU != updatedSpeaker.speakerSKU) {
+          final updatedCircuit = circuitForHw.copyWith(speakerSKU: updatedSpeaker.speakerSKU, name: updatedSpeaker.hardwareName);
+          updateCircuit(updatedCircuit);
+        }
+      }
+      updateHardware(updatedSpeaker);
     }
   }
 
@@ -161,6 +200,15 @@ extension HardwareService on ProjectService {
 
       //remove priority source data for this source
       removePrioritySourceDataForSource(hardwareId);
+
+      //remove linked scene actions
+      final sceneActionIds = relationships.getParents(RelationshipType.actionValueMapping, hardwareId);
+      final sceneActionIdsCopy = List<String>.from(sceneActionIds);
+      for (final actionId in sceneActionIdsCopy) {
+        removeSceneAction(actionId);
+      }
+
+      checkAndRemoveSourceFromZonePrioritySources(sourceId: hardwareId);
     }
 
     final wireConnections = relationships.getChildren(RelationshipType.wireConnection, hardwareId);
@@ -292,6 +340,16 @@ extension HardwareService on ProjectService {
 
   List<HardwareComponent> getAllHardwareInFloorWithoutPosition({required String floorId}) {
     final allHardware = getAllHardwareInFloor(floorId);
+    return allHardware.where((hw) => hw.pos == null).toList();
+  }
+
+  List<HardwareComponent> getAllHardwareInListeningAreaWithPosition({required String listeningAreaId}) {
+    final allHardware = getHardwareForListeningArea(listeningAreaId);
+    return allHardware.where((hw) => hw.pos != null).toList();
+  }
+
+  List<HardwareComponent> getAllHardwareInListeningAreaWithoutPosition({required String listeningAreaId}) {
+    final allHardware = getHardwareForListeningArea(listeningAreaId);
     return allHardware.where((hw) => hw.pos == null).toList();
   }
 

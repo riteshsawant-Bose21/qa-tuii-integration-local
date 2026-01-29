@@ -4,6 +4,7 @@ import 'package:fusion_launcher/features/configuration/presentation/viewmodel/pr
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/models/project_entities/controller.dart';
 import 'package:fusion_lib/models/project_entities/endpoints.dart';
+import 'package:fusion_lib/product_data/models/speaker_product.dart';
 
 extension HardwareViewModel on ProjectViewModel {
   //get Hardware by id
@@ -94,6 +95,26 @@ extension HardwareViewModel on ProjectViewModel {
     }
   }
 
+  void migrateAllSpeakersTo({required Speaker speaker, required String targetListeningAreaId, bool autoSave = true}) {
+    try {
+      if (autoSave) {
+        recordSnapshot();
+      }
+      projectManager.migrateAllSpeakersTo(speaker: speaker, targetListeningAreaId: targetListeningAreaId);
+
+      if (autoSave) {
+        saveProject();
+      }
+      updateProject();
+    } catch (e) {
+      FusionLogger.log(
+        tag: LogTag.project,
+        message: "Failed to migrate all speakers to: $e",
+      );
+      throwError("Failed to migrate all speakers to: $e");
+    }
+  }
+
   void removeHardware({required String hardwareId, bool autoSave = true}) {
     try {
       if (autoSave) {
@@ -175,6 +196,64 @@ extension HardwareViewModel on ProjectViewModel {
         message: "Failed to get hardware without position for floor: $e",
       );
       return <HardwareComponent>[];
+    }
+  }
+
+  List<HardwareComponent> getAllPlacedHardwareInListeningArea({
+    required String listeningAreaId,
+  }) {
+    try {
+      return projectManager.getAllHardwareInListeningAreaWithPosition(listeningAreaId);
+    } catch (e) {
+      FusionLogger.log(
+        tag: LogTag.project,
+        message: "Failed to get placed hardware for listening area: $e",
+      );
+      return <HardwareComponent>[];
+    }
+  }
+
+  List<HardwareComponent> getAllNonPlacedHardwareInListeningArea({
+    required String listeningAreaId,
+  }) {
+    try {
+      return projectManager.getAllHardwareInListeningAreaWithoutPosition(listeningAreaId);
+    } catch (e) {
+      FusionLogger.log(
+        tag: LogTag.project,
+        message: "Failed to get unplaced hardware for listening area: $e",
+      );
+      return <HardwareComponent>[];
+    }
+  }
+
+  List<Speaker> getNonPlacedSpeakersForCurrentListeningArea() {
+    try {
+      final String? listeningAreaId = currentSelectedListeningAreaId;
+      if (listeningAreaId == null) throw Exception("No listening area selected");
+      final List<HardwareComponent> hardwares = projectManager.getAllHardwareInListeningAreaWithoutPosition(listeningAreaId);
+      return hardwares.whereType<Speaker>().toList();
+    } catch (e) {
+      FusionLogger.log(
+        tag: LogTag.project,
+        message: "Failed to get unplaced hardware for listening area: $e",
+      );
+      return <Speaker>[];
+    }
+  }
+
+  List<Speaker> getPlacedSpeakersForCurrentListeningArea() {
+    try {
+      final String? listeningAreaId = currentSelectedListeningAreaId;
+      if (listeningAreaId == null) throw Exception("No listening area selected");
+      final List<HardwareComponent> hardwares = projectManager.getAllHardwareInListeningAreaWithPosition(listeningAreaId);
+      return hardwares.whereType<Speaker>().toList();
+    } catch (e) {
+      FusionLogger.log(
+        tag: LogTag.project,
+        message: "Failed to get unplaced hardware for listening area: $e",
+      );
+      return <Speaker>[];
     }
   }
 
@@ -319,6 +398,26 @@ extension HardwareViewModel on ProjectViewModel {
     }
   }
 
+  void placeSelectedSpeaker({required Offset position, bool autoSave = true, required bool isFromBuildingPage}) {
+    try {
+      if (autoSave) recordSnapshot();
+
+      final List<Speaker> nonPlacedSpeakers = getNonPlacedSpeakersForCurrentListeningArea();
+      if (nonPlacedSpeakers.isEmpty) return;
+      final Speaker updatedSpeaker = nonPlacedSpeakers.first.copyWith(pos: position);
+      updateHardware(hardware: updatedSpeaker);
+
+      if (nonPlacedSpeakers.length == 1) {
+        // Last speaker placed
+        setShouldPlaceNonPlacedSpeakers(false);
+        updateProject();
+      }
+    } catch (e) {
+      FusionLogger.log(tag: LogTag.project, message: "Failed to add selected product as hardware: $e");
+      setShouldPlaceNonPlacedSpeakers(false);
+    }
+  }
+
   void addSelectedProduct({
     required Offset position,
     String? listeningAreaId,
@@ -380,12 +479,38 @@ extension HardwareViewModel on ProjectViewModel {
     }
   }
 
-  HardwareComponent fromProductQueryModel(
-    ProductQueryModel product, {
-    Offset? pos,
-    required LocationModel locationEntity,
-    required bool isFromBuildingPage,
-  }) {
+  Speaker fromSpeakerProductModel(String assetImagePath, SpeakerProduct product, LocationModel locationEntity, bool isFromBuildingPage) {
+    final MountingType? mountingType = MountingType.fromJson(product.mountType);
+    return Speaker(
+      locationEntity: locationEntity,
+      name: product.modelName,
+      productId: product.productId,
+      pos: null,
+      zAxis: 300.0,
+      speakerSKU: product.modelName,
+      gain: 0.0,
+      addedFromBuildingPage: isFromBuildingPage,
+      assetImagePath: assetImagePath,
+      type: OutputType.analogOutput,
+      price: 300,
+      mountingType: mountingType,
+      pitch: mountingType == MountingType.pendant || mountingType == MountingType.ceiling ? 90.0 : 0.0,
+      inputPortsData: <PortData>[
+        PortData(
+          name: "In",
+          position: PortPosition.bottomRight,
+          portNumber: 1,
+          compatibleTypes: <PortType>[PortType.amplifierOutput],
+          type: PortType.speakerInput,
+          description: PortType.speakerInput.description,
+        ),
+      ],
+      outputPortsData: <PortData>[],
+    );
+  }
+
+  HardwareComponent fromProductQueryModel(ProductQueryModel product, {Offset? pos, required LocationModel locationEntity, required bool isFromBuildingPage}) {
+    final ListeningArea? listeningArea = (locationEntity.listeningAreaId != null) ? getListeningArea(areaId: locationEntity.listeningAreaId!) : null;
     switch (product.type) {
       case ProductType.speaker:
         return Speaker(
@@ -419,6 +544,9 @@ extension HardwareViewModel on ProjectViewModel {
           SourceConnectionType.analogInput || SourceConnectionType.aes67input => PortType.analogOutput,
           SourceConnectionType.bluetooth => PortType.bleOut,
           SourceConnectionType.usb => PortType.usbOut,
+          SourceConnectionType.audioJack => PortType.audioJackOutput,
+          SourceConnectionType.xlr => PortType.xlrOutput,
+          SourceConnectionType.hdmi => PortType.hdmiOut,
         };
         return Source(
           locationEntity: locationEntity,
@@ -446,6 +574,9 @@ extension HardwareViewModel on ProjectViewModel {
                   PortType.bleIn,
                 ],
                 SourceConnectionType.usb => <PortType>[PortType.usbIn],
+                SourceConnectionType.audioJack => <PortType>[PortType.audioJackInput],
+                SourceConnectionType.xlr => <PortType>[PortType.xlrInput],
+                SourceConnectionType.hdmi => <PortType>[PortType.hdmiIn],
               },
               type: portType,
               description: portType.description,
@@ -493,7 +624,7 @@ extension HardwareViewModel on ProjectViewModel {
         return FusionController(
           locationEntity: locationEntity,
           name: product.name,
-          pos: pos,
+          pos: listeningArea?.getCenterPositionOfVertices(),
           assetImagePath: product.image,
           sku: product.sku,
           addedFromBuildingPage: isFromBuildingPage,

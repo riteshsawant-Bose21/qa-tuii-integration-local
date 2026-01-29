@@ -7,12 +7,14 @@ import 'package:fusion_launcher/features/authentication/launcher_sign_in_page.da
 import 'package:fusion_launcher/features/projects/view_model/project_sync_view_model.dart';
 import 'package:fusion_lib/fusion_lib.dart' hide FusionUtils;
 import 'package:fusion_lib/fusion_theme/app_theme.dart';
+import 'package:intl/intl.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../../core/service_locator.dart';
 import '../../../configuration/presentation/viewmodel/project_view_model.dart';
 
 class ProjectCard extends StatelessWidget {
+  final int index;
   final ProjectData projectData;
   final String? subtitle;
   final VoidCallback onDelete;
@@ -22,6 +24,7 @@ class ProjectCard extends StatelessWidget {
 
   const ProjectCard({
     super.key,
+    required this.index,
     required this.projectData,
     this.subtitle,
     required this.onDelete,
@@ -56,7 +59,7 @@ class ProjectCard extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: <Widget>[
                       Expanded(
-                        flex: 2,
+                        flex: 5,
                         child: LayoutBuilder(
                           builder: (BuildContext context, BoxConstraints constraints) {
                             return Align(
@@ -77,12 +80,22 @@ class ProjectCard extends StatelessWidget {
                         ),
                       ),
                       Expanded(
+                        flex: 4,
                         child: Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: <Widget>[
+                              // created at
+                              Flexible(
+                                child: FusionAppText(
+                                  text: DateFormat("MMM dd, yyyy 'at' hh:mm a").format(projectData.createdAt),
+                                  style: context.textTheme.bodySmall?.copyWith(
+                                    color: context.colorScheme.onSurface.withValues(alpha: 0.6),
+                                  ),
+                                ),
+                              ),
                               Flexible(
                                 child: FusionAppText(
                                   text: projectData.name,
@@ -186,9 +199,12 @@ class ProjectCard extends StatelessWidget {
                           ),
                         ];
                       },
-                      child: const Padding(
-                        padding: EdgeInsets.all(8.0),
-                        child: Icon(Icons.more_vert),
+                      child: SemanticHelper.button(
+                        testId: SemanticHelper.createTestId(SemanticTypes.button, "project_card_more_options_button_$index"),
+                        child: const Padding(
+                          padding: EdgeInsets.all(8.0),
+                          child: Icon(Icons.more_vert),
+                        ),
                       ),
                     ),
                   ),
@@ -202,9 +218,12 @@ class ProjectCard extends StatelessWidget {
                           await serviceLocator<ProjectSyncViewModel>().uploadProject(projectData: projectData);
                         },
                         tooltip: "Upload to Cloud",
-                        icon: Icon(
-                          LucideIcons.cloudUpload,
-                          color: context.colorScheme.onSurface,
+                        icon: SemanticHelper.button(
+                          testId: SemanticHelper.createTestId(SemanticTypes.button, "project_card_upload_to_cloud_button_$index"),
+                          child: Icon(
+                            LucideIcons.cloudUpload,
+                            color: context.colorScheme.onSurface,
+                          ),
                         ),
                       ),
                     ),
@@ -274,6 +293,7 @@ class ProjectDetailsDialog extends StatelessWidget {
                   border: Border.all(color: context.colorScheme.onSurface.withValues(alpha: 0.3)),
                 ),
                 child: ProjectCard(
+                  index: 0,
                   width: cardWidth,
                   height: cardHeight,
                   projectData: project,

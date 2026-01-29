@@ -174,4 +174,18 @@ extension EventsManager on ProjectManager {
     }
     projectService!.updateEventSelectedState(eventId: eventId, selectedState: selectedState);
   }
+
+  void reOrderEvents({required String eventIdToMove, required String eventAtNewIndex}) {
+    if (projectService == null) {
+      throw Exception('No project is currently open');
+    }
+    Map<String, FusionEvent> reorderedList = projectService!.reOrderEvents(
+      eventIdToMove: eventIdToMove,
+      eventAtNewIndexId: eventAtNewIndex,
+    );
+
+    projectService = projectService!.copyWith(
+      events: projectService!.events.copyWith(reorderedList),
+    );
+  }
 }

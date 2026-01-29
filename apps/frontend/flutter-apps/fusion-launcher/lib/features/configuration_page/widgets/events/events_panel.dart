@@ -23,11 +23,9 @@ class EventsPanel extends StatefulWidget {
 class _EventsPanelState extends State<EventsPanel> {
   ProjectViewModel get _projectViewModel => serviceLocator<ProjectViewModel>();
 
-  final TextEditingController _eventsNameController = TextEditingController();
-
-  void _addNewEvents(BuildContext popupContext) {
+  void _addNewEvents() {
     final FusionEvent newScene = FusionEvent(
-      name: _eventsNameController.text.trim(),
+      name: "New Event ${_projectViewModel.getAllEvents().length + 1}",
       isEnabled: true,
     );
 
@@ -36,19 +34,6 @@ class _EventsPanelState extends State<EventsPanel> {
 
     /// make this snapshot selected
     _projectViewModel.setSelectedEventId(newScene.id);
-
-    /// Clear dialog and close popup
-    _clearSourceSetDialog(pop: true, popContext: popupContext);
-  }
-
-  /// Clear source set dialog inputs
-  void _clearSourceSetDialog({bool pop = false, BuildContext? popContext}) {
-    _eventsNameController.clear();
-
-    if (pop && popContext != null && Navigator.of(popContext).canPop()) {
-      Navigator.of(popContext).pop();
-    }
-    setState(() {});
   }
 
   @override
@@ -62,58 +47,16 @@ class _EventsPanelState extends State<EventsPanel> {
           /// Events Section
           SectionHeader(
             title: 'Events',
-            trailing: PopupMenuButton<dynamic>(
-              onCanceled: () {
-                _clearSourceSetDialog();
-                setState(() {});
-              },
-              tooltip: "Add Events",
-              padding: EdgeInsets.zero,
-              constraints: const BoxConstraints(
-                maxHeight: 500,
-                maxWidth: 250,
-              ),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
-              ),
-              color: Theme.of(context).colorScheme.white,
-              menuPadding: EdgeInsets.zero,
-
-              itemBuilder: (BuildContext context) {
-                return <PopupMenuItem<dynamic>>[
-                  PopupMenuItem<dynamic>(
-                    enabled: false,
-                    padding: EdgeInsets.zero,
-                    child: SizedBox(
-                      width: 250,
-                      child: StatefulBuilder(
-                        builder: (BuildContext context, StateSetter setMenuState) {
-                          return SingleChildScrollView(
-                            child: CreateSnapshotsOrScenesWidget(
-                              headerText: 'Events',
-                              nameController: _eventsNameController,
-                              onCreate: () {
-                                /// Create new Events
-                                _addNewEvents(context);
-                              },
-                              onCancel: () {
-                                /// Cancel inside popup: close only popup.
-                                _clearSourceSetDialog(pop: true, popContext: context);
-                              },
-                            ),
-                          );
-                        },
-                      ),
-                    ),
-                  ),
-                ];
+            trailing: GestureDetector(
+              onTap: () {
+                _addNewEvents();
               },
               child: Icon(Icons.add_sharp, size: 16, color: Theme.of(context).colorScheme.greyDark),
             ),
           ),
 
           /// Event list
-          SingleChildScrollView(
+          Expanded(
             child: BlocBuilder<ProjectViewModel, ProjectViewModelState>(
               builder: (BuildContext context, ProjectViewModelState state) {
                 final List<FusionEvent> eventList = _projectViewModel.getAllEvents();
@@ -121,7 +64,6 @@ class _EventsPanelState extends State<EventsPanel> {
                   return Container(
                     width: double.infinity,
                     alignment: Alignment.center,
-                    padding: EdgeInsets.only(top: MediaQuery.of(context).size.height * 0.4),
                     child: FusionAppText(
                       text: 'No events available',
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
@@ -132,6 +74,7 @@ class _EventsPanelState extends State<EventsPanel> {
                 }
                 return EventList(
                   eventList: eventList,
+                  projectViewModel: _projectViewModel,
                   onDelete: (String eventId) {
                     _projectViewModel.removeEvent(eventId: eventId);
 
@@ -143,7 +86,16 @@ class _EventsPanelState extends State<EventsPanel> {
                   onSelect: (String eventId) {
                     _projectViewModel.setSelectedEventId(eventId);
                   },
-                  onReorder: (_, _) {},
+                  onReorder: (int oldIndex, int newIndex) {
+                    if (oldIndex < newIndex) newIndex -= 1;
+                    final String eventToMove = eventList[oldIndex].id;
+                    final String eventAtNewIndex = eventList[newIndex].id;
+                    _projectViewModel.reOrderEvents(
+                      eventIdToMove: eventToMove,
+                      eventAtNewIndex: eventAtNewIndex,
+                    );
+                    _projectViewModel.setSelectedEventId(eventToMove);
+                  },
                   onSwitchChanged: (String eventId) {
                     /// Fetch event, create updated copy and update
                     final FusionEvent event = _projectViewModel.getEventById(eventId);

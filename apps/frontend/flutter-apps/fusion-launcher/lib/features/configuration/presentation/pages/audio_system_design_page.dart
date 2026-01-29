@@ -5,9 +5,7 @@ import 'package:fusion_launcher/core/utils/fusion_utils.dart';
 import 'package:fusion_launcher/core/widgets/collapsible_side_panel.dart';
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
 import 'package:fusion_launcher/features/configuration/presentation/widgets/dsp_setup/dsp_column.dart';
-import 'package:fusion_lib/fusion_networking/network/fusion_network_client.dart';
-import 'package:fusion_lib/fusion_utils/app_settings.dart';
-import 'package:fusion_lib/models/fusion_models.dart';
+import 'package:fusion_lib/fusion_lib.dart';
 
 import '../../../../core/constants.dart';
 import '../../../../core/service_locator.dart';
@@ -219,8 +217,8 @@ class AudioSystemDesignPageState extends State<AudioSystemDesignPage> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: <Widget>[
-                              Text(
-                                'DRO IP',
+                              FusionAppText(
+                                text: 'DRO IP',
                                 style: TextStyle(
                                   fontSize: 13,
                                   fontWeight: FontWeight.w600,
@@ -250,7 +248,7 @@ class AudioSystemDesignPageState extends State<AudioSystemDesignPage> {
                                     // serviceLocator<ProjectViewModel>().updateProject();
                                     ScaffoldMessenger.of(context).showSnackBar(
                                       SnackBar(
-                                        content: Text('DRO IP updated to $ip'),
+                                        content: FusionAppText(text: 'DRO IP updated to $ip'),
                                         backgroundColor: Colors.green.shade600,
                                       ),
                                     );
@@ -261,7 +259,7 @@ class AudioSystemDesignPageState extends State<AudioSystemDesignPage> {
                                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
                                     elevation: 0,
                                   ),
-                                  child: const Text('Update', style: TextStyle(fontSize: 11)),
+                                  child: const FusionAppText(text: 'Update', style: TextStyle(fontSize: 11)),
                                 ),
                               ),
                             ],
@@ -282,8 +280,8 @@ class AudioSystemDesignPageState extends State<AudioSystemDesignPage> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: <Widget>[
-                              Text(
-                                'Virtual IP Address',
+                              FusionAppText(
+                                text: 'Virtual IP Address',
                                 style: TextStyle(
                                   fontSize: 13,
                                   fontWeight: FontWeight.w600,
@@ -320,7 +318,7 @@ class AudioSystemDesignPageState extends State<AudioSystemDesignPage> {
                                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
                                     elevation: 0,
                                   ),
-                                  child: const Text('Reconfigure', style: TextStyle(fontSize: 11)),
+                                  child: const FusionAppText(text: 'Reconfigure', style: TextStyle(fontSize: 11)),
                                 ),
                               ),
                             ],
@@ -341,8 +339,8 @@ class AudioSystemDesignPageState extends State<AudioSystemDesignPage> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: <Widget>[
-                              Text(
-                                'Backend Address',
+                              FusionAppText(
+                                text: 'Backend Address',
                                 style: TextStyle(
                                   fontSize: 13,
                                   fontWeight: FontWeight.w600,
@@ -379,7 +377,7 @@ class AudioSystemDesignPageState extends State<AudioSystemDesignPage> {
                                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
                                     elevation: 0,
                                   ),
-                                  child: const Text('Configure', style: TextStyle(fontSize: 11)),
+                                  child: const FusionAppText(text: 'Configure', style: TextStyle(fontSize: 11)),
                                 ),
                               ),
                             ],
@@ -400,8 +398,8 @@ class AudioSystemDesignPageState extends State<AudioSystemDesignPage> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: <Widget>[
-                              Text(
-                                'Cloud web url',
+                              FusionAppText(
+                                text: 'Cloud web url',
                                 style: TextStyle(
                                   fontSize: 13,
                                   fontWeight: FontWeight.w600,
@@ -438,7 +436,7 @@ class AudioSystemDesignPageState extends State<AudioSystemDesignPage> {
                                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
                                     elevation: 0,
                                   ),
-                                  child: const Text('Configure', style: TextStyle(fontSize: 11)),
+                                  child: const FusionAppText(text: 'Configure', style: TextStyle(fontSize: 11)),
                                 ),
                               ),
                             ],
@@ -475,7 +473,7 @@ class AudioSystemDesignPageState extends State<AudioSystemDesignPage> {
                                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
                                     elevation: 0,
                                   ),
-                                  child: const Text('Clear value', style: TextStyle(fontSize: 11)),
+                                  child: const FusionAppText(text: 'Clear value', style: TextStyle(fontSize: 11)),
                                 ),
                               ),
                             ],
@@ -637,7 +635,8 @@ class AudioSystemDesignPageState extends State<AudioSystemDesignPage> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Configuration is Live!'),
+            content: FusionAppText(
+                          text: 'Configuration is Live!'),
             backgroundColor: Colors.green,
           ),
         );
@@ -646,7 +645,8 @@ class AudioSystemDesignPageState extends State<AudioSystemDesignPage> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error: ${fusionServerResponse.message}'),
+            content: FusionAppText(
+                          text: 'Error: ${fusionServerResponse.message}'),
             backgroundColor: Colors.red,
           ),
         );

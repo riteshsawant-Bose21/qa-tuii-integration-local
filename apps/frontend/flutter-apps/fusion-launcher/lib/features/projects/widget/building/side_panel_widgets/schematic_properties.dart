@@ -20,11 +20,13 @@ class SchematicProperties extends StatefulWidget {
 class SchematicPropertiesState extends State<SchematicProperties> {
   final TextEditingController speakerQtyController = TextEditingController(text: "1"); // default value 1
   final TextEditingController propertyModelNameController = TextEditingController(text: "1"); // default value 1
+  final ProjectViewModel projectViewModel = serviceLocator<ProjectViewModel>();
+  bool get isListingViewMode => projectViewModel.currentProjectMode == ProjectMode.systemListingMode;
 
   int get speakerQty => int.tryParse(speakerQtyController.text) ?? 1;
 
   void speakerQtyModify({int? qty, bool shouldIncrement = true}) {
-    final ProjectViewModel projectViewModel = context.read<ProjectViewModel>();
+    // final ProjectViewModel projectViewModel = context.read<ProjectViewModel>();
     final SelectedItem? selectedItem = context.read<ProjectViewModel>().selectedDevice;
     if (selectedItem == null || selectedItem.type != SelectedItemType.circuit) return;
 
@@ -329,7 +331,7 @@ class SchematicPropertiesState extends State<SchematicProperties> {
             ),
           ],
 
-          if (selectedItem.type == SelectedItemType.circuit) ...<Widget>[
+          if ((selectedItem.type == SelectedItemType.circuit && isListingViewMode)) ...<Widget>[
             Row(
               spacing: 3,
               children: <Widget>[
@@ -942,8 +944,10 @@ class _SelectListeningAreaForZoneAndSubzonePopupWidgetState extends State<Select
                       final bool isAvailable = availableListeningAreas.any((ListeningArea availableArea) => availableArea.id == area.id);
                       final bool isSelected = selectedListeningAreaIDs.contains(area.id);
 
+                      final bool isAvailableToSelectOrDeselect = isAvailable || zoneName == null;
+
                       return InkWell(
-                        onTap: isSelected || isAvailable ? () => onListeningAreaTap(area.id) : null,
+                        onTap: isSelected || isAvailableToSelectOrDeselect ? () => onListeningAreaTap(area.id) : null,
                         child: Container(
                           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
                           child: Row(
@@ -953,9 +957,9 @@ class _SelectListeningAreaForZoneAndSubzonePopupWidgetState extends State<Select
                                 width: 14,
                                 height: 4,
                                 child: Checkbox(
-                                  value: !isAvailable ? true : isSelected,
+                                  value: !isAvailableToSelectOrDeselect ? true : isSelected,
                                   activeColor: Theme.of(context).colorScheme.greyDark,
-                                  onChanged: !isAvailable ? null : (_) => onListeningAreaTap(area.id),
+                                  onChanged: !isAvailableToSelectOrDeselect ? null : (_) => onListeningAreaTap(area.id),
                                   materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                                   visualDensity: VisualDensity.compact,
                                   shape: const RoundedRectangleBorder(
@@ -973,7 +977,7 @@ class _SelectListeningAreaForZoneAndSubzonePopupWidgetState extends State<Select
                                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
                                     fontWeight: FontWeight.w500,
                                     fontSize: 10,
-                                    color: !isAvailable ? Colors.grey[400] : Theme.of(context).textTheme.bodySmall?.color,
+                                    color: !isAvailableToSelectOrDeselect ? Colors.grey[400] : Theme.of(context).textTheme.bodySmall?.color,
                                   ),
                                 ),
                               ),
@@ -981,7 +985,7 @@ class _SelectListeningAreaForZoneAndSubzonePopupWidgetState extends State<Select
                                 text: zoneName ?? "No zone",
                                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
                                   fontSize: 9,
-                                  color: !isAvailable ? Theme.of(context).colorScheme.grey : Theme.of(context).colorScheme.greyDark,
+                                  color: !isAvailableToSelectOrDeselect ? Theme.of(context).colorScheme.grey : Theme.of(context).colorScheme.greyDark,
                                   fontWeight: FontWeight.w600,
                                 ),
                               ),

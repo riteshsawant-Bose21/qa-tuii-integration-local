@@ -65,6 +65,19 @@ extension ZoneFunctionsTypeList on ZoneFunctionsType {
         return true;
     }
   }
+
+  bool get hasPriority {
+    switch (this) {
+      case ZoneFunctionsType.sourceSelect:
+      case ZoneFunctionsType.sourceMix:
+      case ZoneFunctionsType.miniMatrix:
+        return false;
+      case ZoneFunctionsType.sourceSelectWithPriority:
+      case ZoneFunctionsType.sourceMixWithPriority:
+      case ZoneFunctionsType.miniMatrixWithPriority:
+        return true;
+    }
+  }
 }
 
 class ZoneFunctions {
@@ -144,7 +157,7 @@ class ZoneFunctions {
                 ? MonoMatrixMixer.fromJson(json['matrixMixer'])
                 : StereoMatrixMixer.fromJson(json['matrixMixer'])
           : null,
-      mixScenes: ((json['mixScenes']??[]) as List).map((e) {
+      mixScenes: ((json['mixScenes'] ?? []) as List).map((e) {
         if (e['type'] == MixSceneType.source.name) {
           return SourceMixScene.fromJson(e);
         } else {

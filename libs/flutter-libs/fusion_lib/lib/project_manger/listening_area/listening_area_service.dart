@@ -1,3 +1,5 @@
+import 'package:fusion_lib/models/project_entities/controller.dart';
+
 import '../../fusion_lib.dart';
 
 extension ListeningAreaService on ProjectService {
@@ -98,7 +100,31 @@ extension ListeningAreaService on ProjectService {
     if (!listeningAreas.exists(area.id)) {
       throw Exception('ListeningArea with id ${area.id} does not exist');
     }
+
+    ListeningArea existingArea = listeningAreas.get(area.id)!;
+
     listeningAreas.add(area.id, area);
+
+    //Place all the sources in center of listening area when it is drawn for first time
+    if (!existingArea.isDrawn && area.isDrawn) {
+      final hardwareInArea = relationships.getChildren(RelationshipType.hardwareLocation, area.id);
+      final List<HardwareComponent> allSources = hardwareInArea.map((hwId) => hardware.get(hwId)).whereType<Source>().toList();
+      //update all sources position
+      for (final source in allSources) {
+        final updatedSource = source.copyWith(
+          pos: area.getCenterPositionOfVertices(),
+        );
+        updateHardware(updatedSource);
+      }
+
+      final List<HardwareComponent> allController = hardwareInArea.map((hwId) => hardware.get(hwId)).whereType<FusionController>().toList();
+      for (final controller in allController) {
+        final updatedController = controller.copyWith(
+          pos: area.getCenterPositionOfVertices(),
+        );
+        updateHardware(updatedController);
+      }
+    }
   }
 
   /// Return all ListeningArea objects that belong to the given floorId.

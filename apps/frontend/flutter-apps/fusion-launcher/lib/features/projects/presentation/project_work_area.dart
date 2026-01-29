@@ -5,15 +5,17 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:fusion_launcher/core/spl_calculation/isolate_mace_calculation_manager.dart';
 import 'package:fusion_launcher/core/utils/fusion_utils.dart';
 import 'package:fusion_launcher/features/configuration_page/pages/configuration_events.dart';
 import 'package:fusion_launcher/features/media_files/view/configuration_media_files_pages.dart';
 import 'package:fusion_launcher/features/media_files/viewModel/media_files_view_model.dart';
-import 'package:fusion_launcher/features/product_query/presentation/pages/product_query.dart';
 import 'package:fusion_launcher/features/projects/view_model/project_sync_view_model.dart';
+import 'package:fusion_launcher/features/projects/widget/building/speaker_selection_section/side_speaker_section.dart';
 import 'package:fusion_launcher/features/scheduling/view/scheduling_page.dart';
 import 'package:fusion_launcher/features/wiring_design/view/wiring_device_list_view.dart';
+import 'package:fusion_lib/constants/test_keys.dart';
 import 'package:fusion_lib/fusion_building_view/floor_canvas_controller.dart';
 import 'package:fusion_lib/fusion_building_view/spl_range_controller.dart';
 import 'package:fusion_lib/fusion_lib.dart';
@@ -40,6 +42,7 @@ import '../../schematics/presentation/pages/schematics_page.dart';
 import '../../schematics/presentation/widgets/cost_calculator_widget.dart';
 import '../widget/building/building_canvas.dart';
 import '../widget/building/side_panel_widgets/building_plan.dart';
+import '../widget/building/side_panel_widgets/equipment_location/equipment_location_section.dart';
 import '../widget/building/side_panel_widgets/listening_areas_panel.dart';
 import '../widget/building/side_panel_widgets/properties_panel.dart';
 import '../widget/building/side_panel_widgets/schematic_properties.dart';
@@ -67,13 +70,14 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
   final FloorCanvasController _floorCanvasController = FloorCanvasController();
   MaceEngine? _engine;
   bool useIsolateEngine = true;
+
   bool get isListingViewMode => _projectViewModel.currentProjectMode == ProjectMode.systemListingMode;
   String _appVersion = '1.0.0';
 
   final List<Widget> _tabs = const <Widget>[
     Tab(text: 'Building'),
-    Tab(text: 'Schematics'),
-    Tab(text: 'Budget'),
+    Tab(text: 'Schematic'),
+    Tab(text: 'Cost'),
     Tab(text: 'Configuration'),
     Tab(text: 'Cloud'),
   ];
@@ -352,7 +356,7 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
   final ExpansibleController splController = ExpansibleController();
   final ExpansibleController zoneAreaController = ExpansibleController();
 
-  List<DockItemConfig> _createBuildingDockItems(ToolbarMode toolbarMode) {
+  List<DockItemConfig> _createBuildingDockItems(ToolbarMode toolbarMode, FloorCanvasController floorCanvasController) {
     return <DockItemConfig>[
       const DockItemConfig(
         id: "1",
@@ -408,15 +412,22 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
         controller: zoneAreaController,
         allowUndock: false,
         initiallyExpanded: true,
-        dockItemWidget: toolbarMode == ToolbarMode.acoustics ? const ListeningAreasPanel() : const ZoneAndListeningAreaPanel(),
+        dockItemWidget:
+            toolbarMode == ToolbarMode.acoustics
+                ? ListeningAreasPanel(
+                  floorCanvasController: floorCanvasController,
+                )
+                : ZoneAndListeningAreaPanel(
+                  floorCanvasController: floorCanvasController,
+                ),
       ),
-      DockItemConfig(
-        id: "8",
-        title: "PRODUCT QUERY",
-        side: "right",
-        dockItemWidget: const ProductQueryView(),
-        controller: productsController,
-      ),
+      // DockItemConfig(
+      //   id: "8",
+      //   title: "PRODUCT QUERY",
+      //   side: "right",
+      //   dockItemWidget: const ProductQueryView(),
+      //   controller: productsController,
+      // ),
       DockItemConfig(
         id: "9",
         title: "SPL MAPPING",
@@ -433,6 +444,23 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
           },
         ),
       ),
+      const DockItemConfig(
+        id: "20",
+        title: "SPEAKERS",
+        side: "left",
+        allowUndock: false,
+        isCollapsibleSection: false,
+        dockItemWidget: SpeakerSelectionWidget(),
+      ),
+      // if (toolbarMode == ToolbarMode.system)
+      DockItemConfig(
+        id: "21",
+        title: "EQUIPMENT LOCATIONS",
+        side: "left",
+        allowUndock: false,
+        isCollapsibleSection: false,
+        dockItemWidget: toolbarMode == ToolbarMode.system ? const EquipmentLocationSection() : const SizedBox(),
+      ),
     ];
   }
 
@@ -447,31 +475,32 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
             showRight: true,
             mainArea: BlocBuilder<ProjectViewModel, ProjectViewModelState>(
               builder: (BuildContext context, ProjectViewModelState state) {
-                return BuildingCanvas(
-                  splRangeController: _splRangeController,
-                  onSplStateChanged: (bool value) {
-                    if (value) {
+                return SemanticHelper.container(
+                  testId: SemanticHelper.createTestId(SemanticTypes.container, FusionTestKeys.buildingCanvas),
+                  child: BuildingCanvas(
+                    splRangeController: _splRangeController,
+                    onSplStateChanged: (bool value) {
+                      if (value) {
+                        productsController.collapse();
+                        splController.expand();
+                      } else {
+                        splController.collapse();
+                      }
+                    },
+                    floorCanvasController: _floorCanvasController,
+                    onCalculateSpl: calculateSPL,
+                    splPanelData: _lastPanelData!,
+                    onProductSelected: () {
+                      productsController.expand();
+                    },
+                    onProductDeselected: () {
                       productsController.collapse();
-                      splController.expand();
-                    } else {
-                      splController.collapse();
-                    }
-                  },
-                  floorCanvasController: _floorCanvasController,
-                  onCalculateSpl: calculateSPL,
-                  splPanelData: _lastPanelData!,
-                  onProductSelected: () {
-                    productsController.expand();
-                  },
-                  onProductDeselected: () {
-                    productsController.collapse();
-                  },
+                    },
+                  ),
                 );
               },
             ),
-            dockItemList: _createBuildingDockItems(
-              serviceLocator<ProjectViewModel>().currentToolbarMode,
-            ),
+            dockItemList: _createBuildingDockItems(serviceLocator<ProjectViewModel>().currentToolbarMode, _floorCanvasController),
           );
         },
       ),
@@ -559,21 +588,24 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
         tabKey: "configuration_tab",
         showLeft: true,
         showRight: false,
-        mainArea: BlocBuilder<ProjectViewModel, ProjectViewModelState>(
-          builder: (BuildContext context, ProjectViewModelState state) {
-            return switch (_projectViewModel.currentConfigurationMenuMode) {
-              ConfigurationMenuMode.processing => const ConfigurationProcessingPage(),
-              ConfigurationMenuMode.snapshots => const ConfigurationSnapshots(),
-              // add all othere
-              ConfigurationMenuMode.events => const ConfigurationEvents(),
-              ConfigurationMenuMode.gpio => const GpioPage(),
-              ConfigurationMenuMode.scheduling => const SchedulingPage(),
-              ConfigurationMenuMode.mediaFiles => BlocProvider<MediaFilesViewModel>(
-                create: (_) => MediaFilesViewModel(),
-                child: const ConfigurationMediaFilesPage(),
-              ),
-            };
-          },
+        mainArea: Theme(
+          data: ThemeData.light(),
+          child: BlocBuilder<ProjectViewModel, ProjectViewModelState>(
+            builder: (BuildContext context, ProjectViewModelState state) {
+              return switch (_projectViewModel.currentConfigurationMenuMode) {
+                ConfigurationMenuMode.processing => const ConfigurationProcessingPage(),
+                ConfigurationMenuMode.snapshots => const ConfigurationSnapshots(),
+                // add all othere
+                ConfigurationMenuMode.events => const ConfigurationEvents(),
+                ConfigurationMenuMode.gpio => const GpioPage(),
+                ConfigurationMenuMode.scheduling => const SchedulingPage(),
+                ConfigurationMenuMode.mediaFiles => BlocProvider<MediaFilesViewModel>(
+                  create: (_) => MediaFilesViewModel(),
+                  child: const ConfigurationMediaFilesPage(),
+                ),
+              };
+            },
+          ),
         ),
 
         dockItemList: <DockItemConfig>[
@@ -688,86 +720,95 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
                         ),
                       ),
 
-                      /// Undo Icon Section
-                      Visibility(
-                        visible: true,
-                        child: GestureDetector(
-                          onTap: () {
-                            if (serviceLocator<ProjectViewModel>().canUndo) {
-                              serviceLocator<ProjectViewModel>().undo();
-                            }
-                          },
-                          child: Tooltip(
-                            message: serviceLocator<ProjectViewModel>().canUndo ? "Undo" : "Nothing to undo",
-                            child: Container(
-                              width: 56,
-                              height: 48,
-                              padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
-
-                              decoration: BoxDecoration(
-                                color: Theme.of(context).colorScheme.white,
-                              ),
-                              child: const FusionImage.asset(
-                                "assets/images/return_icon.png",
-                                width: 20,
-                                height: 20,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-
-                      /// Redo Icon Section
-                      Visibility(
-                        visible: true,
-                        child: GestureDetector(
-                          onTap: () {
-                            if (serviceLocator<ProjectViewModel>().canRedo) {
-                              serviceLocator<ProjectViewModel>().redo();
-                            }
-                          },
-                          child: Tooltip(
-                            message: serviceLocator<ProjectViewModel>().canRedo ? "Redo" : "Nothing to redo",
-                            child: Container(
-                              width: 56,
-                              height: 48,
-                              padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
-
-                              decoration: BoxDecoration(
-                                color: Theme.of(context).colorScheme.white,
-                              ),
-
-                              child: Transform(
-                                alignment: Alignment.center,
-                                transform: Matrix4.rotationY(3.14),
-                                child: const FusionImage.asset(
-                                  "assets/images/return_icon.png",
-                                  width: 20,
-                                  height: 20,
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
+                      // /// Undo Icon Section
+                      // Visibility(
+                      //   visible: true,
+                      //   child: SemanticHelper.button(
+                      //     testId: SemanticHelper.createTestId(SemanticTypes.button, FusionTestKeys.undo),
+                      //     child: GestureDetector(
+                      //       onTap: () {
+                      //         if (serviceLocator<ProjectViewModel>().canUndo) {
+                      //           serviceLocator<ProjectViewModel>().undo();
+                      //         }
+                      //       },
+                      //       child: Tooltip(
+                      //         message: serviceLocator<ProjectViewModel>().canUndo ? "Undo" : "Nothing to undo",
+                      //         child: Container(
+                      //           width: 56,
+                      //           height: 48,
+                      //           padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
+                      //
+                      //           decoration: BoxDecoration(
+                      //             color: Theme.of(context).colorScheme.white,
+                      //           ),
+                      //           child: const FusionImage.asset(
+                      //             "assets/images/return_icon.png",
+                      //             width: 20,
+                      //             height: 20,
+                      //           ),
+                      //         ),
+                      //       ),
+                      //     ),
+                      //   ),
+                      // ),
+                      //
+                      // /// Redo Icon Section
+                      // Visibility(
+                      //   visible: true,
+                      //   child: SemanticHelper.button(
+                      //     testId: SemanticHelper.createTestId(SemanticTypes.button, FusionTestKeys.redo),
+                      //     child: GestureDetector(
+                      //       onTap: () {
+                      //         if (serviceLocator<ProjectViewModel>().canRedo) {
+                      //           serviceLocator<ProjectViewModel>().redo();
+                      //         }
+                      //       },
+                      //       child: Tooltip(
+                      //         message: serviceLocator<ProjectViewModel>().canRedo ? "Redo" : "Nothing to redo",
+                      //         child: Container(
+                      //           width: 56,
+                      //           height: 48,
+                      //           padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
+                      //
+                      //           decoration: BoxDecoration(
+                      //             color: Theme.of(context).colorScheme.white,
+                      //           ),
+                      //
+                      //           child: Transform(
+                      //             alignment: Alignment.center,
+                      //             transform: Matrix4.rotationY(3.14),
+                      //             child: const FusionImage.asset(
+                      //               "assets/images/return_icon.png",
+                      //               width: 20,
+                      //               height: 20,
+                      //             ),
+                      //           ),
+                      //         ),
+                      //       ),
+                      //     ),
+                      //   ),
+                      // ),
 
                       /// Save Icon Section
-                      Container(
-                        width: 56,
-                        height: 48,
-                        // padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-                        decoration: BoxDecoration(
-                          color: Theme.of(context).colorScheme.white,
-                        ),
-                        child: IconButton(
-                          icon: Icon(
-                            Icons.save,
-                            size: 24,
-                            color: Theme.of(context).colorScheme.greyDark,
+                      SemanticHelper.button(
+                        testId: SemanticHelper.createTestId(SemanticTypes.button, FusionTestKeys.saveProject),
+                        child: Container(
+                          width: 56,
+                          height: 48,
+                          // padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                          decoration: BoxDecoration(
+                            color: Theme.of(context).colorScheme.white,
                           ),
-                          tooltip: 'Save project',
-                          onPressed: () => _showProjectJsonDialog(context),
-                          onLongPress: () => serviceLocator<ProjectViewModel>().deleteCurrentProjectFromLocal(),
+                          child: IconButton(
+                            icon: Icon(
+                              Icons.save,
+                              size: 24,
+                              color: Theme.of(context).colorScheme.greyDark,
+                            ),
+                            tooltip: 'Save project',
+                            onPressed: () => _showProjectJsonDialog(context),
+                            onLongPress: () => serviceLocator<ProjectViewModel>().deleteCurrentProjectFromLocal(),
+                          ),
                         ),
                       ),
 
@@ -800,6 +841,48 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
                       ),
 
                       /// Share Icon Section
+                      // SemanticHelper.button(
+                      //   testId: SemanticHelper.createTestId(SemanticTypes.button, FusionTestKeys.bugReport),
+                      //   child: Container(
+                      //     width: 56,
+                      //     height: 48,
+                      //     padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                      //     decoration: BoxDecoration(
+                      //       color: Theme.of(context).colorScheme.white,
+                      //       // border horizontal
+                      //       border: Border(
+                      //         left: BorderSide(color: Theme.of(context).colorScheme.dividerColor, width: 1),
+                      //         right: BorderSide(color: Theme.of(context).colorScheme.dividerColor, width: 1),
+                      //       ),
+                      //     ),
+                      //     child: Tooltip(
+                      //       message: 'Give Feedback',
+                      //       child: InkWell(
+                      //         child: Icon(
+                      //           Icons.feedback_outlined,
+                      //           size: 24,
+                      //           color: Theme.of(context).colorScheme.greyDark,
+                      //         ),
+                      //         onTap: () async {
+                      //           showDialog(
+                      //             context: context,
+                      //             builder:
+                      //                 (BuildContext context) => const Dialog(
+                      //                   child: _FeedbackWebView(),
+                      //                 ),
+                      //           );
+                      //         },
+                      //       ),
+                      //     ),
+                      // child: Image.asset(
+                      //   "assets/images/share_icon.png",
+                      //   width: 24,
+                      //   height: 24,
+                      // ),
+                      // ),
+                      // ),
+
+                      /// Share Icon Section
                       Container(
                         width: 56,
                         height: 48,
@@ -830,6 +913,7 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
                         //   height: 24,
                         // ),
                       ),
+
                       const ControlDesignTabSwitcher(),
                       // App Build Version
                       Container(
@@ -903,7 +987,8 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
           child: Container(
             key: _projectNameKey,
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-            width: 197, // Reduced width to account for back button
+            width: 197,
+            // Reduced width to account for back button
             decoration: BoxDecoration(
               color: Theme.of(context).colorScheme.white,
               border: Border(
@@ -929,7 +1014,7 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
                         ) {
                           return FusionAppText(
                             text: serviceLocator<ProjectViewModel>().projectName,
-                            semanticId: "Project Name",
+                            semanticId: FusionTestKeys.projectName,
                             textOverflow: TextOverflow.ellipsis,
                             maxLine: 1,
                             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
@@ -1012,69 +1097,73 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
                       ),
                     ),
                     const SizedBox(height: 12),
-                    TextField(
-                      controller: _projectNameController,
-                      focusNode: _projectNameFocusNode,
-                      maxLength: 24,
-                      autofocus: true,
-                      style: TextStyle(
-                        color: Theme.of(context).colorScheme.fusionTextViewColor,
-                        fontSize: 12,
-                      ),
-                      decoration: InputDecoration(
-                        counterText: "",
-                        hintText: 'Enter project name',
-                        hintStyle: TextStyle(
-                          color: Theme.of(context).colorScheme.grey,
+                    SemanticHelper.formControl(
+                      testId: SemanticHelper.createTestId(SemanticTypes.textInput, FusionTestKeys.projectNameInput),
+                      child: TextField(
+                        controller: _projectNameController,
+                        focusNode: _projectNameFocusNode,
+                        maxLength: 24,
+                        autofocus: true,
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.fusionTextViewColor,
                           fontSize: 12,
                         ),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(4),
-                          borderSide: BorderSide(
-                            color: Theme.of(context).colorScheme.dividerColor,
+                        decoration: InputDecoration(
+                          counterText: "",
+                          hintText: 'Enter project name',
+                          hintStyle: TextStyle(
+                            color: Theme.of(context).colorScheme.grey,
+                            fontSize: 12,
                           ),
-                        ),
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(4),
-                          borderSide: BorderSide(
-                            color: Theme.of(context).colorScheme.dividerColor,
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(4),
+                            borderSide: BorderSide(
+                              color: Theme.of(context).colorScheme.dividerColor,
+                            ),
                           ),
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(4),
-                          borderSide: BorderSide(
-                            color: _projectNameError != null ? Colors.red : Theme.of(context).colorScheme.fusionTextViewColor,
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(4),
+                            borderSide: BorderSide(
+                              color: Theme.of(context).colorScheme.dividerColor,
+                            ),
                           ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(4),
+                            borderSide: BorderSide(
+                              color: _projectNameError != null ? Colors.red : Theme.of(context).colorScheme.fusionTextViewColor,
+                            ),
+                          ),
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 8,
+                          ),
+                          isDense: true,
                         ),
-                        contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 8,
-                        ),
-                        isDense: true,
+                        onChanged: (String value) {
+                          if (_projectNameError != null) {
+                            setMenuState(() {
+                              _projectNameError = null;
+                            });
+                          }
+                        },
+                        onSubmitted: (String value) {
+                          final String trimmedName = value.trim();
+                          if (trimmedName.isNotEmpty) {
+                            serviceLocator<ProjectViewModel>().setProjectName(name: trimmedName);
+                            Navigator.of(context).pop();
+                          } else {
+                            setMenuState(() {
+                              _projectNameError = "Name cannot be empty";
+                            });
+                          }
+                        },
                       ),
-                      onChanged: (String value) {
-                        if (_projectNameError != null) {
-                          setMenuState(() {
-                            _projectNameError = null;
-                          });
-                        }
-                      },
-                      onSubmitted: (String value) {
-                        final String trimmedName = value.trim();
-                        if (trimmedName.isNotEmpty) {
-                          serviceLocator<ProjectViewModel>().setProjectName(name: trimmedName);
-                          Navigator.of(context).pop();
-                        } else {
-                          setMenuState(() {
-                            _projectNameError = "Name cannot be empty";
-                          });
-                        }
-                      },
                     ),
                     if (_projectNameError != null) ...<Widget>[
                       const SizedBox(height: 4),
                       FusionAppText(
                         text: _projectNameError!,
+                        semanticId: FusionTestKeys.projectNameInputError,
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
                           fontSize: 10,
                           color: Colors.red,
@@ -1144,19 +1233,22 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
           (BuildContext ctx) => CleanDialog(
             title: 'Project Saved!',
             actions: <Widget>[
-              ElevatedButton(
-                onPressed: () => Navigator.of(ctx).pop(),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.grey.shade800,
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(4),
+              SemanticHelper.button(
+                testId: SemanticHelper.createTestId(SemanticTypes.button, FusionTestKeys.close),
+                child: ElevatedButton(
+                  onPressed: () => Navigator.of(ctx).pop(),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.grey.shade800,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    elevation: 0,
                   ),
-                  elevation: 0,
-                ),
-                child: const Text(
-                  'Close',
-                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
+                  child: const FusionAppText(
+                    text: 'Close',
+                    style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
+                  ),
                 ),
               ),
             ],
@@ -1180,6 +1272,64 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
               ),
             ),
           ),
+    );
+  }
+}
+
+class _FeedbackWebView extends StatefulWidget {
+  const _FeedbackWebView({super.key});
+
+  @override
+  State<_FeedbackWebView> createState() => __FeedbackWebViewState();
+}
+
+class __FeedbackWebViewState extends State<_FeedbackWebView> {
+  @override
+  Widget build(BuildContext context) {
+    return InAppWebView(
+      initialSettings: InAppWebViewSettings(
+        javaScriptEnabled: true,
+        javaScriptCanOpenWindowsAutomatically: true,
+      ),
+      onReceivedError: (InAppWebViewController controller, WebResourceRequest request, WebResourceError error) {
+        print("Error loading feedback form: ${error.description}");
+      },
+      initialData: InAppWebViewInitialData(
+        data: '''
+      <!DOCTYPE html>
+      <html lang="en">
+      <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Jira Issue Collector Demo</title>
+
+        <!-- Jira Issue Collector Script -->
+        <script type="text/javascript" src="https://boseprofessional.atlassian.net/s/d41d8cd98f00b204e9800998ecf8427e-T/ribuf7/b/0/c95134bc67d3a521bb3f4331beb9b804/_/download/batch/com.atlassian.jira.collector.plugin.jira-issue-collector-plugin:issuecollector/com.atlassian.jira.collector.plugin.jira-issue-collector-plugin:issuecollector.js?locale=en-US&collectorId=9740b101"></script>
+      </head>
+      <body>
+      	<iframe
+          style="display:none;"
+          id="jiraIssueCollector"
+          name="jiraIssueCollector"
+          src='https://inappwebview.dev/docs/webview/in-app-webview'
+        ></iframe>
+        <script type="text/javascript">
+          // Initialize the Jira Issue Collector
+          JIRA.IssueCollector.showIssueCollectorDialog({
+            triggerFunction: function() {
+              // This function is called when the dialog is shown
+              console.log("Jira Issue Collector dialog opened.");
+            }
+          });
+        </script>
+      </body>
+      ''',
+      ),
+      // initialUrlRequest: URLRequest(
+      //   url: WebUri(
+      //     'https://inappwebview.dev/docs/webview/in-app-webview',
+      //   ),
+      // ),
     );
   }
 }
