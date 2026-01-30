@@ -99,7 +99,7 @@ class _FilterOptions extends StatelessWidget {
         Expanded(
           child: BuildingPageDronDown<String>(
             value: value,
-            hintText: "Select type",
+            hintText: "Select $label",
             items: options,
             onSelect: (String newValue) {
               final int selectedIndex = options.indexOf(newValue);
