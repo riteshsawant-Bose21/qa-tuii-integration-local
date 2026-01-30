@@ -4,6 +4,7 @@ import 'package:fusion_launcher/core/router/routes.dart';
 import 'package:fusion_launcher/core/services/user_profile_manager.dart';
 import 'package:fusion_launcher/core/utils/fusion_utils.dart';
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
+import 'package:fusion_launcher/features/widget_library/widget_library.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
 import '../../../../core/service_locator.dart';
@@ -18,7 +19,7 @@ enum DashboardTabs {
   profile("Profile"),
   settings("Settings"),
   // community("Community"),
-  // testLibrady("Test Library"),
+  testLibrady("Test Library"),
   savedProjects("Saved Projects");
 
   final String name;
@@ -113,8 +114,8 @@ class _HomePageState extends State<HomePage> {
                             //   return const CommunityTabContent();
                             case DashboardTabs.savedProjects:
                               return const SavedProjectsTabContent();
-                            // case DashboardTabs.testLibrady:
-                            //   return const SizedBox.shrink();
+                            case DashboardTabs.testLibrady:
+                              return const WidgetLibrary();
                           }
                         },
                       );

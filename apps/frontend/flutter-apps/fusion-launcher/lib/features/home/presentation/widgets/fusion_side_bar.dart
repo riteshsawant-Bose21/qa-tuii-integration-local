@@ -72,34 +72,37 @@ class _FusionSidebarState extends State<FusionSidebar> {
                   spacing: 10,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: <Widget>[
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.end,
-                      children: <Widget>[
-                        SemanticHelper.button(
-                          testId: SemanticHelper.createTestId(SemanticTypes.button, "dashboard_sidebar_notification_button"),
-                          child: Badge(
-                            smallSize: 10, // ← tiny dot size
-                            alignment: Alignment.topRight,
-                            backgroundColor: FusionDarkColorPallette.green20,
-                            textColor: FusionDarkColorPallette.green20,
-                            padding: const EdgeInsets.only(),
-                            textStyle: const TextStyle(fontSize: 0),
-                            child: Container(
-                              height: 36,
-                              width: 36,
-                              decoration: BoxDecoration(
-                                color: context.colorScheme.elevation4,
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: Icon(
-                                LucideIcons.bell,
-                                size: 16,
-                                color: context.colorScheme.primaryWhite,
+                    GestureDetector(
+                      onTap: () => widget.onTabChanged?.call(DashboardTabs.testLibrady),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: <Widget>[
+                          SemanticHelper.button(
+                            testId: SemanticHelper.createTestId(SemanticTypes.button, "dashboard_sidebar_notification_button"),
+                            child: Badge(
+                              smallSize: 10, // ← tiny dot size
+                              alignment: Alignment.topRight,
+                              backgroundColor: FusionDarkColorPallette.green20,
+                              textColor: FusionDarkColorPallette.green20,
+                              padding: const EdgeInsets.only(),
+                              textStyle: const TextStyle(fontSize: 0),
+                              child: Container(
+                                height: 36,
+                                width: 36,
+                                decoration: BoxDecoration(
+                                  color: context.colorScheme.elevation4,
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Icon(
+                                  LucideIcons.bell,
+                                  size: 16,
+                                  color: context.colorScheme.primaryWhite,
+                                ),
                               ),
                             ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
 
                     // ========== User Info Tile ==========
