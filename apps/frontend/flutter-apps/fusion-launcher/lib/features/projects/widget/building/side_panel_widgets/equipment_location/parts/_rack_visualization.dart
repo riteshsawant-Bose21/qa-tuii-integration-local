@@ -40,6 +40,8 @@ class _EQLRackPreview extends StatelessWidget {
                 child: SingleChildScrollView(
                   child: SizedBox(
                     width: 250,
+                    child:SemanticHelper.container(
+                      testId: SemanticHelper.createTestId(SemanticTypes.container, "rack"),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: <Widget>[
