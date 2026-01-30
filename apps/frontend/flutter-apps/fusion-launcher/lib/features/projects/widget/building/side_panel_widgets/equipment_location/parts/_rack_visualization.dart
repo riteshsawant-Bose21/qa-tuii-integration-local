@@ -180,6 +180,7 @@ class _EQLRackPreview extends StatelessWidget {
                         const SizedBox(height: 12),
                       ],
                     ),
+                    ),
                   ),
                 ),
               ),
