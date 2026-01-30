@@ -92,9 +92,7 @@ class AuthViewModel extends Cubit<AuthViewModelState> {
   Future<void> login() async {
     try {
       _emitLoading();
-
       final Credentials credentials = await _authService.login();
-
       await _handleLoginSuccess(credentials);
     } on Exception catch (e) {
       // Web redirect initiated - this is expected
