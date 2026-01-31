@@ -350,7 +350,7 @@ func (c *Cluster) isLocalVIP(vip string) (bool, error) {
 		}
 	}
 	logger.Debug("[CLUSTER] isLocalVIP: no match found for expectedIP=%s", expectedIP.String())
-	return false, fmt.Errorf("no match found for expectedIP=%s", expectedIP.String())
+	return false, nil
 }
 
 // getLocalAndVIP checks whether `vip` (CIDR or plain IP) is assigned on any local interface.
