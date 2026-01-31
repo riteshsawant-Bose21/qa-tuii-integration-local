@@ -39,7 +39,6 @@ func (c *Cluster) watchLocalVIP(iface string) {
 		if canonicalVIP(a.IP.String()) == expectedVIP {
 			logger.Info("[VIP watcher] VIP present at startup: %s", expectedVIP)
 			c.listenerUpdated(expectedVIP, c.appConfig.BindAddr)
-			c.notifyLocalVIPChange(true)
 			break
 		}
 	}
@@ -72,24 +71,37 @@ func (c *Cluster) watchLocalVIP(iface string) {
 				return
 			case update, ok := <-updates:
 				if !ok {
-					logger.Warn("netlink updates channel closed")
+					logger.Warn("[VIP watcher] netlink updates channel closed")
 					return
 				}
+
+				//Since there was an update, check for new expected VIP
+				expectedVIP, err := c.getVIPFromConfig()
+				if err != nil {
+					logger.Error("[VIP watcher] Failed to get VIP from config: %v", err)
+					return
+				}
+				expectedVIP = canonicalVIP(expectedVIP)
+
 				ip := update.LinkAddress.IP
 				if ip == nil || ip.To4() == nil {
 					continue
 				}
 				theIP := canonicalVIP(ip.String())
+				logger.Debug("[VIP watcher] received update for IP: %s", theIP)
+				logger.Debug("[VIP watcher] expected VIP: %s", expectedVIP)
+				logger.Debug("[VIP watcher] theIP: %s", theIP)
+				logger.Debug("[VIP watcher] NewAddr: %v", update.NewAddr)
 
 				if theIP != expectedVIP {
 					continue
 				}
 
 				if update.NewAddr {
-					logger.Info("Local VIP appeared: %s", theIP)
+					logger.Info("[VIP watcher] Local VIP appeared: %s", theIP)
 					c.listenerUpdated(theIP, c.appConfig.BindAddr)
 				} else {
-					logger.Info("Local VIP removed: %s", theIP)
+					logger.Info("[VIP watcher] Local VIP removed: %s", theIP)
 					c.listenerUpdated("", c.appConfig.BindAddr)
 				}
 			}

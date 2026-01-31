@@ -287,7 +287,7 @@ import (
 const (
 	mdnsDomain            = "local"
 	mdnsFusionServiceName = "FusionService"
-	mdnsTTL               = 120
+	// mdnsTTL               = 120
 )
 
 const (
@@ -333,19 +333,34 @@ func NewMDNSManager() *MDNSManager {
 
 // StartWithVIP can be called concurrently.
 func (m *MDNSManager) StartWithVIP(vip net.IP) error {
+	logger := logging.GetLogger()
+
 	if vip == nil {
-		return fmt.Errorf("no VIP available for mDNS service")
+		logger.Error("[Discovery] StartWithVIP called with nil VIP")
+		return fmt.Errorf("[Discovery] no VIP available for mDNS service")
 	}
+
 	resp := make(chan error, 1)
 	m.cmdCh <- cmdStart{vip: vip, resp: resp}
-	return <-resp
+	err := <-resp
+
+	return err
 }
 
 // Close can be called concurrently and is idempotent.
 func (m *MDNSManager) Close() error {
+	logger := logging.GetLogger()
+	logger.Debug("[Discovery] Stopping mDNS")
+
 	resp := make(chan error, 1)
 	m.cmdCh <- cmdStop{resp: resp}
-	return <-resp
+	err := <-resp
+
+	if err != nil {
+		logger.Error("[Discovery] Close failed: %v", err)
+	}
+
+	return err
 }
 
 func (m *MDNSManager) IsRunning() bool {
@@ -427,7 +442,6 @@ func (m *MDNSManager) loop() {
 		st.running = false
 		st.vip = nil
 
-		logger.Debug("[MDNS-MGR] mDNS stopped")
 		return nil
 	}
 
@@ -438,26 +452,39 @@ func (m *MDNSManager) loop() {
 
 		// If already running with same VIP, treat as idempotent success.
 		if st.running && st.vip != nil && st.vip.Equal(vip) {
+			logger.Debug("[Discovery] Already running with same VIP %v, treating as idempotent success", vip)
 			return nil
 		}
 
 		// If running with different VIP, restart.
 		if st.running {
+			logger.Debug("[Discovery] Already running with different VIP (current: %v, new: %v), stopping first", st.vip, vip)
 			if err := stop(); err != nil {
+				logger.Error("[Discovery] Failed to stop existing services before restart: %v", err)
 				return err
 			}
+
+			// Create fresh responder for VIP change to ensure clean state
+			newResponder, err := dnssd.NewResponder()
+			if err != nil {
+				return fmt.Errorf("[Discovery] failed to create fresh responder: %w", err)
+			}
+			st.responder = newResponder
 		}
 
 		// Add services transactionally.
 		fusionHandle, err := addService(st.responder, fusionConfig(vip))
 		if err != nil {
+			logger.Error("[Discovery] Failed to add Fusion service: %v", err)
 			return fmt.Errorf("add Fusion service: %w", err)
 		}
 
 		ocaHandle, err := addService(st.responder, ocaConfig(vip))
 		if err != nil {
+			logger.Error("[Discovery] Failed to add OCA service, rolling back Fusion service: %v", err)
 			// rollback Fusion so we never partially advertise
 			st.responder.Remove(fusionHandle)
+			logger.Debug("[Discovery] Fusion service rolled back due to OCA service failure")
 			return fmt.Errorf("add OCA service: %w", err)
 		}
 
@@ -475,14 +502,12 @@ func (m *MDNSManager) loop() {
 			if err := st.responder.Respond(ctx); err != nil {
 				// Only log as error if we weren't cancelled.
 				if ctx.Err() == nil {
-					logger.Error("[MDNS-MGR] responder error: %v", err)
-				} else {
-					logger.Debug("[MDNS-MGR] responder stopped (cancelled)")
+					logger.Error("[Discovery] responder error: %v", err)
 				}
 			}
 		}(st.ctx)
 
-		logger.Info("[MDNS-MGR] mDNS started: VIP=%s fusion=%s.%s.%s:%d oca=%s.%s:%d",
+		logger.Info("[Discovery] mDNS started: VIP=%s fusion=%s.%s.%s:%d oca=%s.%s:%d",
 			vip,
 			mdnsFusionServiceName, mdnsFusionServiceType, mdnsDomain, mdnsFusionVIPPort,
 			hostnameOrDefault(), mdnsOCAServiceType, mdnsOCAServicePort,
@@ -491,14 +516,15 @@ func (m *MDNSManager) loop() {
 		return nil
 	}
 
-	// Main command loop
 	for cmd := range m.cmdCh {
 		switch c := cmd.(type) {
 		case cmdStart:
-			c.resp <- start(c.vip)
+			err := start(c.vip)
+			c.resp <- err
 
 		case cmdStop:
-			c.resp <- stop()
+			err := stop()
+			c.resp <- err
 
 		case cmdIsRunning:
 			c.resp <- st.running
@@ -512,9 +538,10 @@ func (m *MDNSManager) loop() {
 
 		default:
 			// Should never happen; ignore to avoid deadlock.
-			logger.Warn("[MDNS-MGR] unknown command type %T", c)
+			logger.Warn("[Discovery] unknown command type %T", c)
 		}
 	}
+	logger.Debug("[Discovery] Command loop exited")
 }
 
 // ----- Config helpers (pure functions) -----
@@ -567,7 +594,6 @@ func ocaConfig(vip net.IP) dnssd.Config {
 // ----- DNSSD helper -----
 
 func addService(r dnssd.Responder, cfg dnssd.Config) (dnssd.ServiceHandle, error) {
-	logger := logging.GetLogger()
 
 	svc, err := dnssd.NewService(cfg)
 	if err != nil {
@@ -578,9 +604,6 @@ func addService(r dnssd.Responder, cfg dnssd.Config) (dnssd.ServiceHandle, error
 	if err != nil {
 		return nil, fmt.Errorf("responder add (%s %s): %w", cfg.Name, cfg.Type, err)
 	}
-
-	logger.Debug("[MDNS-MGR] added service: %s.%s.%s -> %v:%d",
-		cfg.Name, cfg.Type, cfg.Domain, cfg.IPs, cfg.Port)
 
 	return handle, nil
 }
