@@ -195,9 +195,10 @@ func (c *Cluster) listenerUpdated(vip, srcIP string) {
 
 	oldVIP := c.vip
 	oldHolder := c.vipHolder
-	// logger.Debug("[CLUSTER] listenerUpdated called: oldVIP=%s oldHolder=%s vip=%s srcIP=%s",
-	// oldVIP, oldHolder, vip, srcIP,
-	// )
+	logger.Debug("[CLUSTER] listenerUpdated called: oldVIP=%s oldHolder=%s vip=%s srcIP=%s",
+		oldVIP, oldHolder, vip, srcIP,
+	)
+
 	// VIP has been removed entirely
 	if newVIP == "" {
 		if oldVIP == "" {
@@ -212,8 +213,11 @@ func (c *Cluster) listenerUpdated(vip, srcIP string) {
 		c.vipHolder = ""
 
 		c.notifyLocalVIPChange(false)
+		if err := c.mdnsManager.Close(); err != nil {
+			logger.Error("[Discovery] Failed to stop mDNS service: %v", err)
 		} else {
 			logger.Debug("[Discovery] mDNS service stopped successfully via manager")
+		}
 		return
 	}
 
@@ -267,6 +271,7 @@ func (c *Cluster) listenerUpdated(vip, srcIP string) {
 	case oldLocal && !newLocal:
 		logger.Info("VIP %s moved (was %s, now %s)", newVIP, oldHolder, srcIP)
 		c.notifyLocalVIPChange(false)
+
 		if err := c.mdnsManager.Close(); err != nil {
 			logger.Error("[Discovery] Failed to stop mDNS service: %v", err)
 		} else {
@@ -287,8 +292,15 @@ func (c *Cluster) listenerUpdated(vip, srcIP string) {
 			}
 		}
 		c.notifyLocalVIPChange(true)
-		c.handleMDNSLifecycleWithVIP(true, net.ParseIP(c.vip)) //FIXME: cluster vip should be net.IP remove parsing here
 
+		// Parse the VIP string into net.IP before passing to mDNS manager
+		if ip := net.ParseIP(newVIP); ip == nil {
+			logger.Error("[Discovery] Invalid VIP %s for mDNS", newVIP)
+		} else {
+			if err := c.mdnsManager.StartWithVIP(ip); err != nil {
+				logger.Error("[Discovery] Failed to start mDNS service: %v", err)
+			}
+		}
 	}
 }
 
