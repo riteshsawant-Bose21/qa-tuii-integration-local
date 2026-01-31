@@ -2,18 +2,17 @@ package cluster
 
 import (
 	"fmt"
+	"fusion-services-core/network"
+	"fusion-services-core/vip"
 	"fusion/internal/api"
 	"fusion/internal/logging"
-	"fusion/internal/network"
 	"fusion/internal/routes"
-	"fusion/internal/utils"
 	"io"
 	"net"
 	"net/http"
 	"os"
 	"os/exec"
 	"path/filepath"
-	"regexp"
 	"strings"
 	"sync"
 	"time"
@@ -23,8 +22,7 @@ import (
 )
 
 const (
-	ConfFile             = "keepalived.conf"
-	configPath           = "/etc/keepalived/" + ConfFile
+	configPath           = "/etc/keepalived/" + vip.DefaultConfFile
 	statusUpdateInterval = 30 * time.Second
 	monitorInterval      = 10 * time.Second
 )
@@ -96,12 +94,15 @@ func NewCluster(appConfig *api.AppConfig, delegate *ClusterDelegate, memberlist 
 			logger.Fatal("startVRRPListener: %v", err)
 		}
 
-		vip, err := cluster.getVIPFromConfig()
+		vipValue, multiple, err := vip.ReadFromKeepalivedConfig(cluster.configPath)
 		if err != nil {
-			logger.Fatal("getVIPFromConfig: %v", err)
+			logger.Fatal("read keepalived config: %v", err)
+		}
+		if multiple {
+			logger.Warn("More than one VIP found.")
 		}
 
-		canonical := canonicalVIP(vip)
+		canonical := vip.Canonicalize(vipValue)
 		cluster.vip = canonical
 	}
 
@@ -160,35 +161,12 @@ func (c *Cluster) getClusterIPs() []string {
 	return ips
 }
 
-// canonicalVIP canonicalizes an IP address.
-// "192.168.2.100/24" becomes "192.168.2.100"
-func canonicalVIP(s string) string {
-	if s == "" {
-		return ""
-	}
-	// handle CIDR form
-	if ip, _, err := net.ParseCIDR(s); err == nil && ip != nil {
-		if v4 := ip.To4(); v4 != nil {
-			return v4.String()
-		}
-		// drop IPv6
-		return ""
-	}
-	// handle plain IP form
-	if ip := net.ParseIP(s); ip != nil {
-		if v4 := ip.To4(); v4 != nil {
-			return v4.String()
-		}
-	}
-	return ""
-}
-
 // listenerUpdated is called when VRRP state changes
-func (c *Cluster) listenerUpdated(vip, srcIP string) {
+func (c *Cluster) listenerUpdated(vipAddr, srcIP string) {
 
 	logger := logging.GetLogger()
 
-	newVIP := canonicalVIP(vip)
+	newVIP := vip.Canonicalize(vipAddr)
 
 	c.vipLock.Lock()
 	defer c.vipLock.Unlock()
@@ -227,6 +205,7 @@ func (c *Cluster) listenerUpdated(vip, srcIP string) {
 	}
 
 	// Determine ownership
+
 	oldLocal, err := c.isLocalVIP(oldHolder)
 	if err != nil {
 		logger.Error("isLocalVIP(oldHolder): %v", err)
@@ -305,8 +284,9 @@ func (c *Cluster) listenerUpdated(vip, srcIP string) {
 }
 
 func (c *Cluster) startVRRPListener(iface string) error {
-	if err := network.StartVRRPListener(c.listenerUpdated); err != nil {
-		return fmt.Errorf("unable to start VRRP listener: %v", err)
+
+	if err := network.StartVRRPListener(logging.GetLogger(), c.listenerUpdated); err != nil {
+		return fmt.Errorf("unable to start keepalived listener: %v", err)
 	}
 
 	go c.watchLocalVIP(iface)
@@ -314,142 +294,145 @@ func (c *Cluster) startVRRPListener(iface string) error {
 	return nil
 }
 
-// isLocalVIP compares the VIP (which might be in CIDR format) to the IPs on local interfaces.
-func (c *Cluster) isLocalVIP(vip string) (bool, error) {
-	logger := logging.GetLogger()
+// <<<<<<< HEAD
+// // isLocalVIP compares the VIP (which might be in CIDR format) to the IPs on local interfaces.
+// func (c *Cluster) isLocalVIP(vip string) (bool, error) {
+// 	logger := logging.GetLogger()
 
-	if vip == "" {
-		return false, fmt.Errorf("empty VIP provided to isLocalVIP")
-	}
-	expectedIP := net.ParseIP(vip)
-	if expectedIP == nil {
-		ip, _, err := net.ParseCIDR(vip)
-		if err != nil {
-			logger.Warn("[CLUSTER] isLocalVIP: unable to parse VIP %q as IP or CIDR: %v", vip, err)
-			return false, err
-		}
-		expectedIP = ip
-	}
+// 	if vip == "" {
+// 		return false, fmt.Errorf("empty VIP provided to isLocalVIP")
+// 	}
+// 	expectedIP := net.ParseIP(vip)
+// 	if expectedIP == nil {
+// 		ip, _, err := net.ParseCIDR(vip)
+// 		if err != nil {
+// 			logger.Warn("[CLUSTER] isLocalVIP: unable to parse VIP %q as IP or CIDR: %v", vip, err)
+// 			return false, err
+// 		}
+// 		expectedIP = ip
+// 	}
 
-	addrs, err := net.InterfaceAddrs()
-	if err != nil {
-		logger.Error("[CLUSTER] isLocalVIP: net.InterfaceAddrs failed: %v", err)
-		return false, err
-	}
+// 	addrs, err := net.InterfaceAddrs()
+// 	if err != nil {
+// 		logger.Error("[CLUSTER] isLocalVIP: net.InterfaceAddrs failed: %v", err)
+// 		return false, err
+// 	}
 
-	for _, addr := range addrs {
-		if ipnet, ok := addr.(*net.IPNet); ok {
-			ip4 := ipnet.IP.To4()
-			if ip4 == nil || ip4.IsLoopback() {
-				// Skip IPv6 and loopback
-				continue
-			}
-			if ip4.Equal(expectedIP) {
-				return true, nil
-			}
-		}
-	}
-	logger.Debug("[CLUSTER] isLocalVIP: no match found for expectedIP=%s", expectedIP.String())
-	return false, nil
-}
+// 	for _, addr := range addrs {
+// 		if ipnet, ok := addr.(*net.IPNet); ok {
+// 			ip4 := ipnet.IP.To4()
+// 			if ip4 == nil || ip4.IsLoopback() {
+// 				// Skip IPv6 and loopback
+// 				continue
+// 			}
+// 			if ip4.Equal(expectedIP) {
+// 				return true, nil
+// 			}
+// 		}
+// 	}
+// 	logger.Debug("[CLUSTER] isLocalVIP: no match found for expectedIP=%s", expectedIP.String())
+// 	return false, nil
+// }
 
-// getLocalAndVIP checks whether `vip` (CIDR or plain IP) is assigned on any local interface.
-// If so, it returns:
-//   - internalAddr: the first non-loopback IPv4 address that is NOT equal to the VIP
-//   - vipAddr: the exact Addr where vip was found
-//   - ok = true
-//
-// If vip isn’t present on any interface, it returns (nil, nil, false).
-func (c *Cluster) getLocalForVIP(vip string) (net.Addr, net.Addr, bool) {
-	expectedIP := net.ParseIP(vip)
-	if expectedIP == nil {
-		ip, _, err := net.ParseCIDR(vip)
-		if err != nil {
-			return nil, nil, false
-		}
-		expectedIP = ip
-	}
+// // getLocalAndVIP checks whether `vip` (CIDR or plain IP) is assigned on any local interface.
+// // If so, it returns:
+// //   - internalAddr: the first non-loopback IPv4 address that is NOT equal to the VIP
+// //   - vipAddr: the exact Addr where vip was found
+// //   - ok = true
+// //
+// // If vip isn’t present on any interface, it returns (nil, nil, false).
+// func (c *Cluster) getLocalForVIP(vip string) (net.Addr, net.Addr, bool) {
+// 	expectedIP := net.ParseIP(vip)
+// 	if expectedIP == nil {
+// 		ip, _, err := net.ParseCIDR(vip)
+// 		if err != nil {
+// 			return nil, nil, false
+// 		}
+// 		expectedIP = ip
+// 	}
 
-	addrs, err := net.InterfaceAddrs()
-	if err != nil {
-		return nil, nil, false
-	}
+// 	addrs, err := net.InterfaceAddrs()
+// 	if err != nil {
+// 		return nil, nil, false
+// 	}
 
-	var vipAddr net.Addr
-	var internalAddr net.Addr
+// 	var vipAddr net.Addr
+// 	var internalAddr net.Addr
 
-	for _, addr := range addrs {
-		ipnet, ok := addr.(*net.IPNet)
-		if !ok {
-			continue
-		}
+// 	for _, addr := range addrs {
+// 		ipnet, ok := addr.(*net.IPNet)
+// 		if !ok {
+// 			continue
+// 		}
 
-		ip4 := ipnet.IP.To4()
-		if ip4 == nil || ip4.IsLoopback() {
-			// Skip IPv6 and loopback
-			continue
-		}
+// 		ip4 := ipnet.IP.To4()
+// 		if ip4 == nil || ip4.IsLoopback() {
+// 			// Skip IPv6 and loopback
+// 			continue
+// 		}
 
-		// Match exact VIP
-		if expectedIP.To4() != nil && ip4.Equal(expectedIP) {
-			vipAddr = &net.IPAddr{IP: ip4}
-			continue
-		}
+// 		// Match exact VIP
+// 		if expectedIP.To4() != nil && ip4.Equal(expectedIP) {
+// 			vipAddr = &net.IPAddr{IP: ip4}
+// 			continue
+// 		}
 
-		// Save the first non-loopback IPv4 as internal address
-		if internalAddr == nil {
-			internalAddr = &net.IPAddr{IP: ip4}
-		}
-	}
+// 		// Save the first non-loopback IPv4 as internal address
+// 		if internalAddr == nil {
+// 			internalAddr = &net.IPAddr{IP: ip4}
+// 		}
+// 	}
 
-	if vipAddr == nil {
-		return nil, nil, false
-	}
+// 	if vipAddr == nil {
+// 		return nil, nil, false
+// 	}
 
-	return internalAddr, vipAddr, true
-}
+// 	return internalAddr, vipAddr, true
+// }
 
-func (c *Cluster) getVIPFromConfig() (string, error) {
+// func (c *Cluster) getVIPFromConfig() (string, error) {
 
-	data, err := os.ReadFile(c.configPath)
-	if err != nil {
-		return "", fmt.Errorf("unable to read config file: %v", err)
-	}
-	configText := string(data)
+// 	data, err := os.ReadFile(c.configPath)
+// 	if err != nil {
+// 		return "", fmt.Errorf("unable to read config file: %v", err)
+// 	}
+// 	configText := string(data)
 
-	// This regex looks for a block starting with "virtual_ipaddress" and
-	// captures everything until the closing brace.
-	re := regexp.MustCompile(`virtual_ipaddress\s*{([^}]+)}`)
-	matches := re.FindStringSubmatch(configText)
-	if len(matches) < 2 {
-		return "", fmt.Errorf("no virtual_ipaddress block found")
-	}
+// 	// This regex looks for a block starting with "virtual_ipaddress" and
+// 	// captures everything until the closing brace.
+// 	re := regexp.MustCompile(`virtual_ipaddress\s*{([^}]+)}`)
+// 	matches := re.FindStringSubmatch(configText)
+// 	if len(matches) < 2 {
+// 		return "", fmt.Errorf("no virtual_ipaddress block found")
+// 	}
 
-	// Extract the content between braces and split by newline or whitespace
-	vipBlock := matches[1]
+// 	// Extract the content between braces and split by newline or whitespace
+// 	vipBlock := matches[1]
 
-	// Split lines and remove extra spaces
-	lines := strings.Split(vipBlock, "\n")
-	var vips []string
-	for _, line := range lines {
-		v := strings.TrimSpace(line)
-		if v != "" {
-			vips = append(vips, v)
-		}
-	}
+// 	// Split lines and remove extra spaces
+// 	lines := strings.Split(vipBlock, "\n")
+// 	var vips []string
+// 	for _, line := range lines {
+// 		v := strings.TrimSpace(line)
+// 		if v != "" {
+// 			vips = append(vips, v)
+// 		}
+// 	}
 
-	if len(vips) == 0 {
-		return "", fmt.Errorf("no VIP found")
-	}
+// 	if len(vips) == 0 {
+// 		return "", fmt.Errorf("no VIP found")
+// 	}
 
-	if len(vips) > 1 {
-		logger := logging.GetLogger()
-		logger.Warn("More than one VIP found.")
-	}
+// 	if len(vips) > 1 {
+// 		logger := logging.GetLogger()
+// 		logger.Warn("More than one VIP found.")
+// 	}
 
-	return vips[0], nil
-}
+// 	return vips[0], nil
+// }
 
+// =======
+// >>>>>>> develop
 // restartKeepalived reloads the keepalived process
 func (c *Cluster) restartKeepalived() error {
 	return exec.Command("systemctl", "reload", "keepalived").Run()
@@ -693,24 +676,14 @@ func getLocalURL(addr, endpoint string) string {
 
 func (c *Cluster) notifyLocalVIPChange(gained bool) {
 	logger := logging.GetLogger()
-	event := ternary(gained, "gained", "lost")
+	event := ternary(gained, vip.EventGained, vip.EventLost)
 
-	logger.Info("[Cluster] VIP ownership change detected: %s (VIP: %s)", event, c.vip)
-
-	msg := map[string]any{
-		"vip":       c.vip,
-		"host":      c.appConfig.BindAddr,
-		"event":     event,
-		"timestamp": time.Now().Unix(),
-	}
-
-	addr := &net.UDPAddr{IP: net.IPv4(127, 0, 0, 1), Port: api.VIPNotifierPort}
-	if err := utils.SendUDPMessage(addr, msg); err != nil {
+	if err := vip.SendLocalStatus(c.vip, c.appConfig.BindAddr, gained); err != nil {
 		logger.Error("SendUDPMessage failed: %v", err)
 		return
 	}
 
-	logger.Debug("Local VIP changed %s: %s. Notified localhost:%d", event, c.vip, api.VIPNotifierPort)
+	logger.Debug("Local VIP changed %s: %s. Notified localhost:%d", event, c.vip, vip.Port)
 }
 
 func ternary(cond bool, a, b string) string {

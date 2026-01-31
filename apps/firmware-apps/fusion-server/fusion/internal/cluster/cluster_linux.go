@@ -4,6 +4,7 @@
 package cluster
 
 import (
+	"fusion-services-core/vip"
 	"fusion/internal/logging"
 
 	"github.com/vishvananda/netlink"
@@ -15,12 +16,16 @@ func (c *Cluster) watchLocalVIP(iface string) {
 	logger := logging.GetLogger()
 
 	logger.Debug("[VIP watcher] Starting VIP on Linux watcher on interface: %s", iface)
-	expectedVIP, err := c.getVIPFromConfig()
+	expectedVIP, multiple, err := vip.ReadFromKeepalivedConfig(c.configPath)
+
 	if err != nil {
 		logger.Error("Failed to get VIP from config: %v", err)
 		return
 	}
-	expectedVIP = canonicalVIP(expectedVIP)
+	if multiple {
+		logger.Warn("More than one VIP found.")
+	}
+	expectedVIP = vip.Canonicalize(expectedVIP)
 
 	// Watch only the correct interface
 	link, err := netlink.LinkByName(iface)
@@ -36,7 +41,8 @@ func (c *Cluster) watchLocalVIP(iface string) {
 		return
 	}
 	for _, a := range addrs {
-		if canonicalVIP(a.IP.String()) == expectedVIP {
+
+		if vip.Canonicalize(a.IP.String()) == expectedVIP {
 			logger.Info("[VIP watcher] VIP present at startup: %s", expectedVIP)
 			c.listenerUpdated(expectedVIP, c.appConfig.BindAddr)
 			break

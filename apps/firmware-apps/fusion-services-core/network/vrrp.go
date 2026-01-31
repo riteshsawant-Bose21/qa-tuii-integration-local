@@ -3,7 +3,6 @@ package network
 import (
 	"encoding/binary"
 	"fmt"
-	"fusion/internal/logging"
 	"net"
 	"strings"
 	"syscall"
@@ -15,6 +14,16 @@ const (
 	VRRPProtocol     = 112
 	MinIPv4HeaderLen = 20
 )
+
+type Logger interface {
+	Debug(format string, args ...any)
+	Error(format string, args ...any)
+}
+
+type noopLogger struct{}
+
+func (noopLogger) Debug(string, ...any) {}
+func (noopLogger) Error(string, ...any) {}
 
 type VRRPHeader struct {
 	VersType    uint8
@@ -34,13 +43,16 @@ type VRRPPacket struct {
 
 // StartVRRPListener starts a goroutine that listens for VRRP advertisements.
 // onUpdate(vip, src) is called when the VIP ownership changes.
-func StartVRRPListener(onUpdate func(vip string, srcIP string)) error {
+func StartVRRPListener(logger Logger, onUpdate func(vip string, srcIP string)) error {
+	if logger == nil {
+		logger = noopLogger{}
+	}
+
 	fd, err := syscall.Socket(syscall.AF_INET, syscall.SOCK_RAW, VRRPProtocol)
 	if err != nil {
 		return fmt.Errorf("failed to create raw socket: %w", err)
 	}
 
-	logger := logging.GetLogger()
 	logger.Debug("VRRP listener started")
 
 	go func() {
