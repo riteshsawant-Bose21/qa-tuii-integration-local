@@ -16,8 +16,10 @@ const (
 	JsonMIMEType = "application/json"
 	Protocol     = "http://"
 
-	FusionEpoch   = "_fusion_epoch"
-	FusionVersion = "_fusion_version"
+	FusionEpoch     = "_fusion_epoch"
+	FusionVersion   = "_fusion_version"
+	FusionMessageID = "_fusion_msg_id"
+	FusionOperation = "_fusion_op"
 
 	HTTPTimeout = 5 * time.Second
 

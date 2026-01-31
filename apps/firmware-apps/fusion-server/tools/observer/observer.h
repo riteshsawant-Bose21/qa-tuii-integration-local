@@ -963,6 +963,17 @@ private:
         std::istringstream iss(buffer);
         std::string errs;
         if (Json::parseFromStream(readerBuilder, iss, &response, &errs)) {
+          std::string msgId;
+          if (response.isMember("_fusion_msg_id")) {
+            msgId = response["_fusion_msg_id"].asString();
+          } else if (response.isMember("data") &&
+                     response["data"].isMember("_fusion_msg_id")) {
+            msgId = response["data"]["_fusion_msg_id"].asString();
+          }
+          if (!msgId.empty()) {
+            sendAck(msgId);
+          }
+
           if (response.isMember("status") && response.isMember("data")) {
             if (verbose_)
               log("Processing initial state response");
@@ -976,6 +987,21 @@ private:
           std::cerr << "Failed to parse JSON: " << errs << std::endl;
         }
       }
+    }
+  }
+
+  void sendAck(const std::string &msgId) {
+    Json::Value ack;
+    ack["operation"] = "ack";
+    ack["id"] = msgId;
+    Json::StreamWriterBuilder writerBuilder;
+    writerBuilder["indentation"] = "";
+    std::string jsonStr = Json::writeString(writerBuilder, ack);
+    ssize_t sent = sendto(udpSocket_.get(), jsonStr.c_str(), jsonStr.length(), 0,
+                          reinterpret_cast<const sockaddr *>(&serverAddr_),
+                          sizeof(serverAddr_));
+    if (sent < 0 && verbose_) {
+      log("Failed to send ack: " + std::string(strerror(errno)));
     }
   }
 
