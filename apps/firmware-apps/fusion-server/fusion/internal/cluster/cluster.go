@@ -2,10 +2,12 @@ package cluster
 
 import (
 	"fmt"
-	"fusion-services-core/network"
+	coreNetwork "fusion-services-core/network"
 	"fusion-services-core/vip"
+
 	"fusion/internal/api"
 	"fusion/internal/logging"
+	"fusion/internal/network"
 	"fusion/internal/routes"
 	"io"
 	"net"
@@ -174,7 +176,7 @@ func (c *Cluster) listenerUpdated(vipAddr, srcIP string) {
 	oldVIP := c.vip
 	oldHolder := c.vipHolder
 	logger.Debug("[CLUSTER] listenerUpdated called: oldVIP=%s oldHolder=%s vip=%s srcIP=%s",
-		oldVIP, oldHolder, vip, srcIP,
+		oldVIP, oldHolder, c.vip, srcIP,
 	)
 
 	// VIP has been removed entirely
@@ -206,12 +208,12 @@ func (c *Cluster) listenerUpdated(vipAddr, srcIP string) {
 
 	// Determine ownership
 
-	oldLocal, err := c.isLocalVIP(oldHolder)
+	oldLocal, err := vip.IsLocalVIP(oldHolder)
 	if err != nil {
 		logger.Error("isLocalVIP(oldHolder): %v", err)
 	}
 
-	newLocal, err := c.isLocalVIP(srcIP)
+	newLocal, err := vip.IsLocalVIP(srcIP)
 	if err != nil {
 		logger.Error("isLocalVIP(srcIP): %v", err)
 	}
@@ -285,7 +287,7 @@ func (c *Cluster) listenerUpdated(vipAddr, srcIP string) {
 
 func (c *Cluster) startVRRPListener(iface string) error {
 
-	if err := network.StartVRRPListener(logging.GetLogger(), c.listenerUpdated); err != nil {
+	if err := coreNetwork.StartVRRPListener(logging.GetLogger(), c.listenerUpdated); err != nil {
 		return fmt.Errorf("unable to start keepalived listener: %v", err)
 	}
 

@@ -200,7 +200,7 @@ func (c *Cluster) GetVIP(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set(api.ContentType, api.JsonMIMEType)
 
-	isVip, err := c.isLocalVIP(vip)
+	isVip, err := vip.IsLocalVIP(vipValue)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return

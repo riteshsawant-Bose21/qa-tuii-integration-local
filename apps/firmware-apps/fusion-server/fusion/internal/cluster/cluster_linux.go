@@ -82,18 +82,21 @@ func (c *Cluster) watchLocalVIP(iface string) {
 				}
 
 				//Since there was an update, check for new expected VIP
-				expectedVIP, err := c.getVIPFromConfig()
+				expectedVIP, multiple, err := vip.ReadFromKeepalivedConfig(c.configPath)
 				if err != nil {
 					logger.Error("[VIP watcher] Failed to get VIP from config: %v", err)
 					return
 				}
-				expectedVIP = canonicalVIP(expectedVIP)
+				if multiple {
+					logger.Warn("More than one VIP found.")
+				}
+				expectedVIP = vip.Canonicalize(expectedVIP)
 
 				ip := update.LinkAddress.IP
 				if ip == nil || ip.To4() == nil {
 					continue
 				}
-				theIP := canonicalVIP(ip.String())
+				theIP := vip.Canonicalize(ip.String())
 				logger.Debug("[VIP watcher] received update for IP: %s", theIP)
 				logger.Debug("[VIP watcher] expected VIP: %s", expectedVIP)
 				logger.Debug("[VIP watcher] theIP: %s", theIP)
