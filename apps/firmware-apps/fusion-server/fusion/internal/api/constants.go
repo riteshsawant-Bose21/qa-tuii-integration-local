@@ -11,7 +11,6 @@ const (
 	MessageTriggerPort = 7949
 	SAPPort            = "9875" // As defined: https://datatracker.ietf.org/doc/html/rfc2974
 	UDPPort            = "7947"
-	VIPNotifierPort    = 7948
 
 	ContentType  = "Content-Type"
 	JsonMIMEType = "application/json"
