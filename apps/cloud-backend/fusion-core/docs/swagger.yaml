@@ -1703,7 +1703,7 @@ paths:
       produces:
       - application/json
       responses:
-        "200":
+        "204":
           description: Successfully updated user profile
         "400":
           description: Invalid request body
@@ -1792,7 +1792,7 @@ paths:
       produces:
       - application/json
       responses:
-        "200":
+        "204":
           description: Successfully updated user settings
         "400":
           description: Invalid request body

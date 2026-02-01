@@ -7,10 +7,10 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 
+	response "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/api/response"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/api/types"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/constants"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion"
-	httputils "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/utils/http"
 )
 
 type UserHandler struct {
@@ -42,13 +42,13 @@ func (h *UserHandler) GetUserAuthorization(ctx *gin.Context) {
 		email, exists = ctx.Get("email")
 	}
 	if !exists {
-		httputils.Unauthorized(ctx, constants.MsgUserEmailNotFoundInToken)
+		response.Unauthorized(ctx, constants.MsgUserEmailNotFoundInToken)
 		return
 	}
 
 	emailStr, ok := email.(string)
 	if !ok {
-		httputils.Unauthorized(ctx, constants.MsgInvalidToken)
+		response.Unauthorized(ctx, constants.MsgInvalidToken)
 		return
 	}
 
@@ -57,15 +57,15 @@ func (h *UserHandler) GetUserAuthorization(ctx *gin.Context) {
 	if err != nil {
 		// Check if it's a "user not found" error
 		if strings.Contains(err.Error(), "user not found") {
-			httputils.NotFound(ctx, "User account not found in the system. Please contact your administrator to set up your account.")
+			response.NotFound(ctx, "User account not found in the system. Please contact your administrator to set up your account.")
 			return
 		}
 		// All other errors are internal server errors
-		httputils.InternalError(ctx)
+		response.InternalError(ctx)
 		return
 	}
 
-	httputils.OK(ctx, authDetails)
+	response.OK(ctx, authDetails)
 }
 
 // GetUserProfile retrieves the current user's profile information.
@@ -87,13 +87,13 @@ func (h *UserHandler) GetUserProfile(ctx *gin.Context) {
 		email, exists = ctx.Get("email")
 	}
 	if !exists {
-		httputils.Unauthorized(ctx, constants.MsgUnauthorized)
+		response.Unauthorized(ctx, constants.MsgUnauthorized)
 		return
 	}
 
 	emailStr, ok := email.(string)
 	if !ok {
-		httputils.Unauthorized(ctx, constants.MsgInvalidToken)
+		response.Unauthorized(ctx, constants.MsgInvalidToken)
 		return
 	}
 
@@ -102,15 +102,15 @@ func (h *UserHandler) GetUserProfile(ctx *gin.Context) {
 	if err != nil {
 		// Check if it's a "user not found" error
 		if strings.Contains(err.Error(), "user not found") {
-			httputils.NotFound(ctx, "User account not found in the system. Please contact your administrator to set up your account.")
+			response.NotFound(ctx, "User account not found in the system. Please contact your administrator to set up your account.")
 			return
 		}
 		// All other errors are internal server errors
-		httputils.InternalError(ctx)
+		response.InternalError(ctx)
 		return
 	}
 
-	httputils.OK(ctx, user)
+	response.OK(ctx, user)
 }
 
 // CreateUser creates a new user in the system.
@@ -128,17 +128,17 @@ func (h *UserHandler) GetUserProfile(ctx *gin.Context) {
 func (h *UserHandler) CreateUser(ctx *gin.Context) {
 	var req types.CreateUserRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
-		httputils.BadRequest(ctx, "Invalid request body: "+err.Error())
+		response.BadRequest(ctx, "Invalid request body: "+err.Error())
 		return
 	}
 
 	user, err := h.user.CreateUser(ctx, &req)
 	if err != nil {
-		httputils.InternalError(ctx)
+		response.InternalError(ctx)
 		return
 	}
 
-	httputils.Created(ctx, user)
+	response.Created(ctx, user)
 }
 
 // GetUserByEmail retrieves a user by their email address.
@@ -156,7 +156,7 @@ func (h *UserHandler) CreateUser(ctx *gin.Context) {
 func (h *UserHandler) GetUserByEmail(ctx *gin.Context) {
 	email := ctx.Param("email")
 	if email == "" {
-		httputils.BadRequest(ctx, "Email parameter is required")
+		response.BadRequest(ctx, "Email parameter is required")
 		return
 	}
 
@@ -164,15 +164,15 @@ func (h *UserHandler) GetUserByEmail(ctx *gin.Context) {
 	if err != nil {
 		// Check if it's a "not found" error
 		if strings.Contains(err.Error(), "user not found") {
-			httputils.NotFound(ctx, "User account not found in the system")
+			response.NotFound(ctx, "User account not found in the system")
 			return
 		}
 		// All other errors are internal server errors
-		httputils.InternalError(ctx)
+		response.InternalError(ctx)
 		return
 	}
 
-	httputils.OK(ctx, user)
+	response.OK(ctx, user)
 }
 
 // UpdateUser updates an existing user's information.
@@ -192,13 +192,13 @@ func (h *UserHandler) GetUserByEmail(ctx *gin.Context) {
 func (h *UserHandler) UpdateUser(ctx *gin.Context) {
 	userID := ctx.Param("userID")
 	if userID == "" {
-		httputils.BadRequest(ctx, "User ID parameter is required")
+		response.BadRequest(ctx, "User ID parameter is required")
 		return
 	}
 
 	var req types.UpdateUserRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
-		httputils.BadRequest(ctx, "Invalid request body: "+err.Error())
+		response.BadRequest(ctx, "Invalid request body: "+err.Error())
 		return
 	}
 
@@ -206,15 +206,15 @@ func (h *UserHandler) UpdateUser(ctx *gin.Context) {
 	if err != nil {
 		// Check if it's a "not found" error
 		if strings.Contains(err.Error(), "user not found") {
-			httputils.NotFound(ctx, "User account not found in the system")
+			response.NotFound(ctx, "User account not found in the system")
 			return
 		}
 		// All other errors are internal server errors
-		httputils.InternalError(ctx)
+		response.InternalError(ctx)
 		return
 	}
 
-	httputils.OK(ctx, user)
+	response.OK(ctx, user)
 }
 
 // === User settings Handlers ===
@@ -233,13 +233,13 @@ func (h *UserHandler) UpdateUser(ctx *gin.Context) {
 func (h *UserHandler) GetUserSettings(ctx *gin.Context) {
 	userAuth, exists := ctx.Get("user_auth")
 	if !exists {
-		httputils.Unauthorized(ctx, constants.MsgUnauthorized)
+		response.Unauthorized(ctx, constants.MsgUnauthorized)
 		return
 	}
 
 	auth, ok := userAuth.(*types.UserAuthorizationResponse)
 	if !ok {
-		httputils.Unauthorized(ctx, constants.MsgUnauthorized)
+		response.Unauthorized(ctx, constants.MsgUnauthorized)
 		return
 	}
 
@@ -248,13 +248,13 @@ func (h *UserHandler) GetUserSettings(ctx *gin.Context) {
 	settings, err := h.user.GetUserSettings(ctx, userID)
 	if err != nil {
 		if err.Error() == "user settings not found" || err.Error() == "sql: no rows in result set" {
-			httputils.NotFound(ctx, "User settings not found")
+			response.NotFound(ctx, "User settings not found")
 			return
 		}
-		httputils.InternalError(ctx)
+		response.InternalError(ctx)
 		return
 	}
-	httputils.OK(ctx, settings)
+	response.OK(ctx, settings)
 }
 
 // CreateUserSettings creates a new user settings.
@@ -272,27 +272,27 @@ func (h *UserHandler) CreateUserSettings(ctx *gin.Context) {
 	var settings types.UserSettings
 
 	if err := ctx.ShouldBindJSON(&settings); err != nil {
-		httputils.BadRequest(ctx, fmt.Sprintf("Invalid request body: %v", err))
+		response.BadRequest(ctx, fmt.Sprintf("Invalid request body: %v", err))
 		return
 	}
 
 	if settings.UserID == "" {
-		httputils.BadRequest(ctx, "user_id is required for creating settings")
+		response.BadRequest(ctx, "user_id is required for creating settings")
 		return
 	}
 
 	if _, err := uuid.Parse(settings.UserID); err != nil {
-		httputils.BadRequest(ctx, "Invalid user_id format: must be a valid UUID")
+		response.BadRequest(ctx, "Invalid user_id format: must be a valid UUID")
 		return
 	}
 
 	userSettingsID, err := h.user.CreateUserSettings(ctx, &settings)
 	if err != nil {
-		httputils.InternalError(ctx)
+		response.InternalError(ctx)
 		return
 	}
 
-	httputils.Created(ctx, types.StatusOkForCreateUserSettings{ID: userSettingsID})
+	response.Created(ctx, types.StatusOkForCreateUserSettings{ID: userSettingsID})
 }
 
 // UpdateUserSettings updates an existing user settings.
@@ -314,24 +314,24 @@ func (h *UserHandler) UpdateUserSettings(ctx *gin.Context) {
 	settingsID := ctx.Param("settingsID")
 
 	if err := ctx.ShouldBindJSON(&settings); err != nil {
-		httputils.BadRequest(ctx, fmt.Sprintf("Invalid JSON format: %v", err))
+		response.BadRequest(ctx, fmt.Sprintf("Invalid JSON format: %v", err))
 		return
 	}
 
 	if _, err := uuid.Parse(settingsID); err != nil {
-		httputils.BadRequest(ctx, "Invalid ID format: must be a valid UUID")
+		response.BadRequest(ctx, "Invalid ID format: must be a valid UUID")
 		return
 	}
 
 	userAuth, exists := ctx.Get("user_auth")
 	if !exists {
-		httputils.Unauthorized(ctx, constants.MsgUnauthorized)
+		response.Unauthorized(ctx, constants.MsgUnauthorized)
 		return
 	}
 
 	auth, ok := userAuth.(*types.UserAuthorizationResponse)
 	if !ok {
-		httputils.Unauthorized(ctx, constants.MsgUnauthorized)
+		response.Unauthorized(ctx, constants.MsgUnauthorized)
 		return
 	}
 
@@ -339,14 +339,14 @@ func (h *UserHandler) UpdateUserSettings(ctx *gin.Context) {
 
 	if err := h.user.UpdateUserSettings(ctx, &settings, settingsID, authUserID); err != nil {
 		if err.Error() == "user settings not found" {
-			httputils.NotFound(ctx, "User settings not found")
+			response.NotFound(ctx, "User settings not found")
 			return
 		}
-		httputils.InternalError(ctx)
+		response.InternalError(ctx)
 		return
 	}
 
-	httputils.NoContent(ctx)
+	response.NoContent(ctx)
 }
 
 // === user Profile Handlers ===
@@ -365,13 +365,13 @@ func (h *UserHandler) UpdateUserSettings(ctx *gin.Context) {
 func (h *UserHandler) GetUserProfileDetails(ctx *gin.Context) {
 	userAuth, exists := ctx.Get("user_auth")
 	if !exists {
-		httputils.Unauthorized(ctx, constants.MsgUnauthorized)
+		response.Unauthorized(ctx, constants.MsgUnauthorized)
 		return
 	}
 
 	auth, ok := userAuth.(*types.UserAuthorizationResponse)
 	if !ok {
-		httputils.Unauthorized(ctx, constants.MsgUnauthorized)
+		response.Unauthorized(ctx, constants.MsgUnauthorized)
 		return
 	}
 
@@ -380,13 +380,13 @@ func (h *UserHandler) GetUserProfileDetails(ctx *gin.Context) {
 	userProfile, err := h.user.GetUserProfile(ctx, userID)
 	if err != nil {
 		if err.Error() == "user profile not found" || err.Error() == "sql: no rows in result set" {
-			httputils.NotFound(ctx, "User profile not found")
+			response.NotFound(ctx, "User profile not found")
 			return
 		}
-		httputils.InternalError(ctx)
+		response.InternalError(ctx)
 		return
 	}
-	httputils.OK(ctx, userProfile)
+	response.OK(ctx, userProfile)
 }
 
 // CreateUserProfile creates a new user profile.
@@ -405,32 +405,32 @@ func (h *UserHandler) CreateUserProfile(ctx *gin.Context) {
 	var profile types.UserProfile
 
 	if err := ctx.ShouldBindJSON(&profile); err != nil {
-		httputils.BadRequest(ctx, fmt.Sprintf("Invalid request body: %v", err))
+		response.BadRequest(ctx, fmt.Sprintf("Invalid request body: %v", err))
 		return
 	}
 
 	if profile.UserID == "" {
-		httputils.BadRequest(ctx, "user_id is required for creating profile")
+		response.BadRequest(ctx, "user_id is required for creating profile")
 		return
 	}
 
 	if _, err := uuid.Parse(profile.UserID); err != nil {
-		httputils.BadRequest(ctx, "Invalid user_id format: must be a valid UUID")
+		response.BadRequest(ctx, "Invalid user_id format: must be a valid UUID")
 		return
 	}
 
 	if profile.Email == "" {
-		httputils.BadRequest(ctx, "email is required for creating profile")
+		response.BadRequest(ctx, "email is required for creating profile")
 		return
 	}
 
 	profileID, err := h.user.CreateUserProfile(ctx, &profile)
 	if err != nil {
-		httputils.InternalError(ctx)
+		response.InternalError(ctx)
 		return
 	}
 
-	httputils.Created(ctx, types.StatusOkForCreateUserProfile{ID: profileID})
+	response.Created(ctx, types.StatusOkForCreateUserProfile{ID: profileID})
 }
 
 // UpdateUserProfile updates an existing user profile.
@@ -452,35 +452,35 @@ func (h *UserHandler) UpdateUserProfile(ctx *gin.Context) {
 	profileID := ctx.Param("profileID")
 
 	if err := ctx.ShouldBindJSON(&profile); err != nil {
-		httputils.BadRequest(ctx, fmt.Sprintf("Invalid JSON format: %v", err))
+		response.BadRequest(ctx, fmt.Sprintf("Invalid JSON format: %v", err))
 		return
 	}
 
 	if _, err := uuid.Parse(profileID); err != nil {
-		httputils.BadRequest(ctx, "Invalid ID format: must be a valid UUID")
+		response.BadRequest(ctx, "Invalid ID format: must be a valid UUID")
 		return
 	}
 
 	userAuth, exists := ctx.Get("user_auth")
 	if !exists {
-		httputils.Unauthorized(ctx, constants.MsgUnauthorized)
+		response.Unauthorized(ctx, constants.MsgUnauthorized)
 		return
 	}
 
 	auth, ok := userAuth.(*types.UserAuthorizationResponse)
 	if !ok {
-		httputils.Unauthorized(ctx, constants.MsgUnauthorized)
+		response.Unauthorized(ctx, constants.MsgUnauthorized)
 		return
 	}
 
 	if err := h.user.UpdateUserProfile(ctx, &profile, profileID, auth.User.ID); err != nil {
 		if err.Error() == "user profile not found" {
-			httputils.NotFound(ctx, "User profile not found")
+			response.NotFound(ctx, "User profile not found")
 			return
 		}
-		httputils.InternalError(ctx)
+		response.InternalError(ctx)
 		return
 	}
 
-	httputils.NoContent(ctx)
+	response.NoContent(ctx)
 }

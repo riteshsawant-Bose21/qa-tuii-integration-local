@@ -5,13 +5,14 @@ import (
 
 	"github.com/gin-gonic/gin"
 
+	response "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/api/response"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/api/types"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/constants"
 )
 
 // RespondWithUnauthorized sends an unauthorized response
 func RespondWithUnauthorized(c *gin.Context) {
-	c.JSON(http.StatusUnauthorized, types.AuthErrorResponse{
+	response.SendJSON(c, http.StatusUnauthorized, types.AuthErrorResponse{
 		Message: constants.MsgUnauthorized,
 		Code:    constants.CodeUnauthorized,
 	})
@@ -19,7 +20,7 @@ func RespondWithUnauthorized(c *gin.Context) {
 
 // RespondWithForbidden sends a forbidden response
 func RespondWithForbidden(c *gin.Context) {
-	c.JSON(http.StatusForbidden, types.AuthErrorResponse{
+	response.SendJSON(c, http.StatusForbidden, types.AuthErrorResponse{
 		Message: constants.MsgAccessDenied,
 		Code:    constants.CodeAccessDenied,
 	})
@@ -27,7 +28,7 @@ func RespondWithForbidden(c *gin.Context) {
 
 // RespondWithInvalidToken sends an invalid token response
 func RespondWithInvalidToken(c *gin.Context) {
-	c.JSON(http.StatusUnauthorized, types.AuthErrorResponse{
+	response.SendJSON(c, http.StatusUnauthorized, types.AuthErrorResponse{
 		Message: constants.MsgInvalidToken,
 		Code:    constants.CodeUnauthorized,
 	})
@@ -35,7 +36,7 @@ func RespondWithInvalidToken(c *gin.Context) {
 
 // RespondWithTokenExpired sends a token expired response
 func RespondWithTokenExpired(c *gin.Context) {
-	c.JSON(http.StatusUnauthorized, types.AuthErrorResponse{
+	response.SendJSON(c, http.StatusUnauthorized, types.AuthErrorResponse{
 		Message: constants.MsgTokenExpired,
 		Code:    constants.CodeUnauthorized,
 	})
@@ -43,7 +44,7 @@ func RespondWithTokenExpired(c *gin.Context) {
 
 // RespondWithInsufficientPermissions sends an insufficient permissions response
 func RespondWithInsufficientPermissions(c *gin.Context) {
-	c.JSON(http.StatusForbidden, types.AuthErrorResponse{
+	response.SendJSON(c, http.StatusForbidden, types.AuthErrorResponse{
 		Message: constants.MsgInsufficientPermissions,
 		Code:    constants.CodeAccessDenied,
 	})

@@ -1,4 +1,4 @@
-package http
+package commonResponse
 
 import (
 	"net/http"
@@ -52,52 +52,4 @@ func NotFound(c *gin.Context, message string) {
 // InternalError sends a 500 Internal Server Error response
 func InternalError(c *gin.Context) {
 	SendJSON(c, http.StatusInternalServerError, types.ErrorResponse{ErrorMessage: constants.MsgInternalServerError})
-}
-
-// RespondWithSuccess sends a success response with generic data
-func RespondWithSuccess(c *gin.Context, message string, data any) {
-	c.JSON(http.StatusOK, types.SuccessResponse{
-		Message: message,
-		Data:    data,
-	})
-}
-
-// RespondWithUserSuccess sends a success response with user data
-func RespondWithUserSuccess(c *gin.Context, message string, data *types.User) {
-	c.JSON(http.StatusOK, types.UserSuccessResponse{
-		Message: message,
-		Data:    data,
-	})
-}
-
-// RespondWithBadRequest sends a bad request response
-func RespondWithBadRequest(c *gin.Context, message string) {
-	c.JSON(http.StatusBadRequest, types.ErrorResponse2{
-		Message: message,
-		Code:    constants.CodeBadRequest,
-	})
-}
-
-// RespondWithInternalServerError sends an internal server error response
-func RespondWithInternalServerError(c *gin.Context) {
-	c.JSON(http.StatusInternalServerError, types.ErrorResponse2{
-		Message: constants.MsgInternalServerError,
-		Code:    constants.CodeInternalServerError,
-	})
-}
-
-// RespondWithNotFound sends a not found response
-func RespondWithNotFound(c *gin.Context, message string) {
-	c.JSON(http.StatusNotFound, types.ErrorResponse2{
-		Message: message,
-		Code:    "NOT_FOUND",
-	})
-}
-
-// RespondWithUserCreated sends a created response with user data
-func RespondWithUserCreated(c *gin.Context, message string, data *types.User) {
-	c.JSON(http.StatusCreated, types.UserSuccessResponse{
-		Message: message,
-		Data:    data,
-	})
 }

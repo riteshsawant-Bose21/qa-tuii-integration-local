@@ -5,10 +5,10 @@ import (
 
 	"github.com/gin-gonic/gin"
 
+	response "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/api/response"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/api/types"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/constants"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion"
-	httputils "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/utils/http"
 )
 
 // AuthHandler handles authentication requests
@@ -39,7 +39,7 @@ func (h *AuthHandler) GetAuthTokensByResourceOwnerPassword(c *gin.Context) {
 	// Get username from query parameter
 	username := c.Query("username")
 	if username == "" {
-		httputils.RespondWithBadRequest(c, "Username query parameter is required")
+		response.BadRequest(c, "Username query parameter is required")
 		return
 	}
 
@@ -48,14 +48,14 @@ func (h *AuthHandler) GetAuthTokensByResourceOwnerPassword(c *gin.Context) {
 	if err != nil {
 		// Check if it's a "disabled" error and return 403, otherwise 500
 		if err.Error() == "Resource Owner Password flow is disabled" {
-			c.JSON(http.StatusForbidden, types.ErrorResponse2{
+			response.SendJSON(c, http.StatusForbidden, types.ErrorResponse2{
 				Message: "Resource Owner Password flow is disabled",
 				Code:    constants.CodeForbidden,
 			})
 			return
 		}
 
-		c.JSON(http.StatusInternalServerError, types.ErrorResponse2{
+		response.SendJSON(c, http.StatusInternalServerError, types.ErrorResponse2{
 			Message: "Failed to generate tokens: " + err.Error(),
 			Code:    constants.CodeInternalServerError,
 		})
@@ -63,7 +63,7 @@ func (h *AuthHandler) GetAuthTokensByResourceOwnerPassword(c *gin.Context) {
 	}
 
 	// Return successful response
-	c.JSON(http.StatusOK, types.AuthTokenSuccessResponse{
+	response.SendJSON(c, http.StatusOK, types.AuthTokenSuccessResponse{
 		Message: "Tokens generated successfully",
 		Data:    tokens,
 	})

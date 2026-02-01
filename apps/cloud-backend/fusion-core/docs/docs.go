@@ -1340,7 +1340,7 @@ const docTemplate = `{
                     }
                 ],
                 "responses": {
-                    "200": {
+                    "204": {
                         "description": "Successfully updated user profile"
                     },
                     "400": {
@@ -1479,7 +1479,7 @@ const docTemplate = `{
                     }
                 ],
                 "responses": {
-                    "200": {
+                    "204": {
                         "description": "Successfully updated user settings"
                     },
                     "400": {

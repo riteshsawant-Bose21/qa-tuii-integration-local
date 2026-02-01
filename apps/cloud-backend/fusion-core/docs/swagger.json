@@ -1337,7 +1337,7 @@
                     }
                 ],
                 "responses": {
-                    "200": {
+                    "204": {
                         "description": "Successfully updated user profile"
                     },
                     "400": {
@@ -1476,7 +1476,7 @@
                     }
                 ],
                 "responses": {
-                    "200": {
+                    "204": {
                         "description": "Successfully updated user settings"
                     },
                     "400": {
