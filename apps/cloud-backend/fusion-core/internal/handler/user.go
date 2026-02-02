@@ -302,7 +302,7 @@ func (h *UserHandler) CreateUserSettings(ctx *gin.Context) {
 // @Accept json
 // @Produce json
 // @Security BearerAuth
-// @Param profileID path string true "Profile ID"
+// @Param settingsID path string true "Settings ID"
 // @Param settings body types.UpdateUserSettingsRequest true "User settings data"
 // @Success 204 "Successfully updated user settings"
 // @Failure 400 {object} types.ErrorResponse "Invalid request body"
