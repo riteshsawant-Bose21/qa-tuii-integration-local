@@ -178,7 +178,9 @@ class _FusionToastState extends State<FusionToast> with SingleTickerProviderStat
                     const SizedBox(width: 8),
                   ],
                   Flexible(
-                    child: FusionAppText(
+                      child: SemanticHelper.staticText(
+                      testId: SemanticHelper.createTestId(SemanticTypes.text, "toast_msg"),
+                      child:FusionAppText(
                       text: widget.message,
                       style: TextStyle(
                         color: widget.textColor ?? Colors.white,
@@ -186,6 +188,7 @@ class _FusionToastState extends State<FusionToast> with SingleTickerProviderStat
                         fontWeight: FontWeight.w500,
                       ),
                     ),
+                  ),
                   ),
                 ],
               ),

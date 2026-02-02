@@ -46,7 +46,9 @@ class _CreateSubzoneWidgetState extends State<CreateSubzoneWidget> {
               ...List<Widget>.generate(subzoneCount, (int subZoneIndex) {
                 return Padding(
                   padding: const EdgeInsets.symmetric(vertical: 4),
-                  child: Row(
+                  child: SemanticHelper.formControl(
+                        testId: SemanticHelper.createTestId(SemanticTypes.textInput, "subzone_$subZoneIndex"),
+                        child:Row(
                     children: <Widget>[
                       Expanded(
                         child: Column(
@@ -95,6 +97,7 @@ class _CreateSubzoneWidgetState extends State<CreateSubzoneWidget> {
                         ),
                       ),
                     ],
+                  ),
                   ),
                 );
               }),
