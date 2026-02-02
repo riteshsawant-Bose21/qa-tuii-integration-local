@@ -378,6 +378,10 @@ class _ZoneCardState extends State<ZoneCard> {
               final Source source = details.data;
               final String sourceId = source.id;
               setState(() {
+                /// Remove from regular source selection if it's currently selected
+                _projectViewModel.removeSourceFromZone(zoneId: widget.zoneId, sourceId: sourceId);
+
+                /// Add to priority
                 _projectViewModel.addPrioritySourceToZone(
                   zoneId: widget.zoneId,
                   sourceId: sourceId,
@@ -401,6 +405,10 @@ class _ZoneCardState extends State<ZoneCard> {
                 child: PopupMenuButton<String>(
                   onSelected: (String value) {
                     setState(() {
+                      /// Remove from regular source selection if it's currently selected
+                      _projectViewModel.removeSourceFromZone(zoneId: widget.zoneId, sourceId: value);
+
+                      /// Add to priority
                       _projectViewModel.addPrioritySourceToZone(
                         zoneId: widget.zoneId,
                         sourceId: value,
@@ -410,6 +418,8 @@ class _ZoneCardState extends State<ZoneCard> {
                   },
                   offset: const Offset(0, 25),
                   tooltip: "Select Priority Source P$priorityIndex",
+                  color: context.colorScheme.elevation1,
+
                   padding: EdgeInsets.zero,
                   itemBuilder: (BuildContext context) {
                     final List<PopupMenuEntry<String>> entries = <PopupMenuEntry<String>>[];
@@ -865,11 +875,15 @@ class _ZoneCardState extends State<ZoneCard> {
         offset: const Offset(0, 25),
         tooltip: "Select Sources",
         padding: EdgeInsets.zero,
+        color: context.colorScheme.elevation1,
         itemBuilder: (BuildContext context) {
           /// Temporary selections mirror existing selections
           final List<String> tempSelectedSources = currentZoneSources.map((Source e) => e.id).toList();
 
           final List<String> tempSelectedSourceSets = currentZoneSourceSets.map((SourceSet e) => e.id).toList();
+
+          /// Get priority sources to disable them in source list
+          final List<String> prioritySources = _projectViewModel.getPrioritySourcesInZone(zoneId: widget.zoneId);
 
           final List<PopupMenuEntry<String>> entries = <PopupMenuEntry<String>>[];
 
@@ -912,6 +926,9 @@ class _ZoneCardState extends State<ZoneCard> {
             for (final Source src in availableSources) {
               final String id = src.id;
 
+              /// Check if this source is already a priority source
+              final bool isPrioritySource = prioritySources.contains(id);
+
               entries.add(
                 PopupMenuItem<String>(
                   enabled: false,
@@ -919,22 +936,10 @@ class _ZoneCardState extends State<ZoneCard> {
                   child: StatefulBuilder(
                     builder: (BuildContext c, StateSetter setPopupState) {
                       return GestureDetector(
-                        onTap: () {
-                          if (tempSelectedSources.contains(id)) {
-                            tempSelectedSources.remove(id);
-                          } else {
-                            tempSelectedSources.add(id);
-                          }
-                          setPopupState(() {});
-                        },
-                        child: Row(
-                          children: <Widget>[
-                            Transform.scale(
-                              scale: 0.7,
-                              child: Checkbox(
-                                value: tempSelectedSources.contains(id),
-                                activeColor: context.colorScheme.primaryBlack,
-                                onChanged: (bool? _) {
+                        onTap:
+                            isPrioritySource
+                                ? null
+                                : () {
                                   if (tempSelectedSources.contains(id)) {
                                     tempSelectedSources.remove(id);
                                   } else {
@@ -942,22 +947,60 @@ class _ZoneCardState extends State<ZoneCard> {
                                   }
                                   setPopupState(() {});
                                 },
+                        child: Row(
+                          children: <Widget>[
+                            Transform.scale(
+                              scale: 0.7,
+                              child: Checkbox(
+                                value: tempSelectedSources.contains(id),
+                                activeColor: isPrioritySource ? context.colorScheme.elevation5 : context.colorScheme.primaryBlack,
+                                onChanged:
+                                    isPrioritySource
+                                        ? null
+                                        : (bool? _) {
+                                          if (tempSelectedSources.contains(id)) {
+                                            tempSelectedSources.remove(id);
+                                          } else {
+                                            tempSelectedSources.add(id);
+                                          }
+                                          setPopupState(() {});
+                                        },
                                 materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                                 visualDensity: const VisualDensity(horizontal: -4, vertical: -4),
                                 checkColor: context.colorScheme.primaryWhite,
                                 side: BorderSide(
                                   width: 1,
-                                  color: context.colorScheme.primaryWhite,
+                                  color: isPrioritySource ? context.colorScheme.elevation5 : context.colorScheme.primaryWhite,
                                 ),
                               ),
                             ),
                             const SizedBox(width: 4),
                             Expanded(
-                              child: FusionAppText(
-                                text: src.name,
-                                capitalize: true,
-                                maxLine: 1,
-                                style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontSize: 10),
+                              child: Row(
+                                children: <Widget>[
+                                  Expanded(
+                                    child: FusionAppText(
+                                      text: src.name,
+                                      capitalize: true,
+                                      maxLine: 1,
+                                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                        fontSize: 10,
+                                        color: isPrioritySource ? context.colorScheme.elevation5 : null,
+                                      ),
+                                    ),
+                                  ),
+                                  if (isPrioritySource) const SizedBox(width: 4),
+                                  if (isPrioritySource)
+                                    FusionAppText(
+                                      text: '(Priority source)',
+                                      maxLine: 1,
+                                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                        fontSize: 9,
+                                        fontStyle: FontStyle.italic,
+                                        color: context.colorScheme.elevation5,
+                                      ),
+                                    ),
+                                ],
                               ),
                             ),
                           ],
