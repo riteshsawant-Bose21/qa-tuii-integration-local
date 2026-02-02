@@ -8,6 +8,7 @@
 #include <linux/of_platform.h>
 #include <sound/soc.h>
 #include <linux/of.h>
+#include <linux/of_reserved_mem.h>
 #include <linux/clk.h>
 #include <sound/pcm_params.h>
 
@@ -121,6 +122,7 @@ static struct snd_soc_dai_link fusion_sound_card_dai[] = {
 static int fusion_sound_card_probe(struct platform_device *pdev)
 {
     struct fusion_sound_card_priv *priv;
+    struct device *dev = &pdev->dev;
     struct device_node *np = pdev->dev.of_node;
     struct device_node *cpu_node, *codec_node;
     struct device_node *cpu_np, *codec_np;
@@ -157,6 +159,10 @@ static int fusion_sound_card_probe(struct platform_device *pdev)
     priv->card.num_dapm_routes = 0;
     priv->card.dapm_widgets = NULL;
 	priv->card.num_dapm_widgets = 0;
+
+    ret = of_reserved_mem_device_init(dev);
+    if (ret)
+        dev_warn(dev, "reserved mem not available: %d\n", ret);
     
     if (!of_property_read_u32(np, "slots", &slots)) {
         priv->cpu_priv.slots = slots;
