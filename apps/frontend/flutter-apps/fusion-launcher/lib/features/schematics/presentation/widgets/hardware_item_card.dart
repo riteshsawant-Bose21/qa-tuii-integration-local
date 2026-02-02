@@ -131,7 +131,11 @@ class _HardwareItemCardState extends State<HardwareItemCard> {
                             fit: BoxFit.contain,
                           ),
                           const SizedBox(width: 6),
+                          SemanticHelper.staticText(
+                          testId: SemanticHelper.createTestId(SemanticTypes.container, "hardware_name"),child:
+
                           Expanded(child: _buildHighlightedName()),
+                          )
                         ],
                       ),
                       const SizedBox(height: 6),
@@ -227,11 +231,15 @@ class _HardwareItemCardState extends State<HardwareItemCard> {
                                   ),
                                   const SizedBox(width: 6),
                                   Flexible(
-                                    child: FusionAppText(
+                                    child: SemanticHelper.staticText(
+                                    testId: SemanticHelper.createTestId(SemanticTypes.text, "location"), child:
+
+                                    FusionAppText(
                                       text: widget.location ?? "",
                                       style: Theme.of(context).textTheme.bodySmall?.copyWith(fontSize: 9),
                                       maxLine: 1,
                                       textOverflow: TextOverflow.ellipsis,
+                                    ),
                                     ),
                                   ),
                                 ],
@@ -249,9 +257,13 @@ class _HardwareItemCardState extends State<HardwareItemCard> {
                               width: 1,
                             ),
                           ),
-                          child: FusionAppText(
+                          child:
+                          SemanticHelper.staticText(
+                          testId: SemanticHelper.createTestId(SemanticTypes.text, "location"),child:
+                            FusionAppText(
                             text: widget.equipmentLocation!,
                             style: Theme.of(context).textTheme.bodySmall?.copyWith(fontSize: 9),
+                          ),
                           ),
                         )
                       else

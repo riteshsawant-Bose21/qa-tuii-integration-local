@@ -258,7 +258,7 @@ func (d *ClusterDelegate) GetBroadcasts(overhead, limit int) [][]byte {
 func (d *ClusterDelegate) LocalState(join bool) []byte {
 
 	logger := logging.GetLogger()
-	logger.Debug("LocalState requested (join=%v)", join)
+	logger.Debug("[DELEGATE] LocalState requested (join=%v)", join)
 
 	state := d.stateManager.GetFullState()
 	snapshot := struct {
@@ -280,6 +280,9 @@ func (d *ClusterDelegate) LocalState(join bool) []byte {
 	logger.Debug("Providing local state with %d entries (version: %v)",
 		len(state.State), snapshot.Version)
 
+	if join {
+		logger.Debug("[DELEGATE] LocalState provided with join true, size=%d", len(data))
+	}
 	return data
 }
 
@@ -290,15 +293,15 @@ func (d *ClusterDelegate) MergeRemoteState(buf []byte, join bool) {
 	}
 
 	logger := logging.GetLogger()
-	logger.Debug("MergeRemoteState called (join=%v, size=%d)", join, len(buf))
+	logger.Debug("[DELEGATE] MergeRemoteState called (join=%v, size=%d)", join, len(buf))
 
 	var snapshot api.RemoteStateSnapshot
 	if err := json.Unmarshal(buf, &snapshot); err != nil {
-		logger.Error("Error unmarshaling remote state: %v", err)
+		logger.Error("[DELEGATE] Error unmarshaling remote state: %v", err)
 		return
 	}
 
-	logger.Debug("Merging remote state from node %s with %d entries (version: %v)",
+	logger.Debug("[DELEGATE] Merging remote state from node %s with %d entries (version: %v)",
 		snapshot.NodeID, len(snapshot.State), snapshot.Version)
 
 	localVersion := d.stateManager.GetVersion()
@@ -306,13 +309,13 @@ func (d *ClusterDelegate) MergeRemoteState(buf []byte, join bool) {
 
 	// Reject older epoch outright
 	if remoteVersion.Epoch < localVersion.Epoch {
-		logger.Debug("Ignoring remote state from older epoch %d (local=%d)", remoteVersion.Epoch, localVersion.Epoch)
+		logger.Debug("[DELEGATE] Ignoring remote state from older epoch %d (local=%d)", remoteVersion.Epoch, localVersion.Epoch)
 		return
 	}
 
 	// Adopt newer epoch as authoritative
 	if remoteVersion.Epoch > localVersion.Epoch {
-		logger.Debug("Adopting newer epoch %d (local=%d)", remoteVersion.Epoch, localVersion.Epoch)
+		logger.Debug("[DELEGATE] Adopting newer epoch %d (local=%d)", remoteVersion.Epoch, localVersion.Epoch)
 		d.stateManager.ReplaceFullState(snapshot.State, remoteVersion)
 		d.persistence.MarkDirty()
 		return
@@ -322,6 +325,10 @@ func (d *ClusterDelegate) MergeRemoteState(buf []byte, join bool) {
 	d.stateManager.MergeRemoteState(snapshot.State)
 
 	d.persistence.MarkDirty()
+
+	if join {
+		logger.Debug("[DELEGATE] MergeRemoteState completed during join")
+	}
 }
 
 func (d *ClusterDelegate) handleAudioRemove(update *api.AudioRemoveUpdate) error {
