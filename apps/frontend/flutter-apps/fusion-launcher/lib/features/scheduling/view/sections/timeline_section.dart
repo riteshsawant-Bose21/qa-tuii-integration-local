@@ -34,7 +34,9 @@ class _TimelineSection extends StatelessWidget {
 
                         FusionTextButton(
                           width: 100,
+                          height: 32,
                           label: "Now",
+                          backgroundColor: context.colorScheme.elevation3,
                           onTap: () {
                             BlocProvider.of<TimelineCubit>(context).goToMonth(DateTime.now());
                           },

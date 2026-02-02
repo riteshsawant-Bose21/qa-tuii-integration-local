@@ -18,6 +18,7 @@ class FloorCanvasPainter extends CustomPainter {
   static final Color defaultListeningAreaColor = ColorUtils.hexToColor("#747474");
   final double splMin;
   final double splMax;
+  final bool showLiveSpl;
 
   final List<ListeningArea> listeningAreas;
   final List<HardwareComponent> hardwareComponents;
@@ -69,6 +70,7 @@ class FloorCanvasPainter extends CustomPainter {
     required this.listeningAreaToZoneMap,
     required this.listeningAreaToSubZoneMap,
     required this.subZoneToZoneMap,
+    required this.showLiveSpl,
   });
 
   @override
@@ -79,7 +81,11 @@ class FloorCanvasPainter extends CustomPainter {
 
     if (showSpl) {
       _drawGrid(canvas, size);
-      _drawHeatMapCached(canvas, size);
+      if (showLiveSpl) {
+        _drawHeatMap(canvas);
+      } else {
+        _drawHeatMapCached(canvas, size);
+      }
       _drawFloorPlanImage(canvas);
     } else {
       _drawFloorPlanImage(canvas);
@@ -137,6 +143,39 @@ class FloorCanvasPainter extends CustomPainter {
 
       // right-align it at the left edge
       tp.paint(canvas, Offset(0, ys - tp.height / 2));
+    }
+  }
+
+  void _drawHeatMap(Canvas canvas) {
+    if (!showSpl) return;
+    final List<HeatMapData> heatMapData = _buildSortedHeatMapEntries();
+    final double pointSize = gridSize / 2;
+
+    final ui.Path tmpPath = Path();
+
+    for (final ListeningArea listeningArea in listeningAreas) {
+      final SplData? spl = listeningArea.splData;
+      print("Listening Area SPL Data: $spl");
+      if (spl == null) continue;
+
+      // 1) compute clipPath once
+      tmpPath.reset();
+      tmpPath.addPolygon(listeningArea.vertices, true);
+      canvas.save();
+      canvas.clipPath(tmpPath);
+      print("HEatMap Data Length: ${heatMapData.length}");
+      // 2) draw *all* points for that listeningArea
+      for (final HeatMapData data in heatMapData.where((HeatMapData e) => e.listeningArea == listeningArea)) {
+        final double v = data.value.clamp(splMin, splMax);
+        final Color color = _colorFromLegend(v);
+
+        final ui.Paint paint = Paint()
+          ..color = color
+          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 30);
+
+        canvas.drawRect(Rect.fromCenter(center: data.point, width: pointSize, height: pointSize), paint);
+      }
+      canvas.restore();
     }
   }
 

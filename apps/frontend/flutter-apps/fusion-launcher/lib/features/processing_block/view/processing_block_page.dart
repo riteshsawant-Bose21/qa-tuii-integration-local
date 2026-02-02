@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:fusion_launcher/core/models/algorithm/algorithm_metadata.dart';
 import 'package:fusion_launcher/core/service_locator.dart';
 import 'package:fusion_launcher/features/processing_block/dto/pb_layout.dart';
+import 'package:fusion_launcher/features/processing_block/view/processing_blocks/peq/peq_block.dart';
 import 'package:fusion_lib/fusion_lib.dart';
-import 'package:fusion_lib/fusion_theme/app_theme.dart';
 import 'package:provider/provider.dart';
 
 import '../viewmodel/algorithm_data_viewmodel.dart';
@@ -14,22 +14,26 @@ class ProcessingBlockPage extends StatelessWidget {
   final ProcessingBlockModel processingBlock;
   @override
   Widget build(BuildContext context) {
-    return Theme(
-      data: FusionAppTheme.lightTheme,
-      child: ChangeNotifierProvider<AlgorithmDataViewmodel>(
-        key: ValueKey<String>(processingBlock.id),
-        create: (BuildContext context) => AlgorithmDataViewmodel(processingBlock: processingBlock, config: serviceLocator.get<FusionAlgorithmsConfig>()),
+    return ChangeNotifierProvider<AlgorithmDataViewmodel>(
+      key: ValueKey<String>(processingBlock.id),
+      create: (BuildContext context) => AlgorithmDataViewmodel(processingBlock: processingBlock, config: serviceLocator.get<FusionAlgorithmsConfig>()),
 
-        child: Consumer<AlgorithmDataViewmodel>(
-          builder: (BuildContext context, AlgorithmDataViewmodel viewModel, Widget? child) {
-            return LayoutBuilder(
+      child: Consumer<AlgorithmDataViewmodel>(
+        builder: (BuildContext context, AlgorithmDataViewmodel viewModel, Widget? child) {
+          return Padding(
+            padding: const EdgeInsets.all(12.0),
+            child: LayoutBuilder(
               builder: (BuildContext context, BoxConstraints constraints) {
+                if (processingBlock.algorithmId == 'peq') {
+                  return const PeqBlock();
+                }
                 final PBLayout? data = viewModel.layout;
                 if (data == null) {
                   return const Center(
                     child: Text(""),
                   );
                 }
+
                 final ScrollController scrollController = viewModel.scrollController;
                 return Scrollbar(
                   controller: scrollController,
@@ -44,9 +48,9 @@ class ProcessingBlockPage extends StatelessWidget {
                   ),
                 );
               },
-            );
-          },
-        ),
+            ),
+          );
+        },
       ),
     );
   }

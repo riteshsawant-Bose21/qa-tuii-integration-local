@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:fusion_launcher/core/theme/app_theme.dart';
+import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_launcher/core/widgets/title_text_field_switcher.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
@@ -57,39 +57,34 @@ class _SnapshotItemCardState extends State<SnapshotItemCard> {
             decoration: BoxDecoration(
               color:
                   widget.isSelected
-                      ? Colors.grey[200]
+                      ? context.colorScheme.elevation3
                       : widget.isDragging
-                      ? Theme.of(context).colorScheme.primary.withOpacity(0.15)
-                      : (_isHovered ? Colors.grey[200] : null),
+                      ? context.colorScheme.primary.withAlpha(150)
+                      : (_isHovered ? context.colorScheme.elevation2 : null),
               borderRadius: BorderRadius.circular(8),
               border: Border.all(
-                color:
-                    widget.isSelected
-                        ? Theme.of(context).colorScheme.greyDark
-                        : (widget.isDragging ? Theme.of(context).colorScheme.primary : Colors.transparent),
+                color: widget.isSelected ? context.colorScheme.elevation5 : (widget.isDragging ? context.colorScheme.primary : Colors.transparent),
                 width: 1.0,
               ),
             ),
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
             child: Row(
               children: <Widget>[
                 /// snapshot item draggable icon
                 ReorderableDragStartListener(
                   index: widget.index,
-                  child: Opacity(
-                    opacity: 0.4,
-                    child: Icon(
-                      Icons.drag_handle,
-                      size: 16,
-                      color: Colors.grey[600],
-                    ),
+                  child: Icon(
+                    Icons.drag_indicator,
+                    size: 16,
+                    color: context.colorScheme.textPlaceholder,
                   ),
                 ),
                 const SizedBox(width: 8),
-                const FusionImage.asset(
+                FusionImage.asset(
                   Assets.playIcon,
                   width: 24,
                   height: 24,
+                  assetColor: context.colorScheme.iconWhite,
                   fit: BoxFit.contain,
                 ),
                 const SizedBox(width: 12),
@@ -139,10 +134,11 @@ class _SnapshotItemCardState extends State<SnapshotItemCard> {
                                 ),
                           );
                         },
-                        child: const FusionImage.asset(
+                        child: FusionImage.asset(
                           Assets.deleteIcon,
                           width: 17,
                           height: 17,
+                          assetColor: context.colorScheme.iconWhite,
                           fit: BoxFit.contain,
                         ),
                       ),
@@ -159,10 +155,11 @@ class _SnapshotItemCardState extends State<SnapshotItemCard> {
                             widget.onDuplicate!();
                           }
                         },
-                        child: const FusionImage.asset(
+                        child: FusionImage.asset(
                           Assets.duplicateIcon,
                           width: 16,
                           height: 16,
+                          assetColor: context.colorScheme.iconWhite,
                           fit: BoxFit.contain,
                         ),
                       ),

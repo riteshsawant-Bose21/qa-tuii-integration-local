@@ -46,48 +46,7 @@ class EquipmentLocationSection extends StatelessWidget {
                         ),
                       );
                     },
-                    // PopupMenuButton<dynamic>(
-                    // onSelected: (dynamic value) {},
-                    // shadowColor: Colors.transparent,
-                    // color: Colors.transparent,
-                    // itemBuilder:
-                    //     (BuildContext context) => <PopupMenuItem<dynamic>>[
-                    //       PopupMenuItem<dynamic>(
-                    //         enabled: false,
-                    //         padding: EdgeInsets.zero,
-                    //         child: SizedBox(
-                    //           width: 250,
-                    //           child: StatefulBuilder(
-                    //             builder: (BuildContext context, StateSetter setMenuState) {
-                    //               final TextEditingController snapshotsNameController = TextEditingController();
-                    //               return SingleChildScrollView(
-                    //                 child: CreateSnapshotsOrScenesWidget(
-                    //                   headerText: 'Equipment Location',
-                    //                   nameController: snapshotsNameController,
-                    //                   onCreate: () {
-                    //                     /// Pass popup context so only the menu closes.
-                    //                     BlocProvider.of<ProjectViewModel>(context).addEquipLocation(
-                    //                       equipLocation: EquipLocation(
-                    //                         name: snapshotsNameController.text,
-                    //                       ),
-                    //                     );
-                    //                     if (Navigator.of(context).canPop()) {
-                    //                       Navigator.of(context).pop();
-                    //                     }
-                    //                   },
-                    //                   onCancel: () {
-                    //                     /// Cancel inside popup: close only popup.
-                    //                     if (Navigator.of(context).canPop()) {
-                    //                       Navigator.of(context).pop();
-                    //                     }
-                    //                   },
-                    //                 ),
-                    //               );
-                    //             },
-                    //           ),
-                    //         ),
-                    //       ),
-                    //     ],
+
                     child: SemanticHelper.button(
                       testId: SemanticHelper.createTestId(SemanticTypes.button, "add_equipment_location_button"),
                       child: Padding(
@@ -95,7 +54,7 @@ class EquipmentLocationSection extends StatelessWidget {
                         child: Icon(
                           LucideIcons.plus200,
                           size: 14,
-                          color: Theme.of(context).colorScheme.fusionTextViewColor,
+                          color: Theme.of(context).colorScheme.primaryWhite,
                         ),
                       ),
                     ),
@@ -196,7 +155,7 @@ class EquipmentLocationSection extends StatelessWidget {
                                       },
                                       child: SemanticHelper.button(
                                         testId: SemanticHelper.createTestId(SemanticTypes.button, "equipment_location_section_item_remove_button_$index"),
-                                        child: Icon(Icons.delete_outline_rounded, size: 12, color: Colors.red[600]),
+                                        child: Icon(LucideIcons.trash200, size: 12, color: Colors.red[600]),
                                       ),
                                     ),
                                   ],
@@ -291,10 +250,7 @@ class __ExpansionTileState extends State<_ExpansionTile> {
               child: SemanticHelper.container(
                 testId: SemanticHelper.createTestId(SemanticTypes.container, "equipment_location_section_item_popup_menu_${widget.index}"),
                 child: RightAlignedPopupMenu(
-                  menuContent: Theme(
-                    data: ThemeData.dark(),
-                    child: EquipmentLocationDialog(equipmentLocationId: widget.location.id),
-                  ),
+                  menuContent: EquipmentLocationDialog(equipmentLocationId: widget.location.id),
                   child: SemanticHelper.container(
                     testId: SemanticHelper.createTestId(SemanticTypes.container, "equipment_location_section_item_${widget.index}_title_textfield"),
                     child: TitleTextFieldSwitcher(

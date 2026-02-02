@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:fusion_lib/fusion_lib.dart';
 
 import '../../dto/pb_item.dart';
 import '../../dto/pb_item_param.dart';
@@ -38,6 +39,7 @@ class PBSlider extends StatelessWidget {
             min: data.min,
             max: data.max,
             showIntervals: showIntervals,
+            activeColor: context.colorScheme.primary,
             onChanged:
                 onChanged ??
                 (num value) {
@@ -61,8 +63,6 @@ class VerticalSlider extends StatefulWidget {
     this.showIntervals = true,
     this.activeColor = const Color(0xFF303030),
     this.inactiveColor = const Color(0xFFBABABA),
-    this.thumbColor = Colors.black,
-    this.thumbInnerColor = Colors.white,
     this.trackWidth = 4.0,
     this.thumbSize = 16.0,
     this.intervalSpacing = 50.0,
@@ -79,8 +79,6 @@ class VerticalSlider extends StatefulWidget {
   // Styling
   final Color activeColor;
   final Color inactiveColor;
-  final Color thumbColor;
-  final Color thumbInnerColor;
   final double trackWidth;
   final double thumbSize;
   final double intervalSpacing;
@@ -290,8 +288,9 @@ class _VerticalSliderState extends State<VerticalSlider> {
                             child: Container(
                               height: widget.thumbSize,
                               width: widget.thumbSize,
+                              padding: EdgeInsets.all(widget.thumbSize * 0.2),
                               decoration: BoxDecoration(
-                                color: widget.thumbColor,
+                                color: context.colorScheme.primaryColor,
                                 shape: BoxShape.circle,
                                 boxShadow: <BoxShadow>[
                                   BoxShadow(
@@ -303,10 +302,10 @@ class _VerticalSliderState extends State<VerticalSlider> {
                               ),
                               child: Center(
                                 child: Container(
-                                  height: widget.thumbSize / 2,
-                                  width: widget.thumbSize / 2,
+                                  height: widget.thumbSize,
+                                  width: widget.thumbSize,
                                   decoration: BoxDecoration(
-                                    color: widget.thumbInnerColor,
+                                    color: context.colorScheme.primaryWhite,
                                     shape: BoxShape.circle,
                                   ),
                                 ),

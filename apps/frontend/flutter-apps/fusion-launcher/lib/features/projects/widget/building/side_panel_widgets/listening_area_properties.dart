@@ -4,7 +4,6 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/core/service_locator.dart';
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
 import 'package:fusion_lib/fusion_lib.dart';
-import 'package:fusion_lib/fusion_theme/app_theme.dart';
 
 class ListeningAreaProperties extends StatelessWidget {
   final ListeningArea selectedListeningArea;
@@ -137,7 +136,7 @@ class ListeningAreaProperties extends StatelessWidget {
                 //       style: Theme.of(context).textTheme.bodySmall?.copyWith(
                 //         fontSize: 11,
                 //         fontWeight: FontWeight.w600,
-                //         color: Theme.of(context).colorScheme.fusionTextViewColor.withValues(alpha: 0.7),
+                //         color: Theme.of(context).colorScheme.textPrimary.withValues(alpha: 0.7),
                 //       ),
                 //     ),
                 //     const SizedBox(height: 12),
@@ -264,7 +263,7 @@ class ListeningAreaProperties extends StatelessWidget {
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
                         fontSize: 11,
                         fontWeight: FontWeight.w600,
-                        color: Theme.of(context).colorScheme.fusionTextViewColor.withValues(alpha: 0.7),
+                        color: Theme.of(context).colorScheme.textPrimary.withValues(alpha: 0.7),
                       ),
                     ),
                     const SizedBox(height: 12),
@@ -301,9 +300,9 @@ class ListeningAreaProperties extends StatelessWidget {
       offset: const Offset(50, 8),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(6),
-        side: BorderSide(color: Theme.of(context).colorScheme.dividerColor),
+        side: BorderSide(color: Theme.of(context).colorScheme.primaryBlack),
       ),
-      color: Theme.of(context).colorScheme.white,
+      color: Theme.of(context).colorScheme.primaryWhite,
       elevation: 1,
       itemBuilder: (BuildContext context) {
         if (options == null || options.isEmpty) {
@@ -335,7 +334,7 @@ class ListeningAreaProperties extends StatelessWidget {
               text: label,
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                 fontSize: 11,
-                color: Theme.of(context).colorScheme.fusionTextViewColor.withValues(alpha: 0.5),
+                color: Theme.of(context).colorScheme.textPrimary.withValues(alpha: 0.5),
               ),
             ),
             // Right: Value + Arrow
@@ -358,7 +357,7 @@ class ListeningAreaProperties extends StatelessWidget {
                   Icon(
                     Icons.keyboard_arrow_down,
                     size: 16,
-                    color: Theme.of(context).colorScheme.fusionTextViewColor,
+                    color: Theme.of(context).colorScheme.textPrimary,
                   ),
                 ],
               ),
@@ -386,7 +385,7 @@ class ListeningAreaProperties extends StatelessWidget {
             text: label,
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
               fontSize: 11,
-              color: Theme.of(context).colorScheme.fusionTextViewColor.withValues(alpha: 0.5),
+              color: Theme.of(context).colorScheme.textPrimary.withValues(alpha: 0.5),
             ),
           ),
 
@@ -401,7 +400,7 @@ class ListeningAreaProperties extends StatelessWidget {
                 onSubmitted: onSubmit,
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
                   fontSize: 11,
-                  color: Theme.of(context).colorScheme.fusionTextViewColor,
+                  color: Theme.of(context).colorScheme.textPrimary,
                 ),
                 decoration: InputDecoration(
                   isDense: true,
@@ -409,9 +408,9 @@ class ListeningAreaProperties extends StatelessWidget {
                   hintText: hintText,
                   hintStyle: Theme.of(context).textTheme.bodySmall?.copyWith(
                     fontSize: 11,
-                    color: Theme.of(context).colorScheme.fusionTextViewColor.withValues(alpha: 0.5),
+                    color: Theme.of(context).colorScheme.textPrimary.withValues(alpha: 0.5),
                   ),
-                  fillColor: Theme.of(context).colorScheme.white,
+                  fillColor: Theme.of(context).colorScheme.primaryWhite,
                 ),
                 inputFormatters: <TextInputFormatter>[
                   FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
@@ -443,7 +442,7 @@ class ListeningAreaProperties extends StatelessWidget {
             text: label,
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
               fontSize: 11,
-              color: Theme.of(context).colorScheme.fusionTextViewColor.withValues(alpha: 0.5),
+              color: Theme.of(context).colorScheme.textPrimary.withValues(alpha: 0.5),
             ),
           ),
 
@@ -459,7 +458,7 @@ class ListeningAreaProperties extends StatelessWidget {
                 keyboardType: const TextInputType.numberWithOptions(decimal: true),
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
                   fontSize: 11,
-                  color: Theme.of(context).colorScheme.fusionTextViewColor,
+                  color: Theme.of(context).colorScheme.textPrimary,
                 ),
                 decoration: InputDecoration(
                   counterText: "",
@@ -468,9 +467,9 @@ class ListeningAreaProperties extends StatelessWidget {
                   hintText: hintText,
                   hintStyle: Theme.of(context).textTheme.bodySmall?.copyWith(
                     fontSize: 11,
-                    color: Theme.of(context).colorScheme.fusionTextViewColor.withValues(alpha: 0.5),
+                    color: Theme.of(context).colorScheme.textPrimary.withValues(alpha: 0.5),
                   ),
-                  fillColor: Theme.of(context).colorScheme.white,
+                  fillColor: Theme.of(context).colorScheme.primaryWhite,
                 ),
 
                 inputFormatters: <TextInputFormatter>[
@@ -631,7 +630,7 @@ class _PropertyRowWidget extends StatelessWidget {
     );
     final TextStyle? textStyleBlack = Theme.of(context).textTheme.bodySmall?.copyWith(
       fontSize: 9,
-      color: Colors.black87,
+      color: context.colorScheme.textPrimary,
       fontWeight: FontWeight.w400,
     );
 
@@ -649,7 +648,7 @@ class _PropertyRowWidget extends StatelessWidget {
             flex: 2,
             child: Row(
               children: <Widget>[
-                FusionAppText(text: "X", style: textStyleGrey),
+                FusionAppText(text: "X:", style: textStyleGrey),
                 const SizedBox(width: 4),
                 FusionAppText(
                   text: "${row.x}",
@@ -664,7 +663,7 @@ class _PropertyRowWidget extends StatelessWidget {
             flex: 2,
             child: Row(
               children: <Widget>[
-                FusionAppText(text: "Y", style: textStyleGrey),
+                FusionAppText(text: "Y:", style: textStyleGrey),
                 const SizedBox(width: 4),
                 FusionAppText(
                   text: "${row.y}",
@@ -679,7 +678,7 @@ class _PropertyRowWidget extends StatelessWidget {
             flex: 2,
             child: Row(
               children: <Widget>[
-                FusionAppText(text: "Z", style: textStyleGrey),
+                FusionAppText(text: "Z:", style: textStyleGrey),
                 const SizedBox(width: 4),
                 FusionAppText(
                   text: "${row.z}",

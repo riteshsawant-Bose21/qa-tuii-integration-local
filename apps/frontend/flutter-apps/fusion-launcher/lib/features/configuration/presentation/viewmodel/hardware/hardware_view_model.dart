@@ -1,6 +1,10 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:fusion_launcher/core/models/products_data.dart';
+import 'package:fusion_launcher/core/service_locator.dart';
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
+import 'package:fusion_launcher/features/projects/widget/building/speaker_selection_section/view_model/product_query_view_model.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/models/project_entities/controller.dart';
 import 'package:fusion_lib/models/project_entities/endpoints.dart';
@@ -492,7 +496,7 @@ extension HardwareViewModel on ProjectViewModel {
       addedFromBuildingPage: isFromBuildingPage,
       assetImagePath: assetImagePath,
       type: OutputType.analogOutput,
-      price: 300,
+      price: 0,
       mountingType: mountingType,
       pitch: mountingType == MountingType.pendant || mountingType == MountingType.ceiling ? 90.0 : 0.0,
       inputPortsData: <PortData>[
@@ -782,6 +786,20 @@ extension HardwareViewModel on ProjectViewModel {
       //     price: product.price,
       //     hardwareName: product.name,
       //   );
+    }
+  }
+
+  //todo: patch work, refine later
+  String? getHardwareImage({required int productId, required String currentImagePath}) {
+    try {
+      if (File(currentImagePath).existsSync()) {
+        return currentImagePath;
+      }
+      final List<SpeakerProduct> speaker = serviceLocator<ProductQueryViewModel>().speakers;
+      final SpeakerProduct hardware = speaker.firstWhere((SpeakerProduct element) => element.productId == productId);
+      return serviceLocator<ProductQueryViewModel>().getImagePath(hardware.assets.assets.values.first.first);
+    } catch (e) {
+      return null;
     }
   }
 }

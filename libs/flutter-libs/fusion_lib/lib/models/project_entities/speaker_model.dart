@@ -248,6 +248,7 @@ class Speaker extends HardwareComponent {
       'inputPortsData': inputPortsData.map((PortData port) => port.toJson()).toList(),
       'addedFromBuildingPage': addedFromBuildingPage,
       'equipmentLocationPosition': equipmentLocationPosition,
+      "mountingType": mountingType?.name,
     };
   }
 

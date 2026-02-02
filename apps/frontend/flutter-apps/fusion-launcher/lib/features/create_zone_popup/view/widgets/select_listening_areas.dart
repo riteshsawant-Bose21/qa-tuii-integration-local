@@ -30,7 +30,7 @@ Widget _buildListeningAreaSelectionSection(
   return FusionArrowPopup(
     showArrow: false,
     blurAmount: 0,
-    backgroundColor: const Color(0xFF292826),
+    backgroundColor: rootContextFromParent.colorScheme.elevation1,
     content: StatefulBuilder(
       builder: (BuildContext context, StateSetter setPopupState) {
         final List<ListeningArea> allListeningAreas = context.watch<ProjectViewModel>().getAllListeningAreas();
@@ -203,8 +203,9 @@ Widget _buildListeningAreaSelectionSection(
       height: 32,
       alignment: Alignment.center,
       decoration: BoxDecoration(
-        color: rootContextFromParent.colorScheme.surface,
+        color: rootContextFromParent.colorScheme.elevation1,
         borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: rootContextFromParent.colorScheme.strokeLight, width: 1),
       ),
       child: BlocProvider<CreateZoneViewModel>.value(
         value: createZoneViewModel,

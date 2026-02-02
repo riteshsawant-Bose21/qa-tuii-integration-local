@@ -1,6 +1,7 @@
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
+import 'package:fusion_lib/fusion_lib.dart';
 
 enum _ArrowDirection { top, bottom }
 
@@ -501,7 +502,7 @@ class _PopupPositionerState extends State<_PopupPositioner> {
                       arrowDirection: _arrowDirection,
                       arrowX: _arrowX,
                       backgroundColor: widget.backgroundColor ?? Theme.of(context).colorScheme.surface,
-                      borderColor: Theme.of(context).dividerColor.withOpacity(0.3),
+                      borderColor: Theme.of(context).colorScheme.primaryBlack.withOpacity(0.3),
                       showArrow: widget.showArrow,
                       content: widget.content,
                       maxHeight: _maxContentHeight,

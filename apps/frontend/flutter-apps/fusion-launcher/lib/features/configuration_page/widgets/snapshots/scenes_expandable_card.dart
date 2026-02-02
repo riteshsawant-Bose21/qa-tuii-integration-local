@@ -107,231 +107,250 @@ class _ScenesExpandableCardState extends State<ScenesExpandableCard> {
 
   @override
   Widget build(BuildContext context) {
-    return ValueListenableBuilder<bool>(
-      valueListenable: _isScenesExpanded,
-      builder: (BuildContext context, bool isExpanded, Widget? child) {
-        return DragTarget<SnapshotsModel>(
-          onWillAcceptWithDetails: (DragTargetDetails<SnapshotsModel> details) {
-            /// Accept drops from snapshots section or from other scenes
-            return widget.draggingFromSection == 'snapshots' ||
-                (widget.draggingFromSection == 'scenes' && !widget.snapShotList.any((SnapshotsModel scene) => scene.id == details.data.id));
-          },
-          onLeave: (SnapshotsModel? data) {},
-          onAcceptWithDetails: (DragTargetDetails<SnapshotsModel> details) {
-            if (widget.draggingFromSection == 'snapshots') {
-              /// Move from snapshots to this scene set
-              /// First check if it's already in this scene set
-              final bool alreadyInSet = widget.snapShotList.any((SnapshotsModel scene) => scene.id == details.data.id);
+    return AnimatedSize(
+      duration: const Duration(milliseconds: 250),
+      alignment: AlignmentGeometry.topCenter,
+      child: ValueListenableBuilder<bool>(
+        valueListenable: _isScenesExpanded,
+        builder: (BuildContext context, bool isExpanded, Widget? child) {
+          return DragTarget<SnapshotsModel>(
+            onWillAcceptWithDetails: (DragTargetDetails<SnapshotsModel> details) {
+              /// Accept drops from snapshots section or from other scenes
+              return widget.draggingFromSection == 'snapshots' ||
+                  (widget.draggingFromSection == 'scenes' && !widget.snapShotList.any((SnapshotsModel scene) => scene.id == details.data.id));
+            },
+            onLeave: (SnapshotsModel? data) {},
+            onAcceptWithDetails: (DragTargetDetails<SnapshotsModel> details) {
+              if (widget.draggingFromSection == 'snapshots') {
+                /// Move from snapshots to this scene set
+                /// First check if it's already in this scene set
+                final bool alreadyInSet = widget.snapShotList.any((SnapshotsModel scene) => scene.id == details.data.id);
 
-              if (!alreadyInSet) {
-                /// Expand the scene set to show the new item
-                _isScenesExpanded.value = true;
+                if (!alreadyInSet) {
+                  /// Expand the scene set to show the new item
+                  _isScenesExpanded.value = true;
 
-                // Try using the exact same scene object
-                _projectViewModel.addNewSnapshotToSceneSet(sceneSetId: widget.sceneSetData.id, scene: details.data);
-              }
-            } else if (widget.draggingFromSection == 'scenes') {
-              /// Move from another scene set to this one
-              final bool alreadyInSet = widget.snapShotList.any((SnapshotsModel scene) => scene.id == details.data.id);
+                  // Try using the exact same scene object
+                  _projectViewModel.addNewSnapshotToSceneSet(sceneSetId: widget.sceneSetData.id, scene: details.data);
+                  _projectViewModel.setSelectedSnapshotId(details.data.id);
+                }
+              } else if (widget.draggingFromSection == 'scenes') {
+                /// Move from another scene set to this one
+                final bool alreadyInSet = widget.snapShotList.any((SnapshotsModel scene) => scene.id == details.data.id);
 
-              if (!alreadyInSet) {
-                /// Expand the scene set to show the new item
-                _isScenesExpanded.value = true;
+                if (!alreadyInSet) {
+                  /// Expand the scene set to show the new item
+                  _isScenesExpanded.value = true;
 
-                /// Add to this scene set first
-                _projectViewModel.addNewSnapshotToSceneSet(sceneSetId: widget.sceneSetData.id, scene: details.data);
+                  /// Add to this scene set first
+                  _projectViewModel.addNewSnapshotToSceneSet(sceneSetId: widget.sceneSetData.id, scene: details.data);
+                  _projectViewModel.setSelectedSnapshotId(details.data.id);
 
-                /// Remove from all other scene sets
-                final List<SceneSetModel> allSceneSets = _projectViewModel.getAllSceneSets();
-                for (SceneSetModel sceneSet in allSceneSets) {
-                  if (sceneSet.id != widget.sceneSetData.id) {
-                    final List<SnapshotsModel> scenesInSet = _projectViewModel.getSnapshotInSceneSet(sceneSetId: sceneSet.id);
-                    if (scenesInSet.any((SnapshotsModel scene) => scene.id == details.data.id)) {
-                      _projectViewModel.removeSnapshotFromSceneSet(sceneSetId: sceneSet.id, sceneId: details.data.id);
+                  /// Remove from all other scene sets
+                  final List<SceneSetModel> allSceneSets = _projectViewModel.getAllSceneSets();
+                  for (SceneSetModel sceneSet in allSceneSets) {
+                    if (sceneSet.id != widget.sceneSetData.id) {
+                      final List<SnapshotsModel> scenesInSet = _projectViewModel.getSnapshotInSceneSet(sceneSetId: sceneSet.id);
+                      if (scenesInSet.any((SnapshotsModel scene) => scene.id == details.data.id)) {
+                        _projectViewModel.removeSnapshotFromSceneSet(sceneSetId: sceneSet.id, sceneId: details.data.id);
+                      }
                     }
                   }
                 }
               }
-            }
 
-            if (widget.onDragEnd != null) {
-              widget.onDragEnd!();
-            }
-          },
-          builder: (BuildContext context, List<SnapshotsModel?> candidateData, List<dynamic> rejectedData) {
-            final bool isHovered =
-                candidateData.isNotEmpty &&
-                (widget.draggingFromSection == 'snapshots' ||
-                    (widget.draggingFromSection == 'scenes' && !widget.snapShotList.any((SnapshotsModel scene) => scene.id == candidateData.first?.id)));
+              if (widget.onDragEnd != null) {
+                widget.onDragEnd!();
+              }
+            },
+            builder: (BuildContext context, List<SnapshotsModel?> candidateData, List<dynamic> rejectedData) {
+              final bool isHovered =
+                  candidateData.isNotEmpty &&
+                  (widget.draggingFromSection == 'snapshots' ||
+                      (widget.draggingFromSection == 'scenes' && !widget.snapShotList.any((SnapshotsModel scene) => scene.id == candidateData.first?.id)));
 
-            return Column(
-              children: <Widget>[
-                MouseRegion(
-                  onEnter: (_) => setState(() => _isHovered = true),
-                  onExit: (_) => setState(() => _isHovered = false),
-                  child: GestureDetector(
-                    onTap: () {
-                      /// Toggle expand/collapse
-                      _isScenesExpanded.value = !_isScenesExpanded.value;
-                    },
-                    child: Container(
-                      padding: const EdgeInsets.only(left: 12, right: 12),
-                      height: 36,
-                      decoration: BoxDecoration(
-                        border: Border.all(
-                          color: isHovered ? Theme.of(context).colorScheme.primary : Colors.transparent,
-                          width: 1.0,
+              return Column(
+                children: <Widget>[
+                  MouseRegion(
+                    onEnter: (_) => setState(() => _isHovered = true),
+                    onExit: (_) => setState(() => _isHovered = false),
+                    child: GestureDetector(
+                      onTap: () {
+                        /// Toggle expand/collapse
+                        _isScenesExpanded.value = !_isScenesExpanded.value;
+                      },
+                      child: Container(
+                        margin: const EdgeInsets.only(top: 8, left: 8, right: 8),
+                        padding: const EdgeInsets.only(left: 12, right: 12),
+                        height: 36,
+                        decoration: BoxDecoration(
+                          border: Border.all(
+                            color: isHovered ? Theme.of(context).colorScheme.primary : Colors.transparent,
+                            width: 1.0,
+                          ),
+                          borderRadius: BorderRadius.circular(6),
+                          color:
+                              isHovered
+                                  ? Theme.of(context).colorScheme.primary.withAlpha(50)
+                                  : (_isHovered ? context.colorScheme.elevation3 : context.colorScheme.elevation2),
                         ),
-                        color:
-                            isHovered
-                                ? Theme.of(context).colorScheme.primary.withOpacity(0.1)
-                                : (_isHovered ? Theme.of(context).colorScheme.grey.withAlpha(200) : Theme.of(context).colorScheme.greyLight),
-                      ),
-                      child: Row(
-                        children: <Widget>[
-                          /// Expand/collapse icon
-                          Icon(
-                            _isScenesExpanded.value ? Icons.arrow_drop_up_rounded : Icons.arrow_drop_down_rounded,
-                            color: Theme.of(context).colorScheme.fusionTextViewColor.withAlpha(90),
-                          ),
-                          const SizedBox(width: 4),
-
-                          /// Source set name
-                          Expanded(
-                            child: TitleTextFieldSwitcher(
-                              value: widget.sceneSetData.name,
-                              hintText: "Enter scenes set name",
-                              style: Theme.of(context).textTheme.bodyMedium!.copyWith(
-                                fontSize: 11,
-                                fontWeight: FontWeight.w600,
-                              ),
-                              save: (String value) {
-                                if (value.isNotEmpty) {
-                                  final SceneSetModel newScenesSet = widget.sceneSetData.copyWith(name: value);
-                                  _projectViewModel.updateSceneSet(sceneSet: newScenesSet);
-                                }
-                              },
+                        child: Row(
+                          children: <Widget>[
+                            /// Expand/collapse icon
+                            Icon(
+                              _isScenesExpanded.value ? Icons.arrow_drop_up_rounded : Icons.arrow_drop_down_rounded,
+                              color: Theme.of(context).colorScheme.iconWhite,
                             ),
-                          ),
-                          const SizedBox(width: 8),
+                            const SizedBox(width: 4),
 
-                          /// Add new scene button
-                          SemanticHelper.button(
-                            testId: SemanticHelper.createTestId(SemanticTypes.button, "add_scene_to_scene_set"),
-                            child: GestureDetector(
-                              onTap: () {
-                                _addNewSceneToSceneSet();
-                              },
-                              child: Icon(Icons.add_sharp, size: 16, color: Theme.of(context).colorScheme.greyDark),
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-
-                          Tooltip(
-                            message: 'Delete Scene Set',
-                            child: SemanticHelper.button(
-                              testId: SemanticHelper.createTestId(SemanticTypes.button, "delete_scene_set"),
-                              child: GestureDetector(
-                                onTap: () {
-                                  showDialog(
-                                    context: context,
-                                    builder:
-                                        (_) => FusionDialog(
-                                          title: 'Delete Scenes?',
-                                          description:
-                                              "This will remove '${widget.sceneSetData.name}' from the Scenes. and all its associated snapshots will be deleted.",
-                                          primaryButtonLabel: 'Delete',
-                                          secondaryButtonLabel: 'Cancel',
-                                          onSecondaryPressed: () {
-                                            Navigator.of(context).pop();
-                                          },
-                                          onPrimaryPressed: () {
-                                            widget.onSceneSetDelete(widget.sceneSetData.id);
-                                            Navigator.of(context).pop();
-                                          },
-                                        ),
-                                  );
-                                },
-                                child: const FusionImage.asset(
-                                  Assets.deleteIcon,
-                                  width: 17,
-                                  height: 17,
-                                  fit: BoxFit.contain,
+                            /// Source set name
+                            Expanded(
+                              child: TitleTextFieldSwitcher(
+                                value: widget.sceneSetData.name,
+                                hintText: "Enter scenes set name",
+                                style: Theme.of(context).textTheme.bodyMedium!.copyWith(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w600,
                                 ),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 4),
-                          Tooltip(
-                            message: 'Duplicate Scene Set',
-                            child: SemanticHelper.button(
-                              testId: SemanticHelper.createTestId(SemanticTypes.button, "duplicate_scene_set"),
-                              child: GestureDetector(
-                                onTap: () {
-                                  if (widget.onSceneSetDuplicate != null) {
-                                    widget.onSceneSetDuplicate!(widget.sceneSetData.id);
+                                save: (String value) {
+                                  if (value.isNotEmpty) {
+                                    final SceneSetModel newScenesSet = widget.sceneSetData.copyWith(name: value);
+                                    _projectViewModel.updateSceneSet(sceneSet: newScenesSet);
                                   }
                                 },
-                                child: const FusionImage.asset(
-                                  Assets.duplicateIcon,
-                                  width: 16,
-                                  height: 16,
-                                  fit: BoxFit.contain,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+
+                            /// Add new scene button
+                            SemanticHelper.button(
+                              testId: SemanticHelper.createTestId(SemanticTypes.button, "add_scene_to_scene_set"),
+                              child: GestureDetector(
+                                onTap: () {
+                                  _addNewSceneToSceneSet();
+                                },
+                                child: Icon(Icons.add_sharp, size: 16, color: context.colorScheme.iconWhite),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+
+                            Tooltip(
+                              message: 'Delete Scene Set',
+                              child: SemanticHelper.button(
+                                testId: SemanticHelper.createTestId(SemanticTypes.button, "delete_scene_set"),
+                                child: GestureDetector(
+                                  onTap: () {
+                                    showDialog(
+                                      context: context,
+                                      builder:
+                                          (_) => FusionDialog(
+                                            title: 'Delete Scenes?',
+                                            description:
+                                                "This will remove '${widget.sceneSetData.name}' from the Scenes. and all its associated snapshots will be deleted.",
+                                            primaryButtonLabel: 'Delete',
+                                            secondaryButtonLabel: 'Cancel',
+                                            onSecondaryPressed: () {
+                                              Navigator.of(context).pop();
+                                            },
+                                            onPrimaryPressed: () {
+                                              widget.onSceneSetDelete(widget.sceneSetData.id);
+                                              Navigator.of(context).pop();
+                                            },
+                                          ),
+                                    );
+                                  },
+                                  child: FusionImage.asset(
+                                    Assets.deleteIcon,
+                                    width: 17,
+                                    height: 17,
+                                    assetColor: context.colorScheme.iconWhite,
+                                    fit: BoxFit.contain,
+                                  ),
                                 ),
                               ),
                             ),
-                          ),
-                        ],
+                            const SizedBox(width: 4),
+                            Tooltip(
+                              message: 'Duplicate Scene Set',
+                              child: SemanticHelper.button(
+                                testId: SemanticHelper.createTestId(SemanticTypes.button, "duplicate_scene_set"),
+                                child: GestureDetector(
+                                  onTap: () {
+                                    if (widget.onSceneSetDuplicate != null) {
+                                      widget.onSceneSetDuplicate!(widget.sceneSetData.id);
+                                    }
+                                  },
+                                  child: FusionImage.asset(
+                                    Assets.duplicateIcon,
+                                    width: 16,
+                                    height: 16,
+                                    assetColor: context.colorScheme.iconWhite,
+                                    fit: BoxFit.contain,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   ),
-                ),
-                if (isExpanded)
-                  Container(
-                    alignment: Alignment.center,
-                    width: double.infinity,
-                    color: isHovered ? Theme.of(context).colorScheme.primary.withOpacity(0.05) : Colors.transparent,
-                    child:
-                        widget.snapShotList.isEmpty
-                            ? Padding(
-                              padding: const EdgeInsets.all(22.0),
-                              child: FusionAppText(
-                                text: "No Snapshots Available",
-                                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                  fontSize: 12,
+                  if (isExpanded)
+                    // expanded container
+                    Container(
+                      alignment: Alignment.center,
+                      width: double.infinity,
+                      padding: const EdgeInsets.only(top: 12, bottom: 12),
+                      margin: const EdgeInsets.only(left: 12, right: 12),
+                      color: isHovered ? Theme.of(context).colorScheme.primary.withOpacity(0.05) : context.colorScheme.elevation2.withAlpha(100),
+                      child:
+                          widget.snapShotList.isEmpty
+                              ? Padding(
+                                padding: const EdgeInsets.all(22.0),
+                                child: FusionAppText(
+                                  text: "No Snapshots Available",
+                                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                    fontSize: 12,
+                                  ),
                                 ),
+                              )
+                              : SnapshotList(
+                                snapShotList: widget.snapShotList,
+                                selectedSnapshotId: _projectViewModel.selectedSnapshotId,
+                                onSelect: widget.onSelect,
+                                onDelete: (String sceneId) {
+                                  widget.onScenesSnapshotDelete(sceneId);
+                                },
+                                onDuplicate: (String sceneId) {
+                                  if (widget.onScenesSnapshotDuplicate != null) {
+                                    widget.onScenesSnapshotDuplicate!(sceneId);
+                                  }
+                                },
+                                onReorder: (int oldIndex, int newIndex) {
+                                  // if (widget.onReorderScenes != null) {
+                                  //   widget.onReorderScenes!(widget.sceneSetData.id, oldIndex, newIndex);
+                                  // }
+                                  _projectViewModel.reOrderSnapshotInSceneSet(
+                                    sceneSetId: widget.sceneSetData.id,
+                                    oldIndex: oldIndex,
+                                    newIndex: newIndex,
+                                  );
+                                  _projectViewModel.setSelectedSnapshotId(widget.snapShotList[oldIndex].id);
+                                },
+                                onDragStarted: widget.onDragStarted,
+                                onDragEnd: widget.onDragEnd,
+                                draggingSnapshotId: widget.draggingSnapshotId,
+                                onRenameSave: (String value, SnapshotsModel newSnapshot) {
+                                  _projectViewModel.updateSnapshots(scene: newSnapshot);
+                                },
                               ),
-                            )
-                            : SnapshotList(
-                              snapShotList: widget.snapShotList,
-                              selectedSnapshotId: _projectViewModel.selectedSnapshotId,
-                              onSelect: widget.onSelect,
-                              onDelete: (String sceneId) {
-                                widget.onScenesSnapshotDelete(sceneId);
-                              },
-                              onDuplicate: (String sceneId) {
-                                if (widget.onScenesSnapshotDuplicate != null) {
-                                  widget.onScenesSnapshotDuplicate!(sceneId);
-                                }
-                              },
-                              onReorder: (int oldIndex, int newIndex) {
-                                if (widget.onReorderScenes != null) {
-                                  widget.onReorderScenes!(widget.sceneSetData.id, oldIndex, newIndex);
-                                }
-                              },
-                              onDragStarted: widget.onDragStarted,
-                              onDragEnd: widget.onDragEnd,
-                              draggingSnapshotId: widget.draggingSnapshotId,
-                              onRenameSave: (String value, SnapshotsModel newSnapshot) {
-                                _projectViewModel.updateSnapshots(scene: newSnapshot);
-                              },
-                            ),
-                  ),
-              ],
-            );
-          },
-        );
-      },
+                    ),
+                ],
+              );
+            },
+          );
+        },
+      ),
     );
   }
 }

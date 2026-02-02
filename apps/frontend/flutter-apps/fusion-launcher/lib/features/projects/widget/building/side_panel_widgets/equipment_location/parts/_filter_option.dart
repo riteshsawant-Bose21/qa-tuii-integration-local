@@ -97,15 +97,35 @@ class _FilterOptions extends StatelessWidget {
         ),
         const SizedBox(width: 8),
         Expanded(
-          child: BuildingPageDronDown<String>(
-            value: value,
-            hintText: "Select $label",
+          child: FusionPopupMenu<String>(
+            // value: value,
+            // hintText: "Select $label",
             items: options,
-            onSelect: (String newValue) {
+            onSelected: (String newValue) {
               final int selectedIndex = options.indexOf(newValue);
               onOptionSelected(selectedIndex);
             },
-            labelBuilder: (String option) {
+            popupOffset: const Offset(5, 0),
+            child: FusionContainer(
+              raised: true,
+              color: context.colorScheme.elevation2,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: <Widget>[
+                    Flexible(
+                      child: FusionAppText(
+                        text: value,
+                        style: context.textTheme.bodySmall,
+                      ),
+                    ),
+                    Icon(LucideIcons.chevronDown200, size: 16, color: context.colorScheme.iconDefault),
+                  ],
+                ),
+              ),
+            ),
+            itemBuilder: (BuildContext context, String option) {
               return FusionAppText(
                 text: option,
                 style: Theme.of(context).textTheme.labelMedium,

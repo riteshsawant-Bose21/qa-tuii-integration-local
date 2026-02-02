@@ -251,4 +251,14 @@ class ProjectManager {
   Future<void> deleteFusionProjectDirectory() async {
     await localProjectManager.deleteFusionProjectDirectory();
   }
+
+  Future<ResponseCallback<bool>> importProjectFromZip(File zipFile) async {
+    try {
+      final ResponseCallback<bool> response = await localProjectManager.importProject(zipFile);
+      return response;
+    } catch (e) {
+      FusionLogger.log(tag: LogTag.exceptions, message: "Error importing project from zip: $e");
+      return ResponseCallback.failure("Error importing project from zip: $e");
+    }
+  }
 }
