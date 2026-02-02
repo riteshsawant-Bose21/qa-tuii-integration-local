@@ -6,7 +6,8 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/api/types"
-	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/constants"
+
+	errors "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/utils/errors"
 )
 
 // SendJSON sends a standard JSON response
@@ -51,5 +52,5 @@ func NotFound(c *gin.Context, message string) {
 
 // InternalError sends a 500 Internal Server Error response
 func InternalError(c *gin.Context) {
-	SendJSON(c, http.StatusInternalServerError, types.ErrorResponse{ErrorMessage: constants.MsgInternalServerError})
+	SendJSON(c, http.StatusInternalServerError, types.ErrorResponse{ErrorMessage: errors.MsgInternalServerError})
 }
