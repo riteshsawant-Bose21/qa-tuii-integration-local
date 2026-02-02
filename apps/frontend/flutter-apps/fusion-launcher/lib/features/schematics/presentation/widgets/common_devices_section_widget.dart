@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:fusion_launcher/core/assets/asset_svg.dart';
 import 'package:fusion_launcher/features/add_source_popup/view/add_source_popup.dart';
 import 'package:fusion_launcher/features/projects/widget/building/side_panel_widgets/equipment_location/equipment_location_dialog.dart';
 import 'package:fusion_lib/fusion_lib.dart';
-import 'package:fusion_lib/fusion_theme/app_theme.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../projects/viewmodel/eql_products_vm.dart';
 import 'add_device_expandable_popup_menu_widget.dart';
@@ -182,44 +183,66 @@ class _CommonDevicesSectionWidgetState extends State<CommonDevicesSectionWidget>
       child: SemanticHelper.toggle(
         testId: SemanticHelper.createTestId(SemanticTypes.toggle, "expandable_header_$title"),
         value: isExpanded,
-        child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 4.0),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12),
           child: Row(
             children: <Widget>[
-              Icon(
-                isExpanded ? Icons.arrow_drop_down_rounded : Icons.arrow_right_rounded,
-                size: 22,
-                color: Colors.black,
+              RotatedBox(
+                quarterTurns: isExpanded ? 0 : 1,
+                child: FusionSvgIcon(
+                  icon: AssetSvg.expandUp,
+                  size: FusionSizes.iconSize12,
+                  color: context.colorScheme.iconWhite,
+                ),
               ),
-              const SizedBox(width: 2),
+              const SizedBox(width: 8),
               FusionAppText(
                 text: title,
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                style: context.textTheme.bodyMedium?.copyWith(
                   fontSize: 12,
                   fontWeight: FontWeight.w600,
-                  color: Colors.black,
+                  color: context.colorScheme.textPrimary,
                 ),
               ),
               const Spacer(),
 
               /// Add device icon
-              title == "Sources"
-                  ? AddSourcePopup(isFromBuildingPage: false, child: Icon(Icons.add_sharp, size: 16, color: Theme.of(context).colorScheme.greyDark))
-                  : (title == "Endpoints" || title == "Fusion Devices" || title == "Amplifiers")
-                  ? FusionArrowPopup(
-                    content: EquipmentLocationDialog(
-                      currentFilter:
-                          title == "Amplifiers"
-                              ? EQLDeviceType.amplifier
-                              : title == "Fusion Devices"
-                              ? EQLDeviceType.processor
-                              : title == "Endpoints"
-                              ? EQLDeviceType.endpoint
-                              : EQLDeviceType.mixerAmp,
-                    ),
-                    child: Icon(Icons.add_sharp, size: 16, color: Theme.of(context).colorScheme.greyDark),
-                  )
-                  : const SizedBox(),
+              Builder(
+                builder: (BuildContext context) {
+                  if (title == "Sources") {
+                    return AddSourcePopup(
+                      isFromBuildingPage: false,
+                      child: Icon(
+                        LucideIcons.plus200,
+                        size: 16,
+                        color: context.colorScheme.primaryWhite,
+                      ),
+                    );
+                  } else {
+                    if (title == "Endpoints" || title == "Fusion Devices" || title == "Amplifiers") {
+                      return FusionArrowPopup(
+                        content: EquipmentLocationDialog(
+                          currentFilter:
+                              title == "Amplifiers"
+                                  ? EQLDeviceType.amplifier
+                                  : title == "Fusion Devices"
+                                  ? EQLDeviceType.processor
+                                  : title == "Endpoints"
+                                  ? EQLDeviceType.endpoint
+                                  : EQLDeviceType.mixerAmp,
+                        ),
+                        child: Icon(
+                          LucideIcons.plus200,
+                          size: FusionSizes.iconSize16,
+                          color: context.colorScheme.primaryWhite,
+                        ),
+                      );
+                    } else {
+                      return const SizedBox();
+                    }
+                  }
+                },
+              ),
             ],
           ),
         ),
@@ -254,42 +277,37 @@ class _CommonDevicesSectionWidgetState extends State<CommonDevicesSectionWidget>
 
   /// Build expandable content sections
   Widget _buildExpandableContent() {
-    if (!widget.enableExpandable || widget.expandableSections == null) {
-      return widget.sectionContent;
-    }
+    if (!widget.enableExpandable || widget.expandableSections == null) return widget.sectionContent;
 
     return SemanticHelper.button(
       testId: SemanticHelper.createTestId(SemanticTypes.button, "expandable_sections_container"),
-      child: Padding(
-        padding: const EdgeInsets.all(10.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children:
-              widget.expandableSections!.map((ExpandableSection section) {
-                final bool isExpanded = _sectionExpansionState[section.title] ?? true;
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children:
+            widget.expandableSections!.map((ExpandableSection section) {
+              final bool isExpanded = _sectionExpansionState[section.title] ?? true;
 
-                final int index = widget.expandableSections!.indexOf(section);
+              final int index = widget.expandableSections!.indexOf(section);
 
-                return SemanticHelper.button(
-                  testId: SemanticHelper.createTestId(SemanticTypes.button, "expandable_section_${section.title}_index_$index"),
-                  child: Column(
-                    children: <Widget>[
-                      _buildExpandableHeader(
-                        title: section.title,
-                        isExpanded: isExpanded,
-                        onTap: () {
-                          setState(() {
-                            _sectionExpansionState[section.title] = !isExpanded;
-                          });
-                        },
-                      ),
-                      _buildAnimatedContent(isExpanded, section.title, section.content),
-                      if (section != widget.expandableSections!.last) const SizedBox(height: 16),
-                    ],
-                  ),
-                );
-              }).toList(),
-        ),
+              return SemanticHelper.button(
+                testId: SemanticHelper.createTestId(SemanticTypes.button, "expandable_section_${section.title}_index_$index"),
+                child: Column(
+                  children: <Widget>[
+                    _buildExpandableHeader(
+                      title: section.title,
+                      isExpanded: isExpanded,
+                      onTap: () {
+                        setState(() {
+                          _sectionExpansionState[section.title] = !isExpanded;
+                        });
+                      },
+                    ),
+                    _buildAnimatedContent(isExpanded, section.title, section.content),
+                    if (section != widget.expandableSections!.last) const SizedBox(height: 16),
+                  ],
+                ),
+              );
+            }).toList(),
       ),
     );
   }
@@ -299,28 +317,29 @@ class _CommonDevicesSectionWidgetState extends State<CommonDevicesSectionWidget>
     return SemanticHelper.container(
       testId: SemanticHelper.createTestId(SemanticTypes.container, "expandable_section_container_${widget.title.toLowerCase()}"),
       child: Container(
-        clipBehavior: Clip.none,
-        width: widget.width,
-        height: widget.height,
+        // padding: const EdgeInsets.symmetric(horizontal: 16),
         decoration: BoxDecoration(
-          color: widget.backgroundColor,
-          border: Border(
-            right: BorderSide(width: 1, color: Theme.of(context).colorScheme.grey),
-          ),
+          color: context.colorScheme.elevation1,
+          border: Border.all(color: context.colorScheme.elevation2, width: 1),
+          borderRadius: BorderRadius.circular(FusionSizes.borderRadius16),
         ),
         child: Column(
+          mainAxisSize: MainAxisSize.min,
           children: <Widget>[
             /// section Header
             SemanticHelper.container(
               testId: SemanticHelper.createTestId(SemanticTypes.container, "expandable_section_header_container_${widget.title.toLowerCase()}"),
               child: Container(
-                width: widget.width,
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 16),
+                alignment: Alignment.centerLeft,
                 height: 44,
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                 decoration: BoxDecoration(
-                  color: Colors.white,
                   border: Border(
-                    bottom: BorderSide(width: 1, color: Theme.of(context).colorScheme.grey),
+                    bottom: BorderSide(
+                      width: 1,
+                      color: context.colorScheme.elevation2,
+                    ),
                   ),
                 ),
                 child: AnimatedBuilder(
@@ -334,27 +353,33 @@ class _CommonDevicesSectionWidgetState extends State<CommonDevicesSectionWidget>
                           child: Stack(
                             children: <Widget>[
                               /// Title - fades out when search is visible
-                              Opacity(
-                                opacity: 1.0 - _searchAnimation.value,
-                                child: Row(
-                                  children: <Widget>[
-                                    Expanded(
-                                      child: FusionAppText(
-                                        text: widget.title,
-                                        style: Theme.of(context).textTheme.bodySmall,
-                                        maxLine: 1,
+                              Positioned.fill(
+                                child: Opacity(
+                                  opacity: 1.0 - _searchAnimation.value,
+                                  child: Row(
+                                    children: <Widget>[
+                                      Expanded(
+                                        child: FusionAppText(
+                                          text: widget.title.toUpperCase(),
+                                          maxLine: 1,
+                                          style: context.textTheme.bodySmall?.copyWith(
+                                            fontWeight: FontWeight.w500,
+                                            fontSize: FusionSizes.fontSize12,
+                                            color: context.colorScheme.textBody,
+                                          ),
+                                        ),
                                       ),
-                                    ),
-                                    const SizedBox(width: 4),
+                                      const SizedBox(width: 4),
 
-                                    /// Add button with listening areas support
-                                    AddDeviceExpandablePopupMenuWidget(
-                                      sectionTitle: widget.title,
-                                      onTapAddDevice: widget.onTapAddDevice,
-                                      listeningAreas: widget.listeningAreas,
-                                      // zones: widget.zones,
-                                    ),
-                                  ],
+                                      /// Add button with listening areas support
+                                      AddDeviceExpandablePopupMenuWidget(
+                                        sectionTitle: widget.title,
+                                        onTapAddDevice: widget.onTapAddDevice,
+                                        listeningAreas: widget.listeningAreas,
+                                        // zones: widget.zones,
+                                      ),
+                                    ],
+                                  ),
                                 ),
                               ),
 
@@ -364,34 +389,27 @@ class _CommonDevicesSectionWidgetState extends State<CommonDevicesSectionWidget>
                                   opacity: _searchAnimation.value,
                                   child: Transform.translate(
                                     offset: Offset((1.0 - _searchAnimation.value) * 50, 0),
-                                    child: Container(
-                                      decoration: BoxDecoration(
-                                        color: Theme.of(context).colorScheme.greyLight,
-                                        borderRadius: BorderRadius.circular(4),
-                                      ),
-                                      height: 36,
-                                      padding: const EdgeInsets.symmetric(horizontal: 8),
-                                      child: Row(
-                                        children: <Widget>[
-                                          Expanded(
-                                            child: SemanticHelper.formControl(
-                                              testId: SemanticHelper.createTestId(SemanticTypes.textInput, "section_search_${widget.title.toLowerCase()}"),
-                                              child: FusionTextField(
-                                                controller: searchController,
-                                                hintText: widget.title == 'Speakers' ? 'Search zones' : 'Search devices',
-                                                focusNode: _searchFocusNode,
-                                                onChanged: (String value) {
-                                                  setState(() {});
-                                                  widget.onSearchChanged?.call(value.trim());
-                                                  if (isSearchVisible) {
-                                                    widget.onActiveExpandableSectionChanged?.call(_activeExpandableSectionTitle);
-                                                  }
-                                                },
-                                              ),
+                                    child: Row(
+                                      children: <Widget>[
+                                        Expanded(
+                                          child: SemanticHelper.formControl(
+                                            testId: SemanticHelper.createTestId(SemanticTypes.textInput, "section_search_${widget.title.toLowerCase()}"),
+                                            child: FusionTextField(
+                                              color: context.colorScheme.elevation2,
+                                              controller: searchController,
+                                              hintText: widget.title == 'Speakers' ? 'Search zones' : 'Search devices',
+                                              focusNode: _searchFocusNode,
+                                              onChanged: (String value) {
+                                                setState(() {});
+                                                widget.onSearchChanged?.call(value.trim());
+                                                if (isSearchVisible) {
+                                                  widget.onActiveExpandableSectionChanged?.call(_activeExpandableSectionTitle);
+                                                }
+                                              },
                                             ),
                                           ),
-                                        ],
-                                      ),
+                                        ),
+                                      ],
                                     ),
                                   ),
                                 ),
@@ -414,18 +432,15 @@ class _CommonDevicesSectionWidgetState extends State<CommonDevicesSectionWidget>
                                   child: InkWell(
                                     borderRadius: BorderRadius.circular(12),
                                     onTap: _onSearchIconPressed,
-                                    child: Container(
-                                      padding: const EdgeInsets.all(4),
-                                      child: SemanticHelper.button(
-                                        testId: SemanticHelper.createTestId(
-                                          SemanticTypes.button,
-                                          isSearchVisible ? "${widget.title.toLowerCase()}_search_close_icon" : "${widget.title.toLowerCase()}_search_icon",
-                                        ),
-                                        child: Icon(
-                                          isSearchVisible ? Icons.close_sharp : Icons.search_sharp,
-                                          color: Theme.of(context).colorScheme.greyDark,
-                                          size: 17,
-                                        ),
+                                    child: SemanticHelper.button(
+                                      testId: SemanticHelper.createTestId(
+                                        SemanticTypes.button,
+                                        isSearchVisible ? "${widget.title.toLowerCase()}_search_close_icon" : "${widget.title.toLowerCase()}_search_icon",
+                                      ),
+                                      child: Icon(
+                                        isSearchVisible ? Icons.close_sharp : Icons.search_sharp,
+                                        color: context.colorScheme.primaryWhite,
+                                        size: 17,
                                       ),
                                     ),
                                   ),
@@ -441,8 +456,10 @@ class _CommonDevicesSectionWidgetState extends State<CommonDevicesSectionWidget>
               ),
             ),
 
+            const SizedBox(height: 8),
+
             /// Content with expandable support
-            Expanded(
+            Flexible(
               child: SemanticHelper.container(
                 testId: SemanticHelper.createTestId(SemanticTypes.container, "expandable_section_content_container_${widget.title.toLowerCase()}"),
                 child: SingleChildScrollView(
@@ -454,25 +471,29 @@ class _CommonDevicesSectionWidgetState extends State<CommonDevicesSectionWidget>
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: <Widget>[
                           /// Search results message (only when active & query not empty)
-                          if (isSearchVisible && (widget.searchQuery != null && widget.searchQuery!.isNotEmpty))
+                          if (isSearchVisible && (widget.searchQuery != null && widget.searchQuery!.isNotEmpty)) ...<Widget>[
                             SemanticHelper.container(
                               testId: SemanticHelper.createTestId(SemanticTypes.container, "search_results_message_container"),
-                              child: Container(
-                                width: double.infinity,
-                                padding: const EdgeInsets.fromLTRB(12, 10, 12, 6),
+                              child: Padding(
+                                padding: const EdgeInsets.only(left: 16.0, bottom: 6.0, right: 16.0),
                                 child: RichText(
                                   text: TextSpan(
                                     style: Theme.of(context).textTheme.bodySmall?.copyWith(fontSize: 11, color: Colors.black87),
                                     children: <InlineSpan>[
                                       TextSpan(
                                         text: '${widget.searchResultCount ?? 0} results found for ',
+                                        style: context.textTheme.bodySmall?.copyWith(
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.w600,
+                                          color: context.colorScheme.primaryWhite,
+                                        ),
                                       ),
                                       TextSpan(
                                         text: '"${widget.searchQuery}"',
-                                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                        style: context.textTheme.bodySmall?.copyWith(
                                           fontSize: 11,
                                           fontWeight: FontWeight.w600,
-                                          backgroundColor: Colors.yellow[200],
+                                          backgroundColor: Colors.orange[200],
                                           color: Colors.black,
                                         ),
                                       ),
@@ -481,9 +502,19 @@ class _CommonDevicesSectionWidgetState extends State<CommonDevicesSectionWidget>
                                 ),
                               ),
                             ),
+                            // const SizedBox(height: 8),
+                          ],
 
                           /// Original content (expandable / static)
-                          widget.enableExpandable ? _buildExpandableContent() : widget.sectionContent,
+                          Builder(
+                            builder: (BuildContext context) {
+                              if (widget.enableExpandable) {
+                                return _buildExpandableContent();
+                              } else {
+                                return widget.sectionContent;
+                              }
+                            },
+                          ),
                         ],
                       ),
                     ),
@@ -491,6 +522,7 @@ class _CommonDevicesSectionWidgetState extends State<CommonDevicesSectionWidget>
                 ),
               ),
             ),
+            const SizedBox(height: 12),
           ],
         ),
       ),

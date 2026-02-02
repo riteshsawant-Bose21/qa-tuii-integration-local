@@ -1,15 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/core/service_locator.dart';
-import 'package:fusion_launcher/features/authentication/launcher_sign_in_page.dart';
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
 import 'package:fusion_launcher/features/create_zone_popup/view_model/create_zone_viewmodel.dart';
+import 'package:fusion_launcher/features/projects/widget/building/side_panel_widgets/schematic_properties.dart';
 import 'package:fusion_launcher/features/projects/widget/building/widgets/drop_down.dart';
 import 'package:fusion_lib/fusion_lib.dart';
-import 'package:fusion_lib/fusion_theme/app_theme.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
-import '../../projects/widget/building/side_panel_widgets/schematic_properties.dart' show hexToColor;
 import '../view_model/create_zone_viewmodel_state.dart';
 
 part 'widgets/create_new_listening_area.dart';
@@ -28,7 +26,7 @@ class CreateZonePopup extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return FusionArrowPopup(
-      backgroundColor: const Color(0xFF292826),
+      backgroundColor: context.colorScheme.elevation1,
       content: NewWidget(isFromBuildingPage: isFromBuildingPage),
       child: child,
     );
@@ -52,12 +50,8 @@ class _NewWidgetState extends State<NewWidget> {
       create: (BuildContext context) => CreateZoneViewModel()..init(isFromBuilding: widget.isFromBuildingPage),
       child: BlocBuilder<CreateZoneViewModel, CreateZoneViewModelState>(
         builder: (BuildContext context, CreateZoneViewModelState state) {
-          return Container(
+          return SizedBox(
             width: 350,
-            decoration: BoxDecoration(
-              color: const Color(0xFF292826),
-              borderRadius: BorderRadius.circular(16),
-            ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -92,7 +86,7 @@ class _NewWidgetState extends State<NewWidget> {
                     ],
                   ),
                 ),
-                const Divider(thickness: 0.5, height: 0),
+                Divider(thickness: 0.5, height: 0, color: context.colorScheme.strokeLight),
                 Flexible(
                   child: SingleChildScrollView(
                     padding: const EdgeInsets.all(16).copyWith(top: 0),
@@ -193,7 +187,7 @@ class _NewWidgetState extends State<NewWidget> {
                         ),
 
                         const SizedBox(height: 20),
-                        const Divider(thickness: 0.5, height: 0),
+                        Divider(thickness: 0.5, height: 0, color: context.colorScheme.strokeLight),
                         const SizedBox(height: 20),
 
                         Row(
@@ -250,7 +244,7 @@ class _NewWidgetState extends State<NewWidget> {
                         ],
                         const SizedBox(height: 20),
 
-                        const Divider(thickness: 0.5, height: 0),
+                        Divider(thickness: 0.5, height: 0, color: context.colorScheme.strokeLight),
                         const SizedBox(height: 10),
 
                         const CreateSubzoneWidget(),
@@ -271,9 +265,9 @@ class _NewWidgetState extends State<NewWidget> {
                               ),
                             ),
                             const SizedBox(width: 15),
-                            NeumorphicDarkButton(
+                            FusionNeumorphicButton(
                               onTap: () => context.read<CreateZoneViewModel>().createZone(context),
-                              backgroundColor: context.colorScheme.surface,
+                              color: context.colorScheme.surface,
                               text: "Save",
                               width: 69,
                               height: 32,

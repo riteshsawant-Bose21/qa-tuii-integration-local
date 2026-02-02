@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:fusion_launcher/core/theme/app_theme.dart';
+import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_launcher/core/widgets/title_text_field_switcher.dart';
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
 import 'package:fusion_lib/fusion_lib.dart';
@@ -54,14 +54,14 @@ class _EventItemCardState extends State<EventItemCard> {
           /// Card container
           child: Container(
             decoration: BoxDecoration(
-              color: widget.isSelected ? Colors.grey[200] : (_isHovered ? Colors.grey[200] : null),
+              color: widget.isSelected ? context.colorScheme.elevation3 : (_isHovered ? context.colorScheme.elevation2 : null),
               borderRadius: BorderRadius.circular(8),
               border: Border.all(
-                color: widget.isSelected ? Theme.of(context).colorScheme.greyDark : Colors.transparent,
+                color: widget.isSelected ? context.colorScheme.elevation5 : Colors.transparent,
                 width: 1.0,
               ),
             ),
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
             child: Row(
               children: <Widget>[
                 /// snapshot item draggable icon
@@ -70,17 +70,18 @@ class _EventItemCardState extends State<EventItemCard> {
                   child: Opacity(
                     opacity: 0.4,
                     child: Icon(
-                      Icons.drag_handle,
+                      Icons.drag_indicator,
                       size: 16,
-                      color: Colors.grey[600],
+                      color: context.colorScheme.textPlaceholder,
                     ),
                   ),
                 ),
                 const SizedBox(width: 8),
-                const FusionImage.asset(
+                FusionImage.asset(
                   Assets.playIcon,
                   width: 24,
                   height: 24,
+                  assetColor: context.colorScheme.iconWhite,
                   fit: BoxFit.contain,
                 ),
                 const SizedBox(width: 12),
@@ -104,6 +105,8 @@ class _EventItemCardState extends State<EventItemCard> {
                   testId: SemanticHelper.createTestId(SemanticTypes.toggle, "event_switch"),
                   value: widget.eventData.isEnabled,
                   child: FusionSwitch(
+                    height: 22,
+                    width: 36,
                     value: widget.eventData.isEnabled,
                     onChanged: (bool value) {
                       if (widget.onSwitchChanged != null) {
@@ -140,10 +143,12 @@ class _EventItemCardState extends State<EventItemCard> {
                               ),
                         );
                       },
-                      child: const FusionImage.asset(
+                      child: FusionImage.asset(
                         Assets.deleteIcon,
                         width: 17,
                         height: 17,
+                        assetColor: context.colorScheme.iconWhite,
+
                         fit: BoxFit.contain,
                       ),
                     ),

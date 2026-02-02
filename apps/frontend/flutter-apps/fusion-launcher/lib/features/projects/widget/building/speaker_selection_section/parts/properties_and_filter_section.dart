@@ -7,8 +7,6 @@ import 'package:fusion_launcher/features/projects/widget/building/speaker_select
 import 'package:fusion_launcher/features/projects/widget/building/widgets/drop_down.dart';
 import 'package:fusion_launcher/features/projects/widget/building/widgets/text_field.dart';
 import 'package:fusion_lib/fusion_lib.dart';
-import 'package:fusion_lib/fusion_theme/app_theme.dart';
-import 'package:fusion_lib/fusion_widgets/others/fusion_checkbox_group.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../view_model/add_speaker_view_model.dart';
@@ -37,7 +35,7 @@ class SpeakerListeningAreaPropertiesState extends State<SpeakerListeningAreaProp
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: const Color(0xFF292826),
+        color: context.colorScheme.elevation2,
         borderRadius: BorderRadius.circular(16),
       ),
       child: BlocBuilder<ProjectViewModel, ProjectViewModelState>(
@@ -79,7 +77,7 @@ class SpeakerListeningAreaPropertiesState extends State<SpeakerListeningAreaProp
                   ],
                 ),
               ),
-              const Divider(thickness: 0.5, height: 0),
+              Divider(thickness: 0.5, height: 0, color: context.colorScheme.strokeLight),
 
               Flexible(
                 child: SingleChildScrollView(
@@ -261,6 +259,7 @@ class SpeakerListeningAreaPropertiesState extends State<SpeakerListeningAreaProp
                                     label: "Ceiling Ht",
                                     controller: ceilingHeightController,
                                     hintText: "e.g., 10 ft",
+                                    fillColor: context.colorScheme.elevation1,
                                     inputFormatters: <TextInputFormatter>[FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*'))],
                                     onFieldSubmitted: (String newValue) {
                                       final ListeningArea updatedLA = selectedListeningArea.copyWith(ceilingHeight: newValue);
@@ -340,50 +339,48 @@ class SpeakerListeningAreaPropertiesState extends State<SpeakerListeningAreaProp
                                   child: Center(
                                     child: MouseRegion(
                                       cursor: SystemMouseCursors.forbidden,
-                                      child: IgnorePointer(
-                                        child: Container(
-                                          padding: const EdgeInsets.all(8),
-                                          decoration: BoxDecoration(
-                                            color: context.colorScheme.surface,
-                                            borderRadius: BorderRadius.circular(12),
-                                          ),
-                                          child: Row(
-                                            spacing: 10,
-                                            mainAxisSize: MainAxisSize.min,
-                                            children: <Widget>[
-                                              ...SpeakerSelectionMode.values.map((SpeakerSelectionMode mode) {
-                                                final bool isSelected = vmState.mode == mode;
+                                      child: Container(
+                                        padding: const EdgeInsets.all(8.0),
+                                        decoration: BoxDecoration(
+                                          color: context.colorScheme.elevation1,
+                                          borderRadius: BorderRadius.circular(12),
+                                        ),
+                                        child: Row(
+                                          spacing: 10,
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: <Widget>[
+                                            ...SpeakerSelectionMode.values.map((SpeakerSelectionMode mode) {
+                                              final bool isSelected = vmState.mode == mode;
 
-                                                return GestureDetector(
-                                                  onTap: () {
-                                                    // setState(() {
-                                                    //   SpeakerselectionMode = mode;
-                                                    // });
-                                                  },
-                                                  child: SemanticHelper.container(
-                                                    testId: SemanticHelper.createTestId(SemanticTypes.container, "speaker_selection_mode_${mode.name}"),
-                                                    child: Container(
-                                                      width: 89,
-                                                      padding: const EdgeInsets.all(8),
-                                                      decoration: BoxDecoration(
-                                                        color: isSelected ? context.colorScheme.surfaceBright : null,
-                                                        borderRadius: BorderRadius.circular(8),
-                                                      ),
-                                                      child: Center(
-                                                        child: FusionAppText(
-                                                          text: mode.displayName,
-                                                          style: context.textTheme.bodySmall?.copyWith(
-                                                            color: context.colorScheme.onSurface,
-                                                            fontWeight: FontWeight.normal,
-                                                          ),
+                                              return GestureDetector(
+                                                onTap: () {
+                                                  // setState(() {
+                                                  //   SpeakerselectionMode = mode;
+                                                  // });
+                                                },
+                                                child: SemanticHelper.container(
+                                                  testId: SemanticHelper.createTestId(SemanticTypes.container, "speaker_selection_mode_${mode.name}"),
+                                                  child: Container(
+                                                    width: 89,
+                                                    padding: const EdgeInsets.all(8),
+                                                    decoration: BoxDecoration(
+                                                      color: isSelected ? context.colorScheme.elevation3 : null,
+                                                      borderRadius: BorderRadius.circular(8),
+                                                    ),
+                                                    child: Center(
+                                                      child: FusionAppText(
+                                                        text: mode.displayName,
+                                                        style: context.textTheme.bodySmall?.copyWith(
+                                                          color: context.colorScheme.onSurface,
+                                                          fontWeight: FontWeight.normal,
                                                         ),
                                                       ),
                                                     ),
                                                   ),
-                                                );
-                                              }),
-                                            ],
-                                          ),
+                                                ),
+                                              );
+                                            }),
+                                          ],
                                         ),
                                       ),
                                     ),

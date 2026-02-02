@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:fusion_launcher/features/projects/widget/building/side_panel_widgets/schematic_properties.dart';
 import 'package:fusion_lib/fusion_lib.dart';
-import 'package:fusion_lib/fusion_theme/app_theme.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../../../core/service_locator.dart';
 import '../../../../configuration/presentation/viewmodel/project_view_model.dart';
@@ -94,8 +95,13 @@ class _HardwareComponentPropertiesState extends State<HardwareComponentPropertie
                     // Speaker image from selected hardware assetPath
                     SemanticHelper.container(
                       testId: SemanticHelper.createTestId(SemanticTypes.container, "hardware_image"),
-                      child: Image.asset(
-                        widget.selectedHardware.assetImagePath,
+                      child: FusionImage.asset(
+                        (widget.selectedHardware is Speaker)
+                            ? serviceLocator<ProjectViewModel>().getHardwareImage(
+                              productId: (widget.selectedHardware as Speaker).productId ?? 0,
+                              currentImagePath: widget.selectedHardware.assetImagePath,
+                            )
+                            : widget.selectedHardware.assetImagePath,
                         width: 28,
                         height: 28,
                         fit: BoxFit.contain,
@@ -122,7 +128,7 @@ class _HardwareComponentPropertiesState extends State<HardwareComponentPropertie
                               fontSize: 12,
                               color: Theme.of(
                                 context,
-                              ).colorScheme.fusionTextViewColor.withOpacity(0.7),
+                              ).colorScheme.textPrimary.withOpacity(0.7),
                             ),
                           ),
                         ],
@@ -131,11 +137,7 @@ class _HardwareComponentPropertiesState extends State<HardwareComponentPropertie
                     SemanticHelper.button(
                       testId: SemanticHelper.createTestId(SemanticTypes.button, "delete_hardware"),
                       child: IconButton(
-                        icon: Icon(
-                          Icons.delete,
-                          size: 18,
-                          color: Theme.of(context).colorScheme.error,
-                        ),
+                        icon: const Icon(LucideIcons.trash200, size: 18, color: Colors.red),
                         onPressed: () {
                           final bool isSpeaker = widget.selectedHardware is Speaker;
                           viewModel.removeHardware(
@@ -149,23 +151,16 @@ class _HardwareComponentPropertiesState extends State<HardwareComponentPropertie
                     ),
                   ],
                 ),
+                const SizedBox(height: 10),
 
                 // Hardware name input field
                 SemanticHelper.formControl(
                   testId: SemanticHelper.createTestId(SemanticTypes.textInput, "hardware_name_edit"),
-                  child: TextFormField(
+                  child: PropertyTextField(
                     initialValue: widget.selectedHardware.name,
                     maxLength: 24,
-                    decoration: const InputDecoration(
-                      counterText: "",
-                      hintText: 'Hardware Name',
-                      border: InputBorder.none,
-                    ),
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w600,
-                      fontSize: 12,
-                    ),
-                    onFieldSubmitted: (String v) {
+                    hintText: 'Hardware Name',
+                    onSubmitted: (String v) {
                       // Validate that the name is not empty or just whitespace
                       final String trimmedName = v.trim();
                       if (trimmedName.isNotEmpty) {
@@ -183,13 +178,14 @@ class _HardwareComponentPropertiesState extends State<HardwareComponentPropertie
                     },
                   ),
                 ),
+                const SizedBox(height: 16),
 
                 // Coordinates section
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: <Widget>[
                     FusionAppText(
-                      text: 'Position',
+                      text: 'Position(in meters)',
                       style: textStyleGrey?.copyWith(
                         fontSize: 11,
                         fontWeight: FontWeight.w600,
@@ -201,24 +197,17 @@ class _HardwareComponentPropertiesState extends State<HardwareComponentPropertie
                         Expanded(
                           child: Row(
                             children: <Widget>[
-                              FusionAppText(text: "X", style: textStyleGrey),
+                              FusionAppText(text: "X :", style: textStyleGrey),
                               const SizedBox(width: 4),
-                              IntrinsicWidth(
+                              Flexible(
                                 child: SemanticHelper.formControl(
                                   testId: SemanticHelper.createTestId(SemanticTypes.textInput, "x_position_input"),
-                                  child: TextFormField(
+                                  child: PropertyTextField(
                                     controller: xController,
                                     maxLength: 24,
-                                    decoration: const InputDecoration(
-                                      counterText: "",
-                                      hintText: 'X',
-                                      border: InputBorder.none,
-                                      suffixText: "m",
-                                      isDense: true,
-                                    ),
-                                    style: textStyleBlack,
+                                    hintText: 'X',
                                     keyboardType: TextInputType.number,
-                                    onFieldSubmitted: (String v) {
+                                    onSubmitted: (String v) {
                                       final double? xValue = double.tryParse(
                                         v.trim(),
                                       );
@@ -260,24 +249,17 @@ class _HardwareComponentPropertiesState extends State<HardwareComponentPropertie
                         Expanded(
                           child: Row(
                             children: <Widget>[
-                              FusionAppText(text: "Y", style: textStyleGrey),
+                              FusionAppText(text: "Y :", style: textStyleGrey),
                               const SizedBox(width: 4),
-                              IntrinsicWidth(
+                              Flexible(
                                 child: SemanticHelper.formControl(
                                   testId: SemanticHelper.createTestId(SemanticTypes.textInput, "y_position_input"),
-                                  child: TextFormField(
+                                  child: PropertyTextField(
                                     controller: yController,
                                     maxLength: 24,
-                                    decoration: const InputDecoration(
-                                      counterText: "",
-                                      hintText: 'Y',
-                                      border: InputBorder.none,
-                                      isDense: true,
-                                      suffixText: "m",
-                                    ),
-                                    style: textStyleBlack,
+                                    hintText: 'Y',
                                     keyboardType: TextInputType.number,
-                                    onFieldSubmitted: (String v) {
+                                    onSubmitted: (String v) {
                                       final double? yValue = double.tryParse(
                                         v.trim(),
                                       );
@@ -319,24 +301,17 @@ class _HardwareComponentPropertiesState extends State<HardwareComponentPropertie
                         Expanded(
                           child: Row(
                             children: <Widget>[
-                              FusionAppText(text: "Z", style: textStyleGrey),
+                              FusionAppText(text: "Z :", style: textStyleGrey),
                               const SizedBox(width: 4),
-                              IntrinsicWidth(
+                              Flexible(
                                 child: SemanticHelper.formControl(
                                   testId: SemanticHelper.createTestId(SemanticTypes.textInput, "z_position_input"),
-                                  child: TextFormField(
+                                  child: PropertyTextField(
                                     controller: zController,
                                     maxLength: 24,
-                                    decoration: const InputDecoration(
-                                      counterText: "",
-                                      hintText: 'Z',
-                                      border: InputBorder.none,
-                                      isDense: true,
-                                      suffixText: "m",
-                                    ),
-                                    style: textStyleBlack,
+                                    hintText: 'Z',
                                     keyboardType: TextInputType.number,
-                                    onFieldSubmitted: (String v) {
+                                    onSubmitted: (String v) {
                                       final double? zValue = double.tryParse(
                                         v.trim(),
                                       );
@@ -391,17 +366,12 @@ class _HardwareComponentPropertiesState extends State<HardwareComponentPropertie
                       IntrinsicWidth(
                         child: SemanticHelper.formControl(
                           testId: SemanticHelper.createTestId(SemanticTypes.textInput, "roll"),
-                          child: TextFormField(
+                          child: PropertyTextField(
                             controller: rollController,
-                            decoration: const InputDecoration(
-                              hintText: 'Roll',
-                              border: InputBorder.none,
-                              isDense: true,
-                              suffixText: "°",
-                            ),
-                            style: textStyleBlack,
+                            hintText: 'Roll',
                             keyboardType: TextInputType.number,
-                            onFieldSubmitted: (String v) {
+                            suffixText: "°",
+                            onSubmitted: (String v) {
                               final double? roll = double.tryParse(v.trim());
                               if (roll != null) {
                                 final Speaker updated = (widget.selectedHardware as Speaker).copyWith(roll: roll);
@@ -444,17 +414,12 @@ class _HardwareComponentPropertiesState extends State<HardwareComponentPropertie
                       IntrinsicWidth(
                         child: SemanticHelper.formControl(
                           testId: SemanticHelper.createTestId(SemanticTypes.textInput, "pitch"),
-                          child: TextFormField(
+                          child: PropertyTextField(
                             controller: pitchController,
-                            decoration: const InputDecoration(
-                              hintText: 'Pitch',
-                              border: InputBorder.none,
-                              isDense: true,
-                              suffixText: "°",
-                            ),
-                            style: textStyleBlack,
+                            hintText: 'Pitch',
+                            suffixText: "°",
                             keyboardType: TextInputType.number,
-                            onFieldSubmitted: (String v) {
+                            onSubmitted: (String v) {
                               final double? pitch = double.tryParse(v.trim());
                               if (pitch != null) {
                                 final Speaker updated = (widget.selectedHardware as Speaker).copyWith(pitch: pitch);
@@ -496,17 +461,12 @@ class _HardwareComponentPropertiesState extends State<HardwareComponentPropertie
                       IntrinsicWidth(
                         child: SemanticHelper.formControl(
                           testId: SemanticHelper.createTestId(SemanticTypes.textInput, "yaw"),
-                          child: TextFormField(
+                          child: PropertyTextField(
                             controller: yawController,
-                            decoration: const InputDecoration(
-                              hintText: 'Yaw',
-                              border: InputBorder.none,
-                              isDense: true,
-                              suffixText: "°",
-                            ),
-                            style: textStyleBlack,
+                            hintText: 'Yaw',
+                            suffixText: "°",
                             keyboardType: TextInputType.number,
-                            onFieldSubmitted: (String v) {
+                            onSubmitted: (String v) {
                               final double? yaw = double.tryParse(v.trim());
                               if (yaw != null) {
                                 final Speaker updated = (widget.selectedHardware as Speaker).copyWith(yaw: yaw);
@@ -551,17 +511,12 @@ class _HardwareComponentPropertiesState extends State<HardwareComponentPropertie
                             IntrinsicWidth(
                               child: SemanticHelper.formControl(
                                 testId: SemanticHelper.createTestId(SemanticTypes.textInput, "gain"),
-                                child: TextFormField(
+                                child: PropertyTextField(
                                   controller: gainController,
-                                  decoration: const InputDecoration(
-                                    hintText: 'Gain',
-                                    border: InputBorder.none,
-                                    isDense: true,
-                                    suffixText: "dB",
-                                  ),
-                                  style: textStyleBlack,
+                                  hintText: 'Gain',
+                                  suffixText: "dB",
                                   keyboardType: TextInputType.number,
-                                  onFieldSubmitted: (String v) {
+                                  onSubmitted: (String v) {
                                     final double? gain = double.tryParse(v.trim());
                                     if (gain != null) {
                                       final Speaker updated = (widget.selectedHardware as Speaker).copyWith(gain: gain);
@@ -604,6 +559,7 @@ class _HardwareComponentPropertiesState extends State<HardwareComponentPropertie
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: <Widget>[
                     const SizedBox(height: 12),
+
                     // Row(
                     //   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     //   children: <Widget>[
@@ -619,7 +575,7 @@ class _HardwareComponentPropertiesState extends State<HardwareComponentPropertie
                     //                 context,
                     //               ).textTheme.bodySmall?.copyWith(
                     //                 fontSize: 11,
-                    //                 color: Theme.of(context).colorScheme.fusionTextViewColor.withOpacity(0.5),
+                    //                 color: Theme.of(context).colorScheme.textPrimary.withOpacity(0.5),
                     //               ),
                     //             ),
                     //             // Right: Value + Arrow
@@ -731,7 +687,6 @@ class _HardwareComponentPropertiesState extends State<HardwareComponentPropertie
                     //     ),
                     //   ],
                     // ),
-
                     const SizedBox(height: 8),
                     _buildHardwarePropertyTextRow(
                       context: context,
@@ -782,9 +737,9 @@ class _HardwareComponentPropertiesState extends State<HardwareComponentPropertie
         offset: const Offset(50, 8),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(6),
-          side: BorderSide(color: Theme.of(context).colorScheme.dividerColor),
+          side: BorderSide(color: Theme.of(context).colorScheme.primaryBlack),
         ),
-        color: Theme.of(context).colorScheme.white,
+        color: Theme.of(context).colorScheme.primaryWhite,
         elevation: 1,
         itemBuilder: (BuildContext context) {
           if (options == null || options.isEmpty) {
@@ -820,7 +775,7 @@ class _HardwareComponentPropertiesState extends State<HardwareComponentPropertie
                   fontSize: 11,
                   color: Theme.of(
                     context,
-                  ).colorScheme.fusionTextViewColor.withOpacity(0.5),
+                  ).colorScheme.textPrimary.withOpacity(0.5),
                 ),
               ),
               // Right: Value + Arrow
@@ -844,7 +799,7 @@ class _HardwareComponentPropertiesState extends State<HardwareComponentPropertie
                         child: Icon(
                           Icons.keyboard_arrow_down,
                           size: 16,
-                          color: Theme.of(context).colorScheme.fusionTextViewColor,
+                          color: Theme.of(context).colorScheme.textPrimary,
                         ),
                       ),
                     ],
@@ -876,7 +831,7 @@ class _HardwareComponentPropertiesState extends State<HardwareComponentPropertie
               fontSize: 11,
               color: Theme.of(
                 context,
-              ).colorScheme.fusionTextViewColor.withOpacity(0.5),
+              ).colorScheme.textPrimary.withOpacity(0.5),
             ),
           ),
           // Right: Value
@@ -919,7 +874,7 @@ class _CircuitSelection extends StatelessWidget {
               text: "Circuit",
               style: context.textTheme.bodySmall?.copyWith(
                 fontSize: 11,
-                color: context.colorScheme.fusionTextViewColor.withValues(
+                color: context.colorScheme.textPrimary.withValues(
                   alpha: 0.5,
                 ),
               ),

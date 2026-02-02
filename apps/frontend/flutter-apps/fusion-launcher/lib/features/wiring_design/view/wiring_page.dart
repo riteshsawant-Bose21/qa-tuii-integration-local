@@ -20,7 +20,6 @@ class _WiringPageState extends State<WiringPage> {
   );
   @override
   void initState() {
-    // TODO: implement initState
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       controller.fitToViewPort();
@@ -29,16 +28,19 @@ class _WiringPageState extends State<WiringPage> {
 
   @override
   Widget build(BuildContext context) {
-    return BlocListener<ProjectViewModel, ProjectViewModelState>(
-      listener: (BuildContext context, ProjectViewModelState state) {
-        if (state is DeviceSelectionChanged) {
-          controller.selectElementFromPM(state.selectedDevice?.id);
-        }
-        if (state is ProjectUpdated) {
-          controller.loadFromPM();
-        }
-      },
-      child: CircuitView(controller: controller),
+    return Theme(
+      data: ThemeData.light(),
+      child: BlocListener<ProjectViewModel, ProjectViewModelState>(
+        listener: (BuildContext context, ProjectViewModelState state) {
+          if (state is DeviceSelectionChanged) {
+            controller.selectElementFromPM(state.selectedDevice?.id);
+          }
+          if (state is ProjectUpdated) {
+            controller.loadFromPM();
+          }
+        },
+        child: CircuitView(controller: controller),
+      ),
     );
   }
 }

@@ -40,8 +40,8 @@ class ProductSearchWidget extends StatelessWidget {
       clipBehavior: Clip.hardEdge,
       decoration: BoxDecoration(
         border: Border(
-          bottom: BorderSide(color: Theme.of(context).colorScheme.dividerColor, width: 1),
-          top: BorderSide(color: Theme.of(context).colorScheme.dividerColor, width: 1),
+          bottom: BorderSide(color: Theme.of(context).colorScheme.primaryBlack, width: 1),
+          top: BorderSide(color: Theme.of(context).colorScheme.primaryBlack, width: 1),
         ),
       ),
       child: Column(
@@ -133,7 +133,7 @@ class ProductSearchWidget extends StatelessWidget {
   }) {
     return PopupMenuButton<void>(
       tooltip: tooltip,
-      color: Theme.of(context).colorScheme.white,
+      color: Theme.of(context).colorScheme.primaryWhite,
       offset: const Offset(0, 30),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(8),
@@ -307,10 +307,10 @@ class ProductSearchWidget extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.greyLight,
+        color: context.colorScheme.primaryBlack,
         borderRadius: BorderRadius.circular(3),
         border: Border.all(
-          color: Theme.of(context).colorScheme.greyLight,
+          color: context.colorScheme.primaryBlack,
           width: 1,
         ),
       ),
@@ -321,7 +321,7 @@ class ProductSearchWidget extends StatelessWidget {
             text: label,
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
               fontSize: 10,
-              color: Theme.of(context).colorScheme.fusionTextViewColor,
+              color: Theme.of(context).colorScheme.textPrimary,
             ),
           ),
           const SizedBox(width: 4),
@@ -330,7 +330,7 @@ class ProductSearchWidget extends StatelessWidget {
             child: Icon(
               Icons.close,
               size: 12,
-              color: Theme.of(context).colorScheme.fusionTextViewColor,
+              color: Theme.of(context).colorScheme.textPrimary,
             ),
           ),
         ],

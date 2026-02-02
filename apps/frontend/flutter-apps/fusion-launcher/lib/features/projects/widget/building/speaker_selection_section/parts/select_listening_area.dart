@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:fusion_launcher/features/projects/widget/building/side_panel_widgets/schematic_properties.dart';
 import 'package:fusion_launcher/features/projects/widget/building/speaker_selection_section/view_model/add_speaker_view_model.dart';
 import 'package:fusion_lib/fusion_lib.dart';
-import 'package:fusion_lib/fusion_theme/app_theme.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../../../../core/service_locator.dart';
@@ -19,7 +19,7 @@ class SelectListeningArea extends StatelessWidget {
     return FusionArrowPopup(
       blurAmount: 0,
       showArrow: false,
-      backgroundColor: const Color(0xFF292826),
+      backgroundColor: context.colorScheme.elevation1,
       barrierColor: Colors.transparent,
       content: SizedBox(
         width: 250,
@@ -229,20 +229,27 @@ class __CreateNewListeningAreaWidgetState extends State<_CreateNewListeningAreaW
                 const SizedBox(height: 4),
 
                 /// Floor dropdown
-                BuildingPageDronDown<FloorModel>(
-                  value: _selectedFloor,
-                  items: serviceLocator<ProjectViewModel>().getAllFloors(),
-                  onSelect: (FloorModel selectedValue) {
-                    setState(() {
-                      _selectedFloor = selectedValue;
-                    });
-                  },
-                  labelBuilder: (FloorModel option) {
-                    return FusionAppText(
-                      text: option.name,
-                      style: Theme.of(context).textTheme.bodySmall,
-                    );
-                  },
+                Container(
+                  decoration: BoxDecoration(
+                    color: context.colorScheme.elevation1,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: context.colorScheme.elevation2, width: 1),
+                  ),
+                  child: BuildingPageDronDown<FloorModel>(
+                    value: _selectedFloor,
+                    items: serviceLocator<ProjectViewModel>().getAllFloors(),
+                    onSelect: (FloorModel selectedValue) {
+                      setState(() {
+                        _selectedFloor = selectedValue;
+                      });
+                    },
+                    labelBuilder: (FloorModel option) {
+                      return FusionAppText(
+                        text: option.name,
+                        style: Theme.of(context).textTheme.bodySmall,
+                      );
+                    },
+                  ),
                 ),
                 const SizedBox(height: 12),
 
@@ -255,21 +262,9 @@ class __CreateNewListeningAreaWidgetState extends State<_CreateNewListeningAreaW
                 ),
                 const SizedBox(height: 4),
 
-                TextFormField(
+                PropertyTextField(
                   controller: listeningAreaNameController,
-                  decoration: InputDecoration(
-                    isDense: true,
-                    hintText: 'Enter location name',
-                    hintStyle: context.textTheme.bodySmall?.copyWith(color: context.colorScheme.onSurface.withAlpha(100)),
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide.none),
-                    focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide.none),
-                    enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide.none),
-                    hoverColor: Colors.transparent,
-                    errorBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide.none),
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
-                    fillColor: context.colorScheme.surface,
-                  ),
-                  style: context.textTheme.bodySmall?.copyWith(color: context.colorScheme.onSurface),
+                  hintText: 'Enter location name',
                 ),
                 const SizedBox(height: 12),
 
@@ -290,7 +285,7 @@ class __CreateNewListeningAreaWidgetState extends State<_CreateNewListeningAreaW
                         child: FusionAppText(
                           text: "Save",
                           style: context.textTheme.titleSmall?.copyWith(
-                            color: context.colorScheme.onSurface,
+                            color: Colors.white,
                             fontWeight: FontWeight.bold,
                           ),
                         ),

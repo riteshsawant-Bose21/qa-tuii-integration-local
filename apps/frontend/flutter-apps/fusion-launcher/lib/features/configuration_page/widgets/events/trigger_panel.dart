@@ -20,12 +20,11 @@ class TriggerPanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
+      clipBehavior: Clip.hardEdge,
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.white,
-
-        border: Border(
-          left: BorderSide(width: 1, color: Theme.of(context).colorScheme.grey),
-        ),
+        color: context.colorScheme.primaryBlack,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(width: 1, color: context.colorScheme.elevation2),
       ),
       child: Column(
         children: <Widget>[
@@ -58,7 +57,7 @@ class TriggerPanel extends StatelessWidget {
                             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                               fontSize: 10,
                               fontWeight: FontWeight.w400,
-                              color: Theme.of(context).colorScheme.greyDark,
+                              color: context.colorScheme.primaryBlack,
                             ),
                             textAlign: TextAlign.center,
                           ),
@@ -69,7 +68,7 @@ class TriggerPanel extends StatelessWidget {
                             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                               fontSize: 10,
                               fontWeight: FontWeight.w400,
-                              color: Theme.of(context).colorScheme.greyDark,
+                              color: context.colorScheme.primaryBlack,
                             ),
                             textAlign: TextAlign.center,
                           ),
@@ -105,21 +104,43 @@ class TriggerPanel extends StatelessWidget {
 
                       /// show list of actions for the selected event
                       Expanded(
-                        child: ReorderableListView.builder(
-                          buildDefaultDragHandles: false,
-                          physics: const ClampingScrollPhysics(),
-                          itemCount: eventActionsList.length,
-                          onReorder: (int oldIndex, int newIndex) {},
-                          itemBuilder: (BuildContext context, int index) {
-                            final SceneActionModel action = eventActionsList[index];
-                            return EventActionRowData(
-                              key: ValueKey<String>(action.id),
-                              action: action,
-                              eventId: selectedEventId,
-                              index: index,
-                            );
-                          },
-                        ),
+                        child:
+                            eventActionsList.isEmpty
+                                ? Center(
+                                  child: Container(
+                                    // 40%
+                                    width: MediaQuery.of(context).size.width * 0.4,
+                                    padding: const EdgeInsets.all(100.0),
+                                    child: Column(
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      crossAxisAlignment: CrossAxisAlignment.center,
+                                      children: <Widget>[
+                                        FusionAppText(
+                                          text: "No actions added to this event yet.",
+                                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.w500,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                )
+                                : ReorderableListView.builder(
+                                  buildDefaultDragHandles: false,
+                                  physics: const ClampingScrollPhysics(),
+                                  itemCount: eventActionsList.length,
+                                  onReorder: (int oldIndex, int newIndex) {},
+                                  itemBuilder: (BuildContext context, int index) {
+                                    final SceneActionModel action = eventActionsList[index];
+                                    return EventActionRowData(
+                                      key: ValueKey<String>(action.id),
+                                      action: action,
+                                      eventId: selectedEventId,
+                                      index: index,
+                                    );
+                                  },
+                                ),
                       ),
                     ],
                   ],

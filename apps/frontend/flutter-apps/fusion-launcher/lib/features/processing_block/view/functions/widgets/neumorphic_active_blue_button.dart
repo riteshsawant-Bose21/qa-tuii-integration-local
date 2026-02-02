@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
-import '../../common/neumorphic_button.dart';
-
 class NeumorphicActiveBlueButton extends StatelessWidget {
   final String text;
   final bool isActive;
@@ -36,16 +34,11 @@ class NeumorphicActiveBlueButton extends StatelessWidget {
           child: ClipRRect(
             borderRadius: BorderRadiusGeometry.circular(borderRadius),
             clipBehavior: isActive ? Clip.hardEdge : Clip.none,
-            child: Container(
+            child: FusionContainer(
               height: height ?? 28,
               width: width ?? double.infinity,
-              clipBehavior: isActive ? Clip.hardEdge : Clip.none,
+              raised: !isActive,
               alignment: Alignment.center,
-              decoration: BoxDecoration(
-                color: Colors.transparent,
-                borderRadius: BorderRadius.circular(borderRadius),
-                boxShadow: getNeumorphismBoxShadows(inner: isActive),
-              ),
               child: Container(
                 width: width,
                 height: height,

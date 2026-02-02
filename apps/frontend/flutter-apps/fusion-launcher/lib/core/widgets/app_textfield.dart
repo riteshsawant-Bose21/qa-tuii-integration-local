@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:fusion_launcher/core/theme/app_theme.dart';
-import 'package:fusion_lib/fusion_widgets/semantics/semantic_helper.dart';
-import 'package:fusion_lib/fusion_widgets/semantics/semantic_type.dart';
+import 'package:fusion_lib/fusion_lib.dart';
 
 import 'app_text_view.dart';
 
@@ -78,7 +76,7 @@ class _AppTextFieldState extends State<AppTextField> {
                       widget.labelStyle ??
                       Theme.of(context).textTheme.labelMedium!.copyWith(
                         fontSize: 14,
-                        color: Theme.of(context).colorScheme.greyDark,
+                        color: context.colorScheme.primaryBlack,
                         fontWeight: FontWeight.w400,
                       ),
                 ),
@@ -111,7 +109,7 @@ class _AppTextFieldState extends State<AppTextField> {
                 obscureText: widget.obscureText,
                 initialValue: widget.value,
                 decoration: InputDecoration(
-                  fillColor: Theme.of(context).colorScheme.softGrey.withValues(alpha: 0.8),
+                  fillColor: Theme.of(context).colorScheme.elevation2.withValues(alpha: 0.8),
                   filled: true,
                   hintText: widget.hintText,
                   suffixIcon: widget.suffixIcon,

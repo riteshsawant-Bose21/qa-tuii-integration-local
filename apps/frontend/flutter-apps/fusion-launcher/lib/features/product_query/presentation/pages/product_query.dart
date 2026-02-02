@@ -170,7 +170,7 @@ import 'package:fusion_lib/fusion_lib.dart';
 //                   text: product.price.toString(),
 //                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
 //                     fontSize: 11,
-//                     color: Theme.of(context).colorScheme.greyDark,
+//                     color: context.colorScheme.primaryBlack,
 //                     fontWeight: FontWeight.w400,
 //                   ),
 //                 ),

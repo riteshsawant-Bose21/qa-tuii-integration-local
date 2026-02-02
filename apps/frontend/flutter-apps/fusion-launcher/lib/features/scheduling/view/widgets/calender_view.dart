@@ -4,6 +4,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/features/scheduling/model/calendar_event.dart';
 import 'package:fusion_launcher/features/scheduling/view/sections/scheduler_form.dart';
 import 'package:fusion_launcher/features/scheduling/viewmodel/scheduler_viewmodel.dart';
+import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/fusion_utils/color_utils.dart';
 import 'package:fusion_lib/fusion_widgets/buttons/fusion_text_button.dart';
 import 'package:fusion_lib/fusion_widgets/fusion_widgets.dart';
@@ -166,7 +167,7 @@ class _CalenderViewState extends State<CalenderView> {
                                     FusionAppText(
                                       text: "At ${DateFormat('hh:mm a').format(event.startTime)}",
                                       style: theme.textTheme.bodySmall?.copyWith(
-                                        color: Colors.black38,
+                                        color: context.colorScheme.elevation5,
                                       ),
                                       textAlign: TextAlign.start,
                                       maxLine: 1,
@@ -200,7 +201,7 @@ class _CalenderViewState extends State<CalenderView> {
                         child: Container(
                           padding: const EdgeInsets.all(8.0),
                           decoration: BoxDecoration(
-                            color: Colors.white,
+                            color: context.colorScheme.elevation2,
                             borderRadius: BorderRadius.circular(8),
                             border: Border(
                               left: BorderSide(
@@ -233,6 +234,7 @@ class _CalenderViewState extends State<CalenderView> {
 
                               FusionTextButton(
                                 label: "",
+                                foregroundColor: context.colorScheme.iconWhite,
                                 prefixIcon: Icons.edit,
                                 showPrefixIcon: true,
                                 width: 50,
@@ -259,22 +261,24 @@ class _CalenderViewState extends State<CalenderView> {
           left: 0,
           right: 0,
           child: Container(
-            color: theme.scaffoldBackgroundColor,
+            color: theme.colorScheme.elevation1,
             height: dayLabelHeight,
             child: Stack(
               children: <Widget>[
                 for (int i = 1; i <= daysInMonth; i++)
                   Positioned(
-                    top: 10,
+                    top: 0,
                     left: hourLabelWidth + ((i - 1) * dayWidth) - (_horizontalController.hasClients ? _horizontalController.offset : 0),
                     child: Container(
+                      alignment: Alignment.center,
+                      // padding: EdgeInsets.only(top: 17),
                       width: dayWidth,
                       height: dayLabelHeight,
                       decoration: BoxDecoration(
                         // color: Colors.red,
                         border: Border(
-                          right: BorderSide(color: Colors.grey.shade300, width: 0.5),
-                          left: BorderSide(color: Colors.grey.shade300, width: 0.5),
+                          right: BorderSide(color: context.colorScheme.elevation4, width: 0.5),
+                          left: BorderSide(color: context.colorScheme.elevation4, width: 0.5),
                         ),
                       ),
                       child: Text(
@@ -294,20 +298,20 @@ class _CalenderViewState extends State<CalenderView> {
           bottom: 0,
           left: 0,
           child: Container(
-            color: theme.scaffoldBackgroundColor,
+            color: theme.colorScheme.elevation1,
             width: hourLabelWidth,
             child: Stack(
               children: <Widget>[
                 for (int i = 0; i < 24; i++)
                   Positioned(
                     top: dayLabelHeight + (i * hourHeight) - (_verticalController.hasClients ? _verticalController.offset : 0),
-                    left: 10,
+                    left: 0,
                     height: hourHeight,
-                    width: hourLabelWidth - 20,
+                    width: hourLabelWidth,
                     child: Container(
                       decoration: BoxDecoration(
                         border: Border.symmetric(
-                          horizontal: BorderSide(color: Colors.grey.shade300, width: 0.5),
+                          horizontal: BorderSide(color: context.colorScheme.elevation4, width: 0.5),
                         ),
                       ),
                       child: Center(
@@ -329,10 +333,10 @@ class _CalenderViewState extends State<CalenderView> {
           height: dayLabelHeight,
           child: Container(
             decoration: BoxDecoration(
-              color: theme.scaffoldBackgroundColor,
+              color: theme.colorScheme.elevation1,
               border: Border(
-                right: BorderSide(color: Colors.grey.shade300, width: 0.5),
-                bottom: BorderSide(color: Colors.grey.shade300, width: 0.5),
+                right: BorderSide(color: context.colorScheme.elevation4, width: 0.5),
+                bottom: BorderSide(color: context.colorScheme.elevation4, width: 0.5),
               ),
             ),
           ),
@@ -360,7 +364,7 @@ class _GridPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    final Paint paint = Paint()..color = Colors.grey.shade300;
+    final Paint paint = Paint()..color = theme.colorScheme.elevation5;
 
     // Draw vertical lines
     for (int i = 0; i <= daysInMonth; i++) {

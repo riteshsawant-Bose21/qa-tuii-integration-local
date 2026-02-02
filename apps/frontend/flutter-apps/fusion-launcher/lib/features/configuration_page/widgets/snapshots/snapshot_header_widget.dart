@@ -93,10 +93,13 @@ class _SnapshotHeaderWidgetState extends State<SnapshotHeaderWidget> {
           vertical: 6,
         ),
         decoration: BoxDecoration(
-          color: context.colorScheme.white,
-          // border bottom
+          color: context.colorScheme.elevation1,
+          borderRadius: const BorderRadius.only(
+            topRight: Radius.circular(12),
+            topLeft: Radius.circular(12),
+          ),
           border: Border(
-            bottom: BorderSide(width: 1, color: context.colorScheme.grey),
+            bottom: BorderSide(width: 1, color: context.colorScheme.elevation2),
           ),
         ),
         child: Row(
@@ -112,6 +115,10 @@ class _SnapshotHeaderWidgetState extends State<SnapshotHeaderWidget> {
                         style: context.textTheme.bodyMedium?.copyWith(fontSize: 14, fontWeight: FontWeight.w700),
                         decoration: const InputDecoration(
                           border: InputBorder.none,
+                          filled: false,
+                          focusedBorder: InputBorder.none,
+                          errorBorder: InputBorder.none,
+                          enabledBorder: InputBorder.none,
                           contentPadding: EdgeInsets.zero,
                           isDense: true,
                         ),
