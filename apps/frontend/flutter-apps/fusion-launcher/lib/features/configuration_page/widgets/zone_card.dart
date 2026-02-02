@@ -7,7 +7,7 @@ import 'package:fusion_lib/fusion_lib.dart';
 import '../../../core/constants/assets_constants.dart';
 import '../../../core/service_locator.dart';
 import '../../configuration/presentation/viewmodel/project_view_model.dart';
-import '../../processing_block/view/functions/mini_matrix.dart';
+import '../../processing_block/view/functions/source_matrix.dart';
 import '../../processing_block/view/functions/source_mix.dart';
 import '../../processing_block/view/processing_chain_view.dart';
 
@@ -790,8 +790,8 @@ class _ZoneCardState extends State<ZoneCard> {
             context,
             zoneID: widget.zoneId,
           );
-        } else if (selectedFunction == ZoneFunctionsType.miniMatrix || selectedFunction == ZoneFunctionsType.miniMatrixWithPriority) {
-          MiniMatrixZoneControlPanel.showDialog(
+        } else if (selectedFunction == ZoneFunctionsType.sourceMatrix || selectedFunction == ZoneFunctionsType.sourceMatrixWithPriority) {
+          SourceMatrixZoneControlPanel.showDialog(
             context,
             zoneID: widget.zoneId,
           );

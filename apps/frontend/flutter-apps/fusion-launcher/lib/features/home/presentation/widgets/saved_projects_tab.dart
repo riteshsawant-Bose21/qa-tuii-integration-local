@@ -809,6 +809,7 @@ class _CreateNewProjectDialogState extends State<CreateNewProjectDialog> {
                                   children: <Widget>[
                                     Expanded(
                                       child: BorderedTextfield(
+                                        autofocus: true,
                                         controller: projectNameController,
                                         label: "Project File Name",
                                         hintText: "Project Name",
@@ -1143,6 +1144,7 @@ class BorderedTextfield extends StatefulWidget {
   final bool isEnabled, isObscured;
   final FormFieldValidator<String>? validator;
   final String? sementicFieldId;
+  final bool autofocus;
 
   const BorderedTextfield({
     super.key,
@@ -1156,6 +1158,7 @@ class BorderedTextfield extends StatefulWidget {
     this.isObscured = false,
     this.validator,
     this.sementicFieldId,
+    this.autofocus = false,
   });
 
   @override
@@ -1202,6 +1205,7 @@ class _BorderedTextfieldState extends State<BorderedTextfield> {
         SemanticHelper.formControl(
           testId: SemanticHelper.createTestId(SemanticTypes.textInput, widget.sementicFieldId ?? "${widget.label}_input"),
           child: TextFormField(
+            autofocus: widget.autofocus,
             controller: widget.controller,
             initialValue: widget.initialValue,
             minLines: widget.minLines,
