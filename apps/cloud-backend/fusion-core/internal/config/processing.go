@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+
+	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/environment"
 )
 
 // Validation holds the configuration settings for data validation.
@@ -21,32 +23,19 @@ type Processing struct {
 	RetryDelay    string
 }
 
-const (
-	// Validation configuration keys
-	keySupportedVersions string = "SUPPORTED_VERSIONS"
-	keyRequireVersion    string = "REQUIRE_VERSION"
-	keyDefaultVersion    string = "DEFAULT_VERSION"
-
-	// Processing configuration keys
-	keyMaxWorkers    string = "MAX_WORKERS"
-	keyBatchSize     string = "BATCH_SIZE"
-	keyRetryAttempts string = "RETRY_ATTEMPTS"
-	keyRetryDelay    string = "RETRY_DELAY"
-)
-
 // Validation retrieves the validation configuration from the store.
 func (p *Service) Validation() (*Validation, error) {
-	supportedVersions, err := p.store.ReqString(keySupportedVersions)
+	supportedVersions, err := p.store.ReqString(environment.Validation.SupportedVersions)
 	if err != nil {
 		return nil, fmt.Errorf("SUPPORTED_VERSIONS environment variable is required")
 	}
 
-	requireVersion, err := p.store.ReqString(keyRequireVersion)
+	requireVersion, err := p.store.ReqString(environment.Validation.RequireVersion)
 	if err != nil {
 		return nil, fmt.Errorf("REQUIRE_VERSION environment variable is required")
 	}
 
-	defaultVersionStr, err := p.store.ReqString(keyDefaultVersion)
+	defaultVersionStr, err := p.store.ReqString(environment.Validation.DefaultVersion)
 	if err != nil {
 		return nil, fmt.Errorf("DEFAULT_VERSION environment variable is required")
 	}
@@ -66,22 +55,22 @@ func (p *Service) Validation() (*Validation, error) {
 
 // Processing retrieves the processing configuration from the store.
 func (p *Service) Processing() (*Processing, error) {
-	maxWorkers, err := p.store.ReqString(keyMaxWorkers)
+	maxWorkers, err := p.store.ReqString(environment.Process.MaxWorkers)
 	if err != nil {
 		return nil, fmt.Errorf("MAX_WORKERS environment variable is required")
 	}
 
-	batchSize, err := p.store.ReqString(keyBatchSize)
+	batchSize, err := p.store.ReqString(environment.Process.BatchSize)
 	if err != nil {
 		return nil, fmt.Errorf("BATCH_SIZE environment variable is required")
 	}
 
-	retryAttempts, err := p.store.ReqString(keyRetryAttempts)
+	retryAttempts, err := p.store.ReqString(environment.Process.RetryAttempt)
 	if err != nil {
 		return nil, fmt.Errorf("RETRY_ATTEMPTS environment variable is required")
 	}
 
-	retryDelay, err := p.store.ReqString(keyRetryDelay)
+	retryDelay, err := p.store.ReqString(environment.Process.RetryDelay)
 	if err != nil {
 		return nil, fmt.Errorf("RETRY_DELAY environment variable is required")
 	}
