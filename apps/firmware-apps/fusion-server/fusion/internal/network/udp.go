@@ -11,6 +11,7 @@ import (
 	"time"
 
 	json "github.com/goccy/go-json"
+	"github.com/oklog/ulid/v2"
 
 	"fusion/internal/api"
 	"fusion/internal/logging"
@@ -21,6 +22,9 @@ import (
 const (
 	maxConcurrent    = 32
 	queueElementSize = 2048
+	ackRetryInterval = 500 * time.Millisecond
+	ackMaxAttempts   = 6
+	clientStaleTTL   = 10 * time.Second
 )
 
 type packet struct {
@@ -32,7 +36,7 @@ type UDPServer struct {
 	*Listener
 	handler *handler.Handler
 
-	clients sync.Map // string:*net.UDPAddr
+	clients sync.Map // string:*clientState
 
 	// Workers
 	queue      chan packet
@@ -40,9 +44,24 @@ type UDPServer struct {
 	numWorkers int
 
 	// ACK handling
-	pending              sync.Map
+	pendingMu            sync.Mutex
+	pending              map[string]*pendingBroadcast
 	lastBroadcastEpoch   atomic.Uint64
 	lastBroadcastVersion atomic.Uint64
+
+	stopCh chan struct{}
+}
+
+type clientState struct {
+	addr     *net.UDPAddr
+	lastSeen atomic.Int64
+}
+
+type pendingBroadcast struct {
+	payload  []byte
+	awaiting map[string]*net.UDPAddr
+	attempts int
+	lastSent time.Time
 }
 
 func NewUDPServer(addr string, handler *handler.Handler) (*UDPServer, error) {
@@ -60,7 +79,8 @@ func NewUDPServer(addr string, handler *handler.Handler) (*UDPServer, error) {
 		queue:      make(chan packet, queueSize),
 		numWorkers: queueWorkers,
 		clients:    sync.Map{},
-		pending:    sync.Map{},
+		pending:    make(map[string]*pendingBroadcast),
+		stopCh:     make(chan struct{}),
 	}
 
 	srv.Listener = NewListener(
@@ -76,6 +96,7 @@ func NewUDPServer(addr string, handler *handler.Handler) (*UDPServer, error) {
 	}
 
 	srv.Start()
+	go srv.maintenanceLoop()
 	return srv, nil
 }
 
@@ -104,15 +125,20 @@ func (s *UDPServer) workerLoop() {
 }
 
 func (s *UDPServer) handlePacket(data []byte, addr *net.UDPAddr) {
-	s.clients.Store(addr.String(), addr)
+	now := time.Now().UnixNano()
+	if val, ok := s.clients.Load(addr.String()); ok {
+		if state, ok := val.(*clientState); ok && state != nil {
+			state.lastSeen.Store(now)
+		}
+	} else {
+		state := &clientState{addr: addr}
+		state.lastSeen.Store(now)
+		s.clients.Store(addr.String(), state)
+	}
 
 	var msg api.NotifyMessage
 	if err := json.Unmarshal(data, &msg); err == nil && msg.Operation == api.NotifyOpAck {
-		if chVal, ok := s.pending.Load(msg.ID); ok {
-			ch := chVal.(chan struct{})
-			close(ch)
-			s.pending.Delete(msg.ID)
-		}
+		s.handleAck(msg.ID, addr)
 		return
 	}
 
@@ -148,20 +174,32 @@ func (s *UDPServer) BroadcastMessage(msg *api.NotifyMessage) error {
 	logger := logging.GetLogger()
 
 	if msg.Operation == api.NotifyOpSnapActivate {
+		if msg.ID == "" {
+			msg.ID = ulid.Make().String()
+		}
 
 		// Load the snapshot data
 		sm := s.handler.StateManager
 		snapshotState := sm.GetFullState()
 		snapshotFlat := snapshotState.Flatten()
 
-		payload, err := s.buildJSONPayload(snapshotFlat, sm.GetVersion())
+		payload, err := s.buildJSONPayload(snapshotFlat, sm.GetVersion(), msg.ID, msg.Operation)
 		if err != nil {
 			return err
 		}
 
-		s.broadcast(payload)
+		s.broadcast(payload, msg.ID)
 
 		return nil
+	}
+
+	if msg.Operation != api.NotifyOpConfigUpdate {
+		logger.Debug("udp broadcast: ignoring unsupported operation=%s", msg.Operation)
+		return nil
+	}
+
+	if msg.ConfigUpdate == nil {
+		return fmt.Errorf("udp broadcast: config_update missing payload")
 	}
 
 	// Normal config updates: apply Lamport version gating
@@ -187,29 +225,40 @@ func (s *UDPServer) BroadcastMessage(msg *api.NotifyMessage) error {
 		s.lastBroadcastVersion.Store(v.Counter)
 	}
 
-	payload, err := s.buildJSONPayload(msg.ConfigUpdate.Data, msg.ConfigUpdate.Version)
+	if msg.ID == "" {
+		msg.ID = ulid.Make().String()
+	}
+
+	payload, err := s.buildJSONPayload(msg.ConfigUpdate.Data, msg.ConfigUpdate.Version, msg.ID, msg.Operation)
 	if err != nil {
 		return err
 	}
 
-	s.broadcast(payload)
+	s.broadcast(payload, msg.ID)
 
 	return nil
 }
 
 func (s *UDPServer) Close() error {
+	close(s.stopCh)
 	close(s.queue)
 	s.wg.Wait()
 	return s.conn.Close()
 }
 
 // buildPayload creates a JSON byte stream including authoritative Lamport version
-func (s *UDPServer) buildJSONPayload(data map[string]any, version api.Version) ([]byte, error) {
+func (s *UDPServer) buildJSONPayload(data map[string]any, version api.Version, msgID string, op api.NotifyOp) ([]byte, error) {
 
-	payload := make(map[string]any, len(data)+2)
+	payload := make(map[string]any, len(data)+4)
 	maps.Copy(payload, data)
 	payload[api.FusionVersion] = version.Counter
 	payload[api.FusionEpoch] = version.Epoch
+	if msgID != "" {
+		payload[api.FusionMessageID] = msgID
+	}
+	if op != "" {
+		payload[api.FusionOperation] = op
+	}
 
 	json, err := json.Marshal(payload)
 	if err != nil {
@@ -219,19 +268,156 @@ func (s *UDPServer) buildJSONPayload(data map[string]any, version api.Version) (
 	return json, nil
 }
 
-func (s *UDPServer) broadcast(payload []byte) {
+func (s *UDPServer) broadcast(payload []byte, msgID string) {
+	if msgID == "" {
+		msgID = ulid.Make().String()
+	}
+
+	awaiting := make(map[string]*net.UDPAddr)
 
 	s.clients.Range(func(k, v any) bool {
-		addr, ok := v.(*net.UDPAddr)
-		if !ok || addr == nil {
+		state, ok := v.(*clientState)
+		if !ok || state == nil || state.addr == nil {
 			return true
 		}
 
-		if _, err := s.conn.WriteToUDP(payload, addr); err != nil {
+		if _, err := s.conn.WriteToUDP(payload, state.addr); err != nil {
 			logging.GetLogger().Warn("udp broadcast to %s failed: %v", k, err)
 			s.clients.Delete(k)
+			return true
+		}
+
+		awaiting[k.(string)] = state.addr
+		return true
+	})
+
+	if len(awaiting) == 0 {
+		return
+	}
+
+	s.pendingMu.Lock()
+	s.pending[msgID] = &pendingBroadcast{
+		payload:  payload,
+		awaiting: awaiting,
+		attempts: 1,
+		lastSent: time.Now(),
+	}
+	s.pendingMu.Unlock()
+}
+
+func (s *UDPServer) handleAck(msgID string, addr *net.UDPAddr) {
+	if msgID == "" || addr == nil {
+		return
+	}
+	s.pendingMu.Lock()
+	if pb, ok := s.pending[msgID]; ok {
+		delete(pb.awaiting, addr.String())
+		if len(pb.awaiting) == 0 {
+			delete(s.pending, msgID)
+		}
+	}
+	s.pendingMu.Unlock()
+}
+
+func (s *UDPServer) maintenanceLoop() {
+	retryTicker := time.NewTicker(ackRetryInterval)
+	pruneTicker := time.NewTicker(time.Second)
+	defer retryTicker.Stop()
+	defer pruneTicker.Stop()
+
+	for {
+		select {
+		case <-s.stopCh:
+			return
+		case <-retryTicker.C:
+			s.retryPending()
+		case <-pruneTicker.C:
+			s.pruneClients()
+		}
+	}
+}
+
+func (s *UDPServer) retryPending() {
+	now := time.Now()
+
+	type retryItem struct {
+		id      string
+		payload []byte
+		addrs   map[string]*net.UDPAddr
+	}
+
+	var retries []retryItem
+
+	s.pendingMu.Lock()
+	for id, pb := range s.pending {
+		if pb.attempts >= ackMaxAttempts {
+			for addrStr := range pb.awaiting {
+				s.clients.Delete(addrStr)
+			}
+			delete(s.pending, id)
+			continue
+		}
+
+		if now.Sub(pb.lastSent) < ackRetryInterval {
+			continue
+		}
+
+		pb.attempts++
+		pb.lastSent = now
+
+		addrs := make(map[string]*net.UDPAddr, len(pb.awaiting))
+		for k, v := range pb.awaiting {
+			addrs[k] = v
+		}
+		retries = append(retries, retryItem{id: id, payload: pb.payload, addrs: addrs})
+	}
+	s.pendingMu.Unlock()
+
+	for _, item := range retries {
+		for addrStr, addr := range item.addrs {
+			if _, err := s.conn.WriteToUDP(item.payload, addr); err != nil {
+				logging.GetLogger().Warn("udp retry to %s failed: %v", addrStr, err)
+				s.clients.Delete(addrStr)
+				s.pendingMu.Lock()
+				if pb, ok := s.pending[item.id]; ok {
+					delete(pb.awaiting, addrStr)
+					if len(pb.awaiting) == 0 {
+						delete(s.pending, item.id)
+					}
+				}
+				s.pendingMu.Unlock()
+			}
+		}
+	}
+}
+
+func (s *UDPServer) pruneClients() {
+	cutoff := time.Now().Add(-clientStaleTTL)
+	s.clients.Range(func(k, v any) bool {
+		state, ok := v.(*clientState)
+		if !ok || state == nil {
+			s.clients.Delete(k)
+			return true
+		}
+
+		lastSeen := time.Unix(0, state.lastSeen.Load())
+		if lastSeen.Before(cutoff) {
+			logging.GetLogger().Warn("Removing stale UDP client: %s (last seen %s)", k, lastSeen.Format(time.RFC3339))
+			s.clients.Delete(k)
+			s.removeClientFromPending(k.(string))
 		}
 
 		return true
 	})
+}
+
+func (s *UDPServer) removeClientFromPending(addrStr string) {
+	s.pendingMu.Lock()
+	for id, pb := range s.pending {
+		delete(pb.awaiting, addrStr)
+		if len(pb.awaiting) == 0 {
+			delete(s.pending, id)
+		}
+	}
+	s.pendingMu.Unlock()
 }

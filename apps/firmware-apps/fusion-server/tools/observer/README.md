@@ -89,6 +89,31 @@ When monitoring a path, changes will be displayed with timestamps:
 14:23:50 devices[0].channel.volume changed from: 0.8 to: 0.6
 ```
 
+## Running Tests
+
+The UDP monitor has a gtest that spins up a fake UDP server and validates
+`UDPValueMonitor` end-to-end. It does not require `fusion-server` to be
+running.
+
+Run all observer tests:
+```bash
+make -C tools/observer test
+```
+
+Run only the UDP monitor test:
+```bash
+GTEST_FILTER=UDPValueMonitorTest.AsynchronousUpdatesAndNetworking \
+make -C tools/observer test
+```
+
+Run the fusion-server integration test (requires a local server running):
+```bash
+FUSION_UDP_INTEGRATION=1 \
+FUSION_UDP_ADDR=127.0.0.1:7947 \
+GTEST_FILTER=UDPValueMonitorTest.IntegrationWithFusionServer \
+make -C tools/observer test
+```
+
 ## Notes
 
 - Array indices start at 0

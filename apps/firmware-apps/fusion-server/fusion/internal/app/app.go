@@ -59,6 +59,7 @@ type App struct {
 	config            *api.AppConfig
 	publicRouter      *mux.Router
 	privateRouter     *mux.Router
+	MDNSManager       *network.MDNSManager
 }
 
 // NewApp is a factory function to set up the application
@@ -78,7 +79,8 @@ func NewApp(config *api.AppConfig) *App {
 	transport := clustertransport.NewMemberlistTransport(memberlist)
 	hub.SetClusterTransport(transport)
 	connectionHandler := handler.NewHandler(config, memberlist, persistence, stateManager, hub, controllerManager)
-	clusterInstance := cluster.NewCluster(config, delegate, memberlist)
+	mdnsManager := initMDNSManager()
+	clusterInstance := cluster.NewCluster(config, delegate, memberlist, mdnsManager)
 	bleServer := initBLEServer()
 	sapServer := initSAPServer(config, api.SAPPort, connectionHandler, hub)
 	udpServer := initUDPServer(api.UDPPort, connectionHandler, hub)
@@ -111,6 +113,7 @@ func NewApp(config *api.AppConfig) *App {
 		config:            config,
 		publicRouter:      publicRouter,
 		privateRouter:     privateRouter,
+		MDNSManager:       mdnsManager,
 	}
 
 	return app
@@ -124,6 +127,11 @@ func (app *App) Close() {
 	}
 	if app.ControllerManager != nil {
 		app.ControllerManager.Stop()
+	}
+	if app.MDNSManager != nil {
+		if err := app.MDNSManager.Close(); err != nil {
+			app.Logger.Error("Failed to close mDNS manager: %v", err)
+		}
 	}
 	app.Cluster.Stop()
 	app.UDPServer.Stop()
@@ -510,6 +518,16 @@ func initLogging(config *api.AppConfig) *logging.Logger {
 		LogLevel:    logLevel,
 	})
 	return logging.GetLogger()
+}
+
+func initMDNSManager() *network.MDNSManager {
+	logger := logging.GetLogger()
+	logger.Info("Initializing mDNS manager")
+
+	manager := network.NewMDNSManager()
+
+	logger.Info("mDNS manager initialized successfully")
+	return manager
 }
 
 // withWebSocketMetrics adds metrics for WebSocket connections

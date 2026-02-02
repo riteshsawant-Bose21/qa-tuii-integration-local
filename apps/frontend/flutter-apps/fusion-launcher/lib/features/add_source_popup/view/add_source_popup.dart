@@ -40,7 +40,9 @@ class AddSourcePopup extends StatelessWidget {
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(16),
           ),
-          child: Column(
+          child: SemanticHelper.container(
+              testId: SemanticHelper.createTestId(SemanticTypes.container, "add_source_dialog"),
+              child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
@@ -452,6 +454,7 @@ class AddSourcePopup extends StatelessWidget {
               ),
             ],
           ),
+        ),
         ),
       ),
       child: child,

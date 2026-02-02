@@ -99,7 +99,7 @@ class _FilterOptions extends StatelessWidget {
         Expanded(
           child: FusionPopupMenu<String>(
             // value: value,
-            // hintText: "Select type",
+            // hintText: "Select $label",
             items: options,
             onSelected: (String newValue) {
               final int selectedIndex = options.indexOf(newValue);
