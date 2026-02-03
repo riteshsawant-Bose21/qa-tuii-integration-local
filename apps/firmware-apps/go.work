@@ -1,0 +1,6 @@
+go 1.23.1
+
+use (
+	./fusion-server/fusion
+	./fusion-services-core
+)

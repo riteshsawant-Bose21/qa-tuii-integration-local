@@ -75,6 +75,8 @@ class EquipmentLocationDialog extends StatelessWidget {
                   ///
                   ///********************************************************************** */
                   Expanded(
+                    child: SemanticHelper.container(
+                    testId: SemanticHelper.createTestId(SemanticTypes.container, "left_dialog"),
                     child: Column(
                       children: <Widget>[
                         if (equipmentLocationId == null) const _EquipmentLocationDropdown(),
@@ -88,7 +90,9 @@ class EquipmentLocationDialog extends StatelessWidget {
                           ),
                         ),
                         Expanded(
-                          child: Column(
+                          child: SemanticHelper.formControl(
+                                testId: SemanticHelper.createTestId(SemanticTypes.container, "available_devices"),
+                                child: Column(
                             children: <Widget>[
                               SemanticHelper.formControl(
                                 testId: SemanticHelper.createTestId(SemanticTypes.textInput, "equipment_location_dialog_search_input"),
@@ -202,8 +206,10 @@ class EquipmentLocationDialog extends StatelessWidget {
                             ],
                           ),
                         ),
+                        ),
                       ],
                     ),
+                  ),
                   ),
 
                   ///********************************************************************** */
@@ -213,6 +219,8 @@ class EquipmentLocationDialog extends StatelessWidget {
                   ///********************************************************************** */
                   ///
                   Expanded(
+                    child: SemanticHelper.container(
+                    testId: SemanticHelper.createTestId(SemanticTypes.container, "right_dialog"),
                     child: Container(
                       decoration: BoxDecoration(
                         color: context.colorScheme.elevation2,
@@ -255,43 +263,38 @@ class EquipmentLocationDialog extends StatelessWidget {
                           ),
                           const SizedBox(height: 16),
                           Center(
-                            child: FusionContainer(
-                              // padding: const EdgeInsets.all(8),
-                              // decoration: BoxDecoration(
-                              //   color: context.colorScheme.elevation1,
-                              //   borderRadius: BorderRadius.circular(12),
-                              // ),
-                              raised: false,
-                              color: context.colorScheme.elevation1,
-                              child: Padding(
-                                padding: const EdgeInsets.all(8.0),
-                                child: Row(
-                                  spacing: 10,
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: <Widget>[
-                                    ...<String>["Select", "Suggest"].map((String mode) {
-                                      final bool isSelected = "Select" == mode;
+                            child: Container(
+                              padding: const EdgeInsets.all(8.0),
+                              decoration: BoxDecoration(
+                                color: context.colorScheme.elevation1,
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Row(
+                                spacing: 10,
+                                mainAxisSize: MainAxisSize.min,
+                                children: <Widget>[
+                                  ...<String>["Select", "Suggest"].map((String mode) {
+                                    final bool isSelected = "Select" == mode;
 
-                                      return SemanticHelper.container(
-                                        testId: SemanticHelper.createTestId(SemanticTypes.container, "equipment_location_dialog_filter_option_$mode"),
-                                        child: Container(
-                                          width: 89,
-                                          padding: const EdgeInsets.all(8),
-                                          decoration: BoxDecoration(
-                                            color: isSelected ? context.colorScheme.elevation3 : null,
-                                            borderRadius: BorderRadius.circular(8),
-                                          ),
-                                          child: Center(
-                                            child: FusionAppText(
-                                              text: mode,
-                                              style: context.textTheme.bodySmall,
-                                            ),
+                                    return SemanticHelper.container(
+                                      testId: SemanticHelper.createTestId(SemanticTypes.container, "equipment_location_dialog_filter_option_$mode"),
+                                      child: Container(
+                                        width: 89,
+                                        padding: const EdgeInsets.all(8),
+                                        decoration: BoxDecoration(
+                                          color: isSelected ? context.colorScheme.elevation3 : null,
+                                          borderRadius: BorderRadius.circular(8),
+                                        ),
+                                        child: Center(
+                                          child: FusionAppText(
+                                            text: mode,
+                                            style: context.textTheme.bodySmall,
                                           ),
                                         ),
-                                      );
-                                    }),
-                                  ],
-                                ),
+                                      ),
+                                    );
+                                  }),
+                                ],
                               ),
                             ),
                           ),
@@ -319,6 +322,7 @@ class EquipmentLocationDialog extends StatelessWidget {
                         ],
                       ),
                     ),
+                  ),
                   ),
                 ],
               );

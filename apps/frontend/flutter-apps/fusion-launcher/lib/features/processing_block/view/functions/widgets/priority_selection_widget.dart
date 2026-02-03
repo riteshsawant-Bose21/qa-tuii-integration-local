@@ -67,7 +67,6 @@ class _PrioritySelectionWidgetState extends State<PrioritySelectionWidget> {
             height: 28,
             width: double.infinity,
             alignment: Alignment.center,
-
             child: FusionAppText(
               text: "PRIORITY",
               style: Theme.of(context).textTheme.labelSmall,

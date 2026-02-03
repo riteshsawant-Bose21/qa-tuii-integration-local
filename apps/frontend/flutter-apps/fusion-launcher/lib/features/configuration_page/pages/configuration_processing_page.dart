@@ -428,8 +428,20 @@ class _ConfigurationProcessingPageState extends State<ConfigurationProcessingPag
           Expanded(
             child: Container(
               decoration: BoxDecoration(
-                border: Border.symmetric(
-                  vertical: BorderSide(color: context.colorScheme.elevation2, width: 1),
+                borderRadius: const BorderRadius.only(
+                  bottomLeft: Radius.circular(12),
+                  bottomRight: Radius.circular(12),
+                ),
+                border: Border(
+                  bottom: BorderSide(
+                    color: context.colorScheme.elevation2,
+                  ),
+                  left: BorderSide(
+                    color: context.colorScheme.elevation2,
+                  ),
+                  right: BorderSide(
+                    color: context.colorScheme.elevation2,
+                  ),
                 ),
               ),
               child: BlocBuilder<ProjectViewModel, ProjectViewModelState>(

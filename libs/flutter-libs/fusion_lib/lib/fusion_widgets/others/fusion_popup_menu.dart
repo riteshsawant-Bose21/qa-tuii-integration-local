@@ -24,43 +24,49 @@ class FusionPopupMenu<T> extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final childKey = GlobalKey();
-    return PopupMenuButton<T>(
-      tooltip: tooltip,
-      position: PopupMenuPosition.under,
-      menuPadding: EdgeInsets.zero,
-      offset: popupOffset,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12.0),
-        side: BorderSide(color: context.colorScheme.strokeLight, width: 2),
-      ),
-      color: context.colorScheme.elevation2,
-      itemBuilder: (context) => List<PopupMenuEntry<T>>.generate(
-        items.length,
-        (index) {
-          final T item = items[index];
-          var findRenderObject = (childKey.currentContext?.findRenderObject() as RenderBox?);
-          var width2 = matchChildWidth ? findRenderObject?.size.width : null;
-          return PopupMenuItem<T>(
-            value: item,
+    return SemanticHelper.button(
+      testId: SemanticHelper.createTestId(SemanticTypes.dropdown, tooltip ?? 'popup_menu'),
+      child: PopupMenuButton<T>(
+        tooltip: tooltip,
+        position: PopupMenuPosition.under,
+        menuPadding: EdgeInsets.zero,
+        offset: popupOffset,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12.0),
+          side: BorderSide(color: context.colorScheme.strokeLight, width: 2),
+        ),
+        color: context.colorScheme.elevation2,
+        itemBuilder: (context) => List<PopupMenuEntry<T>>.generate(
+          items.length,
+          (index) {
+            final T item = items[index];
+            var findRenderObject = (childKey.currentContext?.findRenderObject() as RenderBox?);
+            var width2 = matchChildWidth ? findRenderObject?.size.width : null;
+            return PopupMenuItem<T>(
+              value: item,
 
-            padding: EdgeInsets.all(0),
-            child: SizedBox(
-              width: width2,
-              child: Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: itemBuilder != null
-                    ? itemBuilder!(context, item)
-                    : FusionAppText(
-                        text: itemLabels != null && itemLabels!.containsKey(item) ? itemLabels![item]! : item.toString(),
-                        style: context.textTheme.bodySmall,
-                      ),
+              padding: EdgeInsets.all(0),
+              child: SemanticHelper.button(
+                testId: SemanticHelper.createTestId(SemanticTypes.dropdownItem, tooltip ?? 'popup_menu_item_$index'),
+                child: SizedBox(
+                  width: width2,
+                  child: Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: itemBuilder != null
+                        ? itemBuilder!(context, item)
+                        : FusionAppText(
+                            text: itemLabels != null && itemLabels!.containsKey(item) ? itemLabels![item]! : item.toString(),
+                            style: context.textTheme.bodySmall,
+                          ),
+                  ),
+                ),
               ),
-            ),
-          );
-        },
+            );
+          },
+        ),
+        onSelected: onSelected,
+        child: Container(key: childKey, child: child),
       ),
-      onSelected: onSelected,
-      child: Container(key: childKey, child: child),
     );
   }
 }

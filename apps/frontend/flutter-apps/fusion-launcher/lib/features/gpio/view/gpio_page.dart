@@ -157,7 +157,7 @@ class GpioPage extends StatelessWidget {
                                 ),
                               );
                             }
-                            return FusionTable(
+                            return FusionAppTable(
                               onReorder: (int oldIndex, int newIndex) {
                                 context.read<GpioViewmodel>().reOrderGpio(oldIndex, newIndex);
                               },

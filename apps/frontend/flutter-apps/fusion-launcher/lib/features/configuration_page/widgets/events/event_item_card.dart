@@ -105,6 +105,8 @@ class _EventItemCardState extends State<EventItemCard> {
                   testId: SemanticHelper.createTestId(SemanticTypes.toggle, "event_switch"),
                   value: widget.eventData.isEnabled,
                   child: FusionSwitch(
+                    height: 22,
+                    width: 36,
                     value: widget.eventData.isEnabled,
                     onChanged: (bool value) {
                       if (widget.onSwitchChanged != null) {

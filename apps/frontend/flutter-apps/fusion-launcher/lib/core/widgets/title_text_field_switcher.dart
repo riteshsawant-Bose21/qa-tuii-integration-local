@@ -38,6 +38,15 @@ class _TitleTextFieldSwitcherState extends State<TitleTextFieldSwitcher> {
   }
 
   @override
+  void didUpdateWidget(covariant TitleTextFieldSwitcher oldWidget) {
+    if (widget.value != oldWidget.value) {
+      currentValue = widget.value;
+      controller.text = widget.value;
+    }
+    super.didUpdateWidget(oldWidget);
+  }
+
+  @override
   void dispose() {
     controller.dispose();
     focusNode.dispose();
@@ -102,13 +111,13 @@ class _TitleTextFieldSwitcherState extends State<TitleTextFieldSwitcher> {
                     focusNode: focusNode,
                     style: widget.style,
                     maxLength: 24,
-
                     maxLines: 1,
                     decoration: InputDecoration(
                       hint: Text(
                         widget.hintText,
-                        style: widget.style,
+                        style: widget.style.copyWith(color: context.colorScheme.textSecondary),
                         maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
                       counter: const SizedBox.shrink(),
                       border: InputBorder.none,

@@ -5,18 +5,18 @@ import 'package:fusion_launcher/core/services/user_profile_manager.dart';
 import 'package:fusion_launcher/core/utils/fusion_utils.dart';
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
 import 'package:fusion_lib/fusion_lib.dart';
-import 'package:fusion_lib/fusion_theme/fusion_theme_notifier.dart';
 
 import '../../../../core/service_locator.dart';
 import '../widgets/fusion_side_bar.dart';
 import '../widgets/home_tab_content.dart';
 import '../widgets/profile_tab_content.dart';
 import '../widgets/saved_projects_tab.dart';
+import '../widgets/settings_tab_content.dart';
 
 enum DashboardTabs {
   home("Home"),
   profile("Profile"),
-  // settings("Settings"),
+  settings("Settings"),
   // community("Community"),
   // testLibrady("Test Library"),
   savedProjects("Saved Projects");
@@ -56,7 +56,7 @@ class _HomePageState extends State<HomePage> {
         final bool isWide = constraints.maxWidth >= 800;
 
         return Scaffold(
-          backgroundColor: Colors.black,
+          backgroundColor: context.colorScheme.elevation1,
           body: SafeArea(
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -87,11 +87,8 @@ class _HomePageState extends State<HomePage> {
                     listener: (BuildContext context, ProjectViewModelState state) {
                       if (state is ProjectLoaded && context.mounted) {
                         if (state.currentProject != null) {
-                          // FusionThemeController.setThemeMode(ThemeMode.light);
-
                           FusionUiUtils.hideLoader(context);
                           Navigator.pushNamed(context, Routes.projectPage).then((_) async {
-                            FusionThemeController.setThemeMode(ThemeMode.dark);
                             await serviceLocator<ProjectViewModel>().loadAllLocalProjects();
                           });
                         }
@@ -110,8 +107,8 @@ class _HomePageState extends State<HomePage> {
                               return const HomeTabContent();
                             case DashboardTabs.profile:
                               return const ProfileTabContent();
-                            // case DashboardTabs.settings:
-                            //   return const SettingsTabContent();
+                            case DashboardTabs.settings:
+                              return const SettingsTabContent();
                             // case DashboardTabs.community:
                             //   return const CommunityTabContent();
                             case DashboardTabs.savedProjects:

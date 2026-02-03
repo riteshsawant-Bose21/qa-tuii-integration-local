@@ -3,6 +3,7 @@ import 'package:fusion_lib/fusion_lib.dart';
 
 import '../../../../core/service_locator.dart';
 import '../../../configuration/presentation/viewmodel/project_view_model.dart';
+import '../../../projects/widget/building/side_panel_widgets/schematic_properties.dart';
 
 class ListeningAreaDropdownWidget extends StatefulWidget {
   final List<ListeningArea> listeningAreas;
@@ -373,10 +374,9 @@ class _ListeningAreaDropdownWidgetState extends State<ListeningAreaDropdownWidge
                                       const SizedBox(height: 8),
                                       SemanticHelper.formControl(
                                         testId: SemanticHelper.createTestId(SemanticTypes.textInput, "create_new_location_name_field"),
-                                        child: FusionTextField(
+                                        child: PropertyTextField(
                                           controller: _areaNameController,
                                           hintText: "Enter location name",
-                                          color: context.colorScheme.primaryBlack,
                                           onChanged: (String value) {
                                             setDropdownState(() {}); // Update button state
                                           },
@@ -393,6 +393,8 @@ class _ListeningAreaDropdownWidgetState extends State<ListeningAreaDropdownWidge
                                           child: FusionButton(
                                             height: 32,
                                             label: "Add",
+                                            activeBackgroundColor: context.colorScheme.primaryColor,
+                                            textStyle: context.textTheme.labelMedium?.copyWith(color: Colors.white),
                                             isActive: _areaNameController.text.trim().isNotEmpty && _selectedFloorId.isNotEmpty,
                                             onTap: () {
                                               _createNewArea(floorId: _selectedFloorId);

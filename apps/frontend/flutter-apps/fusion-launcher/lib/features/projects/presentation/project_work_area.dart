@@ -10,7 +10,6 @@ import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:fusion_launcher/core/assets/asset_svg.dart';
 import 'package:fusion_launcher/core/spl_calculation/isolate_mace_calculation_manager.dart';
 import 'package:fusion_launcher/core/utils/fusion_utils.dart';
-import 'package:fusion_launcher/features/commission/presentation/pages/device_setup_wizard.dart';
 import 'package:fusion_launcher/features/configuration_page/pages/configuration_events.dart';
 import 'package:fusion_launcher/features/media_files/view/configuration_media_files_pages.dart';
 import 'package:fusion_launcher/features/media_files/viewModel/media_files_view_model.dart';
@@ -35,6 +34,8 @@ import '../../../core/spl_calculation/mace_engine_provider.dart';
 import '../../../core/utils/broadcast_controllers.dart';
 import '../../../core/utils/bug_report_popup.dart';
 import '../../../core/widgets/clean_widgets.dart';
+import '../../authentication/viewmodel/session_view_model.dart';
+import '../../commission/presentation/pages/network_config_trigger_page.dart';
 import '../../configuration/presentation/viewmodel/project_view_model.dart';
 import '../../configuration_page/pages/configuration_processing_page.dart';
 import '../../configuration_page/pages/configuration_snapshots.dart';
@@ -60,7 +61,7 @@ class ProjectWorkArea extends StatefulWidget {
   State<ProjectWorkArea> createState() => _ProjectWorkAreaState();
 }
 
-class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProviderStateMixin, AutomaticKeepAliveClientMixin {
+class _ProjectWorkAreaState extends State<ProjectWorkArea> with TickerProviderStateMixin, AutomaticKeepAliveClientMixin {
   late TabController _tabController;
   StreamSubscription<int>? subscription;
   late TextEditingController _projectNameController;
@@ -105,7 +106,7 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
   @override
   void initState() {
     super.initState();
-    _initController();
+    _initController(isInDesignMode);
     FusionLogger.log(
       message: "Opened Project ",
       tag: LogTag.project,
@@ -136,9 +137,10 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
     _createTabWidgets();
   }
 
-  void _initController() {
+  void _initController(bool isDesignMode) {
+    final int length = isDesignMode ? _designTabs.length : _controlTabs.length;
     _tabController = TabController(
-      length: _currentTabs.length,
+      length: length,
       vsync: this,
       animationDuration: Duration.zero,
       initialIndex: 0, // Always reset to 0 when switching modes to avoid index out of bounds
@@ -150,6 +152,17 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
         setState(() {});
       }
     });
+  }
+
+  void toggleFusionModes() {
+    serviceLocator<ProjectViewModel>().toggleControlMode();
+
+    // Verify tab controller index is valid, reset to 0 if invalid
+    // if (_tabController.index >= currentWidget.length) {
+    //   WidgetsBinding.instance.addPostFrameCallback((_) {
+    //     _tabController.animateTo(0);
+    //   });
+    // }
   }
 
   Future<void> _initMace() async {
@@ -353,12 +366,6 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
     setState(() {});
   }
 
-  /// Clear input fields
-  void _clearFields() {
-    _projectNameController.clear();
-    _projectNameError = null;
-  }
-
   @override
   void dispose() {
     _tabController.dispose();
@@ -381,6 +388,10 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
 
   @override
   bool get wantKeepAlive => true;
+
+  bool get hasCloudAccess {
+    return serviceLocator<SessionViewModel>().hasCloudAccess();
+  }
 
   final ExpansibleController productsController = ExpansibleController();
   final ExpansibleController splController = ExpansibleController();
@@ -699,54 +710,14 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
         },
       ),
 
-      //
-      // if (kDebugMode)
-      //   const FusionDockableArea(
-      //     tabKey: "zone_config_tab",
-      //     showLeft: false,
-      //     showRight: false,
-      //     mainArea: ProcessingBlockCustomizer(), //ProcessingBlockPage(),
-      //     dockItemList: <DockItemConfig>[],
-      //   ),
-
-      // /// budget tab with docking area
-      // const FusionDockableArea(
-      //   tabKey: "budget_tab",
-      //   showLeft: false,
-      //   showRight: false,
-      //   mainArea: BillOfMaterialsPage(),
-      //   dockItemList: <DockItemConfig>[],
-      // ),
       configurationPage,
-
-      // /// Cloud tab without docking area
-      // const FusionDockableArea(
-      //   tabKey: "cloud_tab",
-      //   showLeft: false,
-      //   showRight: false,
-      //   mainArea: FusionCloudWebView(
-      //     pageToRedirect: "google.com",
-      //   ),
-      //   dockItemList: <DockItemConfig>[],
-      // ),
     ];
 
     _controlWidgets = <Widget>[
-      serviceLocator<ProjectViewModel>().virtualIP == null
-          ? DeviceSetupWizard(
-            onFinish: () {
-              // After finishing device setup, navigate to Devices tab
-              _tabController.animateTo(1);
-              _createTabWidgets();
-            },
-          )
-          : const FusionControlDashboardPage(),
-
-      const FusionDevicesPage(),
-
-      buildingPage,
-
-      configurationPage,
+      serviceLocator<ProjectViewModel>().virtualIP == null ? const NetworkConfigTrigger() : const FusionControlDashboardPage(),
+      serviceLocator<ProjectViewModel>().virtualIP == null ? const NetworkConfigTrigger() : const FusionDevicesPage(),
+      serviceLocator<ProjectViewModel>().virtualIP == null ? const NetworkConfigTrigger() : buildingPage,
+      serviceLocator<ProjectViewModel>().virtualIP == null ? const NetworkConfigTrigger() : configurationPage,
     ];
   }
 
@@ -757,7 +728,11 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
       animationDuration: Duration.zero,
       length: 4,
       child: BlocConsumer<ProjectViewModel, ProjectViewModelState>(
-        listener: (BuildContext context, ProjectViewModelState state) {},
+        listener: (BuildContext context, ProjectViewModelState state) {
+          if (state is TabChanged) {
+            _initController(state.tab == 0);
+          }
+        },
         builder: (BuildContext context, ProjectViewModelState state) {
           return Scaffold(
             backgroundColor: context.colorScheme.primaryBlack,
@@ -794,7 +769,7 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
                             dividerColor: Colors.transparent,
                             controller: _tabController,
                             isScrollable: true,
-                            tabAlignment: TabAlignment.start,
+                            tabAlignment: TabAlignment.center,
 
                             indicator: BoxDecoration(color: context.colorScheme.elevation2, borderRadius: const BorderRadius.all(Radius.circular(8))),
                             indicatorPadding: const EdgeInsets.only(
@@ -943,35 +918,36 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
                           ),
 
                           /// Save Icon Section
-                          Container(
-                            width: 56,
-                            height: 48,
-                            decoration: BoxDecoration(
-                              color: context.colorScheme.elevation1,
-                              border: Border(
-                                top: BorderSide(width: 1, color: context.colorScheme.elevation2),
-                                bottom: BorderSide(width: 1, color: context.colorScheme.elevation2),
+                          if (hasCloudAccess)
+                            Container(
+                              width: 56,
+                              height: 48,
+                              decoration: BoxDecoration(
+                                color: context.colorScheme.elevation1,
+                                border: Border(
+                                  top: BorderSide(width: 1, color: context.colorScheme.elevation2),
+                                  bottom: BorderSide(width: 1, color: context.colorScheme.elevation2),
+                                ),
                               ),
-                            ),
-                            child: IconButton(
-                              icon: Icon(
-                                LucideIcons.cloudUpload,
-                                size: 24,
-                                color: Theme.of(context).colorScheme.primaryWhite,
-                              ),
-                              tooltip: 'Upload project',
-                              onPressed: () async {
-                                FusionUiUtils.showLoader(context);
+                              child: IconButton(
+                                icon: Icon(
+                                  LucideIcons.cloudUpload,
+                                  size: 24,
+                                  color: Theme.of(context).colorScheme.primaryWhite,
+                                ),
+                                tooltip: 'Upload project',
+                                onPressed: () async {
+                                  FusionUiUtils.showLoader(context);
 
-                                await serviceLocator<ProjectSyncViewModel>().uploadProject(
-                                  projectData: serviceLocator<ProjectViewModel>().getCurrentProjectData()!,
-                                );
-                                if (context.mounted) {
-                                  FusionUiUtils.hideLoader(context);
-                                }
-                              },
+                                  await serviceLocator<ProjectSyncViewModel>().uploadProject(
+                                    projectData: serviceLocator<ProjectViewModel>().getCurrentProjectData()!,
+                                  );
+                                  if (context.mounted) {
+                                    FusionUiUtils.hideLoader(context);
+                                  }
+                                },
+                              ),
                             ),
-                          ),
 
                           /// Share Icon Section
                           // SemanticHelper.button(
@@ -1046,7 +1022,11 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
                             //   height: 24,
                             // ),
                           ),
-                          const ControlDesignTabSwitcher(),
+                          ControlDesignTabSwitcher(
+                            onTabChanged: (int index) {
+                              toggleFusionModes();
+                            },
+                          ),
 
                           /// App Build Version
                           Container(
@@ -1195,9 +1175,9 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
       position: position,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(6),
-        side: BorderSide(color: Theme.of(context).colorScheme.primaryBlack),
+        side: BorderSide(color: Theme.of(context).colorScheme.elevation2),
       ),
-      color: Theme.of(context).colorScheme.primaryWhite,
+      color: Theme.of(context).colorScheme.elevation1,
       elevation: 1,
       constraints: const BoxConstraints(minWidth: 189, maxWidth: 189),
       // Match container width
@@ -1229,46 +1209,12 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
                     const SizedBox(height: 12),
                     SemanticHelper.formControl(
                       testId: SemanticHelper.createTestId(SemanticTypes.textInput, FusionTestKeys.projectNameInput),
-                      child: TextField(
+                      child: PropertyTextField(
                         controller: _projectNameController,
                         focusNode: _projectNameFocusNode,
                         maxLength: 24,
                         autofocus: true,
-                        style: TextStyle(
-                          color: Theme.of(context).colorScheme.textPrimary,
-                          fontSize: 12,
-                        ),
-                        decoration: InputDecoration(
-                          counterText: "",
-                          hintText: 'Enter project name',
-                          hintStyle: TextStyle(
-                            color: Theme.of(context).colorScheme.primaryBlack,
-                            fontSize: 12,
-                          ),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(4),
-                            borderSide: BorderSide(
-                              color: Theme.of(context).colorScheme.primaryBlack,
-                            ),
-                          ),
-                          enabledBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(4),
-                            borderSide: BorderSide(
-                              color: Theme.of(context).colorScheme.primaryBlack,
-                            ),
-                          ),
-                          focusedBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(4),
-                            borderSide: BorderSide(
-                              color: _projectNameError != null ? Colors.red : Theme.of(context).colorScheme.textPrimary,
-                            ),
-                          ),
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 8,
-                          ),
-                          isDense: true,
-                        ),
+                        hintText: 'Enter project name',
                         onChanged: (String value) {
                           if (_projectNameError != null) {
                             setMenuState(() {
@@ -1312,7 +1258,6 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
                             context,
                           ).textTheme.labelLarge?.copyWith(fontSize: 10),
                           onTap: () {
-                            _clearFields();
                             Navigator.of(context).pop();
                           },
                         ),

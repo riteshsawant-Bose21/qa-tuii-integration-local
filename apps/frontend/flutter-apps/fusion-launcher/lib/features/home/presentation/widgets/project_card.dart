@@ -3,14 +3,13 @@ import 'dart:ui' show ImageFilter;
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/core/utils/fusion_utils.dart';
-import 'package:fusion_launcher/features/authentication/launcher_sign_in_page.dart';
 import 'package:fusion_launcher/features/projects/view_model/project_sync_view_model.dart';
 import 'package:fusion_lib/fusion_lib.dart' hide FusionUtils;
-import 'package:fusion_lib/fusion_theme/app_theme.dart';
 import 'package:intl/intl.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../../core/service_locator.dart';
+import '../../../authentication/viewmodel/session_view_model.dart';
 import '../../../configuration/presentation/viewmodel/project_view_model.dart';
 
 class ProjectCard extends StatelessWidget {
@@ -34,6 +33,10 @@ class ProjectCard extends StatelessWidget {
     this.height,
     this.borderRadius,
   });
+
+  bool get hasCloudAccess {
+    return serviceLocator<SessionViewModel>().hasCloudAccess();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -131,7 +134,9 @@ class ProjectCard extends StatelessWidget {
                                 ),
                               ],
 
-                              if (projectData.isSyncNeeded && !(state is ProjectUploadInProgress && state.projectId == projectData.id)) ...<Widget>[
+                              if (hasCloudAccess &&
+                                  projectData.isSyncNeeded &&
+                                  !(state is ProjectUploadInProgress && state.projectId == projectData.id)) ...<Widget>[
                                 const SizedBox(height: 4),
                                 FusionAppText(
                                   text: "Modified",
@@ -209,7 +214,7 @@ class ProjectCard extends StatelessWidget {
                     ),
                   ),
 
-                  if (!projectData.isCloudInstance && projectData.isSyncNeeded)
+                  if (hasCloudAccess && !projectData.isCloudInstance && projectData.isSyncNeeded)
                     Positioned(
                       top: 40,
                       right: 6,
@@ -228,7 +233,7 @@ class ProjectCard extends StatelessWidget {
                       ),
                     ),
 
-                  if (projectData.isCloudInstance)
+                  if (hasCloudAccess && projectData.isCloudInstance)
                     Positioned(
                       top: 40,
                       right: 6,
@@ -396,7 +401,7 @@ class ProjectDetailsDialog extends StatelessWidget {
                             ),
                           ),
                           const SizedBox(height: 16),
-                          NeumorphicDarkButton(
+                          FusionNeumorphicButton(
                             onTap: () {},
                             height: 32,
                             width: 112,
@@ -422,7 +427,7 @@ class ProjectDetailsDialog extends StatelessWidget {
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: <Widget>[
                               Flexible(
-                                child: NeumorphicDarkButton(
+                                child: FusionNeumorphicButton(
                                   onTap: () {},
                                   height: 32,
                                   width: 168,
@@ -454,8 +459,8 @@ class ProjectDetailsDialog extends StatelessWidget {
                                       builder: (BuildContext context, ProjectSyncViewModelState state) {
                                         if (project.isCloudInstance) {
                                           if (state is ProjectDownloadInProgress && state.projectId == project.id) {
-                                            return NeumorphicDarkButton(
-                                              onTap: null,
+                                            return FusionNeumorphicButton(
+                                              onTap: () {},
                                               height: 32,
                                               width: 168,
                                               child: Row(
@@ -488,7 +493,7 @@ class ProjectDetailsDialog extends StatelessWidget {
                                                 ),
                                               );
                                             }
-                                            return NeumorphicDarkButton(
+                                            return FusionNeumorphicButton(
                                               onTap: () async {
                                                 // FusionUiUtils.showLoader(context);
                                                 final ResponseCallback<CloudSyncStatus> downloadResponse = await serviceLocator<ProjectSyncViewModel>()
@@ -532,7 +537,7 @@ class ProjectDetailsDialog extends StatelessWidget {
                                             );
                                           }
                                         } else {
-                                          return NeumorphicDarkButton(
+                                          return FusionNeumorphicButton(
                                             onTap: () async {
                                               Navigator.of(context).pop();
                                               FusionUiUtils.showLoader(context);

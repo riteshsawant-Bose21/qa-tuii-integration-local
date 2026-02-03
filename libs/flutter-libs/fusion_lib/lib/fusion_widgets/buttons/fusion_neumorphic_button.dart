@@ -2,22 +2,25 @@ import 'package:flutter/material.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
 class FusionNeumorphicButton extends StatefulWidget {
-  final String text;
+  final String? text;
   final double? width;
   final double? height;
   final double borderRadius;
   final VoidCallback onTap;
   final TextStyle? textStyle;
   final Widget? child;
+  final Color? color;
+
   const FusionNeumorphicButton({
     super.key,
-    required this.text,
+    this.text,
     this.width,
     this.height = 35,
     required this.onTap,
     this.borderRadius = 12,
     this.textStyle,
     this.child,
+    this.color,
   });
 
   @override
@@ -29,6 +32,8 @@ class _FusionNeumorphicButtonState extends State<FusionNeumorphicButton> {
 
   @override
   Widget build(BuildContext context) {
+    assert(widget.text != null || widget.child != null);
+
     return SemanticHelper.button(
       testId: SemanticHelper.createTestId(SemanticTypes.button, "neumorphic_button_${widget.text}"),
       child: GestureDetector(
@@ -47,10 +52,11 @@ class _FusionNeumorphicButtonState extends State<FusionNeumorphicButton> {
             borderRadius: widget.borderRadius,
             height: widget.height,
             alignment: Alignment.center,
+            color: widget.color,
             child:
                 widget.child ??
                 FusionAppText(
-                  text: widget.text,
+                  text: widget.text!,
                   style: widget.textStyle ?? Theme.of(context).textTheme.bodyMedium,
                 ),
           ),

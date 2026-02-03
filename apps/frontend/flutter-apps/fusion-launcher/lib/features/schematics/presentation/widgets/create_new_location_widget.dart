@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:fusion_launcher/core/assets/asset_svg.dart';
+import 'package:fusion_launcher/features/projects/widget/building/side_panel_widgets/schematic_properties.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
 import '../../../../core/service_locator.dart';
@@ -166,10 +167,9 @@ class _CreateNewLocationWidgetState extends State<CreateNewLocationWidget> {
 
                     SemanticHelper.formControl(
                       testId: SemanticHelper.createTestId(SemanticTypes.textInput, "create_new_location_location_name_field"),
-                      child: FusionTextField(
+                      child: PropertyTextField(
                         controller: widget.areaNameController,
                         hintText: "Enter location name",
-                        color: context.colorScheme.elevation2,
                         onChanged: (String value) {
                           widget.setDropdownState(() {});
                         },
@@ -185,6 +185,8 @@ class _CreateNewLocationWidgetState extends State<CreateNewLocationWidget> {
                         child: FusionButton(
                           height: 32,
                           label: "Add",
+                          activeBackgroundColor: context.colorScheme.primaryColor,
+                          textStyle: context.textTheme.labelMedium?.copyWith(color: Colors.white),
                           isActive: widget.areaNameController.text.trim().isNotEmpty && _selectedFloorId.isNotEmpty,
                           onTap: () {
                             widget.onCreateNewArea(

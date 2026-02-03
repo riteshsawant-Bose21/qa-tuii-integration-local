@@ -3,6 +3,8 @@ import 'package:flutter/services.dart';
 import 'package:fusion_lib/fusion_theme/app_theme.dart';
 import 'package:fusion_lib/fusion_widgets/text_views/fusion_app_text.dart';
 
+import '../side_panel_widgets/schematic_properties.dart';
+
 class BuildingPageTextField extends StatelessWidget {
   final String label;
   final TextEditingController controller;
@@ -11,6 +13,7 @@ class BuildingPageTextField extends StatelessWidget {
   final ValueChanged<String>? onChanged;
   final FormFieldValidator<String>? validator;
   final ValueChanged<String>? onFieldSubmitted;
+  final Color? fillColor;
 
   const BuildingPageTextField({
     super.key,
@@ -21,6 +24,7 @@ class BuildingPageTextField extends StatelessWidget {
     this.onChanged,
     this.validator,
     this.onFieldSubmitted,
+    this.fillColor,
   });
 
   @override
@@ -39,26 +43,22 @@ class BuildingPageTextField extends StatelessWidget {
         ),
         const SizedBox(width: 8),
         Expanded(
-          child: TextFormField(
-            controller: controller,
-            keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            style: context.textTheme.bodySmall?.copyWith(color: context.colorScheme.onSurface),
-            decoration: InputDecoration(
-              isDense: true,
-              contentPadding: const EdgeInsets.symmetric(vertical: 10, horizontal: 10),
-              hintText: hintText,
-              hintStyle: context.textTheme.bodySmall?.copyWith(color: context.colorScheme.onSurface.withAlpha(100)),
-              fillColor: context.colorScheme.surface,
-              filled: true,
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(6)),
-              focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(6)),
-              enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(6)),
-              errorBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(6)),
+          child: Container(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(6),
+              color: context.colorScheme.elevation1,
             ),
-            inputFormatters: inputFormatters,
-            validator: validator,
-            onChanged: onChanged,
-            onFieldSubmitted: onFieldSubmitted,
+            child: PropertyTextField(
+              controller: controller,
+              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              hintText: hintText,
+              fillColor: fillColor ?? context.colorScheme.elevation2,
+              contentPadding: const EdgeInsets.symmetric(vertical: 12, horizontal: 12),
+              inputFormatters: inputFormatters,
+              validator: validator,
+              onChanged: onChanged,
+              onSubmitted: onFieldSubmitted,
+            ),
           ),
         ),
       ],

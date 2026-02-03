@@ -30,20 +30,25 @@ class PBRadio extends StatelessWidget {
           child: Container(
             height: size?.height ?? radioSize,
             width: size?.width ?? radioSize,
-            color: bgColor,
+            color: context.colorScheme.elevation1,
             child: Container(
               height: double.infinity,
               width: double.infinity,
               alignment: Alignment.center,
               padding: padding ?? EdgeInsets.all(outerPadding),
-              decoration: BoxDecoration(borderRadius: BorderRadius.circular(4), border: Border.all(color: inactiveColor)),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(4),
+                border: Border.all(
+                  color: value ? context.colorScheme.primaryWhite : context.colorScheme.strokeLight,
+                ),
+              ),
               child: Container(
                 height: double.infinity,
                 width: double.infinity,
                 padding: const EdgeInsets.all(1),
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: value ? activeColor : inactiveColor,
+                  color: value ? context.colorScheme.primaryWhite : context.colorScheme.elevation1,
                 ),
                 child: Container(
                   height: double.infinity,
@@ -56,8 +61,8 @@ class PBRadio extends StatelessWidget {
                     width: double.infinity,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      color: value ? activeColor : inactiveColor,
-                      border: Border.all(color: bgColor, width: 2),
+                      color: value ? context.colorScheme.primaryWhite : context.colorScheme.elevation1,
+                      border: Border.all(color: context.colorScheme.strokeLight, width: 3),
                     ),
                   ),
                 ),

@@ -331,15 +331,15 @@ class _ValueColumn extends StatelessWidget {
       data: SliderTheme.of(context).copyWith(
         rangeThumbShape: const RoundRangeSliderThumbShape(enabledThumbRadius: 6),
         overlayShape: const RoundSliderOverlayShape(overlayRadius: 4),
-        trackHeight: 2,
-        thumbColor: Theme.of(context).colorScheme.primaryBlack,
-        activeTrackColor: context.colorScheme.primaryBlack,
-        inactiveTrackColor: context.colorScheme.primaryBlack,
+        trackHeight: 1,
+        thumbColor: context.colorScheme.primaryWhite,
       ),
       child: RangeSlider(
         values: RangeValues(minValue, maxValue),
         min: 0,
         max: 100,
+        activeColor: context.colorScheme.elevation2,
+        inactiveColor: context.colorScheme.primaryWhite,
         divisions: 100,
         padding: EdgeInsets.zero,
         labels: RangeLabels(
@@ -376,7 +376,7 @@ class _ValueColumn extends StatelessWidget {
               thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6),
               overlayShape: const RoundSliderOverlayShape(overlayRadius: 4),
               trackHeight: 1,
-              thumbColor: Theme.of(context).colorScheme.primaryBlack,
+              thumbColor: Theme.of(context).colorScheme.primaryWhite,
             ),
             child: Slider(
               value: thresholdValue,
@@ -385,8 +385,8 @@ class _ValueColumn extends StatelessWidget {
               divisions: 100,
               padding: EdgeInsets.zero,
               label: thresholdValue.toStringAsFixed(0),
-              activeColor: context.colorScheme.primaryBlack,
-              inactiveColor: context.colorScheme.primaryBlack,
+              activeColor: context.colorScheme.elevation2,
+              inactiveColor: context.colorScheme.primaryWhite,
               onChanged: (double value) {
                 final ThresholdCondition updatedCondition = condition.copyWith(
                   threshold: value,

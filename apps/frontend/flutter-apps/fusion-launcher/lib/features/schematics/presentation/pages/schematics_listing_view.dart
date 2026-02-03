@@ -253,6 +253,7 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
                           content: _buildSourcesContent(),
                           initiallyExpanded: true,
                         ),
+
                       if (_sourcesEndpointsSearchQuery.isEmpty || _sourcesEndpointsSearchScope != DeviceSearchScope.sources)
                         ExpandableSection(
                           title: "Endpoints",

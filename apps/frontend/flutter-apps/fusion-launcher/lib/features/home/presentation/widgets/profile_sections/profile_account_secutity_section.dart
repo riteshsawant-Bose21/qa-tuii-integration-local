@@ -4,7 +4,6 @@ import 'package:fusion_launcher/core/services/user_profile_manager.dart';
 import 'package:fusion_launcher/features/home/presentation/widgets/profile_tab_content.dart';
 import 'package:fusion_launcher/features/home/presentation/widgets/saved_projects_tab.dart';
 import 'package:fusion_lib/fusion_lib.dart';
-import 'package:fusion_lib/fusion_theme/app_theme.dart';
 
 import '../../../../../core/service_locator.dart';
 
@@ -150,12 +149,12 @@ class TinySwitchWithTitle extends StatelessWidget {
             child: Switch(
               value: value,
               onChanged: onChanged,
-              activeTrackColor: context.colorScheme.primary,
-              inactiveTrackColor: context.colorScheme.surfaceBright,
+              activeTrackColor: context.colorScheme.primaryColor,
+              inactiveTrackColor: context.colorScheme.elevation3,
               materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
               splashRadius: 0,
               trackOutlineColor: WidgetStateProperty.resolveWith<Color?>((Set<WidgetState> states) => Colors.transparent),
-              thumbColor: WidgetStatePropertyAll<Color>(context.colorScheme.onSurface),
+              thumbColor: const WidgetStatePropertyAll<Color>(Colors.white),
             ),
           ),
         ),
@@ -165,7 +164,7 @@ class TinySwitchWithTitle extends StatelessWidget {
           child: FusionAppText(
             text: title,
             style: context.textTheme.labelSmall?.copyWith(
-              color: context.colorScheme.surfaceDim,
+              color: context.colorScheme.elevation5,
             ),
           ),
         ),
