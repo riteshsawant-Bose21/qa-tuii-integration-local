@@ -40,7 +40,7 @@ type ProjectAuth struct {
 
 // Request body for creating or updating a project.
 type ProjectCreateRequest struct {
-	ID                        string          `json:"projectId" validate:"required,uuid4" example:"50000001-0000-4000-8000-000000000008"`
+	ID                        string          `json:"project_id" validate:"required,uuid4" example:"50000001-0000-4000-8000-000000000008"`
 	Application               string          `json:"application" validate:"required,min=1,max=255" example:"Audio System Design"`
 	Name                      string          `json:"name" validate:"required,min=1,max=255" example:"Conference Room Audio Setup"`
 	Description               string          `json:"description" validate:"omitempty,max=1000" example:"Professional audio system for corporate conference room"`

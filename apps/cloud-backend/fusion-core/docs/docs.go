@@ -2073,7 +2073,7 @@ const docTemplate = `{
                 "application",
                 "environment_type",
                 "name",
-                "projectId"
+                "project_id"
             ],
             "properties": {
                 "application": {
@@ -2112,7 +2112,7 @@ const docTemplate = `{
                     "minLength": 1,
                     "example": "Conference Room Audio Setup"
                 },
-                "projectId": {
+                "project_id": {
                     "type": "string",
                     "example": "50000001-0000-4000-8000-000000000008"
                 },
