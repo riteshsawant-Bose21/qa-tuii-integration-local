@@ -21,6 +21,7 @@ class ProcessingChainView extends StatelessWidget {
     final ProjectViewModel projectViewModel = serviceLocator<ProjectViewModel>();
     String zoneName = '';
     String subZoneName = '';
+    String paramName = '';
 
     /// switch case based on params.type to get the parent entity
     switch (params.type) {
@@ -30,25 +31,34 @@ class ProcessingChainView extends StatelessWidget {
         final Zone? zone = projectViewModel.getZoneForCircuit(circuitId: params.id);
         if (zone != null) {
           zoneName = zone.name;
+        } else {
+          final SubZone? subZone = projectViewModel.getSubZoneForCircuit(circuitId: params.id);
+          if (subZone != null) {
+            subZoneName = subZone.name;
+            final Zone? parentZone = projectViewModel.getZoneForSubZone(subZoneId: subZone.id);
+            if (parentZone != null) {
+              zoneName = parentZone.name;
+            }
+          }
         }
+        paramName = params.name;
         break;
       case ProcessingChainDeviceType.subzone:
 
         /// get subzone by circuit id
-        final SubZone? subzone = projectViewModel.getSubZoneForCircuit(circuitId: params.id);
-        if (subzone != null) {
-          subZoneName = subzone.name;
-          // Also get the parent zone for subzone
-          final Zone? parentZone = projectViewModel.getZoneForSubZone(subZoneId: subzone.id);
-          if (parentZone != null) {
-            zoneName = parentZone.name;
-          }
+
+        subZoneName = params.name;
+        // Also get the parent zone for subzone
+        final Zone? parentZone = projectViewModel.getZoneForSubZone(subZoneId: params.id);
+        if (parentZone != null) {
+          zoneName = parentZone.name;
         }
         break;
       case ProcessingChainDeviceType.zone:
 
         /// get zone information directly
         zoneName = params.name;
+        paramName = "";
         break;
       case ProcessingChainDeviceType.source:
       case ProcessingChainDeviceType.sourceSet:
@@ -119,18 +129,22 @@ class ProcessingChainView extends StatelessWidget {
                             ),
                             FusionAppText(
                               text: () {
-                                String breadcrumb = '';
-                                if (zoneName.isNotEmpty) {
-                                  breadcrumb += zoneName;
-                                }
-                                if (subZoneName.isNotEmpty) {
-                                  breadcrumb += breadcrumb.isNotEmpty ? ' > $subZoneName' : subZoneName;
-                                }
-                                if (breadcrumb.isNotEmpty) {
-                                  breadcrumb += ' > ${params.name}';
-                                } else {
-                                  breadcrumb = params.name;
-                                }
+                                final String breadcrumb = <String>[
+                                  if (zoneName.isNotEmpty) zoneName,
+                                  if (subZoneName.isNotEmpty) subZoneName,
+                                  if (paramName.isNotEmpty) paramName,
+                                ].join(" > ");
+                                // if (zoneName.isNotEmpty) {
+                                //   breadcrumb += zoneName;
+                                // }
+                                // if (subZoneName.isNotEmpty) {
+                                //   breadcrumb += breadcrumb.isNotEmpty ? ' > $subZoneName' : subZoneName;
+                                // }
+                                // if (paramName.isNotEmpty) {
+                                //   breadcrumb += ' > $paramName';
+                                // } else {
+                                //   breadcrumb = params.name;
+                                // }
                                 return '- $breadcrumb';
                               }(),
                               style: context.textTheme.bodySmall,
