@@ -75,6 +75,8 @@ class EquipmentLocationDialog extends StatelessWidget {
                   ///
                   ///********************************************************************** */
                   Expanded(
+                    child: SemanticHelper.container(
+                    testId: SemanticHelper.createTestId(SemanticTypes.container, "left_dialog"),
                     child: Column(
                       children: <Widget>[
                         if (equipmentLocationId == null) const _EquipmentLocationDropdown(),
@@ -88,7 +90,9 @@ class EquipmentLocationDialog extends StatelessWidget {
                           ),
                         ),
                         Expanded(
-                          child: Column(
+                          child: SemanticHelper.formControl(
+                                testId: SemanticHelper.createTestId(SemanticTypes.container, "available_devices"),
+                                child: Column(
                             children: <Widget>[
                               SemanticHelper.formControl(
                                 testId: SemanticHelper.createTestId(SemanticTypes.textInput, "equipment_location_dialog_search_input"),
@@ -202,8 +206,10 @@ class EquipmentLocationDialog extends StatelessWidget {
                             ],
                           ),
                         ),
+                        ),
                       ],
                     ),
+                  ),
                   ),
 
                   ///********************************************************************** */
@@ -213,6 +219,8 @@ class EquipmentLocationDialog extends StatelessWidget {
                   ///********************************************************************** */
                   ///
                   Expanded(
+                    child: SemanticHelper.container(
+                    testId: SemanticHelper.createTestId(SemanticTypes.container, "right_dialog"),
                     child: Container(
                       decoration: BoxDecoration(
                         color: context.colorScheme.elevation2,
@@ -314,6 +322,7 @@ class EquipmentLocationDialog extends StatelessWidget {
                         ],
                       ),
                     ),
+                  ),
                   ),
                 ],
               );

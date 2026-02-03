@@ -132,6 +132,8 @@ class _NewWidgetState extends State<NewWidget> {
 
                         SizedBox(
                           width: 400,
+                          child: SemanticHelper.container(
+                          testId: SemanticHelper.createTestId(SemanticTypes.container, "zone_color_options"),
                           child: BlocBuilder<CreateZoneViewModel, CreateZoneViewModelState>(
                             buildWhen: (CreateZoneViewModelState previous, CreateZoneViewModelState current) {
                               return previous.zoneColor != current.zoneColor;
@@ -172,6 +174,7 @@ class _NewWidgetState extends State<NewWidget> {
                               );
                             },
                           ),
+                        ),
                         ),
 
                         const SizedBox(height: 20),
