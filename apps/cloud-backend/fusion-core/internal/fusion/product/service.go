@@ -6,9 +6,9 @@ import (
 
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/api/types"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/config"
-	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/errors"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/product/validation"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/storage/cloudfs"
+	errorutil "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/utils/errorutil"
 	"go.uber.org/zap"
 )
 
@@ -54,7 +54,7 @@ type DatabaseService interface {
 	UpdateWithResults(ctx context.Context, jobID, status string, totalItems, successful, failed int, validationWarnings []string, errorMsg *string, logger *zap.Logger) error
 	UpdateStatusAndResults(ctx context.Context, jobID, status string, totalItems, successful, failed int, validationWarnings []string, errorMsg *string, logger *zap.Logger) error
 	GetByID(ctx context.Context, jobID string, logger *zap.Logger) (*types.SyncJobResult, error)
-	StoreValidationErrors(ctx context.Context, jobID string, errorCollector *errors.ErrorCollector, logger *zap.Logger) error
+	StoreValidationErrors(ctx context.Context, jobID string, errorCollector *errorutil.ErrorCollector, logger *zap.Logger) error
 }
 
 // NewService creates a new product service.

@@ -3,7 +3,6 @@ package middleware
 import (
 	"context"
 	"fmt"
-	"net/http"
 	"strings"
 
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion"
@@ -58,20 +57,14 @@ func (acc *AccessControlConfig) RequirePermission(feature string, level Permissi
 		// Get user email from context (set by Auth0 middleware)
 		userEmail, exists := c.Get("user_email")
 		if !exists {
-			response.SendJSON(c, http.StatusUnauthorized, gin.H{
-				"error":   "Unauthorized",
-				"message": "User authentication required",
-			})
+			response.Unauthorized(c, "User authentication required")
 			c.Abort()
 			return
 		}
 
 		email, ok := userEmail.(string)
 		if !ok {
-			response.SendJSON(c, http.StatusUnauthorized, gin.H{
-				"error":   "Unauthorized",
-				"message": "Invalid user authentication",
-			})
+			response.Unauthorized(c, "Invalid user authentication")
 			c.Abort()
 			return
 		}
@@ -79,10 +72,7 @@ func (acc *AccessControlConfig) RequirePermission(feature string, level Permissi
 		// Get user authorization data
 		userAuth, err := acc.UserService.GetUserAuthorization(context.Background(), email)
 		if err != nil {
-			response.SendJSON(c, http.StatusForbidden, gin.H{
-				"error":   "Access Denied",
-				"message": fmt.Sprintf("Failed to retrieve user permissions: %v", err),
-			})
+			response.Forbidden(c, fmt.Sprintf("Failed to retrieve user permissions: %v", err))
 			c.Abort()
 			return
 		}
@@ -92,28 +82,12 @@ func (acc *AccessControlConfig) RequirePermission(feature string, level Permissi
 		if err != nil {
 			// If database check fails, fallback to the old method
 			if !acc.hasPermission(userAuth.Permissions, feature, level) {
-				response.SendJSON(c, http.StatusForbidden, gin.H{
-					"error":   "Access Denied",
-					"message": fmt.Sprintf("Insufficient permissions. Required: %s.%s", feature, level),
-					"required_permission": gin.H{
-						"feature": feature,
-						"level":   level,
-					},
-					"user_permissions": userAuth.Permissions,
-				})
+				response.Forbidden(c, fmt.Sprintf("Insufficient permissions. Required: %s.%s", feature, level))
 				c.Abort()
 				return
 			}
 		} else if !hasPermission {
-			response.SendJSON(c, http.StatusForbidden, gin.H{
-				"error":   "Access Denied",
-				"message": fmt.Sprintf("Insufficient permissions. Required: %s.%s", feature, level),
-				"required_permission": gin.H{
-					"feature": feature,
-					"level":   level,
-				},
-				"user_permissions": userAuth.Permissions,
-			})
+			response.Forbidden(c, fmt.Sprintf("Insufficient permissions. Required: %s.%s", feature, level))
 			c.Abort()
 			return
 		}
@@ -207,20 +181,14 @@ func (acc *AccessControlConfig) GlobalAccessControlMiddleware() gin.HandlerFunc 
 			}
 
 			if !exists {
-				response.SendJSON(c, http.StatusUnauthorized, gin.H{
-					"error":   "Unauthorized",
-					"message": "User authentication required",
-				})
+				response.Unauthorized(c, "User authentication required")
 				c.Abort()
 				return
 			}
 
 			email, ok := userEmail.(string)
 			if !ok {
-				response.SendJSON(c, http.StatusUnauthorized, gin.H{
-					"error":   "Unauthorized",
-					"message": "Invalid user authentication",
-				})
+				response.Unauthorized(c, "Invalid user authentication")
 				c.Abort()
 				return
 			}
@@ -228,26 +196,14 @@ func (acc *AccessControlConfig) GlobalAccessControlMiddleware() gin.HandlerFunc 
 			// Get user authorization data
 			userAuth, err := acc.UserService.GetUserAuthorization(context.Background(), email)
 			if err != nil {
-				response.SendJSON(c, http.StatusForbidden, gin.H{
-					"error":   "Access Denied",
-					"message": fmt.Sprintf("Failed to retrieve user permissions: %v", err),
-				})
+				response.Forbidden(c, fmt.Sprintf("Failed to retrieve user permissions: %v", err))
 				c.Abort()
 				return
 			}
 
 			// Check if user has the required permission
 			if !acc.hasPermission(userAuth.Permissions, permission.Feature, permission.RequiredLevel) {
-				response.SendJSON(c, http.StatusForbidden, gin.H{
-					"error":    "Access Denied",
-					"message":  fmt.Sprintf("Insufficient permissions for %s", permission.Description),
-					"endpoint": key,
-					"required_permission": gin.H{
-						"feature": permission.Feature,
-						"level":   permission.RequiredLevel,
-					},
-					"user_permissions": userAuth.Permissions,
-				})
+				response.Forbidden(c, fmt.Sprintf("Insufficient permissions for %s", permission.Description))
 				c.Abort()
 				return
 			}

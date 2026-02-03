@@ -8,8 +8,8 @@ import (
 
 	response "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/api/response"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/api/types"
-	errorspkg "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/errors"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion"
+	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/utils/errorutil"
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
 )
@@ -79,7 +79,7 @@ func (a *ProductHandler) GetProductByID(c *gin.Context) {
 
 	product, err := a.product.GetProductByID(context.TODO(), id, logger)
 	if err != nil {
-		if errors.Is(err, errorspkg.ErrProductNotFound) {
+		if errors.Is(err, errorutil.ErrProductNotFound) {
 			response.NotFound(c, "Product not found")
 			return
 		}
@@ -129,7 +129,7 @@ func (a *ProductHandler) GetProductPrices(c *gin.Context) {
 
 	prices, err := a.product.GetProductPrices(context.TODO(), id, currency, variant, logger)
 	if err != nil {
-		if errors.Is(err, errorspkg.ErrProductNotFound) || errors.Is(err, errorspkg.ErrNoPricesFound) {
+		if errors.Is(err, errorutil.ErrProductNotFound) || errors.Is(err, errorutil.ErrNoPricesFound) {
 			response.NotFound(c, "No prices found for product")
 			return
 		}

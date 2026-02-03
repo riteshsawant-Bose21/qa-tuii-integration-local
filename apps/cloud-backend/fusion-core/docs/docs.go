@@ -50,25 +50,25 @@ const docTemplate = `{
                     "200": {
                         "description": "Tokens generated successfully",
                         "schema": {
-                            "$ref": "#/definitions/types.AuthTokenSuccessResponse"
+                            "$ref": "#/definitions/types.AuthTokenResponse"
                         }
                     },
                     "400": {
                         "description": "Bad request - username is required",
                         "schema": {
-                            "$ref": "#/definitions/types.ErrorResponse2"
+                            "$ref": "#/definitions/types.ErrorResponse"
                         }
                     },
                     "403": {
                         "description": "auth automation endpoint is disabled",
                         "schema": {
-                            "$ref": "#/definitions/types.ErrorResponse2"
+                            "$ref": "#/definitions/types.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal server error",
                         "schema": {
-                            "$ref": "#/definitions/types.ErrorResponse2"
+                            "$ref": "#/definitions/types.ErrorResponse"
                         }
                     }
                 }
@@ -1463,8 +1463,8 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "Profile ID",
-                        "name": "profileID",
+                        "description": "Settings ID",
+                        "name": "settingsID",
                         "in": "path",
                         "required": true
                     },
@@ -1694,18 +1694,6 @@ const docTemplate = `{
                 }
             }
         },
-        "types.AuthTokenSuccessResponse": {
-            "type": "object",
-            "properties": {
-                "data": {
-                    "$ref": "#/definitions/types.AuthTokenResponse"
-                },
-                "message": {
-                    "type": "string",
-                    "example": "Tokens generated successfully"
-                }
-            }
-        },
         "types.Budget": {
             "type": "object",
             "required": [
@@ -1789,19 +1777,6 @@ const docTemplate = `{
                 "error": {
                     "type": "string",
                     "example": "Error message"
-                }
-            }
-        },
-        "types.ErrorResponse2": {
-            "type": "object",
-            "properties": {
-                "code": {
-                    "type": "string",
-                    "example": "VALIDATION_ERROR"
-                },
-                "message": {
-                    "type": "string",
-                    "example": "Invalid request parameters"
                 }
             }
         },

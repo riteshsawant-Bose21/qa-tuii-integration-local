@@ -7,6 +7,7 @@ import (
 
 	response "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/api/response"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion"
+	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/utils/errorutil"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/utils/validation"
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
@@ -47,7 +48,7 @@ func (h *ProjectHandler) CreateProject(ctx *gin.Context) {
 
 	userAuth, exists := ctx.Get("user_auth")
 	if !exists {
-		response.Unauthorized(ctx, types.ErrMsgUnauthorized)
+		response.Unauthorized(ctx, errorutil.MsgUnauthorized)
 		return
 	}
 	user := userAuth.(*types.UserAuthorizationResponse)
@@ -67,7 +68,7 @@ func (h *ProjectHandler) CreateProject(ctx *gin.Context) {
 	res, err := h.project.CreateProject(ctx, &p, *user, logger)
 
 	if err != nil {
-		if err.Error() == types.ErrMsgProjectAlreadyExists {
+		if err.Error() == errorutil.ErrMsgProjectAlreadyExists {
 			response.BadRequest(ctx, err.Error())
 			return
 		}
@@ -106,13 +107,13 @@ func (h *ProjectHandler) GetAllProjects(ctx *gin.Context) {
 
 	userAuth, exists := ctx.Get("user_auth")
 	if !exists {
-		response.Unauthorized(ctx, types.ErrMsgUnauthorized)
+		response.Unauthorized(ctx, errorutil.MsgUnauthorized)
 		return
 	}
 
 	user, ok := userAuth.(*types.UserAuthorizationResponse)
 	if !ok || user == nil {
-		response.Unauthorized(ctx, types.ErrMsgUnauthorized)
+		response.Unauthorized(ctx, errorutil.MsgUnauthorized)
 		return
 	}
 
@@ -172,7 +173,7 @@ func (h *ProjectHandler) UpdateProject(ctx *gin.Context) {
 	userAuth, exists := ctx.Get("user_auth")
 
 	if !exists {
-		response.Unauthorized(ctx, types.ErrMsgUnauthorized)
+		response.Unauthorized(ctx, errorutil.MsgUnauthorized)
 		return
 	}
 
@@ -180,7 +181,7 @@ func (h *ProjectHandler) UpdateProject(ctx *gin.Context) {
 
 	// Validate UUIDs
 	if !validation.IsValidUUID(projectID) {
-		response.NotFound(ctx, types.ErrMsgProjectNotFound)
+		response.NotFound(ctx, errorutil.ErrMsgProjectNotFound)
 		return
 	}
 
@@ -202,22 +203,22 @@ func (h *ProjectHandler) UpdateProject(ctx *gin.Context) {
 	res, err := h.project.UpdateProject(ctx, &p, *user, logger)
 	if err != nil {
 		// Check if it's a "not found" error
-		if err.Error() == types.ErrMsgProjectNotFound || err.Error() == types.ErrMsgSqlNoRows {
+		if err.Error() == errorutil.ErrMsgProjectNotFound || err.Error() == errorutil.ErrMsgSqlNoRows {
 			response.NotFound(ctx, err.Error())
 			return
 		}
 
-		if err.Error() == types.ErrMsgUserNotFound {
+		if err.Error() == errorutil.ErrMsgUserNotFound {
 			response.Unauthorized(ctx, err.Error())
 			return
 		}
 
 		// Check if it's authorization errors
-		if err.Error() == types.ErrMsgUserNotAssignedToProject ||
-			err.Error() == types.ErrMsgProjectArchived ||
-			err.Error() == types.ErrMsgForbidden ||
-			strings.Contains(err.Error(), types.ErrMsgProjectLockedByUser) ||
-			strings.Contains(err.Error(), types.ErrMsgFailedToGetUserByEmail) {
+		if err.Error() == errorutil.ErrMsgUserNotAssignedToProject ||
+			err.Error() == errorutil.ErrMsgProjectArchived ||
+			err.Error() == errorutil.ErrMsgForbidden ||
+			strings.Contains(err.Error(), errorutil.ErrMsgProjectLockedByUser) ||
+			strings.Contains(err.Error(), errorutil.ErrMsgFailedToGetUserByEmail) {
 			response.Forbidden(ctx, err.Error())
 			return
 		}
@@ -254,7 +255,7 @@ func (h *ProjectHandler) DeleteProject(ctx *gin.Context) {
 
 	userAuth, exists := ctx.Get("user_auth")
 	if !exists {
-		response.Unauthorized(ctx, types.ErrMsgUnauthorized)
+		response.Unauthorized(ctx, errorutil.MsgUnauthorized)
 		return
 	}
 
@@ -262,24 +263,24 @@ func (h *ProjectHandler) DeleteProject(ctx *gin.Context) {
 
 	// Validate UUIDs
 	if !validation.IsValidUUID(projectID) {
-		response.NotFound(ctx, types.ErrMsgProjectNotFound)
+		response.NotFound(ctx, errorutil.ErrMsgProjectNotFound)
 		return
 	}
 
 	if err := h.project.DeleteProject(ctx, projectID, *user, logger); err != nil {
 		// Check if it's a "not found" error
-		if err.Error() == types.ErrMsgProjectNotFound || err.Error() == types.ErrMsgSqlNoRows {
+		if err.Error() == errorutil.ErrMsgProjectNotFound || err.Error() == errorutil.ErrMsgSqlNoRows {
 			response.NotFound(ctx, err.Error())
 			return
 		}
 
 		// Check if it's authorization errors
-		if err.Error() == types.ErrMsgUserNotAssignedToProject ||
-			err.Error() == types.ErrMsgUserNotFound ||
-			err.Error() == types.ErrMsgProjectArchived ||
-			err.Error() == types.ErrMsgForbidden ||
-			strings.Contains(err.Error(), types.ErrMsgProjectLockedByUser) ||
-			strings.Contains(err.Error(), types.ErrMsgFailedToGetUserByEmail) {
+		if err.Error() == errorutil.ErrMsgUserNotAssignedToProject ||
+			err.Error() == errorutil.ErrMsgUserNotFound ||
+			err.Error() == errorutil.ErrMsgProjectArchived ||
+			err.Error() == errorutil.ErrMsgForbidden ||
+			strings.Contains(err.Error(), errorutil.ErrMsgProjectLockedByUser) ||
+			strings.Contains(err.Error(), errorutil.ErrMsgFailedToGetUserByEmail) {
 			response.Forbidden(ctx, err.Error())
 			return
 		}
@@ -315,7 +316,7 @@ func (h *ProjectHandler) AssignUserToProject(ctx *gin.Context) {
 	userEmail := strings.TrimSpace(ctx.Param("userEmail"))
 	userAuth, exists := ctx.Get("user_auth")
 	if !exists {
-		response.Unauthorized(ctx, types.ErrMsgUnauthorized)
+		response.Unauthorized(ctx, errorutil.MsgUnauthorized)
 		return
 	}
 	user := userAuth.(*types.UserAuthorizationResponse)
@@ -330,7 +331,7 @@ func (h *ProjectHandler) AssignUserToProject(ctx *gin.Context) {
 	if err != nil {
 		errorMsg := err.Error()
 		// Check for specific error types
-		if errorMsg == types.ErrMsgProjectNotFound || errorMsg == types.ErrMsgUserNotFound || errorMsg == types.ErrMsgProjectArchived {
+		if errorMsg == errorutil.ErrMsgProjectNotFound || errorMsg == errorutil.ErrMsgUserNotFound || errorMsg == errorutil.ErrMsgProjectArchived {
 			response.NotFound(ctx, errorMsg)
 			return
 		}
@@ -368,7 +369,7 @@ func (h *ProjectHandler) RemoveUserFromProject(ctx *gin.Context) {
 
 	userAuth, exists := ctx.Get("user_auth")
 	if !exists {
-		response.Unauthorized(ctx, types.ErrMsgUnauthorized)
+		response.Unauthorized(ctx, errorutil.MsgUnauthorized)
 		return
 	}
 	user := userAuth.(*types.UserAuthorizationResponse)
@@ -383,11 +384,11 @@ func (h *ProjectHandler) RemoveUserFromProject(ctx *gin.Context) {
 	if err != nil {
 		errorMsg := err.Error()
 		// Check for specific error types
-		if errorMsg == types.ErrMsgProjectNotFound || errorMsg == types.ErrMsgUserNotFound {
+		if errorMsg == errorutil.ErrMsgProjectNotFound || errorMsg == errorutil.ErrMsgUserNotFound {
 			response.NotFound(ctx, errorMsg)
 			return
 		}
-		if errorMsg == types.ErrMsgUserNotAssignedToProject {
+		if errorMsg == errorutil.ErrMsgUserNotAssignedToProject {
 			response.NotFound(ctx, errorMsg)
 			return
 		}
@@ -426,14 +427,14 @@ func (h *ProjectHandler) UpdateProjectStar(ctx *gin.Context) {
 
 	userAuth, exists := ctx.Get("user_auth")
 	if !exists {
-		response.Unauthorized(ctx, types.ErrMsgUnauthorized)
+		response.Unauthorized(ctx, errorutil.MsgUnauthorized)
 		return
 	}
 	user := userAuth.(*types.UserAuthorizationResponse)
 
 	// Validate UUIDs
 	if !validation.IsValidUUID(projectID) {
-		response.NotFound(ctx, types.ErrMsgProjectNotFound)
+		response.NotFound(ctx, errorutil.ErrMsgProjectNotFound)
 		return
 	}
 
@@ -459,11 +460,11 @@ func (h *ProjectHandler) UpdateProjectStar(ctx *gin.Context) {
 	if err != nil {
 		errorMsg := err.Error()
 		// Check for specific error types
-		if errorMsg == types.ErrMsgProjectNotFound || errorMsg == types.ErrMsgUserNotFound {
+		if errorMsg == errorutil.ErrMsgProjectNotFound || errorMsg == errorutil.ErrMsgUserNotFound {
 			response.NotFound(ctx, errorMsg)
 			return
 		}
-		if errorMsg == types.ErrMsgUserNotAssignedToProject || errorMsg == types.ErrMsgProjectArchived {
+		if errorMsg == errorutil.ErrMsgUserNotAssignedToProject || errorMsg == errorutil.ErrMsgProjectArchived {
 			response.Forbidden(ctx, errorMsg)
 			return
 		}
@@ -502,14 +503,14 @@ func (h *ProjectHandler) UpdateProjectArchive(ctx *gin.Context) {
 
 	userAuth, exists := ctx.Get("user_auth")
 	if !exists {
-		response.Unauthorized(ctx, types.ErrMsgUnauthorized)
+		response.Unauthorized(ctx, errorutil.MsgUnauthorized)
 		return
 	}
 	user := userAuth.(*types.UserAuthorizationResponse)
 
 	// Validate UUIDs
 	if !validation.IsValidUUID(projectID) {
-		response.NotFound(ctx, types.ErrMsgProjectNotFound)
+		response.NotFound(ctx, errorutil.ErrMsgProjectNotFound)
 		return
 	}
 
@@ -535,14 +536,14 @@ func (h *ProjectHandler) UpdateProjectArchive(ctx *gin.Context) {
 	if err != nil {
 		errorMsg := err.Error()
 		// Check for specific error types
-		if errorMsg == types.ErrMsgProjectNotFound || errorMsg == types.ErrMsgUserNotFound {
+		if errorMsg == errorutil.ErrMsgProjectNotFound || errorMsg == errorutil.ErrMsgUserNotFound {
 			response.NotFound(ctx, errorMsg)
 			return
 		}
 		// Check if it's authorization errors
-		if errorMsg == types.ErrMsgUserNotAssignedToProject ||
-			strings.Contains(errorMsg, types.ErrMsgProjectLockedByUser) ||
-			strings.Contains(errorMsg, types.ErrMsgFailedToGetUserByEmail) {
+		if errorMsg == errorutil.ErrMsgUserNotAssignedToProject ||
+			strings.Contains(errorMsg, errorutil.ErrMsgProjectLockedByUser) ||
+			strings.Contains(errorMsg, errorutil.ErrMsgFailedToGetUserByEmail) {
 			response.Forbidden(ctx, errorMsg)
 			return
 		}
@@ -581,14 +582,14 @@ func (h *ProjectHandler) UpdateProjectLock(ctx *gin.Context) {
 
 	userAuth, exists := ctx.Get("user_auth")
 	if !exists {
-		response.Unauthorized(ctx, types.ErrMsgUnauthorized)
+		response.Unauthorized(ctx, errorutil.MsgUnauthorized)
 		return
 	}
 	user := userAuth.(*types.UserAuthorizationResponse)
 
 	// Validate UUIDs
 	if !validation.IsValidUUID(projectID) {
-		response.NotFound(ctx, types.ErrMsgProjectNotFound)
+		response.NotFound(ctx, errorutil.ErrMsgProjectNotFound)
 		return
 	}
 
@@ -614,17 +615,17 @@ func (h *ProjectHandler) UpdateProjectLock(ctx *gin.Context) {
 	if err != nil {
 		errorMsg := err.Error()
 		// Check for specific error types
-		if errorMsg == types.ErrMsgProjectNotFound {
+		if errorMsg == errorutil.ErrMsgProjectNotFound {
 			response.NotFound(ctx, errorMsg)
 			return
 		}
 		// Check if it's authorization errors
-		if errorMsg == types.ErrMsgUserNotAssignedToProject || errorMsg == types.ErrMsgUserNotFound ||
-			errorMsg == types.ErrMsgProjectNotLockedByUser ||
-			errorMsg == types.ErrMsgFailedToGetUserByEmail ||
-			errorMsg == types.ErrMsgForbidden ||
-			errorMsg == types.ErrMsgProjectArchived ||
-			strings.Contains(errorMsg, types.ErrMsgProjectLockedByUser) {
+		if errorMsg == errorutil.ErrMsgUserNotAssignedToProject || errorMsg == errorutil.ErrMsgUserNotFound ||
+			errorMsg == errorutil.ErrMsgProjectNotLockedByUser ||
+			errorMsg == errorutil.ErrMsgFailedToGetUserByEmail ||
+			errorMsg == errorutil.ErrMsgForbidden ||
+			errorMsg == errorutil.ErrMsgProjectArchived ||
+			strings.Contains(errorMsg, errorutil.ErrMsgProjectLockedByUser) {
 			response.Forbidden(ctx, errorMsg)
 			return
 		}

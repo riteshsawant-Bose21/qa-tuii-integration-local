@@ -12,9 +12,9 @@ import (
 
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/api/types"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/config"
-	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/errors"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/product/validation"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/storage/cloudfs"
+	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/utils/errorutil"
 	"go.uber.org/zap"
 )
 
@@ -965,7 +965,7 @@ func (s *Service) validateProduct(product *types.DBProduct) error {
 }
 
 // getErrorSummary extracts error summary from error collector
-func (s *Service) getErrorSummary(errorCollector *errors.ErrorCollector) *errors.ErrorSummary {
+func (s *Service) getErrorSummary(errorCollector *errorutil.ErrorCollector) *errorutil.ErrorSummary {
 	summary := errorCollector.GetSummary()
 	return &summary
 }
@@ -1201,7 +1201,7 @@ func (s *Service) SyncPrices(ctx context.Context, data []byte, validationCfg *co
 		Duration:           0,
 	}
 
-	errorCollector := errors.NewErrorCollector(logger, "", "price")
+	errorCollector := errorutil.NewErrorCollector(logger, "", "price")
 	validator := validation.NewFieldValidator()
 
 	var prices []validation.PriceData
@@ -1213,7 +1213,7 @@ func (s *Service) SyncPrices(ctx context.Context, data []byte, validationCfg *co
 		if containerErr != nil {
 			errMsg := fmt.Sprintf("failed to parse JSON data as array (%v) or container (%v)", arrayErr, containerErr)
 			result.Errors = append(result.Errors, errMsg)
-			syncErr := errors.NewSyncError(errors.ValidationError, errors.SeverityCritical, errMsg, arrayErr.Error(), nil, "")
+			syncErr := errorutil.NewSyncError(errorutil.ValidationError, errorutil.SeverityCritical, errMsg, arrayErr.Error(), nil, "")
 			syncErr.Context.SyncType = "price"
 			errorCollector.Add(syncErr)
 			result.Duration = time.Since(startTime)
@@ -1224,7 +1224,7 @@ func (s *Service) SyncPrices(ctx context.Context, data []byte, validationCfg *co
 
 		// Validate version if container format is used
 		if err := s.validatePriceVersion(&container, validationCfg); err != nil {
-			syncErr := errors.NewSyncError(errors.ValidationError, errors.SeverityCritical, "Price data version validation failed", err.Error(), nil, "")
+			syncErr := errorutil.NewSyncError(errorutil.ValidationError, errorutil.SeverityCritical, "Price data version validation failed", err.Error(), nil, "")
 			syncErr.Context.SyncType = "price"
 			errorCollector.Add(syncErr)
 			result.Duration = time.Since(startTime)
@@ -1297,7 +1297,7 @@ type PriceBatchResult struct {
 }
 
 // processPricesBatch processes prices in batches with transactions for better performance
-func (s *Service) processPricesBatch(ctx context.Context, prices []validation.PriceData, validator *validation.FieldValidator, errorCollector *errors.ErrorCollector, logger *zap.Logger) *PriceBatchResult {
+func (s *Service) processPricesBatch(ctx context.Context, prices []validation.PriceData, validator *validation.FieldValidator, errorCollector *errorutil.ErrorCollector, logger *zap.Logger) *PriceBatchResult {
 	result := &PriceBatchResult{
 		Successful:         0,
 		Failed:             0,
@@ -1340,7 +1340,7 @@ func (s *Service) processPricesBatch(ctx context.Context, prices []validation.Pr
 		hasErrors := false
 		if validationResult != nil && !validationResult.IsValid {
 			for _, reqErr := range validationResult.RequiredErrors {
-				errorCollector.AddFieldValidationError(errors.ValidationError, errors.SeverityHigh, price.ProductID, reqErr.FieldName, reqErr.JSONPath,
+				errorCollector.AddFieldValidationError(errorutil.ValidationError, errorutil.SeverityHigh, price.ProductID, reqErr.FieldName, reqErr.JSONPath,
 					fmt.Sprintf("Product ID %d: Missing required field '%s' (%s)", price.ProductID, reqErr.FieldName, reqErr.Description),
 					fmt.Sprintf("Add field '%s' to product %d data", reqErr.JSONPath, price.ProductID))
 				hasErrors = true
@@ -1349,7 +1349,7 @@ func (s *Service) processPricesBatch(ctx context.Context, prices []validation.Pr
 			for _, optWarn := range validationResult.OptionalWarnings {
 				warnMsg := fmt.Sprintf("price for product %d: optional field '%s' %s", price.ProductID, optWarn.FieldName, optWarn.Issue)
 				result.ValidationWarnings = append(result.ValidationWarnings, warnMsg)
-				errorCollector.AddFieldValidationError(errors.ValidationError, errors.SeverityLow, price.ProductID, optWarn.FieldName, optWarn.JSONPath,
+				errorCollector.AddFieldValidationError(errorutil.ValidationError, errorutil.SeverityLow, price.ProductID, optWarn.FieldName, optWarn.JSONPath,
 					fmt.Sprintf("Product ID %d: Missing recommended field '%s' (%s)", price.ProductID, optWarn.FieldName, optWarn.Description),
 					fmt.Sprintf("Consider adding field '%s' to product %d to improve data completeness", optWarn.JSONPath, price.ProductID))
 			}

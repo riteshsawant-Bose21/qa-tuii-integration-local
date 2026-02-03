@@ -54,14 +54,6 @@ definitions:
         example: Bearer
         type: string
     type: object
-  types.AuthTokenSuccessResponse:
-    properties:
-      data:
-        $ref: '#/definitions/types.AuthTokenResponse'
-      message:
-        example: Tokens generated successfully
-        type: string
-    type: object
   types.Budget:
     properties:
       amount:
@@ -123,15 +115,6 @@ definitions:
     properties:
       error:
         example: Error message
-        type: string
-    type: object
-  types.ErrorResponse2:
-    properties:
-      code:
-        example: VALIDATION_ERROR
-        type: string
-      message:
-        example: Invalid request parameters
         type: string
     type: object
   types.Feature:
@@ -795,19 +778,19 @@ paths:
         "200":
           description: Tokens generated successfully
           schema:
-            $ref: '#/definitions/types.AuthTokenSuccessResponse'
+            $ref: '#/definitions/types.AuthTokenResponse'
         "400":
           description: Bad request - username is required
           schema:
-            $ref: '#/definitions/types.ErrorResponse2'
+            $ref: '#/definitions/types.ErrorResponse'
         "403":
           description: auth automation endpoint is disabled
           schema:
-            $ref: '#/definitions/types.ErrorResponse2'
+            $ref: '#/definitions/types.ErrorResponse'
         "500":
           description: Internal server error
           schema:
-            $ref: '#/definitions/types.ErrorResponse2'
+            $ref: '#/definitions/types.ErrorResponse'
       summary: Get Auth0 tokens for automation testing
       tags:
       - auth
@@ -1778,9 +1761,9 @@ paths:
       - application/json
       description: Update an existing user settings with the provided details
       parameters:
-      - description: Profile ID
+      - description: Settings ID
         in: path
-        name: profileID
+        name: settingsID
         required: true
         type: string
       - description: User settings data

@@ -11,7 +11,7 @@ import (
 
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/api/types"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/config"
-	errorspkg "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/errors"
+	errorutil "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/utils/errorutil"
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -319,7 +319,7 @@ func TestGetProductByID(t *testing.T) {
 			name:      "product not found",
 			productID: "non-existent-id",
 			setupMock: func(m *MockProductService) {
-				m.On("GetProductByID", mock.Anything, "non-existent-id", mock.Anything).Return(nil, errorspkg.ErrProductNotFound)
+				m.On("GetProductByID", mock.Anything, "non-existent-id", mock.Anything).Return(nil, errorutil.ErrProductNotFound)
 			},
 			expectedStatus: http.StatusNotFound,
 			expectedError:  productNotFoundMsg,
@@ -481,7 +481,7 @@ func TestGetProductPrices(t *testing.T) {
 			name:      "product not found",
 			productID: "non-existent-id",
 			setupMock: func(m *MockProductService) {
-				m.On("GetProductPrices", mock.Anything, "non-existent-id", "", "", mock.Anything).Return(nil, errorspkg.ErrProductNotFound)
+				m.On("GetProductPrices", mock.Anything, "non-existent-id", "", "", mock.Anything).Return(nil, errorutil.ErrProductNotFound)
 			},
 			expectedStatus: http.StatusNotFound,
 			expectedError:  noPricesFoundMsg,
@@ -490,7 +490,7 @@ func TestGetProductPrices(t *testing.T) {
 			name:      "no prices found for product",
 			productID: testProductID,
 			setupMock: func(m *MockProductService) {
-				m.On("GetProductPrices", mock.Anything, testProductID, "", "", mock.Anything).Return(nil, errorspkg.ErrNoPricesFound)
+				m.On("GetProductPrices", mock.Anything, testProductID, "", "", mock.Anything).Return(nil, errorutil.ErrNoPricesFound)
 			},
 			expectedStatus: http.StatusNotFound,
 			expectedError:  noPricesFoundMsg,

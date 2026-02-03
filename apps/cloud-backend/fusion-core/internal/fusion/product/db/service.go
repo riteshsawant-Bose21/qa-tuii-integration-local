@@ -10,8 +10,8 @@ import (
 	"time"
 
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/api/types"
-	errorspkg "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/errors"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/model/models"
+	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/utils/errorutil"
 
 	"github.com/aarondl/null/v8"
 	"github.com/aarondl/sqlboiler/v4/boil"
@@ -63,7 +63,7 @@ func (s *Service) SelectByID(ctx context.Context, id string, version string, log
 
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return nil, errorspkg.ErrProductNotFound
+			return nil, errorutil.ErrProductNotFound
 		}
 		logger.Error("failed to get product by ID", zap.Int("product_id", productID), zap.Error(err))
 		return nil, fmt.Errorf("failed to get product: %w", err)
@@ -139,7 +139,7 @@ func (s *Service) GetPricesByProductID(ctx context.Context, productID int, curre
 
 	// Check if any prices were found
 	if len(prices) == 0 {
-		return nil, errorspkg.ErrNoPricesFound
+		return nil, errorutil.ErrNoPricesFound
 	}
 
 	// Transform to API response format
@@ -1058,7 +1058,7 @@ func (s *Service) GetByID(ctx context.Context, jobID string, logger *zap.Logger)
 }
 
 // StoreValidationErrors stores validation errors for a job
-func (s *Service) StoreValidationErrors(ctx context.Context, jobID string, errorCollector *errorspkg.ErrorCollector, logger *zap.Logger) error {
+func (s *Service) StoreValidationErrors(ctx context.Context, jobID string, errorCollector *errorutil.ErrorCollector, logger *zap.Logger) error {
 	if errorCollector == nil {
 		logger.Info("no error collector provided, skipping storing validation errors", zap.String("job_id", jobID))
 		return nil
@@ -1100,7 +1100,7 @@ func (s *Service) StoreValidationErrors(ctx context.Context, jobID string, error
 }
 
 // StoreValidationData stores both validation warnings and errors in a combined format
-func (s *Service) StoreValidationData(ctx context.Context, jobID string, validationWarnings []string, errorCollector *errorspkg.ErrorCollector, logger *zap.Logger) error {
+func (s *Service) StoreValidationData(ctx context.Context, jobID string, validationWarnings []string, errorCollector *errorutil.ErrorCollector, logger *zap.Logger) error {
 	job, err := models.ProductSyncJobs(qm.Where("job_id = ?", jobID)).One(ctx, s.db)
 	if err != nil {
 		logger.Error("failed to find sync job for storing validation data", zap.String("job_id", jobID), zap.Error(err))

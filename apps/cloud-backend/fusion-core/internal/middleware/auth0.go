@@ -3,8 +3,10 @@ package middleware
 import (
 	"github.com/gin-gonic/gin"
 
+	response "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/api/response"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion"
 	authutils "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/utils/auth"
+	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/utils/errorutil"
 )
 
 // AuthMiddleware defines the interface for authentication middleware
@@ -31,7 +33,7 @@ func (a *Auth0MiddlewareImpl) Middleware() gin.HandlerFunc {
 		// Get the Authorization header
 		authHeader := c.GetHeader("Authorization")
 		if authHeader == "" {
-			authutils.RespondWithUnauthorized(c)
+			response.Unauthorized(c, errorutil.MsgUnauthorized)
 			c.Abort()
 			return
 		}
@@ -39,7 +41,7 @@ func (a *Auth0MiddlewareImpl) Middleware() gin.HandlerFunc {
 		// Extract token from header
 		token, err := a.authService.ExtractTokenFromHeader(authHeader)
 		if err != nil {
-			authutils.RespondWithInvalidToken(c)
+			response.RespondWithInvalidToken(c)
 			c.Abort()
 			return
 		}
@@ -49,9 +51,9 @@ func (a *Auth0MiddlewareImpl) Middleware() gin.HandlerFunc {
 		if err != nil {
 			// Check error type and respond accordingly
 			if authutils.IsTokenExpired(err.Error()) {
-				authutils.RespondWithTokenExpired(c)
+				response.RespondWithTokenExpired(c)
 			} else {
-				authutils.RespondWithInvalidToken(c)
+				response.RespondWithInvalidToken(c)
 			}
 			c.Abort()
 			return
@@ -60,7 +62,7 @@ func (a *Auth0MiddlewareImpl) Middleware() gin.HandlerFunc {
 		// Extract user information from claims
 		userID, err := a.authService.ExtractUserID(claims)
 		if err != nil {
-			authutils.RespondWithInvalidToken(c)
+			response.RespondWithInvalidToken(c)
 			c.Abort()
 			return
 		}

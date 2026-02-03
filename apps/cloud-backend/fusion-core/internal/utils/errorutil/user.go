@@ -1,4 +1,4 @@
-package errors
+package errorutil
 
 // Authentication Error Messages
 const (

@@ -29,6 +29,7 @@ import (
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/middleware"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/storage/cloudfs"
 	sqlpkg "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/storage/sql"
+	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/utils/errorutil"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
@@ -348,14 +349,14 @@ func (suite *ProjectIntegrationTestSuite) createMockAccessControlMiddleware(user
 	return func(c *gin.Context) {
 		userEmail, exists := c.Get("user_email")
 		if !exists {
-			c.JSON(http.StatusUnauthorized, types.ErrorResponse{ErrorMessage: types.ErrMsgUnauthorized})
+			c.JSON(http.StatusUnauthorized, types.ErrorResponse{ErrorMessage: errorutil.MsgUnauthorized})
 			c.Abort()
 			return
 		}
 
 		email, ok := userEmail.(string)
 		if !ok {
-			c.JSON(http.StatusUnauthorized, types.ErrorResponse{ErrorMessage: types.ErrMsgUnauthorized})
+			c.JSON(http.StatusUnauthorized, types.ErrorResponse{ErrorMessage: errorutil.MsgUnauthorized})
 			c.Abort()
 			return
 		}

@@ -10,7 +10,7 @@ import (
 	response "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/api/response"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/api/types"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion"
-	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/utils/errors"
+	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/utils/errorutil"
 )
 
 type UserHandler struct {
@@ -42,13 +42,13 @@ func (h *UserHandler) GetUserAuthorization(ctx *gin.Context) {
 		email, exists = ctx.Get("email")
 	}
 	if !exists {
-		response.Unauthorized(ctx, errors.MsgUserEmailNotFoundInToken)
+		response.Unauthorized(ctx, errorutil.MsgUserEmailNotFoundInToken)
 		return
 	}
 
 	emailStr, ok := email.(string)
 	if !ok {
-		response.Unauthorized(ctx, errors.MsgInvalidToken)
+		response.Unauthorized(ctx, errorutil.MsgInvalidToken)
 		return
 	}
 
@@ -87,13 +87,13 @@ func (h *UserHandler) GetUserProfile(ctx *gin.Context) {
 		email, exists = ctx.Get("email")
 	}
 	if !exists {
-		response.Unauthorized(ctx, errors.MsgUnauthorized)
+		response.Unauthorized(ctx, errorutil.MsgUnauthorized)
 		return
 	}
 
 	emailStr, ok := email.(string)
 	if !ok {
-		response.Unauthorized(ctx, errors.MsgInvalidToken)
+		response.Unauthorized(ctx, errorutil.MsgInvalidToken)
 		return
 	}
 
@@ -233,13 +233,13 @@ func (h *UserHandler) UpdateUser(ctx *gin.Context) {
 func (h *UserHandler) GetUserSettings(ctx *gin.Context) {
 	userAuth, exists := ctx.Get("user_auth")
 	if !exists {
-		response.Unauthorized(ctx, errors.MsgUnauthorized)
+		response.Unauthorized(ctx, errorutil.MsgUnauthorized)
 		return
 	}
 
 	auth, ok := userAuth.(*types.UserAuthorizationResponse)
 	if !ok {
-		response.Unauthorized(ctx, errors.MsgUnauthorized)
+		response.Unauthorized(ctx, errorutil.MsgUnauthorized)
 		return
 	}
 
@@ -325,13 +325,13 @@ func (h *UserHandler) UpdateUserSettings(ctx *gin.Context) {
 
 	userAuth, exists := ctx.Get("user_auth")
 	if !exists {
-		response.Unauthorized(ctx, errors.MsgUnauthorized)
+		response.Unauthorized(ctx, errorutil.MsgUnauthorized)
 		return
 	}
 
 	auth, ok := userAuth.(*types.UserAuthorizationResponse)
 	if !ok {
-		response.Unauthorized(ctx, errors.MsgUnauthorized)
+		response.Unauthorized(ctx, errorutil.MsgUnauthorized)
 		return
 	}
 
@@ -365,13 +365,13 @@ func (h *UserHandler) UpdateUserSettings(ctx *gin.Context) {
 func (h *UserHandler) GetUserProfileDetails(ctx *gin.Context) {
 	userAuth, exists := ctx.Get("user_auth")
 	if !exists {
-		response.Unauthorized(ctx, errors.MsgUnauthorized)
+		response.Unauthorized(ctx, errorutil.MsgUnauthorized)
 		return
 	}
 
 	auth, ok := userAuth.(*types.UserAuthorizationResponse)
 	if !ok {
-		response.Unauthorized(ctx, errors.MsgUnauthorized)
+		response.Unauthorized(ctx, errorutil.MsgUnauthorized)
 		return
 	}
 
@@ -463,13 +463,13 @@ func (h *UserHandler) UpdateUserProfile(ctx *gin.Context) {
 
 	userAuth, exists := ctx.Get("user_auth")
 	if !exists {
-		response.Unauthorized(ctx, errors.MsgUnauthorized)
+		response.Unauthorized(ctx, errorutil.MsgUnauthorized)
 		return
 	}
 
 	auth, ok := userAuth.(*types.UserAuthorizationResponse)
 	if !ok {
-		response.Unauthorized(ctx, errors.MsgUnauthorized)
+		response.Unauthorized(ctx, errorutil.MsgUnauthorized)
 		return
 	}
 

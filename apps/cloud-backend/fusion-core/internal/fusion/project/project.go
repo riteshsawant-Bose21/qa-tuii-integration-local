@@ -8,6 +8,7 @@ import (
 
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/api/types"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/model/models"
+	errorutils "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/utils/errorutil"
 	"go.uber.org/zap"
 )
 
@@ -55,11 +56,11 @@ func (s *Service) validateProject(ctx context.Context, projectID string, opts Va
 	}
 
 	if opts.CheckDeleted && projectRow.IsDeleted {
-		return nil, errors.New(types.ErrMsgProjectNotFound)
+		return nil, errors.New(errorutils.ErrMsgProjectNotFound)
 	}
 
 	if opts.CheckArchived && projectRow.IsArchived {
-		return nil, errors.New(types.ErrMsgProjectArchived)
+		return nil, errors.New(errorutils.ErrMsgProjectArchived)
 	}
 
 	if opts.CheckUserAssigned {
@@ -87,10 +88,10 @@ func (s *Service) validateProject(ctx context.Context, projectID string, opts Va
 func (s *Service) validateUserAssignment(ctx context.Context, projectID, userID string, logger *zap.Logger) error {
 	isAssigned, err := s.dbService.IsUserAssigned(ctx, projectID, userID, logger)
 	if err != nil {
-		return fmt.Errorf(errorWithDetailsFormat, types.ErrMsgFailedUserAssignmentCheck, err)
+		return fmt.Errorf(errorWithDetailsFormat, errorutils.ErrMsgFailedUserAssignmentCheck, err)
 	}
 	if !isAssigned {
-		return errors.New(types.ErrMsgUserNotAssignedToProject)
+		return errors.New(errorutils.ErrMsgUserNotAssignedToProject)
 	}
 	return nil
 }
@@ -100,7 +101,7 @@ func (s *Service) validateProjectNotLockedByOtherUser(ctx context.Context, proje
 	if projectRow.LockedByUserID.Valid && projectRow.LockedByUserID.String != userID {
 		lockedByEmail, err := s.dbService.GetUserEmailByID(ctx, projectRow.LockedByUserID.String)
 		if err != nil {
-			return fmt.Errorf(errorWithDetailsFormat, types.ErrMsgFailedToGetUserByEmail, err)
+			return fmt.Errorf(errorWithDetailsFormat, errorutils.ErrMsgFailedToGetUserByEmail, err)
 		}
 		return fmt.Errorf("project is locked by user: %s", lockedByEmail)
 	}
@@ -111,7 +112,7 @@ func (s *Service) validateProjectNotLockedByOtherUser(ctx context.Context, proje
 func (s *Service) validatePrimaryOwner(projectRow *models.Project, accountID string) error {
 
 	if projectRow.PrimaryOwnerAccountID.String != accountID {
-		return errors.New(types.ErrMsgForbidden)
+		return errors.New(errorutils.ErrMsgForbidden)
 	}
 	return nil
 }
@@ -122,7 +123,7 @@ func (s *Service) CreateProject(ctx context.Context, project *types.ProjectCreat
 	projectRow, err := s.dbService.GetProjectByID(ctx, project.ID, logger)
 
 	if err == nil && projectRow != nil {
-		return nil, errors.New(types.ErrMsgProjectAlreadyExists)
+		return nil, errors.New(errorutils.ErrMsgProjectAlreadyExists)
 	}
 
 	db := s.dbService.GetDB(ctx)
@@ -135,22 +136,22 @@ func (s *Service) CreateProject(ctx context.Context, project *types.ProjectCreat
 	id, err := s.dbService.Insert(ctx, project, userAuth.Account.ID, tx, logger)
 	if err != nil {
 		if rollbackErr := tx.Rollback(); rollbackErr != nil {
-			return nil, fmt.Errorf(errorWithDetailsFormat, types.ErrMsgFailedToInsertProject, err)
+			return nil, fmt.Errorf(errorWithDetailsFormat, errorutils.ErrMsgFailedToInsertProject, err)
 		}
 
-		return nil, fmt.Errorf(errorWithDetailsFormat, types.ErrMsgFailedToInsertProject, err)
+		return nil, fmt.Errorf(errorWithDetailsFormat, errorutils.ErrMsgFailedToInsertProject, err)
 	}
 
 	// Assign user to project
 	if err := s.dbService.InsertProjectUser(ctx, id, userAuth.User.ID, tx, logger); err != nil {
 		if rollbackErr := tx.Rollback(); rollbackErr != nil {
-			return nil, fmt.Errorf(errorWithDetailsFormat, types.ErrMsgFailedToInsertProject, err)
+			return nil, fmt.Errorf(errorWithDetailsFormat, errorutils.ErrMsgFailedToInsertProject, err)
 		}
-		return nil, fmt.Errorf(errorWithDetailsFormat, types.ErrMsgFailedToInsertProject, err)
+		return nil, fmt.Errorf(errorWithDetailsFormat, errorutils.ErrMsgFailedToInsertProject, err)
 	}
 
 	if err := tx.Commit(); err != nil {
-		return nil, errors.New(types.ErrMsgFailedToInsertProject)
+		return nil, errors.New(errorutils.ErrMsgFailedToInsertProject)
 	}
 
 	response := &types.ProjectCreateResponse{
@@ -236,7 +237,7 @@ func (s *Service) UpdateProject(ctx context.Context, project *types.ProjectUpdat
 
 	err = s.dbService.Update(ctx, projectRow, project, logger)
 	if err != nil {
-		return nil, fmt.Errorf(errorWithDetailsFormat, types.ErrMsgFailedToUpdateProject, err)
+		return nil, fmt.Errorf(errorWithDetailsFormat, errorutils.ErrMsgFailedToUpdateProject, err)
 	}
 
 	response := &types.ProjectUpdateResponse{}
@@ -323,7 +324,7 @@ func (s *Service) AssignUserToProject(ctx context.Context, projectID, userEmail 
 	// Check if user is already assigned to the project
 	isAssigned, err := s.dbService.IsUserAssigned(ctx, projectID, userID, logger)
 	if err != nil {
-		return nil, fmt.Errorf(errorWithDetailsFormat, types.ErrMsgFailedUserAssignmentCheck, err)
+		return nil, fmt.Errorf(errorWithDetailsFormat, errorutils.ErrMsgFailedUserAssignmentCheck, err)
 	}
 
 	if isAssigned {
@@ -334,7 +335,7 @@ func (s *Service) AssignUserToProject(ctx context.Context, projectID, userEmail 
 
 	// Assign the user to the project
 	if err := s.dbService.AssignUser(ctx, projectID, userID, logger); err != nil {
-		return nil, fmt.Errorf(errorWithDetailsFormat, types.ErrMsgFailedToAssignUser, err)
+		return nil, fmt.Errorf(errorWithDetailsFormat, errorutils.ErrMsgFailedToAssignUser, err)
 	}
 
 	return &types.UserAssignmentResponse{
@@ -373,7 +374,7 @@ func (s *Service) RemoveUserFromProject(ctx context.Context, projectID, userEmai
 	// Check if user is assigned to the project
 	isAssigned, err := s.dbService.IsUserAssigned(ctx, projectID, userID, logger)
 	if err != nil {
-		return nil, fmt.Errorf(errorWithDetailsFormat, types.ErrMsgFailedUserAssignmentCheck, err)
+		return nil, fmt.Errorf(errorWithDetailsFormat, errorutils.ErrMsgFailedUserAssignmentCheck, err)
 	}
 	if !isAssigned {
 		return &types.UserAssignmentResponse{
@@ -383,7 +384,7 @@ func (s *Service) RemoveUserFromProject(ctx context.Context, projectID, userEmai
 
 	// Remove the user from the project
 	if err := s.dbService.RemoveUser(ctx, projectID, userID, logger); err != nil {
-		return nil, fmt.Errorf(errorWithDetailsFormat, types.ErrMsgFailedToRemoveUser, err)
+		return nil, fmt.Errorf(errorWithDetailsFormat, errorutils.ErrMsgFailedToRemoveUser, err)
 	}
 
 	return &types.UserAssignmentResponse{
@@ -545,7 +546,7 @@ func (s *Service) LockProject(ctx context.Context, projectID string, userAuth ty
 		} else {
 			lockedByEmail, err := s.dbService.GetUserEmailByID(ctx, projectRow.LockedByUserID.String)
 			if err != nil {
-				return fmt.Errorf(errorWithDetailsFormat, types.ErrMsgFailedToGetUserByEmail, err)
+				return fmt.Errorf(errorWithDetailsFormat, errorutils.ErrMsgFailedToGetUserByEmail, err)
 			}
 			return fmt.Errorf("project is locked by user: %s", lockedByEmail)
 		}
