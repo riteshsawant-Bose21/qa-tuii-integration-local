@@ -551,7 +551,7 @@ static int gpt_probe(struct platform_device *pdev)
 	init_irq_work(&g->tick_iw, gpt_tick_iw);
 	mutex_init(&g->ops_lock);
 
-	ret = devm_request_irq(&pdev->dev, g->irq, gpt_irq, 0,
+	ret = devm_request_irq(&pdev->dev, g->irq, gpt_irq, IRQF_NO_THREAD,
 			       dev_name(&pdev->dev), g);
 	if (ret) goto err_disable_clks;
 
