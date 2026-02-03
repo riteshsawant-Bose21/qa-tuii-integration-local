@@ -23,6 +23,8 @@
 #define TIMER_BASE_INTERVAL_NS 333333
 #define GPT_TICK_NS            100
 
+#define FUSION_CN_RT_PRIO        80
+
 #ifndef abs64
 #define abs64(x) ((x) >= 0 ? (x) : -(x))
 #endif
@@ -513,7 +515,12 @@ int fusion_cn_mgr_start(struct fusion_cn_manager *mgr)
         }
         process_thread = worker->task;
         set_cpus_allowed_ptr(process_thread, cpumask_of(3));
-        sched_set_fifo_low(process_thread);   /* or: sched_set_fifo(process_thread) for max RT prio */
+        {
+            struct sched_param sp = { .sched_priority = FUSION_CN_RT_PRIO };
+            int rc = sched_setscheduler_nocheck(process_thread, SCHED_FIFO, &sp);
+            if (rc)
+                pr_warn("fusion_cn: failed to set RT prio %d: %d\n", FUSION_CN_RT_PRIO, rc);
+        }
         kthread_init_work(&process_work, audio_frame_process_work);
         atomic_set(&process_pending, 0);
         /* Publish the worker only after fully initialized */
