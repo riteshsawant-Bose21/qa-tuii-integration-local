@@ -517,7 +517,7 @@ int fusion_cn_mgr_start(struct fusion_cn_manager *mgr)
         set_cpus_allowed_ptr(process_thread, cpumask_of(3));
         {
             struct sched_param sp = { .sched_priority = FUSION_CN_RT_PRIO };
-            int rc = sched_setscheduler_nocheck(process_thread, SCHED_FIFO, &sp);
+            int rc = sched_setscheduler(process_thread, SCHED_FIFO, &sp);
             if (rc)
                 pr_warn("fusion_cn: failed to set RT prio %d: %d\n", FUSION_CN_RT_PRIO, rc);
         }
