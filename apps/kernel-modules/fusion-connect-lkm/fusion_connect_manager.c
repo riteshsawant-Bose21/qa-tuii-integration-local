@@ -512,7 +512,7 @@ int fusion_cn_mgr_start(struct fusion_cn_manager *mgr)
             return err;
         }
         process_thread = worker->task;
-        set_cpus_allowed_ptr(process_thread, cpumask_of(0));
+        set_cpus_allowed_ptr(process_thread, cpumask_of(3));
         sched_set_fifo_low(process_thread);   /* or: sched_set_fifo(process_thread) for max RT prio */
         kthread_init_work(&process_work, audio_frame_process_work);
         atomic_set(&process_pending, 0);
