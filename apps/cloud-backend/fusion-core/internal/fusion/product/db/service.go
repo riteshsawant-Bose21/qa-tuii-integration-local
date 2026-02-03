@@ -374,7 +374,7 @@ func (s *Service) buildProductItemResponse(product *models.Product, logger *zap.
 		ModelFamily:        s.getStringValue(product.ModelFamily, logger),
 		Description:        s.getStringValue(product.Description, logger),
 		Specifications:     specs,
-		IsFusionCompatible: s.getBoolValue(product.Isfusioncompatible, logger),
+		IsFusionCompatible: s.getBoolValue(product.IsFusionCompatible, logger),
 	}
 }
 
@@ -1164,15 +1164,15 @@ func (s *Service) insertProduct(ctx context.Context, exec boil.ContextExecutor, 
 		ModelFamily:        null.NewString(product.ModelFamily, product.ModelFamily != ""),
 		Description:        null.NewString(product.Description, product.Description != ""),
 		ShortDescription:   null.NewString(product.ShortDescription, product.ShortDescription != ""),
-		Isfusioncompatible: null.NewBool(product.IsFusionCompatible, true),
+		IsFusionCompatible: null.NewBool(product.IsFusionCompatible, true),
 	}
 
 	// Debug: Log fusion compatibility value
 	s.logger.Info("DEBUG: Inserting product with fusion compatibility",
 		zap.Int("product_id", product.ProductID),
 		zap.Bool("is_fusion_compatible", product.IsFusionCompatible),
-		zap.Bool("fusion_compatible_valid", modelProduct.Isfusioncompatible.Valid),
-		zap.Bool("fusion_compatible_value", modelProduct.Isfusioncompatible.Bool))
+		zap.Bool("fusion_compatible_valid", modelProduct.IsFusionCompatible.Valid),
+		zap.Bool("fusion_compatible_value", modelProduct.IsFusionCompatible.Bool))
 
 	// Handle JSON fields - convert string to null.JSON
 	if product.Images != "" {

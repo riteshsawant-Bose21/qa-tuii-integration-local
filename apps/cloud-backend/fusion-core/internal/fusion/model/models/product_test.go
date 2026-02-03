@@ -568,7 +568,7 @@ func testProductsSelect(t *testing.T) {
 }
 
 var (
-	productDBTypes = map[string]string{`ID`: `integer`, `ProductID`: `integer`, `ProductType`: `enum.product_type_enum('speaker','amplifier','dsp','controller','io_endpoint','accessory')`, `ModelName`: `character varying`, `ModelFamily`: `character varying`, `Description`: `text`, `ShortDescription`: `text`, `Images`: `jsonb`, `Specifications`: `jsonb`, `Isfusioncompatible`: `boolean`, `CreatedAt`: `timestamp without time zone`, `UpdatedAt`: `timestamp without time zone`}
+	productDBTypes = map[string]string{`ID`: `integer`, `ProductID`: `integer`, `ProductType`: `enum.product_type_enum('speaker','amplifier','dsp','controller','io_endpoint','accessory')`, `ModelName`: `character varying`, `ModelFamily`: `character varying`, `Description`: `text`, `ShortDescription`: `text`, `Images`: `jsonb`, `Specifications`: `jsonb`, `IsFusionCompatible`: `boolean`, `CreatedAt`: `timestamp without time zone`, `UpdatedAt`: `timestamp without time zone`}
 	_              = bytes.MinRead
 )
 

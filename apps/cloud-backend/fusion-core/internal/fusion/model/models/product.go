@@ -33,7 +33,7 @@ type Product struct {
 	ShortDescription   null.String `boil:"short_description" json:"short_description,omitempty" toml:"short_description" yaml:"short_description,omitempty"`
 	Images             null.JSON   `boil:"images" json:"images,omitempty" toml:"images" yaml:"images,omitempty"`
 	Specifications     null.JSON   `boil:"specifications" json:"specifications,omitempty" toml:"specifications" yaml:"specifications,omitempty"`
-	Isfusioncompatible null.Bool   `boil:"isfusioncompatible" json:"isfusioncompatible,omitempty" toml:"isfusioncompatible" yaml:"isfusioncompatible,omitempty"`
+	IsFusionCompatible null.Bool   `boil:"is_fusion_compatible" json:"is_fusion_compatible,omitempty" toml:"is_fusion_compatible" yaml:"is_fusion_compatible,omitempty"`
 	CreatedAt          null.Time   `boil:"created_at" json:"created_at,omitempty" toml:"created_at" yaml:"created_at,omitempty"`
 	UpdatedAt          null.Time   `boil:"updated_at" json:"updated_at,omitempty" toml:"updated_at" yaml:"updated_at,omitempty"`
 
@@ -51,7 +51,7 @@ var ProductColumns = struct {
 	ShortDescription   string
 	Images             string
 	Specifications     string
-	Isfusioncompatible string
+	IsFusionCompatible string
 	CreatedAt          string
 	UpdatedAt          string
 }{
@@ -64,7 +64,7 @@ var ProductColumns = struct {
 	ShortDescription:   "short_description",
 	Images:             "images",
 	Specifications:     "specifications",
-	Isfusioncompatible: "isfusioncompatible",
+	IsFusionCompatible: "is_fusion_compatible",
 	CreatedAt:          "created_at",
 	UpdatedAt:          "updated_at",
 }
@@ -79,7 +79,7 @@ var ProductTableColumns = struct {
 	ShortDescription   string
 	Images             string
 	Specifications     string
-	Isfusioncompatible string
+	IsFusionCompatible string
 	CreatedAt          string
 	UpdatedAt          string
 }{
@@ -92,7 +92,7 @@ var ProductTableColumns = struct {
 	ShortDescription:   "product.short_description",
 	Images:             "product.images",
 	Specifications:     "product.specifications",
-	Isfusioncompatible: "product.isfusioncompatible",
+	IsFusionCompatible: "product.is_fusion_compatible",
 	CreatedAt:          "product.created_at",
 	UpdatedAt:          "product.updated_at",
 }
@@ -157,7 +157,7 @@ var ProductWhere = struct {
 	ShortDescription   whereHelpernull_String
 	Images             whereHelpernull_JSON
 	Specifications     whereHelpernull_JSON
-	Isfusioncompatible whereHelpernull_Bool
+	IsFusionCompatible whereHelpernull_Bool
 	CreatedAt          whereHelpernull_Time
 	UpdatedAt          whereHelpernull_Time
 }{
@@ -170,7 +170,7 @@ var ProductWhere = struct {
 	ShortDescription:   whereHelpernull_String{field: "\"product\".\"short_description\""},
 	Images:             whereHelpernull_JSON{field: "\"product\".\"images\""},
 	Specifications:     whereHelpernull_JSON{field: "\"product\".\"specifications\""},
-	Isfusioncompatible: whereHelpernull_Bool{field: "\"product\".\"isfusioncompatible\""},
+	IsFusionCompatible: whereHelpernull_Bool{field: "\"product\".\"is_fusion_compatible\""},
 	CreatedAt:          whereHelpernull_Time{field: "\"product\".\"created_at\""},
 	UpdatedAt:          whereHelpernull_Time{field: "\"product\".\"updated_at\""},
 }
@@ -192,9 +192,9 @@ func (*productR) NewStruct() *productR {
 type productL struct{}
 
 var (
-	productAllColumns            = []string{"id", "product_id", "product_type", "model_name", "model_family", "description", "short_description", "images", "specifications", "isfusioncompatible", "created_at", "updated_at"}
+	productAllColumns            = []string{"id", "product_id", "product_type", "model_name", "model_family", "description", "short_description", "images", "specifications", "is_fusion_compatible", "created_at", "updated_at"}
 	productColumnsWithoutDefault = []string{"product_id", "product_type", "model_name"}
-	productColumnsWithDefault    = []string{"id", "model_family", "description", "short_description", "images", "specifications", "isfusioncompatible", "created_at", "updated_at"}
+	productColumnsWithDefault    = []string{"id", "model_family", "description", "short_description", "images", "specifications", "is_fusion_compatible", "created_at", "updated_at"}
 	productPrimaryKeyColumns     = []string{"id"}
 	productGeneratedColumns      = []string{}
 )
