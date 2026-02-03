@@ -17,6 +17,46 @@ class ProcessingChainView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    /// get parent entity information based on params.type
+    final ProjectViewModel projectViewModel = serviceLocator<ProjectViewModel>();
+    String zoneName = '';
+    String subZoneName = '';
+
+    /// switch case based on params.type to get the parent entity
+    switch (params.type) {
+      case ProcessingChainDeviceType.circuit:
+
+        /// get zone by circuit id
+        final Zone? zone = projectViewModel.getZoneForCircuit(circuitId: params.id);
+        if (zone != null) {
+          zoneName = zone.name;
+        }
+        break;
+      case ProcessingChainDeviceType.subzone:
+
+        /// get subzone by circuit id
+        final SubZone? subzone = projectViewModel.getSubZoneForCircuit(circuitId: params.id);
+        if (subzone != null) {
+          subZoneName = subzone.name;
+          // Also get the parent zone for subzone
+          final Zone? parentZone = projectViewModel.getZoneForSubZone(subZoneId: subzone.id);
+          if (parentZone != null) {
+            zoneName = parentZone.name;
+          }
+        }
+        break;
+      case ProcessingChainDeviceType.zone:
+
+        /// get zone information directly
+        zoneName = params.name;
+        break;
+      case ProcessingChainDeviceType.source:
+      case ProcessingChainDeviceType.sourceSet:
+
+        /// for source and sourceSet, no parent zone information needed
+        break;
+    }
+
     return Stack(
       children: <Widget>[
         GestureDetector(
@@ -77,7 +117,24 @@ class ProcessingChainView extends StatelessWidget {
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
-                            FusionAppText(text: "- ${params.name}", style: context.textTheme.bodySmall),
+                            FusionAppText(
+                              text: () {
+                                String breadcrumb = '';
+                                if (zoneName.isNotEmpty) {
+                                  breadcrumb += zoneName;
+                                }
+                                if (subZoneName.isNotEmpty) {
+                                  breadcrumb += breadcrumb.isNotEmpty ? ' > $subZoneName' : subZoneName;
+                                }
+                                if (breadcrumb.isNotEmpty) {
+                                  breadcrumb += ' > ${params.name}';
+                                } else {
+                                  breadcrumb = params.name;
+                                }
+                                return '- $breadcrumb';
+                              }(),
+                              style: context.textTheme.bodySmall,
+                            ),
                           ],
                         ),
                         InkWell(
