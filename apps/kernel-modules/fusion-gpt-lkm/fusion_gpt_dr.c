@@ -34,9 +34,9 @@
 #define CR_CLKSRC_EXT   (0x3 << CR_CLKSRC_SHIFT)
 #define CR_FRR          BIT(9)
 #define CR_IM1_SHIFT    16
-#define CR_IM1_RISING   (0x1 << CR_IM1_SHIFT)
+#define CR_IM1_BOTH     (0x3 << CR_IM1_SHIFT) /* 1pps on both edges */
 #define CR_IM2_SHIFT    18
-#define CR_IM2_RISING   (0x1 << CR_IM2_SHIFT)
+#define CR_IM2_RISING   (0x1 << CR_IM2_SHIFT) /* LRCLK on rising edge */
 
 /* SR (status, W1C) and IR (enable) bits */
 #define SR_OF1   BIT(0)
@@ -477,7 +477,7 @@ static int gpt_start(struct fusion_gpt *g)
 	wrl(g, IR_OF1IE | IR_IF1IE, GPT_IR);
 
 	cr = CR_ENMOD | CR_FRR | CR_CLKSRC_EXT | CR_DBGEN | CR_WAITEN |
-	      CR_IM1_RISING | CR_IM2_RISING;
+	      CR_IM1_BOTH | CR_IM2_RISING;
 	wrl(g, cr, GPT_CR);
 
 	g->frac = 0;
