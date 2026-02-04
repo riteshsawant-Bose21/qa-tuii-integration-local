@@ -222,7 +222,7 @@ int fusion_gpt_set_phc_anchor(u64 phc_ns_at_pps)
         g->pps_epoch_cnt64 = 0;
         g->phc_epoch_valid = false;
         g->phc_aligned = false;
-        pr_info("fusion_gpt: phc anchor cleared\n");
+        pr_debug("fusion_gpt: phc anchor cleared\n");
         rc = 0;
         raw_spin_unlock_irqrestore(&g->pps_lock, flags);
         return rc;
@@ -238,7 +238,7 @@ int fusion_gpt_set_phc_anchor(u64 phc_ns_at_pps)
     /* Epoch becomes valid at the next ICR1 edge (when we bind cap64 -> PHC) */
     g->phc_epoch_valid   = false;
 
-    pr_info("fusion_gpt: phc anchor armed %llu\n", phc_ns_at_pps);
+    pr_debug("fusion_gpt: phc anchor armed %llu\n", phc_ns_at_pps);
     rc = 0;
     raw_spin_unlock_irqrestore(&g->pps_lock, flags);
 
@@ -363,7 +363,7 @@ static irqreturn_t gpt_irq(int irq, void *dev_id)
             g->phc_epoch_valid     = true;
             g->phc_aligned         = false; /* ensure OF1 one-shot align runs */
             g->pending_future_anchor = false;
-            pr_info("fusion_gpt: phc anchor latched epoch=%llu cnt=%llu\n",
+            pr_debug("fusion_gpt: phc anchor latched epoch=%llu cnt=%llu\n",
                     g->phc_epoch_ns, g->pps_epoch_cnt64);
         }
 		raw_spin_unlock(&g->pps_lock);
@@ -385,9 +385,6 @@ static irqreturn_t gpt_irq(int irq, void *dev_id)
 
 			if (epoch_valid && cap64 >= epoch_cnt64)
 				phc_ns = epoch_ns + (cap64 - epoch_cnt64) * 100ULL;
-
-			printk(KERN_DEBUG "fusion_gpt: 1pps cap_ticks=%llu phc_ns=%llu missed=%llu delta_ticks=%llu\n",
-			       cap64, phc_ns, missed, delta_ticks);
 		}
 
 		clr |= SR_IF1;
@@ -444,7 +441,7 @@ static irqreturn_t gpt_irq(int irq, void *dev_id)
 			wrl(g, g->next_ocr1, GPT_OCR1);
 
             WRITE_ONCE(g->phc_aligned, true);          /* only once */
-            pr_info("fusion_gpt: phc aligned to 1/3ms grid\n");
+            pr_debug("fusion_gpt: phc aligned to 1/3ms grid\n");
 
 			clr |= SR_OF1;                              /* clear the latched OF1 */
 			if (clr) wrl(g, clr, GPT_SR);
