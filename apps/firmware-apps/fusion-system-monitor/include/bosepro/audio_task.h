@@ -227,7 +227,7 @@ public:
     ///
     /// @param  configuration  The configuration for the task.
     AudioTask(const TaskConfiguration &configuration)
-        : Configurable(configuration), client(nullptr), cpu_affinity(-1)
+        : Configurable(configuration), cpu_affinity(-1), client(nullptr)
     {
         // Use this task's region manager while allocating blocks within the
         // task.
