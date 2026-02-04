@@ -382,11 +382,11 @@ extension SceneService on ProjectService {
           params.addAll(_getPriorityParams());
         }
 
-      case ZoneFunctionsType.miniMatrix:
+      case ZoneFunctionsType.sourceMatrix:
         if (addOnlyLevelParam) break;
         params.add(_createParam(SceneParamType.mixScene));
 
-      case ZoneFunctionsType.miniMatrixWithPriority:
+      case ZoneFunctionsType.sourceMatrixWithPriority:
         if (addOnlyLevelParam) break;
         params.add(_createParam(SceneParamType.mixScene));
         params.addAll(_getPriorityParams());

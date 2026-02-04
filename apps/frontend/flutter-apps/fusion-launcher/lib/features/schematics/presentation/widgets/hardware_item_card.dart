@@ -131,9 +131,11 @@ class _HardwareItemCardState extends State<HardwareItemCard> {
                             fit: BoxFit.contain,
                           ),
                           const SizedBox(width: 6),
-                          SemanticHelper.staticText(
-                            testId: SemanticHelper.createTestId(SemanticTypes.container, "hardware_name"),
-                            child: Expanded(child: _buildHighlightedName()),
+                          Expanded(
+                            child: SemanticHelper.staticText(
+                              testId: SemanticHelper.createTestId(SemanticTypes.container, "hardware_name"),
+                              child: _buildHighlightedName(),
+                            ),
                           ),
                         ],
                       ),
