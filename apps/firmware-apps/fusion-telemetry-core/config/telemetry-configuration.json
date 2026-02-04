@@ -14,11 +14,11 @@
         },
         {
             "name": "meter_update_period_frames",
-            "property": [50, 1500, 1500000]
+            "property": [150, 1500, 1500000]
         },
         {
             "name": "meter_report_period_frames",
-            "property": [50, 1500, 1500000]
+            "property": [150, 1500, 1500000]
         }
     ]
 }
