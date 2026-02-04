@@ -56,7 +56,7 @@ func TestGetUserSettings(t *testing.T) {
 			},
 			expectedStatus: http.StatusNotFound,
 			expectedBody: map[string]interface{}{
-				"message": "User settings not found",
+				"error": "User settings not found",
 			},
 		},
 		{
@@ -68,7 +68,7 @@ func TestGetUserSettings(t *testing.T) {
 			},
 			expectedStatus: http.StatusNotFound,
 			expectedBody: map[string]interface{}{
-				"message": "User settings not found",
+				"error": "User settings not found",
 			},
 		},
 		{
@@ -80,7 +80,7 @@ func TestGetUserSettings(t *testing.T) {
 			},
 			expectedStatus: http.StatusInternalServerError,
 			expectedBody: map[string]interface{}{
-				"message": "Internal server error",
+				"error": "Internal Server Error",
 			},
 		},
 	}
@@ -196,7 +196,7 @@ func TestUpdateUserSettings(t *testing.T) {
 			},
 			setupAuth:      false,
 			expectedStatus: http.StatusUnauthorized,
-			expectedError:  "Authentication required",
+			expectedError:  "Unauthorized",
 		},
 		{
 			name: "settings not found",
@@ -218,7 +218,7 @@ func TestUpdateUserSettings(t *testing.T) {
 			setupAuth:         true,
 			mockReturnError:   errors.New("database connection failed"),
 			expectedStatus:    http.StatusInternalServerError,
-			expectedError:     "Failed to update user settings",
+			expectedError:     "Internal Server Error",
 		},
 	}
 
@@ -294,7 +294,7 @@ func TestUpdateUserSettings(t *testing.T) {
 			if tt.expectedError != "" {
 				var response map[string]interface{}
 				json.Unmarshal(w.Body.Bytes(), &response)
-				errMsg, ok := response["message"].(string)
+				errMsg, ok := response["error"].(string)
 				assert.True(t, ok)
 				assert.Contains(t, errMsg, tt.expectedError)
 			}
@@ -361,7 +361,7 @@ func TestCreateUserSettings(t *testing.T) {
 				return "", errors.New("database error")
 			},
 			expectedStatus: http.StatusInternalServerError,
-			expectedError:  "Failed to create user settings",
+			expectedError:  "Internal Server Error",
 		},
 	}
 
@@ -396,7 +396,7 @@ func TestCreateUserSettings(t *testing.T) {
 			if tt.expectedError != "" {
 				var response map[string]interface{}
 				json.Unmarshal(w.Body.Bytes(), &response)
-				errMsg, ok := response["message"].(string)
+				errMsg, ok := response["error"].(string)
 				assert.True(t, ok)
 				assert.Contains(t, errMsg, tt.expectedError)
 			}

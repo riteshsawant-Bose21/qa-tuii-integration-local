@@ -31,6 +31,7 @@ import (
 	sqlpkg "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/storage/sql"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/utils/errorutil"
 	"github.com/gin-gonic/gin"
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -277,13 +278,16 @@ func (suite *ProjectIntegrationTestSuite) setupAPI() error {
 
 	// Initialize API server
 	apiConfig := &api.Config{
-		Mode:        "test",
-		Host:        "localhost",
-		Port:        "0",                     // Use ephemeral port for testing
-		Auth0Domain: "test-domain.auth0.com", // Mock Auth0 domain for testing
+		Mode: "test",
+		Host: "localhost",
+		Port: "0", // Use ephemeral port for testing
 	}
 
-	apiServer, err := api.New(apiConfig, productSVC, projectSVC, userSVC, loggers)
+	// Create mock auth service and middleware
+	authSvc := &mockAuthService{}
+	authMiddleware := &mockMiddlewareStruct{}
+
+	apiServer, err := api.New(apiConfig, productSVC, projectSVC, userSVC, authSvc, authMiddleware, loggers)
 	if err != nil {
 		return fmt.Errorf("failed to initialize API server: %w", err)
 	}
@@ -3309,4 +3313,21 @@ func (suite *ProjectIntegrationTestSuite) TestProjectLifecycleTransitions() {
 // Run the test suite
 func TestProjectIntegrationSuite(t *testing.T) {
 	suite.Run(t, new(ProjectIntegrationTestSuite))
+}
+
+// Mock implementations
+type mockAuthService struct{}
+
+func (m *mockAuthService) GetAuthTokensByResourceOwnerPassword(ctx context.Context, username string) (*types.AuthTokenResponse, error) {
+	return nil, nil
+}
+func (m *mockAuthService) ValidateToken(tokenString string) (*jwt.MapClaims, error) { return nil, nil }
+func (m *mockAuthService) ExtractUserID(claims *jwt.MapClaims) (string, error)      { return "", nil }
+func (m *mockAuthService) ExtractUserEmail(claims *jwt.MapClaims) (string, error)   { return "", nil }
+func (m *mockAuthService) ExtractTokenFromHeader(authHeader string) (string, error) { return "", nil }
+
+type mockMiddlewareStruct struct{}
+
+func (m *mockMiddlewareStruct) Middleware() gin.HandlerFunc {
+	return func(c *gin.Context) { c.Next() }
 }

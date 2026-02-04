@@ -116,7 +116,7 @@ const (
 	testCurrency        = "USD"
 	testVariant         = "standard"
 	productServiceError = "service error"
-	internalServerMsg   = "Internal server error"
+	internalServerMsg   = "Internal Server Error"
 	productNotFoundMsg  = "Product not found"
 	productIDRequired   = "Product ID is required"
 	noPricesFoundMsg    = "No prices found for product"
