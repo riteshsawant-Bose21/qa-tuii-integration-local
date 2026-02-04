@@ -101,6 +101,7 @@ class SchematicPropertiesState extends State<SchematicProperties> {
     final ProjectViewModel projectViewModel = context.read<ProjectViewModel>();
 
     late final HardwareComponent? selectedDevice;
+    bool isFromBuildingPage = false;
 
     String? assetImagePath;
     if (selectedItem!.type == SelectedItemType.circuit) {
@@ -115,6 +116,11 @@ class SchematicPropertiesState extends State<SchematicProperties> {
             currentImagePath: speakers.isNotEmpty ? speakers.first.assetImagePath : '',
           ) ??
           "";
+
+      print(" speakers.first.addedFromBuildingPage => ${speakers.first.addedFromBuildingPage}");
+
+      // is added from building page
+      isFromBuildingPage = speakers.first.addedFromBuildingPage;
     } else {
       selectedDevice = projectViewModel.getHardware(hardwareId: selectedItem.id);
       assetImagePath = selectedDevice?.assetImagePath;
@@ -346,7 +352,13 @@ class SchematicPropertiesState extends State<SchematicProperties> {
             ),
           ],
 
-          if ((selectedItem.type == SelectedItemType.circuit && isListingViewMode)) ...<Widget>[
+          /// Speaker Quantity for Circuit only in Listing Mode and not from Building Page
+          /// (As per the requirement)
+          ///
+          /// For other types, speaker quantity is not applicable.
+          ///
+          /// For circuit added from building page, speaker quantity modification is disabled.
+          if ((selectedItem.type == SelectedItemType.circuit && isListingViewMode && !isFromBuildingPage)) ...<Widget>[
             Row(
               spacing: 3,
               children: <Widget>[

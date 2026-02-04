@@ -147,14 +147,13 @@ class _SnapshotActionRowDataState extends State<SnapshotActionRowData> {
   }
 
   Widget _buildActionTypeDropdown(SceneActionModel action) {
-    final bool isInSceneSet = _projectViewModel.getSceneSetForSnapshot(snapshotId: _projectViewModel.selectedSnapshotId!) != null;
     return Expanded(
       child: SemanticHelper.button(
         testId: SemanticHelper.createTestId(SemanticTypes.button, "snapshot_action_type_${widget.index}"),
         child: FusionDropdown<SceneActionType>(
           value: action.actionType,
           hint: "Select Action Type",
-          items: _projectViewModel.getSceneActionTypes(isFromSnapshot: !isInSceneSet),
+          items: _projectViewModel.getSceneActionTypes(isFromSnapshot: true),
           display: (SceneActionType e) => e.displayName,
           onChanged: _updateActionType,
         ),

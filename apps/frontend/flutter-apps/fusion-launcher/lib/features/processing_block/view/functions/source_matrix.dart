@@ -11,10 +11,10 @@ import 'widgets/neumorphic_audio_toggle_button.dart';
 import 'widgets/neumorphic_text_with_popup_slider_button.dart';
 import 'widgets/priority_selection_widget.dart';
 
-class MiniMatrixZoneControlPanel extends StatefulWidget {
+class SourceMatrixZoneControlPanel extends StatefulWidget {
   final String zoneID;
 
-  const MiniMatrixZoneControlPanel({super.key, required this.zoneID});
+  const SourceMatrixZoneControlPanel({super.key, required this.zoneID});
 
   static void showDialog(BuildContext context, {required String zoneID}) {
     showGeneralDialog(
@@ -24,7 +24,7 @@ class MiniMatrixZoneControlPanel extends StatefulWidget {
       barrierColor: Colors.black54,
       transitionDuration: const Duration(milliseconds: 200),
       pageBuilder: (BuildContext buildContext, _, __) {
-        return MiniMatrixZoneControlPanel(
+        return SourceMatrixZoneControlPanel(
           zoneID: zoneID,
         );
       },
@@ -32,10 +32,10 @@ class MiniMatrixZoneControlPanel extends StatefulWidget {
   }
 
   @override
-  State<MiniMatrixZoneControlPanel> createState() => _MiniMatrixZoneControlPanelState();
+  State<SourceMatrixZoneControlPanel> createState() => _SourceMatrixZoneControlPanelState();
 }
 
-class _MiniMatrixZoneControlPanelState extends State<MiniMatrixZoneControlPanel> {
+class _SourceMatrixZoneControlPanelState extends State<SourceMatrixZoneControlPanel> {
   late ZoneFunctions zoneFunction;
   @override
   void initState() {
@@ -93,7 +93,7 @@ class _MiniMatrixZoneControlPanelState extends State<MiniMatrixZoneControlPanel>
                             // Left scrollable section
                             Flexible(
                               fit: FlexFit.loose,
-                              child: MiniMatrixControls(
+                              child: SourceMatrixControls(
                                 zoneID: widget.zoneID,
                                 zoneFunctions: zoneFunction,
                               ),
@@ -184,7 +184,7 @@ class _MiniMatrixZoneControlPanelState extends State<MiniMatrixZoneControlPanel>
                       alignment: Alignment.centerLeft,
                       padding: const EdgeInsets.symmetric(horizontal: 12.0),
                       child: Text(
-                        "ZONE CONTROL PANEL -  MINI MATRIX",
+                        "ZONE CONTROL PANEL -  SOURCE MATRIX",
                         style: Theme.of(context).textTheme.titleSmall?.copyWith(
                           fontSize: 11,
                         ),
@@ -225,11 +225,11 @@ class _MiniMatrixZoneControlPanelState extends State<MiniMatrixZoneControlPanel>
   }
 }
 
-class MiniMatrixControls extends StatelessWidget {
+class SourceMatrixControls extends StatelessWidget {
   final String zoneID;
   final ZoneFunctions zoneFunctions;
 
-  const MiniMatrixControls({
+  const SourceMatrixControls({
     super.key,
     required this.zoneID,
     required this.zoneFunctions,
