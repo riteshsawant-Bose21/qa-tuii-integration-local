@@ -836,6 +836,10 @@ public:
     receiveThread_ = std::thread(&UDPValueMonitor::receiveLoop, this);
   }
 
+    std::vector<PathComponent> splitPath(const std::string& path) const {
+        return jsonMonitor_.splitPath(path);
+    }
+    
    /**
      * @brief Register a callback to be notified when a concrete path is updated.
      *
