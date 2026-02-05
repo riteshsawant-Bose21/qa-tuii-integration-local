@@ -37,9 +37,9 @@ type Project struct {
 	IsArchived            bool              `boil:"is_archived" json:"is_archived" toml:"is_archived" yaml:"is_archived"`
 	IsDeleted             bool              `boil:"is_deleted" json:"is_deleted" toml:"is_deleted" yaml:"is_deleted"`
 	LockedByUserID        null.String       `boil:"locked_by_user_id" json:"locked_by_user_id,omitempty" toml:"locked_by_user_id" yaml:"locked_by_user_id,omitempty"`
-	PrimaryOwnerAccountID null.String       `boil:"primary_owner_account_id" json:"primary_owner_account_id,omitempty" toml:"primary_owner_account_id" yaml:"primary_owner_account_id,omitempty"`
 	CreatedAt             time.Time         `boil:"created_at" json:"created_at" toml:"created_at" yaml:"created_at"`
 	UpdatedAt             time.Time         `boil:"updated_at" json:"updated_at" toml:"updated_at" yaml:"updated_at"`
+	PrimaryOwnerAccountID null.String       `boil:"primary_owner_account_id" json:"primary_owner_account_id,omitempty" toml:"primary_owner_account_id" yaml:"primary_owner_account_id,omitempty"`
 
 	R *projectR `boil:"-" json:"-" toml:"-" yaml:"-"`
 	L projectL  `boil:"-" json:"-" toml:"-" yaml:"-"`
@@ -58,9 +58,9 @@ var ProjectColumns = struct {
 	IsArchived            string
 	IsDeleted             string
 	LockedByUserID        string
-	PrimaryOwnerAccountID string
 	CreatedAt             string
 	UpdatedAt             string
+	PrimaryOwnerAccountID string
 }{
 	ID:                    "id",
 	Application:           "application",
@@ -74,9 +74,9 @@ var ProjectColumns = struct {
 	IsArchived:            "is_archived",
 	IsDeleted:             "is_deleted",
 	LockedByUserID:        "locked_by_user_id",
-	PrimaryOwnerAccountID: "primary_owner_account_id",
 	CreatedAt:             "created_at",
 	UpdatedAt:             "updated_at",
+	PrimaryOwnerAccountID: "primary_owner_account_id",
 }
 
 var ProjectTableColumns = struct {
@@ -92,9 +92,9 @@ var ProjectTableColumns = struct {
 	IsArchived            string
 	IsDeleted             string
 	LockedByUserID        string
-	PrimaryOwnerAccountID string
 	CreatedAt             string
 	UpdatedAt             string
+	PrimaryOwnerAccountID string
 }{
 	ID:                    "project.id",
 	Application:           "project.application",
@@ -108,9 +108,9 @@ var ProjectTableColumns = struct {
 	IsArchived:            "project.is_archived",
 	IsDeleted:             "project.is_deleted",
 	LockedByUserID:        "project.locked_by_user_id",
-	PrimaryOwnerAccountID: "project.primary_owner_account_id",
 	CreatedAt:             "project.created_at",
 	UpdatedAt:             "project.updated_at",
+	PrimaryOwnerAccountID: "project.primary_owner_account_id",
 }
 
 // Generated where
@@ -184,9 +184,9 @@ var ProjectWhere = struct {
 	IsArchived            whereHelperbool
 	IsDeleted             whereHelperbool
 	LockedByUserID        whereHelpernull_String
-	PrimaryOwnerAccountID whereHelpernull_String
 	CreatedAt             whereHelpertime_Time
 	UpdatedAt             whereHelpertime_Time
+	PrimaryOwnerAccountID whereHelpernull_String
 }{
 	ID:                    whereHelperstring{field: "\"project\".\"id\""},
 	Application:           whereHelpernull_String{field: "\"project\".\"application\""},
@@ -200,9 +200,9 @@ var ProjectWhere = struct {
 	IsArchived:            whereHelperbool{field: "\"project\".\"is_archived\""},
 	IsDeleted:             whereHelperbool{field: "\"project\".\"is_deleted\""},
 	LockedByUserID:        whereHelpernull_String{field: "\"project\".\"locked_by_user_id\""},
-	PrimaryOwnerAccountID: whereHelpernull_String{field: "\"project\".\"primary_owner_account_id\""},
 	CreatedAt:             whereHelpertime_Time{field: "\"project\".\"created_at\""},
 	UpdatedAt:             whereHelpertime_Time{field: "\"project\".\"updated_at\""},
+	PrimaryOwnerAccountID: whereHelpernull_String{field: "\"project\".\"primary_owner_account_id\""},
 }
 
 // ProjectRels is where relationship names are stored.
@@ -280,9 +280,9 @@ func (r *projectR) GetProjectUsers() ProjectUserSlice {
 type projectL struct{}
 
 var (
-	projectAllColumns            = []string{"id", "application", "budget_amount", "currency", "description", "name", "project_phase", "venue", "environment_type", "is_archived", "is_deleted", "locked_by_user_id", "primary_owner_account_id", "created_at", "updated_at"}
+	projectAllColumns            = []string{"id", "application", "budget_amount", "currency", "description", "name", "project_phase", "venue", "environment_type", "is_archived", "is_deleted", "locked_by_user_id", "created_at", "updated_at", "primary_owner_account_id"}
 	projectColumnsWithoutDefault = []string{"id"}
-	projectColumnsWithDefault    = []string{"application", "budget_amount", "currency", "description", "name", "project_phase", "venue", "environment_type", "is_archived", "is_deleted", "locked_by_user_id", "primary_owner_account_id", "created_at", "updated_at"}
+	projectColumnsWithDefault    = []string{"application", "budget_amount", "currency", "description", "name", "project_phase", "venue", "environment_type", "is_archived", "is_deleted", "locked_by_user_id", "created_at", "updated_at", "primary_owner_account_id"}
 	projectPrimaryKeyColumns     = []string{"id"}
 	projectGeneratedColumns      = []string{}
 )

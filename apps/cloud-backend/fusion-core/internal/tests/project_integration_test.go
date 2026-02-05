@@ -61,7 +61,7 @@ type ProjectIntegrationTestSuite struct {
 
 // testProject represents a test project for testing
 type testProject struct {
-	ID                        string                `json:"projectId"`
+	ID                        string                `json:"project_id"`
 	Name                      string                `json:"name"`
 	Description               string                `json:"description"`
 	Application               string                `json:"application"`
