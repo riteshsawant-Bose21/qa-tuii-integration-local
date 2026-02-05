@@ -16,7 +16,8 @@ Each node starts with a static configuration (`AppConfig`) specifying:
 - `BindAddr` and `BindPort`
 - `NodeName`
 - Whether the node is running as a local/standalone instance
-- The network interface used for VRRP events
+- Each node ecxpects a interface being passed
+- The network interface used for VRRP events and the cluster will bind to the IP address on the interface
 
 During startup:
 

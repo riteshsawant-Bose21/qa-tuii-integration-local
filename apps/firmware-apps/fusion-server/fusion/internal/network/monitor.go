@@ -2,7 +2,7 @@ package network
 
 import (
 	"fusion/internal/logging"
-	"net"
+	"fusion/internal/utils"
 	"sync"
 	"time"
 )
@@ -15,13 +15,15 @@ type Monitor struct {
 	onChange ChangeCallback
 	stopChan chan struct{}
 	wg       sync.WaitGroup
+	iface    string
 }
 
-func NewMonitor(interval time.Duration, cb ChangeCallback) *Monitor {
+func NewMonitor(interval time.Duration, iface string, cb ChangeCallback) *Monitor {
 	return &Monitor{
 		interval: interval,
 		onChange: cb,
 		stopChan: make(chan struct{}),
+		iface:    iface,
 	}
 }
 
@@ -29,7 +31,7 @@ func (m *Monitor) Start() error {
 
 	logger := logging.GetLogger()
 
-	ip, err := getLocalIP()
+	ip, err := utils.GetLocalIPByInterface(m.iface)
 	if err != nil {
 		return err
 	}
@@ -45,7 +47,7 @@ func (m *Monitor) Start() error {
 		for {
 			select {
 			case <-ticker.C:
-				current, err := getLocalIP()
+				current, err := utils.GetLocalIPByInterface(m.iface)
 				if err != nil {
 					logger.Error("Failed to get IP: %v", err)
 					continue
@@ -67,16 +69,4 @@ func (m *Monitor) Start() error {
 func (m *Monitor) Stop() {
 	close(m.stopChan)
 	m.wg.Wait()
-}
-
-// getLocalIP returns the primary IP address used for outbound communication
-func getLocalIP() (string, error) {
-	conn, err := net.Dial("udp", "8.8.8.8:80")
-	if err != nil {
-		return "", err
-	}
-	defer conn.Close()
-
-	localAddr := conn.LocalAddr().(*net.UDPAddr)
-	return localAddr.IP.String(), nil
 }

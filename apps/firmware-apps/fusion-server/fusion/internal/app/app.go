@@ -289,7 +289,7 @@ func (app *App) startNetworkMonitor() {
 	logger := logging.GetLogger()
 	logger.Info("Network monitor is active")
 
-	app.monitor = network.NewMonitor(networkMonitorInterval, func(oldIP, newIP string) {
+	app.monitor = network.NewMonitor(networkMonitorInterval, app.config.NetIface, func(oldIP, newIP string) {
 		logger.Debug("IP changed from %s to %s.", oldIP, newIP)
 		app.leaveCluster()
 		app.joinCluster(newIP)

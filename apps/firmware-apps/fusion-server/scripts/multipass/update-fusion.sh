@@ -61,9 +61,6 @@ if [ ! -f "$BINARY_PATH" ]; then
     exit 1
 fi
 
-# Path to the launch script
-SCRIPT_PATH="scripts/fusion-server-start.sh"
-
 # Check if launch script exists
 if [ ! -f "$SCRIPT_PATH" ]; then
     echo "Error: Script not found at $SCRIPT_PATH"
@@ -88,9 +85,6 @@ for instance in $instances; do
     # Copy the new binary to the instance
     multipass copy-files "$BINARY_PATH" "$instance:/tmp/fusion-server"
     
-    # Copy the new launch script to the instance
-    multipass copy-files "$SCRIPT_PATH" "$instance:/tmp/fusion-server-start.sh"
-
     # Execute commands on the instance to update and restart the service
     multipass exec "$instance" -- sudo bash -c '
         # Stop the service
@@ -102,9 +96,6 @@ for instance in $instances; do
         
         # Clean up temp file
         rm /tmp/fusion-server
-
-        # Copy new launch script to destination
-        cp /tmp/fusion-server-start.sh /usr/local/bin/
         
         # Start the service
         systemctl start fusion-server
