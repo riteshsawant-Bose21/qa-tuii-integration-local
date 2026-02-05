@@ -1,3 +1,4 @@
+// Package sql provides SQL database connection and configuration utilities.
 package sql
 
 import (

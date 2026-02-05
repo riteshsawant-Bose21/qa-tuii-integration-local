@@ -311,7 +311,7 @@ func TestGetProductByID(t *testing.T) {
 		{
 			name:           "empty product ID",
 			productID:      "",
-			setupMock:      func(m *MockProductService) {}, // No mock setup needed as handler returns early
+			setupMock:      func(_ *MockProductService) {}, // No mock setup needed as handler returns early
 			expectedStatus: http.StatusBadRequest,
 			expectedError:  productIDRequired,
 		},
@@ -473,7 +473,7 @@ func TestGetProductPrices(t *testing.T) {
 		{
 			name:           "empty product ID",
 			productID:      "",
-			setupMock:      func(m *MockProductService) {}, // No mock setup needed
+			setupMock:      func(_ *MockProductService) {}, // No mock setup needed
 			expectedStatus: http.StatusBadRequest,
 			expectedError:  productIDRequired,
 		},

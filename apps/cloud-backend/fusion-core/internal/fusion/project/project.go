@@ -1,3 +1,4 @@
+// Package project provides project management functionality.
 package project
 
 import (
@@ -101,6 +102,7 @@ func (s *Service) validateProjectNotLockedByOtherUser(ctx context.Context, proje
 	if projectRow.LockedByUserID.Valid && projectRow.LockedByUserID.String != userID {
 		lockedByEmail, err := s.dbService.GetUserEmailByID(ctx, projectRow.LockedByUserID.String)
 		if err != nil {
+			logger.Error("failed to get user by email", zap.Error(err))
 			return fmt.Errorf(errorWithDetailsFormat, errorutils.ErrMsgFailedToGetUserByEmail, err)
 		}
 		return fmt.Errorf("project is locked by user: %s", lockedByEmail)
@@ -543,13 +545,12 @@ func (s *Service) LockProject(ctx context.Context, projectID string, userAuth ty
 	if projectRow.LockedByUserID.Valid {
 		if projectRow.LockedByUserID.String == userAuth.User.ID {
 			return nil // Project is already locked by the same user, idempotent behavior
-		} else {
-			lockedByEmail, err := s.dbService.GetUserEmailByID(ctx, projectRow.LockedByUserID.String)
-			if err != nil {
-				return fmt.Errorf(errorWithDetailsFormat, errorutils.ErrMsgFailedToGetUserByEmail, err)
-			}
-			return fmt.Errorf("project is locked by user: %s", lockedByEmail)
 		}
+		lockedByEmail, err := s.dbService.GetUserEmailByID(ctx, projectRow.LockedByUserID.String)
+		if err != nil {
+			return fmt.Errorf(errorWithDetailsFormat, errorutils.ErrMsgFailedToGetUserByEmail, err)
+		}
+		return fmt.Errorf("project is locked by user: %s", lockedByEmail)
 	}
 
 	// Lock the project

@@ -25,6 +25,7 @@ func New(
 	return db, nil
 }
 
+// Opener provides an interface for opening database connections.
 type Opener interface {
 	Open(dataSourceName string) (*sql.DB, error)
 }

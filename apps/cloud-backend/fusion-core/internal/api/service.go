@@ -29,6 +29,7 @@ type API struct {
 	appLog                *zap.Logger
 }
 
+// Config holds the API server configuration settings.
 type Config struct {
 	Mode string // "debug" or "release"
 	Host string
@@ -101,6 +102,7 @@ func New(cfg *Config,
 	return api, nil
 }
 
+// Start starts the API server and blocks until the context is canceled.
 func (s *API) Start(ctx context.Context) error {
 	s.appLog.Info("Starting HTTP server", zap.String("addr", s.server.Addr))
 
@@ -129,7 +131,9 @@ func (s *API) shutdown() error {
 	defer cancel()
 
 	err := s.server.Shutdown(ctx)
-	s.appLog.Sync() // Ensure logs are flushed before shutdown
+	if syncErr := s.appLog.Sync(); syncErr != nil {
+		s.appLog.Error("failed to sync logger during shutdown", zap.Error(syncErr))
+	}
 	return err
 }
 

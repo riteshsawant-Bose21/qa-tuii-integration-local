@@ -52,7 +52,7 @@ func isDuplicateKeyError(err error) bool {
 }
 
 // GetDB returns the database instance for transaction management.
-func (s *Service) GetDB(ctx context.Context) customModel.DBWithTransactions {
+func (s *Service) GetDB(_ context.Context) customModel.DBWithTransactions {
 	return s.db
 }
 

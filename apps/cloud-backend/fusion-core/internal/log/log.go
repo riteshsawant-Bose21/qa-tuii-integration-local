@@ -45,6 +45,7 @@ func (l *Logger) Warn(msg string, fields ...zapcore.Field) {
 	l.zap.Warn(msg, fields...)
 }
 
+// JobSyncLog returns the underlying zap logger for job synchronization logging.
 func (l *Logger) JobSyncLog() *zap.Logger {
 	return l.zap
 }

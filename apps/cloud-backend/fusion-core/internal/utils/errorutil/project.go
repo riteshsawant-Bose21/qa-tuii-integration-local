@@ -59,10 +59,10 @@ const (
 
 	// Validation errors
 	ErrMsgProjectCannotBeNil     = "project cannot be nil"
-	ErrMsgIdCannotBeEmpty        = "id cannot be empty"
-	ErrMsgProjectIdCannotBeEmpty = "project id cannot be empty"
-	ErrMsgUserIdRequired         = "user_id is required"
+	ErrMsgIDCannotBeEmpty        = "id cannot be empty"
+	ErrMsgProjectIDCannotBeEmpty = "project id cannot be empty"
+	ErrMsgUserIDRequired         = "user_id is required"
 
 	// SQL errors
-	ErrMsgSqlNoRows = "sql: no rows in result set"
+	ErrMsgSQLNoRows = "sql: no rows in result set"
 )

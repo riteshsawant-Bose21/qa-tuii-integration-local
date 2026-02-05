@@ -6,6 +6,7 @@ import (
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/api/types"
 )
 
+// User defines the interface for user-related operations
 type User interface {
 	// GetUserByEmail retrieves a user by email
 	GetUserByEmail(ctx context.Context, email string) (*types.User, error)

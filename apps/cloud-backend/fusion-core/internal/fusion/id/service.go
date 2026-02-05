@@ -1,9 +1,11 @@
+// Package id provides ID encryption and decryption services.
 package id
 
 import (
 	"encoding/base64"
 )
 
+// Service provides ID encryption and decryption operations.
 type Service struct {
 	// Add fields as necessary, e.g., a database connection or configuration settings.
 }
@@ -23,12 +25,14 @@ func NewService() *Service {
 
 // Implement the methods defined in the IDService interface.
 
+// EncryptID encrypts the given ID string and returns the encrypted result.
 func (s *Service) EncryptID(id string) (string, error) {
 	// Implement encryption logic here.
 	base64.NewEncoder(base64.StdEncoding, nil)
 	return id, nil
 }
 
+// DecryptID decrypts the given encrypted ID string and returns the original ID.
 func (s *Service) DecryptID(encryptedID string) (string, error) {
 	// Implement decryption logic here.
 	return encryptedID, nil

@@ -1,4 +1,5 @@
-package commonResponse
+// Package commonresponse provides common HTTP response utilities and structures.
+package commonresponse
 
 import (
 	"github.com/gin-gonic/gin"

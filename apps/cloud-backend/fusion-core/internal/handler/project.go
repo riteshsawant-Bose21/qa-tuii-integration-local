@@ -18,6 +18,7 @@ type ProjectHandler struct {
 	project fusion.Project
 }
 
+// NewProjectHandler creates a new project handler with the provided project service.
 func NewProjectHandler(project fusion.Project) *ProjectHandler {
 	return &ProjectHandler{
 		project: project,
@@ -80,7 +81,7 @@ func (h *ProjectHandler) CreateProject(ctx *gin.Context) {
 	response.Created(ctx, res)
 }
 
-// GetProjects retrieves all projects.
+// GetAllProjects retrieves all projects.
 // @Summary Get all projects
 // @Description Get all projects in the system
 // @Tags projects
@@ -203,7 +204,7 @@ func (h *ProjectHandler) UpdateProject(ctx *gin.Context) {
 	res, err := h.project.UpdateProject(ctx, &p, *user, logger)
 	if err != nil {
 		// Check if it's a "not found" error
-		if err.Error() == errorutil.ErrMsgProjectNotFound || err.Error() == errorutil.ErrMsgSqlNoRows {
+		if err.Error() == errorutil.ErrMsgProjectNotFound || err.Error() == errorutil.ErrMsgSQLNoRows {
 			response.NotFound(ctx, err.Error())
 			return
 		}
@@ -269,7 +270,7 @@ func (h *ProjectHandler) DeleteProject(ctx *gin.Context) {
 
 	if err := h.project.DeleteProject(ctx, projectID, *user, logger); err != nil {
 		// Check if it's a "not found" error
-		if err.Error() == errorutil.ErrMsgProjectNotFound || err.Error() == errorutil.ErrMsgSqlNoRows {
+		if err.Error() == errorutil.ErrMsgProjectNotFound || err.Error() == errorutil.ErrMsgSQLNoRows {
 			response.NotFound(ctx, err.Error())
 			return
 		}

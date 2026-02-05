@@ -1,3 +1,4 @@
+// Package db provides database operations for product management.
 package db
 
 import (
@@ -442,7 +443,11 @@ func (s *Service) InsertBatch(ctx context.Context, products []*types.DBProduct, 
 		logger.Error("failed to begin transaction for batch insert", zap.Error(err))
 		return fmt.Errorf("failed to begin transaction: %w", err)
 	}
-	defer tx.Rollback()
+	defer func() {
+		if err := tx.Rollback(); err != nil {
+			logger.Error("failed to rollback transaction", zap.Error(err))
+		}
+	}()
 
 	for _, product := range products {
 		if err := s.insertProduct(ctx, tx, product, logger); err != nil {
@@ -528,7 +533,7 @@ func (s *Service) BatchLookupExistingProductIDs(ctx context.Context, productIDs 
 			args[j] = id
 		}
 
-		query := fmt.Sprintf("SELECT product_id FROM product WHERE product_id IN (%s)", strings.Join(placeholders, ","))
+		query := fmt.Sprintf("SELECT product_id FROM product WHERE product_id IN (%s)", strings.Join(placeholders, ",")) //nolint:gosec // G201: Safe parameterized query with placeholders
 
 		rows, err := s.db.QueryContext(ctx, query, args...)
 		if err != nil {
@@ -539,13 +544,17 @@ func (s *Service) BatchLookupExistingProductIDs(ctx context.Context, productIDs 
 		for rows.Next() {
 			var productID int
 			if err := rows.Scan(&productID); err != nil {
-				rows.Close()
+				if closeErr := rows.Close(); closeErr != nil {
+					logger.Error("failed to close rows", zap.Error(closeErr))
+				}
 				logger.Error("failed to scan product ID during batch lookup", zap.Error(err))
 				return nil, fmt.Errorf("failed to scan product ID: %w", err)
 			}
 			result[productID] = true
 		}
-		rows.Close()
+		if err := rows.Close(); err != nil {
+			logger.Error("failed to close rows", zap.Error(err))
+		}
 
 		if err := rows.Err(); err != nil {
 			logger.Error("error iterating product IDs during batch lookup", zap.Error(err))
@@ -571,14 +580,18 @@ func (s *Service) GetProductTimestamps(ctx context.Context, productIDs []int, lo
 		args[i] = id
 	}
 
-	query := fmt.Sprintf("SELECT product_id, updated_at FROM product WHERE product_id IN (%s)", strings.Join(placeholders, ","))
+	query := fmt.Sprintf("SELECT product_id, updated_at FROM product WHERE product_id IN (%s)", strings.Join(placeholders, ",")) //nolint:gosec // G201: Safe parameterized query with placeholders
 
 	rows, err := s.db.QueryContext(ctx, query, args...)
 	if err != nil {
 		logger.Error("failed to query product timestamps", zap.Error(err))
 		return nil, fmt.Errorf("failed to query product timestamps: %w", err)
 	}
-	defer rows.Close()
+	defer func() {
+		if closeErr := rows.Close(); closeErr != nil {
+			logger.Error("failed to close rows", zap.Error(closeErr))
+		}
+	}()
 
 	result := make(map[int]*int64)
 	for rows.Next() {
@@ -671,7 +684,11 @@ func (s *Service) UpsertBatch(ctx context.Context, prices []*types.DBPrice, logg
 		logger.Error("failed to begin transaction for batch upsert", zap.Error(err))
 		return fmt.Errorf("failed to begin transaction: %w", err)
 	}
-	defer tx.Rollback()
+	defer func() {
+		if err := tx.Rollback(); err != nil {
+			logger.Error("failed to rollback transaction", zap.Error(err))
+		}
+	}()
 
 	for _, price := range prices {
 		if err := s.upsertPrice(ctx, tx, price, logger); err != nil {
@@ -724,7 +741,11 @@ func (s *Service) bulkInsertPrices(ctx context.Context, prices []*types.DBPrice,
 		logger.Error("failed to begin transaction for bulk insert", zap.Error(err))
 		return fmt.Errorf("failed to begin transaction: %w", err)
 	}
-	defer tx.Rollback()
+	defer func() {
+		if err := tx.Rollback(); err != nil {
+			logger.Error("failed to rollback transaction", zap.Error(err))
+		}
+	}()
 
 	// Build DELETE statement to remove existing prices for these product/currency/variant combinations
 	// Then INSERT new prices
@@ -747,7 +768,7 @@ func (s *Service) bulkInsertPrices(ctx context.Context, prices []*types.DBPrice,
 	}
 
 	// Delete existing prices
-	deleteQuery := fmt.Sprintf("DELETE FROM product_price WHERE %s", strings.Join(deleteConditions, " OR "))
+	deleteQuery := fmt.Sprintf("DELETE FROM product_price WHERE %s", strings.Join(deleteConditions, " OR ")) //nolint:gosec // G201: Safe parameterized query with placeholders
 	_, err = tx.ExecContext(ctx, deleteQuery, deleteArgs...)
 	if err != nil {
 		logger.Error("failed to delete existing prices before bulk insert", zap.Error(err))
@@ -772,10 +793,7 @@ func (s *Service) bulkInsertPrices(ctx context.Context, prices []*types.DBPrice,
 		insertArgIndex += 4
 	}
 
-	insertQuery := fmt.Sprintf(`
-		INSERT INTO product_price (product_id, variant, currency, price, created_at, updated_at)
-		VALUES %s
-	`, strings.Join(valueStrings, ", "))
+	insertQuery := "INSERT INTO product_price (product_id, variant, currency, price, created_at, updated_at) VALUES " + strings.Join(valueStrings, ", ") //nolint:gosec
 
 	_, err = tx.ExecContext(ctx, insertQuery, insertArgs...)
 	if err != nil {
@@ -875,7 +893,9 @@ func (s *Service) GetPriceTimestamps(ctx context.Context, priceKeys []types.Pric
 			var updatedAt null.Time
 
 			if err := rows.Scan(&productID, &currency, &variant, &updatedAt); err != nil {
-				rows.Close()
+				if closeErr := rows.Close(); closeErr != nil {
+					logger.Error("failed to close rows", zap.Error(closeErr))
+				}
 				logger.Error("failed to scan price timestamp", zap.Error(err))
 				return nil, fmt.Errorf("failed to scan price timestamp: %w", err)
 			}
@@ -893,7 +913,9 @@ func (s *Service) GetPriceTimestamps(ctx context.Context, priceKeys []types.Pric
 				result[key] = nil
 			}
 		}
-		rows.Close()
+		if closeErr := rows.Close(); closeErr != nil {
+			logger.Error("failed to close rows", zap.Error(closeErr))
+		}
 
 		if err := rows.Err(); err != nil {
 			logger.Error("error iterating price timestamp rows", zap.Error(err))

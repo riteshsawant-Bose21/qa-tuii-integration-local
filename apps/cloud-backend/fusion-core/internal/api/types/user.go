@@ -119,6 +119,7 @@ type UpdateUserRequest struct {
 
 // === User settings related types ===
 
+// UserSettings represents user-specific settings like language and theme preferences
 type UserSettings struct {
 	ID        string     `json:"id"`
 	UserID    string     `json:"user_id"`
@@ -128,17 +129,20 @@ type UserSettings struct {
 	UpdatedAt *time.Time `json:"updated_at"`
 }
 
+// UpdateUserSettingsRequest represents a request to update user settings
 type UpdateUserSettingsRequest struct {
 	Language *string `json:"language"`
 	Theme    *string `json:"theme"`
 }
 
+// StatusOkForCreateUserSettings represents the successful response for creating user settings
 type StatusOkForCreateUserSettings struct {
 	ID string `json:"id" example:"53437319-7a5b-4462-bc7c-9e7f9a057a1a"`
 }
 
 // === User profile related types ===
 
+// UserProfile represents a user's profile information and preferences
 type UserProfile struct {
 	ID                    string          `json:"id"`
 	UserID                string          `json:"user_id"`
@@ -169,6 +173,7 @@ type UserProfile struct {
 	UpdatedAt             *time.Time      `json:"updated_at"`
 }
 
+// UserProfileUpdateRequest represents a request to update user profile information
 type UserProfileUpdateRequest struct {
 	Email                 *string          `json:"email"`
 	FirstName             *string          `json:"first_name"`
@@ -195,6 +200,7 @@ type UserProfileUpdateRequest struct {
 	PriceList             *json.RawMessage `json:"price_list" swaggertype:"object"`
 }
 
+// StatusOkForCreateUserProfile represents the successful response for creating user profile
 type StatusOkForCreateUserProfile struct {
 	ID string `json:"id" example:"53437319-7a5b-4462-bc7c-9e7f9a057a1a"`
 }

@@ -182,7 +182,7 @@ func parseFieldDefinition(fieldName, jsonTag, validateTag, description string) *
 	// Parse validation rules
 	rules := strings.Split(validateTag, ",")
 
-	var requirement FieldRequirement = Required // default to required
+	requirement := Required // default to required
 	var fieldType string
 	constraints := make(map[string]string)
 

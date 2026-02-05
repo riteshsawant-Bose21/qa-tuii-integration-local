@@ -4,13 +4,13 @@ package errorutil
 const (
 	MsgAuthorizationHeaderRequired = "Authorization header is required"
 	MsgInvalidAuthHeaderFormat     = "Invalid authorization header format"
-	MsgInvalidOrExpiredToken       = "Invalid or expired token"
+	MsgInvalidOrExpiredToken       = "Invalid or expired token" //nolint:gosec // G101: False positive - this is just an error message, not credentials
 	MsgTokenExpired                = "Token has expired"
 	MsgMalformedToken              = "Malformed token"
 	MsgInvalidTokenSignature       = "Invalid token signature"
 	MsgUnsupportedTokenFormat      = "Received JWE token but JWT expected"
-	MsgInvalidTokenClaims          = "Invalid token claims"
-	MsgUserEmailNotFoundInToken    = "User email not found in token"
+	MsgInvalidTokenClaims          = "Invalid token claims"          //nolint:gosec
+	MsgUserEmailNotFoundInToken    = "User email not found in token" //nolint:gosec
 )
 
 // User Management Messages

@@ -11,6 +11,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -57,6 +58,7 @@ type ProjectIntegrationTestSuite struct {
 	api               *api.API
 	testProjects      []testProject
 	testUsers         []testUser
+	routerMutex       sync.Mutex // Protects ginRouter from concurrent access
 }
 
 // testProject represents a test project for testing
@@ -301,7 +303,7 @@ func (suite *ProjectIntegrationTestSuite) setupAPI() error {
 }
 
 // createTestRouter creates a Gin router with handlers but mocked authentication for testing
-func (suite *ProjectIntegrationTestSuite) createTestRouter(projectSVC *project.Service, productSVC *product.Service, userSVC *user.Service, userDBSvc *userdb.Service, roleManagementSvc *userdb.RoleManagementService, loggers *log.Loggers) *gin.Engine {
+func (suite *ProjectIntegrationTestSuite) createTestRouter(projectSVC *project.Service, _ *product.Service, userSVC *user.Service, _ *userdb.Service, _ *userdb.RoleManagementService, loggers *log.Loggers) *gin.Engine {
 	gin.SetMode(gin.TestMode)
 	router := gin.New()
 
@@ -468,7 +470,10 @@ func (suite *ProjectIntegrationTestSuite) makeRequestWithUser(method, path strin
 	w := httptest.NewRecorder()
 
 	// Serve the request - authentication is already mocked in router middleware
+	// Use mutex to prevent race conditions from concurrent router access
+	suite.routerMutex.Lock()
 	suite.ginRouter.ServeHTTP(w, req)
+	suite.routerMutex.Unlock()
 
 	// Debug response for failures
 	if w.Code >= 400 {
@@ -3318,13 +3323,13 @@ func TestProjectIntegrationSuite(t *testing.T) {
 // Mock implementations
 type mockAuthService struct{}
 
-func (m *mockAuthService) GetAuthTokensByResourceOwnerPassword(ctx context.Context, username string) (*types.AuthTokenResponse, error) {
+func (m *mockAuthService) GetAuthTokensByResourceOwnerPassword(_ context.Context, _ string) (*types.AuthTokenResponse, error) {
 	return nil, nil
 }
-func (m *mockAuthService) ValidateToken(tokenString string) (*jwt.MapClaims, error) { return nil, nil }
-func (m *mockAuthService) ExtractUserID(claims *jwt.MapClaims) (string, error)      { return "", nil }
-func (m *mockAuthService) ExtractUserEmail(claims *jwt.MapClaims) (string, error)   { return "", nil }
-func (m *mockAuthService) ExtractTokenFromHeader(authHeader string) (string, error) { return "", nil }
+func (m *mockAuthService) ValidateToken(_ string) (*jwt.MapClaims, error)    { return nil, nil }
+func (m *mockAuthService) ExtractUserID(_ *jwt.MapClaims) (string, error)    { return "", nil }
+func (m *mockAuthService) ExtractUserEmail(_ *jwt.MapClaims) (string, error) { return "", nil }
+func (m *mockAuthService) ExtractTokenFromHeader(_ string) (string, error)   { return "", nil }
 
 type mockMiddlewareStruct struct{}
 

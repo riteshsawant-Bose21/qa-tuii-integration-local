@@ -36,7 +36,7 @@ func TestGetUserSettings(t *testing.T) {
 			name:      "authenticated user with settings - success",
 			userID:    validUUID,
 			setupAuth: true,
-			mockGetSettings: func(ctx context.Context, userID string) (*types.UserSettings, error) {
+			mockGetSettings: func(_ context.Context, userID string) (*types.UserSettings, error) {
 				return &types.UserSettings{
 					ID:       uuid.New().String(),
 					UserID:   userID,
@@ -51,7 +51,7 @@ func TestGetUserSettings(t *testing.T) {
 			name:      "settings not found - sql no rows",
 			userID:    validUUID,
 			setupAuth: true,
-			mockGetSettings: func(ctx context.Context, userID string) (*types.UserSettings, error) {
+			mockGetSettings: func(_ context.Context, _ string) (*types.UserSettings, error) {
 				return nil, errors.New("sql: no rows in result set")
 			},
 			expectedStatus: http.StatusNotFound,
@@ -63,7 +63,7 @@ func TestGetUserSettings(t *testing.T) {
 			name:      "settings not found - explicit error",
 			userID:    validUUID,
 			setupAuth: true,
-			mockGetSettings: func(ctx context.Context, userID string) (*types.UserSettings, error) {
+			mockGetSettings: func(_ context.Context, _ string) (*types.UserSettings, error) {
 				return nil, errors.New("user settings not found")
 			},
 			expectedStatus: http.StatusNotFound,
@@ -75,7 +75,7 @@ func TestGetUserSettings(t *testing.T) {
 			name:      "database error",
 			userID:    validUUID,
 			setupAuth: true,
-			mockGetSettings: func(ctx context.Context, userID string) (*types.UserSettings, error) {
+			mockGetSettings: func(_ context.Context, _ string) (*types.UserSettings, error) {
 				return nil, errors.New("database connection failed")
 			},
 			expectedStatus: http.StatusInternalServerError,
@@ -293,7 +293,8 @@ func TestUpdateUserSettings(t *testing.T) {
 
 			if tt.expectedError != "" {
 				var response map[string]interface{}
-				json.Unmarshal(w.Body.Bytes(), &response)
+				err := json.Unmarshal(w.Body.Bytes(), &response)
+				assert.NoError(t, err)
 				errMsg, ok := response["error"].(string)
 				assert.True(t, ok)
 				assert.Contains(t, errMsg, tt.expectedError)
@@ -323,7 +324,7 @@ func TestCreateUserSettings(t *testing.T) {
 				Language: "en-US",
 				Theme:    "dark",
 			},
-			mockCreateSettings: func(ctx context.Context, settingsDetails *types.UserSettings) (string, error) {
+			mockCreateSettings: func(_ context.Context, _ *types.UserSettings) (string, error) {
 				return generatedID, nil
 			},
 			expectedStatus: http.StatusCreated,
@@ -357,7 +358,7 @@ func TestCreateUserSettings(t *testing.T) {
 				UserID:   validUUID,
 				Language: "en-US",
 			},
-			mockCreateSettings: func(ctx context.Context, settingsDetails *types.UserSettings) (string, error) {
+			mockCreateSettings: func(_ context.Context, _ *types.UserSettings) (string, error) {
 				return "", errors.New("database error")
 			},
 			expectedStatus: http.StatusInternalServerError,
@@ -395,7 +396,8 @@ func TestCreateUserSettings(t *testing.T) {
 
 			if tt.expectedError != "" {
 				var response map[string]interface{}
-				json.Unmarshal(w.Body.Bytes(), &response)
+				err := json.Unmarshal(w.Body.Bytes(), &response)
+				assert.NoError(t, err)
 				errMsg, ok := response["error"].(string)
 				assert.True(t, ok)
 				assert.Contains(t, errMsg, tt.expectedError)
@@ -404,8 +406,13 @@ func TestCreateUserSettings(t *testing.T) {
 			// verify returned ID for success
 			if tt.expectedStatus == http.StatusCreated {
 				var response map[string]interface{}
-				json.Unmarshal(w.Body.Bytes(), &response)
+				err := json.Unmarshal(w.Body.Bytes(), &response)
+
+				assert.NoError(t, err)
+				// For success, there should be no error field, only the ID
 				assert.Equal(t, generatedID, response["id"])
+				_, hasError := response["error"]
+				assert.False(t, hasError, "Success response should not contain error field")
 			}
 		})
 	}
