@@ -17,6 +17,7 @@ import (
 	"fusion/internal/logging"
 	"fusion/internal/server"
 	"fusion/internal/server/handler"
+	"fusion/internal/utils"
 )
 
 const (
@@ -166,12 +167,30 @@ func (s *UDPServer) sendResponse(addr *net.UDPAddr, v any) {
 }
 
 func (s *UDPServer) BroadcastMessage(msg *api.NotifyMessage) error {
+	logger := logging.GetLogger()
 
 	if !msg.IsPublic() {
+		logger.Warn("message not public")
 		return nil
 	}
 
-	logger := logging.GetLogger()
+	if msg.Operation == api.NotifyOpDeviceInformationUpdate {
+		if msg.ID == "" {
+			msg.ID = ulid.Make().String()
+		}
+		data, err := utils.ToMap(msg.DeviceInfo)
+		if err != nil {
+			return fmt.Errorf("udp broadcast: failed to convert DeviceInfo to map: %w", err)
+		}
+		payload, err := s.buildJSONPayload(data, api.Version{}, msg.ID, msg.Operation)
+
+		if err != nil {
+			return err
+		}
+
+		s.broadcast(payload, msg.ID)
+		return nil
+	}
 
 	if msg.Operation == api.NotifyOpSnapActivate {
 		if msg.ID == "" {

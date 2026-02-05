@@ -166,6 +166,14 @@ func (h *Handler) HandleExportData() (any, error) {
 	return h.persistence.ExportData()
 }
 
+func (h *Handler) HandleGetDeviceInfo() (*api.DeviceInfo, error) {
+	info, err := h.persistence.GetDeviceInfo()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get device info: %w", err)
+	}
+	return info, nil
+}
+
 func (h *Handler) handleConfigUpdate(data map[string]any, clear bool) error {
 
 	configUpdate, err := h.StateManager.NewConfigUpdate(data)

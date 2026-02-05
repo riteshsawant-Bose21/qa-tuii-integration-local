@@ -380,3 +380,15 @@ func unwrapPrimitiveDiff(m map[string]any) (any, bool) {
 		return v, true
 	}
 }
+
+func ToMap(v any) (map[string]any, error) {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return nil, err
+	}
+	var m map[string]any
+	if err := json.Unmarshal(b, &m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}

@@ -35,8 +35,9 @@ func (h *Handler) HandleUDPMessage(data []byte) (any, error) {
 		state[api.FusionVersion] = h.StateManager.GetVersion().Counter
 		state[api.FusionEpoch] = h.StateManager.GetVersion().Epoch
 		return map[string]any{
-			"status": "success",
-			"data":   state,
+			"status":            "success",
+			"data":              state,
+			api.FusionOperation: api.NotifyOpValueGet,
 		}, nil
 
 	case api.NotifyOpValueSet:
@@ -51,8 +52,21 @@ func (h *Handler) HandleUDPMessage(data []byte) (any, error) {
 			return nil, fmt.Errorf("failed to handle update: %w", err)
 		}
 		return map[string]any{
-			"status":  "success",
-			"message": "Update applied successfully",
+			"status":            "success",
+			"message":           "Update applied successfully",
+			api.FusionOperation: api.NotifyOpValueSet,
+		}, nil
+	case api.NotifyOpGetDeviceInformation:
+		info, err := h.HandleGetDeviceInfo()
+		if err != nil {
+			logger.Error("HandleUDPMessage GetDeviceInfo error: %v", err)
+			return nil, fmt.Errorf("failed to get device info: %w", err)
+		}
+
+		return map[string]any{
+			"status":            "success",
+			"deviceInfo":        info,
+			api.FusionOperation: api.NotifyOpGetDeviceInformation,
 		}, nil
 
 	default:

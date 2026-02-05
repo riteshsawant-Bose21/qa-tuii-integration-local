@@ -7,7 +7,6 @@ import (
 	"fusion-services-core/vip"
 	"fusion/internal/api"
 	"fusion/internal/logging"
-	"fusion/internal/persistence"
 	"fusion/internal/routes"
 	"fusion/internal/utils"
 	"io"
@@ -55,7 +54,7 @@ func (c *Cluster) SetDeviceInfo(w http.ResponseWriter, r *http.Request) {
 	}
 	defer r.Body.Close()
 
-	var info persistence.DeviceInfo
+	var info api.DeviceInfo
 	if err := json.NewDecoder(r.Body).Decode(&info); err != nil {
 		http.Error(w, fmt.Sprintf("Invalid JSON: %v", err), http.StatusBadRequest)
 		return
@@ -65,7 +64,7 @@ func (c *Cluster) SetDeviceInfo(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, fmt.Sprintf("Failed to set device info: %v", err), http.StatusInternalServerError)
 		return
 	}
-
+	c.sendDeviceInfoUpdateNotification(&info)
 	w.WriteHeader(http.StatusNoContent)
 }
 
@@ -83,7 +82,7 @@ func (c *Cluster) UpdateDeviceInfo(w http.ResponseWriter, r *http.Request) {
 
 	deviceInfos := c.fetchAllDeviceInfos()
 
-	var localInfo *persistence.DeviceInfo
+	var localInfo *api.DeviceInfo
 	for _, info := range deviceInfos {
 		if info.Id == deviceId {
 			localInfo = &info
@@ -96,7 +95,7 @@ func (c *Cluster) UpdateDeviceInfo(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var patch persistence.DevicePatch
+	var patch api.DevicePatch
 	if err := json.NewDecoder(r.Body).Decode(&patch); err != nil {
 		http.Error(w, fmt.Sprintf("Invalid JSON: %v", err), http.StatusBadRequest)
 		return
@@ -115,6 +114,7 @@ func (c *Cluster) UpdateDeviceInfo(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, fmt.Sprintf("Failed to set device info: %v", err), http.StatusInternalServerError)
 			return
 		}
+		c.sendDeviceInfoUpdateNotification(localInfo)
 	} else {
 
 		jsonBody, err := json.Marshal(patch)
@@ -157,7 +157,7 @@ func (c *Cluster) UpdateDeviceInfoLocal(w http.ResponseWriter, r *http.Request) 
 	}
 	defer r.Body.Close()
 
-	var patch persistence.DevicePatch
+	var patch api.DevicePatch
 	if err := json.NewDecoder(r.Body).Decode(&patch); err != nil {
 		http.Error(w, fmt.Sprintf("Invalid JSON: %v", err), http.StatusBadRequest)
 		return
@@ -175,7 +175,7 @@ func (c *Cluster) UpdateDeviceInfoLocal(w http.ResponseWriter, r *http.Request) 
 		http.Error(w, fmt.Sprintf("Failed to set device info: %v", err), http.StatusInternalServerError)
 		return
 	}
-
+	c.sendDeviceInfoUpdateNotification(info)
 	w.WriteHeader(http.StatusNoContent)
 }
 
@@ -206,7 +206,7 @@ func (c *Cluster) GetVIP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if isVip {
-		
+
 		local, vipAddr, ok := vip.LocalForVIP(vipValue)
 		if !ok {
 			w.WriteHeader(http.StatusNotFound)
@@ -343,7 +343,7 @@ func (c *Cluster) reloadVIP() error {
 	return nil
 }
 
-func (c *Cluster) fetchAllDeviceInfos() []persistence.DeviceInfo {
+func (c *Cluster) fetchAllDeviceInfos() []api.DeviceInfo {
 	return fetchFromAdmin(
 		c,
 		c.getLocalDeviceInfo,
@@ -351,10 +351,10 @@ func (c *Cluster) fetchAllDeviceInfos() []persistence.DeviceInfo {
 	)
 }
 
-func (c *Cluster) getLocalDeviceInfo() persistence.DeviceInfo {
+func (c *Cluster) getLocalDeviceInfo() api.DeviceInfo {
 	info, err := c.delegate.persistence.GetDeviceInfo()
 	if err != nil {
-		return persistence.DeviceInfo{}
+		return api.DeviceInfo{}
 	}
 	info.IsPrimaryNode = c.isLocalNodePrimary()
 
@@ -376,7 +376,7 @@ func (c *Cluster) isLocalNodePrimary() bool {
 	return isLocal
 }
 
-func (c *Cluster) applyPatch(patch *persistence.DevicePatch, info *persistence.DeviceInfo) {
+func (c *Cluster) applyPatch(patch *api.DevicePatch, info *api.DeviceInfo) {
 
 	if patch.Location != nil {
 		info.Location = *patch.Location
@@ -402,8 +402,8 @@ func (c *Cluster) applyPatch(patch *persistence.DevicePatch, info *persistence.D
 // validateNoDuplication returns an error if any of the non‐nil fields in patch
 // would collide with another DeviceInfo other than the one with ID == currentID.
 func validateNoDuplication(
-	allInfos []persistence.DeviceInfo,
-	patch persistence.DevicePatch,
+	allInfos []api.DeviceInfo,
+	patch api.DevicePatch,
 	currentID string,
 ) error {
 	for _, info := range allInfos {
@@ -477,4 +477,14 @@ func (c *Cluster) getVIPInLocalConfig(w http.ResponseWriter) {
 		"local": vipValue,
 		"vip":   vipValue,
 	})
+}
+
+func (c *Cluster) sendDeviceInfoUpdateNotification(update *api.DeviceInfo) {
+
+	msg := api.NewNotifyMessage(
+		api.NotifyOpDeviceInformationUpdate,
+		c.Memberlist.LocalNode().Name,
+		api.WithDeviceInfo(update),
+	)
+	c.delegate.hub.BroadcastToObservers(msg)
 }

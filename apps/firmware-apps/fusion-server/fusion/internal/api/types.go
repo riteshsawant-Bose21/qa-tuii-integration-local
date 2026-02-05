@@ -242,3 +242,24 @@ type ControllerIdentifyResponse struct {
 type ControllerWinkResponse struct {
 	Status string `json:"status"`
 }
+
+// DeviceInfo represents device configuration data.
+type DeviceInfo struct {
+	Address       string `json:"address"`
+	Id            string `json:"id"`
+	Location      string `json:"location"`
+	Name          string `json:"name"`
+	XYTECloudID   string `json:"xyte_cloud_id"`
+	IsClaimed     bool   `json:"is_claimed"`
+	SerialNumber  string `json:"serial_number"`
+	IsPrimaryNode bool   `json:"is_primary"`
+}
+
+// DevicePatch represents patchable device configuration data.
+type DevicePatch struct {
+	Id          *string `json:"id,omitempty"`
+	Location    *string `json:"location,omitempty"`
+	Name        *string `json:"name,omitempty"`
+	XYTECloudID *string `json:"xyte_cloud_id,omitempty"`
+	IsClaimed   *bool   `json:"is_claimed,omitempty"`
+}

@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"fusion/internal/api"
 	"fusion/internal/logging"
-	"fusion/internal/persistence"
 	"fusion/internal/routes"
 	"io"
 	"log"
@@ -207,7 +206,7 @@ func (c *Cluster) getJoinAddresses(bindAddr string) ([]string, error) {
 // updateDeviceInfo updates the persisted device info
 func (c *Cluster) updateDeviceInfo() {
 
-	var info persistence.DeviceInfo
+	var info api.DeviceInfo
 	savedInfo, err := c.delegate.persistence.GetDeviceInfo()
 	if err == nil {
 		info = *savedInfo
