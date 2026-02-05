@@ -792,10 +792,8 @@ private:
 class UDPValueMonitor
 {
 public:
-  UDPValueMonitor(const std::string &serverIP, int port,
-                  const std::vector<std::string> &targetPaths)
-      : targetPaths_(targetPaths),
-        jsonMonitor_(Json::objectValue)
+  UDPValueMonitor(const std::string &serverIP, int port)
+      : jsonMonitor_(Json::objectValue)
   {
     spdlog::set_level(spdlog::level::trace);
 
@@ -834,28 +832,36 @@ public:
                                strerror(errno));
     }
 
-    // Register watchers.
-    for (const auto &path : targetPaths_)
-    {
-      if (path.find('*') != std::string::npos)
-      {
-        jsonMonitor_.watchPattern(path, [this](const std::string &p,
-                                               const Json::Value &old_val,
-                                               const Json::Value &new_val)
-                                  { handleValueChange(p, old_val, new_val); });
-      }
-      else
-      {
-        jsonMonitor_.watch(path, [this](const std::string &p,
-                                        const Json::Value &old_val,
-                                        const Json::Value &new_val)
-                           { handleValueChange(p, old_val, new_val); });
-      }
-    }
-
     requestInitialState(serverAddr_);
     receiveThread_ = std::thread(&UDPValueMonitor::receiveLoop, this);
   }
+
+   /**
+     * @brief Register a callback to be notified when a concrete path is updated.
+     *
+     * @param path The concrete JSON path to watch. An empty string indicates the
+     * root.
+     * @param callback The function to call when the specified path is updated.
+     */
+    void watch(const std::string &path, JsonMonitor::ChangeCallback callback)
+    {
+        targetPaths_.push_back(path);
+        jsonMonitor_.watch(path, callback);
+    }
+
+    /**
+     * @brief Register a callback to be notified when a subscription pattern is
+     * updated.
+     *
+     * @param pattern The subscription pattern string (may include wildcards).
+     * @param callback The function to call when an update matching the pattern
+     * occurs.
+     */
+    void watchPattern(const std::string &pattern, JsonMonitor::ChangeCallback callback)
+    {
+        targetPaths_.push_back(pattern);
+        jsonMonitor_.watchPattern(pattern, callback);
+    }
 
   ~UDPValueMonitor() { stop(); }
 
@@ -1071,7 +1077,7 @@ private:
         // Optional: filter unexpected senders.
         if (senderAddr.sin_addr.s_addr != serverAddr_.sin_addr.s_addr)
         {
-          SPDLOG_DEBUG("Ignoring datagram from unexpected sender");
+          SPDLOG_WARN("Ignoring datagram from unexpected sender");
           continue;
         }
         buffer[received] = '\0';

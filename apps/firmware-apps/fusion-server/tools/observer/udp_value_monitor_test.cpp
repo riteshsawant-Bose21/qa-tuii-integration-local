@@ -59,8 +59,8 @@ TEST(UDPValueMonitorTest, AsynchronousUpdatesAndNetworking) {
     close(sock);
   });
 
-  std::vector<std::string> targetPaths = {"test.value"};
-  UDPValueMonitor monitorUDP("127.0.0.1", serverPort, targetPaths);
+  UDPValueMonitor monitorUDP("127.0.0.1", serverPort);
+  monitorUDP.watch("test.value", [](const std::string &, const Json::Value &, const Json::Value &) {});
 
   // Allow some time for asynchronous processing (the receive thread picks up
   // the response).
@@ -119,8 +119,8 @@ TEST(UDPValueMonitorTest, IntegrationWithFusionServer) {
     host = "127.0.0.1";
   }
 
-  const std::vector<std::string> targetPaths = {"observer_test.value"};
-  UDPValueMonitor monitorUDP(host, port, targetPaths);
+  UDPValueMonitor monitorUDP(host, port);
+  monitorUDP.watch("observer_test.value", [](const std::string &, const Json::Value &, const Json::Value &) {});
 
   const int expected = 42;
   Json::Value update;

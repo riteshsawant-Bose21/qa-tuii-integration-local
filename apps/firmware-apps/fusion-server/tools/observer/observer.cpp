@@ -39,7 +39,30 @@ int main(int argc, char *argv[])
       std::cout << "  " << path << "\n";
     }
 
-    UDPValueMonitor client(serverIP, port, targetPaths);
+    UDPValueMonitor client(serverIP, port);
+    for (const auto &path : targetPaths)
+    {
+      if (path.find('*') != std::string::npos)
+      {
+        client.watchPattern(path, [](const std::string &p,
+                                            const Json::Value &old_val,
+                                            const Json::Value &new_val)
+                            { 
+                              SPDLOG_INFO("Configuration pattern update received at {}", p);
+                              SPDLOG_INFO("Configuration pattern update from {} to {}", old_val.toStyledString(), new_val.toStyledString());
+                            });
+      }
+      else
+      {
+        client.watch(path, [](const std::string &p,
+                                    const Json::Value &old_val,
+                                    const Json::Value &new_val)
+                     {
+                       SPDLOG_INFO("Value update received at {}", p);
+                       SPDLOG_INFO("Value update from {} to {}", old_val.toStyledString(), new_val.toStyledString());
+                     });
+      }
+    }
     std::cin.get();
     client.stop();
   }
