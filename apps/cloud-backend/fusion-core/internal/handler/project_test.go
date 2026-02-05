@@ -15,6 +15,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"go.uber.org/zap"
+
+	errorutil "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/utils/errorutil"
 )
 
 type MockProjectService struct {
@@ -511,7 +513,7 @@ func TestUpdateProject(t *testing.T) {
 		}
 
 		// Mock project doesn't exist
-		mockSvc.On("UpdateProject", mock.Anything, mock.MatchedBy(func(req *types.ProjectUpdateRequest) bool { return req.ID == projectID && req.Name == updateReq.Name }), mock.AnythingOfType("types.UserAuthorizationResponse"), mock.AnythingOfType("*zap.Logger")).Return((*types.ProjectUpdateResponse)(nil), errors.New(types.ErrMsgProjectNotFound))
+		mockSvc.On("UpdateProject", mock.Anything, mock.MatchedBy(func(req *types.ProjectUpdateRequest) bool { return req.ID == projectID && req.Name == updateReq.Name }), mock.AnythingOfType("types.UserAuthorizationResponse"), mock.AnythingOfType("*zap.Logger")).Return((*types.ProjectUpdateResponse)(nil), errors.New(errorutil.ErrMsgProjectNotFound))
 
 		body, _ := json.Marshal(updateReq)
 		req := httptest.NewRequest(http.MethodPatch, projectsPathPrefix+projectID, bytes.NewBuffer(body))
@@ -533,7 +535,7 @@ func TestUpdateProject(t *testing.T) {
 		}
 
 		// Mock project exists but user is not assigned
-		mockSvc.On("UpdateProject", mock.Anything, mock.MatchedBy(func(req *types.ProjectUpdateRequest) bool { return req.ID == projectID && req.Name == updateReq.Name }), mock.AnythingOfType("types.UserAuthorizationResponse"), mock.AnythingOfType("*zap.Logger")).Return((*types.ProjectUpdateResponse)(nil), errors.New(types.ErrMsgUserNotAssignedToProject))
+		mockSvc.On("UpdateProject", mock.Anything, mock.MatchedBy(func(req *types.ProjectUpdateRequest) bool { return req.ID == projectID && req.Name == updateReq.Name }), mock.AnythingOfType("types.UserAuthorizationResponse"), mock.AnythingOfType("*zap.Logger")).Return((*types.ProjectUpdateResponse)(nil), errors.New(errorutil.ErrMsgUserNotAssignedToProject))
 
 		body, _ := json.Marshal(updateReq)
 		req := httptest.NewRequest(http.MethodPatch, projectsPathPrefix+projectID, bytes.NewBuffer(body))
@@ -573,7 +575,7 @@ func TestUpdateProject(t *testing.T) {
 		updateReq := &types.ProjectUpdateRequest{Name: testUpdatedProject}
 		mockSvc.On("UpdateProject", mock.Anything, mock.MatchedBy(func(req *types.ProjectUpdateRequest) bool {
 			return req.ID == testProjectID && req.Name == updateReq.Name
-		}), mock.AnythingOfType("types.UserAuthorizationResponse"), mock.AnythingOfType("*zap.Logger")).Return((*types.ProjectUpdateResponse)(nil), errors.New(types.ErrMsgUserNotFound))
+		}), mock.AnythingOfType("types.UserAuthorizationResponse"), mock.AnythingOfType("*zap.Logger")).Return((*types.ProjectUpdateResponse)(nil), errors.New(errorutil.ErrMsgUserNotFound))
 		body, _ := json.Marshal(updateReq)
 		req := httptest.NewRequest(http.MethodPatch, projectsPathPrefix+testProjectID, bytes.NewBuffer(body))
 		req.Header.Set(contentTypeHeader, applicationJSON)
@@ -588,7 +590,7 @@ func TestUpdateProject(t *testing.T) {
 		updateReq := &types.ProjectUpdateRequest{Name: testUpdatedProject}
 		mockSvc.On("UpdateProject", mock.Anything, mock.MatchedBy(func(req *types.ProjectUpdateRequest) bool {
 			return req.ID == testProjectID && req.Name == updateReq.Name
-		}), mock.AnythingOfType("types.UserAuthorizationResponse"), mock.AnythingOfType("*zap.Logger")).Return((*types.ProjectUpdateResponse)(nil), errors.New(types.ErrMsgProjectArchived))
+		}), mock.AnythingOfType("types.UserAuthorizationResponse"), mock.AnythingOfType("*zap.Logger")).Return((*types.ProjectUpdateResponse)(nil), errors.New(errorutil.ErrMsgProjectArchived))
 		body, _ := json.Marshal(updateReq)
 		req := httptest.NewRequest(http.MethodPatch, projectsPathPrefix+testProjectID, bytes.NewBuffer(body))
 		req.Header.Set(contentTypeHeader, applicationJSON)
@@ -603,7 +605,7 @@ func TestUpdateProject(t *testing.T) {
 		updateReq := &types.ProjectUpdateRequest{Name: testUpdatedProject}
 		mockSvc.On("UpdateProject", mock.Anything, mock.MatchedBy(func(req *types.ProjectUpdateRequest) bool {
 			return req.ID == testProjectID && req.Name == updateReq.Name
-		}), mock.AnythingOfType("types.UserAuthorizationResponse"), mock.AnythingOfType("*zap.Logger")).Return((*types.ProjectUpdateResponse)(nil), errors.New(types.ErrMsgProjectLockedByUser+" other-user"))
+		}), mock.AnythingOfType("types.UserAuthorizationResponse"), mock.AnythingOfType("*zap.Logger")).Return((*types.ProjectUpdateResponse)(nil), errors.New(errorutil.ErrMsgProjectLockedByUser+" other-user"))
 		body, _ := json.Marshal(updateReq)
 		req := httptest.NewRequest(http.MethodPatch, projectsPathPrefix+testProjectID, bytes.NewBuffer(body))
 		req.Header.Set(contentTypeHeader, applicationJSON)
@@ -649,7 +651,7 @@ func TestDeleteProject(t *testing.T) {
 		r, mockSvc := setupTest()
 
 		projectID := "323e4567-e89b-12d3-a456-426614174000"
-		mockSvc.On("DeleteProject", mock.Anything, projectID, mock.AnythingOfType("types.UserAuthorizationResponse"), mock.AnythingOfType("*zap.Logger")).Return(errors.New(types.ErrMsgProjectNotFound))
+		mockSvc.On("DeleteProject", mock.Anything, projectID, mock.AnythingOfType("types.UserAuthorizationResponse"), mock.AnythingOfType("*zap.Logger")).Return(errors.New(errorutil.ErrMsgProjectNotFound))
 
 		req := httptest.NewRequest(http.MethodDelete, projectsPathPrefix+projectID, nil)
 		w := httptest.NewRecorder()
@@ -664,7 +666,7 @@ func TestDeleteProject(t *testing.T) {
 		r, mockSvc := setupTest()
 
 		projectID := testProjectID
-		mockSvc.On("DeleteProject", mock.Anything, projectID, mock.AnythingOfType("types.UserAuthorizationResponse"), mock.AnythingOfType("*zap.Logger")).Return(errors.New(types.ErrMsgUserNotAssignedToProject))
+		mockSvc.On("DeleteProject", mock.Anything, projectID, mock.AnythingOfType("types.UserAuthorizationResponse"), mock.AnythingOfType("*zap.Logger")).Return(errors.New(errorutil.ErrMsgUserNotAssignedToProject))
 
 		req := httptest.NewRequest(http.MethodDelete, projectsPathPrefix+projectID, nil)
 		w := httptest.NewRecorder()
@@ -717,7 +719,7 @@ func TestDeleteProject(t *testing.T) {
 
 	t.Run("returns forbidden when project archived", func(t *testing.T) {
 		r, mockSvc := setupTest()
-		mockSvc.On("DeleteProject", mock.Anything, testProjectID, mock.AnythingOfType("types.UserAuthorizationResponse"), mock.AnythingOfType("*zap.Logger")).Return(errors.New(types.ErrMsgProjectArchived))
+		mockSvc.On("DeleteProject", mock.Anything, testProjectID, mock.AnythingOfType("types.UserAuthorizationResponse"), mock.AnythingOfType("*zap.Logger")).Return(errors.New(errorutil.ErrMsgProjectArchived))
 		req := httptest.NewRequest(http.MethodDelete, projectsPathPrefix+testProjectID, nil)
 		w := httptest.NewRecorder()
 		r.ServeHTTP(w, req)
@@ -727,7 +729,7 @@ func TestDeleteProject(t *testing.T) {
 
 	t.Run("returns forbidden when locked by another user", func(t *testing.T) {
 		r, mockSvc := setupTest()
-		mockSvc.On("DeleteProject", mock.Anything, testProjectID, mock.AnythingOfType("types.UserAuthorizationResponse"), mock.AnythingOfType("*zap.Logger")).Return(errors.New(types.ErrMsgProjectLockedByUser + " other-user"))
+		mockSvc.On("DeleteProject", mock.Anything, testProjectID, mock.AnythingOfType("types.UserAuthorizationResponse"), mock.AnythingOfType("*zap.Logger")).Return(errors.New(errorutil.ErrMsgProjectLockedByUser + " other-user"))
 		req := httptest.NewRequest(http.MethodDelete, projectsPathPrefix+testProjectID, nil)
 		w := httptest.NewRecorder()
 		r.ServeHTTP(w, req)
@@ -737,7 +739,7 @@ func TestDeleteProject(t *testing.T) {
 
 	t.Run("returns forbidden when user not found", func(t *testing.T) {
 		r, mockSvc := setupTest()
-		mockSvc.On("DeleteProject", mock.Anything, testProjectID, mock.AnythingOfType("types.UserAuthorizationResponse"), mock.AnythingOfType("*zap.Logger")).Return(errors.New(types.ErrMsgUserNotFound))
+		mockSvc.On("DeleteProject", mock.Anything, testProjectID, mock.AnythingOfType("types.UserAuthorizationResponse"), mock.AnythingOfType("*zap.Logger")).Return(errors.New(errorutil.ErrMsgUserNotFound))
 		req := httptest.NewRequest(http.MethodDelete, projectsPathPrefix+testProjectID, nil)
 		w := httptest.NewRecorder()
 		r.ServeHTTP(w, req)
@@ -906,7 +908,7 @@ func TestRemoveUserFromProject(t *testing.T) {
 		projectID := testProjectID
 		userEmail := testUserEmail
 
-		mockSvc.On("RemoveUserFromProject", mock.Anything, projectID, userEmail, mock.AnythingOfType("types.UserAuthorizationResponse"), mock.AnythingOfType("*zap.Logger")).Return((*types.UserAssignmentResponse)(nil), errors.New(types.ErrMsgUserNotAssignedToProject))
+		mockSvc.On("RemoveUserFromProject", mock.Anything, projectID, userEmail, mock.AnythingOfType("types.UserAuthorizationResponse"), mock.AnythingOfType("*zap.Logger")).Return((*types.UserAssignmentResponse)(nil), errors.New(errorutil.ErrMsgUserNotAssignedToProject))
 
 		req := httptest.NewRequest(http.MethodDelete, projectsPathPrefix+projectID+usersPath+userEmail, nil)
 		w := httptest.NewRecorder()
@@ -1041,7 +1043,7 @@ func TestUpdateProjectStar(t *testing.T) {
 	t.Run("returns forbidden when user not assigned to project", func(t *testing.T) {
 		r, mockSvc := setupTest()
 		starReq := types.ProjectStarRequest{IsStarred: true}
-		mockSvc.On("StarProject", mock.Anything, testProjectID, testUserID, mock.AnythingOfType("*zap.Logger")).Return(errors.New(types.ErrMsgUserNotAssignedToProject))
+		mockSvc.On("StarProject", mock.Anything, testProjectID, testUserID, mock.AnythingOfType("*zap.Logger")).Return(errors.New(errorutil.ErrMsgUserNotAssignedToProject))
 		body, _ := json.Marshal(starReq)
 		req := httptest.NewRequest(http.MethodPost, projectsPathPrefix+testProjectID+starPath+testUserID, bytes.NewBuffer(body))
 		req.Header.Set(contentTypeHeader, applicationJSON)
@@ -1100,7 +1102,7 @@ func TestUpdateProjectArchive(t *testing.T) {
 		archiveReq := types.ProjectArchiveRequest{Archive: true}
 
 		// Mock project doesn't exist
-		mockSvc.On("ArchiveProject", mock.Anything, projectID, mock.AnythingOfType("types.UserAuthorizationResponse"), mock.AnythingOfType("*zap.Logger")).Return(errors.New(types.ErrMsgProjectNotFound))
+		mockSvc.On("ArchiveProject", mock.Anything, projectID, mock.AnythingOfType("types.UserAuthorizationResponse"), mock.AnythingOfType("*zap.Logger")).Return(errors.New(errorutil.ErrMsgProjectNotFound))
 
 		body, _ := json.Marshal(archiveReq)
 		req := httptest.NewRequest(http.MethodPost, projectsPathPrefix+projectID+archivePath, bytes.NewBuffer(body))
@@ -1162,7 +1164,7 @@ func TestUpdateProjectArchive(t *testing.T) {
 	t.Run("returns forbidden when user not assigned", func(t *testing.T) {
 		r, mockSvc := setupTest()
 		archiveReq := types.ProjectArchiveRequest{Archive: true}
-		mockSvc.On("ArchiveProject", mock.Anything, testProjectID, mock.AnythingOfType("types.UserAuthorizationResponse"), mock.AnythingOfType("*zap.Logger")).Return(errors.New(types.ErrMsgUserNotAssignedToProject))
+		mockSvc.On("ArchiveProject", mock.Anything, testProjectID, mock.AnythingOfType("types.UserAuthorizationResponse"), mock.AnythingOfType("*zap.Logger")).Return(errors.New(errorutil.ErrMsgUserNotAssignedToProject))
 		body, _ := json.Marshal(archiveReq)
 		req := httptest.NewRequest(http.MethodPost, projectsPathPrefix+testProjectID+archivePath, bytes.NewBuffer(body))
 		req.Header.Set(contentTypeHeader, applicationJSON)
@@ -1175,7 +1177,7 @@ func TestUpdateProjectArchive(t *testing.T) {
 	t.Run("returns forbidden when locked by another user", func(t *testing.T) {
 		r, mockSvc := setupTest()
 		archiveReq := types.ProjectArchiveRequest{Archive: true}
-		mockSvc.On("ArchiveProject", mock.Anything, testProjectID, mock.AnythingOfType("types.UserAuthorizationResponse"), mock.AnythingOfType("*zap.Logger")).Return(errors.New(types.ErrMsgProjectLockedByUser + " other-user"))
+		mockSvc.On("ArchiveProject", mock.Anything, testProjectID, mock.AnythingOfType("types.UserAuthorizationResponse"), mock.AnythingOfType("*zap.Logger")).Return(errors.New(errorutil.ErrMsgProjectLockedByUser + " other-user"))
 		body, _ := json.Marshal(archiveReq)
 		req := httptest.NewRequest(http.MethodPost, projectsPathPrefix+testProjectID+archivePath, bytes.NewBuffer(body))
 		req.Header.Set(contentTypeHeader, applicationJSON)
@@ -1188,7 +1190,7 @@ func TestUpdateProjectArchive(t *testing.T) {
 	t.Run("returns not found when user not found", func(t *testing.T) {
 		r, mockSvc := setupTest()
 		archiveReq := types.ProjectArchiveRequest{Archive: true}
-		mockSvc.On("ArchiveProject", mock.Anything, testProjectID, mock.AnythingOfType("types.UserAuthorizationResponse"), mock.AnythingOfType("*zap.Logger")).Return(errors.New(types.ErrMsgUserNotFound))
+		mockSvc.On("ArchiveProject", mock.Anything, testProjectID, mock.AnythingOfType("types.UserAuthorizationResponse"), mock.AnythingOfType("*zap.Logger")).Return(errors.New(errorutil.ErrMsgUserNotFound))
 		body, _ := json.Marshal(archiveReq)
 		req := httptest.NewRequest(http.MethodPost, projectsPathPrefix+testProjectID+archivePath, bytes.NewBuffer(body))
 		req.Header.Set(contentTypeHeader, applicationJSON)
@@ -1244,7 +1246,7 @@ func TestUpdateProjectLock(t *testing.T) {
 		projectID := "323e4567-e89b-12d3-a456-426614174000"
 		lockReq := types.ProjectLockRequest{IsLocked: true}
 
-		mockSvc.On("LockProject", mock.Anything, projectID, mock.AnythingOfType("types.UserAuthorizationResponse"), mock.AnythingOfType("*zap.Logger")).Return(errors.New(types.ErrMsgProjectNotFound))
+		mockSvc.On("LockProject", mock.Anything, projectID, mock.AnythingOfType("types.UserAuthorizationResponse"), mock.AnythingOfType("*zap.Logger")).Return(errors.New(errorutil.ErrMsgProjectNotFound))
 
 		body, _ := json.Marshal(lockReq)
 		req := httptest.NewRequest(http.MethodPost, projectsPathPrefix+projectID+"/lock", bytes.NewBuffer(body))
@@ -1305,7 +1307,7 @@ func TestUpdateProjectLock(t *testing.T) {
 	t.Run("returns forbidden when user not assigned", func(t *testing.T) {
 		r, mockSvc := setupTest()
 		lockReq := types.ProjectLockRequest{IsLocked: true}
-		mockSvc.On("LockProject", mock.Anything, testProjectID, mock.AnythingOfType("types.UserAuthorizationResponse"), mock.AnythingOfType("*zap.Logger")).Return(errors.New(types.ErrMsgUserNotAssignedToProject))
+		mockSvc.On("LockProject", mock.Anything, testProjectID, mock.AnythingOfType("types.UserAuthorizationResponse"), mock.AnythingOfType("*zap.Logger")).Return(errors.New(errorutil.ErrMsgUserNotAssignedToProject))
 		body, _ := json.Marshal(lockReq)
 		req := httptest.NewRequest(http.MethodPost, projectsPathPrefix+testProjectID+"/lock", bytes.NewBuffer(body))
 		req.Header.Set(contentTypeHeader, applicationJSON)
@@ -1318,7 +1320,7 @@ func TestUpdateProjectLock(t *testing.T) {
 	t.Run("returns forbidden when user not found", func(t *testing.T) {
 		r, mockSvc := setupTest()
 		lockReq := types.ProjectLockRequest{IsLocked: true}
-		mockSvc.On("LockProject", mock.Anything, testProjectID, mock.AnythingOfType("types.UserAuthorizationResponse"), mock.AnythingOfType("*zap.Logger")).Return(errors.New(types.ErrMsgUserNotFound))
+		mockSvc.On("LockProject", mock.Anything, testProjectID, mock.AnythingOfType("types.UserAuthorizationResponse"), mock.AnythingOfType("*zap.Logger")).Return(errors.New(errorutil.ErrMsgUserNotFound))
 		body, _ := json.Marshal(lockReq)
 		req := httptest.NewRequest(http.MethodPost, projectsPathPrefix+testProjectID+"/lock", bytes.NewBuffer(body))
 		req.Header.Set(contentTypeHeader, applicationJSON)
@@ -1331,7 +1333,7 @@ func TestUpdateProjectLock(t *testing.T) {
 	t.Run("returns forbidden when project already locked by another user", func(t *testing.T) {
 		r, mockSvc := setupTest()
 		lockReq := types.ProjectLockRequest{IsLocked: true}
-		mockSvc.On("LockProject", mock.Anything, testProjectID, mock.AnythingOfType("types.UserAuthorizationResponse"), mock.AnythingOfType("*zap.Logger")).Return(errors.New(types.ErrMsgProjectLockedByUser + " other-user"))
+		mockSvc.On("LockProject", mock.Anything, testProjectID, mock.AnythingOfType("types.UserAuthorizationResponse"), mock.AnythingOfType("*zap.Logger")).Return(errors.New(errorutil.ErrMsgProjectLockedByUser + " other-user"))
 		body, _ := json.Marshal(lockReq)
 		req := httptest.NewRequest(http.MethodPost, projectsPathPrefix+testProjectID+"/lock", bytes.NewBuffer(body))
 		req.Header.Set(contentTypeHeader, applicationJSON)
@@ -1344,7 +1346,7 @@ func TestUpdateProjectLock(t *testing.T) {
 	t.Run("returns forbidden when unlocking not locked by user", func(t *testing.T) {
 		r, mockSvc := setupTest()
 		lockReq := types.ProjectLockRequest{IsLocked: false}
-		mockSvc.On("UnlockProject", mock.Anything, testProjectID, mock.AnythingOfType("types.UserAuthorizationResponse"), mock.AnythingOfType("*zap.Logger")).Return(errors.New(types.ErrMsgProjectNotLockedByUser))
+		mockSvc.On("UnlockProject", mock.Anything, testProjectID, mock.AnythingOfType("types.UserAuthorizationResponse"), mock.AnythingOfType("*zap.Logger")).Return(errors.New(errorutil.ErrMsgProjectNotLockedByUser))
 		body, _ := json.Marshal(lockReq)
 		req := httptest.NewRequest(http.MethodPost, projectsPathPrefix+testProjectID+"/lock", bytes.NewBuffer(body))
 		req.Header.Set(contentTypeHeader, applicationJSON)

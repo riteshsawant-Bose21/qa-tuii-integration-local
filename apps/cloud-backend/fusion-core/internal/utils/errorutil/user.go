@@ -1,4 +1,4 @@
-package constants
+package errorutil
 
 // Authentication Error Messages
 const (
@@ -45,15 +45,4 @@ const (
 	MsgInsufficientPermissionsToUpdateUserRoles       = "Insufficient permissions to update user roles"
 	MsgInsufficientPermissionsToUpdateRolePermissions = "Insufficient permissions to update role permissions"
 	MsgInsufficientPermissionsToViewOrgUsers          = "Insufficient permissions to view organization users"
-)
-
-// General Messages
-const (
-	MsgUnauthorized        = "Unauthorized"
-	MsgAccessDenied        = "Access denied"
-	MsgInternalServerError = "Internal Server Error"
-	MsgBadRequest          = "Bad Request"
-	MsgForbidden           = "Forbidden"
-	MsgInvalidRequestBody  = "Invalid request body"
-	MsgInvalidToken        = "Invalid token"
 )

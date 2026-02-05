@@ -215,13 +215,17 @@ func (suite *ProductIntegrationTestSuite) setupAPI() error {
 
 	// Initialize API server (for completeness, though we use test router)
 	apiConfig := &api.Config{
-		Mode:        "test",
-		Host:        "localhost",
-		Port:        "0",                     // Use ephemeral port for testing
-		Auth0Domain: "test-domain.auth0.com", // Mock Auth0 domain for testing
+		Mode: "test",
+		Host: "localhost",
+		Port: "0", // Use ephemeral port for testing
+
 	}
 
-	apiServer, err := api.New(apiConfig, productSVC, projectSVC, userSVC, loggers)
+	// Create mock auth service and middleware
+	authSvc := &mockAuthService{}
+	authMiddleware := &mockMiddlewareStruct{}
+
+	apiServer, err := api.New(apiConfig, productSVC, projectSVC, userSVC, authSvc, authMiddleware, loggers)
 	if err != nil {
 		return fmt.Errorf("failed to initialize API server: %w", err)
 	}

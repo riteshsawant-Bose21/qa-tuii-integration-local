@@ -7,7 +7,6 @@ import (
 	"fmt"
 
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/api/types"
-	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/utils/ptr"
 	"github.com/google/uuid"
 )
 
@@ -36,26 +35,66 @@ func (s *Service) UpdateUserProfile(ctx context.Context, profileDetails *types.U
 	}
 
 	// update only the fields which are present in the request payload and are not null
-	ptr.AssignIfNotNull(&existingProfile.FirstName, profileDetails.FirstName)
-	ptr.AssignIfNotNull(&existingProfile.LastName, profileDetails.LastName)
-	ptr.AssignIfNotNull(&existingProfile.JobTitle, profileDetails.JobTitle)
-	ptr.AssignIfNotNull(&existingProfile.Phone, profileDetails.Phone)
-	ptr.AssignIfNotNull(&existingProfile.ProfilePhotoURL, profileDetails.ProfilePhotoURL)
-	ptr.AssignIfNotNull(&existingProfile.AddressLine1, profileDetails.AddressLine1)
-	ptr.AssignIfNotNull(&existingProfile.City, profileDetails.City)
-	ptr.AssignIfNotNull(&existingProfile.StateProvince, profileDetails.StateProvince)
-	ptr.AssignIfNotNull(&existingProfile.Country, profileDetails.Country)
-	ptr.AssignIfNotNull(&existingProfile.ZipPostalCode, profileDetails.ZipPostalCode)
-	ptr.AssignIfNotNull(&existingProfile.GDPROptOut, profileDetails.GDPROptOut)
-	ptr.AssignIfNotNull(&existingProfile.PrivacyPolicyAccepted, profileDetails.PrivacyPolicyAccepted)
-	ptr.AssignIfNotNull(&existingProfile.Timezone, profileDetails.Timezone)
-	ptr.AssignIfNotNull(&existingProfile.UnitSystem, profileDetails.UnitSystem)
-	ptr.AssignIfNotNull(&existingProfile.CustomerType, profileDetails.CustomerType)
-	ptr.AssignIfNotNull(&existingProfile.ClientType, profileDetails.ClientType)
-	ptr.AssignIfNotNull(&existingProfile.CompanyName, profileDetails.CompanyName)
-	ptr.AssignIfNotNull(&existingProfile.CompanyWebsite, profileDetails.CompanyWebsite)
-	ptr.AssignIfNotNull(&existingProfile.Currency, profileDetails.Currency)
-	ptr.AssignIfNotNull(&existingProfile.NetsuiteCustomerID, profileDetails.NetsuiteCustomerID)
+	if profileDetails.FirstName != nil {
+		existingProfile.FirstName = *profileDetails.FirstName
+	}
+	if profileDetails.LastName != nil {
+		existingProfile.LastName = *profileDetails.LastName
+	}
+	if profileDetails.JobTitle != nil {
+		existingProfile.JobTitle = *profileDetails.JobTitle
+	}
+	if profileDetails.Phone != nil {
+		existingProfile.Phone = *profileDetails.Phone
+	}
+	if profileDetails.ProfilePhotoURL != nil {
+		existingProfile.ProfilePhotoURL = *profileDetails.ProfilePhotoURL
+	}
+	if profileDetails.AddressLine1 != nil {
+		existingProfile.AddressLine1 = *profileDetails.AddressLine1
+	}
+	if profileDetails.City != nil {
+		existingProfile.City = *profileDetails.City
+	}
+	if profileDetails.StateProvince != nil {
+		existingProfile.StateProvince = *profileDetails.StateProvince
+	}
+	if profileDetails.Country != nil {
+		existingProfile.Country = *profileDetails.Country
+	}
+	if profileDetails.ZipPostalCode != nil {
+		existingProfile.ZipPostalCode = *profileDetails.ZipPostalCode
+	}
+	if profileDetails.GDPROptOut != nil {
+		existingProfile.GDPROptOut = *profileDetails.GDPROptOut
+	}
+	if profileDetails.PrivacyPolicyAccepted != nil {
+		existingProfile.PrivacyPolicyAccepted = *profileDetails.PrivacyPolicyAccepted
+	}
+	if profileDetails.Timezone != nil {
+		existingProfile.Timezone = *profileDetails.Timezone
+	}
+	if profileDetails.UnitSystem != nil {
+		existingProfile.UnitSystem = *profileDetails.UnitSystem
+	}
+	if profileDetails.CustomerType != nil {
+		existingProfile.CustomerType = *profileDetails.CustomerType
+	}
+	if profileDetails.ClientType != nil {
+		existingProfile.ClientType = *profileDetails.ClientType
+	}
+	if profileDetails.CompanyName != nil {
+		existingProfile.CompanyName = *profileDetails.CompanyName
+	}
+	if profileDetails.CompanyWebsite != nil {
+		existingProfile.CompanyWebsite = *profileDetails.CompanyWebsite
+	}
+	if profileDetails.Currency != nil {
+		existingProfile.Currency = *profileDetails.Currency
+	}
+	if profileDetails.NetsuiteCustomerID != nil {
+		existingProfile.NetsuiteCustomerID = *profileDetails.NetsuiteCustomerID
+	}
 
 	if profileDetails.PriceList != nil {
 		var js map[string]interface{}

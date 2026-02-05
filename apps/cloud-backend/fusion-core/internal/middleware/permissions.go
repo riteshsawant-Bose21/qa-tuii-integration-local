@@ -1,5 +1,11 @@
 package middleware
 
+import (
+	"fmt"
+
+	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/constants"
+)
+
 // Common permission feature constants
 const (
 	// Project permissions
@@ -36,45 +42,47 @@ const (
 // SetupProjectPermissions configures access control permissions for project endpoints
 func SetupProjectPermissions(acc *AccessControlConfig) {
 	// Project GET endpoints - require read permission
-	acc.RegisterPermission("GET", "/api/v1/projects", ProjectRead, PermissionRead, "View all projects")
+	acc.RegisterPermission("GET", fmt.Sprintf("%s%s", constants.APIV1Path, constants.EndpointProjects), ProjectRead, PermissionRead, "View all projects")
 
 	// Project CREATE endpoint - require write permission
-	acc.RegisterPermission("POST", "/api/v1/projects", ProjectCreate, PermissionWrite, "Create new project")
+	acc.RegisterPermission("POST", fmt.Sprintf("%s%s", constants.APIV1Path, constants.EndpointProjects), ProjectCreate, PermissionWrite, "Create new project")
 
 	// Project UPDATE endpoint - require write permission
-	acc.RegisterPermission("PATCH", "/api/v1/projects/:projectId", ProjectUpdate, PermissionWrite, "Update project")
+	acc.RegisterPermission("PATCH", fmt.Sprintf("%s%s%s", constants.APIV1Path, constants.EndpointProjects, constants.EndpointProjectByID), ProjectUpdate, PermissionWrite, "Update project")
 
 	// Project DELETE endpoint - require admin permission
-	acc.RegisterPermission("DELETE", "/api/v1/projects/:projectId", ProjectDelete, PermissionWrite, "Delete project")
+	acc.RegisterPermission("DELETE", fmt.Sprintf("%s%s%s", constants.APIV1Path, constants.EndpointProjects, constants.EndpointProjectByID), ProjectDelete, PermissionWrite, "Delete project")
 
 	// Project user assignment endpoints - require write permission
-	acc.RegisterPermission("PUT", "/api/v1/projects/:projectId/users/:userEmail", ProjectUpdate, PermissionWrite, "Assign user to project")
-	acc.RegisterPermission("DELETE", "/api/v1/projects/:projectId/users/:userEmail", ProjectUpdate, PermissionWrite, "Remove user from project")
+	acc.RegisterPermission("PUT", fmt.Sprintf("%s%s%s", constants.APIV1Path, constants.EndpointProjects, constants.EndpointProjectAssignUser), ProjectUpdate, PermissionWrite, "Assign user to project")
+	acc.RegisterPermission("DELETE", fmt.Sprintf("%s%s%s", constants.APIV1Path, constants.EndpointProjects, constants.EndpointProjectRemoveUser), ProjectUpdate, PermissionWrite, "Remove user from project")
 
 	// Project star endpoint - require write permission
-	acc.RegisterPermission("POST", "/api/v1/projects/:projectId/star/:userId", ProjectUpdate, PermissionRead, "Star or unstar project")
+	acc.RegisterPermission("POST", fmt.Sprintf("%s%s%s", constants.APIV1Path, constants.EndpointProjects, constants.EndpointProjectStar), ProjectUpdate, PermissionRead, "Star or unstar project")
 
 	// Project archive endpoint - require write permission
-	acc.RegisterPermission("POST", "/api/v1/projects/:projectId/archive", ProjectUpdate, PermissionWrite, "Archive or unarchive project")
+	acc.RegisterPermission("POST", fmt.Sprintf("%s%s%s", constants.APIV1Path, constants.EndpointProjects, constants.EndpointProjectArchive), ProjectUpdate, PermissionWrite, "Archive or unarchive project")
 
 	// Project lock endpoint - require write permission
-	acc.RegisterPermission("POST", "/api/v1/projects/:projectId/lock", ProjectUpdate, PermissionWrite, "Lock or unlock project")
+	acc.RegisterPermission("POST", fmt.Sprintf("%s%s%s", constants.APIV1Path, constants.EndpointProjects, constants.EndpointProjectLock), ProjectUpdate, PermissionWrite, "Lock or unlock project")
 }
 
 // SetupUserProfilePermissions configures access control permissions for user profile endpoints
 func SetupUserProfilePermissions(acc *AccessControlConfig) {
 	// User Profile endpoints
-	acc.RegisterPermission("GET", "/api/v1/users/profile", UserProfileRead, PermissionRead, "View user profile")
-	acc.RegisterPermission("POST", "/api/v1/users/profile", UserProfileCreate, PermissionWrite, "Create user profile")
-	acc.RegisterPermission("PUT", "/api/v1/users/profile/:profileID", UserProfileUpdate, PermissionWrite, "Update user profile")
+	basePath := fmt.Sprintf("%s%s%s", constants.APIV1Path, constants.EndpointUsers, constants.EndpointUserProfile)
+	acc.RegisterPermission("GET", basePath, UserProfileRead, PermissionRead, "View user profile")
+	acc.RegisterPermission("POST", basePath, UserProfileCreate, PermissionWrite, "Create user profile")
+	acc.RegisterPermission("PUT", fmt.Sprintf("%s%s", basePath, constants.EndpointUserProfileByID), UserProfileUpdate, PermissionWrite, "Update user profile")
 }
 
 // SetupUserSettingsPermissions configures access control permissions for user settings endpoints
 func SetupUserSettingsPermissions(acc *AccessControlConfig) {
 	// User Settings endpoints
-	acc.RegisterPermission("GET", "/api/v1/users/settings", UserSettingsRead, PermissionRead, "View user settings")
-	acc.RegisterPermission("POST", "/api/v1/users/settings", UserSettingsCreate, PermissionWrite, "Create user settings")
-	acc.RegisterPermission("PUT", "/api/v1/users/settings/:settingsID", UserSettingsUpdate, PermissionWrite, "Update user settings")
+	basePath := fmt.Sprintf("%s%s%s", constants.APIV1Path, constants.EndpointUsers, constants.EndpointUserSettings)
+	acc.RegisterPermission("GET", basePath, UserSettingsRead, PermissionRead, "View user settings")
+	acc.RegisterPermission("POST", basePath, UserSettingsCreate, PermissionWrite, "Create user settings")
+	acc.RegisterPermission("PUT", fmt.Sprintf("%s%s", basePath, constants.EndpointUserSettingsByID), UserSettingsUpdate, PermissionWrite, "Update user settings")
 }
 
 func SetupDevicePermissions(acc *AccessControlConfig) {

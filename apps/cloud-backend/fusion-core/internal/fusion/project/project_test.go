@@ -11,6 +11,7 @@ import (
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/api/types"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/model"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/model/models"
+	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/utils/errorutil"
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/aarondl/null/v8"
 	"github.com/stretchr/testify/assert"
@@ -1860,7 +1861,7 @@ func TestValidateProject_UserAssignmentDBError(t *testing.T) {
 	logger, _ := zap.NewProduction()
 	_, err := service.validateProject(ctx, testProjectID1, ValidationOptions{CheckUserAssigned: true, UserID: testUserID1}, logger)
 	assert.Error(t, err)
-	assert.Contains(t, err.Error(), types.ErrMsgFailedUserAssignmentCheck)
+	assert.Contains(t, err.Error(), errorutil.ErrMsgFailedUserAssignmentCheck)
 	mockDB.AssertExpectations(t)
 }
 

@@ -1,6 +1,9 @@
 package types
 
-import "time"
+import (
+	"encoding/json"
+	"time"
+)
 
 // User represents a user in the system
 type User struct {
@@ -112,4 +115,86 @@ type UpdateUserRequest struct {
 	FullName          *string `json:"full_name,omitempty" example:"John Smith"`
 	AccountTypeRoleID *int    `json:"account_type_role_id,omitempty" example:"3"`
 	AccountID         *string `json:"account_id,omitempty" example:"acc_111222333"`
+}
+
+// === User settings related types ===
+
+type UserSettings struct {
+	ID        string     `json:"id"`
+	UserID    string     `json:"user_id"`
+	Language  string     `json:"language"`
+	Theme     string     `json:"theme"`
+	CreatedAt time.Time  `json:"created_at"`
+	UpdatedAt *time.Time `json:"updated_at"`
+}
+
+type UpdateUserSettingsRequest struct {
+	Language *string `json:"language"`
+	Theme    *string `json:"theme"`
+}
+
+type StatusOkForCreateUserSettings struct {
+	ID string `json:"id" example:"53437319-7a5b-4462-bc7c-9e7f9a057a1a"`
+}
+
+// === User profile related types ===
+
+type UserProfile struct {
+	ID                    string          `json:"id"`
+	UserID                string          `json:"user_id"`
+	Email                 string          `json:"email"`
+	FirstName             string          `json:"first_name"`
+	LastName              string          `json:"last_name"`
+	JobTitle              string          `json:"job_title"`
+	Phone                 string          `json:"phone"`
+	ProfilePhotoURL       string          `json:"profile_photo_url"`
+	AddressLine1          string          `json:"address_line_1"`
+	City                  string          `json:"city"`
+	StateProvince         string          `json:"state_province"`
+	Country               string          `json:"country"`
+	ZipPostalCode         string          `json:"zip_postal_code"`
+	GDPROptOut            bool            `json:"gdpr_opt_out"`
+	PrivacyPolicyAccepted bool            `json:"privacy_policy_accepted"`
+	LinkedProfiles        json.RawMessage `json:"linked_profiles" swaggertype:"object"`
+	Timezone              string          `json:"timezone"`
+	UnitSystem            string          `json:"unit_system"`
+	CustomerType          string          `json:"customer_type"`
+	ClientType            string          `json:"client_type"`
+	CompanyName           string          `json:"company_name"`
+	CompanyWebsite        string          `json:"company_website"`
+	Currency              string          `json:"currency"`
+	NetsuiteCustomerID    string          `json:"netsuite_customer_id"`
+	PriceList             json.RawMessage `json:"price_list" swaggertype:"object"`
+	CreatedAt             time.Time       `json:"created_at"`
+	UpdatedAt             *time.Time      `json:"updated_at"`
+}
+
+type UserProfileUpdateRequest struct {
+	Email                 *string          `json:"email"`
+	FirstName             *string          `json:"first_name"`
+	LastName              *string          `json:"last_name"`
+	JobTitle              *string          `json:"job_title"`
+	Phone                 *string          `json:"phone"`
+	ProfilePhotoURL       *string          `json:"profile_photo_url"`
+	AddressLine1          *string          `json:"address_line_1"`
+	City                  *string          `json:"city"`
+	StateProvince         *string          `json:"state_province"`
+	Country               *string          `json:"country"`
+	ZipPostalCode         *string          `json:"zip_postal_code"`
+	GDPROptOut            *bool            `json:"gdpr_opt_out"`
+	PrivacyPolicyAccepted *bool            `json:"privacy_policy_accepted"`
+	LinkedProfiles        *json.RawMessage `json:"linked_profiles" swaggertype:"object"`
+	Timezone              *string          `json:"timezone"`
+	UnitSystem            *string          `json:"unit_system"`
+	CustomerType          *string          `json:"customer_type"`
+	ClientType            *string          `json:"client_type"`
+	CompanyName           *string          `json:"company_name"`
+	CompanyWebsite        *string          `json:"company_website"`
+	Currency              *string          `json:"currency"`
+	NetsuiteCustomerID    *string          `json:"netsuite_customer_id"`
+	PriceList             *json.RawMessage `json:"price_list" swaggertype:"object"`
+}
+
+type StatusOkForCreateUserProfile struct {
+	ID string `json:"id" example:"53437319-7a5b-4462-bc7c-9e7f9a057a1a"`
 }

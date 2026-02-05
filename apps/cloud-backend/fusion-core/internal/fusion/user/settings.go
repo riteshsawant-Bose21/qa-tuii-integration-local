@@ -6,7 +6,6 @@ import (
 	"fmt"
 
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/api/types"
-	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/utils/ptr"
 	"github.com/google/uuid"
 )
 
@@ -35,8 +34,12 @@ func (s *Service) UpdateUserSettings(ctx context.Context, settingsDetails *types
 	}
 
 	// Update the settings only if the fields are present in the request payload and is not null
-	ptr.AssignIfNotNull(&existingSettings.Language, settingsDetails.Language)
-	ptr.AssignIfNotNull(&existingSettings.Theme, settingsDetails.Theme)
+	if settingsDetails.Language != nil {
+		existingSettings.Language = *settingsDetails.Language
+	}
+	if settingsDetails.Theme != nil {
+		existingSettings.Theme = *settingsDetails.Theme
+	}
 
 	return s.dbService.UpdateUserSettings(ctx, existingSettings)
 }

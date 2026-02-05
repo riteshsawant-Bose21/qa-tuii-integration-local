@@ -3,7 +3,7 @@ package types
 import (
 	"time"
 
-	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/errors"
+	errorutil "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/utils/errorutil"
 )
 
 var (
@@ -17,7 +17,7 @@ var (
 
 // Generic product item response used for all product types
 type ProductItemResponse struct {
-	ProductID          int         `json:"productid"`
+	ProductID          int         `json:"product_id"`
 	Assets             interface{} `json:"assets"`
 	ModelName          string      `json:"model_name"`
 	ModelFamily        string      `json:"model_family,omitempty"`
@@ -107,17 +107,17 @@ type SyncJobResult struct {
 
 // SyncResult represents the result of a sync operation
 type SyncResult struct {
-	SyncType           string               `json:"sync_type"`
-	TotalItems         int                  `json:"total_items"`
-	Successful         int                  `json:"successful"`
-	Failed             int                  `json:"failed"`
-	Skipped            int                  `json:"skipped"`
-	Errors             []string             `json:"errors"`
-	ValidationWarnings []string             `json:"validation_warnings"`
-	Duration           time.Duration        `json:"duration"`
-	JobID              string               `json:"job_id,omitempty"`
-	ErrorSummary       *errors.ErrorSummary `json:"error_summary,omitempty"`
-	DetailedErrors     []*errors.SyncError  `json:"detailed_errors,omitempty"`
+	SyncType           string                  `json:"sync_type"`
+	TotalItems         int                     `json:"total_items"`
+	Successful         int                     `json:"successful"`
+	Failed             int                     `json:"failed"`
+	Skipped            int                     `json:"skipped"`
+	Errors             []string                `json:"errors"`
+	ValidationWarnings []string                `json:"validation_warnings"`
+	Duration           time.Duration           `json:"duration"`
+	JobID              string                  `json:"job_id,omitempty"`
+	ErrorSummary       *errorutil.ErrorSummary `json:"error_summary,omitempty"`
+	DetailedErrors     []*errorutil.SyncError  `json:"detailed_errors,omitempty"`
 }
 
 // LambdaEvent represents the Lambda event structure

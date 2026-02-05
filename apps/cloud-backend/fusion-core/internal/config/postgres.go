@@ -1,5 +1,9 @@
 package config
 
+import (
+	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/environment"
+)
+
 // Postgres holds the configuration settings for connecting to a PostgreSQL database.
 type Postgres struct {
 	Host     string
@@ -12,32 +16,32 @@ type Postgres struct {
 
 // Postgres retrieves the PostgreSQL configuration from the store.
 func (p *Service) Postgres() (*Postgres, error) {
-	host, err := p.store.ReqString(keyPostgresHost)
+	host, err := p.store.ReqString(environment.DB.Host)
 	if err != nil {
 		return nil, err
 	}
 
-	port, err := p.store.ReqString(keyPostgresPort)
+	port, err := p.store.ReqString(environment.DB.Port)
 	if err != nil {
 		return nil, err
 	}
 
-	user, err := p.store.ReqString(keyPostgresUser)
+	user, err := p.store.ReqString(environment.DB.User)
 	if err != nil {
 		return nil, err
 	}
 
-	password, err := p.store.ReqString(keyPostgresPass)
+	password, err := p.store.ReqString(environment.DB.Password)
 	if err != nil {
 		return nil, err
 	}
 
-	database, err := p.store.ReqString(keyPostgresInstance)
+	database, err := p.store.ReqString(environment.DB.Instance)
 	if err != nil {
 		return nil, err
 	}
 
-	sslMode, err := p.store.ReqString(keyPostgresSSLMode)
+	sslMode, err := p.store.ReqString(environment.DB.SSLMode)
 	if err != nil {
 		return nil, err
 	}
@@ -57,12 +61,3 @@ func (p *Service) Postgres() (*Postgres, error) {
 // 	defaultPostgresHost string = "127.0.0.1"
 // 	defaultPostgresPort string = "5432"
 // )
-
-const (
-	keyPostgresHost     string = "POSTGRES_HOST"
-	keyPostgresPort     string = "POSTGRES_PORT"
-	keyPostgresUser     string = "POSTGRES_USER"
-	keyPostgresPass     string = "POSTGRES_PASS"
-	keyPostgresInstance string = "POSTGRES_INSTANCE"
-	keyPostgresSSLMode  string = "POSTGRES_SSL_MODE"
-)
