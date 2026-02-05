@@ -35,6 +35,7 @@ import (
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/environment"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/log"
 
+	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/device"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/product"
 	productdb "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/product/db"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/project"
@@ -44,6 +45,7 @@ import (
 	"go.uber.org/zap"
 
 	projectdb "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/project/db"
+	devicedb "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/device/db"
 
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/auth"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/user"
@@ -189,11 +191,26 @@ func main() {
 	authMiddleware := middleware.NewAuth0Middleware(authSVC)
 	loggers.AppLogger.Info("Initialized Auth0 middleware")
 
+	iothandler, err := cloudfs.NewIoTClient(ctx, cfg.S3.Region, loggers.AppLogger)
+	if err != nil {
+		loggers.AppLogger.Fatal("Failed to initialize IoT client", zap.Error(err))
+	}
+
+	deviceDbSvc := devicedb.NewService(pgs)
+	if deviceDbSvc == nil {
+		loggers.AppLogger.Fatal("Failed to initialize device database service")
+	}
+	loggers.AppLogger.Info("Initialized Device DB Service.")
+
+	//Initialize Device Service
+	deviceSVC := device.NewService(deviceDbSvc, iothandler)
+
 	// Initialize API Server (with configurable host and port)
 	server, err := api.New(&api.Config{
 		Host: cfg.Server.APIHost,
 		Port: cfg.Server.APIPort,
-	}, productSVC, projectSVC, userSVC, authSVC, authMiddleware, loggers)
+	}, productSVC, projectSVC, userSVC, authSVC, authMiddleware, deviceSVC, loggers)
+	
 	if err != nil {
 		loggers.AppLogger.Fatal(fmt.Sprintf("Error while initializing API: %v", err))
 	}
@@ -201,7 +218,8 @@ func main() {
 	loggers.AppLogger.Info("Initialized the API.",
 		zap.String("host", cfg.Server.APIHost),
 		zap.String("port", cfg.Server.APIPort))
-	// Setup graceful shutdown
+	
+		// Setup graceful shutdown
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 

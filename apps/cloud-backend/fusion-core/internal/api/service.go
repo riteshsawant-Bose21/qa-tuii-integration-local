@@ -27,6 +27,7 @@ type API struct {
 	roleManagementService *userdb.RoleManagementService
 	authMiddleware        middleware.AuthMiddleware
 	appLog                *zap.Logger
+	device                fusion.Device
 }
 
 type Config struct {
@@ -42,6 +43,7 @@ func New(cfg *Config,
 	userSvc fusion.User,
 	authSvc fusion.Auth,
 	authMiddleware middleware.AuthMiddleware,
+	deviceSvc fusion.Device,
 	loggers *log.Loggers,
 ) (*API, error) {
 
@@ -78,6 +80,10 @@ func New(cfg *Config,
 		return nil, errors.New("missing auth middleware")
 	}
 
+	if deviceSvc == nil {
+		return nil, errors.New("missing device service")
+	}
+
 	api := &API{
 		engine:         engine,
 		product:        productSvc,
@@ -86,6 +92,7 @@ func New(cfg *Config,
 		auth:           authSvc,
 		authMiddleware: authMiddleware,
 		appLog:         loggers.AppLogger,
+		device:         deviceSvc,
 	}
 
 	api.registerRoutes()

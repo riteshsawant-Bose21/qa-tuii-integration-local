@@ -93,13 +93,13 @@ func (a *API) registerRoutes() {
 	}
 
 	// Auth endpoints
-	auth := v1.Group("/auth")
-	
-	// Auth automation route (no authentication required)
-	if a.auth != nil {
-		authHandler := handler.NewAuthHandler(a.auth)
-		auth.GET("/automation/tokens", authHandler.GetAuthTokensByResourceOwnerPassword)
-	}
+	// auth := v1.Group("/auth")
+
+	// // Auth automation route (no authentication required)
+	// if a.auth != nil {
+	// 	authHandler := handler.NewAuthHandler(a.auth)
+	// 	auth.GET("/automation/tokens", authHandler.GetAuthTokensByResourceOwnerPassword)
+	// }
 
 	// Role Management routes for organization admins
 	roleManagementHandler := handler.NewRoleManagementHandler(a.user, a.roleManagementService)
@@ -116,4 +116,13 @@ func (a *API) registerRoutes() {
 		organization.GET("/users", roleManagementHandler.GetOrganizationUsers)
 	}
 
+	// Device routes with authentication and access control
+	deviceHandler := handler.NewDeviceHandler(a.device)
+	devices := v1.Group("/devices")
+
+	{
+		devices.Use(a.authMiddleware.Middleware())
+		devices.Use(accessControl.GlobalAccessControlMiddleware())
+		devices.POST("", deviceHandler.CreateDevice)
+	}
 }
