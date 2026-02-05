@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 
+	response "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/api/response"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/api/types"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion"
 	"github.com/gin-gonic/gin"
@@ -37,7 +38,7 @@ func (h *DeviceHandler) CreateDevice(ctx *gin.Context) {
 	loggerFromContext, exists := ctx.Get("logger")
 
 	if !exists {
-		ctx.JSON(http.StatusInternalServerError, types.ErrorResponse{Message: types.ErrMsgInternalServerError})
+		response.InternalError(ctx)
 		return
 	}
 
@@ -46,28 +47,28 @@ func (h *DeviceHandler) CreateDevice(ctx *gin.Context) {
 	userAuth, exists := ctx.Get("user_auth")
 	if !exists {
 		fmt.Println(userAuth)
-		ctx.JSON(http.StatusUnauthorized, types.ErrorResponse{Message: types.ErrMsgUnauthorized})
+		response.Unauthorized(ctx, "User not authenticated")
 		return
 	}
 	user := userAuth.(*types.UserAuthorizationResponse)
 
 	var p types.DeviceCreateRequest
 	if err := ctx.ShouldBindJSON(&p); err != nil {
-		ctx.JSON(http.StatusBadRequest, types.ErrorResponse{Message: err.Error()})
+		response.BadRequest(ctx, err.Error())
 		return
 	}
 
-	response, err := h.device.CreateDevice(ctx, &p, *user, logger)
+	res, err := h.device.CreateDevice(ctx, &p, *user, logger)
 
 	if err != nil {
 		if err.Error() == types.ErrMsgDeviceAlreadyExists {
-			ctx.JSON(http.StatusBadRequest, types.ErrorResponse{Message: err.Error()})
+			response.BadRequest(ctx, err.Error())
 			return
 		}
 		// Internal server errors
-		ctx.JSON(http.StatusInternalServerError, types.ErrorResponse{Message: types.ErrMsgInternalServerError})
+		response.InternalError(ctx)
 		return
 	}
 
-	ctx.JSON(http.StatusCreated, response)
+	ctx.JSON(http.StatusCreated, res)
 }

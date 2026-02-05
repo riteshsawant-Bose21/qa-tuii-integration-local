@@ -16,6 +16,8 @@ import (
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/api"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/api/types"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/config"
+	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/device"
+	devicedb "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/device/db"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/id"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/product"
 	productdb "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/product/db"
@@ -213,6 +215,17 @@ func (suite *ProductIntegrationTestSuite) setupAPI() error {
 	loggers, err := log.NewLoggers(loggerConfig)
 	require.NoError(suite.T(), err, "Failed to create dual loggers")
 
+	// Initialize IoT handler for device service
+	iothandler, err := cloudfs.NewIoTClient(context.Background(), "us-east-1", zapLogger)
+	require.NoError(suite.T(), err, "Failed to initialize IoT client")
+
+	// Initialize Device services
+	deviceDBSvc := devicedb.NewService(suite.db)
+	require.NotNil(suite.T(), deviceDBSvc, "Failed to initialize device database service")
+
+	deviceSVC := device.NewService(deviceDBSvc, iothandler)
+	require.NotNil(suite.T(), deviceSVC, "Failed to initialize device service")
+
 	// Initialize API server (for completeness, though we use test router)
 	apiConfig := &api.Config{
 		Mode: "test",
@@ -225,7 +238,7 @@ func (suite *ProductIntegrationTestSuite) setupAPI() error {
 	authSvc := &mockAuthService{}
 	authMiddleware := &mockMiddlewareStruct{}
 
-	apiServer, err := api.New(apiConfig, productSVC, projectSVC, userSVC, authSvc, authMiddleware, loggers)
+	apiServer, err := api.New(apiConfig, productSVC, projectSVC, userSVC, authSvc, authMiddleware, deviceSVC, loggers)
 	if err != nil {
 		return fmt.Errorf("failed to initialize API server: %w", err)
 	}

@@ -17,6 +17,8 @@ import (
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/api"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/api/types"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/config"
+	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/device"
+	devicedb "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/device/db"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/id"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/product"
 	productdb "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/product/db"
@@ -276,6 +278,17 @@ func (suite *ProjectIntegrationTestSuite) setupAPI() error {
 	roleManagementSvc := userdb.NewRoleManagementService(suite.db)
 	require.NotNil(suite.T(), roleManagementSvc, "Failed to initialize role management service")
 
+	// Initialize IoT handler for device service
+	iothandler, err := cloudfs.NewIoTClient(context.Background(), "us-east-1", loggers.AppLogger)
+	require.NoError(suite.T(), err, "Failed to initialize IoT client")
+
+	// Initialize Device services
+	deviceDBSvc := devicedb.NewService(suite.db)
+	require.NotNil(suite.T(), deviceDBSvc, "Failed to initialize device database service")
+
+	deviceSVC := device.NewService(deviceDBSvc, iothandler)
+	require.NotNil(suite.T(), deviceSVC, "Failed to initialize device service")
+
 	// Initialize API server
 	apiConfig := &api.Config{
 		Mode: "test",
@@ -287,7 +300,7 @@ func (suite *ProjectIntegrationTestSuite) setupAPI() error {
 	authSvc := &mockAuthService{}
 	authMiddleware := &mockMiddlewareStruct{}
 
-	apiServer, err := api.New(apiConfig, productSVC, projectSVC, userSVC, authSvc, authMiddleware, loggers)
+	apiServer, err := api.New(apiConfig, productSVC, projectSVC, userSVC, authSvc, authMiddleware, deviceSVC, loggers)
 	if err != nil {
 		return fmt.Errorf("failed to initialize API server: %w", err)
 	}
