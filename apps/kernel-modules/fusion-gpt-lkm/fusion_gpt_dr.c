@@ -363,7 +363,7 @@ static irqreturn_t gpt_irq(int irq, void *dev_id)
             g->phc_epoch_valid     = true;
             g->phc_aligned         = false; /* ensure OF1 one-shot align runs */
             g->pending_future_anchor = false;
-            pr_debug("fusion_gpt: phc anchor latched epoch=%llu cnt=%llu\n",
+            pr_info("fusion_gpt: phc anchor latched epoch=%llu cnt=%llu\n",
                     g->phc_epoch_ns, g->pps_epoch_cnt64);
         }
 		raw_spin_unlock(&g->pps_lock);
@@ -441,7 +441,7 @@ static irqreturn_t gpt_irq(int irq, void *dev_id)
 			wrl(g, g->next_ocr1, GPT_OCR1);
 
             WRITE_ONCE(g->phc_aligned, true);          /* only once */
-            pr_debug("fusion_gpt: phc aligned to 1/3ms grid\n");
+            pr_infod("fusion_gpt: phc aligned to 1/3ms grid\n");
 
 			clr |= SR_OF1;                              /* clear the latched OF1 */
 			if (clr) wrl(g, clr, GPT_SR);
