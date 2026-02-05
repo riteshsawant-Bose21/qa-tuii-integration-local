@@ -85,8 +85,6 @@ CREATE TABLE project (
     updated_at TIMESTAMP WITHOUT TIME ZONE DEFAULT now() NOT NULL
 );
 
-
-
 -- Create sequence for project_user table
 CREATE SEQUENCE project_user_id_seq;
 
@@ -185,4 +183,25 @@ CREATE TABLE product_sync_job (
     completed_at TIMESTAMP,
     
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+--- Edge and Device Management Tables ---
+
+-- ENUM for claim status
+CREATE TYPE claim_status_enum AS ENUM (
+    'UNCLAIMED',
+    'CLAIMED',
+    'COMMISSIONED'
+);
+
+CREATE TABLE device (
+    device_id UUID PRIMARY KEY DEFAULT gen_random_uuid(), -- Globally unique device identity
+    device_serial_number VARCHAR(100) UNIQUE NOT NULL, -- Manufacturer serial number
+    device_model VARCHAR(100), -- Model identifier
+    certificate_fingerprint VARCHAR(255), -- The certificate fingerprint
+    claim_status claim_status_enum NOT NULL DEFAULT 'UNCLAIMED', -- UNCLAIMED / CLAIMED / COMMISSIONED
+    claimed_by UUID REFERENCES account(id), -- Customer account id
+    thing_name VARCHAR(255), -- Desired AWS Thing name
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, -- Audit / lifecycle tracking
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP -- Audit / lifecycle tracking
 );
