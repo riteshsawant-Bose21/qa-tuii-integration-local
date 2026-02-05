@@ -719,7 +719,7 @@ public:
 
 private:
   void pin_thread(std::thread &t, const char *thread_label) const {
-    constexpr int kTelemetryCpu = 2;
+    constexpr int kTelemetryCpu = 0;
     cpu_set_t cpuset;
     CPU_ZERO(&cpuset);
     CPU_SET(kTelemetryCpu, &cpuset);

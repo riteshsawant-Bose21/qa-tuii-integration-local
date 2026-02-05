@@ -13,6 +13,10 @@
 #include <memory>
 #include <string>
 
+#ifdef __linux__
+#include <pthread.h>
+#endif
+
 namespace bosepro {
 
 class PeriodicTask : public Configurable {
@@ -22,6 +26,7 @@ public:
     /// @param  configuration  The configuration for the task.
     PeriodicTask(const TaskConfiguration &configuration)
         : Configurable(configuration),
+          task_name(configuration.get_name()),
           period_ms(0),
           period_ns(0),
           stop_flag(false)
@@ -97,6 +102,15 @@ public:
 private:
     /// The function that runs the task thread. It executes the task function at the specified frequency.
     void run() {
+#ifdef __linux__
+        // pthread names are limited to 16 bytes including the null terminator.
+        constexpr size_t kMaxPthreadNameLen = 15;
+        std::string name = task_name;
+        if (name.size() > kMaxPthreadNameLen) {
+            name.resize(kMaxPthreadNameLen);
+        }
+        pthread_setname_np(pthread_self(), name.c_str());
+#endif
         auto next_execution_time = std::chrono::steady_clock::now();
 
         while (!stop_flag) {
@@ -118,6 +132,7 @@ private:
     std::list<std::unique_ptr<Module>> blocks; // List of blocks for processing
     std::map<std::string, Module *> block_map; // Map of block names to Module pointers
 
+    std::string task_name;
     int_fast32_t cpu_affinity; // CPU affinity for the task
     uint32_t period_ms;    // Period in milliseconds
     uint64_t period_ns;    // Period in nanoseconds
