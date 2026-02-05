@@ -441,7 +441,7 @@ static irqreturn_t gpt_irq(int irq, void *dev_id)
 			wrl(g, g->next_ocr1, GPT_OCR1);
 
             WRITE_ONCE(g->phc_aligned, true);          /* only once */
-            pr_infod("fusion_gpt: phc aligned to 1/3ms grid\n");
+            pr_info("fusion_gpt: phc aligned to 1/3ms grid\n");
 
 			clr |= SR_OF1;                              /* clear the latched OF1 */
 			if (clr) wrl(g, clr, GPT_SR);
