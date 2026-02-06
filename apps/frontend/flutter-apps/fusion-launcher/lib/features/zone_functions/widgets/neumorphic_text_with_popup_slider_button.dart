@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
-import '../../widgets/pb_slider.dart';
+import '../../processing_block/view/widgets/pb_slider.dart';
 
 class NeumorphicTextWithPopupSliderButton extends StatefulWidget {
   final bool isActive;

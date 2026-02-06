@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:fusion_launcher/core/service_locator.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
-import '../../../../configuration/presentation/viewmodel/project_view_model.dart';
+import '../../configuration/presentation/viewmodel/project_view_model.dart';
 import 'neumorphic_popup_button.dart';
 
 class MixScenes extends StatefulWidget {

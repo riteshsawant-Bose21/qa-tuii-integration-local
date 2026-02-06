@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
-import '../../../../../core/service_locator.dart';
-import '../../../../configuration/presentation/viewmodel/project_view_model.dart';
+import '../../../core/service_locator.dart';
+import '../../configuration/presentation/viewmodel/project_view_model.dart';
 import 'neumorphic_text_with_popup_slider_button.dart';
 
 class PrioritySelectionWidget extends StatefulWidget {

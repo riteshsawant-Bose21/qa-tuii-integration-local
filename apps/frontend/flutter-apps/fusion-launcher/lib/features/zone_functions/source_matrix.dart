@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_svg/svg.dart' show SvgPicture;
-import 'package:fusion_launcher/features/processing_block/view/functions/source_mix.dart';
+import 'package:fusion_launcher/features/zone_functions/source_mix.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
-import '../../../../core/service_locator.dart';
-import '../../../configuration/presentation/viewmodel/project_view_model.dart';
+import '../../core/service_locator.dart';
+import '../configuration/presentation/viewmodel/project_view_model.dart';
 import 'widgets/mix_scene.dart';
 import 'widgets/neumorphic_audio_toggle_button.dart';
 import 'widgets/neumorphic_text_with_popup_slider_button.dart';
