@@ -2,16 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/core/service_locator.dart';
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
+import 'package:fusion_launcher/features/zone_functions/source_mix.dart';
+import 'package:fusion_launcher/features/zone_functions/widgets/priority_selection_widget.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
-import 'settings/source_select_priority_settings.dart';
-import 'source_mix.dart';
-import 'widgets/priority_selection_widget.dart';
-
-class SourceSelectZoneControlPanel extends StatefulWidget {
+class SourceSelectPrioritySettings extends StatefulWidget {
   final String zoneID;
-  const SourceSelectZoneControlPanel({super.key, required this.zoneID});
+
+  const SourceSelectPrioritySettings({super.key, required this.zoneID});
 
   static void showDialog(BuildContext context, {required String zoneID}) {
     showGeneralDialog(
@@ -21,7 +20,7 @@ class SourceSelectZoneControlPanel extends StatefulWidget {
       barrierColor: Colors.black54,
       transitionDuration: const Duration(milliseconds: 200),
       pageBuilder: (BuildContext buildContext, _, __) {
-        return SourceSelectZoneControlPanel(
+        return SourceSelectPrioritySettings(
           zoneID: zoneID,
         );
       },
@@ -29,10 +28,10 @@ class SourceSelectZoneControlPanel extends StatefulWidget {
   }
 
   @override
-  State<SourceSelectZoneControlPanel> createState() => _SourceSelectZoneControlPanelState();
+  State<SourceSelectPrioritySettings> createState() => _SourceSelectPrioritySettingsState();
 }
 
-class _SourceSelectZoneControlPanelState extends State<SourceSelectZoneControlPanel> {
+class _SourceSelectPrioritySettingsState extends State<SourceSelectPrioritySettings> {
   late List<Source> sources;
   final ProjectViewModel projectViewModel = serviceLocator<ProjectViewModel>();
   ZoneFunctions? zoneFunction;
@@ -86,7 +85,7 @@ class _SourceSelectZoneControlPanelState extends State<SourceSelectZoneControlPa
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: <Widget>[
                           FusionAppText(
-                            text: "ZONE CONTROL PANEL - SOURCE SELECT",
+                            text: "SOURCE SELECT - PRIORITY SETTINGS ",
                             style: context.textTheme.titleSmall,
                           ),
                           InkWell(
@@ -302,10 +301,7 @@ class _SourceSelectZoneControlPanelState extends State<SourceSelectZoneControlPa
 
                           child: InkWell(
                             onTap: () {
-                              SourceSelectPrioritySettings.showDialog(
-                                context,
-                                zoneID: widget.zoneID,
-                              );
+                              //
                             },
                             borderRadius: BorderRadius.circular(8.0),
                             hoverColor: Colors.transparent,
