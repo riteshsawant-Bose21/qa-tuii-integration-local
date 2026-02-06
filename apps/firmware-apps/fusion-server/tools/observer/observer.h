@@ -831,41 +831,41 @@ public:
       throw std::runtime_error(std::string("fcntl(F_SETFL) failed: ") +
                                strerror(errno));
     }
-
-    requestInitialState(serverAddr_);
+    requestInitialDeviceInfo(serverAddr_);
     receiveThread_ = std::thread(&UDPValueMonitor::receiveLoop, this);
   }
 
-    std::vector<PathComponent> splitPath(const std::string& path) const {
-        return jsonMonitor_.splitPath(path);
-    }
-    
-   /**
-     * @brief Register a callback to be notified when a concrete path is updated.
-     *
-     * @param path The concrete JSON path to watch. An empty string indicates the
-     * root.
-     * @param callback The function to call when the specified path is updated.
-     */
-    void watch(const std::string &path, JsonMonitor::ChangeCallback callback)
-    {
-        targetPaths_.push_back(path);
-        jsonMonitor_.watch(path, callback);
-    }
+  std::vector<PathComponent> splitPath(const std::string &path) const
+  {
+    return jsonMonitor_.splitPath(path);
+  }
 
-    /**
-     * @brief Register a callback to be notified when a subscription pattern is
-     * updated.
-     *
-     * @param pattern The subscription pattern string (may include wildcards).
-     * @param callback The function to call when an update matching the pattern
-     * occurs.
-     */
-    void watchPattern(const std::string &pattern, JsonMonitor::ChangeCallback callback)
-    {
-        targetPaths_.push_back(pattern);
-        jsonMonitor_.watchPattern(pattern, callback);
-    }
+  /**
+   * @brief Register a callback to be notified when a concrete path is updated.
+   *
+   * @param path The concrete JSON path to watch. An empty string indicates the
+   * root.
+   * @param callback The function to call when the specified path is updated.
+   */
+  void watch(const std::string &path, JsonMonitor::ChangeCallback callback)
+  {
+    targetPaths_.push_back(path);
+    jsonMonitor_.watch(path, callback);
+  }
+
+  /**
+   * @brief Register a callback to be notified when a subscription pattern is
+   * updated.
+   *
+   * @param pattern The subscription pattern string (may include wildcards).
+   * @param callback The function to call when an update matching the pattern
+   * occurs.
+   */
+  void watchPattern(const std::string &pattern, JsonMonitor::ChangeCallback callback)
+  {
+    targetPaths_.push_back(pattern);
+    jsonMonitor_.watchPattern(pattern, callback);
+  }
 
   ~UDPValueMonitor() { stop(); }
 
@@ -907,6 +907,24 @@ private:
                 << " changed from: " << Json::writeString(builder, old_val)
                 << " to: " << Json::writeString(builder, new_val) << std::endl;
     }
+  }
+
+  void requestInitialDeviceInfo(const sockaddr_in &serverAddr)
+  {
+    Json::Value message;
+    message["action"] = "get_device_information";
+    Json::StreamWriterBuilder writerBuilder;
+    std::string jsonStr = Json::writeString(writerBuilder, message);
+    ssize_t sent = sendto(udpSocket_.get(), jsonStr.c_str(), jsonStr.length(),
+                          0, reinterpret_cast<const sockaddr *>(&serverAddr),
+                          sizeof(serverAddr));
+    if (sent < 0)
+    {
+      SPDLOG_WARN("Failed to send initial device information request: {}",
+                  std::string(strerror(errno)));
+      receivedInitialState_ = false;
+    }
+    // receivedInitialState_ = false; // ask nate, he put the condition here instead of above
   }
 
   void requestInitialState(const sockaddr_in &serverAddr)
@@ -1061,7 +1079,9 @@ private:
       else if (pollResult == 0)
       {
         if (!receivedInitialState_)
-          requestInitialState(serverAddr_);
+        {
+          requestInitialDeviceInfo(serverAddr_);
+        }
         continue;
       }
 
@@ -1108,15 +1128,45 @@ private:
             sendAck(msgId);
           }
 
-          if (response.isMember("status") && response.isMember("data"))
+          if (response.isMember("_fusion_op"))
           {
-            SPDLOG_DEBUG("Received initial state response.");
-            receivedInitialState_ = true;
-            handleUpdateMessage(response["data"], false);
+            const std::string op = response["_fusion_op"].asString();
+            // This is to get the device information
+            // Called only at the start or failure to get initial state
+            // Once we have the device information, we can request the initial state
+            if (op == "get_device_information")
+            {
+              if (response.isMember("deviceInfo"))
+              {
+                handleDeviceUpdate(response["deviceInfo"]);
+                requestInitialState(serverAddr_);
+                continue;
+              }
+            }
+            else if (op == "get")
+            {
+              receivedInitialState_ = true;
+              handleUpdateMessage(response["data"], false);
+              continue;
+            }
+            else if (op == "config_update")
+            {
+              handleUpdateMessage(response, true);
+              continue;
+            }
+            else if (op == "device_information_update")
+            {
+              handleDeviceUpdate(response);
+              continue;
+            }
+            else
+            {
+              SPDLOG_WARN("Unknown operation in message: {}", op);
+            }
           }
           else
           {
-            SPDLOG_DEBUG("Processing update message");
+            SPDLOG_INFO("Processing update message");
             handleUpdateMessage(response);
           }
         }
@@ -1125,6 +1175,22 @@ private:
           std::cerr << "Failed to parse JSON: " << errs << std::endl;
         }
       }
+    }
+  }
+  void handleDeviceUpdate(const Json::Value &deviceInfo)
+  {
+    SPDLOG_INFO("Device Information Updated: {}", deviceInfo.toStyledString());
+
+    if (deviceInfo.isMember("id"))
+    {
+      if (deviceInfo["id"].asString() == deviceID_)
+      {
+        SPDLOG_INFO("Device ID unchanged: {}", deviceID_);
+        return;
+      }
+      deviceID_ =
+          deviceInfo["id"].asString();
+      SPDLOG_INFO("Got device ID: {}", deviceID_);
     }
   }
 
@@ -1148,6 +1214,7 @@ private:
   UDPSocket udpSocket_{AF_INET, SOCK_DGRAM, 0};
   std::atomic<bool> running_{true};
   std::thread receiveThread_;
+  std::string deviceID_{""};
   std::vector<std::string> targetPaths_;
   JsonMonitor jsonMonitor_;
   sockaddr_in serverAddr_{};
