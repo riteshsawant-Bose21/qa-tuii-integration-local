@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"fusion-services-core/vip"
 	"fusion/internal/api"
-	"fusion/internal/logging"
+	"fusion-services-core/logging"
 	"fusion/internal/persistence"
 	"fusion/internal/routes"
 	"fusion/internal/utils"

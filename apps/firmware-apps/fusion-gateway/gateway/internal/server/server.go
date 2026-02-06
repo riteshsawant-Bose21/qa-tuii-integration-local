@@ -1,8 +1,6 @@
 package server
 
 import (
-	"fmt"
-	"io"
 	"net/http"
 	"sync"
 	"time"
@@ -10,9 +8,8 @@ import (
 	json "github.com/goccy/go-json"
 
 	"gateway/internal/api"
-	"gateway/internal/logging"
+	"fusion-services-core/logging"
 	"gateway/internal/server/handler"
-	"gateway/internal/utils"
 
 	"github.com/gorilla/websocket"
 )
@@ -47,53 +44,6 @@ func NewFusionGateway(node string, handler *handler.Handler) *FusionGateway {
 		},
 	}
 	return server
-}
-
-// GetValue handles HTTP GET requests to retrieve a configuration value based on a "key" query parameter.
-func (s *FusionGateway) GetValue(w http.ResponseWriter, r *http.Request) {
-
-	if !utils.RequireGet(w, r) {
-		return
-	}
-
-	// Write the JSON response.
-	w.Header().Set(api.ContentType, api.JsonMIMEType)
-	json.NewEncoder(w).Encode(" ")
-}
-
-// SetValue handles HTTP PUT requests to set a configuration value.
-// It expects a JSON body containing the update data.
-func (s *FusionGateway) SetValue(w http.ResponseWriter, r *http.Request) {
-
-	if !utils.RequirePost(w, r) {
-		return
-	}
-
-	// Read the request body.
-	body, err := io.ReadAll(r.Body)
-	if err != nil {
-		http.Error(w, fmt.Sprintf("Error reading request body: %v", err), http.StatusBadRequest)
-		return
-	}
-	defer r.Body.Close()
-
-	// Unmarshal the JSON into a map.
-	var update map[string]any
-	if err := json.Unmarshal(body, &update); err != nil {
-		http.Error(w, fmt.Sprintf("Invalid JSON format: %v", err), http.StatusBadRequest)
-		return
-	}
-
-	// Use the handler to update the configuration.
-	response, err := s.handler.HandleHTTPSet(update)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	// Write the JSON response.
-	w.Header().Set(api.ContentType, api.JsonMIMEType)
-	json.NewEncoder(w).Encode(response)
 }
 
 // HandleWebSocket upgrades an HTTP connection to a WebSocket connection, sets up ping handlers,

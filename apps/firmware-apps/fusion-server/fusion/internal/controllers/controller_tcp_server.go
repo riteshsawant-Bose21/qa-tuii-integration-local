@@ -2,7 +2,7 @@ package controllers
 
 import (
 	"bufio"
-	"fusion/internal/logging"
+	"fusion-services-core/logging"
 	"net"
 	"sync"
 	"time"

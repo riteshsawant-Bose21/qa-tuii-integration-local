@@ -2,7 +2,7 @@ package cluster
 
 import (
 	"fusion/internal/api"
-	"fusion/internal/logging"
+	"fusion-services-core/logging"
 	"fusion/internal/persistence"
 	"fusion/internal/pubsub"
 	"fusion/internal/tasks"

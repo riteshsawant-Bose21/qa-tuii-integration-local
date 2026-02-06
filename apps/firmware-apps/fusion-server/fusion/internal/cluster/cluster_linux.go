@@ -5,7 +5,7 @@ package cluster
 
 import (
 	"fusion-services-core/vip"
-	"fusion/internal/logging"
+	"fusion-services-core/logging"
 	"net"
 
 	"github.com/vishvananda/netlink"

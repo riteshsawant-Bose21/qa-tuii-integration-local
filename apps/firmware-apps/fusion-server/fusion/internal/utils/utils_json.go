@@ -1,7 +1,7 @@
 package utils
 
 import (
-	"fusion/internal/logging"
+	"fusion-services-core/logging"
 	"strconv"
 	"strings"
 )

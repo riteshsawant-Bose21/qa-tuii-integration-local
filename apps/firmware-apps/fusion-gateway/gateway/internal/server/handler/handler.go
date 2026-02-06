@@ -7,17 +7,12 @@ import (
 // Handler is the container for server implimentations.
 type Handler struct {
 	appConfig *api.AppConfig
-	endpoints []string
 }
 
 func NewHandler(appConfig *api.AppConfig) *Handler {
 	return &Handler{
 		appConfig: appConfig,
 	}
-}
-
-func (h *Handler) SetEndpoints(endpoints []string) {
-	h.endpoints = endpoints
 }
 
 func (h *Handler) HandleHTTPGet(key string) (any, error) {

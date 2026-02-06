@@ -5,8 +5,7 @@ import (
 	"context"
 	"fmt"
 	"gateway/internal/api"
-	"gateway/internal/logging"
-	"gateway/internal/routes"
+	"fusion-services-core/logging"
 	"gateway/internal/server"
 	"gateway/internal/server/handler"
 	"gateway/internal/version"
@@ -67,48 +66,24 @@ func (app *App) Close() {
 	app.Logger.Close()
 }
 
-func (app *App) registerPublicDELETE(route string, handler http.HandlerFunc) {
-	routes.RegisterPublicDELETE(app.publicRouter, route, handler)
-}
-
-func (app *App) registerPublicGET(route string, handler http.HandlerFunc) {
-	routes.RegisterPublicGET(app.publicRouter, route, handler)
-}
-
-func (app *App) registerPublicPATCH(route string, handler http.HandlerFunc) {
-	routes.RegisterPublicPATCH(app.publicRouter, route, handler)
-}
-
-func (app *App) registerPublicPOST(route string, handler http.HandlerFunc) {
-	routes.RegisterPublicPOST(app.publicRouter, route, handler)
-}
-
-func (app *App) registerPublicPUT(route string, handler http.HandlerFunc) {
-	routes.RegisterPublicPUT(app.publicRouter, route, handler)
-}
-
-func (app *App) registerPrivateGET(route string, handler http.HandlerFunc) {
-	routes.RegisterPrivateGET(app.privateRouter, route, handler)
-}
-
-func (app *App) registerPrivatePATCH(route string, handler http.HandlerFunc) {
-	routes.RegisterPrivatePATCH(app.privateRouter, route, handler)
-}
-
-func (app *App) registerPrivatePOST(route string, handler http.HandlerFunc) {
-	routes.RegisterPrivatePOST(app.privateRouter, route, handler)
-}
-
 func (app *App) setupPublicRoutes() {
+	proxy, err := server.NewReverseProxy(app.config.UpstreamPublicURL)
+	if err != nil {
+		app.Logger.Fatal("Invalid public upstream URL %q: %v", app.config.UpstreamPublicURL, err)
+	}
 
-	// Endpoints
-	app.registerPublicGET(routes.EndpointsEndpoint, routes.ListRegisteredEndpoints)
-
-	// Root
-	app.registerPublicGET(routes.RootEndpoint, app.Gateway.HandleRoot)
+	// Forward all public requests to the upstream.
+	app.publicRouter.PathPrefix("/").Handler(proxy)
 }
 
 func (app *App) setupPrivateRoutes() {
+	proxy, err := server.NewReverseProxy(app.config.UpstreamPrivateURL)
+	if err != nil {
+		app.Logger.Fatal("Invalid private upstream URL %q: %v", app.config.UpstreamPrivateURL, err)
+	}
+
+	// Forward all private/admin requests to the upstream.
+	app.privateRouter.PathPrefix("/").Handler(proxy)
 }
 
 // startAPIServer starts the main HTTP API server
@@ -160,7 +135,6 @@ func (app *App) Start(ctx context.Context) {
 
 	app.setupPublicRoutes()
 	app.setupPrivateRoutes()
-	app.ConnectionHandler.SetEndpoints(routes.Endpoints)
 
 	var wg sync.WaitGroup
 

@@ -18,7 +18,7 @@ import (
 
 	"gateway/internal/api"
 	"gateway/internal/app"
-	"gateway/internal/logging"
+	"fusion-services-core/logging"
 	"gateway/internal/version"
 )
 
@@ -36,6 +36,8 @@ func parseFlags() *api.AppConfig {
 	local := flag.Bool("local", false, "Run in local-only mode (no clustering)")
 	verbose := flag.Bool("verbose", false, "Enable verbose logging")
 	profile := flag.Bool("profile", false, "Enable profile dump")
+	publicUpstream := flag.String("public-upstream", "http://127.0.0.1:8080", "Upstream URL for public HTTP proxy")
+	privateUpstream := flag.String("private-upstream", "http://127.0.0.1:9090", "Upstream URL for private/admin HTTP proxy")
 	flag.Parse()
 
 	// Read environment overrides
@@ -50,6 +52,12 @@ func parseFlags() *api.AppConfig {
 			*profile = false
 		}
 	}
+	if envVal := os.Getenv("FUSION_PUBLIC_UPSTREAM"); envVal != "" {
+		*publicUpstream = envVal
+	}
+	if envVal := os.Getenv("FUSION_PRIVATE_UPSTREAM"); envVal != "" {
+		*privateUpstream = envVal
+	}
 
 	if *versionFlag {
 		// This must be a log.Printf. The server logger is not running yet.
@@ -58,13 +66,15 @@ func parseFlags() *api.AppConfig {
 	}
 
 	return &api.AppConfig{
-		NodeName: createUniqueNodeName(baseName),
-		BindAddr: *bindAddr,
-		BindPort: *bindPort,
-		NetIface: *netIface,
-		Local:    *local,
-		Verbose:  *verbose,
-		Profile:  *profile,
+		NodeName:           createUniqueNodeName(baseName),
+		BindAddr:           *bindAddr,
+		BindPort:           *bindPort,
+		NetIface:           *netIface,
+		Local:              *local,
+		Verbose:            *verbose,
+		Profile:            *profile,
+		UpstreamPublicURL:  *publicUpstream,
+		UpstreamPrivateURL: *privateUpstream,
 	}
 }
 

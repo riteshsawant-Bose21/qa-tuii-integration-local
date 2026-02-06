@@ -13,7 +13,7 @@ import (
 	json "github.com/goccy/go-json"
 
 	"fusion/internal/api"
-	"fusion/internal/logging"
+	"fusion-services-core/logging"
 	"fusion/internal/server"
 	"fusion/internal/server/handler"
 )
