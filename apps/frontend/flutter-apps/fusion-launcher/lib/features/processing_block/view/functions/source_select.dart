@@ -291,30 +291,41 @@ class _SourceSelectZoneControlPanelState extends State<SourceSelectZoneControlPa
                         ),
                       ),
                     ),
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: Padding(
+                        padding: const EdgeInsets.all(16.0),
+                        child: Material(
+                          color: Colors.transparent,
+                          borderRadius: BorderRadius.circular(8.0),
 
-                    const SizedBox(height: 10),
-                    Container(
-                      height: 35,
-                      decoration: BoxDecoration(
-                        color: context.colorScheme.elevation2,
-                        border: Border(
-                          bottom: BorderSide(
-                            color: context.colorScheme.strokeLight,
-                            width: 1,
+                          child: InkWell(
+                            onTap: () {
+                              //
+                            },
+                            borderRadius: BorderRadius.circular(8.0),
+                            hoverColor: Colors.transparent,
+                            splashColor: Colors.transparent,
+                            child: Ink(
+                              height: 36,
+                              width: 160,
+                              decoration: BoxDecoration(
+                                color: context.colorScheme.elevation2,
+                                borderRadius: BorderRadius.circular(8.0),
+                              ),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.end,
+                                children: <Widget>[
+                                  FusionAppText(
+                                    text: "Additional Settings",
+                                    style: context.textTheme.labelMedium,
+                                  ),
+                                  const Icon(LucideIcons.arrowUpRight100),
+                                ],
+                              ),
+                            ),
                           ),
                         ),
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.end,
-                        children: <Widget>[
-                          TextButton(
-                            onPressed: () {
-                              Navigator.pop(context);
-                            },
-                            child: const Text("CLOSE"),
-                          ),
-                          const SizedBox(width: 8),
-                        ],
                       ),
                     ),
                   ],
