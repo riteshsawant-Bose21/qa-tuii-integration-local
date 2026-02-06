@@ -81,6 +81,8 @@ class _NeumorphicGainTextFieldState extends State<NeumorphicGainTextField> {
           height: widget.height,
           alignment: Alignment.center,
           raised: false,
+          color: context.colorScheme.elevation2,
+          borderRadius: widget.borderRadius,
           child: TextField(
             controller: controller,
             textAlign: TextAlign.center,

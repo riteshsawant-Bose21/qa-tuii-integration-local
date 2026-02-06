@@ -1,9 +1,8 @@
-import 'dart:developer';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/features/processing_block/view/functions/widgets/priority_selection_widget.dart';
 import 'package:fusion_lib/fusion_lib.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../../core/service_locator.dart';
 import '../../../configuration/presentation/viewmodel/project_view_model.dart';
@@ -59,166 +58,142 @@ class _SourceMixZoneControlPanelState extends State<SourceMixZoneControlPanel> {
 
   @override
   Widget build(BuildContext context) {
-    final double controlScreenWidth = MediaQuery.sizeOf(context).width * 0.8;
-
     return Dialog(
-      constraints: BoxConstraints(
-        maxWidth: controlScreenWidth,
-        maxHeight: MediaQuery.sizeOf(context).height * 0.45,
-      ),
-      backgroundColor: context.colorScheme.elevation1,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(context.mediumRadius))),
-      child: BlocConsumer<ProjectViewModel, ProjectViewModelState>(
-        listener: (BuildContext context, ProjectViewModelState state) {
-          zoneFunction = projectViewModel.getZoneFunctionForZone(zoneId: widget.zoneID)!;
-        },
-        builder: (BuildContext context, ProjectViewModelState state) {
-          return SemanticHelper.container(
-            testId: SemanticHelper.createTestId(SemanticTypes.container, "source_mix_zone_control_panel"),
+      child: Stack(
+        children: <Widget>[
+          GestureDetector(
+            onTap: () => Navigator.pop(context),
             child: Container(
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.all(Radius.circular(context.mediumRadius)),
-                border: Border.all(
-                  color: context.colorScheme.strokeLight,
+              color: Colors.black.withAlpha(51),
+              child: const Center(),
+            ),
+          ),
+          Center(
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(16),
+              child: Container(
+                decoration: BoxDecoration(
+                  color: context.colorScheme.elevation1,
+                  border: Border.all(color: context.colorScheme.strokeLight),
+                  borderRadius: BorderRadius.circular(16),
                 ),
-              ),
-              child: ClipRRect(
-                borderRadius: BorderRadius.all(Radius.circular(context.mediumRadius)),
-                child: Stack(
+                child: Column(
                   children: <Widget>[
-                    Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: <Widget>[
-                        const SizedBox(height: 35),
-                        Flexible(
-                          fit: FlexFit.loose,
-                          child: Container(
-                            color: context.colorScheme.elevation1,
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: <Widget>[
-                                // Left scrollable section
-                                Flexible(
-                                  fit: FlexFit.loose,
-                                  child: SourceMixLeftWidget(
-                                    zoneID: widget.zoneID,
-                                    zoneFunctions: zoneFunction,
-                                  ),
-                                ),
-
-                                VerticalDivider(width: 1, color: context.colorScheme.strokeLight),
-
-                                MixScenes(
-                                  selectedMixSceneName: selectedMixScene(zoneFunction)?.name,
-                                  zoneId: widget.zoneID,
-                                  onStoreTap: (String? value) {
-                                    if (value == null || value.isEmpty) {
-                                      return FusionToast.error(
-                                        context,
-                                        message: "Please enter a name for the mix scene",
-                                      );
-                                    } else {
-                                      projectViewModel.saveCurrentSettingsAsMixScene(
-                                        functionId: zoneFunction.id,
-                                        sceneName: value,
-                                      );
-                                    }
-                                  },
-                                  mixScenes: zoneFunction.mixScenes.map((MixScene e) => e.name).toList(),
-                                  onMixSceneSelect: (String value) {
-                                    try {
-                                      final MixScene scene = zoneFunction.mixScenes.firstWhere((MixScene scene) => scene.name == value);
-                                      projectViewModel.applyMixSceneToFunction(
-                                        functionId: zoneFunction.id,
-                                        sceneId: scene.id,
-                                      );
-                                      log("Selected mix scene: ${scene.name}");
-                                    } catch (e) {
-                                      // We might get StateError if the scene is not found.
-                                    }
-                                  },
-                                  onDeleteTap: () {
-                                    final MixScene? scene = selectedMixScene(zoneFunction);
-                                    if (scene != null) {
-                                      projectViewModel.removeMixScene(
-                                        sceneId: scene.id,
-                                        functionId: zoneFunction.id,
-                                      );
-                                    }
-                                  },
-                                ),
-
-                                VerticalDivider(width: 1, color: context.colorScheme.strokeLight),
-                                PrioritySelectionWidget(zoneId: widget.zoneID),
-                                // const VerticalDivider(width: 1, color: Colors.black12),
-
-                                // Right side (only one widget)
-                                Flexible(
-                                  fit: FlexFit.loose,
-                                  child: ZoneControlSliderBuilder(
-                                    zoneID: widget.zoneID,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    Positioned(
-                      left: 0,
-                      right: 0,
-                      child: Container(
-                        decoration: BoxDecoration(
-                          color: context.colorScheme.elevation2,
-                          border: Border(
-                            bottom: BorderSide(
-                              color: context.colorScheme.strokeLight,
-                            ),
-                          ),
-                        ),
-                        child: const SizedBox(height: 35),
-                      ),
-                    ),
-                    // Used Stack to fit content according to content size.
-                    // HEADERS
-                    Positioned(
-                      left: 0,
-                      child: Container(
-                        height: 35,
-
-                        alignment: Alignment.centerLeft,
-                        padding: const EdgeInsets.symmetric(horizontal: 12.0),
-                        child: Text(
-                          "ZONE CONTROL PANEL - SOURCE MIX",
-                          style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                            fontSize: 11,
+                    /// --------------------------------------------------------------------------------
+                    /// HEADING
+                    /// --------------------------------------------------------------------------------
+                    Container(
+                      decoration: BoxDecoration(
+                        border: Border(
+                          bottom: BorderSide(
+                            color: context.colorScheme.strokeLight,
+                            width: 0.5,
                           ),
                         ),
                       ),
+                      padding: const EdgeInsets.symmetric(vertical: 15, horizontal: 20),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: <Widget>[
+                          FusionAppText(
+                            text: "ZONE CONTROL PANEL - SOURCE MIX",
+                            style: context.textTheme.titleSmall,
+                          ),
+                          InkWell(
+                            onTap: () {
+                              Navigator.pop(context);
+                            },
+                            child: Icon(
+                              LucideIcons.x200,
+                              color: context.colorScheme.iconDefault,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
 
-                    Positioned(
-                      right: 0,
-                      child: Container(
-                        height: 35,
+                    Expanded(
+                      child: SemanticHelper.container(
+                        testId: SemanticHelper.createTestId(SemanticTypes.container, "source_select_main_container"),
+                        child: BlocConsumer<ProjectViewModel, ProjectViewModelState>(
+                          listener: (BuildContext context, ProjectViewModelState state) {
+                            zoneFunction = projectViewModel.getZoneFunctionForZone(zoneId: widget.zoneID)!;
+                          },
+                          builder: (BuildContext context, ProjectViewModelState state) {
+                            return Padding(
+                              padding: const EdgeInsets.all(16.0),
+                              child: ClipRRect(
+                                borderRadius: BorderRadius.circular(16),
+                                child: Container(
+                                  decoration: BoxDecoration(
+                                    color: context.colorScheme.elevation2,
+                                    border: Border.all(color: context.colorScheme.strokeLight),
+                                    borderRadius: BorderRadius.circular(16),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: <Widget>[
+                                      Flexible(
+                                        flex: 2,
+                                        child: SourceMixLeftWidget(
+                                          zoneID: widget.zoneID,
+                                          zoneFunctions: zoneFunction,
+                                        ),
+                                      ),
 
-                        alignment: Alignment.centerRight,
-                        padding: const EdgeInsets.symmetric(horizontal: 12.0),
-                        child: SemanticHelper.button(
-                          testId: SemanticHelper.createTestId(SemanticTypes.button, "source_mix_zone_control_panel_close_button"),
-                          child: MouseRegion(
-                            cursor: SystemMouseCursors.click,
-                            child: GestureDetector(
-                              onTap: Navigator.of(context).pop,
-                              child: Icon(
-                                Icons.close,
-                                color: context.colorScheme.iconDefault,
-                                size: 16,
+                                      VerticalDivider(width: 1, color: context.colorScheme.strokeLight),
+                                      MixScenes(
+                                        selectedMixSceneName: selectedMixScene(zoneFunction)?.name,
+                                        zoneId: widget.zoneID,
+                                        onStoreTap: (String? value) {
+                                          if (value == null || value.isEmpty) {
+                                            return FusionToast.error(
+                                              context,
+                                              message: "Please enter a name for the mix scene",
+                                            );
+                                          } else {
+                                            projectViewModel.saveCurrentSettingsAsMixScene(
+                                              functionId: zoneFunction.id,
+                                              sceneName: value,
+                                            );
+                                          }
+                                        },
+                                        mixScenes: zoneFunction.mixScenes.map((MixScene e) => e.name).toList(),
+                                        onMixSceneSelect: (String value) {
+                                          try {
+                                            final MixScene scene = zoneFunction.mixScenes.firstWhere((MixScene scene) => scene.name == value);
+                                            projectViewModel.applyMixSceneToFunction(functionId: zoneFunction.id, sceneId: scene.id);
+                                          } catch (e) {
+                                            // We might get StateError if the scene is not found.
+                                          }
+                                        },
+                                        onDeleteTap: () {
+                                          final MixScene? scene = selectedMixScene(zoneFunction);
+                                          if (scene != null) {
+                                            projectViewModel.removeMixScene(
+                                              sceneId: scene.id,
+                                              functionId: zoneFunction.id,
+                                            );
+                                          }
+                                        },
+                                      ),
+
+                                      VerticalDivider(width: 1, color: context.colorScheme.strokeLight),
+
+                                      PrioritySelectionWidget(zoneId: widget.zoneID),
+
+                                      // RIGHT COLUMN (Static)
+                                      Flexible(
+                                        flex: 2,
+                                        child: ZoneControlSliderBuilder(zoneID: widget.zoneID),
+                                      ),
+                                    ],
+                                  ),
+                                ),
                               ),
-                            ),
-                          ),
+                            );
+                          },
                         ),
                       ),
                     ),
@@ -226,8 +201,8 @@ class _SourceMixZoneControlPanelState extends State<SourceMixZoneControlPanel> {
                 ),
               ),
             ),
-          );
-        },
+          ),
+        ],
       ),
     );
   }
@@ -278,8 +253,9 @@ class _SourceMixLeftWidgetState extends State<SourceMixLeftWidget> {
           children: <Widget>[
             FusionAppText(
               text: "No sources selected for this function",
-              style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                color: Colors.grey,
+              textAlign: TextAlign.center,
+              style: context.textTheme.labelMedium?.copyWith(
+                color: context.colorScheme.textPlaceholder,
               ),
             ),
           ],
@@ -310,9 +286,8 @@ class _SourceMixLeftWidgetState extends State<SourceMixLeftWidget> {
             ),
             child: Column(
               children: <Widget>[
-                SizedBox(
-                  height: 28,
-
+                Padding(
+                  padding: const EdgeInsetsGeometry.all(16),
                   child: Center(
                     child: FusionAppText(
                       text: source.name,
@@ -364,7 +339,8 @@ class _SourceMixLeftWidgetState extends State<SourceMixLeftWidget> {
                         testId: SemanticHelper.createTestId(SemanticTypes.button, "source_mix_mute_button"),
                         child: NeumorphicAudioToggleButton(
                           isActive: mixSetting.muted,
-                          width: 72,
+                          backgroundColor: context.colorScheme.elevation2,
+                          width: 100,
                           onTap: () {
                             projectViewModel.updateMixSettings(
                               mixSettings: mixSetting.copyWith(
@@ -432,95 +408,95 @@ class _ZoneControlSliderBuilderState extends State<ZoneControlSliderBuilder> {
 
     return HorizontalScrollWithShadows(
       controller: _scrollController,
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: List<Widget>.generate(
-          isSubZonesAvailable ? subZones.length : 1,
-          (int index) {
-            final SubZone? subZone = isSubZonesAvailable ? subZones[index] : null;
+      child: ListView.separated(
+        itemCount: isSubZonesAvailable ? subZones.length : 1,
+        shrinkWrap: true,
+        scrollDirection: Axis.horizontal,
+        physics: const ClampingScrollPhysics(),
+        separatorBuilder: (BuildContext context, int index) => Divider(color: context.colorScheme.strokeLight, height: 0),
+        itemBuilder: (BuildContext context, int index) {
+          final SubZone? subZone = isSubZonesAvailable ? subZones[index] : null;
 
-            final String? title = isSubZonesAvailable ? subZone!.name : zone?.name;
-            if (title == null) return const SizedBox.shrink();
+          final String? title = isSubZonesAvailable ? subZone!.name : zone?.name;
+          if (title == null) return const SizedBox.shrink();
 
-            final String zoneOrSubzoneID = isSubZonesAvailable ? subZone!.id : zone!.id;
-            final bool isMuted = isSubZonesAvailable ? subZone!.muted : zone!.muted;
-            final double zoneOrSubzoneGain = isSubZonesAvailable ? subZone!.gain : zone!.gain;
+          final String zoneOrSubzoneID = isSubZonesAvailable ? subZone!.id : zone!.id;
+          final bool isMuted = isSubZonesAvailable ? subZone!.muted : zone!.muted;
+          final double zoneOrSubzoneGain = isSubZonesAvailable ? subZone!.gain : zone!.gain;
 
-            return Container(
-              width: 150,
-              decoration: BoxDecoration(
-                border: Border(
-                  left: BorderSide(color: context.colorScheme.strokeLight),
+          return Container(
+            width: 150,
+            decoration: BoxDecoration(
+              border: Border(
+                right: BorderSide(color: context.colorScheme.strokeLight),
+              ),
+            ),
+            child: Column(
+              children: <Widget>[
+                Container(
+                  padding: const EdgeInsets.all(16.0),
+                  alignment: Alignment.center,
+                  child: FusionAppText(
+                    text: title,
+                    textAlign: TextAlign.center,
+                    style: Theme.of(context).textTheme.labelMedium,
+                  ),
                 ),
-              ),
-              child: Column(
-                children: <Widget>[
-                  Container(
-                    height: 28,
-                    color: widget.headerBackgroundColor ?? context.colorScheme.elevation1,
-                    alignment: Alignment.center,
-                    child: FusionAppText(
-                      text: title,
-                      textAlign: TextAlign.center,
-                      style: Theme.of(context).textTheme.labelMedium,
-                    ),
+                Divider(color: context.colorScheme.strokeLight, height: 0),
+                const SizedBox(height: 10),
+                SemanticHelper.formControl(
+                  testId: SemanticHelper.createTestId(SemanticTypes.formControl, "source_mix_zone_gain_text_field"),
+                  child: NeumorphicGainTextField(
+                    controllerValue: zoneOrSubzoneGain,
+                    minGain: -60,
+                    maxGain: 12,
+                    onSubmitted: (double value) {
+                      projectViewModel.updateZoneGain(
+                        zoneId: zoneOrSubzoneID,
+                        gain: value,
+                      );
+                    },
+                    width: 100,
+                    height: 32,
                   ),
-                  Divider(color: context.colorScheme.strokeLight, height: 0),
-                  const SizedBox(height: 10),
-                  SemanticHelper.formControl(
-                    testId: SemanticHelper.createTestId(SemanticTypes.formControl, "source_mix_zone_gain_text_field"),
-                    child: NeumorphicGainTextField(
-                      controllerValue: zoneOrSubzoneGain,
-                      minGain: -60,
-                      maxGain: 12,
-                      onSubmitted: (double value) {
-                        projectViewModel.updateZoneGain(
-                          zoneId: zoneOrSubzoneID,
-                          gain: value,
-                        );
-                      },
-                      width: 100,
-                      height: 32,
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  Expanded(
-                    child: Column(
-                      children: <Widget>[
-                        Expanded(
-                          child: SliderAndMeterWidget(
-                            sliderValue: zoneOrSubzoneGain,
-                            onSliderChanged: (num value) {
-                              projectViewModel.updateZoneGain(
-                                zoneId: zoneOrSubzoneID,
-                                gain: value.toDouble(),
-                              );
-                            },
-                          ),
+                ),
+                const SizedBox(height: 10),
+                Expanded(
+                  child: Column(
+                    children: <Widget>[
+                      Expanded(
+                        child: SliderAndMeterWidget(
+                          sliderValue: zoneOrSubzoneGain,
+                          onSliderChanged: (num value) {
+                            projectViewModel.updateZoneGain(
+                              zoneId: zoneOrSubzoneID,
+                              gain: value.toDouble(),
+                            );
+                          },
                         ),
-                        SemanticHelper.button(
-                          testId: SemanticHelper.createTestId(SemanticTypes.button, "source_mix_mute_button"),
-                          child: NeumorphicAudioToggleButton(
-                            isActive: isMuted,
-                            width: 72,
-                            onTap: () {
-                              projectViewModel.muteZone(
-                                zoneId: zoneOrSubzoneID,
-                                isMuted: !isMuted,
-                              );
-                            },
-                            backgroundColor: widget.headerBackgroundColor ?? context.colorScheme.elevation1,
-                          ),
+                      ),
+                      SemanticHelper.button(
+                        testId: SemanticHelper.createTestId(SemanticTypes.button, "source_mix_mute_button"),
+                        child: NeumorphicAudioToggleButton(
+                          isActive: isMuted,
+                          width: 100,
+                          onTap: () {
+                            projectViewModel.muteZone(
+                              zoneId: zoneOrSubzoneID,
+                              isMuted: !isMuted,
+                            );
+                          },
+                          backgroundColor: widget.headerBackgroundColor ?? context.colorScheme.elevation2,
                         ),
-                        const SizedBox(height: 10),
-                      ],
-                    ),
+                      ),
+                      const SizedBox(height: 10),
+                    ],
                   ),
-                ],
-              ),
-            );
-          },
-        ),
+                ),
+              ],
+            ),
+          );
+        },
       ),
     );
   }

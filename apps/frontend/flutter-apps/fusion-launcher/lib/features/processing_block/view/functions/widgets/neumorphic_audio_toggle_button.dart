@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_svg/svg.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
-class NeumorphicAudioToggleButton extends StatefulWidget {
+class NeumorphicAudioToggleButton extends StatelessWidget {
   final bool isActive;
   final VoidCallback? onTap;
   final double? height;
@@ -18,16 +18,9 @@ class NeumorphicAudioToggleButton extends StatefulWidget {
     this.height,
     this.width,
     this.backgroundColor,
-    this.borderRadius = 6,
+    this.borderRadius = 8,
     this.iconSize = 16,
   });
-
-  @override
-  State<NeumorphicAudioToggleButton> createState() => _NeumorphicAudioToggleButtonState();
-}
-
-class _NeumorphicAudioToggleButtonState extends State<NeumorphicAudioToggleButton> {
-  bool get _effectiveIsActive => widget.isActive;
 
   @override
   Widget build(BuildContext context) {
@@ -37,24 +30,32 @@ class _NeumorphicAudioToggleButtonState extends State<NeumorphicAudioToggleButto
         testId: SemanticHelper.createTestId(SemanticTypes.button, "neumorphic_audio_toggle_button"),
         child: GestureDetector(
           onTapUp: (_) {
-            widget.onTap?.call();
+            onTap?.call();
           },
-          child: ClipRRect(
-            borderRadius: BorderRadiusGeometry.circular(widget.borderRadius),
-            clipBehavior: _effectiveIsActive ? Clip.hardEdge : Clip.none,
-            child: FusionContainer(
-              height: widget.height ?? 28,
-              width: widget.width ?? double.infinity,
-              raised: !_effectiveIsActive,
-              alignment: Alignment.center,
-              child: Center(
-                child: SvgPicture.asset(
-                  'assets/svg/volume.svg',
-                  height: widget.iconSize,
-                  width: widget.iconSize,
-                  // ignore: deprecated_member_use
-                  color: widget.isActive ? context.colorScheme.iconDefault : context.colorScheme.iconDisabled,
-                ),
+          child: FusionContainer(
+            height: height ?? 32,
+            width: width ?? double.infinity,
+            raised: true,
+            alignment: Alignment.center,
+            color: backgroundColor,
+            borderRadius: borderRadius,
+            child: Center(
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: <Widget>[
+                  FusionAppText(
+                    text: !isActive ? "Mute" : "Unmute",
+                    style: context.textTheme.bodyMedium,
+                  ),
+                  const SizedBox(width: 8),
+                  SvgPicture.asset(
+                    'assets/svg/volume.svg',
+                    height: iconSize,
+                    width: iconSize,
+                    // ignore: deprecated_member_use
+                    color: !isActive ? context.colorScheme.iconDefault : context.colorScheme.errorContainer,
+                  ),
+                ],
               ),
             ),
           ),

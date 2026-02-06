@@ -3,7 +3,6 @@ import 'package:fusion_lib/fusion_lib.dart';
 
 import '../../../../../core/service_locator.dart';
 import '../../../../configuration/presentation/viewmodel/project_view_model.dart';
-import 'neumorphic_active_blue_button.dart';
 import 'neumorphic_text_with_popup_slider_button.dart';
 
 class PrioritySelectionWidget extends StatefulWidget {
@@ -59,23 +58,30 @@ class _PrioritySelectionWidgetState extends State<PrioritySelectionWidget> {
     if (!(existingFunction?.hasPriority ?? false)) return const SizedBox.shrink();
 
     final SizedBox child = SizedBox(
-      width: 300,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      width: 400,
+      child: Row(
         children: <Widget>[
-          Container(
-            height: 28,
-            width: double.infinity,
-            alignment: Alignment.center,
-            child: FusionAppText(
-              text: "PRIORITY",
-              style: Theme.of(context).textTheme.labelSmall,
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Container(
+                  padding: const EdgeInsets.all(16.0),
+                  width: double.infinity,
+                  alignment: Alignment.center,
+                  child: FusionAppText(
+                    text: "PRIORITY",
+                    style: Theme.of(context).textTheme.labelSmall,
+                  ),
+                ),
+
+                Divider(color: context.colorScheme.strokeLight, height: 0),
+
+                _buildReorderablePriorityWidgets(),
+              ],
             ),
           ),
-
-          Divider(color: context.colorScheme.strokeLight, height: 0),
-
-          _buildReorderablePriorityWidgets(),
+          VerticalDivider(width: 1, color: context.colorScheme.strokeLight),
         ],
       ),
     );
@@ -145,47 +151,80 @@ class _PrioritySelectionWidgetState extends State<PrioritySelectionWidget> {
             child: SemanticHelper.button(
               testId: SemanticHelper.createTestId(SemanticTypes.button, "priority_selection_widget_$priorityIndex"),
               child: Container(
-                padding: const EdgeInsets.all(12.0),
                 decoration: BoxDecoration(
-                  border: Border(bottom: BorderSide(color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.3))),
+                  border: Border(
+                    bottom: BorderSide(
+                      color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.3),
+                    ),
+                  ),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: <Widget>[
-                    FusionAppText(
-                      text: "Priority $priorityIndex",
-                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                        fontSize: 10,
+                    //
+                    // ========= HEADINGS ========
+                    //
+                    Padding(
+                      padding: const EdgeInsets.all(16.0).copyWith(bottom: 0),
+                      child: Row(
+                        children: <Widget>[
+                          Expanded(
+                            flex: 2,
+                            child: FusionAppText(
+                              text: "Priority $priorityIndex",
+                              style: Theme.of(context).textTheme.labelSmall,
+                            ),
+                          ),
+                          Expanded(
+                            child: Center(
+                              child: FusionAppText(
+                                text: "VOLUME",
+                                style: context.textTheme.labelSmall?.copyWith(color: context.colorScheme.textSecondary),
+                              ),
+                            ),
+                          ),
+                          Expanded(
+                            child: Center(
+                              child: FusionAppText(
+                                text: "SIGNAL",
+                                style: context.textTheme.labelSmall?.copyWith(color: context.colorScheme.textSecondary),
+                              ),
+                            ),
+                          ),
+                          Expanded(
+                            child: Center(
+                              child: FusionAppText(
+                                text: "ACTIVE",
+                                style: context.textTheme.labelSmall?.copyWith(color: context.colorScheme.textSecondary),
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
-                    Builder(
-                      builder: (BuildContext context) {
-                        if (selectedSourceName == null) {
-                          return FusionAppText(
-                            text: "No source selected for priority $priorityIndex",
-                            style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                              fontSize: 10,
-                              color: const Color(0xFF888888),
-                            ),
-                          );
-                        }
 
-                        return Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisSize: MainAxisSize.min,
-                          children: <Widget>[
-                            Row(
-                              spacing: 8,
-                              children: <Widget>[
-                                Expanded(
-                                  child: Container(
-                                    height: 24,
-                                    width: double.infinity,
-                                    padding: const EdgeInsets.all(4),
-                                    decoration: BoxDecoration(
-                                      color: context.colorScheme.elevation3,
-                                      borderRadius: BorderRadius.circular(3),
-                                    ),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8),
+                      child: Builder(
+                        builder: (BuildContext context) {
+                          if (selectedSourceName == null) {
+                            return FusionAppText(
+                              text: "No source selected for priority $priorityIndex",
+                              style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                                fontSize: 10,
+                                color: const Color(0xFF888888),
+                              ),
+                            );
+                          }
+
+                          return Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisSize: MainAxisSize.min,
+                            children: <Widget>[
+                              Row(
+                                children: <Widget>[
+                                  Expanded(
+                                    flex: 2,
                                     child: Row(
                                       spacing: 4,
                                       children: <Widget>[
@@ -198,9 +237,9 @@ class _PrioritySelectionWidgetState extends State<PrioritySelectionWidget> {
                                             borderRadius: BorderRadius.circular(3),
                                           ),
                                           child: FusionAppText(
-                                            text: "P1",
+                                            text: "P$priorityIndex",
                                             style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                                              fontSize: 10,
+                                              fontSize: 8,
                                               color: Colors.white,
                                               fontWeight: FontWeight.bold,
                                             ),
@@ -217,55 +256,55 @@ class _PrioritySelectionWidgetState extends State<PrioritySelectionWidget> {
                                       ],
                                     ),
                                   ),
-                                ),
 
-                                Icon(
-                                  Icons.circle,
-                                  color: context.colorScheme.elevation5,
-                                  size: 16,
-                                ),
-
-                                SemanticHelper.button(
-                                  testId: SemanticHelper.createTestId(SemanticTypes.button, "priority_active_button_$priorityIndex"),
-                                  child: NeumorphicActiveBlueButton(
-                                    text: "Active",
-                                    isActive: false,
-                                    width: 72,
-                                    onTap: () {
-                                      //
-                                    },
-                                  ),
-                                ),
-                              ],
-                            ),
-
-                            Row(
-                              spacing: 8,
-                              children: <Widget>[
-                                const Expanded(child: SizedBox()),
-
-                                FusionAppText(
-                                  text: "Volume",
-                                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                                    fontSize: 10,
-                                  ),
-                                ),
-
-                                Padding(
-                                  padding: const EdgeInsets.symmetric(horizontal: 8),
-                                  child: SemanticHelper.button(
-                                    testId: SemanticHelper.createTestId(SemanticTypes.button, "priority_volume_slider_$priorityIndex"),
-                                    child: const NeumorphicTextWithPopupSliderButton(
-                                      isActive: false,
-                                      width: 72,
+                                  Expanded(
+                                    child: SemanticHelper.button(
+                                      testId: SemanticHelper.createTestId(SemanticTypes.button, "priority_volume_slider_$priorityIndex"),
+                                      child: const NeumorphicTextWithPopupSliderButton(
+                                        isActive: false,
+                                        width: 72,
+                                      ),
                                     ),
                                   ),
-                                ),
-                              ],
-                            ),
-                          ],
-                        );
-                      },
+
+                                  Expanded(
+                                    child: Column(
+                                      children: <Widget>[
+                                        Container(
+                                          width: 16,
+                                          height: 16,
+                                          decoration: BoxDecoration(
+                                            color: context.colorScheme.primaryColor,
+                                            borderRadius: BorderRadius.circular(4),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+
+                                  Expanded(
+                                    child: Column(
+                                      children: <Widget>[
+                                        SemanticHelper.button(
+                                          testId: SemanticHelper.createTestId(SemanticTypes.button, "priority_active_button_$priorityIndex"),
+                                          child: FusionSwitch(
+                                            value: true,
+                                            width: 44,
+                                            height: 24,
+                                            onChanged: (bool value) {
+                                              //
+                                            },
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          );
+                        },
+                      ),
                     ),
                   ],
                 ),

@@ -71,12 +71,8 @@ class _NeumorphicPopupButtonState extends State<NeumorphicPopupButton> {
         width: widget.width,
         height: widget.height ?? 32,
         alignment: Alignment.center,
-        // decoration: BoxDecoration(
-        //   color: Colors.transparent,
-        //   borderRadius: BorderRadius.circular(widget.borderRadius),
-        //   boxShadow: isFocused ? null : getNeumorphismBoxShadows(inner: true),
-        //   border: isFocused ? Border.all(color: Colors.black12, width: 2) : null,
-        // ),
+        color: context.colorScheme.elevation2,
+        borderRadius: widget.borderRadius,
         child: Row(
           children: <Widget>[
             Expanded(
@@ -97,7 +93,7 @@ class _NeumorphicPopupButtonState extends State<NeumorphicPopupButton> {
                       disabledBorder: InputBorder.none,
                       hoverColor: Colors.transparent,
                       hintText: widget.hintText ?? 'Scene name',
-                      hintStyle: Theme.of(context).textTheme.labelSmall?.copyWith(color: context.colorScheme.iconDisabled),
+                      hintStyle: context.textTheme.labelMedium?.copyWith(color: context.colorScheme.iconDisabled),
                       isDense: true,
                       filled: false,
                       contentPadding: const EdgeInsets.all(0),

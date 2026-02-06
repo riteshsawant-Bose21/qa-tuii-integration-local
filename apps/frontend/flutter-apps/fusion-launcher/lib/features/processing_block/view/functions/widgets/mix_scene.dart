@@ -75,7 +75,7 @@ class _MixScenesState extends State<MixScenes> {
         child: Column(
           children: <Widget>[
             Container(
-              height: 28,
+              padding: const EdgeInsets.all(16),
               alignment: Alignment.center,
               child: FusionAppText(
                 text: "MIX SCENES",
@@ -91,7 +91,7 @@ class _MixScenesState extends State<MixScenes> {
                 controller: mixSceneNameController,
                 options: widget.mixScenes,
                 onSelect: widget.onMixSceneSelect,
-                height: 28,
+                height: 32,
                 borderRadius: 8,
               ),
             ),
@@ -102,9 +102,10 @@ class _MixScenesState extends State<MixScenes> {
               builder: (BuildContext context, bool isNewMixSceneName, Widget? child) {
                 return FusionNeumorphicButton(
                   text: isNewMixSceneName ? "STORE" : "UPDATE",
-                  width: 72,
-                  height: 28,
+                  width: 94,
+                  height: 32,
                   borderRadius: 8,
+                  color: context.colorScheme.elevation2,
                   onTap: () {
                     widget.onStoreTap(
                       mixSceneNameController.text.trim(),
@@ -119,10 +120,11 @@ class _MixScenesState extends State<MixScenes> {
               builder: (BuildContext context, bool isNewMixSceneName, Widget? child) {
                 return FusionNeumorphicButton(
                   text: "DELETE",
-                  width: 72,
-                  height: 28,
+                  width: 94,
+                  height: 32,
                   borderRadius: 8,
-                  textStyle: context.textTheme.bodySmall!.copyWith(
+                  color: context.colorScheme.elevation2,
+                  textStyle: context.textTheme.bodyMedium!.copyWith(
                     color:
                         isNewMixSceneName ? context.colorScheme.primaryWhite.withValues(alpha: 0.4) : context.colorScheme.primaryWhite.withValues(alpha: 0.87),
                   ),

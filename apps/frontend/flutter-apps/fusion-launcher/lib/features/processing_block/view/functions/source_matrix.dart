@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_svg/svg.dart' show SvgPicture;
 import 'package:fusion_launcher/features/processing_block/view/functions/source_mix.dart';
 import 'package:fusion_lib/fusion_lib.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../../core/service_locator.dart';
 import '../../../configuration/presentation/viewmodel/project_view_model.dart';
@@ -57,175 +58,321 @@ class _SourceMatrixZoneControlPanelState extends State<SourceMatrixZoneControlPa
 
   @override
   Widget build(BuildContext context) {
-    final double controlScreenWidth = MediaQuery.sizeOf(context).width * 0.85;
-
     return Dialog(
-      constraints: BoxConstraints(
-        maxWidth: controlScreenWidth,
-        maxHeight: MediaQuery.sizeOf(context).height * 0.5,
-      ),
-      backgroundColor: context.colorScheme.elevation1,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.all(Radius.circular(context.mediumRadius)),
-        side: BorderSide(color: context.colorScheme.strokeLight, width: 1),
-      ),
-      child: BlocConsumer<ProjectViewModel, ProjectViewModelState>(
-        listener: (BuildContext context, ProjectViewModelState state) {
-          zoneFunction = projectViewModel.getZoneFunctionForZone(zoneId: widget.zoneID)!;
-        },
-        builder: (BuildContext context, ProjectViewModelState state) {
-          return SemanticHelper.container(
-            testId: SemanticHelper.createTestId(SemanticTypes.container, "mini_matrix_zone_control_panel"),
+      child: Stack(
+        children: <Widget>[
+          GestureDetector(
+            onTap: () => Navigator.pop(context),
+            child: Container(
+              color: Colors.black.withAlpha(51),
+              child: const Center(),
+            ),
+          ),
+          Center(
             child: ClipRRect(
-              borderRadius: BorderRadius.all(Radius.circular(context.mediumRadius)),
-              child: Stack(
-                children: <Widget>[
-                  Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: <Widget>[
-                      const SizedBox(height: 35),
-                      Flexible(
-                        fit: FlexFit.loose,
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: <Widget>[
-                            // Left scrollable section
-                            Flexible(
-                              fit: FlexFit.loose,
-                              child: SourceMatrixControls(
-                                zoneID: widget.zoneID,
-                                zoneFunctions: zoneFunction,
-                              ),
-                            ),
-                            VerticalDivider(width: 1, color: context.colorScheme.strokeLight),
-
-                            MixScenes(
-                              selectedMixSceneName: selectedMixScene(zoneFunction)?.name,
-                              zoneId: widget.zoneID,
-                              onStoreTap: (String? value) {
-                                if (value == null || value.isEmpty) {
-                                  return FusionToast.error(
-                                    context,
-                                    message: "Please enter a name for the mix scene",
-                                  );
-                                } else {
-                                  projectViewModel.saveCurrentSettingsAsMixScene(
-                                    functionId: zoneFunction.id,
-                                    sceneName: value,
-                                  );
-                                }
-                              },
-                              mixScenes: zoneFunction.mixScenes.map((MixScene e) => e.name).toList(),
-                              onMixSceneSelect: (String value) {
-                                try {
-                                  final MixScene scene = zoneFunction.mixScenes.firstWhere((MixScene scene) => scene.name == value);
-                                  projectViewModel.applyMixSceneToFunction(
-                                    functionId: zoneFunction.id,
-                                    sceneId: scene.id,
-                                  );
-                                } catch (e) {
-                                  // We might get StateError if the scene is not found.
-                                }
-                              },
-                              onDeleteTap: () {
-                                try {
-                                  final MixScene? scene = selectedMixScene(zoneFunction);
-                                  if (scene != null) {
-                                    projectViewModel.removeMixScene(
-                                      functionId: zoneFunction.id,
-                                      sceneId: scene.id,
-                                    );
-                                  }
-                                } catch (e) {
-                                  // We might get StateError if the scene is not found.
-                                }
-                              },
-                            ),
-
-                            VerticalDivider(width: 1, color: context.colorScheme.strokeLight),
-                            PrioritySelectionWidget(zoneId: widget.zoneID),
-                            // const VerticalDivider(width: 1, color: Colors.black12),
-                            // Right side (only one widget)
-                            Flexible(
-                              fit: FlexFit.loose,
-                              child: ZoneControlSliderBuilder(
-                                zoneID: widget.zoneID,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                  Positioned(
-                    left: 0,
-                    right: 0,
-                    child: Container(
-                      height: 35,
+              borderRadius: BorderRadius.circular(16),
+              child: Container(
+                decoration: BoxDecoration(
+                  color: context.colorScheme.elevation1,
+                  border: Border.all(color: context.colorScheme.strokeLight),
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Column(
+                  children: <Widget>[
+                    /// --------------------------------------------------------------------------------
+                    /// HEADING
+                    /// --------------------------------------------------------------------------------
+                    Container(
                       decoration: BoxDecoration(
-                        color: context.colorScheme.elevation2,
                         border: Border(
                           bottom: BorderSide(
                             color: context.colorScheme.strokeLight,
-                            width: 1,
+                            width: 0.5,
                           ),
                         ),
                       ),
-                    ),
-                  ),
-                  // Used Stack to fit content according to content size.
-                  // HEADERS
-                  Positioned(
-                    left: 0,
-                    child: Container(
-                      height: 35,
-
-                      alignment: Alignment.centerLeft,
-                      padding: const EdgeInsets.symmetric(horizontal: 12.0),
-                      child: Text(
-                        "ZONE CONTROL PANEL -  SOURCE MATRIX",
-                        style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                          fontSize: 11,
-                        ),
-                      ),
-                    ),
-                  ),
-
-                  Positioned(
-                    right: 0,
-                    child: SemanticHelper.button(
-                      testId: SemanticHelper.createTestId(SemanticTypes.button, "mini_matrix_close_button"),
-                      child: Container(
-                        height: 35,
-
-                        alignment: Alignment.centerRight,
-                        padding: const EdgeInsets.symmetric(horizontal: 12.0),
-                        child: MouseRegion(
-                          cursor: SystemMouseCursors.click,
-                          child: GestureDetector(
-                            onTap: Navigator.of(context).pop,
-                            child: const Icon(
-                              Icons.close,
-
-                              size: 16,
+                      padding: const EdgeInsets.symmetric(vertical: 15, horizontal: 20),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: <Widget>[
+                          FusionAppText(
+                            text: "ZONE CONTROL PANEL - SOURCE MATRIX",
+                            style: context.textTheme.titleSmall,
+                          ),
+                          InkWell(
+                            onTap: () {
+                              Navigator.pop(context);
+                            },
+                            child: Icon(
+                              LucideIcons.x200,
+                              color: context.colorScheme.iconDefault,
                             ),
                           ),
+                        ],
+                      ),
+                    ),
+
+                    Expanded(
+                      child: SemanticHelper.container(
+                        testId: SemanticHelper.createTestId(SemanticTypes.container, "source_select_main_container"),
+                        child: BlocConsumer<ProjectViewModel, ProjectViewModelState>(
+                          listener: (BuildContext context, ProjectViewModelState state) {
+                            zoneFunction = projectViewModel.getZoneFunctionForZone(zoneId: widget.zoneID)!;
+                          },
+                          builder: (BuildContext context, ProjectViewModelState state) {
+                            return Padding(
+                              padding: const EdgeInsets.all(16.0),
+                              child: ClipRRect(
+                                borderRadius: BorderRadius.circular(16),
+                                child: Container(
+                                  decoration: BoxDecoration(
+                                    color: context.colorScheme.elevation2,
+                                    border: Border.all(color: context.colorScheme.strokeLight),
+                                    borderRadius: BorderRadius.circular(16),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: <Widget>[
+                                      Flexible(
+                                        flex: 2,
+                                        fit: FlexFit.loose,
+                                        child: SourceMatrixControls(
+                                          zoneID: widget.zoneID,
+                                          zoneFunctions: zoneFunction,
+                                        ),
+                                      ),
+
+                                      VerticalDivider(width: 1, color: context.colorScheme.strokeLight),
+                                      MixScenes(
+                                        selectedMixSceneName: selectedMixScene(zoneFunction)?.name,
+                                        zoneId: widget.zoneID,
+                                        onStoreTap: (String? value) {
+                                          if (value == null || value.isEmpty) {
+                                            return FusionToast.error(
+                                              context,
+                                              message: "Please enter a name for the mix scene",
+                                            );
+                                          } else {
+                                            projectViewModel.saveCurrentSettingsAsMixScene(
+                                              functionId: zoneFunction.id,
+                                              sceneName: value,
+                                            );
+                                          }
+                                        },
+                                        mixScenes: zoneFunction.mixScenes.map((MixScene e) => e.name).toList(),
+                                        onMixSceneSelect: (String value) {
+                                          try {
+                                            final MixScene scene = zoneFunction.mixScenes.firstWhere((MixScene scene) => scene.name == value);
+                                            projectViewModel.applyMixSceneToFunction(functionId: zoneFunction.id, sceneId: scene.id);
+                                          } catch (e) {
+                                            // We might get StateError if the scene is not found.
+                                          }
+                                        },
+                                        onDeleteTap: () {
+                                          final MixScene? scene = selectedMixScene(zoneFunction);
+                                          if (scene != null) {
+                                            projectViewModel.removeMixScene(
+                                              sceneId: scene.id,
+                                              functionId: zoneFunction.id,
+                                            );
+                                          }
+                                        },
+                                      ),
+
+                                      VerticalDivider(width: 1, color: context.colorScheme.strokeLight),
+
+                                      PrioritySelectionWidget(zoneId: widget.zoneID),
+
+                                      // RIGHT COLUMN (Static)
+                                      Flexible(
+                                        flex: 2,
+                                        child: ZoneControlSliderBuilder(zoneID: widget.zoneID),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            );
+                          },
                         ),
                       ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
-          );
-        },
+          ),
+        ],
       ),
     );
+    // return Dialog(
+    //   constraints: BoxConstraints(
+    //     maxWidth: controlScreenWidth,
+    //     maxHeight: MediaQuery.sizeOf(context).height * 0.5,
+    //   ),
+    //   backgroundColor: context.colorScheme.elevation1,
+    //   shape: RoundedRectangleBorder(
+    //     borderRadius: BorderRadius.all(Radius.circular(context.mediumRadius)),
+    //     side: BorderSide(color: context.colorScheme.strokeLight, width: 1),
+    //   ),
+    //   child: BlocConsumer<ProjectViewModel, ProjectViewModelState>(
+    //     listener: (BuildContext context, ProjectViewModelState state) {
+    //       zoneFunction = projectViewModel.getZoneFunctionForZone(zoneId: widget.zoneID)!;
+    //     },
+    //     builder: (BuildContext context, ProjectViewModelState state) {
+    //       return SemanticHelper.container(
+    //         testId: SemanticHelper.createTestId(SemanticTypes.container, "mini_matrix_zone_control_panel"),
+    //         child: ClipRRect(
+    //           borderRadius: BorderRadius.all(Radius.circular(context.mediumRadius)),
+    //           child: Stack(
+    //             children: <Widget>[
+    //               Column(
+    //                 mainAxisSize: MainAxisSize.min,
+    //                 children: <Widget>[
+    //                   const SizedBox(height: 35),
+    //                   Flexible(
+    //                     fit: FlexFit.loose,
+    //                     child: Row(
+    //                       mainAxisSize: MainAxisSize.min,
+    //                       crossAxisAlignment: CrossAxisAlignment.start,
+    //                       children: <Widget>[
+    //                         // Left scrollable section
+    //                         Flexible(
+    //                           fit: FlexFit.loose,
+    //                           child: SourceMatrixControls(
+    //                             zoneID: widget.zoneID,
+    //                             zoneFunctions: zoneFunction,
+    //                           ),
+    //                         ),
+    //                         VerticalDivider(width: 1, color: context.colorScheme.strokeLight),
+
+    //                         MixScenes(
+    //                           selectedMixSceneName: selectedMixScene(zoneFunction)?.name,
+    //                           zoneId: widget.zoneID,
+    //                           onStoreTap: (String? value) {
+    //                             if (value == null || value.isEmpty) {
+    //                               return FusionToast.error(
+    //                                 context,
+    //                                 message: "Please enter a name for the mix scene",
+    //                               );
+    //                             } else {
+    //                               projectViewModel.saveCurrentSettingsAsMixScene(
+    //                                 functionId: zoneFunction.id,
+    //                                 sceneName: value,
+    //                               );
+    //                             }
+    //                           },
+    //                           mixScenes: zoneFunction.mixScenes.map((MixScene e) => e.name).toList(),
+    //                           onMixSceneSelect: (String value) {
+    //                             try {
+    //                               final MixScene scene = zoneFunction.mixScenes.firstWhere((MixScene scene) => scene.name == value);
+    //                               projectViewModel.applyMixSceneToFunction(
+    //                                 functionId: zoneFunction.id,
+    //                                 sceneId: scene.id,
+    //                               );
+    //                             } catch (e) {
+    //                               // We might get StateError if the scene is not found.
+    //                             }
+    //                           },
+    //                           onDeleteTap: () {
+    //                             try {
+    //                               final MixScene? scene = selectedMixScene(zoneFunction);
+    //                               if (scene != null) {
+    //                                 projectViewModel.removeMixScene(
+    //                                   functionId: zoneFunction.id,
+    //                                   sceneId: scene.id,
+    //                                 );
+    //                               }
+    //                             } catch (e) {
+    //                               // We might get StateError if the scene is not found.
+    //                             }
+    //                           },
+    //                         ),
+
+    //                         VerticalDivider(width: 1, color: context.colorScheme.strokeLight),
+    //                         PrioritySelectionWidget(zoneId: widget.zoneID),
+    //                         // const VerticalDivider(width: 1, color: Colors.black12),
+    //                         // Right side (only one widget)
+    //                         Flexible(
+    //                           fit: FlexFit.loose,
+    //                           child: ZoneControlSliderBuilder(
+    //                             zoneID: widget.zoneID,
+    //                           ),
+    //                         ),
+    //                       ],
+    //                     ),
+    //                   ),
+    //                 ],
+    //               ),
+    //               Positioned(
+    //                 left: 0,
+    //                 right: 0,
+    //                 child: Container(
+    //                   height: 35,
+    //                   decoration: BoxDecoration(
+    //                     color: context.colorScheme.elevation2,
+    //                     border: Border(
+    //                       bottom: BorderSide(
+    //                         color: context.colorScheme.strokeLight,
+    //                         width: 1,
+    //                       ),
+    //                     ),
+    //                   ),
+    //                 ),
+    //               ),
+    //               // Used Stack to fit content according to content size.
+    //               // HEADERS
+    //               Positioned(
+    //                 left: 0,
+    //                 child: Container(
+    //                   height: 35,
+
+    //                   alignment: Alignment.centerLeft,
+    //                   padding: const EdgeInsets.symmetric(horizontal: 12.0),
+    //                   child: Text(
+    //                     "ZONE CONTROL PANEL -  SOURCE MATRIX",
+    //                     style: Theme.of(context).textTheme.titleSmall?.copyWith(
+    //                       fontSize: 11,
+    //                     ),
+    //                   ),
+    //                 ),
+    //               ),
+
+    //               Positioned(
+    //                 right: 0,
+    //                 child: SemanticHelper.button(
+    //                   testId: SemanticHelper.createTestId(SemanticTypes.button, "mini_matrix_close_button"),
+    //                   child: Container(
+    //                     height: 35,
+
+    //                     alignment: Alignment.centerRight,
+    //                     padding: const EdgeInsets.symmetric(horizontal: 12.0),
+    //                     child: MouseRegion(
+    //                       cursor: SystemMouseCursors.click,
+    //                       child: GestureDetector(
+    //                         onTap: Navigator.of(context).pop,
+    //                         child: const Icon(
+    //                           Icons.close,
+
+    //                           size: 16,
+    //                         ),
+    //                       ),
+    //                     ),
+    //                   ),
+    //                 ),
+    //               ),
+    //             ],
+    //           ),
+    //         ),
+    //       );
+    //     },
+    //   ),
+    // );
   }
 }
 
-class SourceMatrixControls extends StatelessWidget {
+class SourceMatrixControls extends StatefulWidget {
   final String zoneID;
   final ZoneFunctions zoneFunctions;
 
@@ -236,164 +383,102 @@ class SourceMatrixControls extends StatelessWidget {
   });
 
   @override
+  State<SourceMatrixControls> createState() => _SourceMatrixControlsState();
+}
+
+class _SourceMatrixControlsState extends State<SourceMatrixControls> {
+  late final ScrollController sourcesScrollController = ScrollController();
+  late final ScrollController outScrollController = ScrollController();
+
+  bool _isSyncing = false;
+
+  @override
+  void initState() {
+    super.initState();
+
+    sourcesScrollController.addListener(() {
+      if (_isSyncing) return;
+      _isSyncing = true;
+      outScrollController.jumpTo(sourcesScrollController.offset);
+      _isSyncing = false;
+    });
+
+    outScrollController.addListener(() {
+      if (_isSyncing) return;
+      _isSyncing = true;
+      sourcesScrollController.jumpTo(outScrollController.offset);
+      _isSyncing = false;
+    });
+  }
+
+  @override
+  void dispose() {
+    sourcesScrollController.dispose();
+    outScrollController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     final ProjectViewModel projectViewModel = serviceLocator<ProjectViewModel>();
-    final List<Source> sources = projectViewModel.getSourcesAndSourceSetSourcesInZone(zoneId: zoneID);
+    final List<Source> sources = projectViewModel.getSourcesAndSourceSetSourcesInZone(zoneId: widget.zoneID);
 
-    final BorderSide borderSide = BorderSide(color: context.colorScheme.strokeLight, width: 1);
+    final int sourcesLength = sources.length;
 
-    const int sourcesFlex = 3;
-
-    return SizedBox(
-      width: 400,
-      height: double.infinity,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: <Widget>[
-          SizedBox(
-            height: 28,
-            child: Row(
-              children: <Widget>[
-                // HEADING
-                Expanded(
-                  flex: sourcesFlex,
-                  child: Container(
-                    height: 28,
-                    width: double.infinity,
-                    alignment: Alignment.center,
-                    child: FusionAppText(
-                      text: "SOURCES",
-                      style: Theme.of(context).textTheme.labelSmall,
-                    ),
+    return Row(
+      children: <Widget>[
+        //
+        // SOURCES
+        //
+        Expanded(
+          flex: 2,
+          child: Column(
+            children: <Widget>[
+              Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Center(
+                  child: FusionAppText(
+                    text: "SOURCES",
+                    style: Theme.of(context).textTheme.labelSmall,
                   ),
-                ),
-                VerticalDivider(width: 1, color: context.colorScheme.strokeLight),
-                Expanded(
-                  child: Container(
-                    height: 28,
-                    width: double.infinity,
-                    alignment: Alignment.center,
-                    child: FusionAppText(
-                      text: "OUT",
-                      style: Theme.of(context).textTheme.labelSmall,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Divider(color: context.colorScheme.strokeLight, height: 0),
-
-          if (sources.isEmpty) ...<Widget>[
-            Expanded(
-              child: Center(
-                child: FusionAppText(
-                  text: "No sources selected for this function",
-                  style: Theme.of(context).textTheme.labelSmall?.copyWith(color: context.colorScheme.textGrey),
                 ),
               ),
-            ),
-          ] else ...<Widget>[
-            // TOP MUTE TOGGLE BUTTONS
-            Row(
-              children: <Widget>[
-                const Expanded(flex: sourcesFlex, child: SizedBox()),
-                Expanded(
-                  child: NeumorphicAudioToggleButton(
-                    isActive: zoneFunctions.matrixMixer! is MonoMatrixMixer ? (zoneFunctions.matrixMixer! as MonoMatrixMixer).outMuted : false,
-                    width: 72,
-                    height: 28,
-                    iconSize: 16,
-                    onTap: () {
-                      projectViewModel.updateMatrixMixer(
-                        matrixMixer:
-                            zoneFunctions.matrixMixer! is MonoMatrixMixer
-                                ? (zoneFunctions.matrixMixer! as MonoMatrixMixer).copyWith(
-                                  outMuted: !(zoneFunctions.matrixMixer! as MonoMatrixMixer).outMuted,
-                                )
-                                : zoneFunctions.matrixMixer!,
-                        functionId: zoneFunctions.id,
-                      );
-                    },
-                  ),
-                ),
-              ],
-            ),
-
-            Row(
-              children: <Widget>[
-                const Expanded(flex: sourcesFlex, child: SizedBox()),
-                Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.all(8.0).copyWith(top: 4.0),
-                    child: NeumorphicTextWithPopupSliderButton(
-                      isActive: false, // DONT ALLOW ACTIVE STATE.
-                      height: 30,
-                      value: zoneFunctions.matrixMixer! is MonoMatrixMixer ? (zoneFunctions.matrixMixer! as MonoMatrixMixer).outGain : 0.0,
-                      onChanged: (double value) {
-                        projectViewModel.updateMatrixMixer(
-                          matrixMixer:
-                              zoneFunctions.matrixMixer! is MonoMatrixMixer
-                                  ? (zoneFunctions.matrixMixer! as MonoMatrixMixer).copyWith(
-                                    outGain: value,
-                                  )
-                                  : zoneFunctions.matrixMixer!,
-                          functionId: zoneFunctions.id,
-                        );
-                      },
-                    ),
-                  ),
-                ),
-              ],
-            ),
-
-            Flexible(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.all(8.0),
-                physics: const ClampingScrollPhysics(),
-                child: Table(
-                  columnWidths: <int, TableColumnWidth>{
-                    0: FlexColumnWidth(sourcesFlex.toDouble()),
-                    1: const FlexColumnWidth(),
-                    2: const FlexColumnWidth(),
-                  },
-                  children: <TableRow>[
-                    ...List<TableRow>.generate(sources.length, (int index) {
-                      final bool isLast = index == sources.length - 1;
+              Divider(color: context.colorScheme.strokeLight, height: 0),
+              const SizedBox(height: 120),
+              Divider(color: context.colorScheme.strokeLight, height: 0),
+              Expanded(
+                child: ScrollConfiguration(
+                  behavior: const ScrollBehavior().copyWith(scrollbars: false),
+                  child: ListView.separated(
+                    controller: sourcesScrollController,
+                    itemCount: sourcesLength,
+                    padding: EdgeInsets.zero,
+                    physics: const ClampingScrollPhysics(),
+                    separatorBuilder: (BuildContext context, int index) => Divider(color: context.colorScheme.strokeLight, height: 0),
+                    itemBuilder: (BuildContext context, int index) {
                       final Source source = sources[index];
 
                       final MonoMatrixSettings matrixSetting =
-                          zoneFunctions.matrixMixer!.settings.firstWhere((MatrixSettings ms) => ms.sourceId == source.id) as MonoMatrixSettings;
+                          widget.zoneFunctions.matrixMixer!.settings.firstWhere((MatrixSettings ms) => ms.sourceId == source.id) as MonoMatrixSettings;
 
-                      return TableRow(
+                      return Row(
                         children: <Widget>[
-                          Container(
-                            height: 40,
-                            margin: const EdgeInsets.only(left: 4, right: 4),
-                            padding: const EdgeInsets.all(4),
-                            decoration: BoxDecoration(
-                              border: Border.all(color: context.colorScheme.strokeLight, width: 1),
-                            ),
-                            child: Row(
-                              spacing: 6,
-                              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                              children: <Widget>[
-                                Expanded(
-                                  flex: 2,
-                                  child: Container(
-                                    height: 40,
-                                    width: double.infinity,
-                                    alignment: Alignment.center,
-                                    padding: const EdgeInsets.all(4),
+                          Expanded(
+                            flex: 2,
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                              child: Row(
+                                spacing: 6,
+                                children: <Widget>[
+                                  Container(
+                                    height: 16,
+                                    width: 16,
                                     decoration: BoxDecoration(
-                                      border: Border(
-                                        right: borderSide,
-                                        left: borderSide,
-                                        top: isLast ? BorderSide.none : borderSide,
-                                        bottom: isLast ? borderSide : BorderSide.none,
-                                      ),
-                                      borderRadius: const BorderRadius.all(Radius.circular(4)),
+                                      color: context.colorScheme.primaryColor,
+                                      borderRadius: BorderRadius.circular(4),
                                     ),
+                                  ),
+                                  Expanded(
                                     child: Center(
                                       child: FusionAppText(
                                         text: source.name,
@@ -402,91 +487,155 @@ class SourceMatrixControls extends StatelessWidget {
                                       ),
                                     ),
                                   ),
-                                ),
-                                GestureDetector(
-                                  onTap: () {
-                                    projectViewModel.updateMatrixSettings(
-                                      matrixSettings: matrixSetting.copyWith(
-                                        muted: !matrixSetting.muted,
-                                      ),
-                                      functionId: zoneFunctions.id,
-                                    );
-                                  },
-                                  child: Container(
-                                    height: 28,
-                                    width: 28,
-                                    alignment: Alignment.center,
-                                    decoration: BoxDecoration(
-                                      color: context.colorScheme.elevation1,
-                                      borderRadius: BorderRadius.circular(4),
-                                      border: Border.all(color: context.colorScheme.strokeLight),
-                                    ),
+                                  FusionNeumorphicButton(
+                                    onTap: () {
+                                      projectViewModel.updateMatrixSettings(
+                                        matrixSettings: matrixSetting.copyWith(
+                                          muted: !matrixSetting.muted,
+                                        ),
+                                        functionId: widget.zoneFunctions.id,
+                                      );
+                                    },
+                                    width: 24,
+                                    height: 24,
+                                    borderRadius: 6,
                                     child: SvgPicture.asset(
                                       'assets/svg/volume.svg',
-                                      width: 16,
-                                      height: 16,
+                                      width: 12,
+                                      height: 12,
                                       // ignore: deprecated_member_use
                                       color: matrixSetting.muted ? context.colorScheme.iconDisabled : context.colorScheme.primaryWhite,
                                     ),
                                   ),
-                                ),
-                                Flexible(
-                                  child: NeumorphicTextWithPopupSliderButton(
-                                    isActive: false, // DONT ALLOW ACTIVE STATE.
-                                    value: matrixSetting.gain,
-                                    borderRadius: 6,
-                                    onChanged: (double value) {
-                                      projectViewModel.updateMatrixSettings(
-                                        matrixSettings: matrixSetting.copyWith(
-                                          gain: value,
-                                        ),
-                                        functionId: zoneFunctions.id,
-                                      );
-                                    },
+                                  Expanded(
+                                    child: NeumorphicTextWithPopupSliderButton(
+                                      isActive: false, // DONT ALLOW ACTIVE STATE.
+                                      value: matrixSetting.gain,
+                                      borderRadius: 6,
+                                      onChanged: (double value) {
+                                        projectViewModel.updateMatrixSettings(
+                                          matrixSettings: matrixSetting.copyWith(
+                                            gain: value,
+                                          ),
+                                          functionId: widget.zoneFunctions.id,
+                                        );
+                                      },
+                                    ),
                                   ),
-                                ),
-                              ],
-                            ),
-                          ),
-
-                          Container(
-                            height: 40,
-                            alignment: Alignment.center,
-                            padding: const EdgeInsets.all(4),
-                            margin: const EdgeInsets.only(left: 4, right: 4),
-                            decoration: BoxDecoration(
-                              border: Border(
-                                right: borderSide,
-                                left: borderSide,
-                                top: isLast ? BorderSide.none : borderSide,
-                                bottom: isLast ? borderSide : BorderSide.none,
+                                ],
                               ),
-                            ),
-                            child: NeumorphicTextWithPopupSliderButton(
-                              isActive: false,
-                              value: matrixSetting.mixLevel,
-                              height: 30,
-                              borderRadius: 6,
-                              onChanged: (double value) {
-                                projectViewModel.updateMatrixSettings(
-                                  matrixSettings: matrixSetting.copyWith(
-                                    mixLevel: value,
-                                  ),
-                                  functionId: zoneFunctions.id,
-                                );
-                              },
                             ),
                           ),
                         ],
                       );
-                    }),
+                    },
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        VerticalDivider(width: 1, color: context.colorScheme.strokeLight),
+        Expanded(
+          child: Column(
+            children: <Widget>[
+              Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Center(
+                  child: FusionAppText(
+                    text: "OUT",
+                    style: Theme.of(context).textTheme.labelSmall,
+                  ),
+                ),
+              ),
+              Divider(color: context.colorScheme.strokeLight, height: 0),
+              //
+              // TOP OUT MUTE / UNMUTE BUTTON
+              //
+              SizedBox(
+                height: 120,
+                child: Column(
+                  children: <Widget>[
+                    NeumorphicAudioToggleButton(
+                      isActive: widget.zoneFunctions.matrixMixer! is MonoMatrixMixer ? (widget.zoneFunctions.matrixMixer! as MonoMatrixMixer).outMuted : false,
+                      iconSize: 16,
+                      backgroundColor: context.colorScheme.elevation2,
+                      onTap: () {
+                        projectViewModel.updateMatrixMixer(
+                          matrixMixer:
+                              widget.zoneFunctions.matrixMixer! is MonoMatrixMixer
+                                  ? (widget.zoneFunctions.matrixMixer! as MonoMatrixMixer).copyWith(
+                                    outMuted: !(widget.zoneFunctions.matrixMixer! as MonoMatrixMixer).outMuted,
+                                  )
+                                  : widget.zoneFunctions.matrixMixer!,
+                          functionId: widget.zoneFunctions.id,
+                        );
+                      },
+                    ),
+
+                    const SizedBox(height: 16),
+
+                    //
+                    // OUT GAIN SLIDER
+                    //
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                      child: NeumorphicTextWithPopupSliderButton(
+                        isActive: false, // DONT ALLOW ACTIVE STATE.
+                        value: widget.zoneFunctions.matrixMixer! is MonoMatrixMixer ? (widget.zoneFunctions.matrixMixer! as MonoMatrixMixer).outGain : 0.0,
+                        onChanged: (double value) {
+                          projectViewModel.updateMatrixMixer(
+                            matrixMixer:
+                                widget.zoneFunctions.matrixMixer! is MonoMatrixMixer
+                                    ? (widget.zoneFunctions.matrixMixer! as MonoMatrixMixer).copyWith(
+                                      outGain: value,
+                                    )
+                                    : widget.zoneFunctions.matrixMixer!,
+                            functionId: widget.zoneFunctions.id,
+                          );
+                        },
+                      ),
+                    ),
                   ],
                 ),
               ),
-            ),
-          ],
-        ],
-      ),
+              Divider(color: context.colorScheme.strokeLight, height: 0),
+              Expanded(
+                child: ListView.separated(
+                  controller: outScrollController,
+                  itemCount: sourcesLength,
+                  padding: EdgeInsets.zero,
+                  physics: const ClampingScrollPhysics(),
+                  separatorBuilder: (BuildContext context, int index) => Divider(color: context.colorScheme.strokeLight, height: 0),
+                  itemBuilder: (BuildContext context, int index) {
+                    final Source source = sources[index];
+
+                    final MonoMatrixSettings matrixSetting =
+                        widget.zoneFunctions.matrixMixer!.settings.firstWhere((MatrixSettings ms) => ms.sourceId == source.id) as MonoMatrixSettings;
+
+                    return Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      child: NeumorphicTextWithPopupSliderButton(
+                        isActive: false,
+                        value: matrixSetting.mixLevel,
+                        borderRadius: 6,
+                        onChanged: (double value) {
+                          projectViewModel.updateMatrixSettings(
+                            matrixSettings: matrixSetting.copyWith(
+                              mixLevel: value,
+                            ),
+                            functionId: widget.zoneFunctions.id,
+                          );
+                        },
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }

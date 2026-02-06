@@ -61,7 +61,7 @@ class VerticalSlider extends StatefulWidget {
     required this.max,
     this.onChanged,
     this.showIntervals = true,
-    this.activeColor = const Color(0xFF303030),
+    this.activeColor,
     this.inactiveColor = const Color(0xFFBABABA),
     this.trackWidth = 4.0,
     this.thumbSize = 16.0,
@@ -77,7 +77,7 @@ class VerticalSlider extends StatefulWidget {
   final bool showIntervals;
 
   // Styling
-  final Color activeColor;
+  final Color? activeColor;
   final Color inactiveColor;
   final double trackWidth;
   final double thumbSize;
@@ -262,7 +262,7 @@ class _VerticalSliderState extends State<VerticalSlider> {
                                   width: widget.trackWidth,
                                   height: activeHeight,
                                   decoration: BoxDecoration(
-                                    color: widget.activeColor,
+                                    color: widget.activeColor ?? context.colorScheme.primaryColor,
                                     borderRadius: const BorderRadius.vertical(
                                       bottom: Radius.circular(100),
                                     ),

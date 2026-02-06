@@ -57,7 +57,7 @@ class _FusionNeumorphicButtonState extends State<FusionNeumorphicButton> {
                 widget.child ??
                 FusionAppText(
                   text: widget.text!,
-                  style: widget.textStyle ?? Theme.of(context).textTheme.bodyMedium,
+                  style: widget.textStyle ?? context.textTheme.bodyMedium,
                 ),
           ),
         ),

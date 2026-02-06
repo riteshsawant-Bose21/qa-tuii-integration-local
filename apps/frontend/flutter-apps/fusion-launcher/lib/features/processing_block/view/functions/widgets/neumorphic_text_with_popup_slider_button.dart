@@ -40,9 +40,10 @@ class _NeumorphicTextWithPopupSliderButtonState extends State<NeumorphicTextWith
       child: FusionContainer(
         height: widget.height ?? 28,
         width: widget.width ?? double.infinity,
-        raised: !widget.isActive,
+        // raised: widget.isActive,
         alignment: Alignment.center,
         borderRadius: widget.borderRadius,
+        color: context.colorScheme.elevation2,
         child: Row(
           children: <Widget>[
             Expanded(
