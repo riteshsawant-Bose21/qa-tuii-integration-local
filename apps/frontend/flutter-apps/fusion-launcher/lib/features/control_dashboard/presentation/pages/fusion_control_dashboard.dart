@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:fusion_launcher/features/control_dashboard/presentation/widgets/devices/dashboard_device_listing.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
-import '../../../devices/presentation/pages/device_listing_page.dart';
+import '../widgets/alerts/alerts_dashboard.dart';
 import '../widgets/dashboard_scroll_wrapper.dart';
 import '../widgets/events/events_dashboard.dart';
 import '../widgets/message_player/message_player_widget.dart';
@@ -18,15 +18,13 @@ class FusionControlDashboardPage extends StatelessWidget {
     return Scaffold(
       backgroundColor: bgBlack,
       body: const DashboardScrollWrapper(
-        minWidth: 1280, // Set this to the ideal width of your design
+        minWidth: 1280, // Set this to the ideal width of  design
         child: Padding(
           padding: EdgeInsets.all(16.0),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
-              // ---------------------------------------------------------
               // LEFT COLUMN (Devices + Media + Events) - Flex 6
-              // ---------------------------------------------------------
               Expanded(
                 flex: 6,
                 child: Column(
@@ -61,9 +59,7 @@ class FusionControlDashboardPage extends StatelessWidget {
 
               SizedBox(width: 16),
 
-              // ---------------------------------------------------------
               // MIDDLE COLUMN (ZONES) - Flex 4
-              // ---------------------------------------------------------
               Expanded(
                 flex: 4,
                 child: ZoneDashboard(),
@@ -71,12 +67,10 @@ class FusionControlDashboardPage extends StatelessWidget {
 
               SizedBox(width: 16),
 
-              // ---------------------------------------------------------
               // RIGHT COLUMN (ALERTS) - Flex 3
-              // ---------------------------------------------------------
               Expanded(
                 flex: 3,
-                child: NotificationSidebar(), // Reusing your existing widget
+                child: AlertsDashboard(),
               ),
             ],
           ),
