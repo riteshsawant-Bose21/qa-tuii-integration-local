@@ -1,11 +1,10 @@
-import 'dart:math' as math;
-
 import 'package:flutter/material.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
 import '../../../devices/presentation/pages/device_listing_page.dart';
 import '../../../devices/presentation/widgets/themostat_painter.dart';
 import '../widgets/dashboard_scroll_wrapper.dart';
+import '../widgets/zones/zone_dashboard.dart';
 
 class FusionControlDashboardPage extends StatelessWidget {
   const FusionControlDashboardPage({super.key});
@@ -114,10 +113,10 @@ class FusionControlDashboardPage extends StatelessWidget {
                               child: Column(
                                 children: <Widget>[
                                   _buildHeader("UPCOMING EVENTS", "View All"),
-                                  const SizedBox(height: 16),
-                                  _buildEventCard("System Shutdown", "TODAY / 24 JULY, 2025 / 5:00PM", true),
-                                  const SizedBox(height: 12),
-                                  _buildEventCard("StartUP", "EVERYDAY / 24 JULY, 2025 / 5:00PM", false),
+                                  // const SizedBox(height: 16),
+                                  // _buildEventCard("System Shutdown", "TODAY / 24 JULY, 2025 / 5:00PM", true),
+                                  // const SizedBox(height: 12),
+                                  // _buildEventCard("StartUP", "EVERYDAY / 24 JULY, 2025 / 5:00PM", false),
                                 ],
                               ),
                             ),
@@ -134,30 +133,9 @@ class FusionControlDashboardPage extends StatelessWidget {
               // ---------------------------------------------------------
               // MIDDLE COLUMN (ZONES) - Flex 4
               // ---------------------------------------------------------
-              Expanded(
+              const Expanded(
                 flex: 4,
-                child: Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(color: cardDark, borderRadius: BorderRadius.circular(12)),
-                  child: Column(
-                    children: <Widget>[
-                      _buildHeader("ZONES", ""),
-                      const SizedBox(height: 16),
-                      Expanded(
-                        child: ListView(
-                          children: <Widget>[
-                            _buildZoneCard("Zone1", "Reception", const Color(0xFF5C6BC0)),
-                            const SizedBox(height: 16),
-                            _buildZoneCard("Zone2_Fitness", "Cardio", const Color(0xFFEF5350)),
-                            const SizedBox(height: 16),
-                            _buildZoneCard("Zone3", "Reception", const Color(0xFFEF5350)),
-                            const SizedBox(height: 16),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
+                child: ZoneDashboard(),
               ),
 
               const SizedBox(width: 16),
@@ -306,8 +284,6 @@ class FusionControlDashboardPage extends StatelessWidget {
                       _buildMiniControl(Icons.settings_power),
                       const SizedBox(width: 10),
                       _buildMiniControl(Icons.refresh),
-                      const SizedBox(width: 10),
-                      _buildMiniControl(Icons.more_vert),
                     ],
                   ),
                 ),
@@ -363,125 +339,6 @@ class FusionControlDashboardPage extends StatelessWidget {
         icon,
         size: 13,
         color: const Color(0xFF888888),
-      ),
-    );
-  }
-
-  // --- ZONE WIDGETS ---
-  Widget _buildZoneCard(String zoneName, String label, Color accentColor, {bool isExpanded = false}) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      decoration: BoxDecoration(
-        color: const Color(0xFF141414), // Very dark card bg
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.white.withOpacity(0.05)),
-      ),
-      child: Column(
-        children: <Widget>[
-          // --- HEADER (Zone Name + Icon) ---
-          Padding(
-            padding: const EdgeInsets.all(12.0),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: <Widget>[
-                Row(
-                  children: <Widget>[
-                    Container(
-                      width: 14,
-                      height: 14,
-                      decoration: BoxDecoration(color: accentColor, borderRadius: BorderRadius.circular(4)),
-                    ),
-                    const SizedBox(width: 12),
-                    Text(zoneName, style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold)),
-                  ],
-                ),
-                Icon(Icons.drag_indicator, color: Colors.grey[800], size: 18),
-              ],
-            ),
-          ),
-
-          // --- CONTENT (Sliders & Meters) ---
-          // Assuming isExpanded shows content, otherwise just header
-          // For demo, we show content always if you prefer
-          Container(
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                const SizedBox(height: 8),
-
-                // 1. Label + Audio Meter Row
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: <Widget>[
-                    // Label
-                    SizedBox(
-                      width: 80, // Fixed width for alignment
-                      child: Text(label, style: const TextStyle(color: Colors.white, fontSize: 13)),
-                    ),
-                    const SizedBox(width: 12),
-                    // The Custom Animated Meter
-                    const Expanded(
-                      child: AudioMeterWidget(height: 32),
-                    ),
-                  ],
-                ),
-
-                const SizedBox(height: 12),
-
-                // 2. Mute Btn + Slider + Value Row
-                Row(
-                  children: <Widget>[
-                    // Neumorphic Mute Button
-                    FusionNeumorphicButton(
-                      width: 32,
-                      height: 32,
-                      borderRadius: 8,
-                      onTap: () {},
-                      child: const Icon(
-                        Icons.volume_off,
-                        color: Colors.grey,
-                        size: 16,
-                      ),
-                    ),
-
-                    const SizedBox(width: 12),
-
-                    // Slider
-                    Expanded(
-                      child: SliderTheme(
-                        data: SliderThemeData(
-                          trackHeight: 2,
-                          activeTrackColor: Colors.white,
-                          inactiveTrackColor: Colors.grey[800],
-                          thumbColor: Colors.white,
-                          overlayShape: SliderComponentShape.noOverlay,
-                          thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6, elevation: 2),
-                        ),
-                        child: Slider(
-                          value: 0.72,
-                          onChanged: (double v) {},
-                        ),
-                      ),
-                    ),
-
-                    const SizedBox(width: 12),
-
-                    // Value Text
-                    const SizedBox(
-                      width: 24,
-                      child: Text(
-                        "72",
-                        style: TextStyle(color: Colors.white, fontSize: 12),
-                        textAlign: TextAlign.right,
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ],
       ),
     );
   }
@@ -630,176 +487,5 @@ class FusionControlDashboardPage extends StatelessWidget {
     if (name.contains("2")) return const Color(0xFFEF5350);
     if (name.contains("3")) return const Color(0xFFFFCA28);
     return const Color(0xFF66BB6A);
-  }
-}
-
-class AudioMeterWidget extends StatefulWidget {
-  final double height;
-  final bool isAnimate; // To turn off animation if needed
-
-  const AudioMeterWidget({
-    super.key,
-    this.height = 36, // Total height including labels
-    this.isAnimate = true,
-  });
-
-  @override
-  State<AudioMeterWidget> createState() => _AudioMeterWidgetState();
-}
-
-class _AudioMeterWidgetState extends State<AudioMeterWidget> with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
-
-  double _currentLevel = 0.3; // Start partially filled (not 0) to avoid initial jump
-  double _targetLevel = 0.3;
-  final math.Random _random = math.Random();
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(vsync: this, duration: const Duration(milliseconds: 100))..repeat();
-
-    _controller.addListener(_updatePhysics);
-  }
-
-  void _updatePhysics() {
-    if (!widget.isAnimate) return;
-
-    setState(() {
-      // 1. GENERATE NEW TARGET
-      // If we are close to the target, pick a new random volume level
-      if ((_targetLevel - _currentLevel).abs() < 0.02) {
-        // Pick a value between 0.4 and 0.95 (Active "Talking" range)
-        _targetLevel = 0.4 + (_random.nextDouble() * 0.55);
-      }
-
-      // 2. APPLY PHYSICS (Attack & Decay)
-      if (_targetLevel > _currentLevel) {
-        // ATTACK: Move UP fast (0.15 speed)
-        // This makes the meter responsive to "loud" sounds
-        _currentLevel += (_targetLevel - _currentLevel) * 0.15;
-      } else {
-        // DECAY: Move DOWN slow (0.03 speed)
-        // This is the key to removing flicker! It lingers before dropping.
-        _currentLevel += (_targetLevel - _currentLevel) * 0.03;
-      }
-    });
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      height: widget.height,
-      width: double.infinity,
-      child: CustomPaint(
-        painter: _AudioMeterPainter(level: _currentLevel),
-      ),
-    );
-  }
-}
-
-class _AudioMeterPainter extends CustomPainter {
-  final double level;
-
-  _AudioMeterPainter({required this.level});
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    const double barHeight = 12.0;
-    const double tickHeight = 4.0;
-
-    // 1. Draw Background Track (Dark Grey container for the meter)
-    final Paint bgPaint =
-        Paint()
-          ..color = const Color(0xFF2A2A2A)
-          ..style = PaintingStyle.fill;
-
-    final RRect bgRect = RRect.fromRectAndRadius(
-      Rect.fromLTWH(0, 0, size.width, barHeight),
-      const Radius.circular(4),
-    );
-    canvas.drawRRect(bgRect, bgPaint);
-
-    // 2. Draw Active Gradient Level
-    // We create a LinearGradient shader from Green -> Yellow -> Red
-    final Shader gradient = const LinearGradient(
-      colors: <Color>[
-        Color(0xFF4CAF50), // Green (-60)
-        Color(0xFF66BB6A), // Lighter Green
-        Color(0xFFFFCA28), // Yellow (-24)
-        Color(0xFFEF5350), // Red (-00)
-      ],
-      stops: <double>[0.0, 0.4, 0.75, 1.0],
-    ).createShader(Rect.fromLTWH(0, 0, size.width, barHeight));
-
-    final Paint activePaint =
-        Paint()
-          ..shader = gradient
-          ..style = PaintingStyle.fill;
-
-    // Calculate width based on level (0.0 to 1.0)
-    final double activeWidth = size.width * level;
-
-    final RRect activeRect = RRect.fromRectAndRadius(
-      Rect.fromLTWH(0, 0, activeWidth, barHeight),
-      const Radius.circular(4),
-    );
-    canvas.drawRRect(activeRect, activePaint);
-
-    // 3. Draw Peak Indicator (Optional: A small white line at the tip)
-    final Paint peakPaint =
-        Paint()
-          ..color = Colors.white.withOpacity(0.5)
-          ..strokeWidth = 2;
-    canvas.drawLine(Offset(activeWidth, 0), Offset(activeWidth, barHeight), peakPaint);
-
-    // 4. Draw Ticks and Labels
-    final Paint tickPaint =
-        Paint()
-          ..color = Colors.grey[700]!
-          ..strokeWidth = 1.0;
-
-    final TextPainter textPainter = TextPainter(
-      textDirection: TextDirection.ltr,
-      textAlign: TextAlign.center,
-    );
-
-    // Labels from reference image
-    final List<String> labels = <String>["-60", "-48", "-36", "-24", "-12", "-00"];
-
-    // Evenly distribute them
-    for (int i = 0; i < labels.length; i++) {
-      // Calculate X position (normalize i from 0 to 1)
-      // We inset slightly so -60 and -00 aren't on the absolute edge
-      final double x = (size.width * (i / (labels.length - 1)));
-
-      // Draw Tick
-      canvas.drawLine(
-        Offset(x, barHeight),
-        Offset(x, barHeight + tickHeight),
-        tickPaint,
-      );
-
-      // Draw Text
-      textPainter.text = TextSpan(
-        text: labels[i],
-        style: TextStyle(color: Colors.grey[600], fontSize: 9),
-      );
-      textPainter.layout();
-
-      // Center text on the tick
-      textPainter.paint(canvas, Offset(x - (textPainter.width / 2), barHeight + tickHeight + 2));
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant _AudioMeterPainter oldDelegate) {
-    return oldDelegate.level != level;
   }
 }

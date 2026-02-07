@@ -112,11 +112,6 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with TickerProviderSt
       tag: LogTag.project,
     );
 
-    // Listen for tab changes to trigger rebuild for IndexedStack
-    _tabController.addListener(() {
-      setState(() {});
-    });
-
     /// Todo: Need to handle this in a better way
     serviceLocator<ProjectViewModel>().changeDeviceTypeIndex(-1);
     serviceLocator<ProjectViewModel>().currentToolbarMode = ToolbarMode.acoustics;
@@ -148,7 +143,7 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with TickerProviderSt
 
     // Since you are using IndexedStack, we need to rebuild when tab changes
     _tabController.addListener(() {
-      if (!_tabController.indexIsChanging) {
+      if (!_tabController.indexIsChanging && mounted) {
         setState(() {});
       }
     });
@@ -157,12 +152,13 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with TickerProviderSt
   void toggleFusionModes() {
     serviceLocator<ProjectViewModel>().toggleControlMode();
 
-    // Verify tab controller index is valid, reset to 0 if invalid
-    // if (_tabController.index >= currentWidget.length) {
-    //   WidgetsBinding.instance.addPostFrameCallback((_) {
-    //     _tabController.animateTo(0);
-    //   });
-    // }
+    // Safely reinitialize controller after mode change
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        _initController(isInDesignMode);
+        setState(() {});
+      }
+    });
   }
 
   Future<void> _initMace() async {
@@ -714,7 +710,7 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with TickerProviderSt
     ];
 
     _controlWidgets = <Widget>[
-      serviceLocator<ProjectViewModel>().virtualIP == null ? const NetworkConfigTrigger() : const FusionControlDashboardPage(),
+      serviceLocator<ProjectViewModel>().virtualIP == null ? const FusionControlDashboardPage() : const FusionControlDashboardPage(),
       serviceLocator<ProjectViewModel>().virtualIP == null ? const NetworkConfigTrigger() : const FusionDevicesPage(),
       serviceLocator<ProjectViewModel>().virtualIP == null ? const NetworkConfigTrigger() : buildingPage,
       serviceLocator<ProjectViewModel>().virtualIP == null ? const NetworkConfigTrigger() : configurationPage,
@@ -729,7 +725,7 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with TickerProviderSt
       length: 4,
       child: BlocConsumer<ProjectViewModel, ProjectViewModelState>(
         listener: (BuildContext context, ProjectViewModelState state) {
-          if (state is TabChanged) {
+          if (state is TabChanged && mounted) {
             _initController(state.tab == 0);
           }
         },
@@ -1057,10 +1053,13 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with TickerProviderSt
                   ),
                 ),
                 Expanded(
-                  child: IndexedStack(
-                    index: _tabController.index,
-                    children: _currentWidgets,
-                  ),
+                  child:
+                      _currentWidgets.isNotEmpty
+                          ? IndexedStack(
+                            index: _tabController.index.clamp(0, _currentWidgets.length - 1),
+                            children: _currentWidgets,
+                          )
+                          : const Center(child: CircularProgressIndicator()),
                 ),
               ],
             ),

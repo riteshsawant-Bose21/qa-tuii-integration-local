@@ -11,6 +11,8 @@ class FusionContainer extends StatelessWidget {
     this.color,
     this.height,
     this.alignment,
+    this.padding,
+    this.margin,
   });
   final double? width;
   final double? height;
@@ -19,6 +21,9 @@ class FusionContainer extends StatelessWidget {
   final bool raised;
   final Color? color;
   final AlignmentGeometry? alignment;
+  final double? padding;
+  final EdgeInsetsGeometry? margin;
+
   @override
   Widget build(BuildContext context) {
     return AnimatedContainer(
@@ -26,7 +31,8 @@ class FusionContainer extends StatelessWidget {
       width: width,
       height: height,
       alignment: alignment,
-      margin: const EdgeInsets.all(2),
+      margin: margin ?? const EdgeInsets.all(2),
+      padding: EdgeInsets.all(padding ?? 0),
       decoration: BoxDecoration(
         // color: context.colorScheme.shadowDark,
         boxShadow: raised

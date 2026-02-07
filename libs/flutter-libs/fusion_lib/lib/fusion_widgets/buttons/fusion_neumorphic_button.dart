@@ -10,6 +10,8 @@ class FusionNeumorphicButton extends StatefulWidget {
   final TextStyle? textStyle;
   final Widget? child;
   final Color? color;
+  final double? padding;
+  final EdgeInsetsGeometry? margin;
 
   const FusionNeumorphicButton({
     super.key,
@@ -21,6 +23,8 @@ class FusionNeumorphicButton extends StatefulWidget {
     this.textStyle,
     this.child,
     this.color,
+    this.padding,
+    this.margin,
   });
 
   @override
@@ -53,6 +57,8 @@ class _FusionNeumorphicButtonState extends State<FusionNeumorphicButton> {
             height: widget.height,
             alignment: Alignment.center,
             color: widget.color,
+            padding: widget.padding,
+            margin: widget.margin,
             child:
                 widget.child ??
                 FusionAppText(
