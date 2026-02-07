@@ -28,10 +28,9 @@ class DashboardSectionHeader extends StatelessWidget {
                 child: FusionAppText(
                   text: "View All",
                   style: context.textTheme.labelSmall!.copyWith(
-                    color: context.colorScheme.primary,
-                    fontSize: 11,
-                    fontWeight: FontWeight.w500,
-                    decoration: TextDecoration.underline,
+                    color: context.colorScheme.textPrimary,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
                   ),
                 ),
               ),

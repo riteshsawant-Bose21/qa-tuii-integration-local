@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:fusion_launcher/features/control_dashboard/presentation/widgets/devices/dashboard_device_listing.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
 import '../../../devices/presentation/pages/device_listing_page.dart';
-import '../../../devices/presentation/widgets/themostat_painter.dart';
 import '../widgets/dashboard_scroll_wrapper.dart';
 import '../widgets/zones/zone_dashboard.dart';
 
@@ -11,8 +11,8 @@ class FusionControlDashboardPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const Color bgBlack = Color(0xFF000000);
-    const Color cardDark = Color(0xFF111111);
+    final Color bgBlack = context.colorScheme.primaryBlack;
+    final Color cardDark = context.colorScheme.elevation1;
 
     return Scaffold(
       backgroundColor: bgBlack,
@@ -31,55 +31,9 @@ class FusionControlDashboardPage extends StatelessWidget {
                 child: Column(
                   children: <Widget>[
                     // 1. DEVICES PANEL (Top Left)
-                    Expanded(
+                    const Expanded(
                       flex: 3,
-                      child: Container(
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(color: cardDark, borderRadius: BorderRadius.circular(12)),
-                        child: Column(
-                          children: <Widget>[
-                            _buildHeader("DEVICES", "View All"),
-                            const SizedBox(height: 16),
-                            _buildTableHeader(),
-                            const SizedBox(height: 8),
-                            Expanded(
-                              child: ListView(
-                                children: <Widget>[
-                                  _buildDeviceRow(
-                                    name: "Powersmart 8300",
-                                    location: "Equipment Location",
-                                    temp: 33,
-                                    cpu: 0.92,
-                                    disk: 0.92,
-                                    alertMsg: "Open Circuit Fault Channel: 3 , Zone: Reception, Circuit: DM5SE",
-                                    isCritical: true,
-                                  ),
-                                  const SizedBox(height: 12),
-                                  _buildDeviceRow(
-                                    name: "Powersmart 8300",
-                                    location: "model name",
-                                    temp: 46,
-                                    cpu: 0.92,
-                                    disk: 0.71,
-                                    alertMsg: "High Temperature Warning",
-                                    isWarning: true,
-                                  ),
-                                  const SizedBox(height: 12),
-                                  _buildDeviceRow(
-                                    name: "Powersmart 8300",
-                                    location: "Equipment Location",
-                                    temp: 21,
-                                    cpu: 0.43,
-                                    disk: 0.43,
-                                  ),
-                                  const SizedBox(height: 12),
-                                  _buildDeviceRow(name: "Powersmart 8300", location: "Equipment Location", isOffline: true),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
+                      child: DashboardDeviceListing(),
                     ),
                     const SizedBox(height: 16),
 
@@ -163,183 +117,6 @@ class FusionControlDashboardPage extends StatelessWidget {
         Text(title, style: const TextStyle(color: Colors.grey, fontSize: 12, fontWeight: FontWeight.bold, letterSpacing: 1)),
         if (action.isNotEmpty) Text(action, style: const TextStyle(color: Colors.grey, fontSize: 11, decoration: TextDecoration.underline)),
       ],
-    );
-  }
-
-  // --- DEVICE PANEL WIDGETS ---
-  Widget _buildTableHeader() {
-    const TextStyle headerStyle = TextStyle(color: Color(0xFF616161), fontSize: 10, fontWeight: FontWeight.bold);
-
-    return const Padding(
-      // MATCHED PADDING: Matches the internal padding of _buildDeviceRow (12.0)
-      // plus the border width (1.0) to line up text perfectly.
-      padding: EdgeInsets.symmetric(horizontal: 13.0),
-      child: Row(
-        children: <Widget>[
-          // FLEX 4: Device Name
-          Expanded(flex: 4, child: Text("DEVICE NAME", style: headerStyle)),
-          // FLEX 2: Temp
-          Expanded(flex: 2, child: Text("TEMP", style: headerStyle)),
-          // FLEX 2: CPU
-          Expanded(flex: 2, child: Text("CPU", style: headerStyle)),
-          // FLEX 2: Disk
-          Expanded(flex: 2, child: Text("DISK", style: headerStyle)),
-          // FLEX 2: Controls
-          Expanded(flex: 2, child: Align(alignment: Alignment.centerRight, child: Text("CONTROLS", style: headerStyle))),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildDeviceRow({
-    required String name,
-    required String location,
-    double temp = 0,
-    double cpu = 0,
-    double disk = 0,
-    String? alertMsg,
-    bool isCritical = false,
-    bool isWarning = false,
-    bool isOffline = false,
-  }) {
-    final Color bgColor = (isCritical || isWarning) ? const Color(0xFF1E1E1E) : const Color(0xFF161616);
-    final Color borderColor = Colors.white.withOpacity(0.05);
-
-    return Container(
-      decoration: BoxDecoration(
-        color: bgColor,
-        borderRadius: BorderRadius.circular(6),
-        border: Border.all(color: borderColor),
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: <Widget>[
-          Padding(
-            // PADDING: 12.0 horizontal (Matches Header's effective padding)
-            padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 12.0),
-            child: Row(
-              children: <Widget>[
-                // 1. Device Info (FLEX 4 - MATCHES HEADER)
-                Expanded(
-                  flex: 4,
-                  child: Row(
-                    children: <Widget>[
-                      Container(
-                        width: 40,
-                        height: 24,
-                        decoration: BoxDecoration(color: Colors.grey[800], borderRadius: BorderRadius.circular(2)),
-                        child: const Icon(Icons.router, color: Colors.white54, size: 16),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: <Widget>[
-                            Text(
-                              name,
-                              style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w500),
-                              overflow: TextOverflow.ellipsis,
-                              maxLines: 1,
-                            ),
-                            const SizedBox(height: 2),
-                            Text(
-                              location,
-                              style: const TextStyle(color: Colors.grey, fontSize: 11),
-                              overflow: TextOverflow.ellipsis,
-                              maxLines: 1,
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-
-                // 2. Metrics (FLEX 2 EACH - MATCHES HEADER)
-                Expanded(
-                  flex: 2,
-                  child:
-                      isOffline
-                          ? _buildDash()
-                          : Align(
-                            alignment: Alignment.centerLeft,
-                            child: CompactThermostatWidget(temperature: temp.toInt(), maxTemperature: 100),
-                          ),
-                ),
-                Expanded(
-                  flex: 2,
-                  child: isOffline ? _buildDash() : UsageMeterWidget(value: cpu, label: "${(cpu * 100).toInt()}%", color: _getUsageColor(cpu)),
-                ),
-                Expanded(
-                  flex: 2,
-                  child: isOffline ? _buildDash() : UsageMeterWidget(value: disk, label: "${(disk * 100).toInt()}%", color: _getUsageColor(disk)),
-                ),
-
-                // 3. Controls (FLEX 2 - MATCHES HEADER)
-                Expanded(
-                  flex: 2,
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.end,
-                    children: <Widget>[
-                      _buildMiniControl(Icons.settings_power),
-                      const SizedBox(width: 10),
-                      _buildMiniControl(Icons.refresh),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-
-          // Alert Banner code remains same...
-          if (alertMsg != null)
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-              decoration: BoxDecoration(
-                color: isCritical ? const Color(0xFF3E1A1A) : const Color(0xFF3E2E1A),
-                borderRadius: const BorderRadius.only(bottomLeft: Radius.circular(6), bottomRight: Radius.circular(6)),
-              ),
-              child: Row(
-                children: <Widget>[
-                  Icon(
-                    isCritical ? Icons.error_outline : Icons.warning_amber_rounded,
-                    color: isCritical ? const Color(0xFFE57373) : const Color(0xFFFFB74D),
-                    size: 14,
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      alertMsg,
-                      style: TextStyle(color: isCritical ? const Color(0xFFE57373) : const Color(0xFFFFB74D), fontSize: 11),
-                      overflow: TextOverflow.ellipsis,
-                      maxLines: 1,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildDash() => const Align(alignment: Alignment.centerLeft, child: Text("-", style: TextStyle(color: Colors.grey)));
-
-  Widget _buildMiniControl(IconData icon) {
-    return FusionNeumorphicButton(
-      width: 26,
-      height: 26,
-      borderRadius: 6,
-      onTap: () {
-        // Handle click action here
-        print("Clicked $icon");
-      },
-      child: Icon(
-        icon,
-        size: 13,
-        color: const Color(0xFF888888),
-      ),
     );
   }
 
@@ -474,18 +251,5 @@ class FusionControlDashboardPage extends StatelessWidget {
         child: Text(label, style: TextStyle(color: color, fontSize: 12, fontWeight: FontWeight.w600)),
       ),
     );
-  }
-
-  Color _getUsageColor(double val) {
-    if (val < 0.5) return const Color(0xFF4CAF50);
-    if (val < 0.8) return const Color(0xFFFFC107);
-    return const Color(0xFFF44336);
-  }
-
-  Color _getZoneColor(String name) {
-    if (name.contains("1")) return const Color(0xFF5C6BC0);
-    if (name.contains("2")) return const Color(0xFFEF5350);
-    if (name.contains("3")) return const Color(0xFFFFCA28);
-    return const Color(0xFF66BB6A);
   }
 }

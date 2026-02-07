@@ -36,4 +36,6 @@ class AssetIcons {
   static const String wiringViewIcon = '$_path/wiring_view_icon.png';
   static const String controllerSettings = '$_path/control_panel_settings.webp';
   static const String genericSpeaker = '$_path/generic_speaker.webp';
+  static const String standbyIcon = '$_path/standby_icon.webp';
+  static const String rebootIcon = '$_path/reboot_icon.webp';
 }
