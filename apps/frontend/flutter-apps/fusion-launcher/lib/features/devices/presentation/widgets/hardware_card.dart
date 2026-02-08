@@ -46,7 +46,7 @@ class HardwareCard extends StatelessWidget {
       width: isDragging ? 280 : null,
       padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
       decoration: BoxDecoration(
-        color: context.colorScheme.elevation2,
+        // color: context.colorScheme.elevation2,
         borderRadius: BorderRadius.circular(8),
         border: Border.all(color: context.colorScheme.strokeLight),
       ),
@@ -97,7 +97,7 @@ class HardwareCard extends StatelessWidget {
               Icon(
                 Icons.lightbulb_outline,
                 size: 20,
-                color: isAssigned ? context.colorScheme.iconDisabled : context.colorScheme.primaryColor,
+                color: context.colorScheme.iconWhite,
               ),
             ],
           );
