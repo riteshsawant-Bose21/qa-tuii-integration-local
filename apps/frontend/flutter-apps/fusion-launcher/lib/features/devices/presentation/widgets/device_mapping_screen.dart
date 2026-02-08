@@ -364,6 +364,7 @@ class _DeviceMappingScreenState extends State<DeviceMappingScreen> {
         const SizedBox(height: 16),
         FusionNeumorphicButton(
           text: "Add a Wireless Device",
+          height: 35,
           onTap: () {
             // Navigator.of(context).pop();
             ConfigureNetworkDialog.show(context, bluetoothOnly: true);

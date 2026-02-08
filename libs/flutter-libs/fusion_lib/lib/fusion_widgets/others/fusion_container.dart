@@ -21,7 +21,7 @@ class FusionContainer extends StatelessWidget {
   final bool raised;
   final Color? color;
   final AlignmentGeometry? alignment;
-  final double? padding;
+  final EdgeInsetsGeometry? padding;
   final EdgeInsetsGeometry? margin;
 
   @override
@@ -32,7 +32,7 @@ class FusionContainer extends StatelessWidget {
       height: height,
       alignment: alignment,
       margin: margin ?? const EdgeInsets.all(2),
-      padding: EdgeInsets.all(padding ?? 0),
+      padding: padding,
       decoration: BoxDecoration(
         // color: context.colorScheme.shadowDark,
         boxShadow: raised

@@ -711,7 +711,7 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with TickerProviderSt
 
     _controlWidgets = <Widget>[
       serviceLocator<ProjectViewModel>().virtualIP == null ? const FusionControlDashboardPage() : const FusionControlDashboardPage(),
-      serviceLocator<ProjectViewModel>().virtualIP == null ? const NetworkConfigTrigger() : const FusionDevicesPage(),
+      serviceLocator<ProjectViewModel>().virtualIP == null ? const FusionDevicesPage() : const FusionDevicesPage(),
       serviceLocator<ProjectViewModel>().virtualIP == null ? const NetworkConfigTrigger() : buildingPage,
       serviceLocator<ProjectViewModel>().virtualIP == null ? const NetworkConfigTrigger() : configurationPage,
     ];

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:fusion_launcher/core/service_locator.dart';
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
+import 'package:fusion_launcher/features/devices/presentation/widgets/settings/device_global_settings_tab.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
 import 'device_mapping_screen.dart';
@@ -142,15 +143,7 @@ class _DeviceMappingDemoState extends State<DeviceMappingDialog> {
                         networkHardware: _networkHardware,
                         onAssignHardware: _handleAssignHardware,
                       )
-                      : const Center(
-                        child: FusionAppText(
-                          text: 'Settings tab - Coming soon',
-                          style: TextStyle(
-                            color: Color(0xFFB4AFA6),
-                            fontSize: 16,
-                          ),
-                        ),
-                      ),
+                      : const DeviceGlobalSettingsTab(),
             ),
           ],
         ),

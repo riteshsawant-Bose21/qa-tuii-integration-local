@@ -38,4 +38,8 @@ class AssetIcons {
   static const String genericSpeaker = '$_path/generic_speaker.webp';
   static const String standbyIcon = '$_path/standby_icon.webp';
   static const String rebootIcon = '$_path/reboot_icon.webp';
+  static const String bluetoothIcon = '$_path/bluetooth_icon.webp';
+  static const String networkIcon = '$_path/network_icon.webp';
+  static const String timeIcon = '$_path/time_icon.webp';
+  static const String wifiIcon = '$_path/wifi_icon.webp';
 }

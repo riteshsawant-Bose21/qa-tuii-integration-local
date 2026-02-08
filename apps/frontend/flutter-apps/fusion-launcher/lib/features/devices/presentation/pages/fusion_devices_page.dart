@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:fusion_launcher/features/devices/presentation/widgets/settings/device_global_settings_tab.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
-import 'device_global_settings_tab.dart';
 import 'device_listing_page.dart';
 
 // --- Models ---
@@ -127,42 +127,38 @@ class _FusionDevicesPageState extends State<FusionDevicesPage> {
 
   @override
   Widget build(BuildContext context) {
-    final Color bgBlack = const Color(0xFF000000);
+    return Container(
+      color: context.colorScheme.primaryBlack,
+      padding: const EdgeInsets.only(top: 24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          // 1. TABS HEADER
+          Row(
+            children: <Widget>[
+              _buildTab('Device List'),
+              const SizedBox(width: 32),
+              _buildTab('Updates', hasNotification: true),
+              const SizedBox(width: 32),
+              _buildTab('Mapping'), // Active
+              const SizedBox(width: 32),
+              _buildTab('Settings'),
+            ],
+          ),
+          const SizedBox(height: 32),
 
-    return Scaffold(
-      backgroundColor: bgBlack,
-      body: Padding(
-        padding: const EdgeInsets.all(24.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: <Widget>[
-            // 1. TABS HEADER
-            Row(
-              children: <Widget>[
-                _buildTab('Device List'),
-                const SizedBox(width: 32),
-                _buildTab('Updates', hasNotification: true),
-                const SizedBox(width: 32),
-                _buildTab('Mapping'), // Active
-                const SizedBox(width: 32),
-                _buildTab('Settings'),
-              ],
-            ),
-            const SizedBox(height: 32),
-
-            // 2. TAB CONTENT
-            Expanded(
-              child:
-                  _selectedTab == 'Mapping'
-                      ? _buildMappingContent()
-                      : _selectedTab == "Device List"
-                      ? const DeviceListTab()
-                      : _selectedTab == "Settings"
-                      ? const GlobalDeviceSettingsTab()
-                      : _buildPlaceholderContent(),
-            ),
-          ],
-        ),
+          // 2. TAB CONTENT
+          Expanded(
+            child:
+                _selectedTab == 'Mapping'
+                    ? _buildMappingContent()
+                    : _selectedTab == "Device List"
+                    ? const DeviceListTab()
+                    : _selectedTab == "Settings"
+                    ? const DeviceGlobalSettingsTab()
+                    : _buildPlaceholderContent(),
+          ),
+        ],
       ),
     );
   }
