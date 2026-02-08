@@ -44,19 +44,19 @@ class AlertCard extends StatelessWidget {
         children: <Widget>[
           // Top Section: Icon, Texts, Time
           Padding(
-            padding: const EdgeInsets.all(8.0),
+            padding: const EdgeInsets.all(6.0),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
                 // Icon Circle
                 Container(
-                  padding: const EdgeInsets.all(6),
+                  padding: const EdgeInsets.all(4),
                   decoration: BoxDecoration(
                     color: accentColor,
                     shape: BoxShape.circle,
-                    border: Border.all(color: iconBgColor, width: 1.5),
+                    border: Border.all(color: iconBgColor, width: 1),
                   ),
-                  child: Icon(iconData, color: context.colorScheme.iconWhite, size: 20),
+                  child: Icon(iconData, color: context.colorScheme.iconWhite, size: 14),
                 ),
                 const SizedBox(width: 12),
 
@@ -73,7 +73,7 @@ class AlertCard extends StatelessWidget {
                               text: item.title,
                               maxLine: 1,
                               textOverflow: TextOverflow.ellipsis,
-                              style: context.textTheme.titleSmall!.copyWith(
+                              style: context.textTheme.labelMedium!.copyWith(
                                 color: accentColor,
                               ),
                             ),
@@ -90,7 +90,7 @@ class AlertCard extends StatelessWidget {
                       const SizedBox(height: 4),
                       FusionAppText(
                         text: item.description,
-                        style: context.textTheme.labelMedium!.copyWith(
+                        style: context.textTheme.labelSmall!.copyWith(
                           color: context.colorScheme.textPrimary,
                         ),
                       ),
