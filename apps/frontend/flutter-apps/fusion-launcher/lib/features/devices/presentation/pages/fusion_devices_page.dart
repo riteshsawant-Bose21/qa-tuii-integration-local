@@ -3,6 +3,7 @@ import 'package:fusion_launcher/features/devices/presentation/widgets/settings/d
 import 'package:fusion_lib/fusion_lib.dart';
 
 import 'device_listing_page.dart';
+import 'device_updates_page.dart';
 
 enum DeviceTabs {
   deviceList,
@@ -62,7 +63,7 @@ class _FusionDevicesPageState extends State<FusionDevicesPage> {
           Expanded(
             child: switch (_selectedTab) {
               DeviceTabs.deviceList => const DeviceListTab(),
-              DeviceTabs.updates => _buildPlaceholderContent(),
+              DeviceTabs.updates => const DeviceUpdatesTab(),
               DeviceTabs.settings => const DeviceGlobalSettingsTab(),
             },
           ),
