@@ -7,6 +7,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
+import 'package:fusion_launcher/core/assets/asset_icons.dart';
 import 'package:fusion_launcher/core/assets/asset_svg.dart';
 import 'package:fusion_launcher/core/spl_calculation/isolate_mace_calculation_manager.dart';
 import 'package:fusion_launcher/core/utils/fusion_utils.dart';
@@ -41,6 +42,7 @@ import '../../configuration_page/pages/configuration_processing_page.dart';
 import '../../configuration_page/pages/configuration_snapshots.dart';
 import '../../control_dashboard/presentation/pages/fusion_control_dashboard.dart';
 import '../../devices/presentation/pages/fusion_devices_page.dart';
+import '../../devices/presentation/widgets/device_mapping_dialog.dart';
 import '../../gpio/view/gpio_page.dart';
 import '../../schematics/presentation/pages/schematics_page.dart';
 import '../../schematics/presentation/widgets/cost_calculator_widget.dart';
@@ -710,8 +712,8 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with TickerProviderSt
     ];
 
     _controlWidgets = <Widget>[
-      serviceLocator<ProjectViewModel>().virtualIP == null ? const FusionControlDashboardPage() : const FusionControlDashboardPage(),
-      serviceLocator<ProjectViewModel>().virtualIP == null ? const FusionDevicesPage() : const FusionDevicesPage(),
+      serviceLocator<ProjectViewModel>().virtualIP == null ? const NetworkConfigTrigger() : const FusionControlDashboardPage(),
+      serviceLocator<ProjectViewModel>().virtualIP == null ? const NetworkConfigTrigger() : const FusionDevicesPage(),
       serviceLocator<ProjectViewModel>().virtualIP == null ? const NetworkConfigTrigger() : buildingPage,
       serviceLocator<ProjectViewModel>().virtualIP == null ? const NetworkConfigTrigger() : configurationPage,
     ];
@@ -854,6 +856,65 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with TickerProviderSt
                       // ),
                       Row(
                         children: <Widget>[
+                          if (!isInDesignMode && serviceLocator<ProjectViewModel>().virtualIP != null)
+                            Container(
+                              width: 100,
+                              decoration: BoxDecoration(
+                                color: context.colorScheme.elevation1,
+                                border: Border(
+                                  top: BorderSide(width: 1, color: context.colorScheme.elevation2),
+                                  bottom: BorderSide(width: 1, color: context.colorScheme.elevation2),
+                                ),
+                              ),
+
+                              alignment: Alignment.center,
+                              child: SizedBox(
+                                height: 35,
+                                child: FusionNeumorphicButton(
+                                  onTap: () {},
+                                  height: 20,
+                                  borderRadius: 6,
+                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                  text: "Sync",
+                                  textStyle: context.textTheme.labelMedium,
+                                ),
+                              ),
+                            ),
+
+                          if (!isInDesignMode && serviceLocator<ProjectViewModel>().virtualIP != null)
+                            SemanticHelper.button(
+                              testId: SemanticHelper.createTestId(SemanticTypes.button, "device_mapping_icon"),
+                              child: Container(
+                                width: 56,
+                                height: 48,
+                                decoration: BoxDecoration(
+                                  color: context.colorScheme.elevation1,
+                                  border: Border(
+                                    top: BorderSide(width: 1, color: context.colorScheme.elevation2),
+                                    bottom: BorderSide(width: 1, color: context.colorScheme.elevation2),
+                                  ),
+                                ),
+                                alignment: Alignment.center,
+                                child: Container(
+                                  width: 24,
+                                  height: 24,
+                                  decoration: BoxDecoration(
+                                    color: context.colorScheme.elevation3,
+                                    borderRadius: BorderRadius.circular(4),
+                                  ),
+                                  child: InkWell(
+                                    onTap: () {
+                                      DeviceMappingDialog.show(context);
+                                    },
+                                    child: FusionImage.asset(
+                                      AssetIcons.networkIcon,
+                                      assetColor: Theme.of(context).colorScheme.iconWhite,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+
                           if (kDebugMode)
                             /// Theme Change Icon Section (Debug Only)
                             Container(

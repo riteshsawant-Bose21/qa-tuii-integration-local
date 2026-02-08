@@ -169,7 +169,9 @@ class _DeviceMappingDemoState extends State<DeviceMappingDialog> {
                   ),
                   onPressed: () {
                     Navigator.of(context).pop();
-                    serviceLocator<ProjectViewModel>().toggleControlMode();
+                    if (serviceLocator<ProjectViewModel>().virtualIP == null) {
+                      serviceLocator<ProjectViewModel>().toggleControlMode();
+                    }
                   },
                 ),
               ],
