@@ -98,7 +98,10 @@ class _SettingsDashboardState extends State<SettingsDashboard> {
   @override
   Widget build(BuildContext context) {
     return Container(
-      color: context.colorScheme.elevation1,
+      decoration: BoxDecoration(
+        color: context.colorScheme.elevation1,
+        borderRadius: BorderRadius.circular(16),
+      ),
       child: Row(
         children: <Widget>[
           // --- LEFT SIDEBAR ---

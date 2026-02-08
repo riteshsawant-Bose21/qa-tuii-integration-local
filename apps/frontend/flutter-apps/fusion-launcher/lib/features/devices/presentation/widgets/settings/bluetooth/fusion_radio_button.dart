@@ -33,16 +33,16 @@ class FusionRadioButton<T> extends StatelessWidget {
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               border: Border.all(
-                color: Colors.white,
+                color: context.colorScheme.primaryWhite,
                 width: 1.5,
               ),
             ),
             child:
                 isSelected
                     ? Container(
-                      decoration: const BoxDecoration(
+                      decoration: BoxDecoration(
                         shape: BoxShape.circle,
-                        color: Colors.white,
+                        color: context.colorScheme.primaryWhite,
                       ),
                     )
                     : null,
