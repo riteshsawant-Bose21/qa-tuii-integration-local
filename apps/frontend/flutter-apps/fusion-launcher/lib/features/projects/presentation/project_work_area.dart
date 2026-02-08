@@ -896,11 +896,12 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with TickerProviderSt
                                 ),
                                 alignment: Alignment.center,
                                 child: Container(
-                                  width: 24,
-                                  height: 24,
+                                  width: 28,
+                                  height: 28,
+                                  padding: const EdgeInsets.all(4),
                                   decoration: BoxDecoration(
                                     color: context.colorScheme.elevation3,
-                                    borderRadius: BorderRadius.circular(4),
+                                    borderRadius: BorderRadius.circular(6),
                                   ),
                                   child: InkWell(
                                     onTap: () {
