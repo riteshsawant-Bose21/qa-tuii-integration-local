@@ -16,6 +16,7 @@ export 'form_fields/fusion_drop_down_button_form_field.dart';
 export 'form_fields/fusion_text_field.dart';
 export 'form_fields/fusion_text_form_field.dart';
 export 'form_fields/fusion_toggle_switch.dart';
+export 'form_fields/text_fleld.dart';
 export 'others/fusion_arrow_popup.dart';
 export 'others/fusion_container.dart';
 

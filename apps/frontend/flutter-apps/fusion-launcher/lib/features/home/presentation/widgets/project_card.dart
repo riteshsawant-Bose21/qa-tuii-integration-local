@@ -64,7 +64,10 @@ class ProjectCard extends StatelessWidget {
                       Expanded(
                         flex: 5,
                         child: LayoutBuilder(
-                          builder: (BuildContext context, BoxConstraints constraints) {
+                          builder: (
+                            BuildContext context,
+                            BoxConstraints constraints,
+                          ) {
                             return Align(
                               alignment: Alignment.topLeft,
                               child: SizedBox(
@@ -74,7 +77,8 @@ class ProjectCard extends StatelessWidget {
                                   fit: BoxFit.contain,
                                   alignment: Alignment.topLeft,
                                   child: Image.asset(
-                                    assetPath ?? "assets/images/floor_plans/floor_plan_placeholder.png",
+                                    assetPath ??
+                                        "assets/images/floor_plans/floor_plan_placeholder.png",
                                   ),
                                 ),
                               ),
@@ -85,7 +89,10 @@ class ProjectCard extends StatelessWidget {
                       Expanded(
                         flex: 4,
                         child: Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 8,
+                          ),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             mainAxisAlignment: MainAxisAlignment.center,
@@ -93,9 +100,12 @@ class ProjectCard extends StatelessWidget {
                               // created at
                               Flexible(
                                 child: FusionAppText(
-                                  text: DateFormat("MMM dd, yyyy 'at' hh:mm a").format(projectData.createdAt),
+                                  text: DateFormat(
+                                    "MMM dd, yyyy 'at' hh:mm a",
+                                  ).format(projectData.createdAt),
                                   style: context.textTheme.bodySmall?.copyWith(
-                                    color: context.colorScheme.onSurface.withValues(alpha: 0.6),
+                                    color: context.colorScheme.onSurface
+                                        .withValues(alpha: 0.6),
                                   ),
                                 ),
                               ),
@@ -113,22 +123,34 @@ class ProjectCard extends StatelessWidget {
                                 Flexible(
                                   child: Tooltip(
                                     message: subtitle!,
-                                    textStyle: context.textTheme.labelSmall?.copyWith(
-                                      color: context.colorScheme.onSurface.withValues(alpha: 0.3),
+                                    textStyle: context.textTheme.labelSmall
+                                        ?.copyWith(
+                                          color: context.colorScheme.onSurface
+                                              .withValues(alpha: 0.3),
+                                        ),
+                                    constraints: BoxConstraints(
+                                      maxWidth:
+                                          MediaQuery.of(context).size.width *
+                                          0.2,
                                     ),
-                                    constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.2),
                                     padding: const EdgeInsets.all(16),
                                     decoration: BoxDecoration(
                                       color: context.colorScheme.surface,
                                       borderRadius: BorderRadius.circular(8),
-                                      border: Border.all(color: context.colorScheme.onSurface.withValues(alpha: 0.3), width: 0.3),
+                                      border: Border.all(
+                                        color: context.colorScheme.onSurface
+                                            .withValues(alpha: 0.3),
+                                        width: 0.3,
+                                      ),
                                     ),
                                     child: FusionAppText(
                                       text: subtitle!,
                                       maxLine: 1,
-                                      style: context.textTheme.labelSmall?.copyWith(
-                                        color: context.colorScheme.onSurface.withValues(alpha: 0.3),
-                                      ),
+                                      style: context.textTheme.labelSmall
+                                          ?.copyWith(
+                                            color: context.colorScheme.onSurface
+                                                .withValues(alpha: 0.3),
+                                          ),
                                     ),
                                   ),
                                 ),
@@ -136,7 +158,9 @@ class ProjectCard extends StatelessWidget {
 
                               if (hasCloudAccess &&
                                   projectData.isSyncNeeded &&
-                                  !(state is ProjectUploadInProgress && state.projectId == projectData.id)) ...<Widget>[
+                                  !(state is ProjectUploadInProgress &&
+                                      state.projectId ==
+                                          projectData.id)) ...<Widget>[
                                 const SizedBox(height: 4),
                                 FusionAppText(
                                   text: "Modified",
@@ -146,18 +170,25 @@ class ProjectCard extends StatelessWidget {
                                 ),
                               ],
 
-                              if (state is ProjectUploadInProgress && state.projectId == projectData.id)
+                              if (state is ProjectUploadInProgress &&
+                                  state.projectId == projectData.id)
                                 FusionAppText(
-                                  text: "Uploading... ${(state.progress * 100).toStringAsFixed(0)}%",
+                                  text:
+                                      "Uploading... ${(state.progress * 100).toStringAsFixed(0)}%",
                                   style: context.textTheme.labelSmall?.copyWith(
-                                    color: context.colorScheme.onSurface.withValues(alpha: 0.6),
+                                    color: context.colorScheme.onSurface
+                                        .withValues(alpha: 0.6),
                                   ),
                                 ),
-                              if (state is ProjectDownloadInProgress && state.projectId == projectData.id) ...<Widget>[
+                              if (state is ProjectDownloadInProgress &&
+                                  state.projectId ==
+                                      projectData.id) ...<Widget>[
                                 FusionAppText(
-                                  text: "${state.downloadPhase}... ${(state.progress * 100).toStringAsFixed(0)}%",
+                                  text:
+                                      "${state.downloadPhase}... ${(state.progress * 100).toStringAsFixed(0)}%",
                                   style: context.textTheme.labelSmall?.copyWith(
-                                    color: context.colorScheme.onSurface.withValues(alpha: 0.6),
+                                    color: context.colorScheme.onSurface
+                                        .withValues(alpha: 0.6),
                                   ),
                                 ),
                               ],
@@ -186,7 +217,9 @@ class ProjectCard extends StatelessWidget {
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(9),
                         side: BorderSide(
-                          color: context.colorScheme.onSurface.withValues(alpha: 0.3),
+                          color: context.colorScheme.onSurface.withValues(
+                            alpha: 0.3,
+                          ),
                         ),
                       ),
                       color: context.colorScheme.surface,
@@ -205,7 +238,10 @@ class ProjectCard extends StatelessWidget {
                         ];
                       },
                       child: SemanticHelper.button(
-                        testId: SemanticHelper.createTestId(SemanticTypes.button, "project_card_more_options_button_$index"),
+                        testId: SemanticHelper.createTestId(
+                          SemanticTypes.button,
+                          "project_card_more_options_button_$index",
+                        ),
                         child: const Padding(
                           padding: EdgeInsets.all(8.0),
                           child: Icon(Icons.more_vert),
@@ -214,17 +250,23 @@ class ProjectCard extends StatelessWidget {
                     ),
                   ),
 
-                  if (hasCloudAccess && !projectData.isCloudInstance && projectData.isSyncNeeded)
+                  if (hasCloudAccess &&
+                      !projectData.isCloudInstance &&
+                      projectData.isSyncNeeded)
                     Positioned(
                       top: 40,
                       right: 6,
                       child: IconButton(
                         onPressed: () async {
-                          await serviceLocator<ProjectSyncViewModel>().uploadProject(projectData: projectData);
+                          await serviceLocator<ProjectSyncViewModel>()
+                              .uploadProject(projectData: projectData);
                         },
                         tooltip: "Upload to Cloud",
                         icon: SemanticHelper.button(
-                          testId: SemanticHelper.createTestId(SemanticTypes.button, "project_card_upload_to_cloud_button_$index"),
+                          testId: SemanticHelper.createTestId(
+                            SemanticTypes.button,
+                            "project_card_upload_to_cloud_button_$index",
+                          ),
                           child: Icon(
                             LucideIcons.cloudUpload,
                             color: context.colorScheme.onSurface,
@@ -239,7 +281,8 @@ class ProjectCard extends StatelessWidget {
                       right: 6,
                       child: IconButton(
                         onPressed: () async {
-                          await serviceLocator<ProjectSyncViewModel>().downloadProject(projectData);
+                          await serviceLocator<ProjectSyncViewModel>()
+                              .downloadProject(projectData);
                         },
                         tooltip: "Download from Cloud",
                         icon: Icon(
@@ -295,7 +338,9 @@ class ProjectDetailsDialog extends StatelessWidget {
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(borderRadius),
                   color: context.colorScheme.surface.withValues(alpha: 0.5),
-                  border: Border.all(color: context.colorScheme.onSurface.withValues(alpha: 0.3)),
+                  border: Border.all(
+                    color: context.colorScheme.onSurface.withValues(alpha: 0.3),
+                  ),
                 ),
                 child: ProjectCard(
                   index: 0,
@@ -319,14 +364,19 @@ class ProjectDetailsDialog extends StatelessWidget {
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(borderRadius),
                 color: context.colorScheme.surface.withValues(alpha: 0.5),
-                border: Border.all(color: context.colorScheme.onSurface.withValues(alpha: 0.3)),
+                border: Border.all(
+                  color: context.colorScheme.onSurface.withValues(alpha: 0.3),
+                ),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: <Widget>[
                   Expanded(
                     child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 8,
+                      ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: <Widget>[
@@ -339,10 +389,11 @@ class ProjectDetailsDialog extends StatelessWidget {
                                 child: FusionAppText(
                                   text: project.projectName,
                                   maxLine: 2,
-                                  style: context.textTheme.displaySmall?.copyWith(
-                                    fontWeight: FontWeight.bold,
-                                    color: context.colorScheme.onSurface,
-                                  ),
+                                  style: context.textTheme.displaySmall
+                                      ?.copyWith(
+                                        fontWeight: FontWeight.bold,
+                                        color: context.colorScheme.onSurface,
+                                      ),
                                 ),
                               ),
                               Flexible(
@@ -360,16 +411,26 @@ class ProjectDetailsDialog extends StatelessWidget {
                                     ].map(
                                       (String tag) {
                                         return Container(
-                                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 8,
+                                            vertical: 4,
+                                          ),
                                           decoration: BoxDecoration(
-                                            borderRadius: BorderRadius.circular(6),
-                                            color: context.colorScheme.onSurface.withValues(alpha: 0.3),
+                                            borderRadius: BorderRadius.circular(
+                                              6,
+                                            ),
+                                            color: context.colorScheme.onSurface
+                                                .withValues(alpha: 0.3),
                                           ),
                                           child: FusionAppText(
                                             text: tag,
-                                            style: context.textTheme.labelSmall?.copyWith(
-                                              color: context.colorScheme.onSurface,
-                                            ),
+                                            style: context.textTheme.labelSmall
+                                                ?.copyWith(
+                                                  color:
+                                                      context
+                                                          .colorScheme
+                                                          .onSurface,
+                                                ),
                                           ),
                                         );
                                       },
@@ -386,7 +447,9 @@ class ProjectDetailsDialog extends StatelessWidget {
                             text: "Project Description:",
                             style: context.textTheme.titleSmall?.copyWith(
                               fontWeight: FontWeight.bold,
-                              color: context.colorScheme.onSurface.withValues(alpha: 0.6),
+                              color: context.colorScheme.onSurface.withValues(
+                                alpha: 0.6,
+                              ),
                             ),
                           ),
                           const SizedBox(height: 10),
@@ -412,10 +475,11 @@ class ProjectDetailsDialog extends StatelessWidget {
                                 Flexible(
                                   child: FusionAppText(
                                     text: "Device List",
-                                    style: context.textTheme.labelLarge?.copyWith(
-                                      fontSize: 12,
-                                      color: context.colorScheme.onSurface,
-                                    ),
+                                    style: context.textTheme.labelLarge
+                                        ?.copyWith(
+                                          fontSize: 12,
+                                          color: context.colorScheme.onSurface,
+                                        ),
                                   ),
                                 ),
                                 const Icon(LucideIcons.arrowRight),
@@ -438,10 +502,14 @@ class ProjectDetailsDialog extends StatelessWidget {
                                       Flexible(
                                         child: FusionAppText(
                                           text: "Collaborators on File",
-                                          style: context.textTheme.labelLarge?.copyWith(
-                                            fontSize: 12,
-                                            color: context.colorScheme.onSurface,
-                                          ),
+                                          style: context.textTheme.labelLarge
+                                              ?.copyWith(
+                                                fontSize: 12,
+                                                color:
+                                                    context
+                                                        .colorScheme
+                                                        .onSurface,
+                                              ),
                                         ),
                                       ),
                                       const Icon(LucideIcons.arrowRight),
@@ -450,30 +518,56 @@ class ProjectDetailsDialog extends StatelessWidget {
                                 ),
                               ),
                               Flexible(
-                                child: BlocBuilder<ProjectViewModel, ProjectViewModelState>(
-                                  builder: (BuildContext context, ProjectViewModelState viewState) {
-                                    final ProjectData project = serviceLocator<ProjectViewModel>().allProjects.firstWhere(
-                                      (ProjectData p) => p.id == this.project.id,
-                                    );
-                                    return BlocBuilder<ProjectSyncViewModel, ProjectSyncViewModelState>(
-                                      builder: (BuildContext context, ProjectSyncViewModelState state) {
+                                child: BlocBuilder<
+                                  ProjectViewModel,
+                                  ProjectViewModelState
+                                >(
+                                  builder: (
+                                    BuildContext context,
+                                    ProjectViewModelState viewState,
+                                  ) {
+                                    final ProjectData project =
+                                        serviceLocator<ProjectViewModel>()
+                                            .allProjects
+                                            .firstWhere(
+                                              (ProjectData p) =>
+                                                  p.id == this.project.id,
+                                            );
+                                    return BlocBuilder<
+                                      ProjectSyncViewModel,
+                                      ProjectSyncViewModelState
+                                    >(
+                                      builder: (
+                                        BuildContext context,
+                                        ProjectSyncViewModelState state,
+                                      ) {
                                         if (project.isCloudInstance) {
-                                          if (state is ProjectDownloadInProgress && state.projectId == project.id) {
+                                          if (state
+                                                  is ProjectDownloadInProgress &&
+                                              state.projectId == project.id) {
                                             return FusionNeumorphicButton(
                                               onTap: () {},
                                               height: 32,
                                               width: 168,
                                               child: Row(
-                                                mainAxisAlignment: MainAxisAlignment.center,
+                                                mainAxisAlignment:
+                                                    MainAxisAlignment.center,
                                                 spacing: 4,
                                                 children: <Widget>[
                                                   Flexible(
                                                     child: FusionAppText(
-                                                      text: "Downloading... ${(state.progress * 100).toStringAsFixed(0)}%",
-                                                      style: context.textTheme.labelLarge?.copyWith(
-                                                        fontSize: 12,
-                                                        color: context.colorScheme.onSurface,
-                                                      ),
+                                                      text:
+                                                          "Downloading... ${(state.progress * 100).toStringAsFixed(0)}%",
+                                                      style: context
+                                                          .textTheme
+                                                          .labelLarge
+                                                          ?.copyWith(
+                                                            fontSize: 12,
+                                                            color:
+                                                                context
+                                                                    .colorScheme
+                                                                    .onSurface,
+                                                          ),
                                                     ),
                                                   ),
                                                   const Icon(
@@ -484,54 +578,88 @@ class ProjectDetailsDialog extends StatelessWidget {
                                               ),
                                             );
                                           } else {
-                                            if (project.projectFileUrl == null) {
+                                            if (project.projectFileUrl ==
+                                                null) {
                                               return FusionAppText(
-                                                text: "Project file not available for download.",
-                                                style: context.textTheme.labelLarge?.copyWith(
-                                                  fontSize: 12,
-                                                  color: context.colorScheme.error,
-                                                ),
+                                                text:
+                                                    "Project file not available for download.",
+                                                style: context
+                                                    .textTheme
+                                                    .labelLarge
+                                                    ?.copyWith(
+                                                      fontSize: 12,
+                                                      color:
+                                                          context
+                                                              .colorScheme
+                                                              .error,
+                                                    ),
                                               );
                                             }
                                             return FusionNeumorphicButton(
                                               onTap: () async {
                                                 // FusionUiUtils.showLoader(context);
-                                                final ResponseCallback<CloudSyncStatus> downloadResponse = await serviceLocator<ProjectSyncViewModel>()
-                                                    .downloadProject(
-                                                      project,
-                                                    );
+                                                final ResponseCallback<
+                                                  CloudSyncStatus
+                                                >
+                                                downloadResponse =
+                                                    await serviceLocator<
+                                                          ProjectSyncViewModel
+                                                        >()
+                                                        .downloadProject(
+                                                          project,
+                                                        );
 
                                                 if (context.mounted) {
-                                                  if (!downloadResponse.success) {
+                                                  if (!downloadResponse
+                                                      .success) {
                                                     FusionToast.error(
                                                       context,
-                                                      message: downloadResponse.message,
+                                                      message:
+                                                          downloadResponse
+                                                              .message,
                                                     );
                                                     return;
                                                   }
-                                                  await serviceLocator<ProjectViewModel>().loadAllLocalProjects();
+                                                  await serviceLocator<
+                                                        ProjectViewModel
+                                                      >()
+                                                      .loadAllLocalProjects();
                                                   if (context.mounted) {
                                                     Navigator.of(context).pop();
-                                                    serviceLocator<ProjectViewModel>().openProject(project.id);
+                                                    serviceLocator<
+                                                          ProjectViewModel
+                                                        >()
+                                                        .openProject(
+                                                          project.id,
+                                                        );
                                                   }
                                                 }
                                               },
                                               height: 32,
                                               width: 168,
                                               child: Row(
-                                                mainAxisAlignment: MainAxisAlignment.center,
+                                                mainAxisAlignment:
+                                                    MainAxisAlignment.center,
                                                 spacing: 4,
                                                 children: <Widget>[
                                                   Flexible(
                                                     child: FusionAppText(
                                                       text: "Download Project",
-                                                      style: context.textTheme.labelLarge?.copyWith(
-                                                        fontSize: 12,
-                                                        color: context.colorScheme.onSurface,
-                                                      ),
+                                                      style: context
+                                                          .textTheme
+                                                          .labelLarge
+                                                          ?.copyWith(
+                                                            fontSize: 12,
+                                                            color:
+                                                                context
+                                                                    .colorScheme
+                                                                    .onSurface,
+                                                          ),
                                                     ),
                                                   ),
-                                                  const Icon(LucideIcons.arrowRight),
+                                                  const Icon(
+                                                    LucideIcons.arrowRight,
+                                                  ),
                                                 ],
                                               ),
                                             );
@@ -541,24 +669,34 @@ class ProjectDetailsDialog extends StatelessWidget {
                                             onTap: () async {
                                               Navigator.of(context).pop();
                                               FusionUiUtils.showLoader(context);
-                                              serviceLocator<ProjectViewModel>().openProject(project.id);
+                                              serviceLocator<ProjectViewModel>()
+                                                  .openProject(project.id);
                                             },
                                             height: 32,
                                             width: 168,
                                             child: Row(
-                                              mainAxisAlignment: MainAxisAlignment.center,
+                                              mainAxisAlignment:
+                                                  MainAxisAlignment.center,
                                               spacing: 4,
                                               children: <Widget>[
                                                 Flexible(
                                                   child: FusionAppText(
                                                     text: "Open Project",
-                                                    style: context.textTheme.labelLarge?.copyWith(
-                                                      fontSize: 12,
-                                                      color: context.colorScheme.onSurface,
-                                                    ),
+                                                    style: context
+                                                        .textTheme
+                                                        .labelLarge
+                                                        ?.copyWith(
+                                                          fontSize: 12,
+                                                          color:
+                                                              context
+                                                                  .colorScheme
+                                                                  .onSurface,
+                                                        ),
                                                   ),
                                                 ),
-                                                const Icon(LucideIcons.arrowRight),
+                                                const Icon(
+                                                  LucideIcons.arrowRight,
+                                                ),
                                               ],
                                             ),
                                           );
@@ -608,7 +746,11 @@ class AnimatedBlurDialogRoute<T> extends PageRoute<T> {
   Duration get reverseTransitionDuration => const Duration(milliseconds: 400);
 
   @override
-  Widget buildPage(BuildContext context, Animation<double> animation, Animation<double> secondaryAnimation) {
+  Widget buildPage(
+    BuildContext context,
+    Animation<double> animation,
+    Animation<double> secondaryAnimation,
+  ) {
     return AnimatedBuilder(
       animation: animation,
       builder: (BuildContext context, _) {

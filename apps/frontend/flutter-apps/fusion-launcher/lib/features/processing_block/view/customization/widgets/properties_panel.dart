@@ -6,7 +6,10 @@ class _PropertiesPanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      decoration: BoxDecoration(border: Border(left: BorderSide(color: Colors.grey.shade400)), color: Colors.white),
+      decoration: BoxDecoration(
+        border: Border(left: BorderSide(color: Colors.grey.shade400)),
+        color: Colors.white,
+      ),
       child: Consumer<PbcViewmodel>(
         builder: (BuildContext context, PbcViewmodel viewModel, Widget? child) {
           final List<PBItem> selectedItems = viewModel.selectedItems;
@@ -26,7 +29,9 @@ class _PropertiesPanel extends StatelessWidget {
                   ),
                   Text(
                     "Please select an item from the canvas to view and edit its properties.",
-                    style: context.textTheme.bodySmall?.copyWith(color: Colors.grey),
+                    style: context.textTheme.bodySmall?.copyWith(
+                      color: Colors.grey,
+                    ),
                     textAlign: TextAlign.center,
                   ),
                 ],
@@ -41,7 +46,10 @@ class _PropertiesPanel extends StatelessWidget {
             children: <Widget>[
               Text(
                 "Properties",
-                style: context.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.bold, color: Colors.grey),
+                style: context.textTheme.bodySmall?.copyWith(
+                  fontWeight: FontWeight.bold,
+                  color: Colors.grey,
+                ),
               ),
               const SizedBox(
                 height: 10,
@@ -54,9 +62,16 @@ class _PropertiesPanel extends StatelessWidget {
                     child: TextFormField(
                       initialValue: selected.x.toString(),
                       onFieldSubmitted: (String? newValue) {
-                        final Offset currentOffset = Offset(selected.x.toDouble(), selected.y.toDouble());
+                        final Offset currentOffset = Offset(
+                          selected.x.toDouble(),
+                          selected.y.toDouble(),
+                        );
 
-                        final Offset newOffset = Offset(double.tryParse(newValue ?? "") ?? selected.x.toDouble(), selected.y.toDouble());
+                        final Offset newOffset = Offset(
+                          double.tryParse(newValue ?? "") ??
+                              selected.x.toDouble(),
+                          selected.y.toDouble(),
+                        );
                         viewModel.move(newOffset - currentOffset);
                       },
                     ),
@@ -71,9 +86,16 @@ class _PropertiesPanel extends StatelessWidget {
                     child: TextFormField(
                       initialValue: selected.y.toString(),
                       onFieldSubmitted: (String? newValue) {
-                        final Offset currentOffset = Offset(selected.x.toDouble(), selected.y.toDouble());
+                        final Offset currentOffset = Offset(
+                          selected.x.toDouble(),
+                          selected.y.toDouble(),
+                        );
 
-                        final Offset newOffset = Offset(selected.x.toDouble(), double.tryParse(newValue ?? "") ?? selected.y.toDouble());
+                        final Offset newOffset = Offset(
+                          selected.x.toDouble(),
+                          double.tryParse(newValue ?? "") ??
+                              selected.y.toDouble(),
+                        );
                         viewModel.move(newOffset - currentOffset);
                       },
                     ),
@@ -146,7 +168,10 @@ class _PropertiesPanel extends StatelessWidget {
                                   spacing: 40,
                                   mainAxisSize: MainAxisSize.min,
                                   children: <Widget>[
-                                    Text("Current Configuration JSON", style: context.textTheme.titleLarge),
+                                    Text(
+                                      "Current Configuration JSON",
+                                      style: context.textTheme.titleLarge,
+                                    ),
 
                                     IconButton(
                                       onPressed: () {
@@ -160,7 +185,9 @@ class _PropertiesPanel extends StatelessWidget {
                                   child: Container(
                                     color: Colors.grey.shade300,
                                     padding: const EdgeInsets.all(10.0),
-                                    child: SelectableText(encoder.convert(viewModel.currentJson)),
+                                    child: SelectableText(
+                                      encoder.convert(viewModel.currentJson),
+                                    ),
                                   ),
                                 ),
                                 FusionButton(
@@ -170,16 +197,21 @@ class _PropertiesPanel extends StatelessWidget {
                                     ///
                                     /// Save the configuration JSON to a file
                                     ///
-                                    FilePicker.platform.saveFile(
-                                          dialogTitle: 'Save Configuration JSON',
-                                          fileName: '${viewModel.algorithm.name}.json',
+                                    FilePicker.platform
+                                        .saveFile(
+                                          dialogTitle:
+                                              'Save Configuration JSON',
+                                          fileName:
+                                              '${viewModel.algorithm.name}.json',
                                           type: FileType.custom,
                                           allowedExtensions: <String>['json'],
                                         )
                                         .then((String? path) {
                                           if (path != null) {
                                             final File file = File(path);
-                                            file.writeAsStringSync(jsonEncode(viewModel.currentJson));
+                                            file.writeAsStringSync(
+                                              jsonEncode(viewModel.currentJson),
+                                            );
                                             Navigator.of(context).pop();
                                           }
                                         });

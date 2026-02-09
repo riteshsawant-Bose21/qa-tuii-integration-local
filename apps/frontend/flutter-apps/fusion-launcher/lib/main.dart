@@ -20,10 +20,12 @@ import 'package:universal_platform/universal_platform.dart';
 
 import 'core/config/app_config.dart';
 import 'features/configuration/presentation/viewmodel/project_view_model.dart';
-import 'features/home/presentation/pages/launcher_home_page.dart';
+// import 'features/home/presentation/pages/launcher_home_page.dart';
 import 'features/dynamic_config/presentation/bloc/panel_bloc.dart';
+import 'features/home/presentation/pages/launcher_home_page.dart';
 import 'features/product_query/presentation/viewModel/product_query_view_model_cubit.dart';
 import 'features/projects/widget/building/speaker_selection_section/view_model/product_query_view_model.dart';
+import 'features/widget_test.dart';
 
 Future<void> main() async {
   await runZonedGuarded(() async {
@@ -62,7 +64,11 @@ Future<void> main() async {
 
 Future<void> reportCrash(Object exception, StackTrace stack) async {
   try {
-    FusionLogger.log(tag: LogTag.exceptions, message: "Exception: ${exception.toString()} \n, StackTrace: ${stack.toString()} ");
+    FusionLogger.log(
+      tag: LogTag.exceptions,
+      message:
+          "Exception: ${exception.toString()} \n, StackTrace: ${stack.toString()} ",
+    );
     // FirebaseCrashlytics.instance.recordError(exception, stack);
   } catch (ex) {
     debugPrint("Unable to report crash: $ex");
@@ -115,13 +121,16 @@ class MyApp extends StatelessWidget {
           create: (BuildContext context) => serviceLocator<ProjectViewModel>(),
         ),
         BlocProvider<ProjectSyncViewModel>(
-          create: (BuildContext context) => serviceLocator<ProjectSyncViewModel>(),
+          create:
+              (BuildContext context) => serviceLocator<ProjectSyncViewModel>(),
         ),
         BlocProvider<ProductQueryCubit>(
           create: (BuildContext context) => serviceLocator<ProductQueryCubit>(),
         ),
         BlocProvider<GuideShowCaseController>(
-          create: (BuildContext context) => serviceLocator<GuideShowCaseController>(),
+          create:
+              (BuildContext context) =>
+                  serviceLocator<GuideShowCaseController>(),
         ),
       ],
       child: FusionThemeBuilder(
@@ -141,7 +150,11 @@ class MyApp extends StatelessWidget {
             builder: (BuildContext context, SessionViewModelState state) {
               return ValueListenableBuilder<ThemeMode>(
                 valueListenable: FusionThemeController.themeModeNotifier,
-                builder: (BuildContext context, ThemeMode themeMode, Widget? child) {
+                builder: (
+                  BuildContext context,
+                  ThemeMode themeMode,
+                  Widget? child,
+                ) {
                   return MaterialApp(
                     title: 'Fusion Launcher',
                     debugShowCheckedModeBanner: false,
@@ -152,6 +165,7 @@ class MyApp extends StatelessWidget {
                     home:
                         (state is SessionValid)
                             ? const HomePage()
+                            // ? const WidgetTestScreen()
                             : const Scaffold(
                               body: Center(
                                 child: CircularProgressIndicator(),
@@ -162,7 +176,9 @@ class MyApp extends StatelessWidget {
                     navigatorObservers: <NavigatorObserver>[
                       AppNavigatorObserver(),
                     ],
-                    onGenerateRoute: (RouteSettings settings) => Routes.onGenerateRoute(settings),
+                    onGenerateRoute:
+                        (RouteSettings settings) =>
+                            Routes.onGenerateRoute(settings),
                   );
                 },
               );
