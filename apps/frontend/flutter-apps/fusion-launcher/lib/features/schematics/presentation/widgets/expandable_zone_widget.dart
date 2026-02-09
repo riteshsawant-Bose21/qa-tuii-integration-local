@@ -289,37 +289,16 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
                       builder: (BuildContext context, List<CircuitModel?> candidateData, List<dynamic> rejectedData) {
                         return Draggable<CircuitModel>(
                           data: circuitData,
-                          feedback: Material(
-                            color: Colors.transparent,
-                            child: CircuitDeviceWidget(
-                              index: index,
-                              deviceId: deviceId,
-                              circuitModel: circuitData,
-                              circuitDeviceName: circuitData.name,
-                              assetImagePath:
-                                  serviceLocator<ProjectViewModel>().getHardwareImage(
-                                    productId: speakers.isNotEmpty ? speakers.first.productId ?? 0 : 0,
-                                    currentImagePath: speakers.isNotEmpty ? speakers.first.assetImagePath : '',
-                                  ) ??
-                                  "",
-                              location: location,
-                              speakers: speakers,
-                              projectViewModel: _projectViewModel,
-                              circuitDeviceCount: speakers.length,
-                              onDecrementHardwareInCircuit: () {},
-                              onIncrementHardwareInCircuit: () {},
-                              onRename: () {},
-                              onDuplicate: () {},
-                              onDelete: () {},
-                            ),
-                          ),
-                          childWhenDragging: Material(
-                            color: Colors.transparent,
-                            child: Opacity(
-                              opacity: 0.8,
-                              child: SizedBox(
-                                width: 220,
+                          feedback: SizedBox(
+                            width: 220,
+
+                            child: Material(
+                              color: Colors.transparent,
+                              child: AbsorbPointer(
+                                absorbing: true,
+
                                 child: CircuitDeviceWidget(
+                                  prefix: "feedback_",
                                   index: index,
                                   deviceId: deviceId,
                                   circuitModel: circuitData,
@@ -343,7 +322,43 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
                               ),
                             ),
                           ),
+                          childWhenDragging: Material(
+                            color: Colors.transparent,
+                            child: AbsorbPointer(
+                              absorbing: true,
+                              child: Opacity(
+                                opacity: 0.8,
+                                child: SizedBox(
+                                  width: 220,
+
+                                  child: CircuitDeviceWidget(
+                                    prefix: "child_drag_",
+                                    index: index,
+                                    deviceId: deviceId,
+                                    circuitModel: circuitData,
+                                    circuitDeviceName: circuitData.name,
+                                    assetImagePath:
+                                        serviceLocator<ProjectViewModel>().getHardwareImage(
+                                          productId: speakers.isNotEmpty ? speakers.first.productId ?? 0 : 0,
+                                          currentImagePath: speakers.isNotEmpty ? speakers.first.assetImagePath : '',
+                                        ) ??
+                                        "",
+                                    location: location,
+                                    speakers: speakers,
+                                    projectViewModel: _projectViewModel,
+                                    circuitDeviceCount: speakers.length,
+                                    onDecrementHardwareInCircuit: () {},
+                                    onIncrementHardwareInCircuit: () {},
+                                    onRename: () {},
+                                    onDuplicate: () {},
+                                    onDelete: () {},
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
                           child: CircuitDeviceWidget(
+                            prefix: "child_",
                             index: index,
                             deviceId: deviceId,
                             circuitModel: circuitData,

@@ -8,6 +8,7 @@ import '../../../configuration/presentation/viewmodel/project_view_model.dart';
 
 /// Reusable widget for displaying a device item with hover, selection, and menu actions
 class CircuitDeviceWidget extends StatefulWidget {
+  final String prefix;
   final List<ListeningArea> location;
   final List<Speaker> speakers;
   final String deviceId;
@@ -26,6 +27,7 @@ class CircuitDeviceWidget extends StatefulWidget {
 
   const CircuitDeviceWidget({
     super.key,
+    required this.prefix,
     required this.location,
     required this.deviceId,
     required this.circuitDeviceName,
@@ -83,7 +85,7 @@ class _CircuitDeviceWidgetState extends State<CircuitDeviceWidget> {
                 children: <Widget>[
                   // Only drag handle is reorderable
                   ReorderableDragStartListener(
-                    key: ValueKey<String>(widget.deviceId),
+                    key: ValueKey<String>(widget.prefix + widget.deviceId),
                     index: widget.index,
                     child: Icon(
                       Icons.drag_indicator,
