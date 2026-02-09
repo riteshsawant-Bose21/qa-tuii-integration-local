@@ -27,11 +27,13 @@ class SnapshotList extends StatelessWidget {
   final Color? backgroundColor;
   final Function(String sceneId) onDelete;
   final Function(String sceneId)? onSelect;
+  final Function(String sceneId)? onDuplicate;
   final String? selectedSnapshotId;
   final Function(int oldIndex, int newIndex)? onReorder;
   final Function(String sceneId)? onDragStarted;
   final VoidCallback? onDragEnd;
   final String? draggingSnapshotId;
+  final void Function(String value, SnapshotsModel newSnapshot)? onRenameSave;
 
   const SnapshotList({
     super.key,
@@ -39,11 +41,13 @@ class SnapshotList extends StatelessWidget {
     required this.snapShotList,
     required this.onDelete,
     this.onSelect,
+    this.onDuplicate,
     this.selectedSnapshotId,
     this.onReorder,
     this.onDragStarted,
     this.onDragEnd,
     this.draggingSnapshotId,
+    this.onRenameSave,
   });
 
   @override
@@ -57,13 +61,12 @@ class SnapshotList extends StatelessWidget {
         return FadeTransition(
           opacity: animation.drive(Tween<double>(begin: 0.95, end: 1.0)),
           child: Material(
-            color: Colors.white,
+            color: Colors.transparent,
             child: child,
           ),
         );
       },
       buildDefaultDragHandles: false,
-      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
       itemCount: snapShotList.length,
@@ -100,7 +103,11 @@ class SnapshotList extends StatelessWidget {
             feedback: Material(
               color: Colors.transparent,
               child: Container(
-                width: 200,
+                decoration: BoxDecoration(
+                  color: context.colorScheme.primary.withAlpha(150),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                width: 220,
                 constraints: const BoxConstraints(
                   minHeight: 36,
                   maxHeight: 36,
@@ -118,6 +125,11 @@ class SnapshotList extends StatelessWidget {
                     onTap: () {
                       if (onSelect != null) {
                         onSelect!(snapShotData.id);
+                      }
+                    },
+                    onDuplicate: () {
+                      if (onDuplicate != null) {
+                        onDuplicate!(snapShotData.id);
                       }
                     },
                   ),
@@ -139,6 +151,11 @@ class SnapshotList extends StatelessWidget {
                     onSelect!(snapShotData.id);
                   }
                 },
+                onDuplicate: () {
+                  if (onDuplicate != null) {
+                    onDuplicate!(snapShotData.id);
+                  }
+                },
               ),
             ),
             child: SnapshotItemCard(
@@ -146,12 +163,24 @@ class SnapshotList extends StatelessWidget {
               snapShotData: snapShotData,
               isDragging: isDragging,
               isSelected: selectedSnapshotId == snapShotData.id,
+              onRenameSave: (String value, SnapshotsModel newSnapshot) {
+                if (value.isNotEmpty) {
+                  if (onRenameSave != null) {
+                    onRenameSave!.call(value, newSnapshot);
+                  }
+                }
+              },
               onDelete: () {
                 onDelete(snapShotData.id);
               },
               onTap: () {
                 if (onSelect != null) {
                   onSelect!(snapShotData.id);
+                }
+              },
+              onDuplicate: () {
+                if (onDuplicate != null) {
+                  onDuplicate!(snapShotData.id);
                 }
               },
             ),

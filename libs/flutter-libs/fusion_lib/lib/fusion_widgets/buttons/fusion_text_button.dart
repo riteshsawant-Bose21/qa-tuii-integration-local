@@ -95,7 +95,7 @@ class FusionTextButton extends StatelessWidget {
     this.borderRadius = 8,
     this.textStyle,
     this.horizontalPadding = 12,
-    this.foregroundColor = const Color(0xFF000000),
+    this.foregroundColor = const Color(0xFFFFFFFF),
     this.backgroundColor = Colors.transparent,
     this.isLoading = false,
     this.isActive = true,

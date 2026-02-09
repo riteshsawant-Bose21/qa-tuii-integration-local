@@ -1,11 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:fusion_lib/fusion_theme/app_theme.dart';
-import 'package:fusion_lib/fusion_utils/app_enums.dart';
-import 'package:fusion_lib/fusion_widgets/others/fusion_image.dart';
-import 'package:fusion_lib/fusion_widgets/text_views/fusion_app_text.dart';
-import 'package:fusion_lib/models/project_entities/listening_area_model.dart';
-import 'package:fusion_lib/models/project_entities/speaker_model.dart';
+import 'package:fusion_lib/fusion_lib.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../../core/service_locator.dart';
 import '../../../configuration/presentation/viewmodel/project_view_model.dart';
@@ -18,6 +14,7 @@ class CircuitDeviceWidget extends StatefulWidget {
   final String circuitDeviceName;
   final String assetImagePath;
   final int circuitDeviceCount;
+  final CircuitModel circuitModel;
   final ProjectViewModel projectViewModel;
   final VoidCallback onRename;
   final VoidCallback onDuplicate;
@@ -36,6 +33,7 @@ class CircuitDeviceWidget extends StatefulWidget {
     required this.onRename,
     required this.onDuplicate,
     required this.onDelete,
+    required this.circuitModel,
     required this.circuitDeviceCount,
     required this.onDecrementHardwareInCircuit,
     required this.onIncrementHardwareInCircuit,
@@ -66,14 +64,19 @@ class _CircuitDeviceWidgetState extends State<CircuitDeviceWidget> {
             onTap: () => widget.projectViewModel.setSelectedDevice(widget.deviceId, SelectedItemType.circuit),
             child: Container(
               margin: const EdgeInsets.only(bottom: 4),
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+              padding: const EdgeInsets.all(6).copyWith(left: 0),
               decoration: BoxDecoration(
                 color:
                     _isHovered
-                        ? Theme.of(context).colorScheme.grey.withOpacity(0.2)
-                        : (isSelected ? Theme.of(context).colorScheme.grey.withOpacity(0.3) : Theme.of(context).colorScheme.white),
-                border: Border.all(color: isSelected ? Colors.black : Theme.of(context).colorScheme.grey, width: 1),
-                borderRadius: BorderRadius.circular(4),
+                        ? context.colorScheme.elevation2
+                        : isSelected
+                        ? context.colorScheme.elevation3
+                        : context.colorScheme.elevation1,
+                border: Border.all(
+                  color: isSelected ? context.colorScheme.elevation5 : Colors.transparent,
+                  width: 1,
+                ),
+                borderRadius: BorderRadius.circular(8),
               ),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -83,7 +86,7 @@ class _CircuitDeviceWidgetState extends State<CircuitDeviceWidget> {
                     key: ValueKey<String>(widget.deviceId),
                     index: widget.index,
                     child: Icon(
-                      Icons.drag_handle,
+                      Icons.drag_indicator,
                       size: 16,
                       color: Colors.grey[600],
                     ),
@@ -124,20 +127,24 @@ class _CircuitDeviceWidgetState extends State<CircuitDeviceWidget> {
                               runSpacing: 4,
                               children:
                                   widget.location.map((ListeningArea location) {
-                                    return Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-                                      decoration: BoxDecoration(
-                                        color: _isHovered ? Colors.white.withOpacity(0.8) : (isSelected ? Colors.white.withOpacity(0.9) : Colors.white),
-                                        border: Border.all(
-                                          color: Theme.of(context).colorScheme.grey,
-                                          width: 1,
+                                    return Row(
+                                      spacing: 4,
+                                      children: <Widget>[
+                                        Icon(
+                                          LucideIcons.mapPin200,
+                                          size: FusionSizes.iconSize10,
+                                          color: context.colorScheme.elevation5,
                                         ),
-                                        borderRadius: BorderRadius.circular(2),
-                                      ),
-                                      child: FusionAppText(
-                                        text: location.name,
-                                        style: Theme.of(context).textTheme.bodySmall?.copyWith(fontSize: 9, color: const Color(0xFFBD7D23)),
-                                      ),
+                                        Flexible(
+                                          child: FusionAppText(
+                                            text: location.name,
+                                            style: context.textTheme.bodySmall?.copyWith(
+                                              fontSize: 9,
+                                              color: const Color(0xFFBD7D23),
+                                            ),
+                                          ),
+                                        ),
+                                      ],
                                     );
                                   }).toList(),
                             ),
@@ -146,11 +153,29 @@ class _CircuitDeviceWidgetState extends State<CircuitDeviceWidget> {
                   ),
 
                   const SizedBox(width: 4),
-                  _buildAddOrRemoveButton(context: context),
+                  if (!widget.circuitModel.addedInBuildingPage) ...<Widget>[
+                    _buildAddOrRemoveButton(context: context),
 
-                  /// Kebab menu
-                  const SizedBox(width: 8),
-                  _buildKebabMenu(context),
+                    /// Kebab menu
+                    const SizedBox(width: 8),
+                    _buildKebabMenu(context),
+                  ] else ...<Widget>[
+                    const SizedBox(width: 2),
+                    Container(
+                      height: 20,
+                      width: 20,
+                      alignment: Alignment.center,
+                      decoration: BoxDecoration(
+                        border: Border.all(color: context.colorScheme.elevation4, width: 1),
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                      child: FusionAppText(
+                        text: widget.circuitDeviceCount.toString(),
+                        maxLine: 1,
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(fontSize: 8),
+                      ),
+                    ),
+                  ],
                 ],
               ),
             ),
@@ -169,7 +194,11 @@ class _CircuitDeviceWidgetState extends State<CircuitDeviceWidget> {
             onTap: () {
               _showSpeakerDetailsPopup(context, isAdd: false);
             },
-            child: const Icon(Icons.remove, size: 10),
+            child: Icon(
+              Icons.remove,
+              size: 10,
+              color: context.colorScheme.iconDefault,
+            ),
           ),
           const SizedBox(width: 2),
           Container(
@@ -177,7 +206,10 @@ class _CircuitDeviceWidgetState extends State<CircuitDeviceWidget> {
             width: 20,
             alignment: Alignment.center,
             decoration: BoxDecoration(
-              border: Border.all(color: Theme.of(context).colorScheme.grey, width: 1),
+              border: Border.all(
+                color: context.colorScheme.elevation2,
+                width: 1,
+              ),
               borderRadius: BorderRadius.circular(2),
             ),
             child: FusionAppText(
@@ -191,7 +223,11 @@ class _CircuitDeviceWidgetState extends State<CircuitDeviceWidget> {
             onTap: () {
               _showSpeakerDetailsPopup(context, isAdd: true);
             },
-            child: const Icon(Icons.add, size: 10),
+            child: Icon(
+              Icons.add,
+              size: 10,
+              color: context.colorScheme.iconDefault,
+            ),
           ),
         ],
       );
@@ -203,7 +239,11 @@ class _CircuitDeviceWidgetState extends State<CircuitDeviceWidget> {
             onTap: () {
               widget.onDecrementHardwareInCircuit();
             },
-            child: const Icon(Icons.remove, size: 10),
+            child: Icon(
+              Icons.remove,
+              size: 10,
+              color: context.colorScheme.iconDefault,
+            ),
           ),
           const SizedBox(width: 2),
           Container(
@@ -211,7 +251,7 @@ class _CircuitDeviceWidgetState extends State<CircuitDeviceWidget> {
             width: 20,
             alignment: Alignment.center,
             decoration: BoxDecoration(
-              border: Border.all(color: Theme.of(context).colorScheme.grey, width: 1),
+              border: Border.all(color: context.colorScheme.elevation5, width: 1),
               borderRadius: BorderRadius.circular(2),
             ),
             child: FusionAppText(
@@ -225,7 +265,11 @@ class _CircuitDeviceWidgetState extends State<CircuitDeviceWidget> {
             onTap: () {
               widget.onIncrementHardwareInCircuit();
             },
-            child: const Icon(Icons.add, size: 10),
+            child: Icon(
+              Icons.add,
+              size: 10,
+              color: context.colorScheme.iconDefault,
+            ),
           ),
         ],
       );
@@ -238,7 +282,7 @@ class _CircuitDeviceWidgetState extends State<CircuitDeviceWidget> {
       context: context,
       builder: (BuildContext context) {
         return Dialog(
-          backgroundColor: Theme.of(context).colorScheme.white,
+          backgroundColor: context.colorScheme.primaryWhite,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(8),
           ),
@@ -282,7 +326,7 @@ class _CircuitDeviceWidgetState extends State<CircuitDeviceWidget> {
 
                     Divider(
                       height: 12,
-                      color: Theme.of(context).colorScheme.grey,
+                      color: context.colorScheme.primaryBlack,
                     ),
                     const SizedBox(height: 6),
 
@@ -322,8 +366,8 @@ class _CircuitDeviceWidgetState extends State<CircuitDeviceWidget> {
                               const SizedBox(height: 4),
                               Container(
                                 decoration: BoxDecoration(
-                                  color: Theme.of(context).colorScheme.white,
-                                  border: Border.all(color: Theme.of(context).colorScheme.grey, width: 1),
+                                  color: context.colorScheme.primaryWhite,
+                                  border: Border.all(color: context.colorScheme.primaryBlack, width: 1),
                                   borderRadius: BorderRadius.circular(4),
                                 ),
                                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
@@ -366,7 +410,7 @@ class _CircuitDeviceWidgetState extends State<CircuitDeviceWidget> {
                                           width: 20,
                                           alignment: Alignment.center,
                                           decoration: BoxDecoration(
-                                            border: Border.all(color: Theme.of(context).colorScheme.grey, width: 1),
+                                            border: Border.all(color: context.colorScheme.primaryBlack, width: 1),
                                             borderRadius: BorderRadius.circular(2),
                                           ),
                                           child: FusionAppText(
@@ -408,13 +452,15 @@ class _CircuitDeviceWidgetState extends State<CircuitDeviceWidget> {
 
   Widget _buildKebabMenu(BuildContext context) {
     return PopupMenuButton<ZoneMenuAction>(
-      style: const ButtonStyle(
-        overlayColor: WidgetStatePropertyAll<Color>(Colors.transparent),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(FusionSizes.borderRadius12),
+        side: BorderSide(color: context.colorScheme.elevation4),
       ),
+      tooltip: "",
       offset: const Offset(100, 20),
       padding: EdgeInsets.zero,
-      constraints: const BoxConstraints(maxHeight: 550, maxWidth: 140),
-      color: Theme.of(context).colorScheme.white,
+      constraints: const BoxConstraints(maxHeight: 550, maxWidth: 200),
+      color: context.colorScheme.elevation1,
       menuPadding: EdgeInsets.zero,
       itemBuilder:
           (BuildContext context) => <PopupMenuEntry<ZoneMenuAction>>[
@@ -429,15 +475,18 @@ class _CircuitDeviceWidgetState extends State<CircuitDeviceWidget> {
                 text: "Delete",
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
                   fontSize: 12,
-                  color: Theme.of(context).colorScheme.fusionTextViewColor,
+                  color: Theme.of(context).colorScheme.textPrimary,
                 ),
               ),
             ),
           ],
-      child: Icon(
-        Icons.more_vert,
-        size: 14,
-        color: Colors.grey[600],
+      child: SemanticHelper.button(
+        testId: SemanticHelper.createTestId(SemanticTypes.button, "location_item_kebab_menu"),
+        child: Icon(
+          Icons.more_vert,
+          size: 14,
+          color: Colors.grey[600],
+        ),
       ),
     );
   }

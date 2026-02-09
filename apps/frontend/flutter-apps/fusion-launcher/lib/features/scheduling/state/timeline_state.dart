@@ -47,8 +47,8 @@ extension TimelineStateMethods on TimelineState {
         events.add(construct(schedule, schedule.startDate));
       } else {
         DateTime eventDate = schedule.startDate;
-        final DateTime endDate = schedule.endDate;
-        while (eventDate.isBefore(endDate)) {
+        final DateTime? endDate = schedule.endDate;
+        while (eventDate.isBefore(endDate ?? eventDate.add(const Duration(days: 365 * 2)))) {
           if (schedule.recurrence == RecurrenceType.daily) {
             events.add(
               construct(schedule, eventDate),

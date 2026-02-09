@@ -16,13 +16,16 @@ require (
 	github.com/robfig/cron/v3 v3.0.1
 	github.com/vishvananda/netlink v1.3.1
 	go.etcd.io/bbolt v1.4.0
+	fusion-services-core v0.0.0
 )
 
 replace github.com/go-ble/ble => ../third-party/go-ble
+replace fusion-services-core => ../../fusion-services-core
 
 require (
 	github.com/JuulLabs-OSS/cbgo v0.0.1 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
+	github.com/brutella/dnssd v1.2.14 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/hashicorp/go-msgpack/v2 v2.1.2 // indirect
 	github.com/konsorten/go-windows-terminal-sequences v1.0.1 // indirect

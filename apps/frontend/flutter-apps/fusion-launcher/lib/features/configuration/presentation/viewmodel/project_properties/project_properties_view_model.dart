@@ -25,8 +25,6 @@ extension ProjectPropertiesViewModel on ProjectViewModel {
 
   String? get virtualIP => projectManager.getVirtualIP();
 
-  String get metaData => projectManager.getMetaData();
-
   double get minSPL => projectManager.getMinSPL();
 
   double get maxSPL => projectManager.getMaxSPL();
@@ -181,7 +179,9 @@ extension ProjectPropertiesViewModel on ProjectViewModel {
       if (autoSave) {
         saveProject();
       }
-      updateProject();
+      emitTabChanged(
+        projectManager.inControlMode() ? 1 : 0,
+      );
     } catch (e) {
       FusionLogger.log(tag: LogTag.project, message: "Failed to set control mode: $e");
       throwError("Failed to set control mode: $e");
@@ -202,6 +202,13 @@ extension ProjectPropertiesViewModel on ProjectViewModel {
   //update current floor index
   void setCurrentFloorIndex(int index) {
     try {
+      // clear the selections when changing floor
+      currentSelectedHardwareId = null;
+      currentSelectedListeningAreaId = null;
+      currentSelectedZoneId = null;
+      currentSelectedSubZoneId = null;
+      setShouldPlaceNonPlacedSpeakers(false);
+
       projectManager.setCurrentFloorIndex(index);
       updateProject();
     } catch (e) {
@@ -217,6 +224,7 @@ extension ProjectPropertiesViewModel on ProjectViewModel {
 
   void setCurrentSelectedListeningArea(String? area) {
     currentSelectedListeningAreaId = area;
+    if (area == null) setShouldPlaceNonPlacedSpeakers(false);
     updateProject();
   }
 

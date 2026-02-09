@@ -4,8 +4,8 @@ import 'package:fusion_launcher/core/service_locator.dart';
 import 'package:fusion_launcher/features/configuration_page/widgets/section_header.dart';
 import 'package:fusion_launcher/features/configuration_page/widgets/snapshots/scenes_expandable_card.dart';
 import 'package:fusion_launcher/features/configuration_page/widgets/snapshots/snapshot_list.dart';
-import 'package:fusion_lib/fusion_theme/app_theme.dart';
 import 'package:fusion_lib/fusion_lib.dart';
+import 'package:fusion_lib/fusion_theme/app_theme.dart';
 
 import '../../../configuration/presentation/viewmodel/project_view_model.dart';
 import '../drag_divider.dart';
@@ -46,9 +46,9 @@ class _SnapshotsAndScenesPanelState extends State<SnapshotsAndScenesPanel> {
   }
 
   /// Add new snapshots
-  void _addNewSnapshots(BuildContext popupContext) {
+  void _addNewSnapshots() {
     final SnapshotsModel newScene = SnapshotsModel(
-      name: _snapshotsNameController.text.trim(),
+      name: "New Snapshot ${_projectViewModel.getAllSnapshots().length + 1}",
     );
     _projectViewModel.addNewSnapshots(scene: newScene);
 
@@ -61,35 +61,15 @@ class _SnapshotsAndScenesPanelState extends State<SnapshotsAndScenesPanel> {
     _projectViewModel.addSceneActionToSnapshot(sceneId: newScene.id, action: action);
 
     FusionToast.success(context, message: "Snapshot \"${newScene.name}\" created");
-
-    /// Clear dialog and close popup
-    _clearSourceSetDialog(pop: true, popContext: popupContext);
   }
 
   /// Add new scenes
-  void _addNewScenes(BuildContext popupContext) {
+  void _addNewScenes() {
     final SceneSetModel newSceneSet = SceneSetModel(
-      name: _scenesNameController.text.trim(),
+      name: "New Scene Set ${_projectViewModel.getAllSceneSets().length + 1}",
     );
     _projectViewModel.addNewSceneSet(sceneSet: newSceneSet);
     FusionToast.success(context, message: 'Scene "${newSceneSet.name}" created');
-
-    /// Clear dialog and close popup
-    _clearSourceSetDialog(pop: true, popContext: popupContext, isScene: true);
-  }
-
-  /// Clear source set dialog inputs
-  void _clearSourceSetDialog({bool pop = false, BuildContext? popContext, bool isScene = false}) {
-    if (isScene) {
-      _scenesNameController.clear();
-    } else {
-      _snapshotsNameController.clear();
-    }
-
-    if (pop && popContext != null && Navigator.of(popContext).canPop()) {
-      Navigator.of(popContext).pop();
-    }
-    setState(() {});
   }
 
   /// Handle reordering of snapshots
@@ -110,66 +90,31 @@ class _SnapshotsAndScenesPanelState extends State<SnapshotsAndScenesPanel> {
       oldIndex: oldIndex,
       newIndex: newIndex,
     );
+    _projectViewModel.setSelectedSnapshotId(_draggingSnapshotId);
   }
 
   @override
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.white,
+        borderRadius: BorderRadius.circular(12),
+
+        color: Theme.of(context).colorScheme.primaryBlack,
       ),
       child: Column(
         children: <Widget>[
           /// Snapshots Section
           SectionHeader(
             title: 'Snapshots',
-            trailing: PopupMenuButton<dynamic>(
-              onCanceled: () {
-                _clearSourceSetDialog();
-                setState(() {});
+            trailing: GestureDetector(
+              onTap: () {
+                _addNewSnapshots();
               },
-              tooltip: "Add Snapshot Set",
-              padding: EdgeInsets.zero,
-              constraints: const BoxConstraints(
-                maxHeight: 500,
-                maxWidth: 250,
+              child: Icon(
+                Icons.add_sharp,
+                size: 16,
+                color: context.colorScheme.iconWhite,
               ),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
-              ),
-              color: Theme.of(context).colorScheme.white,
-              menuPadding: EdgeInsets.zero,
-
-              itemBuilder: (BuildContext context) {
-                return <PopupMenuItem<dynamic>>[
-                  PopupMenuItem<dynamic>(
-                    enabled: false,
-                    padding: EdgeInsets.zero,
-                    child: SizedBox(
-                      width: 250,
-                      child: StatefulBuilder(
-                        builder: (BuildContext context, StateSetter setMenuState) {
-                          return SingleChildScrollView(
-                            child: CreateSnapshotsOrScenesWidget(
-                              headerText: 'Snapshot',
-                              nameController: _snapshotsNameController,
-                              onCreate: () {
-                                /// Pass popup context so only the menu closes.
-                                _addNewSnapshots(context);
-                              },
-                              onCancel: () {
-                                /// Cancel inside popup: close only popup.
-                                _clearSourceSetDialog(pop: true, popContext: context);
-                              },
-                            ),
-                          );
-                        },
-                      ),
-                    ),
-                  ),
-                ];
-              },
-              child: Icon(Icons.add_sharp, size: 16, color: Theme.of(context).colorScheme.greyDark),
             ),
           ),
 
@@ -177,7 +122,7 @@ class _SnapshotsAndScenesPanelState extends State<SnapshotsAndScenesPanel> {
           /// Sources list with controlled height
           DragTarget<SnapshotsModel>(
             onWillAcceptWithDetails: (DragTargetDetails<SnapshotsModel> details) {
-              // Only accept if dragging from scenes section, not from snapshots section
+              /// Only accept if dragging from scenes section, not from snapshots section
               return _draggingFromSection == 'scenes';
             },
             onLeave: (SnapshotsModel? data) {},
@@ -191,6 +136,7 @@ class _SnapshotsAndScenesPanelState extends State<SnapshotsAndScenesPanel> {
                   /// Add to snapshots section first
                   _projectViewModel.addNewSnapshots(scene: details.data);
                 }
+                _projectViewModel.setSelectedSnapshotId(details.data.id);
 
                 /// Remove from all scene sets (since it's now in snapshots)
                 final List<SceneSetModel> allSceneSets = _projectViewModel.getAllSceneSets();
@@ -209,15 +155,21 @@ class _SnapshotsAndScenesPanelState extends State<SnapshotsAndScenesPanel> {
             builder: (BuildContext context, List<SnapshotsModel?> candidateData, List<dynamic> rejectedData) {
               final bool isHovered = candidateData.isNotEmpty && _draggingFromSection == 'scenes';
               return Container(
+                padding: const EdgeInsets.all(10),
+
                 decoration: BoxDecoration(
-                  color: isHovered ? Theme.of(context).colorScheme.primary.withOpacity(0.1) : Colors.transparent,
+                  color: isHovered ? Theme.of(context).colorScheme.primary.withOpacity(0.1) : context.colorScheme.elevation1,
                   border:
                       isHovered
                           ? Border.all(
                             color: Theme.of(context).colorScheme.primary.withOpacity(0.3),
                             width: 2,
                           )
-                          : null,
+                          : Border.symmetric(
+                            vertical: BorderSide(color: context.colorScheme.elevation2, width: 1),
+                            // color: Theme.of(context).colorScheme.elevation2,
+                            // width: 1,
+                          ),
                 ),
                 height: _sourcesHeight,
                 child: SingleChildScrollView(
@@ -250,7 +202,17 @@ class _SnapshotsAndScenesPanelState extends State<SnapshotsAndScenesPanel> {
                         onSelect: (String sceneId) {
                           _projectViewModel.setSelectedSnapshotId(sceneId);
                         },
-                        onReorder: _handleSnapshotReorder,
+                        onDuplicate: (String sceneId) {
+                          _projectViewModel.duplicateSnapshot(sceneId: sceneId);
+                          FusionToast.success(context, message: "Snapshot duplicated successfully");
+                        },
+                        onReorder: (int oldIndex, int newIndex) {
+                          if (oldIndex < newIndex) newIndex -= 1;
+                          final String snapshotToMove = snapShotList[oldIndex].id;
+                          final String snapshotAtNewIndex = snapShotList[newIndex].id;
+                          _projectViewModel.reOderSnapshots(sceneIdToMove: snapshotToMove.toString(), sceneIdAtNewIndex: snapshotAtNewIndex.toString());
+                          _projectViewModel.setSelectedSnapshotId(snapshotToMove);
+                        },
                         onDragStarted: (String sceneId) {
                           setState(() {
                             _draggingSnapshotId = sceneId;
@@ -264,6 +226,9 @@ class _SnapshotsAndScenesPanelState extends State<SnapshotsAndScenesPanel> {
                           });
                         },
                         draggingSnapshotId: _draggingSnapshotId,
+                        onRenameSave: (String value, SnapshotsModel newSnapshot) {
+                          _projectViewModel.updateSnapshots(scene: newSnapshot);
+                        },
                       );
                     },
                   ),
@@ -277,129 +242,100 @@ class _SnapshotsAndScenesPanelState extends State<SnapshotsAndScenesPanel> {
 
           /// Scenes Section
           SectionHeader(
-            title: 'Scenes',
-            trailing: PopupMenuButton<dynamic>(
-              onCanceled: () {
-                _clearSourceSetDialog(isScene: true);
-                setState(() {});
+            title: 'Scene Sets',
+            isRounded: false,
+            trailing: GestureDetector(
+              onTap: () {
+                _addNewScenes();
               },
-              tooltip: "Add Scenes",
-              padding: EdgeInsets.zero,
-              constraints: const BoxConstraints(
-                maxHeight: 500,
-                maxWidth: 250,
-              ),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
-              ),
-              color: Theme.of(context).colorScheme.white,
-              menuPadding: EdgeInsets.zero,
-
-              itemBuilder: (BuildContext context) {
-                return <PopupMenuItem<dynamic>>[
-                  PopupMenuItem<dynamic>(
-                    enabled: false,
-                    padding: EdgeInsets.zero,
-                    child: SizedBox(
-                      width: 250,
-                      child: StatefulBuilder(
-                        builder: (BuildContext context, StateSetter setMenuState) {
-                          return SingleChildScrollView(
-                            child: CreateSnapshotsOrScenesWidget(
-                              headerText: 'Scenes',
-                              nameController: _scenesNameController,
-                              onCreate: () {
-                                /// Add new scenes
-                                /// Clear dialog and close popup
-                                _addNewScenes(context);
-                              },
-                              onCancel: () {
-                                /// Cancel inside popup: close only popup.
-                                _clearSourceSetDialog(pop: true, popContext: context, isScene: true);
-                              },
-                            ),
-                          );
-                        },
-                      ),
-                    ),
-                  ),
-                ];
-              },
-              child: IconButton(
-                icon: Icon(Icons.add_sharp, size: 16, color: Theme.of(context).colorScheme.greyDark),
-                onPressed: null,
-                padding: EdgeInsets.zero,
-                constraints: const BoxConstraints(),
-              ),
+              child: Icon(Icons.add_sharp, size: 16, color: context.colorScheme.primaryWhite),
             ),
           ),
 
           /// List of Scenes
           Expanded(
-            child: BlocBuilder<ProjectViewModel, ProjectViewModelState>(
-              builder: (BuildContext context, ProjectViewModelState state) {
-                final List<SceneSetModel> scenesSetList = _projectViewModel.getAllSceneSets();
-                if (scenesSetList.isEmpty) {
-                  return Padding(
-                    padding: EdgeInsets.only(top: _sourcesHeight * 0.4),
-                    child: FusionAppText(
-                      text: 'No scenes available',
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        fontSize: 12,
+            child: Container(
+              decoration: BoxDecoration(
+                color: context.colorScheme.elevation1,
+                borderRadius: const BorderRadius.only(
+                  bottomRight: Radius.circular(12),
+                  bottomLeft: Radius.circular(12),
+                ),
+                border: Border.symmetric(
+                  vertical: BorderSide(color: context.colorScheme.elevation2, width: 1),
+                ),
+              ),
+              child: BlocBuilder<ProjectViewModel, ProjectViewModelState>(
+                builder: (BuildContext context, ProjectViewModelState state) {
+                  final List<SceneSetModel> scenesSetList = _projectViewModel.getAllSceneSets();
+                  if (scenesSetList.isEmpty) {
+                    return Container(
+                      alignment: Alignment.center,
+
+                      child: FusionAppText(
+                        text: 'No scenes available',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          fontSize: 12,
+                        ),
                       ),
-                    ),
-                  );
-                }
-                return ListView.separated(
-                  itemCount: scenesSetList.length,
-                  separatorBuilder: (BuildContext context, int index) {
-                    return const SizedBox(height: 8);
-                  },
-                  shrinkWrap: true,
-                  physics: const ClampingScrollPhysics(),
-                  itemBuilder: (BuildContext context, int index) {
-                    final SceneSetModel sceneSetData = scenesSetList[index];
-                    final List<SnapshotsModel> associatedScenes = _projectViewModel.getSnapshotInSceneSet(sceneSetId: sceneSetData.id);
-                    return ScenesExpandableCard(
-                      sceneSetData: sceneSetData,
-                      isDragHovered: false,
-                      snapShotList: associatedScenes,
-                      onSelect: (String sceneId) {
-                        _projectViewModel.setSelectedSnapshotId(sceneId);
-                      },
-                      onSceneSetDelete: (String sceneSetId) {
-                        _projectViewModel.removeSceneSet(sceneSetId: sceneSetId);
-
-                        /// clear selected snapshot to avoid confusion after delete
-                        _projectViewModel.setSelectedSnapshotId(null);
-                        FusionToast.success(context, message: "Scenes deleted successfully");
-                      },
-                      onScenesSnapshotDelete: (String sceneId) {
-                        _projectViewModel.removeSnapshots(sceneId: sceneId);
-
-                        /// clear selected snapshot to avoid confusion after delete
-                        _projectViewModel.setSelectedSnapshotId(null);
-                        FusionToast.success(context, message: "Snapshot deleted successfully");
-                      },
-                      onReorderScenes: _handleSceneSetReorder,
-                      onDragStarted: (String sceneId) {
-                        setState(() {
-                          _draggingSnapshotId = sceneId;
-                          _draggingFromSection = 'scenes';
-                        });
-                      },
-                      onDragEnd: () {
-                        setState(() {
-                          _draggingSnapshotId = null;
-                          _draggingFromSection = null;
-                        });
-                      },
-                      draggingSnapshotId: _draggingSnapshotId,
-                      draggingFromSection: _draggingFromSection,
                     );
-                  },
-                );
-              },
+                  }
+                  return ListView.builder(
+                    itemCount: scenesSetList.length,
+                    shrinkWrap: true,
+                    physics: const ClampingScrollPhysics(),
+                    itemBuilder: (BuildContext context, int index) {
+                      final SceneSetModel sceneSetData = scenesSetList[index];
+                      final List<SnapshotsModel> associatedScenes = _projectViewModel.getSnapshotInSceneSet(sceneSetId: sceneSetData.id);
+                      return ScenesExpandableCard(
+                        sceneSetData: sceneSetData,
+                        isDragHovered: false,
+                        snapShotList: associatedScenes,
+                        onSelect: (String sceneId) {
+                          _projectViewModel.setSelectedSnapshotId(sceneId);
+                        },
+                        onSceneSetDelete: (String sceneSetId) {
+                          _projectViewModel.removeSceneSet(sceneSetId: sceneSetId);
+
+                          /// clear selected snapshot to avoid confusion after delete
+                          _projectViewModel.setSelectedSnapshotId(null);
+                          FusionToast.success(context, message: "Scenes deleted successfully");
+                        },
+                        onSceneSetDuplicate: (String sceneSetId) {
+                          _projectViewModel.duplicateSceneSet(sceneSetId: sceneSetId);
+                          FusionToast.success(context, message: "Scene Set duplicated successfully");
+                        },
+                        onScenesSnapshotDelete: (String sceneId) {
+                          _projectViewModel.removeSnapshots(sceneId: sceneId);
+
+                          /// clear selected snapshot to avoid confusion after delete
+                          _projectViewModel.setSelectedSnapshotId(null);
+                          FusionToast.success(context, message: "Snapshot deleted successfully");
+                        },
+                        onScenesSnapshotDuplicate: (String sceneId) {
+                          _projectViewModel.duplicateSnapshot(sceneId: sceneId);
+                          FusionToast.success(context, message: "Snapshot duplicated successfully");
+                        },
+                        onReorderScenes: _handleSceneSetReorder,
+                        onDragStarted: (String sceneId) {
+                          setState(() {
+                            _draggingSnapshotId = sceneId;
+                            _draggingFromSection = 'scenes';
+                          });
+                        },
+                        onDragEnd: () {
+                          setState(() {
+                            _draggingSnapshotId = null;
+                            _draggingFromSection = null;
+                          });
+                        },
+                        draggingSnapshotId: _draggingSnapshotId,
+                        draggingFromSection: _draggingFromSection,
+                      );
+                    },
+                  );
+                },
+              ),
             ),
           ),
         ],
@@ -433,7 +369,7 @@ class CreateSnapshotsOrScenesWidgetState extends State<CreateSnapshotsOrScenesWi
   @override
   Widget build(BuildContext context) {
     return Container(
-      color: Theme.of(context).colorScheme.white,
+      color: Theme.of(context).colorScheme.primaryWhite,
       width: 250,
       padding: const EdgeInsets.all(12),
       child: Column(
@@ -489,7 +425,7 @@ class CreateSnapshotsOrScenesWidgetState extends State<CreateSnapshotsOrScenesWi
               Flexible(
                 child: FusionButton(
                   width: double.infinity,
-                  textStyle: Theme.of(context).textTheme.labelLarge?.copyWith(fontSize: 10, color: Theme.of(context).colorScheme.fusionButtonTextColor),
+                  textStyle: Theme.of(context).textTheme.labelLarge?.copyWith(fontSize: 10, color: context.colorScheme.primaryBlack),
 
                   label: "Create",
                   isActive: widget.nameController.text.trim().isNotEmpty,
