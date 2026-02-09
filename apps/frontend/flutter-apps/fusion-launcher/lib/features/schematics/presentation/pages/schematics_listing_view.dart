@@ -895,7 +895,7 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
                 highlightQuery: _processorsAmplifiersSearchQuery,
                 assetImagePath: processor.assetImagePath,
                 itemId: processor.id,
-                zoneName: getZoneName(processor.id),
+                zoneName: getZoneName(processor.id),    
                 zoneColor: getZoneColor(processor.id),
                 location: getLocationName(processor.locationEntity.listeningAreaId) ?? "Add location",
                 equipmentLocation: getEquipmentLocationForHardware(processor.id),
