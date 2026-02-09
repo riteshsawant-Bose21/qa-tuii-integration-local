@@ -792,6 +792,9 @@ private:
 class UDPValueMonitor
 {
 public:
+  /// Type definition for device ID change notification callbacks.
+  using DeviceIDChangeCallback = std::function<void(const std::string &)>;
+
   UDPValueMonitor(const std::string &serverIP, int port)
       : jsonMonitor_(Json::objectValue)
   {
@@ -867,6 +870,17 @@ public:
     jsonMonitor_.watchPattern(pattern, callback);
   }
 
+  /**
+   * @brief Register a callback to be notified when the device ID changes.
+   *
+   * @param callback The function to call when the device ID is updated.
+   */
+  void watchDeviceID(DeviceIDChangeCallback callback)
+  {
+    std::lock_guard<std::mutex> lk(deviceIDCallbacks_mutex_);
+    deviceIDCallbacks_.push_back(callback);
+  }
+
   ~UDPValueMonitor() { stop(); }
 
   void stop()
@@ -884,30 +898,30 @@ public:
   }
 
 private:
-  std::string getTimestamp() const
-  {
-    auto now = std::chrono::system_clock::now();
-    auto now_c = std::chrono::system_clock::to_time_t(now);
-    struct tm local_tm;
-    localtime_r(&now_c, &local_tm);
-    std::stringstream ss;
-    ss << std::put_time(&local_tm, "%H:%M:%S");
-    return ss.str();
-  }
+  // std::string getTimestamp() const
+  // {
+  //   auto now = std::chrono::system_clock::now();
+  //   auto now_c = std::chrono::system_clock::to_time_t(now);
+  //   struct tm local_tm;
+  //   localtime_r(&now_c, &local_tm);
+  //   std::stringstream ss;
+  //   ss << std::put_time(&local_tm, "%H:%M:%S");
+  //   return ss.str();
+  // }
 
-  void handleValueChange(const std::string &path, const Json::Value &old_val,
-                         const Json::Value &new_val)
-  {
-    if (old_val != new_val)
-    {
-      Json::StreamWriterBuilder builder;
-      builder["precision"] = 2;
-      builder["indentation"] = "";
-      std::cout << getTimestamp() << " " << path
-                << " changed from: " << Json::writeString(builder, old_val)
-                << " to: " << Json::writeString(builder, new_val) << std::endl;
-    }
-  }
+  // void handleValueChange(const std::string &path, const Json::Value &old_val,
+  //                        const Json::Value &new_val)
+  // {
+  //   if (old_val != new_val)
+  //   {
+  //     Json::StreamWriterBuilder builder;
+  //     builder["precision"] = 2;
+  //     builder["indentation"] = "";
+  //     std::cout << getTimestamp() << " " << path
+  //               << " changed from: " << Json::writeString(builder, old_val)
+  //               << " to: " << Json::writeString(builder, new_val) << std::endl;
+  //   }
+  // }
 
   void requestInitialDeviceInfo(const sockaddr_in &serverAddr)
   {
@@ -1143,18 +1157,18 @@ private:
                 continue;
               }
             }
-            else if (op == "get")
+            else if (op == "get") // request originated from us.
             {
               receivedInitialState_ = true;
               handleUpdateMessage(response["data"], false);
               continue;
             }
-            else if (op == "config_update")
+            else if (op == "config_update") // request originated from server
             {
               handleUpdateMessage(response, true);
               continue;
             }
-            else if (op == "device_information_update")
+            else if (op == "device_information_update") // request originated from server
             {
               handleDeviceUpdate(response);
               continue;
@@ -1183,14 +1197,33 @@ private:
 
     if (deviceInfo.isMember("id"))
     {
-      if (deviceInfo["id"].asString() == deviceID_)
+      std::string newDeviceID = deviceInfo["id"].asString();
+      if (newDeviceID != deviceID_)
       {
-        SPDLOG_INFO("Device ID unchanged: {}", deviceID_);
-        return;
+        deviceID_ = newDeviceID;
+        SPDLOG_INFO("Got device ID: {}", deviceID_);
+
+        // Notify callbacks
+        notifyDeviceIDCallbacks(newDeviceID);
       }
-      deviceID_ =
-          deviceInfo["id"].asString();
-      SPDLOG_INFO("Got device ID: {}", deviceID_);
+    }
+  }
+
+  /**
+   * @brief Notify all registered device ID callbacks.
+   * @param deviceID The device ID.
+   */
+  void notifyDeviceIDCallbacks(const std::string &deviceID)
+  {
+    std::vector<DeviceIDChangeCallback> callbacks;
+    {
+      std::lock_guard<std::mutex> lk(deviceIDCallbacks_mutex_);
+      callbacks = deviceIDCallbacks_;
+    }
+
+    for (const auto &cb : callbacks)
+    {
+      cb(deviceID);
     }
   }
 
@@ -1219,4 +1252,8 @@ private:
   JsonMonitor jsonMonitor_;
   sockaddr_in serverAddr_{};
   bool receivedInitialState_{false};
+
+  // Device ID change callbacks
+  std::vector<DeviceIDChangeCallback> deviceIDCallbacks_;
+  mutable std::mutex deviceIDCallbacks_mutex_;
 };
