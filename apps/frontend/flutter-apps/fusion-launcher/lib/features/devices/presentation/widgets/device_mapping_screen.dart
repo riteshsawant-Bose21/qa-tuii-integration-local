@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:fusion_launcher/core/service_locator.dart';
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
 import 'package:fusion_lib/fusion_lib.dart';
+import 'package:fusion_lib/models/project_entities/controller.dart';
 
 import '../../../commission/presentation/widgets/configure_network_dialog.dart';
 import 'device_models.dart';
@@ -155,15 +156,15 @@ class _DeviceMappingScreenState extends State<DeviceMappingScreen> {
           child: Text(locationName, style: cellStyle, maxLines: 1),
         ),
         'ipAddress': FusionTableCell(
-          value: isAssigned ? assignedHardware!.ipAddress : '--',
-          child: Text(isAssigned ? assignedHardware!.ipAddress : '--', style: cellStyle, maxLines: 1),
+          value: isAssigned ? assignedHardware.ipAddress : '--',
+          child: Text(isAssigned ? assignedHardware.ipAddress : '--', style: cellStyle, maxLines: 1),
         ),
         'firmware': FusionTableCell(
-          value: isAssigned ? assignedHardware!.firmware : '--',
-          child: Text(isAssigned ? assignedHardware!.firmware : '--', style: cellStyle, maxLines: 1),
+          value: isAssigned ? assignedHardware.firmware : '--',
+          child: Text(isAssigned ? assignedHardware.firmware : '--', style: cellStyle, maxLines: 1),
         ),
         'assignedTo': FusionTableCell(
-          value: isAssigned ? assignedHardware!.modelName : 'unassigned',
+          value: isAssigned ? assignedHardware.modelName : 'unassigned',
           child: _buildAssignmentDropdown(device, assignedHardware),
         ),
       },
@@ -301,8 +302,16 @@ class _DeviceMappingScreenState extends State<DeviceMappingScreen> {
 
     // 2. Filter Available Hardware
     // Logic: Hardware is available if assignedToDeviceId is null OR assignedToDeviceId matches THIS device
+
+    final NetworkHardwareType? requiredType = switch (device.runtimeType) {
+      const (FusionDsp) => NetworkHardwareType.dsp,
+      const (Amplifier) => NetworkHardwareType.amplifier,
+      const (FusionController) => NetworkHardwareType.controller,
+      _ => null,
+    };
+
     final Iterable<NetworkHardware> availableHardware = widget.networkHardware.where(
-      (NetworkHardware hw) => hw.assignedToDeviceId == null || hw.assignedToDeviceId == device.id,
+      (NetworkHardware hw) => (hw.assignedToDeviceId == null || hw.assignedToDeviceId == device.id) && (requiredType == null || hw.type == requiredType),
     );
 
     for (NetworkHardware hw in availableHardware) {
