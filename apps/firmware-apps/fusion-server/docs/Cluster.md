@@ -13,11 +13,12 @@ Memberlist handles cluster membership, failure detection, and push/pull state tr
 
 Each node starts with a static configuration (`AppConfig`) specifying:
 
-- `BindAddr` and `BindPort`
-- `NodeName`
+- `Network Inteface` - passed as a startup argument
+- `NodeName` - its a randomized name in the code
 - Whether the node is running as a local/standalone instance
 - Each node expects an interface being passed
-- The network interface used for VRRP events and the cluster will bind to the IP address on the interface
+- The network interface is used for VRRP events
+- The cluster will bind to the IP address on the given interface
 
 During startup:
 
