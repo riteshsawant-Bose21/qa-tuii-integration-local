@@ -4,9 +4,8 @@
 package cluster
 
 import (
-	"fusion-services-core/vip"
 	"fusion-services-core/logging"
-	"net"
+	"fusion-services-core/vip"
 
 	"github.com/vishvananda/netlink"
 )
