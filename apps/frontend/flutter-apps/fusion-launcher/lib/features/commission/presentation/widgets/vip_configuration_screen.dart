@@ -101,6 +101,7 @@ class _VIPConfigurationScreenState extends State<VIPConfigurationScreen> {
               child: FusionNeumorphicButton(
                 text: 'Verify and proceed',
                 onTap: _verify,
+                height: 35,
               ),
             ),
           ],

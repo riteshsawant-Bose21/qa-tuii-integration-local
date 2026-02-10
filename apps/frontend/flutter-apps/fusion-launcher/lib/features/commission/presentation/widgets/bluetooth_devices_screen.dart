@@ -108,6 +108,7 @@ class _BluetoothDevicesScreenState extends State<BluetoothDevicesScreen> {
                 child: SizedBox(
                   width: 300,
                   child: FusionNeumorphicButton(
+                    height: 35,
                     text: 'Send Wifi credentials',
                     // Disable tap if form is invalid
                     onTap: _isFormValid ? _sendCredentials : () {},

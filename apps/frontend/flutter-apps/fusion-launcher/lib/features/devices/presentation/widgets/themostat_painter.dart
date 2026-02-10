@@ -26,7 +26,7 @@ class CompactThermostatWidget extends StatelessWidget {
         // 1. The Small Custom Painter Icon
         CustomPaint(
           // Size of the widget canvas
-          size: const Size(12, 20),
+          size: const Size(12, 24),
           painter: _ThermostatMiniPainter(
             percentage: percentage,
             color: statusColor,
@@ -37,13 +37,9 @@ class CompactThermostatWidget extends StatelessWidget {
         const SizedBox(width: 6),
 
         // 2. The Text Value
-        Text(
-          "$temperature°C",
-          style: TextStyle(
-            fontSize: 13,
-            fontWeight: FontWeight.w500,
-            color: context.colorScheme.primaryBlack,
-          ),
+        FusionAppText(
+          text: "$temperature°C",
+          style: context.textTheme.labelMedium,
         ),
       ],
     );

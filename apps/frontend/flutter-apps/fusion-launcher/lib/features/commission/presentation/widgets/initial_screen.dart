@@ -52,6 +52,7 @@ class InitialScreen extends StatelessWidget {
                     onTap: onConfigureNetwork,
                     text: "Configure Network",
                     width: 200,
+                    height: 35,
                   ),
                 ],
               ),
