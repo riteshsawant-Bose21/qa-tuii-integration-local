@@ -1,11 +1,8 @@
 import 'package:flutter/cupertino.dart';
-import 'package:flutter/material.dart';
-import 'package:fusion_launcher/core/widgets/test_library_screen.dart';
-import 'package:fusion_lib/fusion_theme/app_theme.dart';
 
-import '../../features/dashboard/presentation/pages/dashboard_page.dart';
-import '../../features/projects/presentation/project_work_area.dart';
 import '../../features/authentication/launcher_sign_in_page.dart';
+import '../../features/home/presentation/pages/launcher_home_page.dart';
+import '../../features/projects/presentation/project_work_area.dart';
 
 class Routes {
   static const String launcherSignInPage = '/launcherSignInPage';
@@ -34,18 +31,14 @@ class Routes {
       /// Project Page
       case projectPage:
         return CupertinoPageRoute<void>(
-          builder:
-              (BuildContext context) => Theme(
-                data: FusionAppTheme.lightTheme, //Theme.of(context).copyWith(brightness: Brightness.light),
-                child: const ProjectWorkArea(),
-              ),
+          builder: (BuildContext context) => const ProjectWorkArea(),
           settings: const RouteSettings(name: projectPage),
         );
 
       /// My Library Page
       case mylibraryPage:
         return CupertinoPageRoute<void>(
-          builder: (BuildContext context) => TestLibraryScreen(),
+          builder: (BuildContext context) => const LauncherSignInPage(),
           settings: const RouteSettings(name: mylibraryPage),
         );
 

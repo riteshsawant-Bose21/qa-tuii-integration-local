@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:archive/archive_io.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:path/path.dart' as path;
@@ -290,6 +291,75 @@ class LocalProjectManager {
     } catch (e) {
       FusionLogger.log(tag: LogTag.project, message: 'Error saving projects: $e', logLevel: LogLevel.error);
       return ResponseCallback.failure('Error saving projects: $e');
+    }
+  }
+
+  //import project by zip file and extract to fusion project directory
+  Future<ResponseCallback<bool>> importProject(File zipFile) async {
+    try {
+      final Directory fusionDir = await fusionProjectDirectory;
+
+      // Get zip file name without extension
+      final String zipFileName = path.basenameWithoutExtension(zipFile.path);
+
+      // 1. Run extraction in a background isolate to prevent UI freeze
+      await compute(_extractZipInBackground, {
+        'zipPath': zipFile.path,
+        'destinationPath': fusionDir.path,
+        'folderName': zipFileName,
+      });
+
+      return ResponseCallback.success(true);
+    } catch (e) {
+      FusionLogger.log(
+        tag: LogTag.project,
+        message: 'Error importing project: $e',
+        logLevel: LogLevel.error,
+      );
+      return ResponseCallback.failure('Error importing project: $e');
+    }
+  }
+
+  // 2. This must be a top-level function or a static method
+  Future<void> _extractZipInBackground(Map<String, String> params) async {
+    final String zipPath = params['zipPath']!;
+    final String destinationPath = params['destinationPath']!;
+    final String folderName = params['folderName']!;
+
+    try {
+      // Create the outer folder with zip file name
+      final String projectFolderPath = '$destinationPath/$folderName';
+      final projectFolder = Directory(projectFolderPath);
+
+      // Delete if already exists to avoid conflicts
+      if (await projectFolder.exists()) {
+        await projectFolder.delete(recursive: true);
+      }
+
+      await projectFolder.create(recursive: true);
+
+      // Read the zip file
+      final bytes = File(zipPath).readAsBytesSync();
+      final archive = ZipDecoder().decodeBytes(bytes);
+
+      // Extract files into the project folder
+      for (final file in archive) {
+        final filename = file.name;
+        final filePath = '$projectFolderPath/$filename';
+
+        if (file.isFile) {
+          final outFile = File(filePath);
+          outFile.createSync(recursive: true);
+          outFile.writeAsBytesSync(file.content as List<int>);
+        } else {
+          Directory(filePath).createSync(recursive: true);
+        }
+      }
+
+      print("Project extracted to $projectFolderPath from $zipPath");
+    } catch (e) {
+      print("Error extracting zip: $e");
+      rethrow;
     }
   }
 

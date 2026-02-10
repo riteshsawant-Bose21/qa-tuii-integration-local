@@ -582,6 +582,7 @@ class _FloorPlanCalibratorState extends State<FloorPlanCalibrator> {
                       hintStyle: TextStyle(
                         color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
                       ),
+                      fillColor: context.colorScheme.elevation1,
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(6),
                         borderSide: BorderSide(
@@ -623,6 +624,7 @@ class _FloorPlanCalibratorState extends State<FloorPlanCalibrator> {
                   options: MeasurementUnit.values.map((u) => '${u.displayName} (${u.symbol})').toList(),
                   isDense: true,
                   decoration: InputDecoration(
+                    fillColor: context.colorScheme.elevation1,
                     isDense: true,
                     contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
                     border: OutlineInputBorder(
@@ -779,6 +781,7 @@ class _FloorPlanCalibratorState extends State<FloorPlanCalibrator> {
                   label: FusionStrings.confirmButton,
                   width: 120,
                   height: 36,
+                  activeBackgroundColor: context.colorScheme.primaryColor,
                   onTap: () {
                     log("$_startPointNormalized   $_endPointNormalized && ${_distanceController.text.trim().isNotEmpty}");
                     if (_startPointNormalized != null && _endPointNormalized != null && _distanceController.text.trim().isNotEmpty) {

@@ -60,7 +60,7 @@ class SpeakerQueryPopupState extends State<SpeakerQueryPopup> {
         constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.8),
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: context.colorScheme.surface,
+          color: context.colorScheme.elevation1,
           borderRadius: BorderRadius.circular(12),
         ),
         child: Row(

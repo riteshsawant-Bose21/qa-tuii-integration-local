@@ -116,8 +116,8 @@ class _SnapshotActionRowDataState extends State<SnapshotActionRowData> {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
       decoration: BoxDecoration(
-        color: colorScheme.white,
-        border: Border(bottom: BorderSide(color: colorScheme.grey)),
+        color: colorScheme.primaryBlack,
+        border: Border(bottom: BorderSide(color: colorScheme.elevation1)),
       ),
       child: Row(
         spacing: 12,
@@ -140,21 +140,20 @@ class _SnapshotActionRowDataState extends State<SnapshotActionRowData> {
         width: 30,
         child: Opacity(
           opacity: 0.4,
-          child: Icon(Icons.drag_handle, size: 16, color: Colors.grey[600]),
+          child: Icon(Icons.drag_indicator, size: 16, color: context.colorScheme.iconWhite),
         ),
       ),
     );
   }
 
   Widget _buildActionTypeDropdown(SceneActionModel action) {
-    final bool isInSceneSet = _projectViewModel.getSceneSetForSnapshot(snapshotId: _projectViewModel.selectedSnapshotId!) != null;
     return Expanded(
       child: SemanticHelper.button(
         testId: SemanticHelper.createTestId(SemanticTypes.button, "snapshot_action_type_${widget.index}"),
         child: FusionDropdown<SceneActionType>(
           value: action.actionType,
           hint: "Select Action Type",
-          items: _projectViewModel.getSceneActionTypes(isFromSnapshot: !isInSceneSet),
+          items: _projectViewModel.getSceneActionTypes(isFromSnapshot: true),
           display: (SceneActionType e) => e.displayName,
           onChanged: _updateActionType,
         ),
@@ -251,10 +250,11 @@ class _SnapshotActionRowDataState extends State<SnapshotActionRowData> {
             testId: SemanticHelper.createTestId(SemanticTypes.button, "snapshot_action_delete_${widget.index}"),
             child: GestureDetector(
               onTap: _deleteAction,
-              child: const FusionImage.asset(
+              child: FusionImage.asset(
                 Assets.deleteIcon,
                 width: 20,
                 height: 20,
+                assetColor: context.colorScheme.iconWhite,
                 fit: BoxFit.contain,
               ),
             ),
@@ -264,10 +264,12 @@ class _SnapshotActionRowDataState extends State<SnapshotActionRowData> {
             testId: SemanticHelper.createTestId(SemanticTypes.button, "snapshot_action_duplicate_${widget.index}"),
             child: GestureDetector(
               onTap: _duplicateAction,
-              child: const FusionImage.asset(
+              child: FusionImage.asset(
                 Assets.duplicateIcon,
                 width: 20,
                 height: 20,
+                assetColor: context.colorScheme.iconWhite,
+
                 fit: BoxFit.contain,
               ),
             ),

@@ -2,8 +2,9 @@ package cluster
 
 import (
 	"fmt"
-	"fusion-services-core/network"
+	coreNetwork "fusion-services-core/network"
 	"fusion-services-core/vip"
+
 	"fusion/internal/api"
 	"fusion-services-core/logging"
 	"fusion/internal/routes"
@@ -70,9 +71,10 @@ type Cluster struct {
 	Metrics          *MetricsCollector
 	networkLatencies *NetworkLatencyStore
 	vipMu            sync.Mutex
+	mdnsManager      *network.MDNSManager
 }
 
-func NewCluster(appConfig *api.AppConfig, delegate *ClusterDelegate, memberlist *memberlist.Memberlist) *Cluster {
+func NewCluster(appConfig *api.AppConfig, delegate *ClusterDelegate, memberlist *memberlist.Memberlist, mdnsManager *network.MDNSManager) *Cluster {
 
 	cluster := &Cluster{
 		appConfig:        appConfig,
@@ -82,6 +84,7 @@ func NewCluster(appConfig *api.AppConfig, delegate *ClusterDelegate, memberlist 
 		configPath:       configPath,
 		Metrics:          NewMetricsCollector(memberlist, delegate.stateManager),
 		networkLatencies: NewNetworkLatencyStore(maxLatencyCount, latencyPruneTime),
+		mdnsManager:      mdnsManager,
 	}
 
 	logger := logging.GetLogger()
@@ -171,20 +174,29 @@ func (c *Cluster) listenerUpdated(vipAddr, srcIP string) {
 
 	oldVIP := c.vip
 	oldHolder := c.vipHolder
+	logger.Debug("[CLUSTER] listenerUpdated called: oldVIP=%s oldHolder=%s vip=%s srcIP=%s",
+		oldVIP, oldHolder, c.vip, srcIP,
+	)
 
 	// VIP has been removed entirely
 	if newVIP == "" {
 		if oldVIP == "" {
 			// no change
+			logger.Warn("[CLUSTER] Both oldVIP and newVIP are empty - no change.")
 			return
 		}
 
-		logger.Info("VIP %s removed (old holder %s)", oldVIP, oldHolder)
+		logger.Debug("[CLUSTER] VIP %s removed (old holder %s)", oldVIP, oldHolder)
 
 		c.vip = ""
 		c.vipHolder = ""
 
 		c.notifyLocalVIPChange(false)
+		if err := c.mdnsManager.Close(); err != nil {
+			logger.Error("[Discovery] Failed to stop mDNS service: %v", err)
+		} else {
+			logger.Debug("[Discovery] mDNS service stopped successfully via manager")
+		}
 		return
 	}
 
@@ -194,15 +206,20 @@ func (c *Cluster) listenerUpdated(vipAddr, srcIP string) {
 	}
 
 	// Determine ownership
-	oldLocal := vip.IsLocalVIP(oldHolder)
-	newLocal := vip.IsLocalVIP(srcIP)
 
-	logger.Debug("VIP update: oldVIP=%s newVIP=%s oldHolder=%s newHolder=%s oldLocal=%v newLocal=%v",
-		oldVIP, newVIP, oldHolder, srcIP, oldLocal, newLocal)
+	oldLocal, err := vip.IsLocalVIP(oldHolder)
+	if err != nil {
+		logger.Error("isLocalVIP(oldHolder): %v", err)
+	}
+
+	newLocal, err := vip.IsLocalVIP(srcIP)
+	if err != nil {
+		logger.Error("isLocalVIP(srcIP): %v", err)
+	}
 
 	// VIP address changed
 	if newVIP != oldVIP {
-
+		logger.Info("VIP changed: oldVIP=%s newVIP=%s", oldVIP, newVIP)
 		if err := c.updateVIP(newVIP); err != nil {
 			logger.Error("updateVIP(%q): %v", newVIP, err)
 			return
@@ -212,16 +229,34 @@ func (c *Cluster) listenerUpdated(vipAddr, srcIP string) {
 			logger.Error("reloadVIP: %v", err)
 			return
 		}
+
+		// Parse the VIP string into net.IP before passing to mDNS manager
+		if ip := net.ParseIP(newVIP); ip == nil {
+			logger.Error("[Discovery] Invalid VIP %s for mDNS", newVIP)
+		} else {
+			if err := c.mdnsManager.StartWithVIP(ip); err != nil {
+				logger.Error("[Discovery] Failed to start mDNS service: %v", err)
+			}
+		}
 	}
 
 	c.vip = newVIP
 	c.vipHolder = srcIP
+
+	logger.Debug("VIP update: oldVIP=%s newVIP=%s oldHolder=%s newHolder=%s oldLocal=%v newLocal=%v",
+		oldVIP, newVIP, oldHolder, srcIP, oldLocal, newLocal)
 
 	// Handle ownership transition
 	switch {
 	case oldLocal && !newLocal:
 		logger.Info("VIP %s moved (was %s, now %s)", newVIP, oldHolder, srcIP)
 		c.notifyLocalVIPChange(false)
+
+		if err := c.mdnsManager.Close(); err != nil {
+			logger.Error("[Discovery] Failed to stop mDNS service: %v", err)
+		} else {
+			logger.Debug("[Discovery] mDNS service stopped successfully via manager")
+		}
 
 	case !oldLocal && newLocal:
 		logger.Debug("VIP %s gained locally (holder %s)", newVIP, srcIP)
@@ -236,13 +271,22 @@ func (c *Cluster) listenerUpdated(vipAddr, srcIP string) {
 				logger.Info("Joined memberlist with VIP %s", newVIP)
 			}
 		}
-
 		c.notifyLocalVIPChange(true)
+
+		// Parse the VIP string into net.IP before passing to mDNS manager
+		if ip := net.ParseIP(newVIP); ip == nil {
+			logger.Error("[Discovery] Invalid VIP %s for mDNS", newVIP)
+		} else {
+			if err := c.mdnsManager.StartWithVIP(ip); err != nil {
+				logger.Error("[Discovery] Failed to start mDNS service: %v", err)
+			}
+		}
 	}
 }
 
 func (c *Cluster) startVRRPListener(iface string) error {
-	if err := network.StartVRRPListener(logging.GetLogger(), c.listenerUpdated); err != nil {
+
+	if err := coreNetwork.StartVRRPListener(logging.GetLogger(), c.listenerUpdated); err != nil {
 		return fmt.Errorf("unable to start keepalived listener: %v", err)
 	}
 

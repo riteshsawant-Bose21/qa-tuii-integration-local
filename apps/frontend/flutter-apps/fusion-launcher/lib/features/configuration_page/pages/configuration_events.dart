@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:fusion_launcher/core/service_locator.dart';
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
+import 'package:fusion_lib/fusion_lib.dart';
 
 import '../widgets/events/events_panel.dart';
 import '../widgets/events/trigger_panel.dart';
@@ -25,7 +26,7 @@ class _ConfigurationEventsState extends State<ConfigurationEvents> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey[100],
+      backgroundColor: context.colorScheme.primaryBlack,
       body: LayoutBuilder(
         builder: (BuildContext context, BoxConstraints constraints) {
           final bool isWideScreen = constraints.maxWidth > 600;
@@ -34,6 +35,7 @@ class _ConfigurationEventsState extends State<ConfigurationEvents> {
             return Row(
               children: <Widget>[
                 SizedBox(width: constraints.maxWidth * 0.2, child: const EventsPanel()),
+                const SizedBox(width: 4),
                 const Expanded(child: TriggerPanel()),
               ],
             );

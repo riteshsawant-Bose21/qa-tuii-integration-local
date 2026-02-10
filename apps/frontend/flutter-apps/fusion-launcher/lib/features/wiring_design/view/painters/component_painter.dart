@@ -98,7 +98,6 @@ class ComponentPainter extends BasePainter {
     if (listeningAreaId == null) return null;
 
     final EquipLocation? area = serviceLocator<ProjectViewModel>().getEquipLocationForHardware(hardwareId: listeningAreaId);
-    print("Equipment Location Area: ${area?.name}");
     return area?.name;
   }
 

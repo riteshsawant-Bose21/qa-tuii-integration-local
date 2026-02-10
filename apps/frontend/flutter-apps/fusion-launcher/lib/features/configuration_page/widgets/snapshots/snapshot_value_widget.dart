@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:fusion_lib/fusion_lib.dart';
-import 'package:fusion_lib/fusion_theme/app_theme.dart';
 
 import '../../../../core/service_locator.dart';
 import '../../../configuration/presentation/viewmodel/project_view_model.dart';
@@ -45,7 +44,7 @@ class _SnapshotValueWidgetState extends State<SnapshotValueWidget> {
               Icon(
                 isMute ? Icons.volume_off : Icons.volume_up,
                 size: 20,
-                color: Theme.of(context).colorScheme.greyDark,
+                color: context.colorScheme.primaryWhite,
               ),
               const SizedBox(width: 8),
               FusionAppText(
@@ -67,18 +66,17 @@ class _SnapshotValueWidgetState extends State<SnapshotValueWidget> {
                 data: SliderTheme.of(context).copyWith(
                   thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6),
                   overlayShape: const RoundSliderOverlayShape(overlayRadius: 4),
-                  trackHeight: 1,
-                  thumbColor: Theme.of(context).colorScheme.greyDark,
+                  trackHeight: 2,
+                  thumbColor: context.colorScheme.primaryWhite,
                 ),
                 child: Slider(
                   value: currentValue,
                   padding: EdgeInsets.zero,
-                  activeColor: Theme.of(context).colorScheme.greyDark,
-                  inactiveColor: Theme.of(context).colorScheme.grey,
+                  activeColor: context.colorScheme.elevation2,
+                  inactiveColor: context.colorScheme.primaryWhite,
                   min: 0,
                   max: 100,
                   divisions: 100,
-
                   label: currentValue.toStringAsFixed(0),
                   onChanged: (double v) {
                     final SceneValue updated = value.copyWith(value: v.toString());
@@ -95,7 +93,7 @@ class _SnapshotValueWidgetState extends State<SnapshotValueWidget> {
               alignment: Alignment.center,
               padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 3),
               decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.greyLight,
+                color: context.colorScheme.elevation1,
                 borderRadius: BorderRadius.circular(2),
               ),
               child: FusionAppText(text: currentValue.toStringAsFixed(0), style: Theme.of(context).textTheme.bodySmall?.copyWith(fontSize: 9)),
@@ -166,34 +164,14 @@ class _SnapshotValueWidgetState extends State<SnapshotValueWidget> {
       case SceneParamValueType.onOffButton:
         final bool isOn = value.value == "on";
 
-        return SizedBox(
-          height: 12,
-          child: Transform.scale(
-            scale: 0.8,
-            child: Switch(
-              value: isOn,
-              padding: EdgeInsets.zero,
-              materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-              thumbColor: MaterialStateProperty.resolveWith<Color>((Set<MaterialState> states) {
-                if (states.contains(MaterialState.selected)) {
-                  return Theme.of(context).colorScheme.white;
-                }
-                return Theme.of(context).colorScheme.greyDark;
-              }),
-              trackColor: MaterialStateProperty.resolveWith<Color>((Set<MaterialState> states) {
-                if (states.contains(MaterialState.selected)) {
-                  return Theme.of(context).colorScheme.greyDark;
-                }
-                return Theme.of(context).colorScheme.grey;
-              }),
-              trackOutlineColor: MaterialStateProperty.all(Colors.transparent),
-              onChanged: (bool v) {
-                final SceneValue updated = value.copyWith(value: v ? "on" : "off");
-                widget.onChanged(updated);
-                setState(() {});
-              },
-            ),
-          ),
+        return FusionSwitch(
+          value: isOn,
+          height: 22,
+          width: 36,
+          onChanged: (bool v) {
+            final SceneValue updated = value.copyWith(value: v ? "on" : "off");
+            widget.onChanged(updated);
+          },
         );
       case SceneParamValueType.pulse:
 
@@ -206,37 +184,17 @@ class _SnapshotValueWidgetState extends State<SnapshotValueWidget> {
         return Row(
           children: <Widget>[
             /// Enable/Disable Switch
-            SizedBox(
-              height: 12,
-              child: Transform.scale(
-                scale: 0.8,
-                child: Switch(
-                  value: isEnabled,
-                  padding: EdgeInsets.zero,
-                  materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                  thumbColor: MaterialStateProperty.resolveWith<Color>((Set<MaterialState> states) {
-                    if (states.contains(MaterialState.selected)) {
-                      return Theme.of(context).colorScheme.white;
-                    }
-                    return Theme.of(context).colorScheme.greyDark;
-                  }),
-                  trackColor: MaterialStateProperty.resolveWith<Color>((Set<MaterialState> states) {
-                    if (states.contains(MaterialState.selected)) {
-                      return Theme.of(context).colorScheme.greyDark;
-                    }
-                    return Theme.of(context).colorScheme.grey;
-                  }),
-                  trackOutlineColor: MaterialStateProperty.all(Colors.transparent),
-                  onChanged: (bool val) {
-                    final String newValue = "${val ? 'true' : 'false'}:$duration";
-                    print("new vwaluw = = > $newValue");
+            FusionSwitch(
+              value: isEnabled,
+              height: 22,
+              width: 36,
+              onChanged: (bool val) {
+                final String newValue = "${val ? 'true' : 'false'}:$duration";
+                print("new vwaluw = = > $newValue");
 
-                    final SceneValue updated = value.copyWith(value: newValue);
-                    widget.onChanged(updated);
-                    setState(() {});
-                  },
-                ),
-              ),
+                final SceneValue updated = value.copyWith(value: newValue);
+                widget.onChanged(updated);
+              },
             ),
 
             const SizedBox(width: 8),
@@ -253,12 +211,25 @@ class _SnapshotValueWidgetState extends State<SnapshotValueWidget> {
                     // enabled: isEnabled,
                     keyboardType: TextInputType.number,
                     decoration: InputDecoration(
-                      border: OutlineInputBorder(borderSide: BorderSide(color: context.colorScheme.dividerColor)),
-                      isDense: true,
+                      hintStyle: Theme.of(context).inputDecorationTheme.hintStyle,
+                      counterText: '',
+                      fillColor: context.colorScheme.elevation2,
+                      filled: true,
+                      labelStyle: context.textTheme.bodySmall,
                       labelText: "Duration (ms)",
-                      labelStyle: const TextStyle(fontSize: 10),
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    ),
+
+                      border: const OutlineInputBorder(borderSide: BorderSide(color: Colors.transparent)),
+                      enabledBorder: const OutlineInputBorder(borderSide: BorderSide(color: Colors.transparent)),
+                      focusedBorder: const OutlineInputBorder(borderSide: BorderSide(color: Colors.transparent)),
+                      isDense: true,
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 2, vertical: 4),
+                    ), // decoration: InputDecoration(
+                    //   border: OutlineInputBorder(borderSide: BorderSide(color: context.colorScheme.elevation1)),
+                    //   isDense: true,
+                    //   labelText: "Duration (ms)",
+                    //   labelStyle: context.textTheme.bodySmall,
+                    //   contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    // ),
                     onChanged: (String v) {
                       /// Ensure only valid numbers are accepted
                       final String sanitizedValue = v.replaceAll(RegExp(r'[^0-9]'), '');

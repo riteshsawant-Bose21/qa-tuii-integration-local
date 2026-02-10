@@ -71,7 +71,7 @@ class _AddSpeakersMenuState extends State<AddSpeakersMenu> {
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(8),
       ),
-      color: Theme.of(context).colorScheme.white,
+      color: Theme.of(context).colorScheme.primaryWhite,
       menuPadding: EdgeInsets.zero,
       itemBuilder: (BuildContext context) {
         return <PopupMenuEntry<dynamic>>[
@@ -111,10 +111,10 @@ class _AddSpeakersMenuState extends State<AddSpeakersMenu> {
                                   decoration: BoxDecoration(
                                     borderRadius: BorderRadius.circular(4),
                                     border: Border.all(
-                                      color: speakerData?.sku == item.sku ? Colors.black : Theme.of(context).colorScheme.grey,
+                                      color: speakerData?.sku == item.sku ? Colors.black : context.colorScheme.primaryBlack,
                                       width: 1,
                                     ),
-                                    color: speakerData?.sku == item.sku ? Theme.of(context).colorScheme.grey : null,
+                                    color: speakerData?.sku == item.sku ? context.colorScheme.primaryBlack : null,
                                   ),
                                   child: Row(
                                     children: <Widget>[
@@ -257,7 +257,7 @@ class _AddSpeakersMenuState extends State<AddSpeakersMenu> {
                                     width: double.infinity,
                                     textStyle: Theme.of(
                                       context,
-                                    ).textTheme.labelLarge?.copyWith(fontSize: 10, color: Theme.of(context).colorScheme.fusionButtonTextColor),
+                                    ).textTheme.labelLarge?.copyWith(fontSize: 10, color: context.colorScheme.primaryBlack),
 
                                     label: "Save",
                                     isActive: speakerData != null && _selectedListeningAreaIds.isNotEmpty,

@@ -67,6 +67,16 @@ extension ListeningAreaViewModel on ProjectViewModel {
     }
   }
 
+  List<ListeningArea> getListeningAreasForCurrentFloor() {
+    try {
+      final String currentSelectedFloorId = currentFloor.id;
+      return getListeningAreasForFloor(floorId: currentSelectedFloorId);
+    } catch (e) {
+      FusionLogger.log(tag: LogTag.project, message: "Failed to get floor listening areas: $e");
+      return <ListeningArea>[];
+    }
+  }
+
   Zone? getZonesForListeningArea({required String areaId}) {
     try {
       return projectManager.getZoneForListeningArea(areaId);

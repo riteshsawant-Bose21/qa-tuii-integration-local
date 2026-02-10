@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:fusion_launcher/core/assets/asset_svg.dart';
+import 'package:fusion_launcher/features/projects/widget/building/side_panel_widgets/schematic_properties.dart';
 import 'package:fusion_lib/fusion_lib.dart';
-import 'package:fusion_lib/fusion_theme/app_theme.dart';
 
 import '../../../../core/service_locator.dart';
 import '../../../configuration/presentation/viewmodel/project_view_model.dart';
@@ -43,11 +44,7 @@ class _CreateNewLocationWidgetState extends State<CreateNewLocationWidget> {
   @override
   Widget build(BuildContext context) {
     return Container(
-      decoration: BoxDecoration(
-        border: Border(
-          top: BorderSide(color: Colors.grey[300]!),
-        ),
-      ),
+      decoration: BoxDecoration(border: Border(top: BorderSide(color: context.colorScheme.elevation2))),
       child: Column(
         children: <Widget>[
           /// Header
@@ -73,10 +70,13 @@ class _CreateNewLocationWidgetState extends State<CreateNewLocationWidget> {
                         ),
                       ),
                     ),
-                    Icon(
-                      _isExpanded ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
-                      size: 20,
-                      color: Colors.grey[600],
+                    RotatedBox(
+                      quarterTurns: _isExpanded ? 0 : 2,
+                      child: FusionSvgIcon(
+                        icon: AssetSvg.expandUp,
+                        size: FusionSizes.iconSize12,
+                        color: context.colorScheme.primaryWhite,
+                      ),
                     ),
                   ],
                 ),
@@ -90,7 +90,6 @@ class _CreateNewLocationWidgetState extends State<CreateNewLocationWidget> {
               testId: SemanticHelper.createTestId(SemanticTypes.container, "create_new_location_form_container"),
               child: Container(
                 padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(color: Colors.grey[50]),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: <Widget>[
@@ -110,13 +109,13 @@ class _CreateNewLocationWidgetState extends State<CreateNewLocationWidget> {
                       child: Container(
                         height: 26,
                         decoration: BoxDecoration(
-                          color: Theme.of(context).colorScheme.white,
-                          border: Border.all(color: Colors.grey[300]!),
+                          // color: Theme.of(context).colorScheme.primaryWhite,
+                          border: Border.all(color: context.colorScheme.elevation2),
                           borderRadius: BorderRadius.circular(4),
                         ),
                         child: DropdownButtonHideUnderline(
                           child: DropdownButton<String>(
-                            dropdownColor: Theme.of(context).colorScheme.white,
+                            dropdownColor: context.colorScheme.elevation1,
                             hint: FusionAppText(
                               text: "Select floor",
                               style: Theme.of(context).textTheme.bodySmall?.copyWith(
@@ -168,13 +167,9 @@ class _CreateNewLocationWidgetState extends State<CreateNewLocationWidget> {
 
                     SemanticHelper.formControl(
                       testId: SemanticHelper.createTestId(SemanticTypes.textInput, "create_new_location_location_name_field"),
-                      child: FusionTextField(
+                      child: PropertyTextField(
                         controller: widget.areaNameController,
                         hintText: "Enter location name",
-                        decoration: FusionInputDecoration.fusionDense(
-                          colorScheme: Theme.of(context).colorScheme,
-                          hintText: 'Enter location name',
-                        ),
                         onChanged: (String value) {
                           widget.setDropdownState(() {});
                         },
@@ -190,6 +185,8 @@ class _CreateNewLocationWidgetState extends State<CreateNewLocationWidget> {
                         child: FusionButton(
                           height: 32,
                           label: "Add",
+                          activeBackgroundColor: context.colorScheme.primaryColor,
+                          textStyle: context.textTheme.labelMedium?.copyWith(color: Colors.white),
                           isActive: widget.areaNameController.text.trim().isNotEmpty && _selectedFloorId.isNotEmpty,
                           onTap: () {
                             widget.onCreateNewArea(

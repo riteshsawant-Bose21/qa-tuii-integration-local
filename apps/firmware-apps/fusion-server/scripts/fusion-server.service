@@ -1,11 +1,13 @@
 # Fusion fusion-server service file
 [Unit]
 Description=Fusion Server
-After=network-online.target
+After=network-online.target keepalived.service
 Wants=network-online.target
+Requires=keepalived.service
 
 [Service]
 Type=simple
+Environment=FUSION_NET_IFACE=lan1
 ExecStart=/usr/local/bin/fusion-server-start.sh
 Restart=always
 RestartSec=5

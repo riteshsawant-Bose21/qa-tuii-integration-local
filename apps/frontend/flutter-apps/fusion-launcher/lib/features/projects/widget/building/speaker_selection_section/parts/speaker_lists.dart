@@ -6,7 +6,6 @@ import 'package:fusion_launcher/features/configuration/presentation/viewmodel/pr
 import 'package:fusion_launcher/features/projects/widget/building/speaker_selection_section/view_model/product_query_view_model.dart';
 import 'package:fusion_launcher/features/projects/widget/building/widgets/grid_view.dart';
 import 'package:fusion_lib/fusion_lib.dart';
-import 'package:fusion_lib/fusion_theme/app_theme.dart';
 import 'package:fusion_lib/product_data/models/models.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
@@ -44,6 +43,8 @@ class ProductQuerySpeakerList extends StatelessWidget {
             onChanged: (String value) => speakerSelectionViewModel.setSearchQuery(value),
           ),
         ),
+        const SizedBox(height: 10),
+
         const SizedBox(height: 10),
         Row(
           children: <Widget>[
@@ -183,7 +184,7 @@ class ProductQuerySpeakerList extends StatelessWidget {
         ),
 
         const SizedBox(height: 10),
-        const Divider(thickness: 0.5, height: 0),
+        Divider(thickness: 0.5, height: 0, color: context.colorScheme.strokeLight),
 
         BlocBuilder<ProjectViewModel, ProjectViewModelState>(
           builder: (BuildContext context, ProjectViewModelState projectViewModelState) {
@@ -311,6 +312,10 @@ class _SpeakerCardState extends State<SpeakerCard> {
       (String key, List<String> values) {
         if (values.isNotEmpty) {
           final String assetImagePath = context.read<ProductQueryViewModel>().getImagePath(values.first);
+          // log("key: $key : ${values.first}");
+          // final String? assetImagePath = context.read<ProductQueryViewModel>().getImagePath(widget.product.productId, key);
+          // final String assetImagePath = context.read<ProductQueryViewModel>().cachedImages[widget.product.productId]?[key] ?? '';
+          // final String assetImageName = context.read<ProductQueryViewModel>().getImageName(values.first);
 
           final SpeakerColor speakerColor = SpeakerColor.getValueBasedOnKey(key);
           if (filterColors.isEmpty || filterColors.contains(speakerColor)) {
@@ -564,7 +569,7 @@ class _SpeakerCardState extends State<SpeakerCard> {
                                     child: Container(
                                       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                                       decoration: BoxDecoration(
-                                        color: context.colorScheme.onSurface.withValues(alpha: 0.4),
+                                        color: context.colorScheme.elevation3,
                                         borderRadius: BorderRadius.circular(60),
                                       ),
                                       child: Row(
@@ -574,14 +579,15 @@ class _SpeakerCardState extends State<SpeakerCard> {
                                           FusionAppText(
                                             text: colorVarient.color.displayName,
                                             style: context.textTheme.labelSmall?.copyWith(
-                                              color: Colors.white,
+                                              color: context.colorScheme.textPrimary,
                                               fontSize: 7,
                                             ),
                                           ),
                                           if (isSelected)
-                                            const Icon(
+                                            Icon(
                                               Icons.check,
                                               size: 12,
+                                              color: context.colorScheme.textPrimary,
                                             ),
                                         ],
                                       ),
@@ -596,16 +602,17 @@ class _SpeakerCardState extends State<SpeakerCard> {
                     ),
                     SemanticHelper.button(
                       testId: SemanticHelper.createTestId(SemanticTypes.button, "add_speaker_button_${widget.index}"),
-                      child: NeumorphicDarkButton(
+                      child: FusionNeumorphicButton(
                         height: 24,
                         width: 24,
                         borderRadius: 6,
-                        backgroundColor: widget.isSelected ? FusionDarkColorPallette.green20 : null,
+                        color: widget.isSelected ? FusionDarkColorPallette.green20 : context.colorScheme.elevation2,
                         child: Icon(
                           LucideIcons.plus,
                           size: 12,
-                          color: context.colorScheme.onSurface,
+                          color: widget.isSelected ? Colors.white : context.colorScheme.textPrimary,
                         ),
+                        // text: "Add Speaker",
                         onTap: () {
                           context.read<SpeakerSelectionViewModel>().addOrReplaceSpeaker(
                             context: context,

@@ -1,11 +1,13 @@
+import 'dart:developer';
+
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart' show TextInputFormatter, FilteringTextInputFormatter;
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:fusion_launcher/core/assets/asset_svg.dart';
 import 'package:fusion_launcher/core/service_locator.dart';
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
 import 'package:fusion_lib/fusion_lib.dart';
-import 'package:fusion_lib/fusion_theme/app_theme.dart';
 
 // ignore: constant_identifier_names
 const int _MAX_SPEAKER_COUNT = 25;
@@ -99,6 +101,7 @@ class SchematicPropertiesState extends State<SchematicProperties> {
     final ProjectViewModel projectViewModel = context.read<ProjectViewModel>();
 
     late final HardwareComponent? selectedDevice;
+    bool isFromBuildingPage = false;
 
     String? assetImagePath;
     if (selectedItem!.type == SelectedItemType.circuit) {
@@ -106,7 +109,18 @@ class SchematicPropertiesState extends State<SchematicProperties> {
 
       if (speakers.isEmpty) return const _NoPropertiesWidget();
       selectedDevice = speakers.first;
-      assetImagePath = selectedDevice.assetImagePath;
+      // assetImagePath = selectedDevice.assetImagePath;
+      assetImagePath =
+          serviceLocator<ProjectViewModel>().getHardwareImage(
+            productId: speakers.first.productId ?? 0,
+            currentImagePath: speakers.isNotEmpty ? speakers.first.assetImagePath : '',
+          ) ??
+          "";
+
+      print(" speakers.first.addedFromBuildingPage => ${speakers.first.addedFromBuildingPage}");
+
+      // is added from building page
+      isFromBuildingPage = speakers.first.addedFromBuildingPage;
     } else {
       selectedDevice = projectViewModel.getHardware(hardwareId: selectedItem.id);
       assetImagePath = selectedDevice?.assetImagePath;
@@ -128,7 +142,7 @@ class SchematicPropertiesState extends State<SchematicProperties> {
             : '1';
 
     return Padding(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(16.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         spacing: 10,
@@ -165,48 +179,48 @@ class SchematicPropertiesState extends State<SchematicProperties> {
                 ),
               ),
               Expanded(
-                child: Builder(
-                  builder: (BuildContext context) {
-                    return TextField(
-                      controller: propertyModelNameController,
-                      maxLines: 1,
-                      textInputAction: TextInputAction.done,
-                      onTapOutside: (PointerDownEvent event) {
-                        final String value = propertyModelNameController.text.trim();
-                        if (value.isEmpty) return FusionToast.error(context, message: "Name should not be empty");
+                child: SemanticHelper.button(
+                  testId: SemanticHelper.createTestId(SemanticTypes.textInput, 'property_name_input'),
+                  child: Builder(
+                    builder: (BuildContext context) {
+                      return PropertyTextField(
+                        controller: propertyModelNameController,
+                        hintText: 'Enter name',
+                        onTapOutside: (PointerDownEvent event) {
+                          final String value = propertyModelNameController.text.trim();
+                          if (value.isEmpty) return FusionToast.error(context, message: "Name should not be empty");
 
-                        if (selectedItem.type == SelectedItemType.zone) {
-                          final Zone? zone = projectViewModel.getZone(zoneId: selectedItem.id);
-                          projectViewModel.updateZone(zone: zone!.copyWith(name: value));
-                        } else if (selectedItem.type == SelectedItemType.subzone) {
-                          final SubZone? subzone = projectViewModel.getSubZone(subZoneId: selectedItem.id);
-                          projectViewModel.updateSubZone(subZone: subzone!.copyWith(name: value));
-                        } else {
-                          final HardwareComponent hardware = selectedDevice!.copyWith(name: value);
-                          projectViewModel.updateHardware(hardware: hardware);
-                        }
-                      },
-                      onSubmitted: (String value) {
-                        if (value.trim().isEmpty) {
-                          return FusionToast.error(context, message: "Name should not be empty");
-                        } else if (selectedItem.type == SelectedItemType.zone) {
-                          final Zone? zone = projectViewModel.getZone(zoneId: selectedItem.id);
-                          projectViewModel.updateZone(zone: zone!.copyWith(name: value));
-                        } else if (selectedItem.type == SelectedItemType.subzone) {
-                          final SubZone? subzone = projectViewModel.getSubZone(subZoneId: selectedItem.id);
-                          projectViewModel.updateSubZone(subZone: subzone!.copyWith(name: value));
-                        } else if (selectedItem.type == SelectedItemType.circuit) {
-                          final CircuitModel? circuit = projectViewModel.getCircuitById(circuitId: selectedItem.id);
-                          projectViewModel.updateCircuit(circuit: circuit!.copyWith(name: value));
-                        } else {
-                          final HardwareComponent hardware = selectedDevice!.copyWith(name: value);
-                          projectViewModel.updateHardware(hardware: hardware);
-                        }
-                      },
-                      style: Theme.of(context).textTheme.bodySmall,
-                      decoration: const InputDecoration.collapsed(hintText: 'Enter model name'),
-                    );
-                  },
+                          if (selectedItem.type == SelectedItemType.zone) {
+                            final Zone? zone = projectViewModel.getZone(zoneId: selectedItem.id);
+                            projectViewModel.updateZone(zone: zone!.copyWith(name: value));
+                          } else if (selectedItem.type == SelectedItemType.subzone) {
+                            final SubZone? subzone = projectViewModel.getSubZone(subZoneId: selectedItem.id);
+                            projectViewModel.updateSubZone(subZone: subzone!.copyWith(name: value));
+                          } else {
+                            final HardwareComponent hardware = selectedDevice!.copyWith(name: value);
+                            projectViewModel.updateHardware(hardware: hardware);
+                          }
+                        },
+                        onSubmitted: (String value) {
+                          if (value.trim().isEmpty) {
+                            return FusionToast.error(context, message: "Name should not be empty");
+                          } else if (selectedItem.type == SelectedItemType.zone) {
+                            final Zone? zone = projectViewModel.getZone(zoneId: selectedItem.id);
+                            projectViewModel.updateZone(zone: zone!.copyWith(name: value));
+                          } else if (selectedItem.type == SelectedItemType.subzone) {
+                            final SubZone? subzone = projectViewModel.getSubZone(subZoneId: selectedItem.id);
+                            projectViewModel.updateSubZone(subZone: subzone!.copyWith(name: value));
+                          } else if (selectedItem.type == SelectedItemType.circuit) {
+                            final CircuitModel? circuit = projectViewModel.getCircuitById(circuitId: selectedItem.id);
+                            projectViewModel.updateCircuit(circuit: circuit!.copyWith(name: value));
+                          } else {
+                            final HardwareComponent hardware = selectedDevice!.copyWith(name: value);
+                            projectViewModel.updateHardware(hardware: hardware);
+                          }
+                        },
+                      );
+                    },
+                  ),
                 ),
               ),
             ],
@@ -228,77 +242,83 @@ class SchematicPropertiesState extends State<SchematicProperties> {
                       ),
                     ),
                     Flexible(
-                      child: PopupMenuButton<String>(
-                        position: PopupMenuPosition.under,
-                        shadowColor: Colors.transparent,
-                        color: Colors.white,
-                        shape: const RoundedRectangleBorder(
-                          borderRadius: BorderRadius.all(Radius.circular(6)),
-                          side: BorderSide(color: Colors.black12),
-                        ),
-                        surfaceTintColor: Colors.transparent,
-                        tooltip: "Select zone color",
-                        child: Container(
-                          height: 24,
-                          width: 24,
-                          alignment: Alignment.centerLeft,
-                          decoration: BoxDecoration(
-                            color: zone.color,
-                            borderRadius: BorderRadius.circular(4),
+                      child: SemanticHelper.button(
+                        testId: SemanticHelper.createTestId(SemanticTypes.dropdown, 'zone_color_selector'),
+                        child: PopupMenuButton<String>(
+                          position: PopupMenuPosition.under,
+                          shadowColor: Colors.transparent,
+                          color: Colors.white,
+                          shape: const RoundedRectangleBorder(
+                            borderRadius: BorderRadius.all(Radius.circular(6)),
+                            side: BorderSide(color: Colors.black12),
                           ),
-                        ),
-                        itemBuilder: (BuildContext context) {
-                          return <PopupMenuEntry<String>>[
-                            PopupMenuItem<String>(
-                              enabled: false,
-                              child: Builder(
-                                builder: (BuildContext context) {
-                                  final Zone? selectedZone = projectViewModel.getZone(zoneId: selectedItem.id);
-                                  final Color? selectedColor = selectedZone?.color;
-
-                                  return Wrap(
-                                    children: <Widget>[
-                                      ...Zone.zoneColors.map(
-                                        (String hexCode) {
-                                          final Color color = hexToColor(hexCode);
-                                          final bool isSelected = selectedColor == color;
-
-                                          return GestureDetector(
-                                            onTap: () {
-                                              if (selectedZone == null) return;
-                                              projectViewModel.updateZone(zone: selectedZone.copyWith(zoneColor: hexCode));
-                                              Navigator.of(context).pop();
-                                            },
-                                            child: Container(
-                                              height: 24,
-                                              width: 24,
-                                              margin: const EdgeInsets.all(1),
-                                              decoration: BoxDecoration(
-                                                color: color,
-                                                borderRadius: BorderRadius.circular(4),
-                                                border: isSelected ? Border.all(color: Theme.of(context).colorScheme.greyDark, width: 2) : null,
-                                              ),
-                                              child:
-                                                  isSelected
-                                                      ? Container(
-                                                        decoration: BoxDecoration(
-                                                          color: Theme.of(context).colorScheme.greyDark.withOpacity(0.2),
-                                                          borderRadius: BorderRadius.circular(4),
-                                                        ),
-                                                        child: const Icon(Icons.check, color: Colors.white, size: 16),
-                                                      )
-                                                      : null,
-                                            ),
-                                          );
-                                        },
-                                      ),
-                                    ],
-                                  );
-                                },
-                              ),
+                          surfaceTintColor: Colors.transparent,
+                          tooltip: "Select zone color",
+                          child: Container(
+                            height: 24,
+                            width: 24,
+                            alignment: Alignment.centerLeft,
+                            decoration: BoxDecoration(
+                              color: zone.color,
+                              borderRadius: BorderRadius.circular(4),
                             ),
-                          ];
-                        },
+                          ),
+                          itemBuilder: (BuildContext context) {
+                            return <PopupMenuEntry<String>>[
+                              PopupMenuItem<String>(
+                                enabled: false,
+                                child: Builder(
+                                  builder: (BuildContext context) {
+                                    final Zone? selectedZone = projectViewModel.getZone(zoneId: selectedItem.id);
+                                    final Color? selectedColor = selectedZone?.color;
+
+                                    return Wrap(
+                                      children: <Widget>[
+                                        ...Zone.zoneColors.map(
+                                          (String hexCode) {
+                                            final Color color = hexToColor(hexCode);
+                                            final bool isSelected = selectedColor == color;
+
+                                            return SemanticHelper.button(
+                                              testId: SemanticHelper.createTestId(SemanticTypes.dropdownItem, 'zone_color_$hexCode'),
+                                              child: GestureDetector(
+                                                onTap: () {
+                                                  if (selectedZone == null) return;
+                                                  projectViewModel.updateZone(zone: selectedZone.copyWith(zoneColor: hexCode));
+                                                  Navigator.of(context).pop();
+                                                },
+                                                child: Container(
+                                                  height: 24,
+                                                  width: 24,
+                                                  margin: const EdgeInsets.all(1),
+                                                  decoration: BoxDecoration(
+                                                    color: color,
+                                                    borderRadius: BorderRadius.circular(4),
+                                                    border: isSelected ? Border.all(color: context.colorScheme.primaryBlack, width: 2) : null,
+                                                  ),
+                                                  child:
+                                                      isSelected
+                                                          ? Container(
+                                                            decoration: BoxDecoration(
+                                                              color: context.colorScheme.primaryBlack.withOpacity(0.2),
+                                                              borderRadius: BorderRadius.circular(4),
+                                                            ),
+                                                            child: const Icon(Icons.check, color: Colors.white, size: 16),
+                                                          )
+                                                          : null,
+                                                ),
+                                              ),
+                                            );
+                                          },
+                                        ),
+                                      ],
+                                    );
+                                  },
+                                ),
+                              ),
+                            ];
+                          },
+                        ),
                       ),
                     ),
                   ],
@@ -324,6 +344,7 @@ class SchematicPropertiesState extends State<SchematicProperties> {
                 Expanded(
                   child: FusionAppText(
                     text: selectedDevice?.hardwareName ?? '',
+                    semanticId: "hardware_model_name",
                     style: Theme.of(context).textTheme.bodySmall,
                   ),
                 ),
@@ -331,7 +352,13 @@ class SchematicPropertiesState extends State<SchematicProperties> {
             ),
           ],
 
-          if ((selectedItem.type == SelectedItemType.circuit && isListingViewMode)) ...<Widget>[
+          /// Speaker Quantity for Circuit only in Listing Mode and not from Building Page
+          /// (As per the requirement)
+          ///
+          /// For other types, speaker quantity is not applicable.
+          ///
+          /// For circuit added from building page, speaker quantity modification is disabled.
+          if ((selectedItem.type == SelectedItemType.circuit && isListingViewMode && !isFromBuildingPage)) ...<Widget>[
             Row(
               spacing: 3,
               children: <Widget>[
@@ -345,51 +372,44 @@ class SchematicPropertiesState extends State<SchematicProperties> {
                   child: Row(
                     spacing: 3,
                     children: <Widget>[
-                      GestureDetector(
-                        child: const Icon(Icons.remove, size: 17),
-                        onTap: () => speakerQtyModify(shouldIncrement: false),
-                      ),
-                      Flexible(
-                        child: Container(
-                          width: 36,
-                          height: 26,
-                          alignment: Alignment.center,
-                          decoration: BoxDecoration(
-                            border: Border.all(color: Colors.grey.shade300),
-                            borderRadius: BorderRadius.circular(6),
-                            color: Colors.white,
-                          ),
-                          child: TextField(
-                            controller: speakerQtyController,
-                            keyboardType: TextInputType.number,
-                            maxLines: 1,
-                            textAlign: TextAlign.center,
-                            onSubmitted: (String value) {
-                              if (value.isEmpty) return;
-                              final int? modifiedQty = int.tryParse(value);
-                              if (modifiedQty == null) return;
-                              if (modifiedQty > _MAX_SPEAKER_COUNT) {
-                                return FusionToast.error(
-                                  context,
-                                  message: "Count should be between 1 and $_MAX_SPEAKER_COUNT",
-                                );
-                              }
-                              speakerQtyModify(qty: modifiedQty);
-                            },
-                            style: Theme.of(context).textTheme.bodySmall,
-                            inputFormatters: <TextInputFormatter>[
-                              FilteringTextInputFormatter.digitsOnly,
-                            ],
-                            decoration: const InputDecoration.collapsed(hintText: '0'),
-                          ),
+                      SemanticHelper.button(
+                        testId: SemanticHelper.createTestId(SemanticTypes.button, 'decrement_speaker_qty_button'),
+                        child: GestureDetector(
+                          child: const Icon(Icons.remove, size: 17),
+                          onTap: () => speakerQtyModify(shouldIncrement: false),
                         ),
                       ),
-                      GestureDetector(
-                        child: const Icon(
-                          Icons.add,
-                          size: 17,
+                      SizedBox(
+                        width: 36,
+                        child: PropertyTextField(
+                          controller: speakerQtyController,
+                          semanticId: 'speaker_quantity_input',
+                          keyboardType: TextInputType.number,
+                          maxLines: 1,
+                          textAlign: TextAlign.center,
+                          onSubmitted: (String value) {
+                            if (value.isEmpty) return;
+                            final int? modifiedQty = int.tryParse(value);
+                            if (modifiedQty == null) return;
+                            if (modifiedQty > _MAX_SPEAKER_COUNT) {
+                              return FusionToast.error(
+                                context,
+                                message: "Count should be between 1 and $_MAX_SPEAKER_COUNT",
+                              );
+                            }
+                            speakerQtyModify(qty: modifiedQty);
+                          },
                         ),
-                        onTap: () => speakerQtyModify(shouldIncrement: true),
+                      ),
+                      SemanticHelper.button(
+                        testId: SemanticHelper.createTestId(SemanticTypes.button, 'increment_speaker_qty_button'),
+                        child: GestureDetector(
+                          child: const Icon(
+                            Icons.add,
+                            size: 17,
+                          ),
+                          onTap: () => speakerQtyModify(shouldIncrement: true),
+                        ),
                       ),
                     ],
                   ),
@@ -422,37 +442,16 @@ class SchematicPropertiesState extends State<SchematicProperties> {
             ),
           ],
 
-          if (!<SelectedItemType>[
-            SelectedItemType.processor,
-            SelectedItemType.amplifier,
+          if (<SelectedItemType>[
+            SelectedItemType.zone,
+            SelectedItemType.subzone,
           ].contains(selectedItem.type)) ...<Widget>[
             Builder(
               builder: (BuildContext context) {
-                List<ListeningArea> listeningAreas = <ListeningArea>[];
-
-                if (selectedItem.type == SelectedItemType.circuit && selectedDevice is Speaker) {
-                  final SubZone? subZone = projectViewModel.getSubZoneForHardware(hardwareId: selectedDevice.id);
-                  if (subZone?.id != null) {
-                    listeningAreas = projectViewModel.getListeningAreasInSubZone(subZoneId: subZone!.id);
-                  } else {
-                    final Zone? zone = projectViewModel.getZoneForHardware(hardwareId: selectedDevice.id);
-                    if (zone?.id != null) listeningAreas = projectViewModel.getListeningAreasForZone(zoneId: zone!.id);
-                  }
-                } else {
-                  if (selectedItem.type == SelectedItemType.zone) {
-                    listeningAreas = projectViewModel.getAvailableListeningAreasForZone(zoneId: selectedItem.id);
-                  } else if (selectedItem.type == SelectedItemType.subzone) {
-                    listeningAreas = projectViewModel.getAvailableListeningAreasForZone();
-                  } else {
-                    listeningAreas = projectViewModel.getAllListeningAreas();
-                  }
+                // if selected zone has subzones, return SizedBox.shrink
+                if (selectedItem.type == SelectedItemType.zone && projectViewModel.getSubZonesForZone(parentZoneId: selectedItem.id).isNotEmpty) {
+                  return const SizedBox.shrink();
                 }
-
-                final List<String> selectedListeningAreaIds =
-                    listeningAreas
-                        .where((ListeningArea area) => area.id == selectedDevice?.locationEntity.listeningAreaId)
-                        .map((ListeningArea area) => area.id)
-                        .toList();
 
                 return Row(
                   spacing: 3,
@@ -468,8 +467,36 @@ class SchematicPropertiesState extends State<SchematicProperties> {
                       child: Builder(
                         builder: (BuildContext context) {
                           if (selectedItem.type == SelectedItemType.zone || selectedItem.type == SelectedItemType.subzone) {
-                            return _ZonesListeningAreaSelectionWidget(selectedItem: selectedItem);
+                            return _ZonesListeningAreaSelectionWidget(
+                              selectedItem: selectedItem,
+                            );
                           }
+
+                          List<ListeningArea> listeningAreas = <ListeningArea>[];
+
+                          if (selectedItem.type == SelectedItemType.circuit && selectedDevice is Speaker) {
+                            final SubZone? subZone = projectViewModel.getSubZoneForHardware(hardwareId: selectedDevice.id);
+                            if (subZone?.id != null) {
+                              listeningAreas = projectViewModel.getListeningAreasInSubZone(subZoneId: subZone!.id);
+                            } else {
+                              final Zone? zone = projectViewModel.getZoneForHardware(hardwareId: selectedDevice.id);
+                              if (zone?.id != null) listeningAreas = projectViewModel.getListeningAreasForZone(zoneId: zone!.id);
+                            }
+                          } else {
+                            if (selectedItem.type == SelectedItemType.zone) {
+                              listeningAreas = projectViewModel.getAvailableListeningAreasForZone(zoneId: selectedItem.id);
+                            } else if (selectedItem.type == SelectedItemType.subzone) {
+                              listeningAreas = projectViewModel.getAvailableListeningAreasForZone();
+                            } else {
+                              listeningAreas = projectViewModel.getAllListeningAreas();
+                            }
+                          }
+
+                          final List<String> selectedListeningAreaIds =
+                              listeningAreas
+                                  .where((ListeningArea area) => area.id == selectedDevice?.locationEntity.listeningAreaId)
+                                  .map((ListeningArea area) => area.id)
+                                  .toList();
 
                           return _LocationSelecDropDown(
                             selectedItemType: selectedItem.type,
@@ -482,6 +509,9 @@ class SchematicPropertiesState extends State<SchematicProperties> {
                               final String? floorID = projectViewModel.getFloorForListeningArea(areaId: value.first)?.id;
                               final LocationModel newLocation = LocationModel(listeningAreaId: value.first, floorId: floorID);
                               projectViewModel.updateHardwareLocation(hardwareId: selectedDevice!.id, newLocation: newLocation);
+                              setState(() {});
+
+                              log("Selected Listening Areas: $value");
                             },
                           );
                         },
@@ -493,6 +523,94 @@ class SchematicPropertiesState extends State<SchematicProperties> {
             ),
           ],
         ],
+      ),
+    );
+  }
+}
+
+class PropertyTextField extends StatelessWidget {
+  final String? initialValue;
+  final TextEditingController? controller;
+  final String? hintText;
+  final Function(String)? onSubmitted;
+  final Function(String)? onChanged;
+  final Function(PointerDownEvent event)? onTapOutside;
+  final TextInputType? keyboardType;
+  final int? maxLines;
+  final int? maxLength;
+  final TextAlign? textAlign;
+  final String? suffixText;
+  final FocusNode? focusNode;
+  final bool enabled;
+  final bool autofocus;
+  final List<TextInputFormatter>? inputFormatters;
+  final FormFieldValidator<String>? validator;
+  final EdgeInsetsGeometry? contentPadding;
+  final Color? fillColor;
+  final String? semanticId;
+
+  const PropertyTextField({
+    super.key,
+    this.initialValue,
+    this.controller,
+    this.hintText,
+    this.onSubmitted,
+    this.onChanged,
+    this.onTapOutside,
+    this.keyboardType,
+    this.maxLines,
+    this.maxLength,
+    this.textAlign,
+    this.suffixText,
+    this.focusNode,
+    this.enabled = true,
+    this.autofocus = false,
+    this.inputFormatters,
+    this.validator,
+    this.contentPadding,
+    this.fillColor,
+    this.semanticId,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return SemanticHelper.formControl(
+      testId: SemanticHelper.createTestId(SemanticTypes.textInput, semanticId ?? 'hardware_property_text_field'),
+      child: TextFormField(
+        autofocus: autofocus,
+        focusNode: focusNode,
+        initialValue: initialValue,
+        controller: controller,
+        maxLines: maxLines ?? 1,
+        keyboardType: keyboardType,
+        textAlign: textAlign ?? TextAlign.start,
+        onChanged: onChanged,
+        textInputAction: TextInputAction.done,
+        onTapOutside: onTapOutside,
+        onFieldSubmitted: onSubmitted,
+        style: Theme.of(context).textTheme.bodySmall,
+        maxLength: maxLength,
+        enabled: enabled,
+        inputFormatters: inputFormatters,
+        validator: validator,
+        decoration: InputDecoration(
+          counterText: '',
+          suffixText: suffixText,
+          hintText: hintText,
+          hintStyle: Theme.of(context).textTheme.bodySmall?.copyWith(color: context.colorScheme.elevation5),
+          isDense: true,
+          fillColor: fillColor ?? context.colorScheme.elevation1,
+          contentPadding: contentPadding ?? const EdgeInsets.symmetric(horizontal: 6, vertical: 10),
+          border: InputBorder.none,
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(6),
+            borderSide: BorderSide(color: context.colorScheme.strokeLight, width: 1),
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(6),
+            borderSide: BorderSide(color: context.colorScheme.strokeLight, width: 1),
+          ),
+        ),
       ),
     );
   }
@@ -530,7 +648,7 @@ class _NoPropertiesWidget extends StatelessWidget {
       child: Padding(
         padding: const EdgeInsets.all(16.0),
         child: FusionAppText(
-          text: 'Select a device to view its properties',
+          text: 'Select device, zone or subzone to view properties',
           textAlign: TextAlign.center,
           style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey),
         ),
@@ -581,12 +699,16 @@ class _LocationSelecDropDown extends StatelessWidget {
 
     return PopupMenuButton<void>(
       tooltip: "Select Location",
-      constraints: const BoxConstraints(
-        maxHeight: 400,
-        maxWidth: 300,
-      ),
+      constraints: const BoxConstraints(maxHeight: 400, maxWidth: 300),
       position: PopupMenuPosition.under,
-      color: Colors.white,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(FusionSizes.borderRadius12),
+        side: BorderSide(color: context.colorScheme.elevation4),
+      ),
+      offset: const Offset(100, 20),
+      padding: EdgeInsets.zero,
+      color: context.colorScheme.elevation1,
+      menuPadding: EdgeInsets.zero,
       child: Row(
         mainAxisSize: MainAxisSize.min,
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -598,20 +720,26 @@ class _LocationSelecDropDown extends StatelessWidget {
                   return FusionAppText(
                     text: '${listeningAreas.length} zones selected',
                     maxLine: 1,
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey),
+                    style: context.textTheme.bodySmall?.copyWith(
+                      color: context.colorScheme.primaryWhite,
+                    ),
                   );
                 } else if (selectedItemType == SelectedItemType.subzone) {
                   return FusionAppText(
                     text: '${listeningAreas.length} zones selected',
                     maxLine: 1,
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey),
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: context.colorScheme.primaryWhite,
+                    ),
                   );
                 }
 
                 return FusionAppText(
                   text: _getSelectedAreaDisplayText(context),
                   maxLine: 1,
-                  style: Theme.of(context).textTheme.bodySmall,
+                  style: context.textTheme.bodySmall?.copyWith(
+                    color: context.colorScheme.elevation5,
+                  ),
                 );
               },
             ),
@@ -620,7 +748,7 @@ class _LocationSelecDropDown extends StatelessWidget {
             Icon(
               Icons.keyboard_arrow_down,
               size: 16,
-              color: Theme.of(context).colorScheme.fusionTextViewColor,
+              color: context.colorScheme.primaryWhite,
             ),
         ],
       ),
@@ -642,7 +770,13 @@ class _LocationSelecDropDown extends StatelessWidget {
                         /// Header
                         Container(
                           padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(border: Border(bottom: BorderSide(color: Colors.grey[300]!))),
+                          decoration: BoxDecoration(
+                            border: Border(
+                              bottom: BorderSide(
+                                color: context.colorScheme.elevation2,
+                              ),
+                            ),
+                          ),
                           child: Row(
                             children: <Widget>[
                               Expanded(
@@ -683,22 +817,19 @@ class _LocationSelecDropDown extends StatelessWidget {
                                       return InkWell(
                                         onTap: () => _toggleListeningAreaSelection(context, area.id),
                                         child: Container(
-                                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+                                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                                           decoration: BoxDecoration(
-                                            color: isSelected ? Theme.of(context).colorScheme.grey : null,
+                                            color: isSelected ? context.colorScheme.elevation2 : null,
                                           ),
                                           child: Row(
                                             children: <Widget>[
                                               /// Radio Button
-                                              Radio<String>(
-                                                value: area.id,
-                                                activeColor: Theme.of(context).colorScheme.greyDark,
-                                                groupValue: selectedListeningAreaIds.isNotEmpty ? selectedListeningAreaIds.first : null,
-                                                onChanged: (String? value) {
-                                                  if (value != null) _toggleListeningAreaSelection(context, value);
-                                                },
-                                                materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                              Icon(
+                                                isSelected ? Icons.radio_button_checked : Icons.radio_button_unchecked,
+                                                size: 16,
+                                                color: isSelected ? context.colorScheme.primaryWhite : null,
                                               ),
+
                                               const SizedBox(width: 8),
                                               Expanded(
                                                 child: FusionAppText(
@@ -758,8 +889,17 @@ class _ZonesListeningAreaSelectionWidget extends StatelessWidget {
     final ProjectViewModel projectViewModel = context.watch<ProjectViewModel>();
 
     return PopupMenuButton<String>(
-      color: Theme.of(context).colorScheme.white,
       position: PopupMenuPosition.under,
+      tooltip: "Select Location",
+      constraints: const BoxConstraints(maxHeight: 400, maxWidth: 300),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(FusionSizes.borderRadius12),
+        side: BorderSide(color: context.colorScheme.elevation4),
+      ),
+      offset: const Offset(100, 20),
+      padding: EdgeInsets.zero,
+      color: context.colorScheme.elevation1,
+      menuPadding: EdgeInsets.zero,
       child: Row(
         children: <Widget>[
           Expanded(
@@ -776,14 +916,22 @@ class _ZonesListeningAreaSelectionWidget extends StatelessWidget {
                 return FusionAppText(
                   text: listeningAreas.isEmpty ? "Select Location" : "${listeningAreas.length} location${listeningAreas.length > 1 ? '(s)' : ''} selected",
                   maxLine: 1,
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: listeningAreas.isEmpty ? Theme.of(context).colorScheme.greyDark : Theme.of(context).textTheme.bodySmall?.color,
+                  style: context.textTheme.bodySmall?.copyWith(
+                    color: listeningAreas.isEmpty ? context.colorScheme.elevation5 : context.colorScheme.primaryWhite,
                   ),
                 );
               },
             ),
           ),
-          Icon(Icons.keyboard_arrow_down, size: 20, color: Theme.of(context).colorScheme.greyDark),
+          const SizedBox(width: 4),
+          RotatedBox(
+            quarterTurns: 2,
+            child: FusionSvgIcon(
+              icon: AssetSvg.expandUp,
+              size: FusionSizes.iconSize12,
+              color: context.colorScheme.iconWhite,
+            ),
+          ),
         ],
       ),
       itemBuilder: (BuildContext context) {
@@ -899,7 +1047,7 @@ class _SelectListeningAreaForZoneAndSubzonePopupWidgetState extends State<Select
         /// Header with close button
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-          decoration: BoxDecoration(border: Border(bottom: BorderSide(color: Colors.grey[300]!))),
+
           child: Row(
             children: <Widget>[
               Expanded(
@@ -916,12 +1064,14 @@ class _SelectListeningAreaForZoneAndSubzonePopupWidgetState extends State<Select
                 child: Icon(
                   Icons.close,
                   size: 16,
-                  color: Theme.of(context).colorScheme.fusionTextViewColor,
+                  color: Theme.of(context).colorScheme.textPrimary,
                 ),
               ),
             ],
           ),
         ),
+
+        Divider(height: 1, color: context.colorScheme.elevation2),
 
         /// Scrollable list of listening areas
         Flexible(
@@ -929,7 +1079,9 @@ class _SelectListeningAreaForZoneAndSubzonePopupWidgetState extends State<Select
             constraints: BoxConstraints(maxHeight: MediaQuery.sizeOf(context).height / 3),
             child: SingleChildScrollView(
               physics: const ClampingScrollPhysics(),
+              padding: const EdgeInsets.all(4),
               child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: <Widget>[
                   ...allListeningAreas.map(
                     (ListeningArea area) {
@@ -948,49 +1100,45 @@ class _SelectListeningAreaForZoneAndSubzonePopupWidgetState extends State<Select
 
                       return InkWell(
                         onTap: isSelected || isAvailableToSelectOrDeselect ? () => onListeningAreaTap(area.id) : null,
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
-                          child: Row(
-                            children: <Widget>[
-                              /// Checkbox for selection
-                              SizedBox(
-                                width: 14,
-                                height: 4,
-                                child: Checkbox(
-                                  value: !isAvailableToSelectOrDeselect ? true : isSelected,
-                                  activeColor: Theme.of(context).colorScheme.greyDark,
-                                  onChanged: !isAvailableToSelectOrDeselect ? null : (_) => onListeningAreaTap(area.id),
-                                  materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                                  visualDensity: VisualDensity.compact,
-                                  shape: const RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.zero,
-                                    side: BorderSide(width: 0.5),
-                                  ),
+                        child: Row(
+                          children: <Widget>[
+                            Transform.scale(
+                              scale: 0.7, // 👈 try 0.6–0.8
+                              child: Checkbox(
+                                value: !isAvailableToSelectOrDeselect ? true : isSelected,
+                                activeColor: context.colorScheme.primaryWhite,
+                                onChanged: !isAvailableToSelectOrDeselect ? null : (_) => onListeningAreaTap(area.id),
+                                materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                visualDensity: VisualDensity.compact,
+                                checkColor: context.colorScheme.primaryBlack,
+                                shape: const RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.zero,
+                                  side: BorderSide(width: 0.5),
                                 ),
                               ),
-                              const SizedBox(width: 12),
+                            ),
+                            const SizedBox(width: 12),
 
-                              /// Area and zone names
-                              Expanded(
-                                child: FusionAppText(
-                                  text: area.name.isNotEmpty ? "${floorName?.name}/${area.name}" : 'Unnamed Area',
-                                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                    fontWeight: FontWeight.w500,
-                                    fontSize: 10,
-                                    color: !isAvailableToSelectOrDeselect ? Colors.grey[400] : Theme.of(context).textTheme.bodySmall?.color,
-                                  ),
-                                ),
-                              ),
-                              FusionAppText(
-                                text: zoneName ?? "No zone",
+                            /// Area and zone names
+                            Expanded(
+                              child: FusionAppText(
+                                text: area.name.isNotEmpty ? "${floorName?.name}/${area.name}" : 'Unnamed Area',
                                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                  fontSize: 9,
-                                  color: !isAvailableToSelectOrDeselect ? Theme.of(context).colorScheme.grey : Theme.of(context).colorScheme.greyDark,
-                                  fontWeight: FontWeight.w600,
+                                  fontWeight: FontWeight.w500,
+                                  fontSize: 10,
+                                  color: !isAvailableToSelectOrDeselect ? context.colorScheme.elevation5 : context.colorScheme.textPrimary,
                                 ),
                               ),
-                            ],
-                          ),
+                            ),
+                            FusionAppText(
+                              text: zoneName ?? "No zone",
+                              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                fontSize: 9,
+                                color: context.colorScheme.elevation5,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
                         ),
                       );
                     },
@@ -1024,9 +1172,15 @@ class _SelectListeningAreaForZoneAndSubzonePopupWidgetState extends State<Select
                     ),
                   ),
                   FusionButton(
-                    width: 100,
+                    width: 80,
+                    height: 32,
                     label: "Save",
                     onTap: onSaveTap,
+                    activeBackgroundColor: context.colorScheme.primaryColor,
+                    textStyle: context.textTheme.bodySmall?.copyWith(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                 ],
               ),
@@ -1099,7 +1253,7 @@ class _AddNewLocationWidgetState extends State<AddNewLocationWidget> {
           if (_isExpanded) ...<Widget>[
             Container(
               padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(color: Colors.grey[50]),
+              decoration: BoxDecoration(color: context.colorScheme.elevation1),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: <Widget>[
@@ -1117,13 +1271,13 @@ class _AddNewLocationWidgetState extends State<AddNewLocationWidget> {
                   Container(
                     height: 26,
                     decoration: BoxDecoration(
-                      color: Theme.of(context).colorScheme.white,
-                      border: Border.all(color: Colors.grey[300]!),
+                      color: Theme.of(context).colorScheme.elevation1,
+                      border: Border.all(color: Theme.of(context).colorScheme.elevation3),
                       borderRadius: BorderRadius.circular(4),
                     ),
                     child: DropdownButtonHideUnderline(
                       child: DropdownButton<String>(
-                        dropdownColor: Theme.of(context).colorScheme.white,
+                        dropdownColor: Theme.of(context).colorScheme.elevation1,
                         hint: FusionAppText(
                           text: "Select floor",
                           style: Theme.of(context).textTheme.bodySmall?.copyWith(
@@ -1167,13 +1321,9 @@ class _AddNewLocationWidgetState extends State<AddNewLocationWidget> {
                   ),
                   const SizedBox(height: 4),
 
-                  FusionTextField(
+                  PropertyTextField(
                     controller: locationNameController,
                     hintText: "Enter location name",
-                    decoration: FusionInputDecoration.fusionDense(
-                      colorScheme: Theme.of(context).colorScheme,
-                      hintText: 'Enter location name',
-                    ),
                   ),
                   const SizedBox(height: 12),
 
@@ -1181,6 +1331,8 @@ class _AddNewLocationWidgetState extends State<AddNewLocationWidget> {
                     height: 32,
                     width: double.infinity,
                     label: "Add",
+                    activeBackgroundColor: context.colorScheme.primaryColor,
+                    textStyle: context.textTheme.labelMedium?.copyWith(color: Colors.white),
                     onTap: () {
                       if (isDetailsFilled) {
                         final String locationName = locationNameController.text.trim();

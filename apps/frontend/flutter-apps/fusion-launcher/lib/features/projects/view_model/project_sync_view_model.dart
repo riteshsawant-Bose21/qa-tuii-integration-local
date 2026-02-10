@@ -7,6 +7,8 @@ import 'package:fusion_launcher/core/service_locator.dart';
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
+import '../../authentication/viewmodel/session_view_model.dart';
+
 part 'project_sync_view_model_state.dart';
 
 /// Cubit for managing project upload state
@@ -167,6 +169,13 @@ class ProjectSyncViewModel extends Cubit<ProjectSyncViewModelState> {
   }
 
   Future<void> deleteProject({required String projectId}) async {
+    final bool hasCloudAccess = serviceLocator<SessionViewModel>().hasCloudAccess();
+    if (!hasCloudAccess) {
+      await serviceLocator<ProjectViewModel>().deleteProjectFromLocal(projectId);
+      //if user is in offline mode, we don't delete from cloud
+      return;
+    }
+
     await serviceLocator<ProjectViewModel>().softDeleteProject(projectId);
 
     final ResponseCallback<bool> response = await _uploadService.deleteProjectFromCloud(projectId: projectId);

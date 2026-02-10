@@ -81,30 +81,22 @@ class _BuildingToolbarState extends State<BuildingToolbar> {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(24.0),
+        borderRadius: BorderRadius.circular(60.0),
         boxShadow: <BoxShadow>[
           // Main drop shadow
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.1),
-            blurRadius: 12.0,
-            offset: const Offset(0, 4),
-            spreadRadius: 0,
-          ),
+          BoxShadow(color: Colors.black.withValues(alpha: 0.1), blurRadius: 12.0, offset: const Offset(0, 4), spreadRadius: 0),
         ],
       ),
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(24.0),
+        borderRadius: BorderRadius.circular(60.0),
         child: BackdropFilter(
           filter: ImageFilter.blur(sigmaX: 6.0, sigmaY: 6.0),
           child: Container(
             decoration: BoxDecoration(
               color: Colors.white.withValues(alpha: 0.6),
-              borderRadius: BorderRadius.circular(24.0),
+              borderRadius: BorderRadius.circular(60.0),
             ),
-            padding: const EdgeInsets.symmetric(
-              horizontal: 4.0,
-              vertical: 2.0,
-            ),
+            padding: const EdgeInsets.all(4),
             child: BlocListener<ProjectViewModel, ProjectViewModelState>(
               listenWhen: (ProjectViewModelState previous, ProjectViewModelState current) => current is ToolbarModeChanged,
               listener: (BuildContext context, ProjectViewModelState state) {
@@ -168,10 +160,9 @@ class _BuildingToolbarState extends State<BuildingToolbar> {
     return Container(
       decoration: BoxDecoration(
         color: Colors.grey.shade100,
-        borderRadius: BorderRadius.circular(18.0),
+        borderRadius: BorderRadius.circular(60.0),
         border: Border.all(color: Colors.grey.shade300, width: 0.5),
       ),
-      padding: const EdgeInsets.all(2.0),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: <Widget>[
@@ -182,6 +173,7 @@ class _BuildingToolbarState extends State<BuildingToolbar> {
               serviceLocator<GuideShowCaseController>().completeStep(GuideShowCaseSteps.acousticMode);
             },
             child: _buildModeTab(
+              context: context,
               label: "Acoustics",
               isSelected: currentMode == ToolbarMode.acoustics,
               color: Colors.blue,
@@ -197,6 +189,7 @@ class _BuildingToolbarState extends State<BuildingToolbar> {
               serviceLocator<GuideShowCaseController>().completeStep(GuideShowCaseSteps.systemMode);
             },
             child: _buildModeTab(
+              context: context,
               label: "System",
               isSelected: currentMode == ToolbarMode.system,
               color: Colors.green,
@@ -211,6 +204,7 @@ class _BuildingToolbarState extends State<BuildingToolbar> {
   }
 
   Widget _buildModeTab({
+    required BuildContext context,
     required String label,
     required bool isSelected,
     required Color color,
@@ -223,31 +217,18 @@ class _BuildingToolbarState extends State<BuildingToolbar> {
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 250),
           curve: Curves.easeInOutCubic,
-          padding: const EdgeInsets.symmetric(horizontal: 14.0, vertical: 8.0),
+          padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 8.0),
           decoration: BoxDecoration(
             color: isSelected ? color.withValues(alpha: 0.1) : Colors.transparent,
-            borderRadius: BorderRadius.circular(16.0),
-            border: isSelected ? Border.all(color: color.withValues(alpha: 0.3), width: 1.0) : null,
-            boxShadow:
-                isSelected
-                    ? <BoxShadow>[
-                      BoxShadow(
-                        color: color.withValues(alpha: 0.15),
-                        blurRadius: 3,
-                        offset: const Offset(0, 1),
-                      ),
-                    ]
-                    : null,
+            borderRadius: BorderRadius.circular(60.0),
+            boxShadow: isSelected ? <BoxShadow>[BoxShadow(color: color.withValues(alpha: 0.15), blurRadius: 3, offset: const Offset(0, 1))] : null,
           ),
-          child: AnimatedDefaultTextStyle(
-            duration: const Duration(milliseconds: 250),
-            curve: Curves.easeInOutCubic,
-            style: TextStyle(
+          child: FusionAppText(
+            text: label,
+            style: context.textTheme.labelLarge?.copyWith(
               color: isSelected ? _getDarkerShade(color) : Colors.black54,
-              fontSize: 13.0,
-              fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+              fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
             ),
-            child: FusionAppText(text: label),
           ),
         ),
       ),

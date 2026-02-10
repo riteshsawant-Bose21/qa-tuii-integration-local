@@ -36,7 +36,7 @@ class _EventTriggerRowHeaderState extends State<EventTriggerRowHeader> {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
-      color: Theme.of(context).colorScheme.grey.withAlpha(40),
+      color: context.colorScheme.elevation2.withAlpha(120),
       child: Row(
         children: <Widget>[
           // const SizedBox(width: 30),
@@ -86,7 +86,6 @@ class _TriggerTypeDropdown extends StatelessWidget {
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
               fontWeight: FontWeight.w600,
               fontSize: 13,
-              color: Theme.of(context).colorScheme.fusionTextViewColor,
             ),
             maxLine: 1,
           ),
@@ -147,7 +146,6 @@ class _TriggerItemDropdown extends StatelessWidget {
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
               fontWeight: FontWeight.w600,
               fontSize: 13,
-              color: Theme.of(context).colorScheme.fusionTextViewColor,
             ),
             maxLine: 1,
           ),
@@ -196,7 +194,6 @@ class _ActionTypeDropdown extends StatelessWidget {
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
               fontWeight: FontWeight.w600,
               fontSize: 13,
-              color: Theme.of(context).colorScheme.fusionTextViewColor,
             ),
             maxLine: 1,
           ),
@@ -247,7 +244,6 @@ class _ConditionDropdown extends StatelessWidget {
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
               fontWeight: FontWeight.w600,
               fontSize: 13,
-              color: Theme.of(context).colorScheme.fusionTextViewColor,
             ),
             maxLine: 1,
           ),
@@ -298,7 +294,6 @@ class _ValueColumn extends StatelessWidget {
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
               fontWeight: FontWeight.w600,
               fontSize: 13,
-              color: Theme.of(context).colorScheme.fusionTextViewColor,
             ),
             maxLine: 1,
           ),
@@ -336,15 +331,15 @@ class _ValueColumn extends StatelessWidget {
       data: SliderTheme.of(context).copyWith(
         rangeThumbShape: const RoundRangeSliderThumbShape(enabledThumbRadius: 6),
         overlayShape: const RoundSliderOverlayShape(overlayRadius: 4),
-        trackHeight: 2,
-        thumbColor: Theme.of(context).colorScheme.black,
-        activeTrackColor: Theme.of(context).colorScheme.greyDark,
-        inactiveTrackColor: Theme.of(context).colorScheme.grey,
+        trackHeight: 1,
+        thumbColor: context.colorScheme.primaryWhite,
       ),
       child: RangeSlider(
         values: RangeValues(minValue, maxValue),
         min: 0,
         max: 100,
+        activeColor: context.colorScheme.elevation2,
+        inactiveColor: context.colorScheme.primaryWhite,
         divisions: 100,
         padding: EdgeInsets.zero,
         labels: RangeLabels(
@@ -381,7 +376,7 @@ class _ValueColumn extends StatelessWidget {
               thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6),
               overlayShape: const RoundSliderOverlayShape(overlayRadius: 4),
               trackHeight: 1,
-              thumbColor: Theme.of(context).colorScheme.black,
+              thumbColor: Theme.of(context).colorScheme.primaryWhite,
             ),
             child: Slider(
               value: thresholdValue,
@@ -390,8 +385,8 @@ class _ValueColumn extends StatelessWidget {
               divisions: 100,
               padding: EdgeInsets.zero,
               label: thresholdValue.toStringAsFixed(0),
-              activeColor: Theme.of(context).colorScheme.greyDark,
-              inactiveColor: Theme.of(context).colorScheme.grey,
+              activeColor: context.colorScheme.elevation2,
+              inactiveColor: context.colorScheme.primaryWhite,
               onChanged: (double value) {
                 final ThresholdCondition updatedCondition = condition.copyWith(
                   threshold: value,
@@ -410,7 +405,7 @@ class _ValueColumn extends StatelessWidget {
           alignment: Alignment.center,
           padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 3),
           decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.greyLight,
+            color: context.colorScheme.primaryBlack,
             borderRadius: BorderRadius.circular(2),
           ),
           child: FusionAppText(
