@@ -26,7 +26,9 @@ class Amplifier extends HardwareComponent {
     super.portData,
     super.inputPortsData,
     super.outputPortsData,
+    super.equipmentLocationPosition,
     this.sku = '',
+    required super.addedFromBuildingPage,
   }) : super(
          hardwareName: hardwareName ?? name,
          locationEntity: locationEntity ?? LocationModel(),
@@ -55,6 +57,8 @@ class Amplifier extends HardwareComponent {
     List<PortData>? inputPortsData,
     List<PortData>? outputPortsData,
     String? sku,
+    int? equipmentLocationPosition,
+    bool? addedFromBuildingPage,
   }) {
     return Amplifier(
       name: name ?? this.name,
@@ -74,6 +78,8 @@ class Amplifier extends HardwareComponent {
       inputPortsData: inputPortsData ?? this.inputPortsData,
       outputPortsData: outputPortsData ?? this.outputPortsData,
       sku: sku ?? this.sku,
+      equipmentLocationPosition: equipmentLocationPosition ?? this.equipmentLocationPosition,
+      addedFromBuildingPage: addedFromBuildingPage ?? this.addedFromBuildingPage,
     );
   }
 
@@ -97,6 +103,8 @@ class Amplifier extends HardwareComponent {
       outputPortsData: (json['outputPortsData'] as List<dynamic>?)?.map((dynamic e) => PortData.fromJson(e as Map<String, dynamic>)).toList() ?? <PortData>[],
       inputPortsData: (json['inputPortsData'] as List<dynamic>?)?.map((dynamic e) => PortData.fromJson(e as Map<String, dynamic>)).toList() ?? <PortData>[],
       sku: json['sku'] as String? ?? '',
+      addedFromBuildingPage: json['addedFromBuildingPage'] as bool? ?? false,
+      equipmentLocationPosition: DeserializationUtil.intDeserializer.deserialize(json['equipmentLocationPosition']),
     );
   }
 
@@ -111,7 +119,7 @@ class Amplifier extends HardwareComponent {
       'id': id,
       'hardwareName': hardwareName,
       'locationEntity': locationEntity.toJson(),
-      'pos': <String, double>{'dx': pos.dx, 'dy': pos.dy},
+      'pos': pos != null ? <String, double>{'dx': pos!.dx, 'dy': pos!.dy} : null,
       'wiringPos': wiringPos != null ? <String, double>{'dx': wiringPos!.dx, 'dy': wiringPos!.dy} : null,
       'zAxis': zAxis,
       'componentType': 'amplifier',
@@ -120,6 +128,8 @@ class Amplifier extends HardwareComponent {
       'outputPortsData': outputPortsData.map((PortData port) => port.toJson()).toList(),
       'inputPortsData': inputPortsData.map((PortData port) => port.toJson()).toList(),
       'sku': sku,
+      'addedFromBuildingPage': addedFromBuildingPage,
+      'equipmentLocationPosition': equipmentLocationPosition,
     };
   }
 

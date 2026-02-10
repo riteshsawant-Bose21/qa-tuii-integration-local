@@ -7,6 +7,8 @@ import 'package:fusion_lib/fusion_widgets/buttons/fusion_outlined_button.dart';
 import 'package:fusion_lib/fusion_widgets/form_fields/fusion_text_field.dart';
 import 'package:fusion_lib/fusion_widgets/others/fusion_image.dart';
 import 'package:fusion_lib/fusion_widgets/others/fusion_toast.dart';
+import 'package:fusion_lib/fusion_widgets/semantics/semantic_helper.dart';
+import 'package:fusion_lib/fusion_widgets/semantics/semantic_type.dart';
 import 'package:fusion_lib/fusion_widgets/text_views/fusion_app_text.dart';
 import 'package:fusion_lib/models/product_query/product_query_model.dart';
 import 'package:fusion_lib/models/project_entities/listening_area_model.dart';
@@ -100,44 +102,46 @@ class _AddSpeakersMenuState extends State<AddSpeakersMenu> {
                                   speakerData = item;
                                 });
                               },
-                              child: Container(
-                                height: 30,
-
-                                margin: const EdgeInsets.only(bottom: 4),
-                                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-                                decoration: BoxDecoration(
-                                  borderRadius: BorderRadius.circular(4),
-                                  border: Border.all(
-                                    color: speakerData?.sku == item.sku ? Colors.black : Theme.of(context).colorScheme.grey,
-                                    width: 1,
-                                  ),
-                                  color: speakerData?.sku == item.sku ? Theme.of(context).colorScheme.grey : null,
-                                ),
-                                child: Row(
-                                  children: <Widget>[
-                                    FusionImage.asset(
-                                      item.image.isNotEmpty ? item.image : '',
-                                      height: 14,
-                                      width: 14,
-                                      fit: BoxFit.contain,
+                              child: SemanticHelper.container(
+                                testId: SemanticHelper.createTestId(SemanticTypes.container, "speaker_${item.sku}"),
+                                child: Container(
+                                  height: 30,
+                                  margin: const EdgeInsets.only(bottom: 4),
+                                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                                  decoration: BoxDecoration(
+                                    borderRadius: BorderRadius.circular(4),
+                                    border: Border.all(
+                                      color: speakerData?.sku == item.sku ? Colors.black : Theme.of(context).colorScheme.grey,
+                                      width: 1,
                                     ),
-                                    const SizedBox(width: 8),
-                                    Expanded(
-                                      child: FusionAppText(
-                                        text: item.name,
-                                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                          fontSize: 11,
-                                          fontWeight: speakerData?.sku == item.sku ? FontWeight.w600 : null,
+                                    color: speakerData?.sku == item.sku ? Theme.of(context).colorScheme.grey : null,
+                                  ),
+                                  child: Row(
+                                    children: <Widget>[
+                                      FusionImage.asset(
+                                        item.image.isNotEmpty ? item.image : '',
+                                        height: 14,
+                                        width: 14,
+                                        fit: BoxFit.contain,
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Expanded(
+                                        child: FusionAppText(
+                                          text: item.name,
+                                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                            fontSize: 11,
+                                            fontWeight: speakerData?.sku == item.sku ? FontWeight.w600 : null,
+                                          ),
                                         ),
                                       ),
-                                    ),
-                                    if (speakerData?.sku == item.sku)
-                                      const Icon(
-                                        Icons.check_circle,
-                                        size: 16,
-                                        color: Colors.black,
-                                      ),
-                                  ],
+                                      if (speakerData?.sku == item.sku)
+                                        const Icon(
+                                          Icons.check_circle,
+                                          size: 16,
+                                          color: Colors.black,
+                                        ),
+                                    ],
+                                  ),
                                 ),
                               ),
                             ),
@@ -155,27 +159,30 @@ class _AddSpeakersMenuState extends State<AddSpeakersMenu> {
                           ),
                           const SizedBox(height: 4),
                           // todo change it to + and - button
-                          FusionTextField(
-                            controller: numberOfSpeakers,
-                            keyboardType: TextInputType.number,
-                            inputFormatters: <TextInputFormatter>[FilteringTextInputFormatter.digitsOnly],
-                            hintText: "Enter zone name",
-                            decoration: FusionInputDecoration.fusionDense(
-                              colorScheme: Theme.of(context).colorScheme,
-                              hintText: 'Enter zone name',
+                          SemanticHelper.formControl(
+                            testId: SemanticHelper.createTestId(SemanticTypes.textInput, "speakers_count_field"),
+                            child: FusionTextField(
+                              controller: numberOfSpeakers,
+                              keyboardType: TextInputType.number,
+                              inputFormatters: <TextInputFormatter>[FilteringTextInputFormatter.digitsOnly],
+                              hintText: "Enter zone name",
+                              decoration: FusionInputDecoration.fusionDense(
+                                colorScheme: Theme.of(context).colorScheme,
+                                hintText: 'Enter zone name',
+                              ),
+                              onChanged: (String value) {
+                                final int count = int.tryParse(value) ?? 1;
+                                if (count < 1 || count > 25) {
+                                  setMenuState(() {
+                                    numberOfSpeakers.text = '1';
+                                  });
+                                  FusionToast.error(
+                                    context,
+                                    message: "Count should be between 1 and 25",
+                                  );
+                                }
+                              },
                             ),
-                            onChanged: (String value) {
-                              final int count = int.tryParse(value) ?? 1;
-                              if (count < 1 || count > 25) {
-                                setMenuState(() {
-                                  numberOfSpeakers.text = '1';
-                                });
-                                FusionToast.error(
-                                  context,
-                                  message: "Count should be between 1 and 25",
-                                );
-                              }
-                            },
                           ),
 
                           const SizedBox(height: 16),
@@ -231,6 +238,7 @@ class _AddSpeakersMenuState extends State<AddSpeakersMenu> {
                                 child: FusionOutlinedButton(
                                   width: double.infinity,
                                   label: "Cancel",
+                                  semanticsId: "add_speakers_cancel_button",
                                   textStyle: Theme.of(context).textTheme.labelLarge?.copyWith(fontSize: 10),
                                   onTap: () {
                                     Navigator.of(context).pop();
@@ -243,37 +251,41 @@ class _AddSpeakersMenuState extends State<AddSpeakersMenu> {
                               ),
                               const SizedBox(width: 8),
                               Flexible(
-                                child: FusionButton(
-                                  width: double.infinity,
-                                  textStyle: Theme.of(
-                                    context,
-                                  ).textTheme.labelLarge?.copyWith(fontSize: 10, color: Theme.of(context).colorScheme.fusionButtonTextColor),
+                                child: SemanticHelper.button(
+                                  testId: SemanticHelper.createTestId(SemanticTypes.button, "add_speakers_save_button"),
+                                  child: FusionButton(
+                                    width: double.infinity,
+                                    textStyle: Theme.of(
+                                      context,
+                                    ).textTheme.labelLarge?.copyWith(fontSize: 10, color: Theme.of(context).colorScheme.fusionButtonTextColor),
 
-                                  label: "Save",
-                                  isActive: speakerData != null && _selectedListeningAreaIds.isNotEmpty,
-                                  onTap: () {
-                                    if (speakerData != null && _selectedListeningAreaIds.isNotEmpty) {
-                                      serviceLocator<ProjectViewModel>().createCircuitWithSpeakers(
-                                        speakerData: speakerData!,
-                                        listeningAreaId: _selectedListeningAreaIds.first,
-                                        speakerCount: int.tryParse(numberOfSpeakers.text) ?? 1,
-                                        zoneId: widget.zoneId,
-                                        subZoneId: widget.subZoneId,
-                                        circuitName: "${speakerData!.name} Circuit",
-                                      );
-                                      FusionToast.success(
-                                        context,
-                                        message: "Speakers added to circuit successfully",
-                                      );
-                                      if (widget.onSpeakerAdded != null) {
-                                        widget.onSpeakerAdded!();
+                                    label: "Save",
+                                    isActive: speakerData != null && _selectedListeningAreaIds.isNotEmpty,
+                                    onTap: () {
+                                      if (speakerData != null && _selectedListeningAreaIds.isNotEmpty) {
+                                        serviceLocator<ProjectViewModel>().createCircuitWithSpeakers(
+                                          speakerData: speakerData!,
+                                          listeningAreaId: _selectedListeningAreaIds.first,
+                                          speakerCount: int.tryParse(numberOfSpeakers.text) ?? 1,
+                                          zoneId: widget.zoneId,
+                                          subZoneId: widget.subZoneId,
+                                          isFromBuildingPage: false,
+                                          circuitName: "${speakerData!.name} Circuit",
+                                        );
+                                        FusionToast.success(
+                                          context,
+                                          message: "Speakers added to circuit successfully",
+                                        );
+                                        if (widget.onSpeakerAdded != null) {
+                                          widget.onSpeakerAdded!();
+                                        }
                                       }
-                                    }
-                                    speakerData = null;
-                                    Navigator.pop(context);
-                                    numberOfSpeakers.text = '1';
-                                    _selectedListeningAreaIds.clear();
-                                  },
+                                      speakerData = null;
+                                      Navigator.pop(context);
+                                      numberOfSpeakers.text = '1';
+                                      _selectedListeningAreaIds.clear();
+                                    },
+                                  ),
                                 ),
                               ),
                             ],

@@ -2,10 +2,9 @@ package cluster
 
 import (
 	"fusion/internal/api"
-	"fusion/internal/logging"
+	"fusion-services-core/logging"
 	"fusion/internal/persistence"
 	"fusion/internal/pubsub"
-	"fusion/internal/server/handler"
 	"fusion/internal/tasks"
 	"math"
 	"sync"
@@ -67,7 +66,6 @@ type ClusterDelegate struct {
 	persistence   *persistence.Persistence
 	stateManager  *persistence.StateManager
 	taskManager   *tasks.TaskManager
-	updater       *handler.Updater
 	syncLatencies *SyncLatencyStore
 	skewStore     *SkewStore
 	hub           *pubsub.Hub
@@ -78,14 +76,12 @@ func NewClusterDelegate(
 	persistence *persistence.Persistence,
 	stateManager *persistence.StateManager,
 	taskManager *tasks.TaskManager,
-	updater *handler.Updater,
 	hub *pubsub.Hub) *ClusterDelegate {
 	delegate := &ClusterDelegate{
 		appConfig:     config,
 		persistence:   persistence,
 		stateManager:  stateManager,
 		taskManager:   taskManager,
-		updater:       updater,
 		hub:           hub,
 		syncLatencies: NewSyncLatencyStore(maxLatencyCount, latencyPruneTime),
 		skewStore:     NewSkewStore(),
@@ -190,7 +186,7 @@ func (d *ClusterDelegate) NotifyMsg(msg []byte) {
 		}
 
 		if !dirty {
-			logger.Debug("delegate: skipping stale ConfigUpdate version=%v from %s",
+			logger.Debug("[Delegate] Skipping stale ConfigUpdate version=%v from %s",
 				message.ConfigUpdate.Version, message.Node)
 			return
 		}
@@ -198,24 +194,41 @@ func (d *ClusterDelegate) NotifyMsg(msg []byte) {
 		// Overwrite with effective local Lamport version
 		updated := *message.ConfigUpdate
 		updated.Version = d.stateManager.GetVersion()
+		logger.Debug("[Delegate] NotifyOpConfigUpdate setting Version: %d", updated.Version.Counter)
 		message.ConfigUpdate = &updated
 
 		d.persistence.MarkDirty()
-		d.hub.Broadcast(&message)
+		d.hub.BroadcastToObservers(&message)
 
 	case api.NotifyOpSnapActivate:
-		if err := d.persistence.ActivateSnapshot(message.SnapshotUpdate.Name); err != nil {
+		if message.SnapshotOperation == nil {
+			logger.Error("SnapActivate message with nil payload from %s", message.Node)
+			return
+		}
+
+		logger.Info("[Delegate] SnapActivate on %s for %s (from=%s)",
+			d.appConfig.NodeName,
+			message.SnapshotOperation.Name,
+			message.Node,
+		)
+
+		if err := d.persistence.ActivateSnapshot(message.SnapshotOperation.Name); err != nil {
 			logger.Error("Error activating snapshot: %v", err)
 		}
 
 	case api.NotifyOpSnapCreate:
-		if err := d.persistence.CreateSnapshot(message.SnapshotUpdate.Name); err != nil {
+		if err := d.persistence.CreateSnapshot(message.SnapshotOperation.Name); err != nil {
 			logger.Error("Error creating snapshot: %v", err)
 		}
 
 	case api.NotifyOpSnapDelete:
-		if err := d.persistence.DeleteSnapshot(message.SnapshotUpdate.Name); err != nil {
+		if err := d.persistence.DeleteSnapshot(message.SnapshotOperation.Name); err != nil {
 			logger.Error("Error deleting snapshot: %v", err)
+		}
+
+	case api.NotifyOpSnapSave:
+		if err := d.persistence.SaveSnapshot(message.SnapshotOperation.Name); err != nil {
+			logger.Error("Error saving snapshot: %v", err)
 		}
 
 	case api.NotifyOpTaskCreate:
@@ -231,11 +244,6 @@ func (d *ClusterDelegate) NotifyMsg(msg []byte) {
 	case api.NotifyOpTaskUpdate:
 		if err := d.taskManager.UpdateTaskFromCluster(message.Task); err != nil {
 			logger.Error("Error updating task: %v", err)
-		}
-
-	case api.NotifyOpVersionUpdate:
-		if err := d.updater.PerformRemoteUpdate(*message.VersionUpdate); err != nil {
-			logger.Error("PerformRemoteUpdate error: %v", err)
 		}
 
 	default:
@@ -292,6 +300,25 @@ func (d *ClusterDelegate) MergeRemoteState(buf []byte, join bool) {
 
 	logger.Debug("Merging remote state from node %s with %d entries (version: %v)",
 		snapshot.NodeID, len(snapshot.State), snapshot.Version)
+
+	localVersion := d.stateManager.GetVersion()
+	remoteVersion := snapshot.Version
+
+	// Reject older epoch outright
+	if remoteVersion.Epoch < localVersion.Epoch {
+		logger.Debug("Ignoring remote state from older epoch %d (local=%d)", remoteVersion.Epoch, localVersion.Epoch)
+		return
+	}
+
+	// Adopt newer epoch as authoritative
+	if remoteVersion.Epoch > localVersion.Epoch {
+		logger.Debug("Adopting newer epoch %d (local=%d)", remoteVersion.Epoch, localVersion.Epoch)
+		d.stateManager.ReplaceFullState(snapshot.State, remoteVersion)
+		d.persistence.MarkDirty()
+		return
+	}
+
+	// Same epoch, do normal merge
 	d.stateManager.MergeRemoteState(snapshot.State)
 
 	d.persistence.MarkDirty()

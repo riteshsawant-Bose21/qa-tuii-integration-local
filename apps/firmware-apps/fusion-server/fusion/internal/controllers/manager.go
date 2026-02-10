@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"fusion/internal/api"
-	"fusion/internal/logging"
+	"fusion-services-core/logging"
 	"fusion/internal/pubsub"
 	"net"
 	"time"

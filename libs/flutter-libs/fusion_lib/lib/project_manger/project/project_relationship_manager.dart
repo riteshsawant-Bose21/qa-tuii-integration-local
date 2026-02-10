@@ -5,14 +5,26 @@ enum RelationshipType {
   floorAreas,
   zoneAreas,
   zoneSourceSet,
+  zoneSources,
   zoneSubZones,
   sourceSetSources,
   hardwareLocation,
+  equipLocation,
   hardwareFloor,
   circuitHardware,
   zoneCircuits,
   wireConnection,
   processingBlock,
+  zonePriorities,
+  zoneFunctions,
+  sourcePriorityData,
+  sceneSetScenes,
+  sceneActions,
+  eventActions,
+  actionItemMapping,
+  actionValueMapping,
+  actionParamMapping,
+  eventsItemMapping,
 }
 
 class RelationshipManager {
@@ -64,8 +76,8 @@ class RelationshipManager {
   /// --- JSON Support ---
   Map<String, dynamic> toJson() {
     return {
-      "parentToChildren": _parentToChildren.map((type, map) => MapEntry(type.toString(), map.map((k, v) => MapEntry(k, v.toList())))),
-      "childToParents": _childToParents.map((type, map) => MapEntry(type.toString(), map.map((k, v) => MapEntry(k, v.toList())))),
+      "parentToChildren": _parentToChildren.map((type, map) => MapEntry(type.name.toString(), map.map((k, v) => MapEntry(k, v.toList())))),
+      "childToParents": _childToParents.map((type, map) => MapEntry(type.name.toString(), map.map((k, v) => MapEntry(k, v.toList())))),
     };
   }
 
@@ -78,7 +90,7 @@ class RelationshipManager {
     final childJson = json["childToParents"] as Map<String, dynamic>? ?? {};
 
     for (final entry in parentJson.entries) {
-      final type = RelationshipType.values.firstWhere((e) => e.toString() == entry.key);
+      final type = RelationshipType.values.firstWhere((e) => e.name == entry.key);
       _parentToChildren[type] = {};
       (entry.value as Map<String, dynamic>).forEach((k, v) {
         _parentToChildren[type]![k] = Set<String>.from(v);
@@ -86,7 +98,7 @@ class RelationshipManager {
     }
 
     for (final entry in childJson.entries) {
-      final type = RelationshipType.values.firstWhere((e) => e.toString() == entry.key);
+      final type = RelationshipType.values.firstWhere((e) => e.name == entry.key);
       _childToParents[type] = {};
       (entry.value as Map<String, dynamic>).forEach((k, v) {
         _childToParents[type]![k] = Set<String>.from(v);

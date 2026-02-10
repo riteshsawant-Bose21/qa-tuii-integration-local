@@ -11,7 +11,7 @@ class FloorCanvasController {
   Function()? _updateFloorView;
   Function(ListeningArea)? _onTapListeningArea;
   Function(HardwareComponent)? _setSelectedHardwareComponent;
-  Function(HardwareComponent)? _setHardwareComponentListeningAreaId;
+  // Function(HardwareComponent)? _setHardwareComponentListeningAreaId;
   VoidCallback? _toggleSpl;
   Completer<List<Offset>?>? autoPlaceCompleter;
 
@@ -37,7 +37,7 @@ class FloorCanvasController {
     required VoidCallback toggleSpl,
     required Function(ListeningArea) onTapListeningArea,
     required Function(HardwareComponent) setSelectedHardwareComponent,
-    required Function(HardwareComponent)? setHardwareComponentListeningAreaId,
+    // required Function(HardwareComponent)? setHardwareComponentListeningAreaId,
     required Function()? updateView,
   }) {
     _toggleDraw = toggleDraw;
@@ -47,7 +47,7 @@ class FloorCanvasController {
     _deselectAll = deselectAll;
     _onTapListeningArea = onTapListeningArea;
     _setSelectedHardwareComponent = setSelectedHardwareComponent;
-    _setHardwareComponentListeningAreaId = setHardwareComponentListeningAreaId;
+    // _setHardwareComponentListeningAreaId = setHardwareComponentListeningAreaId;
     _updateFloorView = updateView;
   }
 
@@ -55,11 +55,11 @@ class FloorCanvasController {
     _updateFloorView?.call();
   }
 
-  // update hardware component's listing area id
-  setHardwareComponentListeningAreaId(HardwareComponent hardwareComponent) {
-    print("called setHardwareComponentListeningAreaId for ${hardwareComponent.name}");
-    _setHardwareComponentListeningAreaId?.call(hardwareComponent);
-  }
+  // // update hardware component's listing area id
+  // setHardwareComponentListeningAreaId(HardwareComponent hardwareComponent) {
+  //   print("called setHardwareComponentListeningAreaId for ${hardwareComponent.name}");
+  //   _setHardwareComponentListeningAreaId?.call(hardwareComponent);
+  // }
 
   /// Called by the parent to set the selected hardware component.
   void setSelectedHardwareComponent(HardwareComponent hardwareComponent) {

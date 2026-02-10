@@ -34,6 +34,10 @@ extension ProcessingBlockService on ProjectService {
     processingBlocks.add(processingBlock.id, processingBlock);
   }
 
+  ProcessingBlockModel? getProcessingBlock(String id) {
+    return processingBlocks.get(id);
+  }
+
   List<ProcessingBlockModel> getAllProcessingBlocks() {
     return processingBlocks.getAll();
   }

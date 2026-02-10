@@ -5,7 +5,7 @@ class SemanticHelper {
   // Core identifier generator
   static String createTestId(String type, String identifier) {
     final String sanitizedIdentifier = identifier.replaceAll(' ', '_');
-    return '${type}_$sanitizedIdentifier';
+    return '${type}_${sanitizedIdentifier.toLowerCase()}';
   }
 
   // Button elements

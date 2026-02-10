@@ -21,9 +21,19 @@ class ProjectManager {
     return projects.firstWhere((project) => project.id == projectId);
   }
 
-  /// check if Admin login
-  bool isAdminLogin() {
-    return localProjectManager.isAdminLogin;
+  ProjectData? getCurrentProjectData() {
+    if (projectService == null) return null;
+    try {
+      ProjectData projectData = getProjectById(projectService!.id);
+      projectData = projectData.copyWith(
+        projectRawData: projectService!.toJson(),
+        lastUploadedAt: projectService!.lastUploadedAt,
+      );
+      return projectData;
+    } catch (e) {
+      return null;
+    }
+    return null;
   }
 
   //Load projects from cloud
@@ -42,6 +52,18 @@ class ProjectManager {
       projects = response.data!;
     }
     return response;
+  }
+
+  Future<List<ProjectData>> getAllProjectsToUpload() async {
+    return projects.where((project) => (project.isSyncNeeded && !project.isCloudInstance)).toList();
+  }
+
+  Future<File> getProjectDirectoryZip(String projectId) async {
+    return await localProjectManager.zipProjectDirectory(projectId);
+  }
+
+  Future<Directory> getFusionProjectDirectory() async {
+    return await localProjectManager.fusionProjectDirectory;
   }
 
   // Create and save new project
@@ -74,9 +96,9 @@ class ProjectManager {
   }
 
   //Delete specific project by ID
-  Future<ResponseCallback<bool>> deleteProject(String projectId) async {
+  Future<ResponseCallback<bool>> deleteProjectLocally(String projectId) async {
     try {
-      await localProjectManager.deleteProject(projectId: projectId);
+      await localProjectManager.deleteProjectFolder(projectId: projectId);
       projects.removeWhere((p) => p.id == projectId);
       if (projectService != null && projectService!.id == projectId) {
         projectService = null;
@@ -95,13 +117,40 @@ class ProjectManager {
       projectService = ProjectService.fromJson(project.projectRawData);
 
       //initial state of project;
-      projectService!.recordChange();
+      // projectService!.recordChange();
 
       return ResponseCallback.success(project);
     } catch (e) {
       FusionLogger.log(tag: LogTag.exceptions, message: "Error opening project: $e");
       return ResponseCallback.failure("Error opening project: $e");
     }
+  }
+
+  Future<void> updateProjectLastSyncedAt(String projectId, DateTime lastSyncedAt) async {
+    await loadProjectsFromLocal();
+    final ProjectData project = getProjectById(projectId);
+    ProjectService projectToUpdate = ProjectService.fromJson(project.projectRawData);
+    projectToUpdate = projectToUpdate.copyWith(lastUploadedAt: lastSyncedAt.toUtc());
+    if (projectService != null && projectService!.id == projectId) {
+      projectService = projectService!.copyWith(lastUploadedAt: lastSyncedAt.toUtc());
+      projectToUpdate = projectService!;
+    }
+    print("Updated lastSyncedAt to ${projectToUpdate.lastUploadedAt}");
+    final ProjectData updatedProject = project.copyWith(projectRawData: projectToUpdate.toJson());
+    await localProjectManager.saveProject(updatedProject);
+  }
+
+  Future<void> softDeleteProject(String projectId) async {
+    await loadProjectsFromLocal();
+    final ProjectData project = getProjectById(projectId);
+    ProjectService projectToUpdate = ProjectService.fromJson(project.projectRawData);
+    projectToUpdate = projectToUpdate.copyWith(isDeleted: true);
+    if (projectService != null && projectService!.id == projectId) {
+      projectService = projectService!.copyWith(isDeleted: true);
+      projectToUpdate = projectService!;
+    }
+    final ProjectData updatedProject = project.copyWith(projectRawData: projectToUpdate.toJson());
+    await localProjectManager.saveProject(updatedProject);
   }
 
   //Save current project
@@ -118,6 +167,10 @@ class ProjectManager {
 
       try {
         final ProjectData currentProject = getProjectById(projectService!.id);
+        // Update the updatedAt timestamp,
+        projectService = projectService!.copyWith(
+          updatedAt: DateTime.now().toUtc(),
+        );
         final ProjectData updatedProject = currentProject.copyWith(projectRawData: projectService!.toJson());
 
         // Save to local storage
@@ -129,6 +182,15 @@ class ProjectManager {
         return ResponseCallback.failure("Error saving project: $e");
       }
     });
+  }
+
+  Future<ResponseCallback<bool>> saveProjects(List<ProjectData> projectsToSave) async {
+    try {
+      return await localProjectManager.saveProjects(projectsToSave, fromServer: true);
+    } catch (e) {
+      FusionLogger.log(tag: LogTag.exceptions, message: "Error saving projects: $e");
+      return ResponseCallback.failure("Error saving projects: $e");
+    }
   }
 
   /// save image to current project directory
@@ -184,5 +246,9 @@ class ProjectManager {
       return FusionUtils().zipProjectDirectory(projectDirectory);
     }
     return null;
+  }
+
+  Future<void> deleteFusionProjectDirectory() async {
+    await localProjectManager.deleteFusionProjectDirectory();
   }
 }

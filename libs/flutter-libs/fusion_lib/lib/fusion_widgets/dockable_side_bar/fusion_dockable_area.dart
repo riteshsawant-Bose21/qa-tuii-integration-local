@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:fusion_lib/fusion_lib.dart';
+import 'package:fusion_lib/fusion_theme/app_theme.dart';
+
 import '../../models/dock_item_config.dart';
 import '../../models/fusion_dock_item.dart';
-import '../others/fusion_horizontal_resizable_widget.dart';
-import 'fusion_dock_floating_panel.dart';
-import 'fusion_dock_side_bar.dart';
 
 class FusionDockableArea extends StatefulWidget {
   final String tabKey;
@@ -209,17 +209,20 @@ class _FusionDockableAreaState extends State<FusionDockableArea> {
           children: [
             /// Left Sidebar
             if (widget.showLeft)
-              FusionHorizontalResizableWidget(
-                minWidth: 240,
-                maxWidth: screenWidth * 0.3,
-                dragLeft: false,
-                dragRight: true,
-                child: FusionDockSidebar(
-                  side: "left",
-                  items: items.where((i) => i.docked && i.side == "left").toList()..sort((a, b) => (a.dockedOrder ?? 0).compareTo(b.dockedOrder ?? 0)),
-                  itemConfigs: widget.dockItemList,
-                  onItemUndock: _handleSidebarUndock,
-                  onExpansionChanged: _handleExpansionChanged,
+              SemanticHelper.container(
+                testId: SemanticHelper.createTestId(SemanticTypes.container, "horizontal_resizable_left"),
+                child: FusionHorizontalResizableWidget(
+                  minWidth: 240,
+                  maxWidth: screenWidth * 0.3,
+                  dragLeft: false,
+                  dragRight: true,
+                  child: FusionDockSidebar(
+                    side: "left",
+                    items: items.where((i) => i.docked && i.side == "left").toList()..sort((a, b) => (a.dockedOrder ?? 0).compareTo(b.dockedOrder ?? 0)),
+                    itemConfigs: widget.dockItemList,
+                    onItemUndock: _handleSidebarUndock,
+                    onExpansionChanged: _handleExpansionChanged,
+                  ),
                 ),
               ),
 
@@ -227,7 +230,8 @@ class _FusionDockableAreaState extends State<FusionDockableArea> {
             Expanded(
               child: LayoutBuilder(
                 builder: (BuildContext context, BoxConstraints constraints) {
-                  return SizedBox(
+                  return Container(
+                    color: Theme.of(context).colorScheme.white,
                     width: constraints.maxWidth,
                     height: constraints.maxHeight,
                     child: widget.mainArea,
@@ -238,17 +242,20 @@ class _FusionDockableAreaState extends State<FusionDockableArea> {
 
             /// Right Sidebar
             if (widget.showRight)
-              FusionHorizontalResizableWidget(
-                minWidth: 240,
-                maxWidth: screenWidth * 0.3,
-                dragLeft: true,
-                dragRight: false,
-                child: FusionDockSidebar(
-                  side: "right",
-                  items: items.where((i) => i.docked && i.side == "right").toList()..sort((a, b) => (a.dockedOrder ?? 0).compareTo(b.dockedOrder ?? 0)),
-                  itemConfigs: widget.dockItemList,
-                  onItemUndock: _handleSidebarUndock,
-                  onExpansionChanged: _handleExpansionChanged,
+              SemanticHelper.container(
+                testId: SemanticHelper.createTestId(SemanticTypes.container, "horizontal_resizable_right"),
+                child: FusionHorizontalResizableWidget(
+                  minWidth: 240,
+                  maxWidth: screenWidth * 0.3,
+                  dragLeft: true,
+                  dragRight: false,
+                  child: FusionDockSidebar(
+                    side: "right",
+                    items: items.where((i) => i.docked && i.side == "right").toList()..sort((a, b) => (a.dockedOrder ?? 0).compareTo(b.dockedOrder ?? 0)),
+                    itemConfigs: widget.dockItemList,
+                    onItemUndock: _handleSidebarUndock,
+                    onExpansionChanged: _handleExpansionChanged,
+                  ),
                 ),
               ),
           ],

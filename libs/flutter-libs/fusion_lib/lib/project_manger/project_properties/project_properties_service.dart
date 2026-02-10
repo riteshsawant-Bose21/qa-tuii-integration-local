@@ -38,10 +38,6 @@ extension ProjectPropertiesService on ProjectService {
     return id;
   }
 
-  String getMetaData() {
-    return metaData;
-  }
-
   List<Color> getProjectColors() {
     return colors;
   }

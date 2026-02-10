@@ -1,4 +1,5 @@
 import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
@@ -34,80 +35,83 @@ class ProductFilterPage extends StatefulWidget {
 class _ProductFilterPageState extends State<ProductFilterPage> {
   final TextEditingController _searchController = TextEditingController();
   final FusionDevices _fusionDevices = FusionDevices();
-  
+
   // Product type filter
   String selectedProductType = 'All'; // All, Speakers, Amplifiers, DSP Devices
-  
+
   // Speaker-specific filters
   Set<String> selectedMountTypes = <String>{};
   Set<String> selectedVenueTypes = <String>{};
   Set<String> selectedColors = <String>{};
   Set<CoverageLevel> selectedCoverage = <CoverageLevel>{};
-  
+
   // Amplifier-specific filters
   Set<String> selectedChannelCounts = <String>{}; // 2, 4, 8, etc.
   Set<String> selectedPowerRanges = <String>{}; // Low, Mid, High power
-  
+
   // DSP-specific filters
   Set<String> selectedInputCounts = <String>{}; // Number of inputs
   Set<String> selectedOutputCounts = <String>{}; // Number of outputs
   Set<String> selectedNetworkTypes = <String>{}; // Ethernet, Dante, etc.
-  
+
   // Common filters
   Set<ImpedanceLevel> selectedImpedance = <ImpedanceLevel>{};
   SortOption selectedSort = SortOption.nameAToZ;
-  
+
   // SPL Range state
   RangeValues splRange = const RangeValues(70, 120);
-  
+
   // Data
   List<ProductItem> allProducts = <ProductItem>[];
   List<ProductItem> filteredProducts = <ProductItem>[];
-  
+
   @override
   void initState() {
     super.initState();
     _loadProducts();
     _searchController.addListener(_onSearchChanged);
   }
-  
+
   @override
   void dispose() {
     _searchController.dispose();
     super.dispose();
   }
-  
+
   void _loadProducts() {
     allProducts = <ProductItem>[];
-    
+
     try {
       // Load speakers
       final String speakersJson = _fusionDevices.getSpeakers();
       if (speakersJson.isNotEmpty && speakersJson != '[]') {
-        final List<ProductItem> speakers = (jsonDecode(speakersJson) as List<dynamic>)
-            .map((dynamic json) => SpeakerModel.fromJson(json as Map<String, dynamic>))
-            .map((SpeakerModel speaker) => ProductItem.fromSpeaker(speaker))
-            .toList();
+        final List<ProductItem> speakers =
+            (jsonDecode(speakersJson) as List<dynamic>)
+                .map((dynamic json) => SpeakerModel.fromJson(json as Map<String, dynamic>))
+                .map((SpeakerModel speaker) => ProductItem.fromSpeaker(speaker))
+                .toList();
         allProducts.addAll(speakers);
       }
-      
+
       // Load amplifiers
       final String ampsJson = _fusionDevices.getAmplifiers();
       if (ampsJson.isNotEmpty && ampsJson != '[]') {
-        final List<ProductItem> amplifiers = (jsonDecode(ampsJson) as List<dynamic>)
-            .map((dynamic json) => AmpModel.fromJson(json as Map<String, dynamic>))
-            .map((AmpModel amp) => ProductItem.fromAmplifier(amp))
-            .toList();
+        final List<ProductItem> amplifiers =
+            (jsonDecode(ampsJson) as List<dynamic>)
+                .map((dynamic json) => AmpModel.fromJson(json as Map<String, dynamic>))
+                .map((AmpModel amp) => ProductItem.fromAmplifier(amp))
+                .toList();
         allProducts.addAll(amplifiers);
       }
-      
+
       // Load devices
       final String devicesJson = _fusionDevices.getDevices();
       if (devicesJson.isNotEmpty && devicesJson != '[]') {
-        final List<ProductItem> devices = (jsonDecode(devicesJson) as List<dynamic>)
-            .map((dynamic json) => DeviceSpec.fromJson(json as Map<String, dynamic>))
-            .map((DeviceSpec device) => ProductItem.fromDevice(device))
-            .toList();
+        final List<ProductItem> devices =
+            (jsonDecode(devicesJson) as List<dynamic>)
+                .map((dynamic json) => DeviceSpec.fromJson(json as Map<String, dynamic>))
+                .map((DeviceSpec device) => ProductItem.fromDevice(device))
+                .toList();
         allProducts.addAll(devices);
       }
     } catch (e) {
@@ -115,14 +119,14 @@ class _ProductFilterPageState extends State<ProductFilterPage> {
       // This prevents the app from crashing and shows empty results
       // In production, this should be logged properly
     }
-    
+
     _applyFilters();
   }
-  
+
   void _onSearchChanged() {
     _applyFilters();
   }
-  
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -143,203 +147,204 @@ class _ProductFilterPageState extends State<ProductFilterPage> {
                   ),
                 ),
               ),
-            child: Row(
-              children: <Widget>[
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: <Widget>[
-                    const Text(
-                      'Product Browser',
-                      style: TextStyle(
-                        fontSize: 28,
-                        fontWeight: FontWeight.w700,
-                        color: Color(0xFF212121),
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'Browse and filter Bose Professional products',
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: Colors.grey[600],
-                        fontWeight: FontWeight.w400,
-                      ),
-                    ),
-                  ],
-                ),
-                const Spacer(),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFF0F9FF),
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(
-                      color: const Color(0xFF0EA5E9),
-                      width: 1,
-                    ),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
+              child: Row(
+                children: <Widget>[
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: <Widget>[
-                      const Icon(
-                        Icons.inventory_2_outlined,
-                        size: 16,
-                        color: Color(0xFF0EA5E9),
+                      const Text(
+                        'Product Browser',
+                        style: TextStyle(
+                          fontSize: 28,
+                          fontWeight: FontWeight.w700,
+                          color: Color(0xFF212121),
+                        ),
                       ),
-                      const SizedBox(width: 6),
+                      const SizedBox(height: 4),
                       Text(
-                        '${allProducts.length} Products Available',
-                        style: const TextStyle(
+                        'Browse and filter Bose Professional products',
+                        style: TextStyle(
                           fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                          color: Color(0xFF0EA5E9),
+                          color: Colors.grey[600],
+                          fontWeight: FontWeight.w400,
                         ),
                       ),
                     ],
                   ),
-                ),
-              ],
-            ),
-          ),
-          
-          // Search and sort bar
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-            decoration: const BoxDecoration(
-              color: Colors.white,
-              border: Border(
-                bottom: BorderSide(
-                  color: Color(0xFFE0E0E0),
-                  width: 1,
-                ),
+                  const Spacer(),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF0F9FF),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(
+                        color: const Color(0xFF0EA5E9),
+                        width: 1,
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: <Widget>[
+                        const Icon(
+                          Icons.inventory_2_outlined,
+                          size: 16,
+                          color: Color(0xFF0EA5E9),
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          '${allProducts.length} Products Available',
+                          style: const TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                            color: Color(0xFF0EA5E9),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ),
             ),
-            child: Row(
-              children: <Widget>[
-                // Search bar
-                Expanded(
-                  flex: 3,
-                  child: Container(
+
+            // Search and sort bar
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                border: Border(
+                  bottom: BorderSide(
+                    color: Color(0xFFE0E0E0),
+                    width: 1,
+                  ),
+                ),
+              ),
+              child: Row(
+                children: <Widget>[
+                  // Search bar
+                  Expanded(
+                    flex: 3,
+                    child: Container(
+                      height: 48,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF5F5F5),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: const Color(0xFFE0E0E0),
+                          width: 1,
+                        ),
+                      ),
+                      child: TextField(
+                        controller: _searchController,
+                        decoration: const InputDecoration(
+                          hintText: 'Search products…',
+                          hintStyle: TextStyle(
+                            color: Color(0xFF757575),
+                            fontSize: 16,
+                          ),
+                          prefixIcon: Icon(
+                            Icons.search_outlined,
+                            color: Color(0xFF757575),
+                            size: 20,
+                          ),
+                          border: InputBorder.none,
+                          contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                        ),
+                        style: const TextStyle(fontSize: 16),
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(width: 16),
+
+                  // Sort dropdown
+                  Container(
                     height: 48,
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFF5F5F5),
+                      color: Colors.white,
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(
                         color: const Color(0xFFE0E0E0),
                         width: 1,
                       ),
                     ),
-                    child: TextField(
-                      controller: _searchController,
-                      decoration: const InputDecoration(
-                        hintText: 'Search products…',
-                        hintStyle: TextStyle(
-                          color: Color(0xFF757575),
-                          fontSize: 16,
-                        ),
-                        prefixIcon: Icon(
-                          Icons.search_outlined,
-                          color: Color(0xFF757575),
-                          size: 20,
-                        ),
-                        border: InputBorder.none,
-                        contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    child: DropdownButton<SortOption>(
+                      value: selectedSort,
+                      underline: const SizedBox(),
+                      icon: const Icon(
+                        Icons.keyboard_arrow_down_outlined,
+                        color: Color(0xFF757575),
                       ),
-                      style: const TextStyle(fontSize: 16),
+                      style: const TextStyle(
+                        color: Color(0xFF212121),
+                        fontSize: 14,
+                      ),
+                      onChanged: (SortOption? newValue) {
+                        if (newValue != null) {
+                          setState(() {
+                            selectedSort = newValue;
+                          });
+                          _applyFilters();
+                        }
+                      },
+                      items:
+                          SortOption.values.map<DropdownMenuItem<SortOption>>((SortOption value) {
+                            return DropdownMenuItem<SortOption>(
+                              value: value,
+                              child: Text(_getSortLabelForOption(value)),
+                            );
+                          }).toList(),
                     ),
                   ),
-                ),
-                
-                const SizedBox(width: 16),
-                
-                // Sort dropdown
-                Container(
-                  height: 48,
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                      color: const Color(0xFFE0E0E0),
-                      width: 1,
-                    ),
-                  ),
-                  child: DropdownButton<SortOption>(
-                    value: selectedSort,
-                    underline: const SizedBox(),
-                    icon: const Icon(
-                      Icons.keyboard_arrow_down_outlined,
-                      color: Color(0xFF757575),
-                    ),
-                    style: const TextStyle(
-                      color: Color(0xFF212121),
-                      fontSize: 14,
-                    ),
-                    onChanged: (SortOption? newValue) {
-                      if (newValue != null) {
-                        setState(() {
-                          selectedSort = newValue;
-                        });
-                        _applyFilters();
-                      }
-                    },
-                    items: SortOption.values.map<DropdownMenuItem<SortOption>>((SortOption value) {
-                      return DropdownMenuItem<SortOption>(
-                        value: value,
-                        child: Text(_getSortLabelForOption(value)),
-                      );
-                    }).toList(),
-                  ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-          
-          // Main content with sidebar and products
-          Expanded(
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                // Left sidebar
-                Container(
-                  width: 280,
-                  decoration: const BoxDecoration(
-                    color: Colors.white,
-                    border: Border(
-                      right: BorderSide(
-                        color: Color(0xFFE0E0E0),
-                        width: 1,
+
+            // Main content with sidebar and products
+            Expanded(
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  // Left sidebar
+                  Container(
+                    width: 280,
+                    decoration: const BoxDecoration(
+                      color: Colors.white,
+                      border: Border(
+                        right: BorderSide(
+                          color: Color(0xFFE0E0E0),
+                          width: 1,
+                        ),
+                      ),
+                    ),
+                    child: SingleChildScrollView(
+                      padding: const EdgeInsets.only(left: 20, right: 20, top: 8, bottom: 20),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: <Widget>[
+                          _buildProductTypeFilter(),
+                          const SizedBox(height: 24),
+                          _buildCategorySpecificFilters(),
+                          const SizedBox(height: 24),
+                          _buildClearFiltersButton(),
+                        ],
                       ),
                     ),
                   ),
-                  child: SingleChildScrollView(
-                    padding: const EdgeInsets.only(left: 20, right: 20, top: 8, bottom: 20),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: <Widget>[
-                        _buildProductTypeFilter(),
-                        const SizedBox(height: 24),
-                        _buildCategorySpecificFilters(),
-                        const SizedBox(height: 24),
-                        _buildClearFiltersButton(),
-                      ],
-                    ),
+
+                  // Products grid
+                  Expanded(
+                    child: _buildProductsGrid(),
                   ),
-                ),
-                
-                // Products grid
-                Expanded(
-                  child: _buildProductsGrid(),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-        ],
+          ],
         ),
       ),
     );
   }
-  
+
   Widget _buildProductTypeFilter() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -371,7 +376,7 @@ class _ProductFilterPageState extends State<ProductFilterPage> {
         const SizedBox(height: 12),
         ...<String>['All', 'Speakers', 'Amplifiers', 'DSP Devices'].map((String type) {
           final bool isSelected = selectedProductType == type;
-          
+
           // Calculate count for this type
           int typeCount = 0;
           if (type == 'All') {
@@ -383,7 +388,7 @@ class _ProductFilterPageState extends State<ProductFilterPage> {
           } else if (type == 'DSP Devices') {
             typeCount = allProducts.where((ProductItem p) => p.type == 'DSP Device').length;
           }
-          
+
           return Container(
             margin: const EdgeInsets.only(bottom: 8),
             child: InkWell(
@@ -459,7 +464,7 @@ class _ProductFilterPageState extends State<ProductFilterPage> {
       ],
     );
   }
-  
+
   IconData _getProductTypeIcon(String type) {
     switch (type) {
       case 'All':
@@ -474,7 +479,7 @@ class _ProductFilterPageState extends State<ProductFilterPage> {
         return Icons.device_unknown_outlined;
     }
   }
-  
+
   Widget _buildCategorySpecificFilters() {
     switch (selectedProductType) {
       case 'Speakers':
@@ -487,7 +492,7 @@ class _ProductFilterPageState extends State<ProductFilterPage> {
         return _buildAllProductsFilters();
     }
   }
-  
+
   Widget _buildSpeakerFilters() {
     return Column(
       children: <Widget>[
@@ -531,15 +536,16 @@ class _ProductFilterPageState extends State<ProductFilterPage> {
       ],
     );
   }
-  
+
   Widget _buildAmplifierFilters() {
     // Get available channel counts from actual amplifier data
-    final Set<String> availableChannels = allProducts
-        .where((ProductItem p) => p.type == 'Amplifier')
-        .map((ProductItem p) => p.additionalInfo['channels']?.toString() ?? '')
-        .where((String s) => s.isNotEmpty)
-        .toSet();
-    
+    final Set<String> availableChannels =
+        allProducts
+            .where((ProductItem p) => p.type == 'Amplifier')
+            .map((ProductItem p) => p.additionalInfo['channels']?.toString() ?? '')
+            .where((String s) => s.isNotEmpty)
+            .toSet();
+
     return Column(
       children: <Widget>[
         _buildFilterSection(
@@ -578,21 +584,23 @@ class _ProductFilterPageState extends State<ProductFilterPage> {
       ],
     );
   }
-  
+
   Widget _buildDspFilters() {
     // Get available input/output counts from actual DSP device data
-    final Set<String> availableInputs = allProducts
-        .where((ProductItem p) => p.type == 'DSP Device')
-        .map((ProductItem p) => p.additionalInfo['analogInputs']?.toString() ?? '')
-        .where((String s) => s.isNotEmpty)
-        .toSet();
-        
-    final Set<String> availableOutputs = allProducts
-        .where((ProductItem p) => p.type == 'DSP Device')
-        .map((ProductItem p) => p.additionalInfo['analogOutputs']?.toString() ?? '')
-        .where((String s) => s.isNotEmpty)
-        .toSet();
-    
+    final Set<String> availableInputs =
+        allProducts
+            .where((ProductItem p) => p.type == 'DSP Device')
+            .map((ProductItem p) => p.additionalInfo['analogInputs']?.toString() ?? '')
+            .where((String s) => s.isNotEmpty)
+            .toSet();
+
+    final Set<String> availableOutputs =
+        allProducts
+            .where((ProductItem p) => p.type == 'DSP Device')
+            .map((ProductItem p) => p.additionalInfo['analogOutputs']?.toString() ?? '')
+            .where((String s) => s.isNotEmpty)
+            .toSet();
+
     return Column(
       children: <Widget>[
         _buildFilterSection(
@@ -648,7 +656,7 @@ class _ProductFilterPageState extends State<ProductFilterPage> {
       ],
     );
   }
-  
+
   Widget _buildAllProductsFilters() {
     return Column(
       children: <Widget>[
@@ -692,7 +700,7 @@ class _ProductFilterPageState extends State<ProductFilterPage> {
       ],
     );
   }
-  
+
   Widget _buildFilterSection(
     String title,
     IconData icon,
@@ -744,13 +752,14 @@ class _ProductFilterPageState extends State<ProductFilterPage> {
                         ),
                         borderRadius: BorderRadius.circular(3),
                       ),
-                      child: isSelected
-                          ? const Icon(
-                              Icons.check,
-                              size: 12,
-                              color: Colors.white,
-                            )
-                          : null,
+                      child:
+                          isSelected
+                              ? const Icon(
+                                Icons.check,
+                                size: 12,
+                                color: Colors.white,
+                              )
+                              : null,
                     ),
                     const SizedBox(width: 8),
                     Expanded(
@@ -772,18 +781,15 @@ class _ProductFilterPageState extends State<ProductFilterPage> {
       ],
     );
   }
-  
+
   Widget _buildColorFilter() {
     // Get available colors from actual speaker data
-    final Set<String> availableColors = allProducts
-        .where((ProductItem p) => p.type == 'Speaker' && p.color != null)
-        .map((ProductItem p) => p.color!)
-        .toSet();
-    
+    final Set<String> availableColors = allProducts.where((ProductItem p) => p.type == 'Speaker' && p.color != null).map((ProductItem p) => p.color!).toSet();
+
     if (availableColors.isEmpty) {
       return const SizedBox.shrink(); // Don't show filter if no colors available
     }
-    
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
@@ -807,69 +813,70 @@ class _ProductFilterPageState extends State<ProductFilterPage> {
         ),
         const SizedBox(height: 8),
         Row(
-          children: availableColors.map((String color) {
-            final bool isSelected = selectedColors.contains(color);
-            return Expanded(
-              child: Container(
-                margin: const EdgeInsets.only(right: 8),
-                child: InkWell(
-                  onTap: () {
-                    setState(() {
-                      if (selectedColors.contains(color)) {
-                        selectedColors.remove(color);
-                      } else {
-                        selectedColors.add(color);
-                      }
-                    });
-                    _applyFilters();
-                  },
-                  borderRadius: BorderRadius.circular(8),
+          children:
+              availableColors.map((String color) {
+                final bool isSelected = selectedColors.contains(color);
+                return Expanded(
                   child: Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
+                    margin: const EdgeInsets.only(right: 8),
+                    child: InkWell(
+                      onTap: () {
+                        setState(() {
+                          if (selectedColors.contains(color)) {
+                            selectedColors.remove(color);
+                          } else {
+                            selectedColors.add(color);
+                          }
+                        });
+                        _applyFilters();
+                      },
                       borderRadius: BorderRadius.circular(8),
-                      border: Border.all(
-                        color: isSelected ? const Color(0xFF0EA5E9) : const Color(0xFFE0E0E0),
-                        width: isSelected ? 2 : 1,
+                      child: Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
+                            color: isSelected ? const Color(0xFF0EA5E9) : const Color(0xFFE0E0E0),
+                            width: isSelected ? 2 : 1,
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: <Widget>[
+                            Container(
+                              width: 16,
+                              height: 16,
+                              decoration: BoxDecoration(
+                                color: color.toLowerCase() == 'white' ? Colors.white : Colors.black,
+                                border: Border.all(
+                                  color: const Color(0xFFBDBDBD),
+                                  width: 1,
+                                ),
+                                shape: BoxShape.circle,
+                              ),
+                            ),
+                            const SizedBox(width: 6),
+                            Text(
+                              color,
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: isSelected ? const Color(0xFF0EA5E9) : const Color(0xFF616161),
+                                fontWeight: isSelected ? FontWeight.w500 : FontWeight.w400,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: <Widget>[
-                        Container(
-                          width: 16,
-                          height: 16,
-                          decoration: BoxDecoration(
-                            color: color.toLowerCase() == 'white' ? Colors.white : Colors.black,
-                            border: Border.all(
-                              color: const Color(0xFFBDBDBD),
-                              width: 1,
-                            ),
-                            shape: BoxShape.circle,
-                          ),
-                        ),
-                        const SizedBox(width: 6),
-                        Text(
-                          color,
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: isSelected ? const Color(0xFF0EA5E9) : const Color(0xFF616161),
-                            fontWeight: isSelected ? FontWeight.w500 : FontWeight.w400,
-                          ),
-                        ),
-                      ],
-                    ),
                   ),
-                ),
-              ),
-            );
-          }).toList(),
+                );
+              }).toList(),
         ),
       ],
     );
   }
-  
+
   Widget _buildCoverageFilter() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -894,59 +901,60 @@ class _ProductFilterPageState extends State<ProductFilterPage> {
         ),
         const SizedBox(height: 8),
         Row(
-          children: CoverageLevel.values.map((CoverageLevel level) {
-            final bool isSelected = selectedCoverage.contains(level);
-            final String label = level.toString().split('.').last;
-            final String capitalizedLabel = label[0].toUpperCase() + label.substring(1);
-            
-            return Expanded(
-              child: Container(
-                margin: const EdgeInsets.only(right: 8),
-                child: InkWell(
-                  onTap: () {
-                    setState(() {
-                      if (selectedCoverage.contains(level)) {
-                        selectedCoverage.remove(level);
-                      } else {
-                        selectedCoverage.add(level);
-                      }
-                    });
-                    _applyFilters();
-                  },
-                  borderRadius: BorderRadius.circular(8),
+          children:
+              CoverageLevel.values.map((CoverageLevel level) {
+                final bool isSelected = selectedCoverage.contains(level);
+                final String label = level.toString().split('.').last;
+                final String capitalizedLabel = label[0].toUpperCase() + label.substring(1);
+
+                return Expanded(
                   child: Container(
-                    padding: const EdgeInsets.symmetric(vertical: 8),
-                    decoration: BoxDecoration(
-                      color: isSelected ? const Color(0xFFF0F9FF) : Colors.white,
+                    margin: const EdgeInsets.only(right: 8),
+                    child: InkWell(
+                      onTap: () {
+                        setState(() {
+                          if (selectedCoverage.contains(level)) {
+                            selectedCoverage.remove(level);
+                          } else {
+                            selectedCoverage.add(level);
+                          }
+                        });
+                        _applyFilters();
+                      },
                       borderRadius: BorderRadius.circular(8),
-                      border: Border.all(
-                        color: isSelected ? const Color(0xFF0EA5E9) : const Color(0xFFE0E0E0),
-                        width: 1,
-                      ),
-                    ),
-                    child: Text(
-                      capitalizedLabel,
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: isSelected ? const Color(0xFF0EA5E9) : const Color(0xFF616161),
-                        fontWeight: isSelected ? FontWeight.w500 : FontWeight.w400,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(vertical: 8),
+                        decoration: BoxDecoration(
+                          color: isSelected ? const Color(0xFFF0F9FF) : Colors.white,
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
+                            color: isSelected ? const Color(0xFF0EA5E9) : const Color(0xFFE0E0E0),
+                            width: 1,
+                          ),
+                        ),
+                        child: Text(
+                          capitalizedLabel,
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: isSelected ? const Color(0xFF0EA5E9) : const Color(0xFF616161),
+                            fontWeight: isSelected ? FontWeight.w500 : FontWeight.w400,
+                          ),
+                        ),
                       ),
                     ),
                   ),
-                ),
-              ),
-            );
-          }).toList(),
+                );
+              }).toList(),
         ),
       ],
     );
   }
-  
+
   Widget _buildClearFiltersButton() {
     final int activeFilters = _getActiveFilterCount();
     if (activeFilters == 0) return const SizedBox.shrink();
-    
+
     return SizedBox(
       width: double.infinity,
       child: OutlinedButton.icon(
@@ -976,7 +984,7 @@ class _ProductFilterPageState extends State<ProductFilterPage> {
       ),
     );
   }
-  
+
   Widget _buildProductsGrid() {
     if (filteredProducts.isEmpty) {
       return const Center(
@@ -1009,7 +1017,7 @@ class _ProductFilterPageState extends State<ProductFilterPage> {
         ),
       );
     }
-    
+
     return GridView.builder(
       padding: const EdgeInsets.all(16),
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
@@ -1028,7 +1036,7 @@ class _ProductFilterPageState extends State<ProductFilterPage> {
       },
     );
   }
-  
+
   void _clearAllFilters() {
     setState(() {
       selectedMountTypes.clear();
@@ -1047,141 +1055,128 @@ class _ProductFilterPageState extends State<ProductFilterPage> {
     });
     _applyFilters();
   }
-  
+
   // Update _applyFilters to include product type filtering
   void _applyFilters() {
     setState(() {
-      filteredProducts = allProducts.where((ProductItem product) {
-        // Product type filter
-        if (selectedProductType != 'All') {
-          if (selectedProductType == 'Speakers' && product.type != 'Speaker') return false;
-          if (selectedProductType == 'Amplifiers' && product.type != 'Amplifier') return false;
-          if (selectedProductType == 'DSP Devices' && product.type != 'DSP Device') return false;
-        }
-        
-        // Search filter
-        final String query = _searchController.text.toLowerCase();
-        if (query.isNotEmpty && 
-            !product.name.toLowerCase().contains(query) &&
-            !product.type.toLowerCase().contains(query)) {
-          return false;
-        }
-        
-        // Mount type filter (speakers only)
-        if (selectedMountTypes.isNotEmpty && 
-            product.mountType != null &&
-            !selectedMountTypes.contains(product.mountType)) {
-          return false;
-        }
-        
-        // Venue type filter
-        if (selectedVenueTypes.isNotEmpty && 
-            product.venueType != null &&
-            !selectedVenueTypes.contains(product.venueType)) {
-          return false;
-        }
-        
-        // Color filter
-        if (selectedColors.isNotEmpty && 
-            product.color != null &&
-            !selectedColors.contains(product.color)) {
-          return false;
-        }
-        
-        // Coverage filter
-        if (selectedCoverage.isNotEmpty && 
-            product.coverage != null &&
-            !selectedCoverage.contains(product.coverage)) {
-          return false;
-        }
-        
-        // SPL range filter (only applies to speakers with maxSpl data)
-        if (product.additionalInfo.containsKey('maxSpl')) {
-          final double maxSpl = product.additionalInfo['maxSpl'] as double;
-          if (maxSpl < splRange.start || maxSpl > splRange.end) {
-            return false;
-          }
-        }
-        
-        // Amplifier-specific filters
-        if (product.type == 'Amplifier') {
-          // Channel count filter
-          if (selectedChannelCounts.isNotEmpty && 
-              product.additionalInfo.containsKey('channels')) {
-            final int channels = product.additionalInfo['channels'] as int;
-            final String channelStr = channels.toString();
-            if (!selectedChannelCounts.contains(channelStr)) {
+      filteredProducts =
+          allProducts.where((ProductItem product) {
+            // Product type filter
+            if (selectedProductType != 'All') {
+              if (selectedProductType == 'Speakers' && product.type != 'Speaker') return false;
+              if (selectedProductType == 'Amplifiers' && product.type != 'Amplifier') return false;
+              if (selectedProductType == 'DSP Devices' && product.type != 'DSP Device') return false;
+            }
+
+            // Search filter
+            final String query = _searchController.text.toLowerCase();
+            if (query.isNotEmpty && !product.name.toLowerCase().contains(query) && !product.type.toLowerCase().contains(query)) {
               return false;
             }
-          }
-          
-          // Power range filter
-          if (selectedPowerRanges.isNotEmpty && 
-              product.additionalInfo.containsKey('peakPerChannel')) {
-            final double power = product.additionalInfo['peakPerChannel'] as double;
-            String powerRange = '';
-            if (power <= 600) {
-              powerRange = 'Low Power (≤600W)';
-            } else if (power <= 1200) {
-              powerRange = 'Mid Power (600-1200W)';
-            } else {
-              powerRange = 'High Power (>1200W)';
-            }
-            if (!selectedPowerRanges.contains(powerRange)) {
+
+            // Mount type filter (speakers only)
+            if (selectedMountTypes.isNotEmpty && product.mountType != null && !selectedMountTypes.contains(product.mountType)) {
               return false;
             }
-          }
-        }
-        
-        // DSP Device-specific filters
-        if (product.type == 'DSP Device') {
-          // Input count filter
-          if (selectedInputCounts.isNotEmpty && 
-              product.additionalInfo.containsKey('analogInputs')) {
-            final int inputs = product.additionalInfo['analogInputs'] as int;
-            final String inputStr = inputs.toString();
-            if (!selectedInputCounts.contains(inputStr)) {
+
+            // Venue type filter
+            if (selectedVenueTypes.isNotEmpty && product.venueType != null && !selectedVenueTypes.contains(product.venueType)) {
               return false;
             }
-          }
-          
-          // Output count filter
-          if (selectedOutputCounts.isNotEmpty && 
-              product.additionalInfo.containsKey('analogOutputs')) {
-            final int outputs = product.additionalInfo['analogOutputs'] as int;
-            final String outputStr = outputs.toString();
-            if (!selectedOutputCounts.contains(outputStr)) {
+
+            // Color filter
+            if (selectedColors.isNotEmpty && product.color != null && !selectedColors.contains(product.color)) {
               return false;
             }
-          }
-          
-          // Network type filter (updated for separate network I/O)
-          if (selectedNetworkTypes.isNotEmpty && 
-              product.additionalInfo.containsKey('networkInputs') &&
-              product.additionalInfo.containsKey('networkOutputs')) {
-            final int networkInputs = product.additionalInfo['networkInputs'] as int;
-            final int networkOutputs = product.additionalInfo['networkOutputs'] as int;
-            final int totalNetworkIO = networkInputs + networkOutputs;
-            String networkType = '';
-            if (totalNetworkIO > 0) {
-              networkType = 'Network I/O';
-            } else {
-              networkType = 'Analog Only';
-            }
-            if (!selectedNetworkTypes.contains(networkType)) {
+
+            // Coverage filter
+            if (selectedCoverage.isNotEmpty && product.coverage != null && !selectedCoverage.contains(product.coverage)) {
               return false;
             }
-          }
-        }
-        
-        return true;
-      }).toList();
-      
+
+            // SPL range filter (only applies to speakers with maxSpl data)
+            if (product.additionalInfo.containsKey('maxSpl')) {
+              final double maxSpl = product.additionalInfo['maxSpl'] as double;
+              if (maxSpl < splRange.start || maxSpl > splRange.end) {
+                return false;
+              }
+            }
+
+            // Amplifier-specific filters
+            if (product.type == 'Amplifier') {
+              // Channel count filter
+              if (selectedChannelCounts.isNotEmpty && product.additionalInfo.containsKey('channels')) {
+                final int channels = product.additionalInfo['channels'] as int;
+                final String channelStr = channels.toString();
+                if (!selectedChannelCounts.contains(channelStr)) {
+                  return false;
+                }
+              }
+
+              // Power range filter
+              if (selectedPowerRanges.isNotEmpty && product.additionalInfo.containsKey('peakPerChannel')) {
+                final double power = product.additionalInfo['peakPerChannel'] as double;
+                String powerRange = '';
+                if (power <= 600) {
+                  powerRange = 'Low Power (≤600W)';
+                } else if (power <= 1200) {
+                  powerRange = 'Mid Power (600-1200W)';
+                } else {
+                  powerRange = 'High Power (>1200W)';
+                }
+                if (!selectedPowerRanges.contains(powerRange)) {
+                  return false;
+                }
+              }
+            }
+
+            // DSP Device-specific filters
+            if (product.type == 'DSP Device') {
+              // Input count filter
+              if (selectedInputCounts.isNotEmpty && product.additionalInfo.containsKey('analogInputs')) {
+                final int inputs = product.additionalInfo['analogInputs'] as int;
+                final String inputStr = inputs.toString();
+                if (!selectedInputCounts.contains(inputStr)) {
+                  return false;
+                }
+              }
+
+              // Output count filter
+              if (selectedOutputCounts.isNotEmpty && product.additionalInfo.containsKey('analogOutputs')) {
+                final int outputs = product.additionalInfo['analogOutputs'] as int;
+                final String outputStr = outputs.toString();
+                if (!selectedOutputCounts.contains(outputStr)) {
+                  return false;
+                }
+              }
+
+              // Network type filter (updated for separate network I/O)
+              if (selectedNetworkTypes.isNotEmpty &&
+                  product.additionalInfo.containsKey('networkInputs') &&
+                  product.additionalInfo.containsKey('networkOutputs')) {
+                final int networkInputs = product.additionalInfo['networkInputs'] as int;
+                final int networkOutputs = product.additionalInfo['networkOutputs'] as int;
+                final int totalNetworkIO = networkInputs + networkOutputs;
+                String networkType = '';
+                if (totalNetworkIO > 0) {
+                  networkType = 'Network I/O';
+                } else {
+                  networkType = 'Analog Only';
+                }
+                if (!selectedNetworkTypes.contains(networkType)) {
+                  return false;
+                }
+              }
+            }
+
+            return true;
+          }).toList();
+
       // Apply sorting
       _sortProducts();
     });
   }
-  
+
   void _sortProducts() {
     filteredProducts.sort((ProductItem a, ProductItem b) {
       switch (selectedSort) {
@@ -1196,7 +1191,7 @@ class _ProductFilterPageState extends State<ProductFilterPage> {
       }
     });
   }
-  
+
   int _getActiveFilterCount() {
     return selectedMountTypes.length +
         selectedVenueTypes.length +
@@ -1209,7 +1204,7 @@ class _ProductFilterPageState extends State<ProductFilterPage> {
         selectedOutputCounts.length +
         selectedNetworkTypes.length;
   }
-  
+
   String _getSortLabelForOption(SortOption option) {
     switch (option) {
       case SortOption.priceLowToHigh:
@@ -1222,7 +1217,7 @@ class _ProductFilterPageState extends State<ProductFilterPage> {
         return 'Z → A';
     }
   }
-  
+
   void _showProductDetails(BuildContext context, ProductItem product) {
     showDialog(
       context: context,
@@ -1243,7 +1238,7 @@ class ProductItem {
   final CoverageLevel? coverage;
   final ImpedanceLevel? impedance;
   final Map<String, dynamic> additionalInfo;
-  
+
   ProductItem({
     required this.name,
     required this.type,
@@ -1256,7 +1251,7 @@ class ProductItem {
     this.impedance,
     this.additionalInfo = const <String, dynamic>{},
   });
-  
+
   factory ProductItem.fromSpeaker(SpeakerModel speaker) {
     return ProductItem(
       name: speaker.model,
@@ -1277,7 +1272,7 @@ class ProductItem {
       },
     );
   }
-  
+
   factory ProductItem.fromAmplifier(AmpModel amplifier) {
     return ProductItem(
       name: amplifier.name,
@@ -1291,7 +1286,7 @@ class ProductItem {
       },
     );
   }
-  
+
   factory ProductItem.fromDevice(DeviceSpec device) {
     return ProductItem(
       name: device.name,
@@ -1308,18 +1303,18 @@ class ProductItem {
       },
     );
   }
-  
+
   static String capitalize(String str) {
     if (str.isEmpty) return str;
     return str[0].toUpperCase() + str.substring(1);
   }
-  
+
   static CoverageLevel getCoverageFromSpl(double spl) {
     if (spl < 100) return CoverageLevel.low;
     if (spl < 110) return CoverageLevel.mid;
     return CoverageLevel.high;
   }
-  
+
   static ImpedanceLevel getImpedanceLevel(double ohms) {
     return ohms <= 4 ? ImpedanceLevel.low : ImpedanceLevel.high;
   }
@@ -1329,13 +1324,13 @@ class ProductItem {
 class CleanProductCard extends StatelessWidget {
   final ProductItem product;
   final VoidCallback? onTap;
-  
+
   const CleanProductCard({
-    super.key, 
+    super.key,
     required this.product,
     this.onTap,
   });
-  
+
   @override
   Widget build(BuildContext context) {
     return InkWell(
@@ -1360,95 +1355,97 @@ class CleanProductCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
-          // Product image
-          Expanded(
-            flex: 3, // Increased from 1 to give more space to image
-            child: Container(
-              width: double.infinity,
-              decoration: const BoxDecoration(
-                color: Color(0xFFF9F9F9),
-                borderRadius: BorderRadius.vertical(top: Radius.circular(12)),
-              ),
-              padding: const EdgeInsets.all(12), // Increased padding for better image display
-              child: product.imageUrl != null
-                  ? ClipRRect(
-                      borderRadius: BorderRadius.circular(8),
-                      child: product.imageUrl!.startsWith('assets/')
-                          ? Image.asset(
-                              product.imageUrl!,
-                              fit: BoxFit.contain,
-                              errorBuilder: (BuildContext context, Object error, StackTrace? stackTrace) {
-                                // Try fallback to default image
-                                return Image.asset(
-                                  'assets/images/default_image.png',
-                                  fit: BoxFit.contain,
-                                  errorBuilder: (BuildContext context, Object error, StackTrace? stackTrace) =>
-                                      Center(
-                                        child: Icon(
-                                          _getProductIcon(),
-                                          size: 32,
-                                          color: const Color(0xFFBDBDBD),
+            // Product image
+            Expanded(
+              flex: 3, // Increased from 1 to give more space to image
+              child: Container(
+                width: double.infinity,
+                decoration: const BoxDecoration(
+                  color: Color(0xFFF9F9F9),
+                  borderRadius: BorderRadius.vertical(top: Radius.circular(12)),
+                ),
+                padding: const EdgeInsets.all(12), // Increased padding for better image display
+                child:
+                    product.imageUrl != null
+                        ? ClipRRect(
+                          borderRadius: BorderRadius.circular(8),
+                          child:
+                              product.imageUrl!.startsWith('assets/')
+                                  ? Image.asset(
+                                    product.imageUrl!,
+                                    fit: BoxFit.contain,
+                                    errorBuilder: (BuildContext context, Object error, StackTrace? stackTrace) {
+                                      // Try fallback to default image
+                                      return Image.asset(
+                                        'assets/images/default_image.png',
+                                        fit: BoxFit.contain,
+                                        errorBuilder:
+                                            (BuildContext context, Object error, StackTrace? stackTrace) => Center(
+                                              child: Icon(
+                                                _getProductIcon(),
+                                                size: 32,
+                                                color: const Color(0xFFBDBDBD),
+                                              ),
+                                            ),
+                                      );
+                                    },
+                                  )
+                                  : Image.network(
+                                    product.imageUrl!,
+                                    fit: BoxFit.contain,
+                                    loadingBuilder: (BuildContext context, Widget child, ImageChunkEvent? loadingProgress) {
+                                      if (loadingProgress == null) return child;
+                                      return Center(
+                                        child: CircularProgressIndicator(
+                                          value:
+                                              loadingProgress.expectedTotalBytes != null
+                                                  ? loadingProgress.cumulativeBytesLoaded / loadingProgress.expectedTotalBytes!
+                                                  : null,
+                                          strokeWidth: 2,
+                                          color: _getTypeColor(),
                                         ),
-                                      ),
-                                );
-                              },
-                            )
-                          : Image.network(
-                              product.imageUrl!,
-                              fit: BoxFit.contain,
-                              loadingBuilder: (BuildContext context, Widget child, ImageChunkEvent? loadingProgress) {
-                                if (loadingProgress == null) return child;
-                                return Center(
-                                  child: CircularProgressIndicator(
-                                    value: loadingProgress.expectedTotalBytes != null
-                                        ? loadingProgress.cumulativeBytesLoaded / loadingProgress.expectedTotalBytes!
-                                        : null,
-                                    strokeWidth: 2,
-                                    color: _getTypeColor(),
+                                      );
+                                    },
+                                    errorBuilder:
+                                        (BuildContext context, Object error, StackTrace? stackTrace) => Center(
+                                          child: Icon(
+                                            _getProductIcon(),
+                                            size: 32,
+                                            color: const Color(0xFFBDBDBD),
+                                          ),
+                                        ),
                                   ),
-                                );
-                              },
-                              errorBuilder: (BuildContext context, Object error, StackTrace? stackTrace) =>
-                                  Center(
-                                    child: Icon(
-                                      _getProductIcon(),
-                                      size: 32,
-                                      color: const Color(0xFFBDBDBD),
-                                    ),
-                                  ),
-                            ),
-                    )
-                  : Center(
-                      child: Icon(
-                        _getProductIcon(),
-                        size: 32,
-                        color: const Color(0xFFBDBDBD),
-                      ),
-                    ),
+                        )
+                        : Center(
+                          child: Icon(
+                            _getProductIcon(),
+                            size: 32,
+                            color: const Color(0xFFBDBDBD),
+                          ),
+                        ),
+              ),
             ),
-          ),
-          // Product details with specs
-          Expanded(
-            flex: 2, // Reduced from 4 to balance with larger image area
-            child: Padding(
-              padding: const EdgeInsets.all(12), // Increased padding for better spacing
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: <Widget>[
-                  // Product name
-                  Text(
-                    product.name,
-                    style: const TextStyle(
-                      fontSize: 13, // Slightly reduced for better fit
-                      fontWeight: FontWeight.w600,
-                      color: Color(0xFF212121),
+            // Product details with specs
+            Expanded(
+              flex: 2, // Reduced from 4 to balance with larger image area
+              child: Padding(
+                padding: const EdgeInsets.all(12), // Increased padding for better spacing
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: <Widget>[
+                    // Product name
+                    Text(
+                      product.name,
+                      style: const TextStyle(
+                        fontSize: 13, // Slightly reduced for better fit
+                        fontWeight: FontWeight.w600,
+                        color: Color(0xFF212121),
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
                     ),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
                     const SizedBox(height: 4), // Increased spacing
-                    
                     // Product type badge
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
@@ -1466,14 +1463,12 @@ class CleanProductCard extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: 6), // Increased spacing
-                    
                     // Device specs - using Flexible instead of Expanded
                     Flexible(
                       child: _buildDeviceSpecs(),
                     ),
-                    
+
                     const SizedBox(height: 4), // Add spacing before price
-                    
                     // Price
                     if (product.price != null)
                       Text(
@@ -1501,70 +1496,84 @@ class CleanProductCard extends StatelessWidget {
       ),
     );
   }
-  
+
   Widget _buildDeviceSpecs() {
     final List<Widget> specs = <Widget>[];
-    
+
     // Add specs based on product type
     switch (product.type) {
       case 'Speaker':
         if (product.additionalInfo.containsKey('maxSpl')) {
-          specs.add(_buildSpecItem(
-            Icons.volume_up_outlined, 
-            '${product.additionalInfo['maxSpl']} dB',
-          ));
+          specs.add(
+            _buildSpecItem(
+              Icons.volume_up_outlined,
+              '${product.additionalInfo['maxSpl']} dB',
+            ),
+          );
         }
         if (product.additionalInfo.containsKey('nominalOhms')) {
-          specs.add(_buildSpecItem(
-            Icons.electrical_services_outlined, 
-            '${product.additionalInfo['nominalOhms']}Ω',
-          ));
+          specs.add(
+            _buildSpecItem(
+              Icons.electrical_services_outlined,
+              '${product.additionalInfo['nominalOhms']}Ω',
+            ),
+          );
         }
         if (product.mountType != null) {
-          specs.add(_buildSpecItem(
-            Icons.install_desktop_outlined, 
-            product.mountType!,
-          ));
+          specs.add(
+            _buildSpecItem(
+              Icons.install_desktop_outlined,
+              product.mountType!,
+            ),
+          );
         }
         break;
-        
+
       case 'Amplifier':
         if (product.additionalInfo.containsKey('channels')) {
-          specs.add(_buildSpecItem(
-            Icons.linear_scale_outlined, 
-            '${product.additionalInfo['channels']} Ch',
-          ));
+          specs.add(
+            _buildSpecItem(
+              Icons.linear_scale_outlined,
+              '${product.additionalInfo['channels']} Ch',
+            ),
+          );
         }
         if (product.additionalInfo.containsKey('peakPerChannel')) {
-          specs.add(_buildSpecItem(
-            Icons.power_outlined, 
-            '${product.additionalInfo['peakPerChannel']}W',
-          ));
+          specs.add(
+            _buildSpecItem(
+              Icons.power_outlined,
+              '${product.additionalInfo['peakPerChannel']}W',
+            ),
+          );
         }
         break;
-        
+
       case 'DSP Device':
         if (product.additionalInfo.containsKey('analogInputs')) {
-          specs.add(_buildSpecItem(
-            Icons.input_outlined, 
-            '${product.additionalInfo['analogInputs']} In',
-          ));
+          specs.add(
+            _buildSpecItem(
+              Icons.input_outlined,
+              '${product.additionalInfo['analogInputs']} In',
+            ),
+          );
         }
         if (product.additionalInfo.containsKey('analogOutputs')) {
-          specs.add(_buildSpecItem(
-            Icons.output_outlined, 
-            '${product.additionalInfo['analogOutputs']} Out',
-          ));
+          specs.add(
+            _buildSpecItem(
+              Icons.output_outlined,
+              '${product.additionalInfo['analogOutputs']} Out',
+            ),
+          );
         }
         break;
     }
-    
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: specs.take(2).toList(), // Reduced from 3 to 2 specs
     );
   }
-  
+
   Widget _buildSpecItem(IconData icon, String value) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 3),
@@ -1591,7 +1600,7 @@ class CleanProductCard extends StatelessWidget {
       ),
     );
   }
-  
+
   IconData _getProductIcon() {
     switch (product.type) {
       case 'Speaker':
@@ -1604,7 +1613,7 @@ class CleanProductCard extends StatelessWidget {
         return Icons.device_unknown_outlined;
     }
   }
-  
+
   Color _getTypeColor() {
     switch (product.type) {
       case 'Speaker':
@@ -1622,9 +1631,9 @@ class CleanProductCard extends StatelessWidget {
 /// Detailed product information dialog
 class ProductDetailsDialog extends StatelessWidget {
   final ProductItem product;
-  
+
   const ProductDetailsDialog({super.key, required this.product});
-  
+
   @override
   Widget build(BuildContext context) {
     return Dialog(
@@ -1661,7 +1670,7 @@ class ProductDetailsDialog extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 16),
-            
+
             // Product type badge
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
@@ -1679,7 +1688,7 @@ class ProductDetailsDialog extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 24),
-            
+
             Expanded(
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -1698,65 +1707,68 @@ class ProductDetailsDialog extends StatelessWidget {
                         ),
                       ),
                       padding: const EdgeInsets.all(16), // Add padding for better image display
-                      child: product.imageUrl != null
-                          ? ClipRRect(
-                              borderRadius: BorderRadius.circular(12),
-                              child: product.imageUrl!.startsWith('assets/')
-                                  ? Image.asset(
-                                      product.imageUrl!,
-                                      fit: BoxFit.contain,
-                                      errorBuilder: (BuildContext context, Object error, StackTrace? stackTrace) {
-                                        // Try fallback to default image
-                                        return Image.asset(
-                                          'assets/images/default_image.png',
+                      child:
+                          product.imageUrl != null
+                              ? ClipRRect(
+                                borderRadius: BorderRadius.circular(12),
+                                child:
+                                    product.imageUrl!.startsWith('assets/')
+                                        ? Image.asset(
+                                          product.imageUrl!,
                                           fit: BoxFit.contain,
-                                          errorBuilder: (BuildContext context, Object error, StackTrace? stackTrace) =>
-                                              Center(
+                                          errorBuilder: (BuildContext context, Object error, StackTrace? stackTrace) {
+                                            // Try fallback to default image
+                                            return Image.asset(
+                                              'assets/images/default_image.png',
+                                              fit: BoxFit.contain,
+                                              errorBuilder:
+                                                  (BuildContext context, Object error, StackTrace? stackTrace) => Center(
+                                                    child: Icon(
+                                                      _getProductIcon(),
+                                                      size: 100,
+                                                      color: const Color(0xFFBDBDBD),
+                                                    ),
+                                                  ),
+                                            );
+                                          },
+                                        )
+                                        : Image.network(
+                                          product.imageUrl!,
+                                          fit: BoxFit.contain,
+                                          loadingBuilder: (BuildContext context, Widget child, ImageChunkEvent? loadingProgress) {
+                                            if (loadingProgress == null) return child;
+                                            return Center(
+                                              child: CircularProgressIndicator(
+                                                value:
+                                                    loadingProgress.expectedTotalBytes != null
+                                                        ? loadingProgress.cumulativeBytesLoaded / loadingProgress.expectedTotalBytes!
+                                                        : null,
+                                                strokeWidth: 3,
+                                                color: _getTypeColor(),
+                                              ),
+                                            );
+                                          },
+                                          errorBuilder:
+                                              (BuildContext context, Object error, StackTrace? stackTrace) => Center(
                                                 child: Icon(
                                                   _getProductIcon(),
                                                   size: 100,
                                                   color: const Color(0xFFBDBDBD),
                                                 ),
                                               ),
-                                        );
-                                      },
-                                    )
-                                  : Image.network(
-                                      product.imageUrl!,
-                                      fit: BoxFit.contain,
-                                      loadingBuilder: (BuildContext context, Widget child, ImageChunkEvent? loadingProgress) {
-                                        if (loadingProgress == null) return child;
-                                        return Center(
-                                          child: CircularProgressIndicator(
-                                            value: loadingProgress.expectedTotalBytes != null
-                                                ? loadingProgress.cumulativeBytesLoaded / loadingProgress.expectedTotalBytes!
-                                                : null,
-                                            strokeWidth: 3,
-                                            color: _getTypeColor(),
-                                          ),
-                                        );
-                                      },
-                                      errorBuilder: (BuildContext context, Object error, StackTrace? stackTrace) =>
-                                          Center(
-                                            child: Icon(
-                                              _getProductIcon(),
-                                              size: 100,
-                                              color: const Color(0xFFBDBDBD),
-                                            ),
-                                          ),
-                                    ),
-                            )
-                          : Center(
-                              child: Icon(
-                                _getProductIcon(),
-                                size: 100,
-                                color: const Color(0xFFBDBDBD),
+                                        ),
+                              )
+                              : Center(
+                                child: Icon(
+                                  _getProductIcon(),
+                                  size: 100,
+                                  color: const Color(0xFFBDBDBD),
+                                ),
                               ),
-                            ),
                     ),
                   ),
                   const SizedBox(width: 24),
-                  
+
                   // Product specifications
                   Expanded(
                     flex: 3,
@@ -1781,9 +1793,9 @@ class ProductDetailsDialog extends StatelessWidget {
                 ],
               ),
             ),
-            
+
             const SizedBox(height: 24),
-            
+
             // Price and action buttons
             Row(
               children: <Widget>[
@@ -1842,10 +1854,10 @@ class ProductDetailsDialog extends StatelessWidget {
       ),
     );
   }
-  
+
   Widget _buildDetailedSpecs() {
     final Map<String, String> specs = <String, String>{};
-    
+
     // Add specs based on product type
     switch (product.type) {
       case 'Speaker':
@@ -1874,7 +1886,7 @@ class ProductDetailsDialog extends StatelessWidget {
           specs['Hi-Z Support'] = product.additionalInfo['hasHiZ'] ? 'Yes' : 'No';
         }
         break;
-        
+
       case 'Amplifier':
         if (product.additionalInfo.containsKey('channels')) {
           specs['Channels'] = '${product.additionalInfo['channels']}';
@@ -1886,7 +1898,7 @@ class ProductDetailsDialog extends StatelessWidget {
           specs['Total Capacity'] = '${product.additionalInfo['totalCapacity']}W';
         }
         break;
-        
+
       case 'DSP Device':
         if (product.additionalInfo.containsKey('analogInputs')) {
           specs['Analog Inputs'] = '${product.additionalInfo['analogInputs']}';
@@ -1902,52 +1914,53 @@ class ProductDetailsDialog extends StatelessWidget {
         }
         break;
     }
-    
+
     return SingleChildScrollView(
       child: Column(
-        children: specs.entries.map((MapEntry<String, String> entry) {
-          return Container(
-            margin: const EdgeInsets.only(bottom: 12),
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: const Color(0xFFF9F9F9),
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(
-                color: const Color(0xFFE0E0E0),
-                width: 1,
-              ),
-            ),
-            child: Row(
-              children: <Widget>[
-                Expanded(
-                  flex: 2,
-                  child: Text(
-                    entry.key,
-                    style: const TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: Color(0xFF424242),
-                    ),
+        children:
+            specs.entries.map((MapEntry<String, String> entry) {
+              return Container(
+                margin: const EdgeInsets.only(bottom: 12),
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF9F9F9),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                    color: const Color(0xFFE0E0E0),
+                    width: 1,
                   ),
                 ),
-                Expanded(
-                  flex: 3,
-                  child: Text(
-                    entry.value,
-                    style: const TextStyle(
-                      fontSize: 14,
-                      color: Color(0xFF212121),
+                child: Row(
+                  children: <Widget>[
+                    Expanded(
+                      flex: 2,
+                      child: Text(
+                        entry.key,
+                        style: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: Color(0xFF424242),
+                        ),
+                      ),
                     ),
-                  ),
+                    Expanded(
+                      flex: 3,
+                      child: Text(
+                        entry.value,
+                        style: const TextStyle(
+                          fontSize: 14,
+                          color: Color(0xFF212121),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
-              ],
-            ),
-          );
-        }).toList(),
+              );
+            }).toList(),
       ),
     );
   }
-  
+
   IconData _getProductIcon() {
     switch (product.type) {
       case 'Speaker':
@@ -1960,7 +1973,7 @@ class ProductDetailsDialog extends StatelessWidget {
         return Icons.device_unknown_outlined;
     }
   }
-  
+
   Color _getTypeColor() {
     switch (product.type) {
       case 'Speaker':

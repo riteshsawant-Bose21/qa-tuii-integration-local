@@ -39,7 +39,7 @@ class ComponentPort {
         PortType.bleIn || PortType.bleOut || PortType.ble => 'assets/icons/wiring_ports/bluetooth.png',
         PortType.hdmiIn || PortType.hdmiOut || PortType.hdmi => 'assets/icons/wiring_ports/hdmi.png',
         PortType.usbIn || PortType.usbOut || PortType.usb => 'assets/icons/wiring_ports/usb.png',
-        PortType.audioJack => 'assets/icons/wiring_ports/audio_jack.png',
+        PortType.audioJackInput || PortType.audioJackOutput => 'assets/icons/wiring_ports/audio_jack.png',
         _ => null,
       },
       position: portData.position,

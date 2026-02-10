@@ -4,7 +4,8 @@
 package cluster
 
 import (
-	"fusion/internal/logging"
+	"fusion-services-core/vip"
+	"fusion-services-core/logging"
 	"net"
 
 	"github.com/vishvananda/netlink"
@@ -14,12 +15,15 @@ const updateChannels = 16
 
 func (c *Cluster) watchLocalVIP(iface string) {
 	logger := logging.GetLogger()
-	expectedVIP, err := c.getVIPFromConfig()
+	expectedVIP, multiple, err := vip.ReadFromKeepalivedConfig(c.configPath)
 	if err != nil {
 		logger.Error("Failed to get VIP from config: %v", err)
 		return
 	}
-	expectedVIP = canonicalVIP(expectedVIP)
+	if multiple {
+		logger.Warn("More than one VIP found.")
+	}
+	expectedVIP = vip.Canonicalize(expectedVIP)
 
 	// Watch only the correct interface
 	link, err := netlink.LinkByName(iface)
@@ -31,7 +35,7 @@ func (c *Cluster) watchLocalVIP(iface string) {
 	// Initial scan
 	addrs, _ := netlink.AddrList(link, netlink.FAMILY_V4)
 	for _, a := range addrs {
-		if canonicalVIP(a.IP.String()) == expectedVIP {
+		if vip.Canonicalize(a.IP.String()) == expectedVIP {
 			logger.Info("VIP present at startup: %s", expectedVIP)
 			c.listenerUpdated(expectedVIP, c.appConfig.BindAddr)
 			c.notifyLocalVIPChange(true)
@@ -59,7 +63,7 @@ func (c *Cluster) watchLocalVIP(iface string) {
 		if ip == nil || ip.To4() == nil || !vipNet.Contains(ip) {
 			continue
 		}
-		theIP := canonicalVIP(ip.String())
+		theIP := vip.Canonicalize(ip.String())
 
 		if theIP != expectedVIP {
 			continue

@@ -1,13 +1,14 @@
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:flutter/cupertino.dart';
+import 'package:archive/archive_io.dart';
 import 'package:flutter/services.dart';
 import 'package:fusion_lib/fusion_lib.dart';
-import 'package:fusion_lib/fusion_logger/logger.dart';
+import 'package:path/path.dart' as path;
 import 'package:path_provider/path_provider.dart';
 
 const String kFusionProjectDirName = '/FusionProject';
+const String kFusionMediaDirectory = '/MediaFiles';
 const String kAdminFusionProjectDirName = '/AdminFusionProject';
 const String kProjectDataFileName = 'project_data.json';
 
@@ -19,9 +20,11 @@ class LocalProjectManager {
   /// Adds a new project to the list.
   /// If the project already exists, it will be replaced.
   Future<Directory> get fusionProjectDirectory async {
-    final String fusionDirPath = isAdminLogin ? kFusionProjectDirName : kFusionProjectDirName;
+    final String fusionDirPath = kFusionProjectDirName;
     Directory appDocDir = await FusionUtils.getFusionAppDirectory();
     final Directory fusionDir = Directory('${appDocDir.path}$fusionDirPath');
+
+    // print("Fusion Project Directory: ${fusionDir.path}");
 
     if (!await fusionDir.exists()) {
       await fusionDir.create(recursive: true);
@@ -45,12 +48,12 @@ class LocalProjectManager {
     /// check for the token
     /// if not exists then do not load projects
 
-    final String? accessToken = sharedPreferencesHandler.getString(SharedPreferenceKeys.accessToken);
-
-    if ((accessToken == null || accessToken.isEmpty) && !isAdminLogin) {
-      FusionLogger.log(tag: LogTag.project, message: "No access token found. Skipping project load.");
-      return ResponseCallback.failure('No access token found. Please log in.');
-    }
+    // final String? accessToken = sharedPreferencesHandler.getString(SharedPreferenceKeys.accessToken);
+    //
+    // if ((accessToken == null || accessToken.isEmpty) && !isAdminLogin) {
+    //   FusionLogger.log(tag: LogTag.project, message: "No access token found. Skipping project load.");
+    //   return ResponseCallback.failure('No access token found. Please log in.');
+    // }
 
     try {
       /// Load local project_data.json files
@@ -59,10 +62,16 @@ class LocalProjectManager {
         final File jsonFile = File('${folder.path}/$kProjectDataFileName');
         if (!await jsonFile.exists()) continue;
 
-        final String jsonStr = await jsonFile.readAsString();
-        final Map<String, dynamic> projectData = jsonDecode(jsonStr);
-
-        allProjects.add(ProjectData.fromJson(projectData));
+        try {
+          final String jsonStr = await jsonFile.readAsString();
+          final Map<String, dynamic> projectData = jsonDecode(jsonStr);
+          ProjectData project = ProjectData.fromJson(projectData);
+          if (!project.isDeleted) {
+            allProjects.add(project);
+          }
+        } catch (e) {
+          FusionLogger.log(tag: LogTag.project, message: "Error reading project data from folder ${folder.path}: $e", logLevel: LogLevel.error);
+        }
       }
 
       return ResponseCallback.success(allProjects);
@@ -78,12 +87,80 @@ class LocalProjectManager {
     return projectDir;
   }
 
+  Future<Directory> getProjectMediaDirectory({required String projectId}) async {
+    final String mediaDirPath = kFusionMediaDirectory;
+    Directory appDocDir = await getProjectDirectoryById(projectId);
+    final Directory mediaDir = Directory('${appDocDir.path}$mediaDirPath');
+
+    if (!await mediaDir.exists()) {
+      await mediaDir.create(recursive: true);
+    }
+    return mediaDir;
+  }
+
+  Future<File> zipProjectDirectory(String projectId) async {
+    final Directory projectDir = await getProjectDirectoryById(projectId);
+
+    if (!await projectDir.exists()) {
+      throw Exception("Project directory not found: ${projectDir.path}");
+    }
+
+    final String zipPath = '${projectDir.path}.zip';
+    final File zipFile = File(zipPath);
+
+    // Delete existing zip file
+    if (await zipFile.exists()) {
+      await zipFile.delete();
+    }
+
+    try {
+      // Create archive in memory
+      final archive = Archive();
+
+      // Get all entities recursively
+      final entities = projectDir.listSync(recursive: true);
+
+      for (final entity in entities) {
+        final relativePath = entity.path.substring(projectDir.path.length + 1);
+
+        if (entity is File) {
+          // Add file with its content
+          final bytes = await entity.readAsBytes();
+          final archiveFile = ArchiveFile(relativePath, bytes.length, bytes);
+          archive.addFile(archiveFile);
+        } else if (entity is Directory) {
+          // Add directory entry (with trailing slash)
+          final archiveFile = ArchiveFile('$relativePath/', 0, []);
+          archive.addFile(archiveFile);
+        }
+      }
+
+      // Encode to zip
+      final zipData = ZipEncoder().encode(archive);
+
+      if (zipData == null) {
+        throw Exception("Failed to encode zip file");
+      }
+
+      // Write to file
+      await zipFile.writeAsBytes(zipData);
+
+      return zipFile;
+    } catch (e) {
+      // Cleanup partial zip on error
+      if (await zipFile.exists()) {
+        await zipFile.delete();
+      }
+      rethrow;
+    }
+  }
+
   /// Creates a new project folder
   /// with the given name.
   /// inside the Fusion project directory.
   Future<ResponseCallback<ProjectData?>> createNewProject({required NewProjectDetails projectDetails}) async {
-    final String projectId = FusionUtils.shortStringUUID();
-    final DateTime now = DateTime.now();
+    final String projectId = FusionUtils.generateUUID();
+    final DateTime now = DateTime.now().toUtc();
     final List<Color> newColor = FusionUtils.randomColors();
 
     try {
@@ -100,42 +177,72 @@ class LocalProjectManager {
       /// Create the new folder
       await projectDir.create(recursive: true);
 
-      final Map<String, dynamic> sampleMetadata = ProjectMetadataModel(fileId: '', thumbnailUrl: '', projectName: projectDetails.name).toJson();
-
       Map<String, dynamic> newProjectData = {
         'id': projectId,
         'name': projectDetails.name,
         'projectName': projectDetails.name,
-        'metaData': sampleMetadata.toString(),
-        'colors': newColor.map((Color color) => color.value).toList(),
+        'colors': newColor.map((Color color) => '0x${color.toARGB32().toRadixString(16).padLeft(8, '0')}').toList(),
         'createdAt': now.toIso8601String(),
         'updatedAt': now.toIso8601String(),
-        "floors": [
-          {
-            "id": "FLOOR${FusionUtils.shortStringUUID()}",
-            'name': "Floor 1",
-            'floorPlan': FloorPlanModel.defaultFloorPlan,
-          },
-        ],
-        "listeningAreas": [],
-        "zones": [],
-        "sourceSet": [],
-        "circuits": [],
-        "wiringConnection": [],
-        "hardwareComponents": [],
-        "fusionDevices": [],
-        "suggestedFusionDevices": [],
-        "amplifiers": [],
         "virtualIP": null,
         "currentFloorIndex": 0,
         "droResponse": null,
         "minSPL": 36.0,
         "maxSPL": 132.0,
         "isInControlMode": false,
+        "isInHardwareMode": false,
+        "application": null,
+        "budget": null,
+        "description": null,
+        "environment_type": null,
+        "is_archived": false,
+        "is_starred": false,
+        "locked_by_user": null,
+        "project_file_url": null,
+        "project_phase": null,
+        "thumbnail_url": null,
+        "venue": null,
+        "lastUploadedAt": null,
+        "isCloudInstance": false,
+        "is_deleted": false,
+        "floors": [
+          {
+            "id": "FLOOR${FusionUtils.shortStringUUID()}",
+            'name': "Floor 1",
+            'floorPlan': FloorPlanModel.defaultFloorPlan.toJson(),
+          },
+        ],
+        "listeningAreas": [],
+        "zones": [],
+        "subZones": [],
+        "sourceSet": [],
+        "circuits": [],
+        "wiringConnection": [],
+        "hardware": [],
+        "fusionDevices": [],
+        "suggestedFusionDevices": [],
+        "amplifiers": [],
+        "processingBlocks": [],
+        "relationships": {},
+        "zoneFunctions": [],
+        "prioritySourceData": [],
+        "snapshots": [],
+        "sceneActions": [],
+        "sceneSets": [],
+        "gpioConfig": [],
+        "schedulerConfig": [],
+        "events": [],
       };
 
       /// Create the project entity
-      final ProjectData newProject = ProjectData(id: projectId, name: projectDetails.name, metaData: sampleMetadata.toString(), projectRawData: newProjectData);
+      final ProjectData newProject = ProjectData(
+        id: projectId,
+        name: projectDetails.name,
+        projectRawData: newProjectData,
+        createdAt: now,
+        updatedAt: now,
+        isCloudInstance: false,
+      );
 
       /// Write the project data to a JSON file
       final File jsonFile = File('${projectDir.path}/$kProjectDataFileName');
@@ -149,7 +256,7 @@ class LocalProjectManager {
   }
 
   ///save all projects to fusion project directory
-  Future<ResponseCallback<bool>> saveProjects(List<ProjectData> projects) async {
+  Future<ResponseCallback<bool>> saveProjects(List<ProjectData> projects, {bool fromServer = false}) async {
     try {
       final Directory fusionDir = await fusionProjectDirectory;
 
@@ -158,10 +265,25 @@ class LocalProjectManager {
 
         if (!await projectDir.exists()) {
           await projectDir.create(recursive: true);
+        } else {
+          if (fromServer) {
+            FusionLogger.log(tag: LogTag.project, message: 'Project directory already exists: ${projectDir.path}');
+            //check for existing project data file and updated at date to avoid overwriting newer data or if both are same then also skip
+            final File existingJsonFile = File('${projectDir.path}/$kProjectDataFileName');
+            if (await existingJsonFile.exists()) {
+              final String existingJsonStr = await existingJsonFile.readAsString();
+              final Map<String, dynamic> existingProjectData = jsonDecode(existingJsonStr);
+              final DateTime existingUpdatedAt = DateTime.parse(existingProjectData['updatedAt'] as String);
+              if (existingUpdatedAt.isAfter(project.updatedAt) || existingUpdatedAt.isAtSameMomentAs(project.updatedAt)) {
+                FusionLogger.log(tag: LogTag.project, message: 'Skipping save for project ${project.id} as existing data is same/newer.');
+                continue;
+              }
+            }
+          }
         }
 
         final File jsonFile = File('${projectDir.path}/$kProjectDataFileName');
-        await jsonFile.writeAsString(jsonEncode(project.projectRawData));
+        await jsonFile.writeAsString(jsonEncode(project.isCloudInstance ? project.toJson() : project.projectRawData));
       }
 
       return ResponseCallback.success(true);
@@ -172,7 +294,7 @@ class LocalProjectManager {
   }
 
   ///save single project to fusion project directory
-  Future<ResponseCallback<bool>> saveProject(ProjectData project) async {
+  Future<ResponseCallback<bool>> saveProject(ProjectData project, {bool fromServer = false}) async {
     try {
       final Directory fusionDir = await fusionProjectDirectory;
 
@@ -180,10 +302,25 @@ class LocalProjectManager {
 
       if (!await projectDir.exists()) {
         await projectDir.create(recursive: true);
+      } else {
+        if (fromServer) {
+          FusionLogger.log(tag: LogTag.project, message: 'Project directory already exists: ${projectDir.path}');
+          //check for existing project data file and updated at date to avoid overwriting newer data or if both are same then also skip
+          final File existingJsonFile = File('${projectDir.path}/$kProjectDataFileName');
+          if (await existingJsonFile.exists()) {
+            final String existingJsonStr = await existingJsonFile.readAsString();
+            final Map<String, dynamic> existingProjectData = jsonDecode(existingJsonStr);
+            final DateTime existingUpdatedAt = DateTime.parse(existingProjectData['updatedAt'] as String);
+            if (existingUpdatedAt.isAfter(project.updatedAt) || existingUpdatedAt.isAtSameMomentAs(project.updatedAt)) {
+              FusionLogger.log(tag: LogTag.project, message: 'Skipping save for project ${project.id} as existing data is same/newer.');
+              return ResponseCallback.success(true);
+            }
+          }
+        }
       }
 
       final File jsonFile = File('${projectDir.path}/$kProjectDataFileName');
-      await jsonFile.writeAsString(jsonEncode(project.projectRawData));
+      await jsonFile.writeAsString(jsonEncode(project.isCloudInstance ? project.toJson() : project.projectRawData));
 
       return ResponseCallback.success(true);
     } catch (e) {
@@ -202,7 +339,7 @@ class LocalProjectManager {
   }
 
   /// Deletes a project folder
-  Future<ResponseCallback<bool>> deleteProject({required String projectId}) async {
+  Future<ResponseCallback<bool>> deleteProjectFolder({required String projectId}) async {
     return await deleteLocalFolder(projectId);
   }
 
@@ -227,10 +364,6 @@ class LocalProjectManager {
 
   /// Deletes the Fusion project directory
   Future<ResponseCallback<bool>> deleteFusionProjectDirectory() async {
-    if (isAdminLogin) {
-      FusionLogger.log(tag: LogTag.project, message: 'Admin mode: Skipping deletion of Fusion project directory.');
-      return ResponseCallback.success(true);
-    }
     final Directory fusionDir = await fusionProjectDirectory;
 
     if (await fusionDir.exists()) {
@@ -263,6 +396,65 @@ class LocalProjectManager {
       return "${splits[splits.length - 2]}/${splits.last}/images/$imageName";
     } catch (e) {
       throw ('Error saving image to project: $e');
+    }
+  }
+
+  Future<String> saveMediaFileToProject({required File mediaFile, required String projectId, String? fileName}) async {
+    try {
+      final Directory mediaDir = await getProjectMediaDirectory(projectId: projectId);
+      if (!await mediaDir.exists()) {
+        await mediaDir.create(recursive: true);
+      }
+      fileName ??= path.basename(mediaFile.path);
+      final File destFile = File('${mediaDir.path}/$fileName');
+      await destFile.writeAsBytes(await mediaFile.readAsBytes());
+
+      return fileName;
+    } catch (e) {
+      throw ('Error saving media file to project: $e');
+    }
+  }
+
+  Future<List<File>> getAllMediaFilesFromProject({required String projectId}) async {
+    try {
+      final Directory mediaDir = await getProjectMediaDirectory(projectId: projectId);
+      if (!await mediaDir.exists()) {
+        return [];
+      }
+      final List<FileSystemEntity> entities = await mediaDir.list().toList();
+      final List<File> mediaFiles = entities.whereType<File>().toList();
+      return mediaFiles;
+    } catch (e) {
+      throw ('Error getting media files from project: $e');
+    }
+  }
+
+  Future<void> deleteMediaFileFromProject({required String projectId, required String fileName}) async {
+    try {
+      final Directory mediaDir = await getProjectMediaDirectory(projectId: projectId);
+      final File mediaFile = File('${mediaDir.path}/$fileName');
+      if (await mediaFile.exists()) {
+        await mediaFile.delete();
+      } else {
+        FusionLogger.log(tag: LogTag.project, message: 'Media file does not exist: ${mediaFile.path}');
+      }
+    } catch (e) {
+      throw ('Error deleting media file from project: $e');
+    }
+  }
+
+  Future<void> renameMediaFileInProject({required String projectId, required String oldFileName, required String newFileName}) async {
+    try {
+      final Directory mediaDir = await getProjectMediaDirectory(projectId: projectId);
+      final File oldMediaFile = File('${mediaDir.path}/$oldFileName');
+      final File newMediaFile = File('${mediaDir.path}/$newFileName');
+      if (await oldMediaFile.exists()) {
+        await oldMediaFile.rename(newMediaFile.path);
+      } else {
+        throw ('Media file does not exist: ${oldMediaFile.path}');
+      }
+    } catch (e) {
+      throw ('Error renaming media file in project: $e');
     }
   }
 
@@ -300,11 +492,6 @@ class LocalProjectManager {
     } catch (e) {
       throw ('Error getting image from project: $e');
     }
-  }
-
-  // Is admin
-  bool get isAdminLogin {
-    return sharedPreferencesHandler.getBool(SharedPreferenceKeys.adminLogin) ?? false;
   }
 
   Future<Directory> _projectDirectory(String projectId) async {

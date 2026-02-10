@@ -1,5 +1,3 @@
-import 'dart:ui';
-
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
@@ -23,10 +21,11 @@ extension CircuitViewmodel on ProjectViewModel {
       }
       final CircuitModel newCircuit = CircuitModel(
         id: FusionUtils.shortStringUUID(),
+        addedInBuildingPage: hardware.addedFromBuildingPage,
         name: "${hardware.hardwareName} ${count == 0 ? "" : count + 1}",
         speakerSKU: (hardware as Speaker).speakerSKU,
       );
-      projectManager.addCircuit(newCircuit);
+      addCircuit(circuit: newCircuit, autoSave: false);
       projectManager.addHardwareToCircuit(hardware.id, newCircuit.id);
 
       if (subzone != null) {
@@ -61,6 +60,19 @@ extension CircuitViewmodel on ProjectViewModel {
         recordSnapshot();
       }
       projectManager.addCircuit(circuit);
+      for (final String algo in <String>[
+        "peq",
+        'limiter',
+        "delay",
+      ]) {
+        addProcessingBlockToParent(
+          processingBlock: ProcessingBlockModel.circuitBlocks.firstWhere(
+            (ProcessingBlockModel element) => element.algorithmId == algo,
+          ),
+          parentId: circuit.id,
+          autoSave: false,
+        );
+      }
       if (autoSave) {
         saveProject();
       }
@@ -219,6 +231,7 @@ extension CircuitViewmodel on ProjectViewModel {
     String? circuitName,
     String? subZoneId,
     required String zoneId,
+    required bool isFromBuildingPage,
     bool autoSave = true,
   }) {
     if (autoSave) {
@@ -232,6 +245,8 @@ extension CircuitViewmodel on ProjectViewModel {
 
     final CircuitModel circuitModel = CircuitModel(
       name: circuitName ?? "Circuit ${circuits.length + 1}",
+      speakerSKU: speakerData.sku,
+      addedInBuildingPage: isFromBuildingPage,
     );
     projectManager.addCircuit(circuitModel);
 
@@ -242,11 +257,7 @@ extension CircuitViewmodel on ProjectViewModel {
     }
 
     for (int i = 0; i < speakerCount; i++) {
-      final HardwareComponent newHardware = fromProductQueryModel(
-        speakerData,
-        pos: Offset.zero,
-        locationEntity: locationModel,
-      );
+      final HardwareComponent newHardware = fromProductQueryModel(speakerData, locationEntity: locationModel, isFromBuildingPage: isFromBuildingPage);
       projectManager.addHardware(newHardware);
       projectManager.addHardwareToCircuit(newHardware.id, circuitModel.id);
     }
@@ -269,6 +280,41 @@ extension CircuitViewmodel on ProjectViewModel {
     } catch (e) {
       FusionLogger.log(tag: LogTag.project, message: "Failed to reorder circuit in zone: $e");
       throwError("Failed to reorder circuit in zone: $e");
+    }
+  }
+
+  void moveCircuitsFromZoneToSubZone({
+    required String zoneId,
+    required String subZoneId,
+    bool autoSave = true,
+  }) {
+    try {
+      if (autoSave) {
+        recordSnapshot();
+      }
+
+      // Get all circuits in the zone before any operations
+      final List<CircuitModel> zoneCircuits = getCircuitsInZone(zoneId);
+
+      FusionLogger.log(tag: LogTag.project, message: "Moving ${zoneCircuits.length} circuits from zone $zoneId to subzone $subZoneId");
+
+      // Move each circuit from zone to subzone
+      // Note: This should typically be handled automatically when listening areas are moved
+      // but we're doing this as a fallback to ensure circuits are properly assigned
+      for (final CircuitModel circuit in zoneCircuits) {
+        // Remove from zone first
+        removeCircuitFromZone(circuitId: circuit.id, zoneId: zoneId, autoSave: false);
+        // Then add to subzone
+        addCircuitToSubZone(circuitId: circuit.id, subZoneId: subZoneId, autoSave: false);
+      }
+
+      if (autoSave) {
+        saveProject();
+      }
+      updateProject();
+    } catch (e) {
+      FusionLogger.log(tag: LogTag.project, message: "Failed to move circuits from zone to subzone: $e");
+      throwError("Failed to move circuits from zone to subzone: $e");
     }
   }
 

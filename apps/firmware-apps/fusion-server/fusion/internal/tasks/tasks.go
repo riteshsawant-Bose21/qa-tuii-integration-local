@@ -13,8 +13,9 @@ import (
 	json "github.com/goccy/go-json"
 
 	"fusion/internal/api"
-	"fusion/internal/logging"
+	"fusion-services-core/logging"
 	"fusion/internal/persistence"
+	"fusion/internal/pubsub"
 	"fusion/internal/utils"
 
 	"github.com/robfig/cron/v3"
@@ -46,6 +47,7 @@ type TaskManager struct {
 	mu               sync.Mutex
 	node             string
 	persistence      *persistence.Persistence
+	hub              *pubsub.Hub
 	running          bool
 	taskFuncs        map[string]func()
 	tasks            map[string]*api.Task
@@ -53,13 +55,26 @@ type TaskManager struct {
 }
 
 // NewTaskManager initializes and returns a new TaskManager with persistence.
-func NewTaskManager(config *api.AppConfig, persistence *persistence.Persistence) *TaskManager {
+func NewTaskManager(config *api.AppConfig, persistence *persistence.Persistence, hub *pubsub.Hub) *TaskManager {
 	tm := &TaskManager{
-		cron:             cron.New(),
+		cron: cron.New(
+			cron.WithParser(
+				cron.NewParser(
+					cron.SecondOptional |
+						cron.Descriptor |
+						cron.Minute |
+						cron.Hour |
+						cron.Dom |
+						cron.Month |
+						cron.Dow,
+				),
+			),
+		),
 		executionHistory: make([]ExecutionRecord, 0),
 		historyFilePath:  HistoryPath,
 		node:             config.NodeName,
 		persistence:      persistence,
+		hub:              hub,
 		taskFuncs:        make(map[string]func()),
 		tasks:            make(map[string]*api.Task),
 	}
@@ -83,18 +98,17 @@ func (tm *TaskManager) AddTask(t *api.Task) error {
 		return fmt.Errorf("task %q exists", t.ID)
 	}
 
-	factory, ok := tm.actionFactories[t.Type]
-	if !ok {
-		return fmt.Errorf("unknown task type %q", t.Type)
-	}
-
-	// Build the closure
-	tracked := factory(t)
-	entryID, err := tm.cron.AddFunc(t.CronExpr, tracked)
+	fn, err := tm.makeTaskFunc(t)
 	if err != nil {
 		return err
 	}
-	t.CronEntryID = entryID
+
+	t.Enabled = true
+
+	if err := tm.scheduleTaskIfNeeded(t, fn); err != nil {
+		return err
+	}
+
 	tm.tasks[t.ID] = t
 	return tm.saveTasks()
 }
@@ -104,28 +118,28 @@ func (tm *TaskManager) UpdateTask(task *api.Task, taskFunc TaskFunc) error {
 	tm.mu.Lock()
 	defer tm.mu.Unlock()
 
-	logger := logging.GetLogger()
-
-	_, exists := tm.tasks[task.ID]
-	if !exists {
+	if _, exists := tm.tasks[task.ID]; !exists {
 		return ErrTaskNotFound
 	}
 
-	tm.cron.Remove(task.CronEntryID)
+	// Remove old cron entry
+	if task.CronEntryID != 0 {
+		tm.cron.Remove(task.CronEntryID)
+		task.CronEntryID = 0
+	}
 
-	// Wrap the new taskFunc to track execution history
-	trackedTaskFunc := tm.wrapTask(task, taskFunc)
+	now := time.Now()
+	if !task.EndAt.IsZero() && now.After(task.EndAt) {
+		tm.disableTaskLocked(task)
+		return nil
+	}
 
-	entryID, err := tm.cron.AddFunc(task.CronExpr, trackedTaskFunc)
-	if err != nil {
-		logger.Error("Failed to update task '%s': %v", task.ID, err)
+	task.Enabled = true
+	if err := tm.scheduleTaskIfNeeded(task, taskFunc); err != nil {
 		return err
 	}
-	task.Enabled = true
-	task.CronEntryID = entryID
-	tm.tasks[task.ID] = task
-	tm.taskFuncs[task.ID] = trackedTaskFunc
 
+	tm.tasks[task.ID] = task
 	return tm.saveTasks()
 }
 
@@ -184,8 +198,7 @@ func (tm *TaskManager) RecordExecution(task *api.Task, status string) {
 		tm.executionHistory = tm.executionHistory[len(tm.executionHistory)-MaxHistory:]
 	}
 
-	err := tm.saveHistory()
-	if err != nil {
+	if err := tm.saveHistory(); err != nil {
 		logging.GetLogger().Error("Error saving history: %v", err)
 	}
 }
@@ -200,31 +213,37 @@ func (tm *TaskManager) GetExecutionHistory() []ExecutionRecord {
 
 // Start starts the TaskManager's scheduler.
 func (tm *TaskManager) Start() {
-
 	logger := logging.GetLogger()
 
 	if tm.running {
-		logger.Warn("TaskManager already running")
+		logger.Warn("[TASKS] TaskManager already running")
 		return
 	}
 
-	if err := tm.loadTasks(); err != nil {
-		logger.Fatal("%v", err)
+	if err := tm.LoadTasks(); err != nil {
+		logger.Fatal("[TASKS] %v", err)
 	}
 
 	if err := tm.loadHistory(); err != nil {
-		logger.Fatal("%v", err)
+		logger.Fatal("[TASKS] %v", err)
 	}
 
 	if err := tm.registerEnabledTasks(); err != nil {
-		logger.Fatal("%v", err)
+		logger.Fatal("[TASKS] %v", err)
 	}
 
 	tm.cron.Start()
 
-	tm.running = true
+	// Window manager loop
+	go func() {
+		ticker := time.NewTicker(30 * time.Second)
+		for range ticker.C {
+			tm.evalTaskWindows()
+		}
+	}()
 
-	logger.Info("TaskManager running")
+	tm.running = true
+	logger.Info("[TASKS] TaskManager running")
 }
 
 // Stop stops the TaskManager's scheduler.
@@ -247,8 +266,8 @@ func (tm *TaskManager) GetTasks(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(tasks)
 }
 
-// GetTask handles HTTP GET requests to get a single task
-func (tm *TaskManager) GetTask(w http.ResponseWriter, r *http.Request) {
+// GetTaskHandler handles HTTP GET requests to get a single task
+func (tm *TaskManager) GetTaskHandler(w http.ResponseWriter, r *http.Request) {
 
 	if !utils.RequireGet(w, r) {
 		return
@@ -260,7 +279,7 @@ func (tm *TaskManager) GetTask(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	task, err := tm.getTask(id)
+	task, err := tm.GetTask(id)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusNotFound)
 		return
@@ -323,7 +342,6 @@ func (tm *TaskManager) ClearHistory(w http.ResponseWriter, r *http.Request) {
 
 // EnableTask handles HTTP POST requests to enable a task
 func (tm *TaskManager) EnableTask(w http.ResponseWriter, r *http.Request) {
-
 	if !utils.RequirePost(w, r) {
 		return
 	}
@@ -334,31 +352,30 @@ func (tm *TaskManager) EnableTask(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	task, err := tm.getTask(id)
+	task, err := tm.GetTask(id)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusNotFound)
 		return
 	}
 
-	if task.CronEntryID != 0 {
-		tm.cron.Remove(task.CronEntryID)
-	}
-
-	f, err := tm.makeTaskFunc(task)
+	fn, err := tm.makeTaskFunc(task)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	entryID, err := tm.cron.AddFunc(task.CronExpr, tm.wrapTask(task, f))
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
+	tm.mu.Lock()
+	defer tm.mu.Unlock()
 
 	task.Enabled = true
-	task.CronEntryID = entryID
+	task.CronEntryID = 0
 
+	if err := tm.scheduleTaskIfNeeded(task, fn); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	tm.tasks[id] = task
 	tm.saveTasks()
 
 	w.WriteHeader(http.StatusNoContent)
@@ -377,7 +394,7 @@ func (tm *TaskManager) DisableTask(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	task, err := tm.getTask(id)
+	task, err := tm.GetTask(id)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusNotFound)
 		return
@@ -387,6 +404,10 @@ func (tm *TaskManager) DisableTask(w http.ResponseWriter, r *http.Request) {
 	task.CronEntryID = 0
 	task.Enabled = false
 
+	tm.mu.Lock()
+	defer tm.mu.Unlock()
+	tm.tasks[id] = task
+
 	tm.saveTasks()
 
 	w.WriteHeader(http.StatusNoContent)
@@ -394,22 +415,44 @@ func (tm *TaskManager) DisableTask(w http.ResponseWriter, r *http.Request) {
 
 // wrapTask wraps a task function to track execution history and handle panics.
 func (tm *TaskManager) wrapTask(task *api.Task, fn TaskFunc) func() {
-
 	logger := logging.GetLogger()
 
 	return func() {
+		now := time.Now()
+
+		// Skip before start window
+		if !task.StartAt.IsZero() && now.Before(task.StartAt) {
+			logger.Debug("[TASKS] Skipping task '%s': before start time %s", task.ID, task.StartAt)
+			return
+		}
+
+		// If past window, disable permanently
+		if !task.EndAt.IsZero() && now.After(task.EndAt) {
+			logger.Debug("[TASKS] Auto-disabling task '%s' after end time", task.ID)
+			tm.disableTask(task)
+			return
+		}
+
+		// Enforce recurring window, if present
+		if task.Recurrence != nil && !withinRecurringWindow(task.Recurrence, now) {
+			logger.Debug("[TASKS] Skipping task '%s': outside recurring window", task.ID)
+			return
+		}
+
 		defer func() {
 			if r := recover(); r != nil {
 				tm.RecordExecution(task, "failed")
-				logger.Error("Task '%s' panic: %v\n%s", task.ID, r, debug.Stack())
+				logger.Error("[TASKS] Task '%s' panic: %v\n%s", task.ID, r, debug.Stack())
 			}
 		}()
+
 		ctx := context.Background()
 		if err := fn(ctx); err != nil {
 			tm.RecordExecution(task, "failed")
-			logger.Error("Task '%s' error: %v", task.ID, err)
+			logger.Error("[TASKS] Task '%s' error: %v", task.ID, err)
 			return
 		}
+
 		tm.RecordExecution(task, "success")
 	}
 }
@@ -419,8 +462,8 @@ func (tm *TaskManager) saveTasks() error {
 	return tm.persistence.SaveTasks(tm.tasks)
 }
 
-// loadTasks loads tasks from the persistence file and schedules them.
-func (tm *TaskManager) loadTasks() error {
+// LoadTasks loads tasks from the persistence file and schedules them.
+func (tm *TaskManager) LoadTasks() error {
 	tm.mu.Lock()
 	defer tm.mu.Unlock()
 
@@ -486,12 +529,14 @@ func (tm *TaskManager) registerEnabledTasks() error {
 	return nil
 }
 
-// fetchTask loads a task by ID from the boltdb and returns it (or an error).
-func (tm *TaskManager) getTask(id string) (*api.Task, error) {
+// GetTask loads a task by ID from the boltdb and returns it (or an error).
+func (tm *TaskManager) GetTask(id string) (*api.Task, error) {
+	tm.mu.Lock()
+	defer tm.mu.Unlock()
 
-	task, err := tm.persistence.GetTask(id)
-	if err != nil {
-		return nil, err
+	task, ok := tm.tasks[id]
+	if !ok {
+		return nil, ErrTaskNotFound
 	}
 	return task, nil
 }
@@ -502,11 +547,6 @@ func (tm *TaskManager) makeTaskFunc(task *api.Task) (TaskFunc, error) {
 	case api.TaskTypeMessage:
 		id := task.Params[api.MessageIDKey]
 		if id == "" {
-			return nil, fmt.Errorf("missing '%s'", api.MessageIDKey)
-		}
-
-		path := task.Params[api.MessagePathKey]
-		if path == "" {
 			return nil, fmt.Errorf("missing '%s'", api.MessageIDKey)
 		}
 
@@ -522,4 +562,94 @@ func (tm *TaskManager) makeTaskFunc(task *api.Task) (TaskFunc, error) {
 	default:
 		return nil, fmt.Errorf("unsupported task type %q", task.Type)
 	}
+}
+
+// scheduleTaskIfNeeded schedules a task with cron only if its start/end window allows it.
+// Caller must hold tm.mu.
+func (tm *TaskManager) scheduleTaskIfNeeded(task *api.Task, fn TaskFunc) error {
+	now := time.Now()
+
+	// Too early → do NOT attach cron yet.
+	if !task.StartAt.IsZero() && now.Before(task.StartAt) {
+		task.CronEntryID = 0
+		return nil
+	}
+
+	// Too late → auto-disable.
+	if !task.EndAt.IsZero() && now.After(task.EndAt) {
+		tm.disableTaskLocked(task)
+		return nil
+	}
+
+	// Already scheduled?
+	if task.CronEntryID != 0 {
+		return nil
+	}
+
+	wrapped := tm.wrapTask(task, fn)
+
+	entryID, err := tm.cron.AddFunc(task.CronExpr, wrapped)
+	if err != nil {
+		return err
+	}
+
+	task.CronEntryID = entryID
+	tm.taskFuncs[task.ID] = wrapped
+	return nil
+}
+
+// Caller must hold tm.mu
+func (tm *TaskManager) disableTaskLocked(task *api.Task) {
+	if task.CronEntryID != 0 {
+		tm.cron.Remove(task.CronEntryID)
+		task.CronEntryID = 0
+	}
+	task.Enabled = false
+	tm.tasks[task.ID] = task
+	tm.saveTasks()
+}
+
+// Safe from goroutines
+func (tm *TaskManager) disableTask(task *api.Task) {
+	tm.mu.Lock()
+	tm.disableTaskLocked(task)
+	tm.mu.Unlock()
+}
+
+// Reevaluates windows every 30 seconds in case StartAt/EndAt change or clock drift
+func (tm *TaskManager) evalTaskWindows() {
+	tm.mu.Lock()
+	defer tm.mu.Unlock()
+
+	now := time.Now()
+	for _, task := range tm.tasks {
+		if !task.Enabled {
+			continue
+		}
+
+		// End-of-window → disable
+		if !task.EndAt.IsZero() && now.After(task.EndAt) {
+			tm.disableTaskLocked(task)
+			continue
+		}
+
+		// Before start window → ensure unscheduled
+		if !task.StartAt.IsZero() && now.Before(task.StartAt) {
+			if task.CronEntryID != 0 {
+				tm.cron.Remove(task.CronEntryID)
+				task.CronEntryID = 0
+			}
+			continue
+		}
+
+		// Within window → ensure scheduled
+		if task.CronEntryID == 0 {
+			fn, err := tm.makeTaskFunc(task)
+			if err == nil {
+				tm.scheduleTaskIfNeeded(task, fn)
+			}
+		}
+	}
+
+	tm.saveTasks()
 }

@@ -34,7 +34,6 @@ EOF
 multipass exec arm-builder -- mkdir -p observer
 
 # Copy the source to the instance and build
-multipass transfer Makefile arm-builder:observer/Makefile
 multipass transfer observer.* arm-builder:observer/
 multipass exec arm-builder -- bash -c "cd observer; make arm64"
 

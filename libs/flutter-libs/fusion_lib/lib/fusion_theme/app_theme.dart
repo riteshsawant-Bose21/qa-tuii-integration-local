@@ -174,6 +174,7 @@ class FusionAppTheme {
   /// Returns a fully configured [ThemeData] for light theme
   static ThemeData get lightTheme {
     final lightColorScheme = ColorScheme.fromSeed(
+      primary: Color(0xFF2F7554),
       seedColor: const Color(0xFF146C94), // Using your primary color
       brightness: Brightness.light,
     );
@@ -182,7 +183,7 @@ class FusionAppTheme {
       // Primary color scheme using custom primary color
       colorScheme: lightColorScheme,
       fontFamily: GoogleFonts.montserrat().fontFamily,
-
+      primaryColor: Color(0xFF2F7554),
       // Custom TextTheme with proper color assignments
       textTheme: _createTextTheme(lightColorScheme),
 
@@ -199,6 +200,14 @@ class FusionAppTheme {
             fontWeight: FontWeight.w500,
           ),
         ),
+      ),
+
+      scrollbarTheme: ScrollbarThemeData(
+        thickness: WidgetStateProperty.all(3), // small thickness globally
+        radius: const Radius.circular(4),
+        thumbColor: WidgetStateProperty.all(Colors.grey.shade400),
+        trackColor: WidgetStateProperty.all(Colors.transparent),
+        thumbVisibility: WidgetStateProperty.all(true), // always visible (optional)
       ),
 
       /// Outlined button styling with primary color border and text
@@ -295,6 +304,12 @@ class FusionAppTheme {
   /// Returns a fully configured [ThemeData] for dark theme
   static ThemeData get darkTheme {
     final darkColorScheme = ColorScheme.fromSeed(
+      primary: Color(0xFF2F7554),
+      onPrimary: Colors.white,
+      surface: Color(0xFF1D1D1D),
+
+      onSurface: Colors.white,
+      surfaceDim: Color(0xFFC0C0C0),
       seedColor: const Color(0xFF80C7FF), // Using your dark primary color
       brightness: Brightness.dark,
     );
@@ -302,7 +317,9 @@ class FusionAppTheme {
     return ThemeData(
       // Primary color scheme using custom dark primary color
       colorScheme: darkColorScheme,
+      scaffoldBackgroundColor: darkColorScheme.surface,
       fontFamily: GoogleFonts.montserrat().fontFamily,
+      primaryColor: Color(0xFF2F7554),
 
       // Custom TextTheme with proper dark theme color assignments
       textTheme: _createTextTheme(darkColorScheme),
@@ -320,6 +337,12 @@ class FusionAppTheme {
             fontWeight: FontWeight.w500,
           ),
         ),
+      ),
+
+      scrollbarTheme: ScrollbarThemeData(
+        thickness: WidgetStateProperty.all(3), // small thickness globally
+        radius: const Radius.circular(4),
+        thumbVisibility: WidgetStateProperty.all(true), // always visible (optional)
       ),
 
       /// Outlined button styling with primary color border for dark theme
@@ -346,6 +369,23 @@ class FusionAppTheme {
             fontWeight: FontWeight.w500,
           ),
         ),
+      ),
+
+      dividerTheme: DividerThemeData(
+        color: darkColorScheme.dividerColor,
+        thickness: 1,
+      ),
+
+      iconTheme: IconThemeData(
+        size: 16,
+        color: darkColorScheme.onSurface,
+      ),
+
+      dialogTheme: DialogThemeData(
+        barrierColor: Colors.black87,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        backgroundColor: darkColorScheme.surface,
+        elevation: 0,
       ),
 
       /// Tab bar styling with custom font and dark theme colors
@@ -514,8 +554,11 @@ extension ColorExtends on ColorScheme {
   ///
   ///
   Color get portOverlayTitle => Color(0xFF929292);
+
+  Color get green => Color(0xFF78B899);
 }
 
+/// Extension on [BuildContext] to easily access commonly used theme properties.
 extension ColorContextExtension on BuildContext {
   ColorScheme get colorScheme => Theme.of(this).colorScheme;
   TextTheme get textTheme => Theme.of(this).textTheme;

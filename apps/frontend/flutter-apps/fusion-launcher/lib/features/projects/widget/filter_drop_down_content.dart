@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:fusion_lib/constants/test_keys.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/fusion_theme/app_theme.dart';
 
@@ -69,18 +70,24 @@ class _FilterDropdownContentState extends State<FilterDropdownContent> {
                   Expanded(
                     child: FusionAppText(text: "Filter", style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontSize: 11)),
                   ),
-                  TextButton(
-                    onPressed: () {
-                      // Apply filters and close the dropdown
-                      // _applyFilters();
-                      Navigator.of(context).pop();
-                    },
-                    child: Text('Apply', style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontSize: 11)),
+                  SemanticHelper.button(
+                    testId: SemanticHelper.createTestId(SemanticTypes.button, FusionTestKeys.applyProductQueryFilters),
+                    child: TextButton(
+                      onPressed: () {
+                        // Apply filters and close the dropdown
+                        // _applyFilters();
+                        Navigator.of(context).pop();
+                      },
+                      child: FusionAppText(text: 'Apply', style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontSize: 11)),
+                    ),
                   ),
                   if (_hasAnyFilters())
-                    TextButton(
-                      onPressed: _clearAllFilters,
-                      child: Text('Clear', style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontSize: 11)),
+                    SemanticHelper.button(
+                      testId: SemanticHelper.createTestId(SemanticTypes.button, FusionTestKeys.clearProductQueryFilters),
+                      child: TextButton(
+                        onPressed: _clearAllFilters,
+                        child: FusionAppText(text: 'Clear', style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontSize: 11)),
+                      ),
                     ),
                 ],
               ),
@@ -88,6 +95,7 @@ class _FilterDropdownContentState extends State<FilterDropdownContent> {
 
             /// Product Type Filter
             _buildFilterSection(
+              index: 0,
               title: 'Product Type',
               image: "assets/images/coverage.png",
               initiallyExpanded: _localProductTypes.length == 1 && _localProductTypes.contains(ProductType.speaker) ? false : true,
@@ -112,6 +120,7 @@ class _FilterDropdownContentState extends State<FilterDropdownContent> {
             /// Mount Type Filter (only for speakers when it's the only selected type)
             if (_localProductTypes.length == 1 && _localProductTypes.contains(ProductType.speaker))
               _buildFilterSection(
+                index: 1,
                 title: 'Mount Type',
                 image: "assets/images/mount_type.png",
                 options: <String>['Ceiling', 'Surface', 'Pendant'],
@@ -127,6 +136,7 @@ class _FilterDropdownContentState extends State<FilterDropdownContent> {
             /// Venue Type Filter (only for speakers when it's the only selected type)
             if (_localProductTypes.length == 1 && _localProductTypes.contains(ProductType.speaker))
               _buildFilterSection(
+                index: 2,
                 title: 'Venue Type',
                 image: "assets/images/venue_type.png",
                 options: <String>['Indoor', 'Indoor + Outdoor'],
@@ -142,6 +152,7 @@ class _FilterDropdownContentState extends State<FilterDropdownContent> {
             /// Color Filter (only for speakers when it's the only selected type)
             if (_localProductTypes.length == 1 && _localProductTypes.contains(ProductType.speaker))
               _buildFilterSection(
+                index: 3,
                 title: 'Color',
                 image: "assets/images/color.png",
                 options: <String>['White', 'Black'],
@@ -157,6 +168,7 @@ class _FilterDropdownContentState extends State<FilterDropdownContent> {
             /// Coverage Filter (only for speakers when it's the only selected type)
             if (_localProductTypes.length == 1 && _localProductTypes.contains(ProductType.speaker))
               _buildFilterSection(
+                index: 4,
                 title: 'Coverage',
                 image: "assets/images/coverage.png",
                 options: <String>['Low', 'Mid', 'High'],
@@ -172,6 +184,7 @@ class _FilterDropdownContentState extends State<FilterDropdownContent> {
             /// Impedance Filter (only for speakers when it's the only selected type)
             if (_localProductTypes.length == 1 && _localProductTypes.contains(ProductType.speaker))
               _buildFilterSection(
+                index: 5,
                 title: 'Impedance',
                 image: "assets/images/impedance.png",
                 options: <String>['Low', 'High'],
@@ -191,6 +204,7 @@ class _FilterDropdownContentState extends State<FilterDropdownContent> {
 
   /// Build individual filter section with radio buttons or checkboxes
   Widget _buildFilterSection({
+    required int index,
     required String title,
     required String image,
     bool initiallyExpanded = false,
@@ -198,37 +212,44 @@ class _FilterDropdownContentState extends State<FilterDropdownContent> {
     required Set<String> selectedOptions,
     required ValueChanged<Set<String>> onChanged,
   }) {
-    return ExpansionTile(
-      minTileHeight: 24,
-      iconColor: Colors.black,
-      collapsedIconColor: Colors.black,
-      initiallyExpanded: initiallyExpanded,
-      childrenPadding: const EdgeInsets.only(left: 34, right: 16, bottom: 8),
-      tilePadding: const EdgeInsets.symmetric(horizontal: 16),
-      title: Row(
-        children: <Widget>[
-          Image.asset(
-            image,
-            width: 24,
-            height: 24,
-          ),
-          const SizedBox(width: 12),
-          FusionAppText(
-            text: title,
-            textAlign: TextAlign.center,
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              fontSize: 11,
-              fontWeight: FontWeight.w600,
+    return SemanticHelper.toggle(
+      testId: SemanticHelper.createTestId(SemanticTypes.toggle, "filter_section_${title}_item_$index"),
+      value: initiallyExpanded,
+      child: ExpansionTile(
+        minTileHeight: 24,
+        iconColor: Colors.black,
+        collapsedIconColor: Colors.black,
+        initiallyExpanded: initiallyExpanded,
+        childrenPadding: const EdgeInsets.only(left: 34, right: 16, bottom: 8),
+        tilePadding: const EdgeInsets.symmetric(horizontal: 16),
+        title: Row(
+          children: <Widget>[
+            Image.asset(
+              image,
+              width: 24,
+              height: 24,
             ),
-          ),
-        ],
-      ),
-      children:
-          (title == "Product Type")
-              ? options.map((String option) {
-                final bool isSelected = selectedOptions.contains(option);
-                print("$title - option: $option, isSelected: $isSelected");
-                return RadioListTile<String>(
+            const SizedBox(width: 12),
+            FusionAppText(
+              text: title,
+              textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
+        children: <Widget>[
+          if (title == "Product Type") ...<Widget>[
+            ...List<Widget>.generate(options.length, (int optionIndex) {
+              final String option = options[optionIndex];
+              final bool isSelected = selectedOptions.contains(option);
+
+              return SemanticHelper.toggle(
+                testId: SemanticHelper.createTestId(SemanticTypes.toggle, "${title}_option_item_index_$optionIndex"),
+                value: isSelected,
+                child: RadioListTile<String>(
                   dense: true,
                   contentPadding: EdgeInsets.zero,
                   controlAffinity: ListTileControlAffinity.leading,
@@ -249,11 +270,17 @@ class _FilterDropdownContentState extends State<FilterDropdownContent> {
                     }
                     onChanged(newSelected);
                   },
-                );
-              }).toList()
-              : options.map((String option) {
-                final bool isSelected = selectedOptions.contains(option);
-                return CheckboxListTile(
+                ),
+              );
+            }),
+          ] else ...<Widget>[
+            ...List<Widget>.generate(options.length, (int optionIndex) {
+              final String option = options[optionIndex];
+              final bool isSelected = selectedOptions.contains(option);
+              return SemanticHelper.toggle(
+                testId: SemanticHelper.createTestId(SemanticTypes.toggle, "${title}_option_item_index_$optionIndex"),
+                value: isSelected,
+                child: CheckboxListTile(
                   dense: true,
                   contentPadding: EdgeInsets.zero,
                   controlAffinity: ListTileControlAffinity.leading,
@@ -274,8 +301,12 @@ class _FilterDropdownContentState extends State<FilterDropdownContent> {
                     }
                     onChanged(newSelected);
                   },
-                );
-              }).toList(),
+                ),
+              );
+            }),
+          ],
+        ],
+      ),
     );
   }
 

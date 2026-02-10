@@ -47,9 +47,9 @@ class SPLCalculationManager {
       if (sp is! Speaker) continue;
       final int cid = engine.addSpeaker(
         sp.speakerSKU,
-        sp.pos.dx / 100,
-        sp.pos.dy / 100,
-        sp.zAxis / 100,
+        sp.pos!.dx / 100,
+        sp.pos!.dy / 100,
+        sp.zAxis! / 100,
         sp.gain,
         (sp.roll) * (pi / 180),
         (sp.pitch) * (pi / 180),

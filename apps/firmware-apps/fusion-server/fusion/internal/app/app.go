@@ -6,8 +6,9 @@ import (
 	"fmt"
 	"fusion/internal/api"
 	"fusion/internal/cluster"
+	clustertransport "fusion/internal/cluster/transport"
 	"fusion/internal/controllers"
-	"fusion/internal/logging"
+	"fusion-services-core/logging"
 	"fusion/internal/network"
 	"fusion/internal/persistence"
 	"fusion/internal/pubsub"
@@ -45,7 +46,6 @@ type App struct {
 	StateManager      *persistence.StateManager
 	Persistence       *persistence.Persistence
 	TaskManager       *tasks.TaskManager
-	Updater           *handler.Updater
 	ConnectionHandler *handler.Handler
 	Cluster           *cluster.Cluster
 	Delegate          *cluster.ClusterDelegate
@@ -70,14 +70,14 @@ func NewApp(config *api.AppConfig) *App {
 
 	stateManager := initStateManager(config)
 	persistence := initPersistence(fusionDatabasePath, stateManager)
-	taskManager := initTaskManager(config, persistence)
-	updater := handler.NewUpdater()
-	hub := pubsub.NewHub()
-
-	controllerManager := controllers.NewControllerManager(hub, "7950")
-	delegate := cluster.NewClusterDelegate(config, persistence, stateManager, taskManager, updater, hub)
+	hub := pubsub.NewHub(stateManager, persistence)
+	taskManager := initTaskManager(config, persistence, hub)
+	controllerManager := controllers.NewControllerManager(hub, api.ControllerPort)
+	delegate := cluster.NewClusterDelegate(config, persistence, stateManager, taskManager, hub)
 	memberlist := cluster.CreateMemberlist(config, delegate)
-	connectionHandler := handler.NewHandler(config, memberlist, persistence, stateManager, updater, hub, controllerManager)
+	transport := clustertransport.NewMemberlistTransport(memberlist)
+	hub.SetClusterTransport(transport)
+	connectionHandler := handler.NewHandler(config, memberlist, persistence, stateManager, hub, controllerManager)
 	clusterInstance := cluster.NewCluster(config, delegate, memberlist)
 	bleServer := initBLEServer()
 	sapServer := initSAPServer(config, api.SAPPort, connectionHandler, hub)
@@ -99,7 +99,6 @@ func NewApp(config *api.AppConfig) *App {
 		StateManager:      stateManager,
 		Persistence:       persistence,
 		TaskManager:       taskManager,
-		Updater:           updater,
 		ConnectionHandler: connectionHandler,
 		Cluster:           clusterInstance,
 		Delegate:          delegate,
@@ -209,6 +208,7 @@ func (app *App) setupPublicRoutes() {
 	app.registerPublicGET(routes.PAVAMessageStreamEndpoint, app.Server.StreamMessage)
 	app.registerPublicGET(routes.PAVAScheduleEndpoint, app.TaskManager.ListScheduledMessages)
 	app.registerPublicPOST(routes.PAVAScheduleEndpoint, app.TaskManager.CreateScheduleMessageTask)
+	app.registerPublicPATCH(routes.PAVAScheduleIDEndpoint, app.TaskManager.UpdateScheduleMessageTask)
 	app.registerPublicPUT(routes.PAVAMessageTriggerEndpoint, app.TaskManager.TriggerMessage)
 	// app.registerPublicGET(routes.PAVAZonesEndpoint, app.Server.ListZones)
 	// app.registerPublicGET(routes.PAVAZoneStatusEndpoint, app.Server.GetZoneStatus)
@@ -224,20 +224,20 @@ func (app *App) setupPublicRoutes() {
 	app.registerPublicGET(routes.SessionsIdEndpoint, app.Server.GetSession)
 
 	// Snapshots
-	// NOTE: These must be added before the {name} parameter endpoints to avoid conflicts
-	app.registerPublicGET(routes.SnapshotsEndpoint, app.Server.ListSnapshots)
+	app.registerPublicPOST(routes.SnapshotsActivateEndpoint, app.Server.ActivateSnapshot)
+	app.registerPublicPOST(routes.SnapshotsUpdateEndpoint, app.Server.SaveSnapshot)
 	app.registerPublicPOST(routes.SnapshotsNameEndpoint, app.Server.CreateSnapshot)
+	app.registerPublicGET(routes.SnapshotsEndpoint, app.Server.ListSnapshots)
+	app.registerPublicGET(routes.SnapshotsActiveEndpoint, app.Server.GetActiveSnapshotName)
 	app.registerPublicGET(routes.SnapshotsNameEndpoint, app.Server.GetSnapshot)
 	app.registerPublicDELETE(routes.SnapshotsNameEndpoint, app.Server.DeleteSnapshot)
-	app.registerPublicPOST(routes.SnapshotsActivateEndpoint, app.Server.ActivateSnapshot)
 
 	// Tasks
-	// NOTE: These must be added before the {id} parameter endpoints to avoid conflicts
 	app.registerPublicGET(routes.TasksHistoryEndpoint, app.TaskManager.GetHistory)
 	app.registerPublicDELETE(routes.TasksHistoryEndpoint, app.TaskManager.ClearHistory)
 	app.registerPublicGET(routes.TasksEndpoint, app.TaskManager.GetTasks)
 	app.registerPublicPOST(routes.TasksEndpoint, app.TaskManager.CreateApplySnapshotTask)
-	app.registerPublicGET(routes.TasksIdEndpoint, app.TaskManager.GetTask)
+	app.registerPublicGET(routes.TasksIdEndpoint, app.TaskManager.GetTaskHandler)
 	app.registerPublicPATCH(routes.TasksIdEndpoint, app.TaskManager.UpdateApplySnapshotTask)
 	app.registerPublicDELETE(routes.TasksIdEndpoint, app.TaskManager.DeleteTask)
 	app.registerPublicPOST(routes.TasksIdEnableEndpoint, app.TaskManager.EnableTask)
@@ -251,8 +251,6 @@ func (app *App) setupPublicRoutes() {
 
 	// Versioning
 	app.registerPublicGET(routes.VersionEndpoint, app.Server.GetVersion)
-	app.registerPublicPOST(routes.VersionEndpoint, app.Server.RollbackVersion)
-	app.registerPublicPUT(routes.VersionEndpoint, app.Server.UpdateVersion)
 
 	// WebSocket
 	app.registerPublicGET(routes.WebsocketEndpoint, withWebSocketMetrics(app.config, app.Server.HandleWebSocket, app.Cluster.Metrics))
@@ -445,8 +443,8 @@ func initStateManager(config *api.AppConfig) *persistence.StateManager {
 }
 
 // initTaskManager initializes the timer manager.
-func initTaskManager(config *api.AppConfig, persistence *persistence.Persistence) *tasks.TaskManager {
-	taskManager := tasks.NewTaskManager(config, persistence)
+func initTaskManager(config *api.AppConfig, persistence *persistence.Persistence, hub *pubsub.Hub) *tasks.TaskManager {
+	taskManager := tasks.NewTaskManager(config, persistence, hub)
 	taskManager.Start()
 	return taskManager
 }
