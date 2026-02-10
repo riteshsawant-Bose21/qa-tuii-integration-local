@@ -46,6 +46,7 @@ class SemanticHelper {
     bool excludeChildSemantics = true,
   }) {
     return Semantics(
+      container: true,
       identifier: testId,
       toggled: value,
       label: label,
