@@ -96,7 +96,7 @@ dev_dependencies:
   appium_flutter_server: 
     git:
       url: https://github.com/Preetham-BoseProfessional/appium-flutter-server-x.git
-      ref: main
+      ref: 9e5008033f84a5a0f3c99c68f203f479be3284df
       path: server
   integration_test:
     sdk: flutter
