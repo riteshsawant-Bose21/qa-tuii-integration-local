@@ -478,7 +478,7 @@ func TestGetAllProjects(t *testing.T) {
 func TestUpdateProject(t *testing.T) {
 	mockProjectRow := &models.Project{
 		ID:                    "1",
-		PrimaryOwnerAccountID: null.NewString("123", true),
+		PrimaryOwnerAccountID: "123",
 		Name:                  null.NewString(updatedProjectName, true),
 		IsArchived:            false,
 		IsDeleted:             false,

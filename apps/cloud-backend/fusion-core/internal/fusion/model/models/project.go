@@ -39,7 +39,7 @@ type Project struct {
 	LockedByUserID        null.String       `boil:"locked_by_user_id" json:"locked_by_user_id,omitempty" toml:"locked_by_user_id" yaml:"locked_by_user_id,omitempty"`
 	CreatedAt             time.Time         `boil:"created_at" json:"created_at" toml:"created_at" yaml:"created_at"`
 	UpdatedAt             time.Time         `boil:"updated_at" json:"updated_at" toml:"updated_at" yaml:"updated_at"`
-	PrimaryOwnerAccountID null.String       `boil:"primary_owner_account_id" json:"primary_owner_account_id,omitempty" toml:"primary_owner_account_id" yaml:"primary_owner_account_id,omitempty"`
+	PrimaryOwnerAccountID string            `boil:"primary_owner_account_id" json:"primary_owner_account_id" toml:"primary_owner_account_id" yaml:"primary_owner_account_id"`
 
 	R *projectR `boil:"-" json:"-" toml:"-" yaml:"-"`
 	L projectL  `boil:"-" json:"-" toml:"-" yaml:"-"`
@@ -186,7 +186,7 @@ var ProjectWhere = struct {
 	LockedByUserID        whereHelpernull_String
 	CreatedAt             whereHelpertime_Time
 	UpdatedAt             whereHelpertime_Time
-	PrimaryOwnerAccountID whereHelpernull_String
+	PrimaryOwnerAccountID whereHelperstring
 }{
 	ID:                    whereHelperstring{field: "\"project\".\"id\""},
 	Application:           whereHelpernull_String{field: "\"project\".\"application\""},
@@ -202,7 +202,7 @@ var ProjectWhere = struct {
 	LockedByUserID:        whereHelpernull_String{field: "\"project\".\"locked_by_user_id\""},
 	CreatedAt:             whereHelpertime_Time{field: "\"project\".\"created_at\""},
 	UpdatedAt:             whereHelpertime_Time{field: "\"project\".\"updated_at\""},
-	PrimaryOwnerAccountID: whereHelpernull_String{field: "\"project\".\"primary_owner_account_id\""},
+	PrimaryOwnerAccountID: whereHelperstring{field: "\"project\".\"primary_owner_account_id\""},
 }
 
 // ProjectRels is where relationship names are stored.
@@ -281,8 +281,8 @@ type projectL struct{}
 
 var (
 	projectAllColumns            = []string{"id", "application", "budget_amount", "currency", "description", "name", "project_phase", "venue", "environment_type", "is_archived", "is_deleted", "locked_by_user_id", "created_at", "updated_at", "primary_owner_account_id"}
-	projectColumnsWithoutDefault = []string{"id"}
-	projectColumnsWithDefault    = []string{"application", "budget_amount", "currency", "description", "name", "project_phase", "venue", "environment_type", "is_archived", "is_deleted", "locked_by_user_id", "created_at", "updated_at", "primary_owner_account_id"}
+	projectColumnsWithoutDefault = []string{"id", "primary_owner_account_id"}
+	projectColumnsWithDefault    = []string{"application", "budget_amount", "currency", "description", "name", "project_phase", "venue", "environment_type", "is_archived", "is_deleted", "locked_by_user_id", "created_at", "updated_at"}
 	projectPrimaryKeyColumns     = []string{"id"}
 	projectGeneratedColumns      = []string{}
 )
@@ -785,9 +785,7 @@ func (projectL) LoadPrimaryOwnerAccount(ctx context.Context, e boil.ContextExecu
 		if object.R == nil {
 			object.R = &projectR{}
 		}
-		if !queries.IsNil(object.PrimaryOwnerAccountID) {
-			args[object.PrimaryOwnerAccountID] = struct{}{}
-		}
+		args[object.PrimaryOwnerAccountID] = struct{}{}
 
 	} else {
 		for _, obj := range slice {
@@ -795,9 +793,7 @@ func (projectL) LoadPrimaryOwnerAccount(ctx context.Context, e boil.ContextExecu
 				obj.R = &projectR{}
 			}
 
-			if !queries.IsNil(obj.PrimaryOwnerAccountID) {
-				args[obj.PrimaryOwnerAccountID] = struct{}{}
-			}
+			args[obj.PrimaryOwnerAccountID] = struct{}{}
 
 		}
 	}
@@ -862,7 +858,7 @@ func (projectL) LoadPrimaryOwnerAccount(ctx context.Context, e boil.ContextExecu
 
 	for _, local := range slice {
 		for _, foreign := range resultSlice {
-			if queries.Equal(local.PrimaryOwnerAccountID, foreign.ID) {
+			if local.PrimaryOwnerAccountID == foreign.ID {
 				local.R.PrimaryOwnerAccount = foreign
 				if foreign.R == nil {
 					foreign.R = &accountR{}
@@ -1096,7 +1092,7 @@ func (o *Project) SetPrimaryOwnerAccount(ctx context.Context, exec boil.ContextE
 		return errors.Wrap(err, "failed to update local table")
 	}
 
-	queries.Assign(&o.PrimaryOwnerAccountID, related.ID)
+	o.PrimaryOwnerAccountID = related.ID
 	if o.R == nil {
 		o.R = &projectR{
 			PrimaryOwnerAccount: related,
@@ -1113,39 +1109,6 @@ func (o *Project) SetPrimaryOwnerAccount(ctx context.Context, exec boil.ContextE
 		related.R.PrimaryOwnerAccountProjects = append(related.R.PrimaryOwnerAccountProjects, o)
 	}
 
-	return nil
-}
-
-// RemovePrimaryOwnerAccount relationship.
-// Sets o.R.PrimaryOwnerAccount to nil.
-// Removes o from all passed in related items' relationships struct.
-func (o *Project) RemovePrimaryOwnerAccount(ctx context.Context, exec boil.ContextExecutor, related *Account) error {
-	var err error
-
-	queries.SetScanner(&o.PrimaryOwnerAccountID, nil)
-	if _, err = o.Update(ctx, exec, boil.Whitelist("primary_owner_account_id")); err != nil {
-		return errors.Wrap(err, "failed to update local table")
-	}
-
-	if o.R != nil {
-		o.R.PrimaryOwnerAccount = nil
-	}
-	if related == nil || related.R == nil {
-		return nil
-	}
-
-	for i, ri := range related.R.PrimaryOwnerAccountProjects {
-		if queries.Equal(o.PrimaryOwnerAccountID, ri.PrimaryOwnerAccountID) {
-			continue
-		}
-
-		ln := len(related.R.PrimaryOwnerAccountProjects)
-		if ln > 1 && i < ln-1 {
-			related.R.PrimaryOwnerAccountProjects[i] = related.R.PrimaryOwnerAccountProjects[ln-1]
-		}
-		related.R.PrimaryOwnerAccountProjects = related.R.PrimaryOwnerAccountProjects[:ln-1]
-		break
-	}
 	return nil
 }
 

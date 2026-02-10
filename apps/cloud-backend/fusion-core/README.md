@@ -439,9 +439,8 @@ cd internal/fusion/model
 #verify 
 which sqlboiler
 
-# Generate models from database schema
-sqlboiler psql --config sqlboiler.toml
-
+# Generate models from database schema without tests and regenerate it from scratch
+sqlboiler psql --config sqlboiler.toml --no-tests --wipe
 ```
 
 ### Regenerating API Documentation
