@@ -16,9 +16,9 @@ import (
 	"syscall"
 	"time"
 
+	"fusion-services-core/logging"
 	"gateway/internal/api"
 	"gateway/internal/app"
-	"fusion-services-core/logging"
 	"gateway/internal/version"
 )
 
@@ -32,17 +32,27 @@ func parseFlags() *api.AppConfig {
 	versionFlag := flag.Bool("version", false, "Show version information")
 	bindAddr := flag.String("bind-addr", "0.0.0.0", "Bind address for cluster communication")
 	bindPort := flag.Int("bind-port", 7946, "Bind port for cluster communication (default 7946)")
+	publicPort := flag.String("public-port", "18080", "Listen port for public HTTP API")
+	adminPort := flag.String("admin-port", "19090", "Listen port for private/admin HTTP API")
 	netIface := flag.String("net-iface", "eth0", "Network interface for VRRP monitoring")
 	local := flag.Bool("local", false, "Run in local-only mode (no clustering)")
 	verbose := flag.Bool("verbose", false, "Enable verbose logging")
 	profile := flag.Bool("profile", false, "Enable profile dump")
 	publicUpstream := flag.String("public-upstream", "http://127.0.0.1:8080", "Upstream URL for public HTTP proxy")
 	privateUpstream := flag.String("private-upstream", "http://127.0.0.1:9090", "Upstream URL for private/admin HTTP proxy")
+	publicUpstreamFromVRRP := flag.Bool("public-upstream-from-vrrp", false, "Discover public upstream VIP from VRRP advertisements")
+	publicUpstreamVRRPTimeoutSec := flag.Int("public-upstream-vrrp-timeout-sec", 3, "Seconds to wait for a VRRP advertisement when discovering upstream VIP")
 	flag.Parse()
 
 	// Read environment overrides
 	if envVal := os.Getenv("FUSION_NET_IFACE"); envVal != "" {
 		*netIface = envVal
+	}
+	if envVal := os.Getenv("FUSION_PUBLIC_PORT"); envVal != "" {
+		*publicPort = envVal
+	}
+	if envVal := os.Getenv("FUSION_ADMIN_PORT"); envVal != "" {
+		*adminPort = envVal
 	}
 
 	if envVal := os.Getenv("FUSION_PROFILE"); envVal != "" {
@@ -58,6 +68,18 @@ func parseFlags() *api.AppConfig {
 	if envVal := os.Getenv("FUSION_PRIVATE_UPSTREAM"); envVal != "" {
 		*privateUpstream = envVal
 	}
+	if envVal := os.Getenv("FUSION_PUBLIC_UPSTREAM_FROM_VRRP"); envVal != "" {
+		if envVal == "1" || strings.EqualFold(envVal, "true") {
+			*publicUpstreamFromVRRP = true
+		} else if envVal == "0" || strings.EqualFold(envVal, "false") {
+			*publicUpstreamFromVRRP = false
+		}
+	}
+	if envVal := os.Getenv("FUSION_PUBLIC_UPSTREAM_VRRP_TIMEOUT_SEC"); envVal != "" {
+		if parsed, err := strconv.Atoi(envVal); err == nil && parsed > 0 {
+			*publicUpstreamVRRPTimeoutSec = parsed
+		}
+	}
 
 	if *versionFlag {
 		// This must be a log.Printf. The server logger is not running yet.
@@ -66,15 +88,19 @@ func parseFlags() *api.AppConfig {
 	}
 
 	return &api.AppConfig{
-		NodeName:           createUniqueNodeName(baseName),
-		BindAddr:           *bindAddr,
-		BindPort:           *bindPort,
-		NetIface:           *netIface,
-		Local:              *local,
-		Verbose:            *verbose,
-		Profile:            *profile,
-		UpstreamPublicURL:  *publicUpstream,
-		UpstreamPrivateURL: *privateUpstream,
+		NodeName:                     createUniqueNodeName(baseName),
+		BindAddr:                     *bindAddr,
+		BindPort:                     *bindPort,
+		PublicPort:                   *publicPort,
+		AdminPort:                    *adminPort,
+		NetIface:                     *netIface,
+		Local:                        *local,
+		Verbose:                      *verbose,
+		Profile:                      *profile,
+		PublicUpstreamFromVRRP:       *publicUpstreamFromVRRP,
+		PublicUpstreamVRRPTimeoutSec: *publicUpstreamVRRPTimeoutSec,
+		UpstreamPublicURL:            *publicUpstream,
+		UpstreamPrivateURL:           *privateUpstream,
 	}
 }
 

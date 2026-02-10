@@ -1,6 +1,8 @@
 package server
 
 import (
+	"context"
+	"errors"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
@@ -23,6 +25,10 @@ func NewReverseProxy(target string) (*httputil.ReverseProxy, error) {
 		req.Host = upstream.Host
 	}
 	proxy.ErrorHandler = func(w http.ResponseWriter, r *http.Request, err error) {
+		if errors.Is(err, context.Canceled) || errors.Is(r.Context().Err(), context.Canceled) {
+			logging.GetLogger().Debug("proxy request canceled for %s %s", r.Method, r.URL.Path)
+			return
+		}
 		logging.GetLogger().Error("proxy error for %s %s: %v", r.Method, r.URL.Path, err)
 		http.Error(w, "bad gateway", http.StatusBadGateway)
 	}
