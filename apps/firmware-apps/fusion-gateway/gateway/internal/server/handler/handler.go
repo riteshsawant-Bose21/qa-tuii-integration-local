@@ -4,7 +4,7 @@ import (
 	"gateway/internal/api"
 )
 
-// Handler is the container for server implimentations.
+// Handler is the container for server implementations.
 type Handler struct {
 	appConfig *api.AppConfig
 }
