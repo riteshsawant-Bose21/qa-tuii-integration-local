@@ -6,7 +6,7 @@ set -eu
 fusion_server_start_path=/usr/local/bin/fusion-gateway-start.sh
 fusion_server_service_path=/etc/systemd/system/fusion-gateway.service
 
-# haproxy confi
+# haproxy config
 haproxy_conf_data_path=/usr/local/bin/haproxy_conf_data.sh
 
 # Keepalived configuration
