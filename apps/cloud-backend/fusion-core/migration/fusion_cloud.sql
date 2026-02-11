@@ -186,3 +186,44 @@ CREATE TABLE product_sync_job (
     
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+-- User profile table
+CREATE TABLE user_profile (
+	id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID UNIQUE NOT NULL REFERENCES app_user(id),
+    email VARCHAR(255) UNIQUE NOT NULL,
+    first_name VARCHAR(100),
+    last_name VARCHAR(100),
+    job_title VARCHAR(100),
+    phone VARCHAR(30),
+    profile_photo_url VARCHAR(2048),
+    address_line_1 VARCHAR(255),
+    city VARCHAR(100),
+    state_province VARCHAR(100),
+    country VARCHAR(60),
+    zip_postal_code VARCHAR(10),
+    gdpr_opt_out BOOLEAN DEFAULT false,
+    privacy_policy_accepted BOOLEAN DEFAULT false,
+    linked_profiles JSONB,
+    timezone VARCHAR(64),
+    unit_system VARCHAR(20),
+    customer_type VARCHAR(50),
+    client_type VARCHAR(50),
+    company_name VARCHAR(255),
+    company_website VARCHAR(2048),
+    currency VARCHAR(3),
+    netsuite_customer_id VARCHAR(255),
+    price_list JSONB,
+    created_at timestamp NOT NULL DEFAULT now(),
+    updated_at timestamp
+);
+
+-- user settings table
+CREATE TABLE user_settings (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID UNIQUE NOT NULL REFERENCES app_user(id),
+    language VARCHAR(20) DEFAULT 'en-US',
+    theme VARCHAR(20) DEFAULT 'system',
+    created_at timestamp NOT NULL DEFAULT NOW(),
+    updated_at timestamp
+);
