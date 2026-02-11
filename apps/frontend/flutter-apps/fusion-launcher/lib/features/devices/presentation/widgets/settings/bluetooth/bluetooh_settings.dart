@@ -3,7 +3,7 @@ import 'package:fusion_launcher/features/devices/presentation/widgets/settings/n
 import 'package:fusion_launcher/features/devices/presentation/widgets/settings/settings_item_row.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
-import 'fusion_checkbox.dart';
+import 'fusion_checkbox.dart' as localCheckBox;
 import 'fusion_radio_button.dart';
 import 'passcode_input_field.dart';
 
@@ -190,7 +190,7 @@ class _BluetoothSettingsPageState extends State<BluetoothSettingsPage> {
           const SizedBox(height: 24),
 
           // --- Bottom Checkbox ---
-          FusionCheckbox(
+          localCheckBox.FusionCheckbox(
             label: "Turn off Bluetooth once Wifi or Ethernet is connected.",
             value: _turnOffBluetooth,
             onChanged: (bool val) => setState(() => _turnOffBluetooth = val),
