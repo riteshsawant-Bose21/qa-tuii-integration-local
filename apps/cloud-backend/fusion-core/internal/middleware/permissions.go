@@ -85,13 +85,19 @@ func SetupUserSettingsPermissions(acc *AccessControlConfig) {
 	acc.RegisterPermission("PUT", fmt.Sprintf("%s%s", basePath, constants.EndpointUserSettingsByID), UserSettingsUpdate, PermissionWrite, "Update user settings")
 }
 
+func SetupDevicePermissions(acc *AccessControlConfig) {
+	// Device CREATE endpoint - require write permission
+	acc.RegisterPermission("POST", "/api/v1/devices", "project.create", PermissionWrite, "Create new device")
+}
+
 // SetupCommonPermissions configures common permission patterns
 func SetupCommonPermissions(acc *AccessControlConfig) {
 	SetupProjectPermissions(acc)
 	SetupUserProfilePermissions(acc)
 	SetupUserSettingsPermissions(acc)
-
+	SetupDevicePermissions(acc)
 	// Add more permission setups here as needed
 	// SetupUserPermissions(acc)
 	// SetupProductPermissions(acc)
 }
+

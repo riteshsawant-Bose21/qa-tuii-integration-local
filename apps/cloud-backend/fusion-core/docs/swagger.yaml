@@ -1,6 +1,6 @@
 basePath: /api/v1
 definitions:
-  types.AccessLevel:
+  github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.AccessLevel:
     properties:
       id:
         example: 1
@@ -12,7 +12,7 @@ definitions:
         example: Full Access
         type: string
     type: object
-  types.AccountInfo:
+  github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.AccountInfo:
     properties:
       description:
         example: Leading technology company
@@ -27,7 +27,7 @@ definitions:
         example: Enterprise
         type: string
     type: object
-  types.AssignRoleRequest:
+  github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.AssignRoleRequest:
     properties:
       role_id:
         example: 2
@@ -39,22 +39,22 @@ definitions:
     - role_id
     - user_id
     type: object
-  types.AuthTokenResponse:
+  github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.BadRequestError:
     properties:
-      access_token:
-        example: eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9...
-        type: string
-      expires_in:
-        example: 86400
-        type: integer
-      id_token:
-        example: eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9...
-        type: string
-      token_type:
-        example: Bearer
+      message:
+        example: Bad Request
         type: string
     type: object
-  types.Budget:
+  github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.BadRequestResponse:
+    properties:
+      error:
+        example: Bad Request
+        type: string
+      message:
+        example: Invalid JSON payload
+        type: string
+    type: object
+  github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.Budget:
     properties:
       amount:
         example: 50000
@@ -65,7 +65,7 @@ definitions:
     required:
     - currency
     type: object
-  types.CreateRoleRequest:
+  github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.CreateRoleRequest:
     properties:
       description:
         example: Role for managing projects and team members
@@ -81,7 +81,7 @@ definitions:
     - description
     - name
     type: object
-  types.CreateUserRequest:
+  github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.CreateUserRequest:
     properties:
       account_id:
         example: acc_987654321
@@ -101,7 +101,31 @@ definitions:
     - email
     - full_name
     type: object
-  types.EnvironmentType:
+  github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.DeviceCreateRequest:
+    properties:
+      csr:
+        type: string
+      deviceId:
+        type: string
+      deviceName:
+        type: string
+      deviceType:
+        type: string
+      firmwareVersion:
+        type: string
+    required:
+    - csr
+    - deviceId
+    - deviceName
+    - deviceType
+    - firmwareVersion
+    type: object
+  github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.DeviceCreateResponse:
+    properties:
+      certificate:
+        type: string
+    type: object
+  github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.EnvironmentType:
     enum:
     - indoor
     - outdoor
@@ -111,13 +135,13 @@ definitions:
     - EnvironmentTypeIndoor
     - EnvironmentTypeOutdoor
     - EnvironmentTypeHybrid
-  types.ErrorResponse:
+  github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.ErrorResponse:
     properties:
-      error:
+      message:
         example: Error message
         type: string
     type: object
-  types.Feature:
+  github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.Feature:
     properties:
       description:
         example: Permission to create new projects
@@ -129,7 +153,7 @@ definitions:
         example: launcher.project.create
         type: string
     type: object
-  types.FeaturePermissionDetail:
+  github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.FeaturePermissionDetail:
     properties:
       access_label:
         example: Full Access
@@ -147,11 +171,17 @@ definitions:
         example: launcher.project.create
         type: string
     type: object
-  types.GetAllProjectsResponse:
+  github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.ForbiddenError:
+    properties:
+      message:
+        example: Forbidden
+        type: string
+    type: object
+  github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.GetAllProjectsResponse:
     properties:
       data:
         items:
-          $ref: '#/definitions/types.Project'
+          $ref: '#/definitions/github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.Project'
         type: array
       page:
         example: 1
@@ -163,16 +193,58 @@ definitions:
         example: 3
         type: integer
     type: object
-  types.OrganizationUsersResponse:
+  github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.InternalServerError:
+    properties:
+      message:
+        example: Internal Server Error
+        type: string
+    type: object
+  ? github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.InternalServerErrorForCreateUserProfile
+  : properties:
+      message:
+        example: 'Failed to create user profile: '
+        type: string
+    type: object
+  ? github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.InternalServerErrorForUpdateUserProfile
+  : properties:
+      message:
+        example: 'Failed to update user profile: '
+        type: string
+    type: object
+  github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.InternalServerErrorResponse:
+    properties:
+      error:
+        example: Internal Server Error
+        type: string
+      message:
+        example: Internal server error
+        type: string
+    type: object
+  github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.NotFoundError:
+    properties:
+      message:
+        example: Not Found
+        type: string
+    type: object
+  github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.NotFoundResponse:
+    properties:
+      error:
+        example: Not Found
+        type: string
+      message:
+        example: User not found in the system
+        type: string
+    type: object
+  github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.OrganizationUsersResponse:
     properties:
       account:
-        $ref: '#/definitions/types.AccountInfo'
+        $ref: '#/definitions/github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.AccountInfo'
       users:
         items:
-          $ref: '#/definitions/types.UserWithRole'
+          $ref: '#/definitions/github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.UserWithRole'
         type: array
     type: object
-  types.PermissionUpdateRequest:
+  github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.PermissionUpdateRequest:
     properties:
       access_level_id:
         example: 2
@@ -192,7 +264,7 @@ definitions:
     - action
     - feature_id
     type: object
-  types.PriceDetail:
+  github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.PriceDetail:
     properties:
       currency:
         type: string
@@ -201,18 +273,18 @@ definitions:
       variant:
         type: string
     type: object
-  types.PriceResponse:
+  github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.PriceResponse:
     properties:
       prices:
         items:
-          $ref: '#/definitions/types.PriceDetail'
+          $ref: '#/definitions/github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.PriceDetail'
         type: array
       product_id:
         type: integer
       version:
         type: string
     type: object
-  types.ProductItemResponse:
+  github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.ProductItemResponse:
     properties:
       assets: {}
       description:
@@ -227,42 +299,42 @@ definitions:
         type: integer
       specifications: {}
     type: object
-  types.ProductResponse:
+  github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.ProductResponse:
     properties:
       accessory:
         items:
-          $ref: '#/definitions/types.ProductItemResponse'
+          $ref: '#/definitions/github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.ProductItemResponse'
         type: array
       amplifier:
         items:
-          $ref: '#/definitions/types.ProductItemResponse'
+          $ref: '#/definitions/github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.ProductItemResponse'
         type: array
       controller:
         items:
-          $ref: '#/definitions/types.ProductItemResponse'
+          $ref: '#/definitions/github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.ProductItemResponse'
         type: array
       dsp:
         items:
-          $ref: '#/definitions/types.ProductItemResponse'
+          $ref: '#/definitions/github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.ProductItemResponse'
         type: array
       io_endpoint:
         items:
-          $ref: '#/definitions/types.ProductItemResponse'
+          $ref: '#/definitions/github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.ProductItemResponse'
         type: array
       speaker:
         items:
-          $ref: '#/definitions/types.ProductItemResponse'
+          $ref: '#/definitions/github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.ProductItemResponse'
         type: array
       version:
         type: string
     type: object
-  types.Project:
+  github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.Project:
     properties:
       application:
         example: Audio System Design
         type: string
       budget:
-        $ref: '#/definitions/types.Budget'
+        $ref: '#/definitions/github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.Budget'
       created_at:
         example: "2023-10-15T14:30:00Z"
         type: string
@@ -271,7 +343,7 @@ definitions:
         type: string
       environment_type:
         allOf:
-        - $ref: '#/definitions/types.EnvironmentType'
+        - $ref: '#/definitions/github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.EnvironmentType'
         example: indoor
       id:
         example: 123e4567-e89b-12d3-a456-426614174000
@@ -293,7 +365,7 @@ definitions:
         type: string
       project_phase:
         allOf:
-        - $ref: '#/definitions/types.ProjectPhase'
+        - $ref: '#/definitions/github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.ProjectPhase'
         example: Development
       thumbnail_url:
         example: https://storage.example.com/projects/123e4567/thumbnail.jpg
@@ -305,7 +377,7 @@ definitions:
         example: Building A - Conference Room 101
         type: string
     type: object
-  types.ProjectArchiveRequest:
+  github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.ProjectArchiveRequest:
     properties:
       is_archived:
         example: true
@@ -313,7 +385,7 @@ definitions:
     required:
     - is_archived
     type: object
-  types.ProjectCreateRequest:
+  github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.ProjectCreateRequest:
     properties:
       application:
         example: Audio System Design
@@ -321,14 +393,14 @@ definitions:
         minLength: 1
         type: string
       budget:
-        $ref: '#/definitions/types.Budget'
+        $ref: '#/definitions/github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.Budget'
       description:
         example: Professional audio system for corporate conference room
         maxLength: 1000
         type: string
       environment_type:
         allOf:
-        - $ref: '#/definitions/types.EnvironmentType'
+        - $ref: '#/definitions/github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.EnvironmentType'
         example: indoor
       is_project_file_created:
         example: false
@@ -346,7 +418,7 @@ definitions:
         type: string
       project_phase:
         allOf:
-        - $ref: '#/definitions/types.ProjectPhase'
+        - $ref: '#/definitions/github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.ProjectPhase'
         example: Proposal
       venue:
         example: Building A - Conference Room 101
@@ -358,7 +430,7 @@ definitions:
     - name
     - project_id
     type: object
-  types.ProjectCreateResponse:
+  github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.ProjectCreateResponse:
     properties:
       id:
         example: 123e4567-e89b-12d3-a456-426614174000
@@ -370,7 +442,7 @@ definitions:
         example: https://storage.example.com/upload/projects/123e4567
         type: string
     type: object
-  types.ProjectLockRequest:
+  github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.ProjectLockRequest:
     properties:
       is_locked:
         example: true
@@ -378,7 +450,7 @@ definitions:
     required:
     - is_locked
     type: object
-  types.ProjectPhase:
+  github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.ProjectPhase:
     enum:
     - Proposal
     - Development
@@ -388,7 +460,7 @@ definitions:
     - ProjectPhaseProposal
     - ProjectPhaseDevelopment
     - ProjectPhaseCommissioned
-  types.ProjectStarRequest:
+  github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.ProjectStarRequest:
     properties:
       is_starred:
         example: true
@@ -396,7 +468,7 @@ definitions:
     required:
     - is_starred
     type: object
-  types.ProjectUpdateRequest:
+  github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.ProjectUpdateRequest:
     properties:
       application:
         example: Audio System Design
@@ -404,14 +476,14 @@ definitions:
         minLength: 1
         type: string
       budget:
-        $ref: '#/definitions/types.Budget'
+        $ref: '#/definitions/github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.Budget'
       description:
         example: Updated professional audio system for corporate conference room
         maxLength: 1000
         type: string
       environment_type:
         allOf:
-        - $ref: '#/definitions/types.EnvironmentType'
+        - $ref: '#/definitions/github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.EnvironmentType'
         example: indoor
       is_project_file_dirty:
         example: true
@@ -426,14 +498,14 @@ definitions:
         type: string
       project_phase:
         allOf:
-        - $ref: '#/definitions/types.ProjectPhase'
+        - $ref: '#/definitions/github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.ProjectPhase'
         example: Development
       venue:
         example: Building B - Conference Room 205
         maxLength: 255
         type: string
     type: object
-  types.ProjectUpdateResponse:
+  github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.ProjectUpdateResponse:
     properties:
       project_upload_url:
         example: https://storage.example.com/upload/projects/123e4567
@@ -442,7 +514,7 @@ definitions:
         example: https://storage.example.com/upload/projects/123e4567
         type: string
     type: object
-  types.RoleInfo:
+  github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.RoleInfo:
     properties:
       id:
         example: 1
@@ -451,26 +523,26 @@ definitions:
         example: Admin
         type: string
     type: object
-  types.RoleManagementResponse:
+  github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.RoleManagementResponse:
     properties:
       access_levels:
         items:
-          $ref: '#/definitions/types.AccessLevel'
+          $ref: '#/definitions/github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.AccessLevel'
         type: array
       features:
         items:
-          $ref: '#/definitions/types.Feature'
+          $ref: '#/definitions/github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.Feature'
         type: array
       roles:
         items:
-          $ref: '#/definitions/types.RoleWithPermissions'
+          $ref: '#/definitions/github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.RoleWithPermissions'
         type: array
       users:
         items:
-          $ref: '#/definitions/types.UserBasicInfo'
+          $ref: '#/definitions/github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.UserBasicInfo'
         type: array
     type: object
-  types.RoleWithPermissions:
+  github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.RoleWithPermissions:
     properties:
       created_at:
         example: "2023-01-15T10:30:00Z"
@@ -486,30 +558,90 @@ definitions:
         type: string
       permissions:
         items:
-          $ref: '#/definitions/types.FeaturePermissionDetail'
+          $ref: '#/definitions/github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.FeaturePermissionDetail'
         type: array
       user_count:
         example: 5
         type: integer
     type: object
-  types.SingleProductResponse:
+  github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.SingleProductResponse:
     properties:
       accessory:
-        $ref: '#/definitions/types.ProductItemResponse'
+        $ref: '#/definitions/github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.ProductItemResponse'
       amplifier:
-        $ref: '#/definitions/types.ProductItemResponse'
+        $ref: '#/definitions/github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.ProductItemResponse'
       controller:
-        $ref: '#/definitions/types.ProductItemResponse'
+        $ref: '#/definitions/github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.ProductItemResponse'
       dsp:
-        $ref: '#/definitions/types.ProductItemResponse'
+        $ref: '#/definitions/github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.ProductItemResponse'
       io_endpoint:
-        $ref: '#/definitions/types.ProductItemResponse'
+        $ref: '#/definitions/github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.ProductItemResponse'
       speaker:
-        $ref: '#/definitions/types.ProductItemResponse'
+        $ref: '#/definitions/github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.ProductItemResponse'
       version:
         type: string
     type: object
-  types.StatusOkForCreateUserProfile:
+  github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.StatusBadRequest:
+    properties:
+      message:
+        example: Invalid request body
+        type: string
+    type: object
+  ? github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.StatusBadRequestForUpdateUserSettings
+  : properties:
+      message:
+        example: id is required for updating settings
+        type: string
+    type: object
+  github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.StatusInternalServerError:
+    properties:
+      message:
+        example: Internal server error
+        type: string
+    type: object
+  ? github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.StatusInternalServerErrorForUpdateSettings
+  : properties:
+      message:
+        example: 'Failed to update user settings: '
+        type: string
+    type: object
+  github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.StatusNotFound:
+    properties:
+      message:
+        example: User settings not found
+        type: string
+    type: object
+  github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.StatusNotFoundForGetUserProfile:
+    properties:
+      message:
+        example: User profile not found
+        type: string
+    type: object
+  github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.StatusOkForCreateUserProfile:
+    properties:
+      id:
+        example: 53437319-7a5b-4462-bc7c-9e7f9a057a1a
+        type: string
+    type: object
+  github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.StatusOkForCreateUserSettings:
+    properties:
+      id:
+        example: 53437319-7a5b-4462-bc7c-9e7f9a057a1a
+        type: string
+    type: object
+  github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.StatusOkForUpdateUserProfile:
+    properties:
+      message:
+        example: User profile updated successfully
+        type: string
+    type: object
+  github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.StatusOkForUpdateUserSettings:
+    properties:
+      message:
+        example: User settings updated successfully
+        type: string
+    type: object
+  github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.UnauthorizedResponse:
     properties:
       id:
         example: 53437319-7a5b-4462-bc7c-9e7f9a057a1a
@@ -521,7 +653,7 @@ definitions:
         example: 53437319-7a5b-4462-bc7c-9e7f9a057a1a
         type: string
     type: object
-  types.UpdateUserRequest:
+  github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.UpdateUserRequest:
     properties:
       account_id:
         example: acc_111222333
@@ -533,14 +665,14 @@ definitions:
         example: John Smith
         type: string
     type: object
-  types.UpdateUserSettingsRequest:
+  github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.UpdateUserSettingsRequest:
     properties:
       language:
         type: string
       theme:
         type: string
     type: object
-  types.User:
+  github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.User:
     properties:
       account_id:
         example: acc_987654321
@@ -564,20 +696,20 @@ definitions:
         example: "2023-06-20T14:45:00Z"
         type: string
     type: object
-  types.UserAuthorizationResponse:
+  github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.UserAuthorizationResponse:
     properties:
       account:
-        $ref: '#/definitions/types.AccountInfo'
+        $ref: '#/definitions/github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.AccountInfo'
       permissions:
         additionalProperties:
           type: string
         type: object
       role:
-        $ref: '#/definitions/types.RoleInfo'
+        $ref: '#/definitions/github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.RoleInfo'
       user:
-        $ref: '#/definitions/types.UserInfo'
+        $ref: '#/definitions/github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.UserInfo'
     type: object
-  types.UserBasicInfo:
+  github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.UserBasicInfo:
     properties:
       email:
         example: john.doe@company.com
@@ -595,7 +727,7 @@ definitions:
         example: Admin
         type: string
     type: object
-  types.UserInfo:
+  github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.UserInfo:
     properties:
       email:
         example: john.doe@company.com
@@ -604,7 +736,7 @@ definitions:
         example: usr_123456789
         type: string
     type: object
-  types.UserProfile:
+  github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.UserProfile:
     properties:
       address_line_1:
         type: string
@@ -661,7 +793,7 @@ definitions:
       zip_postal_code:
         type: string
     type: object
-  types.UserProfileUpdateRequest:
+  github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.UserProfileUpdateRequest:
     properties:
       address_line_1:
         type: string
@@ -710,7 +842,7 @@ definitions:
       zip_postal_code:
         type: string
     type: object
-  types.UserSettings:
+  github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.UserSettings:
     properties:
       created_at:
         type: string
@@ -725,7 +857,7 @@ definitions:
       user_id:
         type: string
     type: object
-  types.UserWithRole:
+  github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.UserWithRole:
     properties:
       email:
         example: john.doe@company.com
@@ -740,7 +872,7 @@ definitions:
         example: "2023-01-15T10:30:00Z"
         type: string
       role:
-        $ref: '#/definitions/types.RoleInfo'
+        $ref: '#/definitions/github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.RoleInfo'
       status:
         description: active, pending, suspended
         example: active
@@ -760,40 +892,39 @@ info:
   title: Fusion Cloud Backend API
   version: "1.0"
 paths:
-  /auth/automation/tokens:
-    get:
+  /devices:
+    post:
       consumes:
       - application/json
-      description: Get access and ID tokens for a user using Resource Owner Password
-        flow (QA/Staging environment only)
+      description: Create a new device in the system
       parameters:
-      - description: Username for token generation
-        in: query
-        name: username
+      - description: Device details
+        in: body
+        name: body
         required: true
-        type: string
+        schema:
+          $ref: '#/definitions/github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.DeviceCreateRequest'
       produces:
       - application/json
       responses:
-        "200":
-          description: Tokens generated successfully
+        "201":
+          description: Successfully created device
           schema:
-            $ref: '#/definitions/types.AuthTokenResponse'
+            $ref: '#/definitions/github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.DeviceCreateResponse'
         "400":
-          description: Bad request - username is required
+          description: Bad request - Invalid payload or user not found or device Id
+            already exists
           schema:
-            $ref: '#/definitions/types.ErrorResponse'
-        "403":
-          description: auth automation endpoint is disabled
-          schema:
-            $ref: '#/definitions/types.ErrorResponse'
+            $ref: '#/definitions/github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.ErrorResponse'
         "500":
           description: Internal server error
           schema:
-            $ref: '#/definitions/types.ErrorResponse'
-      summary: Get Auth0 tokens for automation testing
+            $ref: '#/definitions/github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Create a new device
       tags:
-      - auth
+      - devices
   /organization/role-management:
     get:
       consumes:
@@ -806,7 +937,7 @@ paths:
         "200":
           description: Successfully retrieved role management data
           schema:
-            $ref: '#/definitions/types.RoleManagementResponse'
+            $ref: '#/definitions/github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.RoleManagementResponse'
         "401":
           description: Unauthorized - User email not found in token
           schema:
@@ -842,14 +973,14 @@ paths:
         name: role
         required: true
         schema:
-          $ref: '#/definitions/types.CreateRoleRequest'
+          $ref: '#/definitions/github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.CreateRoleRequest'
       produces:
       - application/json
       responses:
         "201":
           description: Successfully created role
           schema:
-            $ref: '#/definitions/types.RoleWithPermissions'
+            $ref: '#/definitions/github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.RoleWithPermissions'
         "400":
           description: Bad request - Invalid JSON payload
           schema:
@@ -896,7 +1027,7 @@ paths:
         required: true
         schema:
           items:
-            $ref: '#/definitions/types.PermissionUpdateRequest'
+            $ref: '#/definitions/github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.PermissionUpdateRequest'
           type: array
       produces:
       - application/json
@@ -947,7 +1078,7 @@ paths:
         "200":
           description: Successfully retrieved organization users
           schema:
-            $ref: '#/definitions/types.OrganizationUsersResponse'
+            $ref: '#/definitions/github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.OrganizationUsersResponse'
         "401":
           description: Unauthorized - User email not found in token
           schema:
@@ -987,7 +1118,7 @@ paths:
         name: roleAssignment
         required: true
         schema:
-          $ref: '#/definitions/types.AssignRoleRequest'
+          $ref: '#/definitions/github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.AssignRoleRequest'
       produces:
       - application/json
       responses:
@@ -1038,11 +1169,11 @@ paths:
         "200":
           description: Successful response with all products
           schema:
-            $ref: '#/definitions/types.ProductResponse'
+            $ref: '#/definitions/github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.ProductResponse'
         "500":
           description: Internal server error
           schema:
-            $ref: '#/definitions/types.ErrorResponse'
+            $ref: '#/definitions/github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.InternalServerError'
       summary: Get all products
       tags:
       - products
@@ -1063,19 +1194,19 @@ paths:
         "200":
           description: Successful response with product details
           schema:
-            $ref: '#/definitions/types.SingleProductResponse'
+            $ref: '#/definitions/github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.SingleProductResponse'
         "400":
           description: Bad request - Product ID is required
           schema:
-            $ref: '#/definitions/types.ErrorResponse'
+            $ref: '#/definitions/github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.BadRequestError'
         "404":
           description: Product not found
           schema:
-            $ref: '#/definitions/types.ErrorResponse'
+            $ref: '#/definitions/github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.NotFoundError'
         "500":
           description: Internal server error
           schema:
-            $ref: '#/definitions/types.ErrorResponse'
+            $ref: '#/definitions/github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.InternalServerError'
       summary: Get product by ID
       tags:
       - products
@@ -1105,19 +1236,19 @@ paths:
         "200":
           description: Successful response with product prices
           schema:
-            $ref: '#/definitions/types.PriceResponse'
+            $ref: '#/definitions/github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.PriceResponse'
         "400":
           description: Bad request - Product ID is required
           schema:
-            $ref: '#/definitions/types.ErrorResponse'
+            $ref: '#/definitions/github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.BadRequestError'
         "404":
           description: Product not found
           schema:
-            $ref: '#/definitions/types.ErrorResponse'
+            $ref: '#/definitions/github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.NotFoundError'
         "500":
           description: Internal server error
           schema:
-            $ref: '#/definitions/types.ErrorResponse'
+            $ref: '#/definitions/github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.InternalServerError'
       summary: Get product prices by ID
       tags:
       - products
@@ -1148,15 +1279,15 @@ paths:
         "200":
           description: Successfully retrieved all projects
           schema:
-            $ref: '#/definitions/types.GetAllProjectsResponse'
+            $ref: '#/definitions/github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.GetAllProjectsResponse'
         "400":
           description: Bad request - Invalid query parameters
           schema:
-            $ref: '#/definitions/types.ErrorResponse'
+            $ref: '#/definitions/github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.BadRequestError'
         "500":
           description: Internal server error
           schema:
-            $ref: '#/definitions/types.ErrorResponse'
+            $ref: '#/definitions/github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.InternalServerError'
       security:
       - BearerAuth: []
       summary: Get all projects
@@ -1172,23 +1303,23 @@ paths:
         name: body
         required: true
         schema:
-          $ref: '#/definitions/types.ProjectCreateRequest'
+          $ref: '#/definitions/github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.ProjectCreateRequest'
       produces:
       - application/json
       responses:
         "201":
           description: Successfully created project
           schema:
-            $ref: '#/definitions/types.ProjectCreateResponse'
+            $ref: '#/definitions/github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.ProjectCreateResponse'
         "400":
           description: Bad request - Invalid payload or user not found or project
             Id already exists
           schema:
-            $ref: '#/definitions/types.ErrorResponse'
+            $ref: '#/definitions/github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.BadRequestError'
         "500":
           description: Internal server error
           schema:
-            $ref: '#/definitions/types.ErrorResponse'
+            $ref: '#/definitions/github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.InternalServerError'
       security:
       - BearerAuth: []
       summary: Create a new project
@@ -1213,20 +1344,20 @@ paths:
         "400":
           description: Bad request - Missing user ID
           schema:
-            $ref: '#/definitions/types.ErrorResponse'
+            $ref: '#/definitions/github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.BadRequestError'
         "403":
           description: Forbidden - User not assigned to project, project archived,
             or locked by another user
           schema:
-            $ref: '#/definitions/types.ErrorResponse'
+            $ref: '#/definitions/github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.ForbiddenError'
         "404":
           description: Project or user not found
           schema:
-            $ref: '#/definitions/types.ErrorResponse'
+            $ref: '#/definitions/github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.NotFoundError'
         "500":
           description: Internal server error
           schema:
-            $ref: '#/definitions/types.ErrorResponse'
+            $ref: '#/definitions/github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.InternalServerError'
       security:
       - BearerAuth: []
       summary: Delete project
@@ -1247,31 +1378,31 @@ paths:
         name: body
         required: true
         schema:
-          $ref: '#/definitions/types.ProjectUpdateRequest'
+          $ref: '#/definitions/github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.ProjectUpdateRequest'
       produces:
       - application/json
       responses:
         "200":
           description: Successfully updated project
           schema:
-            $ref: '#/definitions/types.ProjectUpdateResponse'
+            $ref: '#/definitions/github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.ProjectUpdateResponse'
         "400":
           description: Bad request - Invalid payload
           schema:
-            $ref: '#/definitions/types.ErrorResponse'
+            $ref: '#/definitions/github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.BadRequestError'
         "403":
           description: Forbidden - User not assigned to project, project archived,
             or locked by another user
           schema:
-            $ref: '#/definitions/types.ErrorResponse'
+            $ref: '#/definitions/github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.ForbiddenError'
         "404":
           description: Project or user not found
           schema:
-            $ref: '#/definitions/types.ErrorResponse'
+            $ref: '#/definitions/github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.NotFoundError'
         "500":
           description: Internal server error
           schema:
-            $ref: '#/definitions/types.ErrorResponse'
+            $ref: '#/definitions/github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.InternalServerError'
       security:
       - BearerAuth: []
       summary: Update project
@@ -1293,7 +1424,7 @@ paths:
         name: body
         required: true
         schema:
-          $ref: '#/definitions/types.ProjectArchiveRequest'
+          $ref: '#/definitions/github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.ProjectArchiveRequest'
       produces:
       - application/json
       responses:
@@ -1302,20 +1433,20 @@ paths:
         "400":
           description: Bad request - Invalid payload
           schema:
-            $ref: '#/definitions/types.ErrorResponse'
+            $ref: '#/definitions/github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.BadRequestError'
         "403":
           description: Forbidden - User not assigned to project or project locked
             by another user
           schema:
-            $ref: '#/definitions/types.ErrorResponse'
+            $ref: '#/definitions/github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.ForbiddenError'
         "404":
           description: Project not found
           schema:
-            $ref: '#/definitions/types.ErrorResponse'
+            $ref: '#/definitions/github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.NotFoundError'
         "500":
           description: Internal server error
           schema:
-            $ref: '#/definitions/types.ErrorResponse'
+            $ref: '#/definitions/github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.InternalServerError'
       security:
       - BearerAuth: []
       summary: Update project archive status
@@ -1337,7 +1468,7 @@ paths:
         name: body
         required: true
         schema:
-          $ref: '#/definitions/types.ProjectLockRequest'
+          $ref: '#/definitions/github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.ProjectLockRequest'
       produces:
       - application/json
       responses:
@@ -1346,20 +1477,20 @@ paths:
         "400":
           description: Bad request - Invalid payload
           schema:
-            $ref: '#/definitions/types.ErrorResponse'
+            $ref: '#/definitions/github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.BadRequestError'
         "403":
           description: Forbidden - User not assigned to project or project already
             locked by another user
           schema:
-            $ref: '#/definitions/types.ErrorResponse'
+            $ref: '#/definitions/github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.ForbiddenError'
         "404":
           description: Project not found
           schema:
-            $ref: '#/definitions/types.ErrorResponse'
+            $ref: '#/definitions/github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.NotFoundError'
         "500":
           description: Internal server error
           schema:
-            $ref: '#/definitions/types.ErrorResponse'
+            $ref: '#/definitions/github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.InternalServerError'
       security:
       - BearerAuth: []
       summary: Update project lock status
@@ -1381,7 +1512,7 @@ paths:
         name: body
         required: true
         schema:
-          $ref: '#/definitions/types.ProjectStarRequest'
+          $ref: '#/definitions/github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.ProjectStarRequest'
       produces:
       - application/json
       responses:
@@ -1390,20 +1521,20 @@ paths:
         "400":
           description: Bad request - Invalid payload
           schema:
-            $ref: '#/definitions/types.ErrorResponse'
+            $ref: '#/definitions/github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.BadRequestError'
         "403":
           description: Forbidden - User not assigned to project, project archived,
             or locked by another user
           schema:
-            $ref: '#/definitions/types.ErrorResponse'
+            $ref: '#/definitions/github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.ForbiddenError'
         "404":
           description: Project or User not found
           schema:
-            $ref: '#/definitions/types.ErrorResponse'
+            $ref: '#/definitions/github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.NotFoundError'
         "500":
           description: Internal server error
           schema:
-            $ref: '#/definitions/types.ErrorResponse'
+            $ref: '#/definitions/github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.InternalServerError'
       security:
       - BearerAuth: []
       summary: Update project star status
@@ -1433,11 +1564,11 @@ paths:
         "404":
           description: Project or User not found, or user not assigned to the project
           schema:
-            $ref: '#/definitions/types.ErrorResponse'
+            $ref: '#/definitions/github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.NotFoundError'
         "500":
           description: Internal server error
           schema:
-            $ref: '#/definitions/types.ErrorResponse'
+            $ref: '#/definitions/github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.InternalServerError'
       security:
       - BearerAuth: []
       summary: Remove a user from a project
@@ -1466,16 +1597,204 @@ paths:
         "404":
           description: Project or User not found
           schema:
-            $ref: '#/definitions/types.ErrorResponse'
+            $ref: '#/definitions/github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.NotFoundError'
         "500":
           description: Internal server error
           schema:
-            $ref: '#/definitions/types.ErrorResponse'
+            $ref: '#/definitions/github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.InternalServerError'
       security:
       - BearerAuth: []
       summary: Assign a user to a project
       tags:
       - projects
+  /user/profile:
+    get:
+      consumes:
+      - application/json
+      description: Get profile for a specific user
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Successfully retrieved user profile
+          schema:
+            $ref: '#/definitions/github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.UserProfile'
+        "404":
+          description: User profile not found / Invalid user ID format
+          schema:
+            $ref: '#/definitions/github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.StatusNotFoundForGetUserProfile'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.InternalServerError'
+      security:
+      - BearerAuth: []
+      summary: Get user profile by user ID
+      tags:
+      - user/profile
+    post:
+      consumes:
+      - application/json
+      description: Create a new user profile with the provided details
+      parameters:
+      - description: User profile data
+        in: body
+        name: profile
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.UserProfile'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Successfully created user profile
+          schema:
+            $ref: '#/definitions/github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.StatusOkForCreateUserProfile'
+        "400":
+          description: Invalid request body
+          schema:
+            $ref: '#/definitions/github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.StatusBadRequest'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.InternalServerErrorForCreateUserProfile'
+      security:
+      - BearerAuth: []
+      summary: Create a new user profile
+      tags:
+      - user/profile
+  /user/profile/:profileID:
+    put:
+      consumes:
+      - application/json
+      description: Update an existing user profile with the provided details
+      parameters:
+      - description: Profile ID
+        in: path
+        name: profileID
+        required: true
+        type: string
+      - description: User profile data
+        in: body
+        name: profile
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.UserProfileUpdateRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Successfully updated user profile
+          schema:
+            $ref: '#/definitions/github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.StatusOkForUpdateUserProfile'
+        "400":
+          description: Invalid request body
+          schema:
+            $ref: '#/definitions/github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.StatusBadRequest'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.InternalServerErrorForUpdateUserProfile'
+      security:
+      - BearerAuth: []
+      summary: Update an existing user profile
+      tags:
+      - user/profile
+  /user/settings:
+    get:
+      consumes:
+      - application/json
+      description: Get settings for a specific user
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Successfully retrieved user settings
+          schema:
+            $ref: '#/definitions/github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.UserSettings'
+        "404":
+          description: User settings not found / Invalid user ID format
+          schema:
+            $ref: '#/definitions/github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.StatusNotFound'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.StatusInternalServerError'
+      security:
+      - BearerAuth: []
+      summary: Get user settings by user ID
+      tags:
+      - user/settings
+    post:
+      consumes:
+      - application/json
+      description: Create a new user settings with the provided details
+      parameters:
+      - description: User settings data
+        in: body
+        name: settings
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.UserSettings'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Successfully created user settings
+          schema:
+            $ref: '#/definitions/github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.StatusOkForCreateUserSettings'
+        "400":
+          description: Invalid request body
+          schema:
+            $ref: '#/definitions/github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.StatusBadRequest'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.StatusInternalServerError'
+      summary: Create a new user settings
+      tags:
+      - user/settings
+  /user/settings/:settingsID:
+    put:
+      consumes:
+      - application/json
+      description: Update an existing user settings with the provided details
+      parameters:
+      - description: Profile ID
+        in: path
+        name: profileID
+        required: true
+        type: string
+      - description: User settings data
+        in: body
+        name: settings
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.UpdateUserSettingsRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Successfully updated user settings
+          schema:
+            $ref: '#/definitions/github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.StatusOkForUpdateUserSettings'
+        "400":
+          description: Invalid request body
+          schema:
+            $ref: '#/definitions/github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.StatusBadRequestForUpdateUserSettings'
+        "404":
+          description: User settings not found
+          schema:
+            $ref: '#/definitions/github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.StatusNotFound'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.StatusInternalServerErrorForUpdateSettings'
+      security:
+      - BearerAuth: []
+      summary: Update an existing user settings
+      tags:
+      - user/settings
   /users:
     post:
       consumes:
@@ -1487,22 +1806,22 @@ paths:
         name: user
         required: true
         schema:
-          $ref: '#/definitions/types.CreateUserRequest'
+          $ref: '#/definitions/github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.CreateUserRequest'
       produces:
       - application/json
       responses:
         "201":
           description: Successfully created user
           schema:
-            $ref: '#/definitions/types.User'
+            $ref: '#/definitions/github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.User'
         "400":
           description: Bad request - Invalid JSON payload
           schema:
-            $ref: '#/definitions/types.ErrorResponse'
+            $ref: '#/definitions/github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.BadRequestResponse'
         "500":
           description: Internal server error
           schema:
-            $ref: '#/definitions/types.ErrorResponse'
+            $ref: '#/definitions/github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.InternalServerErrorResponse'
       security:
       - BearerAuth: []
       summary: Create a new user
@@ -1525,15 +1844,15 @@ paths:
         "200":
           description: Successfully retrieved user
           schema:
-            $ref: '#/definitions/types.User'
+            $ref: '#/definitions/github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.User'
         "404":
           description: User not found
           schema:
-            $ref: '#/definitions/types.ErrorResponse'
+            $ref: '#/definitions/github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.NotFoundResponse'
         "500":
           description: Internal server error
           schema:
-            $ref: '#/definitions/types.ErrorResponse'
+            $ref: '#/definitions/github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.InternalServerErrorResponse'
       security:
       - BearerAuth: []
       summary: Get user by email
@@ -1555,26 +1874,26 @@ paths:
         name: user
         required: true
         schema:
-          $ref: '#/definitions/types.UpdateUserRequest'
+          $ref: '#/definitions/github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.UpdateUserRequest'
       produces:
       - application/json
       responses:
         "200":
           description: Successfully updated user
           schema:
-            $ref: '#/definitions/types.User'
+            $ref: '#/definitions/github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.User'
         "400":
           description: Bad request - Invalid JSON payload
           schema:
-            $ref: '#/definitions/types.ErrorResponse'
+            $ref: '#/definitions/github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.BadRequestResponse'
         "404":
           description: User not found
           schema:
-            $ref: '#/definitions/types.ErrorResponse'
+            $ref: '#/definitions/github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.NotFoundResponse'
         "500":
           description: Internal server error
           schema:
-            $ref: '#/definitions/types.ErrorResponse'
+            $ref: '#/definitions/github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.InternalServerErrorResponse'
       security:
       - BearerAuth: []
       summary: Update user
@@ -1592,19 +1911,19 @@ paths:
         "200":
           description: Successfully retrieved user authorization details
           schema:
-            $ref: '#/definitions/types.UserAuthorizationResponse'
+            $ref: '#/definitions/github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.UserAuthorizationResponse'
         "401":
           description: Unauthorized - User email not found in token
           schema:
-            $ref: '#/definitions/types.ErrorResponse'
+            $ref: '#/definitions/github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.UnauthorizedResponse'
         "404":
           description: User not found in the system
           schema:
-            $ref: '#/definitions/types.ErrorResponse'
+            $ref: '#/definitions/github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.NotFoundResponse'
         "500":
           description: Internal server error
           schema:
-            $ref: '#/definitions/types.ErrorResponse'
+            $ref: '#/definitions/github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.InternalServerErrorResponse'
       security:
       - BearerAuth: []
       summary: Get user authorization details
@@ -1621,106 +1940,19 @@ paths:
         "200":
           description: Successfully retrieved user profile
           schema:
-            $ref: '#/definitions/types.UserProfile'
-        "404":
-          description: User profile not found / Invalid user ID format
+            $ref: '#/definitions/github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.User'
+        "401":
+          description: Unauthorized - User email not found in token
           schema:
-            $ref: '#/definitions/types.ErrorResponse'
-        "500":
-          description: Internal server error
-          schema:
-            $ref: '#/definitions/types.ErrorResponse'
-      security:
-      - BearerAuth: []
-      summary: Get user profile by user ID
-      tags:
-      - users/profile
-    post:
-      consumes:
-      - application/json
-      description: Create a new user profile with the provided details
-      parameters:
-      - description: User profile data
-        in: body
-        name: profile
-        required: true
-        schema:
-          $ref: '#/definitions/types.UserProfile'
-      produces:
-      - application/json
-      responses:
-        "201":
-          description: Successfully created user profile
-          schema:
-            $ref: '#/definitions/types.StatusOkForCreateUserProfile'
-        "400":
-          description: Invalid request body
-          schema:
-            $ref: '#/definitions/types.ErrorResponse'
-        "500":
-          description: Internal server error
-          schema:
-            $ref: '#/definitions/types.ErrorResponse'
-      security:
-      - BearerAuth: []
-      summary: Create a new user profile
-      tags:
-      - users/profile
-  /users/profile/:profileID:
-    put:
-      consumes:
-      - application/json
-      description: Update an existing user profile with the provided details
-      parameters:
-      - description: Profile ID
-        in: path
-        name: profileID
-        required: true
-        type: string
-      - description: User profile data
-        in: body
-        name: profile
-        required: true
-        schema:
-          $ref: '#/definitions/types.UserProfileUpdateRequest'
-      produces:
-      - application/json
-      responses:
-        "204":
-          description: Successfully updated user profile
-        "400":
-          description: Invalid request body
-          schema:
-            $ref: '#/definitions/types.ErrorResponse'
-        "500":
-          description: Internal server error
-          schema:
-            $ref: '#/definitions/types.ErrorResponse'
-      security:
-      - BearerAuth: []
-      summary: Update an existing user profile
-      tags:
-      - users/profile
-  /users/settings:
-    get:
-      consumes:
-      - application/json
-      description: Get settings for a specific user
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: Successfully retrieved user settings
-          schema:
-            $ref: '#/definitions/types.UserSettings'
+            $ref: '#/definitions/github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.UnauthorizedResponse'
         "404":
           description: User settings not found / Invalid user ID format
           schema:
-            $ref: '#/definitions/types.ErrorResponse'
+            $ref: '#/definitions/github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.NotFoundResponse'
         "500":
           description: Internal server error
           schema:
-            $ref: '#/definitions/types.ErrorResponse'
+            $ref: '#/definitions/github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.InternalServerErrorResponse'
       security:
       - BearerAuth: []
       summary: Get user settings by user ID
