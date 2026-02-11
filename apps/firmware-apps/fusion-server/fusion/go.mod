@@ -4,6 +4,7 @@ go 1.23.1
 
 require (
 	fusion-services-core v0.0.0
+	github.com/brutella/dnssd v1.2.14
 	github.com/gibson042/canonicaljson-go v1.0.3
 	github.com/go-ble/ble v0.0.0-20240122180141-8c5522f54333
 	github.com/go-ping/ping v1.2.0
@@ -26,7 +27,6 @@ replace fusion-services-core => ../../fusion-services-core
 require (
 	github.com/JuulLabs-OSS/cbgo v0.0.1 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
-	github.com/brutella/dnssd v1.2.14 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/golang/protobuf v1.5.2 // indirect
 	github.com/hashicorp/go-msgpack/v2 v2.1.2 // indirect

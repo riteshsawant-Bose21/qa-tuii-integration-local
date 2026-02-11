@@ -7,7 +7,7 @@ Requires=keepalived.service
 
 [Service]
 Type=simple
-Environment=FUSION_NET_IFACE=lan1
+Environment=FUSION_NET_IFACE=enp0s1
 ExecStart=/usr/local/bin/fusion-server-start.sh
 Restart=always
 RestartSec=5
