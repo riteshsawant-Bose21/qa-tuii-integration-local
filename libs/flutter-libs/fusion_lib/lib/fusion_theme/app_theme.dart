@@ -153,7 +153,7 @@ class FusionAppTheme {
     return ThemeData(
       // Primary color scheme using custom primary color
       colorScheme: lightColorScheme,
-      fontFamily: 'EaseStd',
+      fontFamily: GoogleFonts.montserrat().fontFamily,
       primaryColor: Color(0xFF2F7554),
       // Custom TextTheme with proper color assignments
       textTheme: _createTextTheme(lightColorScheme),
@@ -167,7 +167,7 @@ class FusionAppTheme {
           elevation: 0,
           textStyle: TextStyle(
             fontSize: 11,
-            fontFamily: 'EaseStd',
+            fontFamily: GoogleFonts.montserrat().fontFamily,
             fontWeight: FontWeight.w500,
           ),
         ),
@@ -189,7 +189,7 @@ class FusionAppTheme {
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
           textStyle: TextStyle(
             fontSize: 11,
-            fontFamily: 'EaseStd',
+            fontFamily: GoogleFonts.montserrat().fontFamily,
             fontWeight: FontWeight.w500,
           ),
         ),
@@ -201,7 +201,7 @@ class FusionAppTheme {
           foregroundColor: lightColorScheme.primaryColor,
           textStyle: TextStyle(
             fontSize: 11,
-            fontFamily: 'EaseStd',
+            fontFamily: GoogleFonts.montserrat().fontFamily,
             fontWeight: FontWeight.w500,
           ),
         ),
@@ -210,11 +210,11 @@ class FusionAppTheme {
       /// Tab bar styling with custom font and colors
       tabBarTheme: TabBarThemeData(
         labelStyle: TextStyle(
-          fontFamily: 'EaseStd',
+          fontFamily: GoogleFonts.montserrat().fontFamily,
           fontWeight: FontWeight.w600,
         ),
         unselectedLabelStyle: TextStyle(
-          fontFamily: 'EaseStd',
+          fontFamily: GoogleFonts.montserrat().fontFamily,
           fontWeight: FontWeight.w400,
         ),
         labelColor: lightColorScheme.primaryColor,
@@ -240,7 +240,7 @@ class FusionAppTheme {
         titleTextStyle: TextStyle(
           fontSize: 20,
           fontWeight: FontWeight.w600,
-          fontFamily: 'EaseStd',
+          fontFamily: GoogleFonts.montserrat().fontFamily,
           color: lightColorScheme.primaryWhite,
         ),
       ),
@@ -301,7 +301,7 @@ class FusionAppTheme {
       // Primary color scheme using custom dark primary color
       colorScheme: darkColorScheme,
       scaffoldBackgroundColor: darkColorScheme.surface,
-      fontFamily: 'EaseStd',
+      fontFamily: GoogleFonts.montserrat().fontFamily,
       primaryColor: Color(0xFF2F7554),
 
       // Custom TextTheme with proper dark theme color assignments
@@ -316,7 +316,7 @@ class FusionAppTheme {
           elevation: 0,
           textStyle: TextStyle(
             fontSize: 11,
-            fontFamily: 'EaseStd',
+            fontFamily: GoogleFonts.montserrat().fontFamily,
             fontWeight: FontWeight.w500,
           ),
         ),
@@ -336,7 +336,7 @@ class FusionAppTheme {
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
           textStyle: TextStyle(
             fontSize: 11,
-            fontFamily: 'EaseStd',
+            fontFamily: GoogleFonts.montserrat().fontFamily,
             fontWeight: FontWeight.w500,
           ),
         ),
@@ -355,7 +355,7 @@ class FusionAppTheme {
           foregroundColor: darkColorScheme.primaryColor,
           textStyle: TextStyle(
             fontSize: 11,
-            fontFamily: 'EaseStd',
+            fontFamily: GoogleFonts.montserrat().fontFamily,
             fontWeight: FontWeight.w500,
           ),
         ),
@@ -381,11 +381,11 @@ class FusionAppTheme {
       /// Tab bar styling with custom font and dark theme colors
       tabBarTheme: TabBarThemeData(
         labelStyle: TextStyle(
-          fontFamily: 'EaseStd',
+          fontFamily: GoogleFonts.montserrat().fontFamily,
           fontWeight: FontWeight.w600,
         ),
         unselectedLabelStyle: TextStyle(
-          fontFamily: 'EaseStd',
+          fontFamily: GoogleFonts.montserrat().fontFamily,
           fontWeight: FontWeight.w400,
         ),
         labelColor: darkColorScheme.primaryColor,
@@ -399,7 +399,7 @@ class FusionAppTheme {
         titleTextStyle: TextStyle(
           fontSize: 20,
           fontWeight: FontWeight.w600,
-          fontFamily: 'EaseStd',
+          fontFamily: GoogleFonts.montserrat().fontFamily,
           color: darkColorScheme.primaryWhite,
         ),
       ),
@@ -453,21 +453,21 @@ extension FusionTextStyle on TextTheme {
     weight: FontWeight.w400,
   );
 
-  TextStyle get h1Bold => _fusionText(displayLarge!, size: 48, lineHeight: 56, letterSpacing: -2, weight: FontWeight.w700);
+  TextStyle get h1Bold => _fusionText(displayLarge!, size: 48, lineHeight: 56, letterSpacing: -2, weight: FontWeight.w700, fontFamily: 'EaseStd');
 
   /// ------------------------
   /// H2 – 40 / 48 / -1
   /// ------------------------
-  TextStyle get h2Regular => _fusionText(displayMedium!, size: 40, lineHeight: 48, letterSpacing: -1, weight: FontWeight.w400);
+  TextStyle get h2Regular => _fusionText(displayMedium!, size: 40, lineHeight: 48, letterSpacing: -1, weight: FontWeight.w400, fontFamily: 'EaseStd');
 
-  TextStyle get h2Bold => _fusionText(displayMedium!, size: 40, lineHeight: 48, letterSpacing: -1, weight: FontWeight.w700);
+  TextStyle get h2Bold => _fusionText(displayMedium!, size: 40, lineHeight: 48, letterSpacing: -1, weight: FontWeight.w700, fontFamily: 'EaseStd');
 
   /// ------------------------
   /// H3 – 32 / 40 / -1
   /// ------------------------
-  TextStyle get h3Regular => _fusionText(headlineLarge!, size: 32, lineHeight: 40, letterSpacing: -1, weight: FontWeight.w400);
+  TextStyle get h3Regular => _fusionText(headlineLarge!, size: 32, lineHeight: 40, letterSpacing: -1, weight: FontWeight.w400, fontFamily: 'EaseStd');
 
-  TextStyle get h3Bold => _fusionText(headlineLarge!, size: 32, lineHeight: 40, letterSpacing: -1, weight: FontWeight.w700);
+  TextStyle get h3Bold => _fusionText(headlineLarge!, size: 32, lineHeight: 40, letterSpacing: -1, weight: FontWeight.w700, fontFamily: 'EaseStd');
 
   /// ------------------------
   /// H4 – 24 / 32 / -1
@@ -481,23 +481,23 @@ extension FusionTextStyle on TextTheme {
   /// ------------------------
   /// H5 – 20 / 24 / 0
   /// ------------------------
-  TextStyle get h5Regular => _fusionText(titleLarge!, size: 20, lineHeight: 24, weight: FontWeight.w400);
+  TextStyle get h5Regular => _fusionText(titleLarge!, size: 20, lineHeight: 24, weight: FontWeight.w400, fontFamily: 'EaseStd');
 
-  TextStyle get h5Bold => _fusionText(titleLarge!, size: 20, lineHeight: 24, weight: FontWeight.w700);
+  TextStyle get h5Bold => _fusionText(titleLarge!, size: 20, lineHeight: 24, weight: FontWeight.w700, fontFamily: 'EaseStd');
 
   /// ------------------------
   /// H6 – 18 / 24 / 0
   /// ------------------------
-  TextStyle get h6Regular => _fusionText(titleMedium!, size: 18, lineHeight: 24, weight: FontWeight.w400);
+  TextStyle get h6Regular => _fusionText(titleMedium!, size: 18, lineHeight: 24, weight: FontWeight.w400, fontFamily: 'EaseStd');
 
-  TextStyle get h6Bold => _fusionText(titleMedium!, size: 18, lineHeight: 24, weight: FontWeight.w700);
+  TextStyle get h6Bold => _fusionText(titleMedium!, size: 18, lineHeight: 24, weight: FontWeight.w700, fontFamily: 'EaseStd');
 
   /// ------------------------
   /// B1 – 16 / 24 / 0
   /// ------------------------
-  TextStyle get b1Regular => _fusionText(bodyLarge!, size: 16, lineHeight: 24, weight: FontWeight.w400);
+  TextStyle get b1Regular => _fusionText(bodyLarge!, size: 16, lineHeight: 24, weight: FontWeight.w400, fontFamily: 'EaseStd');
 
-  TextStyle get b1Bold => _fusionText(bodyLarge!, size: 16, lineHeight: 24, weight: FontWeight.w700);
+  TextStyle get b1Bold => _fusionText(bodyLarge!, size: 16, lineHeight: 24, weight: FontWeight.w700, fontFamily: 'EaseStd');
 
   /// ------------------------
   /// B2 – 16 / 24 / 0
