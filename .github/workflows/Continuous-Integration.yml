@@ -29,6 +29,7 @@ jobs:
       fusionSystemMonitor: ${{ steps.filter.outputs.fusionSystemMonitor }}
       fusionEdgeGateway: ${{ steps.filter.outputs.fusionEdgeGateway }}
       fusionTelemetryCore: ${{ steps.filter.outputs.fusionTelemetryCore }}
+      fusionKernelModules: ${{ steps.filter.outputs.fusionKernelModules }}
     
 
     steps:
@@ -61,7 +62,9 @@ jobs:
             fusionEdgeGateway:
               - "./apps/firmware-apps/fusion-edge-gateway/**"
             fusionTelemetryCore:
-              - "./apps/firmware-apps/fusion-telemetry-core/**" 
+              - "./apps/firmware-apps/fusion-telemetry-core/**"
+            fusionKernelModules:
+              - "./apps/kernel-modules/**"
 
   flutter-android-iOS-macOS-build:
     needs: buildChecks
@@ -126,13 +129,13 @@ jobs:
       - name: Setup Monorepo Toolchain
         uses: ./.github/reusable-actions/setup-toolchain
 
-      - name: Build Apps
-        uses: ./.github/reusable-actions/build-flutter-web
-        with:
-          flutter_apps_sonar_token: ${{ secrets.FLUTTER_APPS_SONAR_TOKEN }}
-          nexus_password: ${{ secrets.NEXUS_PASSWORD }}
-          nexus_url: ${{ secrets.NEXUS_BASE_URL }}
-          keychain_password: ${{ secrets.KEYCHAIN_PASSWORD }}
+      # - name: Build Apps
+      #   uses: ./.github/reusable-actions/build-flutter-web
+      #   with:
+      #     flutter_apps_sonar_token: ${{ secrets.FLUTTER_APPS_SONAR_TOKEN }}
+      #     nexus_password: ${{ secrets.NEXUS_PASSWORD }}
+      #     nexus_url: ${{ secrets.NEXUS_BASE_URL }}
+      #     keychain_password: ${{ secrets.KEYCHAIN_PASSWORD }}
 
   cloud-servicesUI-build:
     needs: buildChecks
@@ -182,6 +185,7 @@ jobs:
     runs-on: ubuntu-agent
     outputs:
       ran: ${{ steps.set-output.outputs.ran }}
+      fusion_dsp_version: ${{ steps.build-fusion-dsp-CI.outputs.fusion_dsp_version }}
     timeout-minutes: 30
 
     steps:
@@ -194,6 +198,7 @@ jobs:
         uses: ./.github/reusable-actions/setup-toolchain
 
       - name: Build Apps
+        id: build-fusion-dsp-CI
         uses: ./.github/reusable-actions/build-fusion-dsp
         with:
           flutter_apps_sonar_token: ${{ secrets.FLUTTER_APPS_SONAR_TOKEN }}
@@ -216,6 +221,7 @@ jobs:
     runs-on: ubuntu-agent
     outputs:
       ran: ${{ steps.set-output.outputs.ran }}
+      fusion_server_version: ${{ steps.build-fusion-server-CI.outputs.fusion_server_version }}
     timeout-minutes: 30
 
     steps:
@@ -226,6 +232,7 @@ jobs:
         uses: ./.github/reusable-actions/setup-toolchain
 
       - name: Build Fusion Server
+        id: build-fusion-server-CI
         uses: ./.github/reusable-actions/build-fusion-server
         with:
           flutter_apps_sonar_token: ${{ secrets.FLUTTER_APPS_SONAR_TOKEN }}
@@ -248,6 +255,7 @@ jobs:
     runs-on: ubuntu-agent
     outputs:
       ran: ${{ steps.set-output.outputs.ran }}
+      fusion_server_version: ${{ steps.build-fusion-system-monitor-CI.outputs.fusion_system_monitor_version }}
     timeout-minutes: 30
 
     steps:
@@ -260,6 +268,7 @@ jobs:
         uses: ./.github/reusable-actions/setup-toolchain
 
       - name: Build Apps
+        id: build-fusion-system-monitor-CI
         uses: ./.github/reusable-actions/build-fusion-system-monitor
         with:
           flutter_apps_sonar_token: ${{ secrets.FLUTTER_APPS_SONAR_TOKEN }}
@@ -282,6 +291,7 @@ jobs:
     runs-on: ubuntu-agent
     outputs:
       ran: ${{ steps.set-output.outputs.ran }}
+      fusion_edge_gateway_version: ${{ steps.build-fusion-edge-gateway-CI.outputs.fusion_edge_gateway_version }}
     timeout-minutes: 30
 
     steps:
@@ -294,6 +304,7 @@ jobs:
         uses: ./.github/reusable-actions/setup-toolchain
 
       - name: Build Apps
+        id: build-fusion-edge-gateway-CI
         uses: ./.github/reusable-actions/build-fusion-edge-gateway
         with:
           flutter_apps_sonar_token: ${{ secrets.FLUTTER_APPS_SONAR_TOKEN }}
@@ -316,6 +327,7 @@ jobs:
     runs-on: ubuntu-agent
     outputs:
       ran: ${{ steps.set-output.outputs.ran }}
+      fusion_telemetry_core_version: ${{ steps.build-fusion-telemetry-core-CI.outputs.fusion_telemetry_core_version }}
     timeout-minutes: 30
 
     steps:
@@ -344,6 +356,7 @@ jobs:
 
   integration-tests:
     needs:
+      - buildChecks
       - flutter-android-iOS-macOS-build
       - flutter-windows-build
       - flutter-web-build
@@ -359,13 +372,15 @@ jobs:
         (needs.fusion-server-build.result == 'success' && needs.fusion-server-build.outputs.ran == 'true') ||
         (needs.fusion-system-monitor-build.result == 'success' && needs.fusion-system-monitor-build.outputs.ran == 'true') ||
         (needs.fusion-edge-gateway-build.result == 'success' && needs.fusion-edge-gateway-build.outputs.ran == 'true') ||
-        (needs.fusion-telemetry-core-build.result == 'success' && needs.fusion-telemetry-core-build.outputs.ran == 'true')
+        (needs.fusion-telemetry-core-build.result == 'success' && needs.fusion-telemetry-core-build.outputs.ran == 'true') ||
+        (needs.buildChecks.outputs.fusionKernelModules == 'true')
       )
     concurrency:
       group: integration-tests
     runs-on: ubuntu-agent
     outputs:
       ran: ${{ steps.set-output.outputs.ran }}
+      MONOREPO_COMMIT_HASH: ${{ steps.hash-step.outputs.git-hash }}
     timeout-minutes: 30
     steps:
       - name: Make changes in target repo
@@ -374,10 +389,24 @@ jobs:
       - name: Set output
         id: set-output
         run: echo "ran=true" >> $GITHUB_OUTPUT
+      - name: Generate Git hash
+        id: hash-step
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            HASH="${{ github.event.pull_request.head.sha }}"
+          else
+            HASH=$(git rev-parse HEAD)
+          fi
+          echo "git-hash=$HASH" >> $GITHUB_OUTPUT
 
   yocto-image-build:
     needs:
       - integration-tests
+      - fusion-server-build
+      - fusion-system-monitor-build
+      - fusion-edge-gateway-build
+      - fusion-telemetry-core-build
+      - fusion-dsp-build
     if: |
       always() && (
         needs.integration-tests.result == 'success' && needs.integration-tests.outputs.ran == 'true'
@@ -400,6 +429,8 @@ jobs:
           BRANCH_NAME: ${{ github.head_ref || github.ref_name }}
         run: |
           FILE="conf/fusion-mini_properties.inc"
+          VERSION_INFO_FILE="recipes-bsp/fusion-init/fusion-init/fusion-mini/version_info.txt"
+          MONOREPO_COMMIT_HASH=${{ needs.integration-tests.outputs.MONOREPO_COMMIT_HASH }}
 
           # Create file if it doesn't exist
           if [ ! -f "$FILE" ]; then
@@ -412,9 +443,54 @@ jobs:
             else
               echo "FUSION_MONOREPO_BRANCH=\"${BRANCH_NAME}\"" >> "$FILE"
             fi
+            if grep -q "^FUSION_MONOREPO_COMMIT_HASH=" "$FILE"; then
+              sed -i "s|^FUSION_MONOREPO_COMMIT_HASH=.*|FUSION_MONOREPO_COMMIT_HASH=\"${MONOREPO_COMMIT_HASH}\"|" "$FILE"
+            else
+              echo "FUSION_MONOREPO_COMMIT_HASH=\"${MONOREPO_COMMIT_HASH}\"" >> "$FILE"
+            fi
           fi
 
+          if [ ! -f "$VERSION_INFO_FILE" ]; then
+            echo "File $VERSION_INFO_FILE does not exist. Failing the step."
+            exit 1
+          fi
+
+          # --- FUSION_SERVER_VERSION ---
+          if grep -q "^FUSION_SERVER_VERSION=" "$VERSION_INFO_FILE"; then
+            sed -i "s|^FUSION_SERVER_VERSION=.*|FUSION_SERVER_VERSION=\"${{ needs.fusion-server-build.outputs.fusion_server_version }}\"|" "$VERSION_INFO_FILE"
+          else
+            echo "FUSION_SERVER_VERSION=\"${{ needs.fusion-server-build.outputs.fusion_server_version }}\"" >> "$VERSION_INFO_FILE"
+          fi
+
+          # --- FUSION_SYSTEM_MONITOR_VERSION ---
+          if grep -q "^FUSION_SYSTEM_MONITOR_VERSION=" "$VERSION_INFO_FILE"; then
+            sed -i "s|^FUSION_SYSTEM_MONITOR_VERSION=.*|FUSION_SYSTEM_MONITOR_VERSION=\"${{ needs.fusion-system-monitor-build.outputs.fusion_system_monitor_version }}\"|" "$VERSION_INFO_FILE"
+          else
+            echo "FUSION_SYSTEM_MONITOR_VERSION=\"${{ needs.fusion-system-monitor-build.outputs.fusion_system_monitor_version }}\"" >> "$VERSION_INFO_FILE"
+          fi
+
+          # --- FUSION_EDGE_GATEWAY_VERSION ---
+          if grep -q "^FUSION_EDGE_GATEWAY_VERSION=" "$VERSION_INFO_FILE"; then
+            sed -i "s|^FUSION_EDGE_GATEWAY_VERSION=.*|FUSION_EDGE_GATEWAY_VERSION=\"${{ needs.fusion-edge-gateway-build.outputs.fusion_edge_gateway_version }}\"|" "$VERSION_INFO_FILE"
+          else
+            echo "FUSION_EDGE_GATEWAY_VERSION=\"${{ needs.fusion-edge-gateway-build.outputs.fusion_edge_gateway_version }}\"" >> "$VERSION_INFO_FILE"
+          fi
+
+          # --- FUSION_TELEMETRY_CORE_VERSION ---
+          if grep -q "^FUSION_TELEMETRY_CORE_VERSION=" "$VERSION_INFO_FILE"; then
+            sed -i "s|^FUSION_TELEMETRY_CORE_VERSION=.*|FUSION_TELEMETRY_CORE_VERSION=\"${{ needs.fusion-telemetry-core-build.outputs.fusion_telemetry_core_version }}\"|" "$VERSION_INFO_FILE"
+          else
+            echo "FUSION_TELEMETRY_CORE_VERSION=\"${{ needs.fusion-telemetry-core-build.outputs.fusion_telemetry_core_version }}\"" >> "$VERSION_INFO_FILE"
+          fi
+
+          # --- FUSION_DSP_VERSION ---
+          if grep -q "^FUSION_DSP_VERSION=" "$VERSION_INFO_FILE"; then
+            sed -i "s|^FUSION_DSP_VERSION=.*|FUSION_DSP_VERSION=\"${{ needs.fusion-dsp-build.outputs.fusion_dsp_version }}\"|" "$VERSION_INFO_FILE"
+          else
+            echo "FUSION_DSP_VERSION=\"${{ needs.fusion-dsp-build.outputs.fusion_dsp_version }}\"" >> "$VERSION_INFO_FILE"
+          fi
           git add conf/fusion-mini_properties.inc
+          git add recipes-bsp/fusion-init/fusion-init/fusion-mini/version_info.txt
           git commit -m "CI: Build trigger from Fusion Monorepo branch: ${{ github.ref_name }}" || echo "No changes to commit"
 
       - name: Push commit to target repo

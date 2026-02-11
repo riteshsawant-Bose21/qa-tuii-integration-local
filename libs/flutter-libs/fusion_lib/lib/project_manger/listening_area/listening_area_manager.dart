@@ -41,12 +41,26 @@ extension ListeningAreaManager on ProjectManager {
     return projectService!.addListeningAreaToZone(listeningAreaId, zoneId);
   }
 
+  void addMultipleAreasToAddZone(List<String> allAreasToAdd, String zoneId) {
+    if (projectService == null) {
+      throw Exception('No project is currently open');
+    }
+    return projectService!.addMultipleAreasToAddZone(allAreasToAdd, zoneId);
+  }
+
   /// Remove Listening Area from Zone
   void removeListeningAreaFromZone(String listeningAreaId, String zoneId) {
     if (projectService == null) {
       throw Exception('No project is currently open');
     }
     return projectService!.removeListeningAreaFromZone(listeningAreaId, zoneId);
+  }
+
+  void removeMultipleListeningAreaFromZone(List<String> listeningAreaIds, String zoneId) {
+    if (projectService == null) {
+      throw Exception('No project is currently open');
+    }
+    return projectService!.removeMultipleListeningAreaFromZone(listeningAreaIds, zoneId);
   }
 
   FloorModel getFloorForListeningArea(String listeningAreaId) {
@@ -60,11 +74,18 @@ extension ListeningAreaManager on ProjectManager {
     if (projectService == null) {
       throw Exception('No project is currently open');
     }
-    List<Zone> zones = projectService!.getZonesForListeningArea(listeningAreaId);
-    if (zones.length > 1) {
-      throw Exception('Listening Area found in multiple zones');
+    Zone? zone = projectService!.getZoneForListeningArea(listeningAreaId);
+
+    return zone;
+  }
+
+  SubZone? getSubZoneForListeningArea(String listeningAreaId) {
+    if (projectService == null) {
+      throw Exception('No project is currently open');
     }
-    return zones.isNotEmpty ? zones.first : null;
+    SubZone? subZone = projectService!.getSubZoneForListeningArea(listeningAreaId);
+
+    return subZone;
   }
 
   //Get All Listening Area
@@ -82,5 +103,35 @@ extension ListeningAreaManager on ProjectManager {
     }
 
     return projectService!.getListeningAreaById(listenAreaId)!;
+  }
+
+  //get Available Listening Areas for Zone or subzone
+  List<ListeningArea> getAvailableListeningAreasForZone({required String? id}) {
+    if (projectService == null) {
+      throw Exception('No project is currently open');
+    }
+    return projectService!.getAvailableListeningAreasForZone(id);
+  }
+
+  List<ListeningArea> getPendingListeningAreaToDraw({required String floorId}) {
+    if (projectService == null) {
+      throw Exception('No project is currently open');
+    }
+    return projectService!.getPendingListeningAreasToDraw(floorId);
+  }
+
+  List<ListeningArea> getAllDrawnListeningAreasForFloor({required String floorId}) {
+    if (projectService == null) {
+      throw Exception('No project is currently open');
+    }
+    return projectService!.getDrawnListeningAreas(floorId);
+  }
+
+  //get Available Listening Areas for Zone or subzone
+  List<ListeningArea> getAvailableListeningAreasForSubZone({String? subZoneId, required String parentZoneId}) {
+    if (projectService == null) {
+      throw Exception('No project is currently open');
+    }
+    return projectService!.getAvailableListeningAreasForSubZone(subZoneId: subZoneId, parentZone: parentZoneId);
   }
 }

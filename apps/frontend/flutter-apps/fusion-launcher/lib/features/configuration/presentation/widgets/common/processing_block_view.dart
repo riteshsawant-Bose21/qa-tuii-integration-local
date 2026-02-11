@@ -4,15 +4,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:fusion_launcher/core/constants.dart';
 import 'package:fusion_launcher/features/dynamic_config/presentation/pages/panel_page.dart';
-import 'package:fusion_lib/models/fusion_models.dart';
+import 'package:fusion_lib/fusion_lib.dart';
 
 enum ProcessingType { input, zone, mix, output }
 
 class ProcessingBlockView extends StatefulWidget {
   final List<ProcessingBlockModel> selectedBlocks;
   final Function(ProcessingBlockModel) onBlockSelected;
-  final Function(int index) onBlockRemoved;
-  final Function(List<ProcessingBlockModel>) onBlocksUpdated;
+  final Function(String blocId) onBlockRemoved;
+  final Function(int oldIndex, int newIndex) onBlocksUpdated;
   final ProcessingType processingType;
   final bool isControlMode;
 
@@ -33,31 +33,27 @@ class ProcessingBlockView extends StatefulWidget {
 class _ProcessingBlockViewState extends State<ProcessingBlockView> {
   final ScrollController _horizontalScrollController = ScrollController();
 
-  void _removeBlock(int index) {
-    widget.onBlockRemoved(index);
+  void _removeBlock(String blockId) {
+    widget.onBlockRemoved(blockId);
   }
 
   void _reorderBlocks(int oldIndex, int newIndex) {
     if (newIndex > oldIndex) {
       newIndex -= 1;
     }
-    final ProcessingBlockModel block = widget.selectedBlocks.removeAt(
-      oldIndex,
-    );
-    widget.selectedBlocks.insert(newIndex, block);
-    widget.onBlocksUpdated(widget.selectedBlocks);
+    widget.onBlocksUpdated(oldIndex, newIndex);
   }
 
   List<ProcessingBlockModel> get _availableBlocks {
     switch (widget.processingType) {
       case ProcessingType.input:
-        return ProcessingBlockModel.inputBlocks;
+        return ProcessingBlockModel.sourceBlocks;
       case ProcessingType.zone:
         return ProcessingBlockModel.zoneBlocks;
       case ProcessingType.mix:
         return ProcessingBlockModel.mixBlocks;
       case ProcessingType.output:
-        return ProcessingBlockModel.outputBlocks;
+        return ProcessingBlockModel.circuitBlocks;
     }
   }
 
@@ -89,8 +85,8 @@ class _ProcessingBlockViewState extends State<ProcessingBlockView> {
                       children: <Widget>[
                         Icon(Icons.memory, size: 18, color: colors.tertiary),
                         const SizedBox(width: 8),
-                        Text(
-                          'Processing Blocks',
+                        FusionAppText(
+                          text: 'Processing Blocks',
                           style: Theme.of(
                             context,
                           ).textTheme.titleSmall?.copyWith(
@@ -109,8 +105,8 @@ class _ProcessingBlockViewState extends State<ProcessingBlockView> {
                             color: colors.tertiaryContainer,
                             borderRadius: BorderRadius.circular(12),
                           ),
-                          child: Text(
-                            '${widget.selectedBlocks.length}',
+                          child: FusionAppText(
+                            text: '${widget.selectedBlocks.length}',
                             style: TextStyle(
                               fontSize: 12,
                               fontWeight: FontWeight.w500,
@@ -145,7 +141,7 @@ class _ProcessingBlockViewState extends State<ProcessingBlockView> {
                                 children: <Widget>[
                                   Icon(block.icon, size: 20),
                                   const SizedBox(width: 8),
-                                  Text(block.name),
+                                  FusionAppText(text: block.name),
                                 ],
                               ),
                             );
@@ -153,8 +149,8 @@ class _ProcessingBlockViewState extends State<ProcessingBlockView> {
                         },
                         child: FilledButton.tonalIcon(
                           icon: const Icon(Icons.add, size: 14),
-                          label: Text(
-                            'Add',
+                          label: FusionAppText(
+                            text: 'Add',
                             style: TextStyle(
                               fontSize: 12,
                               fontWeight: FontWeight.w500,
@@ -198,8 +194,8 @@ class _ProcessingBlockViewState extends State<ProcessingBlockView> {
                           color: colors.onSurfaceVariant,
                         ),
                         const SizedBox(width: 8),
-                        Text(
-                          'No processing blocks selected',
+                        FusionAppText(
+                          text: 'No processing blocks selected',
                           style: TextStyle(
                             color: colors.onSurfaceVariant,
                             fontSize: 12,
@@ -269,8 +265,8 @@ class _ProcessingBlockViewState extends State<ProcessingBlockView> {
                                                     children: <Widget>[
                                                       Expanded(
                                                         child: Center(
-                                                          child: Text(
-                                                            block.name,
+                                                          child: FusionAppText(
+                                                            text: block.name,
                                                           ),
                                                         ),
                                                       ),
@@ -342,8 +338,8 @@ class _ProcessingBlockViewState extends State<ProcessingBlockView> {
                                                   color: Colors.black87,
                                                 ),
                                                 const SizedBox(width: 6),
-                                                Text(
-                                                  block.name,
+                                                FusionAppText(
+                                                  text: block.name,
                                                   style: const TextStyle(
                                                     fontSize: 10,
                                                     fontWeight: FontWeight.w500,
@@ -353,7 +349,10 @@ class _ProcessingBlockViewState extends State<ProcessingBlockView> {
                                                 const SizedBox(width: 6),
                                                 if (!widget.isControlMode)
                                                   GestureDetector(
-                                                    onTap: () => _removeBlock(index),
+                                                    onTap:
+                                                        () => _removeBlock(
+                                                          block.id,
+                                                        ),
                                                     child: Container(
                                                       padding: const EdgeInsets.all(2),
                                                       child: Icon(

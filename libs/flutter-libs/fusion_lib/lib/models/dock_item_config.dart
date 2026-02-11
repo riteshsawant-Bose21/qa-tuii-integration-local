@@ -5,12 +5,12 @@ class DockItemConfig {
   final String title;
   final String side;
   final bool initiallyExpanded;
-  final bool alowUndock;
+  final bool allowUndock;
   final bool isVisible;
   final bool isCollapsibleSection;
   final ExpansibleController? controller;
 
-  final Widget Function() dockItemWidget;
+  final Widget dockItemWidget;
 
   const DockItemConfig({
     required this.id,
@@ -18,7 +18,7 @@ class DockItemConfig {
     required this.side,
     required this.dockItemWidget,
     this.initiallyExpanded = false,
-    this.alowUndock = true,
+    this.allowUndock = true,
     this.isCollapsibleSection = true,
     this.controller,
     this.isVisible = true,

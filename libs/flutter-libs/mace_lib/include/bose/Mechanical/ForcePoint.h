@@ -5,7 +5,7 @@
 #include <map>
 #include <optional>
 #include <utility>
-#include "Math/Vector.h"
+#include <bose/Math/Vector.h>
 
 namespace bosepro::mechanical
 {

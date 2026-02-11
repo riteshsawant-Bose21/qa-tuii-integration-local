@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/fusion_theme/app_theme.dart';
 
 /// A customizable rich text widget for the Fusion design system.
@@ -119,7 +120,7 @@ class FusionRichText extends StatelessWidget {
   Widget build(BuildContext context) {
     final TextStyle baseStyle = textStyle.copyWith(
       decoration: underLine ? TextDecoration.underline : TextDecoration.none,
-      decorationColor: underLine ? underlineColor ?? Theme.of(context).colorScheme.fusionTextViewColor : null,
+      decorationColor: underLine ? underlineColor ?? Theme.of(context).colorScheme.textPrimary : null,
       foreground: gradient != null ? (Paint()..shader = gradient!.createShader(const Rect.fromLTWH(0, 0, 200, 70))) : null,
     );
 

@@ -1,6 +1,12 @@
 import 'package:fusion_lib/fusion_lib.dart';
 
 extension UndoRedoManager on ProjectManager {
+  void recordSnapshot() {
+    if (projectService != null) {
+      projectService!.recordChange();
+    }
+  }
+
   //Undo / redo
   void undo() {
     Map<String, dynamic>? snapshot = projectService?.undo();

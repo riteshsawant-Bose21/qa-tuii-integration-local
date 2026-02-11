@@ -1,10 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-
-import '../models/project_entities/hardware_component_model.dart';
-import '../models/project_entities/listening_area_model.dart';
-import '../models/project_entities/zone_model.dart';
+import 'package:fusion_lib/fusion_lib.dart';
 
 class FloorCanvasController {
   VoidCallback? _toggleDraw;
@@ -12,14 +9,16 @@ class FloorCanvasController {
   VoidCallback? _deselectAll;
   Future<void> Function()? _loadPlan;
   Function()? _updateFloorView;
+  Function(ListeningArea)? _onTapListeningArea;
   Function(HardwareComponent)? _setSelectedHardwareComponent;
-  Function(HardwareComponent)? _setHardwareComponentListeningAreaId;
+  // Function(HardwareComponent)? _setHardwareComponentListeningAreaId;
   VoidCallback? _toggleSpl;
   Completer<List<Offset>?>? autoPlaceCompleter;
 
   Completer<List<ListeningArea>?>? _listeningAreaSelectionCompleter;
   final List<ListeningArea> _selectedListeningAreas = <ListeningArea>[];
   Zone? currentlySelectingZone;
+  SubZone? currentlySelectingSubZone;
 
   final ValueNotifier<bool> isDrawing = ValueNotifier<bool>(false);
   final ValueNotifier<bool> isShowingSpl = ValueNotifier<bool>(false);
@@ -36,8 +35,9 @@ class FloorCanvasController {
     required VoidCallback deselectAll,
     required Future<void> Function() loadFloorPlanImage,
     required VoidCallback toggleSpl,
+    required Function(ListeningArea) onTapListeningArea,
     required Function(HardwareComponent) setSelectedHardwareComponent,
-    required Function(HardwareComponent)? setHardwareComponentListeningAreaId,
+    // required Function(HardwareComponent)? setHardwareComponentListeningAreaId,
     required Function()? updateView,
   }) {
     _toggleDraw = toggleDraw;
@@ -45,8 +45,9 @@ class FloorCanvasController {
     _loadPlan = loadFloorPlanImage;
     _toggleSpl = toggleSpl;
     _deselectAll = deselectAll;
+    _onTapListeningArea = onTapListeningArea;
     _setSelectedHardwareComponent = setSelectedHardwareComponent;
-    _setHardwareComponentListeningAreaId = setHardwareComponentListeningAreaId;
+    // _setHardwareComponentListeningAreaId = setHardwareComponentListeningAreaId;
     _updateFloorView = updateView;
   }
 
@@ -54,11 +55,11 @@ class FloorCanvasController {
     _updateFloorView?.call();
   }
 
-  // update hardware component's listing area id
-  setHardwareComponentListeningAreaId(HardwareComponent hardwareComponent) {
-    print("called setHardwareComponentListeningAreaId for ${hardwareComponent.name}");
-    _setHardwareComponentListeningAreaId?.call(hardwareComponent);
-  }
+  // // update hardware component's listing area id
+  // setHardwareComponentListeningAreaId(HardwareComponent hardwareComponent) {
+  //   print("called setHardwareComponentListeningAreaId for ${hardwareComponent.name}");
+  //   _setHardwareComponentListeningAreaId?.call(hardwareComponent);
+  // }
 
   /// Called by the parent to set the selected hardware component.
   void setSelectedHardwareComponent(HardwareComponent hardwareComponent) {
@@ -73,6 +74,20 @@ class FloorCanvasController {
   void toggleSpl() {
     isShowingSpl.value = !isShowingSpl.value;
     _toggleSpl?.call();
+  }
+
+  void setSpl(bool showSpl) {
+    if (isShowingSpl.value != showSpl) {
+      isShowingSpl.value = showSpl;
+      _toggleSpl?.call();
+    }
+  }
+
+  void setDraw(bool isDraw) {
+    if (isDrawing.value != isDraw) {
+      isDrawing.value = isDraw;
+      _toggleDraw?.call();
+    }
   }
 
   void deselectAll() {
@@ -101,7 +116,10 @@ class FloorCanvasController {
   }
 
   /// Start listening area selection and return a Future that completes when selection is done
-  Future<List<ListeningArea>?> requestListeningAreaSelection(List<ListeningArea> existingListeningAreas, Zone selectingZone) {
+  Future<List<ListeningArea>?> requestListeningAreaSelection(
+    List<ListeningArea> existingListeningAreas,
+    Zone selectingZone,
+  ) {
     // If there's already one pending, cancel it first
     if (_listeningAreaSelectionCompleter != null && !_listeningAreaSelectionCompleter!.isCompleted) {
       _listeningAreaSelectionCompleter!.complete(null);
@@ -113,6 +131,26 @@ class FloorCanvasController {
     _selectedListeningAreas.addAll(existingListeningAreas);
     isListeningAreaSelectionActive.value = true;
     currentlySelectingZone = selectingZone;
+    currentlySelectingSubZone = null;
+
+    updateFloorView();
+
+    return _listeningAreaSelectionCompleter!.future;
+  }
+
+  Future<List<ListeningArea>?> requestListeningAreaSelectionForSubZone(List<ListeningArea> existingListeningAreas, SubZone selectingSubZone) {
+    // If there's already one pending, cancel it first
+    if (_listeningAreaSelectionCompleter != null && !_listeningAreaSelectionCompleter!.isCompleted) {
+      _listeningAreaSelectionCompleter!.complete(null);
+      isListeningAreaSelectionActive.value = false;
+    }
+
+    _listeningAreaSelectionCompleter = Completer<List<ListeningArea>?>();
+    _selectedListeningAreas.clear();
+    _selectedListeningAreas.addAll(existingListeningAreas);
+    isListeningAreaSelectionActive.value = true;
+    currentlySelectingZone = null;
+    currentlySelectingSubZone = selectingSubZone;
 
     updateFloorView();
 
@@ -129,6 +167,7 @@ class FloorCanvasController {
       _selectedListeningAreas.removeAt(index);
     } else {
       _selectedListeningAreas.add(area);
+      _onTapListeningArea?.call(area);
     }
   }
 
@@ -142,6 +181,7 @@ class FloorCanvasController {
 
     isListeningAreaSelectionActive.value = false;
     currentlySelectingZone = null;
+    currentlySelectingSubZone = null;
     _selectedListeningAreas.clear();
     deselectAll();
   }
@@ -155,6 +195,7 @@ class FloorCanvasController {
 
     isListeningAreaSelectionActive.value = false;
     currentlySelectingZone = null;
+    currentlySelectingSubZone = null;
     _selectedListeningAreas.clear();
     deselectAll();
   }

@@ -4,7 +4,7 @@
 
 #include <vector>
 #include <unordered_map>
-#include "FilterInterface.h"
+#include <bose/FilterInterface.h>
 
 namespace bosepro::acoustics
 {

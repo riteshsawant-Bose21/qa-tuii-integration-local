@@ -18,7 +18,7 @@ import (
 
 	"fusion/internal/api"
 	"fusion/internal/app"
-	"fusion/internal/logging"
+	"fusion-services-core/logging"
 	"fusion/internal/version"
 )
 
@@ -38,7 +38,11 @@ func parseFlags() *api.AppConfig {
 	profile := flag.Bool("profile", false, "Enable profile dump")
 	flag.Parse()
 
-	// Read environment override
+	// Read environment overrides
+	if envVal := os.Getenv("FUSION_NET_IFACE"); envVal != "" {
+		*netIface = envVal
+	}
+
 	if envVal := os.Getenv("FUSION_PROFILE"); envVal != "" {
 		if envVal == "1" || strings.EqualFold(envVal, "true") {
 			*profile = true
