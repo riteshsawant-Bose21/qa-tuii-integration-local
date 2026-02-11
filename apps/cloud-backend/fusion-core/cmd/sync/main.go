@@ -1,3 +1,4 @@
+// Package main provides the entry point for the sync service.
 package main
 
 import (
@@ -74,7 +75,11 @@ func main() {
 	if err != nil {
 		logger.Fatal("Failed to connect to the database", zap.Error(err))
 	}
-	defer pgs.Close()
+	defer func() {
+		if err := pgs.Close(); err != nil {
+			logger.Error("Failed to close database connection", zap.Error(err))
+		}
+	}()
 
 	logger.Info("Database connection established successfully")
 

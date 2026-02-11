@@ -1,3 +1,4 @@
+// Package model provides custom model types and database abstractions for the fusion application.
 package model
 
 import (

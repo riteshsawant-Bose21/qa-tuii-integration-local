@@ -1,3 +1,4 @@
+// Package api provides HTTP routing and endpoint definitions for the REST API.
 package api
 
 import (

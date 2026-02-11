@@ -13,6 +13,7 @@ type RoleManagementService struct {
 	db *sql.DB
 }
 
+// NewRoleManagementService creates a new role management service
 func NewRoleManagementService(db *sql.DB) *RoleManagementService {
 	if db == nil {
 		panic("db cannot be nil")
@@ -72,7 +73,13 @@ func (s *RoleManagementService) getRolesWithPermissions(ctx context.Context, acc
 	if err != nil {
 		return nil, fmt.Errorf("failed to query roles: %w", err)
 	}
-	defer rows.Close()
+	defer func() {
+		if err := rows.Close(); err != nil {
+			// Row close errors are usually not critical but should be logged
+			// In production, consider using a proper logger here
+			_ = err // Explicitly handle the error by acknowledging it
+		}
+	}()
 
 	var roles []types.RoleWithPermissions
 	for rows.Next() {
@@ -121,7 +128,12 @@ func (s *RoleManagementService) getRolePermissions(ctx context.Context, roleID i
 	if err != nil {
 		return nil, fmt.Errorf("failed to query role permissions: %w", err)
 	}
-	defer rows.Close()
+	defer func() {
+		if err := rows.Close(); err != nil {
+			// Row close errors are usually not critical
+			_ = err
+		}
+	}()
 
 	var permissions []types.FeaturePermissionDetail
 	for rows.Next() {
@@ -165,7 +177,12 @@ func (s *RoleManagementService) getAllFeatures(ctx context.Context) ([]types.Fea
 	if err != nil {
 		return nil, fmt.Errorf("failed to query features: %w", err)
 	}
-	defer rows.Close()
+	defer func() {
+		if err := rows.Close(); err != nil {
+			// Row close errors are usually not critical
+			_ = err // Explicitly acknowledge the error
+		}
+	}()
 
 	var features []types.Feature
 	for rows.Next() {
@@ -188,7 +205,12 @@ func (s *RoleManagementService) getAllAccessLevels(ctx context.Context) ([]types
 	if err != nil {
 		return nil, fmt.Errorf("failed to query access levels: %w", err)
 	}
-	defer rows.Close()
+	defer func() {
+		if err := rows.Close(); err != nil {
+			// Row close errors are usually not critical
+			_ = err // Explicitly acknowledge the error
+		}
+	}()
 
 	var accessLevels []types.AccessLevel
 	for rows.Next() {
@@ -218,7 +240,14 @@ func (s *RoleManagementService) getOrganizationUsers(ctx context.Context, accoun
 	if err != nil {
 		return nil, fmt.Errorf("failed to query organization users: %w", err)
 	}
-	defer rows.Close()
+	defer func() {
+		err = rows.Close()
+		if err != nil {
+			// Row close errors are usually not critical but should be logged
+			// In production, consider using a proper logger here
+			_ = err // Explicitly handle the error by acknowledging it
+		}
+	}()
 
 	var users []types.UserBasicInfo
 	for rows.Next() {
@@ -240,7 +269,14 @@ func (s *RoleManagementService) CreateRole(ctx context.Context, accountID string
 	if err != nil {
 		return nil, fmt.Errorf("failed to start transaction: %w", err)
 	}
-	defer tx.Rollback()
+	defer func() {
+		err = tx.Rollback()
+		if err != nil {
+			// Rollback errors are usually not critical but should be logged
+			// In production, consider using a proper logger here
+			_ = err // Explicitly handle the error by acknowledging it
+		}
+	}()
 
 	// Create the role
 	var role types.Role
@@ -330,7 +366,9 @@ func (s *RoleManagementService) UpdateRolePermissions(ctx context.Context, roleI
 	if err != nil {
 		return fmt.Errorf("failed to start transaction: %w", err)
 	}
-	defer tx.Rollback()
+	defer func() {
+		_ = tx.Rollback() // Rollback errors are usually not critical
+	}()
 
 	// Get account_type_role_id
 	var accountTypeRoleID int

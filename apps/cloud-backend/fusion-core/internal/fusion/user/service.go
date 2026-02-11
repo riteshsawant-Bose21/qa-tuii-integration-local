@@ -6,10 +6,12 @@ import (
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/api/types"
 )
 
+// Service provides user-related business logic operations.
 type Service struct {
 	dbService DatabaseService
 }
 
+// DatabaseService defines the database operations required for user management.
 type DatabaseService interface {
 	GetUserByEmail(ctx context.Context, email string) (*types.User, error)
 	GetUserAuthorization(ctx context.Context, email string) (*types.UserAuthorizationResponse, error)
@@ -30,6 +32,7 @@ type DatabaseService interface {
 	UpdateUserSettings(ctx context.Context, settings *types.UserSettings) error
 }
 
+// NewService creates a new user service with the provided database service.
 func NewService(dbService DatabaseService) *Service {
 	if dbService == nil {
 		panic("dbService cannot be nil")

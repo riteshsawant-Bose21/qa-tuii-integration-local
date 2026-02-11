@@ -1,3 +1,4 @@
+// Package validation provides data validation utilities and schemas.
 package validation
 
 import (

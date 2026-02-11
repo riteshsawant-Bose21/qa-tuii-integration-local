@@ -6,15 +6,21 @@ import "time"
 type EnvironmentType string
 
 const (
-	EnvironmentTypeIndoor  EnvironmentType = "indoor"
+	// EnvironmentTypeIndoor represents an indoor environment
+	EnvironmentTypeIndoor EnvironmentType = "indoor"
+	// EnvironmentTypeOutdoor represents an outdoor environment
 	EnvironmentTypeOutdoor EnvironmentType = "outdoor"
-	EnvironmentTypeHybrid  EnvironmentType = "hybrid"
+	// EnvironmentTypeHybrid represents a hybrid environment
+	EnvironmentTypeHybrid EnvironmentType = "hybrid"
 )
 
+// ProjectFileType represents the type of file associated with a project
 type ProjectFileType string
 
 const (
-	ProjectFileTypeProjectFile      ProjectFileType = "projectFile"
+	// ProjectFileTypeProjectFile represents a project file
+	ProjectFileTypeProjectFile ProjectFileType = "projectFile"
+	// ProjectFileTypeProjectThumbnail represents a project thumbnail file
 	ProjectFileTypeProjectThumbnail ProjectFileType = "projectThumbnail"
 )
 
@@ -22,23 +28,28 @@ const (
 type ProjectPhase string
 
 const (
-	ProjectPhaseProposal     ProjectPhase = "Proposal"
-	ProjectPhaseDevelopment  ProjectPhase = "Development"
+	// ProjectPhaseProposal represents the proposal phase
+	ProjectPhaseProposal ProjectPhase = "Proposal"
+	// ProjectPhaseDevelopment represents the development phase
+	ProjectPhaseDevelopment ProjectPhase = "Development"
+	// ProjectPhaseCommissioned represents the commissioned phase
 	ProjectPhaseCommissioned ProjectPhase = "Commissioned"
 )
 
+// Budget represents project budget information
 type Budget struct {
 	Amount   int64  `json:"amount" example:"50000"`
 	Currency string `json:"currency" validate:"required,currency,len=3" example:"USD"`
 }
 
+// ProjectAuth represents project authorization context
 type ProjectAuth struct {
 	UserID    string `swaggerignore:"true"`
 	Role      string `swaggerignore:"true"`
 	AccountID string `swaggerignore:"true"`
 }
 
-// Request body for creating or updating a project.
+// ProjectCreateRequest represents the request body for creating or updating a project.
 type ProjectCreateRequest struct {
 	ID                        string          `json:"project_id" validate:"required,uuid4" example:"50000001-0000-4000-8000-000000000008"`
 	Application               string          `json:"application" validate:"required,min=1,max=255" example:"Audio System Design"`
@@ -52,7 +63,7 @@ type ProjectCreateRequest struct {
 	IsProjectThumbnailCreated bool            `json:"is_project_thumbnail_created" example:"false"`
 }
 
-// Request body for creating or updating a project.
+// ProjectUpdateRequest represents the request body for creating or updating a project.
 type ProjectUpdateRequest struct {
 	ID                      string          `swaggerignore:"true"`
 	Application             string          `json:"application" validate:"omitempty,min=1,max=255" example:"Audio System Design"`
@@ -85,14 +96,14 @@ type Project struct {
 	UpdatedAt       time.Time       `json:"updated_at" example:"2023-10-20T16:45:00Z"`
 }
 
-// Parameters for retrieving all projects.
+// GetAllProjectsParams represents the parameters for retrieving all projects.
 type GetAllProjectsParams struct {
 	IsArchived bool   `form:"is_archived" example:"false"`
 	SortBy     string `form:"sort_by" validate:"omitempty,project_sort_field" example:"created_at"`
 	SortOrder  string `form:"sort_order" validate:"omitempty,sort_order" example:"asc"`
 }
 
-// Response for retrieving all projects with pagination.
+// GetAllProjectsResponse represents the response for retrieving all projects with pagination.
 type GetAllProjectsResponse struct {
 	Data       []Project `json:"data"`
 	TotalCount int       `json:"total_count" example:"25"`
@@ -100,35 +111,35 @@ type GetAllProjectsResponse struct {
 	TotalPages int       `json:"total_pages" example:"3"`
 }
 
-// Request body for archiving or unarchiving a project.
+// ProjectArchiveRequest represents the request body for archiving or unarchiving a project.
 type ProjectArchiveRequest struct {
 	Archive bool `json:"is_archived" example:"true" validate:"required"`
 }
 
-// Request body for locking or unlocking a project.
+// ProjectLockRequest represents the request body for locking or unlocking a project.
 type ProjectLockRequest struct {
 	IsLocked bool `json:"is_locked" example:"true" validate:"required"`
 }
 
-// Request body for starring or unstarring a project.
+// ProjectStarRequest represents the request body for starring or unstarring a project.
 type ProjectStarRequest struct {
 	IsStarred bool `json:"is_starred" example:"true" validate:"required"`
 }
 
-// Response for creating a project.
+// ProjectCreateResponse represents the response for creating a project.
 type ProjectCreateResponse struct {
 	ID                 string  `json:"id" example:"123e4567-e89b-12d3-a456-426614174000"`
 	ProjectUploadURL   *string `json:"project_upload_url" example:"https://storage.example.com/upload/projects/123e4567"`
 	ThumbnailUploadURL *string `json:"thumbnail_upload_url" example:"https://storage.example.com/upload/projects/123e4567"`
 }
 
-// Response for updating a project.
+// ProjectUpdateResponse represents the response for updating a project.
 type ProjectUpdateResponse struct {
 	ProjectUploadURL   *string `json:"project_upload_url" example:"https://storage.example.com/upload/projects/123e4567"`
 	ThumbnailUploadURL *string `json:"thumbnail_upload_url" example:"https://storage.example.com/upload/projects/123e4567"`
 }
 
-// Response for user assignment operations.
+// UserAssignmentResponse represents the response for user assignment operations.
 type UserAssignmentResponse struct {
 	Message string `json:"message" example:"User successfully assigned to project"`
 }

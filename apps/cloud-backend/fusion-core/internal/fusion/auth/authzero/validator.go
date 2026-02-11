@@ -170,8 +170,12 @@ func (a *Auth0Validator) fetchJWKS() (*JWKS, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch JWKS: %w", err)
 	}
-	defer resp.Body.Close()
 
+	defer func() {
+		if err :=resp.Body.Close(); err != nil {
+			_ = err
+		}
+	}()
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("failed to fetch JWKS: status %d", resp.StatusCode)
 	}

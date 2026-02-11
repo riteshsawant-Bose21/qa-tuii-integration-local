@@ -1,3 +1,4 @@
+// Package db provides database access layer for user profile operations.
 package db
 
 import (
@@ -23,6 +24,7 @@ func (s *Service) SelectUserProfileByUserID(ctx context.Context, userID string) 
 	return newUserProfile(row)
 }
 
+// SelectUserProfileByProfileIDAndUserID retrieves a user profile by profile ID and user ID
 func (s *Service) SelectUserProfileByProfileIDAndUserID(ctx context.Context, profileID string, userID string) (*types.UserProfile, error) {
 	row, err := model.UserProfiles(model.UserProfileWhere.ID.EQ(profileID), model.UserProfileWhere.UserID.EQ(userID)).One(ctx, s.db)
 	if err != nil {

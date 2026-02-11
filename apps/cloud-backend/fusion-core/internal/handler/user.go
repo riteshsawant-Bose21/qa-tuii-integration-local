@@ -13,10 +13,12 @@ import (
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/utils/errorutil"
 )
 
+// UserHandler handles HTTP requests for user management.
 type UserHandler struct {
 	user fusion.User
 }
 
+// NewUserHandler creates a new user handler with the provided user service.
 func NewUserHandler(userSvc fusion.User) *UserHandler {
 	return &UserHandler{
 		user: userSvc,

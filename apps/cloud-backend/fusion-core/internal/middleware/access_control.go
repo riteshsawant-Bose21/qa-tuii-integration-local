@@ -1,3 +1,4 @@
+// Package middleware provides HTTP middleware functions for authentication, logging, and access control.
 package middleware
 
 import (
@@ -15,8 +16,11 @@ import (
 type PermissionLevel string
 
 const (
-	PermissionRead  PermissionLevel = "read"
+	// PermissionRead grants read-only access
+	PermissionRead PermissionLevel = "read"
+	// PermissionWrite grants read and write access
 	PermissionWrite PermissionLevel = "edit"
+	// PermissionAdmin grants full administrative access
 	PermissionAdmin PermissionLevel = "admin"
 )
 

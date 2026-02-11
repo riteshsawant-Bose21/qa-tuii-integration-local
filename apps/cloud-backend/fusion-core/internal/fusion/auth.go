@@ -1,3 +1,4 @@
+// Package fusion provides core business logic interfaces and implementations.
 package fusion
 
 import (

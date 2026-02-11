@@ -1,3 +1,4 @@
+// Package environment provides environment-specific constants and configuration.
 package environment
 
 import (

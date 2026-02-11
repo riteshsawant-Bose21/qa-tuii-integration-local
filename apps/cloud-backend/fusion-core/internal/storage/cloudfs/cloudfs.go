@@ -1,3 +1,4 @@
+// Package cloudfs provides cloud filesystem abstractions for object storage operations.
 package cloudfs
 
 import (
@@ -15,6 +16,7 @@ type Store interface {
 	Bucket(name string) BucketHandle
 }
 
+// PresignHandle provides methods for generating presigned URLs for cloud storage operations
 type PresignHandle interface {
 	PresignGet(ctx context.Context, objectKey string, ttl time.Duration, logger *zap.Logger) (string, error)
 	PresignPut(ctx context.Context, objectKey string, ttl time.Duration, logger *zap.Logger) (string, error)

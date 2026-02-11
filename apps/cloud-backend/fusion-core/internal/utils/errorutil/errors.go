@@ -1,3 +1,4 @@
+// Package errorutil provides common error handling utilities and error message constants.
 package errorutil
 
 // General Messages

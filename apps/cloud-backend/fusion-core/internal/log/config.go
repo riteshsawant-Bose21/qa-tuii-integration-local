@@ -1,3 +1,4 @@
+// Package log provides logging configuration and setup for the application.
 package log
 
 import (
@@ -9,6 +10,7 @@ import (
 	"gopkg.in/natefinch/lumberjack.v2"
 )
 
+// LoggerConfig holds configuration for setting up application loggers.
 type LoggerConfig struct {
 	Mode        string // "debug" or "release"
 	LogDir      string // Base directory for logs
@@ -16,6 +18,7 @@ type LoggerConfig struct {
 	AppConfig   RotationConfig
 }
 
+// RotationConfig holds configuration for log file rotation.
 type RotationConfig struct {
 	MaxSize    int  // MB
 	MaxAge     int  // Days
@@ -23,6 +26,7 @@ type RotationConfig struct {
 	Compress   bool // Compress rotated files
 }
 
+// Loggers holds the configured application loggers.
 type Loggers struct {
 	AuditLogger *zap.Logger
 	AppLogger   *zap.Logger
@@ -54,10 +58,10 @@ func NewLoggers(cfg *LoggerConfig) (*Loggers, error) {
 	auditDir := filepath.Join(cfg.LogDir, "audit")
 	appDir := filepath.Join(cfg.LogDir, "application")
 
-	if err := os.MkdirAll(auditDir, 0755); err != nil {
+	if err := os.MkdirAll(auditDir, 0750); err != nil {
 		return nil, err
 	}
-	if err := os.MkdirAll(appDir, 0755); err != nil {
+	if err := os.MkdirAll(appDir, 0750); err != nil {
 		return nil, err
 	}
 
@@ -141,9 +145,9 @@ func NewLoggers(cfg *LoggerConfig) (*Loggers, error) {
 // Close cleanly closes both loggers
 func (l *Loggers) Close() {
 	if l.AuditLogger != nil {
-		l.AuditLogger.Sync()
+		_ = l.AuditLogger.Sync() // Logger sync errors are not critical during shutdown
 	}
 	if l.AppLogger != nil {
-		l.AppLogger.Sync()
+		_ = l.AppLogger.Sync() // Logger sync errors are not critical during shutdown
 	}
 }
