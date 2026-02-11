@@ -192,7 +192,9 @@ class NeumorphicDarkTextField extends StatelessWidget {
   final Widget? suffix;
   final bool isObscured;
   final double? width;
+  final double? height;
   final EdgeInsetsGeometry? contentPadding;
+  final bool enabled;
 
   const NeumorphicDarkTextField({
     super.key,
@@ -207,7 +209,9 @@ class NeumorphicDarkTextField extends StatelessWidget {
     this.suffix,
     this.isObscured = false,
     this.width,
+    this.height,
     this.contentPadding,
+    this.enabled = true,
   });
 
   @override
@@ -216,6 +220,7 @@ class NeumorphicDarkTextField extends StatelessWidget {
       padding: const EdgeInsets.all(2.0),
       child: FusionContainer(
         width: width,
+        height: height,
         borderRadius: borderRadius,
         // margin: const EdgeInsets.all(2),
         // decoration: BoxDecoration(
@@ -235,6 +240,7 @@ class NeumorphicDarkTextField extends StatelessWidget {
             validator: validator,
             style: context.textTheme.labelLarge,
             obscureText: isObscured,
+            enabled: enabled,
             decoration: InputDecoration(
               prefixIcon: prefix,
               prefixIconConstraints: const BoxConstraints(minWidth: 0, minHeight: 0),
