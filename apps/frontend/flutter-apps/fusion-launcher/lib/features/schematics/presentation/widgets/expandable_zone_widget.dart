@@ -216,7 +216,7 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
 
     return SemanticHelper.container(
       testId: SemanticHelper.createTestId(SemanticTypes.container, "zones_content"),
-      child:  Container(
+      child: Container(
         margin: const EdgeInsets.symmetric(horizontal: 4),
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
