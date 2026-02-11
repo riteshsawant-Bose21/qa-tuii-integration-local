@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:fusion_launcher/features/projects/widget/building/side_panel_widgets/schematic_properties.dart';
 import 'package:fusion_lib/fusion_lib.dart';
-import 'package:fusion_lib/fusion_theme/app_theme.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../../../core/service_locator.dart';
 import '../../../../configuration/presentation/viewmodel/project_view_model.dart';
@@ -34,80 +35,71 @@ class FloorProperties extends StatelessWidget {
 
         floorNameController.text = selectedFloor.name;
 
-        return Container(
-          padding: const EdgeInsets.only(top: 0, bottom: 16, left: 16, right: 16),
-          child: Column(
-            children: <Widget>[
-              Row(
-                children: <Widget>[
-                  Expanded(
-                    flex: 7,
-                    child: TextFormField(
-                      controller: floorNameController,
-                      maxLength: 24,
-                      decoration: const InputDecoration(
-                        counterText: '',
-                        hintText: 'Floor Name',
-                        border: InputBorder.none,
+        return SemanticHelper.container(
+          testId: SemanticHelper.createTestId(SemanticTypes.container, "floor_properties_panel"),
+          child: Container(
+            padding: const EdgeInsets.only(top: 0, bottom: 16, left: 16, right: 16),
+            child: Column(
+              children: <Widget>[
+                Row(
+                  children: <Widget>[
+                    Expanded(
+                      flex: 7,
+                      child: SemanticHelper.formControl(
+                        testId: SemanticHelper.createTestId(SemanticTypes.textInput, "floor_name_input"),
+                        child: PropertyTextField(
+                          controller: floorNameController,
+                          maxLength: 24,
+                          onSubmitted: (String v) {
+                            // Validate that the name is not empty or just whitespace
+                            final String trimmedName = v.trim();
+                            if (trimmedName.isNotEmpty) {
+                              final FloorModel updated = selectedFloor.copyWith(name: trimmedName);
+                              viewModel.updateFloor(floor: updated);
+                            } else {
+                              // Reset to previous name if empty
+                              floorNameController.text = selectedFloor.name;
+                              // Show a snackbar to inform user
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('Floor name cannot be empty'),
+                                  duration: Duration(seconds: 2),
+                                ),
+                              );
+                            }
+                          },
+                        ),
                       ),
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w600,
-                        fontSize: 12,
-                      ),
-                      onFieldSubmitted: (String v) {
-                        // Validate that the name is not empty or just whitespace
-                        final String trimmedName = v.trim();
-                        if (trimmedName.isNotEmpty) {
-                          final FloorModel updated = selectedFloor.copyWith(name: trimmedName);
-                          viewModel.updateFloor(floor: updated);
-                        } else {
-                          // Reset to previous name if empty
-                          floorNameController.text = selectedFloor.name;
-                          // Show a snackbar to inform user
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('Floor name cannot be empty'),
-                              duration: Duration(seconds: 2),
-                            ),
-                          );
-                        }
-                      },
                     ),
-                  ),
 
-                  Expanded(
-                    flex: 3,
-                    child: IconButton(
-                      icon: const Icon(
-                        Icons.delete,
-                        size: 15,
+                    Expanded(
+                      flex: 3,
+                      child: SemanticHelper.button(
+                        testId: SemanticHelper.createTestId(SemanticTypes.button, "delete_floor"),
+                        child: IconButton(
+                          icon: const Icon(LucideIcons.trash200, size: 14, color: Colors.red),
+                          disabledColor: context.colorScheme.primaryBlack,
+                          onPressed: viewModel.floors.length > 1 ? () => viewModel.removeFloor(floorId: selectedFloor.id) : null,
+                        ),
                       ),
-                      disabledColor: Theme.of(context).colorScheme.grey,
-
-                      onPressed:
-                          viewModel.floors.length > 1
-                              ? () {
-                                viewModel.removeFloor(floorId: selectedFloor.id);
-                              }
-                              : null,
                     ),
-                  ),
-                ],
-              ),
+                  ],
+                ),
 
-              const SizedBox(height: 5),
+                const SizedBox(height: 5),
 
-              _buildHardwarePropertyTextRow(
-                context: context,
-                label: "Total LA",
-                value: "${viewModel.getListeningAreasForFloor(floorId: selectedFloor.id).length}",
-              ),
-              _buildHardwarePropertyTextRow(
-                context: context,
-                label: "Total H/W",
-                value: "${viewModel.getHardwareForFloor(floorId: selectedFloor.id).length}",
-              ),
-            ],
+                _buildHardwarePropertyTextRow(
+                  context: context,
+                  label: "Total LA",
+                  value: "${viewModel.getListeningAreasForFloor(floorId: selectedFloor.id).length}",
+                ),
+                _buildHardwarePropertyTextRow(
+                  context: context,
+                  label: "Total H/W",
+                  value: "${viewModel.getHardwareForFloor(floorId: selectedFloor.id).length}",
+                ),
+              ],
+            ),
           ),
         );
       },
@@ -134,9 +126,9 @@ class FloorProperties extends StatelessWidget {
       offset: const Offset(50, 8),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(6),
-        side: BorderSide(color: Theme.of(context).colorScheme.dividerColor),
+        side: BorderSide(color: Theme.of(context).colorScheme.primaryBlack),
       ),
-      color: Theme.of(context).colorScheme.white,
+      color: Theme.of(context).colorScheme.primaryWhite,
       elevation: 1,
       itemBuilder: (BuildContext context) {
         if (options == null || options.isEmpty) {
@@ -144,10 +136,13 @@ class FloorProperties extends StatelessWidget {
         }
 
         return options.map((String option) {
+          final int index = options.indexOf(option);
+
           return PopupMenuItem<String>(
             value: option,
             child: FusionAppText(
               text: option,
+              semanticId: "${label}_option_$index",
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                 fontSize: 11,
               ),
@@ -165,7 +160,7 @@ class FloorProperties extends StatelessWidget {
               text: label,
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                 fontSize: 11,
-                color: Theme.of(context).colorScheme.fusionTextViewColor.withOpacity(0.5),
+                color: Theme.of(context).colorScheme.textPrimary.withOpacity(0.5),
               ),
             ),
             // Right: Value + Arrow
@@ -186,7 +181,7 @@ class FloorProperties extends StatelessWidget {
                   Icon(
                     Icons.keyboard_arrow_down,
                     size: 16,
-                    color: Theme.of(context).colorScheme.fusionTextViewColor,
+                    color: Theme.of(context).colorScheme.textPrimary,
                   ),
                 ],
               ),
@@ -213,7 +208,7 @@ class FloorProperties extends StatelessWidget {
             text: label,
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
               fontSize: 11,
-              color: Theme.of(context).colorScheme.fusionTextViewColor.withOpacity(0.5),
+              color: Theme.of(context).colorScheme.textPrimary.withOpacity(0.5),
             ),
           ),
 

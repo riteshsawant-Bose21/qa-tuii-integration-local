@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:fusion_lib/fusion_lib.dart';
 
 class CollapsibleSidePanel extends StatefulWidget {
   final Widget child;
@@ -41,7 +42,6 @@ class _CollapsibleSidePanelState extends State<CollapsibleSidePanel> {
 
   @override
   Widget build(BuildContext context) {
-
     return AnimatedContainer(
       duration: const Duration(milliseconds: 300),
       curve: Curves.easeInOut,
@@ -120,15 +120,15 @@ class _CollapsibleSidePanelState extends State<CollapsibleSidePanel> {
                         child: AnimatedOpacity(
                           duration: const Duration(milliseconds: 150),
                           opacity: _isExpanded ? 1.0 : 0.0,
-                          child: Text(
-                            widget.title,
+                          child: FusionAppText(
+                            text: widget.title,
                             style: TextStyle(
                               fontSize: 14,
                               fontWeight: FontWeight.w600,
                               color: Colors.grey.shade700,
                             ),
-                            overflow: TextOverflow.ellipsis,
-                            maxLines: 1,
+                            // overflow: TextOverflow.ellipsis,
+                            maxLine: 1,
                           ),
                         ),
                       ),

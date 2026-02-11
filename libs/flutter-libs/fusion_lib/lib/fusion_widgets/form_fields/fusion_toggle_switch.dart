@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/fusion_theme/app_theme.dart';
 
 /// A reusable toggle row widget with a switch and a label.
@@ -58,14 +59,14 @@ class FusionToggleRow extends StatelessWidget {
             child: Switch(
               value: value,
               onChanged: onChanged,
-              activeColor: activeColor ?? Theme.of(context).colorScheme.white,
-              activeTrackColor: activeTrackColor ?? Theme.of(context).colorScheme.grey,
-              inactiveThumbColor: inactiveThumbColor ?? Theme.of(context).colorScheme.white,
+              activeColor: activeColor ?? context.colorScheme.primaryWhite,
+              activeTrackColor: activeTrackColor ?? context.colorScheme.primaryBlack,
+              inactiveThumbColor: inactiveThumbColor ?? context.colorScheme.primaryWhite,
               inactiveTrackColor: inactiveTrackColor ?? const Color(0xFFE5E5E5),
               materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
               splashRadius: 0,
               trackOutlineColor: WidgetStateProperty.all(Colors.transparent),
-              thumbColor: WidgetStateProperty.all(Theme.of(context).colorScheme.white),
+              thumbColor: WidgetStateProperty.all(context.colorScheme.primaryWhite),
             ),
           ),
         ),

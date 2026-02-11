@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:fusion_lib/fusion_lib.dart';
 
 class FusionHorizontalResizableWidget extends StatefulWidget {
   final Widget child;
@@ -81,10 +82,11 @@ class HorizontalResizableContainerState extends State<FusionHorizontalResizableW
         Container(
           width: _width,
           decoration: BoxDecoration(
-            border: Border(
-              left: (_hoverLeft || _draggingLeft) ? const BorderSide(color: Colors.blue, width: 2) : const BorderSide(color: Colors.transparent, width: 2),
-              right: (_hoverRight || _draggingRight) ? const BorderSide(color: Colors.blue, width: 2) : const BorderSide(color: Colors.transparent, width: 2),
-            ),
+            borderRadius: BorderRadius.circular(FusionSizes.borderRadius16),
+            // border: Border(
+            //   left: (_hoverLeft || _draggingLeft) ? const BorderSide(color: Colors.blue, width: 2) : const BorderSide(color: Colors.transparent, width: 2),
+            //   right: (_hoverRight || _draggingRight) ? const BorderSide(color: Colors.blue, width: 2) : const BorderSide(color: Colors.transparent, width: 2),
+            // ),
           ),
           child: widget.child,
         ),

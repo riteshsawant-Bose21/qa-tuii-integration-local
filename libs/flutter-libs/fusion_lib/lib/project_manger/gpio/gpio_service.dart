@@ -9,7 +9,10 @@ extension GpioService on ProjectService {
     if (!gpioConfigs.exists(config.id)) {
       throw Exception("GPIO Pin with ID ${config.id} does not exist.");
     }
-    gpioConfigs.add(config.id, config);
+
+    final updatedConfig = config.direction == GpioDirection.input ? config.removeGpoAction() : config.removeGpiAction();
+
+    gpioConfigs.add(updatedConfig.id, updatedConfig);
   }
 
   List<GpiAction> getGPIActions() {
@@ -24,11 +27,34 @@ extension GpioService on ProjectService {
     if (!gpioConfigs.exists(gpioConfigId)) {
       throw Exception("GPIO Pin with ID $gpioConfigId does not exist.");
     }
+
+    //remove associated events
+    final parentEvents = relationships.getParents(RelationshipType.eventsItemMapping, gpioConfigId);
+    final copyOfParentEvents = List<String>.from(parentEvents);
+    for (final eventId in copyOfParentEvents) {
+      removeEvent(eventId);
+    }
+
+    //remove associated Scene actions
+    final parentActions = relationships.getParents(RelationshipType.actionItemMapping, gpioConfigId);
+    final copyOfParentActions = List<String>.from(parentActions);
+    for (final actionId in copyOfParentActions) {
+      removeSceneAction(actionId);
+    }
+
     gpioConfigs.remove(gpioConfigId);
   }
 
   List<GpioConfig> getAllGPIOConfigs() {
     return gpioConfigs.getAll();
+  }
+
+  List<GpioConfig> getGpiConfigs() {
+    return gpioConfigs.getAll().where((config) => config.direction == GpioDirection.input).toList();
+  }
+
+  List<GpioConfig> getGpoConfigs() {
+    return gpioConfigs.getAll().where((config) => config.direction == GpioDirection.output).toList();
   }
 
   int getAvailableGpioPorts() {
@@ -43,5 +69,25 @@ extension GpioService on ProjectService {
     final dspCount = hardware.getAll().whereType<FusionDsp>();
     final totalPins = dspCount.length * 4;
     return totalPins;
+  }
+
+  Map<String, GpioConfig> reOrderGpio({required String gpioIdToMove, required String gpioAtNewIndexId}) {
+    List<GpioConfig> items = getAllGPIOConfigs();
+
+    // Find indices
+    int fromIndex = items.indexWhere((s) => s.id == gpioIdToMove);
+    int toIndex = items.indexWhere((s) => s.id == gpioAtNewIndexId);
+
+    // Validate
+    if (fromIndex == -1 || toIndex == -1) {
+      throw ArgumentError('Invalid Scene IDs');
+    }
+
+    // Reorder using List operations
+    GpioConfig item = items.removeAt(fromIndex);
+    items.insert(toIndex, item);
+
+    // Convert back to Map
+    return {for (var s in items) s.id: s};
   }
 }

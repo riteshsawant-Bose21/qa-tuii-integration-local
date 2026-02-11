@@ -1,3 +1,5 @@
+import 'package:fusion_lib/fusion_lib.dart';
+
 enum SceneActionType {
   zoneControl,
   gpOut,
@@ -17,7 +19,7 @@ extension SceneActionExtension on SceneActionType {
       case SceneActionType.snapshot:
         return "Snapshot Recall";
       case SceneActionType.scene:
-        return "Mix Scene Recall";
+        return "Scene Recall";
       // case SceneActionType.sourceControl:
       //   return "Source Control";
       case SceneActionType.deviceControl:
@@ -34,6 +36,16 @@ class SceneItemDropdown {
     required this.id,
     required this.name,
   });
+
+  @override
+  bool operator ==(covariant SceneItemDropdown other) {
+    if (identical(this, other)) return true;
+
+    return other.id == id && other.name == name;
+  }
+
+  @override
+  int get hashCode => id.hashCode ^ name.hashCode;
 }
 
 /// Represents a selectable item in column 2.
@@ -99,6 +111,25 @@ extension SceneParamOptionExtension on SceneParamType {
     }
   }
 
+  bool get isRelatedToZoneFunction {
+    switch (this) {
+      case SceneParamType.sourceSelect:
+      case SceneParamType.mixScene:
+      case SceneParamType.prioritySelect1:
+      case SceneParamType.prioritySelect2:
+        return true;
+      case SceneParamType.setState:
+      case SceneParamType.standby:
+      case SceneParamType.volume:
+      case SceneParamType.mute:
+      case SceneParamType.recall:
+      case SceneParamType.pulse:
+      case SceneParamType.inputLevel:
+      case SceneParamType.inputMute:
+        return false;
+    }
+  }
+
   SceneParamValueType get valueType {
     switch (this) {
       case SceneParamType.volume:
@@ -110,14 +141,15 @@ extension SceneParamOptionExtension on SceneParamType {
       case SceneParamType.recall:
       case SceneParamType.sourceSelect:
       case SceneParamType.mixScene:
+        return SceneParamValueType.dropdownSingle;
       case SceneParamType.prioritySelect1:
       case SceneParamType.prioritySelect2:
-        return SceneParamValueType.dropdownSingle;
+        return SceneParamValueType.onOffButton;
       case SceneParamType.setState:
       case SceneParamType.standby:
         return SceneParamValueType.onOffButton;
       case SceneParamType.pulse:
-        return SceneParamValueType.textInput;
+        return SceneParamValueType.pulse;
     }
   }
 
@@ -151,6 +183,7 @@ enum SceneParamValueType {
   dropdownSingle,
   textInput,
   onOffButton,
+  pulse,
 }
 
 class SceneParam {
@@ -200,16 +233,93 @@ class SceneValueDropdown {
   });
 }
 
+class SceneStateValue {
+  final String? value1;
+  final String? value2;
+
+  SceneStateValue({
+    this.value1,
+    this.value2,
+  });
+
+  copyWith({
+    String? value1,
+    String? value2,
+  }) {
+    return SceneStateValue(
+      value1: value1 ?? this.value1,
+      value2: value2 ?? this.value2,
+    );
+  }
+
+  //from json
+  factory SceneStateValue.fromJson(Map<String, dynamic> json) => SceneStateValue(
+    value1: json['value1'],
+    value2: json['value2'],
+  );
+
+  Map<String, dynamic> toJson() => {
+    'value1': value1,
+    'value2': value2,
+  };
+}
+
 /// Value for column 4 (type-safe)
 class SceneValue {
   final String label;
   final String? value;
   final SceneParamValueType valueType;
+  final bool hasStates;
+  final SceneStateValue? states;
+  final bool enabled;
+
+  String? getValue({EventStateTypes? stateType}) {
+    if (!hasStates || states == null) return value;
+    switch (stateType) {
+      case EventStateTypes.on:
+      case EventStateTypes.above:
+        return states?.value1;
+      case EventStateTypes.off:
+      case EventStateTypes.below:
+        return states?.value2;
+      default:
+        return value;
+    }
+  }
+
+  SceneValue updateStateValue({required String newValue, required EventStateTypes stateType}) {
+    if (!hasStates) return this;
+    switch (stateType) {
+      case EventStateTypes.on:
+      case EventStateTypes.above:
+        return copyWith(
+          states:
+              states?.copyWith(value1: newValue) ??
+              SceneStateValue(
+                value1: newValue,
+                value2: null,
+              ),
+        );
+      case EventStateTypes.off:
+      case EventStateTypes.below:
+        return copyWith(
+          states:
+              states?.copyWith(value2: newValue) ??
+              SceneStateValue(
+                value1: null,
+                value2: newValue,
+              ),
+        );
+    }
+  }
 
   SceneValue({
     required this.label,
     this.value,
     required this.valueType,
+    this.hasStates = false,
+    this.enabled = true,
+    this.states,
   });
 
   //copy with
@@ -217,11 +327,17 @@ class SceneValue {
     String? label,
     String? value,
     SceneParamValueType? valueType,
+    bool? hasStates,
+    bool? enabled,
+    SceneStateValue? states,
   }) {
     return SceneValue(
       label: label ?? this.label,
       value: value ?? this.value,
       valueType: valueType ?? this.valueType,
+      hasStates: hasStates ?? this.hasStates,
+      states: states ?? this.states,
+      enabled: enabled ?? this.enabled,
     );
   }
 
@@ -229,12 +345,18 @@ class SceneValue {
     value: json['value'],
     label: json['label'],
     valueType: SceneParamValueType.values.firstWhere((e) => e.name == json['valueType']),
+    hasStates: json['hasStates'] ?? false,
+    states: json['states'] != null ? SceneStateValue.fromJson(json['states']) : null,
+    enabled: json['enabled'],
   );
 
   Map<String, dynamic> toJson() => {
     'value': value,
     'label': label,
     'valueType': valueType.name,
+    'hasStates': hasStates,
+    'states': states?.toJson(),
+    'enabled': enabled,
   };
 }
 
@@ -341,6 +463,36 @@ class SceneActionModel {
       item: item ?? this.item,
       param: param ?? this.param,
       value: value ?? this.value,
+    );
+  }
+
+  SceneActionModel updateStateValue(SceneStateValue stateValue) {
+    return SceneActionModel(
+      id: id,
+      actionType: actionType,
+      item: item,
+      param: param,
+      value: value?.copyWith(states: stateValue),
+    );
+  }
+
+  SceneActionModel updateActionType(SceneActionType actionType) {
+    return SceneActionModel(
+      id: id,
+      actionType: actionType,
+      item: null,
+      param: null,
+      value: null,
+    );
+  }
+
+  SceneActionModel updateItem(SceneItem item) {
+    return SceneActionModel(
+      id: id,
+      actionType: actionType,
+      item: item,
+      param: null,
+      value: null,
     );
   }
 

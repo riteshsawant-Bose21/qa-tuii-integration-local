@@ -94,10 +94,10 @@ class FusionAuthService {
       if (expiresAtString == null) return true;
 
       final expiresAt = DateTime.parse(expiresAtString);
-      final now = DateTime.now();
+      final now = DateTime.now().toUtc();
 
-      // Consider token expired if it expires in the next 5 minutes
-      return now.isAfter(expiresAt.subtract(const Duration(minutes: 5)));
+      // Consider token expired if it expires in the next 24 hours
+      return now.isAfter(expiresAt.subtract(const Duration(hours: 10)));
     } catch (e) {
       FusionLogger.log(tag: LogTag.exceptions, message: 'Error checking token expiration: $e');
       return true;
@@ -108,6 +108,7 @@ class FusionAuthService {
   Future<String?> getValidAccessToken() async {
     try {
       final isExpired = await isAccessTokenExpired();
+      print("Access token expired: $isExpired");
 
       if (isExpired) {
         final hasRefreshToken = await getRefreshToken() != null;

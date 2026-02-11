@@ -9,6 +9,8 @@ import 'package:fusion_launcher/core/network_clients/rest_client/interceptor.dar
 import 'package:fusion_launcher/core/services/user_profile_manager.dart';
 import 'package:fusion_launcher/features/authentication/viewmodel/auth_view_model.dart';
 import 'package:fusion_launcher/features/dynamic_config/domain/usecases/get_panel_entity_usecase.dart';
+import 'package:fusion_launcher/features/projects/view_model/project_sync_view_model.dart';
+import 'package:fusion_launcher/features/projects/widget/building/speaker_selection_section/view_model/product_query_view_model.dart';
 import 'package:fusion_lib/di/service_locator.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/fusion_networking/network/rest_client/dio_client.dart';
@@ -18,12 +20,12 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../features/authentication/viewmodel/session_view_model.dart';
 import '../features/configuration/presentation/viewmodel/project_view_model.dart';
-import '../features/dashboard/domain/usecases/create_project_usecase.dart';
-import '../features/dashboard/domain/usecases/delete_project_usecase.dart';
-import '../features/dashboard/domain/usecases/fetch_file_usecase.dart';
-import '../features/dashboard/domain/usecases/get_projects_data_usecase.dart';
-import '../features/dashboard/domain/usecases/update_project_usecase.dart';
-import '../features/dashboard/domain/usecases/upload_file_usecase.dart';
+import '../features/home/domain/usecases/create_project_usecase.dart';
+import '../features/home/domain/usecases/delete_project_usecase.dart';
+import '../features/home/domain/usecases/fetch_file_usecase.dart';
+import '../features/home/domain/usecases/get_projects_data_usecase.dart';
+import '../features/home/domain/usecases/update_project_usecase.dart';
+import '../features/home/domain/usecases/upload_file_usecase.dart';
 import '../features/dynamic_config/data/datasources/panel_datasource.dart';
 import '../features/dynamic_config/data/datasources/panel_datasource_impl.dart';
 import '../features/dynamic_config/data/repositories/panel_repository_impl.dart';
@@ -186,6 +188,20 @@ Future<void> setupServiceLocator() async {
       authService: serviceLocator<FusionAuthService>(),
       networkClient: serviceLocator<FusionNetworkClient>(),
       sessionViewModel: serviceLocator<SessionViewModel>(),
+    ),
+  );
+
+  serviceLocator.registerLazySingleton<ProductQueryViewModel>(() => ProductQueryViewModel());
+
+  serviceLocator.registerLazySingleton<ProjectSyncService>(
+    () => ProjectSyncService(
+      networkClient: serviceLocator<FusionNetworkClient>(),
+    ),
+  );
+
+  serviceLocator.registerLazySingleton<ProjectSyncViewModel>(
+    () => ProjectSyncViewModel(
+      serviceLocator<ProjectSyncService>(),
     ),
   );
 

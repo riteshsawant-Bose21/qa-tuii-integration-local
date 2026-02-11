@@ -1,0 +1,79 @@
+import 'dart:io';
+
+import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
+import 'package:fusion_lib/fusion_lib.dart';
+
+extension MediaFileViewModels on ProjectViewModel {
+  Future<void> addMediaFile({required File file, String? fileName, bool autoSave = true}) async {
+    if (autoSave) {
+      recordSnapshot();
+    }
+    await projectManager.addMediaFile(mediaFile: file, fileName: fileName);
+
+    if (autoSave) {
+      await saveProject();
+    }
+  }
+
+  List<MediaFileModel> getAllMediaFiles() {
+    return projectManager.getAllMediaFiles();
+  }
+
+  Future<void> removeMediaFileById(String mediaId, {bool autoSave = true}) async {
+    if (autoSave) {
+      recordSnapshot();
+    }
+    await projectManager.removeMediaFileById(mediaId);
+
+    if (autoSave) {
+      await saveProject();
+    }
+  }
+
+  MediaFileModel? getMediaFileModelById(String mediaId) {
+    try {
+      return projectManager.getMediaFileModelById(mediaId);
+    } catch (ex) {
+      FusionLogger.log(tag: LogTag.project, message: "Error getting media file by id: $ex");
+      return null;
+    }
+  }
+
+  Future<File> getMediaFileFromProject({required String mediaId}) async {
+    try {
+      return await projectManager.getMediaFileFromProject(mediaId: mediaId);
+    } catch (ex) {
+      FusionLogger.log(tag: LogTag.project, message: "Error getting media file by id: $ex");
+      rethrow;
+    }
+  }
+
+  Future<Directory> getProjectsMediaDirectory() async {
+    try {
+      return await projectManager.getProjectsMediaDirectory();
+    } catch (ex) {
+      FusionLogger.log(tag: LogTag.project, message: "Error getting project's media directory: $ex");
+      rethrow;
+    }
+  }
+
+  Future<void> renameMediaFile({required String mediaId, required String newName, bool autoSave = true}) async {
+    if (autoSave) {
+      recordSnapshot();
+    }
+    await projectManager.renameMediaFile(mediaId: mediaId, newFileName: newName);
+
+    if (autoSave) {
+      await saveProject();
+    }
+  }
+
+  Future<List<File>> getAllMediaFilesInProject() async {
+    try {
+      return await projectManager.getAllMediaFilesInProject();
+    } catch (ex) {
+      FusionLogger.log(tag: LogTag.project, message: "Error getting all media files in project: $ex");
+      return <File>[];
+    }
+  }
+}
