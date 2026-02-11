@@ -18,7 +18,7 @@ import (
 
 	"fusion/internal/api"
 	"fusion/internal/app"
-	"fusion/internal/logging"
+	"fusion-services-core/logging"
 	"fusion/internal/version"
 )
 
