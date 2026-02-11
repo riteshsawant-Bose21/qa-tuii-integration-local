@@ -6,6 +6,8 @@
 #include <string>
 #include <functional>
 #include <thread>
+#include <pthread.h>
+#include <sched.h>
 #include <sys/un.h>
 #include <sys/socket.h>
 #include <cstring>
@@ -140,6 +142,8 @@ public:
             SPDLOG_INFO("Starting TelemetryMonitor...");
             monitor_thread = std::thread(&TelemetryMonitor::monitor_loop, this);
             events_thread = std::thread(&TelemetryMonitor::manage_events_loop, this);
+            name_thread(monitor_thread, "sm-telm-mon");
+            name_thread(events_thread, "sm-telm-evt");
 
             running = true;
         }
@@ -443,6 +447,15 @@ public:
 
 
 private:
+    void name_thread(std::thread &t, const char *name) const
+    {
+        int rc = pthread_setname_np(t.native_handle(), name);
+        if (rc != 0)
+        {
+            SPDLOG_WARN("Failed to set thread name '{}': {}", name, strerror(rc));
+        }
+    }
+
     /// Callback to send event telemetry on UDS
     ///
     /// @param message the message to send

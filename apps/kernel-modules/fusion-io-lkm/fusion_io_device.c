@@ -7,6 +7,9 @@
 #include <linux/interrupt.h>
 #include <linux/delay.h>
 #include <linux/workqueue.h>
+#include <linux/of.h>
+#include <linux/string.h>
+#include <linux/property.h>
 
 #include "fusion-io.h"
 #include "fusion-io-sysfs.h"
@@ -376,27 +379,34 @@ int tca9544_handle_irq(struct endpoint_gpio *ep_gpio)
     u8 buf[1];
     int ret;
     u8 irq_mask;
+    const int max_iters = 8;
 
     msg.addr = client->addr;
     msg.flags = I2C_SMBUS_READ;
     msg.len = 1;
     msg.buf = buf;
 
-    ret = i2c_transfer(client->adapter, &msg, 1);
-    if (ret < 0) {
-        printk(KERN_ERR "tca9544_handle_irq: failed transfer\n");
-        return ret;
-    }
+    for (int iter = 0; iter < max_iters; ++iter) {
+        ret = i2c_transfer(client->adapter, &msg, 1);
+        if (ret < 0) {
+            printk(KERN_ERR "tca9544_handle_irq: failed transfer\n");
+            return ret;
+        }
 
-    // last 4 bits are irq mask
-    irq_mask = *buf >> 4;
-    for (int i = 0; i < tca9544->num_gpios; ++i) {
-        if ((irq_mask >> i) & 1) {
-            if (tca9544->gpios[i].is_irq && tca9544->gpios[i].num != 0) {
-                if (tca9544->gpios[i].linked_gpio == NULL) {
-                    continue;
+        // last 4 bits are irq mask
+        irq_mask = *buf >> 4;
+        if (!irq_mask) {
+            break;
+        }
+
+        for (int i = 0; i < tca9544->num_gpios; ++i) {
+            if ((irq_mask >> i) & 1) {
+                if (tca9544->gpios[i].is_irq && tca9544->gpios[i].num != 0) {
+                    if (tca9544->gpios[i].linked_gpio == NULL) {
+                        continue;
+                    }
+                    handle_irq(tca9544->gpios[i].linked_gpio);
                 }
-                handle_irq(tca9544->gpios[i].linked_gpio);
             }
         }
     }
@@ -413,6 +423,7 @@ int tcal6408_handle_irq(struct endpoint_gpio *ep_gpio)
     u8 rd_buf[1];
     int ret;
     u8 irq_mask;
+    const int max_iters = 8;
 
     wr_buf[0] = TCAL6408_REG_INT_STATUS_REG;
     msgs[0].addr = client->addr;
@@ -425,20 +436,25 @@ int tcal6408_handle_irq(struct endpoint_gpio *ep_gpio)
     msgs[1].len = 1;
     msgs[1].buf = rd_buf;
 
-    ret = i2c_transfer(client->adapter, msgs, 2);
-    if (ret < 0) {
-        return ret;
-    }
+    for (int iter = 0; iter < max_iters; ++iter) {
+        ret = i2c_transfer(client->adapter, msgs, 2);
+        if (ret < 0) {
+            return ret;
+        }
 
-    irq_mask = *rd_buf;
+        irq_mask = *rd_buf;
+        if (!irq_mask) {
+            break;
+        }
 
-    for (int i = 0; i < tcal6408->num_gpios; ++i) {
-        if ((irq_mask >> i) & 1) {
-            if (tcal6408->gpios[i].is_irq && tcal6408->gpios[i].num != 0) {
-                if (tcal6408->gpios[i].linked_gpio == NULL) {
-                    continue;
+        for (int i = 0; i < tcal6408->num_gpios; ++i) {
+            if ((irq_mask >> i) & 1) {
+                if (tcal6408->gpios[i].is_irq && tcal6408->gpios[i].num != 0) {
+                    if (tcal6408->gpios[i].linked_gpio == NULL) {
+                        continue;
+                    }
+                    handle_irq(tcal6408->gpios[i].linked_gpio);
                 }
-                handle_irq(tcal6408->gpios[i].linked_gpio);
             }
         }
     }
@@ -616,7 +632,7 @@ int ads7128_handle_irq(struct endpoint_gpio *ep_gpio)
                 continue;
             }
         } else {
-            // cannot use Digital input with C0 due to voltage divider scheme at input
+            // cannot use Digital input with c0/c1 due to voltage divider scheme at input
         }
 
         // clear event flag bits
@@ -1198,20 +1214,86 @@ static void cleanup_gpios(void)
     }
 }
 
-static struct base_device *new_default_base_device(enum base_device_type bd_type) 
+static int parse_device_id_from_bootargs(struct device *dev, char *device_id, size_t len)
+{
+    struct device_node *chosen;
+    const char *bootargs;
+    const char *match, *end;
+    size_t token_len;
+
+    chosen = of_find_node_by_path("/chosen");
+    if (!chosen)
+        return -ENOENT;
+
+    bootargs = of_get_property(chosen, "bootargs", NULL);
+    if (!bootargs) {
+        of_node_put(chosen);
+        return -ENOENT;
+    }
+
+    match = strstr(bootargs, "device_id=");
+    if (!match) {
+        of_node_put(chosen);
+        return -ENOENT;
+    }
+
+    match += strlen("device_id=");
+    end = strpbrk(match, " ");
+    token_len = end ? (size_t)(end - match) : strnlen(match, len - 1);
+    token_len = min(token_len, len - 1);
+    if (!token_len) {
+        of_node_put(chosen);
+        return -EINVAL;
+    }
+
+    memcpy(device_id, match, token_len);
+    device_id[token_len] = '\0';
+
+    of_node_put(chosen);
+    dev_dbg(dev, "Parsed device_id '%s' from bootargs\n", device_id);
+
+    return 0;
+}
+
+static int get_device_id(struct device *dev, char *device_id, size_t len)
+{
+    const char *device_id_prop;
+    int ret;
+
+    // first try devicetree property
+    ret = device_property_read_string(dev, "device-id", &device_id_prop);
+    if (!ret && device_id_prop && device_id_prop[0]) {
+        strscpy(device_id, device_id_prop, len);
+        dev_dbg(dev, "Using device-id '%s' from devicetree\n", device_id);
+        return 0;
+    }
+
+    // if no devicetree property, try bootargs
+    ret = parse_device_id_from_bootargs(dev, device_id, len);
+    if (ret)
+        dev_err(dev, "Failed to get device_id from devicetree property or bootargs\n");
+
+    return ret;
+}
+
+static struct base_device *new_default_base_device(const char *device_id)
 {
     struct base_device *bd;
 
-    for (int i = 0; default_bd_types[i] != BD_TYPE_NONE; ++i) {
-        if (bd_type == default_bd_types[i]) {
-            bd = devm_kzalloc(&bd_drvdata->pdev->dev, sizeof(*default_bds[i]), GFP_KERNEL);
-            if (bd == NULL) {
-                break;
-            }
+    if (!device_id || !device_id[0])
+        return NULL;
 
-            memcpy(bd, default_bds[i], sizeof(*bd));
-            return bd;
+    for (size_t i = 0; default_bd_types[i] != BD_TYPE_NONE; ++i) {
+        if (strcasecmp(device_id, default_bds[i]->data.model) != 0)
+            continue;
+
+        bd = devm_kzalloc(&bd_drvdata->pdev->dev, sizeof(*default_bds[i]), GFP_KERNEL);
+        if (bd == NULL) {
+            break;
         }
+
+        memcpy(bd, default_bds[i], sizeof(*bd));
+        return bd;
     }
 
     return NULL;
@@ -1318,9 +1400,10 @@ static int fusion_io_probe(struct platform_device *pdev)
 {
     struct base_device  *bd;
     struct io_card      *ic;
-    struct id_data      data;
+    struct id_data      data = {0};
 
     struct i2c_adapter  *i2c_adapter;
+    char                device_id[MAX_STRING] = {0};
 
     bool has_slot_io;
     int i, j;
@@ -1334,35 +1417,27 @@ static int fusion_io_probe(struct platform_device *pdev)
 
     bd_drvdata->pdev = pdev;
 
+    ret = get_device_id(&pdev->dev, device_id, sizeof(device_id));
+    if (ret)
+        return ret;
 
     i2c_adapter = i2c_get_adapter(I2C_ADAPTER);
     if (!i2c_adapter) {
-        dev_err(&pdev->dev, "Failed to get I2C adapter %d\n", I2C_ADAPTER);
-        return -ENODEV;
+        return dev_err_probe(&pdev->dev, -EPROBE_DEFER, "i2c bus not ready\n");;
     }
 
-    // TODO
-    // Read IMX8 ROM for this. hardcode for now
-    data.type = BD_TYPE_FUSION_C0;
-
-    if (data.type >= BD_TYPE_FIXED_IO_START && data.type < BD_TYPE_FIXED_IO_END) {
-        has_slot_io = false;
-    } else {
-        has_slot_io = true;
-    }
-    
     // set up the base_device
-    bd = new_default_base_device(data.type);
+    bd = new_default_base_device(device_id);
     if (!bd) {
-        dev_err(&pdev->dev, "No base_device static config match found for base_device type %d\n", data.type);
+        dev_err(&pdev->dev, "No base_device static config match found for device_id '%s'\n", device_id);
         ret = -EINVAL;
         goto error;
     }
+    has_slot_io = (bd->data.type >= BD_TYPE_SLOT_IO_START && bd->data.type < BD_TYPE_SLOT_IO_END);
     bd_drvdata->fusion_device = bd;
 
     platform_set_drvdata(pdev, bd_drvdata);
     
-    strcpy(bd->data.sn, data.sn);
     bd_drvdata->i2c_adapter = i2c_adapter;
     dev_info(&pdev->dev, "Found config -- Model: %s, SN: %s", bd->data.model, bd->data.sn);
 
@@ -1544,64 +1619,21 @@ error:
     return ret;
 }
 
+static const struct of_device_id fusion_io_of_match[] = {
+    { .compatible = "bosepro,fusion-io", },
+    { /* sentinel */ }
+};
+MODULE_DEVICE_TABLE(of, fusion_io_of_match);
+
 static struct platform_driver fusion_io_driver = {
     .driver = {
         .name = "fusion-io",
+        .of_match_table = fusion_io_of_match
     },
     .probe = fusion_io_probe,
-    .remove = fusion_io_remove,
+    .remove = fusion_io_remove
 };
-
-// Define the release function for the platform device
-static void fusion_io_device_release(struct device *dev)
-{
-    pr_info("fusion-io: Device release called\n");
-}
-
-// Update the platform device to include the release function
-static struct platform_device fusion_io_device = {
-    .name = "fusion-io",
-    .id = -1,
-    .dev = {
-        .release = fusion_io_device_release,
-    },
-};
-
-static int __init fusion_io_init(void)
-{
-    int ret;
-
-    // Register the platform device
-    ret = platform_device_register(&fusion_io_device);
-    if (ret) {
-        pr_err("fusion-io: Failed to register device\n");
-        return ret;
-    }
-
-    // Register the platform driver
-    ret = platform_driver_register(&fusion_io_driver);
-    if (ret) {
-        pr_err("fusion-io: Failed to register driver\n");
-        platform_device_unregister(&fusion_io_device);
-        return ret;
-    }
-
-    return 0;
-}
-
-static void __exit fusion_io_exit(void)
-{
-    pr_info("fusion-io: Exiting driver\n");
-
-    platform_driver_unregister(&fusion_io_driver);
-    platform_device_unregister(&fusion_io_device);
-
-    pr_info("fusion-io: Driver exit completed\n");
-}
-
-
-module_init(fusion_io_init);
-module_exit(fusion_io_exit);
+module_platform_driver(fusion_io_driver);
 
 MODULE_AUTHOR("Nathan Mark");
 MODULE_DESCRIPTION("Fusion IO Driver");
