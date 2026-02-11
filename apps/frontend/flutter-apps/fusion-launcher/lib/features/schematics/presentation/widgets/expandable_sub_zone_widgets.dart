@@ -13,6 +13,7 @@ class ExpandableSubZoneWidget extends StatefulWidget {
   final String name;
   final String subZoneId;
   final String zoneId;
+  final int index;
   final List<CircuitModel> subZoneCircuit;
   final Function(String)? onDelete;
   final Function(String)? onEdit;
@@ -23,6 +24,7 @@ class ExpandableSubZoneWidget extends StatefulWidget {
     required this.subZoneId,
     required this.zoneId,
     required this.subZoneCircuit,
+    required this.index,
     this.onDelete,
     this.onEdit,
   });
@@ -66,66 +68,69 @@ class _ExpandableSubZoneWidgetState extends State<ExpandableSubZoneWidget> {
                 borderRadius: BorderRadius.circular(FusionSizes.borderRadius12),
                 border: isSelected ? Border.all(color: context.colorScheme.strokeLight) : null,
               ),
-              child: Column(
-                children: <Widget>[
-                  MouseRegion(
-                    onEnter: (_) => setState(() => _isHovered = true),
-                    onExit: (_) => setState(() => _isHovered = false),
-                    child: SizedBox(
-                      height: 36,
-                      width: double.infinity,
-                      child: Row(
-                        children: <Widget>[
-                          _buildDragHandle(),
-                          const SizedBox(width: 4),
-                          GestureDetector(
-                            onTap: () => _isSubZoneExpanded.value = !_isSubZoneExpanded.value,
-                            child: _buildExpandIcon(context, subZoneExpanded),
-                          ),
-                          const SizedBox(width: 4),
-                          Expanded(
-                            child: GestureDetector(
-                              onTap: () {
-                                /// Select  subzone on tap
-                                _projectViewModel.setSelectedDevice(widget.subZoneId, SelectedItemType.subzone);
-                              },
-                              // onTap: () => _isZoneExpanded.value = !_isZoneExpanded.value,
-                              child: _buildZoneName(context, widget.name),
+              child: SemanticHelper.container(
+                testId: SemanticHelper.createTestId(SemanticTypes.container, "sub_zone_${widget.index}"),
+                child: Column(
+                  children: <Widget>[
+                    MouseRegion(
+                      onEnter: (_) => setState(() => _isHovered = true),
+                      onExit: (_) => setState(() => _isHovered = false),
+                      child: SizedBox(
+                        height: 36,
+                        width: double.infinity,
+                        child: Row(
+                          children: <Widget>[
+                            _buildDragHandle(),
+                            const SizedBox(width: 4),
+                            GestureDetector(
+                              onTap: () => _isSubZoneExpanded.value = !_isSubZoneExpanded.value,
+                              child: _buildExpandIcon(context, subZoneExpanded),
                             ),
-                          ),
+                            const SizedBox(width: 4),
+                            Expanded(
+                              child: GestureDetector(
+                                onTap: () {
+                                  /// Select  subzone on tap
+                                  _projectViewModel.setSelectedDevice(widget.subZoneId!, SelectedItemType.subzone);
+                                },
+                                // onTap: () => _isZoneExpanded.value = !_isZoneExpanded.value,
+                                child: _buildZoneName(context, widget.name),
+                              ),
+                            ),
 
-                          // /// Add device button
-                          // AddSpeakersMenu(
-                          //   zoneId: widget.zoneId ?? "",
-                          //   subZoneId: widget.subZoneId,
-                          //   onSpeakerAdded: onSpeakerAdded,
-                          // ),
-                          FusionArrowPopup(
-                            content: SpeakerQueryPopup(isFromBuildingPage: false, zoneId: widget.zoneId, subZoneId: widget.subZoneId),
-                            backgroundColor: context.colorScheme.elevation1,
-                            child: Row(
-                              children: <Widget>[
-                                Icon(Icons.add, size: 10, color: context.colorScheme.iconWhite),
-                                const SizedBox(width: 4),
-                                FusionAppText(
-                                  text: "Speaker",
-                                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                    fontSize: 8,
-                                    fontWeight: FontWeight.w400,
-                                    color: context.colorScheme.textPrimary,
+                            // /// Add device button
+                            // AddSpeakersMenu(
+                            //   zoneId: widget.zoneId ?? "",
+                            //   subZoneId: widget.subZoneId,
+                            //   onSpeakerAdded: onSpeakerAdded,
+                            // ),
+                            FusionArrowPopup(
+                              content: SpeakerQueryPopup(isFromBuildingPage: false, zoneId: widget.zoneId, subZoneId: widget.subZoneId),
+                              backgroundColor: context.colorScheme.elevation1,
+                              child: Row(
+                                children: <Widget>[
+                                  Icon(Icons.add, size: 10, color: context.colorScheme.iconWhite),
+                                  const SizedBox(width: 4),
+                                  FusionAppText(
+                                    text: "Speaker",
+                                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                      fontSize: 8,
+                                      fontWeight: FontWeight.w400,
+                                      color: context.colorScheme.textPrimary,
+                                    ),
                                   ),
-                                ),
-                              ],
+                                ],
+                              ),
                             ),
-                          ),
-                          const SizedBox(width: 8),
-                          _buildKebabMenu(context),
-                        ],
+                            const SizedBox(width: 8),
+                            _buildKebabMenu(context),
+                          ],
+                        ),
                       ),
                     ),
-                  ),
-                  if (subZoneExpanded) _buildSubZoneContent(),
-                ],
+                    if (subZoneExpanded) _buildSubZoneContent(),
+                  ],
+                ),
               ),
             );
           },

@@ -80,105 +80,108 @@ class _CircuitDeviceWidgetState extends State<CircuitDeviceWidget> {
                 ),
                 borderRadius: BorderRadius.circular(8),
               ),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: <Widget>[
-                  // Only drag handle is reorderable
-                  ReorderableDragStartListener(
-                    key: ValueKey<String>(widget.prefix + widget.deviceId),
-                    index: widget.index,
-                    child: Icon(
-                      Icons.drag_indicator,
-                      size: 16,
-                      color: Colors.grey[600],
+              child: SemanticHelper.container(
+                testId: SemanticHelper.createTestId(SemanticTypes.container, "circuit_${widget.index}"),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    // Only drag handle is reorderable
+                    ReorderableDragStartListener(
+                      key: ValueKey<String>(widget.deviceId),
+                      index: widget.index,
+                      child: Icon(
+                        Icons.drag_indicator,
+                        size: 16,
+                        color: Colors.grey[600],
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: 6),
+                    const SizedBox(width: 6),
 
-                  /// Device icon, name and location
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: <Widget>[
-                        /// Device name with circuit/device type label
-                        Row(
-                          children: <Widget>[
-                            FusionImage.asset(
-                              widget.assetImagePath,
-                              width: 22,
-                              height: 22,
-                              fit: BoxFit.contain,
-                            ),
-                            const SizedBox(width: 6),
-                            Expanded(
-                              child: FusionAppText(
-                                text: widget.circuitDeviceName,
-                                maxLine: 1,
-                                style: Theme.of(context).textTheme.bodySmall?.copyWith(fontSize: 10),
+                    /// Device icon, name and location
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: <Widget>[
+                          /// Device name with circuit/device type label
+                          Row(
+                            children: <Widget>[
+                              FusionImage.asset(
+                                widget.assetImagePath,
+                                width: 22,
+                                height: 22,
+                                fit: BoxFit.contain,
                               ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 6),
+                              const SizedBox(width: 6),
+                              Expanded(
+                                child: FusionAppText(
+                                  text: widget.circuitDeviceName,
+                                  maxLine: 1,
+                                  style: Theme.of(context).textTheme.bodySmall?.copyWith(fontSize: 10),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 6),
 
-                        /// Device location
-                        widget.location.isEmpty
-                            ? const SizedBox.shrink()
-                            : Wrap(
-                              spacing: 4,
-                              runSpacing: 4,
-                              children:
-                                  widget.location.map((ListeningArea location) {
-                                    return Row(
-                                      spacing: 4,
-                                      children: <Widget>[
-                                        Icon(
-                                          LucideIcons.mapPin200,
-                                          size: FusionSizes.iconSize10,
-                                          color: context.colorScheme.elevation5,
-                                        ),
-                                        Flexible(
-                                          child: FusionAppText(
-                                            text: location.name,
-                                            style: context.textTheme.bodySmall?.copyWith(
-                                              fontSize: 9,
-                                              color: const Color(0xFFBD7D23),
+                          /// Device location
+                          widget.location.isEmpty
+                              ? const SizedBox.shrink()
+                              : Wrap(
+                                spacing: 4,
+                                runSpacing: 4,
+                                children:
+                                    widget.location.map((ListeningArea location) {
+                                      return Row(
+                                        spacing: 4,
+                                        children: <Widget>[
+                                          Icon(
+                                            LucideIcons.mapPin200,
+                                            size: FusionSizes.iconSize10,
+                                            color: context.colorScheme.elevation5,
+                                          ),
+                                          Flexible(
+                                            child: FusionAppText(
+                                              text: location.name,
+                                              style: context.textTheme.bodySmall?.copyWith(
+                                                fontSize: 9,
+                                                color: const Color(0xFFBD7D23),
+                                              ),
                                             ),
                                           ),
-                                        ),
-                                      ],
-                                    );
-                                  }).toList(),
-                            ),
-                      ],
-                    ),
-                  ),
-
-                  const SizedBox(width: 4),
-                  if (!widget.circuitModel.addedInBuildingPage) ...<Widget>[
-                    _buildAddOrRemoveButton(context: context),
-
-                    /// Kebab menu
-                    const SizedBox(width: 8),
-                    _buildKebabMenu(context),
-                  ] else ...<Widget>[
-                    const SizedBox(width: 2),
-                    Container(
-                      height: 20,
-                      width: 20,
-                      alignment: Alignment.center,
-                      decoration: BoxDecoration(
-                        border: Border.all(color: context.colorScheme.elevation4, width: 1),
-                        borderRadius: BorderRadius.circular(2),
-                      ),
-                      child: FusionAppText(
-                        text: widget.circuitDeviceCount.toString(),
-                        maxLine: 1,
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(fontSize: 8),
+                                        ],
+                                      );
+                                    }).toList(),
+                              ),
+                        ],
                       ),
                     ),
+
+                    const SizedBox(width: 4),
+                    if (!widget.circuitModel.addedInBuildingPage) ...<Widget>[
+                      _buildAddOrRemoveButton(context: context),
+
+                      /// Kebab menu
+                      const SizedBox(width: 8),
+                      _buildKebabMenu(context),
+                    ] else ...<Widget>[
+                      const SizedBox(width: 2),
+                      Container(
+                        height: 20,
+                        width: 20,
+                        alignment: Alignment.center,
+                        decoration: BoxDecoration(
+                          border: Border.all(color: context.colorScheme.elevation4, width: 1),
+                          borderRadius: BorderRadius.circular(2),
+                        ),
+                        child: FusionAppText(
+                          text: widget.circuitDeviceCount.toString(),
+                          maxLine: 1,
+                          style: Theme.of(context).textTheme.bodySmall?.copyWith(fontSize: 8),
+                        ),
+                      ),
+                    ],
                   ],
-                ],
+                ),
               ),
             ),
           ),
@@ -237,14 +240,17 @@ class _CircuitDeviceWidgetState extends State<CircuitDeviceWidget> {
       /// logic for single/zero location
       return Row(
         children: <Widget>[
-          GestureDetector(
-            onTap: () {
-              widget.onDecrementHardwareInCircuit();
-            },
-            child: Icon(
-              Icons.remove,
-              size: 10,
-              color: context.colorScheme.iconDefault,
+          SemanticHelper.container(
+            testId: SemanticHelper.createTestId(SemanticTypes.button, "decrement_speaker_count"),
+            child: GestureDetector(
+              onTap: () {
+                widget.onDecrementHardwareInCircuit();
+              },
+              child: Icon(
+                Icons.remove,
+                size: 10,
+                color: context.colorScheme.iconDefault,
+              ),
             ),
           ),
           const SizedBox(width: 2),
@@ -263,14 +269,17 @@ class _CircuitDeviceWidgetState extends State<CircuitDeviceWidget> {
             ),
           ),
           const SizedBox(width: 2),
-          GestureDetector(
-            onTap: () {
-              widget.onIncrementHardwareInCircuit();
-            },
-            child: Icon(
-              Icons.add,
-              size: 10,
-              color: context.colorScheme.iconDefault,
+          SemanticHelper.container(
+            testId: SemanticHelper.createTestId(SemanticTypes.button, "increment_speaker_count"),
+            child: GestureDetector(
+              onTap: () {
+                widget.onIncrementHardwareInCircuit();
+              },
+              child: Icon(
+                Icons.add,
+                size: 10,
+                color: context.colorScheme.iconDefault,
+              ),
             ),
           ),
         ],
