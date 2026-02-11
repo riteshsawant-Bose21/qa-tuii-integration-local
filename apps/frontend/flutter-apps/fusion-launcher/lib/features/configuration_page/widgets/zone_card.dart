@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/features/configuration_page/widgets/sub_zone_card.dart';
+import 'package:fusion_launcher/features/zone_functions/source_select.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
 import '../../../core/constants/assets_constants.dart';
 import '../../../core/service_locator.dart';
 import '../../configuration/presentation/viewmodel/project_view_model.dart';
 import '../../processing_block/view/processing_chain_view.dart';
-import '../../zone_functions/settings/source_select_priority_settings.dart';
 import '../../zone_functions/source_matrix.dart';
 import '../../zone_functions/source_mix.dart';
 
@@ -791,14 +791,14 @@ class _ZoneCardState extends State<ZoneCard> {
     return GestureDetector(
       onTap: () {
         if (selectedFunction == ZoneFunctionsType.sourceSelect || selectedFunction == ZoneFunctionsType.sourceSelectWithPriority) {
-          // SourceSelectZoneControlPanel.showDialog(
-          //   context,
-          //   zoneID: widget.zoneId,
-          // );
-          SourceSelectPrioritySettings.showDialog(
+          SourceSelectZoneControlPanel.showDialog(
             context,
             zoneID: widget.zoneId,
           );
+          // SourceSelectPrioritySettings.showDialog(
+          //   context,
+          //   zoneID: widget.zoneId,
+          // );
         } else if (selectedFunction == ZoneFunctionsType.sourceMix || selectedFunction == ZoneFunctionsType.sourceMixWithPriority) {
           SourceMixZoneControlPanel.showDialog(
             context,

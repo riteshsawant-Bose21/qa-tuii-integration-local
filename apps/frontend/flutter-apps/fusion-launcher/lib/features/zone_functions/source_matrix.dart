@@ -14,7 +14,6 @@ import 'widgets/priority_selection_widget.dart';
 
 class SourceMatrixZoneControlPanel extends StatefulWidget {
   final String zoneID;
-
   const SourceMatrixZoneControlPanel({super.key, required this.zoneID});
 
   static void showDialog(BuildContext context, {required String zoneID}) {
@@ -38,6 +37,7 @@ class SourceMatrixZoneControlPanel extends StatefulWidget {
 
 class _SourceMatrixZoneControlPanelState extends State<SourceMatrixZoneControlPanel> {
   late ZoneFunctions zoneFunction;
+
   @override
   void initState() {
     super.initState();
@@ -58,61 +58,71 @@ class _SourceMatrixZoneControlPanelState extends State<SourceMatrixZoneControlPa
 
   @override
   Widget build(BuildContext context) {
-    return Dialog(
+    return Material(
+      color: Colors.transparent,
+      type: MaterialType.transparency,
       child: Stack(
         children: <Widget>[
           GestureDetector(
-            onTap: () => Navigator.pop(context),
-            child: Container(
-              color: Colors.black.withAlpha(51),
-              child: const Center(),
-            ),
+            onTap: Navigator.of(context).pop,
+            child: Container(color: Colors.transparent),
           ),
+
           Center(
             child: ClipRRect(
               borderRadius: BorderRadius.circular(16),
               child: Container(
+                margin: const EdgeInsets.all(24.0),
                 decoration: BoxDecoration(
                   color: context.colorScheme.elevation1,
                   border: Border.all(color: context.colorScheme.strokeLight),
                   borderRadius: BorderRadius.circular(16),
                 ),
-                child: Column(
+                child: Stack(
+                  fit: StackFit.loose,
                   children: <Widget>[
-                    /// --------------------------------------------------------------------------------
-                    /// HEADING
-                    /// --------------------------------------------------------------------------------
-                    Container(
-                      decoration: BoxDecoration(
-                        border: Border(
-                          bottom: BorderSide(
-                            color: context.colorScheme.strokeLight,
-                            width: 0.5,
-                          ),
+                    // TITLTE
+                    Positioned(
+                      top: 0,
+                      left: 0,
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 15, horizontal: 20),
+                        child: FusionAppText(
+                          text: "ZONE CONTROL PANEL - SOURCE MATRIX",
+                          style: context.textTheme.titleSmall,
+                          maxLine: 1,
                         ),
-                      ),
-                      padding: const EdgeInsets.symmetric(vertical: 15, horizontal: 20),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: <Widget>[
-                          FusionAppText(
-                            text: "ZONE CONTROL PANEL - SOURCE MATRIX",
-                            style: context.textTheme.titleSmall,
-                          ),
-                          InkWell(
-                            onTap: () {
-                              Navigator.pop(context);
-                            },
-                            child: Icon(
-                              LucideIcons.x200,
-                              color: context.colorScheme.iconDefault,
-                            ),
-                          ),
-                        ],
                       ),
                     ),
 
-                    Expanded(
+                    // CLOSE BUTTON
+                    Positioned(
+                      top: 0,
+                      right: 0,
+                      child: Material(
+                        color: Colors.transparent,
+                        child: Padding(
+                          padding: const EdgeInsets.all(8.0),
+                          child: InkWell(
+                            onTap: Navigator.of(context).pop,
+                            customBorder: const CircleBorder(),
+                            child: Padding(
+                              padding: const EdgeInsets.all(8.0),
+                              child: Icon(
+                                LucideIcons.x200,
+                                color: context.colorScheme.iconDefault,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+
+                    /// --------------------------------------------------------------------------------
+                    ///                             MAIN CONTENT
+                    /// --------------------------------------------------------------------------------
+                    Padding(
+                      padding: const EdgeInsets.only(top: 50),
                       child: SemanticHelper.container(
                         testId: SemanticHelper.createTestId(SemanticTypes.container, "source_select_main_container"),
                         child: BlocConsumer<ProjectViewModel, ProjectViewModelState>(
@@ -120,7 +130,15 @@ class _SourceMatrixZoneControlPanelState extends State<SourceMatrixZoneControlPa
                             zoneFunction = projectViewModel.getZoneFunctionForZone(zoneId: widget.zoneID)!;
                           },
                           builder: (BuildContext context, ProjectViewModelState state) {
-                            return Padding(
+                            return Container(
+                              decoration: BoxDecoration(
+                                border: Border(
+                                  top: BorderSide(
+                                    color: context.colorScheme.strokeLight,
+                                    width: 0.5,
+                                  ),
+                                ),
+                              ),
                               padding: const EdgeInsets.all(16.0),
                               child: ClipRRect(
                                 borderRadius: BorderRadius.circular(16),

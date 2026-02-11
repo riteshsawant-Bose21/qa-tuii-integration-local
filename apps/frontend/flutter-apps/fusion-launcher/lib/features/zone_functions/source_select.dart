@@ -5,7 +5,6 @@ import 'package:fusion_launcher/features/configuration/presentation/viewmodel/pr
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
-import 'settings/source_select_priority_settings.dart';
 import 'source_mix.dart';
 import 'widgets/priority_selection_widget.dart';
 
@@ -46,63 +45,71 @@ class _SourceSelectZoneControlPanelState extends State<SourceSelectZoneControlPa
 
   @override
   Widget build(BuildContext context) {
-    return Dialog(
+    return Material(
+      color: Colors.transparent,
+      type: MaterialType.transparency,
       child: Stack(
         children: <Widget>[
           GestureDetector(
-            onTap: () {
-              Navigator.pop(context);
-            },
-            child: Container(
-              color: Colors.black.withAlpha(51),
-              child: const Center(),
-            ),
+            onTap: Navigator.of(context).pop,
+            child: Container(color: Colors.transparent),
           ),
+
           Center(
             child: ClipRRect(
               borderRadius: BorderRadius.circular(16),
               child: Container(
+                margin: const EdgeInsets.all(24.0),
                 decoration: BoxDecoration(
                   color: context.colorScheme.elevation1,
                   border: Border.all(color: context.colorScheme.strokeLight),
                   borderRadius: BorderRadius.circular(16),
                 ),
-                child: Column(
+                child: Stack(
+                  fit: StackFit.loose,
                   children: <Widget>[
-                    /// --------------------------------------------------------------------------------
-                    /// HEADING
-                    /// --------------------------------------------------------------------------------
-                    Container(
-                      decoration: BoxDecoration(
-                        border: Border(
-                          bottom: BorderSide(
-                            color: context.colorScheme.strokeLight,
-                            width: 0.5,
-                          ),
+                    // TITLTE
+                    Positioned(
+                      top: 0,
+                      left: 0,
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 15, horizontal: 20),
+                        child: FusionAppText(
+                          text: "ZONE CONTROL PANEL - SOURCE SELECT",
+                          style: context.textTheme.titleSmall,
+                          maxLine: 1,
                         ),
-                      ),
-                      padding: const EdgeInsets.symmetric(vertical: 15, horizontal: 20),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: <Widget>[
-                          FusionAppText(
-                            text: "ZONE CONTROL PANEL - SOURCE SELECT",
-                            style: context.textTheme.titleSmall,
-                          ),
-                          InkWell(
-                            onTap: () {
-                              Navigator.pop(context);
-                            },
-                            child: Icon(
-                              LucideIcons.x200,
-                              color: context.colorScheme.iconDefault,
-                            ),
-                          ),
-                        ],
                       ),
                     ),
 
-                    Expanded(
+                    // CLOSE BUTTON
+                    Positioned(
+                      top: 0,
+                      right: 0,
+                      child: Material(
+                        color: Colors.transparent,
+                        child: Padding(
+                          padding: const EdgeInsets.all(8.0),
+                          child: InkWell(
+                            onTap: Navigator.of(context).pop,
+                            customBorder: const CircleBorder(),
+                            child: Padding(
+                              padding: const EdgeInsets.all(8.0),
+                              child: Icon(
+                                LucideIcons.x200,
+                                color: context.colorScheme.iconDefault,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+
+                    /// --------------------------------------------------------------------------------
+                    ///                             MAIN CONTENT
+                    /// --------------------------------------------------------------------------------
+                    Padding(
+                      padding: const EdgeInsets.only(top: 50),
                       child: SemanticHelper.container(
                         testId: SemanticHelper.createTestId(SemanticTypes.container, "source_select_main_container"),
                         child: BlocConsumer<ProjectViewModel, ProjectViewModelState>(
@@ -110,7 +117,15 @@ class _SourceSelectZoneControlPanelState extends State<SourceSelectZoneControlPa
                             zoneFunction = projectViewModel.getZoneFunctionForZone(zoneId: widget.zoneID);
                           },
                           builder: (BuildContext context, ProjectViewModelState state) {
-                            return Padding(
+                            return Container(
+                              decoration: BoxDecoration(
+                                border: Border(
+                                  top: BorderSide(
+                                    color: context.colorScheme.strokeLight,
+                                    width: 0.5,
+                                  ),
+                                ),
+                              ),
                               padding: const EdgeInsets.all(16.0),
                               child: ClipRRect(
                                 borderRadius: BorderRadius.circular(16),
@@ -289,46 +304,6 @@ class _SourceSelectZoneControlPanelState extends State<SourceSelectZoneControlPa
                               ),
                             );
                           },
-                        ),
-                      ),
-                    ),
-                    Align(
-                      alignment: Alignment.centerRight,
-                      child: Padding(
-                        padding: const EdgeInsets.all(16.0),
-                        child: Material(
-                          color: Colors.transparent,
-                          borderRadius: BorderRadius.circular(8.0),
-
-                          child: InkWell(
-                            onTap: () {
-                              SourceSelectPrioritySettings.showDialog(
-                                context,
-                                zoneID: widget.zoneID,
-                              );
-                            },
-                            borderRadius: BorderRadius.circular(8.0),
-                            hoverColor: Colors.transparent,
-                            splashColor: Colors.transparent,
-                            child: Ink(
-                              height: 36,
-                              width: 160,
-                              decoration: BoxDecoration(
-                                color: context.colorScheme.elevation2,
-                                borderRadius: BorderRadius.circular(8.0),
-                              ),
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.end,
-                                children: <Widget>[
-                                  FusionAppText(
-                                    text: "Additional Settings",
-                                    style: context.textTheme.labelMedium,
-                                  ),
-                                  const Icon(LucideIcons.arrowUpRight100),
-                                ],
-                              ),
-                            ),
-                          ),
                         ),
                       ),
                     ),
