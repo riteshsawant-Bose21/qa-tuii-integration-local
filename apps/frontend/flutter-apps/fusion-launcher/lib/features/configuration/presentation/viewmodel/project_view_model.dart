@@ -340,6 +340,10 @@ class ProjectViewModel extends Cubit<ProjectViewModelState> {
     }
   }
 
+  void emitTabChanged(int tabIndex) {
+    emit(TabChanged(tab: tabIndex));
+  }
+
   void emitFloorUpdated() {
     emit(FloorsUpdated());
   }
@@ -523,5 +527,27 @@ class ProjectViewModel extends Cubit<ProjectViewModelState> {
     final List<Speaker> speakers = getAllNonPlacedHardwareInListeningArea(listeningAreaId: currentSelectedListeningAreaId!).whereType<Speaker>().toList();
     final Speaker clonedSpeaker = speakers.last;
     removeHardware(hardwareId: clonedSpeaker.id);
+  }
+
+  Future<ResponseCallback<bool>> importProjectFromFile(File file) async {
+    emit(ProjectLoading());
+    try {
+      final ResponseCallback<bool> importResponse = await projectManager.importProjectFromZip(file);
+      if (importResponse.success) {
+        // Reload projects after import
+        await loadAllLocalProjects();
+        return importResponse;
+      } else {
+        emit(
+          ProjectError(
+            message: "Failed to import project: ${importResponse.message}",
+          ),
+        );
+        return importResponse;
+      }
+    } catch (e) {
+      emit(ProjectError(message: "Failed to import project: $e"));
+      return ResponseCallback<bool>(success: false, message: e.toString());
+    }
   }
 }

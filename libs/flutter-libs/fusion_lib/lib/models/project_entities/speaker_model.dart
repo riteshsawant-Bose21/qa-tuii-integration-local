@@ -133,7 +133,7 @@ class Speaker extends HardwareComponent {
       communicationPorts: speaker.communicationPorts,
       inputPortsData: speaker.inputPortsData,
       outputPortsData: speaker.outputPortsData,
-      addedFromBuildingPage: speaker.addedFromBuildingPage,
+      addedFromBuildingPage: addedFromBuildingPage ? true : speaker.addedFromBuildingPage,
       mountingType: speaker.mountingType,
     );
   }
@@ -248,6 +248,7 @@ class Speaker extends HardwareComponent {
       'inputPortsData': inputPortsData.map((PortData port) => port.toJson()).toList(),
       'addedFromBuildingPage': addedFromBuildingPage,
       'equipmentLocationPosition': equipmentLocationPosition,
+      "mountingType": mountingType?.name,
     };
   }
 

@@ -2,9 +2,12 @@ import 'package:dio/dio.dart';
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/core/config/app_config.dart';
+import 'package:fusion_launcher/features/authentication/viewmodel/session_view_model.dart';
 import 'package:fusion_lib/fusion_widgets/fusion_widgets.dart';
 import 'package:fusion_lib/product_data/product_data.dart';
 import 'package:fusion_lib/product_data/products.dart';
+
+import '../../../../../../core/service_locator.dart';
 
 /// ViewModel to query product data from the Products API
 /// This ViewModel called from the ProjectWorkArea widget
@@ -51,8 +54,14 @@ class ProductQueryViewModelState extends Equatable {
 class ProductQueryViewModel extends Cubit<ProductQueryViewModelState> {
   ProductQueryViewModel() : super(ProductQueryViewModelState.initial());
 
-  static const int _maxRetries = 3;
+  static const int _maxRetries = 1;
   final Products _productsApi = Products(baseUrl: AppConfig.awsApiBaseUrl, fusionOnly: true);
+
+  late String localProductDirPath;
+
+  bool get hasCloudAccess {
+    return serviceLocator<SessionViewModel>().hasCloudAccess();
+  }
 
   Future<void> loadProducts({int attempt = 1, bool refresh = false}) async {
     try {
@@ -62,23 +71,25 @@ class ProductQueryViewModel extends Cubit<ProductQueryViewModelState> {
       await (refresh ? _productsApi.refresh() : _productsApi.initialize());
       emit(state.copyWith(products: _productsApi, isLoading: false, isRefreshing: false));
 
-      for (SpeakerProduct element in speakers) {
-        _fetchProductPrices(element.productId);
-      }
-      for (AmplifierProduct element in amplifiers) {
-        _fetchProductPrices(element.productId);
-      }
-      for (IoEndpointProduct element in ioEndpoints) {
-        _fetchProductPrices(element.productId);
-      }
-      for (DspProduct element in dsps) {
-        _fetchProductPrices(element.productId);
-      }
-      for (ControllerProduct element in controllers) {
-        _fetchProductPrices(element.productId);
-      }
-      for (AccessoryProduct element in accessories) {
-        _fetchProductPrices(element.productId);
+      if (hasCloudAccess) {
+        for (SpeakerProduct element in speakers) {
+          _fetchProductPrices(element.productId);
+        }
+        for (AmplifierProduct element in amplifiers) {
+          _fetchProductPrices(element.productId);
+        }
+        for (IoEndpointProduct element in ioEndpoints) {
+          _fetchProductPrices(element.productId);
+        }
+        for (DspProduct element in dsps) {
+          _fetchProductPrices(element.productId);
+        }
+        for (ControllerProduct element in controllers) {
+          _fetchProductPrices(element.productId);
+        }
+        for (AccessoryProduct element in accessories) {
+          _fetchProductPrices(element.productId);
+        }
       }
     } catch (e) {
       if (attempt < _maxRetries) {
@@ -96,6 +107,9 @@ class ProductQueryViewModel extends Cubit<ProductQueryViewModelState> {
 
   // ---------- get image ----------
   String getImagePath(String imageUrl) => _productsApi.getImagePath(imageUrl);
+
+  // ---------- get image name ----------
+  String getImageName(String imageUrl) => _productsApi.getImageName(imageUrl);
 
   bool get isLoading => state.isLoading;
   String get errorMessage => state.errorMessage;

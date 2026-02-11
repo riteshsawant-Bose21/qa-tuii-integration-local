@@ -8,6 +8,7 @@ import 'package:fusion_lib/product_data/models/models.dart';
 
 import '../parts/constant_enums.dart';
 import '../parts/replace_speaker_warning_dialog.dart';
+import 'product_query_view_model.dart';
 
 part 'state.dart';
 
@@ -270,11 +271,50 @@ class SpeakerSelectionViewModel extends Cubit<SpeakerSelectionViewModelState> {
     final Set<int> selectedProductIds = getAllPlacedNonPlacedSpeakers().map((Speaker sp) => sp.productId).whereType<int>().toSet();
 
     int compareByOption(SpeakerProduct a, SpeakerProduct b) {
+      double maxSplValue(MaxSpl? m) {
+        if (m == null || m.at.isEmpty) return 0.0;
+        final Iterable<double> values = m.at.map((MeasurementValue e) => (e.value as num).toDouble());
+        return values.isEmpty ? 0.0 : values.reduce((double x, double y) => x > y ? x : y);
+      }
+
+      num powerHandlingValue(PowerHandling? p) {
+        if (p == null) return 0;
+        if (p.longTermRms != 0) return p.longTermRms;
+        if (p.peak != 0) return p.peak;
+        return 0;
+      }
+
+      final ProductQueryViewModel pq = serviceLocator<ProductQueryViewModel>();
+
       switch (state.sortOption) {
         case SpeakerSortOption.nameAsc:
           return a.modelName.toLowerCase().compareTo(b.modelName.toLowerCase());
         case SpeakerSortOption.nameDesc:
           return b.modelName.toLowerCase().compareTo(a.modelName.toLowerCase());
+        case SpeakerSortOption.priceLowToHigh:
+          final double ap = pq.getPrice(a.productId);
+          final double bp = pq.getPrice(b.productId);
+          return ap.compareTo(bp);
+        case SpeakerSortOption.priceHighToLow:
+          final double ap = pq.getPrice(a.productId);
+          final double bp = pq.getPrice(b.productId);
+          return bp.compareTo(ap);
+        case SpeakerSortOption.maxSplHighToLow:
+          final double am = maxSplValue(a.maxSpl);
+          final double bm = maxSplValue(b.maxSpl);
+          return bm.compareTo(am);
+        case SpeakerSortOption.maxSplLowToHigh:
+          final double am = maxSplValue(a.maxSpl);
+          final double bm = maxSplValue(b.maxSpl);
+          return am.compareTo(bm);
+        case SpeakerSortOption.powerHandlingHighToLow:
+          final num ah = powerHandlingValue(a.powerHandling);
+          final num bh = powerHandlingValue(b.powerHandling);
+          return bh.compareTo(ah);
+        case SpeakerSortOption.powerHandlingLowToHigh:
+          final num ah = powerHandlingValue(a.powerHandling);
+          final num bh = powerHandlingValue(b.powerHandling);
+          return ah.compareTo(bh);
       }
     }
 

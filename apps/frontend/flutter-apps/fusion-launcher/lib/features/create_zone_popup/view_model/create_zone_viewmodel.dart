@@ -133,7 +133,7 @@ class CreateZoneViewModel extends Cubit<CreateZoneViewModelState> {
   }
 
   void createZone(BuildContext context) {
-    if (state.zoneFunctionType == null) return FusionToast.error(context, message: 'Please select a function type for the zone.');
+    // if (state.zoneFunctionType == null) return FusionToast.error(context, message: 'Please select a function type for the zone.');
 
     if (!isCreatingSubZonesAlongSide && state.zoneListeningAreas.isEmpty) {
       return FusionToast.error(context, message: 'Select atleast one listening area');
@@ -171,10 +171,12 @@ class CreateZoneViewModel extends Cubit<CreateZoneViewModelState> {
       }
     }
 
-    serviceLocator<ProjectViewModel>().addFunctionToZone(
-      function: getNewZoneFunction(type: state.zoneFunctionType!),
-      zoneId: zone.id,
-    );
+    if (state.zoneFunctionType != null) {
+      projectViewModel.addFunctionToZone(
+        function: getNewZoneFunction(type: state.zoneFunctionType!),
+        zoneId: zone.id,
+      );
+    }
 
     // Close popup
     Navigator.of(context).pop();

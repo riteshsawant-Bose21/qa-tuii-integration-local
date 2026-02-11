@@ -9,7 +9,7 @@ class SnapshotActionRowHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
-      color: Theme.of(context).colorScheme.grey.withAlpha(40),
+      color: context.colorScheme.elevation2.withAlpha(120),
       child: const Row(
         spacing: 12,
 
@@ -41,7 +41,7 @@ class _HeaderCell extends StatelessWidget {
         style: Theme.of(context).textTheme.bodySmall?.copyWith(
           fontWeight: FontWeight.w600,
           fontSize: 13,
-          color: Theme.of(context).colorScheme.fusionTextViewColor,
+          color: Theme.of(context).colorScheme.textPrimary,
         ),
         maxLine: 1,
       ),

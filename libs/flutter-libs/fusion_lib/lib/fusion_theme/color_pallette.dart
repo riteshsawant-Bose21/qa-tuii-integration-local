@@ -20,7 +20,6 @@ class FusionDarkColorPallette {
   // static const Color blackTransparentL = Color(0x4D000000);
   // static const Color blackTransparentM = Color(0x80000000);
   // static const Color blackTransparentH = Color(0xCC000000);
-  // static const Color white = Color(0xFFFFFFFF);
 
   static const Color dark70 = Color(0xFF3D3C38);
   static const Color dark80 = Color(0xFF292826);

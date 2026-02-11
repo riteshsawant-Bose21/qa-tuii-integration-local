@@ -75,7 +75,7 @@ class _EventValueWidgetState extends State<EventValueWidget> {
                 Icon(
                   isMute ? Icons.volume_off : Icons.volume_up,
                   size: 20,
-                  color: Theme.of(context).colorScheme.greyDark,
+                  color: context.colorScheme.primaryWhite,
                 ),
                 const SizedBox(width: 8),
                 FusionAppText(
@@ -101,13 +101,13 @@ class _EventValueWidgetState extends State<EventValueWidget> {
                     thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6),
                     overlayShape: const RoundSliderOverlayShape(overlayRadius: 4),
                     trackHeight: 1,
-                    thumbColor: Theme.of(context).colorScheme.greyDark,
+                    thumbColor: context.colorScheme.primaryWhite,
                   ),
                   child: Slider(
                     value: currentValue,
                     padding: EdgeInsets.zero,
-                    activeColor: Theme.of(context).colorScheme.greyDark,
-                    inactiveColor: Theme.of(context).colorScheme.grey,
+                    activeColor: context.colorScheme.elevation2,
+                    inactiveColor: context.colorScheme.primaryWhite,
                     min: 0,
                     max: 100,
                     divisions: 100,
@@ -152,7 +152,7 @@ class _EventValueWidgetState extends State<EventValueWidget> {
               alignment: Alignment.center,
               padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 3),
               decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.greyLight,
+                color: context.colorScheme.elevation1,
                 borderRadius: BorderRadius.circular(2),
               ),
               child: FusionAppText(text: currentValue.toStringAsFixed(0), style: Theme.of(context).textTheme.bodySmall?.copyWith(fontSize: 9)),
@@ -276,61 +276,42 @@ class _EventValueWidgetState extends State<EventValueWidget> {
       case SceneParamValueType.onOffButton:
         final bool isOn = value.getValue(stateType: widget.stateType) == "on";
 
-        return SizedBox(
-          height: 12,
-          child: Transform.scale(
-            scale: 0.8,
-            child: SemanticHelper.toggle(
-              testId: SemanticHelper.createTestId(SemanticTypes.toggle, "event_value_on_off_toggle"),
-              value: isOn,
-              child: Switch(
-                value: isOn,
-                padding: EdgeInsets.zero,
-                materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                thumbColor: WidgetStateProperty.resolveWith<Color>((Set<WidgetState> states) {
-                  if (states.contains(WidgetState.selected)) {
-                    return Theme.of(context).colorScheme.white;
-                  }
-                  return Theme.of(context).colorScheme.greyDark;
-                }),
-                trackColor: WidgetStateProperty.resolveWith<Color>((Set<WidgetState> states) {
-                  if (states.contains(WidgetState.selected)) {
-                    return Theme.of(context).colorScheme.black;
-                  }
-                  return Theme.of(context).colorScheme.grey;
-                }),
-                trackOutlineColor: WidgetStateProperty.all(Colors.transparent),
-                onChanged: (bool v) {
-                  final String newValue = v ? "on" : "off";
-                  SceneValue updated;
+        return SemanticHelper.toggle(
+          testId: SemanticHelper.createTestId(SemanticTypes.toggle, "event_value_on_off_toggle"),
+          value: isOn,
+          child: FusionSwitch(
+            value: isOn,
+            height: 22,
+            width: 36,
+            onChanged: (bool v) {
+              final String newValue = v ? "on" : "off";
+              SceneValue updated;
 
-                  if (value.hasStates) {
-                    // If this is the first time setting a state value and states are empty,
-                    // initialize with appropriate defaults
-                    if (value.states == null) {
-                      // Above state gets "on", Below state gets "off" by default
-                      // The current state gets the new value the user is setting
-                      final String value1 = widget.stateType == EventStateTypes.above ? newValue : "on";
-                      final String value2 = widget.stateType == EventStateTypes.below ? newValue : "off";
+              if (value.hasStates) {
+                // If this is the first time setting a state value and states are empty,
+                // initialize with appropriate defaults
+                if (value.states == null) {
+                  // Above state gets "on", Below state gets "off" by default
+                  // The current state gets the new value the user is setting
+                  final String value1 = widget.stateType == EventStateTypes.above ? newValue : "on";
+                  final String value2 = widget.stateType == EventStateTypes.below ? newValue : "off";
 
-                      updated = value.copyWith(
-                        hasStates: true,
-                        states: SceneStateValue(
-                          value1: value1,
-                          value2: value2,
-                        ),
-                      );
-                    } else {
-                      updated = value.updateStateValue(newValue: newValue, stateType: widget.stateType);
-                    }
-                  } else {
-                    updated = value.copyWith(value: newValue);
-                  }
+                  updated = value.copyWith(
+                    hasStates: true,
+                    states: SceneStateValue(
+                      value1: value1,
+                      value2: value2,
+                    ),
+                  );
+                } else {
+                  updated = value.updateStateValue(newValue: newValue, stateType: widget.stateType);
+                }
+              } else {
+                updated = value.copyWith(value: newValue);
+              }
 
-                  widget.onChanged(updated);
-                },
-              ),
-            ),
+              widget.onChanged(updated);
+            },
           ),
         );
 
@@ -345,40 +326,20 @@ class _EventValueWidgetState extends State<EventValueWidget> {
         return Row(
           children: <Widget>[
             /// Enable/Disable Switch
-            SizedBox(
-              height: 12,
-              child: Transform.scale(
-                scale: 0.8,
-                child: SemanticHelper.toggle(
-                  testId: SemanticHelper.createTestId(SemanticTypes.toggle, "event_value_pulse_toggle"),
-                  value: isEnabled,
-                  child: Switch(
-                    value: isEnabled,
-                    padding: EdgeInsets.zero,
-                    materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                    thumbColor: WidgetStateProperty.resolveWith<Color>((Set<WidgetState> states) {
-                      if (states.contains(WidgetState.selected)) {
-                        return Theme.of(context).colorScheme.white;
-                      }
-                      return Theme.of(context).colorScheme.greyDark;
-                    }),
-                    trackColor: WidgetStateProperty.resolveWith<Color>((Set<WidgetState> states) {
-                      if (states.contains(WidgetState.selected)) {
-                        return Theme.of(context).colorScheme.greyDark;
-                      }
-                      return Theme.of(context).colorScheme.grey;
-                    }),
-                    trackOutlineColor: WidgetStateProperty.all(Colors.transparent),
-                    onChanged: (bool val) {
-                      final String newValue = "${val ? 'true' : 'false'}:$duration";
-                      print("new vwaluw = = > $newValue");
+            SemanticHelper.toggle(
+              testId: SemanticHelper.createTestId(SemanticTypes.toggle, "event_value_pulse_toggle"),
+              value: isEnabled,
+              child: FusionSwitch(
+                height: 22,
+                width: 36,
+                value: isEnabled,
+                onChanged: (bool val) {
+                  final String newValue = "${val ? 'true' : 'false'}:$duration";
+                  print("new vwaluw = = > $newValue");
 
-                      final SceneValue updated = value.copyWith(value: newValue);
-                      widget.onChanged(updated);
-                      setState(() {});
-                    },
-                  ),
-                ),
+                  final SceneValue updated = value.copyWith(value: newValue);
+                  widget.onChanged(updated);
+                },
               ),
             ),
 
@@ -398,12 +359,19 @@ class _EventValueWidgetState extends State<EventValueWidget> {
                       // enabled: isEnabled,
                       keyboardType: TextInputType.number,
                       decoration: InputDecoration(
-                        border: OutlineInputBorder(borderSide: BorderSide(color: context.colorScheme.dividerColor)),
-                        isDense: true,
+                        hintStyle: Theme.of(context).inputDecorationTheme.hintStyle,
+                        counterText: '',
+                        fillColor: context.colorScheme.elevation2,
+                        filled: true,
+                        labelStyle: context.textTheme.bodySmall,
                         labelText: "Duration (ms)",
-                        labelStyle: const TextStyle(fontSize: 10),
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                      ),
+
+                        border: const OutlineInputBorder(borderSide: BorderSide(color: Colors.transparent)),
+                        enabledBorder: const OutlineInputBorder(borderSide: BorderSide(color: Colors.transparent)),
+                        focusedBorder: const OutlineInputBorder(borderSide: BorderSide(color: Colors.transparent)),
+                        isDense: true,
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 2, vertical: 4),
+                      ), // decoration: InputDecoration(
                       onChanged: (String v) {
                         /// Ensure only valid numbers are accepted
                         final String sanitizedValue = v.replaceAll(RegExp(r'[^0-9]'), '');

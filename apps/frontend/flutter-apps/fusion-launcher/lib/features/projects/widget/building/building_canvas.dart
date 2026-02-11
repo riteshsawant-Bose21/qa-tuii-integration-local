@@ -11,7 +11,6 @@ import 'package:fusion_lib/fusion_building_view/floor_canvas_controller.dart';
 import 'package:fusion_lib/fusion_building_view/floor_plan_calibrator.dart';
 import 'package:fusion_lib/fusion_building_view/spl_range_controller.dart';
 import 'package:fusion_lib/fusion_lib.dart';
-import 'package:fusion_lib/fusion_theme/app_theme.dart';
 import 'package:fusion_lib/fusion_utils/image_loader_service.dart';
 
 import '../../../configuration/presentation/viewmodel/project_view_model.dart';
@@ -43,6 +42,8 @@ class BuildingCanvas extends StatefulWidget {
 
 class _BuildingCanvasState extends State<BuildingCanvas> {
   Offset viewPortCenter = Offset.zero;
+
+  bool showLiveSpl = false;
 
   @override
   void initState() {
@@ -131,11 +132,7 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
         widget.onCalculateSpl();
       },
       child: Container(
-        decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.white,
-          // borderRadius: BorderRadius.circular(6),
-          // border: Border.all(color: Colors.grey.shade200),
-        ),
+        decoration: const BoxDecoration(color: Colors.white),
         child: Column(
           children: <Widget>[
             // Canvas with floor plan and components
@@ -329,6 +326,7 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
                                         listeningAreaToSubZoneMap: serviceLocator<ProjectViewModel>().getListeningAreaToSubZoneMap(),
                                         isAcousticsMode: serviceLocator<ProjectViewModel>().currentToolbarMode == ToolbarMode.acoustics,
                                         isInSpeakerPlacementMode: projectViewModel.shouldPlaceNonPlacedSpeakers,
+                                        showLiveSpl: showLiveSpl,
                                       ),
                                     ),
                                   ),
@@ -704,12 +702,22 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
                                 // debugPrint("SPL Range changed: ${min.round()} - ${max.round()}");
                                 serviceLocator<ProjectViewModel>().setMinSPL(minSPL: min, autoSave: false);
                                 serviceLocator<ProjectViewModel>().setMaxSPL(maxSPL: max);
+                                if (!showLiveSpl) {
+                                  setState(() {
+                                    showLiveSpl = true;
+                                  });
+                                }
                               },
                               onChangeEnd: (double min, double max) {
                                 // debugPrint("SPL Range change ended: ${min.round()} - ${max.round()}");
                                 serviceLocator<ProjectViewModel>().setMinSPL(minSPL: min, autoSave: false);
                                 serviceLocator<ProjectViewModel>().setMaxSPL(maxSPL: max);
                                 // serviceLocator<ProjectViewModel>().saveProjectToLocal();
+                                if (showLiveSpl) {
+                                  setState(() {
+                                    showLiveSpl = false;
+                                  });
+                                }
                               },
                             ),
                           );
@@ -727,54 +735,63 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
   }
 
   Widget _buildEmptyFloorWidget() {
-    return Center(
-      child: SizedBox(
-        width: double.infinity,
-        height: 400,
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            /// icon
-            const FusionImage.asset(
+    return Container(
+      width: double.infinity,
+      height: double.infinity,
+      decoration: BoxDecoration(
+        color: context.colorScheme.elevation1,
+        border: Border.all(color: context.colorScheme.elevation2, width: 1),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: <Widget>[
+          /// icon
+          ColorFiltered(
+            colorFilter: ColorFilter.mode(
+              Theme.of(context).colorScheme.primaryWhite,
+              BlendMode.srcIn,
+            ),
+            child: const FusionImage.asset(
               "assets/images/upload_floor_plan.png",
               width: 64,
               height: 64,
             ),
+          ),
 
-            const SizedBox(height: 24),
+          const SizedBox(height: 24),
 
-            /// Title
-            FusionAppText(
-              text: "Getting Started",
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
+          /// Title
+          FusionAppText(
+            text: "Getting Started",
+            style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
+          ),
+          const SizedBox(height: 16),
+
+          /// Subtitle
+          FusionAppText(
+            text: "Start with a pre-built structure.\nChoose how you want to shape your sound space.",
+            textAlign: TextAlign.center,
+            style: Theme.of(context).textTheme.titleSmall,
+          ),
+          const SizedBox(height: 28),
+
+          /// Upload Button
+          GuideShowcaseWrapper(
+            step: GuideShowCaseSteps.uploadFloorPlan,
+            onHighlightedSpotTap: (TapDownDetails details) => _showFloorPlanPicker(),
+            child: FusionOutlinedButton(
+              height: 32,
+              width: 160,
+              semanticsId: FusionTestKeys.uploadFloorPlan,
+              label: "Upload Floor-plan",
+              textStyle: Theme.of(context).textTheme.titleSmall,
+              onTap: () {
+                _showFloorPlanPicker();
+              },
             ),
-            const SizedBox(height: 16),
-
-            /// Subtitle
-            FusionAppText(
-              text: "Start with a pre-built structure.\nChoose how you want to shape your sound space.",
-              textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.titleSmall,
-            ),
-            const SizedBox(height: 28),
-
-            /// Upload Button
-            GuideShowcaseWrapper(
-              step: GuideShowCaseSteps.uploadFloorPlan,
-              onHighlightedSpotTap: (TapDownDetails details) => _showFloorPlanPicker(),
-              child: FusionOutlinedButton(
-                height: 32,
-                width: 160,
-                semanticsId: FusionTestKeys.uploadFloorPlan,
-                label: "Upload Floor-plan",
-                textStyle: Theme.of(context).textTheme.titleSmall,
-                onTap: () {
-                  _showFloorPlanPicker();
-                },
-              ),
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -791,12 +808,12 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
       context: context,
       builder:
           (BuildContext ctx) => Dialog(
-            backgroundColor: Theme.of(context).colorScheme.white,
+            backgroundColor: Theme.of(context).colorScheme.elevation1,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
             child: Container(
               width: 720,
               height: 600,
-              padding: const EdgeInsets.all(24),
+              padding: const EdgeInsets.all(16),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: <Widget>[
@@ -804,11 +821,13 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: <Widget>[
-                      FusionAppText(
-                        text: 'Upload Floor Plan',
-                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                          fontWeight: FontWeight.w600,
-                          color: Theme.of(context).colorScheme.fusionTextViewColor,
+                      Expanded(
+                        child: FusionAppText(
+                          text: 'Upload Floor Plan',
+                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.w600,
+                            color: context.colorScheme.textPrimary,
+                          ),
                         ),
                       ),
                       SemanticHelper.button(
@@ -817,7 +836,7 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
                           onPressed: () => Navigator.of(ctx).pop(),
                           icon: Icon(
                             Icons.close,
-                            color: Theme.of(context).colorScheme.greyDark,
+                            color: context.colorScheme.primaryWhite,
                             size: 20,
                           ),
                           splashRadius: 16,
@@ -838,18 +857,18 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
                   // Divider
                   Row(
                     children: <Widget>[
-                      Expanded(child: Divider(color: Theme.of(context).colorScheme.dividerColor)),
+                      Expanded(child: Divider(color: context.colorScheme.elevation2)),
                       Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 16),
                         child: FusionAppText(
                           text: 'or choose from samples',
                           style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: Theme.of(context).colorScheme.greyDark,
+                            color: context.colorScheme.primaryWhite,
                             fontWeight: FontWeight.w500,
                           ),
                         ),
                       ),
-                      Expanded(child: Divider(color: Theme.of(context).colorScheme.dividerColor)),
+                      Expanded(child: Divider(color: context.colorScheme.elevation2)),
                     ],
                   ),
 
@@ -887,10 +906,10 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
           child: Container(
             width: double.infinity,
             decoration: BoxDecoration(
-              color: isDragActive ? Theme.of(context).colorScheme.primaryColor.withValues(alpha: 0.05) : Theme.of(context).colorScheme.greyLight,
+              color: isDragActive ? Theme.of(context).colorScheme.primaryColor.withValues(alpha: 0.05) : context.colorScheme.elevation1,
               border: Border.all(
                 width: isDragActive ? 2 : 1,
-                color: isDragActive ? Theme.of(context).colorScheme.primaryColor : Theme.of(context).colorScheme.dividerColor,
+                color: isDragActive ? Theme.of(context).colorScheme.primaryWhite : context.colorScheme.elevation2,
                 style: BorderStyle.solid,
               ),
             ),
@@ -901,16 +920,13 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
                   duration: const Duration(milliseconds: 200),
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color:
-                        isDragActive
-                            ? Theme.of(context).colorScheme.primaryColor.withValues(alpha: 0.15)
-                            : Theme.of(context).colorScheme.primaryColor.withValues(alpha: 0.1),
+                    color: isDragActive ? context.colorScheme.primaryWhite.withValues(alpha: 0.15) : context.colorScheme.primaryWhite.withValues(alpha: 0.1),
                     shape: BoxShape.circle,
                   ),
                   child: Icon(
                     isDragActive ? Icons.file_download : Icons.cloud_upload_outlined,
                     size: 48,
-                    color: Theme.of(context).colorScheme.primaryColor,
+                    color: context.colorScheme.primaryWhite,
                   ),
                 ),
                 const SizedBox(height: 16),
@@ -918,14 +934,14 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
                   text: isDragActive ? 'Drop your file here!' : 'Click here to upload',
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.w600,
-                    color: isDragActive ? Theme.of(context).colorScheme.primaryColor : Theme.of(context).colorScheme.fusionTextViewColor,
+                    color: isDragActive ? context.colorScheme.primaryWhite : context.colorScheme.textPrimary,
                   ),
                 ),
                 const SizedBox(height: 8),
                 FusionAppText(
                   text: 'Upload .JPEG and .PNG files',
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: isDragActive ? Theme.of(context).colorScheme.primaryColor : Theme.of(context).colorScheme.greyDark,
+                    color: isDragActive ? context.colorScheme.primaryWhite : context.colorScheme.elevation4,
                   ),
                 ),
                 const SizedBox(height: 16),
@@ -933,11 +949,9 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
                   height: 36,
                   width: 140,
                   label: 'Browse Files',
-                  textStyle: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    fontWeight: FontWeight.w500,
-                  ),
-                  foregroundColor: Theme.of(context).colorScheme.fusionTextViewColor,
-                  activeBorderColor: Theme.of(context).colorScheme.primaryColor,
+                  textStyle: Theme.of(context).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w500),
+                  foregroundColor: Theme.of(context).colorScheme.textPrimary,
+                  activeBorderColor: Theme.of(context).colorScheme.primaryWhite,
                   backgroundColor: Theme.of(context).colorScheme.primaryColor.withValues(alpha: 0.05),
                   onTap: () => _importFloorPlan(),
                 ),
@@ -957,27 +971,26 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
       child: Container(
         height: 120,
         margin: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
+        alignment: Alignment.center,
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(8),
           border: Border.all(
-            color: Theme.of(context).colorScheme.dividerColor,
+            color: Theme.of(context).colorScheme.elevation2,
           ),
         ),
         child: GestureDetector(
           onTap: () => _selectAssetFloorPlan(planPath),
           child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
             children: <Widget>[
               Expanded(
                 child: _buildFloorPlanImage(planPath),
               ),
-              const SizedBox(
-                height: 8,
-              ),
+              const SizedBox(height: 8),
               FusionAppText(
                 text: title,
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: Colors.black,
-                  fontSize: 10,
+                  color: context.colorScheme.textPrimary,
                   fontWeight: FontWeight.w600,
                 ),
                 textAlign: TextAlign.center,

@@ -6,3 +6,13 @@ extension SizeUtils on BuildContext {
   double get screenWidth => screenSize.width;
   double get screenHeight => screenSize.height;
 }
+
+extension RadiusUtils on BuildContext {
+  double get smallRadius => 8;
+  double get mediumRadius => 16;
+  double get largeRadius => 24;
+
+  BorderRadius get borderRadiusSmall => BorderRadius.circular(smallRadius);
+  BorderRadius get borderRadiusMedium => BorderRadius.circular(mediumRadius);
+  BorderRadius get borderRadiusLarge => BorderRadius.circular(largeRadius);
+}

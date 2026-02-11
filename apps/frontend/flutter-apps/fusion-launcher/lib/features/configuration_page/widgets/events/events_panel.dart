@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/core/service_locator.dart';
 import 'package:fusion_launcher/features/configuration_page/widgets/section_header.dart';
+import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/fusion_theme/app_theme.dart';
 import 'package:fusion_lib/fusion_widgets/buttons/fusion_button.dart';
 import 'package:fusion_lib/fusion_widgets/buttons/fusion_outlined_button.dart';
@@ -38,25 +39,35 @@ class _EventsPanelState extends State<EventsPanel> {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.white,
-      ),
-      child: Column(
-        children: <Widget>[
-          /// Events Section
-          SectionHeader(
-            title: 'Events',
-            trailing: GestureDetector(
-              onTap: () {
-                _addNewEvents();
-              },
-              child: Icon(Icons.add_sharp, size: 16, color: Theme.of(context).colorScheme.greyDark),
-            ),
+    return Column(
+      children: <Widget>[
+        /// Events Section
+        SectionHeader(
+          title: 'Events',
+          trailing: GestureDetector(
+            onTap: () {
+              _addNewEvents();
+            },
+            child: Icon(Icons.add_sharp, size: 16, color: context.colorScheme.iconWhite),
           ),
+        ),
 
-          /// Event list
-          Expanded(
+        /// Event list
+        Expanded(
+          child: Container(
+            clipBehavior: Clip.hardEdge,
+            decoration: BoxDecoration(
+              borderRadius: const BorderRadius.only(
+                bottomLeft: Radius.circular(12),
+                bottomRight: Radius.circular(12),
+              ),
+              border: Border(
+                bottom: BorderSide(color: context.colorScheme.elevation2, width: 1),
+                left: BorderSide(color: context.colorScheme.elevation2, width: 1),
+                right: BorderSide(color: context.colorScheme.elevation2, width: 1),
+              ),
+              color: Theme.of(context).colorScheme.elevation1,
+            ),
             child: BlocBuilder<ProjectViewModel, ProjectViewModelState>(
               builder: (BuildContext context, ProjectViewModelState state) {
                 final List<FusionEvent> eventList = _projectViewModel.getAllEvents();
@@ -106,8 +117,8 @@ class _EventsPanelState extends State<EventsPanel> {
               },
             ),
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }
@@ -137,7 +148,7 @@ class CreateSnapshotsOrScenesWidgetState extends State<CreateSnapshotsOrScenesWi
   @override
   Widget build(BuildContext context) {
     return Container(
-      color: Theme.of(context).colorScheme.white,
+      color: Theme.of(context).colorScheme.elevation1,
       width: 250,
       padding: const EdgeInsets.all(12),
       child: Column(
@@ -193,7 +204,7 @@ class CreateSnapshotsOrScenesWidgetState extends State<CreateSnapshotsOrScenesWi
               Flexible(
                 child: FusionButton(
                   width: double.infinity,
-                  textStyle: Theme.of(context).textTheme.labelLarge?.copyWith(fontSize: 10, color: Theme.of(context).colorScheme.fusionButtonTextColor),
+                  textStyle: Theme.of(context).textTheme.labelLarge?.copyWith(fontSize: 10, color: context.colorScheme.primaryBlack),
 
                   label: "Create",
                   isActive: widget.nameController.text.trim().isNotEmpty,

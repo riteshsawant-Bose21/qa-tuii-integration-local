@@ -26,11 +26,23 @@ class _EquipmentLocationDropdown extends StatelessWidget {
                   }
                 },
                 labelBuilder: (EquipLocation? option) {
+                  if (option == null) {
+                    return Row(
+                      children: <Widget>[
+                        Icon(Icons.add, color: context.colorScheme.iconDefault),
+                        const SizedBox(width: 8),
+                        FusionAppText(
+                          text: 'Create New Location',
+                          style: Theme.of(context).textTheme.bodySmall,
+                        ),
+                      ],
+                    );
+                  }
                   return SizedBox(
                     width: double.infinity,
                     child: FusionAppText(
-                      text: option?.name ?? 'Create New Location',
-                      style: Theme.of(context).textTheme.labelMedium,
+                      text: option.name,
+                      style: Theme.of(context).textTheme.bodySmall,
                     ),
                   );
                 },
