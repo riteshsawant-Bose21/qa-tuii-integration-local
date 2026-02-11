@@ -135,14 +135,9 @@ class _ZonesColumnState extends State<ZonesColumn> {
                 onDelete: () {
                   widget.onZoneDeleted(widget.zones[i]);
                 },
-                zoneSpeakers: widget.allSpeakers.where((Speaker val) => val.locationEntity.zoneId == widget.zones[i].id).toList(),
-                duplicateZone: (Zone zone) {
-                  final Zone newZone = Zone(
-                    name: '${zone.name} (Copy)',
-                    sourceSetIds: List<String>.from(zone.sourceSetIds),
-                  );
-                  widget.onZoneAdded(newZone);
-                },
+                zoneSpeakers: <Speaker>[],
+                // zoneSpeakers: widget.allSpeakers.where((Speaker val) => val.locationEntity.zoneId == widget.zones[i].id).toList(),
+                duplicateZone: (Zone zone) {},
                 onSpeakerUpdated: (Speaker speakers) {
                   widget.onSpeakerUpdated(speakers);
                 },

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:fusion_lib/models/fusion_models.dart';
 
+import '../../../../../core/service_locator.dart';
+import '../../viewmodel/project_view_model.dart';
 import 'mix_widget.dart';
 
 class MixColumn extends StatefulWidget {
@@ -112,16 +114,21 @@ class _MixColumnState extends State<MixColumn> {
               onMixUpdated: (SourceSet ss) {
                 widget.onMixUpdated(ss);
               },
+              onSourceRemoved: (String sourceId) {
+                serviceLocator<ProjectViewModel>().removeSourceFromSourceSet(sourceId: sourceId, sourceSetId: widget.mixes[i].id);
+              },
               onDelete: () {
                 widget.onMixDeleted(widget.mixes[i]);
               },
+              selectedSources: serviceLocator<ProjectViewModel>().getSourcesInSourceSet(sourceSetId: widget.mixes[i].id),
               duplicateMix: () {
                 final SourceSet newMix = SourceSet(
                   name: '${widget.mixes[i].name} (Copy)',
-                  sourceIds: List<String>.from(widget.mixes[i].sourceIds),
-                  processingBlocks: widget.mixes[i].processingBlocks,
                 );
                 widget.onMixAdded(newMix);
+              },
+              onSourcesSetUpdated: (String sourceSetId, List<String> newSourceIds) {
+                serviceLocator<ProjectViewModel>().updateSourcesInSourceSet(sourceSetId: sourceSetId, sourceIds: newSourceIds);
               },
             ),
           ),

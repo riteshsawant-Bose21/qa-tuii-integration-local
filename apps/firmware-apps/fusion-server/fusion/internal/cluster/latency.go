@@ -3,7 +3,7 @@ package cluster
 import (
 	"fmt"
 	"fusion/internal/api"
-	"fusion/internal/logging"
+	"fusion-services-core/logging"
 	"fusion/internal/routes"
 	"fusion/internal/utils"
 	"io"
@@ -25,16 +25,11 @@ import (
 
 const (
 	dialTimeout          = 1 * time.Second
-	httpTimeout          = 2 * time.Second
 	latencyPruneTime     = 5 * time.Minute
 	rttThreshold         = 50.0
 	syncLatencyThreshold = 100.0
 	tickerTime           = 10 * time.Second
 )
-
-var httpClient = &http.Client{
-	Timeout: httpTimeout,
-}
 
 // aggregatedKey is used to group sync latency records by sender and operation.
 type aggregatedKey struct {

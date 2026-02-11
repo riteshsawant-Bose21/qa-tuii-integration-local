@@ -6,9 +6,14 @@ import (
 	"errors"
 	"fmt"
 	"fusion/internal/api"
-	"fusion/internal/logging"
+	"fusion-services-core/logging"
+	"fusion/internal/routes"
 	"fusion/internal/utils"
+	"io"
+	"net/http"
 	"os"
+	"path/filepath"
+	"strings"
 	"sync"
 	"time"
 
@@ -18,11 +23,14 @@ import (
 )
 
 const (
-	bucketAudio        = "audio"
-	bucketDevice       = "device"
-	bucketFusion       = "fusion"
-	bucketSnapshots    = "snapshots"
-	bucketTasks        = "tasks"
+	bucketActive    = "active"
+	bucketAudio     = "audio"
+	bucketDevice    = "device"
+	bucketFusion    = "fusion"
+	bucketSnapshots = "snapshots"
+	bucketTasks     = "tasks"
+
+	keyActiveState     = "state"
 	keyDefaultSnapshot = "default"
 	keyDeviceInfo      = "info"
 	keyMetadata        = "metadata"
@@ -61,6 +69,11 @@ func NewPersistence(dbPath string, stateManager *StateManager) (*Persistence, er
 		logger.Debug("Successfully recreated new database at %s", dbPath)
 	}
 
+	// Ensure audio directory exists
+	if err := os.MkdirAll(api.AudioFilesLocation, 0755); err != nil {
+		return nil, fmt.Errorf("mkdir %s: %w", api.AudioFilesLocation, err)
+	}
+
 	persistence := &Persistence{
 		dbPath:       dbPath,
 		stateManager: stateManager,
@@ -81,28 +94,25 @@ func NewPersistence(dbPath string, stateManager *StateManager) (*Persistence, er
 // Close safely closes the database.
 func (p *Persistence) Close() {
 	p.SaveState()
+	close(p.saveCh)
 	p.db.Close()
 }
 
-// MarkDirty triggers a state save with debounce logic.
+// MarkDirty triggers a state save with debounce
 func (p *Persistence) MarkDirty() {
-	if time.Since(p.getLastSave()) < p.saveDebounce {
-		time.Sleep(p.saveDebounce)
-	}
-
-	if err := p.SaveState(); err != nil {
-		logging.GetLogger().Error("Failed to persist state: %v", err)
+	select {
+	case p.saveCh <- struct{}{}:
+	default:
+		// channel already has a pending signal — ignore
 	}
 }
 
-// SaveState persists the current state using the active snapshot key.
+// SaveState persists the current state as the live "active" state.
 func (p *Persistence) SaveState() error {
 	p.mutex.Lock()
 	defer p.mutex.Unlock()
 
-	snapshotKey := p.getActiveSnapshotKey()
-
-	ps, err := p.persistState(snapshotKey)
+	ps, err := p.persistActiveState()
 	if err != nil {
 		return err
 	}
@@ -120,8 +130,8 @@ func (p *Persistence) SaveState() error {
 		return fmt.Errorf("failed to update metadata: %w", err)
 	}
 
-	logging.GetLogger().Debug("State saved (version: %v, checksum: %s) under snapshot '%s'",
-		ps.Version, ps.Checksum, snapshotKey)
+	logging.GetLogger().Debug("State saved (version: %v, checksum: %s) to active state",
+		ps.Version, ps.Checksum)
 
 	return nil
 }
@@ -133,7 +143,7 @@ func (p *Persistence) ValidateState() error {
 	payload := p.stateManager.GetStateMap()
 
 	// Recompute checksum over that payload
-	calculated, err := utils.CalculateChecksum(payload)
+	calculated, err := utils.JSONChecksum(payload)
 	if err != nil {
 		return fmt.Errorf("failed to calculate checksum: %w", err)
 	}
@@ -230,7 +240,7 @@ func (p *Persistence) ImportData(importData map[string]any) error {
 		return nil
 	}
 
-	// Update the overall database hash.
+	// Update the overall database hash
 	if err := p.updateHash(); err != nil {
 		return fmt.Errorf("failed to update DB hash after import: %w", err)
 	}
@@ -238,16 +248,26 @@ func (p *Persistence) ImportData(importData map[string]any) error {
 	return nil
 }
 
-// persistState saves the current state under the given snapshot key.
-// Note that it does not update lastSave; the caller should update lastSave as needed.
-func (p *Persistence) persistState(snapshotKey string) (*PersistentState, error) {
-	state := p.stateManager.GetFullStateDeepCopy()
+// persistStateToBucket saves the current state into the given bucket/key.
+// Used by both snapshot persistence and active state persistence.
+func (p *Persistence) persistStateToBucket(bucketName, key string) (*PersistentState, error) {
+	state := p.stateManager.GetFullState()
+
+	// Ensure we always have a checksum
+	chk := state.Checksum
+	if chk == "" {
+		// Compute over the state payload only
+		payload := state.State
+		if c, err := utils.JSONChecksum(payload); err == nil {
+			chk = c
+		}
+	}
 
 	ps := &PersistentState{
 		Version:   p.stateManager.GetVersion(),
 		Timestamp: time.Now().UTC(),
-		Checksum:  state.Checksum,
-		State:     state.State,
+		Checksum:  chk,
+		State:     deepCopyState(state.State),
 	}
 
 	data, err := json.Marshal(ps)
@@ -256,15 +276,14 @@ func (p *Persistence) persistState(snapshotKey string) (*PersistentState, error)
 	}
 
 	err = p.db.Update(func(tx *bbolt.Tx) error {
-		bucket := tx.Bucket([]byte(bucketSnapshots))
+		bucket := tx.Bucket([]byte(bucketName))
 		if bucket == nil {
-			return fmt.Errorf("snapshots bucket not found")
+			return fmt.Errorf("%s bucket not found", bucketName)
 		}
-		return bucket.Put([]byte(snapshotKey), data)
+		return bucket.Put([]byte(key), data)
 	})
-
 	if err != nil {
-		return nil, fmt.Errorf("failed to save state: %w", err)
+		return nil, fmt.Errorf("failed to save state to %s/%s: %w", bucketName, key, err)
 	}
 
 	if err := p.updateHash(); err != nil {
@@ -272,6 +291,18 @@ func (p *Persistence) persistState(snapshotKey string) (*PersistentState, error)
 	}
 
 	return ps, nil
+}
+
+// persistState saves the current state under the given snapshot key
+// in the snapshots bucket. This is ONLY for explicit snapshot creation.
+func (p *Persistence) persistState(snapshotKey string) (*PersistentState, error) {
+	return p.persistStateToBucket(bucketSnapshots, snapshotKey)
+}
+
+// persistActiveState saves the current state as the live "active" state.
+// This is what SaveState() uses instead of mutating snapshots.
+func (p *Persistence) persistActiveState() (*PersistentState, error) {
+	return p.persistStateToBucket(bucketActive, keyActiveState)
 }
 
 // loadMetadata retrieves and unmarshals the api.DatabaseMetadata from the database.
@@ -307,13 +338,6 @@ func (p *Persistence) saveMetadata(meta *api.DatabaseMetadata) error {
 		}
 		return bucket.Put([]byte(keyMetadata), data)
 	})
-}
-
-// getLastSave returns the last save time.
-func (p *Persistence) getLastSave() time.Time {
-	p.mutex.RLock()
-	defer p.mutex.RUnlock()
-	return p.lastSave
 }
 
 // updateHash recalculates the overall database hash and updates it in metadata.
@@ -363,7 +387,8 @@ func (p *Persistence) initializeDatabase() error {
 	return p.db.Update(func(tx *bbolt.Tx) error {
 
 		// Bail out if buckets exist
-		if tx.Bucket([]byte(bucketAudio)) != nil &&
+		if tx.Bucket([]byte(bucketActive)) != nil &&
+			tx.Bucket([]byte(bucketAudio)) != nil &&
 			tx.Bucket([]byte(bucketFusion)) != nil &&
 			tx.Bucket([]byte(bucketDevice)) != nil &&
 			tx.Bucket([]byte(bucketTasks)) != nil &&
@@ -372,7 +397,13 @@ func (p *Persistence) initializeDatabase() error {
 		}
 
 		// Otherwise create any missing buckets
-		for _, bucket := range []string{bucketAudio, bucketDevice, bucketFusion, bucketTasks, bucketSnapshots} {
+		for _, bucket := range []string{
+			bucketActive,
+			bucketAudio,
+			bucketDevice,
+			bucketFusion,
+			bucketTasks,
+			bucketSnapshots} {
 			if err := createBucketIfNotExists(tx, bucket); err != nil {
 				return err
 			}
@@ -386,6 +417,12 @@ func (p *Persistence) initializeDatabase() error {
 
 		fusionBucket := tx.Bucket([]byte(bucketFusion))
 		if err := p.initializeMetadata(fusionBucket); err != nil {
+			return err
+		}
+
+		// Seed the active state with whatever is in the default snapshot
+		activeBucket := tx.Bucket([]byte(bucketActive))
+		if err := p.initializeActiveState(activeBucket); err != nil {
 			return err
 		}
 
@@ -435,6 +472,30 @@ func (p *Persistence) replaceBucketData(bucketName string, data map[string]any) 
 	return err
 }
 
+func (p *Persistence) initializeActiveState(bucket *bbolt.Bucket) error {
+
+	if existing := bucket.Get([]byte(keyActiveState)); existing != nil {
+		return nil
+	}
+
+	state := p.stateManager.GetFullState()
+
+	ps := PersistentState{
+		Version:   p.stateManager.GetVersion(),
+		Timestamp: time.Now().UTC(),
+		Checksum:  state.Checksum,
+		State:     deepCopyState(state.State),
+	}
+	data, err := json.Marshal(ps)
+	if err != nil {
+		return fmt.Errorf("failed to marshal initial active state: %w", err)
+	}
+	if err := bucket.Put([]byte(keyActiveState), data); err != nil {
+		return fmt.Errorf("failed to save initial active state: %w", err)
+	}
+	return nil
+}
+
 func (p *Persistence) initializeDefaultSnapshot(bucket *bbolt.Bucket) error {
 
 	state := p.stateManager.GetFullState()
@@ -443,7 +504,7 @@ func (p *Persistence) initializeDefaultSnapshot(bucket *bbolt.Bucket) error {
 		Version:   p.stateManager.GetVersion(),
 		Timestamp: time.Now().UTC(),
 		Checksum:  state.Checksum,
-		State:     state.State,
+		State:     deepCopyState(state.State),
 	}
 	data, err := json.Marshal(ps)
 	if err != nil {
@@ -456,6 +517,11 @@ func (p *Persistence) initializeDefaultSnapshot(bucket *bbolt.Bucket) error {
 }
 
 func (p *Persistence) initializeMetadata(bucket *bbolt.Bucket) error {
+
+	// If metadata already exists, do not overwrite.
+	if existing := bucket.Get([]byte(keyMetadata)); existing != nil {
+		return nil
+	}
 
 	newHash, err := p.computeHash()
 	if err != nil {
@@ -473,33 +539,126 @@ func (p *Persistence) initializeMetadata(bucket *bbolt.Bucket) error {
 		return fmt.Errorf("failed to marshal metadata: %w", err)
 	}
 
-	if err := bucket.Put([]byte(keyMetadata), data); err != nil {
-		return fmt.Errorf("failed to save metadata: %w", err)
+	return bucket.Put([]byte(keyMetadata), data)
+}
+
+// saveWorker saves state with debounce
+func (p *Persistence) saveWorker() {
+	var (
+		timer *time.Timer
+		mu    sync.Mutex
+	)
+
+	for range p.saveCh {
+		mu.Lock()
+		if timer != nil {
+			timer.Reset(p.saveDebounce)
+			mu.Unlock()
+			continue
+		}
+
+		timer = time.AfterFunc(p.saveDebounce, func() {
+			if err := p.SaveState(); err != nil {
+				logging.GetLogger().Error("Error saving state: %v", err)
+			}
+
+			mu.Lock()
+			timer = nil
+			mu.Unlock()
+		})
+		mu.Unlock()
+	}
+}
+
+// RemoveAudioFile removes an audio file from a node
+func (p *Persistence) RemoveAudioFile(id string) error {
+	meta, err := p.GetAudioMetadata(id)
+	if err != nil {
+		return err
+	}
+	if meta == nil {
+		return nil
+	}
+
+	path := filepath.Join(api.AudioFilesLocation, meta.Filename)
+	if err := os.Remove(path); err != nil && !os.IsNotExist(err) {
+		return fmt.Errorf("remove %s: %w", path, err)
+	}
+
+	return p.DeleteAudioMetadata(id)
+}
+
+// SyncAudioFile retrieves an audio file from another node and stores metadata.
+func (p *Persistence) SyncAudioFile(update *api.AudioSyncUpdate) error {
+	finalPath := filepath.Join(api.AudioFilesLocation, update.Metadata.Filename)
+
+	// Attempt to open a temp file with O_CREATE|O_EXCL
+	// If the final file already exists, return early.
+	tmpPath := finalPath + ".part"
+
+	tmp, err := os.OpenFile(tmpPath, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0644)
+	if err != nil {
+		// If temp file or final file already exists, another goroutine/node is handling it
+		if os.IsExist(err) {
+			if _, statErr := os.Stat(finalPath); statErr == nil {
+				// File already exists — we're done
+				return nil
+			}
+			// If .part exists but final doesn't, someone else is writing it — treat as in progress
+			return nil
+		}
+		return fmt.Errorf("create %s: %w", tmpPath, err)
+	}
+
+	// Make sure cleanup happens if anything fails after this point
+	cleanup := func(err error) error {
+		tmp.Close()
+		os.Remove(tmpPath)
+		return err
+	}
+
+	// Fetch source data
+	streamEndpoint := strings.Replace(routes.PAVAMessageStreamEndpoint, "{id}", update.Metadata.Id, 1)
+	streamURL := fmt.Sprintf("%s%s", update.URL, streamEndpoint)
+
+	resp, err := http.Get(streamURL)
+	if err != nil {
+		return cleanup(fmt.Errorf("GET %s: %w", streamURL, err))
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		return cleanup(fmt.Errorf("unexpected status %d: %s", resp.StatusCode, string(body)))
+	}
+
+	// Copy file body to temp
+	if _, err := io.Copy(tmp, resp.Body); err != nil {
+		return cleanup(fmt.Errorf("copy: %w", err))
+	}
+
+	if err := tmp.Sync(); err != nil {
+		return cleanup(fmt.Errorf("sync: %w", err))
+	}
+
+	if err := tmp.Close(); err != nil {
+		return cleanup(fmt.Errorf("close: %w", err))
+	}
+
+	// Rename atomically
+	if err := os.Rename(tmpPath, finalPath); err != nil {
+		// Attempt cleanup but return rename error
+		os.Remove(tmpPath)
+		return fmt.Errorf("rename %s → %s: %w", tmpPath, finalPath, err)
+	}
+
+	if err := p.SaveAudioMeta(&update.Metadata); err != nil {
+		return fmt.Errorf("SaveAudioMeta: %w", err)
 	}
 
 	return nil
 }
 
-// saveWorker saves state with debounce on a channel
-func (p *Persistence) saveWorker() {
-	debounce := p.saveDebounce
-
-	for range p.saveCh {
-
-		time.Sleep(debounce)
-
-		for {
-			select {
-			case <-p.saveCh:
-				time.Sleep(debounce)
-			default:
-				goto save
-			}
-		}
-
-	save:
-		if err := p.SaveState(); err != nil {
-			logging.GetLogger().Error("Failed to persist state: %v", err)
-		}
-	}
+func (p *Persistence) GetVersion() api.Version {
+	return p.stateManager.GetVersion()
 }

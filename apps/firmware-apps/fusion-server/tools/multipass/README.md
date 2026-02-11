@@ -42,6 +42,7 @@ sudo chmod +x "/Library/Application Support/com.canonical.multipass/bin/qemu-sys
 
 ```bash
 sudo launchctl kickstart -k system/com.canonical.multipassd
+sudo launchctl load /Library/LaunchDaemons/com.canonical.multipassd.plist
 ```
 
 ### 6. Launch a new instance

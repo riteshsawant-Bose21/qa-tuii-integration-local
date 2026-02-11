@@ -1,5 +1,7 @@
 import 'dart:io';
 
+import 'package:mutex/mutex.dart';
+
 import '../../fusion_lib.dart';
 
 class ProjectManager {
@@ -7,6 +9,7 @@ class ProjectManager {
   final LocalProjectManager localProjectManager;
 
   static List<ProjectData> projects = [];
+  final Mutex _mutex = Mutex();
 
   ProjectService? projectService;
 
@@ -18,9 +21,19 @@ class ProjectManager {
     return projects.firstWhere((project) => project.id == projectId);
   }
 
-  /// check if Admin login
-  bool isAdminLogin() {
-    return localProjectManager.isAdminLogin;
+  ProjectData? getCurrentProjectData() {
+    if (projectService == null) return null;
+    try {
+      ProjectData projectData = getProjectById(projectService!.id);
+      projectData = projectData.copyWith(
+        projectRawData: projectService!.toJson(),
+        lastUploadedAt: projectService!.lastUploadedAt,
+      );
+      return projectData;
+    } catch (e) {
+      return null;
+    }
+    return null;
   }
 
   //Load projects from cloud
@@ -41,6 +54,18 @@ class ProjectManager {
     return response;
   }
 
+  Future<List<ProjectData>> getAllProjectsToUpload() async {
+    return projects.where((project) => (project.isSyncNeeded && !project.isCloudInstance)).toList();
+  }
+
+  Future<File> getProjectDirectoryZip(String projectId) async {
+    return await localProjectManager.zipProjectDirectory(projectId);
+  }
+
+  Future<Directory> getFusionProjectDirectory() async {
+    return await localProjectManager.fusionProjectDirectory;
+  }
+
   // Create and save new project
   Future<ResponseCallback<ProjectData?>> createAndSaveNewProject(NewProjectDetails newProject) async {
     try {
@@ -51,6 +76,7 @@ class ProjectManager {
       }
       return createProjectResponse;
     } catch (e) {
+      FusionLogger.log(tag: LogTag.exceptions, message: "Error creating and saving new project: $e");
       return ResponseCallback.failure("Error creating and saving new project: $e");
     }
   }
@@ -63,20 +89,23 @@ class ProjectManager {
       projectService = null;
       return ResponseCallback.success(true);
     } catch (e) {
+      FusionLogger.log(tag: LogTag.exceptions, message: "Error deleting Fusion directory: $e");
+
       return ResponseCallback.failure("Error deleting Fusion directory: $e");
     }
   }
 
   //Delete specific project by ID
-  Future<ResponseCallback<bool>> deleteProject(String projectId) async {
+  Future<ResponseCallback<bool>> deleteProjectLocally(String projectId) async {
     try {
-      await localProjectManager.deleteProject(projectId: projectId);
+      await localProjectManager.deleteProjectFolder(projectId: projectId);
       projects.removeWhere((p) => p.id == projectId);
       if (projectService != null && projectService!.id == projectId) {
         projectService = null;
       }
       return ResponseCallback.success(true);
     } catch (e) {
+      FusionLogger.log(tag: LogTag.exceptions, message: "Error deleting project: $e");
       return ResponseCallback.failure("Error deleting project: $e");
     }
   }
@@ -87,10 +116,41 @@ class ProjectManager {
       final ProjectData project = getProjectById(projectId);
       projectService = ProjectService.fromJson(project.projectRawData);
 
+      //initial state of project;
+      // projectService!.recordChange();
+
       return ResponseCallback.success(project);
     } catch (e) {
+      FusionLogger.log(tag: LogTag.exceptions, message: "Error opening project: $e");
       return ResponseCallback.failure("Error opening project: $e");
     }
+  }
+
+  Future<void> updateProjectLastSyncedAt(String projectId, DateTime lastSyncedAt) async {
+    await loadProjectsFromLocal();
+    final ProjectData project = getProjectById(projectId);
+    ProjectService projectToUpdate = ProjectService.fromJson(project.projectRawData);
+    projectToUpdate = projectToUpdate.copyWith(lastUploadedAt: lastSyncedAt.toUtc());
+    if (projectService != null && projectService!.id == projectId) {
+      projectService = projectService!.copyWith(lastUploadedAt: lastSyncedAt.toUtc());
+      projectToUpdate = projectService!;
+    }
+    print("Updated lastSyncedAt to ${projectToUpdate.lastUploadedAt}");
+    final ProjectData updatedProject = project.copyWith(projectRawData: projectToUpdate.toJson());
+    await localProjectManager.saveProject(updatedProject);
+  }
+
+  Future<void> softDeleteProject(String projectId) async {
+    await loadProjectsFromLocal();
+    final ProjectData project = getProjectById(projectId);
+    ProjectService projectToUpdate = ProjectService.fromJson(project.projectRawData);
+    projectToUpdate = projectToUpdate.copyWith(isDeleted: true);
+    if (projectService != null && projectService!.id == projectId) {
+      projectService = projectService!.copyWith(isDeleted: true);
+      projectToUpdate = projectService!;
+    }
+    final ProjectData updatedProject = project.copyWith(projectRawData: projectToUpdate.toJson());
+    await localProjectManager.saveProject(updatedProject);
   }
 
   //Save current project
@@ -99,20 +159,37 @@ class ProjectManager {
       return ResponseCallback.failure("No project is currently loaded.");
     }
 
-    // Record the change before saving (for undo/redo functionality)
-    // We can add this before every change to the projectService to support step by step undo/redo
-    projectService!.recordChange();
+    //mutex lock to prevent concurrent saves
+    return await _mutex.protect(() async {
+      // Record the change before saving (for undo/redo functionality)
+      // We can add this before every change to the projectService to support step by step undo/redo
+      // projectService!.recordChange();
 
+      try {
+        final ProjectData currentProject = getProjectById(projectService!.id);
+        // Update the updatedAt timestamp,
+        projectService = projectService!.copyWith(
+          updatedAt: DateTime.now().toUtc(),
+        );
+        final ProjectData updatedProject = currentProject.copyWith(projectRawData: projectService!.toJson());
+
+        // Save to local storage
+        await localProjectManager.saveProject(updatedProject);
+
+        return ResponseCallback.success(true);
+      } catch (e) {
+        FusionLogger.log(tag: LogTag.exceptions, message: "Error saving project: $e");
+        return ResponseCallback.failure("Error saving project: $e");
+      }
+    });
+  }
+
+  Future<ResponseCallback<bool>> saveProjects(List<ProjectData> projectsToSave) async {
     try {
-      final ProjectData currentProject = getProjectById(projectService!.id);
-      final ProjectData updatedProject = currentProject.copyWith(projectRawData: projectService!.toJson());
-
-      // Save to local storage
-      await localProjectManager.saveProject(updatedProject);
-
-      return ResponseCallback.success(true);
+      return await localProjectManager.saveProjects(projectsToSave, fromServer: true);
     } catch (e) {
-      return ResponseCallback.failure("Error saving project: $e");
+      FusionLogger.log(tag: LogTag.exceptions, message: "Error saving projects: $e");
+      return ResponseCallback.failure("Error saving projects: $e");
     }
   }
 
@@ -125,6 +202,7 @@ class ProjectManager {
       final String savedImagePath = await localProjectManager.saveImageToProject(projectId: projectService!.id, imagePath: imagePath);
       return ResponseCallback.success(savedImagePath);
     } catch (e) {
+      FusionLogger.log(tag: LogTag.exceptions, message: "Error saving image to project directory: $e");
       return ResponseCallback.failure("Error saving image to project directory: $e");
     }
   }
@@ -138,6 +216,7 @@ class ProjectManager {
       final String savedImagePath = await localProjectManager.saveAssetImageToProject(projectId: projectService!.id, assetPath: assetPath);
       return ResponseCallback.success(savedImagePath);
     } catch (e) {
+      FusionLogger.log(tag: LogTag.exceptions, message: "Error saving image to project directory: $e");
       return ResponseCallback.failure("Error saving image to project directory: $e");
     }
   }
@@ -151,6 +230,7 @@ class ProjectManager {
       final File file = await localProjectManager.getImageFromProject(projectId: projectService!.id, imageName: imageName);
       return ResponseCallback.success(file);
     } catch (e) {
+      FusionLogger.log(tag: LogTag.exceptions, message: "Error getting image from project directory: $e");
       return ResponseCallback.failure("Error getting image from project directory: $e");
     }
   }
@@ -158,5 +238,27 @@ class ProjectManager {
   // get Project JSon
   Map<String, dynamic> getCurrentProjectJson() {
     return projectService?.toJson() ?? {};
+  }
+
+  Future<File?> getProjectZipFile({required String projectId}) async {
+    final Directory projectDirectory = await localProjectManager.getProjectDirectoryById(projectId);
+    if (await projectDirectory.exists()) {
+      return FusionUtils().zipProjectDirectory(projectDirectory);
+    }
+    return null;
+  }
+
+  Future<void> deleteFusionProjectDirectory() async {
+    await localProjectManager.deleteFusionProjectDirectory();
+  }
+
+  Future<ResponseCallback<bool>> importProjectFromZip(File zipFile) async {
+    try {
+      final ResponseCallback<bool> response = await localProjectManager.importProject(zipFile);
+      return response;
+    } catch (e) {
+      FusionLogger.log(tag: LogTag.exceptions, message: "Error importing project from zip: $e");
+      return ResponseCallback.failure("Error importing project from zip: $e");
+    }
   }
 }

@@ -1,33 +1,41 @@
 import 'dart:ui';
 
-import 'hardware_component_model.dart';
-import 'location_model.dart';
+import 'package:fusion_lib/fusion_lib.dart';
 
-enum GenericHardwareComponentType { controller, rack, other }
+enum GenericHardwareComponentType { rack, other }
 
 class GenericHardwareComponent extends HardwareComponent {
   GenericHardwareComponentType type;
   final String sku;
 
   GenericHardwareComponent({
-    super.id,
+    String? id,
     required super.locationEntity,
     required super.name,
     super.zAxis,
-    required Offset super.pos,
+    super.pos,
+    super.wiringPos,
     required this.type,
     required super.assetImagePath,
     required super.price,
+    super.portData,
+    super.communicationPorts,
+    super.inputPortsData,
+    super.outputPortsData,
     String? sku,
     String? hardwareName,
+    super.lockListeningArea,
+    super.equipmentLocationPosition,
+    required super.addedFromBuildingPage,
   }) : sku = sku ?? name,
-       super(hardwareName: hardwareName ?? name);
+       super(hardwareName: hardwareName ?? name, id: id ?? "${type.name.toUpperCase()}{FusionUtils.shortStringUUID()}");
 
   @override
   GenericHardwareComponent copyWith({
     String? id,
     String? name,
     Offset? pos,
+    Offset? wiringPos,
     double? zAxis,
     GenericHardwareComponentType? type,
     String? assetImagePath,
@@ -35,11 +43,20 @@ class GenericHardwareComponent extends HardwareComponent {
     double? price,
     String? hardwareName,
     String? sku,
+    int? outputPorts,
+    int? inputPorts,
+    bool? lockListeningArea,
+    List<PortData>? communicationPorts,
+    List<PortData>? inputPortsData,
+    List<PortData>? outputPortsData,
+    bool? addedFromBuildingPage,
+    int? equipmentLocationPosition,
   }) {
     return GenericHardwareComponent(
       id: id ?? this.id,
       name: name ?? this.name,
       pos: pos ?? this.pos,
+      wiringPos: wiringPos ?? this.wiringPos,
       zAxis: zAxis ?? this.zAxis,
       type: type ?? this.type,
       assetImagePath: assetImagePath ?? this.assetImagePath,
@@ -47,6 +64,12 @@ class GenericHardwareComponent extends HardwareComponent {
       price: price ?? this.price,
       hardwareName: hardwareName ?? this.hardwareName,
       sku: sku ?? this.sku,
+      lockListeningArea: lockListeningArea ?? this.lockListeningArea,
+      communicationPorts: communicationPorts ?? this.communicationPorts,
+      inputPortsData: inputPortsData ?? this.inputPortsData,
+      outputPortsData: outputPortsData ?? this.outputPortsData,
+      addedFromBuildingPage: addedFromBuildingPage ?? this.addedFromBuildingPage,
+      equipmentLocationPosition: equipmentLocationPosition ?? this.equipmentLocationPosition,
     );
   }
 
@@ -54,7 +77,8 @@ class GenericHardwareComponent extends HardwareComponent {
     return <String, dynamic>{
       'id': id,
       'name': name,
-      'pos': <String, double>{'dx': pos.dx, 'dy': pos.dy},
+      'pos': pos != null ? <String, double>{'dx': pos!.dx, 'dy': pos!.dy} : null,
+      'wiringPos': wiringPos != null ? <String, double>{'dx': wiringPos!.dx, 'dy': wiringPos!.dy} : null,
       'type': type.name,
       "zAxis": zAxis,
       'assetImagePath': assetImagePath,
@@ -63,6 +87,12 @@ class GenericHardwareComponent extends HardwareComponent {
       'price': price,
       'hardwareName': hardwareName,
       'sku': sku,
+      'lockListeningArea': lockListeningArea,
+      'communicationPorts': communicationPorts.map((PortData port) => port.toJson()).toList(),
+      'outputPortsData': outputPortsData.map((PortData port) => port.toJson()).toList(),
+      'inputPortsData': inputPortsData.map((PortData port) => port.toJson()).toList(),
+      'addedFromBuildingPage': addedFromBuildingPage,
+      'equipmentLocationPosition': equipmentLocationPosition,
     };
   }
 
@@ -76,15 +106,11 @@ class GenericHardwareComponent extends HardwareComponent {
       },
     );
 
-    final Map<String, dynamic> posMap = json['pos'] as Map<String, dynamic>? ?? (throw FormatException('Missing "pos" in CanvasProduct JSON: $json'));
-
-    final double dx = (posMap['dx'] as num?)?.toDouble() ?? (throw FormatException('Invalid pos.dx in CanvasProduct JSON: $json'));
-    final double dy = (posMap['dy'] as num?)?.toDouble() ?? (throw FormatException('Invalid pos.dy in CanvasProduct JSON: $json'));
-
     return GenericHardwareComponent(
       id: json['id'] as String?,
       name: json['name'] as String? ?? (throw FormatException('Missing "name" in CanvasProduct JSON: $json')),
-      pos: Offset(dx, dy),
+      pos: json['pos'] != null ? Offset((json['pos']['dx'] as num).toDouble(), (json['pos']['dy'] as num).toDouble()) : null,
+      wiringPos: json['wiringPos'] != null ? Offset((json['wiringPos']['dx'] as num).toDouble(), (json['wiringPos']['dy'] as num).toDouble()) : null,
       type: productType,
       assetImagePath: json['assetImagePath'] as String,
       locationEntity: LocationModel.fromJson(json['locationEntity'] as Map<String, dynamic>),
@@ -92,6 +118,13 @@ class GenericHardwareComponent extends HardwareComponent {
       hardwareName: json['hardwareName'],
       sku: json['sku'] as String? ?? '',
       zAxis: (json['zAxis'] as num?)?.toDouble() ?? 0.0,
+      lockListeningArea: json['lockListeningArea'] as bool? ?? false,
+      communicationPorts:
+          (json['communicationPorts'] as List<dynamic>?)?.map((dynamic e) => PortData.fromJson(e as Map<String, dynamic>)).toList() ?? <PortData>[],
+      outputPortsData: (json['outputPortsData'] as List<dynamic>?)?.map((dynamic e) => PortData.fromJson(e as Map<String, dynamic>)).toList() ?? <PortData>[],
+      inputPortsData: (json['inputPortsData'] as List<dynamic>?)?.map((dynamic e) => PortData.fromJson(e as Map<String, dynamic>)).toList() ?? <PortData>[],
+      addedFromBuildingPage: json['addedFromBuildingPage'] as bool? ?? false,
+      equipmentLocationPosition: DeserializationUtil.intDeserializer.deserialize(json['equipmentLocationPosition']),
     );
   }
 }

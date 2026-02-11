@@ -38,15 +38,11 @@ extension ProjectPropertiesService on ProjectService {
     return id;
   }
 
-  String getMetaData() {
-    return metaData;
-  }
-
   List<Color> getProjectColors() {
     return colors;
   }
 
-  List<FusionDevice> getAllFusionDevices() {
+  List<FusionDsp> getAllFusionDevices() {
     return this.fusionDevices.getAll();
   }
 }

@@ -19,20 +19,27 @@ class Helper {
 
     for (final FileSystemEntity file in files) {
       if (file is File) {
-        final String relativePath = file.path.replaceFirst('${folder.path}/', '');
+        final String relativePath = file.path.replaceFirst(
+          '${folder.path}/',
+          '',
+        );
         final Uint8List data = await file.readAsBytes();
         archive.addFile(ArchiveFile(relativePath, data.length, data));
       }
     }
 
     final List<int> zipData = ZipEncoder().encode(archive);
-    final File zipFile = File('${folder.path}.zip')..createSync(recursive: true);
-    await zipFile.writeAsBytes(zipData!);
+    final File zipFile = File('${folder.path}.zip')
+      ..createSync(recursive: true);
+    await zipFile.writeAsBytes(zipData);
     return zipFile;
   }
 
   /// Unzips the given zip file to the specified destination directory.
-  static Future<void> unzipFile(Uint8List zipFile, Directory destination) async {
+  static Future<void> unzipFile(
+    Uint8List zipFile,
+    Directory destination,
+  ) async {
     final Archive archive = ZipDecoder().decodeBytes(zipFile);
 
     for (final ArchiveFile file in archive) {
