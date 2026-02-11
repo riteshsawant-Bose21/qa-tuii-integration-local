@@ -12,6 +12,27 @@ class UsersRepositoryImpl implements UsersRepository {
     required this.localDataSource,
   });
 
+  UserModel _entityToModel(UserEntity user) {
+    return UserModel(
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      roles: user.roles,
+      status: user.status,
+      userType: user.userType,
+      createdAt: user.createdAt,
+      lastLoginAt: user.lastLoginAt,
+      inviteDate: user.inviteDate,
+      avatar: user.avatar,
+      permissions: user.permissions,
+      associatedProjects: user.associatedProjects,
+      organizationId: user.organizationId,
+      phone: user.phone,
+      activityHistory: user.activityHistory,
+      isActive: user.isActive,
+    );
+  }
+
   @override
   Future<List<UserEntity>> getUsers() async {
     try {
@@ -42,17 +63,7 @@ class UsersRepositoryImpl implements UsersRepository {
 
   @override
   Future<UserEntity> createUser(UserEntity user) async {
-    final userModel = UserModel(
-      id: user.id,
-      name: user.name,
-      email: user.email,
-      role: user.role,
-      status: user.status,
-      createdAt: user.createdAt,
-      lastLoginAt: user.lastLoginAt,
-      avatar: user.avatar,
-      permissions: user.permissions,
-    );
+    final userModel = _entityToModel(user);
 
     try {
       final result = await remoteDataSource.createUser(userModel);
@@ -65,17 +76,7 @@ class UsersRepositoryImpl implements UsersRepository {
 
   @override
   Future<UserEntity> updateUser(UserEntity user) async {
-    final userModel = UserModel(
-      id: user.id,
-      name: user.name,
-      email: user.email,
-      role: user.role,
-      status: user.status,
-      createdAt: user.createdAt,
-      lastLoginAt: user.lastLoginAt,
-      avatar: user.avatar,
-      permissions: user.permissions,
-    );
+    final userModel = _entityToModel(user);
 
     try {
       final result = await remoteDataSource.updateUser(userModel);
@@ -114,6 +115,168 @@ class UsersRepositoryImpl implements UsersRepository {
             )
             .toList();
       }
+    }
+  }
+
+  @override
+  Future<UserEntity> inviteUser(InviteUserParams params) async {
+    try {
+      return await remoteDataSource.inviteUser(params);
+    } catch (e) {
+      // Create a mock invited user for local testing
+      final newUser = UserModel(
+        id: DateTime.now().millisecondsSinceEpoch.toString(),
+        name: params.name,
+        email: params.email,
+        roles: params.roles,
+        status: UserStatus.invited,
+        userType: params.userType,
+        createdAt: DateTime.now(),
+        inviteDate: DateTime.now(),
+        permissions: ['read'],
+        associatedProjects: params.projectIds,
+        isActive: false,
+      );
+      await localDataSource.createUser(newUser);
+      return newUser;
+    }
+  }
+
+  @override
+  Future<void> resendInvite(String userId) async {
+    try {
+      await remoteDataSource.resendInvite(userId);
+    } catch (e) {
+      // Simulate resend locally
+      print('Resending invite for user: $userId');
+    }
+  }
+
+  @override
+  Future<UserEntity> updateUserRoles(UpdateUserRoleParams params) async {
+    try {
+      return await remoteDataSource.updateUserRoles(params);
+    } catch (e) {
+      final user = await getUserById(params.userId);
+      final updatedUser = user.copyWith(roles: params.roles);
+      return await updateUser(updatedUser);
+    }
+  }
+
+  @override
+  Future<UserEntity> assignUserToProjects(
+    String userId,
+    List<String> projectIds,
+  ) async {
+    try {
+      return await remoteDataSource.assignUserToProjects(userId, projectIds);
+    } catch (e) {
+      final user = await getUserById(userId);
+      final updatedProjects = [
+        ...user.associatedProjects,
+        ...projectIds,
+      ].toSet().toList();
+      final updatedUser = user.copyWith(associatedProjects: updatedProjects);
+      return await updateUser(updatedUser);
+    }
+  }
+
+  @override
+  Future<UserEntity> removeUserFromProjects(
+    String userId,
+    List<String> projectIds,
+  ) async {
+    try {
+      return await remoteDataSource.removeUserFromProjects(userId, projectIds);
+    } catch (e) {
+      final user = await getUserById(userId);
+      final updatedProjects = user.associatedProjects
+          .where((projectId) => !projectIds.contains(projectId))
+          .toList();
+      final updatedUser = user.copyWith(associatedProjects: updatedProjects);
+      return await updateUser(updatedUser);
+    }
+  }
+
+  @override
+  Future<UserEntity> activateUser(String userId) async {
+    try {
+      return await remoteDataSource.activateUser(userId);
+    } catch (e) {
+      final user = await getUserById(userId);
+      final updatedUser = user.copyWith(
+        status: UserStatus.active,
+        isActive: true,
+      );
+      return await updateUser(updatedUser);
+    }
+  }
+
+  @override
+  Future<UserEntity> deactivateUser(String userId) async {
+    try {
+      return await remoteDataSource.deactivateUser(userId);
+    } catch (e) {
+      final user = await getUserById(userId);
+      final updatedUser = user.copyWith(
+        status: UserStatus.inactive,
+        isActive: false,
+      );
+      return await updateUser(updatedUser);
+    }
+  }
+
+  @override
+  Future<List<UserEntity>> filterUsers(UserFilterParams params) async {
+    try {
+      return await remoteDataSource.filterUsers(params);
+    } catch (e) {
+      final users = await getUsers();
+      var filtered = users;
+
+      if (params.role != null) {
+        filtered = filtered
+            .where((u) => u.roles.contains(params.role))
+            .toList();
+      }
+      if (params.status != null) {
+        filtered = filtered.where((u) => u.status == params.status).toList();
+      }
+      if (params.userType != null) {
+        filtered = filtered
+            .where((u) => u.userType == params.userType)
+            .toList();
+      }
+      if (params.projectId != null) {
+        filtered = filtered
+            .where((u) => u.associatedProjects.contains(params.projectId))
+            .toList();
+      }
+      if (params.lastLoginStart != null && params.lastLoginEnd != null) {
+        filtered = filtered.where((u) {
+          if (u.lastLoginAt == null) return false;
+          return u.lastLoginAt!.isAfter(params.lastLoginStart!) &&
+              u.lastLoginAt!.isBefore(params.lastLoginEnd!);
+        }).toList();
+      }
+
+      return filtered;
+    }
+  }
+
+  @override
+  Future<Map<String, int>> getUserMetrics() async {
+    try {
+      return await remoteDataSource.getUserMetrics();
+    } catch (e) {
+      final users = await getUsers();
+      return {
+        'total': users.length,
+        'active': users.where((u) => u.status == UserStatus.active).length,
+        'invited': users.where((u) => u.status == UserStatus.invited).length,
+        'pending': users.where((u) => u.status == UserStatus.pending).length,
+        'inactive': users.where((u) => u.status == UserStatus.inactive).length,
+      };
     }
   }
 }

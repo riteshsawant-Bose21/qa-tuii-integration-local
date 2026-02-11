@@ -34,29 +34,40 @@ class AuthViewModel extends ChangeNotifier {
   }
 
   Future<void> checkAuthStatus() async {
+    print('🔍 AuthViewModel: Checking auth status...');
     try {
       _isLoggedIn = await isLoggedInUseCase();
+      print('🔍 AuthViewModel: isLoggedIn = $_isLoggedIn');
+
       if (_isLoggedIn) {
         await _initializeApiToken();
         _currentUser = await getCurrentUserUseCase();
+        print('🔍 AuthViewModel: Current user loaded: ${_currentUser?.email}');
       }
       notifyListeners();
     } catch (e) {
+      print('⚠️ AuthViewModel: Error checking auth status: $e');
       _error = e.toString();
       notifyListeners();
     }
   }
 
   Future<void> _initializeApiToken() async {
+    print('🔐 AuthViewModel: Initializing API token...');
     try {
       if (_authRepository != null) {
         final token = await _authRepository.getIdToken();
         if (token != null) {
           ServiceLocator().apiService.setBearerToken(token);
+          print('✅ AuthViewModel: API token set successfully');
+        } else {
+          print('⚠️ AuthViewModel: No token received from auth repository');
         }
+      } else {
+        print('⚠️ AuthViewModel: Auth repository is null');
       }
     } catch (e) {
-      print('Failed to initialize API token: $e');
+      print('❌ AuthViewModel: Failed to initialize API token: $e');
     }
   }
 
