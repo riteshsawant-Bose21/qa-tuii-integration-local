@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/core/service_locator.dart';
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
+import 'package:fusion_launcher/features/schematics/presentation/widgets/common_reorderable_list_view.dart';
 import 'package:fusion_launcher/features/zone_functions/source_mix.dart';
 import 'package:fusion_launcher/features/zone_functions/widgets/priority_selection_widget.dart';
 import 'package:fusion_lib/fusion_lib.dart';
@@ -124,7 +125,7 @@ class _SourceSelectPrioritySettingsState extends State<SourceSelectPrioritySetti
                                     crossAxisAlignment: CrossAxisAlignment.start,
                                     children: <Widget>[
                                       // LEFT COLUMN (Reorderable List)
-                                      Expanded(
+                                      Flexible(
                                         flex: 2,
                                         child: Column(
                                           children: <Widget>[
@@ -138,46 +139,8 @@ class _SourceSelectPrioritySettingsState extends State<SourceSelectPrioritySetti
                                               ),
                                             ),
                                             Divider(color: context.colorScheme.strokeLight, height: 0),
-                                            Container(
-                                              margin: const EdgeInsets.symmetric(horizontal: 8),
-                                              padding: const EdgeInsets.all(16.0),
-                                              child: Row(
-                                                spacing: 10,
-                                                children: <Widget>[
-                                                  Expanded(
-                                                    child: Center(
-                                                      child: FusionAppText(
-                                                        text: "SIGNAL",
-                                                        textAlign: TextAlign.center,
-                                                        style: Theme.of(context).textTheme.labelSmall,
-                                                      ),
-                                                    ),
-                                                  ),
-                                                  Expanded(
-                                                    flex: 2,
-                                                    child: Center(
-                                                      child: FusionAppText(
-                                                        text: "CHANNELS",
-                                                        textAlign: TextAlign.center,
-                                                        style: Theme.of(context).textTheme.labelSmall,
-                                                      ),
-                                                    ),
-                                                  ),
-                                                  Expanded(
-                                                    child: Center(
-                                                      child: FusionAppText(
-                                                        text: "OUTPUT",
-                                                        textAlign: TextAlign.center,
-                                                        style: Theme.of(context).textTheme.labelSmall,
-                                                      ),
-                                                    ),
-                                                  ),
-                                                ],
-                                              ),
-                                            ),
-                                            Divider(color: context.colorScheme.strokeLight, height: 0),
 
-                                            Expanded(
+                                            Flexible(
                                               child: Builder(
                                                 builder: (BuildContext context) {
                                                   if (sources.isEmpty) {
@@ -191,12 +154,18 @@ class _SourceSelectPrioritySettingsState extends State<SourceSelectPrioritySetti
                                                     );
                                                   }
 
-                                                  return ListView.separated(
-                                                    padding: const EdgeInsets.symmetric(horizontal: 8),
-                                                    physics: const ClampingScrollPhysics(),
-                                                    itemCount: sources.length,
-                                                    separatorBuilder: (_, __) => Divider(color: context.colorScheme.strokeLight, height: 0),
-                                                    itemBuilder: (BuildContext context, int index) {
+                                                  return CommonReorderableListView<Source>(
+                                                    // padding: const EdgeInsets.symmetric(horizontal: 8),
+                                                    // physics: const ClampingScrollPhysics(),
+                                                    // itemCount: sources.length,
+                                                    // separatorBuilder: (_, __) => Divider(color: context.colorScheme.strokeLight, height: 0),
+                                                    items: sources,
+                                                    emptyMessage: "No sources selected for this function",
+                                                    keyExtractor: (Source item) => item.id,
+                                                    onReorder: (int oldIndex, int newIndex) {
+                                                      //
+                                                    },
+                                                    itemBuilder: (BuildContext context, Source item, int index) {
                                                       final Source source = sources[index];
 
                                                       final bool isSelected = source.id == zoneFunction?.selectedSourceId;
@@ -216,19 +185,10 @@ class _SourceSelectPrioritySettingsState extends State<SourceSelectPrioritySetti
                                                             padding: const EdgeInsets.all(12),
                                                             child: Row(
                                                               children: <Widget>[
-                                                                Expanded(
-                                                                  child: Column(
-                                                                    children: <Widget>[
-                                                                      Container(
-                                                                        height: 16,
-                                                                        width: 16,
-                                                                        decoration: BoxDecoration(
-                                                                          color: context.colorScheme.iconDisabled,
-                                                                          borderRadius: BorderRadius.circular(4),
-                                                                        ),
-                                                                      ),
-                                                                    ],
-                                                                  ),
+                                                                Icon(
+                                                                  Icons.drag_indicator,
+                                                                  size: FusionSizes.iconSize16,
+                                                                  color: context.colorScheme.iconDefault,
                                                                 ),
                                                                 Expanded(
                                                                   flex: 2,
@@ -240,27 +200,16 @@ class _SourceSelectPrioritySettingsState extends State<SourceSelectPrioritySetti
                                                                     ),
                                                                   ),
                                                                 ),
-                                                                Expanded(
-                                                                  child: MouseRegion(
-                                                                    cursor: SystemMouseCursors.click,
-                                                                    child: GestureDetector(
-                                                                      onTap: () {
-                                                                        projectViewModel.selectSourceForFunction(
-                                                                          functionId: zoneFunction!.id,
-                                                                          sourceId: source.id,
-                                                                        );
-                                                                      },
-                                                                      child: SemanticHelper.toggle(
-                                                                        testId: SemanticHelper.createTestId(SemanticTypes.toggle, "source_select_radio_$index"),
-                                                                        value: isSelected,
-                                                                        child: Icon(
-                                                                          Icons.radio_button_checked,
-                                                                          size: 16,
-                                                                          color:
-                                                                              isSelected ? context.colorScheme.textPrimary : context.colorScheme.iconDisabled,
-                                                                        ),
-                                                                      ),
-                                                                    ),
+                                                                MouseRegion(
+                                                                  cursor: SystemMouseCursors.click,
+                                                                  child: FusionCheckbox(
+                                                                    value: isSelected,
+                                                                    onChanged: () {
+                                                                      projectViewModel.selectSourceForFunction(
+                                                                        functionId: zoneFunction!.id,
+                                                                        sourceId: source.id,
+                                                                      );
+                                                                    },
                                                                   ),
                                                                 ),
                                                               ],
@@ -271,6 +220,44 @@ class _SourceSelectPrioritySettingsState extends State<SourceSelectPrioritySetti
                                                     },
                                                   );
                                                 },
+                                              ),
+                                            ),
+                                            MouseRegion(
+                                              cursor: SystemMouseCursors.click,
+                                              child: GestureDetector(
+                                                onTap: () {},
+                                                behavior: HitTestBehavior.opaque,
+                                                child: Container(
+                                                  padding: const EdgeInsets.all(12),
+                                                  child: Row(
+                                                    children: <Widget>[
+                                                      Icon(
+                                                        Icons.drag_indicator,
+                                                        size: FusionSizes.iconSize16,
+                                                        color: context.colorScheme.iconDefault,
+                                                      ),
+                                                      Expanded(
+                                                        flex: 2,
+                                                        child: Center(
+                                                          child: FusionAppText(
+                                                            text: "Off",
+                                                            maxLine: 1,
+                                                            style: Theme.of(context).textTheme.labelSmall,
+                                                          ),
+                                                        ),
+                                                      ),
+                                                      MouseRegion(
+                                                        cursor: SystemMouseCursors.click,
+                                                        child: FusionCheckbox(
+                                                          value: false,
+                                                          onChanged: () {
+                                                            //
+                                                          },
+                                                        ),
+                                                      ),
+                                                    ],
+                                                  ),
+                                                ),
                                               ),
                                             ),
                                           ],
