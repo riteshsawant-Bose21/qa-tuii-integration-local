@@ -11,6 +11,7 @@ import 'package:fusion_launcher/features/projects/viewmodel/eql_products_vm.dart
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:nested/nested.dart';
+import 'package:recase/recase.dart';
 
 import '../../../../viewmodel/equipment_location_selection_viewmodel.dart';
 import '../../../../viewmodel/equipment_location_viewmodel.dart';
