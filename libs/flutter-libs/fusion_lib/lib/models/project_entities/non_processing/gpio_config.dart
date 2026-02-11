@@ -48,6 +48,7 @@ class GpioConfig {
   final GpiAction? gpiAction; // used when direction = input
   final GpoAction? gpoAction; // used when direction = output
   final bool invert;
+  final bool? isEnabled;
   final bool status;
 
   GpioConfig({
@@ -57,6 +58,7 @@ class GpioConfig {
     this.gpiAction,
     this.gpoAction,
     required this.invert,
+    this.isEnabled,
     required this.status,
   }) : id = id ?? "GPIO${DateTime.now().millisecondsSinceEpoch}";
 
@@ -79,6 +81,7 @@ class GpioConfig {
             ),
       invert: json['invert'] ?? false,
       status: json['status'] ?? false,
+      isEnabled: json['isEnabled'] ?? false,
     );
   }
 
@@ -91,6 +94,7 @@ class GpioConfig {
       'gpoAction': gpoAction?.name,
       'invert': invert,
       'status': status,
+      'isEnabled': isEnabled,
     };
   }
 
@@ -102,6 +106,7 @@ class GpioConfig {
     GpoAction? gpoAction,
     bool? invert,
     bool? status,
+    bool? isEnabled,
   }) {
     return GpioConfig(
       id: id ?? this.id,
@@ -111,6 +116,34 @@ class GpioConfig {
       gpoAction: gpoAction ?? this.gpoAction,
       invert: invert ?? this.invert,
       status: status ?? this.status,
+      isEnabled: isEnabled ?? this.isEnabled,
+    );
+  }
+
+  GpioConfig removeGpiAction() {
+    return GpioConfig(
+      id: id,
+      name: name,
+      direction: direction,
+      gpiAction: null,
+      gpoAction: gpoAction,
+      invert: invert,
+      status: status,
+
+      isEnabled: isEnabled,
+    );
+  }
+
+  GpioConfig removeGpoAction() {
+    return GpioConfig(
+      id: id,
+      name: name,
+      direction: direction,
+      gpiAction: gpiAction,
+      gpoAction: null,
+      invert: invert,
+      status: status,
+      isEnabled: isEnabled,
     );
   }
 }

@@ -4,7 +4,6 @@ import 'package:fusion_launcher/core/service_locator.dart';
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
 import 'package:fusion_launcher/features/processing_block/view/functions/source_mix.dart';
 import 'package:fusion_lib/fusion_lib.dart';
-import 'package:fusion_lib/fusion_theme/app_theme.dart';
 
 import '../widgets/pb_radio.dart';
 import 'widgets/priority_selection_widget.dart';
@@ -48,26 +47,29 @@ class _SourceSelectZoneControlPanelState extends State<SourceSelectZoneControlPa
   Widget build(BuildContext context) {
     final double controlScreenWidth = MediaQuery.sizeOf(context).width * 0.85;
 
-    return Theme(
-      data: FusionAppTheme.lightTheme,
-      child: Dialog(
-        constraints: BoxConstraints(
-          maxWidth: controlScreenWidth,
-          maxHeight: MediaQuery.sizeOf(context).height * 0.5,
-        ),
-        backgroundColor: Colors.white,
-        shape: const RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(6))),
-        child: BlocConsumer<ProjectViewModel, ProjectViewModelState>(
-          listener: (BuildContext context, ProjectViewModelState state) {
-            zoneFunction = projectViewModel.getZoneFunctionForZone(zoneId: widget.zoneID);
-          },
-          builder: (BuildContext context, ProjectViewModelState state) {
-            return ClipRRect(
-              borderRadius: const BorderRadius.all(Radius.circular(6)),
-              child: Stack(
-                children: <Widget>[
-                  Container(
-                    color: Colors.black,
+    return Dialog(
+      constraints: BoxConstraints(
+        maxWidth: controlScreenWidth,
+        maxHeight: MediaQuery.sizeOf(context).height * 0.5,
+      ),
+      backgroundColor: context.colorScheme.elevation1,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.all(Radius.circular(context.mediumRadius)),
+        side: BorderSide(color: context.colorScheme.strokeLight, width: 1),
+      ),
+      child: BlocConsumer<ProjectViewModel, ProjectViewModelState>(
+        listener: (BuildContext context, ProjectViewModelState state) {
+          zoneFunction = projectViewModel.getZoneFunctionForZone(zoneId: widget.zoneID);
+        },
+        builder: (BuildContext context, ProjectViewModelState state) {
+          return ClipRRect(
+            borderRadius: BorderRadius.all(Radius.circular(context.mediumRadius)),
+            child: Stack(
+              children: <Widget>[
+                SemanticHelper.container(
+                  testId: SemanticHelper.createTestId(SemanticTypes.container, "source_select_main_container"),
+                  child: Container(
+                    color: context.colorScheme.elevation1,
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: <Widget>[
@@ -75,7 +77,7 @@ class _SourceSelectZoneControlPanelState extends State<SourceSelectZoneControlPa
                         Flexible(
                           fit: FlexFit.loose,
                           child: Container(
-                            color: Colors.white,
+                            color: context.colorScheme.elevation1,
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
                               crossAxisAlignment: CrossAxisAlignment.start,
@@ -90,13 +92,13 @@ class _SourceSelectZoneControlPanelState extends State<SourceSelectZoneControlPa
                                           height: 28,
                                           width: double.infinity,
                                           alignment: Alignment.center,
-                                          color: const Color(0xFFF5F5F5),
+
                                           child: FusionAppText(
                                             text: "SOURCE SELECT",
                                             style: Theme.of(context).textTheme.labelSmall,
                                           ),
                                         ),
-                                        const Divider(color: Colors.black12, height: 0),
+                                        Divider(color: context.colorScheme.strokeLight, height: 0),
                                         Container(
                                           margin: const EdgeInsets.symmetric(horizontal: 8),
                                           padding: const EdgeInsets.all(8.0),
@@ -129,7 +131,7 @@ class _SourceSelectZoneControlPanelState extends State<SourceSelectZoneControlPa
                                                   child: FusionAppText(
                                                     text: "No sources selected for this function",
                                                     style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                                                      color: Colors.grey,
+                                                      color: context.colorScheme.primaryWhite,
                                                     ),
                                                   ),
                                                 );
@@ -155,9 +157,11 @@ class _SourceSelectZoneControlPanelState extends State<SourceSelectZoneControlPa
                                                       key: ValueKey<String>(source.id),
                                                       margin: const EdgeInsets.symmetric(vertical: 2),
                                                       decoration: BoxDecoration(
-                                                        border: Border.all(color: isSelected ? Colors.black54 : const Color(0xFFE5E5E5)),
+                                                        border: Border.all(
+                                                          color: isSelected ? context.colorScheme.strokeLight : context.colorScheme.elevation2,
+                                                        ),
                                                         borderRadius: BorderRadius.circular(4),
-                                                        color: Colors.white,
+                                                        color: context.colorScheme.elevation2,
                                                       ),
                                                       child: Row(
                                                         children: <Widget>[
@@ -168,7 +172,7 @@ class _SourceSelectZoneControlPanelState extends State<SourceSelectZoneControlPa
                                                               alignment: Alignment.center,
                                                               padding: const EdgeInsets.all(2),
                                                               decoration: BoxDecoration(
-                                                                color: const Color(0xFFF5F5F5),
+                                                                color: context.colorScheme.elevation3,
                                                                 borderRadius: BorderRadius.circular(4),
                                                               ),
                                                               child: FusionAppText(
@@ -178,16 +182,20 @@ class _SourceSelectZoneControlPanelState extends State<SourceSelectZoneControlPa
                                                               ),
                                                             ),
                                                           ),
-                                                          PBRadio(
+                                                          SemanticHelper.toggle(
+                                                            testId: SemanticHelper.createTestId(SemanticTypes.toggle, "source_select_radio_$index"),
                                                             value: isSelected,
-                                                            size: const Size(28, 28),
-                                                            padding: const EdgeInsets.all(2),
-                                                            onChanged: (bool value) {
-                                                              projectViewModel.selectSourceForFunction(
-                                                                functionId: zoneFunction!.id,
-                                                                sourceId: source.id,
-                                                              );
-                                                            },
+                                                            child: PBRadio(
+                                                              value: isSelected,
+                                                              size: const Size(28, 28),
+                                                              padding: const EdgeInsets.all(2),
+                                                              onChanged: (bool value) {
+                                                                projectViewModel.selectSourceForFunction(
+                                                                  functionId: zoneFunction!.id,
+                                                                  sourceId: source.id,
+                                                                );
+                                                              },
+                                                            ),
                                                           ),
 
                                                           const SizedBox(width: 5),
@@ -204,7 +212,7 @@ class _SourceSelectZoneControlPanelState extends State<SourceSelectZoneControlPa
                                     ),
                                   ),
                                 ),
-                                const VerticalDivider(width: 1, color: Colors.black12),
+                                VerticalDivider(width: 1, color: context.colorScheme.strokeLight),
 
                                 PrioritySelectionWidget(zoneId: widget.zoneID),
 
@@ -217,51 +225,69 @@ class _SourceSelectZoneControlPanelState extends State<SourceSelectZoneControlPa
                       ],
                     ),
                   ),
+                ),
 
-                  // HEADER TITLE
-                  Positioned(
-                    left: 0,
-                    child: Container(
-                      height: 35,
-                      color: Colors.black,
-                      alignment: Alignment.centerLeft,
-                      padding: const EdgeInsets.symmetric(horizontal: 12.0),
-                      child: Text(
-                        "ZONE CONTROL PANEL - SOURCE SELECT",
-                        style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                          color: Colors.white,
-                          fontSize: 11,
+                Positioned(
+                  left: 0,
+                  right: 0,
+                  child: Container(
+                    height: 35,
+
+                    decoration: BoxDecoration(
+                      color: context.colorScheme.elevation2,
+                      border: Border(
+                        bottom: BorderSide(
+                          color: context.colorScheme.strokeLight,
+                          width: 1,
                         ),
                       ),
                     ),
                   ),
+                ),
+                // HEADER TITLE
+                Positioned(
+                  left: 0,
+                  child: Container(
+                    height: 35,
 
-                  // CLOSE BUTTON
-                  Positioned(
-                    right: 0,
+                    alignment: Alignment.centerLeft,
+                    padding: const EdgeInsets.symmetric(horizontal: 12.0),
+                    child: Text(
+                      "ZONE CONTROL PANEL - SOURCE SELECT",
+                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                        fontSize: 11,
+                      ),
+                    ),
+                  ),
+                ),
+
+                // CLOSE BUTTON
+                Positioned(
+                  right: 0,
+                  child: SemanticHelper.button(
+                    testId: SemanticHelper.createTestId(SemanticTypes.button, "source_select_close_button"),
                     child: Container(
                       height: 35,
-                      color: Colors.black,
                       alignment: Alignment.centerRight,
                       padding: const EdgeInsets.symmetric(horizontal: 12.0),
                       child: MouseRegion(
                         cursor: SystemMouseCursors.click,
                         child: GestureDetector(
                           onTap: Navigator.of(context).pop,
-                          child: const Icon(
+                          child: Icon(
                             Icons.close,
-                            color: Colors.white,
+                            color: context.colorScheme.iconDefault,
                             size: 16,
                           ),
                         ),
                       ),
                     ),
                   ),
-                ],
-              ),
-            );
-          },
-        ),
+                ),
+              ],
+            ),
+          );
+        },
       ),
     );
   }

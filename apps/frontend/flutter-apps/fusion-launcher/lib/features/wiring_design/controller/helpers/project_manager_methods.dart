@@ -14,12 +14,10 @@ import '../state/wiring_state.dart';
 
 extension ProjectManagerMethods on CircuitController {
   void selectElementFromPM(String? id) {
-    if (state is ElementSelectionState &&
-        (state as ElementSelectionState).element.id == id) {
+    if (state is ElementSelectionState && (state as ElementSelectionState).element.id == id) {
       return;
     }
-    if (state is ElementMovingState &&
-        (state as ElementMovingState).element.id == id) {
+    if (state is ElementMovingState && (state as ElementMovingState).element.id == id) {
       return;
     }
     final CanvasElement? element = componentDB.getComponent(id ?? "");
@@ -29,7 +27,7 @@ extension ProjectManagerMethods on CircuitController {
             ? state.canvasState
             : state.canvasState.recenter(
               element.position,
-              ((canvasSize ?? const Size(100, 100)) * 0.25),
+              ((canvasSize ?? const Size(100, 100)) * 0.5),
             ),
       );
       setState(updateCanvasState.select(element), notifyToPM: false);

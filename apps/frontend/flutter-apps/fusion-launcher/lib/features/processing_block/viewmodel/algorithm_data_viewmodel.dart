@@ -36,6 +36,7 @@ class AlgorithmDataViewmodel extends PBWidgetValueHandler with ChangeNotifier {
     await _loadLayout();
   }
 
+  @override
   dynamic getValue(PBItem param) {
     return processingBlock.properties
             .firstWhereOrNull((PropertySetting element) => element.name == param.field && element.dimension == param.dimension)
@@ -48,7 +49,32 @@ class AlgorithmDataViewmodel extends PBWidgetValueHandler with ChangeNotifier {
 
   @override
   void onValueChanged(PBItem item, dynamic value) {
-    processingBlock.updateProperty(PropertySetting(name: item.field, value: value, dimension: item.dimension));
+    updateValue(field: item.field, dimension: item.dimension, value: value);
+  }
+
+  void updateValue({required String field, int? dimension, required dynamic value}) {
+    processingBlock.updateProperty(PropertySetting(name: field, value: value, dimension: dimension));
+    serviceLocator<ProjectViewModel>().updateProcessingBlock(
+      processingBlock: processingBlock,
+    );
+    notifyListeners();
+  }
+
+  @override
+  void addValue(PBItem item, dynamic value) {
+    addProperty(PropertySetting(name: item.field, value: value, dimension: item.dimension));
+  }
+
+  void addProperty(PropertySetting property) {
+    processingBlock.addProperty(property);
+    serviceLocator<ProjectViewModel>().updateProcessingBlock(
+      processingBlock: processingBlock,
+    );
+    notifyListeners();
+  }
+
+  void removeProperty(PropertySetting property) {
+    processingBlock.removeProperty(property);
     serviceLocator<ProjectViewModel>().updateProcessingBlock(
       processingBlock: processingBlock,
     );

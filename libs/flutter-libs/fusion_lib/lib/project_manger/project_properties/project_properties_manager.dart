@@ -28,11 +28,6 @@ extension ProjectPropertiesManager on ProjectManager {
     projectService = projectService!.copyWith(colors: colors);
   }
 
-  //get Project meta data
-  String getMetaData() {
-    return projectService!.getMetaData();
-  }
-
   //set Project meta data
   void setMetaData(String metaData) {
     projectService = projectService!.copyWith(metaData: metaData);

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/fusion_theme/app_theme.dart';
 
 import '../buttons/fusion_button.dart';
@@ -75,6 +76,8 @@ class FusionDialog extends StatelessWidget {
   /// Description text style. Defaults to `bodyMedium` from the theme.
   final TextStyle? descriptionTextStyle;
 
+  final double primaryButtonWidth;
+
   /// Creates a [FusionDialog].
   const FusionDialog({
     super.key,
@@ -91,13 +94,14 @@ class FusionDialog extends StatelessWidget {
     this.backgroundColor,
     this.titleTextStyle,
     this.descriptionTextStyle,
+    this.primaryButtonWidth = 90,
   });
 
   @override
   Widget build(BuildContext context) {
     return Dialog(
       shape: roundedCorners ? RoundedRectangleBorder(borderRadius: BorderRadius.circular(borderRadius)) : null,
-      backgroundColor: backgroundColor ?? Theme.of(context).colorScheme.white,
+      backgroundColor: backgroundColor ?? context.colorScheme.elevation1,
       insetPadding: const EdgeInsets.symmetric(horizontal: 40, vertical: 24),
 
       child: ConstrainedBox(
@@ -108,7 +112,7 @@ class FusionDialog extends StatelessWidget {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                if (icon != null) ...[Icon(icon, size: 48, color: iconColor ?? Theme.of(context).primaryColor), const SizedBox(height: 16)],
+                if (icon != null) ...[Icon(icon, size: 48, color: iconColor ?? Theme.of(context).colorScheme.primaryWhite), const SizedBox(height: 16)],
                 FusionAppText(
                   text: title,
                   textAlign: TextAlign.center,
@@ -149,12 +153,12 @@ class FusionDialog extends StatelessWidget {
                       const SizedBox(width: 8),
                     ],
                     SizedBox(
-                      width: 90,
+                      width: primaryButtonWidth,
                       child: FusionButton(
                         label: primaryButtonLabel,
                         textStyle: Theme.of(context).textTheme.labelLarge?.copyWith(
                           fontSize: 11,
-                          color: Theme.of(context).colorScheme.fusionButtonTextColor,
+                          color: context.colorScheme.primaryBlack,
                         ),
                         isActive: true,
                         onTap: () {

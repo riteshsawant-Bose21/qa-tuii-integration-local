@@ -9,6 +9,32 @@ extension ZoneFunctionService on ProjectService {
     if (currentZoneFunctions.isNotEmpty) {
       //remove old function
       removeFunction(functionId: currentZoneFunctions.first);
+
+      final linkedSceneActions = relationships.getParents(RelationshipType.actionItemMapping, zoneId);
+      final copyOfLinkedSceneActions = List<String>.from(linkedSceneActions);
+      for (final actionId in copyOfLinkedSceneActions) {
+        print("Checking action $actionId for removal due to function change");
+        final action = sceneActions.get(actionId);
+        if (action != null && action.param != null) {
+          if (action.param!.type.isRelatedToZoneFunction) {
+            final SceneParamType paramType = action.param!.type;
+            if (paramType == SceneParamType.prioritySelect1 || paramType == SceneParamType.prioritySelect2) {
+              //check if current function also has priority or not, if not remove the action
+              if (!function.hasPriority) {
+                removeSceneAction(actionId);
+              }
+            } else {
+              if (paramType == SceneParamType.sourceSelect &&
+                  (function.type == ZoneFunctionsType.sourceSelect || function.type == ZoneFunctionsType.sourceSelectWithPriority)) {
+                //Do nothing, valid action
+              } else {
+                //invalid action for the new function, remove it
+                removeSceneAction(actionId);
+              }
+            }
+          }
+        }
+      }
     }
 
     relationships.link(RelationshipType.zoneFunctions, zoneId, function.id);

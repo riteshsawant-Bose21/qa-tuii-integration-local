@@ -2,7 +2,6 @@ import 'dart:io';
 import 'dart:ui' as ui;
 
 import 'package:flutter/services.dart';
-import 'package:path_provider/path_provider.dart';
 
 import '../fusion_lib.dart';
 
@@ -42,8 +41,13 @@ class ImageLoaderService {
 
   /// Loads an image from the file system
   Future<ui.Image> _loadFileImage(String filePath) async {
-    final Directory dir = await FusionUtils.getFusionAppDirectory();
-    final File file = File("${dir.path}/$filePath");
+    late final File file;
+    if (filePath.startsWith('/')) {
+      file = File(filePath);
+    } else {
+      final Directory dir = await FusionUtils.getFusionAppDirectory();
+      file = File("${dir.path}/$filePath");
+    }
 
     if (!await file.exists()) {
       throw Exception('Image file not found: $filePath');
@@ -52,6 +56,7 @@ class ImageLoaderService {
     final Uint8List bytes = await file.readAsBytes();
     final ui.Codec codec = await ui.instantiateImageCodec(bytes);
     final ui.FrameInfo frame = await codec.getNextFrame();
+
     return frame.image;
   }
 

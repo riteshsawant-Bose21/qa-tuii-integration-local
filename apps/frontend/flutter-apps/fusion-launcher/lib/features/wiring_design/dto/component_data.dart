@@ -5,15 +5,20 @@ import 'dart:ui';
 import 'package:flutter/foundation.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
+import '../../../core/service_locator.dart';
+import '../../configuration/presentation/viewmodel/project_view_model.dart';
 import '../util/canvas_util.dart';
 
 part 'component_port.dart';
 
 abstract class ComponentData {
   String get id;
+
   final String? image;
   final String label;
+
   LocationModel? get location;
+
   final List<ComponentPort> inputPorts;
   final List<ComponentPort> outputPorts;
   final List<ComponentPort> comPorts;
@@ -29,12 +34,15 @@ abstract class ComponentData {
   String get type;
 
   Size get size;
+
   Offset get portOffset;
+
   double get portRadius;
 }
 
 class DeviceSchematicComponentData extends ComponentData {
   final HardwareComponent data;
+
   DeviceSchematicComponentData({
     super.image,
     required super.label,
@@ -46,6 +54,7 @@ class DeviceSchematicComponentData extends ComponentData {
 
   @override
   LocationModel? get location => data.locationEntity;
+
   static DeviceSchematicComponentData from(HardwareComponent hardware) {
     return DeviceSchematicComponentData(
       image: hardware.assetImagePath,
@@ -110,18 +119,13 @@ class DeviceSchematicComponentData extends ComponentData {
     final int max2 = max(inputPorts.length, outputPorts.length);
     cSize += Offset(
       0,
-      max2 * WiringViewConstants.portDimension +
-          (max2 + 2) * WiringViewConstants.portSpacing,
+      max2 * WiringViewConstants.portDimension + (max2 + 2) * WiringViewConstants.portSpacing,
     );
 
     if (comPorts.isNotEmpty) {
       final int extraHeight = max(
-        comPorts
-            .where((ComponentPort e) => e.position == PortPosition.bottomLeft)
-            .length,
-        comPorts
-            .where((ComponentPort e) => e.position == PortPosition.bottomRight)
-            .length,
+        comPorts.where((ComponentPort e) => e.position == PortPosition.bottomLeft).length,
+        comPorts.where((ComponentPort e) => e.position == PortPosition.bottomRight).length,
       );
       cSize += Offset(0, extraHeight * WiringViewConstants.portDimension);
 
@@ -150,23 +154,17 @@ class DeviceSchematicComponentData extends ComponentData {
       if ((hasFooterLeft + hasFooterRight + hasFooterCenter) > 0) {
         double comPortWidth = WiringViewConstants.portSpacing;
         if (hasFooterLeft > 0) {
-          comPortWidth +=
-              hasFooterLeft * WiringViewConstants.comPortWidth +
-              (hasFooterLeft) * WiringViewConstants.portSpacing;
+          comPortWidth += hasFooterLeft * WiringViewConstants.comPortWidth + (hasFooterLeft) * WiringViewConstants.portSpacing;
         } else {
           comPortWidth += WiringViewConstants.comPortWidth;
         }
         if (hasFooterCenter > 0) {
-          comPortWidth +=
-              hasFooterCenter * WiringViewConstants.comPortWidth +
-              (hasFooterCenter) * WiringViewConstants.portSpacing;
+          comPortWidth += hasFooterCenter * WiringViewConstants.comPortWidth + (hasFooterCenter) * WiringViewConstants.portSpacing;
         } else {
           comPortWidth += WiringViewConstants.comPortWidth;
         }
         if (hasFooterRight > 0) {
-          comPortWidth +=
-              hasFooterRight * WiringViewConstants.comPortWidth +
-              (hasFooterRight) * WiringViewConstants.portSpacing;
+          comPortWidth += hasFooterRight * WiringViewConstants.comPortWidth + (hasFooterRight) * WiringViewConstants.portSpacing;
         } else {
           comPortWidth += WiringViewConstants.comPortWidth;
         }
@@ -185,6 +183,7 @@ class DeviceSchematicComponentData extends ComponentData {
 
   @override
   Offset get portOffset => const Offset(0, WiringViewConstants.headingHeight);
+
   @override
   double get portRadius => WiringViewConstants.portRadius;
 
@@ -197,6 +196,7 @@ class DeviceSchematicComponentData extends ComponentData {
 
 class SourceComponentData extends ComponentData {
   final Source source;
+
   SourceComponentData({
     super.image,
     required super.label,
@@ -205,8 +205,10 @@ class SourceComponentData extends ComponentData {
     required super.outputPorts,
     required this.source,
   });
+
   @override
   LocationModel? get location => source.locationEntity;
+
   static SourceComponentData from(Source source) {
     return SourceComponentData(
       image: source.assetImagePath,
@@ -233,11 +235,13 @@ class SourceComponentData extends ComponentData {
 
   @override
   String get id => source.id;
+
   @override
   Size get size => const Size(100, 100);
 
   @override
   Offset get portOffset => Offset(0, size.height / 2 - portRadius);
+
   @override
   double get portRadius => WiringViewConstants.portRadius / 2;
 
@@ -247,6 +251,7 @@ class SourceComponentData extends ComponentData {
 
 class ZoneComponentData extends ComponentData {
   final Zone zone;
+
   ZoneComponentData({
     super.image,
     required super.label,
@@ -255,6 +260,7 @@ class ZoneComponentData extends ComponentData {
     required super.outputPorts,
     required this.zone,
   });
+
   static ZoneComponentData from(Zone zone) {
     return ZoneComponentData(
       // image: source.assetImagePath,
@@ -270,20 +276,26 @@ class ZoneComponentData extends ComponentData {
 
   @override
   String get id => zone.id;
+
   @override
   LocationModel? get location => null;
+
   @override
   Offset get portOffset => Offset.zero;
+
   @override
   Size get size => const Size(200, 30);
+
   @override
   double get portRadius => 0;
+
   @override
   String get type => 'zone';
 }
 
 class SubZoneComponentData extends ComponentData {
   final SubZone zone;
+
   SubZoneComponentData({
     super.image,
     required super.label,
@@ -292,6 +304,7 @@ class SubZoneComponentData extends ComponentData {
     required super.outputPorts,
     required this.zone,
   });
+
   static SubZoneComponentData from(SubZone zone) {
     return SubZoneComponentData(
       // image: source.assetImagePath,
@@ -307,15 +320,19 @@ class SubZoneComponentData extends ComponentData {
 
   @override
   LocationModel? get location => null;
+
   @override
   String get id => zone.id;
 
   @override
   Offset get portOffset => Offset.zero;
+
   @override
   Size get size => const Size(160, 30);
+
   @override
   double get portRadius => 0;
+
   @override
   String get type => 'subzone';
 }
@@ -323,6 +340,7 @@ class SubZoneComponentData extends ComponentData {
 class CircuitComponentData extends ComponentData {
   final List<ComponentData> speakers;
   final CircuitModel circuit;
+
   CircuitComponentData({
     super.image,
     required super.label,
@@ -332,6 +350,7 @@ class CircuitComponentData extends ComponentData {
     required this.circuit,
     required this.speakers,
   });
+
   static CircuitComponentData from(
     CircuitModel zone,
     List<ComponentData> speakers,
@@ -353,21 +372,26 @@ class CircuitComponentData extends ComponentData {
 
   @override
   String get id => circuit.id;
+
   @override
   LocationModel? get location => null;
+
   @override
   Offset get portOffset => Offset(0, size.height / 2 - portRadius);
+
   @override
   Size get size => const Size(100, 100);
 
   @override
   double get portRadius => 0;
+
   @override
   String get type => 'circuit';
 }
 
 class SpeakerComponentData extends ComponentData {
   final Speaker speaker;
+
   SpeakerComponentData({
     super.image,
     required super.label,
@@ -376,9 +400,13 @@ class SpeakerComponentData extends ComponentData {
     required super.outputPorts,
     required this.speaker,
   });
+
   static SpeakerComponentData from(Speaker speaker) {
     return SpeakerComponentData(
-      image: speaker.assetImagePath,
+      image: serviceLocator<ProjectViewModel>().getHardwareImage(
+        productId: speaker.productId ?? 0,
+        currentImagePath: speaker.assetImagePath,
+      ),
       label: speaker.name,
       comPorts: <ComponentPort>[],
       inputPorts:
@@ -415,12 +443,16 @@ class SpeakerComponentData extends ComponentData {
 
   @override
   String get id => speaker.id;
+
   @override
   LocationModel? get location => speaker.locationEntity;
+
   @override
   Size get size => const Size(100, 100);
+
   @override
   Offset get portOffset => Offset(0, size.height / 2 - portRadius);
+
   @override
   double get portRadius => WiringViewConstants.portRadius / 2;
 

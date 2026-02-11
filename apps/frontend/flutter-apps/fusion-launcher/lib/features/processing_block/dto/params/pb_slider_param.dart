@@ -20,8 +20,8 @@ class PBSliderParam extends PBItemParam {
   factory PBSliderParam.fromMap(Map<dynamic, dynamic> map) {
     return PBSliderParam(
       label: map['label'] as String,
-      min: WiringSerializationUtil.numDeserializer.deserialize(map['min']) ?? 0,
-      max: WiringSerializationUtil.numDeserializer.deserialize(map['max']) ?? 0,
+      min: DeserializationUtil.numDeserializer.deserialize(map['min']) ?? 0,
+      max: DeserializationUtil.numDeserializer.deserialize(map['max']) ?? 0,
     );
   }
 
@@ -45,7 +45,8 @@ class PBSliderParam extends PBItemParam {
   PBItemParam loadMap(Map<String, dynamic> map) {
     return PBSliderParam.fromMap(map);
   }
-    @override
+
+  @override
   PBItemParam clone() {
     return copyWith();
   }

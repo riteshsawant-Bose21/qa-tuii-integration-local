@@ -28,6 +28,12 @@ final class ProjectUpdated extends ProjectViewModelState {
   ProjectUpdated({required this.projectId});
 }
 
+final class TabChanged extends ProjectViewModelState {
+  final int tab;
+
+  TabChanged({required this.tab});
+}
+
 final class FloorsUpdated extends ProjectViewModelState {
   FloorsUpdated();
 }

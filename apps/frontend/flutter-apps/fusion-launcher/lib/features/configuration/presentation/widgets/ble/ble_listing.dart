@@ -2,7 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
-import 'package:fusion_lib/fusion_networking/ble/ble_connection_manager.dart';
+import 'package:fusion_lib/fusion_lib.dart';
 
 import '../../../../../core/utils/fusion_utils.dart';
 
@@ -179,8 +179,8 @@ class _BleDiscoveryState extends State<BleDiscovery> {
                 color: colors.primary,
               ),
               const SizedBox(width: 8),
-              Text(
-                'Available Devices',
+              FusionAppText(
+                text: 'Available Devices',
                 style: Theme.of(context).textTheme.titleSmall?.copyWith(
                   fontWeight: FontWeight.w600,
                   color: colors.primary,
@@ -193,8 +193,8 @@ class _BleDiscoveryState extends State<BleDiscovery> {
                   color: colors.primaryContainer,
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: Text(
-                  '${bleDevices.length}',
+                child: FusionAppText(
+                  text: '${bleDevices.length}',
                   style: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w500,
@@ -263,8 +263,8 @@ class _BleDiscoveryState extends State<BleDiscovery> {
                         color: colors.onSurfaceVariant,
                       ),
                       const SizedBox(width: 8),
-                      Text(
-                        'No devices found',
+                      FusionAppText(
+                        text: 'No devices found',
                         style: TextStyle(
                           color: colors.onSurfaceVariant,
                           fontSize: 12,
@@ -311,8 +311,8 @@ class _BleDiscoveryState extends State<BleDiscovery> {
                                       children: <Widget>[
                                         Row(
                                           children: <Widget>[
-                                            Text(
-                                              device.device.advName,
+                                            FusionAppText(
+                                              text: device.device.advName,
                                               style: TextStyle(
                                                 fontSize: 14,
                                                 fontWeight: FontWeight.w600,
@@ -322,8 +322,8 @@ class _BleDiscoveryState extends State<BleDiscovery> {
                                           ],
                                         ),
                                         const SizedBox(height: 4),
-                                        Text(
-                                          'Mac: ${device.device.remoteId.str}',
+                                        FusionAppText(
+                                          text: 'Mac: ${device.device.remoteId.str}',
                                           style: TextStyle(
                                             fontSize: 10,
                                             color: colors.onSurfaceVariant,
