@@ -717,14 +717,14 @@ class _CeilingPendantSpeakerLayoutWidgetState extends State<CeilingPendantSpeake
 
                                     Text('Boundary Threshold: ${(_boundaryOverlapThreshold * 100).toStringAsFixed(0)}%'),
                                     Slider(
-                                      value: _boundaryOverlapThreshold.clamp(0.3, 0.9),
-                                      min: 0.3,
+                                      value: _boundaryOverlapThreshold.clamp(0.01, 0.9),
+                                      min: 0.01,
                                       max: 0.9,
-                                      divisions: 12,
+                                      // divisions: 12,
                                       label: '${(_boundaryOverlapThreshold * 100).toStringAsFixed(0)}%',
                                       onChanged: (double value) {
                                         setState(() {
-                                          _boundaryOverlapThreshold = value.clamp(0.3, 0.9);
+                                          _boundaryOverlapThreshold = value.clamp(0.01, 0.9);
                                         });
                                       },
                                       onChangeEnd: (double value) {
@@ -1354,7 +1354,7 @@ class _CeilingPendantSpeakerLayoutWidgetState extends State<CeilingPendantSpeake
                   ),
                   const SizedBox(height: 8),
                   const Text(
-                    '• Origin (0,0) is at bottom-left corner\n'
+                    '• Origin (0,0) is at top-left corner\n'
                     '• X-axis increases to the right\n'
                     '• Y-axis increases upward\n'
                     '• Coordinates define room boundary vertices\n'
