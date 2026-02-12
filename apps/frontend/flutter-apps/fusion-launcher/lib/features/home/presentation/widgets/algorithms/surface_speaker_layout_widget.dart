@@ -17,7 +17,7 @@ class _SurfaceSpeakerLayoutWidgetState extends State<SurfaceSpeakerLayoutWidget>
   // Form controllers
   final TextEditingController _lengthController = TextEditingController(text: '30.5');
   final TextEditingController _widthController = TextEditingController(text: '20.1');
-  final TextEditingController _heightController = TextEditingController(text: '11.9');
+  final TextEditingController _heightController = TextEditingController(text: '7');
   final TextEditingController _listenerHeightController = TextEditingController(text: '1.7');
   // Speaker height removed - now hardcoded to 3 feet (0.914m) in the algorithm
   final TextEditingController _coverageAngleController = TextEditingController(text: '90.0');
@@ -164,7 +164,7 @@ class _SurfaceSpeakerLayoutWidgetState extends State<SurfaceSpeakerLayoutWidget>
           const SizedBox(height: 16),
           Row(
             children: <Widget>[
-              Expanded(child: _buildNumberField(_heightController, 'Ceiling Height (m)', Icons.height)),
+              Expanded(child: _buildNumberField(_heightController, 'Ceiling Height (m)', Icons.height, max: 8.0)),
               const SizedBox(width: 16),
               Expanded(child: _buildNumberField(_listenerHeightController, 'Listener Height (m)', Icons.person, min: 0.1, max: 2.4)),
             ],
