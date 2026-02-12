@@ -9,54 +9,62 @@ List<Positioned> getBlockHeader(BuildContext context, ProcessingBlockModel pb, {
     Positioned(
       left: 0,
       top: 0,
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: <Widget>[
-          AnimatedContainer(
-            duration: const Duration(milliseconds: 200),
-            decoration: BoxDecoration(color: context.colorScheme.elevation2, borderRadius: BorderRadius.circular(10)),
-            padding: const EdgeInsets.all(10),
-            child: Image.asset(
-              pb.iconAsset,
-              color: context.colorScheme.iconDefault,
-              height: 18,
-              width: 18,
-              // package: '',
-            ),
+      child: SizedBox(
+        height: 40,
+        child: Center(
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                decoration: BoxDecoration(color: context.colorScheme.elevation2, borderRadius: BorderRadius.circular(10)),
+                padding: const EdgeInsets.all(10),
+                child: Image.asset(
+                  pb.iconAsset,
+                  color: context.colorScheme.iconDefault,
+                  height: 18,
+                  width: 18,
+                  // package: '',
+                ),
+              ),
+              const SizedBox(width: 10),
+              Text(
+                pb.name,
+                style: context.textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
           ),
-          const SizedBox(width: 10),
-          Text(
-            pb.name,
-            style: context.textTheme.titleMedium?.copyWith(
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-        ],
+        ),
       ),
     ),
 
     Positioned(
       right: 0,
       top: 0,
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: <Widget>[
-          if (actions != null) ...actions,
-          const SizedBox(width: 10),
-          InkWell(
-            onTap: () {
-              context.read<ProcessingChainCubit>().deleteSelectedProcessingBlock();
-            },
-            child: Tooltip(
-              message: "Delete processing block",
-              child: Icon(
-                LucideIcons.trash200,
-                size: 16,
-                color: context.colorScheme.iconDefault,
+      child: SizedBox(
+        height: 40,
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            if (actions != null) ...actions,
+            const SizedBox(width: 10),
+            InkWell(
+              onTap: () {
+                context.read<ProcessingChainCubit>().deleteSelectedProcessingBlock();
+              },
+              child: Tooltip(
+                message: "Delete processing block",
+                child: Icon(
+                  LucideIcons.trash200,
+                  size: 16,
+                  color: context.colorScheme.iconDefault,
+                ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     ),
   ];
