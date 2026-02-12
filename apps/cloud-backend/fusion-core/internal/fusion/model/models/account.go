@@ -916,7 +916,7 @@ func (accountL) LoadPrimaryOwnerAccountProjects(ctx context.Context, e boil.Cont
 
 	for _, foreign := range resultSlice {
 		for _, local := range slice {
-			if queries.Equal(local.ID, foreign.PrimaryOwnerAccountID) {
+			if local.ID == foreign.PrimaryOwnerAccountID {
 				local.R.PrimaryOwnerAccountProjects = append(local.R.PrimaryOwnerAccountProjects, foreign)
 				if foreign.R == nil {
 					foreign.R = &projectR{}
@@ -1038,7 +1038,7 @@ func (o *Account) AddPrimaryOwnerAccountProjects(ctx context.Context, exec boil.
 	var err error
 	for _, rel := range related {
 		if insert {
-			queries.Assign(&rel.PrimaryOwnerAccountID, o.ID)
+			rel.PrimaryOwnerAccountID = o.ID
 			if err = rel.Insert(ctx, exec, boil.Infer()); err != nil {
 				return errors.Wrap(err, "failed to insert into foreign table")
 			}
@@ -1059,7 +1059,7 @@ func (o *Account) AddPrimaryOwnerAccountProjects(ctx context.Context, exec boil.
 				return errors.Wrap(err, "failed to update foreign table")
 			}
 
-			queries.Assign(&rel.PrimaryOwnerAccountID, o.ID)
+			rel.PrimaryOwnerAccountID = o.ID
 		}
 	}
 
@@ -1080,80 +1080,6 @@ func (o *Account) AddPrimaryOwnerAccountProjects(ctx context.Context, exec boil.
 			rel.R.PrimaryOwnerAccount = o
 		}
 	}
-	return nil
-}
-
-// SetPrimaryOwnerAccountProjects removes all previously related items of the
-// account replacing them completely with the passed
-// in related items, optionally inserting them as new records.
-// Sets o.R.PrimaryOwnerAccount's PrimaryOwnerAccountProjects accordingly.
-// Replaces o.R.PrimaryOwnerAccountProjects with related.
-// Sets related.R.PrimaryOwnerAccount's PrimaryOwnerAccountProjects accordingly.
-func (o *Account) SetPrimaryOwnerAccountProjects(ctx context.Context, exec boil.ContextExecutor, insert bool, related ...*Project) error {
-	query := "update \"project\" set \"primary_owner_account_id\" = null where \"primary_owner_account_id\" = $1"
-	values := []interface{}{o.ID}
-	if boil.IsDebug(ctx) {
-		writer := boil.DebugWriterFrom(ctx)
-		fmt.Fprintln(writer, query)
-		fmt.Fprintln(writer, values)
-	}
-	_, err := exec.ExecContext(ctx, query, values...)
-	if err != nil {
-		return errors.Wrap(err, "failed to remove relationships before set")
-	}
-
-	if o.R != nil {
-		for _, rel := range o.R.PrimaryOwnerAccountProjects {
-			queries.SetScanner(&rel.PrimaryOwnerAccountID, nil)
-			if rel.R == nil {
-				continue
-			}
-
-			rel.R.PrimaryOwnerAccount = nil
-		}
-		o.R.PrimaryOwnerAccountProjects = nil
-	}
-
-	return o.AddPrimaryOwnerAccountProjects(ctx, exec, insert, related...)
-}
-
-// RemovePrimaryOwnerAccountProjects relationships from objects passed in.
-// Removes related items from R.PrimaryOwnerAccountProjects (uses pointer comparison, removal does not keep order)
-// Sets related.R.PrimaryOwnerAccount.
-func (o *Account) RemovePrimaryOwnerAccountProjects(ctx context.Context, exec boil.ContextExecutor, related ...*Project) error {
-	if len(related) == 0 {
-		return nil
-	}
-
-	var err error
-	for _, rel := range related {
-		queries.SetScanner(&rel.PrimaryOwnerAccountID, nil)
-		if rel.R != nil {
-			rel.R.PrimaryOwnerAccount = nil
-		}
-		if _, err = rel.Update(ctx, exec, boil.Whitelist("primary_owner_account_id")); err != nil {
-			return err
-		}
-	}
-	if o.R == nil {
-		return nil
-	}
-
-	for _, rel := range related {
-		for i, ri := range o.R.PrimaryOwnerAccountProjects {
-			if rel != ri {
-				continue
-			}
-
-			ln := len(o.R.PrimaryOwnerAccountProjects)
-			if ln > 1 && i < ln-1 {
-				o.R.PrimaryOwnerAccountProjects[i] = o.R.PrimaryOwnerAccountProjects[ln-1]
-			}
-			o.R.PrimaryOwnerAccountProjects = o.R.PrimaryOwnerAccountProjects[:ln-1]
-			break
-		}
-	}
-
 	return nil
 }
 
