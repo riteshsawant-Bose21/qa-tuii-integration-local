@@ -411,7 +411,7 @@ class _CeilingPendantSpeakerLayoutWidgetState extends State<CeilingPendantSpeake
                                         children: <Widget>[
                                           _buildTemplateButton('Rectangle', '(0,0), (10,0), (10,8), (0,8)'),
                                           _buildTemplateButton('L-Shape', '(0,0), (10,0), (10,6), (4,6), (4,8), (0,8)'),
-                                          _buildTemplateButton('U-Shape', '(0,0), (3,0), (3,7), (7,7), (7,0), (10,0), (10,8), (0,8)'),
+                                          _buildTemplateButton('U-Shape', '(0,8), (0,0), (10,0), (10,8), (7,8), (7,2), (3,2), (3,8)'),
                                         ],
                                       ),
                                     ],
@@ -1354,7 +1354,7 @@ class _CeilingPendantSpeakerLayoutWidgetState extends State<CeilingPendantSpeake
                   ),
                   const SizedBox(height: 8),
                   const Text(
-                    '• Origin (0,0) is at top-left corner\n'
+                    '• Origin (0,0) is at bottom-left corner\n'
                     '• X-axis increases to the right\n'
                     '• Y-axis increases upward\n'
                     '• Coordinates define room boundary vertices\n'
@@ -1655,6 +1655,7 @@ class RoomLayoutPainter extends CustomPainter {
     final double scaledHeight = roomHeight * scaleFactor;
 
     final double offsetX = (size.width - scaledWidth) / 2 - bounds.minX * scaleFactor;
+    // Adjust Y offset for bottom-left origin coordinate system
     final double offsetY = (size.height - scaledHeight) / 2 - bounds.minY * scaleFactor;
 
     return Offset(offsetX, offsetY);
@@ -2007,9 +2008,13 @@ class RoomLayoutPainter extends CustomPainter {
   }
 
   Offset _transformPoint(Point2D point, double scaleFactor, Offset offset) {
+    final RoomBounds bounds = _calculateBounds();
+    final double roomHeight = bounds.maxY - bounds.minY;
+
     return Offset(
       point.x * scaleFactor + offset.dx,
-      point.y * scaleFactor + offset.dy,
+      // Flip Y coordinate to have (0,0) at bottom-left
+      (roomHeight - point.y) * scaleFactor + offset.dy,
     );
   }
 
