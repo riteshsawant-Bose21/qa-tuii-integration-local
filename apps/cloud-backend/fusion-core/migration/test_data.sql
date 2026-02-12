@@ -156,3 +156,11 @@ INSERT INTO feature_permission (id, feature_id, account_type_role_id, access_lev
 SELECT setval('feature_permission_id_seq',99,true);
 
 -- (Removed prior duplicate COPY-converted INSERT blocks.)
+
+-- Insert data to User profile table
+INSERT INTO user_profile (user_id, email, first_name, last_name, job_title, phone, address_line_1, city, state_province, country, zip_postal_code, gdpr_opt_out, privacy_policy_accepted, timezone, unit_system, customer_type, company_name, currency)
+VALUES ('60000001-0000-4000-8000-000000000006', 'test@domain.com', 'David', 'Admin', 'Audio Engineer', '+1-555-0101', '123 Main Street', 'New York', 'NY', 'USA', '10001', false, true, 'America/New_York', 'imperial', 'enterprise', 'Acme Corp', 'USD');
+
+-- Insert data to User settings table
+INSERT INTO user_settings (user_id, language, theme)
+VALUES ('60000001-0000-4000-8000-000000000006', 'en-US', 'system');
