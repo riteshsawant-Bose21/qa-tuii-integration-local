@@ -65,286 +65,566 @@ import 'package:fusion_lib/fusion_lib.dart';
 ///   prefixIcon: Icons.touch_app,
 /// )
 /// ```
-/// ================= BUTTON STYLES =================
+/// ---------------- ENUM ----------------
 
 enum FusionAppButtonStyle {
   primary,
+  secondary,
   neumorphic,
+  brand,
+  tertiary,
+  link,
 }
 
-/// ================= MAIN BUTTON =================
+/// ---------------- BUTTON ----------------
 
 class FusionAppButton extends StatefulWidget {
-  final String label;
-  final Color? backgroundColor;
-  final VoidCallback onTap;
+  final String? text;
   final FusionAppButtonStyle style;
-  final double height;
+  final bool enabled;
+
   final double width;
-  final double borderRadius;
-  final TextStyle? textStyle;
-  final double horizontalPadding;
-  final Gradient? gradient;
-  final Color? foregroundColor;
-  final Color borderColor;
-  final bool isLoading;
-  final bool isActive;
+  final double height;
+
   final bool showPrefixIcon;
   final IconData? prefixIcon;
+
   final bool showSuffixIcon;
   final IconData? suffixIcon;
-  final String? accessIdentifier;
-  final String? accessLabel;
 
+  final bool IconButton;
+  final FusionAppButtonStyle IconStyle;
+
+  final VoidCallback? onPressed;
+  final Widget? child;
+  final String? semanticId;
   const FusionAppButton({
     super.key,
-    this.backgroundColor,
-    required this.label,
-    required this.onTap,
-
-    this.style = FusionAppButtonStyle.primary,
-
-    this.height = 35,
-    this.width = 120,
-    this.borderRadius = 12,
-
-    this.textStyle,
-    this.horizontalPadding = 12,
-
-    this.gradient,
-    this.foregroundColor,
-    this.borderColor = Colors.transparent,
-
-    this.isLoading = false,
-    this.isActive = true,
-
+    this.semanticId,
+    this.child,
     this.showPrefixIcon = false,
     this.prefixIcon,
-
     this.showSuffixIcon = false,
     this.suffixIcon,
-
-    this.accessIdentifier,
-    this.accessLabel,
+    this.IconButton = false,
+    this.IconStyle = FusionAppButtonStyle.primary,
+    this.text,
+    required this.style,
+    this.enabled = true,
+    this.width = 358,
+    this.height = 48,
+    this.onPressed,
   });
 
   @override
   State<FusionAppButton> createState() => _FusionAppButtonState();
 }
 
-/// ================= STATE =================
-
 class _FusionAppButtonState extends State<FusionAppButton> {
+  bool _isHovered = false;
   bool _isPressed = false;
+  bool _isActive = false;
+
+  bool get _isDisabled => !widget.enabled;
 
   @override
   Widget build(BuildContext context) {
+    return SemanticHelper.button(
+      testId: SemanticHelper.createTestId(
+        SemanticTypes.button,
+        "fusion_app_button${widget.semanticId ?? ""}",
+      ),
+      child: MouseRegion(
+        onEnter: (_) {
+          if (!_isDisabled) {
+            setState(() => _isHovered = true);
+          }
+        },
+        onExit: (_) {
+          if (!_isDisabled) {
+            setState(() {
+              _isHovered = false;
+              _isPressed = false;
+              // keep _isActive
+            });
+          }
+        },
+        child: GestureDetector(
+          onTapDown: _isDisabled
+              ? null
+              : (_) => setState(() => _isPressed = true),
+
+          onTap: _isDisabled
+              ? null
+              : () {
+                  setState(() {
+                    _isActive = !_isActive;
+                    _isPressed = false;
+                  });
+
+                  widget.onPressed?.call();
+                },
+
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 150),
+            curve: Curves.easeOut,
+            width: widget.style == FusionAppButtonStyle.tertiary
+                ? 180
+                : widget.style == FusionAppButtonStyle.link
+                ? null
+                : widget.child != null
+                ? 40
+                : widget.width,
+            height:
+                widget.style == FusionAppButtonStyle.tertiary ||
+                    widget.style == FusionAppButtonStyle.link
+                ? 24
+                : widget.child != null
+                ? 40
+                : widget.height,
+            decoration:
+                // widget.style == FusionAppButtonStyle.neumorphic
+                //     ? null
+                //     :
+                _buildDecoration(),
+            // alignment: Alignment.center,
+            child: _buildContent(),
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// ---------------- UI ----------------
+
+  Widget _buildContent() {
+    return SemanticHelper.container(
+      testId: SemanticHelper.createTestId(
+        SemanticTypes.container,
+        "_build_content",
+      ),
+      child: widget.style == FusionAppButtonStyle.neumorphic
+          ? Opacity(
+              opacity: _isDisabled ? 0.5 : 1,
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                clipBehavior: _isPressed ? Clip.hardEdge : Clip.none,
+                child: FusionContainer(
+                  raised: !_isPressed,
+                  borderRadius: 6,
+                  height: widget.height,
+                  alignment: Alignment.center,
+                  color: () {
+                    if (_isDisabled)
+                      return context.colorScheme.elevation2;
+                    else
+                      return context.colorScheme.elevation1;
+                  }(),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (widget.prefixIcon != null) ...[
+                        Icon(
+                          widget.prefixIcon,
+                          size: 16,
+                          color: !widget.enabled
+                              ? context.colorScheme.iconDisabled
+                              : context.colorScheme.textPrimary,
+                        ),
+                        const SizedBox(width: 8),
+                      ],
+                      const SizedBox(width: 6),
+
+                      Center(
+                        child:
+                            widget.child ??
+                            FusionAppText(
+                              text: widget.text!,
+                              style: _textStyle(),
+                            ),
+                      ),
+                      const SizedBox(width: 8),
+                      if (widget.suffixIcon != null) ...[
+                        const SizedBox(width: 6),
+                        Icon(
+                          widget.suffixIcon,
+                          size: 16,
+                          color: !widget.enabled
+                              ? context.colorScheme.iconDisabled
+                              : context.colorScheme.textPrimary,
+                        ),
+                      ],
+                      if (widget.IconButton) ...[
+                        const SizedBox(width: 6),
+                        // if (widget.IconStyle == FusionAppButtonStyle.primary)
+                        //   ...[]
+                        // else if (widget.IconStyle == FusionAppButtonStyle.secondary)
+                        //   ...[]
+                        // else if (widget.IconStyle == FusionAppButtonStyle.neumorphic)
+                        //   ...[]
+                        // else if (widget.IconStyle == FusionAppButtonStyle.brand)
+                        //   ...[]
+                        // else if (widget.IconStyle == FusionAppButtonStyle.tertiary)
+                        //   ...[]
+                        // else if (widget.IconStyle == FusionAppButtonStyle.link)
+                        //   ...[]
+                        // else ...[
+                        Container(
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(6),
+                            color: _isDisabled
+                                ? context.colorScheme.elevation6
+                                : context.colorScheme.primaryWhite,
+                          ),
+                          width: 24,
+                          height: 24,
+                          child: Icon(
+                            Icons.arrow_forward_rounded,
+                            size: 16,
+                            color: () {
+                              if (_isDisabled)
+                                context.colorScheme.textPlaceholder;
+                              else
+                                return context.colorScheme.elevation2;
+                            }(),
+                          ),
+                        ),
+
+                        // ],
+                        // const SizedBox(width: 8),
+                      ],
+                    ],
+                  ),
+                ),
+              ),
+            )
+          : Row(
+              mainAxisSize: MainAxisSize.min,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                if (widget.showPrefixIcon && widget.prefixIcon != null) ...[
+                  Icon(widget.prefixIcon, size: 16, color: _buttonTextColor),
+                  const SizedBox(width: 8),
+                ],
+                const SizedBox(width: 6),
+
+                widget.child ??
+                    Flexible(
+                      child: FusionAppText(
+                        text: widget.text!,
+                        style: _textStyle(),
+                      ),
+                    ),
+
+                const SizedBox(width: 6),
+                if (widget.showSuffixIcon && widget.suffixIcon != null) ...[
+                  const SizedBox(width: 8),
+                  Icon(widget.suffixIcon, size: 16, color: _buttonTextColor),
+                ],
+                if (widget.IconButton) ...[
+                  const SizedBox(width: 6),
+
+                  // if (widget.IconStyle == FusionAppButtonStyle.primary)
+                  //   ...[]
+                  // else if (widget.IconStyle == FusionAppButtonStyle.secondary)
+                  //   ...[]
+                  // else if (widget.IconStyle == FusionAppButtonStyle.neumorphic)
+                  //   ...[]
+                  // else if (widget.IconStyle == FusionAppButtonStyle.brand)
+                  //   ...[]
+                  // else if (widget.IconStyle == FusionAppButtonStyle.tertiary)
+                  //   ...[]
+                  // else if (widget.IconStyle == FusionAppButtonStyle.link)
+                  //   ...[]
+                  // else ...[
+                  Container(
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(6),
+                      color: _isDisabled
+                          ? context.colorScheme.elevation6
+                          : context.colorScheme.primaryWhite,
+                    ),
+                    width: 24,
+                    height: 24,
+                    child: Icon(
+                      Icons.arrow_forward_rounded,
+                      size: 16,
+                      color: () {
+                        if (_isDisabled)
+                          if (widget.style == FusionAppButtonStyle.brand)
+                            return context.colorScheme.primaryColor;
+                          else
+                            context.colorScheme.textPlaceholder;
+                        else if (widget.style == FusionAppButtonStyle.brand)
+                          return context.colorScheme.primaryColor;
+                        else
+                          return context.colorScheme.elevation2;
+                      }(),
+                    ),
+                  ),
+
+                  // ],
+                  // const SizedBox(width: 8),
+                ],
+              ],
+            ),
+    );
+  }
+
+  /// ---------------- DECORATION ----------------
+  Color get _buttonTextColor {
+    final colorScheme = context.colorScheme;
+
+    // Disabled
+    if (_isDisabled) {
+      if (widget.style == FusionAppButtonStyle.brand) {
+        return colorScheme.GreenThemeDisabledText;
+      }
+      return colorScheme.iconDisabled;
+    }
+
+    // Brand (enabled)
+    if (widget.style == FusionAppButtonStyle.brand) {
+      return colorScheme.primaryWhite;
+    }
+
+    // Tertiary or Link
+    if (widget.style == FusionAppButtonStyle.tertiary ||
+        widget.style == FusionAppButtonStyle.link) {
+      if (_isDisabled) {
+        return colorScheme.iconDisabled;
+      }
+
+      if (_isHovered) {
+        return colorScheme.iconDefault;
+      }
+
+      if (_isActive || _isPressed) {
+        return colorScheme.iconWhite;
+      }
+
+      return colorScheme.textPrimary;
+    }
+
+    // Default
+    return colorScheme.textPrimary;
+  }
+
+  BoxDecoration _buildDecoration() {
     switch (widget.style) {
       case FusionAppButtonStyle.primary:
-        return _buildPrimary(context);
+        return _primary();
+
+      case FusionAppButtonStyle.secondary:
+        return _secondary();
 
       case FusionAppButtonStyle.neumorphic:
-        return _buildNeumorphic(context);
+        return _neumorphic();
+
+      case FusionAppButtonStyle.brand:
+        return _brand();
+
+      case FusionAppButtonStyle.tertiary:
+        return _tertiary();
+
+      case FusionAppButtonStyle.link:
+        return _link();
     }
   }
 
-  // ================= PRIMARY =================
+  /// ---------------- STYLES ----------------
 
-  Widget _buildPrimary(BuildContext context) {
-    final bool disabled = !widget.isActive || widget.isLoading;
+  BoxDecoration _primary() {
+    return BoxDecoration(
+      color: _isDisabled
+          ? context.colorScheme.elevation2
+          : _isPressed || _isActive
+          ? context.colorScheme.elevation2
+          : _isHovered
+          ? context.colorScheme.elevation3
+          : context.colorScheme.elevation2,
+      border: Border.all(color: _border(), width: _isPressed ? 2 : 1),
+      borderRadius: BorderRadius.circular(12),
+    );
+  }
 
-    final Color effectiveBorderColor =
-        disabled && widget.borderColor != Colors.transparent
-        ? widget.borderColor.withOpacity(0.4)
-        : widget.borderColor;
-
-    return SizedBox(
-      width: widget.width,
-      height: widget.height,
-
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          gradient: widget.isActive ? widget.gradient : null,
-
-          color: widget.gradient == null
-              ? (widget.backgroundColor ?? context.colorScheme.elevation2)
-              : null,
-
-          borderRadius: BorderRadius.circular(widget.borderRadius),
-
-          border: Border.all(color: effectiveBorderColor, width: 1),
-        ),
-
-        child: ElevatedButton(
-          onPressed: disabled ? null : widget.onTap,
-
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.transparent,
-            shadowColor: Colors.transparent,
-            disabledBackgroundColor: Colors.transparent,
-
-            padding: EdgeInsets.symmetric(
-              horizontal: widget.horizontalPadding,
-            ),
-
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(widget.borderRadius),
-            ),
-
-            elevation: 0,
-          ),
-
-          child: _buildPrimaryContent(context),
-        ),
+  BoxDecoration _secondary() {
+    return BoxDecoration(
+      color: _isDisabled
+          ? Colors.transparent
+          : _isPressed || _isActive
+          ? context.colorScheme.elevation2
+          : Colors.transparent,
+      borderRadius: BorderRadius.circular(12),
+      border: Border.all(
+        color: _isDisabled
+            ? context.colorScheme.elevation2
+            : _isPressed || _isActive
+            ? context.colorScheme.elevation5
+            : _isHovered
+            ? context.colorScheme.elevation5
+            : context.colorScheme.elevation4,
+        width: _isPressed ? 2 : 1,
       ),
     );
   }
 
-  // ================= NEUMORPHIC =================
+  BoxDecoration _neumorphic() {
+    final pressed = _isPressed;
 
-  Widget _buildNeumorphic(BuildContext context) {
-    final bool disabled = !widget.isActive || widget.isLoading;
-
-    return GestureDetector(
-      onTapDown: disabled ? null : (_) => setState(() => _isPressed = true),
-
-      onTapCancel: disabled ? null : () => setState(() => _isPressed = false),
-
-      onTapUp: disabled
-          ? null
-          : (_) {
-              setState(() => _isPressed = false);
-              widget.onTap();
-            },
-
-      child: Opacity(
-        opacity: disabled ? 0.5 : 1,
-
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(widget.borderRadius),
-
-          clipBehavior: _isPressed ? Clip.hardEdge : Clip.none,
-
-          child: FusionContainer(
-            color: widget.backgroundColor ?? context.colorScheme.elevation2,
-            width: widget.width,
-            height: widget.height,
-
-            raised: !_isPressed && !disabled,
-
-            borderRadius: widget.borderRadius,
-
-            alignment: Alignment.center,
-
-            child: _buildNeumorphicContent(context),
-          ),
-        ),
-      ),
-    );
-  }
-
-  // ================= PRIMARY CONTENT =================
-
-  Widget _buildPrimaryContent(BuildContext context) {
-    if (widget.isLoading) {
-      return const SizedBox(
-        width: 22,
-        height: 22,
-        child: CircularProgressIndicator(
-          strokeWidth: 2,
-          valueColor: AlwaysStoppedAnimation(Colors.white),
-        ),
-      );
-    }
-
-    final Color iconColor = widget.isActive
-        ? widget.foregroundColor ?? context.colorScheme.iconWhite
-        : (widget.foregroundColor ?? context.colorScheme.iconWhite).withOpacity(
-            0.5,
-          );
-
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-
-      children: [
-        if (widget.showPrefixIcon && widget.prefixIcon != null) ...[
-          Icon(widget.prefixIcon, size: 16, color: iconColor),
-          const SizedBox(width: 8),
-        ],
-
-        Flexible(
-          child: Center(
-            child: Text(
-              widget.label,
-              overflow: TextOverflow.ellipsis,
-
-              // textAlign: TextAlign,
-              style:
-                  widget.textStyle ??
-                  TextStyle(
-                    fontSize: 16,
-                    color: widget.isActive
-                        ? context.colorScheme.textLabel
-                        : context.colorScheme.elevation3,
-                  ),
-            ),
-          ),
-        ),
-
-        if (widget.showSuffixIcon && widget.suffixIcon != null) ...[
-          const SizedBox(width: 8),
-          Icon(widget.suffixIcon, size: 16, color: iconColor),
-        ],
-      ],
-    );
-  }
-
-  // ================= NEUMORPHIC CONTENT =================
-
-  Widget _buildNeumorphicContent(BuildContext context) {
-    if (widget.isLoading) {
-      return const SizedBox(
-        width: 22,
-        height: 22,
-        child: CircularProgressIndicator(strokeWidth: 2),
-      );
-    }
-
-    return Padding(
-      padding: EdgeInsets.symmetric(horizontal: widget.horizontalPadding),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-
-        children: [
-          if (widget.showPrefixIcon && widget.prefixIcon != null) ...[
-            Icon(widget.prefixIcon, size: 16),
-            const SizedBox(width: 8),
-          ],
-
-          Flexible(
-            child: Center(
-              child: Text(
-                widget.label,
-                overflow: TextOverflow.ellipsis,
-
-                style:
-                    widget.textStyle ??
-                    TextStyle(
-                      fontSize: 16,
-                      color: widget.isActive
-                          ? context.colorScheme.textLabel
-                          : context.colorScheme.elevation3,
-                    ),
+    return BoxDecoration(
+      borderRadius: BorderRadius.circular(12),
+      boxShadow: _isPressed || _isActive
+          ? [
+              BoxShadow(
+                color: context.colorScheme.shadowDark,
+                blurRadius: 4,
+                offset: const Offset(2, 2),
               ),
-            ),
-          ),
+              BoxShadow(color: context.colorScheme.elevation1),
+            ]
+          : [
+              BoxShadow(
+                color: context.colorScheme.shadowDark,
+                blurRadius: 1,
+                offset: Offset(-2, -2),
+                blurStyle: BlurStyle.inner,
+              ),
+              BoxShadow(
+                color: context.colorScheme.shadowLight,
+                blurRadius: 1,
+                offset: Offset(2, 2),
+                blurStyle: BlurStyle.inner,
+              ),
+              BoxShadow(
+                color: context.colorScheme.elevation1,
+                blurRadius: 4,
+                blurStyle: BlurStyle.inner,
+              ),
+            ],
+    );
+  }
 
-          if (widget.showSuffixIcon && widget.suffixIcon != null) ...[
-            const SizedBox(width: 8),
-            Icon(widget.suffixIcon, size: 16),
-          ],
-        ],
+  BoxDecoration _brand() {
+    return BoxDecoration(
+      color: () {
+        if (_isDisabled)
+          return context.colorScheme.GreenThemeDisabled;
+        else if (_isPressed || _isActive)
+          return context.colorScheme.spl600;
+        else if (_isHovered)
+          return context.colorScheme.spl500;
+        else
+          context.colorScheme.spl600;
+      }(),
+      borderRadius: BorderRadius.circular(12),
+      border: Border.all(
+        color: _isDisabled
+            ? Colors.transparent
+            : _isPressed || _isActive
+            ? context.colorScheme.spl300
+            : Colors.transparent,
+        width: _isPressed ? 2 : 1,
       ),
+    );
+  }
+
+  BoxDecoration _tertiary() {
+    return BoxDecoration(
+      color: Colors.transparent,
+      borderRadius: BorderRadius.circular(8),
+    );
+  }
+
+  BoxDecoration _link() {
+    return BoxDecoration(
+      color: Colors.transparent,
+      border: Border(
+        bottom: BorderSide(
+          color: _isDisabled
+              ? context.colorScheme.textDisabled
+              : _isPressed || _isActive
+              ? context.colorScheme.textPrimary
+              : _isHovered
+              ? context.colorScheme.textBody
+              : context.colorScheme.textPrimary,
+          width: 1,
+        ),
+      ),
+    );
+  }
+
+  /// ---------------- COLORS ----------------
+
+  Color _border() {
+    if (_isDisabled) {
+      if (widget.style == FusionAppButtonStyle.primary) {
+        return context.colorScheme.elevation2;
+      }
+    }
+
+    if (_isPressed) {
+      if (widget.style == FusionAppButtonStyle.primary) {
+        return context.colorScheme.elevation5;
+      }
+    }
+    if (_isActive) {
+      return context.colorScheme.elevation5;
+    }
+    if (_isHovered) {
+      if (widget.style == FusionAppButtonStyle.primary) {
+        return context.colorScheme.elevation4;
+      }
+    }
+
+    return context.colorScheme.elevation3;
+  }
+
+  TextStyle _textStyle() {
+    Color color = context.colorScheme.textPrimary;
+    if (_isDisabled) {
+      color = context.colorScheme.textDisabled;
+    }
+    if (widget.style == FusionAppButtonStyle.link) {
+      return TextStyle(
+        fontWeight: FontWeight.w600,
+        color: () {
+          if (_isDisabled)
+            return context.colorScheme.textDisabled;
+          else if (_isPressed || _isActive)
+            return context.colorScheme.textPrimary;
+          else if (_isHovered)
+            return context.colorScheme.textBody;
+          else
+            context.colorScheme.textPrimary;
+        }(),
+      );
+    }
+    if (widget.style == FusionAppButtonStyle.tertiary) {
+      return TextStyle(
+        fontWeight: FontWeight.w600,
+        color: _isDisabled
+            ? context.colorScheme.textDisabled
+            : _isPressed || _isActive
+            ? context.colorScheme.textPrimary
+            : _isHovered
+            ? context.colorScheme.textBody
+            : context.colorScheme.textPrimary,
+      );
+    }
+
+    if (widget.style == FusionAppButtonStyle.brand) {
+      return TextStyle(
+        fontWeight: FontWeight.w600,
+        color: _isDisabled
+            ? context.colorScheme.GreenThemeDisabledText
+            : context.colorScheme.primaryWhite,
+      );
+    }
+
+    return TextStyle(
+      fontWeight: FontWeight.w600,
+      color: color,
     );
   }
 }

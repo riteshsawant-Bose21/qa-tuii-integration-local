@@ -71,33 +71,41 @@ class WidgetLibrary extends StatelessWidget {
       create: (BuildContext context) => WidgetLibraryViewModel(),
       child: Scaffold(
         backgroundColor: context.colorScheme.primaryBlack,
-        body: LayoutBuilder(
-          builder: (BuildContext context, BoxConstraints constraints) {
-            final bool isWideScreen = constraints.maxWidth > 600;
+        body: SemanticHelper.container(
+          testId: SemanticHelper.createTestId(
+            SemanticTypes.container,
+            "widget_library",
+          ),
+          child: LayoutBuilder(
+            builder: (BuildContext context, BoxConstraints constraints) {
+              final bool isWideScreen = constraints.maxWidth > 600;
 
-            if (isWideScreen) {
-              return Padding(
-                padding: const EdgeInsets.all(4.0),
-                child: Row(
+              if (isWideScreen) {
+                return Padding(
+                  padding: const EdgeInsets.all(4.0),
+                  child: Row(
+                    children: <Widget>[
+                      SizedBox(
+                        width: constraints.maxWidth * 0.25,
+                        child: const WidgetList(),
+                      ),
+                      const SizedBox(width: 4),
+                      const Expanded(
+                        child: Center(child: WidgetDetailsSection()),
+                      ),
+                    ],
+                  ),
+                );
+              } else {
+                return const Column(
                   children: <Widget>[
-                    SizedBox(
-                      width: constraints.maxWidth * 0.25,
-                      child: const WidgetList(),
-                    ),
-                    const SizedBox(width: 4),
-                    const Expanded(child: WidgetDetailsSection()),
+                    Expanded(flex: 1, child: WidgetList()),
+                    Expanded(flex: 2, child: WidgetDetailsSection()),
                   ],
-                ),
-              );
-            } else {
-              return const Column(
-                children: <Widget>[
-                  Expanded(flex: 1, child: WidgetList()),
-                  Expanded(flex: 2, child: WidgetDetailsSection()),
-                ],
-              );
-            }
-          },
+                );
+              }
+            },
+          ),
         ),
       ),
     );

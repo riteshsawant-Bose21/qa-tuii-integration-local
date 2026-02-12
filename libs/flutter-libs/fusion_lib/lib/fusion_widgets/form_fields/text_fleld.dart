@@ -65,9 +65,11 @@ class CustomTextField extends StatefulWidget {
   final FusionFieldState? fieldState;
   final FusionFieldVariant variant;
   final bool showRupee;
+  final String? semanticId;
 
   const CustomTextField({
     super.key,
+    this.semanticId,
     this.showRupee = false,
     this.label,
     required this.hint,
@@ -287,54 +289,6 @@ class _CustomTextFieldState extends State<CustomTextField> {
   }
 
   // Add this list at the top of your _CustomTextFieldState class
-  final List<Map<String, String>> _countries = [
-    {'name': 'Afghanistan', 'code': '+93', 'iso': 'AF'},
-    {'name': 'Albania', 'code': '+355', 'iso': 'AL'},
-    {'name': 'Algeria', 'code': '+213', 'iso': 'DZ'},
-    {'name': 'Argentina', 'code': '+54', 'iso': 'AR'},
-    {'name': 'Australia', 'code': '+61', 'iso': 'AU'},
-    {'name': 'Austria', 'code': '+43', 'iso': 'AT'},
-    {'name': 'Bangladesh', 'code': '+880', 'iso': 'BD'},
-    {'name': 'Belgium', 'code': '+32', 'iso': 'BE'},
-    {'name': 'Brazil', 'code': '+55', 'iso': 'BR'},
-    {'name': 'Canada', 'code': '+1', 'iso': 'CA'},
-    {'name': 'China', 'code': '+86', 'iso': 'CN'},
-    {'name': 'Denmark', 'code': '+45', 'iso': 'DK'},
-    {'name': 'Egypt', 'code': '+20', 'iso': 'EG'},
-    {'name': 'France', 'code': '+33', 'iso': 'FR'},
-    {'name': 'Germany', 'code': '+49', 'iso': 'DE'},
-    {'name': 'India', 'code': '+91', 'iso': 'IN'},
-    {'name': 'Indonesia', 'code': '+62', 'iso': 'ID'},
-    {'name': 'Ireland', 'code': '+353', 'iso': 'IE'},
-    {'name': 'Italy', 'code': '+39', 'iso': 'IT'},
-    {'name': 'Japan', 'code': '+81', 'iso': 'JP'},
-    {'name': 'Malaysia', 'code': '+60', 'iso': 'MY'},
-    {'name': 'Mexico', 'code': '+52', 'iso': 'MX'},
-    {'name': 'Netherlands', 'code': '+31', 'iso': 'NL'},
-    {'name': 'New Zealand', 'code': '+64', 'iso': 'NZ'},
-    {'name': 'Nigeria', 'code': '+234', 'iso': 'NG'},
-    {'name': 'Norway', 'code': '+47', 'iso': 'NO'},
-    {'name': 'Pakistan', 'code': '+92', 'iso': 'PK'},
-    {'name': 'Philippines', 'code': '+63', 'iso': 'PH'},
-    {'name': 'Poland', 'code': '+48', 'iso': 'PL'},
-    {'name': 'Portugal', 'code': '+351', 'iso': 'PT'},
-    {'name': 'Russia', 'code': '+7', 'iso': 'RU'},
-    {'name': 'Saudi Arabia', 'code': '+966', 'iso': 'SA'},
-    {'name': 'Singapore', 'code': '+65', 'iso': 'SG'},
-    {'name': 'South Africa', 'code': '+27', 'iso': 'ZA'},
-    {'name': 'South Korea', 'code': '+82', 'iso': 'KR'},
-    {'name': 'Spain', 'code': '+34', 'iso': 'ES'},
-    {'name': 'Sri Lanka', 'code': '+94', 'iso': 'LK'},
-    {'name': 'Sweden', 'code': '+46', 'iso': 'SE'},
-    {'name': 'Switzerland', 'code': '+41', 'iso': 'CH'},
-    {'name': 'Thailand', 'code': '+66', 'iso': 'TH'},
-    {'name': 'Turkey', 'code': '+90', 'iso': 'TR'},
-    {'name': 'UAE', 'code': '+971', 'iso': 'AE'},
-    {'name': 'Ukraine', 'code': '+380', 'iso': 'UA'},
-    {'name': 'United Kingdom', 'code': '+44', 'iso': 'GB'},
-    {'name': 'United States', 'code': '+1', 'iso': 'US'},
-    {'name': 'Vietnam', 'code': '+84', 'iso': 'VN'},
-  ];
 
   String _selectedCountryCode = '+91';
 
@@ -368,7 +322,7 @@ class _CustomTextFieldState extends State<CustomTextField> {
                     color: Colors.transparent,
                     child: StatefulBuilder(
                       builder: (context, setOverlayState) {
-                        List<Map<String, String>> filteredCountries = _countries
+                        List<Map<String, String>> filteredCountries = countries
                             .where(
                               (country) =>
                                   country['name']!.toLowerCase().contains(
@@ -629,6 +583,8 @@ class _CustomTextFieldState extends State<CustomTextField> {
 
       default:
         return context.colorScheme.elevation1;
+      // default:
+      //   return Colors.transparent;
     }
   }
 
@@ -639,18 +595,34 @@ class _CustomTextFieldState extends State<CustomTextField> {
       return BoxDecoration(
         color: _fillColor(),
         borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.6),
-            offset: const Offset(4, 4),
-            blurRadius: 8,
-          ),
-          BoxShadow(
-            color: Colors.white.withOpacity(0.05),
-            offset: const Offset(-3, -3),
-            blurRadius: 6,
-          ),
-        ],
+        // boxShadow: widget.fieldState == FusionFieldState.focused
+        //     ? [
+        //         BoxShadow(
+        //           color: context.colorScheme.shadowDark,
+        //           blurRadius: 4,
+        //           offset: const Offset(2, 2),
+        //         ),
+        //         BoxShadow(color: context.colorScheme.elevation1),
+        //       ]
+        //     : [
+        //         BoxShadow(
+        //           color: context.colorScheme.shadowDark,
+        //           blurRadius: 1,
+        //           offset: Offset(-2, -2),
+        //           blurStyle: BlurStyle.inner,
+        //         ),
+        //         BoxShadow(
+        //           color: context.colorScheme.shadowLight,
+        //           blurRadius: 1,
+        //           offset: Offset(2, 2),
+        //           blurStyle: BlurStyle.inner,
+        //         ),
+        //         BoxShadow(
+        //           color: context.colorScheme.elevation1,
+        //           blurRadius: 4,
+        //           blurStyle: BlurStyle.inner,
+        //         ),
+        //       ],
       );
     }
 
@@ -668,55 +640,59 @@ class _CustomTextFieldState extends State<CustomTextField> {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        /// LABEL
-        if (widget.showLabel)
-          Row(
-            children: [
-              Text(
-                widget.label ?? '',
-                style: TextStyle(
-                  color: widget.hasErrorText
-                      ? context.colorScheme.errorText
-                      : widget.fieldState == FusionFieldState.blocked
-                      ? context.colorScheme.textDisabled
-                      : context.colorScheme.primaryWhite,
-                  fontSize: 13,
-                ),
-              ),
-              SizedBox(
-                width: 2,
-              ),
-              if (widget.info) ...[
-                GestureDetector(
-                  onTap: widget.infoTap,
-                  child: Icon(
-                    Icons.info_outline_rounded,
-                    size: 12,
+    return SemanticHelper.container(
+      testId: SemanticHelper.createTestId(
+        SemanticTypes.container,
+        "textfield_${widget.semanticId ?? ""}",
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          /// LABEL
+          if (widget.showLabel)
+            Row(
+              children: [
+                FusionAppText(
+                  text: widget.label ?? '',
+                  style: TextStyle(
                     color: widget.hasErrorText
                         ? context.colorScheme.errorText
                         : widget.fieldState == FusionFieldState.blocked
                         ? context.colorScheme.textDisabled
                         : context.colorScheme.primaryWhite,
+                    fontSize: 13,
                   ),
                 ),
+                SizedBox(
+                  width: 2,
+                ),
+                if (widget.info) ...[
+                  GestureDetector(
+                    onTap: widget.infoTap,
+                    child: Icon(
+                      Icons.info_outline_rounded,
+                      size: 12,
+                      color: widget.hasErrorText
+                          ? context.colorScheme.errorText
+                          : widget.fieldState == FusionFieldState.blocked
+                          ? context.colorScheme.textDisabled
+                          : context.colorScheme.primaryWhite,
+                    ),
+                  ),
+                ],
               ],
-            ],
-          ),
+            ),
 
-        const SizedBox(height: 6),
+          const SizedBox(height: 6),
 
-        /// FIELD
-        CompositedTransformTarget(
-          link: _layerLink,
-          child: Container(
-            key: _fieldKey,
-            decoration: _getDecoration(),
-
-            child: Padding(
-              padding: const EdgeInsets.all(2),
+          /// FIELD
+          CompositedTransformTarget(
+            link: _layerLink,
+            child: Container(
+              padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              height: 52,
+              key: _fieldKey,
+              decoration: _getDecoration(),
 
               child: Row(
                 children: [
@@ -726,25 +702,31 @@ class _CustomTextFieldState extends State<CustomTextField> {
                     Icon(
                       widget.prefixIcon,
                       size: 20,
-                      color: widget.fieldState == FusionFieldState.blocked
-                          ? context.colorScheme.iconDisabled
-                          : widget.fieldState == FusionFieldState.blockedFilled
-                          ? context.colorScheme.iconDisabled
-                          : context.colorScheme.textPrimary,
+                      color: () {
+                        if (widget.fieldState == FusionFieldState.blocked)
+                          return context.colorScheme.iconDisabled;
+                        else if (widget.fieldState ==
+                            FusionFieldState.blockedFilled)
+                          return context.colorScheme.iconDisabled;
+                        else
+                          return context.colorScheme.textPrimary;
+                      }(),
                     ),
                   ],
                   if (widget.showCountryCode) ...[
                     GestureDetector(
                       onTap: widget.enabled ? _showCountryCodePicker : null,
                       child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 14,
-                        ),
+                        // padding: const EdgeInsets.symmetric(
+                        //   horizontal: 12,
+                        //   vertical: 14,
+                        // ),
                         decoration: BoxDecoration(
                           color: widget.enabled
                               ? Colors.transparent
-                              : context.colorScheme.elevation1.withOpacity(0.5),
+                              : context.colorScheme.elevation1.withOpacity(
+                                  0.5,
+                                ),
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Row(
@@ -768,13 +750,16 @@ class _CustomTextFieldState extends State<CustomTextField> {
                             Icon(
                               Icons.arrow_drop_down,
                               size: 20,
-                              color:
-                                  widget.fieldState == FusionFieldState.blocked
-                                  ? context.colorScheme.textDisabled
-                                  : widget.fieldState ==
-                                        FusionFieldState.blockedFilled
-                                  ? context.colorScheme.textBody
-                                  : context.colorScheme.textPrimary,
+                              color: () {
+                                if (widget.fieldState ==
+                                    FusionFieldState.blocked)
+                                  return context.colorScheme.iconDisabled;
+                                else if (widget.fieldState ==
+                                    FusionFieldState.blockedFilled)
+                                  return context.colorScheme.iconDisabled;
+                                else
+                                  return context.colorScheme.textPrimary;
+                              }(),
                             ),
                           ],
                         ),
@@ -814,11 +799,12 @@ class _CustomTextFieldState extends State<CustomTextField> {
                                   }
                                 : null,
                             child: Container(
-                              alignment: Alignment.centerLeft,
+                              // alignment: Alignment.centerLeft,
                               padding: const EdgeInsets.symmetric(
                                 vertical: 14,
                                 horizontal: 10,
                               ),
+                              color: _fillColor(),
                               child: Text(
                                 widget.controller.text.isEmpty
                                     ? widget.hint
@@ -835,15 +821,24 @@ class _CustomTextFieldState extends State<CustomTextField> {
                             ),
                           )
                         : IgnorePointer(
-                            ignoring: !widget.enabled,
+                            ignoring:
+                                widget.fieldState == FusionFieldState.blocked
+                                ? true
+                                : !widget.enabled,
                             child: TextField(
                               controller: widget.controller,
                               focusNode: _focusNode,
 
                               enabled: widget.enabled,
 
-                              readOnly: widget.isDropdown,
-                              showCursor: !widget.isDropdown,
+                              readOnly:
+                                  widget.fieldState == FusionFieldState.blocked
+                                  ? true
+                                  : !widget.enabled,
+                              showCursor:
+                                  widget.fieldState == FusionFieldState.blocked
+                                  ? false
+                                  : !widget.isDropdown,
 
                               onTap: () {
                                 if (widget.isDropdown) {
@@ -891,13 +886,11 @@ class _CustomTextFieldState extends State<CustomTextField> {
                                 color:
                                     widget.fieldState ==
                                         FusionFieldState.blocked
-                                    ? context.colorScheme.textDisabled
+                                    ? context.colorScheme.elevation1
                                     : widget.fieldState ==
                                           FusionFieldState.blockedFilled
-                                    ? context.colorScheme.textBody
-                                    : context
-                                          .colorScheme
-                                          .textPrimary, // ← CHANGED: Always use textPrimary for visible states
+                                    ? context.colorScheme.elevation1
+                                    : context.colorScheme.primaryWhite,
                                 fontSize: 14,
                               ),
 
@@ -919,9 +912,7 @@ class _CustomTextFieldState extends State<CustomTextField> {
                                       : widget.fieldState ==
                                             FusionFieldState.blockedFilled
                                       ? context.colorScheme.textBody
-                                      : context
-                                            .colorScheme
-                                            .textPlaceholder, // Hint stays as placeholder color
+                                      : Colors.transparent,
                                 ),
 
                                 fillColor: context.colorScheme.elevation1,
@@ -937,6 +928,7 @@ class _CustomTextFieldState extends State<CustomTextField> {
                   /// BUTTON
                   if (widget.button)
                     NeumorphicButton(
+                      height: 32,
                       borderRadius: 8,
                       onTap: widget.buttonTap ?? () {},
                       text: widget.buttonText,
@@ -966,38 +958,38 @@ class _CustomTextFieldState extends State<CustomTextField> {
               ),
             ),
           ),
-        ),
 
-        const SizedBox(height: 4),
+          const SizedBox(height: 4),
 
-        /// MESSAGES
-        if (widget.hasHelperText)
-          Text(
-            widget.helperText,
-            style: TextStyle(
-              fontSize: 12,
-              color: context.colorScheme.textPrimary,
+          /// MESSAGES
+          if (widget.hasHelperText)
+            Text(
+              widget.helperText,
+              style: TextStyle(
+                fontSize: 12,
+                color: context.colorScheme.textPrimary,
+              ),
             ),
-          ),
 
-        if (widget.hasErrorText)
-          Text(
-            widget.errorText,
-            style: TextStyle(
-              color: context.colorScheme.errorText,
-              fontSize: 12,
+          if (widget.hasErrorText)
+            Text(
+              widget.errorText,
+              style: TextStyle(
+                color: context.colorScheme.errorText,
+                fontSize: 12,
+              ),
             ),
-          ),
 
-        if (widget.hasSuccessText)
-          Text(
-            widget.successText,
-            style: TextStyle(
-              color: context.colorScheme.successText,
-              fontSize: 12,
+          if (widget.hasSuccessText)
+            Text(
+              widget.successText,
+              style: TextStyle(
+                color: context.colorScheme.successText,
+                fontSize: 12,
+              ),
             ),
-          ),
-      ],
+        ],
+      ),
     );
   }
 }

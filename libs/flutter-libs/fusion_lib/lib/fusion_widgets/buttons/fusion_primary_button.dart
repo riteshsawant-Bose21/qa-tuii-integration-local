@@ -113,9 +113,11 @@ class FusionPrimaryButton extends StatefulWidget {
   final String? accessIdentifier;
   final String? accessLabel;
   final Color? backgroundColor;
+  final Widget? child;
 
   const FusionPrimaryButton({
     super.key,
+    this.child,
     required this.label,
     this.backgroundColor,
     required this.onTap,

@@ -18,18 +18,6 @@ class WidgetLibraryData {
       category: WidgetCategory.buttons,
     ),
     const WidgetItem(
-      name: 'SecondaryButton',
-      category: WidgetCategory.buttons,
-    ),
-    const WidgetItem(
-      name: 'FusionTextButton',
-      category: WidgetCategory.buttons,
-    ),
-    const WidgetItem(
-      name: 'TertiaryLinkButton',
-      category: WidgetCategory.buttons,
-    ),
-    const WidgetItem(
       name: 'FusionTextField',
       category: WidgetCategory.textFields,
     ),

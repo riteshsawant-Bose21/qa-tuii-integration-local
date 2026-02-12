@@ -163,6 +163,7 @@ class WidgetDetailsSection extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
             FusionAppText(
+              semanticId: widget.name,
               text: widget.name,
               style: const TextStyle(
                 fontSize: 20,
@@ -196,16 +197,12 @@ class WidgetDetailsSection extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          const Row(
-            children: <Widget>[
-              FusionAppText(
-                text: 'Types',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ],
+          const FusionAppText(
+            text: 'Types',
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+            ),
           ),
 
           const SizedBox(height: 24),
@@ -225,18 +222,14 @@ class WidgetDetailsSection extends StatelessWidget {
     final WidgetItem? widget = viewModel.selectedWidget;
 
     if (widget == null) {
-      return const FusionAppText(text: 'No widget selected');
+      return const FusionAppText(
+        text: 'No widget selected',
+      );
     }
 
     switch (widget.name) {
       case "FusionAppButton":
         return _buildFusionAppButtonVariants(context);
-      case "SecondaryButton":
-        return _buildSecondaryButtonVariants(context);
-      case "TertiaryLinkButton":
-        return _buildTertiaryLinkButtonVariants(context);
-      case "FusionTextButton":
-        return _buildFusionTextButtonVariants(context);
       case "FusionTextField":
         return _buildFusionTextFieldVariants(context);
       case "RadioButton":
@@ -295,684 +288,374 @@ class WidgetDetailsSection extends StatelessWidget {
         _buildWithCopy(
           context: context,
           preview: FusionAppButton(
-            width: 200,
-            label: "Primary",
-            onTap: () {},
-            style: FusionAppButtonStyle.primary,
-          ),
-          code: '''
-FusionAppButton(
-  label: "Primary",
-  onTap: () {},
-  style: FusionAppButtonStyle.primary,
-)
-''',
-        ),
-
-        const SizedBox(height: 12),
-
-        /// ================= PRIMARY + ICONS =================
-        _buildWithCopy(
-          context: context,
-          preview: FusionAppButton(
-            width: 200,
-            label: "With Icons",
-            onTap: () {},
-            style: FusionAppButtonStyle.primary,
+            semanticId: "Primary",
+            text: "Primary",
             showPrefixIcon: true,
-            prefixIcon: Icons.login,
-            showSuffixIcon: true,
-            suffixIcon: Icons.check,
-          ),
-          code: '''
-FusionAppButton(
-  label: "With Icons",
-  onTap: () {},
-  showPrefixIcon: true,
-  prefixIcon: Icons.login,
-  showSuffixIcon: true,
-  suffixIcon: Icons.check,
-)
-''',
-        ),
-
-        const SizedBox(height: 12),
-
-        /// ================= GRADIENT =================
-        _buildWithCopy(
-          context: context,
-          preview: FusionAppButton(
-            label: "Gradient",
-            onTap: () {},
-            width: 200,
-            style: FusionAppButtonStyle.primary,
-            gradient: const LinearGradient(
-              colors: <Color>[Colors.blue, Colors.purple],
-            ),
-          ),
-          code: '''
-FusionAppButton(
-  label: "Gradient",
-  onTap: () {},
-  gradient: LinearGradient(
-    colors: [Colors.blue, Colors.purple],
-  ),
-)
-''',
-        ),
-
-        const SizedBox(height: 12),
-
-        /// ================= DISABLED =================
-        _buildWithCopy(
-          context: context,
-          preview: FusionAppButton(
-            label: "Disabled",
-            onTap: () {},
-            width: 200,
-            isActive: false,
-          ),
-          code: '''
-FusionAppButton(
-  label: "Disabled",
-  onTap: () {},
-  isActive: false,
-)
-''',
-        ),
-
-        const SizedBox(height: 12),
-
-        /// ================= BORDERED =================
-        _buildWithCopy(
-          context: context,
-          preview: FusionAppButton(
-            label: "Bordered",
-            onTap: () {},
-            width: 200,
-            borderColor: Colors.blue,
-            backgroundColor: Colors.transparent,
-            foregroundColor: Colors.blue,
-          ),
-          code: '''
-FusionAppButton(
-  label: "Bordered",
-  onTap: () {},
-  borderColor: Colors.blue,
-  backgroundColor: Colors.transparent,
-)
-''',
-        ),
-
-        const SizedBox(height: 12),
-
-        /// ================= NEUMORPHIC =================
-        _buildWithCopy(
-          context: context,
-          preview: FusionAppButton(
-            label: "Neumorphic",
-            width: 200,
-            onTap: () {},
-            style: FusionAppButtonStyle.primary,
-            backgroundColor: context.colorScheme.elevation2,
-          ),
-          code: '''
-FusionAppButton(
-  label: "Neumorphic",
-  onTap: () {},
-  style: FusionAppButtonStyle.neumorphic,
-)
-''',
-        ),
-
-        const SizedBox(height: 12),
-
-        /// ================= NEUMORPHIC + ICON =================
-        _buildWithCopy(
-          context: context,
-          preview: FusionAppButton(
-            label: "Soft UI",
-            width: 200,
-            onTap: () {},
-            style: FusionAppButtonStyle.primary,
-            backgroundColor: context.colorScheme.elevation2,
-            showPrefixIcon: true,
-            prefixIcon: Icons.touch_app,
-          ),
-          code: '''
-FusionAppButton(
-  label: "Soft UI",
-  onTap: () {},
-  style: FusionAppButtonStyle.neumorphic,
-  showPrefixIcon: true,
-  prefixIcon: Icons.touch_app,
-)
-''',
-        ),
-
-        const SizedBox(height: 12),
-        _buildWithCopy(
-          context: context,
-          preview: FusionAppButton(
-            width: 200,
-            label: "Primary",
-            onTap: () {},
-            style: FusionAppButtonStyle.neumorphic,
-          ),
-          code: '''
-FusionAppButton(
-  label: "Primary",
-  onTap: () {},
-  style: FusionAppButtonStyle.primary,
-)
-''',
-        ),
-
-        const SizedBox(height: 12),
-
-        /// ================= PRIMARY + ICONS =================
-        _buildWithCopy(
-          context: context,
-          preview: FusionAppButton(
-            width: 200,
-            label: "With Icons",
-            onTap: () {},
-            style: FusionAppButtonStyle.neumorphic,
-            showPrefixIcon: true,
-            prefixIcon: Icons.login,
-            showSuffixIcon: true,
-            suffixIcon: Icons.check,
-          ),
-          code: '''
-FusionAppButton(
-  label: "With Icons",
-  onTap: () {},
-  showPrefixIcon: true,
-  prefixIcon: Icons.login,
-  showSuffixIcon: true,
-  suffixIcon: Icons.check,
-)
-''',
-        ),
-
-        const SizedBox(height: 12),
-
-        /// ================= DISABLED =================
-        _buildWithCopy(
-          context: context,
-          preview: FusionAppButton(
-            label: "Disabled",
-            onTap: () {},
-            width: 200,
-            style: FusionAppButtonStyle.neumorphic,
-            isActive: false,
-          ),
-          code: '''
-FusionAppButton(
-  label: "Disabled",
-  onTap: () {},
-  isActive: false,
-)
-''',
-        ),
-
-        const SizedBox(height: 12),
-
-        /// ================= BORDERED =================
-        _buildWithCopy(
-          context: context,
-          preview: FusionAppButton(
-            label: "Bordered",
-            onTap: () {},
-            style: FusionAppButtonStyle.neumorphic,
-            width: 200,
-            borderColor: Colors.blue,
-            backgroundColor: Colors.transparent,
-            foregroundColor: Colors.blue,
-          ),
-          code: '''
-FusionAppButton(
-  label: "Bordered",
-  onTap: () {},
-  borderColor: Colors.blue,
-  backgroundColor: Colors.transparent,
-)
-''',
-        ),
-
-        const SizedBox(height: 12),
-
-        /// ================= NEUMORPHIC =================
-        _buildWithCopy(
-          context: context,
-          preview: FusionAppButton(
-            label: "Neumorphic",
-            width: 200,
-            onTap: () {},
-            style: FusionAppButtonStyle.neumorphic,
-            backgroundColor: context.colorScheme.elevation2,
-          ),
-          code: '''
-FusionAppButton(
-  label: "Neumorphic",
-  onTap: () {},
-  style: FusionAppButtonStyle.neumorphic,
-)
-''',
-        ),
-
-        const SizedBox(height: 12),
-
-        /// ================= NEUMORPHIC + ICON =================
-        _buildWithCopy(
-          context: context,
-          preview: FusionAppButton(
-            label: "Soft UI",
-            width: 200,
-            onTap: () {},
-            style: FusionAppButtonStyle.neumorphic,
-            backgroundColor: context.colorScheme.elevation2,
-            showPrefixIcon: true,
-            prefixIcon: Icons.touch_app,
-          ),
-          code: '''
-FusionAppButton(
-  label: "Soft UI",
-  onTap: () {},
-  style: FusionAppButtonStyle.neumorphic,
-  showPrefixIcon: true,
-  prefixIcon: Icons.touch_app,
-)
-''',
-        ),
-
-        const SizedBox(height: 12),
-      ],
-    );
-  }
-
-  Widget _buildSecondaryButtonVariants(BuildContext context) {
-    return Column(
-      children: <Widget>[
-        // ================= DEFAULT =================
-        _buildWithCopy(
-          context: context,
-          preview: SecondaryButton(
-            label: "Default",
-            onTap: () {},
-          ),
-          code: '''
-SecondaryButton(
-  label: "Default",
-  onTap: () {},
-)
-''',
-        ),
-
-        const SizedBox(height: 20),
-
-        // ================= DISABLED =================
-        _buildWithCopy(
-          context: context,
-          preview: SecondaryButton(
-            label: "Disabled",
-            isActive: false,
-            onTap: () {},
-          ),
-          code: '''
-SecondaryButton(
-  label: "Disabled",
-  isActive: false,
-  onTap: () {},
-)
-''',
-        ),
-
-        const SizedBox(height: 20),
-
-        // ================= BOLD TEXT =================
-        _buildWithCopy(
-          context: context,
-          preview: SecondaryButton(
-            label: "Bold",
-            textStyle: const TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-            ),
-            onTap: () {},
-          ),
-          code: '''
-SecondaryButton(
-  label: "Bold",
-  textStyle: TextStyle(
-    fontSize: 16,
-    fontWeight: FontWeight.bold,
-  ),
-  onTap: () {},
-)
-''',
-        ),
-
-        const SizedBox(height: 20),
-
-        // ================= PREFIX ICON =================
-        _buildWithCopy(
-          context: context,
-          preview: SecondaryButton(
-            label: "Upload",
-            showPrefixIcon: true,
-            prefixIcon: Icons.upload,
-            onTap: () {},
-          ),
-          code: '''
-SecondaryButton(
-  label: "Upload",
-  showPrefixIcon: true,
-  prefixIcon: Icons.upload,
-  onTap: () {},
-)
-''',
-        ),
-
-        const SizedBox(height: 20),
-
-        // ================= SUFFIX ICON =================
-        _buildWithCopy(
-          context: context,
-          preview: SecondaryButton(
-            label: "Send",
-            showSuffixIcon: true,
-            suffixIcon: Icons.send,
-            onTap: () {},
-          ),
-          code: '''
-SecondaryButton(
-  label: "Send",
-  showSuffixIcon: true,
-  suffixIcon: Icons.send,
-  onTap: () {},
-)
-''',
-        ),
-
-        const SizedBox(height: 20),
-        _buildWithCopy(
-          context: context,
-          preview: SecondaryButton(
-            label: "Send",
-            gradient: const LinearGradient(
-              colors: <Color>[Colors.purple, Colors.pink],
-            ),
-            onTap: () {},
-          ),
-          code: '''
-SecondaryButton(
-  label: "Send",
-  showSuffixIcon: true,
-  suffixIcon: Icons.send,
-  gradient: const LinearGradient(
-              colors: <Color>[Colors.purple, Colors.pink],
-            ),
-  onTap: () {},
-)
-''',
-        ),
-      ],
-    );
-  }
-
-  Widget _buildFusionTextButtonVariants(BuildContext context) {
-    return Column(
-      children: <Widget>[
-        // ================= DEFAULT =================
-        _buildWithCopy(
-          context: context,
-          preview: FusionTextButton(
-            label: "Default",
-            onTap: () {},
-          ),
-          code: '''
-FusionTextButton(
-  label: "Default",
-  onTap: () {},
-)
-''',
-        ),
-
-        const SizedBox(height: 20),
-
-        // ================= CUSTOM TEXT STYLE =================
-        _buildWithCopy(
-          context: context,
-          preview: FusionTextButton(
-            label: "Bold Text",
-            textStyle: const TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-              color: Colors.blue,
-            ),
-            onTap: () {},
-          ),
-          code: '''
-FusionTextButton(
-  label: "Bold Text",
-  textStyle: TextStyle(
-    fontSize: 16,
-    fontWeight: FontWeight.bold,
-    color: Colors.blue,
-  ),
-  onTap: () {},
-)
-''',
-        ),
-
-        const SizedBox(height: 20),
-
-        // ================= PREFIX ICON =================
-        _buildWithCopy(
-          context: context,
-          preview: FusionTextButton(
-            label: "Close",
-            showPrefixIcon: true,
-            prefixIcon: Icons.close,
-            onTap: () {},
-          ),
-          code: '''
-FusionTextButton(
-  label: "Close",
-  showPrefixIcon: true,
-  prefixIcon: Icons.close,
-  onTap: () {},
-)
-''',
-        ),
-
-        const SizedBox(height: 20),
-
-        // ================= SUFFIX ICON =================
-        _buildWithCopy(
-          context: context,
-          preview: FusionTextButton(
-            label: "Next",
+            prefixIcon: Icons.arrow_back,
             showSuffixIcon: true,
             suffixIcon: Icons.arrow_forward,
-            onTap: () {},
+            onPressed: () {},
+            IconButton: true,
+            style: FusionAppButtonStyle.primary,
           ),
           code: '''
-FusionTextButton(
-  label: "Next",
-  showSuffixIcon: true,
-  suffixIcon: Icons.arrow_forward,
-  onTap: () {},
-)
-''',
-        ),
-
-        const SizedBox(height: 20),
-
-        // ================= BOTH ICONS =================
-        _buildWithCopy(
-          context: context,
-          preview: FusionTextButton(
-            label: "Share",
+FusionAppButton(
+            semanticId: "Primary",
+            text: "Primary",
             showPrefixIcon: true,
-            prefixIcon: Icons.share,
+            prefixIcon: Icons.arrow_back,
             showSuffixIcon: true,
             suffixIcon: Icons.arrow_forward,
-            onTap: () {},
+            onPressed: () {},
+            IconButton: true,
+            style: FusionAppButtonStyle.primary,
           ),
-          code: '''
-FusionTextButton(
-  label: "Share",
-  showPrefixIcon: true,
-  prefixIcon: Icons.share,
-  showSuffixIcon: true,
-  suffixIcon: Icons.arrow_forward,
-  onTap: () {},
-)
 ''',
         ),
-
-        const SizedBox(height: 20),
-      ],
-    );
-  }
-
-  Widget _buildTertiaryLinkButtonVariants(BuildContext context) {
-    return Column(
-      children: <Widget>[
-        const SizedBox(height: 20),
-        _buildWithCopy(
-          context: context,
-          preview: FusionTextButton(
-            label: "Default",
-            textStyle: const TextStyle(
-              decoration: TextDecoration.underline,
-              fontSize: 16,
-              decorationThickness: 2,
-              color: Colors.white,
-            ),
-            onTap: () {},
-          ),
-          code: '''
-FusionTextButton(
-  label: "Bold Text",
-  textStyle: TextStyle(
-    fontSize: 16,
-    fontWeight: FontWeight.bold,
-    color: Colors.blue,
-  ),
-  onTap: () {},
-)
-''',
+        const SizedBox(
+          height: 10,
         ),
-        // ================= CUSTOM TEXT STYLE =================
         _buildWithCopy(
           context: context,
-          preview: FusionTextButton(
-            label: "Bold Text",
-            textStyle: const TextStyle(
-              fontSize: 16,
-              decoration: TextDecoration.underline,
-              decorationThickness: 2,
-              fontWeight: FontWeight.bold,
-              color: Colors.blue,
-            ),
-            onTap: () {},
-          ),
-          code: '''
-FusionTextButton(
-  label: "Bold Text",
-  textStyle: TextStyle(
-    fontSize: 16,
-    fontWeight: FontWeight.bold,
-    color: Colors.blue,
-  ),
-  onTap: () {},
-)
-''',
-        ),
-
-        const SizedBox(height: 20),
-
-        // ================= PREFIX ICON =================
-        _buildWithCopy(
-          context: context,
-          preview: FusionTextButton(
-            label: "Close",
+          preview: FusionAppButton(
+            semanticId: "Primary_disabled",
+            text: "Primary",
             showPrefixIcon: true,
-            textStyle: const TextStyle(
-              decoration: TextDecoration.underline,
-              decorationThickness: 2,
-            ),
-            prefixIcon: Icons.close,
-            onTap: () {},
+            prefixIcon: Icons.arrow_back,
+            showSuffixIcon: true,
+            enabled: false,
+            suffixIcon: Icons.arrow_forward,
+            onPressed: () {},
+            IconButton: true,
+            style: FusionAppButtonStyle.primary,
           ),
           code: '''
-FusionTextButton(
-  label: "Close",
-  showPrefixIcon: true,
-  prefixIcon: Icons.close,
-  onTap: () {},
-)
+FusionAppButton(
+            semanticId: "Primary_disabled",
+            text: "Primary",
+            showPrefixIcon: true,
+            prefixIcon: Icons.arrow_back,
+            showSuffixIcon: true,
+            enabled: false,
+            suffixIcon: Icons.arrow_forward,
+            onPressed: () {},
+            IconButton: true,
+            style: FusionAppButtonStyle.primary,
+          ),
 ''',
         ),
-
-        const SizedBox(height: 20),
-
-        // ================= SUFFIX ICON =================
+        const SizedBox(
+          height: 10,
+        ),
         _buildWithCopy(
           context: context,
-          preview: FusionTextButton(
-            label: "Next",
+          preview: FusionAppButton(
+            semanticId: "Secondary",
+            text: "Secondary",
+            showPrefixIcon: true,
+            prefixIcon: Icons.arrow_back,
             showSuffixIcon: true,
             suffixIcon: Icons.arrow_forward,
-            textStyle: const TextStyle(
-              decoration: TextDecoration.underline,
-              decorationThickness: 2,
-            ),
-            onTap: () {},
+            onPressed: () {},
+            IconButton: true,
+            style: FusionAppButtonStyle.secondary,
           ),
           code: '''
-FusionTextButton(
-  label: "Next",
-  showSuffixIcon: true,
-  suffixIcon: Icons.arrow_forward,
-  onTap: () {},
-)
-''',
-        ),
-
-        const SizedBox(height: 20),
-
-        // ================= BOTH ICONS =================
-        _buildWithCopy(
-          context: context,
-          preview: FusionTextButton(
-            label: "Share",
+FusionAppButton(
+            semanticId: "Secondary",
+            text: "Secondary",
             showPrefixIcon: true,
-            textStyle: const TextStyle(
-              decoration: TextDecoration.underline,
-              decorationThickness: 2,
-            ),
-            prefixIcon: Icons.share,
+            prefixIcon: Icons.arrow_back,
             showSuffixIcon: true,
             suffixIcon: Icons.arrow_forward,
-            onTap: () {},
+            onPressed: () {},
+            IconButton: true,
+            style: FusionAppButtonStyle.secondary,
+          ),
+''',
+        ),
+        const SizedBox(
+          height: 10,
+        ),
+        _buildWithCopy(
+          context: context,
+          preview: FusionAppButton(
+            semanticId: "Secondary_disabled",
+            text: "Secondary",
+            showPrefixIcon: true,
+            prefixIcon: Icons.arrow_back,
+            showSuffixIcon: true,
+            enabled: false,
+            suffixIcon: Icons.arrow_forward,
+            onPressed: () {},
+            IconButton: true,
+            style: FusionAppButtonStyle.secondary,
           ),
           code: '''
-FusionTextButton(
-  label: "Share",
-  showPrefixIcon: true,
-  prefixIcon: Icons.share,
-  showSuffixIcon: true,
-  suffixIcon: Icons.arrow_forward,
-  onTap: () {},
-)
+FusionAppButton(
+            semanticId: "Secondary_disabled",
+            text: "Secondary",
+            showPrefixIcon: true,
+            prefixIcon: Icons.arrow_back,
+            showSuffixIcon: true,
+            enabled: false,
+            suffixIcon: Icons.arrow_forward,
+            onPressed: () {},
+            IconButton: true,
+            style: FusionAppButtonStyle.secondary,
+          ),
+''',
+        ),
+        const SizedBox(
+          height: 10,
+        ),
+        _buildWithCopy(
+          context: context,
+          preview: FusionAppButton(
+            semanticId: "Neuomorpic",
+            text: "Neuomorpic",
+            showPrefixIcon: true,
+            prefixIcon: Icons.arrow_back,
+            showSuffixIcon: true,
+            suffixIcon: Icons.arrow_forward,
+            onPressed: () {},
+            IconButton: true,
+            style: FusionAppButtonStyle.neumorphic,
+          ),
+          code: '''
+FusionAppButton(
+            semanticId: "Neuomorpic",
+            text: "Neuomorpic",
+            showPrefixIcon: true,
+            prefixIcon: Icons.arrow_back,
+            showSuffixIcon: true,
+            suffixIcon: Icons.arrow_forward,
+            onPressed: () {},
+            IconButton: true,
+            style: FusionAppButtonStyle.neumorphic,
+          ),
+''',
+        ),
+        const SizedBox(
+          height: 10,
+        ),
+        _buildWithCopy(
+          context: context,
+          preview: FusionAppButton(
+            text: "Neuomorpic",
+            semanticId: "Neuomorpic_disabled",
+            showPrefixIcon: true,
+            prefixIcon: Icons.arrow_back,
+            showSuffixIcon: true,
+            enabled: false,
+            suffixIcon: Icons.arrow_forward,
+            onPressed: () {},
+            IconButton: true,
+            style: FusionAppButtonStyle.neumorphic,
+          ),
+          code: '''
+FusionAppButton(
+            text: "Neuomorpic",
+            semanticId: "Neuomorpic_disabled",
+            showPrefixIcon: true,
+            prefixIcon: Icons.arrow_back,
+            showSuffixIcon: true,
+            enabled: false,
+            suffixIcon: Icons.arrow_forward,
+            onPressed: () {},
+            IconButton: true,
+            style: FusionAppButtonStyle.neumorphic,
+          ),
 ''',
         ),
 
-        const SizedBox(height: 20),
+        const SizedBox(
+          height: 10,
+        ),
+        _buildWithCopy(
+          context: context,
+          preview: FusionAppButton(
+            semanticId: "Brand Green",
+            text: "Brand Green",
+            showPrefixIcon: true,
+            prefixIcon: Icons.arrow_back,
+            showSuffixIcon: true,
+            suffixIcon: Icons.arrow_forward,
+            onPressed: () {},
+            IconButton: true,
+            style: FusionAppButtonStyle.brand,
+          ),
+          code: '''
+FusionAppButton(
+            semanticId: "Brand Green",
+            text: "Brand Green",
+            showPrefixIcon: true,
+            prefixIcon: Icons.arrow_back,
+            showSuffixIcon: true,
+            suffixIcon: Icons.arrow_forward,
+            onPressed: () {},
+            IconButton: true,
+            style: FusionAppButtonStyle.brand,
+          ),
+''',
+        ),
+        const SizedBox(
+          height: 10,
+        ),
+        _buildWithCopy(
+          context: context,
+          preview: FusionAppButton(
+            semanticId: "Brand_Green_disabled",
+            text: "Brand Green",
+            showPrefixIcon: true,
+            prefixIcon: Icons.arrow_back,
+            showSuffixIcon: true,
+            enabled: false,
+            suffixIcon: Icons.arrow_forward,
+            onPressed: () {},
+            IconButton: true,
+            style: FusionAppButtonStyle.brand,
+          ),
+          code: '''
+FusionAppButton(
+            semanticId: "Brand_Green_disabled",
+            text: "Brand Green",
+            showPrefixIcon: true,
+            prefixIcon: Icons.arrow_back,
+            showSuffixIcon: true,
+            enabled: false,
+            suffixIcon: Icons.arrow_forward,
+            onPressed: () {},
+            IconButton: true,
+            style: FusionAppButtonStyle.brand,
+          ),
+''',
+        ),
+
+        const SizedBox(
+          height: 10,
+        ),
+        _buildWithCopy(
+          context: context,
+          preview: FusionAppButton(
+            semanticId: "Tertiary",
+            text: "Tertiary",
+            showPrefixIcon: true,
+            prefixIcon: Icons.arrow_back,
+            showSuffixIcon: true,
+            suffixIcon: Icons.arrow_forward,
+            onPressed: () {},
+            IconButton: true,
+            style: FusionAppButtonStyle.tertiary,
+          ),
+          code: '''
+FusionAppButton(
+            semanticId: "Tertiary",
+            text: "Tertiary",
+            showPrefixIcon: true,
+            prefixIcon: Icons.arrow_back,
+            showSuffixIcon: true,
+            suffixIcon: Icons.arrow_forward,
+            onPressed: () {},
+            IconButton: true,
+            style: FusionAppButtonStyle.tertiary,
+          ),
+''',
+        ),
+        const SizedBox(
+          height: 10,
+        ),
+        _buildWithCopy(
+          context: context,
+          preview: FusionAppButton(
+            semanticId: "Tertiary_disabled",
+            text: "Tertiary",
+            showPrefixIcon: true,
+            prefixIcon: Icons.arrow_back,
+            showSuffixIcon: true,
+            enabled: false,
+            suffixIcon: Icons.arrow_forward,
+            onPressed: () {},
+            IconButton: true,
+            style: FusionAppButtonStyle.tertiary,
+          ),
+          code: '''
+FusionAppButton(
+            semanticId: "Tertiary_disabled",
+            text: "Tertiary",
+            showPrefixIcon: true,
+            prefixIcon: Icons.arrow_back,
+            showSuffixIcon: true,
+            enabled: false,
+            suffixIcon: Icons.arrow_forward,
+            onPressed: () {},
+            IconButton: true,
+            style: FusionAppButtonStyle.tertiary,
+          ),
+''',
+        ),
+        const SizedBox(
+          height: 10,
+        ),
+        _buildWithCopy(
+          context: context,
+          preview: FusionAppButton(
+            semanticId: "Link",
+            text: "Link",
+            showPrefixIcon: true,
+            prefixIcon: Icons.arrow_back,
+            showSuffixIcon: true,
+            suffixIcon: Icons.arrow_forward,
+            onPressed: () {},
+            IconButton: true,
+            style: FusionAppButtonStyle.link,
+          ),
+          code: '''
+FusionAppButton(
+            semanticId: "Link",
+            text: "Link",
+            showPrefixIcon: true,
+            prefixIcon: Icons.arrow_back,
+            showSuffixIcon: true,
+            suffixIcon: Icons.arrow_forward,
+            onPressed: () {},
+            IconButton: true,
+            style: FusionAppButtonStyle.link,
+          ),
+''',
+        ),
+        const SizedBox(
+          height: 10,
+        ),
+        _buildWithCopy(
+          context: context,
+          preview: FusionAppButton(
+            semanticId: "Link_disabled",
+            text: "Link",
+            showPrefixIcon: true,
+            prefixIcon: Icons.arrow_back,
+            showSuffixIcon: true,
+            enabled: false,
+            suffixIcon: Icons.arrow_forward,
+            onPressed: () {},
+            IconButton: true,
+            style: FusionAppButtonStyle.link,
+          ),
+          code: '''
+FusionAppButton(
+            semanticId: "Link_disabled",
+            text: "Link",
+            showPrefixIcon: true,
+            prefixIcon: Icons.arrow_back,
+            showSuffixIcon: true,
+            enabled: false,
+            suffixIcon: Icons.arrow_forward,
+            onPressed: () {},
+            IconButton: true,
+            style: FusionAppButtonStyle.link,
+          ),
+''',
+        ),
       ],
     );
   }
@@ -984,6 +667,7 @@ FusionTextButton(
         _buildWithCopy(
           context: context,
           preview: CustomTextField(
+            semanticId: "Default",
             label: "Default",
             hint: "Value",
             controller: TextEditingController(),
@@ -991,6 +675,7 @@ FusionTextButton(
           ),
           code: '''
 CustomTextField(
+            semanticId: "Default",
             label: "Default",
             hint: "Value",
             controller: TextEditingController(),
@@ -1003,6 +688,7 @@ CustomTextField(
         _buildWithCopy(
           context: context,
           preview: CustomTextField(
+            semanticId: "Neumorphic",
             label: "Neumorphic",
             hint: "Value",
             controller: TextEditingController(),
@@ -1010,54 +696,19 @@ CustomTextField(
           ),
           code: '''
 CustomTextField(
+            semanticId: "Neumorphic",
             label: "Neumorphic",
             hint: "Value",
             controller: TextEditingController(),
             variant: FusionFieldVariant.neumorphic,
-          ),
-''',
-        ),
-
-        // ================= FOCUSED =================
-        _buildWithCopy(
-          context: context,
-          preview: CustomTextField(
-            label: "Focused",
-            hint: "Value",
-            controller: TextEditingController(text: ""),
-            fieldState: FusionFieldState.focused,
-          ),
-          code: '''
-CustomTextField(
-            label: "Focused",
-            hint: "Value",
-            controller: TextEditingController(text: ""),
-            fieldState: FusionFieldState.focused,
-          ),
-''',
-        ),
-
-        // ================= FILLED =================
-        _buildWithCopy(
-          context: context,
-          preview: CustomTextField(
-            label: "Filled",
-            hint: "Value",
-            controller: TextEditingController(text: "Hello"),
-          ),
-          code: '''
-CustomTextField(
-            label: "Filled",
-            hint: "Value",
-            controller: TextEditingController(text: "Hello"),
-          ),
-''',
+          ),''',
         ),
 
         // ================= ERROR =================
         _buildWithCopy(
           context: context,
           preview: CustomTextField(
+            semanticId: "Error",
             label: "Error",
             hint: "Value",
             controller: TextEditingController(text: "123"),
@@ -1066,6 +717,7 @@ CustomTextField(
           ),
           code: '''
 CustomTextField(
+            semanticId: "Error",
             label: "Error",
             hint: "Value",
             controller: TextEditingController(text: "123"),
@@ -1080,6 +732,7 @@ CustomTextField(
           context: context,
           preview: CustomTextField(
             label: "Blocked",
+            semanticId: "Blocked",
             hint: "Value",
             controller: TextEditingController(),
             enabled: false,
@@ -1087,6 +740,7 @@ CustomTextField(
           code: '''
 CustomTextField(
             label: "Blocked",
+            semanticId: "Blocked",
             hint: "Value",
             controller: TextEditingController(),
             enabled: false,
@@ -1099,6 +753,7 @@ CustomTextField(
           context: context,
           preview: CustomTextField(
             label: "Blocked Filled",
+            semanticId: "Blocked Filled",
             hint: "Value",
             controller: TextEditingController(text: "Readonly"),
             enabled: false,
@@ -1106,6 +761,7 @@ CustomTextField(
           code: '''
 CustomTextField(
             label: "Blocked Filled",
+            semanticId: "Blocked Filled",
             hint: "Value",
             controller: TextEditingController(text: "Readonly"),
             enabled: false,
@@ -1117,6 +773,7 @@ CustomTextField(
         _buildWithCopy(
           context: context,
           preview: CustomTextField(
+            semanticId: "With Button",
             label: "With Button",
             hint: "Value",
             controller: TextEditingController(),
@@ -1128,6 +785,7 @@ CustomTextField(
           ),
           code: '''
 CustomTextField(
+            semanticId: "With Button",
             label: "With Button",
             hint: "Value",
             controller: TextEditingController(),
@@ -1144,6 +802,7 @@ CustomTextField(
         _buildWithCopy(
           context: context,
           preview: CustomTextField(
+            semanticId: "Phone",
             label: "Phone",
             hint: "Mobile Number",
             controller: TextEditingController(),
@@ -1152,6 +811,7 @@ CustomTextField(
           ),
           code: '''
 CustomTextField(
+            semanticId: "Phone",
             label: "Phone",
             hint: "Mobile Number",
             controller: TextEditingController(),
@@ -1165,6 +825,7 @@ CustomTextField(
         _buildWithCopy(
           context: context,
           preview: CustomTextField(
+            semanticId: "Icons",
             label: "Icons",
             hint: "Value",
             controller: TextEditingController(),
@@ -1175,6 +836,7 @@ CustomTextField(
           ),
           code: '''
 CustomTextField(
+            semanticId: "Icons",
             label: "Icons",
             hint: "Value",
             controller: TextEditingController(),
@@ -1190,7 +852,8 @@ CustomTextField(
         _buildWithCopy(
           context: context,
           preview: CustomTextField(
-            label: "Info + Helper",
+            label: "Info",
+            semanticId: "Info",
             hint: "Value",
             controller: TextEditingController(),
             info: true,
@@ -1202,7 +865,8 @@ CustomTextField(
           ),
           code: '''
 CustomTextField(
-            label: "Info + Helper",
+            label: "Info",
+            semanticId: "Info",
             hint: "Value",
             controller: TextEditingController(),
             info: true,
@@ -1220,6 +884,7 @@ CustomTextField(
           context: context,
           preview: CustomTextField(
             label: "Success",
+            semanticId: "Success",
             hint: "Value",
             controller: TextEditingController(text: "Done"),
             hasSuccessText: true,
@@ -1228,6 +893,7 @@ CustomTextField(
           code: '''
 CustomTextField(
             label: "Success",
+            semanticId: "Success",
             hint: "Value",
             controller: TextEditingController(text: "Done"),
             hasSuccessText: true,
@@ -1239,26 +905,8 @@ CustomTextField(
         _buildWithCopy(
           context: context,
           preview: CustomTextField(
-            label: "Default",
-            showRupee: true,
-            hint: "Value",
-            controller: TextEditingController(),
-            variant: FusionFieldVariant.outline,
-          ),
-          code: '''
-CustomTextField(
-            label: "Default",
-            showRupee: true,
-            hint: "Value",
-            controller: TextEditingController(),
-            variant: FusionFieldVariant.outline,
-          ),
-''',
-        ),
-        _buildWithCopy(
-          context: context,
-          preview: CustomTextField(
             label: "Disabled",
+            semanticId: "Disabled",
             hint: "Value",
             controller: TextEditingController(),
             variant: FusionFieldVariant.outline,
@@ -1266,11 +914,12 @@ CustomTextField(
           ),
           code: '''
 CustomTextField(
-            label: "Default",
-            showRupee: true,
+            label: "Disabled",
+            semanticId: "Disabled",
             hint: "Value",
             controller: TextEditingController(),
             variant: FusionFieldVariant.outline,
+            fieldState: FusionFieldState.blocked,
           ),
 ''',
         ),
@@ -1279,6 +928,7 @@ CustomTextField(
           preview: CustomTextField(
             showLabel: true,
             label: "Label",
+            semanticId: "Label",
             info: true,
             showPrefixIcon: true,
             prefixIcon: Icons.arrow_drop_down_outlined,
@@ -1304,12 +954,14 @@ CustomTextField(
 CustomTextField(
             showLabel: true,
             label: "Label",
+            semanticId: "Label",
             info: true,
             showPrefixIcon: true,
             prefixIcon: Icons.arrow_drop_down_outlined,
             showSuffixIcon: true,
             button: true,
             buttonText: "Button",
+            enabled: false,
             suffixIcon: Icons.arrow_drop_down_outlined,
             showCountryCode: true,
             showRupee: true,
@@ -1322,6 +974,7 @@ CustomTextField(
             hint: "Value",
             controller: TextEditingController(),
             variant: FusionFieldVariant.outline,
+            fieldState: FusionFieldState.blocked,
           ),
 ''',
         ),
@@ -1341,6 +994,7 @@ CustomTextField(
             shape: BoxShape.rectangle,
             state: FusionSelectionState.partial,
             variant: FusionSelectionVariant.checkbox,
+            semanticId: "checkbox",
             onTap: () {},
           ),
 
@@ -1349,6 +1003,7 @@ CustomTextField(
             shape: BoxShape.rectangle,
             state: FusionSelectionState.partial,
             variant: FusionSelectionVariant.checkbox,
+            semanticId: "checkbox",
             onTap: () {},
           ),
 ''',
@@ -1360,13 +1015,15 @@ CustomTextField(
             shape: BoxShape.circle,
             variant: FusionSelectionVariant.radio,
             onTap: () {},
+            semanticId: "radiobutton",
           ),
 
           code: '''
-RadioButton(
+ RadioButton(
             shape: BoxShape.circle,
             variant: FusionSelectionVariant.radio,
             onTap: () {},
+            semanticId: "radiobutton",
           ),
 ''',
         ),
@@ -1374,47 +1031,7 @@ RadioButton(
         _buildWithCopy(
           context: context,
           preview: RadioButton(
-            shape: BoxShape.circle,
-            variant: FusionSelectionVariant.radio,
-            state: FusionSelectionState.checked,
-            disabled: true,
-            onTap: () {},
-          ),
-
-          code: '''
-RadioButton(
-            shape: BoxShape.circle,
-            variant: FusionSelectionVariant.radio,
-            state: FusionSelectionState.checked,
-            disabled: true,
-            onTap: () {},
-          ),
-''',
-        ),
-        _buildWithCopy(
-          context: context,
-          preview: RadioButton(
-            shape: BoxShape.circle,
-            variant: FusionSelectionVariant.radio,
-            state: FusionSelectionState.partial,
-            disabled: true,
-            onTap: () {},
-          ),
-
-          code: '''
-RadioButton(
-            shape: BoxShape.circle,
-            variant: FusionSelectionVariant.radio,
-            state: FusionSelectionState.partial,
-            disabled: true,
-            onTap: () {},
-          ),
-''',
-        ),
-
-        _buildWithCopy(
-          context: context,
-          preview: RadioButton(
+            semanticId: "radiobox",
             shape: BoxShape.circle,
             variant: FusionSelectionVariant.radioBox,
             label: "Option 1",
@@ -1423,6 +1040,7 @@ RadioButton(
 
           code: '''
 RadioButton(
+            semanticId: "radiobox",
             shape: BoxShape.circle,
             variant: FusionSelectionVariant.radioBox,
             label: "Option 1",
@@ -1431,49 +1049,13 @@ RadioButton(
 ''',
         ),
 
-        _buildWithCopy(
-          context: context,
-          preview: RadioButton(
-            shape: BoxShape.circle,
-            variant: FusionSelectionVariant.radioBox,
-            label: "Disabled",
-            disabled: true,
-          ),
-
-          code: '''
-RadioButton(
-            shape: BoxShape.circle,
-            variant: FusionSelectionVariant.radioBox,
-            label: "Disabled",
-            disabled: true,
-          ),
-''',
-        ),
-        _buildWithCopy(
-          context: context,
-          preview: RadioButton(
-            shape: BoxShape.circle,
-            variant: FusionSelectionVariant.radioBox,
-            state: FusionSelectionState.checked,
-            label: "Disabled",
-            disabled: true,
-          ),
-
-          code: '''
-RadioButton(
-            shape: BoxShape.circle,
-            variant: FusionSelectionVariant.radioBox,
-            label: "Disabled",
-            disabled: true,
-          ),
-''',
-        ),
         const SizedBox(
           height: 4,
         ),
         _buildWithCopy(
           context: context,
           preview: RadioButton(
+            semanticId: "radiooption_v1",
             variant: FusionSelectionVariant.radioOption,
             iconPrifix: true,
             label: "Hello",
@@ -1481,6 +1063,7 @@ RadioButton(
 
           code: '''
 RadioButton(
+            semanticId: "radiooption",
             variant: FusionSelectionVariant.radioOption,
             iconPrifix: true,
             label: "Hello",
@@ -1493,6 +1076,7 @@ RadioButton(
         _buildWithCopy(
           context: context,
           preview: RadioButton(
+            semanticId: "radiooption_v2",
             variant: FusionSelectionVariant.radioOption,
             iconPrifix: false,
             label: "Hello",
@@ -1500,10 +1084,11 @@ RadioButton(
 
           code: '''
 RadioButton(
+            semanticId: "radiooption_v2",
             variant: FusionSelectionVariant.radioOption,
             iconPrifix: false,
             label: "Hello",
-          )
+          ),
 ''',
         ),
         const SizedBox(height: 20),
@@ -1520,6 +1105,7 @@ RadioButton(
         _buildWithCopy(
           context: context,
           preview: CustomTextField(
+            semanticId: "dropdown",
             label: "Dropdown",
             hint: "Select Value",
             controller: TextEditingController(),
@@ -1544,15 +1130,25 @@ RadioButton(
 
           code: '''
 CustomTextField(
+            semanticId: "dropdown",
             label: "Dropdown",
             hint: "Select Value",
             controller: TextEditingController(),
+
             isDropdown: true,
+            enabled: true,
+
+            dropdownItems: const <String>[
+              "Apple",
+              "Banana",
+              "Orange",
+              "Mango",
+            ],
+
+            onItemSelected: (){}
+
             showSuffixIcon: true,
             suffixIcon: Icons.arrow_drop_down,
-            onTap: () {
-              debugPrint("Open dropdown");
-            },
           ),
 ''',
         ),

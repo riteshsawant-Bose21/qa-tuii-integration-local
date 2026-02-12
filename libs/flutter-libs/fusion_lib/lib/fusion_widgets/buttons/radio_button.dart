@@ -95,9 +95,11 @@ class RadioButton extends StatefulWidget {
   final double width;
   final double height;
   final bool iconPrifix;
+  final String? semanticId;
 
   RadioButton({
     super.key,
+    this.semanticId,
     this.width = 16,
     this.height = 16,
     this.iconPrifix = false,
@@ -127,24 +129,29 @@ class _RadioButtonState extends State<RadioButton> {
 
   @override
   Widget build(BuildContext context) {
-    // Safety: Never allow partial in 2-state variants
     if (_isTwoStateVariant && widget.state == FusionSelectionState.partial) {
       widget.state = FusionSelectionState.unchecked;
     }
 
-    return GestureDetector(
-      onTap: _isEnabled
-          ? () {
-              setState(() {
-                widget.state = _nextState(widget.state);
-              });
+    return SemanticHelper.button(
+      testId: SemanticHelper.createTestId(
+        SemanticTypes.button,
+        "radio_button${widget.semanticId}",
+      ),
+      child: GestureDetector(
+        onTap: _isEnabled
+            ? () {
+                setState(() {
+                  widget.state = _nextState(widget.state);
+                });
 
-              widget.onTap?.call();
-            }
-          : null,
-      child: Opacity(
-        opacity: _isEnabled ? 1 : 0.4,
-        child: _buildByVariant(),
+                widget.onTap?.call();
+              }
+            : null,
+        child: Opacity(
+          opacity: _isEnabled ? 1 : 0.4,
+          child: _buildByVariant(),
+        ),
       ),
     );
   }
@@ -243,10 +250,18 @@ class _RadioButtonState extends State<RadioButton> {
         decoration: BoxDecoration(
           shape: widget.shape,
           border: Border.all(
-            color: _borderColor,
+            color: widget.variant == FusionSelectionVariant.radioOption
+                ? widget.state == FusionSelectionState.checked
+                      ? context.colorScheme.green
+                      : _borderColor
+                : _borderColor,
             width: 1.5,
           ),
-          color: _isPartial ? context.colorScheme.white : Colors.transparent,
+          color: _isPartial
+              ? widget.variant == FusionSelectionVariant.radioOption
+                    ? context.colorScheme.green
+                    : context.colorScheme.white
+              : Colors.transparent,
         ),
         child: Center(child: _buildRadioInner()),
       ),
@@ -308,7 +323,7 @@ class _RadioButtonState extends State<RadioButton> {
             ? context.colorScheme.elevation1
             : active
             ? context.colorScheme.elevation2
-            : null,
+            : context.colorScheme.primaryBlack,
       ),
       child: Center(
         child: Row(
