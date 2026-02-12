@@ -32,62 +32,58 @@ class PeqBlock extends StatelessWidget {
       update: (BuildContext context, AlgorithmDataViewmodel valueHandler, PEQController? previous) => PEQController(valueHandler),
       child: Builder(
         builder: (BuildContext context) {
-          return Column(
-            spacing: 10,
+          return Stack(
             children: <Widget>[
-              BlockHeader(
-                pb: context.watch<AlgorithmDataViewmodel>().processingBlock,
-                actions: Row(
-                  children: <Widget>[
-                    FusionNeumorphicButton(
-                      text: "SORT",
-                      width: 100,
-                      height: 40,
-                      onTap: () {
-                        context.read<PEQController>().sortBandsByFrequency();
-                      },
-                    ),
-                    const SizedBox(width: 10),
-                    FusionContainer(
-                      raised: true,
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 5.0, horizontal: 20),
-                        child: Row(
-                          spacing: 10,
-                          children: <Widget>[
-                            const FusionAppText(text: "Q"),
-                            FusionSwitch(
-                              inactiveTrackColor: context.colorScheme.elevation1,
-                              value: context.watch<PEQController>().isInBW,
-                              onChanged: (bool value) {
-                                context.read<PEQController>().toggleQAndBw(value);
-                              },
-                              height: 30,
-                              width: 50,
-                            ),
-                            const FusionAppText(text: "BW"),
-                          ],
-                        ),
+              ...getBlockHeader(
+                context,
+                context.watch<AlgorithmDataViewmodel>().processingBlock,
+                actions: <Widget>[
+                  FusionNeumorphicButton(
+                    text: "SORT",
+                    width: 100,
+                    height: 40,
+                    onTap: () {
+                      context.read<PEQController>().sortBandsByFrequency();
+                    },
+                  ),
+                  FusionContainer(
+                    raised: true,
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 5.0, horizontal: 20),
+                      child: Row(
+                        spacing: 10,
+                        children: <Widget>[
+                          const FusionAppText(text: "Q"),
+                          FusionSwitch(
+                            inactiveTrackColor: context.colorScheme.elevation1,
+                            value: context.watch<PEQController>().isInBW,
+                            onChanged: (bool value) {
+                              context.read<PEQController>().toggleQAndBw(value);
+                            },
+                            height: 30,
+                            width: 50,
+                          ),
+                          const FusionAppText(text: "BW"),
+                        ],
                       ),
                     ),
-                    const SizedBox(
-                      width: 70,
-                    ),
-                    const FusionAppText(text: "BYPASS"),
-                    const SizedBox(width: 10),
-                    FusionSwitch(
-                      inactiveTrackColor: context.colorScheme.elevation1,
-                      value: context.watch<PEQController>().isGloballyBypassed,
-                      onChanged: (bool value) {
-                        context.read<PEQController>().bypassGlobally(value);
-                      },
-                      height: 30,
-                      width: 50,
-                    ),
-                  ],
-                ),
+                  ),
+                  const SizedBox(width: 70),
+                  const FusionAppText(text: "BYPASS"),
+                  const SizedBox(width: 10),
+                  FusionSwitch(
+                    inactiveTrackColor: context.colorScheme.elevation1,
+                    value: context.watch<PEQController>().isGloballyBypassed,
+                    onChanged: (bool value) {
+                      context.read<PEQController>().bypassGlobally(value);
+                    },
+                    height: 30,
+                    width: 50,
+                  ),
+                ],
               ),
-              Expanded(
+              Padding(
+                padding: const EdgeInsetsGeometry.only(top: 50),
                 child: DisabledWidgetWrapper(
                   isDisabled: context.watch<PEQController>().isGloballyBypassed,
                   child: const Row(

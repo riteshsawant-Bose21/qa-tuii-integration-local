@@ -62,7 +62,7 @@ class VerticalSlider extends StatefulWidget {
     this.onChanged,
     this.showIntervals = true,
     this.activeColor,
-    this.inactiveColor = const Color(0xFFBABABA),
+    this.inactiveColor,
     this.trackWidth = 4.0,
     this.thumbSize = 16.0,
     this.intervalSpacing = 50.0,
@@ -78,7 +78,7 @@ class VerticalSlider extends StatefulWidget {
 
   // Styling
   final Color? activeColor;
-  final Color inactiveColor;
+  final Color? inactiveColor;
   final double trackWidth;
   final double thumbSize;
   final double intervalSpacing;
@@ -207,10 +207,10 @@ class _VerticalSliderState extends State<VerticalSlider> {
                               spacing: 2,
                               mainAxisSize: MainAxisSize.min,
                               children: <Widget>[
-                                Text(
-                                  v.round().toString(),
-                                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                                    color: widget.inactiveColor,
+                                FusionAppText(
+                                  text: v.round().toString(),
+                                  style: context.textTheme.labelSmall?.copyWith(
+                                    color: context.colorScheme.textPrimary,
                                     fontWeight: FontWeight.w500,
                                     fontSize: 8,
                                   ),
@@ -219,7 +219,7 @@ class _VerticalSliderState extends State<VerticalSlider> {
                                   height: 2,
                                   width: widget.intervalTickWidth,
                                   decoration: BoxDecoration(
-                                    color: widget.inactiveColor,
+                                    color: context.colorScheme.textPrimary,
                                     borderRadius: BorderRadius.circular(1),
                                   ),
                                 ),
@@ -251,7 +251,7 @@ class _VerticalSliderState extends State<VerticalSlider> {
                                   width: widget.trackWidth,
                                   height: inactiveHeight,
                                   decoration: BoxDecoration(
-                                    color: widget.inactiveColor,
+                                    color: context.colorScheme.elevation5,
                                     borderRadius: const BorderRadius.vertical(
                                       top: Radius.circular(100),
                                     ),

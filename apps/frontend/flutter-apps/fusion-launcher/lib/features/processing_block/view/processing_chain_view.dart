@@ -12,6 +12,8 @@ import '../viewmodel/processing_chain_cubit.dart';
 import 'processing_block_page.dart';
 import 'widgets/dotted_line.dart';
 
+
+
 class ProcessingChainView extends StatelessWidget {
   const ProcessingChainView({super.key, required this.params});
   final ProcessingChainParams params;
@@ -200,116 +202,113 @@ class ProcessingChainView extends StatelessWidget {
 
                                     if (state is! UpdatedProcessingChainState) return const SizedBox();
 
-                                    return Container(
-                                      alignment: Alignment.centerLeft,
-                                      child: Row(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: <Widget>[
-                                          /// --------------------------------------------------------------------------------
-                                          /// Sidebar
-                                          /// --------------------------------------------------------------------------------
-                                          _CollapsibleSideBar(
-                                            builder: (BuildContext context, bool isOpen) {
-                                              return Column(
-                                                mainAxisSize: MainAxisSize.min,
-                                                mainAxisAlignment: MainAxisAlignment.start,
-                                                children: <Widget>[
-                                                  Padding(
-                                                    padding: const EdgeInsets.symmetric(horizontal: 10),
-                                                    child: Row(
+                                    return Row(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: <Widget>[
+                                        /// --------------------------------------------------------------------------------
+                                        /// Sidebar
+                                        /// --------------------------------------------------------------------------------
+                                        _CollapsibleSideBar(
+                                          builder: (BuildContext context, bool isOpen) {
+                                            return Column(
+                                              mainAxisSize: MainAxisSize.min,
+                                              mainAxisAlignment: MainAxisAlignment.start,
+                                              children: <Widget>[
+                                                Padding(
+                                                  padding: const EdgeInsets.symmetric(horizontal: 10),
+                                                  child: Row(
+                                                    children: <Widget>[
+                                                      AddProcessingBlockButton(
+                                                        params: params,
+                                                        viewModel: viewModel,
+                                                        child: Container(
+                                                          decoration: BoxDecoration(
+                                                            color: context.colorScheme.elevation2,
+                                                            borderRadius: BorderRadius.circular(10),
+                                                          ),
+                                                          padding: const EdgeInsets.all(10),
+                                                          child: Icon(
+                                                            Icons.add,
+                                                            color: context.colorScheme.iconDefault,
+                                                            size: 18,
+                                                          ),
+                                                        ),
+                                                      ),
+                                                    ],
+                                                  ),
+                                                ),
+
+                                                const SizedBox(height: 10),
+                                                Expanded(
+                                                  child: SingleChildScrollView(
+                                                    physics: const ClampingScrollPhysics(),
+                                                    padding: const EdgeInsets.symmetric(horizontal: 10).copyWith(bottom: 10),
+                                                    child: Stack(
+                                                      alignment: Alignment.centerLeft,
                                                       children: <Widget>[
-                                                        AddProcessingBlockButton(
-                                                          params: params,
-                                                          viewModel: viewModel,
-                                                          child: Container(
-                                                            decoration: BoxDecoration(
-                                                              color: context.colorScheme.elevation2,
-                                                              borderRadius: BorderRadius.circular(10),
-                                                            ),
-                                                            padding: const EdgeInsets.all(10),
-                                                            child: Icon(
-                                                              Icons.add,
-                                                              color: context.colorScheme.iconDefault,
-                                                              size: 18,
+                                                        Padding(
+                                                          padding: const EdgeInsets.only(left: 23),
+                                                          child: SizedBox(
+                                                            height: state.blocks.length * 40.0,
+                                                            child: DottedLine(
+                                                              direction: Axis.vertical,
+                                                              color: context.colorScheme.strokeLight,
+                                                              dotSize: 4,
+                                                              spacing: 2,
                                                             ),
                                                           ),
+                                                        ),
+                                                        CommonReorderableListView<ProcessingBlockModel>(
+                                                          onReorder: (int oldIndex, int newIndex) => viewModel.reorderProcessingBlocks(oldIndex, newIndex),
+                                                          emptyMessage: '',
+                                                          items: state.blocks,
+                                                          keyExtractor: (ProcessingBlockModel item) => item.id,
+                                                          itemBuilder: (BuildContext context, ProcessingBlockModel block, int index) {
+                                                            return InkWell(
+                                                              onTap: () {
+                                                                viewModel.selectProcessingBlock(block);
+                                                              },
+                                                              child: Tooltip(
+                                                                message: block.name,
+                                                                child: Padding(
+                                                                  padding: const EdgeInsets.symmetric(vertical: 4),
+                                                                  child: Row(
+                                                                    spacing: 12,
+                                                                    children: <Widget>[
+                                                                      _PBIcon(
+                                                                        icon: block.iconAsset,
+                                                                        isActive: block.id == state.selectedBlock.id,
+                                                                      ),
+                                                                      if (isOpen)
+                                                                        FusionAppText(
+                                                                          text: block.name,
+                                                                          style: context.textTheme.bodySmall?.copyWith(
+                                                                            color: context.colorScheme.textPrimary,
+                                                                          ),
+                                                                        ),
+                                                                    ],
+                                                                  ),
+                                                                ),
+                                                              ),
+                                                            );
+                                                          },
                                                         ),
                                                       ],
                                                     ),
                                                   ),
+                                                ),
+                                              ],
+                                            );
+                                          },
+                                        ),
 
-                                                  const SizedBox(height: 10),
-                                                  Expanded(
-                                                    child: SingleChildScrollView(
-                                                      physics: const ClampingScrollPhysics(),
-                                                      padding: const EdgeInsets.symmetric(horizontal: 10).copyWith(bottom: 10),
-                                                      child: Stack(
-                                                        alignment: Alignment.centerLeft,
-                                                        children: <Widget>[
-                                                          Padding(
-                                                            padding: const EdgeInsets.only(left: 23),
-                                                            child: SizedBox(
-                                                              height: state.blocks.length * 40.0,
-                                                              child: DottedLine(
-                                                                direction: Axis.vertical,
-                                                                color: context.colorScheme.strokeLight,
-                                                                dotSize: 4,
-                                                                spacing: 2,
-                                                              ),
-                                                            ),
-                                                          ),
-                                                          CommonReorderableListView<ProcessingBlockModel>(
-                                                            onReorder: (int oldIndex, int newIndex) => viewModel.reorderProcessingBlocks(oldIndex, newIndex),
-                                                            emptyMessage: '',
-                                                            items: state.blocks,
-                                                            keyExtractor: (ProcessingBlockModel item) => item.id,
-                                                            itemBuilder: (BuildContext context, ProcessingBlockModel block, int index) {
-                                                              return InkWell(
-                                                                onTap: () {
-                                                                  viewModel.selectProcessingBlock(block);
-                                                                },
-                                                                child: Tooltip(
-                                                                  message: block.name,
-                                                                  child: Padding(
-                                                                    padding: const EdgeInsets.symmetric(vertical: 4),
-                                                                    child: Row(
-                                                                      spacing: 12,
-                                                                      children: <Widget>[
-                                                                        _PBIcon(
-                                                                          icon: block.iconAsset,
-                                                                          isActive: block.id == state.selectedBlock.id,
-                                                                        ),
-                                                                        if (isOpen)
-                                                                          FusionAppText(
-                                                                            text: block.name,
-                                                                            style: context.textTheme.bodySmall?.copyWith(
-                                                                              color: context.colorScheme.textPrimary,
-                                                                            ),
-                                                                          ),
-                                                                      ],
-                                                                    ),
-                                                                  ),
-                                                                ),
-                                                              );
-                                                            },
-                                                          ),
-                                                        ],
-                                                      ),
-                                                    ),
-                                                  ),
-                                                ],
-                                              );
-                                            },
+                                        Flexible(
+                                          child: ProcessingBlockPage(
+                                            processingBlock: state.selectedBlock,
                                           ),
-
-                                          Flexible(
-                                            child: ProcessingBlockPage(
-                                              processingBlock: state.selectedBlock,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
+                                        ),
+                                      ],
                                     );
                                   },
                                 );

@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:fusion_lib/fusion_theme/app_theme.dart';
+import 'package:fusion_lib/fusion_widgets/text_views/fusion_app_text.dart';
 
 import '../../dto/pb_item.dart';
 import '../../dto/pb_item_param.dart';
@@ -38,7 +40,7 @@ class VerticalMeter extends StatelessWidget {
     required this.max,
     this.showIntervals = true,
     this.meterWidth = 4.0,
-    this.inactiveColor = const Color(0xFFBABABA),
+    this.inactiveColor,
     this.intervalSpacing = 50.0,
     this.intervalTickWidth = 10.0,
     this.intervalGap,
@@ -52,7 +54,7 @@ class VerticalMeter extends StatelessWidget {
 
   // Styling
   final double meterWidth;
-  final Color inactiveColor;
+  final Color? inactiveColor;
   final double intervalSpacing;
   final double intervalTickWidth;
   final num? intervalGap;
@@ -142,7 +144,7 @@ class VerticalMeter extends StatelessWidget {
                             width: meterWidth,
                             height: height - activeHeight,
                             decoration: BoxDecoration(
-                              color: inactiveColor,
+                              color: inactiveColor ?? context.colorScheme.elevation5,
                               // no need to set radius here — already clipped by parent
                             ),
                           ),
@@ -171,14 +173,14 @@ class VerticalMeter extends StatelessWidget {
                                   height: 2,
                                   width: intervalTickWidth,
                                   decoration: BoxDecoration(
-                                    color: inactiveColor,
+                                    color: context.colorScheme.textPrimary,
                                     borderRadius: BorderRadius.circular(1),
                                   ),
                                 ),
-                                Text(
-                                  v.round().toString(),
+                                FusionAppText(
+                                  text: v.round().toString(),
                                   style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                                    color: inactiveColor,
+                                    color: context.colorScheme.textPrimary,
                                     fontWeight: FontWeight.w500,
                                     fontSize: 8,
                                   ),
@@ -193,6 +195,297 @@ class VerticalMeter extends StatelessWidget {
               ],
             ),
           ),
+        );
+      },
+    );
+  }
+}
+
+// class VerticalGradientMeter extends StatefulWidget {
+//   const VerticalGradientMeter({
+//     super.key,
+//     required this.value,
+//     required this.onChanged,
+//     this.min = -60,
+//     this.max = 12,
+
+//     this.width = 4,
+//     this.knobSize = 24,
+
+//     this.intervalGap,
+//     this.intervalSpacing = 50,
+
+//     this.animationDuration = const Duration(milliseconds: 120),
+//   });
+
+//   final double value;
+//   final double min;
+//   final double max;
+
+//   final double width;
+//   final double knobSize;
+
+//   final double? intervalGap;
+//   final double intervalSpacing;
+
+//   final Duration animationDuration;
+
+//   final ValueChanged<double> onChanged;
+
+//   @override
+//   State<VerticalGradientMeter> createState() => _VerticalGradientMeterState();
+// }
+
+// class _VerticalGradientMeterState extends State<VerticalGradientMeter> {
+//   double _normalize(double v) => ((v - widget.min) / (widget.max - widget.min)).clamp(0.0, 1.0);
+
+//   double _denormalize(double n) => widget.min + (n * (widget.max - widget.min));
+
+//   List<double> _generateIntervals(double height) {
+//     if (widget.intervalGap != null) {
+//       final int count = ((widget.max - widget.min) / widget.intervalGap!).floor() + 1;
+
+//       return List<double>.generate(
+//         count,
+//         (int i) => widget.max - (i * widget.intervalGap!),
+//       ).where((double e) => e >= widget.min).toList();
+//     }
+
+//     final int tickCount = (height / widget.intervalSpacing).floor().clamp(3, 10);
+//     final double step = (widget.max - widget.min) / (tickCount - 1);
+
+//     return List<double>.generate(
+//       tickCount,
+//       (int i) => widget.max - (i * step),
+//     );
+//   }
+
+//   void _handleDrag(Offset localPosition, double height) {
+//     final double dy = localPosition.dy.clamp(0.0, height);
+
+//     // invert because 0 is top
+//     final double normalized = 1 - (dy / height);
+//     final double value = _denormalize(normalized);
+
+//     widget.onChanged(value);
+//   }
+
+//   @override
+//   Widget build(BuildContext context) {
+//     return LayoutBuilder(
+//       builder: (BuildContext context, BoxConstraints c) {
+//         final double h = c.maxHeight;
+//         final double normalized = _normalize(widget.value);
+//         final double knobY = normalized * h;
+//         final List<double> intervals = _generateIntervals(h);
+
+//         return Row(
+//           mainAxisSize: MainAxisSize.min,
+//           crossAxisAlignment: CrossAxisAlignment.stretch,
+//           children: <Widget>[
+//             /// SCALE
+//             SizedBox(
+//               width: 40,
+//               child: Column(
+//                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
+//                 crossAxisAlignment: CrossAxisAlignment.end,
+//                 children: <Widget>[
+//                   ...intervals.map(
+//                     (double v) => Text(
+//                       v.round().toString(),
+//                       style: const TextStyle(
+//                         color: Colors.white70,
+//                         fontSize: 10,
+//                       ),
+//                     ),
+//                   ),
+//                   // const Text(
+//                   //   'inf',
+//                   //   style: TextStyle(color: Colors.white70, fontSize: 10),
+//                   // ),
+//                 ],
+//               ),
+//             ),
+
+//             const SizedBox(width: 6),
+
+//             /// INTERACTIVE BAR
+//             GestureDetector(
+//               behavior: HitTestBehavior.translucent,
+//               onVerticalDragStart: (DragStartDetails details) => _handleDrag(details.localPosition, h),
+//               onVerticalDragUpdate: (DragUpdateDetails details) => _handleDrag(details.localPosition, h),
+//               onTapDown: (TapDownDetails details) => _handleDrag(details.localPosition, h),
+//               child: Stack(
+//                 clipBehavior: Clip.none,
+//                 alignment: Alignment.bottomCenter,
+//                 children: <Widget>[
+//                   /// Gradient bar
+//                   ClipRRect(
+//                     borderRadius: BorderRadius.circular(100),
+//                     child: SizedBox(
+//                       width: widget.width,
+//                       height: h,
+//                       child: const DecoratedBox(
+//                         decoration: BoxDecoration(
+//                           gradient: LinearGradient(
+//                             begin: Alignment.topCenter,
+//                             end: Alignment.bottomCenter,
+//                             colors: <Color>[
+//                               Colors.red,
+//                               Colors.orange,
+//                               Colors.yellow,
+//                               Colors.green,
+//                             ],
+//                           ),
+//                         ),
+//                       ),
+//                     ),
+//                   ),
+
+//                   /// Knob
+//                   AnimatedPositioned(
+//                     duration: widget.animationDuration,
+//                     curve: Curves.easeOut,
+//                     bottom: knobY - widget.knobSize / 2,
+//                     child: Container(
+//                       width: widget.knobSize,
+//                       height: widget.knobSize,
+//                       padding: const EdgeInsets.all(2),
+//                       decoration: BoxDecoration(
+//                         color: Colors.white,
+//                         shape: BoxShape.circle,
+//                         border: Border.all(
+//                           color: Colors.black,
+//                           width: 4,
+//                         ),
+//                       ),
+//                     ),
+//                   ),
+//                 ],
+//               ),
+//             ),
+//           ],
+//         );
+//       },
+//     );
+//   }
+// }
+
+class SimpleVerticalMeter extends StatelessWidget {
+  const SimpleVerticalMeter({
+    super.key,
+    required this.value,
+    this.min = -42,
+    this.max = 0,
+
+    this.width = 4,
+
+    this.trackColor = const Color(0xFF6B6B6B),
+    this.activeColor = const Color(0xFF2ECC71),
+
+    this.intervalGap,
+    this.intervalSpacing = 50,
+
+    this.isBottomToTop = false,
+  });
+
+  final double value;
+  final double min;
+  final double max;
+
+  final double width;
+  final Color trackColor;
+  final Color activeColor;
+
+  final double? intervalGap;
+  final double intervalSpacing;
+
+  /// NEW
+  final bool isBottomToTop;
+
+  double _normalize(double v) => ((v - min) / (max - min)).clamp(0.0, 1.0);
+
+  List<double> _generateIntervals(double height) {
+    if (intervalGap != null) {
+      final int count = ((max - min) / intervalGap!).floor() + 1;
+
+      return List<double>.generate(
+        count,
+        (int i) => max - (i * intervalGap!),
+      ).where((double e) => e >= min).toList();
+    }
+
+    final int tickCount = (height / intervalSpacing).floor().clamp(3, 10);
+    final double step = (max - min) / (tickCount - 1);
+
+    return List<double>.generate(
+      tickCount,
+      (int i) => max - (i * step),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (BuildContext context, BoxConstraints c) {
+        final double h = c.maxHeight;
+        final double normalized = _normalize(value);
+        final double activeHeight = normalized * h;
+        final List<double> intervals = _generateIntervals(h);
+
+        return Row(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: <Widget>[
+            /// SCALE
+            SizedBox(
+              width: 40,
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children:
+                    intervals
+                        .map(
+                          (double v) => Text(
+                            v.round().toString(),
+                            style: const TextStyle(
+                              color: Colors.white70,
+                              fontSize: 10,
+                            ),
+                          ),
+                        )
+                        .toList(),
+              ),
+            ),
+
+            const SizedBox(width: 6),
+
+            /// BAR
+            ClipRRect(
+              borderRadius: BorderRadius.circular(100),
+              child: SizedBox(
+                width: width,
+                height: h,
+                child: Stack(
+                  children: <Widget>[
+                    /// TRACK
+                    Container(color: trackColor),
+
+                    /// ACTIVE PART (direction aware)
+                    Align(
+                      alignment: isBottomToTop ? Alignment.bottomCenter : Alignment.topCenter,
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 150),
+                        curve: Curves.easeOut,
+                        height: activeHeight,
+                        color: activeColor,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
         );
       },
     );

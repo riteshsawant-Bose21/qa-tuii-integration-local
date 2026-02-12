@@ -8,10 +8,12 @@ import 'package:provider/provider.dart';
 
 import '../viewmodel/algorithm_data_viewmodel.dart';
 import 'dynamic_grid_view.dart';
+import 'processing_blocks/agc/agc_block.dart';
 
 class ProcessingBlockPage extends StatelessWidget {
   const ProcessingBlockPage({super.key, required this.processingBlock});
   final ProcessingBlockModel processingBlock;
+
   @override
   Widget build(BuildContext context) {
     return ChangeNotifierProvider<AlgorithmDataViewmodel>(
@@ -26,15 +28,16 @@ class ProcessingBlockPage extends StatelessWidget {
               builder: (BuildContext context, BoxConstraints constraints) {
                 if (processingBlock.algorithmId == 'peq') {
                   return const PeqBlock();
-                }
-                final PBLayout? data = viewModel.layout;
-                if (data == null) {
-                  return const Center(
-                    child: Text(""),
-                  );
+                } else if (processingBlock.algorithmId == 'agc') {
+                  return const AgcBlock();
                 }
 
+                final PBLayout? data = viewModel.layout;
+
+                if (data == null) return const Center(child: Text(""));
+
                 final ScrollController scrollController = viewModel.scrollController;
+
                 return Scrollbar(
                   controller: scrollController,
                   thumbVisibility: true,
