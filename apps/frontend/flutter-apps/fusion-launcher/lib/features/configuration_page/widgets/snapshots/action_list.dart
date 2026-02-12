@@ -5,6 +5,7 @@ import 'package:fusion_launcher/features/configuration_page/widgets/snapshots/sn
 import 'package:fusion_launcher/features/configuration_page/widgets/snapshots/snapshot_header_widget.dart';
 import 'package:fusion_lib/fusion_theme/app_theme.dart';
 import 'package:fusion_lib/fusion_widgets/text_views/fusion_app_text.dart';
+import 'package:fusion_lib/models/project_entities/non_processing/scene_set_model.dart';
 import 'package:fusion_lib/models/project_entities/non_processing/snapshot_model.dart';
 
 import '../../../../core/service_locator.dart';
@@ -102,12 +103,14 @@ class ActionList extends StatelessWidget {
 
               /// get selected snapshot name
               final SnapshotsModel? selectedScene = _projectViewModel.getSnapshotById(sceneId: selectedSnapshotId);
+              final SceneSetModel? sceneSet = _projectViewModel.getSceneSetForSnapshot(snapshotId: selectedSnapshotId);
+
               return Expanded(
                 child: Column(
                   children: <Widget>[
                     /// Snapshot Header Widget
                     SnapshotHeaderWidget(
-                      snapshotName: selectedScene?.name ?? "",
+                      snapshotName: sceneSet != null ? "${sceneSet.name} > ${selectedScene?.name}" : selectedScene?.name ?? "",
                       onNameChanged: (String newName) {
                         final SnapshotsModel scene = selectedScene!.copyWith(name: newName);
                         _projectViewModel.updateSnapshots(scene: scene);

@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/core/assets/asset_svg.dart';
 import 'package:fusion_lib/fusion_lib.dart';
-import 'package:fusion_lib/fusion_theme/app_theme.dart';
-import '../../../configuration/presentation/viewmodel/project_view_model.dart';
+
 import '../../../../core/service_locator.dart';
+import '../../../configuration/presentation/viewmodel/project_view_model.dart';
 import '../../../projects/widget/building/speaker_selection_section/parts/select_speaker_popup.dart';
 import 'circuit_device_widget.dart';
 
@@ -13,6 +13,7 @@ class ExpandableSubZoneWidget extends StatefulWidget {
   final String name;
   final String subZoneId;
   final String zoneId;
+  final int index;
   final List<CircuitModel> subZoneCircuit;
   final Function(String)? onDelete;
   final Function(String)? onEdit;
@@ -23,6 +24,7 @@ class ExpandableSubZoneWidget extends StatefulWidget {
     required this.subZoneId,
     required this.zoneId,
     required this.subZoneCircuit,
+    required this.index,
     this.onDelete,
     this.onEdit,
   });
@@ -66,67 +68,69 @@ class _ExpandableSubZoneWidgetState extends State<ExpandableSubZoneWidget> {
                 borderRadius: BorderRadius.circular(FusionSizes.borderRadius12),
                 border: isSelected ? Border.all(color: context.colorScheme.strokeLight) : null,
               ),
-              child: Column(
-                children: <Widget>[
-                  MouseRegion(
-                    onEnter: (_) => setState(() => _isHovered = true),
-                    onExit: (_) => setState(() => _isHovered = false),
-                    child: SizedBox(
-                      height: 36,
-                      width: double.infinity,
-                      child: Row(
-                        children: <Widget>[
-                          _buildDragHandle(),
-                          const SizedBox(width: 4),
-                          GestureDetector(
-                            onTap: () => _isSubZoneExpanded.value = !_isSubZoneExpanded.value,
-                            child: _buildExpandIcon(context, subZoneExpanded),
-                          ),
-                          const SizedBox(width: 4),
-                          Expanded(
-                            child: GestureDetector(
-                              onTap: () {
-                                /// Select  subzone on tap
-                                if (widget.subZoneId == null) return;
-                                _projectViewModel.setSelectedDevice(widget.subZoneId!, SelectedItemType.subzone);
-                              },
-                              // onTap: () => _isZoneExpanded.value = !_isZoneExpanded.value,
-                              child: _buildZoneName(context, widget.name),
+              child: SemanticHelper.container(
+                testId: SemanticHelper.createTestId(SemanticTypes.container, "sub_zone_${widget.index}"),
+                child: Column(
+                  children: <Widget>[
+                    MouseRegion(
+                      onEnter: (_) => setState(() => _isHovered = true),
+                      onExit: (_) => setState(() => _isHovered = false),
+                      child: SizedBox(
+                        height: 36,
+                        width: double.infinity,
+                        child: Row(
+                          children: <Widget>[
+                            _buildDragHandle(),
+                            const SizedBox(width: 4),
+                            GestureDetector(
+                              onTap: () => _isSubZoneExpanded.value = !_isSubZoneExpanded.value,
+                              child: _buildExpandIcon(context, subZoneExpanded),
                             ),
-                          ),
+                            const SizedBox(width: 4),
+                            Expanded(
+                              child: GestureDetector(
+                                onTap: () {
+                                  /// Select  subzone on tap
+                                  _projectViewModel.setSelectedDevice(widget.subZoneId!, SelectedItemType.subzone);
+                                },
+                                // onTap: () => _isZoneExpanded.value = !_isZoneExpanded.value,
+                                child: _buildZoneName(context, widget.name),
+                              ),
+                            ),
 
-                          // /// Add device button
-                          // AddSpeakersMenu(
-                          //   zoneId: widget.zoneId ?? "",
-                          //   subZoneId: widget.subZoneId,
-                          //   onSpeakerAdded: onSpeakerAdded,
-                          // ),
-                          FusionArrowPopup(
-                            content: SpeakerQueryPopup(isFromBuildingPage: false, zoneId: widget.zoneId, subZoneId: widget.subZoneId),
-                            backgroundColor: context.colorScheme.elevation1,
-                            child: Row(
-                              children: <Widget>[
-                                Icon(Icons.add, size: 10, color: context.colorScheme.iconWhite),
-                                const SizedBox(width: 4),
-                                FusionAppText(
-                                  text: "Speaker",
-                                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                    fontSize: 8,
-                                    fontWeight: FontWeight.w400,
-                                    color: context.colorScheme.textPrimary,
+                            // /// Add device button
+                            // AddSpeakersMenu(
+                            //   zoneId: widget.zoneId ?? "",
+                            //   subZoneId: widget.subZoneId,
+                            //   onSpeakerAdded: onSpeakerAdded,
+                            // ),
+                            FusionArrowPopup(
+                              content: SpeakerQueryPopup(isFromBuildingPage: false, zoneId: widget.zoneId, subZoneId: widget.subZoneId),
+                              backgroundColor: context.colorScheme.elevation1,
+                              child: Row(
+                                children: <Widget>[
+                                  Icon(Icons.add, size: 10, color: context.colorScheme.iconWhite),
+                                  const SizedBox(width: 4),
+                                  FusionAppText(
+                                    text: "Speaker",
+                                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                      fontSize: 8,
+                                      fontWeight: FontWeight.w400,
+                                      color: context.colorScheme.textPrimary,
+                                    ),
                                   ),
-                                ),
-                              ],
+                                ],
+                              ),
                             ),
-                          ),
-                          const SizedBox(width: 8),
-                          _buildKebabMenu(context),
-                        ],
+                            const SizedBox(width: 8),
+                            _buildKebabMenu(context),
+                          ],
+                        ),
                       ),
                     ),
-                  ),
-                  if (subZoneExpanded) _buildSubZoneContent(),
-                ],
+                    if (subZoneExpanded) _buildSubZoneContent(),
+                  ],
+                ),
               ),
             );
           },
@@ -181,7 +185,9 @@ class _ExpandableSubZoneWidgetState extends State<ExpandableSubZoneWidget> {
               final List<ListeningArea> location = _projectViewModel.getListeningAreasForCircuit(circuitId: circuitData.id);
               return DragTarget<CircuitModel>(
                 key: ValueKey<String>(deviceId),
-                onWillAccept: (CircuitModel? incoming) {
+                onWillAcceptWithDetails: (DragTargetDetails<CircuitModel>? param) {
+                  final CircuitModel? incoming = param?.data;
+
                   /// Only accept if the incoming circuit has the same name but different ID
                   ///
                   if (incoming == null) return false;
@@ -191,7 +197,7 @@ class _ExpandableSubZoneWidgetState extends State<ExpandableSubZoneWidget> {
                   }
 
                   // return incoming != null && incoming.name == circuitData.name && incoming.id != circuitData.id;
-                  final List<Speaker> incomingSpeakers = _projectViewModel.getHardwareForCircuit(circuitId: incoming!.id).whereType<Speaker>().toList();
+                  final List<Speaker> incomingSpeakers = _projectViewModel.getHardwareForCircuit(circuitId: incoming.id).whereType<Speaker>().toList();
                   final List<Speaker> currentData = _projectViewModel.getHardwareForCircuit(circuitId: circuitData.id).whereType<Speaker>().toList();
                   final SubZone? circuitSubZone = _projectViewModel.getSubZoneForCircuit(circuitId: incoming.id);
 
@@ -199,7 +205,9 @@ class _ExpandableSubZoneWidgetState extends State<ExpandableSubZoneWidget> {
                       incoming.id != circuitData.id &&
                       (circuitSubZone != null && circuitSubZone.id == widget.subZoneId);
                 },
-                onAccept: (CircuitModel incoming) {
+                onAcceptWithDetails: (DragTargetDetails<CircuitModel> param) {
+                  final CircuitModel incoming = param.data;
+
                   /// Add speaker to target circuit
                   final List<Speaker> incomingSpeakers = _projectViewModel.getHardwareForCircuit(circuitId: incoming.id).whereType<Speaker>().toList();
 
@@ -224,6 +232,7 @@ class _ExpandableSubZoneWidgetState extends State<ExpandableSubZoneWidget> {
                         child: SizedBox(
                           width: 220,
                           child: CircuitDeviceWidget(
+                            prefix: "drag_",
                             index: index,
                             deviceId: deviceId,
                             circuitModel: circuitData,
@@ -264,6 +273,7 @@ class _ExpandableSubZoneWidgetState extends State<ExpandableSubZoneWidget> {
                         child: SizedBox(
                           width: 220,
                           child: CircuitDeviceWidget(
+                            prefix: "child_",
                             index: index,
                             circuitModel: circuitData,
                             deviceId: deviceId,
@@ -288,6 +298,7 @@ class _ExpandableSubZoneWidgetState extends State<ExpandableSubZoneWidget> {
                       ),
                     ),
                     child: CircuitDeviceWidget(
+                      prefix: "child_",
                       index: index,
                       deviceId: deviceId,
                       location: location,
@@ -379,7 +390,7 @@ class _ExpandableSubZoneWidgetState extends State<ExpandableSubZoneWidget> {
               height: 26,
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
               onTap: () {
-                widget.onDelete?.call(widget.subZoneId!);
+                widget.onDelete?.call(widget.subZoneId);
               },
               child: FusionAppText(
                 text: "Delete",

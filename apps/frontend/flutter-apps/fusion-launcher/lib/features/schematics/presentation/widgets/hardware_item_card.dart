@@ -131,7 +131,12 @@ class _HardwareItemCardState extends State<HardwareItemCard> {
                             fit: BoxFit.contain,
                           ),
                           const SizedBox(width: 6),
-                          Expanded(child: _buildHighlightedName()),
+                          Expanded(
+                            child: SemanticHelper.staticText(
+                              testId: SemanticHelper.createTestId(SemanticTypes.container, "hardware_name"),
+                              child: _buildHighlightedName(),
+                            ),
+                          ),
                         ],
                       ),
                       const SizedBox(height: 6),
@@ -227,11 +232,14 @@ class _HardwareItemCardState extends State<HardwareItemCard> {
                                   ),
                                   const SizedBox(width: 6),
                                   Flexible(
-                                    child: FusionAppText(
-                                      text: widget.location ?? "",
-                                      style: Theme.of(context).textTheme.bodySmall?.copyWith(fontSize: 9),
-                                      maxLine: 1,
-                                      textOverflow: TextOverflow.ellipsis,
+                                    child: SemanticHelper.staticText(
+                                      testId: SemanticHelper.createTestId(SemanticTypes.text, "location"),
+                                      child: FusionAppText(
+                                        text: widget.location ?? "",
+                                        style: Theme.of(context).textTheme.bodySmall?.copyWith(fontSize: 9),
+                                        maxLine: 1,
+                                        textOverflow: TextOverflow.ellipsis,
+                                      ),
                                     ),
                                   ),
                                 ],
@@ -249,9 +257,12 @@ class _HardwareItemCardState extends State<HardwareItemCard> {
                               width: 1,
                             ),
                           ),
-                          child: FusionAppText(
-                            text: widget.equipmentLocation!,
-                            style: Theme.of(context).textTheme.bodySmall?.copyWith(fontSize: 9),
+                          child: SemanticHelper.staticText(
+                            testId: SemanticHelper.createTestId(SemanticTypes.text, "location"),
+                            child: FusionAppText(
+                              text: widget.equipmentLocation!,
+                              style: Theme.of(context).textTheme.bodySmall?.copyWith(fontSize: 9),
+                            ),
                           ),
                         )
                       else

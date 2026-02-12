@@ -35,7 +35,7 @@ dependencies:
 
   shimmer: ^3.0.0
   flutter_bloc: ^9.1.1
-  google_fonts: ^6.2.1
+  google_fonts: ^8.0.0
   flutter_svg: ^2.2.3
 
   just_audio: ^0.10.5

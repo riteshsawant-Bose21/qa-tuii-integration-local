@@ -58,6 +58,8 @@ class _ProductTile extends StatelessWidget {
                       Row(
                         children: <Widget>[
                           Flexible(
+                            child: SemanticHelper.staticText(
+                            testId: SemanticHelper.createTestId(SemanticTypes.text, "device_name"),
                             child: FusionAppText(
                               text: product.name,
                               style: context.textTheme.labelSmall?.copyWith(
@@ -65,6 +67,7 @@ class _ProductTile extends StatelessWidget {
                                 color: context.colorScheme.onSurface,
                               ),
                             ),
+                          ),
                           ),
                           const SizedBox(width: 4),
                           // info
@@ -132,13 +135,15 @@ class _ProductTile extends StatelessWidget {
                           ),
                         ],
                       ),
-
-                      FusionAppText(
+                      SemanticHelper.staticText(
+                      testId: SemanticHelper.createTestId(SemanticTypes.text, "cost"),
+                      child: FusionAppText(
                         text: "\$${product.price.toStringAsFixed(2)}", // TODO: hardcoded
                         style: context.textTheme.bodySmall?.copyWith(
                           fontWeight: FontWeight.normal,
                           color: context.colorScheme.onSurface.withValues(alpha: 0.5),
                         ),
+                      ),
                       ),
                     ],
                   ),

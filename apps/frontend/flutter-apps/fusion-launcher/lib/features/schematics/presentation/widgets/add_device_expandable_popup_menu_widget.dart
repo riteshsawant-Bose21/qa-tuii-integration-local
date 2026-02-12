@@ -298,7 +298,7 @@ class _AddDeviceExpandablePopupMenuWidgetState extends State<AddDeviceExpandable
     final bool canAddDevice = _selectedPopupDevice != null && _selectedListeningAreaIds.isNotEmpty;
 
     return SemanticHelper.button(
-      testId: SemanticHelper.createTestId(SemanticTypes.container, "add_device_menu"),
+      testId: SemanticHelper.createTestId(SemanticTypes.container, title),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(FusionSizes.borderRadius8),
         child: Column(

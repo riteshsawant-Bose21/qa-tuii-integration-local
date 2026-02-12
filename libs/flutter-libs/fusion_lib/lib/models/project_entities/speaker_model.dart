@@ -133,7 +133,7 @@ class Speaker extends HardwareComponent {
       communicationPorts: speaker.communicationPorts,
       inputPortsData: speaker.inputPortsData,
       outputPortsData: speaker.outputPortsData,
-      addedFromBuildingPage: speaker.addedFromBuildingPage,
+      addedFromBuildingPage: addedFromBuildingPage ? true : speaker.addedFromBuildingPage,
       mountingType: speaker.mountingType,
     );
   }

@@ -101,6 +101,7 @@ class SchematicPropertiesState extends State<SchematicProperties> {
     final ProjectViewModel projectViewModel = context.read<ProjectViewModel>();
 
     late final HardwareComponent? selectedDevice;
+    bool isFromBuildingPage = false;
 
     String? assetImagePath;
     if (selectedItem!.type == SelectedItemType.circuit) {
@@ -115,6 +116,11 @@ class SchematicPropertiesState extends State<SchematicProperties> {
             currentImagePath: speakers.isNotEmpty ? speakers.first.assetImagePath : '',
           ) ??
           "";
+
+      print(" speakers.first.addedFromBuildingPage => ${speakers.first.addedFromBuildingPage}");
+
+      // is added from building page
+      isFromBuildingPage = speakers.first.addedFromBuildingPage;
     } else {
       selectedDevice = projectViewModel.getHardware(hardwareId: selectedItem.id);
       assetImagePath = selectedDevice?.assetImagePath;
@@ -173,45 +179,48 @@ class SchematicPropertiesState extends State<SchematicProperties> {
                 ),
               ),
               Expanded(
-                child: Builder(
-                  builder: (BuildContext context) {
-                    return PropertyTextField(
-                      controller: propertyModelNameController,
-                      hintText: 'Enter name',
-                      onTapOutside: (PointerDownEvent event) {
-                        final String value = propertyModelNameController.text.trim();
-                        if (value.isEmpty) return FusionToast.error(context, message: "Name should not be empty");
+                child: SemanticHelper.button(
+                  testId: SemanticHelper.createTestId(SemanticTypes.textInput, 'property_name_input'),
+                  child: Builder(
+                    builder: (BuildContext context) {
+                      return PropertyTextField(
+                        controller: propertyModelNameController,
+                        hintText: 'Enter name',
+                        onTapOutside: (PointerDownEvent event) {
+                          final String value = propertyModelNameController.text.trim();
+                          if (value.isEmpty) return FusionToast.error(context, message: "Name should not be empty");
 
-                        if (selectedItem.type == SelectedItemType.zone) {
-                          final Zone? zone = projectViewModel.getZone(zoneId: selectedItem.id);
-                          projectViewModel.updateZone(zone: zone!.copyWith(name: value));
-                        } else if (selectedItem.type == SelectedItemType.subzone) {
-                          final SubZone? subzone = projectViewModel.getSubZone(subZoneId: selectedItem.id);
-                          projectViewModel.updateSubZone(subZone: subzone!.copyWith(name: value));
-                        } else {
-                          final HardwareComponent hardware = selectedDevice!.copyWith(name: value);
-                          projectViewModel.updateHardware(hardware: hardware);
-                        }
-                      },
-                      onSubmitted: (String value) {
-                        if (value.trim().isEmpty) {
-                          return FusionToast.error(context, message: "Name should not be empty");
-                        } else if (selectedItem.type == SelectedItemType.zone) {
-                          final Zone? zone = projectViewModel.getZone(zoneId: selectedItem.id);
-                          projectViewModel.updateZone(zone: zone!.copyWith(name: value));
-                        } else if (selectedItem.type == SelectedItemType.subzone) {
-                          final SubZone? subzone = projectViewModel.getSubZone(subZoneId: selectedItem.id);
-                          projectViewModel.updateSubZone(subZone: subzone!.copyWith(name: value));
-                        } else if (selectedItem.type == SelectedItemType.circuit) {
-                          final CircuitModel? circuit = projectViewModel.getCircuitById(circuitId: selectedItem.id);
-                          projectViewModel.updateCircuit(circuit: circuit!.copyWith(name: value));
-                        } else {
-                          final HardwareComponent hardware = selectedDevice!.copyWith(name: value);
-                          projectViewModel.updateHardware(hardware: hardware);
-                        }
-                      },
-                    );
-                  },
+                          if (selectedItem.type == SelectedItemType.zone) {
+                            final Zone? zone = projectViewModel.getZone(zoneId: selectedItem.id);
+                            projectViewModel.updateZone(zone: zone!.copyWith(name: value));
+                          } else if (selectedItem.type == SelectedItemType.subzone) {
+                            final SubZone? subzone = projectViewModel.getSubZone(subZoneId: selectedItem.id);
+                            projectViewModel.updateSubZone(subZone: subzone!.copyWith(name: value));
+                          } else {
+                            final HardwareComponent hardware = selectedDevice!.copyWith(name: value);
+                            projectViewModel.updateHardware(hardware: hardware);
+                          }
+                        },
+                        onSubmitted: (String value) {
+                          if (value.trim().isEmpty) {
+                            return FusionToast.error(context, message: "Name should not be empty");
+                          } else if (selectedItem.type == SelectedItemType.zone) {
+                            final Zone? zone = projectViewModel.getZone(zoneId: selectedItem.id);
+                            projectViewModel.updateZone(zone: zone!.copyWith(name: value));
+                          } else if (selectedItem.type == SelectedItemType.subzone) {
+                            final SubZone? subzone = projectViewModel.getSubZone(subZoneId: selectedItem.id);
+                            projectViewModel.updateSubZone(subZone: subzone!.copyWith(name: value));
+                          } else if (selectedItem.type == SelectedItemType.circuit) {
+                            final CircuitModel? circuit = projectViewModel.getCircuitById(circuitId: selectedItem.id);
+                            projectViewModel.updateCircuit(circuit: circuit!.copyWith(name: value));
+                          } else {
+                            final HardwareComponent hardware = selectedDevice!.copyWith(name: value);
+                            projectViewModel.updateHardware(hardware: hardware);
+                          }
+                        },
+                      );
+                    },
+                  ),
                 ),
               ),
             ],
@@ -233,77 +242,83 @@ class SchematicPropertiesState extends State<SchematicProperties> {
                       ),
                     ),
                     Flexible(
-                      child: PopupMenuButton<String>(
-                        position: PopupMenuPosition.under,
-                        shadowColor: Colors.transparent,
-                        color: Colors.white,
-                        shape: const RoundedRectangleBorder(
-                          borderRadius: BorderRadius.all(Radius.circular(6)),
-                          side: BorderSide(color: Colors.black12),
-                        ),
-                        surfaceTintColor: Colors.transparent,
-                        tooltip: "Select zone color",
-                        child: Container(
-                          height: 24,
-                          width: 24,
-                          alignment: Alignment.centerLeft,
-                          decoration: BoxDecoration(
-                            color: zone.color,
-                            borderRadius: BorderRadius.circular(4),
+                      child: SemanticHelper.button(
+                        testId: SemanticHelper.createTestId(SemanticTypes.dropdown, 'zone_color_selector'),
+                        child: PopupMenuButton<String>(
+                          position: PopupMenuPosition.under,
+                          shadowColor: Colors.transparent,
+                          color: Colors.white,
+                          shape: const RoundedRectangleBorder(
+                            borderRadius: BorderRadius.all(Radius.circular(6)),
+                            side: BorderSide(color: Colors.black12),
                           ),
-                        ),
-                        itemBuilder: (BuildContext context) {
-                          return <PopupMenuEntry<String>>[
-                            PopupMenuItem<String>(
-                              enabled: false,
-                              child: Builder(
-                                builder: (BuildContext context) {
-                                  final Zone? selectedZone = projectViewModel.getZone(zoneId: selectedItem.id);
-                                  final Color? selectedColor = selectedZone?.color;
-
-                                  return Wrap(
-                                    children: <Widget>[
-                                      ...Zone.zoneColors.map(
-                                        (String hexCode) {
-                                          final Color color = hexToColor(hexCode);
-                                          final bool isSelected = selectedColor == color;
-
-                                          return GestureDetector(
-                                            onTap: () {
-                                              if (selectedZone == null) return;
-                                              projectViewModel.updateZone(zone: selectedZone.copyWith(zoneColor: hexCode));
-                                              Navigator.of(context).pop();
-                                            },
-                                            child: Container(
-                                              height: 24,
-                                              width: 24,
-                                              margin: const EdgeInsets.all(1),
-                                              decoration: BoxDecoration(
-                                                color: color,
-                                                borderRadius: BorderRadius.circular(4),
-                                                border: isSelected ? Border.all(color: context.colorScheme.primaryBlack, width: 2) : null,
-                                              ),
-                                              child:
-                                                  isSelected
-                                                      ? Container(
-                                                        decoration: BoxDecoration(
-                                                          color: context.colorScheme.primaryBlack.withOpacity(0.2),
-                                                          borderRadius: BorderRadius.circular(4),
-                                                        ),
-                                                        child: const Icon(Icons.check, color: Colors.white, size: 16),
-                                                      )
-                                                      : null,
-                                            ),
-                                          );
-                                        },
-                                      ),
-                                    ],
-                                  );
-                                },
-                              ),
+                          surfaceTintColor: Colors.transparent,
+                          tooltip: "Select zone color",
+                          child: Container(
+                            height: 24,
+                            width: 24,
+                            alignment: Alignment.centerLeft,
+                            decoration: BoxDecoration(
+                              color: zone.color,
+                              borderRadius: BorderRadius.circular(4),
                             ),
-                          ];
-                        },
+                          ),
+                          itemBuilder: (BuildContext context) {
+                            return <PopupMenuEntry<String>>[
+                              PopupMenuItem<String>(
+                                enabled: false,
+                                child: Builder(
+                                  builder: (BuildContext context) {
+                                    final Zone? selectedZone = projectViewModel.getZone(zoneId: selectedItem.id);
+                                    final Color? selectedColor = selectedZone?.color;
+
+                                    return Wrap(
+                                      children: <Widget>[
+                                        ...Zone.zoneColors.map(
+                                          (String hexCode) {
+                                            final Color color = hexToColor(hexCode);
+                                            final bool isSelected = selectedColor == color;
+
+                                            return SemanticHelper.button(
+                                              testId: SemanticHelper.createTestId(SemanticTypes.dropdownItem, 'zone_color_$hexCode'),
+                                              child: GestureDetector(
+                                                onTap: () {
+                                                  if (selectedZone == null) return;
+                                                  projectViewModel.updateZone(zone: selectedZone.copyWith(zoneColor: hexCode));
+                                                  Navigator.of(context).pop();
+                                                },
+                                                child: Container(
+                                                  height: 24,
+                                                  width: 24,
+                                                  margin: const EdgeInsets.all(1),
+                                                  decoration: BoxDecoration(
+                                                    color: color,
+                                                    borderRadius: BorderRadius.circular(4),
+                                                    border: isSelected ? Border.all(color: context.colorScheme.primaryBlack, width: 2) : null,
+                                                  ),
+                                                  child:
+                                                      isSelected
+                                                          ? Container(
+                                                            decoration: BoxDecoration(
+                                                              color: context.colorScheme.primaryBlack.withOpacity(0.2),
+                                                              borderRadius: BorderRadius.circular(4),
+                                                            ),
+                                                            child: const Icon(Icons.check, color: Colors.white, size: 16),
+                                                          )
+                                                          : null,
+                                                ),
+                                              ),
+                                            );
+                                          },
+                                        ),
+                                      ],
+                                    );
+                                  },
+                                ),
+                              ),
+                            ];
+                          },
+                        ),
                       ),
                     ),
                   ],
@@ -329,6 +344,7 @@ class SchematicPropertiesState extends State<SchematicProperties> {
                 Expanded(
                   child: FusionAppText(
                     text: selectedDevice?.hardwareName ?? '',
+                    semanticId: "hardware_model_name",
                     style: Theme.of(context).textTheme.bodySmall,
                   ),
                 ),
@@ -336,7 +352,13 @@ class SchematicPropertiesState extends State<SchematicProperties> {
             ),
           ],
 
-          if ((selectedItem.type == SelectedItemType.circuit && isListingViewMode)) ...<Widget>[
+          /// Speaker Quantity for Circuit only in Listing Mode and not from Building Page
+          /// (As per the requirement)
+          ///
+          /// For other types, speaker quantity is not applicable.
+          ///
+          /// For circuit added from building page, speaker quantity modification is disabled.
+          if ((selectedItem.type == SelectedItemType.circuit && isListingViewMode && !isFromBuildingPage)) ...<Widget>[
             Row(
               spacing: 3,
               children: <Widget>[
@@ -350,14 +372,18 @@ class SchematicPropertiesState extends State<SchematicProperties> {
                   child: Row(
                     spacing: 3,
                     children: <Widget>[
-                      GestureDetector(
-                        child: const Icon(Icons.remove, size: 17),
-                        onTap: () => speakerQtyModify(shouldIncrement: false),
+                      SemanticHelper.button(
+                        testId: SemanticHelper.createTestId(SemanticTypes.button, 'decrement_speaker_qty_button'),
+                        child: GestureDetector(
+                          child: const Icon(Icons.remove, size: 17),
+                          onTap: () => speakerQtyModify(shouldIncrement: false),
+                        ),
                       ),
                       SizedBox(
                         width: 36,
                         child: PropertyTextField(
                           controller: speakerQtyController,
+                          semanticId: 'speaker_quantity_input',
                           keyboardType: TextInputType.number,
                           maxLines: 1,
                           textAlign: TextAlign.center,
@@ -375,12 +401,15 @@ class SchematicPropertiesState extends State<SchematicProperties> {
                           },
                         ),
                       ),
-                      GestureDetector(
-                        child: const Icon(
-                          Icons.add,
-                          size: 17,
+                      SemanticHelper.button(
+                        testId: SemanticHelper.createTestId(SemanticTypes.button, 'increment_speaker_qty_button'),
+                        child: GestureDetector(
+                          child: const Icon(
+                            Icons.add,
+                            size: 17,
+                          ),
+                          onTap: () => speakerQtyModify(shouldIncrement: true),
                         ),
-                        onTap: () => speakerQtyModify(shouldIncrement: true),
                       ),
                     ],
                   ),
@@ -518,6 +547,7 @@ class PropertyTextField extends StatelessWidget {
   final FormFieldValidator<String>? validator;
   final EdgeInsetsGeometry? contentPadding;
   final Color? fillColor;
+  final String? semanticId;
 
   const PropertyTextField({
     super.key,
@@ -539,43 +569,47 @@ class PropertyTextField extends StatelessWidget {
     this.validator,
     this.contentPadding,
     this.fillColor,
+    this.semanticId,
   });
 
   @override
   Widget build(BuildContext context) {
-    return TextFormField(
-      autofocus: autofocus,
-      focusNode: focusNode,
-      initialValue: initialValue,
-      controller: controller,
-      maxLines: maxLines ?? 1,
-      keyboardType: keyboardType,
-      textAlign: textAlign ?? TextAlign.start,
-      onChanged: onChanged,
-      textInputAction: TextInputAction.done,
-      onTapOutside: onTapOutside,
-      onFieldSubmitted: onSubmitted,
-      style: Theme.of(context).textTheme.bodySmall,
-      maxLength: maxLength,
-      enabled: enabled,
-      inputFormatters: inputFormatters,
-      validator: validator,
-      decoration: InputDecoration(
-        counterText: '',
-        suffixText: suffixText,
-        hintText: hintText,
-        hintStyle: Theme.of(context).textTheme.bodySmall?.copyWith(color: context.colorScheme.elevation5),
-        isDense: true,
-        fillColor: fillColor ?? context.colorScheme.elevation1,
-        contentPadding: contentPadding ?? const EdgeInsets.symmetric(horizontal: 6, vertical: 10),
-        border: InputBorder.none,
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(6),
-          borderSide: BorderSide(color: context.colorScheme.strokeLight, width: 1),
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(6),
-          borderSide: BorderSide(color: context.colorScheme.strokeLight, width: 1),
+    return SemanticHelper.formControl(
+      testId: SemanticHelper.createTestId(SemanticTypes.textInput, semanticId ?? 'hardware_property_text_field'),
+      child: TextFormField(
+        autofocus: autofocus,
+        focusNode: focusNode,
+        initialValue: initialValue,
+        controller: controller,
+        maxLines: maxLines ?? 1,
+        keyboardType: keyboardType,
+        textAlign: textAlign ?? TextAlign.start,
+        onChanged: onChanged,
+        textInputAction: TextInputAction.done,
+        onTapOutside: onTapOutside,
+        onFieldSubmitted: onSubmitted,
+        style: Theme.of(context).textTheme.bodySmall,
+        maxLength: maxLength,
+        enabled: enabled,
+        inputFormatters: inputFormatters,
+        validator: validator,
+        decoration: InputDecoration(
+          counterText: '',
+          suffixText: suffixText,
+          hintText: hintText,
+          hintStyle: Theme.of(context).textTheme.bodySmall?.copyWith(color: context.colorScheme.elevation5),
+          isDense: true,
+          fillColor: fillColor ?? context.colorScheme.elevation1,
+          contentPadding: contentPadding ?? const EdgeInsets.symmetric(horizontal: 6, vertical: 10),
+          border: InputBorder.none,
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(6),
+            borderSide: BorderSide(color: context.colorScheme.strokeLight, width: 1),
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(6),
+            borderSide: BorderSide(color: context.colorScheme.strokeLight, width: 1),
+          ),
         ),
       ),
     );

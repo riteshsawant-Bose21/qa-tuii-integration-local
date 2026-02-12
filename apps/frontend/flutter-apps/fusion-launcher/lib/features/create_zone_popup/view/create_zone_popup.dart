@@ -94,6 +94,7 @@ class _NewWidgetState extends State<NewWidget> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: <Widget>[
                         // container 20 x 20
+                        const SizedBox(height: 10),
                         BlocBuilder<CreateZoneViewModel, CreateZoneViewModelState>(
                           buildWhen: (CreateZoneViewModelState previous, CreateZoneViewModelState current) {
                             return previous.zoneName != current.zoneName || previous.zoneColor != current.zoneColor;
@@ -116,21 +117,10 @@ class _NewWidgetState extends State<NewWidget> {
                                 Expanded(
                                   child: SemanticHelper.formControl(
                                     testId: SemanticHelper.createTestId(SemanticTypes.textInput, "create_zone_name_input"),
-                                    child: TextFormField(
+                                    child: PropertyTextField(
                                       initialValue: zoneName,
                                       onChanged: context.read<CreateZoneViewModel>().setZoneName,
-                                      decoration: InputDecoration(
-                                        hintText: 'Enter zone name',
-                                        hintStyle: context.textTheme.bodySmall?.copyWith(color: context.colorScheme.onSurface.withAlpha(100)),
-                                        border: InputBorder.none,
-                                        focusedBorder: InputBorder.none,
-                                        enabledBorder: InputBorder.none,
-                                        hoverColor: Colors.transparent,
-                                        errorBorder: InputBorder.none,
-                                        contentPadding: EdgeInsets.zero,
-                                        fillColor: Colors.transparent,
-                                      ),
-                                      style: context.textTheme.bodySmall?.copyWith(color: context.colorScheme.onSurface),
+                                      hintText: 'Enter zone name',
                                     ),
                                   ),
                                 ),
@@ -138,9 +128,12 @@ class _NewWidgetState extends State<NewWidget> {
                             );
                           },
                         ),
+                        const SizedBox(height: 20),
 
                         SizedBox(
                           width: 400,
+                          child: SemanticHelper.container(
+                          testId: SemanticHelper.createTestId(SemanticTypes.container, "zone_color_options"),
                           child: BlocBuilder<CreateZoneViewModel, CreateZoneViewModelState>(
                             buildWhen: (CreateZoneViewModelState previous, CreateZoneViewModelState current) {
                               return previous.zoneColor != current.zoneColor;
@@ -181,6 +174,7 @@ class _NewWidgetState extends State<NewWidget> {
                               );
                             },
                           ),
+                        ),
                         ),
 
                         const SizedBox(height: 20),
