@@ -22,9 +22,6 @@ static int fusion_codec_hw_params(struct snd_pcm_substream *substream,
                                       struct snd_pcm_hw_params *params,
                                       struct snd_soc_dai *dai)
 {
-    pr_info("%s: hw_params - rate=%d, width=%d, channels=%d\n",
-             CODEC_DRIVER_NAME, params_rate(params), 
-             params_width(params), params_channels(params));
     return 0;
 }
 
@@ -98,15 +95,10 @@ static int fusion_codec_probe(struct platform_device *pdev)
     if (ret) {
         dev_err(&pdev->dev, "%s: Failed to register codec component: %d\n",
                 CODEC_DRIVER_NAME, ret);
-    } else {
-        dev_info(&pdev->dev, "%s: Codec registered successfully\n",
-                 CODEC_DRIVER_NAME);
     }
 
     return ret;
 }
-
-
 
 static const struct of_device_id fusion_codec_of_match[] = {
     { .compatible = "bosepro,fusion-codec", },

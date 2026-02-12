@@ -1,7 +1,7 @@
 package main
 
 import (
-	"fusion/internal/logging"
+	"fusion-services-core/logging"
 	"testing"
 )
 

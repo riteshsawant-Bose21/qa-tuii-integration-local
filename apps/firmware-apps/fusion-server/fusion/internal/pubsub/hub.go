@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"fusion/internal/api"
 	"fusion/internal/cluster/transport"
-	"fusion/internal/logging"
+	"fusion-services-core/logging"
 	"fusion/internal/persistence"
 )
 
