@@ -12,8 +12,6 @@ import '../viewmodel/processing_chain_cubit.dart';
 import 'processing_block_page.dart';
 import 'widgets/dotted_line.dart';
 
-
-
 class ProcessingChainView extends StatelessWidget {
   const ProcessingChainView({super.key, required this.params});
   final ProcessingChainParams params;

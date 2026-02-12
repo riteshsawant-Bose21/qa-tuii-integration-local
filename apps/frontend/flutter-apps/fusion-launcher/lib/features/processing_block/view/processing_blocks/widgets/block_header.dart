@@ -4,13 +4,15 @@ import 'package:fusion_launcher/features/processing_block/viewmodel/processing_c
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
+const double headerHeight = 45;
+
 List<Positioned> getBlockHeader(BuildContext context, ProcessingBlockModel pb, {List<Widget>? actions}) {
   return <Positioned>[
     Positioned(
       left: 0,
       top: 0,
       child: SizedBox(
-        height: 40,
+        height: headerHeight,
         child: Center(
           child: Row(
             mainAxisSize: MainAxisSize.min,
@@ -44,7 +46,7 @@ List<Positioned> getBlockHeader(BuildContext context, ProcessingBlockModel pb, {
       right: 0,
       top: 0,
       child: SizedBox(
-        height: 40,
+        height: headerHeight,
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: <Widget>[

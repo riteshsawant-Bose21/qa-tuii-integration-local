@@ -63,6 +63,7 @@ class AgcBlock extends StatelessWidget {
                     child: Container(
                       color: context.colorScheme.elevation2,
                       child: Row(
+                        spacing: 2,
                         mainAxisSize: MainAxisSize.min,
                         children: <Widget>[
                           Column(
