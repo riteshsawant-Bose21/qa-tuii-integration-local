@@ -4,9 +4,9 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"fusion-services-core/logging"
 	"fusion-services-core/vip"
 	"fusion/internal/api"
-	"fusion-services-core/logging"
 	"fusion/internal/persistence"
 	"fusion/internal/routes"
 	"fusion/internal/utils"
@@ -206,7 +206,7 @@ func (c *Cluster) GetVIP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if isVip {
-		
+
 		local, vipAddr, ok := vip.LocalForVIP(vipValue)
 		if !ok {
 			w.WriteHeader(http.StatusNotFound)
@@ -315,6 +315,178 @@ func (c *Cluster) ReloadVIPLocal(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.WriteHeader(http.StatusNoContent)
+}
+
+func (c *Cluster) GetCSR(w http.ResponseWriter, r *http.Request) {
+	if !utils.RequireGet(w, r) {
+		return
+	}
+
+	csrContent, err := os.ReadFile("/var/lib/device-identity/device.csr")
+	if err != nil {
+		if os.IsNotExist(err) {
+			http.Error(w, "CSR file not found", http.StatusNotFound)
+			return
+		}
+		logging.GetLogger().Error("Error reading CSR file: %v", err)
+		http.Error(w, fmt.Sprintf("Error reading CSR file: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set(api.ContentType, "text/plain")
+	w.Write(csrContent)
+}
+
+func (c *Cluster) SetCertificate(w http.ResponseWriter, r *http.Request) {
+	if !utils.RequirePost(w, r) {
+		return
+	}
+	defer r.Body.Close()
+
+	certContent, err := io.ReadAll(r.Body)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("Error reading certificate data: %v", err), http.StatusBadRequest)
+		return
+	}
+
+	if len(certContent) == 0 {
+		http.Error(w, "Certificate data cannot be empty", http.StatusBadRequest)
+		return
+	}
+
+	if err := os.WriteFile("/var/lib/device-identity/device.x509.cert", certContent, 0644); err != nil {
+		logging.GetLogger().Error("Error writing certificate file: %v", err)
+		http.Error(w, fmt.Sprintf("Error writing certificate file: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func (c *Cluster) SetDeviceCertificate(w http.ResponseWriter, r *http.Request) {
+	if !utils.RequirePost(w, r) {
+		return
+	}
+	defer r.Body.Close()
+
+	deviceId, err := utils.ExtractId(r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	deviceInfos := c.fetchAllDeviceInfos()
+
+	var targetDevice *persistence.DeviceInfo
+	for _, info := range deviceInfos {
+		if info.Id == deviceId {
+			targetDevice = &info
+			break
+		}
+	}
+
+	if targetDevice == nil {
+		http.Error(w, fmt.Sprintf("Device %s not found", deviceId), http.StatusNotFound)
+		return
+	}
+
+	certContent, err := io.ReadAll(r.Body)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("Error reading certificate data: %v", err), http.StatusBadRequest)
+		return
+	}
+
+	if c.hostIsLocal(targetDevice.Address) {
+		// If this is the local device, write certificate locally
+		if err := os.WriteFile("/var/lib/device-identity/device.x509.cert", certContent, 0644); err != nil {
+			logging.GetLogger().Error("Error writing certificate file: %v", err)
+			http.Error(w, fmt.Sprintf("Error writing certificate file: %v", err), http.StatusInternalServerError)
+			return
+		}
+		w.WriteHeader(http.StatusNoContent)
+	} else {
+		// Make HTTP POST request to the remote device's admin certificate endpoint
+		deviceAddress := net.JoinHostPort(targetDevice.Address, api.AdminPort)
+		url := getLocalURL(deviceAddress, routes.DevicesCertificateEndpoint)
+
+		req, err := http.NewRequest(http.MethodPost, url, bytes.NewReader(certContent))
+		if err != nil {
+			http.Error(w, fmt.Sprintf("Failed to create POST request: %v", err), http.StatusInternalServerError)
+			return
+		}
+		req.Header.Set(api.ContentType, "text/plain")
+
+		resp, err := c.httpClient.Do(req)
+		if err != nil {
+			http.Error(w, fmt.Sprintf("Failed to send certificate to device: %v", err), http.StatusBadGateway)
+			return
+		}
+		defer resp.Body.Close()
+
+		if resp.StatusCode != http.StatusNoContent {
+			body, _ := io.ReadAll(resp.Body)
+			logging.GetLogger().Error("Remote certificate request to %s failed with status %d: %s", url, resp.StatusCode, string(body))
+			http.Error(w, fmt.Sprintf("Device returned error: %s", string(body)), resp.StatusCode)
+			return
+		}
+
+		w.WriteHeader(http.StatusNoContent)
+	}
+}
+
+func (c *Cluster) GetDeviceCSR(w http.ResponseWriter, r *http.Request) {
+	if !utils.RequireGet(w, r) {
+		return
+	}
+
+	deviceId, err := utils.ExtractId(r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	deviceInfos := c.fetchAllDeviceInfos()
+
+	var targetDevice *persistence.DeviceInfo
+	for _, info := range deviceInfos {
+		if info.Id == deviceId {
+			targetDevice = &info
+			break
+		}
+	}
+
+	if targetDevice == nil {
+		http.Error(w, fmt.Sprintf("Device %s not found", deviceId), http.StatusNotFound)
+		return
+	}
+
+	if c.hostIsLocal(targetDevice.Address) {
+		// If this is the local device, call the local GetCSR function
+		c.GetCSR(w, r)
+		return
+	} else {
+		// Make HTTP request to the remote device's admin CSR endpoint
+		deviceAddress := net.JoinHostPort(targetDevice.Address, api.AdminPort)
+		url := getLocalURL(deviceAddress, routes.DevicesGetCSREndpoint)
+
+		resp, err := c.httpClient.Get(url)
+		if err != nil {
+			http.Error(w, fmt.Sprintf("Failed to get CSR from device: %v", err), http.StatusBadGateway)
+			return
+		}
+		defer resp.Body.Close()
+
+		if resp.StatusCode != http.StatusOK {
+			body, _ := io.ReadAll(resp.Body)
+			logging.GetLogger().Error("Remote CSR request to %s failed with status %d: %s", url, resp.StatusCode, string(body))
+			http.Error(w, fmt.Sprintf("Device returned error: %s", string(body)), resp.StatusCode)
+			return
+		}
+
+		// Copy the response headers and body
+		w.Header().Set(api.ContentType, "text/plain")
+		io.Copy(w, resp.Body)
+	}
 }
 
 // updateVIP updates keepalived configuration with the new VIP but DOES NOT restart keepalived.

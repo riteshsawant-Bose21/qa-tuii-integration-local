@@ -4,11 +4,11 @@ import (
 	"bufio"
 	"context"
 	"fmt"
+	"fusion-services-core/logging"
 	"fusion/internal/api"
 	"fusion/internal/cluster"
 	clustertransport "fusion/internal/cluster/transport"
 	"fusion/internal/controllers"
-	"fusion-services-core/logging"
 	"fusion/internal/network"
 	"fusion/internal/persistence"
 	"fusion/internal/pubsub"
@@ -190,6 +190,8 @@ func (app *App) setupPublicRoutes() {
 
 	// Device
 	app.registerPublicGET(routes.DevicesEndpoint, app.Cluster.GetDevicesInfo)
+	app.registerPublicGET(routes.DevicesGetCSREndpoint, app.Cluster.GetDeviceCSR)
+	app.registerPublicPOST(routes.DevicesIDCertificateEndpoint, app.Cluster.SetDeviceCertificate)
 	app.registerPublicGET(routes.DevicesVIPEndpoint, app.Cluster.GetVIP)
 	app.registerPublicPOST(routes.DevicesSetVIPEndpoint, app.Cluster.SetVIP)
 	app.registerPublicPOST(routes.DeviceReloadVIPEndpoint, app.Cluster.ReloadVIP)
@@ -272,6 +274,8 @@ func (app *App) setupPrivateRoutes() {
 	app.registerPrivateGET(routes.ClusterLatencyStatusLocalEndpoint, app.Cluster.GetLatencyStatusLocal)
 
 	app.registerPrivateGET(routes.DeviceEndpoint, app.Cluster.GetDeviceInfo)
+	app.registerPrivateGET(routes.DevicesGetCSREndpoint, app.Cluster.GetCSR)
+	app.registerPrivatePOST(routes.DevicesCertificateEndpoint, app.Cluster.SetCertificate)
 	app.registerPrivatePOST(routes.DeviceEndpoint, app.Cluster.SetDeviceInfo)
 	app.registerPrivatePATCH(routes.DeviceEndpoint, app.Cluster.UpdateDeviceInfoLocal)
 	app.registerPrivatePOST(routes.DevicesSetVIPEndpoint, app.Cluster.UpdateVIPLocal)

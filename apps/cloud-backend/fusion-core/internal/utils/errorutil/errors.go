@@ -3,11 +3,12 @@ package errorutil
 
 // General Messages
 const (
-	MsgUnauthorized        = "Unauthorized"
-	MsgAccessDenied        = "Access denied"
-	MsgInternalServerError = "Internal Server Error"
-	MsgBadRequest          = "Bad Request"
-	MsgForbidden           = "Forbidden"
-	MsgInvalidRequestBody  = "Invalid request body"
-	MsgInvalidToken        = "Invalid token"
+	MsgUnauthorized           = "Unauthorized"
+	ErrMsgDeviceAlreadyExists = "Device with the given ID already exists"
+	MsgAccessDenied           = "Access denied"
+	MsgInternalServerError    = "Internal Server Error"
+	MsgBadRequest             = "Bad Request"
+	MsgForbidden              = "Forbidden"
+	MsgInvalidRequestBody     = "Invalid request body"
+	MsgInvalidToken           = "Invalid token"
 )

@@ -46,10 +46,14 @@ const (
 	DeviceReloadVIPEndpoint = DeviceReloadEndpoint + "/vip"
 	DeviceIDEndpoint        = DeviceEndpoint + "/{id}"
 
-	DevicesEndpoint       = "/devices"
-	DevicesIDEndpoint     = DevicesEndpoint + "/{id}"
-	DevicesVIPEndpoint    = DevicesEndpoint + "/vip"
-	DevicesSetVIPEndpoint = DevicesVIPEndpoint + "/{vip}"
+	DevicesEndpoint                = "/devices"
+	DevicesIDEndpoint              = DevicesEndpoint + "/{id}"
+	DevicesVIPEndpoint             = DevicesEndpoint + "/vip"
+	DevicesSetVIPEndpoint          = DevicesVIPEndpoint + "/{vip}"
+	DevicesGetCSREndpoint          = DevicesIDEndpoint + "/csr"
+	DevicesGetCSRForDeviceEndpoint = DevicesEndpoint + "/csr"
+	DevicesIDCertificateEndpoint   = DevicesIDEndpoint + "/certificate"
+	DevicesCertificateEndpoint     = DevicesEndpoint + "/certificate"
 
 	EndpointsEndpoint = "/endpoints"
 
