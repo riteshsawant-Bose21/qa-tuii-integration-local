@@ -414,6 +414,47 @@ setup_instance() {
     fi
     print_success "fusion-gateway installed successfully"
 
+    print_step "Creating device identity directory..."
+    if ! mp_exec "$instance_name" "sudo mkdir -p /var/lib/device-identity"; then
+        print_error "Failed to create device identity directory"
+        return 1
+    fi
+    print_success "Device identity directory created"
+
+    print_step "Generating device certificates..."
+    if ! mp_exec "$instance_name" "sudo openssl genrsa -out /var/lib/device-identity/device.key 2048"; then
+        print_error "Failed to generate private key"
+        return 1
+    fi
+    
+    if ! mp_exec "$instance_name" "sudo chmod 600 /var/lib/device-identity/device.key"; then
+        print_error "Failed to set permissions on private key"
+        return 1
+    fi
+    
+    if ! mp_exec "$instance_name" "sudo openssl req -new -key /var/lib/device-identity/device.key -out /var/lib/device-identity/device.csr -subj '/CN=device-001'"; then
+        print_error "Failed to generate certificate signing request"
+        return 1
+    fi
+    
+    if ! mp_exec "$instance_name" "sudo chmod 644 /var/lib/device-identity/device.csr"; then
+        print_error "Failed to set permissions on CSR"
+        return 1
+    fi
+    print_success "Device certificates generated successfully"
+
+    print_step "Downloading Amazon Root CA certificate..."
+    if ! mp_exec "$instance_name" "sudo wget -O /var/lib/device-identity/AmazonRootCA1.pem https://www.amazontrust.com/repository/AmazonRootCA1.pem"; then
+        print_error "Failed to download Amazon Root CA certificate"
+        return 1
+    fi
+    
+    if ! mp_exec "$instance_name" "sudo chmod 644 /var/lib/device-identity/AmazonRootCA1.pem"; then
+        print_error "Failed to set permissions on Amazon Root CA certificate"
+        return 1
+    fi
+    print_success "Amazon Root CA certificate downloaded successfully"
+
     print_step "Configuring keepalived priority..."
     local priority=$((100 - instance_number))
     mp_exec "$instance_name" sudo sed -i "s/priority 100/priority ${priority}/" /etc/keepalived/keepalived.conf
