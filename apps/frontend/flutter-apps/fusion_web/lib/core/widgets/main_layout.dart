@@ -9,9 +9,10 @@ import 'package:fusion_web/features/roles/presentation/pages/roles_page.dart';
 import 'package:fusion_web/features/settings/presentation/pages/settings_page.dart';
 
 class MainLayout extends StatefulWidget {
-  final DashboardTabs? initialTab;
+  final DashboardTabs initialTab;
+  final Widget? child;
 
-  const MainLayout({super.key, this.initialTab});
+  const MainLayout({super.key, required this.initialTab, this.child});
 
   @override
   State<MainLayout> createState() => _MainLayoutState();
@@ -31,7 +32,7 @@ class _MainLayoutState extends State<MainLayout> {
       case DashboardTabs.dashboard:
         return const DashboardPage();
       case DashboardTabs.projects:
-        return const ProjectsPage();
+        return ProjectsPage();
       case DashboardTabs.users:
         return const UsersPage();
       case DashboardTabs.devices:
@@ -53,16 +54,14 @@ class _MainLayoutState extends State<MainLayout> {
           FusionSidebar(
             selectedTab: _currentTab,
             onTabChanged: (tab) {
-              setState(() {
-                _currentTab = tab;
-              });
+              Navigator.pushReplacementNamed(context, tab.route);
             },
           ),
           // Content area - shows different pages
           Expanded(
             child: Container(
               color: Theme.of(context).scaffoldBackgroundColor,
-              child: _getScreenForTab(_currentTab),
+              child: widget.child ?? _getScreenForTab(_currentTab),
             ),
           ),
         ],

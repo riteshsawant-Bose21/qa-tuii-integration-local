@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:fusion_web/core/constants/app_constants.dart';
 import 'package:fusion_web/core/widgets/main_layout.dart';
 import 'package:fusion_web/features/auth/presentation/pages/login_page.dart';
+import 'package:fusion_web/features/projects/domain/entities/project_entity.dart';
+import 'package:fusion_web/features/projects/presentation/pages/project_detail_page.dart';
 
 enum DashboardTabs {
   dashboard("Dashboard"),
@@ -34,7 +36,8 @@ enum DashboardTabs {
 
 class AppRouter {
   static Route<dynamic> generateRoute(RouteSettings settings) {
-    // Handle login route
+
+    // ================= LOGIN =================
     if (settings.name == AppConstants.loginRoute) {
       return MaterialPageRoute(
         builder: (_) => const LoginPage(),
@@ -42,8 +45,22 @@ class AppRouter {
       );
     }
 
-    // Extract tab from route name for authenticated routes
-    DashboardTabs? initialTab;
+    // ================= PROJECT DETAIL ROUTE =================
+    if (settings.name == AppConstants.projectDetailRoute) {
+      final project = settings.arguments as ProjectEntity;
+
+      return MaterialPageRoute(
+        builder: (_) => MainLayout(
+          initialTab: DashboardTabs.projects,
+          child: ProjectDetailPage(project: project),
+        ),
+        settings: settings,
+      );
+    }
+
+    // ================= NORMAL DASHBOARD TABS =================
+    DashboardTabs initialTab;
+
     switch (settings.name) {
       case AppConstants.dashboardRoute:
         initialTab = DashboardTabs.dashboard;
@@ -65,10 +82,8 @@ class AppRouter {
         break;
       default:
         initialTab = DashboardTabs.dashboard;
-        break;
     }
 
-    // Always return the same MainLayout, just with different initial tab
     return MaterialPageRoute(
       builder: (_) => MainLayout(initialTab: initialTab),
       settings: settings,
