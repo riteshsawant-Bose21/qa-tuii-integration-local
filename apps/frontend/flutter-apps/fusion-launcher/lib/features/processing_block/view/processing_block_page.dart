@@ -10,6 +10,7 @@ import 'package:provider/provider.dart';
 import '../viewmodel/algorithm_data_viewmodel.dart';
 import 'dynamic_grid_view.dart';
 import 'processing_blocks/agc/agc_block.dart';
+import 'processing_blocks/gate/gate_block.dart';
 
 class ProcessingBlockPage extends StatelessWidget {
   const ProcessingBlockPage({super.key, required this.processingBlock});
@@ -34,6 +35,9 @@ class ProcessingBlockPage extends StatelessWidget {
                 }
                 if (processingBlock.algorithmId == 'delay') {
                   return const DelayBlock();
+                }
+                if (processingBlock.algorithmId == 'gate') {
+                  return const GateBlock();
                 }
                 final PBLayout? data = viewModel.layout;
 
