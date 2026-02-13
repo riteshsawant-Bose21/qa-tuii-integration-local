@@ -7,6 +7,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../core/service_locator.dart';
 import '../configuration/presentation/viewmodel/project_view_model.dart';
+import 'settings/source_matrix_priority_settings.dart';
 import 'widgets/mix_scene.dart';
 import 'widgets/neumorphic_audio_toggle_button.dart';
 import 'widgets/neumorphic_text_with_popup_slider_button.dart';
@@ -58,6 +59,9 @@ class _SourceMatrixZoneControlPanelState extends State<SourceMatrixZoneControlPa
 
   @override
   Widget build(BuildContext context) {
+    final ZoneFunctions? existingFunction = projectViewModel.getZoneFunctionForZone(zoneId: widget.zoneID);
+    final bool hasPriority = existingFunction?.hasPriority ?? false;
+
     return Material(
       color: Colors.transparent,
       type: MaterialType.transparency,
@@ -122,7 +126,7 @@ class _SourceMatrixZoneControlPanelState extends State<SourceMatrixZoneControlPa
                     ///                             MAIN CONTENT
                     /// --------------------------------------------------------------------------------
                     Padding(
-                      padding: const EdgeInsets.only(top: 50),
+                      padding: const EdgeInsets.symmetric(vertical: 50.0).copyWith(bottom: hasPriority ? null : 0),
                       child: SemanticHelper.container(
                         testId: SemanticHelper.createTestId(SemanticTypes.container, "source_select_main_container"),
                         child: BlocConsumer<ProjectViewModel, ProjectViewModelState>(
@@ -216,6 +220,52 @@ class _SourceMatrixZoneControlPanelState extends State<SourceMatrixZoneControlPa
                         ),
                       ),
                     ),
+                    if (hasPriority) ...<Widget>[
+                      Positioned(
+                        bottom: 0,
+                        right: 0,
+                        child: Material(
+                          color: Colors.transparent,
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                            child: InkWell(
+                              onTap: () {
+                                SourceMatrixPrioritySettings.showDialog(
+                                  context,
+                                  zoneID: widget.zoneID,
+                                );
+                              },
+                              borderRadius: BorderRadius.circular(8),
+                              splashColor: Colors.transparent,
+                              child: Ink(
+                                padding: const EdgeInsets.all(12),
+                                decoration: BoxDecoration(
+                                  color: context.colorScheme.elevation2,
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: <Widget>[
+                                    Flexible(
+                                      child: FusionAppText(
+                                        text: "Additional Settings",
+                                        style: Theme.of(context).textTheme.labelSmall,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Icon(
+                                      LucideIcons.arrowUpRight200,
+                                      size: 16,
+                                      color: context.colorScheme.iconDefault,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
                   ],
                 ),
               ),

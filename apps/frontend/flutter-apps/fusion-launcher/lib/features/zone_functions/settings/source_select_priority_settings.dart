@@ -89,7 +89,7 @@ class _SourceSelectPrioritySettingsState extends State<SourceSelectPrioritySetti
                       child: Padding(
                         padding: const EdgeInsets.symmetric(vertical: 15, horizontal: 20),
                         child: FusionAppText(
-                          text: "SOURCE SELECT - PRIORITY SETTINGS ",
+                          text: "SOURCE SELECT - PRIORITY SETTINGS",
                           style: context.textTheme.titleSmall,
                           maxLine: 1,
                         ),
@@ -123,7 +123,7 @@ class _SourceSelectPrioritySettingsState extends State<SourceSelectPrioritySetti
                     ///                             MAIN CONTENT
                     /// --------------------------------------------------------------------------------
                     Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 50.0),
+                      padding: const EdgeInsets.only(top: 50),
                       child: SemanticHelper.container(
                         testId: SemanticHelper.createTestId(SemanticTypes.container, "source_select_main_container"),
                         child: BlocConsumer<ProjectViewModel, ProjectViewModelState>(
@@ -204,39 +204,50 @@ class _SourceSelectPrioritySettingsState extends State<SourceSelectPrioritySetti
                                                               );
                                                             },
                                                             behavior: HitTestBehavior.opaque,
-                                                            child: Container(
-                                                              key: ValueKey<String>(source.id),
-                                                              padding: const EdgeInsets.all(12),
-                                                              child: Row(
-                                                                children: <Widget>[
-                                                                  Icon(
-                                                                    Icons.drag_indicator,
-                                                                    size: FusionSizes.iconSize16,
-                                                                    color: context.colorScheme.iconDefault,
+                                                            child: Padding(
+                                                              padding: const EdgeInsets.symmetric(horizontal: 12),
+                                                              child: Container(
+                                                                key: ValueKey<String>(source.id),
+                                                                padding: const EdgeInsets.all(12),
+
+                                                                decoration: BoxDecoration(
+                                                                  border: Border(
+                                                                    bottom: BorderSide(
+                                                                      color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.3),
+                                                                    ),
                                                                   ),
-                                                                  Expanded(
-                                                                    flex: 2,
-                                                                    child: Center(
-                                                                      child: FusionAppText(
-                                                                        text: source.name,
-                                                                        maxLine: 1,
-                                                                        style: Theme.of(context).textTheme.labelSmall,
+                                                                ),
+                                                                child: Row(
+                                                                  children: <Widget>[
+                                                                    Icon(
+                                                                      Icons.drag_indicator,
+                                                                      size: FusionSizes.iconSize16,
+                                                                      color: context.colorScheme.iconDefault,
+                                                                    ),
+                                                                    Expanded(
+                                                                      flex: 2,
+                                                                      child: Center(
+                                                                        child: FusionAppText(
+                                                                          text: source.name,
+                                                                          maxLine: 1,
+                                                                          style: Theme.of(context).textTheme.labelSmall,
+                                                                        ),
                                                                       ),
                                                                     ),
-                                                                  ),
-                                                                  MouseRegion(
-                                                                    cursor: SystemMouseCursors.click,
-                                                                    child: FusionCheckbox(
-                                                                      value: isSelected,
-                                                                      onChanged: () {
-                                                                        projectViewModel.selectSourceForFunction(
-                                                                          functionId: zoneFunction!.id,
-                                                                          sourceId: source.id,
-                                                                        );
-                                                                      },
+                                                                    MouseRegion(
+                                                                      cursor: SystemMouseCursors.click,
+                                                                      child: FusionCheckbox(
+                                                                        value: isSelected,
+                                                                        onChanged: () {
+                                                                          projectViewModel.selectSourceForFunction(
+                                                                            functionId: zoneFunction!.id,
+                                                                            sourceId: source.id,
+                                                                          );
+                                                                        },
+                                                                      ),
                                                                     ),
-                                                                  ),
-                                                                ],
+                                                                  ],
+                                                                ),
                                                               ),
                                                             ),
                                                           ),
@@ -251,35 +262,79 @@ class _SourceSelectPrioritySettingsState extends State<SourceSelectPrioritySetti
                                                 child: GestureDetector(
                                                   onTap: () {},
                                                   behavior: HitTestBehavior.opaque,
-                                                  child: Container(
-                                                    padding: const EdgeInsets.all(12),
-                                                    child: Row(
-                                                      children: <Widget>[
-                                                        Icon(
-                                                          Icons.drag_indicator,
-                                                          size: FusionSizes.iconSize16,
-                                                          color: context.colorScheme.iconDefault,
-                                                        ),
-                                                        Expanded(
-                                                          flex: 2,
-                                                          child: Center(
-                                                            child: FusionAppText(
-                                                              text: "Off",
-                                                              maxLine: 1,
-                                                              style: Theme.of(context).textTheme.labelSmall,
+                                                  child: Padding(
+                                                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                                                    child: Container(
+                                                      padding: const EdgeInsets.all(12),
+                                                      child: Row(
+                                                        children: <Widget>[
+                                                          Icon(
+                                                            Icons.drag_indicator,
+                                                            size: FusionSizes.iconSize16,
+                                                            color: context.colorScheme.iconDefault,
+                                                          ),
+                                                          Expanded(
+                                                            flex: 2,
+                                                            child: Center(
+                                                              child: FusionAppText(
+                                                                text: "Off",
+                                                                maxLine: 1,
+                                                                style: Theme.of(context).textTheme.labelSmall,
+                                                              ),
                                                             ),
                                                           ),
-                                                        ),
-                                                        MouseRegion(
-                                                          cursor: SystemMouseCursors.click,
-                                                          child: FusionCheckbox(
-                                                            value: false,
-                                                            onChanged: () {
-                                                              //
-                                                            },
+                                                          MouseRegion(
+                                                            cursor: SystemMouseCursors.click,
+                                                            child: FusionCheckbox(
+                                                              value: false,
+                                                              onChanged: () {
+                                                                //
+                                                              },
+                                                            ),
                                                           ),
-                                                        ),
-                                                      ],
+                                                        ],
+                                                      ),
+                                                    ),
+                                                  ),
+                                                ),
+                                              ),
+                                              Padding(
+                                                padding: const EdgeInsets.symmetric(horizontal: 12),
+                                                child: Divider(color: context.colorScheme.strokeLight, height: 0),
+                                              ),
+                                              MouseRegion(
+                                                cursor: SystemMouseCursors.click,
+                                                child: GestureDetector(
+                                                  onTap: () {},
+                                                  behavior: HitTestBehavior.opaque,
+                                                  child: Padding(
+                                                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                                                    child: Container(
+                                                      padding: const EdgeInsets.all(12),
+                                                      child: Row(
+                                                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                                                        children: <Widget>[
+                                                          Flexible(
+                                                            flex: 2,
+                                                            child: Center(
+                                                              child: FusionAppText(
+                                                                text: "Use crossfade",
+                                                                maxLine: 1,
+                                                                style: Theme.of(context).textTheme.labelSmall,
+                                                              ),
+                                                            ),
+                                                          ),
+                                                          MouseRegion(
+                                                            cursor: SystemMouseCursors.click,
+                                                            child: FusionCheckbox(
+                                                              value: false,
+                                                              onChanged: () {
+                                                                //
+                                                              },
+                                                            ),
+                                                          ),
+                                                        ],
+                                                      ),
                                                     ),
                                                   ),
                                                 ),
@@ -292,7 +347,7 @@ class _SourceSelectPrioritySettingsState extends State<SourceSelectPrioritySetti
                                         PrioritySettingsWidget(zoneId: widget.zoneID),
 
                                         // RIGHT COLUMN (Static)
-                                        Flexible(flex: 3, child: ZoneSubZoneSettingBuilder(zoneID: widget.zoneID)),
+                                        Flexible(flex: 3, child: PriorityZoneSubZoneSettingBuilder(zoneID: widget.zoneID)),
                                       ],
                                     ),
                                   ),
@@ -699,16 +754,16 @@ class _PrioritySettingsWidgetState extends State<PrioritySettingsWidget> {
   }
 }
 
-class ZoneSubZoneSettingBuilder extends StatefulWidget {
+class PriorityZoneSubZoneSettingBuilder extends StatefulWidget {
   final String zoneID;
 
-  const ZoneSubZoneSettingBuilder({super.key, required this.zoneID});
+  const PriorityZoneSubZoneSettingBuilder({super.key, required this.zoneID});
 
   @override
-  State<ZoneSubZoneSettingBuilder> createState() => _ZoneSubZoneSettingBuilderState();
+  State<PriorityZoneSubZoneSettingBuilder> createState() => _ZoneSubZoneSettingBuilderState();
 }
 
-class _ZoneSubZoneSettingBuilderState extends State<ZoneSubZoneSettingBuilder> {
+class _ZoneSubZoneSettingBuilderState extends State<PriorityZoneSubZoneSettingBuilder> {
   late final ScrollController _scrollController = ScrollController();
   late final ProjectViewModel projectViewModel = serviceLocator<ProjectViewModel>();
 
@@ -735,114 +790,133 @@ class _ZoneSubZoneSettingBuilderState extends State<ZoneSubZoneSettingBuilder> {
 
     final bool isSubZonesAvailable = subZones.isNotEmpty;
 
-    return HorizontalScrollWithShadows(
-      controller: _scrollController,
-      child: ListView.separated(
-        itemCount: isSubZonesAvailable ? subZones.length : 1,
-        shrinkWrap: true,
-        scrollDirection: Axis.horizontal,
-        physics: const ClampingScrollPhysics(),
-        separatorBuilder: (BuildContext context, int index) => Divider(color: context.colorScheme.strokeLight, height: 0),
-        itemBuilder: (BuildContext context, int index) {
-          final SubZone? subZone = isSubZonesAvailable ? subZones[index] : null;
-
-          final String? title = isSubZonesAvailable ? subZone!.name : zone?.name;
-          if (title == null) return const SizedBox.shrink();
-
-          final String zoneOrSubzoneID = isSubZonesAvailable ? subZone!.id : zone!.id;
-          final bool isMuted = isSubZonesAvailable ? subZone!.muted : zone!.muted;
-          final double zoneOrSubzoneGain = isSubZonesAvailable ? subZone!.gain : zone!.gain;
-
-          return Container(
-            width: 150,
-            decoration: BoxDecoration(
-              border: Border(
-                right: BorderSide(color: context.colorScheme.strokeLight),
-              ),
+    return Column(
+      children: <Widget>[
+        if (isSubZonesAvailable) ...<Widget>[
+          Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: FusionAppText(
+              text: "SUB ZONE VOLUME",
+              textAlign: TextAlign.center,
+              style: context.textTheme.labelMedium,
             ),
-            child: Column(
-              children: <Widget>[
-                Container(
-                  padding: const EdgeInsets.all(16.0),
-                  alignment: Alignment.center,
-                  child: FusionAppText(
-                    text: title,
-                    textAlign: TextAlign.center,
-                    style: Theme.of(context).textTheme.labelMedium,
+          ),
+        ],
+        Expanded(
+          child: HorizontalScrollWithShadows(
+            controller: _scrollController,
+            child: ListView.separated(
+              itemCount: isSubZonesAvailable ? subZones.length : 1,
+              shrinkWrap: true,
+              scrollDirection: Axis.horizontal,
+              physics: const ClampingScrollPhysics(),
+              separatorBuilder: (BuildContext context, int index) => Divider(color: context.colorScheme.strokeLight, height: 0),
+              itemBuilder: (BuildContext context, int index) {
+                final SubZone? subZone = isSubZonesAvailable ? subZones[index] : null;
+
+                final String? title = isSubZonesAvailable ? subZone!.name : zone?.name;
+                if (title == null) return const SizedBox.shrink();
+
+                final String zoneOrSubzoneID = isSubZonesAvailable ? subZone!.id : zone!.id;
+                final bool isMuted = isSubZonesAvailable ? subZone!.muted : zone!.muted;
+                final double zoneOrSubzoneGain = isSubZonesAvailable ? subZone!.gain : zone!.gain;
+
+                return Container(
+                  width: 150,
+                  decoration: BoxDecoration(
+                    border: Border(
+                      top: BorderSide(color: context.colorScheme.strokeLight),
+                      right: BorderSide(color: context.colorScheme.strokeLight),
+                    ),
                   ),
-                ),
-                Divider(color: context.colorScheme.strokeLight, height: 0),
-                const SizedBox(height: 10),
-                SemanticHelper.formControl(
-                  testId: SemanticHelper.createTestId(SemanticTypes.formControl, "source_mix_zone_gain_text_field"),
-                  child: NeumorphicGainTextField(
-                    controllerValue: zoneOrSubzoneGain,
-                    minGain: -60,
-                    maxGain: 12,
-                    onSubmitted: (double value) {
-                      projectViewModel.updateZoneGain(
-                        zoneId: zoneOrSubzoneID,
-                        gain: value,
-                      );
-                    },
-                    width: 100,
-                    height: 32,
-                  ),
-                ),
-                const SizedBox(height: 10),
-                Divider(color: context.colorScheme.strokeLight, height: 0),
-                const SizedBox(height: 10),
-                Expanded(
                   child: Column(
                     children: <Widget>[
-                      Expanded(
-                        child: VerticalRangeSelectionSlider(
-                          min: -60,
-                          max: 12,
-                          lowerValue: -40,
-                          upperValue: 0,
-                          onLowerChanged: (num value) {
-                            print("Lower changed: $value");
-                          },
-                          onUpperChanged: (num value) {
-                            print("Upper changed: $value");
-                          },
+                      Container(
+                        padding: const EdgeInsets.all(16.0),
+                        alignment: Alignment.center,
+                        child: FusionAppText(
+                          text: title,
+                          textAlign: TextAlign.center,
+                          style: Theme.of(context).textTheme.labelMedium,
                         ),
                       ),
-                      const SizedBox(height: 10),
                       Divider(color: context.colorScheme.strokeLight, height: 0),
                       const SizedBox(height: 10),
+                      SemanticHelper.formControl(
+                        testId: SemanticHelper.createTestId(SemanticTypes.formControl, "source_mix_zone_gain_text_field"),
+                        child: NeumorphicGainTextField(
+                          controllerValue: zoneOrSubzoneGain,
+                          minGain: -60,
+                          maxGain: 12,
+                          onSubmitted: (double value) {
+                            projectViewModel.updateZoneGain(
+                              zoneId: zoneOrSubzoneID,
+                              gain: value,
+                            );
+                          },
+                          width: 100,
+                          height: 32,
+                        ),
+                      ),
                       Padding(
                         padding: const EdgeInsets.symmetric(vertical: 10),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                        child: Divider(color: context.colorScheme.strokeLight, height: 0),
+                      ),
+                      Expanded(
+                        child: Column(
                           children: <Widget>[
-                            Flexible(
-                              child: FusionAppText(
-                                text: "Allow mute",
-                                style: context.textTheme.labelMedium?.copyWith(
-                                  color: context.colorScheme.textSecondary,
-                                ),
+                            Expanded(
+                              child: VerticalRangeSelectionSlider(
+                                min: -60,
+                                max: 12,
+                                lowerValue: -40,
+                                upperValue: 0,
+                                onLowerChanged: (num value) {
+                                  print("Lower changed: $value");
+                                },
+                                onUpperChanged: (num value) {
+                                  print("Upper changed: $value");
+                                },
                               ),
                             ),
-                            FusionCheckbox(
-                              value: isMuted,
-                              onChanged: () {
-                                //
-                              },
+                            Padding(
+                              padding: const EdgeInsets.symmetric(vertical: 10),
+                              child: Divider(color: context.colorScheme.strokeLight, height: 0),
                             ),
+                            Padding(
+                              padding: const EdgeInsets.symmetric(vertical: 10),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                                children: <Widget>[
+                                  Flexible(
+                                    child: FusionAppText(
+                                      text: "Allow mute",
+                                      style: context.textTheme.labelMedium?.copyWith(
+                                        color: context.colorScheme.textSecondary,
+                                      ),
+                                    ),
+                                  ),
+                                  FusionCheckbox(
+                                    value: isMuted,
+                                    onChanged: () {
+                                      //
+                                    },
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(height: 10),
                           ],
                         ),
                       ),
-                      const SizedBox(height: 10),
                     ],
                   ),
-                ),
-              ],
+                );
+              },
             ),
-          );
-        },
-      ),
+          ),
+        ),
+      ],
     );
   }
 }
