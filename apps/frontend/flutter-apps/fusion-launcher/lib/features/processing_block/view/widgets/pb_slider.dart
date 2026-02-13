@@ -280,37 +280,11 @@ class _VerticalSliderState extends State<VerticalSlider> {
                         right: 0,
                         bottom: thumbBottom,
                         child: Center(
-                          child: GestureDetector(
-                            behavior: HitTestBehavior.opaque,
-                            onPanStart: _onPanStart,
-                            onPanUpdate: (DragUpdateDetails details) => _onPanUpdate(details, height),
-                            onPanEnd: _onPanEnd,
-                            child: Container(
-                              height: widget.thumbSize,
-                              width: widget.thumbSize,
-                              padding: EdgeInsets.all(widget.thumbSize * 0.2),
-                              decoration: BoxDecoration(
-                                color: context.colorScheme.primaryColor,
-                                shape: BoxShape.circle,
-                                boxShadow: <BoxShadow>[
-                                  BoxShadow(
-                                    color: Colors.black.withOpacity(0.15),
-                                    blurRadius: 4,
-                                    offset: const Offset(0, 2),
-                                  ),
-                                ],
-                              ),
-                              child: Center(
-                                child: Container(
-                                  height: widget.thumbSize,
-                                  width: widget.thumbSize,
-                                  decoration: BoxDecoration(
-                                    color: context.colorScheme.primaryWhite,
-                                    shape: BoxShape.circle,
-                                  ),
-                                ),
-                              ),
-                            ),
+                          child: _Thumb(
+                            size: widget.thumbSize,
+                            onStart: _onPanStart,
+                            onUpdate: (DragUpdateDetails details) => _onPanUpdate(details, height),
+                            onEnd: _onPanEnd,
                           ),
                         ),
                       ),
@@ -462,7 +436,7 @@ class _VerticalRangeSelectionSliderState extends State<VerticalRangeSelectionSli
                         Container(
                           width: widget.intervalTickWidth,
                           height: 2,
-                          color: Colors.white,
+                          color: context.colorScheme.textPrimary,
                         ),
                       ],
                     ),
@@ -479,7 +453,7 @@ class _VerticalRangeSelectionSliderState extends State<VerticalRangeSelectionSli
                     child: Center(
                       child: Container(
                         width: widget.trackWidth,
-                        color: Colors.grey.shade700,
+                        color: context.colorScheme.strokeLight,
                       ),
                     ),
                   ),
