@@ -2,18 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/core/service_locator.dart';
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
-import 'package:fusion_launcher/features/processing_block/view/widgets/pb_slider.dart';
-import 'package:fusion_launcher/features/zone_functions/widgets/neumorphic_gain_text_field.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
-import '../widgets/horizontal_scroll_effect_wrapper.dart';
-import 'source_select_priority_settings.dart';
+import 'source_select_additional_settings.dart';
 
-class SourceMixPrioritySettings extends StatefulWidget {
+class SourceMatrixAdditionalSettings extends StatefulWidget {
   final String zoneID;
 
-  const SourceMixPrioritySettings({super.key, required this.zoneID});
+  const SourceMatrixAdditionalSettings({super.key, required this.zoneID});
 
   static void showDialog(BuildContext context, {required String zoneID}) {
     showGeneralDialog(
@@ -23,7 +20,7 @@ class SourceMixPrioritySettings extends StatefulWidget {
       barrierColor: Colors.black54,
       transitionDuration: const Duration(milliseconds: 200),
       pageBuilder: (BuildContext buildContext, _, __) {
-        return SourceMixPrioritySettings(
+        return SourceMatrixAdditionalSettings(
           zoneID: zoneID,
         );
       },
@@ -31,10 +28,10 @@ class SourceMixPrioritySettings extends StatefulWidget {
   }
 
   @override
-  State<SourceMixPrioritySettings> createState() => _SourceMixPrioritySettingsState();
+  State<SourceMatrixAdditionalSettings> createState() => _SourceMatrixAdditionalSettingsState();
 }
 
-class _SourceMixPrioritySettingsState extends State<SourceMixPrioritySettings> {
+class _SourceMatrixAdditionalSettingsState extends State<SourceMatrixAdditionalSettings> {
   late ZoneFunctions zoneFunction;
   @override
   void initState() {
@@ -170,11 +167,12 @@ class _SourceMixPrioritySettingsState extends State<SourceMixPrioritySettings> {
                                       ),
 
                                       VerticalDivider(width: 1, color: context.colorScheme.strokeLight),
+                                      AdditionalPrioritySettingsWidget(zoneId: widget.zoneID),
 
                                       // RIGHT COLUMN (Static)
                                       Flexible(
                                         flex: 2,
-                                        child: PriorityZoneSubZoneSettingBuilder(zoneID: widget.zoneID),
+                                        child: AdditionalPriorityZoneSubZoneSettingBuilder(zoneID: widget.zoneID),
                                       ),
                                     ],
                                   ),
@@ -242,19 +240,19 @@ class __SourcesSettingState extends State<_SourcesSetting> {
           ),
         ),
         Expanded(
-          child: Builder(
-            builder: (BuildContext context) {
-              if (sources.isEmpty) {
-                return Container(
-                  padding: const EdgeInsets.all(16.0),
-                  decoration: BoxDecoration(
-                    border: Border(
-                      top: BorderSide(
-                        color: context.colorScheme.strokeLight,
-                      ),
-                    ),
-                  ),
-                  child: Center(
+          child: Container(
+            padding: const EdgeInsets.all(16.0).copyWith(top: 0),
+            decoration: BoxDecoration(
+              border: Border(
+                top: BorderSide(
+                  color: context.colorScheme.strokeLight,
+                ),
+              ),
+            ),
+            child: Builder(
+              builder: (BuildContext context) {
+                if (sources.isEmpty) {
+                  return Center(
                     child: FusionAppText(
                       text: "No sources selected for this function",
                       textAlign: TextAlign.center,
@@ -262,126 +260,62 @@ class __SourcesSettingState extends State<_SourcesSetting> {
                         color: context.colorScheme.textPlaceholder,
                       ),
                     ),
-                  ),
-                );
-              }
+                  );
+                }
 
-              return HorizontalScrollWithShadows(
-                controller: _scrollController,
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: List<Widget>.generate(sources.length, (int index) {
-                    final Source source = sources[index];
+                return Opacity(
+                  opacity: 0.4,
+                  child: ListView.separated(
+                    controller: _scrollController,
+                    padding: const EdgeInsets.all(0.0),
+                    itemBuilder: (BuildContext context, int index) {
+                      final Source source = sources[index];
 
-                    final MixSettings mixSetting = widget.zoneFunctions.mixSettings!.singleWhere(
-                      (MixSettings setting) => setting.sourceId == source.id,
-                      orElse: () => MixSettings(sourceId: source.id, gain: 0, muted: true),
-                    );
+                      return Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 12),
+                        child: Container(
+                          key: ValueKey<String>(source.id),
+                          padding: const EdgeInsets.all(12),
 
-                    return Container(
-                      width: 150,
-                      decoration: BoxDecoration(
-                        border: Border(
-                          top: BorderSide(
-                            color: context.colorScheme.strokeLight,
-                          ),
-                          right: BorderSide(
-                            color: context.colorScheme.strokeLight,
-                          ),
-                        ),
-                      ),
-                      child: Column(
-                        children: <Widget>[
-                          Padding(
-                            padding: const EdgeInsetsGeometry.all(16),
-                            child: Center(
-                              child: FusionAppText(
-                                text: source.name,
-                                textAlign: TextAlign.center,
-                                maxLine: 1,
-                                style: Theme.of(context).textTheme.labelMedium,
+                          decoration: BoxDecoration(
+                            border: Border(
+                              bottom: BorderSide(
+                                color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.3),
                               ),
                             ),
                           ),
-                          Divider(color: context.colorScheme.strokeLight, height: 0),
-                          const SizedBox(height: 10),
-                          SemanticHelper.formControl(
-                            testId: SemanticHelper.createTestId(SemanticTypes.textInput, "source_mix_gain_text_field"),
-                            child: NeumorphicGainTextField(
-                              controllerValue: mixSetting.gain,
-                              minGain: -60,
-                              maxGain: 12,
-                              onSubmitted: (double value) {
-                                projectViewModel.updateMixSettings(
-                                  mixSettings: mixSetting.copyWith(
-                                    gain: value,
-                                  ),
-                                  functionId: widget.zoneFunctions.id,
-                                );
-                              },
-                            ),
-                          ),
-                          Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 10),
-                            child: Divider(color: context.colorScheme.strokeLight, height: 0),
-                          ),
-                          Expanded(
-                            child: Column(
-                              children: <Widget>[
-                                Expanded(
-                                  child: SemanticHelper.button(
-                                    testId: SemanticHelper.createTestId(SemanticTypes.button, "source_mix_gain_slider"),
-                                    child: VerticalRangeSelectionSlider(
-                                      lowerValue: -40,
-                                      upperValue: 0,
-                                      min: -60,
-                                      max: 12,
-                                      onLowerChanged: (num value) {
-                                        //
-                                      },
-                                      onUpperChanged: (num value) {
-                                        //
-                                      },
-                                    ),
+                          child: Row(
+                            spacing: 10,
+                            children: <Widget>[
+                              Container(
+                                width: 16,
+                                height: 16,
+                                decoration: BoxDecoration(
+                                  color: context.colorScheme.primaryColor,
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
+                              ),
+                              Expanded(
+                                child: Center(
+                                  child: FusionAppText(
+                                    text: source.name,
+                                    maxLine: 1,
+                                    style: Theme.of(context).textTheme.labelSmall,
                                   ),
                                 ),
-                                Padding(
-                                  padding: const EdgeInsets.symmetric(vertical: 10),
-                                  child: Divider(color: context.colorScheme.strokeLight, height: 0),
-                                ),
-                                Padding(
-                                  padding: const EdgeInsets.symmetric(vertical: 10),
-                                  child: Row(
-                                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                                    children: <Widget>[
-                                      Flexible(
-                                        child: FusionAppText(
-                                          text: "Allow mute",
-                                          style: context.textTheme.labelMedium?.copyWith(
-                                            color: context.colorScheme.textSecondary,
-                                          ),
-                                        ),
-                                      ),
-                                      FusionCheckbox(
-                                        value: false,
-                                        onChanged: () {
-                                          //
-                                        },
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                const SizedBox(height: 10),
-                              ],
-                            ),
+                              ),
+                            ],
                           ),
-                        ],
-                      ),
-                    );
-                  }),
-                ),
-              );
-            },
+                        ),
+                      );
+                    },
+                    separatorBuilder: (BuildContext context, int index) => const SizedBox(height: 10),
+                    itemCount: sources.length,
+                    physics: const ClampingScrollPhysics(),
+                  ),
+                );
+              },
+            ),
           ),
         ),
       ],

@@ -11,20 +11,20 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../widgets/horizontal_scroll_effect_wrapper.dart';
 
-enum _SourceSelectSettingPriorityMode {
+enum _SourceSelectAdditionalSettingPriorityMode {
   override(displayName: "Override"),
   talkOver(displayName: "Talk Over"),
   ducking(displayName: "Ducking"),
   custom(displayName: "Custom");
 
-  const _SourceSelectSettingPriorityMode({required this.displayName});
+  const _SourceSelectAdditionalSettingPriorityMode({required this.displayName});
   final String displayName;
 }
 
-class SourceSelectPrioritySettings extends StatefulWidget {
+class SourceSelectAdditionalSettings extends StatefulWidget {
   final String zoneID;
 
-  const SourceSelectPrioritySettings({super.key, required this.zoneID});
+  const SourceSelectAdditionalSettings({super.key, required this.zoneID});
 
   static void showDialog(BuildContext context, {required String zoneID}) {
     showGeneralDialog(
@@ -34,7 +34,7 @@ class SourceSelectPrioritySettings extends StatefulWidget {
       barrierColor: Colors.black54,
       transitionDuration: const Duration(milliseconds: 200),
       pageBuilder: (BuildContext buildContext, _, __) {
-        return SourceSelectPrioritySettings(
+        return SourceSelectAdditionalSettings(
           zoneID: zoneID,
         );
       },
@@ -42,10 +42,10 @@ class SourceSelectPrioritySettings extends StatefulWidget {
   }
 
   @override
-  State<SourceSelectPrioritySettings> createState() => _SourceSelectPrioritySettingsState();
+  State<SourceSelectAdditionalSettings> createState() => _SourceSelectAdditionalSettingsState();
 }
 
-class _SourceSelectPrioritySettingsState extends State<SourceSelectPrioritySettings> {
+class _SourceSelectAdditionalSettingsState extends State<SourceSelectAdditionalSettings> {
   late List<Source> sources;
   final ProjectViewModel projectViewModel = serviceLocator<ProjectViewModel>();
   ZoneFunctions? zoneFunction;
@@ -344,10 +344,10 @@ class _SourceSelectPrioritySettingsState extends State<SourceSelectPrioritySetti
                                         ),
                                         VerticalDivider(width: 1, color: context.colorScheme.strokeLight),
 
-                                        PrioritySettingsWidget(zoneId: widget.zoneID),
+                                        AdditionalPrioritySettingsWidget(zoneId: widget.zoneID),
 
                                         // RIGHT COLUMN (Static)
-                                        Flexible(flex: 3, child: PriorityZoneSubZoneSettingBuilder(zoneID: widget.zoneID)),
+                                        Flexible(flex: 3, child: AdditionalPriorityZoneSubZoneSettingBuilder(zoneID: widget.zoneID)),
                                       ],
                                     ),
                                   ),
@@ -369,16 +369,16 @@ class _SourceSelectPrioritySettingsState extends State<SourceSelectPrioritySetti
   }
 }
 
-class PrioritySettingsWidget extends StatefulWidget {
+class AdditionalPrioritySettingsWidget extends StatefulWidget {
   final String zoneId;
   final Function(Widget child)? builder;
-  const PrioritySettingsWidget({super.key, required this.zoneId, this.builder});
+  const AdditionalPrioritySettingsWidget({super.key, required this.zoneId, this.builder});
 
   @override
-  State<PrioritySettingsWidget> createState() => _PrioritySettingsWidgetState();
+  State<AdditionalPrioritySettingsWidget> createState() => _AdditionalPrioritySettingsWidgetState();
 }
 
-class _PrioritySettingsWidgetState extends State<PrioritySettingsWidget> {
+class _AdditionalPrioritySettingsWidgetState extends State<AdditionalPrioritySettingsWidget> {
   final ProjectViewModel projectViewModel = serviceLocator<ProjectViewModel>();
 
   late final List<Source> sources;
@@ -608,16 +608,16 @@ class _PrioritySettingsWidgetState extends State<PrioritySettingsWidget> {
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: <Widget>[
-                                    PBDropdown<_SourceSelectSettingPriorityMode>(
+                                    PBDropdown<_SourceSelectAdditionalSettingPriorityMode>(
                                       hintText: "select",
-                                      items: _SourceSelectSettingPriorityMode.values,
-                                      itemBuilder: (BuildContext context, _SourceSelectSettingPriorityMode mode) {
+                                      items: _SourceSelectAdditionalSettingPriorityMode.values,
+                                      itemBuilder: (BuildContext context, _SourceSelectAdditionalSettingPriorityMode mode) {
                                         return FusionAppText(
                                           text: mode.displayName,
                                           style: context.textTheme.bodySmall,
                                         );
                                       },
-                                      onChanged: (_SourceSelectSettingPriorityMode value) {
+                                      onChanged: (_SourceSelectAdditionalSettingPriorityMode value) {
                                         //
                                       },
                                     ),
@@ -754,16 +754,16 @@ class _PrioritySettingsWidgetState extends State<PrioritySettingsWidget> {
   }
 }
 
-class PriorityZoneSubZoneSettingBuilder extends StatefulWidget {
+class AdditionalPriorityZoneSubZoneSettingBuilder extends StatefulWidget {
   final String zoneID;
 
-  const PriorityZoneSubZoneSettingBuilder({super.key, required this.zoneID});
+  const AdditionalPriorityZoneSubZoneSettingBuilder({super.key, required this.zoneID});
 
   @override
-  State<PriorityZoneSubZoneSettingBuilder> createState() => _ZoneSubZoneSettingBuilderState();
+  State<AdditionalPriorityZoneSubZoneSettingBuilder> createState() => _ZoneSubZoneSettingBuilderState();
 }
 
-class _ZoneSubZoneSettingBuilderState extends State<PriorityZoneSubZoneSettingBuilder> {
+class _ZoneSubZoneSettingBuilderState extends State<AdditionalPriorityZoneSubZoneSettingBuilder> {
   late final ScrollController _scrollController = ScrollController();
   late final ProjectViewModel projectViewModel = serviceLocator<ProjectViewModel>();
 
