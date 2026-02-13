@@ -2,11 +2,24 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/core/service_locator.dart';
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
+import 'package:fusion_launcher/features/processing_block/view/widgets/pb_meter.dart';
+import 'package:fusion_launcher/features/processing_block/view/widgets/widgets.dart';
 import 'package:fusion_launcher/features/schematics/presentation/widgets/common_reorderable_list_view.dart';
-import 'package:fusion_launcher/features/zone_functions/source_mix.dart';
-import 'package:fusion_launcher/features/zone_functions/widgets/priority_selection_widget.dart';
+import 'package:fusion_launcher/features/zone_functions/widgets/neumorphic_gain_text_field.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
+
+import '../widgets/horizontal_scroll_effect_wrapper.dart';
+
+enum _SourceSelectSettingPriorityMode {
+  override(displayName: "Override"),
+  talkOver(displayName: "Talk Over"),
+  ducking(displayName: "Ducking"),
+  custom(displayName: "Custom");
+
+  const _SourceSelectSettingPriorityMode({required this.displayName});
+  final String displayName;
+}
 
 class SourceSelectPrioritySettings extends StatefulWidget {
   final String zoneID;
@@ -276,10 +289,10 @@ class _SourceSelectPrioritySettingsState extends State<SourceSelectPrioritySetti
                                         ),
                                         VerticalDivider(width: 1, color: context.colorScheme.strokeLight),
 
-                                        PrioritySelectionWidget(zoneId: widget.zoneID),
+                                        PrioritySettingsWidget(zoneId: widget.zoneID),
 
                                         // RIGHT COLUMN (Static)
-                                        Flexible(flex: 3, child: ZoneControlSliderBuilder(zoneID: widget.zoneID)),
+                                        Flexible(flex: 3, child: ZoneSubZoneSettingBuilder(zoneID: widget.zoneID)),
                                       ],
                                     ),
                                   ),
@@ -296,6 +309,539 @@ class _SourceSelectPrioritySettingsState extends State<SourceSelectPrioritySetti
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class PrioritySettingsWidget extends StatefulWidget {
+  final String zoneId;
+  final Function(Widget child)? builder;
+  const PrioritySettingsWidget({super.key, required this.zoneId, this.builder});
+
+  @override
+  State<PrioritySettingsWidget> createState() => _PrioritySettingsWidgetState();
+}
+
+class _PrioritySettingsWidgetState extends State<PrioritySettingsWidget> {
+  final ProjectViewModel projectViewModel = serviceLocator<ProjectViewModel>();
+
+  late final List<Source> sources;
+
+  @override
+  void initState() {
+    super.initState();
+    sources = projectViewModel.getSourcesAndSourceSetSourcesInZone(zoneId: widget.zoneId);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final ZoneFunctions? existingFunction = projectViewModel.getZoneFunctionForZone(zoneId: widget.zoneId);
+    if (!(existingFunction?.hasPriority ?? false)) return const SizedBox.shrink();
+
+    final SizedBox child = SizedBox(
+      width: 600,
+      child: Row(
+        children: <Widget>[
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Container(
+                  padding: const EdgeInsets.all(16.0),
+                  width: double.infinity,
+                  alignment: Alignment.center,
+                  child: FusionAppText(
+                    text: "PRIORITY",
+                    style: Theme.of(context).textTheme.labelSmall,
+                  ),
+                ),
+
+                Divider(color: context.colorScheme.strokeLight, height: 0),
+
+                Flexible(child: _buildReorderablePriorityWidgets()),
+              ],
+            ),
+          ),
+          VerticalDivider(width: 1, color: context.colorScheme.strokeLight),
+        ],
+      ),
+    );
+
+    // Wrap with builder if provided for customizations
+    if (widget.builder != null) return widget.builder!(child);
+
+    // Otherwise, return the child directly
+    return child;
+  }
+
+  Widget _buildReorderablePriorityWidgets() {
+    final ZoneFunctions? existingFunction = projectViewModel.getZoneFunctionForZone(zoneId: widget.zoneId);
+    if (!(existingFunction?.hasPriority ?? false)) return const SizedBox.shrink();
+
+    return Material(
+      color: Colors.transparent,
+      child: ListView.separated(
+        shrinkWrap: true,
+        physics: const ClampingScrollPhysics(),
+        itemCount: 2,
+        separatorBuilder: (BuildContext context, int index) => Divider(color: context.colorScheme.strokeLight, height: 0),
+        itemBuilder: (BuildContext context, int index) {
+          final int priorityIndex = index + 1;
+
+          // String? selectedSourceId;
+          String? selectedSourceName;
+
+          final List<String> prioritySources = projectViewModel.getPrioritySourcesInZone(zoneId: widget.zoneId);
+
+          /// priority 1
+          if (priorityIndex == 1) {
+            if (prioritySources.isNotEmpty && prioritySources[0].isNotEmpty) {
+              final HardwareComponent? sourceData = projectViewModel.getHardware(hardwareId: prioritySources[0]);
+              if (sourceData != null) {
+                selectedSourceName = sourceData.name;
+                // selectedSourceId = prioritySources[0];
+              }
+            }
+          } else {
+            /// priority 2
+            if (prioritySources.length > 1 && prioritySources[1].isNotEmpty) {
+              final HardwareComponent? sourceData = projectViewModel.getHardware(hardwareId: prioritySources[1]);
+              if (sourceData != null) {
+                selectedSourceName = sourceData.name;
+                // selectedSourceId = prioritySources[1];
+              }
+            }
+          }
+
+          return SemanticHelper.button(
+            testId: SemanticHelper.createTestId(SemanticTypes.button, "priority_selection_widget_$priorityIndex"),
+            child: SizedBox(
+              height: 600,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  //
+                  // ========= HEADINGS ========
+                  //
+                  Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: FusionAppText(
+                      text: "PRIORITY $priorityIndex",
+                      style: context.textTheme.labelMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                  Divider(color: context.colorScheme.strokeLight, height: 0), // // ========= CONTENT ======== //
+
+                  Expanded(
+                    child: Builder(
+                      builder: (BuildContext context) {
+                        if (selectedSourceName == null) {
+                          return FusionAppText(
+                            text: "No source selected for priority $priorityIndex.",
+                            style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                              fontSize: 10,
+                              color: const Color(0xFF888888),
+                            ),
+                          );
+                        }
+
+                        return Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: <Widget>[
+                            Expanded(
+                              child: Column(
+                                children: <Widget>[
+                                  Padding(
+                                    padding: const EdgeInsets.all(16.0),
+                                    child: Row(
+                                      spacing: 4,
+                                      children: <Widget>[
+                                        Expanded(
+                                          child: FusionAppText(
+                                            text: "PTT/CONTROL",
+                                            style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                                              color: context.colorScheme.textSecondary,
+                                            ),
+                                          ),
+                                        ),
+                                        SemanticHelper.button(
+                                          testId: SemanticHelper.createTestId(SemanticTypes.button, "priority_active_button_$priorityIndex"),
+                                          child: FusionSwitch(
+                                            value: true,
+                                            width: 44,
+                                            height: 24,
+                                            onChanged: (bool value) {
+                                              //
+                                            },
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  Divider(color: context.colorScheme.strokeLight, height: 0),
+                                  Padding(
+                                    padding: const EdgeInsets.all(16.0),
+                                    child: Row(
+                                      spacing: 4,
+                                      children: <Widget>[
+                                        Expanded(
+                                          child: FusionAppText(
+                                            text: "THRESHOLD",
+                                            style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                                              color: context.colorScheme.textSecondary,
+                                            ),
+                                          ),
+                                        ),
+                                        SemanticHelper.button(
+                                          testId: SemanticHelper.createTestId(SemanticTypes.button, "priority_active_button_$priorityIndex"),
+                                          child: FusionSwitch(
+                                            value: true,
+                                            width: 44,
+                                            height: 24,
+                                            onChanged: (bool value) {
+                                              //
+                                            },
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+
+                                  const SizedBox(height: 10),
+                                  Divider(color: context.colorScheme.strokeLight, height: 0),
+                                  const SizedBox(height: 10),
+                                  Expanded(
+                                    child: VerticalSlider(
+                                      value: -24,
+                                      min: -60,
+                                      max: 12,
+                                      onChanged: (num value) {
+                                        //
+                                      },
+                                    ),
+                                  ),
+                                  const SizedBox(height: 10),
+                                  Divider(color: context.colorScheme.strokeLight, height: 0),
+                                  const SizedBox(height: 10),
+                                  NeumorphicGainTextField(
+                                    maxGain: 12,
+                                    minGain: -60,
+                                    onSubmitted: (double value) {
+                                      //
+                                    },
+                                  ),
+                                  const SizedBox(height: 10),
+                                  FusionAppText(
+                                    text: "dBFS",
+                                    style: context.textTheme.labelSmall?.copyWith(
+                                      color: context.colorScheme.textSecondary,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 10),
+                                ],
+                              ),
+                            ),
+
+                            VerticalDivider(width: 1, color: context.colorScheme.strokeLight),
+
+                            Expanded(
+                              child: Padding(
+                                padding: const EdgeInsets.all(16.0),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: <Widget>[
+                                    PBDropdown<_SourceSelectSettingPriorityMode>(
+                                      hintText: "select",
+                                      items: _SourceSelectSettingPriorityMode.values,
+                                      itemBuilder: (BuildContext context, _SourceSelectSettingPriorityMode mode) {
+                                        return FusionAppText(
+                                          text: mode.displayName,
+                                          style: context.textTheme.bodySmall,
+                                        );
+                                      },
+                                      onChanged: (_SourceSelectSettingPriorityMode value) {
+                                        //
+                                      },
+                                    ),
+                                    const SizedBox(height: 10),
+                                    Row(
+                                      spacing: 5,
+                                      children: <Widget>[
+                                        const Expanded(
+                                          child: FusionAppText(
+                                            text: "DEPTH",
+                                          ),
+                                        ),
+                                        NeumorphicGainTextField(
+                                          maxGain: 12,
+                                          minGain: -60,
+                                          onSubmitted: (double value) {
+                                            //
+                                          },
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 10),
+                                    Row(
+                                      spacing: 5,
+                                      children: <Widget>[
+                                        const Expanded(
+                                          child: FusionAppText(
+                                            text: "ATTACK",
+                                          ),
+                                        ),
+                                        NeumorphicGainTextField(
+                                          maxGain: 12,
+                                          minGain: -60,
+                                          onSubmitted: (double value) {
+                                            //
+                                          },
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 10),
+                                    Row(
+                                      spacing: 5,
+                                      children: <Widget>[
+                                        const Expanded(
+                                          child: FusionAppText(
+                                            text: "HOLD",
+                                          ),
+                                        ),
+                                        UnitNumberTextField(
+                                          min: 1,
+                                          max: null,
+                                          unit: "ms",
+                                          onSubmitted: (double value) {
+                                            //
+                                          },
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 10),
+                                    Row(
+                                      spacing: 5,
+                                      children: <Widget>[
+                                        const Expanded(
+                                          child: FusionAppText(
+                                            text: "RELEASE",
+                                          ),
+                                        ),
+                                        UnitNumberTextField(
+                                          min: 1,
+                                          max: null,
+                                          unit: "ms",
+                                          onSubmitted: (double value) {
+                                            //
+                                          },
+                                        ),
+                                      ],
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+
+                            VerticalDivider(width: 1, color: context.colorScheme.strokeLight),
+
+                            Expanded(
+                              child: Column(
+                                children: <Widget>[
+                                  const Expanded(
+                                    child: Padding(
+                                      padding: EdgeInsets.all(16.0),
+                                      child: SizedBox(
+                                        width: 100,
+                                        child: SimpleVerticalMeter(
+                                          value: -20,
+                                          min: -42,
+                                          max: 0,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                  Divider(color: context.colorScheme.strokeLight, height: 0),
+                                  const SizedBox(height: 10),
+                                  NeumorphicGainTextField(
+                                    maxGain: 12,
+                                    minGain: -60,
+                                    showDbSuffix: false,
+                                    onSubmitted: (double value) {
+                                      //
+                                    },
+                                  ),
+                                  const SizedBox(height: 10),
+                                  FusionAppText(
+                                    text: "dB",
+                                    style: context.textTheme.labelSmall?.copyWith(
+                                      color: context.colorScheme.textSecondary,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 10),
+                                ],
+                              ),
+                            ),
+                          ],
+                        );
+                      },
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+}
+
+class ZoneSubZoneSettingBuilder extends StatefulWidget {
+  final String zoneID;
+
+  const ZoneSubZoneSettingBuilder({super.key, required this.zoneID});
+
+  @override
+  State<ZoneSubZoneSettingBuilder> createState() => _ZoneSubZoneSettingBuilderState();
+}
+
+class _ZoneSubZoneSettingBuilderState extends State<ZoneSubZoneSettingBuilder> {
+  late final ScrollController _scrollController = ScrollController();
+  late final ProjectViewModel projectViewModel = serviceLocator<ProjectViewModel>();
+
+  late List<SubZone> subZones;
+  late Zone? zone;
+
+  @override
+  void initState() {
+    super.initState();
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    context.watch<ProjectViewModel>();
+
+    subZones = projectViewModel.getSubZonesForZone(parentZoneId: widget.zoneID);
+    if (subZones.isEmpty) zone = projectViewModel.getZone(zoneId: widget.zoneID);
+
+    final bool isSubZonesAvailable = subZones.isNotEmpty;
+
+    return HorizontalScrollWithShadows(
+      controller: _scrollController,
+      child: ListView.separated(
+        itemCount: isSubZonesAvailable ? subZones.length : 1,
+        shrinkWrap: true,
+        scrollDirection: Axis.horizontal,
+        physics: const ClampingScrollPhysics(),
+        separatorBuilder: (BuildContext context, int index) => Divider(color: context.colorScheme.strokeLight, height: 0),
+        itemBuilder: (BuildContext context, int index) {
+          final SubZone? subZone = isSubZonesAvailable ? subZones[index] : null;
+
+          final String? title = isSubZonesAvailable ? subZone!.name : zone?.name;
+          if (title == null) return const SizedBox.shrink();
+
+          final String zoneOrSubzoneID = isSubZonesAvailable ? subZone!.id : zone!.id;
+          final bool isMuted = isSubZonesAvailable ? subZone!.muted : zone!.muted;
+          final double zoneOrSubzoneGain = isSubZonesAvailable ? subZone!.gain : zone!.gain;
+
+          return Container(
+            width: 150,
+            decoration: BoxDecoration(
+              border: Border(
+                right: BorderSide(color: context.colorScheme.strokeLight),
+              ),
+            ),
+            child: Column(
+              children: <Widget>[
+                Container(
+                  padding: const EdgeInsets.all(16.0),
+                  alignment: Alignment.center,
+                  child: FusionAppText(
+                    text: title,
+                    textAlign: TextAlign.center,
+                    style: Theme.of(context).textTheme.labelMedium,
+                  ),
+                ),
+                Divider(color: context.colorScheme.strokeLight, height: 0),
+                const SizedBox(height: 10),
+                SemanticHelper.formControl(
+                  testId: SemanticHelper.createTestId(SemanticTypes.formControl, "source_mix_zone_gain_text_field"),
+                  child: NeumorphicGainTextField(
+                    controllerValue: zoneOrSubzoneGain,
+                    minGain: -60,
+                    maxGain: 12,
+                    onSubmitted: (double value) {
+                      projectViewModel.updateZoneGain(
+                        zoneId: zoneOrSubzoneID,
+                        gain: value,
+                      );
+                    },
+                    width: 100,
+                    height: 32,
+                  ),
+                ),
+                const SizedBox(height: 10),
+                Divider(color: context.colorScheme.strokeLight, height: 0),
+                const SizedBox(height: 10),
+                Expanded(
+                  child: Column(
+                    children: <Widget>[
+                      Expanded(
+                        child: VerticalRangeSelectionSlider(
+                          min: -60,
+                          max: 12,
+                          lowerValue: -40,
+                          upperValue: 0,
+                          onLowerChanged: (num value) {
+                            print("Lower changed: $value");
+                          },
+                          onUpperChanged: (num value) {
+                            print("Upper changed: $value");
+                          },
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      Divider(color: context.colorScheme.strokeLight, height: 0),
+                      const SizedBox(height: 10),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 10),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                          children: <Widget>[
+                            Flexible(
+                              child: FusionAppText(
+                                text: "Allow mute",
+                                style: context.textTheme.labelMedium?.copyWith(
+                                  color: context.colorScheme.textSecondary,
+                                ),
+                              ),
+                            ),
+                            FusionCheckbox(
+                              value: isMuted,
+                              onChanged: () {
+                                //
+                              },
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
       ),
     );
   }

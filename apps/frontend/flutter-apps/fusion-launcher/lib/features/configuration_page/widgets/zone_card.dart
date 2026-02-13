@@ -795,10 +795,6 @@ class _ZoneCardState extends State<ZoneCard> {
             context,
             zoneID: widget.zoneId,
           );
-          // SourceSelectPrioritySettings.showDialog(
-          //   context,
-          //   zoneID: widget.zoneId,
-          // );
         } else if (selectedFunction == ZoneFunctionsType.sourceMix || selectedFunction == ZoneFunctionsType.sourceMixWithPriority) {
           SourceMixZoneControlPanel.showDialog(
             context,

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/core/service_locator.dart';
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
+import 'package:fusion_launcher/features/zone_functions/settings/source_select_priority_settings.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
@@ -109,7 +110,7 @@ class _SourceSelectZoneControlPanelState extends State<SourceSelectZoneControlPa
                     ///                             MAIN CONTENT
                     /// --------------------------------------------------------------------------------
                     Padding(
-                      padding: const EdgeInsets.only(top: 50),
+                      padding: const EdgeInsets.only(top: 50, bottom: 50),
                       child: SemanticHelper.container(
                         testId: SemanticHelper.createTestId(SemanticTypes.container, "source_select_main_container"),
                         child: BlocConsumer<ProjectViewModel, ProjectViewModelState>(
@@ -304,6 +305,38 @@ class _SourceSelectZoneControlPanelState extends State<SourceSelectZoneControlPa
                               ),
                             );
                           },
+                        ),
+                      ),
+                    ),
+
+                    Positioned(
+                      bottom: 0,
+                      right: 0,
+                      child: Material(
+                        color: Colors.transparent,
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                          child: InkWell(
+                            onTap: () {
+                              SourceSelectPrioritySettings.showDialog(
+                                context,
+                                zoneID: widget.zoneID,
+                              );
+                            },
+                            borderRadius: BorderRadius.circular(8),
+                            splashColor: Colors.transparent,
+                            child: Ink(
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: context.colorScheme.elevation2,
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: FusionAppText(
+                                text: "Additional Settings",
+                                style: Theme.of(context).textTheme.labelSmall,
+                              ),
+                            ),
+                          ),
                         ),
                       ),
                     ),
