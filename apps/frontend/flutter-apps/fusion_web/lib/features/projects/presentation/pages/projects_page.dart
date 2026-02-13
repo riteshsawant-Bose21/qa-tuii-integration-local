@@ -8,6 +8,10 @@ import 'package:fusion_web/features/projects/domain/entities/project_entity.dart
 import 'package:fusion_web/core/services/service_locator.dart';
 import 'package:fusion_web/features/projects/presentation/pages/project_detail_page.dart';
 import 'package:fusion_web/core/constants/app_constants.dart';
+import 'package:fusion_lib/fusion_widgets/shared_widgets/project/new_project.dart';
+import 'package:fusion_lib/fusion_widgets/shared_widgets/project/animated_blur_dialog_route.dart';
+import 'dart:ui';
+
 
 class ProjectsPage extends StatefulWidget {
   const ProjectsPage({super.key});
@@ -132,6 +136,63 @@ class _ProjectsPageState extends State<ProjectsPage> {
     );
   }
 
+  void _openNewProjectDialog() {
+    showGeneralDialog(
+      context: context,
+      barrierDismissible: true,
+      barrierLabel: "New Project",
+      barrierColor: Colors.black.withOpacity(0.15),
+      transitionDuration: const Duration(milliseconds: 350),
+      pageBuilder: (context, animation, secondaryAnimation) {
+        return const SizedBox.shrink(); // required but unused
+      },
+      transitionBuilder: (context, animation, secondaryAnimation, child) {
+        final curved = CurvedAnimation(
+          parent: animation,
+          curve: Curves.easeOutCubic,
+        );
+
+        return Stack(
+          children: [
+            // Blur background
+            GestureDetector(
+              onTap: () => Navigator.pop(context),
+              child: BackdropFilter(
+                filter: ImageFilter.blur(
+                  sigmaX: 5 * animation.value,
+                  sigmaY: 5 * animation.value,
+                ),
+                child: Container(
+                  color: Colors.black.withOpacity(0.08 * animation.value),
+                ),
+              ),
+            ),
+
+            // Dialog
+            Center(
+              child: FadeTransition(
+                opacity: curved,
+                child: ScaleTransition(
+                  scale: Tween<double>(begin: 0.95, end: 1).animate(curved),
+                  child: Container(
+                    width: 1000,
+                    height: 820,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(24),
+                    ),
+                    clipBehavior: Clip.antiAlias,
+                    child: const NewProjectDialog(),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -186,7 +247,7 @@ class _ProjectsPageState extends State<ProjectsPage> {
 
         // RIGHT SIDE (New Project Button)
         ElevatedButton.icon(
-          onPressed: (){},
+          onPressed: _openNewProjectDialog,
           icon: const Icon(Icons.add, size: 18),
           label: Text(
             'New Project',
@@ -239,7 +300,7 @@ class _ProjectsPageState extends State<ProjectsPage> {
           ),
           const SizedBox(width: 16),
           Flexible(
-            flex: 2,
+            flex: 1,
             child: _dropdown(_selectedRegions, [
               'All Regions',
               'North America',
@@ -248,7 +309,7 @@ class _ProjectsPageState extends State<ProjectsPage> {
           ),
           const SizedBox(width: 16),
           Flexible(
-            flex: 2,
+            flex: 1,
             child: _dropdown(_selectedStatus, [
               'All Status',
               'Active',
@@ -808,8 +869,6 @@ class _ProjectsPageState extends State<ProjectsPage> {
     );
   }
 }
-
-
 
 
 
