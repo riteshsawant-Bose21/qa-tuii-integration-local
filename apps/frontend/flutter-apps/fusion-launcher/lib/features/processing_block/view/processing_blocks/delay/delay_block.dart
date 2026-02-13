@@ -2,11 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:fusion_launcher/features/add_source_popup/view_model/add_source_viewmodel.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:provider/provider.dart';
-import 'package:fusion_launcher/features/add_source_popup/view_model/add_source_viewmodel.dart';
 import 'package:fusion_launcher/features/processing_block/viewmodel/algorithm_data_viewmodel.dart';
 import 'package:fusion_lib/models/algorithm/property_settings.dart';
 
-import '../../../viewmodel/algorithm_data_viewmodel.dart';
 import '../../widgets/pb_dropdown.dart';
 import '../../widgets/pb_meter.dart';
 import '../../widgets/pb_textfield.dart';
