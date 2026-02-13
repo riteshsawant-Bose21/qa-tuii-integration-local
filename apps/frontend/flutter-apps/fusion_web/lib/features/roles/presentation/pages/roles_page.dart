@@ -14,8 +14,9 @@ class RolesPage extends StatefulWidget {
   State<RolesPage> createState() => _RolesPageState();
 }
 
-class _RolesPageState extends State<RolesPage> {
+class _RolesPageState extends State<RolesPage> with TickerProviderStateMixin {
   late RolesViewModel _viewModel;
+  late TabController _tabController;
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
   String _selectedType = 'All';
@@ -24,6 +25,7 @@ class _RolesPageState extends State<RolesPage> {
   @override
   void initState() {
     super.initState();
+    _tabController = TabController(length: 2, vsync: this);
     _initializeViewModel();
     _searchController.addListener(() {
       setState(() {
@@ -46,6 +48,7 @@ class _RolesPageState extends State<RolesPage> {
   @override
   void dispose() {
     _searchController.dispose();
+    _tabController.dispose();
     _viewModel.dispose();
     super.dispose();
   }
@@ -54,17 +57,28 @@ class _RolesPageState extends State<RolesPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.grey[50],
-      body: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildHeader(),
-            const SizedBox(height: 24),
-            _buildFiltersSection(),
-            const SizedBox(height: 24),
-            Expanded(child: _buildRolesTable()),
-          ],
+      body: SafeArea(
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            return SingleChildScrollView(
+              padding: const EdgeInsets.all(24),
+              child: ConstrainedBox(
+                constraints: BoxConstraints(
+                  minHeight: constraints.maxHeight - 48,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildHeader(),
+                    const SizedBox(height: 24),
+                    _buildRolesMetrics(),
+                    const SizedBox(height: 24),
+                    _buildTabSection(constraints),
+                  ],
+                ),
+              ),
+            );
+          },
         ),
       ),
     );
@@ -72,24 +86,43 @@ class _RolesPageState extends State<RolesPage> {
 
   Widget _buildHeader() {
     return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Role Management',
+              'Roles & Access Control',
               style: GoogleFonts.montserrat(
                 fontSize: 32,
-                fontWeight: FontWeight.bold,
+                fontWeight: FontWeight.w700,
                 color: Colors.black87,
               ),
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 4),
             Text(
-              'Manage system roles and permissions',
+              'Define and manage what users can see and do within the Fusion ecosystem',
               style: GoogleFonts.montserrat(
                 fontSize: 16,
                 color: Colors.grey[600],
+              ),
+            ),
+          ],
+        ),
+        Row(
+          children: [
+            OutlinedButton.icon(
+              onPressed: () => _showCreateRoleDialog(),
+              icon: const Icon(Icons.add, size: 18),
+              label: Text(
+                'Create Role',
+                style: GoogleFonts.montserrat(fontWeight: FontWeight.w500),
+              ),
+              style: OutlinedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 16,
+                ),
               ),
             ),
           ],
@@ -318,7 +351,16 @@ class _RolesPageState extends State<RolesPage> {
               minWidth: 900,
               dataRowHeight: 72,
               headingRowHeight: 56,
+              showCheckboxColumn: false,
               headingRowColor: WidgetStateProperty.all(Colors.grey[50]),
+              dataRowColor: WidgetStateProperty.resolveWith<Color?>((
+                Set<WidgetState> states,
+              ) {
+                if (states.contains(WidgetState.hovered)) {
+                  return Colors.grey[50];
+                }
+                return null;
+              }),
               border: TableBorder(
                 horizontalInside: BorderSide(
                   color: Colors.grey[200]!,
@@ -563,6 +605,8 @@ class _RolesPageState extends State<RolesPage> {
     return PopupMenuButton<String>(
       icon: Icon(Icons.more_vert, size: 18, color: Colors.grey[600]),
       offset: const Offset(-50, 0),
+      splashRadius: 20,
+      tooltip: 'Role actions',
       itemBuilder: (context) => [
         PopupMenuItem(
           value: 'view',
@@ -1096,10 +1140,282 @@ class _RolesPageState extends State<RolesPage> {
   }
 
   void _showEditRoleDialog(RoleEntity role) {
-    // TODO: Implement edit role dialog
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Edit role "${role.name}" functionality coming soon'),
+    final nameController = TextEditingController(text: role.name);
+    final descriptionController = TextEditingController(text: role.description);
+    final formKey = GlobalKey<FormState>();
+
+    // Define available role types
+    final List<String> roleTypes = ['Admin', 'Designer', 'Technician'];
+    String selectedRoleType = roleTypes.contains(role.name)
+        ? role.name
+        : roleTypes.first;
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) => Dialog(
+          child: Container(
+            width: 600,
+            height: 500,
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Header
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'Edit Role',
+                      style: GoogleFonts.montserrat(
+                        fontSize: 24,
+                        fontWeight: FontWeight.w700,
+                        color: Colors.black87,
+                      ),
+                    ),
+                    IconButton(
+                      onPressed: () => Navigator.pop(context),
+                      icon: const Icon(Icons.close),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 24),
+
+                // Form
+                Expanded(
+                  child: Form(
+                    key: formKey,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Role Type Dropdown
+                        Text(
+                          'Role Type',
+                          style: GoogleFonts.montserrat(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        DropdownButtonFormField<String>(
+                          value: selectedRoleType,
+                          decoration: InputDecoration(
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            prefixIcon: Icon(
+                              Icons.admin_panel_settings_outlined,
+                            ),
+                          ),
+                          items: roleTypes.map((String roleType) {
+                            return DropdownMenuItem<String>(
+                              value: roleType,
+                              child: Text(
+                                roleType,
+                                style: GoogleFonts.montserrat(fontSize: 14),
+                              ),
+                            );
+                          }).toList(),
+                          onChanged: (String? newValue) {
+                            if (newValue != null) {
+                              setState(() {
+                                selectedRoleType = newValue;
+                                nameController.text = newValue;
+                              });
+                            }
+                          },
+                          validator: (value) {
+                            if (value == null || value.isEmpty) {
+                              return 'Please select a role type';
+                            }
+                            return null;
+                          },
+                        ),
+                        const SizedBox(height: 16),
+
+                        // Role Name (auto-filled from dropdown)
+                        TextFormField(
+                          controller: nameController,
+                          readOnly: true,
+                          decoration: InputDecoration(
+                            labelText: 'Role Name',
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            prefixIcon: Icon(Icons.badge_outlined),
+                            fillColor: Colors.grey[50],
+                            filled: true,
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+
+                        // Role Description
+                        TextFormField(
+                          controller: descriptionController,
+                          maxLines: 3,
+                          decoration: InputDecoration(
+                            labelText: 'Description',
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            prefixIcon: Icon(Icons.description_outlined),
+                          ),
+                          validator: (value) {
+                            if (value == null || value.trim().isEmpty) {
+                              return 'Description is required';
+                            }
+                            return null;
+                          },
+                        ),
+                        const SizedBox(height: 16),
+
+                        // Role Information
+                        Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: Colors.blue[50],
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: Colors.blue[200]!),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Icon(
+                                    Icons.info_outline,
+                                    size: 20,
+                                    color: Colors.blue[700],
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    'Role Permissions',
+                                    style: GoogleFonts.montserrat(
+                                      fontWeight: FontWeight.w600,
+                                      color: Colors.blue[700],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                _getRolePermissionsInfo(selectedRoleType),
+                                style: GoogleFonts.montserrat(
+                                  fontSize: 13,
+                                  color: Colors.blue[600],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+
+                const SizedBox(height: 24),
+
+                // Action Buttons
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(context),
+                      child: Text(
+                        'Cancel',
+                        style: GoogleFonts.montserrat(
+                          color: Colors.grey[600],
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    ElevatedButton(
+                      onPressed: () async {
+                        if (formKey.currentState?.validate() ?? false) {
+                          // Show loading
+                          Navigator.pop(context);
+                          if (mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Row(
+                                  children: [
+                                    SizedBox(
+                                      width: 20,
+                                      height: 20,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 12),
+                                    Text('Updating role...'),
+                                  ],
+                                ),
+                                duration: Duration(seconds: 30),
+                              ),
+                            );
+                          }
+
+                          // Get permissions for the selected role type
+                          final rolePermissions = _getRolePermissions(
+                            selectedRoleType,
+                          );
+
+                          // Update the role
+                          final success = await _viewModel.updateRole(
+                            roleId: role.id,
+                            name: nameController.text.trim(),
+                            description: descriptionController.text.trim(),
+                            permissions: rolePermissions,
+                          );
+
+                          // Hide loading snackbar and show result
+                          if (mounted) {
+                            ScaffoldMessenger.of(context).hideCurrentSnackBar();
+
+                            if (success) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text(
+                                    'Role "${nameController.text.trim()}" updated successfully',
+                                  ),
+                                  backgroundColor: Colors.green,
+                                ),
+                              );
+                            } else {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text(_viewModel.errorMessage),
+                                  backgroundColor: Colors.red,
+                                ),
+                              );
+                            }
+                          }
+                        }
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.black87,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 24,
+                          vertical: 12,
+                        ),
+                      ),
+                      child: Text(
+                        'Update Role',
+                        style: GoogleFonts.montserrat(
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -1156,5 +1472,423 @@ class _RolesPageState extends State<RolesPage> {
         ],
       ),
     );
+  }
+
+  // New comprehensive methods for Roles & Access Control
+  Widget _buildRolesMetrics() {
+    return ListenableBuilder(
+      listenable: _viewModel,
+      builder: (context, _) {
+        final roles = _viewModel.roles;
+        final systemRoles = roles.where((r) => r.isSystem).length;
+        final customRoles = roles.where((r) => !r.isSystem).length;
+        final totalUsers = roles.fold<int>(
+          0,
+          (sum, role) => sum + role.userCount,
+        );
+
+        return LayoutBuilder(
+          builder: (context, constraints) {
+            return Wrap(
+              spacing: 16,
+              runSpacing: 16,
+              children: [
+                SizedBox(
+                  width: (constraints.maxWidth - 48) / 4,
+                  child: _buildMetricCard(
+                    'Total Roles',
+                    roles.length.toString(),
+                    Icons.admin_panel_settings,
+                    Colors.blue,
+                  ),
+                ),
+                SizedBox(
+                  width: (constraints.maxWidth - 48) / 4,
+                  child: _buildMetricCard(
+                    'System Roles',
+                    systemRoles.toString(),
+                    Icons.settings,
+                    Colors.green,
+                  ),
+                ),
+                SizedBox(
+                  width: (constraints.maxWidth - 48) / 4,
+                  child: _buildMetricCard(
+                    'Custom Roles',
+                    customRoles.toString(),
+                    Icons.tune,
+                    Colors.orange,
+                  ),
+                ),
+                SizedBox(
+                  width: (constraints.maxWidth - 48) / 4,
+                  child: _buildMetricCard(
+                    'Total Users',
+                    totalUsers.toString(),
+                    Icons.people,
+                    Colors.purple,
+                  ),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Widget _buildMetricCard(
+    String label,
+    String value,
+    IconData icon,
+    Color color,
+  ) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey[200]!),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: color.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Icon(icon, color: color, size: 24),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  value,
+                  style: GoogleFonts.montserrat(
+                    fontSize: 24,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.black87,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+                Text(
+                  label,
+                  style: GoogleFonts.montserrat(
+                    fontSize: 13,
+                    color: Colors.grey[600],
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTabSection(BoxConstraints constraints) {
+    return Container(
+      height: constraints.maxHeight - 300,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey[200]!),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.02),
+            blurRadius: 8,
+            spreadRadius: 0,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          Container(
+            decoration: BoxDecoration(
+              color: Colors.grey[50],
+              borderRadius: const BorderRadius.only(
+                topLeft: Radius.circular(12),
+                topRight: Radius.circular(12),
+              ),
+            ),
+            child: TabBar(
+              controller: _tabController,
+              labelStyle: GoogleFonts.montserrat(
+                fontWeight: FontWeight.w600,
+                fontSize: 14,
+              ),
+              unselectedLabelStyle: GoogleFonts.montserrat(
+                fontWeight: FontWeight.w500,
+                fontSize: 14,
+              ),
+              labelColor: Colors.black87,
+              unselectedLabelColor: Colors.grey[600],
+              indicatorColor: Colors.black87,
+              indicatorWeight: 2,
+              tabs: const [
+                Tab(
+                  icon: Icon(Icons.list_alt, size: 18),
+                  text: 'Role Definitions',
+                ),
+                Tab(icon: Icon(Icons.history, size: 18), text: 'Audit Trail'),
+              ],
+            ),
+          ),
+          Expanded(
+            child: TabBarView(
+              controller: _tabController,
+              children: [_buildRoleDefinitionsTab(), _buildAuditTrailTab()],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildRoleDefinitionsTab() {
+    return Padding(
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Role Definitions Overview',
+            style: GoogleFonts.montserrat(
+              fontSize: 20,
+              fontWeight: FontWeight.w600,
+              color: Colors.black87,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'List of all available roles with types, descriptions, and permission sets',
+            style: GoogleFonts.montserrat(
+              fontSize: 14,
+              color: Colors.grey[600],
+            ),
+          ),
+          const SizedBox(height: 20),
+          Expanded(child: _buildRolesTable()),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAuditTrailTab() {
+    return Padding(
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Audit Trail on Role Changes',
+            style: GoogleFonts.montserrat(
+              fontSize: 20,
+              fontWeight: FontWeight.w600,
+              color: Colors.black87,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'Track who changed user roles, before/after states, and timestamps',
+            style: GoogleFonts.montserrat(
+              fontSize: 14,
+              color: Colors.grey[600],
+            ),
+          ),
+          const SizedBox(height: 20),
+          Expanded(child: _buildAuditTrailTable()),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAuditTrailTable() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.history, size: 64, color: Colors.grey[400]),
+          const SizedBox(height: 16),
+          Text(
+            'Audit Trail',
+            style: GoogleFonts.montserrat(
+              fontSize: 18,
+              fontWeight: FontWeight.w600,
+              color: Colors.grey[600],
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Feature coming soon - Track role changes and approval history',
+            style: GoogleFonts.montserrat(
+              fontSize: 14,
+              color: Colors.grey[500],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showCreateRoleDialog() {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          'Create Role feature coming soon!',
+          style: GoogleFonts.montserrat(),
+        ),
+      ),
+    );
+  }
+
+  void _showBulkAssignDialog() {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          'Bulk Assign feature coming soon!',
+          style: GoogleFonts.montserrat(),
+        ),
+      ),
+    );
+  }
+
+  // Helper methods for formatting permissions
+  String _formatPermissionName(String permission) {
+    // Convert snake_case or camelCase to Title Case
+    return permission
+        .replaceAll('_', ' ')
+        .replaceAllMapped(
+          RegExp(r'([a-z])([A-Z])'),
+          (match) => '${match.group(1)} ${match.group(2)}',
+        )
+        .split(' ')
+        .map(
+          (word) => word.isNotEmpty
+              ? word[0].toUpperCase() + word.substring(1).toLowerCase()
+              : '',
+        )
+        .join(' ');
+  }
+
+  String _getPermissionDescription(String permission) {
+    // Provide descriptions for common permissions
+    final descriptions = {
+      'user_read': 'View user profiles and information',
+      'user_write': 'Create and modify user accounts',
+      'user_delete': 'Remove user accounts from the system',
+      'role_read': 'View roles and their permissions',
+      'role_write': 'Create and modify roles and permissions',
+      'role_delete': 'Remove roles from the system',
+      'project_read': 'View project details and information',
+      'project_write': 'Create and modify projects',
+      'project_delete': 'Remove projects from the system',
+      'device_read': 'View device information and status',
+      'device_write': 'Configure and manage devices',
+      'device_delete': 'Remove devices from the system',
+      'settings_read': 'View system settings and configuration',
+      'settings_write': 'Modify system settings and configuration',
+      'dashboard_access': 'Access to main dashboard and overview',
+      'reports_read': 'View reports and analytics',
+      'reports_write': 'Create and modify reports',
+      'audit_read': 'View audit logs and system activity',
+      'admin_access': 'Full administrative access to the system',
+    };
+
+    return descriptions[permission] ??
+        'Permission for ${_formatPermissionName(permission).toLowerCase()}';
+  }
+
+  // Helper methods for role dropdown functionality
+  IconData _getRoleIcon(String roleType) {
+    switch (roleType) {
+      case 'Admin':
+        return Icons.admin_panel_settings;
+      case 'Designer':
+        return Icons.design_services;
+      case 'Technician':
+        return Icons.engineering;
+      default:
+        return Icons.person;
+    }
+  }
+
+  Color _getRoleColor(String roleType) {
+    switch (roleType) {
+      case 'Admin':
+        return Colors.red[600]!;
+      case 'Designer':
+        return Colors.purple[600]!;
+      case 'Technician':
+        return Colors.blue[600]!;
+      default:
+        return Colors.grey[600]!;
+    }
+  }
+
+  String _getRolePermissionsInfo(String roleType) {
+    switch (roleType) {
+      case 'Admin':
+        return 'Full system access with all administrative privileges including user management, system settings, and complete control over all features.';
+      case 'Designer':
+        return 'Design-focused permissions including project creation, design asset management, and collaboration tools with limited administrative access.';
+      case 'Technician':
+        return 'Technical permissions including device management, system maintenance, troubleshooting tools, and operational control with restricted administrative access.';
+      default:
+        return 'Basic user permissions with limited access to system features.';
+    }
+  }
+
+  List<String> _getRolePermissions(String roleType) {
+    switch (roleType) {
+      case 'Admin':
+        return [
+          'admin_access',
+          'user_read',
+          'user_write',
+          'user_delete',
+          'role_read',
+          'role_write',
+          'role_delete',
+          'project_read',
+          'project_write',
+          'project_delete',
+          'device_read',
+          'device_write',
+          'device_delete',
+          'settings_read',
+          'settings_write',
+          'dashboard_access',
+          'reports_read',
+          'reports_write',
+          'audit_read',
+        ];
+      case 'Designer':
+        return [
+          'dashboard_access',
+          'project_read',
+          'project_write',
+          'user_read',
+          'device_read',
+          'reports_read',
+        ];
+      case 'Technician':
+        return [
+          'dashboard_access',
+          'device_read',
+          'device_write',
+          'project_read',
+          'user_read',
+          'reports_read',
+        ];
+      default:
+        return ['dashboard_access'];
+    }
   }
 }

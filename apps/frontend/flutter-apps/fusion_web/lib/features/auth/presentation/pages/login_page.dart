@@ -15,7 +15,6 @@ class LoginPage extends StatefulWidget {
 
 class _LoginPageState extends State<LoginPage> {
   late AuthViewModel _viewModel;
-  bool _isCheckingAuth = true; // Add loading state
 
   @override
   void initState() {
@@ -32,12 +31,21 @@ class _LoginPageState extends State<LoginPage> {
       logoutUseCase: LogoutUseCase(repository),
       getCurrentUserUseCase: GetCurrentUserUseCase(repository),
       isLoggedInUseCase: IsLoggedInUseCase(repository),
+      authRepository: repository,
     );
 
+    // Listen to authentication state changes
+    _viewModel.addListener(_onAuthStateChanged);
     _viewModel.initialize();
 
     // Check authentication state after redirect from Auth0
     _checkAuthenticationState();
+  }
+
+  void _onAuthStateChanged() {
+    if (_viewModel.isLoggedIn && mounted) {
+      Navigator.pushReplacementNamed(context, AppConstants.usersRoute);
+    }
   }
 
   void _checkAuthenticationState() async {
@@ -48,16 +56,12 @@ class _LoginPageState extends State<LoginPage> {
 
     if (_viewModel.isLoggedIn && mounted) {
       Navigator.pushReplacementNamed(context, AppConstants.usersRoute);
-    } else {
-      // Authentication check complete, hide loading
-      setState(() {
-        _isCheckingAuth = false;
-      });
     }
   }
 
   @override
   void dispose() {
+    _viewModel.removeListener(_onAuthStateChanged);
     _viewModel.dispose();
     super.dispose();
   }
@@ -66,6 +70,11 @@ class _LoginPageState extends State<LoginPage> {
     // Auth0Web.loginWithRedirect will redirect to Auth0,
     // and then redirect back, so we don't wait for the result here
     await _viewModel.login();
+
+    // Check if login was successful and redirect
+    if (_viewModel.isLoggedIn && mounted) {
+      Navigator.pushReplacementNamed(context, AppConstants.usersRoute);
+    }
   }
 
   @override
@@ -189,122 +198,6 @@ class _LoginPageState extends State<LoginPage> {
               ),
             ),
           ),
-
-          // Loading Overlay
-          if (_viewModel.isLoading)
-            Container(
-              color: Colors.black.withValues(alpha: 0.7),
-              child: Center(
-                child: Container(
-                  width: 300,
-                  padding: const EdgeInsets.all(32),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(12),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.2),
-                        blurRadius: 20,
-                        spreadRadius: 2,
-                      ),
-                    ],
-                  ),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const CircularProgressIndicator(
-                        strokeWidth: 3,
-                        valueColor: AlwaysStoppedAnimation<Color>(
-                          Colors.black87,
-                        ),
-                      ),
-                      const SizedBox(height: 24),
-                      Text(
-                        'Authenticating...',
-                        style: GoogleFonts.montserrat(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.black87,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        'Please complete authentication in the popup window',
-                        textAlign: TextAlign.center,
-                        style: GoogleFonts.montserrat(
-                          fontSize: 14,
-                          color: Colors.grey[600],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-
-          // Auth checking loading overlay
-          if (_isCheckingAuth)
-            Container(
-              color: Colors.black.withValues(alpha: 0.3),
-              child: Center(
-                child: Container(
-                  padding: const EdgeInsets.all(32),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(12),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.2),
-                        blurRadius: 10,
-                        spreadRadius: 2,
-                      ),
-                    ],
-                  ),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      // Bose Professional Logo
-                      Image.asset(
-                        'assets/images/bose_professional_logo.png',
-                        height: 50,
-                        fit: BoxFit.contain,
-                      ),
-                      const SizedBox(height: 32),
-
-                      Text(
-                        'Verifying authentication...',
-                        style: GoogleFonts.montserrat(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w500,
-                          color: Colors.grey[700],
-                        ),
-                      ),
-                      const SizedBox(height: 20),
-
-                      // LinkedIn-style bar loader
-                      Container(
-                        width: 200,
-                        height: 4,
-                        decoration: BoxDecoration(
-                          color: Colors.grey[200],
-                          borderRadius: BorderRadius.circular(2),
-                        ),
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(2),
-                          child: const LinearProgressIndicator(
-                            backgroundColor: Colors.transparent,
-                            valueColor: AlwaysStoppedAnimation<Color>(
-                              Colors.black87,
-                            ),
-                            minHeight: 4,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
         ],
       ),
     );
