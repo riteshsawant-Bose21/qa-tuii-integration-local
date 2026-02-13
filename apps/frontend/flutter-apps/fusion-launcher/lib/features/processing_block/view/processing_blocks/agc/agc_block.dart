@@ -1,7 +1,4 @@
-import 'dart:math';
-
 import 'package:flutter/material.dart';
-import 'package:fusion_launcher/features/add_source_popup/view_model/add_source_viewmodel.dart';
 import 'package:fusion_launcher/features/processing_block/view/processing_blocks/widgets/block_header.dart';
 import 'package:fusion_launcher/features/processing_block/view/widgets/pb_meter.dart';
 import 'package:fusion_launcher/features/processing_block/view/widgets/widgets.dart';
@@ -9,6 +6,7 @@ import 'package:fusion_launcher/features/zone_functions/widgets/neumorphic_gain_
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:provider/provider.dart';
 
+import '../../../../add_source_popup/view_model/add_source_viewmodel.dart';
 import '../../../viewmodel/algorithm_data_viewmodel.dart';
 import '../widgets/disabled_widget_wrapper.dart';
 
@@ -85,13 +83,10 @@ class AgcBlock extends StatelessWidget {
                                   child: Padding(
                                     padding: const EdgeInsets.all(16),
                                     child: VerticalSlider(
-                                      value: -10,
+                                      value: context.watch<AgcController>().currentThreshold,
                                       max: 12,
                                       min: -60,
-                                      onChanged: (num value) {
-                                        print("Threshold changed: $value");
-                                        // context.read<AgcController>().setThreshold(value);
-                                      },
+                                      onChanged: context.read<AgcController>().updateThreshold,
                                     ),
                                   ),
                                 ),
@@ -100,11 +95,11 @@ class AgcBlock extends StatelessWidget {
                                   padding: const EdgeInsets.all(16),
                                   decoration: BoxDecoration(border: Border(top: BorderSide(color: context.colorScheme.strokeLight))),
                                   child: NeumorphicGainTextField(
+                                    controllerValue: context.watch<AgcController>().currentThreshold,
                                     maxGain: 12,
                                     minGain: -60,
-                                    onSubmitted: (double value) {
-                                      //
-                                    },
+                                    showDbSuffix: false,
+                                    onSubmitted: context.read<AgcController>().updateThreshold,
                                   ),
                                 ),
                                 FusionAppText(
@@ -138,11 +133,11 @@ class AgcBlock extends StatelessWidget {
                                     ),
                                   ),
                                 ),
-                                const Flexible(
+                                Flexible(
                                   child: Padding(
-                                    padding: EdgeInsets.all(16.0),
+                                    padding: const EdgeInsets.all(16.0),
                                     child: SimpleVerticalMeter(
-                                      value: -10,
+                                      value: context.watch<AgcController>().currentReduction,
                                       min: -60,
                                       max: 12,
                                     ),
@@ -159,9 +154,8 @@ class AgcBlock extends StatelessWidget {
                                     controllerValue: 10,
                                     maxGain: 12,
                                     minGain: -60,
-                                    onSubmitted: (double value) {
-                                      //
-                                    },
+                                    showDbSuffix: false,
+                                    onSubmitted: context.read<AgcController>().updateReduction,
                                   ),
                                 ),
                                 FusionAppText(
