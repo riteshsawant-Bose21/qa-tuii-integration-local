@@ -33,6 +33,7 @@ export 'others/fusion_svg_icon.dart';
 export 'others/fusion_switch.dart';
 export 'others/fusion_toast.dart';
 export 'others/others.dart';
+export 'others/fusion_checkbox.dart';
 
 /// text views
 export 'text_views/fusion_app_text.dart';
