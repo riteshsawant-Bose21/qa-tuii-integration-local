@@ -1,12 +1,10 @@
 import 'package:flutter/material.dart';
 
-import 'package:flutter/material.dart';
 import 'package:fusion_launcher/features/add_source_popup/view_model/add_source_viewmodel.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:provider/provider.dart';
 
 import '../../../viewmodel/algorithm_data_viewmodel.dart';
-import '../../widgets/pb_dropdown.dart';
 import '../../widgets/pb_meter.dart';
 import '../../widgets/pb_textfield.dart';
 import '../widgets/block_header.dart';
@@ -158,9 +156,9 @@ class LimiterBlock extends StatelessWidget {
                                             width: 58,
                                             color: context.colorScheme.elevation2,
                                             child: PBNumberTextField(
-                                              value: context.watch<LimiterController>().currentThreshold ?? 0,
+                                              value: context.watch<LimiterController>().currentRMSThreshold ?? 0,
                                               onChanged: (num value) {
-                                                context.read<LimiterController>().updateThreshold(value);
+                                                context.read<LimiterController>().updateRMSThreshold(value);
                                               },
                                               min: 1,
                                               max: 96000,
