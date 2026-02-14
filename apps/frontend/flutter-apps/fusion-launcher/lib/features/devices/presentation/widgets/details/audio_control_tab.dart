@@ -26,7 +26,6 @@ class AudioControlTab extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: context.colorScheme.primaryBlack,
         borderRadius: BorderRadius.circular(12),
       ),
       child: SingleChildScrollView(

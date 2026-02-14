@@ -22,19 +22,21 @@ class DeviceDetailsTab extends StatelessWidget {
         return GestureDetector(
           onTap: () => tabController.animateTo(index),
           child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
+            padding: const EdgeInsets.only(bottom: 4),
             decoration: BoxDecoration(
-              color: isSelected ? context.colorScheme.elevation3 : Colors.transparent,
-              borderRadius: BorderRadius.circular(6),
-              border: Border.all(
-                color: isSelected ? Colors.transparent : Colors.transparent, // Clean look
-              ),
+              // borderRadius: BorderRadius.circular(6),
+              border:
+                  isSelected
+                      ? Border(
+                        bottom: BorderSide(color: context.colorScheme.primary, width: 2),
+                      )
+                      : null,
             ),
             child: FusionAppText(
               text: label,
               style: context.textTheme.labelMedium!.copyWith(
                 color: isSelected ? context.colorScheme.textPrimary : context.colorScheme.textSecondary,
-                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
               ),
             ),
           ),

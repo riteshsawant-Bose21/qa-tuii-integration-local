@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:fusion_launcher/core/service_locator.dart';
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
+import 'package:fusion_launcher/features/control_dashboard/presentation/widgets/alerts/alerts_dashboard.dart';
 import 'package:fusion_launcher/features/devices/presentation/widgets/details/left_side_bar.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/models/project_entities/controller.dart';
@@ -61,50 +62,73 @@ class _DeviceDetailsPageState extends State<DeviceDetailsPage> with SingleTicker
               ),
             ),
 
-            const SizedBox(width: 16),
+            const SizedBox(width: 10),
 
             // --- RIGHT CONTENT (Tabs) ---
             Expanded(
-              child: Column(
-                children: <Widget>[
-                  // Custom Tab Bar Row
-                  Row(
-                    children: <Widget>[
-                      if (!isController) ...<Widget>[
-                        DeviceDetailsTab(
-                          label: "Audio/Control",
-                          index: 0,
-                          tabController: _tabController,
-                        ),
-                        const SizedBox(width: 12),
-                      ],
-                      DeviceDetailsTab(
-                        label: "Settings",
-                        index: isController ? 0 : 1,
-                        tabController: _tabController,
-                      ),
-                    ],
+              child: Container(
+                padding: const EdgeInsets.all(16.0),
+                decoration: BoxDecoration(
+                  color: context.colorScheme.elevation1,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border(
+                    top: BorderSide(
+                      color: context.colorScheme.strokeLight,
+                      width: 1,
+                    ),
                   ),
-                  const SizedBox(height: 16),
-
-                  // Tab Content
-                  Expanded(
-                    child: TabBarView(
-                      controller: _tabController,
-                      physics: const NeverScrollableScrollPhysics(), // Disable swipe
+                ),
+                child: Column(
+                  children: <Widget>[
+                    // Custom Tab Bar Row
+                    Row(
                       children: <Widget>[
-                        if (!isController)
-                          AudioControlTab(
-                            hardwareComponent: device,
+                        if (!isController) ...<Widget>[
+                          DeviceDetailsTab(
+                            label: "Audio/Control",
+                            index: 0,
+                            tabController: _tabController,
                           ),
-                        DeviceSettingsTab(
-                          hardwareComponent: device,
+                          const SizedBox(width: 12),
+                        ],
+                        DeviceDetailsTab(
+                          label: "Settings",
+                          index: isController ? 0 : 1,
+                          tabController: _tabController,
                         ),
                       ],
                     ),
-                  ),
-                ],
+                    // const SizedBox(height: 10),
+                    Divider(
+                      color: context.colorScheme.elevation2,
+                      thickness: 1,
+                    ),
+                    const SizedBox(height: 10),
+                    // Tab Content
+                    Expanded(
+                      child: TabBarView(
+                        controller: _tabController,
+                        physics: const NeverScrollableScrollPhysics(), // Disable swipe
+                        children: <Widget>[
+                          if (!isController)
+                            AudioControlTab(
+                              hardwareComponent: device,
+                            ),
+                          DeviceSettingsTab(
+                            hardwareComponent: device,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
               ),
+            ),
+            const SizedBox(width: 10),
+
+            const SizedBox(
+              width: 280, // Fixed width for sidebar
+              child: AlertsDashboard(),
             ),
           ],
         ),

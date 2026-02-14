@@ -50,7 +50,7 @@ class DeviceLeftSideBar extends StatelessWidget {
         children: <Widget>[
           // 1. Header with Back Button
           Padding(
-            padding: const EdgeInsets.all(16.0),
+            padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 10),
             child: Row(
               children: <Widget>[
                 InkWell(onTap: () => Navigator.of(context).pop(), child: Icon(Icons.arrow_back_ios, size: 14, color: context.colorScheme.textSecondary)),
@@ -65,7 +65,13 @@ class DeviceLeftSideBar extends StatelessWidget {
               ],
             ),
           ),
-          Divider(height: 1, color: context.colorScheme.elevation2),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8.0),
+            child: Divider(
+              color: context.colorScheme.elevation2,
+              thickness: 1,
+            ),
+          ),
 
           // 2. Device Identity
           Expanded(
