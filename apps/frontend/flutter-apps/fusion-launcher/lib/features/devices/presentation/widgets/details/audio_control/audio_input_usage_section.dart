@@ -1,9 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:fusion_lib/fusion_lib.dart';
 
 import 'audio_details_input_usage_row.dart';
 
 class AudioInputsUsageSection extends StatelessWidget {
-  const AudioInputsUsageSection({super.key});
+  final HardwareComponent hardwareComponent;
+
+  const AudioInputsUsageSection({
+    super.key,
+    required this.hardwareComponent,
+  });
 
   @override
   Widget build(BuildContext context) {

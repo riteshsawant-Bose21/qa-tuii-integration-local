@@ -229,9 +229,9 @@ class DeviceLeftSideBar extends StatelessWidget {
                           color: context.colorScheme.elevation2,
                         ),
 
-                        const DeviceDetailsFooter(
+                        DeviceDetailsFooter(
                           label: "Model",
-                          value: "Fusion Mini FM6",
+                          value: device.hardwareName,
                         ),
                         const SizedBox(height: 8),
                         DeviceDetailsFooter(

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:fusion_lib/fusion_lib.dart';
+import 'package:fusion_lib/models/project_entities/controller.dart';
 
 import 'audio_control/aes_67_io_usage.dart';
 import 'audio_control/audio_input_usage_section.dart';
@@ -8,7 +9,18 @@ import 'audio_control/audio_status_card.dart';
 import 'audio_control/controller_io_section.dart';
 
 class AudioControlTab extends StatelessWidget {
-  const AudioControlTab({super.key});
+  final HardwareComponent hardwareComponent;
+
+  const AudioControlTab({
+    super.key,
+    required this.hardwareComponent,
+  });
+
+  bool get isAmplifier => hardwareComponent is Amplifier;
+
+  bool get isController => hardwareComponent is FusionController;
+
+  bool get isDsp => hardwareComponent is FusionDsp;
 
   @override
   Widget build(BuildContext context) {
@@ -17,7 +29,7 @@ class AudioControlTab extends StatelessWidget {
         color: context.colorScheme.primaryBlack,
         borderRadius: BorderRadius.circular(12),
       ),
-      child: const SingleChildScrollView(
+      child: SingleChildScrollView(
         child: Column(
           children: <Widget>[
             // Row 1: Audio Inputs & Outputs
@@ -28,20 +40,24 @@ class AudioControlTab extends StatelessWidget {
                   Expanded(
                     child: AudioStatusCard(
                       title: "AUDIO INPUTS",
-                      content: AudioInputsUsageSection(),
+                      content: AudioInputsUsageSection(
+                        hardwareComponent: hardwareComponent,
+                      ),
                     ),
                   ),
-                  SizedBox(width: 5),
+                  const SizedBox(width: 5),
                   Expanded(
                     child: AudioStatusCard(
                       title: "AUDIO OUTPUTS",
-                      content: AudioOutputsUsageSection(),
+                      content: AudioOutputsUsageSection(
+                        hardwareComponent: hardwareComponent,
+                      ),
                     ),
                   ),
                 ],
               ),
             ),
-            SizedBox(height: 5),
+            const SizedBox(height: 5),
             // Row 2: Control I/O & AES67
             SizedBox(
               height: 220,
@@ -50,15 +66,20 @@ class AudioControlTab extends StatelessWidget {
                   Expanded(
                     child: AudioStatusCard(
                       title: "CONTROL I/O",
-                      content: ControlIOSection(),
+                      content: ControlIOSection(
+                        hardwareComponent: hardwareComponent,
+                      ),
                     ),
                   ),
-                  SizedBox(width: 5),
+                  const SizedBox(width: 5),
                   Expanded(
-                    child: AudioStatusCard(
-                      title: "AES67 I/O",
-                      content: Aes67IOUsageSection(),
-                    ),
+                    child:
+                        isDsp
+                            ? const AudioStatusCard(
+                              title: "AES67 I/O",
+                              content: Aes67IOUsageSection(),
+                            )
+                            : Container(),
                   ),
                 ],
               ),

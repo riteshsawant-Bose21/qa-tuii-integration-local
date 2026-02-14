@@ -1,10 +1,16 @@
 import 'package:flutter/material.dart';
+import 'package:fusion_lib/fusion_lib.dart';
 
 import 'gpio_usage_row.dart';
 import 'section_divider.dart';
 
 class ControlIOSection extends StatelessWidget {
-  const ControlIOSection({super.key});
+  final HardwareComponent hardwareComponent;
+
+  const ControlIOSection({
+    super.key,
+    required this.hardwareComponent,
+  });
 
   @override
   Widget build(BuildContext context) {

@@ -3,6 +3,7 @@ import 'package:fusion_launcher/core/service_locator.dart';
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
 import 'package:fusion_launcher/features/devices/presentation/widgets/details/left_side_bar.dart';
 import 'package:fusion_lib/fusion_lib.dart';
+import 'package:fusion_lib/models/project_entities/controller.dart';
 
 import '../widgets/details/audio_control_tab.dart';
 import '../widgets/details/device_details_tab.dart';
@@ -26,7 +27,7 @@ class _DeviceDetailsPageState extends State<DeviceDetailsPage> with SingleTicker
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
+    _tabController = TabController(length: isController ? 1 : 2, vsync: this);
   }
 
   @override
@@ -36,6 +37,12 @@ class _DeviceDetailsPageState extends State<DeviceDetailsPage> with SingleTicker
   }
 
   HardwareComponent get device => serviceLocator<ProjectViewModel>().getHardware(hardwareId: widget.deviceId)!;
+
+  bool get isAmplifier => device is Amplifier;
+
+  bool get isController => device is FusionController;
+
+  bool get isDsp => device is FusionDsp;
 
   @override
   Widget build(BuildContext context) {
@@ -63,15 +70,17 @@ class _DeviceDetailsPageState extends State<DeviceDetailsPage> with SingleTicker
                   // Custom Tab Bar Row
                   Row(
                     children: <Widget>[
-                      DeviceDetailsTab(
-                        label: "Audio/Control",
-                        index: 0,
-                        tabController: _tabController,
-                      ),
-                      const SizedBox(width: 12),
+                      if (!isController) ...<Widget>[
+                        DeviceDetailsTab(
+                          label: "Audio/Control",
+                          index: 0,
+                          tabController: _tabController,
+                        ),
+                        const SizedBox(width: 12),
+                      ],
                       DeviceDetailsTab(
                         label: "Settings",
-                        index: 1,
+                        index: isController ? 0 : 1,
                         tabController: _tabController,
                       ),
                     ],
@@ -84,8 +93,13 @@ class _DeviceDetailsPageState extends State<DeviceDetailsPage> with SingleTicker
                       controller: _tabController,
                       physics: const NeverScrollableScrollPhysics(), // Disable swipe
                       children: <Widget>[
-                        const AudioControlTab(),
-                        const DeviceSettingsTab(),
+                        if (!isController)
+                          AudioControlTab(
+                            hardwareComponent: device,
+                          ),
+                        DeviceSettingsTab(
+                          hardwareComponent: device,
+                        ),
                       ],
                     ),
                   ),

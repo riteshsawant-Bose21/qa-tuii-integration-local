@@ -1,31 +1,76 @@
 import 'package:flutter/material.dart';
+import 'package:fusion_lib/fusion_lib.dart';
 
 import 'audio_output_usage_row.dart';
 
 class AudioOutputsUsageSection extends StatelessWidget {
-  const AudioOutputsUsageSection({super.key});
+  final HardwareComponent hardwareComponent;
+
+  const AudioOutputsUsageSection({
+    super.key,
+    required this.hardwareComponent,
+  });
+
+  bool get isAmplifier => hardwareComponent is Amplifier;
+
+  bool get isDsp => hardwareComponent is FusionDsp;
 
   @override
   Widget build(BuildContext context) {
-    return ListView(
+    final List<AudioOutputData> outputs = _getAudioOutputs();
+
+    return ListView.builder(
       padding: EdgeInsets.zero,
-      children: const <Widget>[
-        OutputUsageRow(index: 1, name: "Line Out 1", labelIcon: Icons.speaker_group_outlined, labelText: "PS (1), Line In 1", isActive: true),
-
-        OutputUsageRow(index: 2, name: "Line Out 2", labelIcon: Icons.speaker_group_outlined, labelText: "PS (1), Line In 2", isActive: true),
-
-        OutputUsageRow(index: 3, name: "Line Out 3", labelIcon: Icons.radio_button_checked, labelText: "Record <>", isActive: true),
-
-        OutputUsageRow(index: 4, name: "Line Out 4"),
-
-        OutputUsageRow(index: 5, name: "Line Out 5"),
-
-        OutputUsageRow(index: 6, name: "Line Out 6"),
-
-        OutputUsageRow(index: 7, name: "Line Out 7"),
-
-        OutputUsageRow(index: 8, name: "Line Out 8"),
-      ],
+      itemCount: outputs.length,
+      itemBuilder: (BuildContext context, int index) {
+        final AudioOutputData data = outputs[index];
+        return OutputUsageRow(
+          index: index + 1,
+          name: data.name,
+          labelIcon: data.icon,
+          labelText: data.labelText,
+          isActive: data.isActive,
+        );
+      },
     );
   }
+
+  List<AudioOutputData> _getAudioOutputs() {
+    if (isAmplifier) {
+      return List<AudioOutputData>.generate(8, (int index) {
+        return AudioOutputData(
+          name: "Line Out ${index + 1}",
+          icon: Icons.speaker_group_outlined,
+          labelText: "Circuit ${index + 1}",
+          isActive: true,
+        );
+      });
+    }
+
+    // Default / DSP behavior (keeping existing hardcoded values for safety/reference)
+    return <AudioOutputData>[
+      AudioOutputData(name: "Line Out 1", icon: Icons.speaker_group_outlined, labelText: "PS (1), Line In 1", isActive: true),
+      AudioOutputData(name: "Line Out 2", icon: Icons.speaker_group_outlined, labelText: "PS (1), Line In 2", isActive: true),
+      AudioOutputData(name: "Line Out 3", icon: Icons.radio_button_checked, labelText: "Record <>", isActive: true),
+      AudioOutputData(name: "Line Out 4"),
+      AudioOutputData(name: "Line Out 5"),
+      AudioOutputData(name: "Line Out 6"),
+      AudioOutputData(name: "Line Out 7"),
+      AudioOutputData(name: "Line Out 8"),
+    ];
+  }
+}
+
+class AudioOutputData {
+  final String name;
+  final IconData? icon;
+  final String? labelText;
+  final bool isActive;
+
+  AudioOutputData({
+    required this.name,
+    this.icon,
+    this.labelText,
+    this.isActive = false,
+  });
 }
