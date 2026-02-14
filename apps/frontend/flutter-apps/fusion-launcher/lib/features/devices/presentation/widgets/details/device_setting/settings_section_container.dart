@@ -25,11 +25,9 @@ class SettingsSectionContainer extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
         color: context.colorScheme.elevation1,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: context.colorScheme.elevation2),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

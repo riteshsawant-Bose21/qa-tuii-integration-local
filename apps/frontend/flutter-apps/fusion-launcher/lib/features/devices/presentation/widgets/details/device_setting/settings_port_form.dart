@@ -11,7 +11,6 @@ class SettingsPortForm extends StatelessWidget {
   final TextEditingController subnetController;
   final TextEditingController gatewayController;
   final TextEditingController macController;
-  final bool viewMoreNetwork;
 
   const SettingsPortForm({
     super.key,
@@ -19,7 +18,6 @@ class SettingsPortForm extends StatelessWidget {
     required this.ipController,
     required this.subnetController,
     required this.gatewayController,
-    required this.viewMoreNetwork,
     required this.macController,
   });
 
@@ -29,6 +27,7 @@ class SettingsPortForm extends StatelessWidget {
       children: <Widget>[
         SettingsItemRow(
           label: "Network Mode",
+          labelFlex: 3,
           child: NetworkDropdown<String>(
             items: const <String>["DHCP", "Static"],
             selectedValue: "DHCP",
@@ -39,49 +38,74 @@ class SettingsPortForm extends StatelessWidget {
         const SizedBox(height: 12),
         SettingsItemRow(
           label: "IP address",
-          child: NeumorphicDarkTextField(controller: ipController),
+          labelFlex: 3,
+          child: NeumorphicDarkTextField(
+            controller: ipController,
+            height: 32,
+            borderRadius: 8,
+          ),
         ),
         const SizedBox(height: 12),
         SettingsItemRow(
           label: "Subnet Mask",
-          child: NeumorphicDarkTextField(controller: subnetController),
+          labelFlex: 3,
+          child: NeumorphicDarkTextField(
+            controller: subnetController,
+            height: 32,
+            borderRadius: 8,
+          ),
         ),
         const SizedBox(height: 12),
         SettingsItemRow(
           label: "Default Gateway",
-          child: NeumorphicDarkTextField(controller: gatewayController),
+          labelFlex: 3,
+          child: NeumorphicDarkTextField(
+            controller: gatewayController,
+            height: 32,
+            borderRadius: 8,
+          ),
         ),
         const SizedBox(height: 12),
         SettingsItemRow(
           label: "MAC Address",
+          labelFlex: 3,
           child: NeumorphicDarkTextField(
             controller: macController,
             enabled: false,
+            height: 32,
+            borderRadius: 8,
             color: context.colorScheme.elevation2,
+            textStyle: context.textTheme.labelMedium!.copyWith(
+              color: context.colorScheme.textDisabled,
+            ),
           ),
         ),
-        // EXPANDED DETAILS (Hidden by default)
-        if (viewMoreNetwork) ...<Widget>[
-          const SizedBox(height: 12),
-          SettingsItemRow(
-            label: "VLAN",
-            child: LabeledSwitch(label: "", value: true, onChanged: (bool v) {}),
+        const SizedBox(height: 12),
+        SettingsItemRow(
+          label: "VLAN",
+          labelFlex: 3,
+          child: LabeledSwitch(label: "", value: true, onChanged: (bool v) {}),
+        ),
+        const SizedBox(height: 12),
+        SettingsItemRow(
+          label: "ID",
+          labelFlex: 3,
+          child: NeumorphicDarkTextField(
+            controller: TextEditingController(text: "1024"),
+            height: 32,
+            borderRadius: 8,
           ),
-          const SizedBox(height: 12),
-          SettingsItemRow(
-            label: "ID",
-            child: NeumorphicDarkTextField(
-              controller: TextEditingController(text: "1024"),
-            ),
+        ),
+        const SizedBox(height: 12),
+        SettingsItemRow(
+          label: "Priority",
+          labelFlex: 3,
+          child: NeumorphicDarkTextField(
+            controller: TextEditingController(text: "1"),
+            height: 32,
+            borderRadius: 8,
           ),
-          const SizedBox(height: 12),
-          SettingsItemRow(
-            label: "Priority",
-            child: NeumorphicDarkTextField(
-              controller: TextEditingController(text: "1"),
-            ),
-          ),
-        ],
+        ),
       ],
     );
   }

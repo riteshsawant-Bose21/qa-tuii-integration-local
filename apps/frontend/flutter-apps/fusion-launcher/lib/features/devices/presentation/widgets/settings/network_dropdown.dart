@@ -23,7 +23,7 @@ class NetworkDropdown<T> extends StatelessWidget {
       borderRadius: 6,
       raised: true,
       child: Container(
-        height: 32, // Fixed height to match design
+        height: 32,
         padding: const EdgeInsets.symmetric(horizontal: 12),
         decoration: BoxDecoration(
           color: context.colorScheme.elevation1,

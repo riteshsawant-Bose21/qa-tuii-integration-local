@@ -50,4 +50,5 @@ class AssetIcons {
   static const String speaker = '$_path/speaker.webp';
   static const String temperature = '$_path/temperature.webp';
   static const String levelIndicator = '$_path/level_indicator.webp';
+  static const String webIcon = '$_path/web_icon.webp';
 }

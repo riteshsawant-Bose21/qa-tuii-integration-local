@@ -62,32 +62,35 @@ class _FusionDevicesListViewState extends State<FusionDevicesListView> {
   Widget build(BuildContext context) {
     return Container(
       color: context.colorScheme.primaryBlack,
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
           // 1. TABS HEADER
-          Row(
-            children: <Widget>[
-              _buildTab(
-                'Device List',
-                isActive: _selectedTab == DeviceTabs.deviceList,
-                onTap: () => setState(() => _selectedTab = DeviceTabs.deviceList),
-              ),
-              const SizedBox(width: 32),
-              _buildTab(
-                'Updates',
-                hasNotification: true,
-                isActive: _selectedTab == DeviceTabs.updates,
-                onTap: () => setState(() => _selectedTab = DeviceTabs.updates),
-              ),
-              const SizedBox(width: 32),
-              _buildTab(
-                'Settings',
-                isActive: _selectedTab == DeviceTabs.settings,
-                onTap: () => setState(() => _selectedTab = DeviceTabs.settings),
-              ),
-            ],
+          Padding(
+            padding: const EdgeInsets.only(left: 10.0),
+            child: Row(
+              children: <Widget>[
+                _buildTab(
+                  'Device List',
+                  isActive: _selectedTab == DeviceTabs.deviceList,
+                  onTap: () => setState(() => _selectedTab = DeviceTabs.deviceList),
+                ),
+                const SizedBox(width: 32),
+                _buildTab(
+                  'Updates',
+                  hasNotification: true,
+                  isActive: _selectedTab == DeviceTabs.updates,
+                  onTap: () => setState(() => _selectedTab = DeviceTabs.updates),
+                ),
+                const SizedBox(width: 32),
+                _buildTab(
+                  'Settings',
+                  isActive: _selectedTab == DeviceTabs.settings,
+                  onTap: () => setState(() => _selectedTab = DeviceTabs.settings),
+                ),
+              ],
+            ),
           ),
           const SizedBox(height: 10),
 
@@ -122,7 +125,7 @@ class _FusionDevicesListViewState extends State<FusionDevicesListView> {
                     : null,
             child: FusionAppText(
               text: title,
-              style: context.textTheme.titleMedium!.copyWith(
+              style: context.textTheme.labelLarge!.copyWith(
                 color: isActive ? context.colorScheme.textPrimary : context.colorScheme.textSecondary,
                 fontWeight: isActive ? FontWeight.w600 : FontWeight.normal,
               ),

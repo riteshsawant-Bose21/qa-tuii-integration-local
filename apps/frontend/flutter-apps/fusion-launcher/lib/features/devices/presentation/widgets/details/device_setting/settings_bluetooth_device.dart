@@ -17,6 +17,7 @@ class SettingsBluetoothDevice extends StatelessWidget {
       constraints: const BoxConstraints(maxWidth: 600),
       child: SettingsItemRow(
         label: name,
+        labelFlex: 3,
         child: Container(
           height: 40,
           width: 300,
