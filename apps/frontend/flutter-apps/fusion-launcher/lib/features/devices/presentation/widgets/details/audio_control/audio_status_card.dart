@@ -33,7 +33,7 @@ class AudioStatusCard extends StatelessWidget {
           const SizedBox(height: 16),
           const Divider(height: 1, color: Color(0xFF333333)), // Subtle divider
           const SizedBox(height: 16),
-          Expanded(child: content),
+          content,
         ],
       ),
     );

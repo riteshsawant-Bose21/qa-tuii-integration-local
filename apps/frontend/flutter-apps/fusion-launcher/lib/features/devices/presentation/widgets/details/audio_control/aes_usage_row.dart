@@ -23,14 +23,15 @@ class AesUsageRow extends StatelessWidget {
           ),
         ),
         Expanded(
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+          child: Wrap(
+            runAlignment: WrapAlignment.spaceEvenly,
             children: List<Widget>.generate(8, (int index) {
               final bool isActive = index < activeCount;
               return Container(
                 width: 24,
                 height: 24,
                 alignment: Alignment.center,
+                margin: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
                 decoration: BoxDecoration(
                   color: isActive ? context.colorScheme.primaryWhite : Colors.transparent, // Active White, Inactive Transparent
                   borderRadius: BorderRadius.circular(8),

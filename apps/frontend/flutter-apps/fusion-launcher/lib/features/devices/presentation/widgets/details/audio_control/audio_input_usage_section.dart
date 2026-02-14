@@ -14,6 +14,8 @@ class AudioInputsUsageSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ListView(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
       padding: EdgeInsets.zero,
       children: const <Widget>[
         AudioInputUsageRow(icon: Icons.settings_input_component, name: "DVD", hasSignal: true, isStereo: true),

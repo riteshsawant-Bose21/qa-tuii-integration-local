@@ -20,6 +20,8 @@ class AudioOutputsUsageSection extends StatelessWidget {
     final List<AudioOutputData> outputs = _getAudioOutputs();
 
     return ListView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
       padding: EdgeInsets.zero,
       itemCount: outputs.length,
       itemBuilder: (BuildContext context, int index) {

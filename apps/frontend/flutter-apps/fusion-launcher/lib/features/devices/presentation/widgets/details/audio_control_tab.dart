@@ -32,11 +32,12 @@ class AudioControlTab extends StatelessWidget {
         child: Column(
           children: <Widget>[
             // Row 1: Audio Inputs & Outputs
-            SizedBox(
-              height: 380, // Fixed height to align cards row
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
               child: Row(
                 children: <Widget>[
-                  Expanded(
+                  SizedBox(
+                    width: MediaQuery.of(context).size.width * 0.28,
                     child: AudioStatusCard(
                       title: "AUDIO INPUTS",
                       content: AudioInputsUsageSection(
@@ -45,7 +46,8 @@ class AudioControlTab extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(width: 5),
-                  Expanded(
+                  SizedBox(
+                    width: MediaQuery.of(context).size.width * 0.28,
                     child: AudioStatusCard(
                       title: "AUDIO OUTPUTS",
                       content: AudioOutputsUsageSection(
@@ -58,30 +60,27 @@ class AudioControlTab extends StatelessWidget {
             ),
             const SizedBox(height: 5),
             // Row 2: Control I/O & AES67
-            SizedBox(
-              height: 220,
-              child: Row(
-                children: <Widget>[
-                  Expanded(
-                    child: AudioStatusCard(
-                      title: "CONTROL I/O",
-                      content: ControlIOSection(
-                        hardwareComponent: hardwareComponent,
-                      ),
+            Row(
+              children: <Widget>[
+                Expanded(
+                  child: AudioStatusCard(
+                    title: "CONTROL I/O",
+                    content: ControlIOSection(
+                      hardwareComponent: hardwareComponent,
                     ),
                   ),
-                  const SizedBox(width: 5),
-                  Expanded(
-                    child:
-                        isDsp
-                            ? const AudioStatusCard(
-                              title: "AES67 I/O",
-                              content: Aes67IOUsageSection(),
-                            )
-                            : Container(),
-                  ),
-                ],
-              ),
+                ),
+                const SizedBox(width: 5),
+                Expanded(
+                  child:
+                      isDsp
+                          ? const AudioStatusCard(
+                            title: "AES67 I/O",
+                            content: Aes67IOUsageSection(),
+                          )
+                          : Container(),
+                ),
+              ],
             ),
           ],
         ),
