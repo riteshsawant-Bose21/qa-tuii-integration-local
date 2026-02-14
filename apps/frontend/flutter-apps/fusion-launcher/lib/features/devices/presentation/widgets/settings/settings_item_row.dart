@@ -6,6 +6,7 @@ class SettingsItemRow extends StatelessWidget {
   final Widget child;
   final int labelFlex;
   final int childFlex;
+  final BoxConstraints childConstraints;
 
   const SettingsItemRow({
     super.key,
@@ -13,6 +14,7 @@ class SettingsItemRow extends StatelessWidget {
     required this.child,
     this.labelFlex = 2,
     this.childFlex = 8,
+    this.childConstraints = const BoxConstraints(),
   });
 
   @override

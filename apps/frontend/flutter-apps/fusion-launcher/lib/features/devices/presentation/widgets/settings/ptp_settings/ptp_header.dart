@@ -26,12 +26,12 @@ class PtpSettingsHeader extends StatelessWidget {
                 letterSpacing: 0.5,
               ),
             ),
-            const SizedBox(width: 24),
+            const SizedBox(width: 50),
             // Reusing LabeledSwitch but reversing order to match design: "Default [Switch]"
             Row(
               children: <Widget>[
                 FusionAppText(
-                  text: "Default",
+                  text: "Custom",
                   style: context.textTheme.labelMedium!.copyWith(
                     color: context.colorScheme.textPrimary,
                   ),

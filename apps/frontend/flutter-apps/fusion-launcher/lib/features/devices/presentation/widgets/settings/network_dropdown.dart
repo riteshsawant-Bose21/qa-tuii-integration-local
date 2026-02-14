@@ -7,6 +7,8 @@ class NetworkDropdown<T> extends StatelessWidget {
   final String Function(T item) labelBuilder;
   final ValueChanged<T?>? onChanged;
   final String placeholder;
+  final double? width;
+  final double? height;
 
   const NetworkDropdown({
     super.key,
@@ -15,6 +17,8 @@ class NetworkDropdown<T> extends StatelessWidget {
     this.selectedValue,
     this.onChanged,
     this.placeholder = 'Select...',
+    this.width,
+    this.height = 32,
   });
 
   @override
@@ -23,7 +27,8 @@ class NetworkDropdown<T> extends StatelessWidget {
       borderRadius: 6,
       raised: true,
       child: Container(
-        height: 32,
+        height: height,
+        width: width,
         padding: const EdgeInsets.symmetric(horizontal: 12),
         decoration: BoxDecoration(
           color: context.colorScheme.elevation1,
@@ -41,7 +46,8 @@ class NetworkDropdown<T> extends StatelessWidget {
               color: context.colorScheme.textDisabled,
               size: 16,
             ),
-            dropdownColor: context.colorScheme.elevation2, // Darker background for menu
+            dropdownColor: context.colorScheme.elevation2,
+            // Darker background for menu
             style: context.textTheme.labelMedium!.copyWith(
               color: context.colorScheme.textPrimary,
             ),
