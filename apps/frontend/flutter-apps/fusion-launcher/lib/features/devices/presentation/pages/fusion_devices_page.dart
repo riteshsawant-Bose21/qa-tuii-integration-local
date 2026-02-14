@@ -1,7 +1,10 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:fusion_launcher/core/router/routes.dart';
 import 'package:fusion_launcher/features/devices/presentation/widgets/settings/device_global_settings_tab.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
+import 'device_details_page.dart';
 import 'device_listing_page.dart';
 import 'device_updates_page.dart';
 
@@ -19,12 +22,41 @@ class FusionDevicesPage extends StatefulWidget {
 }
 
 class _FusionDevicesPageState extends State<FusionDevicesPage> {
-  DeviceTabs _selectedTab = DeviceTabs.deviceList; // Default Tab
+  final GlobalKey<NavigatorState> _navigatorKey = GlobalKey<NavigatorState>();
 
   @override
-  void initState() {
-    super.initState();
+  Widget build(BuildContext context) {
+    return Navigator(
+      key: _navigatorKey,
+      onGenerateRoute: (RouteSettings settings) {
+        WidgetBuilder builder;
+        switch (settings.name) {
+          case '/':
+            builder = (BuildContext context) => const FusionDevicesListView();
+            break;
+          case Routes.deviceDetails:
+            final String deviceId = settings.arguments as String;
+            builder = (BuildContext context) => DeviceDetailsPage(deviceId: deviceId);
+            // builder = (BuildContext context) => const Center(child: Text("Details"));
+            break;
+          default:
+            builder = (BuildContext context) => const FusionDevicesListView();
+        }
+        return CupertinoPageRoute<void>(builder: builder, settings: settings);
+      },
+    );
   }
+}
+
+class FusionDevicesListView extends StatefulWidget {
+  const FusionDevicesListView({super.key});
+
+  @override
+  State<FusionDevicesListView> createState() => _FusionDevicesListViewState();
+}
+
+class _FusionDevicesListViewState extends State<FusionDevicesListView> {
+  DeviceTabs _selectedTab = DeviceTabs.deviceList; // Default Tab
 
   @override
   Widget build(BuildContext context) {
@@ -68,17 +100,6 @@ class _FusionDevicesPageState extends State<FusionDevicesPage> {
             },
           ),
         ],
-      ),
-    );
-  }
-
-  // --- Tab Views ---
-
-  Widget _buildPlaceholderContent() {
-    return Center(
-      child: Text(
-        "$_selectedTab Page Content",
-        style: TextStyle(color: Colors.grey[700], fontSize: 18),
       ),
     );
   }
