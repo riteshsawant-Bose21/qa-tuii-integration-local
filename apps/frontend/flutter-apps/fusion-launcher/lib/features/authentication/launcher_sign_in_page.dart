@@ -194,6 +194,7 @@ class NeumorphicDarkTextField extends StatelessWidget {
   final double? width;
   final double? height;
   final EdgeInsetsGeometry? contentPadding;
+  final Color? color;
   final bool enabled;
 
   const NeumorphicDarkTextField({
@@ -212,6 +213,7 @@ class NeumorphicDarkTextField extends StatelessWidget {
     this.height,
     this.contentPadding,
     this.enabled = true,
+    this.color,
   });
 
   @override
@@ -222,6 +224,7 @@ class NeumorphicDarkTextField extends StatelessWidget {
         width: width,
         height: height,
         borderRadius: borderRadius,
+        color: color,
         // margin: const EdgeInsets.all(2),
         // decoration: BoxDecoration(
         //   boxShadow: <BoxShadow>[

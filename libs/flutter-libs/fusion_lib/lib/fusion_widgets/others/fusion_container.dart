@@ -37,15 +37,15 @@ class FusionContainer extends StatelessWidget {
         // color: context.colorScheme.shadowDark,
         boxShadow: raised
             ? <BoxShadow>[
-                BoxShadow(color: context.colorScheme.shadowLight, blurRadius: 2, offset: const Offset(-2, -2)),
-                BoxShadow(color: context.colorScheme.shadowDark, blurRadius: 4, offset: const Offset(2, 2)),
+                BoxShadow(color: context.colorScheme.shadowLight, blurRadius: 6, offset: const Offset(-2, -2)),
+                BoxShadow(color: context.colorScheme.shadowDark, blurRadius: 8, offset: const Offset(2, 2)),
                 BoxShadow(color: color ?? context.colorScheme.elevation1),
               ]
             : <BoxShadow>[
-                BoxShadow(color: context.colorScheme.shadowDark, blurRadius: 1, offset: Offset(-2, -2), blurStyle: BlurStyle.inner),
+                BoxShadow(color: context.colorScheme.shadowDark, blurRadius: 2, offset: Offset(-2, -2), blurStyle: BlurStyle.inner),
                 BoxShadow(
                   color: context.colorScheme.shadowLight,
-                  blurRadius: 1,
+                  blurRadius: 2,
                   offset: Offset(2, 2),
                   blurStyle: BlurStyle.inner,
                 ),

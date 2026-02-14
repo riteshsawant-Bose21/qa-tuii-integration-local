@@ -21,13 +21,16 @@ class NetworkDropdown<T> extends StatelessWidget {
   Widget build(BuildContext context) {
     return FusionContainer(
       borderRadius: 6,
+      raised: true,
       child: Container(
         height: 32, // Fixed height to match design
         padding: const EdgeInsets.symmetric(horizontal: 12),
         decoration: BoxDecoration(
           color: context.colorScheme.elevation1,
           borderRadius: BorderRadius.circular(6),
-          border: Border.all(color: Colors.white10),
+          border: Border.all(
+            color: context.colorScheme.elevation1,
+          ),
         ),
         child: DropdownButtonHideUnderline(
           child: DropdownButton<T>(
