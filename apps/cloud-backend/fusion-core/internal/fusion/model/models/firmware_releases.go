@@ -38,6 +38,7 @@ type FirmwareRelease struct {
 	APILevel             string           `boil:"api_level" json:"api_level" toml:"api_level" yaml:"api_level"`
 	MetadataJSON         null.JSON        `boil:"metadata_json" json:"metadata_json,omitempty" toml:"metadata_json" yaml:"metadata_json,omitempty"`
 	CreatedAt            time.Time        `boil:"created_at" json:"created_at" toml:"created_at" yaml:"created_at"`
+	UpdatedAt            time.Time        `boil:"updated_at" json:"updated_at" toml:"updated_at" yaml:"updated_at"`
 
 	R *firmwareReleaseR `boil:"-" json:"-" toml:"-" yaml:"-"`
 	L firmwareReleaseL  `boil:"-" json:"-" toml:"-" yaml:"-"`
@@ -57,6 +58,7 @@ var FirmwareReleaseColumns = struct {
 	APILevel             string
 	MetadataJSON         string
 	CreatedAt            string
+	UpdatedAt            string
 }{
 	ID:                   "id",
 	Platform:             "platform",
@@ -71,6 +73,7 @@ var FirmwareReleaseColumns = struct {
 	APILevel:             "api_level",
 	MetadataJSON:         "metadata_json",
 	CreatedAt:            "created_at",
+	UpdatedAt:            "updated_at",
 }
 
 var FirmwareReleaseTableColumns = struct {
@@ -87,6 +90,7 @@ var FirmwareReleaseTableColumns = struct {
 	APILevel             string
 	MetadataJSON         string
 	CreatedAt            string
+	UpdatedAt            string
 }{
 	ID:                   "firmware_releases.id",
 	Platform:             "firmware_releases.platform",
@@ -101,6 +105,7 @@ var FirmwareReleaseTableColumns = struct {
 	APILevel:             "firmware_releases.api_level",
 	MetadataJSON:         "firmware_releases.metadata_json",
 	CreatedAt:            "firmware_releases.created_at",
+	UpdatedAt:            "firmware_releases.updated_at",
 }
 
 // Generated where
@@ -164,6 +169,7 @@ var FirmwareReleaseWhere = struct {
 	APILevel             whereHelperstring
 	MetadataJSON         whereHelpernull_JSON
 	CreatedAt            whereHelpertime_Time
+	UpdatedAt            whereHelpertime_Time
 }{
 	ID:                   whereHelperstring{field: "\"firmware_releases\".\"id\""},
 	Platform:             whereHelperstring{field: "\"firmware_releases\".\"platform\""},
@@ -178,6 +184,7 @@ var FirmwareReleaseWhere = struct {
 	APILevel:             whereHelperstring{field: "\"firmware_releases\".\"api_level\""},
 	MetadataJSON:         whereHelpernull_JSON{field: "\"firmware_releases\".\"metadata_json\""},
 	CreatedAt:            whereHelpertime_Time{field: "\"firmware_releases\".\"created_at\""},
+	UpdatedAt:            whereHelpertime_Time{field: "\"firmware_releases\".\"updated_at\""},
 }
 
 // FirmwareReleaseRels is where relationship names are stored.
@@ -217,9 +224,9 @@ func (r *firmwareReleaseR) GetReleaseFirmwareDeployments() FirmwareDeploymentSli
 type firmwareReleaseL struct{}
 
 var (
-	firmwareReleaseAllColumns            = []string{"id", "platform", "version", "version_parts", "status", "release_notes", "s3_key", "file_checksum", "min_desktop_app_version", "hw_compatibility", "api_level", "metadata_json", "created_at"}
+	firmwareReleaseAllColumns            = []string{"id", "platform", "version", "version_parts", "status", "release_notes", "s3_key", "file_checksum", "min_desktop_app_version", "hw_compatibility", "api_level", "metadata_json", "created_at", "updated_at"}
 	firmwareReleaseColumnsWithoutDefault = []string{"platform", "version", "release_notes", "s3_key", "file_checksum", "min_desktop_app_version", "hw_compatibility", "api_level"}
-	firmwareReleaseColumnsWithDefault    = []string{"id", "version_parts", "status", "metadata_json", "created_at"}
+	firmwareReleaseColumnsWithDefault    = []string{"id", "version_parts", "status", "metadata_json", "created_at", "updated_at"}
 	firmwareReleasePrimaryKeyColumns     = []string{"id"}
 	firmwareReleaseGeneratedColumns      = []string{"version_parts"}
 )
@@ -764,6 +771,9 @@ func (o *FirmwareRelease) Insert(ctx context.Context, exec boil.ContextExecutor,
 		if o.CreatedAt.IsZero() {
 			o.CreatedAt = currTime
 		}
+		if o.UpdatedAt.IsZero() {
+			o.UpdatedAt = currTime
+		}
 	}
 
 	if err := o.doBeforeInsertHooks(ctx, exec); err != nil {
@@ -841,6 +851,12 @@ func (o *FirmwareRelease) Insert(ctx context.Context, exec boil.ContextExecutor,
 // See boil.Columns.UpdateColumnSet documentation to understand column list inference for updates.
 // Update does not automatically update the record in case of default values. Use .Reload() to refresh the records.
 func (o *FirmwareRelease) Update(ctx context.Context, exec boil.ContextExecutor, columns boil.Columns) (int64, error) {
+	if !boil.TimestampsAreSkipped(ctx) {
+		currTime := time.Now().In(boil.GetLocation())
+
+		o.UpdatedAt = currTime
+	}
+
 	var err error
 	if err = o.doBeforeUpdateHooks(ctx, exec); err != nil {
 		return 0, err
@@ -978,6 +994,7 @@ func (o *FirmwareRelease) Upsert(ctx context.Context, exec boil.ContextExecutor,
 		if o.CreatedAt.IsZero() {
 			o.CreatedAt = currTime
 		}
+		o.UpdatedAt = currTime
 	}
 
 	if err := o.doBeforeUpsertHooks(ctx, exec); err != nil {

@@ -105,3 +105,40 @@ func (s *Service) MakeReleaseAvailable(ctx context.Context, releaseID string, lo
 
 	return nil
 }
+
+func (s *Service) ListReleases(ctx context.Context, platform string, page, limit int) (*types.FirmwareReleaseListResponse, error) {
+	if page < 1 {
+		page = 1
+	}
+	if limit < 1 {
+		limit = 10
+	}
+	offset := (page - 1) * limit
+
+	releases, total, err := s.dbService.ListReleases(ctx, limit, offset, platform)
+	if err != nil {
+		return nil, err
+	}
+
+	var releaseDetails []types.FirmwareReleaseDetails
+	for _, r := range releases {
+		releaseDetails = append(releaseDetails, types.FirmwareReleaseDetails{
+			ID:                   r.ID,
+			Platform:             r.Platform,
+			FirmwareVersion:      r.Version,
+			ReleaseNotes:         r.ReleaseNotes,
+			MinDesktopAppVersion: r.MinDesktopAppVersion,
+			HwCompatibility:      r.HWCompatibility,
+			ApiVersion:           r.APILevel,
+			Created:              r.CreatedAt,
+			Updated:              r.UpdatedAt,
+		})
+	}
+
+	return &types.FirmwareReleaseListResponse{
+		Releases: releaseDetails,
+		Total:    total,
+		Page:     page,
+		Limit:    limit,
+	}, nil
+}

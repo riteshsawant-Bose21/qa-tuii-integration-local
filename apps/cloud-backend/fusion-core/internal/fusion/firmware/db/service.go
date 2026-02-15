@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"time"
 
 	types "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/api/types"
 	customModel "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/model"
@@ -132,11 +133,12 @@ func (s *Service) UpdateReleaseStatus(ctx context.Context, releaseID string, sta
 	}
 
 	release := &model.FirmwareRelease{
-		ID:     releaseID,
-		Status: status,
+		ID:        releaseID,
+		Status:    status,
+		UpdatedAt: time.Now(),
 	}
 
-	_, err := release.Update(ctx, tx, boil.Whitelist(model.FirmwareReleaseColumns.Status))
+	_, err := release.Update(ctx, tx, boil.Whitelist(model.FirmwareReleaseColumns.Status, model.FirmwareReleaseColumns.UpdatedAt))
 	return err
 }
 
