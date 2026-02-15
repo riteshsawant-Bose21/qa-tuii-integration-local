@@ -163,6 +163,8 @@ definitions:
         example: 3
         type: integer
     type: object
+  types.InitiateFirmwareReleasePayload:
+    type: object
   types.OrganizationUsersResponse:
     properties:
       account:
@@ -794,6 +796,25 @@ paths:
       summary: Get Auth0 tokens for automation testing
       tags:
       - auth
+  /firmware/initiateRelease:
+    post:
+      consumes:
+      - application/json
+      description: Insert release details to firmware_releases table and return a
+        presigned URL to upload the artifacts to s3
+      parameters:
+      - description: Firmware release details
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/types.InitiateFirmwareReleasePayload'
+      produces:
+      - application/json
+      responses: {}
+      summary: Initiate Firmware Release
+      tags:
+      - Firmware Update
   /organization/role-management:
     get:
       consumes:

@@ -26,9 +26,10 @@ var (
 	}
 
 	S3 = types.EnvironmentS3Variables{
-		PriceBucket:   "S3_PRICE_BUCKET",
-		ProjectBucket: "S3_PROJECT_BUCKET",
-		ProductBucket: "S3_PRODUCT_BUCKET",
+		PriceBucket:          "S3_PRICE_BUCKET",
+		ProjectBucket:        "S3_PROJECT_BUCKET",
+		ProductBucket:        "S3_PRODUCT_BUCKET",
+		FirmwareUpdateBucket: "S3_FIRMWARE_UPDATE_BUCKET",
 	}
 
 	AWS = types.EnvironmentAWSVariables{

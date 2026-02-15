@@ -74,6 +74,33 @@ const docTemplate = `{
                 }
             }
         },
+        "/firmware/initiateRelease": {
+            "post": {
+                "description": "Insert release details to firmware_releases table and return a presigned URL to upload the artifacts to s3",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Firmware Update"
+                ],
+                "summary": "Initiate Firmware Release",
+                "parameters": [
+                    {
+                        "description": "Firmware release details",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/types.InitiateFirmwareReleasePayload"
+                        }
+                    }
+                ],
+                "responses": {}
+            }
+        },
         "/organization/role-management": {
             "get": {
                 "security": [
@@ -1844,6 +1871,9 @@ const docTemplate = `{
                     "example": 3
                 }
             }
+        },
+        "types.InitiateFirmwareReleasePayload": {
+            "type": "object"
         },
         "types.OrganizationUsersResponse": {
             "type": "object",

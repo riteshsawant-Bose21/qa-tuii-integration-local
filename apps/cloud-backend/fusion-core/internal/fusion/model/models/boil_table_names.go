@@ -9,8 +9,10 @@ var TableNames = struct {
 	AccountType       string
 	AccountTypeRole   string
 	AppUser           string
+	Deployments       string
 	Feature           string
 	FeaturePermission string
+	FirmwareReleases  string
 	Product           string
 	ProductPrice      string
 	ProductSyncJob    string
@@ -25,8 +27,10 @@ var TableNames = struct {
 	AccountType:       "account_type",
 	AccountTypeRole:   "account_type_role",
 	AppUser:           "app_user",
+	Deployments:       "deployments",
 	Feature:           "feature",
 	FeaturePermission: "feature_permission",
+	FirmwareReleases:  "firmware_releases",
 	Product:           "product",
 	ProductPrice:      "product_price",
 	ProductSyncJob:    "product_sync_job",

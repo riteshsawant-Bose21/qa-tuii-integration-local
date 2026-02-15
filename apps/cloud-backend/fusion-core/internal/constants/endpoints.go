@@ -65,4 +65,7 @@ const (
 	EndpointRolePermissions = "/roles/:roleID/permissions"
 	// EndpointOrganizationUsers is the endpoint for organization user operations.
 	EndpointOrganizationUsers = "/users"
+
+	EndpointFirmware                = "/firmware"
+	EndpointFirmwareInitiateRelease = "/initiateRelease"
 )

@@ -111,4 +111,11 @@ func (a *API) registerRoutes() {
 		organization.GET(constants.EndpointOrganizationUsers, roleManagementHandler.GetOrganizationUsers)
 	}
 
+	firmwareUpdate := v1.Group(constants.EndpointFirmware)
+	firmwareHandler := handler.NewFirmwareUpdateHandler(a.firmware)
+
+	{
+		firmwareUpdate.POST(constants.EndpointFirmwareInitiateRelease, firmwareHandler.InitiateRelease)
+	}
+
 }
