@@ -6,6 +6,8 @@ import (
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion"
 	"go.uber.org/zap"
 
+	"strconv"
+
 	"github.com/gin-gonic/gin"
 )
 
@@ -86,4 +88,30 @@ func (h *FirmwareUpdateHandler) MakeReleaseAvailable(ctx *gin.Context) {
 	}
 
 	response.NoContent(ctx)
+}
+
+// ListReleases lists all firmware releases with pagination and filtering
+// @Summary List Firmware Releases
+// @Description List all firmware releases with pagination and filtering
+// @Tags Firmware Update
+// @Accept json
+// @Produce json
+// @Param page query int false "Page number"
+// @Param limit query int false "Items per page"
+// @Param platform query string false "Platform filter"
+// @Success 200 {object} types.FirmwareReleaseListResponse
+// @Failure 500 {object} types.ErrorResponse
+// @Router /firmware [get]
+func (h *FirmwareUpdateHandler) ListReleases(ctx *gin.Context) {
+	page, _ := strconv.Atoi(ctx.DefaultQuery("page", "1"))
+	limit, _ := strconv.Atoi(ctx.DefaultQuery("limit", "10"))
+	platform := ctx.Query("platform")
+
+	resp, err := h.firmware.ListReleases(ctx, platform, page, limit)
+	if err != nil {
+		response.InternalError(ctx)
+		return
+	}
+
+	response.OK(ctx, resp)
 }

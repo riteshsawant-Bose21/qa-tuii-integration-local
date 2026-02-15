@@ -147,6 +147,40 @@ definitions:
         example: launcher.project.create
         type: string
     type: object
+  types.FirmwareReleaseDetails:
+    properties:
+      apiVersion:
+        type: string
+      created:
+        type: string
+      firmwareVersion:
+        type: string
+      hwCompatibility:
+        type: string
+      id:
+        type: string
+      minDesktopAppVersion:
+        type: string
+      platform:
+        type: string
+      releaseNotes:
+        type: string
+      updated:
+        type: string
+    type: object
+  types.FirmwareReleaseListResponse:
+    properties:
+      limit:
+        type: integer
+      page:
+        type: integer
+      releases:
+        items:
+          $ref: '#/definitions/types.FirmwareReleaseDetails'
+        type: array
+      total:
+        type: integer
+    type: object
   types.FirmwareReleaseMetaData:
     properties:
       apiVersion:
@@ -833,6 +867,38 @@ paths:
       summary: Get Auth0 tokens for automation testing
       tags:
       - auth
+  /firmware:
+    get:
+      consumes:
+      - application/json
+      description: List all firmware releases with pagination and filtering
+      parameters:
+      - description: Page number
+        in: query
+        name: page
+        type: integer
+      - description: Items per page
+        in: query
+        name: limit
+        type: integer
+      - description: Platform filter
+        in: query
+        name: platform
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/types.FirmwareReleaseListResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+      summary: List Firmware Releases
+      tags:
+      - Firmware Update
   /firmware/{releaseID}/makeReleaseAvailable:
     post:
       consumes:

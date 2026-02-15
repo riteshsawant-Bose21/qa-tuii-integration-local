@@ -74,6 +74,55 @@ const docTemplate = `{
                 }
             }
         },
+        "/firmware": {
+            "get": {
+                "description": "List all firmware releases with pagination and filtering",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Firmware Update"
+                ],
+                "summary": "List Firmware Releases",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Page number",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Items per page",
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Platform filter",
+                        "name": "platform",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/types.FirmwareReleaseListResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/firmware/initiateRelease": {
             "post": {
                 "description": "Insert release details to firmware_releases table and return a presigned URL to upload the artifacts to s3",
@@ -1906,6 +1955,58 @@ const docTemplate = `{
                 "feature_name": {
                     "type": "string",
                     "example": "launcher.project.create"
+                }
+            }
+        },
+        "types.FirmwareReleaseDetails": {
+            "type": "object",
+            "properties": {
+                "apiVersion": {
+                    "type": "string"
+                },
+                "created": {
+                    "type": "string"
+                },
+                "firmwareVersion": {
+                    "type": "string"
+                },
+                "hwCompatibility": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "minDesktopAppVersion": {
+                    "type": "string"
+                },
+                "platform": {
+                    "type": "string"
+                },
+                "releaseNotes": {
+                    "type": "string"
+                },
+                "updated": {
+                    "type": "string"
+                }
+            }
+        },
+        "types.FirmwareReleaseListResponse": {
+            "type": "object",
+            "properties": {
+                "limit": {
+                    "type": "integer"
+                },
+                "page": {
+                    "type": "integer"
+                },
+                "releases": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/types.FirmwareReleaseDetails"
+                    }
+                },
+                "total": {
+                    "type": "integer"
                 }
             }
         },

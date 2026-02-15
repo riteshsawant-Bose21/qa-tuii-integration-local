@@ -139,3 +139,25 @@ func (s *Service) UpdateReleaseStatus(ctx context.Context, releaseID string, sta
 	_, err := release.Update(ctx, tx, boil.Whitelist(model.FirmwareReleaseColumns.Status))
 	return err
 }
+
+func (s *Service) ListReleases(ctx context.Context, limit, offset int, platform string) ([]*model.FirmwareRelease, int64, error) {
+	var mods []qm.QueryMod
+
+	if platform != "" {
+		mods = append(mods, qm.Where("platform = ?", platform))
+	}
+
+	total, err := model.FirmwareReleases(mods...).Count(ctx, s.db)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	mods = append(mods, qm.Limit(limit), qm.Offset(offset), qm.OrderBy("created_at DESC"))
+
+	releases, err := model.FirmwareReleases(mods...).All(ctx, s.db)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	return releases, total, nil
+}
