@@ -20,6 +20,8 @@ type DatabaseService interface {
 	GetDB(ctx context.Context) customModel.DBWithTransactions
 	GetReleaseByVersion(ctx context.Context, platform string, version string) (*model.FirmwareRelease, error)
 	CheckIfNewerVersionExists(ctx context.Context, platform string, version string) (bool, error)
+	GetReleaseByID(ctx context.Context, releaseID string) (*model.FirmwareRelease, error)
+	UpdateReleaseStatus(ctx context.Context, releaseID string, status string, tx customModel.DBContextExecutor) error
 	InsertRelease(ctx context.Context, releaseDetails types.FirmwareReleaseMetaData, checksum string, filePath string, tx customModel.DBContextExecutor, logger *zap.Logger) (string, error)
 	InsertDeployment(ctx context.Context, releaseID string, tx customModel.DBContextExecutor, channel string, logger *zap.Logger) (string, error)
 }

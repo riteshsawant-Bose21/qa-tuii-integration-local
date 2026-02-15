@@ -28,8 +28,8 @@ func NewFirmwareUpdateHandler(firmware fusion.Firmware) *FirmwareUpdateHandler {
 // @Produce json
 // @Param request body types.InitiateFirmwareReleasePayload true "Firmware release details"
 // @Success 200 {object} types.FormwareReleaseInitiateResposne "Returns releaseId and presignedUrl"
-// @Failure 400 {object} response.ErrorResponse
-// @Failure 500 {object} response.ErrorResponse
+// @Failure 400 {object} types.ErrorResponse
+// @Failure 500 {object} types.ErrorResponse
 // @Router /firmware/initiateRelease [post]
 func (h *FirmwareUpdateHandler) InitiateRelease(ctx *gin.Context) {
 	var payload types.InitiateFirmwareReleasePayload
@@ -52,4 +52,38 @@ func (h *FirmwareUpdateHandler) InitiateRelease(ctx *gin.Context) {
 
 	response.OK(ctx, types.FormwareReleaseInitiateResposne{ReleaseID: ID, PresignedURL: presignURL})
 
+}
+
+// MakeReleaseAvailable updates the status of a release to available and creates a deployment
+// @Summary Make Release Available
+// @Description Updates the status of a release to available and creates a deployment
+// @Tags Firmware Update
+// @Accept json
+// @Produce json
+// @Param releaseID path string true "Release ID"
+// @Success 204 "Success"
+// @Failure 400 {object} types.ErrorResponse
+// @Failure 500 {object} types.ErrorResponse
+// @Router /firmware/{releaseID}/makeReleaseAvailable [post]
+func (h *FirmwareUpdateHandler) MakeReleaseAvailable(ctx *gin.Context) {
+	releaseID := ctx.Param("releaseID")
+	if releaseID == "" {
+		response.BadRequest(ctx, "releaseID is required")
+		return
+	}
+
+	loggerFromContext, exists := ctx.Get("logger")
+	if !exists {
+		response.InternalError(ctx)
+		return
+	}
+	logger := loggerFromContext.(*zap.Logger)
+
+	err := h.firmware.MakeReleaseAvailable(ctx, releaseID, logger)
+	if err != nil {
+		response.InternalError(ctx)
+		return
+	}
+
+	response.NoContent(ctx)
 }

@@ -147,6 +147,35 @@ definitions:
         example: launcher.project.create
         type: string
     type: object
+  types.FirmwareReleaseMetaData:
+    properties:
+      apiVersion:
+        type: string
+      firmwareVersion:
+        type: string
+      hwCompatibility:
+        type: string
+      minDesktopAppVersion:
+        type: string
+      platform:
+        type: string
+      releaseNotes:
+        type: string
+    required:
+    - apiVersion
+    - firmwareVersion
+    - hwCompatibility
+    - minDesktopAppVersion
+    - platform
+    - releaseNotes
+    type: object
+  types.FormwareReleaseInitiateResposne:
+    properties:
+      presignedUrl:
+        type: string
+      releaseId:
+        type: string
+    type: object
   types.GetAllProjectsResponse:
     properties:
       data:
@@ -164,6 +193,14 @@ definitions:
         type: integer
     type: object
   types.InitiateFirmwareReleasePayload:
+    properties:
+      checksum:
+        type: string
+      metaData:
+        $ref: '#/definitions/types.FirmwareReleaseMetaData'
+    required:
+    - checksum
+    - metaData
     type: object
   types.OrganizationUsersResponse:
     properties:
@@ -796,6 +833,33 @@ paths:
       summary: Get Auth0 tokens for automation testing
       tags:
       - auth
+  /firmware/{releaseID}/makeReleaseAvailable:
+    post:
+      consumes:
+      - application/json
+      description: Updates the status of a release to available and creates a deployment
+      parameters:
+      - description: Release ID
+        in: path
+        name: releaseID
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: Success
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+      summary: Make Release Available
+      tags:
+      - Firmware Update
   /firmware/initiateRelease:
     post:
       consumes:
@@ -811,7 +875,19 @@ paths:
           $ref: '#/definitions/types.InitiateFirmwareReleasePayload'
       produces:
       - application/json
-      responses: {}
+      responses:
+        "200":
+          description: Returns releaseId and presignedUrl
+          schema:
+            $ref: '#/definitions/types.FormwareReleaseInitiateResposne'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
       summary: Initiate Firmware Release
       tags:
       - Firmware Update

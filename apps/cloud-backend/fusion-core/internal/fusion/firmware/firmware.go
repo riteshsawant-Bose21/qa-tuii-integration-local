@@ -67,3 +67,41 @@ func (s *Service) InitiateRelease(ctx context.Context, releaseDetails *types.Ini
 
 	return ID, presignURL, nil
 }
+
+func (s *Service) MakeReleaseAvailable(ctx context.Context, releaseID string, logger *zap.Logger) error {
+	// Check if release exists
+	release, err := s.dbService.GetReleaseByID(ctx, releaseID)
+	if err != nil {
+		return fmt.Errorf("failed to get release: %v", err)
+	}
+	if release == nil {
+		return errors.New("release not found")
+	}
+
+	// Start transaction
+	db := s.dbService.GetDB(ctx)
+	tx, err := db.BeginTx(ctx, nil)
+	if err != nil {
+		return fmt.Errorf("failed to begin transaction: %v", err)
+	}
+
+	// Update status to AVAILABLE
+	err = s.dbService.UpdateReleaseStatus(ctx, releaseID, "AVAILABLE", tx)
+	if err != nil {
+		tx.Rollback()
+		return fmt.Errorf("failed to update release status: %v", err)
+	}
+
+	// Insert into deployments
+	_, err = s.dbService.InsertDeployment(ctx, releaseID, tx, "dev", logger)
+	if err != nil {
+		tx.Rollback()
+		return fmt.Errorf("failed to insert deployment: %v", err)
+	}
+
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("failed to commit transaction: %v", err)
+	}
+
+	return nil
+}

@@ -116,6 +116,7 @@ func (a *API) registerRoutes() {
 
 	{
 		firmwareUpdate.POST(constants.EndpointFirmwareInitiateRelease, firmwareHandler.InitiateRelease)
+		firmwareUpdate.POST(constants.EndpointFirmwareMakeAvailable, firmwareHandler.MakeReleaseAvailable)
 	}
 
 }

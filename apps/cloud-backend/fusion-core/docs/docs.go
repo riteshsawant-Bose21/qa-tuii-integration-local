@@ -98,7 +98,67 @@ const docTemplate = `{
                         }
                     }
                 ],
-                "responses": {}
+                "responses": {
+                    "200": {
+                        "description": "Returns releaseId and presignedUrl",
+                        "schema": {
+                            "$ref": "#/definitions/types.FormwareReleaseInitiateResposne"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/firmware/{releaseID}/makeReleaseAvailable": {
+            "post": {
+                "description": "Updates the status of a release to available and creates a deployment",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Firmware Update"
+                ],
+                "summary": "Make Release Available",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Release ID",
+                        "name": "releaseID",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "Success"
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    }
+                }
             }
         },
         "/organization/role-management": {
@@ -1849,6 +1909,48 @@ const docTemplate = `{
                 }
             }
         },
+        "types.FirmwareReleaseMetaData": {
+            "type": "object",
+            "required": [
+                "apiVersion",
+                "firmwareVersion",
+                "hwCompatibility",
+                "minDesktopAppVersion",
+                "platform",
+                "releaseNotes"
+            ],
+            "properties": {
+                "apiVersion": {
+                    "type": "string"
+                },
+                "firmwareVersion": {
+                    "type": "string"
+                },
+                "hwCompatibility": {
+                    "type": "string"
+                },
+                "minDesktopAppVersion": {
+                    "type": "string"
+                },
+                "platform": {
+                    "type": "string"
+                },
+                "releaseNotes": {
+                    "type": "string"
+                }
+            }
+        },
+        "types.FormwareReleaseInitiateResposne": {
+            "type": "object",
+            "properties": {
+                "presignedUrl": {
+                    "type": "string"
+                },
+                "releaseId": {
+                    "type": "string"
+                }
+            }
+        },
         "types.GetAllProjectsResponse": {
             "type": "object",
             "properties": {
@@ -1873,7 +1975,19 @@ const docTemplate = `{
             }
         },
         "types.InitiateFirmwareReleasePayload": {
-            "type": "object"
+            "type": "object",
+            "required": [
+                "checksum",
+                "metaData"
+            ],
+            "properties": {
+                "checksum": {
+                    "type": "string"
+                },
+                "metaData": {
+                    "$ref": "#/definitions/types.FirmwareReleaseMetaData"
+                }
+            }
         },
         "types.OrganizationUsersResponse": {
             "type": "object",

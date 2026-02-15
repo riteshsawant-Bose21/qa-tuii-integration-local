@@ -2,6 +2,7 @@ package db
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 
 	types "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/api/types"
@@ -93,7 +94,7 @@ func (s *Service) InsertRelease(ctx context.Context, releaseDetails types.Firmwa
 }
 
 func (s *Service) InsertDeployment(ctx context.Context, releaseID string, dbTx customModel.DBContextExecutor, channel string, logger *zap.Logger) (string, error) {
-	deployRecord := &model.Deployment{
+	deployRecord := &model.FirmwareDeployment{
 		ReleaseID: releaseID,
 		Channel:   channel,
 	}
@@ -107,4 +108,34 @@ func (s *Service) InsertDeployment(ctx context.Context, releaseID string, dbTx c
 	}
 
 	return deployRecord.ID, nil
+}
+
+func (s *Service) GetReleaseByID(ctx context.Context, releaseID string) (*model.FirmwareRelease, error) {
+	if releaseID == "" {
+		return nil, errors.New("releaseID cannot be empty")
+	}
+
+	release, err := model.FindFirmwareRelease(ctx, s.db, releaseID)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, nil // Return nil if not found, let caller handle
+		}
+		return nil, err
+	}
+
+	return release, nil
+}
+
+func (s *Service) UpdateReleaseStatus(ctx context.Context, releaseID string, status string, tx customModel.DBContextExecutor) error {
+	if releaseID == "" || status == "" {
+		return errors.New("releaseID and status cannot be empty")
+	}
+
+	release := &model.FirmwareRelease{
+		ID:     releaseID,
+		Status: status,
+	}
+
+	_, err := release.Update(ctx, tx, boil.Whitelist(model.FirmwareReleaseColumns.Status))
+	return err
 }

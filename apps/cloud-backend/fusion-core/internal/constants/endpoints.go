@@ -68,4 +68,5 @@ const (
 
 	EndpointFirmware                = "/firmware"
 	EndpointFirmwareInitiateRelease = "/initiateRelease"
+	EndpointFirmwareMakeAvailable   = "/:releaseID/makeReleaseAvailable"
 )

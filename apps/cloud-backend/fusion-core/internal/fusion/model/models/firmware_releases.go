@@ -182,14 +182,14 @@ var FirmwareReleaseWhere = struct {
 
 // FirmwareReleaseRels is where relationship names are stored.
 var FirmwareReleaseRels = struct {
-	ReleaseDeployments string
+	ReleaseFirmwareDeployments string
 }{
-	ReleaseDeployments: "ReleaseDeployments",
+	ReleaseFirmwareDeployments: "ReleaseFirmwareDeployments",
 }
 
 // firmwareReleaseR is where relationships are stored.
 type firmwareReleaseR struct {
-	ReleaseDeployments DeploymentSlice `boil:"ReleaseDeployments" json:"ReleaseDeployments" toml:"ReleaseDeployments" yaml:"ReleaseDeployments"`
+	ReleaseFirmwareDeployments FirmwareDeploymentSlice `boil:"ReleaseFirmwareDeployments" json:"ReleaseFirmwareDeployments" toml:"ReleaseFirmwareDeployments" yaml:"ReleaseFirmwareDeployments"`
 }
 
 // NewStruct creates a new relationship struct
@@ -197,20 +197,20 @@ func (*firmwareReleaseR) NewStruct() *firmwareReleaseR {
 	return &firmwareReleaseR{}
 }
 
-func (o *FirmwareRelease) GetReleaseDeployments() DeploymentSlice {
+func (o *FirmwareRelease) GetReleaseFirmwareDeployments() FirmwareDeploymentSlice {
 	if o == nil {
 		return nil
 	}
 
-	return o.R.GetReleaseDeployments()
+	return o.R.GetReleaseFirmwareDeployments()
 }
 
-func (r *firmwareReleaseR) GetReleaseDeployments() DeploymentSlice {
+func (r *firmwareReleaseR) GetReleaseFirmwareDeployments() FirmwareDeploymentSlice {
 	if r == nil {
 		return nil
 	}
 
-	return r.ReleaseDeployments
+	return r.ReleaseFirmwareDeployments
 }
 
 // firmwareReleaseL is where Load methods for each relationship are stored.
@@ -529,23 +529,23 @@ func (q firmwareReleaseQuery) Exists(ctx context.Context, exec boil.ContextExecu
 	return count > 0, nil
 }
 
-// ReleaseDeployments retrieves all the deployment's Deployments with an executor via release_id column.
-func (o *FirmwareRelease) ReleaseDeployments(mods ...qm.QueryMod) deploymentQuery {
+// ReleaseFirmwareDeployments retrieves all the firmware_deployment's FirmwareDeployments with an executor via release_id column.
+func (o *FirmwareRelease) ReleaseFirmwareDeployments(mods ...qm.QueryMod) firmwareDeploymentQuery {
 	var queryMods []qm.QueryMod
 	if len(mods) != 0 {
 		queryMods = append(queryMods, mods...)
 	}
 
 	queryMods = append(queryMods,
-		qm.Where("\"deployments\".\"release_id\"=?", o.ID),
+		qm.Where("\"firmware_deployments\".\"release_id\"=?", o.ID),
 	)
 
-	return Deployments(queryMods...)
+	return FirmwareDeployments(queryMods...)
 }
 
-// LoadReleaseDeployments allows an eager lookup of values, cached into the
+// LoadReleaseFirmwareDeployments allows an eager lookup of values, cached into the
 // loaded structs of the objects. This is for a 1-M or N-M relationship.
-func (firmwareReleaseL) LoadReleaseDeployments(ctx context.Context, e boil.ContextExecutor, singular bool, maybeFirmwareRelease interface{}, mods queries.Applicator) error {
+func (firmwareReleaseL) LoadReleaseFirmwareDeployments(ctx context.Context, e boil.ContextExecutor, singular bool, maybeFirmwareRelease interface{}, mods queries.Applicator) error {
 	var slice []*FirmwareRelease
 	var object *FirmwareRelease
 
@@ -598,8 +598,8 @@ func (firmwareReleaseL) LoadReleaseDeployments(ctx context.Context, e boil.Conte
 	}
 
 	query := NewQuery(
-		qm.From(`deployments`),
-		qm.WhereIn(`deployments.release_id in ?`, argsSlice...),
+		qm.From(`firmware_deployments`),
+		qm.WhereIn(`firmware_deployments.release_id in ?`, argsSlice...),
 	)
 	if mods != nil {
 		mods.Apply(query)
@@ -607,22 +607,22 @@ func (firmwareReleaseL) LoadReleaseDeployments(ctx context.Context, e boil.Conte
 
 	results, err := query.QueryContext(ctx, e)
 	if err != nil {
-		return errors.Wrap(err, "failed to eager load deployments")
+		return errors.Wrap(err, "failed to eager load firmware_deployments")
 	}
 
-	var resultSlice []*Deployment
+	var resultSlice []*FirmwareDeployment
 	if err = queries.Bind(results, &resultSlice); err != nil {
-		return errors.Wrap(err, "failed to bind eager loaded slice deployments")
+		return errors.Wrap(err, "failed to bind eager loaded slice firmware_deployments")
 	}
 
 	if err = results.Close(); err != nil {
-		return errors.Wrap(err, "failed to close results in eager load on deployments")
+		return errors.Wrap(err, "failed to close results in eager load on firmware_deployments")
 	}
 	if err = results.Err(); err != nil {
-		return errors.Wrap(err, "error occurred during iteration of eager loaded relations for deployments")
+		return errors.Wrap(err, "error occurred during iteration of eager loaded relations for firmware_deployments")
 	}
 
-	if len(deploymentAfterSelectHooks) != 0 {
+	if len(firmwareDeploymentAfterSelectHooks) != 0 {
 		for _, obj := range resultSlice {
 			if err := obj.doAfterSelectHooks(ctx, e); err != nil {
 				return err
@@ -630,10 +630,10 @@ func (firmwareReleaseL) LoadReleaseDeployments(ctx context.Context, e boil.Conte
 		}
 	}
 	if singular {
-		object.R.ReleaseDeployments = resultSlice
+		object.R.ReleaseFirmwareDeployments = resultSlice
 		for _, foreign := range resultSlice {
 			if foreign.R == nil {
-				foreign.R = &deploymentR{}
+				foreign.R = &firmwareDeploymentR{}
 			}
 			foreign.R.Release = object
 		}
@@ -643,9 +643,9 @@ func (firmwareReleaseL) LoadReleaseDeployments(ctx context.Context, e boil.Conte
 	for _, foreign := range resultSlice {
 		for _, local := range slice {
 			if local.ID == foreign.ReleaseID {
-				local.R.ReleaseDeployments = append(local.R.ReleaseDeployments, foreign)
+				local.R.ReleaseFirmwareDeployments = append(local.R.ReleaseFirmwareDeployments, foreign)
 				if foreign.R == nil {
-					foreign.R = &deploymentR{}
+					foreign.R = &firmwareDeploymentR{}
 				}
 				foreign.R.Release = local
 				break
@@ -656,11 +656,11 @@ func (firmwareReleaseL) LoadReleaseDeployments(ctx context.Context, e boil.Conte
 	return nil
 }
 
-// AddReleaseDeployments adds the given related objects to the existing relationships
+// AddReleaseFirmwareDeployments adds the given related objects to the existing relationships
 // of the firmware_release, optionally inserting them as new records.
-// Appends related to o.R.ReleaseDeployments.
+// Appends related to o.R.ReleaseFirmwareDeployments.
 // Sets related.R.Release appropriately.
-func (o *FirmwareRelease) AddReleaseDeployments(ctx context.Context, exec boil.ContextExecutor, insert bool, related ...*Deployment) error {
+func (o *FirmwareRelease) AddReleaseFirmwareDeployments(ctx context.Context, exec boil.ContextExecutor, insert bool, related ...*FirmwareDeployment) error {
 	var err error
 	for _, rel := range related {
 		if insert {
@@ -670,9 +670,9 @@ func (o *FirmwareRelease) AddReleaseDeployments(ctx context.Context, exec boil.C
 			}
 		} else {
 			updateQuery := fmt.Sprintf(
-				"UPDATE \"deployments\" SET %s WHERE %s",
+				"UPDATE \"firmware_deployments\" SET %s WHERE %s",
 				strmangle.SetParamNames("\"", "\"", 1, []string{"release_id"}),
-				strmangle.WhereClause("\"", "\"", 2, deploymentPrimaryKeyColumns),
+				strmangle.WhereClause("\"", "\"", 2, firmwareDeploymentPrimaryKeyColumns),
 			)
 			values := []interface{}{o.ID, rel.ID}
 
@@ -691,15 +691,15 @@ func (o *FirmwareRelease) AddReleaseDeployments(ctx context.Context, exec boil.C
 
 	if o.R == nil {
 		o.R = &firmwareReleaseR{
-			ReleaseDeployments: related,
+			ReleaseFirmwareDeployments: related,
 		}
 	} else {
-		o.R.ReleaseDeployments = append(o.R.ReleaseDeployments, related...)
+		o.R.ReleaseFirmwareDeployments = append(o.R.ReleaseFirmwareDeployments, related...)
 	}
 
 	for _, rel := range related {
 		if rel.R == nil {
-			rel.R = &deploymentR{
+			rel.R = &firmwareDeploymentR{
 				Release: o,
 			}
 		} else {
