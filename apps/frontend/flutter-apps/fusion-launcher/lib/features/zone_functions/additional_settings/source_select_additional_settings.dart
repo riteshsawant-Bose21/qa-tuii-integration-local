@@ -410,7 +410,7 @@ class _AdditionalPrioritySettingsWidgetState extends State<AdditionalPrioritySet
 
                 Divider(color: context.colorScheme.strokeLight, height: 0),
 
-                Flexible(child: _buildReorderablePriorityWidgets(widget.vm)),
+                Flexible(child: _buildPriorityWidgets(widget.vm)),
               ],
             ),
           ),
@@ -423,7 +423,7 @@ class _AdditionalPrioritySettingsWidgetState extends State<AdditionalPrioritySet
     return child;
   }
 
-  Widget _buildReorderablePriorityWidgets(ZoneFunctionAdditionalSettingsViewModel vm) {
+  Widget _buildPriorityWidgets(ZoneFunctionAdditionalSettingsViewModel vm) {
     final ZoneFunctions? existingFunction = projectViewModel.getZoneFunctionForZone(zoneId: widget.zoneId);
     if (!(existingFunction?.hasPriority ?? false)) return const SizedBox.shrink();
 
@@ -473,7 +473,7 @@ class _AdditionalPrioritySettingsWidgetState extends State<AdditionalPrioritySet
                   Padding(
                     padding: const EdgeInsets.all(16.0),
                     child: FusionAppText(
-                      text: "PRIORITY $index",
+                      text: "PRIORITY ${index + 1}",
                       style: context.textTheme.labelMedium?.copyWith(
                         fontWeight: FontWeight.bold,
                       ),
@@ -486,7 +486,7 @@ class _AdditionalPrioritySettingsWidgetState extends State<AdditionalPrioritySet
                       builder: (BuildContext context) {
                         if (selectedSourceName == null) {
                           return FusionAppText(
-                            text: "No source selected for priority $index.",
+                            text: "No source selected for priority ${index + 1}.",
                             style: Theme.of(context).textTheme.labelSmall?.copyWith(
                               fontSize: 10,
                               color: const Color(0xFF888888),
@@ -520,7 +520,10 @@ class _AdditionalPrioritySettingsWidgetState extends State<AdditionalPrioritySet
                                             width: 44,
                                             height: 24,
                                             onChanged: (bool value) {
-                                              vm.setPriorityControlType(index, AdditionalSettingsPriorityControlType.pttControler);
+                                              vm.setPriorityControlType(
+                                                index,
+                                                value ? AdditionalSettingsPriorityControlType.pttControler : null,
+                                              );
                                             },
                                           ),
                                         ),
@@ -548,7 +551,10 @@ class _AdditionalPrioritySettingsWidgetState extends State<AdditionalPrioritySet
                                             width: 44,
                                             height: 24,
                                             onChanged: (bool value) {
-                                              vm.setPriorityControlType(index, AdditionalSettingsPriorityControlType.threshold);
+                                              vm.setPriorityControlType(
+                                                index,
+                                                value ? AdditionalSettingsPriorityControlType.threshold : null,
+                                              );
                                             },
                                           ),
                                         ),
@@ -598,8 +604,41 @@ class _AdditionalPrioritySettingsWidgetState extends State<AdditionalPrioritySet
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: <Widget>[
+                                    Center(
+                                      child: FusionAppText(
+                                        text: "STATE",
+                                        style: context.textTheme.labelMedium?.copyWith(
+                                          color: context.colorScheme.textSecondary,
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(height: 10),
+                                    FusionNeumorphicButton(
+                                      height: 34,
+                                      width: double.infinity,
+                                      text: "Active",
+                                      color: context.colorScheme.elevation2,
+                                      onTap: () {
+                                        //
+                                      },
+                                    ),
+                                    const SizedBox(height: 10),
+                                    Divider(color: context.colorScheme.strokeLight, height: 0),
+                                    const SizedBox(height: 10),
+
+                                    Center(
+                                      child: FusionAppText(
+                                        text: "BEHAVIOR",
+                                        style: context.textTheme.labelMedium?.copyWith(
+                                          color: context.colorScheme.textSecondary,
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(height: 10),
+
                                     PBDropdown<AdditionalSettingPriorityBehavior>(
                                       hintText: "select",
+                                      value: vm.getPriorityBehavior(index)?.displayName,
                                       items: AdditionalSettingPriorityBehavior.values,
                                       itemBuilder: (BuildContext context, AdditionalSettingPriorityBehavior mode) {
                                         return FusionAppText(
@@ -615,12 +654,16 @@ class _AdditionalPrioritySettingsWidgetState extends State<AdditionalPrioritySet
                                     Row(
                                       spacing: 5,
                                       children: <Widget>[
-                                        const Expanded(
+                                        Expanded(
                                           child: FusionAppText(
                                             text: "DEPTH",
+                                            style: context.textTheme.labelMedium?.copyWith(
+                                              color: context.colorScheme.textSecondary,
+                                            ),
                                           ),
                                         ),
                                         NeumorphicGainTextField(
+                                          enabled: vm.isFieldsEnabled(index),
                                           controllerValue: vm.getDepth(index),
                                           maxGain: 12,
                                           minGain: -60,
@@ -634,12 +677,16 @@ class _AdditionalPrioritySettingsWidgetState extends State<AdditionalPrioritySet
                                     Row(
                                       spacing: 5,
                                       children: <Widget>[
-                                        const Expanded(
+                                        Expanded(
                                           child: FusionAppText(
                                             text: "ATTACK",
+                                            style: context.textTheme.labelMedium?.copyWith(
+                                              color: context.colorScheme.textSecondary,
+                                            ),
                                           ),
                                         ),
                                         NeumorphicGainTextField(
+                                          enabled: vm.isFieldsEnabled(index),
                                           controllerValue: vm.getAttack(index),
                                           maxGain: 12,
                                           minGain: -60,
@@ -653,12 +700,16 @@ class _AdditionalPrioritySettingsWidgetState extends State<AdditionalPrioritySet
                                     Row(
                                       spacing: 5,
                                       children: <Widget>[
-                                        const Expanded(
+                                        Expanded(
                                           child: FusionAppText(
                                             text: "HOLD",
+                                            style: context.textTheme.labelMedium?.copyWith(
+                                              color: context.colorScheme.textSecondary,
+                                            ),
                                           ),
                                         ),
                                         UnitNumberTextField(
+                                          enabled: vm.isFieldsEnabled(index),
                                           min: 1,
                                           max: null,
                                           unit: "ms",
@@ -673,12 +724,16 @@ class _AdditionalPrioritySettingsWidgetState extends State<AdditionalPrioritySet
                                     Row(
                                       spacing: 5,
                                       children: <Widget>[
-                                        const Expanded(
+                                        Expanded(
                                           child: FusionAppText(
                                             text: "RELEASE",
+                                            style: context.textTheme.labelMedium?.copyWith(
+                                              color: context.colorScheme.textSecondary,
+                                            ),
                                           ),
                                         ),
                                         UnitNumberTextField(
+                                          enabled: vm.isFieldsEnabled(index),
                                           min: 1,
                                           max: null,
                                           unit: "ms",
@@ -714,15 +769,18 @@ class _AdditionalPrioritySettingsWidgetState extends State<AdditionalPrioritySet
                                   ),
                                   Divider(color: context.colorScheme.strokeLight, height: 0),
                                   const SizedBox(height: 10),
-                                  NeumorphicGainTextField(
-                                    maxGain: 12,
-                                    minGain: -60,
-                                    showDbSuffix: false,
-                                    enabled: false,
-                                    controllerValue: vm.reductionValue,
-                                    onSubmitted: (double value) {
-                                      // TODO:
-                                    },
+                                  FusionContainer(
+                                    width: 100,
+                                    height: 32,
+                                    alignment: Alignment.center,
+                                    borderRadius: 8,
+                                    color: context.colorScheme.elevation2,
+                                    child: FusionAppText(
+                                      text: "${vm.reductionValue ?? 0.0}",
+                                      style: context.textTheme.labelMedium?.copyWith(
+                                        color: context.colorScheme.textSecondary,
+                                      ),
+                                    ),
                                   ),
                                   const SizedBox(height: 10),
                                   FusionAppText(

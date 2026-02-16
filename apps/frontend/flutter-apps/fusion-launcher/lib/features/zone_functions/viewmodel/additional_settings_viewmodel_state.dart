@@ -88,6 +88,9 @@ class SourceSelectAdditionalSettingsModel extends Equatable {
     useCrossfade,
     thresholdValue,
     reductionValue,
+    priorityAdditionalSettingsModel,
+    zone,
+    subZone,
   ];
 }
 
@@ -109,7 +112,6 @@ class PriorityAdditionalSettingsModel extends Equatable {
   });
 
   PriorityAdditionalSettingsModel copyWith({
-    int? index,
     AdditionalSettingsPriorityControlType? priorityControlType,
     AdditionalSettingPriorityBehavior? priorityBehavior,
     double? depth,

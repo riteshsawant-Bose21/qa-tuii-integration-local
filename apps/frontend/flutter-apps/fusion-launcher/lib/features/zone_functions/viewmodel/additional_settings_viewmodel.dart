@@ -67,13 +67,22 @@ class ZoneFunctionAdditionalSettingsViewModel extends Cubit<ZoneFunctionAddition
 
   AdditionalSettingPriorityBehavior? getPriorityBehavior(int index) =>
       state.sourceSelectAdditionalSettingsModel?.priorityAdditionalSettingsModel?[index].priorityBehavior;
+
   void setPriorityBehavior(int index, AdditionalSettingPriorityBehavior? priorityBehavior) {
     final List<PriorityAdditionalSettingsModel> priorityAdditionalSettingsModel = <PriorityAdditionalSettingsModel>[
       ...?state.sourceSelectAdditionalSettingsModel?.priorityAdditionalSettingsModel,
     ];
 
     if (index < priorityAdditionalSettingsModel.length) {
-      priorityAdditionalSettingsModel[index] = priorityAdditionalSettingsModel[index].copyWith(priorityBehavior: priorityBehavior);
+      final bool shouldResetFields = priorityBehavior != AdditionalSettingPriorityBehavior.custom;
+      priorityAdditionalSettingsModel[index] = priorityAdditionalSettingsModel[index].copyWith(
+        priorityBehavior: priorityBehavior,
+        depth: shouldResetFields ? 0.0 : null,
+        attack: shouldResetFields ? 0.0 : null,
+        hold: shouldResetFields ? 0.0 : null,
+        release: shouldResetFields ? 0.0 : null,
+      );
+
       emit(
         state.copyWith(
           sourceSelectAdditionalSettingsModel: state.sourceSelectAdditionalSettingsModel?.copyWith(
@@ -104,6 +113,19 @@ class ZoneFunctionAdditionalSettingsViewModel extends Cubit<ZoneFunctionAddition
         ),
       ),
     );
+  }
+
+  bool isFieldsEnabled(int index) {
+    final List<PriorityAdditionalSettingsModel> priorityAdditionalSettingsModel = <PriorityAdditionalSettingsModel>[
+      ...?state.sourceSelectAdditionalSettingsModel?.priorityAdditionalSettingsModel,
+    ];
+
+    if (index < priorityAdditionalSettingsModel.length) {
+      final AdditionalSettingPriorityBehavior? priorityBehavior = priorityAdditionalSettingsModel[index].priorityBehavior;
+      return priorityBehavior != null && priorityBehavior == AdditionalSettingPriorityBehavior.custom;
+    }
+
+    return false;
   }
 
   double? getDepth(int index) => state.sourceSelectAdditionalSettingsModel?.priorityAdditionalSettingsModel?[index].depth;
