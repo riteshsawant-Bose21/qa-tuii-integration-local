@@ -734,6 +734,10 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with TickerProviderSt
           if (state is TabChanged && mounted) {
             _initController(state.tab == 0);
           }
+          if (state is VipUpdated) {
+            _createTabWidgets();
+            _tabController.animateTo(1);
+          }
         },
         builder: (BuildContext context, ProjectViewModelState state) {
           return Scaffold(
