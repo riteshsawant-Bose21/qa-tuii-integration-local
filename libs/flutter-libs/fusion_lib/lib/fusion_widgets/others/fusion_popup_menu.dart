@@ -27,7 +27,7 @@ class FusionPopupMenu<T> extends StatelessWidget {
     return SemanticHelper.button(
       testId: SemanticHelper.createTestId(SemanticTypes.dropdown, tooltip ?? 'popup_menu'),
       child: PopupMenuButton<T>(
-        tooltip: tooltip,
+        tooltip: tooltip ?? '',
         position: PopupMenuPosition.under,
         menuPadding: EdgeInsets.zero,
         offset: popupOffset,

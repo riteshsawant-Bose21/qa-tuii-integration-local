@@ -5,6 +5,7 @@ import 'package:fusion_launcher/features/configuration/presentation/viewmodel/pr
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
+import 'additional_settings/source_select_additional_settings.dart';
 import 'source_mix.dart';
 import 'widgets/priority_selection_widget.dart';
 
@@ -45,6 +46,9 @@ class _SourceSelectZoneControlPanelState extends State<SourceSelectZoneControlPa
 
   @override
   Widget build(BuildContext context) {
+    final ZoneFunctions? existingFunction = projectViewModel.getZoneFunctionForZone(zoneId: widget.zoneID);
+    final bool hasPriority = existingFunction?.hasPriority ?? false;
+
     return Material(
       color: Colors.transparent,
       type: MaterialType.transparency,
@@ -109,7 +113,7 @@ class _SourceSelectZoneControlPanelState extends State<SourceSelectZoneControlPa
                     ///                             MAIN CONTENT
                     /// --------------------------------------------------------------------------------
                     Padding(
-                      padding: const EdgeInsets.only(top: 50),
+                      padding: const EdgeInsets.symmetric(vertical: 50.0).copyWith(bottom: hasPriority ? null : 0),
                       child: SemanticHelper.container(
                         testId: SemanticHelper.createTestId(SemanticTypes.container, "source_select_main_container"),
                         child: BlocConsumer<ProjectViewModel, ProjectViewModelState>(
@@ -307,6 +311,52 @@ class _SourceSelectZoneControlPanelState extends State<SourceSelectZoneControlPa
                         ),
                       ),
                     ),
+                    if (hasPriority) ...<Widget>[
+                      Positioned(
+                        bottom: 0,
+                        right: 0,
+                        child: Material(
+                          color: Colors.transparent,
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                            child: InkWell(
+                              onTap: () {
+                                SourceSelectAdditionalSettings.showDialog(
+                                  context,
+                                  zoneID: widget.zoneID,
+                                );
+                              },
+                              borderRadius: BorderRadius.circular(8),
+                              splashColor: Colors.transparent,
+                              child: Ink(
+                                padding: const EdgeInsets.all(12),
+                                decoration: BoxDecoration(
+                                  color: context.colorScheme.elevation2,
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: <Widget>[
+                                    Flexible(
+                                      child: FusionAppText(
+                                        text: "Additional Settings",
+                                        style: Theme.of(context).textTheme.labelSmall,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Icon(
+                                      LucideIcons.arrowUpRight200,
+                                      size: 16,
+                                      color: context.colorScheme.iconDefault,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
                   ],
                 ),
               ),
