@@ -70,4 +70,6 @@ const (
 	EndpointFirmwareList            = ""
 	EndpointFirmwareInitiateRelease = "/initiateRelease"
 	EndpointFirmwareMakeAvailable   = "/:releaseID/makeReleaseAvailable"
+	EndpointFirmwareUpdateCheck     = "/updates/check"
+	EndpointFirmwareDownload        = "/getDownloadUrl/:platform/:version"
 )

@@ -36,22 +36,25 @@ func (s *Service) GetDB(_ context.Context) customModel.DBWithTransactions {
 	return s.db
 }
 
-func (s *Service) GetReleaseByVersion(ctx context.Context, platform string, version string) (*model.FirmwareRelease, error) {
+func (s *Service) GetReleaseByPlatformAndVersion(ctx context.Context, platform string, version string) (*model.FirmwareRelease, error) {
 	if platform == "" || version == "" {
 		return nil, errors.New("platform and version cannot be empty")
 	}
 
-	row, err := model.FirmwareReleases(
-		qm.Where("version_parts = string_to_array(?, '.')::int[]", version),
-		qm.OrderBy("version_parts ASC"),
+	release, err := model.FirmwareReleases(
+		qm.Where("platform = ?", platform),
+		qm.Where("version = ?", version),
 		qm.Limit(1),
 	).One(ctx, s.db)
 
 	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, nil
+		}
 		return nil, err
 	}
 
-	return row, nil
+	return release, nil
 }
 
 func (s *Service) CheckIfNewerVersionExists(ctx context.Context, platform string, version string) (bool, error) {
@@ -142,11 +145,15 @@ func (s *Service) UpdateReleaseStatus(ctx context.Context, releaseID string, sta
 	return err
 }
 
-func (s *Service) ListReleases(ctx context.Context, limit, offset int, platform string) ([]*model.FirmwareRelease, int64, error) {
+func (s *Service) ListReleases(ctx context.Context, limit, offset int, platform string, minVersion string) ([]*model.FirmwareRelease, int64, error) {
 	var mods []qm.QueryMod
 
 	if platform != "" {
 		mods = append(mods, qm.Where("platform = ?", platform))
+	}
+
+	if minVersion != "" {
+		mods = append(mods, qm.Where("version_parts > string_to_array(?, '.')::int[]", minVersion))
 	}
 
 	total, err := model.FirmwareReleases(mods...).Count(ctx, s.db)
@@ -154,7 +161,7 @@ func (s *Service) ListReleases(ctx context.Context, limit, offset int, platform 
 		return nil, 0, err
 	}
 
-	mods = append(mods, qm.Limit(limit), qm.Offset(offset), qm.OrderBy("created_at DESC"))
+	mods = append(mods, qm.Limit(limit), qm.Offset(offset), qm.OrderBy("version_parts DESC"))
 
 	releases, err := model.FirmwareReleases(mods...).All(ctx, s.db)
 	if err != nil {
@@ -162,4 +169,28 @@ func (s *Service) ListReleases(ctx context.Context, limit, offset int, platform 
 	}
 
 	return releases, total, nil
+}
+
+func (s *Service) GetLatestReleaseNewerThan(ctx context.Context, platformName, channelName, currentVersion string) (*model.FirmwareRelease, error) {
+	if platformName == "" || channelName == "" || currentVersion == "" {
+		return nil, errors.New("platform, channel, and currentVersion cannot be empty")
+	}
+
+	release, err := model.FirmwareReleases(
+		qm.InnerJoin("firmware_deployments on firmware_deployments.release_id = firmware_releases.id"),
+		qm.Where("firmware_releases.platform = ?", platformName),
+		qm.Where("firmware_deployments.channel = ?", channelName),
+		qm.Where("firmware_releases.version_parts > string_to_array(?, '.')::int[]", currentVersion),
+		qm.OrderBy("firmware_releases.version_parts DESC"),
+		qm.Limit(1),
+	).One(ctx, s.db)
+
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, nil // Return nil if no newer release found
+		}
+		return nil, err
+	}
+
+	return release, nil
 }

@@ -31,12 +31,28 @@ func (m *MockFirmwareService) MakeReleaseAvailable(ctx context.Context, releaseI
 	return args.Error(0)
 }
 
-func (m *MockFirmwareService) ListReleases(ctx context.Context, platform string, page, limit int) (*types.FirmwareReleaseListResponse, error) {
-	args := m.Called(ctx, platform, page, limit)
+func (m *MockFirmwareService) ListReleases(ctx context.Context, platform string, page, limit int, minVersion string) (*types.FirmwareReleaseListResponse, error) {
+	args := m.Called(ctx, platform, page, limit, minVersion)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
 	}
 	return args.Get(0).(*types.FirmwareReleaseListResponse), args.Error(1)
+}
+
+func (m *MockFirmwareService) CheckForUpdates(ctx context.Context, request *types.CheckUpdateRequest) (*types.CheckUpdateResponse, error) {
+	args := m.Called(ctx, request)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*types.CheckUpdateResponse), args.Error(1)
+}
+
+func (m *MockFirmwareService) GetArtifactDownloadURL(ctx context.Context, platform, version string, logger *zap.Logger) (*types.DownloadArtifactResponse, error) {
+	args := m.Called(ctx, platform, version, logger)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*types.DownloadArtifactResponse), args.Error(1)
 }
 
 func TestFirmwareUpdateHandler_ListReleases(t *testing.T) {
@@ -53,7 +69,7 @@ func TestFirmwareUpdateHandler_ListReleases(t *testing.T) {
 			name:        "Happy Path - Default Pagination",
 			queryParams: "",
 			mockSetup: func(m *MockFirmwareService) {
-				m.On("ListReleases", mock.Anything, "", 1, 10).Return(&types.FirmwareReleaseListResponse{
+				m.On("ListReleases", mock.Anything, "", 1, 10, "").Return(&types.FirmwareReleaseListResponse{
 					Releases: []types.FirmwareReleaseDetails{
 						{ID: "1", Platform: "p1", FirmwareVersion: "1.0.0", Created: time.Now()},
 					},
@@ -69,7 +85,7 @@ func TestFirmwareUpdateHandler_ListReleases(t *testing.T) {
 			name:        "Happy Path - With Filtering and Pagination",
 			queryParams: "?platform=p1&page=2&limit=5",
 			mockSetup: func(m *MockFirmwareService) {
-				m.On("ListReleases", mock.Anything, "p1", 2, 5).Return(&types.FirmwareReleaseListResponse{
+				m.On("ListReleases", mock.Anything, "p1", 2, 5, "").Return(&types.FirmwareReleaseListResponse{
 					Releases: []types.FirmwareReleaseDetails{},
 					Total:    0,
 					Page:     2,
@@ -83,7 +99,7 @@ func TestFirmwareUpdateHandler_ListReleases(t *testing.T) {
 			name:        "Internal Error",
 			queryParams: "",
 			mockSetup: func(m *MockFirmwareService) {
-				m.On("ListReleases", mock.Anything, "", 1, 10).Return(nil, errors.New("db error"))
+				m.On("ListReleases", mock.Anything, "", 1, 10, "").Return(nil, errors.New("db error"))
 			},
 			expectedStatus: http.StatusInternalServerError,
 			expectedBody:   `"error":"Internal Server Error"`,

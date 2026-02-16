@@ -65,6 +65,25 @@ definitions:
     required:
     - currency
     type: object
+  types.CheckUpdateRequest:
+    properties:
+      channel:
+        type: string
+      devices:
+        items:
+          $ref: '#/definitions/types.DeviceUpdateCheckPayload'
+        type: array
+    required:
+    - channel
+    - devices
+    type: object
+  types.CheckUpdateResponse:
+    properties:
+      results:
+        additionalProperties:
+          $ref: '#/definitions/types.DeviceUpdateResult'
+        type: object
+    type: object
   types.CreateRoleRequest:
     properties:
       description:
@@ -100,6 +119,37 @@ definitions:
     - account_type_role_id
     - email
     - full_name
+    type: object
+  types.DeviceUpdateCheckPayload:
+    properties:
+      current_firmware_version:
+        type: string
+      device_id:
+        type: string
+      hardware_revision:
+        type: string
+      platform:
+        type: string
+    required:
+    - current_firmware_version
+    - device_id
+    - platform
+    type: object
+  types.DeviceUpdateResult:
+    properties:
+      latest_version:
+        type: string
+      release_notes:
+        type: string
+      update_available:
+        type: boolean
+    type: object
+  types.DownloadArtifactResponse:
+    properties:
+      checksum:
+        type: string
+      download_url:
+        type: string
     type: object
   types.EnvironmentType:
     enum:
@@ -149,21 +199,23 @@ definitions:
     type: object
   types.FirmwareReleaseDetails:
     properties:
-      apiVersion:
+      api_version:
         type: string
       created:
         type: string
-      firmwareVersion:
+      firmware_version:
         type: string
-      hwCompatibility:
+      hw_compatibility:
         type: string
       id:
         type: string
-      minDesktopAppVersion:
+      min_desktop_app_version:
         type: string
       platform:
         type: string
-      releaseNotes:
+      release_notes:
+        type: string
+      status:
         type: string
       updated:
         type: string
@@ -885,6 +937,10 @@ paths:
         in: query
         name: platform
         type: string
+      - description: Minimum version (returns versions newer than this)
+        in: query
+        name: min_version
+        type: string
       produces:
       - application/json
       responses:
@@ -926,6 +982,45 @@ paths:
       summary: Make Release Available
       tags:
       - Firmware Update
+  /firmware/getDownloadUrl/{platform}/{version}:
+    get:
+      consumes:
+      - application/json
+      description: Provides a presigned S3 URL to download a specific firmware release
+        artifact
+      parameters:
+      - description: Platform name
+        in: path
+        name: platform
+        required: true
+        type: string
+      - description: Firmware version
+        in: path
+        name: version
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/types.DownloadArtifactResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+      summary: Get Firmware Download URL
+      tags:
+      - Firmware Update
   /firmware/initiateRelease:
     post:
       consumes:
@@ -955,6 +1050,37 @@ paths:
           schema:
             $ref: '#/definitions/types.ErrorResponse'
       summary: Initiate Firmware Release
+      tags:
+      - Firmware Update
+  /firmware/updates/check:
+    post:
+      consumes:
+      - application/json
+      description: Checks for firmware updates for a list of devices based on their
+        current version and platform
+      parameters:
+      - description: Device details for update check
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/types.CheckUpdateRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/types.CheckUpdateResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+      summary: Check for Firmware Updates
       tags:
       - Firmware Update
   /organization/role-management:

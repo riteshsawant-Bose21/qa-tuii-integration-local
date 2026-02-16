@@ -118,6 +118,8 @@ func (a *API) registerRoutes() {
 		firmwareUpdate.GET(constants.EndpointFirmwareList, firmwareHandler.ListReleases)
 		firmwareUpdate.POST(constants.EndpointFirmwareInitiateRelease, firmwareHandler.InitiateRelease)
 		firmwareUpdate.POST(constants.EndpointFirmwareMakeAvailable, firmwareHandler.MakeReleaseAvailable)
+		firmwareUpdate.POST(constants.EndpointFirmwareUpdateCheck, firmwareHandler.CheckUpdates)
+		firmwareUpdate.GET(constants.EndpointFirmwareDownload, firmwareHandler.DownloadArtifact)
 	}
 
 }

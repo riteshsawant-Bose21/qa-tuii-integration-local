@@ -54,7 +54,7 @@ func (s *Service) InitiateRelease(ctx context.Context, releaseDetails *types.Ini
 		return "", "", errors.New("a newer or equal version already exists for this platform")
 	}
 
-	presignURL, err = s.generateFirmwareArtifactURL(ctx, releaseDetails.MetaData.Platform, releaseDetails.MetaData.FirmwareVersion, "firmware", time.Minute*15, "put", logger)
+	presignURL, err = s.generateFirmwareArtifactURL(ctx, releaseDetails.MetaData.Platform, releaseDetails.MetaData.FirmwareVersion, "firmware", time.Hour*15, "put", logger)
 	if err != nil {
 		return "", "", fmt.Errorf("failed to generate presign URL: %v", err)
 	}
@@ -106,7 +106,67 @@ func (s *Service) MakeReleaseAvailable(ctx context.Context, releaseID string, lo
 	return nil
 }
 
-func (s *Service) ListReleases(ctx context.Context, platform string, page, limit int) (*types.FirmwareReleaseListResponse, error) {
+func (s *Service) CheckForUpdates(ctx context.Context, request *types.CheckUpdateRequest) (*types.CheckUpdateResponse, error) {
+	results := make(map[string]types.DeviceUpdateResult)
+
+	for _, device := range request.Devices {
+		// Skip if platform or current version is missing
+		if device.Platform == "" || device.CurrentFirmwareVersion == "" {
+			results[device.DeviceID] = types.DeviceUpdateResult{
+				UpdateAvailable: false,
+			}
+			continue
+		}
+
+		// Query DB for latest release newer than current version
+		newerRelease, err := s.dbService.GetLatestReleaseNewerThan(ctx, device.Platform, request.Channel, device.CurrentFirmwareVersion)
+		if err != nil {
+			// Log error but continue for other devices in batch operation
+			continue
+		}
+
+		// If no newer release found, no update available
+		if newerRelease == nil {
+			results[device.DeviceID] = types.DeviceUpdateResult{
+				UpdateAvailable: false,
+			}
+			continue
+		}
+
+		// Newer release found
+		results[device.DeviceID] = types.DeviceUpdateResult{
+			UpdateAvailable: true,
+			LatestVersion:   newerRelease.Version,
+			ReleaseNotes:    newerRelease.ReleaseNotes,
+		}
+	}
+
+	return &types.CheckUpdateResponse{Results: results}, nil
+}
+
+func (s *Service) GetArtifactDownloadURL(ctx context.Context, platform, version string, logger *zap.Logger) (*types.DownloadArtifactResponse, error) {
+	// Get release by platform and version
+	release, err := s.dbService.GetReleaseByPlatformAndVersion(ctx, platform, version)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get release: %v", err)
+	}
+	if release == nil {
+		return nil, errors.New("release not found")
+	}
+
+	// Generate presigned GET URL
+	downloadURL, err := s.generateFirmwareArtifactURL(ctx, platform, version, "firmware", time.Minute*15, "get", logger)
+	if err != nil {
+		return nil, fmt.Errorf("failed to generate download URL: %v", err)
+	}
+
+	return &types.DownloadArtifactResponse{
+		DownloadURL: downloadURL,
+		Checksum:    release.FileChecksum,
+	}, nil
+}
+
+func (s *Service) ListReleases(ctx context.Context, platform string, page, limit int, minVersion string) (*types.FirmwareReleaseListResponse, error) {
 	if page < 1 {
 		page = 1
 	}
@@ -115,7 +175,7 @@ func (s *Service) ListReleases(ctx context.Context, platform string, page, limit
 	}
 	offset := (page - 1) * limit
 
-	releases, total, err := s.dbService.ListReleases(ctx, limit, offset, platform)
+	releases, total, err := s.dbService.ListReleases(ctx, limit, offset, platform, minVersion)
 	if err != nil {
 		return nil, err
 	}
@@ -126,6 +186,7 @@ func (s *Service) ListReleases(ctx context.Context, platform string, page, limit
 			ID:                   r.ID,
 			Platform:             r.Platform,
 			FirmwareVersion:      r.Version,
+			Status:               r.Status,
 			ReleaseNotes:         r.ReleaseNotes,
 			MinDesktopAppVersion: r.MinDesktopAppVersion,
 			HwCompatibility:      r.HWCompatibility,

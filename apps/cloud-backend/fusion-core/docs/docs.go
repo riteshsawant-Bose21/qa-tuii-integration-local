@@ -105,6 +105,12 @@ const docTemplate = `{
                         "description": "Platform filter",
                         "name": "platform",
                         "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Minimum version (returns versions newer than this)",
+                        "name": "min_version",
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -112,6 +118,63 @@ const docTemplate = `{
                         "description": "OK",
                         "schema": {
                             "$ref": "#/definitions/types.FirmwareReleaseListResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/firmware/getDownloadUrl/{platform}/{version}": {
+            "get": {
+                "description": "Provides a presigned S3 URL to download a specific firmware release artifact",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Firmware Update"
+                ],
+                "summary": "Get Firmware Download URL",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Platform name",
+                        "name": "platform",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Firmware version",
+                        "name": "version",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/types.DownloadArtifactResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
                         }
                     },
                     "500": {
@@ -152,6 +215,52 @@ const docTemplate = `{
                         "description": "Returns releaseId and presignedUrl",
                         "schema": {
                             "$ref": "#/definitions/types.FormwareReleaseInitiateResposne"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/firmware/updates/check": {
+            "post": {
+                "description": "Checks for firmware updates for a list of devices based on their current version and platform",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Firmware Update"
+                ],
+                "summary": "Check for Firmware Updates",
+                "parameters": [
+                    {
+                        "description": "Device details for update check",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/types.CheckUpdateRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/types.CheckUpdateResponse"
                         }
                     },
                     "400": {
@@ -1846,6 +1955,35 @@ const docTemplate = `{
                 }
             }
         },
+        "types.CheckUpdateRequest": {
+            "type": "object",
+            "required": [
+                "channel",
+                "devices"
+            ],
+            "properties": {
+                "channel": {
+                    "type": "string"
+                },
+                "devices": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/types.DeviceUpdateCheckPayload"
+                    }
+                }
+            }
+        },
+        "types.CheckUpdateResponse": {
+            "type": "object",
+            "properties": {
+                "results": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "$ref": "#/definitions/types.DeviceUpdateResult"
+                    }
+                }
+            }
+        },
         "types.CreateRoleRequest": {
             "type": "object",
             "required": [
@@ -1891,6 +2029,53 @@ const docTemplate = `{
                 "full_name": {
                     "type": "string",
                     "example": "Jane Smith"
+                }
+            }
+        },
+        "types.DeviceUpdateCheckPayload": {
+            "type": "object",
+            "required": [
+                "current_firmware_version",
+                "device_id",
+                "platform"
+            ],
+            "properties": {
+                "current_firmware_version": {
+                    "type": "string"
+                },
+                "device_id": {
+                    "type": "string"
+                },
+                "hardware_revision": {
+                    "type": "string"
+                },
+                "platform": {
+                    "type": "string"
+                }
+            }
+        },
+        "types.DeviceUpdateResult": {
+            "type": "object",
+            "properties": {
+                "latest_version": {
+                    "type": "string"
+                },
+                "release_notes": {
+                    "type": "string"
+                },
+                "update_available": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "types.DownloadArtifactResponse": {
+            "type": "object",
+            "properties": {
+                "checksum": {
+                    "type": "string"
+                },
+                "download_url": {
+                    "type": "string"
                 }
             }
         },
@@ -1961,28 +2146,31 @@ const docTemplate = `{
         "types.FirmwareReleaseDetails": {
             "type": "object",
             "properties": {
-                "apiVersion": {
+                "api_version": {
                     "type": "string"
                 },
                 "created": {
                     "type": "string"
                 },
-                "firmwareVersion": {
+                "firmware_version": {
                     "type": "string"
                 },
-                "hwCompatibility": {
+                "hw_compatibility": {
                     "type": "string"
                 },
                 "id": {
                     "type": "string"
                 },
-                "minDesktopAppVersion": {
+                "min_desktop_app_version": {
                     "type": "string"
                 },
                 "platform": {
                     "type": "string"
                 },
-                "releaseNotes": {
+                "release_notes": {
+                    "type": "string"
+                },
+                "status": {
                     "type": "string"
                 },
                 "updated": {

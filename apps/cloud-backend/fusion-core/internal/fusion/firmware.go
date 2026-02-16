@@ -10,5 +10,7 @@ import (
 type Firmware interface {
 	InitiateRelease(ctx context.Context, releaseDetails *types.InitiateFirmwareReleasePayload, logger *zap.Logger) (releaseID string, presignURL string, err error)
 	MakeReleaseAvailable(ctx context.Context, releaseID string, logger *zap.Logger) error
-	ListReleases(ctx context.Context, platform string, page, limit int) (*types.FirmwareReleaseListResponse, error)
+	CheckForUpdates(ctx context.Context, request *types.CheckUpdateRequest) (*types.CheckUpdateResponse, error)
+	GetArtifactDownloadURL(ctx context.Context, platform, version string, logger *zap.Logger) (*types.DownloadArtifactResponse, error)
+	ListReleases(ctx context.Context, platform string, page, limit int, minVersion string) (*types.FirmwareReleaseListResponse, error)
 }

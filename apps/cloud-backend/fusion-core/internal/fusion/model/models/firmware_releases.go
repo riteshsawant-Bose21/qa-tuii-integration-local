@@ -13,7 +13,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/aarondl/null/v8"
 	"github.com/aarondl/sqlboiler/v4/boil"
 	"github.com/aarondl/sqlboiler/v4/queries"
 	"github.com/aarondl/sqlboiler/v4/queries/qm"
@@ -36,7 +35,6 @@ type FirmwareRelease struct {
 	MinDesktopAppVersion string           `boil:"min_desktop_app_version" json:"min_desktop_app_version" toml:"min_desktop_app_version" yaml:"min_desktop_app_version"`
 	HWCompatibility      string           `boil:"hw_compatibility" json:"hw_compatibility" toml:"hw_compatibility" yaml:"hw_compatibility"`
 	APILevel             string           `boil:"api_level" json:"api_level" toml:"api_level" yaml:"api_level"`
-	MetadataJSON         null.JSON        `boil:"metadata_json" json:"metadata_json,omitempty" toml:"metadata_json" yaml:"metadata_json,omitempty"`
 	CreatedAt            time.Time        `boil:"created_at" json:"created_at" toml:"created_at" yaml:"created_at"`
 	UpdatedAt            time.Time        `boil:"updated_at" json:"updated_at" toml:"updated_at" yaml:"updated_at"`
 
@@ -56,7 +54,6 @@ var FirmwareReleaseColumns = struct {
 	MinDesktopAppVersion string
 	HWCompatibility      string
 	APILevel             string
-	MetadataJSON         string
 	CreatedAt            string
 	UpdatedAt            string
 }{
@@ -71,7 +68,6 @@ var FirmwareReleaseColumns = struct {
 	MinDesktopAppVersion: "min_desktop_app_version",
 	HWCompatibility:      "hw_compatibility",
 	APILevel:             "api_level",
-	MetadataJSON:         "metadata_json",
 	CreatedAt:            "created_at",
 	UpdatedAt:            "updated_at",
 }
@@ -88,7 +84,6 @@ var FirmwareReleaseTableColumns = struct {
 	MinDesktopAppVersion string
 	HWCompatibility      string
 	APILevel             string
-	MetadataJSON         string
 	CreatedAt            string
 	UpdatedAt            string
 }{
@@ -103,7 +98,6 @@ var FirmwareReleaseTableColumns = struct {
 	MinDesktopAppVersion: "firmware_releases.min_desktop_app_version",
 	HWCompatibility:      "firmware_releases.hw_compatibility",
 	APILevel:             "firmware_releases.api_level",
-	MetadataJSON:         "firmware_releases.metadata_json",
 	CreatedAt:            "firmware_releases.created_at",
 	UpdatedAt:            "firmware_releases.updated_at",
 }
@@ -131,30 +125,6 @@ func (w whereHelpertypes_Int64Array) GTE(x types.Int64Array) qm.QueryMod {
 	return qmhelper.Where(w.field, qmhelper.GTE, x)
 }
 
-type whereHelpernull_JSON struct{ field string }
-
-func (w whereHelpernull_JSON) EQ(x null.JSON) qm.QueryMod {
-	return qmhelper.WhereNullEQ(w.field, false, x)
-}
-func (w whereHelpernull_JSON) NEQ(x null.JSON) qm.QueryMod {
-	return qmhelper.WhereNullEQ(w.field, true, x)
-}
-func (w whereHelpernull_JSON) LT(x null.JSON) qm.QueryMod {
-	return qmhelper.Where(w.field, qmhelper.LT, x)
-}
-func (w whereHelpernull_JSON) LTE(x null.JSON) qm.QueryMod {
-	return qmhelper.Where(w.field, qmhelper.LTE, x)
-}
-func (w whereHelpernull_JSON) GT(x null.JSON) qm.QueryMod {
-	return qmhelper.Where(w.field, qmhelper.GT, x)
-}
-func (w whereHelpernull_JSON) GTE(x null.JSON) qm.QueryMod {
-	return qmhelper.Where(w.field, qmhelper.GTE, x)
-}
-
-func (w whereHelpernull_JSON) IsNull() qm.QueryMod    { return qmhelper.WhereIsNull(w.field) }
-func (w whereHelpernull_JSON) IsNotNull() qm.QueryMod { return qmhelper.WhereIsNotNull(w.field) }
-
 var FirmwareReleaseWhere = struct {
 	ID                   whereHelperstring
 	Platform             whereHelperstring
@@ -167,7 +137,6 @@ var FirmwareReleaseWhere = struct {
 	MinDesktopAppVersion whereHelperstring
 	HWCompatibility      whereHelperstring
 	APILevel             whereHelperstring
-	MetadataJSON         whereHelpernull_JSON
 	CreatedAt            whereHelpertime_Time
 	UpdatedAt            whereHelpertime_Time
 }{
@@ -182,7 +151,6 @@ var FirmwareReleaseWhere = struct {
 	MinDesktopAppVersion: whereHelperstring{field: "\"firmware_releases\".\"min_desktop_app_version\""},
 	HWCompatibility:      whereHelperstring{field: "\"firmware_releases\".\"hw_compatibility\""},
 	APILevel:             whereHelperstring{field: "\"firmware_releases\".\"api_level\""},
-	MetadataJSON:         whereHelpernull_JSON{field: "\"firmware_releases\".\"metadata_json\""},
 	CreatedAt:            whereHelpertime_Time{field: "\"firmware_releases\".\"created_at\""},
 	UpdatedAt:            whereHelpertime_Time{field: "\"firmware_releases\".\"updated_at\""},
 }
@@ -224,9 +192,9 @@ func (r *firmwareReleaseR) GetReleaseFirmwareDeployments() FirmwareDeploymentSli
 type firmwareReleaseL struct{}
 
 var (
-	firmwareReleaseAllColumns            = []string{"id", "platform", "version", "version_parts", "status", "release_notes", "s3_key", "file_checksum", "min_desktop_app_version", "hw_compatibility", "api_level", "metadata_json", "created_at", "updated_at"}
+	firmwareReleaseAllColumns            = []string{"id", "platform", "version", "version_parts", "status", "release_notes", "s3_key", "file_checksum", "min_desktop_app_version", "hw_compatibility", "api_level", "created_at", "updated_at"}
 	firmwareReleaseColumnsWithoutDefault = []string{"platform", "version", "release_notes", "s3_key", "file_checksum", "min_desktop_app_version", "hw_compatibility", "api_level"}
-	firmwareReleaseColumnsWithDefault    = []string{"id", "version_parts", "status", "metadata_json", "created_at", "updated_at"}
+	firmwareReleaseColumnsWithDefault    = []string{"id", "version_parts", "status", "created_at", "updated_at"}
 	firmwareReleasePrimaryKeyColumns     = []string{"id"}
 	firmwareReleaseGeneratedColumns      = []string{"version_parts"}
 )

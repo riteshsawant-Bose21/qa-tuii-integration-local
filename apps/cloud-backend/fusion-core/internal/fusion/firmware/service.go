@@ -18,13 +18,15 @@ type Service struct {
 // DatabaseService defines the interface for database operations related to firmware.
 type DatabaseService interface {
 	GetDB(ctx context.Context) customModel.DBWithTransactions
-	GetReleaseByVersion(ctx context.Context, platform string, version string) (*model.FirmwareRelease, error)
+	// GetReleaseByVersion(ctx context.Context, platform string, version string) (*model.FirmwareRelease, error)
 	CheckIfNewerVersionExists(ctx context.Context, platform string, version string) (bool, error)
 	GetReleaseByID(ctx context.Context, releaseID string) (*model.FirmwareRelease, error)
 	UpdateReleaseStatus(ctx context.Context, releaseID string, status string, tx customModel.DBContextExecutor) error
 	InsertRelease(ctx context.Context, releaseDetails types.FirmwareReleaseMetaData, checksum string, filePath string, tx customModel.DBContextExecutor, logger *zap.Logger) (string, error)
 	InsertDeployment(ctx context.Context, releaseID string, tx customModel.DBContextExecutor, channel string, logger *zap.Logger) (string, error)
-	ListReleases(ctx context.Context, limit, offset int, platform string) ([]*model.FirmwareRelease, int64, error)
+	ListReleases(ctx context.Context, limit, offset int, platform string, minVersion string) ([]*model.FirmwareRelease, int64, error)
+	GetLatestReleaseNewerThan(ctx context.Context, platformName, channelName, currentVersion string) (*model.FirmwareRelease, error)
+	GetReleaseByPlatformAndVersion(ctx context.Context, platform string, version string) (*model.FirmwareRelease, error)
 }
 
 // PresignerService defines the interface for generating presigned URLs.

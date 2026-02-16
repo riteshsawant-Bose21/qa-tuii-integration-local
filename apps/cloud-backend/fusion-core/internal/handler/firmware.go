@@ -99,6 +99,7 @@ func (h *FirmwareUpdateHandler) MakeReleaseAvailable(ctx *gin.Context) {
 // @Param page query int false "Page number"
 // @Param limit query int false "Items per page"
 // @Param platform query string false "Platform filter"
+// @Param min_version query string false "Minimum version (returns versions newer than this)"
 // @Success 200 {object} types.FirmwareReleaseListResponse
 // @Failure 500 {object} types.ErrorResponse
 // @Router /firmware [get]
@@ -106,9 +107,80 @@ func (h *FirmwareUpdateHandler) ListReleases(ctx *gin.Context) {
 	page, _ := strconv.Atoi(ctx.DefaultQuery("page", "1"))
 	limit, _ := strconv.Atoi(ctx.DefaultQuery("limit", "10"))
 	platform := ctx.Query("platform")
+	minVersion := ctx.Query("min_version")
 
-	resp, err := h.firmware.ListReleases(ctx, platform, page, limit)
+	resp, err := h.firmware.ListReleases(ctx, platform, page, limit, minVersion)
 	if err != nil {
+		response.InternalError(ctx)
+		return
+	}
+
+	response.OK(ctx, resp)
+}
+
+// CheckUpdates checks for firmware updates for a list of devices
+// @Summary Check for Firmware Updates
+// @Description Checks for firmware updates for a list of devices based on their current version and platform
+// @Tags Firmware Update
+// @Accept json
+// @Produce json
+// @Param request body types.CheckUpdateRequest true "Device details for update check"
+// @Success 200 {object} types.CheckUpdateResponse
+// @Failure 400 {object} types.ErrorResponse
+// @Failure 500 {object} types.ErrorResponse
+// @Router /firmware/updates/check [post]
+func (h *FirmwareUpdateHandler) CheckUpdates(ctx *gin.Context) {
+	var payload types.CheckUpdateRequest
+	if err := ctx.ShouldBindJSON(&payload); err != nil {
+		response.BadRequest(ctx, err.Error())
+		return
+	}
+
+	resp, err := h.firmware.CheckForUpdates(ctx, &payload)
+	if err != nil {
+		// Log error?
+		response.InternalError(ctx)
+		return
+	}
+
+	response.OK(ctx, resp)
+}
+
+// DownloadArtifact provides a presigned URL to download a firmware artifact
+// @Summary Get Firmware Download URL
+// @Description Provides a presigned S3 URL to download a specific firmware release artifact
+// @Tags Firmware Update
+// @Accept json
+// @Produce json
+// @Param platform path string true "Platform name"
+// @Param version path string true "Firmware version"
+// @Success 200 {object} types.DownloadArtifactResponse
+// @Failure 400 {object} types.ErrorResponse
+// @Failure 404 {object} types.ErrorResponse
+// @Failure 500 {object} types.ErrorResponse
+// @Router /firmware/getDownloadUrl/{platform}/{version} [get]
+func (h *FirmwareUpdateHandler) DownloadArtifact(ctx *gin.Context) {
+	platform := ctx.Param("platform")
+	version := ctx.Param("version")
+
+	if platform == "" || version == "" {
+		response.BadRequest(ctx, "platform and version are required")
+		return
+	}
+
+	loggerFromContext, exists := ctx.Get("logger")
+	if !exists {
+		response.InternalError(ctx)
+		return
+	}
+	logger := loggerFromContext.(*zap.Logger)
+
+	resp, err := h.firmware.GetArtifactDownloadURL(ctx, platform, version, logger)
+	if err != nil {
+		if err.Error() == "release not found" {
+			response.NotFound(ctx, "firmware release not found")
+			return
+		}
 		response.InternalError(ctx)
 		return
 	}
