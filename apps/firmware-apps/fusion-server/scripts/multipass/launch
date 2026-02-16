@@ -328,11 +328,18 @@ setup_instance() {
     local instance_ip=$(get_instance_ip "$instance_name")
     
     while [ $wait_count -lt $max_wait_retries ]; do
-        # Try multipass exec first, then fall back to direct SSH
-        if multipass exec "$instance_name" -- echo "ready" >/dev/null 2>&1; then
-            print_success "Instance is ready for connections (multipass)"
-            break
-        elif [ -n "$instance_ip" ] && sudo ssh -i "$MULTIPASS_SSH_KEY" -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=3 -o LogLevel=ERROR ubuntu@"$instance_ip" echo "ready" >/dev/null 2>&1; then
+        # Check if instance is running via multipass info (avoids TTY bug with exec + stdout redirect in 1.16.1)
+        # Then verify SSH connectivity without redirecting stdout
+        if multipass info "$instance_name" 2>/dev/null | grep -q "State:.*Running"; then
+            # Test actual SSH connectivity - only redirect stderr (stdout redirect causes hang in 1.16.1)
+            if multipass exec "$instance_name" -- true 2>/dev/null; then
+                print_success "Instance is ready for connections"
+                break
+            fi
+        fi
+        # Direct SSH fallback
+        instance_ip=$(get_instance_ip "$instance_name")
+        if [ -n "$instance_ip" ] && sudo ssh -i "$MULTIPASS_SSH_KEY" -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=3 -o LogLevel=ERROR ubuntu@"$instance_ip" true 2>/dev/null; then
             print_success "Instance is ready for connections (direct SSH)"
             break
         fi
@@ -347,8 +354,9 @@ setup_instance() {
     fi
     
     # Wait for cloud-init to complete
+    # Note: Only redirect stderr - stdout redirect causes hang in multipass 1.16.1
     print_step "Waiting for cloud-init to complete..."
-    if mp_exec "$instance_name" cloud-init status --wait >/dev/null 2>&1; then
+    if mp_exec "$instance_name" cloud-init status --wait 2>/dev/null; then
         print_success "Cloud-init completed"
     else
         print_warning "Cloud-init may not have completed properly"
