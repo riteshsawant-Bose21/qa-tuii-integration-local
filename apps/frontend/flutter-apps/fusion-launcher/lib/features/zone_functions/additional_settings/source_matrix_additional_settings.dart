@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/core/service_locator.dart';
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
+import 'package:fusion_launcher/features/zone_functions/viewmodel/additional_settings_viewmodel.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
@@ -167,7 +168,10 @@ class _SourceMatrixAdditionalSettingsState extends State<SourceMatrixAdditionalS
                                       ),
 
                                       VerticalDivider(width: 1, color: context.colorScheme.strokeLight),
-                                      AdditionalPrioritySettingsWidget(zoneId: widget.zoneID),
+                                      AdditionalPrioritySettingsWidget(
+                                        zoneId: widget.zoneID,
+                                        vm: context.read<ZoneFunctionAdditionalSettingsViewModel>(),
+                                      ),
 
                                       // RIGHT COLUMN (Static)
                                       Flexible(

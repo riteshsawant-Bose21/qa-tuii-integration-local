@@ -11,6 +11,7 @@ class NeumorphicGainTextField extends StatefulWidget {
   final double maxGain;
   final double minGain;
   final bool showDbSuffix;
+  final bool enabled;
 
   const NeumorphicGainTextField({
     super.key,
@@ -22,6 +23,7 @@ class NeumorphicGainTextField extends StatefulWidget {
     this.borderRadius = 8,
     this.controllerValue,
     this.showDbSuffix = true,
+    this.enabled = true,
   });
 
   @override
@@ -86,6 +88,7 @@ class _NeumorphicGainTextFieldState extends State<NeumorphicGainTextField> {
           color: context.colorScheme.elevation2,
           borderRadius: widget.borderRadius,
           child: TextField(
+            enabled: widget.enabled,
             controller: controller,
             textAlign: TextAlign.center,
             focusNode: _focusNode,
