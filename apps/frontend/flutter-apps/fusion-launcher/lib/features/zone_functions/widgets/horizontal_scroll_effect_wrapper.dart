@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:fusion_lib/fusion_lib.dart';
 
 class HorizontalScrollWithShadows extends StatefulWidget {
   final Widget child;
@@ -48,8 +49,8 @@ class _HorizontalScrollWithShadowsState extends State<HorizontalScrollWithShadow
 
   @override
   Widget build(BuildContext context) {
-    const Color shadowColor = Color(0x09000000);
-    const double shadowWidth = 6;
+    final Color shadowColor = context.colorScheme.shadowDark.withAlpha(context.colorScheme.isDarkMode ? 50 : 20);
+    const double shadowWidth = 2;
     const double shadowBlurRadius = 6;
     const double shadowSpreadRadius = 6;
 
@@ -66,13 +67,13 @@ class _HorizontalScrollWithShadowsState extends State<HorizontalScrollWithShadow
         if (_showRightShadow)
           Positioned(
             right: 0,
-            top: 0,
-            bottom: 0,
+            top: 5,
+            bottom: -5,
             child: IgnorePointer(
               child: Container(
                 height: double.infinity,
                 width: shadowWidth,
-                decoration: const BoxDecoration(
+                decoration: BoxDecoration(
                   boxShadow: <BoxShadow>[
                     BoxShadow(
                       color: shadowColor,
@@ -89,13 +90,13 @@ class _HorizontalScrollWithShadowsState extends State<HorizontalScrollWithShadow
         if (_showLeftShadow)
           Positioned(
             left: 0,
-            top: 0,
-            bottom: 0,
+            top: 5,
+            bottom: -5,
             child: IgnorePointer(
               child: Container(
                 height: double.infinity,
                 width: shadowWidth,
-                decoration: const BoxDecoration(
+                decoration: BoxDecoration(
                   boxShadow: <BoxShadow>[
                     BoxShadow(
                       color: shadowColor,
