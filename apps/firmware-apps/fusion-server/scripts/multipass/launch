@@ -1,6 +1,11 @@
 #!/bin/bash
 set -eu
 
+# Change to the fusion-server directory (two levels up from this script)
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+FUSION_SERVER_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"
+cd "$FUSION_SERVER_DIR"
+
 if [ ! -f multipass.env ]; then
     cp multipass_template.env multipass.env
 fi
@@ -354,7 +359,6 @@ setup_instance() {
     fi
     
     # Wait for cloud-init to complete
-    # Note: Only redirect stderr - stdout redirect causes hang in multipass 1.16.1
     print_step "Waiting for cloud-init to complete..."
     if mp_exec "$instance_name" cloud-init status --wait 2>/dev/null; then
         print_success "Cloud-init completed"
@@ -470,32 +474,6 @@ setup_instance() {
     
     print_step "Starting services..."
     local services_started=true
-
-    # Verify service files exist - if not, copy them directly (fallback for cloud-init failures)
-    print_substep "Verifying service files..."
-    local scripts_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-    for service in fusion-server fusion-gateway; do
-        if ! mp_exec "$instance_name" test -f /etc/systemd/system/${service}.service; then
-            print_warning "Service file ${service}.service not found - copying directly"
-            if ! mp_transfer "${scripts_dir}/${service}.service" "$instance_name":/tmp/${service}.service; then
-                print_error "Failed to copy ${service}.service"
-                services_started=false
-                continue
-            fi
-            if ! mp_exec "$instance_name" sudo cp /tmp/${service}.service /etc/systemd/system/ || \
-               ! mp_exec "$instance_name" sudo chmod 644 /etc/systemd/system/${service}.service || \
-               ! mp_exec "$instance_name" rm /tmp/${service}.service; then
-                print_error "Failed to install ${service}.service"
-                services_started=false
-                continue
-            fi
-            print_success "${service}.service installed"
-        fi
-    done
-    
-    if [ "$services_started" = false ]; then
-        return 1
-    fi
 
     # Do daemon-reload once before starting services
     print_substep "Reloading systemd daemon..."
@@ -1001,8 +979,12 @@ fi
 system_checks
 host_setup
 
-
-sed -i '' 's/Environment=FUSION_NET_IFACE=lan1/Environment=FUSION_NET_IFACE=enp0s1/' scripts/fusion-server.service
+# Cross-platform sed in-place edit (macOS uses -i '', Linux uses -i)
+if [[ "$(uname)" == "Darwin" ]]; then
+    sed -i '' 's/Environment=FUSION_NET_IFACE=lan1/Environment=FUSION_NET_IFACE=enp0s1/' scripts/fusion-server.service
+else
+    sed -i 's/Environment=FUSION_NET_IFACE=lan1/Environment=FUSION_NET_IFACE=enp0s1/' scripts/fusion-server.service
+fi
 
 # Set up trap but don't exit on errors
 trap cleanup EXIT
