@@ -435,15 +435,13 @@ class _AdditionalPrioritySettingsWidgetState extends State<AdditionalPrioritySet
         itemCount: 2,
         separatorBuilder: (BuildContext context, int index) => Divider(color: context.colorScheme.strokeLight, height: 0),
         itemBuilder: (BuildContext context, int index) {
-          final int priorityIndex = index + 1;
-
           // String? selectedSourceId;
           String? selectedSourceName;
 
           final List<String> prioritySources = projectViewModel.getPrioritySourcesInZone(zoneId: widget.zoneId);
 
           /// priority 1
-          if (priorityIndex == 1) {
+          if (index == 0) {
             if (prioritySources.isNotEmpty && prioritySources[0].isNotEmpty) {
               final HardwareComponent? sourceData = projectViewModel.getHardware(hardwareId: prioritySources[0]);
               if (sourceData != null) {
@@ -463,7 +461,7 @@ class _AdditionalPrioritySettingsWidgetState extends State<AdditionalPrioritySet
           }
 
           return SemanticHelper.button(
-            testId: SemanticHelper.createTestId(SemanticTypes.button, "priority_selection_widget_$priorityIndex"),
+            testId: SemanticHelper.createTestId(SemanticTypes.button, "priority_selection_widget_$index"),
             child: SizedBox(
               height: 600,
               child: Column(
@@ -475,7 +473,7 @@ class _AdditionalPrioritySettingsWidgetState extends State<AdditionalPrioritySet
                   Padding(
                     padding: const EdgeInsets.all(16.0),
                     child: FusionAppText(
-                      text: "PRIORITY $priorityIndex",
+                      text: "PRIORITY $index",
                       style: context.textTheme.labelMedium?.copyWith(
                         fontWeight: FontWeight.bold,
                       ),
@@ -488,7 +486,7 @@ class _AdditionalPrioritySettingsWidgetState extends State<AdditionalPrioritySet
                       builder: (BuildContext context) {
                         if (selectedSourceName == null) {
                           return FusionAppText(
-                            text: "No source selected for priority $priorityIndex.",
+                            text: "No source selected for priority $index.",
                             style: Theme.of(context).textTheme.labelSmall?.copyWith(
                               fontSize: 10,
                               color: const Color(0xFF888888),
@@ -516,7 +514,7 @@ class _AdditionalPrioritySettingsWidgetState extends State<AdditionalPrioritySet
                                           ),
                                         ),
                                         SemanticHelper.button(
-                                          testId: SemanticHelper.createTestId(SemanticTypes.button, "priority_active_button_$priorityIndex"),
+                                          testId: SemanticHelper.createTestId(SemanticTypes.button, "priority_active_button_$index"),
                                           child: FusionSwitch(
                                             value: vm.isPriorityControlTypePTT(index),
                                             width: 44,
@@ -544,7 +542,7 @@ class _AdditionalPrioritySettingsWidgetState extends State<AdditionalPrioritySet
                                           ),
                                         ),
                                         SemanticHelper.button(
-                                          testId: SemanticHelper.createTestId(SemanticTypes.button, "priority_active_button_$priorityIndex"),
+                                          testId: SemanticHelper.createTestId(SemanticTypes.button, "priority_active_button_$index"),
                                           child: FusionSwitch(
                                             value: vm.isPriorityControlTypeThreshold(index),
                                             width: 44,

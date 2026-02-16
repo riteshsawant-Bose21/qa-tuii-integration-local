@@ -1,5 +1,3 @@
-import 'dart:developer';
-
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_lib/fusion_lib.dart';
@@ -73,8 +71,6 @@ class ZoneFunctionAdditionalSettingsViewModel extends Cubit<ZoneFunctionAddition
     final List<PriorityAdditionalSettingsModel> priorityAdditionalSettingsModel = <PriorityAdditionalSettingsModel>[
       ...?state.sourceSelectAdditionalSettingsModel?.priorityAdditionalSettingsModel,
     ];
-
-    log(priorityAdditionalSettingsModel.toString());
 
     if (index < priorityAdditionalSettingsModel.length) {
       priorityAdditionalSettingsModel[index] = priorityAdditionalSettingsModel[index].copyWith(priorityBehavior: priorityBehavior);
