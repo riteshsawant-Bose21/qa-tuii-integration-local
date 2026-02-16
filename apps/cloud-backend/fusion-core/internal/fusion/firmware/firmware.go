@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/api/types"
+	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/utils/errorutil"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/utils/validation"
 	"go.uber.org/zap"
 )
@@ -48,13 +49,14 @@ func (s *Service) InitiateRelease(ctx context.Context, releaseDetails *types.Ini
 	// check if the version already exists for the platform or if a newer version exists
 	exists, err := s.dbService.CheckIfNewerVersionExists(ctx, releaseDetails.MetaData.Platform, releaseDetails.MetaData.FirmwareVersion)
 	if err != nil {
-		return "", "", fmt.Errorf("failed to check firmware versions: %v", err)
-	}
-	if exists {
-		return "", "", errors.New("a newer or equal version already exists for this platform")
+		return "", "", err
 	}
 
-	presignURL, err = s.generateFirmwareArtifactURL(ctx, releaseDetails.MetaData.Platform, releaseDetails.MetaData.FirmwareVersion, "firmware", time.Hour*15, "put", logger)
+	if exists {
+		return "", "", errorutil.ErrVersionExists
+	}
+
+	presignURL, err = s.generateFirmwareArtifactURL(ctx, releaseDetails.MetaData.Platform, releaseDetails.MetaData.FirmwareVersion, "firmware", time.Minute*15, "put", logger)
 	if err != nil {
 		return "", "", fmt.Errorf("failed to generate presign URL: %v", err)
 	}
@@ -148,10 +150,10 @@ func (s *Service) GetArtifactDownloadURL(ctx context.Context, platform, version 
 	// Get release by platform and version
 	release, err := s.dbService.GetReleaseByPlatformAndVersion(ctx, platform, version)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get release: %v", err)
+		return nil, fmt.Errorf("failed to get release: %w", err)
 	}
 	if release == nil {
-		return nil, errors.New("release not found")
+		return nil, errorutil.ErrReleaseNotFound
 	}
 
 	// Generate presigned GET URL

@@ -1,14 +1,15 @@
 package handler
 
 import (
+	"errors"
+	"strconv"
+
 	response "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/api/response"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/api/types"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion"
-	"go.uber.org/zap"
-
-	"strconv"
-
+	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/utils/errorutil"
 	"github.com/gin-gonic/gin"
+	"go.uber.org/zap"
 )
 
 type FirmwareUpdateHandler struct {
@@ -22,16 +23,17 @@ func NewFirmwareUpdateHandler(firmware fusion.Firmware) *FirmwareUpdateHandler {
 	}
 }
 
-// initiateRelease inserts release details to firmware_releases table and returns a presigned URL to upload the artifacts to s3
+// InitiateRelease creates a new firmware release draft and generates a presigned S3 upload URL
 // @Summary Initiate Firmware Release
-// @Description Insert release details to firmware_releases table and return a presigned URL to upload the artifacts to s3
+// @Description Creates a new firmware release entry in draft status and returns a presigned S3 URL for uploading the firmware artifact. The upload URL is valid for 15 minutes.
 // @Tags Firmware Update
 // @Accept json
 // @Produce json
-// @Param request body types.InitiateFirmwareReleasePayload true "Firmware release details"
-// @Success 200 {object} types.FormwareReleaseInitiateResposne "Returns releaseId and presignedUrl"
-// @Failure 400 {object} types.ErrorResponse
-// @Failure 500 {object} types.ErrorResponse
+// @Security BearerAuth
+// @Param request body types.InitiateFirmwareReleasePayload true "Firmware release metadata including version, platform, release notes, etc."
+// @Success 200 {object} types.FormwareReleaseInitiateResposne "Returns releaseId and presignedUrl for artifact upload"
+// @Failure 400 {object} types.ErrorResponse "Invalid request payload or version already exists"
+// @Failure 500 {object} types.ErrorResponse "Internal server error"
 // @Router /firmware/initiateRelease [post]
 func (h *FirmwareUpdateHandler) InitiateRelease(ctx *gin.Context) {
 	var payload types.InitiateFirmwareReleasePayload
@@ -43,29 +45,38 @@ func (h *FirmwareUpdateHandler) InitiateRelease(ctx *gin.Context) {
 	logger := loggerFromContext.(*zap.Logger)
 
 	if err := ctx.ShouldBindJSON(&payload); err != nil {
-		response.BadRequest(ctx, err.Error())
+		logger.Error("Failed to bind InitiateRelease payload", zap.Error(err))
+		response.BadRequest(ctx, "Invalid request payload: "+err.Error())
 		return
 	}
+
 	ID, presignURL, err := h.firmware.InitiateRelease(ctx, &payload, logger)
 	if err != nil {
+		logger.Error("Failed to initiate firmware release", zap.Error(err))
+		if errors.Is(err, errorutil.ErrVersionExists) {
+			response.BadRequest(ctx, err.Error())
+			return
+		}
 		response.InternalError(ctx)
 		return
 	}
 
 	response.OK(ctx, types.FormwareReleaseInitiateResposne{ReleaseID: ID, PresignedURL: presignURL})
-
 }
 
-// MakeReleaseAvailable updates the status of a release to available and creates a deployment
+// MakeReleaseAvailable publishes a firmware release to a deployment channel
 // @Summary Make Release Available
-// @Description Updates the status of a release to available and creates a deployment
+// @Description Updates the release status to 'AVAILABLE' and creates a deployment entry for the specified channel, making the firmware available for devices to download
 // @Tags Firmware Update
 // @Accept json
 // @Produce json
-// @Param releaseID path string true "Release ID"
-// @Success 204 "Success"
-// @Failure 400 {object} types.ErrorResponse
-// @Failure 500 {object} types.ErrorResponse
+// @Security BearerAuth
+// @Param releaseID path string true "Unique identifier of the firmware release"
+// @Param request body types.MakeReleaseAvailablePayload true "Deployment configuration including channel"
+// @Success 204 "Release successfully made available"
+// @Failure 400 {object} types.ErrorResponse "Invalid releaseID or request payload"
+// @Failure 404 {object} types.ErrorResponse "Release not found"
+// @Failure 500 {object} types.ErrorResponse "Internal server error"
 // @Router /firmware/{releaseID}/makeReleaseAvailable [post]
 func (h *FirmwareUpdateHandler) MakeReleaseAvailable(ctx *gin.Context) {
 	releaseID := ctx.Param("releaseID")
@@ -83,6 +94,11 @@ func (h *FirmwareUpdateHandler) MakeReleaseAvailable(ctx *gin.Context) {
 
 	err := h.firmware.MakeReleaseAvailable(ctx, releaseID, logger)
 	if err != nil {
+		logger.Error("Failed to make release available", zap.String("releaseID", releaseID), zap.Error(err))
+		if errors.Is(err, errorutil.ErrReleaseNotFound) {
+			response.NotFound(ctx, "Release not found")
+			return
+		}
 		response.InternalError(ctx)
 		return
 	}
@@ -90,18 +106,20 @@ func (h *FirmwareUpdateHandler) MakeReleaseAvailable(ctx *gin.Context) {
 	response.NoContent(ctx)
 }
 
-// ListReleases lists all firmware releases with pagination and filtering
+// ListReleases retrieves firmware releases with pagination and filtering
 // @Summary List Firmware Releases
-// @Description List all firmware releases with pagination and filtering
+// @Description Returns a paginated list of firmware releases with optional filtering by platform and minimum version. Results are ordered by version in descending order.
 // @Tags Firmware Update
 // @Accept json
 // @Produce json
-// @Param page query int false "Page number"
-// @Param limit query int false "Items per page"
-// @Param platform query string false "Platform filter"
-// @Param min_version query string false "Minimum version (returns versions newer than this)"
-// @Success 200 {object} types.FirmwareReleaseListResponse
-// @Failure 500 {object} types.ErrorResponse
+// @Security BearerAuth
+// @Param page query int false "Page number (default: 1)" default(1)
+// @Param limit query int false "Items per page (default: 10, max: 100)" default(10)
+// @Param platform query string false "Filter by platform (e.g., 'amp-8x300', 'amp-4x150')"
+// @Param min_version query string false "Minimum version filter - returns only versions newer than this (e.g., '1.0.1')"
+// @Success 200 {object} types.FirmwareReleaseListResponse "List of firmware releases with pagination metadata"
+// @Failure 400 {object} types.ErrorResponse "Invalid query parameters"
+// @Failure 500 {object} types.ErrorResponse "Internal server error"
 // @Router /firmware [get]
 func (h *FirmwareUpdateHandler) ListReleases(ctx *gin.Context) {
 	page, _ := strconv.Atoi(ctx.DefaultQuery("page", "1"))
@@ -118,27 +136,34 @@ func (h *FirmwareUpdateHandler) ListReleases(ctx *gin.Context) {
 	response.OK(ctx, resp)
 }
 
-// CheckUpdates checks for firmware updates for a list of devices
+// CheckUpdates checks if firmware updates are available for devices
 // @Summary Check for Firmware Updates
-// @Description Checks for firmware updates for a list of devices based on their current version and platform
+// @Description Checks if newer firmware versions are available for a batch of devices based on their current versions, platform, and deployment channel. Returns update availability status and latest version information for each device.
 // @Tags Firmware Update
 // @Accept json
 // @Produce json
-// @Param request body types.CheckUpdateRequest true "Device details for update check"
-// @Success 200 {object} types.CheckUpdateResponse
-// @Failure 400 {object} types.ErrorResponse
-// @Failure 500 {object} types.ErrorResponse
+// @Param request body types.CheckUpdateRequest true "List of devices with their current firmware versions and platform information"
+// @Success 200 {object} types.CheckUpdateResponse "Update availability results for each device"
+// @Failure 400 {object} types.ErrorResponse "Invalid request payload"
+// @Failure 500 {object} types.ErrorResponse "Internal server error"
 // @Router /firmware/updates/check [post]
 func (h *FirmwareUpdateHandler) CheckUpdates(ctx *gin.Context) {
 	var payload types.CheckUpdateRequest
 	if err := ctx.ShouldBindJSON(&payload); err != nil {
-		response.BadRequest(ctx, err.Error())
+		response.BadRequest(ctx, "Invalid request payload: "+err.Error())
 		return
 	}
 
+	loggerFromContext, exists := ctx.Get("logger")
+	if !exists {
+		response.InternalError(ctx)
+		return
+	}
+	logger := loggerFromContext.(*zap.Logger)
+
 	resp, err := h.firmware.CheckForUpdates(ctx, &payload)
 	if err != nil {
-		// Log error?
+		logger.Error("Failed to check for updates", zap.Error(err), zap.String("channel", payload.Channel))
 		response.InternalError(ctx)
 		return
 	}
@@ -146,18 +171,18 @@ func (h *FirmwareUpdateHandler) CheckUpdates(ctx *gin.Context) {
 	response.OK(ctx, resp)
 }
 
-// DownloadArtifact provides a presigned URL to download a firmware artifact
+// DownloadArtifact generates a presigned download URL for a firmware artifact
 // @Summary Get Firmware Download URL
-// @Description Provides a presigned S3 URL to download a specific firmware release artifact
+// @Description Generates a presigned S3 URL for downloading a specific firmware release artifact. The URL is valid for 15 minutes and includes the file checksum for integrity verification.
 // @Tags Firmware Update
 // @Accept json
 // @Produce json
-// @Param platform path string true "Platform name"
-// @Param version path string true "Firmware version"
-// @Success 200 {object} types.DownloadArtifactResponse
-// @Failure 400 {object} types.ErrorResponse
-// @Failure 404 {object} types.ErrorResponse
-// @Failure 500 {object} types.ErrorResponse
+// @Param platform path string true "Platform identifier (e.g., 'amp-8x300')"
+// @Param version path string true "Firmware version (e.g., '1.2.0')"
+// @Success 200 {object} types.DownloadArtifactResponse "Presigned download URL and file checksum"
+// @Failure 400 {object} types.ErrorResponse "Missing or invalid parameters"
+// @Failure 404 {object} types.ErrorResponse "Firmware release not found for the specified platform and version"
+// @Failure 500 {object} types.ErrorResponse "Internal server error"
 // @Router /firmware/getDownloadUrl/{platform}/{version} [get]
 func (h *FirmwareUpdateHandler) DownloadArtifact(ctx *gin.Context) {
 	platform := ctx.Param("platform")
@@ -177,8 +202,9 @@ func (h *FirmwareUpdateHandler) DownloadArtifact(ctx *gin.Context) {
 
 	resp, err := h.firmware.GetArtifactDownloadURL(ctx, platform, version, logger)
 	if err != nil {
-		if err.Error() == "release not found" {
-			response.NotFound(ctx, "firmware release not found")
+		logger.Error("Failed to generate download URL", zap.String("platform", platform), zap.String("version", version), zap.Error(err))
+		if errors.Is(err, errorutil.ErrReleaseNotFound) {
+			response.NotFound(ctx, "Firmware release not found for the specified platform and version")
 			return
 		}
 		response.InternalError(ctx)
