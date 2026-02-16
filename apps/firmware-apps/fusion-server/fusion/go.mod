@@ -5,6 +5,7 @@ go 1.23.1
 require (
 	fusion-services-core v0.0.0
 	github.com/brutella/dnssd v1.2.14
+	github.com/eclipse/paho.mqtt.golang v1.4.3
 	github.com/gibson042/canonicaljson-go v1.0.3
 	github.com/go-ble/ble v0.0.0-20240122180141-8c5522f54333
 	github.com/go-ping/ping v1.2.0

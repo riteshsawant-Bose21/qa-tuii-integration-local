@@ -19,6 +19,12 @@ type AppConfig struct {
 	Local    bool
 	Profile  bool
 	Verbose  bool
+
+	// IoT Core settings
+	IoTEnabled     bool
+	IoTEndpoint    string
+	IoTClientID    string
+	IoTTopicPrefix string
 }
 
 func (a *AppConfig) SelfUrl() string {

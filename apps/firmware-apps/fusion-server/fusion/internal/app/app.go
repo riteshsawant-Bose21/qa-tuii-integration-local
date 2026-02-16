@@ -9,6 +9,7 @@ import (
 	"fusion/internal/cluster"
 	clustertransport "fusion/internal/cluster/transport"
 	"fusion/internal/controllers"
+	"fusion/internal/iot"
 	"fusion/internal/network"
 	"fusion/internal/persistence"
 	"fusion/internal/pubsub"
@@ -54,6 +55,7 @@ type App struct {
 	SAPServer         *network.SAPServer
 	UDPServer         *network.UDPServer
 	ControllerManager *controllers.ControllerManager
+	IoTPublisher      *iot.Publisher
 	memberlist        *memberlist.Memberlist
 	monitor           *network.Monitor
 	config            *api.AppConfig
@@ -85,6 +87,7 @@ func NewApp(config *api.AppConfig) *App {
 	sapServer := initSAPServer(config, api.SAPPort, connectionHandler, hub)
 	udpServer := initUDPServer(api.UDPPort, connectionHandler, hub)
 	fusionServer := server.NewFusionServer(config.NodeName, connectionHandler, hub)
+	iotPublisher := initIoTPublisher(config, clusterInstance.Metrics)
 
 	// Setup the public routes
 	publicRouter := mux.NewRouter()
@@ -109,6 +112,7 @@ func NewApp(config *api.AppConfig) *App {
 		SAPServer:         sapServer,
 		UDPServer:         udpServer,
 		ControllerManager: controllerManager,
+		IoTPublisher:      iotPublisher,
 		memberlist:        memberlist,
 		config:            config,
 		publicRouter:      publicRouter,
@@ -127,6 +131,9 @@ func (app *App) Close() {
 	}
 	if app.ControllerManager != nil {
 		app.ControllerManager.Stop()
+	}
+	if app.IoTPublisher != nil {
+		app.IoTPublisher.Stop()
 	}
 	if app.MDNSManager != nil {
 		if err := app.MDNSManager.Close(); err != nil {
@@ -394,6 +401,13 @@ func (app *App) Start(ctx context.Context) {
 		app.Logger.Error("Failed to start ControllerManager: %v", err)
 	}
 
+	// Start the IoT publisher for AWS IoT Core metrics
+	if app.IoTPublisher != nil {
+		if err := app.IoTPublisher.Start(); err != nil {
+			app.Logger.Error("Failed to start IoT publisher: %v", err)
+		}
+	}
+
 	wg.Wait()
 }
 
@@ -532,6 +546,42 @@ func initMDNSManager() *network.MDNSManager {
 
 	logger.Info("mDNS manager initialized successfully")
 	return manager
+}
+
+// initIoTPublisher initializes the AWS IoT Core publisher
+func initIoTPublisher(config *api.AppConfig, metrics *cluster.MetricsCollector) *iot.Publisher {
+	logger := logging.GetLogger()
+
+	if !config.IoTEnabled {
+		logger.Info("IoT publisher disabled")
+		return nil
+	}
+
+	if config.IoTEndpoint == "" {
+		logger.Warn("IoT endpoint not configured, disabling IoT publisher")
+		return nil
+	}
+
+	clientID := config.IoTClientID
+	if clientID == "" {
+		clientID = config.NodeName
+	}
+
+	iotConfig := &iot.Config{
+		Endpoint:    config.IoTEndpoint,
+		ClientID:    clientID,
+		TopicPrefix: config.IoTTopicPrefix,
+		Enabled:     config.IoTEnabled,
+	}
+
+	publisher, err := iot.NewPublisher(iotConfig, metrics)
+	if err != nil {
+		logger.Error("Failed to create IoT publisher: %v", err)
+		return nil
+	}
+
+	logger.Info("IoT publisher initialized for endpoint: %s", config.IoTEndpoint)
+	return publisher
 }
 
 // withWebSocketMetrics adds metrics for WebSocket connections

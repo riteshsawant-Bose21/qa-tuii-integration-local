@@ -16,9 +16,9 @@ import (
 	"syscall"
 	"time"
 
+	"fusion-services-core/logging"
 	"fusion/internal/api"
 	"fusion/internal/app"
-	"fusion-services-core/logging"
 	"fusion/internal/version"
 )
 
@@ -36,6 +36,12 @@ func parseFlags() *api.AppConfig {
 	local := flag.Bool("local", false, "Run in local-only mode (no clustering)")
 	verbose := flag.Bool("verbose", false, "Enable verbose logging")
 	profile := flag.Bool("profile", false, "Enable profile dump")
+
+	// IoT Core flags
+	iotEnabled := flag.Bool("iot-enabled", false, "Enable AWS IoT Core metrics publishing")
+	iotEndpoint := flag.String("iot-endpoint", "", "AWS IoT Core endpoint (e.g., xxx-ats.iot.us-east-2.amazonaws.com)")
+	iotClientID := flag.String("iot-client-id", "", "AWS IoT Core client ID")
+	iotTopicPrefix := flag.String("iot-topic-prefix", "logs/", "Topic prefix for IoT messages")
 	flag.Parse()
 
 	// Read environment overrides
@@ -51,6 +57,22 @@ func parseFlags() *api.AppConfig {
 		}
 	}
 
+	// IoT environment overrides
+	if envVal := os.Getenv("FUSION_IOT_ENABLED"); envVal != "" {
+		if envVal == "1" || strings.EqualFold(envVal, "true") {
+			*iotEnabled = true
+		}
+	}
+	if envVal := os.Getenv("FUSION_IOT_ENDPOINT"); envVal != "" {
+		*iotEndpoint = envVal
+	}
+	if envVal := os.Getenv("FUSION_IOT_CLIENT_ID"); envVal != "" {
+		*iotClientID = envVal
+	}
+	if envVal := os.Getenv("FUSION_IOT_TOPIC_PREFIX"); envVal != "" {
+		*iotTopicPrefix = envVal
+	}
+
 	if *versionFlag {
 		// This must be a log.Printf. The server logger is not running yet.
 		log.Printf("Version: %s\nCommit: %s\nBuild Time: %s\n", version.Version, version.Commit, version.BuildTime)
@@ -58,13 +80,17 @@ func parseFlags() *api.AppConfig {
 	}
 
 	return &api.AppConfig{
-		NodeName: createUniqueNodeName(baseName),
-		BindAddr: *bindAddr,
-		BindPort: *bindPort,
-		NetIface: *netIface,
-		Local:    *local,
-		Verbose:  *verbose,
-		Profile:  *profile,
+		NodeName:       createUniqueNodeName(baseName),
+		BindAddr:       *bindAddr,
+		BindPort:       *bindPort,
+		NetIface:       *netIface,
+		Local:          *local,
+		Verbose:        *verbose,
+		Profile:        *profile,
+		IoTEnabled:     *iotEnabled,
+		IoTEndpoint:    *iotEndpoint,
+		IoTClientID:    *iotClientID,
+		IoTTopicPrefix: *iotTopicPrefix,
 	}
 }
 
