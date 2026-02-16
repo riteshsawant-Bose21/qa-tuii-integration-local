@@ -137,6 +137,8 @@ class _PBTextFieldState extends State<PBTextField> {
           keyboardType: TextInputType.number,
           controller: controller,
           style: context.textTheme.bodySmall,
+          textAlign: TextAlign.center,
+
           decoration: const InputDecoration(
             border: InputBorder.none,
             focusedBorder: InputBorder.none,

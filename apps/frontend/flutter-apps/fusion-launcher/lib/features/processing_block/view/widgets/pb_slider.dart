@@ -288,9 +288,9 @@ class _VerticalSliderState extends State<VerticalSlider> {
                             child: Container(
                               height: widget.thumbSize,
                               width: widget.thumbSize,
-                              padding: EdgeInsets.all(widget.thumbSize * 0.2),
+                              padding: EdgeInsets.all(widget.thumbSize * 0.25),
                               decoration: BoxDecoration(
-                                color: context.colorScheme.primaryColor,
+                                color: context.colorScheme.primaryWhite,
                                 shape: BoxShape.circle,
                                 boxShadow: <BoxShadow>[
                                   BoxShadow(
@@ -305,7 +305,7 @@ class _VerticalSliderState extends State<VerticalSlider> {
                                   height: widget.thumbSize,
                                   width: widget.thumbSize,
                                   decoration: BoxDecoration(
-                                    color: context.colorScheme.primaryWhite,
+                                    color: context.colorScheme.textGrey,
                                     shape: BoxShape.circle,
                                   ),
                                 ),
