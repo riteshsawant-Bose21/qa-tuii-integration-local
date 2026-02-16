@@ -3,6 +3,7 @@ import 'package:fusion_launcher/core/models/algorithm/algorithm_metadata.dart';
 import 'package:fusion_launcher/core/service_locator.dart';
 import 'package:fusion_launcher/features/processing_block/dto/pb_layout.dart';
 import 'package:fusion_launcher/features/processing_block/view/processing_blocks/delay/delay_block.dart';
+import 'package:fusion_launcher/features/processing_block/view/processing_blocks/limiter/limiter_block.dart';
 import 'package:fusion_launcher/features/processing_block/view/processing_blocks/peq/peq_block.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:provider/provider.dart';
@@ -31,6 +32,8 @@ class ProcessingBlockPage extends StatelessWidget {
                   return const PeqBlock();
                 } else if (processingBlock.algorithmId == 'agc') {
                   return const AgcBlock();
+                } else if (processingBlock.algorithmId == 'limiter') {
+                  return const LimiterBlock();
                 }
                 if (processingBlock.algorithmId == 'delay') {
                   return const DelayBlock();
