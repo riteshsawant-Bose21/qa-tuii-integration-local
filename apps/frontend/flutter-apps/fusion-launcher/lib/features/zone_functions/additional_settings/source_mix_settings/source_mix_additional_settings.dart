@@ -8,6 +8,7 @@ import 'package:fusion_lib/fusion_lib.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../widgets/horizontal_scroll_effect_wrapper.dart';
+import '../models/models.dart';
 import 'viewmodel/source_mix_additional_settings_viewmodel.dart';
 
 class SourceMixAdditionalSettingsDialog extends StatefulWidget {
@@ -155,7 +156,7 @@ class _SourceMixAdditionalSettingsState extends State<SourceMixAdditionalSetting
                                           flex: 2,
                                           child: _SourcesSetting(
                                             zoneID: widget.zoneID,
-                                            zoneFunctions: zoneFunction,
+                                            vm: vm,
                                           ),
                                         ),
 
@@ -203,12 +204,9 @@ class _SourceMixAdditionalSettingsState extends State<SourceMixAdditionalSetting
 
 class _SourcesSetting extends StatefulWidget {
   final String zoneID;
-  final ZoneFunctions zoneFunctions;
+  final SourceMixAdditionalSettingsViewmodel vm;
 
-  const _SourcesSetting({
-    required this.zoneID,
-    required this.zoneFunctions,
-  });
+  const _SourcesSetting({required this.zoneID, required this.vm});
 
   @override
   State<_SourcesSetting> createState() => __SourcesSettingState();
@@ -222,8 +220,8 @@ class __SourcesSettingState extends State<_SourcesSetting> {
   @override
   void initState() {
     super.initState();
-    late final ProjectViewModel projectViewModel = serviceLocator<ProjectViewModel>();
-    sources = projectViewModel.getSourcesAndSourceSetSourcesInZone(zoneId: widget.zoneID);
+    final ProjectViewModel projectViewModel = serviceLocator<ProjectViewModel>();
+    sources = projectViewModel.getSourcesInZone(zoneId: widget.zoneID);
   }
 
   @override
@@ -234,7 +232,7 @@ class __SourcesSettingState extends State<_SourcesSetting> {
 
   @override
   Widget build(BuildContext context) {
-    final ProjectViewModel projectViewModel = context.watch<ProjectViewModel>();
+    // final ProjectViewModel projectViewModel = context.watch<ProjectViewModel>();
 
     return Column(
       children: <Widget>[
@@ -278,10 +276,7 @@ class __SourcesSettingState extends State<_SourcesSetting> {
                   children: List<Widget>.generate(sources.length, (int index) {
                     final Source source = sources[index];
 
-                    final MixSettings mixSetting = widget.zoneFunctions.mixSettings!.singleWhere(
-                      (MixSettings setting) => setting.sourceId == source.id,
-                      orElse: () => MixSettings(sourceId: source.id, gain: 0, muted: true),
-                    );
+                    final SourceVolumneRangeModel sourceRange = widget.vm.getSourceRange(source.id);
 
                     return Container(
                       width: 150,
@@ -313,17 +308,10 @@ class __SourcesSettingState extends State<_SourcesSetting> {
                           SemanticHelper.formControl(
                             testId: SemanticHelper.createTestId(SemanticTypes.textInput, "source_mix_gain_text_field"),
                             child: NeumorphicGainTextField(
-                              controllerValue: mixSetting.gain,
+                              // controllerValue: sourceRange.gain,
                               minGain: -60,
                               maxGain: 12,
-                              onSubmitted: (double value) {
-                                projectViewModel.updateMixSettings(
-                                  mixSettings: mixSetting.copyWith(
-                                    gain: value,
-                                  ),
-                                  functionId: widget.zoneFunctions.id,
-                                );
-                              },
+                              onSubmitted: (double value) {},
                             ),
                           ),
                           Padding(
@@ -337,15 +325,21 @@ class __SourcesSettingState extends State<_SourcesSetting> {
                                   child: SemanticHelper.button(
                                     testId: SemanticHelper.createTestId(SemanticTypes.button, "source_mix_gain_slider"),
                                     child: VerticalRangeSelectionSlider(
-                                      lowerValue: -40,
-                                      upperValue: 0,
+                                      lowerValue: sourceRange.lowerGain,
+                                      upperValue: sourceRange.upperGain,
                                       min: -60,
                                       max: 12,
                                       onLowerChanged: (num value) {
-                                        //
+                                        widget.vm.updateSource(
+                                          sourceId: source.id,
+                                          lowerGain: value.toDouble(),
+                                        );
                                       },
                                       onUpperChanged: (num value) {
-                                        //
+                                        widget.vm.updateSource(
+                                          sourceId: source.id,
+                                          upperGain: value.toDouble(),
+                                        );
                                       },
                                     ),
                                   ),
@@ -370,7 +364,10 @@ class __SourcesSettingState extends State<_SourcesSetting> {
                                       FusionCheckbox(
                                         value: false,
                                         onChanged: () {
-                                          //
+                                          widget.vm.updateSource(
+                                            sourceId: source.id,
+                                            alloMute: !sourceRange.allowMute,
+                                          );
                                         },
                                       ),
                                     ],

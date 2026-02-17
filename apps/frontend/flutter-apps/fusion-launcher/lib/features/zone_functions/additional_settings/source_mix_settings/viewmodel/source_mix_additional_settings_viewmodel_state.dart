@@ -1,26 +1,26 @@
 part of 'source_mix_additional_settings_viewmodel.dart';
 
 class SourceMixAdditionalSettingsViewmodelState extends Equatable {
-  final List<String> selectedSourcesIds;
+  final List<SourceVolumneRangeModel> sources;
   final VolumneRangeModel? zoneVolumeRange;
   final List<VolumneRangeModel>? subZonesVolumeRange;
   final bool assignToControllers;
 
   const SourceMixAdditionalSettingsViewmodelState({
-    this.selectedSourcesIds = const <String>[],
+    this.sources = const <SourceVolumneRangeModel>[],
     this.zoneVolumeRange,
     this.subZonesVolumeRange,
     this.assignToControllers = false,
   });
 
   SourceMixAdditionalSettingsViewmodelState copyWith({
-    List<String>? selectedSourcesIds,
+    List<SourceVolumneRangeModel>? sources,
     VolumneRangeModel? zoneVolumeRange,
     List<VolumneRangeModel>? subZonesVolumeRange,
     bool? assignToControllers,
   }) {
     return SourceMixAdditionalSettingsViewmodelState(
-      selectedSourcesIds: selectedSourcesIds ?? this.selectedSourcesIds,
+      sources: sources ?? this.sources,
       zoneVolumeRange: zoneVolumeRange ?? this.zoneVolumeRange,
       subZonesVolumeRange: subZonesVolumeRange ?? this.subZonesVolumeRange,
       assignToControllers: assignToControllers ?? this.assignToControllers,
@@ -29,7 +29,7 @@ class SourceMixAdditionalSettingsViewmodelState extends Equatable {
 
   @override
   List<Object?> get props => <Object?>[
-    selectedSourcesIds,
+    sources,
     zoneVolumeRange,
     subZonesVolumeRange,
     assignToControllers,

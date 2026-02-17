@@ -16,29 +16,62 @@ class SourceMixAdditionalSettingsViewmodel extends Cubit<SourceMixAdditionalSett
   bool hasSubZones = false;
 
   void init({required String zoneID}) {
+    final List<Source> sources = projectViewModel.getSourcesInZone(zoneId: zoneID);
+
+    SourceMixAdditionalSettingsViewmodelState updatedState = state.copyWith(
+      // ===============================================================================================
+      // SOURCES volume range initialization
+      // ===============================================================================================
+      sources: <SourceVolumneRangeModel>[
+        ...sources.map(
+          (Source source) => SourceVolumneRangeModel(sourceId: source.id),
+        ),
+      ],
+    );
+
     // ===============================================================================================
     // ZONE or SUBZONE volume range initialization
     // ===============================================================================================
     final List<SubZone> subZones = projectViewModel.getSubZonesForZone(parentZoneId: zoneID);
     if (subZones.isEmpty) {
       hasSubZones = false;
-      final SourceMixAdditionalSettingsViewmodelState updated = state.copyWith(zoneVolumeRange: VolumneRangeModel(zoneOrSubzoneId: zoneID));
-      emit(updated);
+      updatedState = updatedState.copyWith(zoneVolumeRange: VolumneRangeModel(zoneOrSubzoneId: zoneID));
+      emit(updatedState);
     } else {
       hasSubZones = true;
       final List<VolumneRangeModel> subZonesVolumes = subZones.map((SubZone subZone) => VolumneRangeModel(zoneOrSubzoneId: subZone.id)).toList();
-      final SourceMixAdditionalSettingsViewmodelState updated = state.copyWith(subZonesVolumeRange: subZonesVolumes);
-      emit(updated);
+      updatedState = updatedState.copyWith(subZonesVolumeRange: subZonesVolumes);
+      emit(updatedState);
     }
   }
 
-  bool isSourceSelect(String sourceId) => state.selectedSourcesIds.contains(sourceId);
+  SourceVolumneRangeModel getSourceRange(String sourceId) => state.sources.firstWhere((SourceVolumneRangeModel source) => source.sourceId == sourceId);
 
   bool get isAssignToControllersEnabled => state.assignToControllers;
   void toggleAssignToControllers() {
     final bool newValue = !isAssignToControllersEnabled;
     final SourceMixAdditionalSettingsViewmodelState updated = state.copyWith(assignToControllers: newValue);
     emit(updated);
+  }
+
+  void updateSource({
+    required String sourceId,
+    double? lowerGain,
+    double? upperGain,
+    bool? alloMute,
+  }) {
+    final SourceVolumneRangeModel sourceRange = getSourceRange(sourceId);
+    final SourceVolumneRangeModel updatedSourceRange = sourceRange.copyWith(
+      lowerGain: lowerGain,
+      upperGain: upperGain,
+      allowMute: alloMute,
+    );
+
+    final Iterable<SourceVolumneRangeModel> updatedSources = state.sources.map((SourceVolumneRangeModel source) {
+      return source.sourceId == sourceId ? updatedSourceRange : source;
+    });
+
+    emit(state.copyWith(sources: updatedSources.toList()));
   }
 
   // ZONE AND SUBZONES related methods

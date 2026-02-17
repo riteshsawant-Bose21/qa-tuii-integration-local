@@ -43,6 +43,37 @@ class VolumneRangeModel extends Equatable {
   List<Object?> get props => <Object?>[lowerGain, upperGain, zoneOrSubzoneId, allowMute];
 }
 
+class SourceVolumneRangeModel extends Equatable {
+  final String sourceId;
+  final double lowerGain;
+  final double upperGain;
+  final bool allowMute;
+
+  const SourceVolumneRangeModel({
+    this.lowerGain = -6,
+    this.upperGain = 6,
+    required this.sourceId,
+    this.allowMute = true,
+  });
+
+  SourceVolumneRangeModel copyWith({
+    double? lowerGain,
+    double? upperGain,
+    String? sourceId,
+    bool? allowMute,
+  }) {
+    return SourceVolumneRangeModel(
+      lowerGain: lowerGain ?? this.lowerGain,
+      upperGain: upperGain ?? this.upperGain,
+      sourceId: sourceId ?? this.sourceId,
+      allowMute: allowMute ?? this.allowMute,
+    );
+  }
+
+  @override
+  List<Object?> get props => <Object?>[lowerGain, upperGain, sourceId, allowMute];
+}
+
 class PriorityAdditionalSettingsModel extends Equatable {
   final AdditionalSettingsPriorityControlType priorityControlType;
   final AdditionalSettingPriorityBehavior? priorityBehavior;
