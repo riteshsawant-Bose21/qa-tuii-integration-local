@@ -47,21 +47,22 @@ class GraphicEqController {
   void bypassGlobally(bool value) => valueHandler.updateValue(field: 'bypass', value: value);
 
   double getBandValue(int bandIndex) {
-    final String fieldName = graphicEqFrequencies[bandIndex].toString();
-    final dynamic value = allProperties.firstWhereOrNull((PropertySetting e) => e.name == fieldName && e.dimension == null)?.value;
+    final dynamic value = allProperties.firstWhereOrNull((PropertySetting e) => e.name == "gain" && e.dimension == bandIndex)?.value;
     if (value == null) return 0.0;
     return DeserializationUtil.numDeserializer.deserialize(value)?.toDouble() ?? 0.0;
   }
 
   void updateBandValue(int bandIndex, num newValue) {
-    final String fieldName = graphicEqFrequencies[bandIndex].toString();
-    valueHandler.updateValue(field: fieldName, value: newValue);
+    valueHandler.updateValue(
+      field: "gain",
+      dimension: bandIndex,
+      value: newValue,
+    );
   }
 
   void flattenAll() {
-    for (num freq in graphicEqFrequencies) {
-      final String fieldName = freq.toString();
-      valueHandler.updateValue(field: fieldName, value: 0.0);
+    for (int i = 0; i < graphicEqFrequencies.length; i++) {
+      valueHandler.updateValue(field: "gain", value: 0.0, dimension: i);
     }
   }
 }
