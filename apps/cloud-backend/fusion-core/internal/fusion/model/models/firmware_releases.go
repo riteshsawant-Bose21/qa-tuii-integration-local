@@ -27,7 +27,7 @@ type FirmwareRelease struct {
 	ID                   string           `boil:"id" json:"id" toml:"id" yaml:"id"`
 	Platform             string           `boil:"platform" json:"platform" toml:"platform" yaml:"platform"`
 	Version              string           `boil:"version" json:"version" toml:"version" yaml:"version"`
-	VersionParts         types.Int64Array `boil:"version_parts" json:"version_parts" toml:"version_parts" yaml:"version_parts"`
+	VersionParts         types.Int64Array `boil:"version_parts" json:"version_parts,omitempty" toml:"version_parts" yaml:"version_parts,omitempty"`
 	Status               string           `boil:"status" json:"status" toml:"status" yaml:"status"`
 	ReleaseNotes         string           `boil:"release_notes" json:"release_notes" toml:"release_notes" yaml:"release_notes"`
 	S3Key                string           `boil:"s3_key" json:"s3_key" toml:"s3_key" yaml:"s3_key"`
@@ -107,10 +107,10 @@ var FirmwareReleaseTableColumns = struct {
 type whereHelpertypes_Int64Array struct{ field string }
 
 func (w whereHelpertypes_Int64Array) EQ(x types.Int64Array) qm.QueryMod {
-	return qmhelper.Where(w.field, qmhelper.EQ, x)
+	return qmhelper.WhereNullEQ(w.field, false, x)
 }
 func (w whereHelpertypes_Int64Array) NEQ(x types.Int64Array) qm.QueryMod {
-	return qmhelper.Where(w.field, qmhelper.NEQ, x)
+	return qmhelper.WhereNullEQ(w.field, true, x)
 }
 func (w whereHelpertypes_Int64Array) LT(x types.Int64Array) qm.QueryMod {
 	return qmhelper.Where(w.field, qmhelper.LT, x)
@@ -124,6 +124,9 @@ func (w whereHelpertypes_Int64Array) GT(x types.Int64Array) qm.QueryMod {
 func (w whereHelpertypes_Int64Array) GTE(x types.Int64Array) qm.QueryMod {
 	return qmhelper.Where(w.field, qmhelper.GTE, x)
 }
+
+func (w whereHelpertypes_Int64Array) IsNull() qm.QueryMod    { return qmhelper.WhereIsNull(w.field) }
+func (w whereHelpertypes_Int64Array) IsNotNull() qm.QueryMod { return qmhelper.WhereIsNotNull(w.field) }
 
 var FirmwareReleaseWhere = struct {
 	ID                   whereHelperstring

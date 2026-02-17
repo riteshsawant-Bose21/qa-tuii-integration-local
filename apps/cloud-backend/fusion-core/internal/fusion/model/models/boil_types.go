@@ -51,6 +51,34 @@ func makeCacheKey(cols boil.Columns, nzDefaults []string) string {
 	return str
 }
 
+// Enum values for FirmwareReleaseStatus
+const (
+	FirmwareReleaseStatusPENDING_UPLOAD string = "PENDING_UPLOAD"
+	FirmwareReleaseStatusAVAILABLE      string = "AVAILABLE"
+	FirmwareReleaseStatusARCHIVED       string = "ARCHIVED"
+)
+
+func AllFirmwareReleaseStatus() []string {
+	return []string{
+		FirmwareReleaseStatusPENDING_UPLOAD,
+		FirmwareReleaseStatusAVAILABLE,
+		FirmwareReleaseStatusARCHIVED,
+	}
+}
+
+// Enum values for FirmwareUpdateStatus
+const (
+	FirmwareUpdateStatusINSTALL_SUCCESS string = "INSTALL_SUCCESS"
+	FirmwareUpdateStatusINSTALL_FAIL    string = "INSTALL_FAIL"
+)
+
+func AllFirmwareUpdateStatus() []string {
+	return []string{
+		FirmwareUpdateStatusINSTALL_SUCCESS,
+		FirmwareUpdateStatusINSTALL_FAIL,
+	}
+}
+
 // Enum values for ProductTypeEnum
 const (
 	ProductTypeEnumSpeaker    string = "speaker"

@@ -39,6 +39,11 @@ func (m *MockFirmwareService) ListReleases(ctx context.Context, platform string,
 	return args.Get(0).(*types.FirmwareReleaseListResponse), args.Error(1)
 }
 
+func (m *MockFirmwareService) LogFirmwareUpdate(ctx context.Context, req *types.LogFirmwareUpdateRequest) error {
+	args := m.Called(ctx, req)
+	return args.Error(0)
+}
+
 func (m *MockFirmwareService) CheckForUpdates(ctx context.Context, request *types.CheckUpdateRequest) (*types.CheckUpdateResponse, error) {
 	args := m.Called(ctx, request)
 	if args.Get(0) == nil {

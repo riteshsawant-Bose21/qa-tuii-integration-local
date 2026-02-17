@@ -55,7 +55,6 @@ func (s *Service) InitiateRelease(ctx context.Context, releaseDetails *types.Ini
 	if exists {
 		return "", "", errorutil.ErrVersionExists
 	}
-
 	presignURL, err = s.generateFirmwareArtifactURL(ctx, releaseDetails.MetaData.Platform, releaseDetails.MetaData.FirmwareVersion, "firmware", time.Minute*15, "put", logger)
 	if err != nil {
 		return "", "", fmt.Errorf("failed to generate presign URL: %v", err)

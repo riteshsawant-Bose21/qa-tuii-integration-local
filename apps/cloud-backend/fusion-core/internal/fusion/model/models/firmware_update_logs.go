@@ -23,42 +23,47 @@ import (
 
 // FirmwareUpdateLog is an object representing the database table.
 type FirmwareUpdateLog struct {
-	ID        int64     `boil:"id" json:"id" toml:"id" yaml:"id"`
-	DeviceID  string    `boil:"device_id" json:"device_id" toml:"device_id" yaml:"device_id"`
-	Status    string    `boil:"status" json:"status" toml:"status" yaml:"status"`
-	EventTime time.Time `boil:"event_time" json:"event_time" toml:"event_time" yaml:"event_time"`
-	CreatedAt time.Time `boil:"created_at" json:"created_at" toml:"created_at" yaml:"created_at"`
+	ID             int64     `boil:"id" json:"id" toml:"id" yaml:"id"`
+	DeviceID       string    `boil:"device_id" json:"device_id" toml:"device_id" yaml:"device_id"`
+	Status         string    `boil:"status" json:"status" toml:"status" yaml:"status"`
+	ReleaseVersion string    `boil:"release_version" json:"release_version" toml:"release_version" yaml:"release_version"`
+	EventTime      time.Time `boil:"event_time" json:"event_time" toml:"event_time" yaml:"event_time"`
+	CreatedAt      time.Time `boil:"created_at" json:"created_at" toml:"created_at" yaml:"created_at"`
 
 	R *firmwareUpdateLogR `boil:"-" json:"-" toml:"-" yaml:"-"`
 	L firmwareUpdateLogL  `boil:"-" json:"-" toml:"-" yaml:"-"`
 }
 
 var FirmwareUpdateLogColumns = struct {
-	ID        string
-	DeviceID  string
-	Status    string
-	EventTime string
-	CreatedAt string
+	ID             string
+	DeviceID       string
+	Status         string
+	ReleaseVersion string
+	EventTime      string
+	CreatedAt      string
 }{
-	ID:        "id",
-	DeviceID:  "device_id",
-	Status:    "status",
-	EventTime: "event_time",
-	CreatedAt: "created_at",
+	ID:             "id",
+	DeviceID:       "device_id",
+	Status:         "status",
+	ReleaseVersion: "release_version",
+	EventTime:      "event_time",
+	CreatedAt:      "created_at",
 }
 
 var FirmwareUpdateLogTableColumns = struct {
-	ID        string
-	DeviceID  string
-	Status    string
-	EventTime string
-	CreatedAt string
+	ID             string
+	DeviceID       string
+	Status         string
+	ReleaseVersion string
+	EventTime      string
+	CreatedAt      string
 }{
-	ID:        "firmware_update_logs.id",
-	DeviceID:  "firmware_update_logs.device_id",
-	Status:    "firmware_update_logs.status",
-	EventTime: "firmware_update_logs.event_time",
-	CreatedAt: "firmware_update_logs.created_at",
+	ID:             "firmware_update_logs.id",
+	DeviceID:       "firmware_update_logs.device_id",
+	Status:         "firmware_update_logs.status",
+	ReleaseVersion: "firmware_update_logs.release_version",
+	EventTime:      "firmware_update_logs.event_time",
+	CreatedAt:      "firmware_update_logs.created_at",
 }
 
 // Generated where
@@ -87,17 +92,19 @@ func (w whereHelperint64) NIN(slice []int64) qm.QueryMod {
 }
 
 var FirmwareUpdateLogWhere = struct {
-	ID        whereHelperint64
-	DeviceID  whereHelperstring
-	Status    whereHelperstring
-	EventTime whereHelpertime_Time
-	CreatedAt whereHelpertime_Time
+	ID             whereHelperint64
+	DeviceID       whereHelperstring
+	Status         whereHelperstring
+	ReleaseVersion whereHelperstring
+	EventTime      whereHelpertime_Time
+	CreatedAt      whereHelpertime_Time
 }{
-	ID:        whereHelperint64{field: "\"firmware_update_logs\".\"id\""},
-	DeviceID:  whereHelperstring{field: "\"firmware_update_logs\".\"device_id\""},
-	Status:    whereHelperstring{field: "\"firmware_update_logs\".\"status\""},
-	EventTime: whereHelpertime_Time{field: "\"firmware_update_logs\".\"event_time\""},
-	CreatedAt: whereHelpertime_Time{field: "\"firmware_update_logs\".\"created_at\""},
+	ID:             whereHelperint64{field: "\"firmware_update_logs\".\"id\""},
+	DeviceID:       whereHelperstring{field: "\"firmware_update_logs\".\"device_id\""},
+	Status:         whereHelperstring{field: "\"firmware_update_logs\".\"status\""},
+	ReleaseVersion: whereHelperstring{field: "\"firmware_update_logs\".\"release_version\""},
+	EventTime:      whereHelpertime_Time{field: "\"firmware_update_logs\".\"event_time\""},
+	CreatedAt:      whereHelpertime_Time{field: "\"firmware_update_logs\".\"created_at\""},
 }
 
 // FirmwareUpdateLogRels is where relationship names are stored.
@@ -117,8 +124,8 @@ func (*firmwareUpdateLogR) NewStruct() *firmwareUpdateLogR {
 type firmwareUpdateLogL struct{}
 
 var (
-	firmwareUpdateLogAllColumns            = []string{"id", "device_id", "status", "event_time", "created_at"}
-	firmwareUpdateLogColumnsWithoutDefault = []string{"device_id", "status"}
+	firmwareUpdateLogAllColumns            = []string{"id", "device_id", "status", "release_version", "event_time", "created_at"}
+	firmwareUpdateLogColumnsWithoutDefault = []string{"device_id", "status", "release_version"}
 	firmwareUpdateLogColumnsWithDefault    = []string{"id", "event_time", "created_at"}
 	firmwareUpdateLogPrimaryKeyColumns     = []string{"id"}
 	firmwareUpdateLogGeneratedColumns      = []string{}
