@@ -87,9 +87,7 @@ class GraphicEqBlock extends StatelessWidget {
                                               margin: const EdgeInsets.only(bottom: 90),
                                               decoration: BoxDecoration(
                                                 color: index.isOdd ? context.colorScheme.elevation2 : null,
-                                                borderRadius: BorderRadius.circular(
-                                                  FusionSizes.borderRadius2,
-                                                ),
+                                                borderRadius: BorderRadius.circular(FusionSizes.borderRadius2),
                                               ),
                                               child: Column(
                                                 children: <Widget>[

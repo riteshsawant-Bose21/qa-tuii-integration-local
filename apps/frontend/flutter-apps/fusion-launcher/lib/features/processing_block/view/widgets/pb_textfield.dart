@@ -132,9 +132,11 @@ class _PBTextFieldState extends State<PBTextField> {
   @override
   Widget build(BuildContext context) {
     return FusionContainer(
+      alignment: Alignment.center,
       color: context.colorScheme.elevation2,
+      borderRadius: 8,
       child: Padding(
-        padding: const EdgeInsets.all(8.0),
+        padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4),
         child: TextFormField(
           focusNode: focusNode,
           keyboardType: TextInputType.number,
