@@ -72,7 +72,6 @@ class _CompactFirmwareUpdateWidgetState extends State<CompactFirmwareUpdateWidge
     // or transparent to fit into an existing card.
     return AnimatedContainer(
       duration: const Duration(milliseconds: 300),
-      padding: const EdgeInsets.symmetric(vertical: 8),
       child: _buildContent(),
     );
   }

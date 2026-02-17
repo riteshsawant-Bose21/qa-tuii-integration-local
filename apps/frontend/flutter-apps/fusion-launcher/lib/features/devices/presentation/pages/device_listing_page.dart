@@ -1,6 +1,7 @@
 import 'dart:math';
 
 import 'package:flutter/material.dart';
+import 'package:fusion_launcher/core/router/routes.dart';
 import 'package:fusion_launcher/core/service_locator.dart';
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
 import 'package:fusion_launcher/features/control_dashboard/presentation/widgets/alerts/alerts_dashboard.dart';
@@ -31,7 +32,6 @@ class _DeviceListTabState extends State<DeviceListTab> {
     return <HardwareComponent>[...dsp, ...amplifiers, ...controllers];
   }
 
-  // Location Logic (Ported from DashboardDeviceCard)
   String _getDeviceLocation(HardwareComponent device) {
     if (device.locationEntity.listeningAreaId != null) {
       final Zone? zone = serviceLocator<ProjectViewModel>().getZonesForListeningArea(areaId: device.locationEntity.listeningAreaId!);
@@ -133,7 +133,7 @@ class _DeviceListTabState extends State<DeviceListTab> {
         ),
         'deviceName': FusionTableCell(
           value: deviceName,
-          child: _buildLinkText(deviceName),
+          child: _buildLinkText(deviceName, device.id),
         ),
         // 'model': FusionTableCell(
         //   value: modelName,
@@ -256,17 +256,26 @@ class _DeviceListTabState extends State<DeviceListTab> {
     );
   }
 
-  Widget _buildLinkText(String text) {
-    return Text(
-      text,
-      style: const TextStyle(
-        color: Color(0xFF4CAF50),
-        decoration: TextDecoration.underline,
-        decorationColor: Color(0xFF4CAF50),
-        fontSize: 13,
+  Widget _buildLinkText(String deviceName, String deviceId) {
+    return InkWell(
+      onTap: () {
+        Navigator.pushNamed(
+          context,
+          Routes.deviceDetails,
+          arguments: deviceId,
+        );
+      },
+      child: FusionAppText(
+        text: deviceName,
+        style: context.textTheme.labelMedium!.copyWith(
+          color: context.colorScheme.green,
+          decoration: TextDecoration.underline,
+          decorationColor: context.colorScheme.green,
+          fontSize: 13,
+        ),
+        maxLine: 1,
+        textOverflow: TextOverflow.ellipsis,
       ),
-      maxLines: 1,
-      overflow: TextOverflow.ellipsis,
     );
   }
 }

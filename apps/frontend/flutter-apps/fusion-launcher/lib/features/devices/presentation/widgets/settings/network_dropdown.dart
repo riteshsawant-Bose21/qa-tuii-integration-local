@@ -7,6 +7,8 @@ class NetworkDropdown<T> extends StatelessWidget {
   final String Function(T item) labelBuilder;
   final ValueChanged<T?>? onChanged;
   final String placeholder;
+  final double? width;
+  final double? height;
 
   const NetworkDropdown({
     super.key,
@@ -15,19 +17,25 @@ class NetworkDropdown<T> extends StatelessWidget {
     this.selectedValue,
     this.onChanged,
     this.placeholder = 'Select...',
+    this.width,
+    this.height = 32,
   });
 
   @override
   Widget build(BuildContext context) {
     return FusionContainer(
       borderRadius: 6,
+      raised: true,
       child: Container(
-        height: 32, // Fixed height to match design
+        height: height,
+        width: width,
         padding: const EdgeInsets.symmetric(horizontal: 12),
         decoration: BoxDecoration(
           color: context.colorScheme.elevation1,
           borderRadius: BorderRadius.circular(6),
-          border: Border.all(color: Colors.white10),
+          border: Border.all(
+            color: context.colorScheme.elevation1,
+          ),
         ),
         child: DropdownButtonHideUnderline(
           child: DropdownButton<T>(
@@ -38,7 +46,8 @@ class NetworkDropdown<T> extends StatelessWidget {
               color: context.colorScheme.textDisabled,
               size: 16,
             ),
-            dropdownColor: context.colorScheme.elevation2, // Darker background for menu
+            dropdownColor: context.colorScheme.elevation2,
+            // Darker background for menu
             style: context.textTheme.labelMedium!.copyWith(
               color: context.colorScheme.textPrimary,
             ),

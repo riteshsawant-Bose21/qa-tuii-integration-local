@@ -114,6 +114,11 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with TickerProviderSt
       tag: LogTag.project,
     );
 
+    // Listen for tab changes to trigger rebuild for IndexedStack
+    _tabController.addListener(() {
+      setState(() {});
+    });
+
     /// Todo: Need to handle this in a better way
     serviceLocator<ProjectViewModel>().changeDeviceTypeIndex(-1);
     serviceLocator<ProjectViewModel>().currentToolbarMode = ToolbarMode.acoustics;
@@ -154,13 +159,12 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with TickerProviderSt
   void toggleFusionModes() {
     serviceLocator<ProjectViewModel>().toggleControlMode();
 
-    // Safely reinitialize controller after mode change
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) {
-        _initController(isInDesignMode);
-        setState(() {});
-      }
-    });
+    // Verify tab controller index is valid, reset to 0 if invalid
+    // if (_tabController.index >= currentWidget.length) {
+    //   WidgetsBinding.instance.addPostFrameCallback((_) {
+    //     _tabController.animateTo(0);
+    //   });
+    // }
   }
 
   Future<void> _initMace() async {
@@ -729,6 +733,10 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with TickerProviderSt
         listener: (BuildContext context, ProjectViewModelState state) {
           if (state is TabChanged && mounted) {
             _initController(state.tab == 0);
+          }
+          if (state is VipUpdated) {
+            _createTabWidgets();
+            _tabController.animateTo(1);
           }
         },
         builder: (BuildContext context, ProjectViewModelState state) {
