@@ -1,4 +1,5 @@
 class FusionSizes {
+  static const double borderRadius2 = 2.0;
   static const double borderRadius4 = 4.0;
   static const double borderRadius8 = 8.0;
   static const double borderRadius12 = 12.0;

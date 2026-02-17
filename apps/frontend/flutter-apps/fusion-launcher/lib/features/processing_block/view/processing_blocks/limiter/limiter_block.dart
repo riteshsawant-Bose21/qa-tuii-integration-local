@@ -184,10 +184,8 @@ class LimiterBlock extends StatelessWidget {
                                         mainAxisSize: MainAxisSize.min,
                                         children: <Widget>[
                                           /// threshold input
-                                          FusionContainer(
-                                            alignment: Alignment.center,
+                                          SizedBox(
                                             width: 58,
-                                            color: context.colorScheme.elevation2,
                                             child: PBNumberTextField(
                                               value: context.watch<LimiterController>().currentRMSAttackTime ?? 0,
                                               onChanged: (num value) {
