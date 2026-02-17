@@ -13,8 +13,8 @@ import (
 	json "github.com/goccy/go-json"
 	"github.com/oklog/ulid/v2"
 
-	"fusion/internal/api"
 	"fusion-services-core/logging"
+	"fusion/internal/api"
 	"fusion/internal/server"
 	"fusion/internal/server/handler"
 )
@@ -332,7 +332,10 @@ func (s *UDPServer) maintenanceLoop() {
 		case <-retryTicker.C:
 			s.retryPending()
 		case <-pruneTicker.C:
-			s.pruneClients()
+			logging.GetLogger().Warn(
+				"UDP client prunning disabled. Enabled it in PR-295",
+			)
+			// s.pruneClients()
 		}
 	}
 }
