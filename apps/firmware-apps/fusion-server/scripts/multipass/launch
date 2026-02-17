@@ -813,9 +813,6 @@ fi
 system_checks
 host_setup
 
-
-sed -i 's/Environment=FUSION_NET_IFACE=lan1/Environment=FUSION_NET_IFACE=enp0s1/' scripts/fusion-server.service
-
 # Set up trap but don't exit on errors
 trap cleanup EXIT
 
