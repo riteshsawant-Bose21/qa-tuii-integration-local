@@ -1,6 +1,7 @@
 import 'package:auth0_flutter/auth0_flutter_web.dart';
 import 'package:fusion_web/features/auth/domain/entities/user_entity.dart';
 import 'package:fusion_web/core/config/auth0_config.dart';
+import 'package:fusion_web/core/config/environment_config.dart';
 import 'package:fusion_web/core/services/api_service.dart';
 import 'package:fusion_web/core/models/authorization_models.dart';
 import 'package:fusion_web/core/services/service_locator.dart';
@@ -19,7 +20,7 @@ class Auth0DataSource {
       print('Starting Auth0 login...');
 
       await _auth0.loginWithRedirect(
-        redirectUrl: 'http://localhost:5173',
+        redirectUrl: EnvironmentConfig.appHostUrl,
         parameters: {
           'scope': 'openid profile email',
           'response_type': 'id_token token',
@@ -37,7 +38,7 @@ class Auth0DataSource {
   Future<void> logout() async {
     try {
       _apiService.clearToken();
-      await _auth0.logout(returnToUrl: 'http://localhost:5173');
+      await _auth0.logout(returnToUrl: EnvironmentConfig.appHostUrl);
     } catch (e) {
       print('Auth0 Logout Error: $e');
       throw Exception('Logout failed: $e');

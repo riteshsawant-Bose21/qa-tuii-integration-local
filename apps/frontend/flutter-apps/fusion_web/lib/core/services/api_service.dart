@@ -1,8 +1,9 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'package:fusion_web/core/config/environment_config.dart';
 
 class ApiService {
-  static const String baseUrl = 'http://localhost:8080/api/v1';
+  static String get baseUrl => EnvironmentConfig.apiBaseUrl;
 
   final http.Client _client;
   String? _bearerToken;

@@ -36,11 +36,12 @@ dependencies:
   cupertino_icons: ^1.0.8
   flutter_bloc: ^9.1.1
   lucide_icons_flutter: ^3.1.6
-  google_fonts: ^6.3.3
+  google_fonts: ^8.0.1
   flutter_svg: ^2.0.14
   auth0_flutter: ^1.7.2
   http: ^1.1.0
   data_table_2: ^2.5.15
+  flutter_dotenv: ^5.1.0
 
   # Fusion Libraries
   fusion_lib: 
@@ -71,6 +72,7 @@ flutter:
   # Assets
   assets:
     - assets/images/
+    - .env
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images
