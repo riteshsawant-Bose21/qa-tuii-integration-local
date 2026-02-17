@@ -210,7 +210,7 @@ class _DeviceListTabState extends State<DeviceListTab> {
                   height: 26,
                   borderRadius: 6,
                   onTap: () {
-                    // Handle click action here
+                    _showStandbyConfirmation(context, device);
                   },
                   child: FusionImage.asset(
                     AssetIcons.standbyIcon,
@@ -227,7 +227,7 @@ class _DeviceListTabState extends State<DeviceListTab> {
                 height: 26,
                 borderRadius: 6,
                 onTap: () {
-                  // Handle click action here
+                  _showRebootConfirmation(context, device);
                 },
                 child: FusionImage.asset(
                   AssetIcons.rebootIcon,
@@ -277,5 +277,49 @@ class _DeviceListTabState extends State<DeviceListTab> {
         textOverflow: TextOverflow.ellipsis,
       ),
     );
+  }
+
+  void _showStandbyConfirmation(BuildContext context, HardwareComponent device) async {
+    final bool? result = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder:
+          (BuildContext context) => FusionActionPopup(
+            title: 'STANDBY',
+            description: 'Do you want to set ${device.name} device to standby ?',
+            loadingMessage: 'Device going standby',
+            onConfirm: () {
+              // TODO: Implement actual standby logic if needed before loading
+            },
+          ),
+    );
+
+    if (result == true && context.mounted) {
+      FusionToast.success(
+        context,
+        message: "${device.name} set to standby successful.",
+      );
+    }
+  }
+
+  _showRebootConfirmation(BuildContext context, HardwareComponent device) async {
+    final bool? result = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder:
+          (BuildContext context) => FusionActionPopup(
+            title: 'REBOOT',
+            description: 'Do you want to reboot ${device.name} device ?',
+            loadingMessage: 'Device rebooting',
+            onConfirm: () {},
+          ),
+    );
+
+    if (result == true && context.mounted) {
+      FusionToast.success(
+        context,
+        message: "${device.name} reboot successful.",
+      );
+    }
   }
 }

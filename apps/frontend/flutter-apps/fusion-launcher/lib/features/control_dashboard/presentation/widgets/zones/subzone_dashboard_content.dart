@@ -8,7 +8,7 @@ import 'dashboard_circuit_widget.dart';
 import 'exandable_section.dart';
 import 'volume_control_buttons.dart';
 
-class SubzoneDashboardContent extends StatelessWidget {
+class SubzoneDashboardContent extends StatefulWidget {
   final SubZone subZone;
   final bool isLast;
 
@@ -18,8 +18,27 @@ class SubzoneDashboardContent extends StatelessWidget {
     this.isLast = false,
   });
 
+  @override
+  State<SubzoneDashboardContent> createState() => _SubzoneDashboardContentState();
+}
+
+class _SubzoneDashboardContentState extends State<SubzoneDashboardContent> {
   List<CircuitModel> get circuits {
-    return serviceLocator<ProjectViewModel>().getCircuitsInSubZone(subZoneId: subZone.id);
+    return serviceLocator<ProjectViewModel>().getCircuitsInSubZone(subZoneId: widget.subZone.id);
+  }
+
+  late final TextEditingController volumeController;
+
+  @override
+  void initState() {
+    volumeController = TextEditingController(text: "5.0");
+    super.initState();
+  }
+
+  @override
+  void dispose() {
+    volumeController.dispose();
+    super.dispose();
   }
 
   @override
@@ -28,7 +47,7 @@ class SubzoneDashboardContent extends StatelessWidget {
       decoration: BoxDecoration(
         color: context.colorScheme.elevation1,
         borderRadius:
-            isLast
+            widget.isLast
                 ? const BorderRadius.only(
                   bottomLeft: Radius.circular(8.0),
                   bottomRight: Radius.circular(8.0),
@@ -49,30 +68,54 @@ class SubzoneDashboardContent extends StatelessWidget {
               children: <Widget>[
                 Expanded(
                   child: FusionAppText(
-                    text: subZone.name,
+                    text: widget.subZone.name,
                     style: context.textTheme.labelMedium,
                   ),
                 ),
 
                 VolumeControlButtons(
+                  volumeController: volumeController,
                   onVolumeChanged: (double newVolume) {
-                    // Handle volume change logic here
+                    if (newVolume < 0.0) {
+                      newVolume = 0.0;
+                    } else if (newVolume > 10.0) {
+                      newVolume = 10.0;
+                    }
+                    volumeController.text = newVolume.toStringAsFixed(1);
                   },
                   onIncrement: () {
-                    // Handle increment logic here
+                    double currentVolume = double.tryParse(volumeController.text) ?? 0.0;
+
+                    currentVolume += 1.0;
+                    if (currentVolume > 10.0) {
+                      currentVolume = 10.0;
+                    }
+                    volumeController.text = currentVolume.toStringAsFixed(1);
                   },
                   onDecrement: () {
-                    // Handle decrement logic here
+                    double currentVolume = double.tryParse(volumeController.text) ?? 0.0;
+
+                    currentVolume -= 1.0;
+                    if (currentVolume < 0.0) {
+                      currentVolume = 0.0;
+                    }
+                    volumeController.text = currentVolume.toStringAsFixed(1);
                   },
                 ),
 
                 // Fix 1: Volume Icon
                 IconButton(
-                  onPressed: () {},
+                  onPressed: () {
+                    serviceLocator<ProjectViewModel>().updateSubZone(
+                      subZone: widget.subZone.copyWith(
+                        muted: !widget.subZone.muted,
+                      ),
+                    );
+                  },
                   padding: EdgeInsets.zero, // Removes internal padding
                   constraints: const BoxConstraints(), // Removes 48px limit
                   icon: Icon(
-                    Icons.volume_up_outlined,
+                    widget.subZone.muted ? Icons.volume_off_outlined : Icons.volume_up_outlined,
                     size: 16,
                     color: context.colorScheme.iconWhite,
                   ),
@@ -81,7 +124,9 @@ class SubzoneDashboardContent extends StatelessWidget {
             ),
           ),
 
-          const AudioMeterContainer(),
+          AudioMeterContainer(
+            muted: widget.subZone.muted,
+          ),
 
           if (circuits.isNotEmpty) ...<Widget>[
             CircuitExpandableSection(
@@ -92,6 +137,7 @@ class SubzoneDashboardContent extends StatelessWidget {
                       .map(
                         (CircuitModel circuit) => DashboardCircuitWidget(
                           circuit: circuit,
+                          isZoneMuted: widget.subZone.muted,
                         ),
                       )
                       .toList(),
@@ -99,10 +145,10 @@ class SubzoneDashboardContent extends StatelessWidget {
           ],
 
           SizedBox(
-            height: isLast ? 10 : 5,
+            height: widget.isLast ? 10 : 5,
           ),
 
-          if (!isLast)
+          if (!widget.isLast)
             Divider(
               color: context.colorScheme.elevation2,
               thickness: 1,
