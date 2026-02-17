@@ -7,15 +7,13 @@ import 'package:fusion_launcher/features/zone_functions/widgets/neumorphic_gain_
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
-import '../viewmodel/additional_settings_viewmodel.dart';
-import '../widgets/horizontal_scroll_effect_wrapper.dart';
-import 'cubit_wrapper.dart';
-import 'source_select_additional_settings.dart';
+import '../../widgets/horizontal_scroll_effect_wrapper.dart';
+import 'viewmodel/source_mix_additional_settings_viewmodel.dart';
 
-class SourceMixAdditionalSettings extends StatefulWidget {
+class SourceMixAdditionalSettingsDialog extends StatefulWidget {
   final String zoneID;
 
-  const SourceMixAdditionalSettings({super.key, required this.zoneID});
+  const SourceMixAdditionalSettingsDialog({super.key, required this.zoneID});
 
   static void showDialog(BuildContext context, {required String zoneID}) {
     showGeneralDialog(
@@ -25,7 +23,7 @@ class SourceMixAdditionalSettings extends StatefulWidget {
       barrierColor: Colors.black54,
       transitionDuration: const Duration(milliseconds: 200),
       pageBuilder: (BuildContext buildContext, _, __) {
-        return SourceMixAdditionalSettings(
+        return SourceMixAdditionalSettingsDialog(
           zoneID: zoneID,
         );
       },
@@ -33,10 +31,10 @@ class SourceMixAdditionalSettings extends StatefulWidget {
   }
 
   @override
-  State<SourceMixAdditionalSettings> createState() => _SourceMixAdditionalSettingsState();
+  State<SourceMixAdditionalSettingsDialog> createState() => _SourceMixAdditionalSettingsState();
 }
 
-class _SourceMixAdditionalSettingsState extends State<SourceMixAdditionalSettings> {
+class _SourceMixAdditionalSettingsState extends State<SourceMixAdditionalSettingsDialog> {
   late ZoneFunctions zoneFunction;
   @override
   void initState() {
@@ -125,67 +123,70 @@ class _SourceMixAdditionalSettingsState extends State<SourceMixAdditionalSetting
                       padding: const EdgeInsets.only(top: 50),
                       child: SemanticHelper.container(
                         testId: SemanticHelper.createTestId(SemanticTypes.container, "source_select_main_container"),
-                        child: ZoneFunctionAdditionalSettingsViewModelCubitWrapper(
-                          zoneID: widget.zoneID,
-                          zoneFunction: zoneFunction,
-                          builder: (BuildContext context, ZoneFunctionAdditionalSettingsViewmodelState state, ZoneFunctionAdditionalSettingsViewModel vm) {
-                            return Container(
-                              decoration: BoxDecoration(
-                                border: Border(
-                                  top: BorderSide(
-                                    color: context.colorScheme.strokeLight,
-                                    width: 0.5,
+                        child: BlocProvider<SourceMixAdditionalSettingsViewmodel>(
+                          create: (_) => SourceMixAdditionalSettingsViewmodel()..init(zoneID: widget.zoneID),
+                          child: BlocBuilder<SourceMixAdditionalSettingsViewmodel, SourceMixAdditionalSettingsViewmodelState>(
+                            builder: (BuildContext context, SourceMixAdditionalSettingsViewmodelState state) {
+                              final SourceMixAdditionalSettingsViewmodel vm = context.watch<SourceMixAdditionalSettingsViewmodel>();
+
+                              return Container(
+                                decoration: BoxDecoration(
+                                  border: Border(
+                                    top: BorderSide(
+                                      color: context.colorScheme.strokeLight,
+                                      width: 0.5,
+                                    ),
                                   ),
                                 ),
-                              ),
-                              padding: const EdgeInsets.all(16.0),
-                              child: ClipRRect(
-                                borderRadius: BorderRadius.circular(16),
-                                child: Container(
-                                  decoration: BoxDecoration(
-                                    color: context.colorScheme.elevation2,
-                                    border: Border.all(color: context.colorScheme.strokeLight),
-                                    borderRadius: BorderRadius.circular(16),
-                                  ),
-                                  child: Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: <Widget>[
-                                      Flexible(
-                                        flex: 2,
-                                        child: _SourcesSetting(
-                                          zoneID: widget.zoneID,
-                                          zoneFunctions: zoneFunction,
+                                padding: const EdgeInsets.all(16.0),
+                                child: ClipRRect(
+                                  borderRadius: BorderRadius.circular(16),
+                                  child: Container(
+                                    decoration: BoxDecoration(
+                                      color: context.colorScheme.elevation2,
+                                      border: Border.all(color: context.colorScheme.strokeLight),
+                                      borderRadius: BorderRadius.circular(16),
+                                    ),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: <Widget>[
+                                        Flexible(
+                                          flex: 2,
+                                          child: _SourcesSetting(
+                                            zoneID: widget.zoneID,
+                                            zoneFunctions: zoneFunction,
+                                          ),
                                         ),
-                                      ),
 
-                                      VerticalDivider(width: 1, color: context.colorScheme.strokeLight),
-                                      Flexible(
-                                        child: _MixSceneSetting(
-                                          allowController: vm.isAssignToControllersEnabled,
-                                          zoneId: widget.zoneID,
-                                          onAllowControllerChanged: () {
-                                            vm.toggleAssignToControllers();
-                                          },
+                                        VerticalDivider(width: 1, color: context.colorScheme.strokeLight),
+                                        Flexible(
+                                          child: _MixSceneSetting(
+                                            allowController: vm.isAssignToControllersEnabled,
+                                            zoneId: widget.zoneID,
+                                            onAllowControllerChanged: () {
+                                              vm.toggleAssignToControllers();
+                                            },
+                                          ),
                                         ),
-                                      ),
 
-                                      VerticalDivider(width: 1, color: context.colorScheme.strokeLight),
+                                        VerticalDivider(width: 1, color: context.colorScheme.strokeLight),
 
-                                      // RIGHT COLUMN (Static)
-                                      Flexible(
-                                        flex: 2,
-                                        child: AdditionalPriorityZoneSubZoneSettingBuilder(
-                                          zoneID: widget.zoneID,
-                                          vm: vm,
+                                        // RIGHT COLUMN (Static)
+                                        Flexible(
+                                          flex: 2,
+                                          child: _ZoneSubZoneBuilder(
+                                            zoneID: widget.zoneID,
+                                            vm: vm,
+                                          ),
                                         ),
-                                      ),
-                                    ],
+                                      ],
+                                    ),
                                   ),
                                 ),
-                              ),
-                            );
-                          },
+                              );
+                            },
+                          ),
                         ),
                       ),
                     ),
@@ -440,6 +441,171 @@ class _MixSceneSetting extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+class _ZoneSubZoneBuilder extends StatefulWidget {
+  final String zoneID;
+  final SourceMixAdditionalSettingsViewmodel vm;
+
+  const _ZoneSubZoneBuilder({required this.zoneID, required this.vm});
+
+  @override
+  State<_ZoneSubZoneBuilder> createState() => _ZoneSubZoneSettingBuilderState();
+}
+
+class _ZoneSubZoneSettingBuilderState extends State<_ZoneSubZoneBuilder> {
+  late final ScrollController _scrollController = ScrollController();
+  late final ProjectViewModel projectViewModel = serviceLocator<ProjectViewModel>();
+
+  late List<SubZone> subZones;
+  late Zone? zone;
+  late bool isSubZonesAvailable;
+
+  @override
+  void initState() {
+    super.initState();
+    subZones = projectViewModel.getSubZonesForZone(parentZoneId: widget.zoneID);
+    if (subZones.isEmpty) zone = projectViewModel.getZone(zoneId: widget.zoneID);
+    isSubZonesAvailable = subZones.isNotEmpty;
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    context.watch<ProjectViewModel>();
+
+    return BlocProvider<SourceMixAdditionalSettingsViewmodel>.value(
+      value: widget.vm,
+      child: BlocBuilder<SourceMixAdditionalSettingsViewmodel, SourceMixAdditionalSettingsViewmodelState>(
+        builder: (BuildContext context, SourceMixAdditionalSettingsViewmodelState state) {
+          return Column(
+            children: <Widget>[
+              if (isSubZonesAvailable) ...<Widget>[
+                Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: FusionAppText(
+                    text: "SUB ZONE VOLUME",
+                    textAlign: TextAlign.center,
+                    style: context.textTheme.labelMedium,
+                  ),
+                ),
+              ],
+
+              /// SUBZONE VOLUME
+              Expanded(
+                child: HorizontalScrollWithShadows(
+                  controller: _scrollController,
+                  child: ListView.separated(
+                    itemCount: isSubZonesAvailable ? subZones.length : 1,
+                    shrinkWrap: true,
+                    scrollDirection: Axis.horizontal,
+                    physics: const ClampingScrollPhysics(),
+                    separatorBuilder: (BuildContext context, int index) => Divider(color: context.colorScheme.strokeLight, height: 0),
+                    itemBuilder: (BuildContext context, int index) {
+                      final SubZone? subZone = isSubZonesAvailable ? subZones[index] : null;
+
+                      final String? title = isSubZonesAvailable ? subZone!.name : zone?.name;
+                      if (title == null) return const SizedBox.shrink();
+
+                      final String zoneOrSubzoneID = isSubZonesAvailable ? subZone!.id : zone!.id;
+
+                      final bool isAllowMute = widget.vm.isAllowMute(zoneOrSubzoneID);
+
+                      return Container(
+                        width: 150,
+                        decoration: BoxDecoration(
+                          border: Border(
+                            top: BorderSide(color: context.colorScheme.strokeLight),
+                            right: BorderSide(color: context.colorScheme.strokeLight),
+                          ),
+                        ),
+                        child: Column(
+                          children: <Widget>[
+                            Container(
+                              padding: const EdgeInsets.all(16.0),
+                              alignment: Alignment.center,
+                              child: FusionAppText(
+                                text: title,
+                                textAlign: TextAlign.center,
+                                style: Theme.of(context).textTheme.labelMedium,
+                              ),
+                            ),
+                            Divider(color: context.colorScheme.strokeLight, height: 0),
+                            const SizedBox(height: 10),
+                            Expanded(
+                              child: Column(
+                                children: <Widget>[
+                                  Expanded(
+                                    child: VerticalRangeSelectionSlider(
+                                      min: -60,
+                                      max: 12,
+                                      lowerValue: widget.vm.getLowerGain(zoneOrSubzoneID),
+                                      upperValue: widget.vm.getUpperGain(zoneOrSubzoneID),
+                                      onLowerChanged: (num value) {
+                                        widget.vm.updateZoneProperties(
+                                          zoneOrSubzoneId: zoneOrSubzoneID,
+                                          lowerLimit: value.toDouble(),
+                                        );
+                                      },
+                                      onUpperChanged: (num value) {
+                                        widget.vm.updateZoneProperties(
+                                          zoneOrSubzoneId: zoneOrSubzoneID,
+                                          upperLimit: value.toDouble(),
+                                        );
+                                      },
+                                    ),
+                                  ),
+                                  Padding(
+                                    padding: const EdgeInsets.symmetric(vertical: 10),
+                                    child: Divider(color: context.colorScheme.strokeLight, height: 0),
+                                  ),
+                                  Padding(
+                                    padding: const EdgeInsets.symmetric(vertical: 10),
+                                    child: Row(
+                                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                                      children: <Widget>[
+                                        Flexible(
+                                          child: FusionAppText(
+                                            text: "Allow mute",
+                                            style: context.textTheme.labelMedium?.copyWith(
+                                              color: context.colorScheme.textSecondary,
+                                            ),
+                                          ),
+                                        ),
+                                        FusionCheckbox(
+                                          value: isAllowMute,
+                                          onChanged: () {
+                                            widget.vm.updateZoneProperties(
+                                              zoneOrSubzoneId: zoneOrSubzoneID,
+                                              allowMuteUnmute: !isAllowMute,
+                                            );
+                                          },
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  const SizedBox(height: 10),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ),
+            ],
+          );
+        },
+      ),
     );
   }
 }
