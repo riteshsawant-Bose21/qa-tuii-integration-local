@@ -47,6 +47,10 @@ class _FusionKeyboardWrapperState extends State<FusionKeyboardWrapper> {
   }
 
   void _handleKey(KeyEvent event) {
+    if (!_focusNode.hasPrimaryFocus) {
+      return;
+      // print("Key event: ${event.logicalKey.debugName}, isMeta: ${HardwareKeyboard.instance.isMetaPressed}, isControl: ${HardwareKeyboard.instance.isControlPressed}, isShift: ${HardwareKeyboard.instance.isShiftPressed}");
+    }
     final bool isMeta = HardwareKeyboard.instance.isMetaPressed || HardwareKeyboard.instance.isControlPressed;
 
     final LogicalKeyboardKey logicalKey = event.logicalKey;

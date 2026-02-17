@@ -12,9 +12,15 @@ import 'elements/search_result_section.dart';
 class SchematicListingSection extends StatefulWidget {
   final String sectionTitle;
   final String? searchHint;
-
+  final Widget? action;
   final List<Widget> sections;
-  const SchematicListingSection({super.key, required this.sectionTitle, this.searchHint, required this.sections});
+  const SchematicListingSection({
+    super.key,
+    required this.sectionTitle,
+    this.searchHint,
+    required this.sections,
+    this.action,
+  });
 
   @override
   State<SchematicListingSection> createState() => _SchematicListingSectionState();
@@ -65,7 +71,7 @@ class _SchematicListingSectionState extends State<SchematicListingSection> {
                                   (Widget child, Animation<double> animation) => FadeTransition(
                                     opacity: animation,
                                     child: SlideTransition(
-                                      position: Tween<Offset>(begin: const Offset(0.5, 0), end: Offset.zero).animate(animation),
+                                      position: Tween<Offset>(begin: const Offset(1, 0), end: Offset.zero).animate(animation),
                                       child: child,
                                     ),
                                   ),
@@ -84,6 +90,7 @@ class _SchematicListingSectionState extends State<SchematicListingSection> {
                                       : FusionAppText(
                                         text: widget.sectionTitle.toUpperCase(),
                                         maxLine: 1,
+                                        textAlign: TextAlign.start,
                                         style: context.textTheme.bodySmall?.copyWith(
                                           fontWeight: FontWeight.w500,
                                           fontSize: FusionSizes.fontSize12,
@@ -93,6 +100,7 @@ class _SchematicListingSectionState extends State<SchematicListingSection> {
                             ),
                           ),
                         ),
+                        if (widget.action != null) widget.action!,
                         SemanticHelper.button(
                           testId: SemanticHelper.createTestId(
                             SemanticTypes.button,

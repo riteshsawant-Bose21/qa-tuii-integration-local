@@ -70,6 +70,7 @@ class _SchematicExpansionSectionState<T> extends State<SchematicExpansionSection
                   ),
                 ),
               ),
+              SizedBox(height: isExpanded ? 8 : 0),
               SemanticHelper.container(
                 testId: SemanticHelper.createTestId(
                   SemanticTypes.container,
@@ -96,6 +97,7 @@ class _SchematicExpansionSectionState<T> extends State<SchematicExpansionSection
                               )
                               : ReorderableColumn<T>(
                                 items: widget.items,
+                                childPadding: EdgeInsets.zero,
                                 onReorder: (int oldIndex, int newIndex) {
                                   final T oldItem = widget.items[oldIndex];
                                   final T newItem = widget.items[newIndex];

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:fusion_launcher/features/schematics/viewmodel/schematic_amplifier_viewmodel.dart';
+import 'package:fusion_launcher/features/schematics/viewmodel/schematic_fusion_dsp_viewmodel.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/models/project_entities/controller.dart';
 import 'package:fusion_lib/models/project_entities/endpoints.dart';
@@ -9,7 +11,10 @@ import '../../../../core/models/products_data.dart';
 import '../../../../core/service_locator.dart';
 import '../../../add_source_popup/view/add_source_popup.dart' show AddSourcePopup;
 import '../../../configuration/presentation/viewmodel/project_view_model.dart';
+import '../../../projects/viewmodel/eql_products_vm.dart';
+import '../../../projects/widget/building/side_panel_widgets/equipment_location/equipment_location_dialog.dart';
 import '../../viewmodel/endpoints_viewmodel.dart';
+import '../../viewmodel/schematic_fusion_controller_viewmodel.dart';
 import '../../viewmodel/schematic_sources_viewmodel.dart';
 import '../../views/widgets/schematic_hardware_listing.dart';
 import '../../views/widgets/schematic_listing_section.dart';
@@ -32,11 +37,11 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
   /// Get ProjectViewModel instance
   ProjectViewModel get _projectViewModel => serviceLocator<ProjectViewModel>();
 
-  String _sourcesEndpointsSearchQuery = '';
+  final String _sourcesEndpointsSearchQuery = '';
   DeviceSearchScope? _sourcesEndpointsSearchScope;
 
   /// Processors & Amplifiers search state
-  String _processorsAmplifiersSearchQuery = '';
+  final String _processorsAmplifiersSearchQuery = '';
   DeviceSearchScope? _processorsAmplifiersSearchScope;
 
   /// Controllers search state
@@ -230,259 +235,309 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
                         ),
                       ),
 
+                      const SizedBox(height: 12),
+
                       SchematicHardwareListing<FusionEndpoints, SchematicEndpointsViewModel>(
                         create: (BuildContext context) {
                           return SchematicEndpointsViewModel();
                         },
                         title: "Endpoints",
-                        // addAction: AddSourcePopup(
-                        //   isFromBuildingPage: false,
-                        //   child: Icon(
-                        //     LucideIcons.plus200,
-                        //     size: 16,
-                        //     color: context.colorScheme.primaryWhite,
-                        //   ),
-                        // ),
+                        addAction: FusionArrowPopup(
+                          content: const EquipmentLocationDialog(
+                            currentFilter: EQLDeviceType.endpoint,
+                          ),
+                          child: Icon(
+                            LucideIcons.plus200,
+                            size: FusionSizes.iconSize16,
+                            color: context.colorScheme.primaryWhite,
+                          ),
+                        ),
                       ),
+                      const SizedBox(height: 12),
                     ],
                   ),
                 ),
+
+                // Expanded(
+                //   flex: 2,
+                //   child: CommonDevicesSectionWidget(
+                //     title: "Sources & Endpoints",
+                //     width: normalColumnWidth,
+                //     height: double.infinity,
+                //     backgroundColor: Colors.grey[200]!,
+                //     sectionContent: Container(),
+                //     enableExpandable: true,
+                //     searchResultCount: _sourcesEndpointsResultCount(),
+                //     searchQuery: _sourcesEndpointsSearchQuery,
+                //     onSearchChanged: (String query) {
+                //       _projectViewModel.clearSelections();
+                //       setState(() {
+                //         _sourcesEndpointsSearchQuery = query.toLowerCase();
+                //         if (_sourcesEndpointsSearchQuery.isEmpty) {
+                //           _sourcesEndpointsSearchScope = null;
+                //           return;
+                //         }
+                //         final List<Source> sourceMatches =
+                //             _projectViewModel.sources
+                //                 .where(
+                //                   (Source s) => s.name.toLowerCase().contains(
+                //                     _sourcesEndpointsSearchQuery,
+                //                   ),
+                //                 )
+                //                 .toList();
+                //         final List<FusionEndpoints> endpointMatches =
+                //             _projectViewModel.fusionEndpoints
+                //                 .where(
+                //                   (FusionEndpoints e) => e.name.toLowerCase().contains(_sourcesEndpointsSearchQuery),
+                //                 )
+                //                 .toList();
+                //         if (sourceMatches.isNotEmpty && endpointMatches.isEmpty) {
+                //           _sourcesEndpointsSearchScope = DeviceSearchScope.sources;
+                //         } else if (endpointMatches.isNotEmpty && sourceMatches.isEmpty) {
+                //           _sourcesEndpointsSearchScope = DeviceSearchScope.endpoints;
+                //         } else {
+                //           _sourcesEndpointsSearchScope = null;
+                //         }
+                //       });
+                //     },
+                //     expandableSections: <ExpandableSection>[
+                //       if (_sourcesEndpointsSearchQuery.isEmpty || _sourcesEndpointsSearchScope != DeviceSearchScope.endpoints)
+                //         ExpandableSection(
+                //           title: "Sources",
+                //           content: _buildSourcesContent(),
+                //           initiallyExpanded: true,
+                //         ),
+
+                //       if (_sourcesEndpointsSearchQuery.isEmpty || _sourcesEndpointsSearchScope != DeviceSearchScope.sources)
+                //         ExpandableSection(
+                //           title: "Endpoints",
+                //           content: _buildEndpointsContent(),
+                //           initiallyExpanded: true,
+                //         ),
+                //     ],
+                //     listeningAreas: _projectViewModel.listeningAreas,
+                //     selectedDeviceId: _projectViewModel.selectedDevice?.type == SelectedItemType.source ? _projectViewModel.selectedDevice?.id : null,
+                //     onTapAddDevice: (dynamic item, String areaId, String floorId) {
+                //       /// Sources [onTapAddDevice]
+                //       if (item is SourceData) {
+                //         final SourceType type = SourceData.getSourceType(item.id);
+                //         final SourceConnectionType connectType = SourceData.getSourceConnectionType(item.id);
+                //         final PortType portType = switch (connectType) {
+                //           SourceConnectionType.analogInput || SourceConnectionType.aes67input => PortType.analogOutput,
+                //           SourceConnectionType.bluetooth => PortType.bleOut,
+                //           SourceConnectionType.usb => PortType.usbOut,
+                //           SourceConnectionType.audioJack => PortType.audioJackOutput,
+                //           SourceConnectionType.xlr => PortType.xlrOutput,
+                //           SourceConnectionType.hdmi => PortType.hdmiOut,
+                //         };
+                //         final Source source = Source(
+                //           name: item.name,
+                //           pos: null,
+                //           type: item.type,
+                //           addedFromBuildingPage: false,
+                //           connectionType: connectType,
+                //           assetImagePath: item.assetPath,
+                //           locationEntity: LocationModel(
+                //             listeningAreaId: areaId,
+                //             floorId: floorId,
+                //           ),
+                //           sku: item.id,
+                //           price: item.price,
+                //           portData: HardwarePortData(
+                //             inputPorts: 0,
+                //             outputPorts: 1,
+                //             inputPortType: PortType.analogInput,
+                //             outputPortType: portType,
+                //             compatibleInputTypes: <PortType>[],
+                //             compatibleOutputTypes: switch (connectType) {
+                //               SourceConnectionType.analogInput || SourceConnectionType.aes67input => <PortType>[
+                //                 PortType.dspAnalogInput,
+                //                 PortType.endpointInput,
+                //               ],
+                //               SourceConnectionType.bluetooth => <PortType>[
+                //                 PortType.bleIn,
+                //               ],
+                //               SourceConnectionType.usb => <PortType>[PortType.usbIn],
+                //               SourceConnectionType.audioJack => <PortType>[PortType.audioJackInput],
+                //               SourceConnectionType.xlr => <PortType>[PortType.xlrInput],
+                //               SourceConnectionType.hdmi => <PortType>[PortType.hdmiIn],
+                //             },
+                //             portPosition: PortPosition.topLeft,
+                //           ),
+                //         );
+                //         serviceLocator<ProjectViewModel>().addHardware(
+                //           hardware: source,
+                //         );
+                //         FusionToast.success(
+                //           context,
+                //           message: "Source \"${item.name}\" added",
+                //         );
+                //       }
+                //       /// Endpoints [onTapAddDevice]
+                //       else if (item is ProductQueryModel) {
+                //         final HardwareComponent hardware = serviceLocator<ProjectViewModel>().fromProductQueryModel(
+                //           item,
+                //           locationEntity: LocationModel(
+                //             listeningAreaId: areaId,
+                //             floorId: floorId,
+                //           ),
+                //           isFromBuildingPage: false,
+                //         );
+
+                //         serviceLocator<ProjectViewModel>().addHardware(
+                //           hardware: hardware,
+                //         );
+                //         FusionToast.show(
+                //           context,
+                //           message: "Endpoint \"${item.name}\" added",
+                //           icon: Icons.check_circle_outline,
+                //           backgroundColor: Colors.green[600],
+                //         );
+                //       }
+                //     },
+                //   ),
+                // ),
                 Expanded(
                   flex: 2,
-                  child: CommonDevicesSectionWidget(
-                    title: "Sources & Endpoints",
-                    width: normalColumnWidth,
-                    height: double.infinity,
-                    backgroundColor: Colors.grey[200]!,
-                    sectionContent: Container(),
-                    enableExpandable: true,
-                    searchResultCount: _sourcesEndpointsResultCount(),
-                    searchQuery: _sourcesEndpointsSearchQuery,
-                    onSearchChanged: (String query) {
-                      _projectViewModel.clearSelections();
-                      setState(() {
-                        _sourcesEndpointsSearchQuery = query.toLowerCase();
-                        if (_sourcesEndpointsSearchQuery.isEmpty) {
-                          _sourcesEndpointsSearchScope = null;
-                          return;
-                        }
-                        final List<Source> sourceMatches =
-                            _projectViewModel.sources
-                                .where(
-                                  (Source s) => s.name.toLowerCase().contains(
-                                    _sourcesEndpointsSearchQuery,
-                                  ),
-                                )
-                                .toList();
-                        final List<FusionEndpoints> endpointMatches =
-                            _projectViewModel.fusionEndpoints
-                                .where(
-                                  (FusionEndpoints e) => e.name.toLowerCase().contains(_sourcesEndpointsSearchQuery),
-                                )
-                                .toList();
-                        if (sourceMatches.isNotEmpty && endpointMatches.isEmpty) {
-                          _sourcesEndpointsSearchScope = DeviceSearchScope.sources;
-                        } else if (endpointMatches.isNotEmpty && sourceMatches.isEmpty) {
-                          _sourcesEndpointsSearchScope = DeviceSearchScope.endpoints;
-                        } else {
-                          _sourcesEndpointsSearchScope = null;
-                        }
-                      });
-                    },
-                    expandableSections: <ExpandableSection>[
-                      if (_sourcesEndpointsSearchQuery.isEmpty || _sourcesEndpointsSearchScope != DeviceSearchScope.endpoints)
-                        ExpandableSection(
-                          title: "Sources",
-                          content: _buildSourcesContent(),
-                          initiallyExpanded: true,
+                  child: SchematicListingSection(
+                    sectionTitle: "Processors & Amplifiers",
+                    sections: <Widget>[
+                      SchematicHardwareListing<FusionDsp, SchematicFusionDeviceViewModel>(
+                        create: (BuildContext context) {
+                          return SchematicFusionDeviceViewModel();
+                        },
+                        title: "Fusion Devices",
+                        addAction: FusionArrowPopup(
+                          content: const EquipmentLocationDialog(
+                            currentFilter: EQLDeviceType.processor,
+                          ),
+                          child: Icon(
+                            LucideIcons.plus200,
+                            size: FusionSizes.iconSize16,
+                            color: context.colorScheme.primaryWhite,
+                          ),
                         ),
+                      ),
 
-                      if (_sourcesEndpointsSearchQuery.isEmpty || _sourcesEndpointsSearchScope != DeviceSearchScope.sources)
-                        ExpandableSection(
-                          title: "Endpoints",
-                          content: _buildEndpointsContent(),
-                          initiallyExpanded: true,
+                      const SizedBox(height: 12),
+
+                      SchematicHardwareListing<Amplifier, SchematicAmplifiersViewModel>(
+                        create: (BuildContext context) {
+                          return SchematicAmplifiersViewModel();
+                        },
+                        title: "Amplifiers",
+                        addAction: FusionArrowPopup(
+                          content: const EquipmentLocationDialog(
+                            currentFilter: EQLDeviceType.amplifier,
+                          ),
+                          child: Icon(
+                            LucideIcons.plus200,
+                            size: FusionSizes.iconSize16,
+                            color: context.colorScheme.primaryWhite,
+                          ),
                         ),
+                      ),
+                      const SizedBox(height: 12),
                     ],
-                    listeningAreas: _projectViewModel.listeningAreas,
-                    selectedDeviceId: _projectViewModel.selectedDevice?.type == SelectedItemType.source ? _projectViewModel.selectedDevice?.id : null,
-                    onTapAddDevice: (dynamic item, String areaId, String floorId) {
-                      /// Sources [onTapAddDevice]
-                      if (item is SourceData) {
-                        final SourceType type = SourceData.getSourceType(item.id);
-                        final SourceConnectionType connectType = SourceData.getSourceConnectionType(item.id);
-                        final PortType portType = switch (connectType) {
-                          SourceConnectionType.analogInput || SourceConnectionType.aes67input => PortType.analogOutput,
-                          SourceConnectionType.bluetooth => PortType.bleOut,
-                          SourceConnectionType.usb => PortType.usbOut,
-                          SourceConnectionType.audioJack => PortType.audioJackOutput,
-                          SourceConnectionType.xlr => PortType.xlrOutput,
-                          SourceConnectionType.hdmi => PortType.hdmiOut,
-                        };
-                        final Source source = Source(
-                          name: item.name,
-                          pos: null,
-                          type: item.type,
-                          addedFromBuildingPage: false,
-                          connectionType: connectType,
-                          assetImagePath: item.assetPath,
-                          locationEntity: LocationModel(
-                            listeningAreaId: areaId,
-                            floorId: floorId,
-                          ),
-                          sku: item.id,
-                          price: item.price,
-                          portData: HardwarePortData(
-                            inputPorts: 0,
-                            outputPorts: 1,
-                            inputPortType: PortType.analogInput,
-                            outputPortType: portType,
-                            compatibleInputTypes: <PortType>[],
-                            compatibleOutputTypes: switch (connectType) {
-                              SourceConnectionType.analogInput || SourceConnectionType.aes67input => <PortType>[
-                                PortType.dspAnalogInput,
-                                PortType.endpointInput,
-                              ],
-                              SourceConnectionType.bluetooth => <PortType>[
-                                PortType.bleIn,
-                              ],
-                              SourceConnectionType.usb => <PortType>[PortType.usbIn],
-                              SourceConnectionType.audioJack => <PortType>[PortType.audioJackInput],
-                              SourceConnectionType.xlr => <PortType>[PortType.xlrInput],
-                              SourceConnectionType.hdmi => <PortType>[PortType.hdmiIn],
-                            },
-                            portPosition: PortPosition.topLeft,
-                          ),
-                        );
-                        serviceLocator<ProjectViewModel>().addHardware(
-                          hardware: source,
-                        );
-                        FusionToast.success(
-                          context,
-                          message: "Source \"${item.name}\" added",
-                        );
-                      }
-                      /// Endpoints [onTapAddDevice]
-                      else if (item is ProductQueryModel) {
-                        final HardwareComponent hardware = serviceLocator<ProjectViewModel>().fromProductQueryModel(
-                          item,
-                          locationEntity: LocationModel(
-                            listeningAreaId: areaId,
-                            floorId: floorId,
-                          ),
-                          isFromBuildingPage: false,
-                        );
-
-                        serviceLocator<ProjectViewModel>().addHardware(
-                          hardware: hardware,
-                        );
-                        FusionToast.show(
-                          context,
-                          message: "Endpoint \"${item.name}\" added",
-                          icon: Icons.check_circle_outline,
-                          backgroundColor: Colors.green[600],
-                        );
-                      }
-                    },
                   ),
                 ),
 
                 /// Processors & Amplifiers
-                Expanded(
-                  flex: 2,
-                  child: CommonDevicesSectionWidget(
-                    title: "Processors & Amplifiers",
-                    width: normalColumnWidth,
-                    height: double.infinity,
-                    backgroundColor: Colors.grey[200]!,
-                    sectionContent: Container(),
-                    enableExpandable: true,
-                    searchResultCount: _processorsAmplifiersResultCount(),
-                    searchQuery: _processorsAmplifiersSearchQuery,
-                    onSearchChanged: (String q) {
-                      _projectViewModel.clearSelections();
+                // Expanded(
+                //   flex: 2,
+                //   child: CommonDevicesSectionWidget(
+                //     title: "Processors & Amplifiers",
+                //     width: normalColumnWidth,
+                //     height: double.infinity,
+                //     backgroundColor: Colors.grey[200]!,
+                //     sectionContent: Container(),
+                //     enableExpandable: true,
+                //     searchResultCount: _processorsAmplifiersResultCount(),
+                //     searchQuery: _processorsAmplifiersSearchQuery,
+                //     onSearchChanged: (String q) {
+                //       _projectViewModel.clearSelections();
 
-                      setState(() {
-                        _processorsAmplifiersSearchQuery = q.toLowerCase();
-                        if (_processorsAmplifiersSearchQuery.isEmpty) {
-                          _processorsAmplifiersSearchScope = null;
-                          return;
-                        }
-                        final List<FusionDsp> processorMatches =
-                            _projectViewModel.fusionDsps
-                                .where(
-                                  (FusionDsp p) => p.name.toLowerCase().contains(
-                                    _processorsAmplifiersSearchQuery,
-                                  ),
-                                )
-                                .toList();
-                        final List<Amplifier> amplifierMatches =
-                            _projectViewModel.amplifiers
-                                .where(
-                                  (Amplifier a) => a.name.toLowerCase().contains(
-                                    _processorsAmplifiersSearchQuery,
-                                  ),
-                                )
-                                .toList();
-                        if (processorMatches.isNotEmpty && amplifierMatches.isEmpty) {
-                          _processorsAmplifiersSearchScope = DeviceSearchScope.fusionDevices;
-                        } else if (amplifierMatches.isNotEmpty && processorMatches.isEmpty) {
-                          _processorsAmplifiersSearchScope = DeviceSearchScope.amplifiers;
-                        } else {
-                          _processorsAmplifiersSearchScope = null;
-                        }
-                      });
-                    },
-                    expandableSections: <ExpandableSection>[
-                      if (_processorsAmplifiersSearchQuery.isEmpty || _processorsAmplifiersSearchScope != DeviceSearchScope.amplifiers)
-                        ExpandableSection(
-                          title: "Fusion Devices",
-                          content: _buildProcessorsContent(),
-                          initiallyExpanded: true,
-                        ),
-                      if (_processorsAmplifiersSearchQuery.isEmpty || _processorsAmplifiersSearchScope != DeviceSearchScope.fusionDevices)
-                        ExpandableSection(
-                          title: "Amplifiers",
-                          content: _buildAmplifiersContent(),
-                          initiallyExpanded: true,
-                        ),
-                    ],
-                    listeningAreas: _projectViewModel.listeningAreas,
-                    selectedDeviceId: _projectViewModel.selectedDevice?.type == SelectedItemType.processor ? _projectViewModel.selectedDevice?.id : null,
-                    // onTapAddDevice: (dynamic item, String areaId, String floorId) {
-                    //   print("Adding hardware of type: ${item.type}");
-                    //
-                    //   if (item is ProductQueryModel) {
-                    //     final HardwareComponent hardware = serviceLocator<ProjectViewModel>().fromProductQueryModel(
-                    //       item,
-                    //       locationEntity: LocationModel(
-                    //         listeningAreaId: areaId,
-                    //         floorId: floorId,
-                    //       ),
-                    //       isFromBuildingPage: false,
-                    //     );
-                    //     if (item.type == ProductType.dsps) {
-                    //       serviceLocator<ProjectViewModel>().addHardware(
-                    //         hardware: hardware,
-                    //       );
-                    //       FusionToast.success(
-                    //         context,
-                    //         message: "Processors \"${item.name}\" added",
-                    //       );
-                    //     } else {
-                    //       serviceLocator<ProjectViewModel>().addHardware(
-                    //         hardware: hardware,
-                    //       );
-                    //       FusionToast.success(
-                    //         context,
-                    //         message: "Amplifier \"${item.name}\" added",
-                    //       );
-                    //       return;
-                    //     }
-                    //   }
-                    // },
-                  ),
-                ),
+                //       setState(() {
+                //         _processorsAmplifiersSearchQuery = q.toLowerCase();
+                //         if (_processorsAmplifiersSearchQuery.isEmpty) {
+                //           _processorsAmplifiersSearchScope = null;
+                //           return;
+                //         }
+                //         final List<FusionDsp> processorMatches =
+                //             _projectViewModel.fusionDsps
+                //                 .where(
+                //                   (FusionDsp p) => p.name.toLowerCase().contains(
+                //                     _processorsAmplifiersSearchQuery,
+                //                   ),
+                //                 )
+                //                 .toList();
+                //         final List<Amplifier> amplifierMatches =
+                //             _projectViewModel.amplifiers
+                //                 .where(
+                //                   (Amplifier a) => a.name.toLowerCase().contains(
+                //                     _processorsAmplifiersSearchQuery,
+                //                   ),
+                //                 )
+                //                 .toList();
+                //         if (processorMatches.isNotEmpty && amplifierMatches.isEmpty) {
+                //           _processorsAmplifiersSearchScope = DeviceSearchScope.fusionDevices;
+                //         } else if (amplifierMatches.isNotEmpty && processorMatches.isEmpty) {
+                //           _processorsAmplifiersSearchScope = DeviceSearchScope.amplifiers;
+                //         } else {
+                //           _processorsAmplifiersSearchScope = null;
+                //         }
+                //       });
+                //     },
+                //     expandableSections: <ExpandableSection>[
+                //       if (_processorsAmplifiersSearchQuery.isEmpty || _processorsAmplifiersSearchScope != DeviceSearchScope.amplifiers)
+                //         ExpandableSection(
+                //           title: "Fusion Devices",
+                //           content: _buildProcessorsContent(),
+                //           initiallyExpanded: true,
+                //         ),
+                //       if (_processorsAmplifiersSearchQuery.isEmpty || _processorsAmplifiersSearchScope != DeviceSearchScope.fusionDevices)
+                //         ExpandableSection(
+                //           title: "Amplifiers",
+                //           content: _buildAmplifiersContent(),
+                //           initiallyExpanded: true,
+                //         ),
+                //     ],
+                //     listeningAreas: _projectViewModel.listeningAreas,
+                //     selectedDeviceId: _projectViewModel.selectedDevice?.type == SelectedItemType.processor ? _projectViewModel.selectedDevice?.id : null,
+                //     // onTapAddDevice: (dynamic item, String areaId, String floorId) {
+                //     //   print("Adding hardware of type: ${item.type}");
+                //     //
+                //     //   if (item is ProductQueryModel) {
+                //     //     final HardwareComponent hardware = serviceLocator<ProjectViewModel>().fromProductQueryModel(
+                //     //       item,
+                //     //       locationEntity: LocationModel(
+                //     //         listeningAreaId: areaId,
+                //     //         floorId: floorId,
+                //     //       ),
+                //     //       isFromBuildingPage: false,
+                //     //     );
+                //     //     if (item.type == ProductType.dsps) {
+                //     //       serviceLocator<ProjectViewModel>().addHardware(
+                //     //         hardware: hardware,
+                //     //       );
+                //     //       FusionToast.success(
+                //     //         context,
+                //     //         message: "Processors \"${item.name}\" added",
+                //     //       );
+                //     //     } else {
+                //     //       serviceLocator<ProjectViewModel>().addHardware(
+                //     //         hardware: hardware,
+                //     //       );
+                //     //       FusionToast.success(
+                //     //         context,
+                //     //         message: "Amplifier \"${item.name}\" added",
+                //     //       );
+                //     //       return;
+                //     //     }
+                //     //   }
+                //     // },
+                //   ),
+                // ),
 
                 /// Speakers
                 Expanded(
@@ -503,6 +558,27 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
                     },
                     searchResultCount: _speakersResultCount(),
                     searchQuery: _speakersSearchQuery,
+                  ),
+                ),
+                Expanded(
+                  flex: 2,
+                  child: SchematicListingSection(
+                    sectionTitle: "Controllers",
+                    action: Icon(
+                      LucideIcons.plus200,
+                      size: FusionSizes.iconSize16,
+                      color: context.colorScheme.primaryWhite,
+                    ),
+                    sections: <Widget>[
+                      SchematicHardwareListing<FusionController, SchematicFusionControllerViewModel>(
+                        create: (BuildContext context) {
+                          return SchematicFusionControllerViewModel();
+                        },
+                        title: "Controllers",
+                      ),
+
+                      const SizedBox(height: 12),
+                    ],
                   ),
                 ),
 
