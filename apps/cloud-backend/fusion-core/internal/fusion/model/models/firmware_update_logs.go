@@ -26,6 +26,7 @@ type FirmwareUpdateLog struct {
 	ID        int64     `boil:"id" json:"id" toml:"id" yaml:"id"`
 	DeviceID  string    `boil:"device_id" json:"device_id" toml:"device_id" yaml:"device_id"`
 	Status    string    `boil:"status" json:"status" toml:"status" yaml:"status"`
+	EventTime time.Time `boil:"event_time" json:"event_time" toml:"event_time" yaml:"event_time"`
 	CreatedAt time.Time `boil:"created_at" json:"created_at" toml:"created_at" yaml:"created_at"`
 
 	R *firmwareUpdateLogR `boil:"-" json:"-" toml:"-" yaml:"-"`
@@ -36,11 +37,13 @@ var FirmwareUpdateLogColumns = struct {
 	ID        string
 	DeviceID  string
 	Status    string
+	EventTime string
 	CreatedAt string
 }{
 	ID:        "id",
 	DeviceID:  "device_id",
 	Status:    "status",
+	EventTime: "event_time",
 	CreatedAt: "created_at",
 }
 
@@ -48,11 +51,13 @@ var FirmwareUpdateLogTableColumns = struct {
 	ID        string
 	DeviceID  string
 	Status    string
+	EventTime string
 	CreatedAt string
 }{
 	ID:        "firmware_update_logs.id",
 	DeviceID:  "firmware_update_logs.device_id",
 	Status:    "firmware_update_logs.status",
+	EventTime: "firmware_update_logs.event_time",
 	CreatedAt: "firmware_update_logs.created_at",
 }
 
@@ -85,11 +90,13 @@ var FirmwareUpdateLogWhere = struct {
 	ID        whereHelperint64
 	DeviceID  whereHelperstring
 	Status    whereHelperstring
+	EventTime whereHelpertime_Time
 	CreatedAt whereHelpertime_Time
 }{
 	ID:        whereHelperint64{field: "\"firmware_update_logs\".\"id\""},
 	DeviceID:  whereHelperstring{field: "\"firmware_update_logs\".\"device_id\""},
 	Status:    whereHelperstring{field: "\"firmware_update_logs\".\"status\""},
+	EventTime: whereHelpertime_Time{field: "\"firmware_update_logs\".\"event_time\""},
 	CreatedAt: whereHelpertime_Time{field: "\"firmware_update_logs\".\"created_at\""},
 }
 
@@ -110,9 +117,9 @@ func (*firmwareUpdateLogR) NewStruct() *firmwareUpdateLogR {
 type firmwareUpdateLogL struct{}
 
 var (
-	firmwareUpdateLogAllColumns            = []string{"id", "device_id", "status", "created_at"}
+	firmwareUpdateLogAllColumns            = []string{"id", "device_id", "status", "event_time", "created_at"}
 	firmwareUpdateLogColumnsWithoutDefault = []string{"device_id", "status"}
-	firmwareUpdateLogColumnsWithDefault    = []string{"id", "created_at"}
+	firmwareUpdateLogColumnsWithDefault    = []string{"id", "event_time", "created_at"}
 	firmwareUpdateLogPrimaryKeyColumns     = []string{"id"}
 	firmwareUpdateLogGeneratedColumns      = []string{}
 )

@@ -76,7 +76,12 @@ const docTemplate = `{
         },
         "/firmware": {
             "get": {
-                "description": "List all firmware releases with pagination and filtering",
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Returns a paginated list of firmware releases with optional filtering by platform and minimum version. Results are ordered by version in descending order.",
                 "consumes": [
                     "application/json"
                 ],
@@ -90,38 +95,46 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "integer",
-                        "description": "Page number",
+                        "default": 1,
+                        "description": "Page number (default: 1)",
                         "name": "page",
                         "in": "query"
                     },
                     {
                         "type": "integer",
-                        "description": "Items per page",
+                        "default": 10,
+                        "description": "Items per page (default: 10, max: 100)",
                         "name": "limit",
                         "in": "query"
                     },
                     {
                         "type": "string",
-                        "description": "Platform filter",
+                        "description": "Filter by platform (e.g., 'amp-8x300', 'amp-4x150')",
                         "name": "platform",
                         "in": "query"
                     },
                     {
                         "type": "string",
-                        "description": "Minimum version (returns versions newer than this)",
+                        "description": "Minimum version filter - returns only versions newer than this (e.g., '1.0.1')",
                         "name": "min_version",
                         "in": "query"
                     }
                 ],
                 "responses": {
                     "200": {
-                        "description": "OK",
+                        "description": "List of firmware releases with pagination metadata",
                         "schema": {
                             "$ref": "#/definitions/types.FirmwareReleaseListResponse"
                         }
                     },
+                    "400": {
+                        "description": "Invalid query parameters",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    },
                     "500": {
-                        "description": "Internal Server Error",
+                        "description": "Internal server error",
                         "schema": {
                             "$ref": "#/definitions/types.ErrorResponse"
                         }
@@ -131,7 +144,7 @@ const docTemplate = `{
         },
         "/firmware/getDownloadUrl/{platform}/{version}": {
             "get": {
-                "description": "Provides a presigned S3 URL to download a specific firmware release artifact",
+                "description": "Generates a presigned S3 URL for downloading a specific firmware release artifact. The URL is valid for 15 minutes and includes the file checksum for integrity verification.",
                 "consumes": [
                     "application/json"
                 ],
@@ -145,14 +158,14 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "Platform name",
+                        "description": "Platform identifier (e.g., 'amp-8x300')",
                         "name": "platform",
                         "in": "path",
                         "required": true
                     },
                     {
                         "type": "string",
-                        "description": "Firmware version",
+                        "description": "Firmware version (e.g., '1.2.0')",
                         "name": "version",
                         "in": "path",
                         "required": true
@@ -160,25 +173,25 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "OK",
+                        "description": "Presigned download URL and file checksum",
                         "schema": {
                             "$ref": "#/definitions/types.DownloadArtifactResponse"
                         }
                     },
                     "400": {
-                        "description": "Bad Request",
+                        "description": "Missing or invalid parameters",
                         "schema": {
                             "$ref": "#/definitions/types.ErrorResponse"
                         }
                     },
                     "404": {
-                        "description": "Not Found",
+                        "description": "Firmware release not found for the specified platform and version",
                         "schema": {
                             "$ref": "#/definitions/types.ErrorResponse"
                         }
                     },
                     "500": {
-                        "description": "Internal Server Error",
+                        "description": "Internal server error",
                         "schema": {
                             "$ref": "#/definitions/types.ErrorResponse"
                         }
@@ -188,7 +201,12 @@ const docTemplate = `{
         },
         "/firmware/initiateRelease": {
             "post": {
-                "description": "Insert release details to firmware_releases table and return a presigned URL to upload the artifacts to s3",
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Creates a new firmware release entry in draft status and returns a presigned S3 URL for uploading the firmware artifact. The upload URL is valid for 15 minutes.",
                 "consumes": [
                     "application/json"
                 ],
@@ -196,12 +214,12 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "Firmware Update"
+                    "Firmware Update - Internal API"
                 ],
                 "summary": "Initiate Firmware Release",
                 "parameters": [
                     {
-                        "description": "Firmware release details",
+                        "description": "Firmware release metadata including version, platform, release notes, etc.",
                         "name": "request",
                         "in": "body",
                         "required": true,
@@ -212,19 +230,19 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "Returns releaseId and presignedUrl",
+                        "description": "Returns releaseId and presignedUrl for artifact upload",
                         "schema": {
                             "$ref": "#/definitions/types.FormwareReleaseInitiateResposne"
                         }
                     },
                     "400": {
-                        "description": "Bad Request",
+                        "description": "Invalid request payload or version already exists",
                         "schema": {
                             "$ref": "#/definitions/types.ErrorResponse"
                         }
                     },
                     "500": {
-                        "description": "Internal Server Error",
+                        "description": "Internal server error",
                         "schema": {
                             "$ref": "#/definitions/types.ErrorResponse"
                         }
@@ -234,7 +252,7 @@ const docTemplate = `{
         },
         "/firmware/updates/check": {
             "post": {
-                "description": "Checks for firmware updates for a list of devices based on their current version and platform",
+                "description": "Checks if newer firmware versions are available for a batch of devices based on their current versions, platform, and deployment channel. Returns update availability status and latest version information for each device.",
                 "consumes": [
                     "application/json"
                 ],
@@ -247,7 +265,7 @@ const docTemplate = `{
                 "summary": "Check for Firmware Updates",
                 "parameters": [
                     {
-                        "description": "Device details for update check",
+                        "description": "List of devices with their current firmware versions and platform information",
                         "name": "request",
                         "in": "body",
                         "required": true,
@@ -258,19 +276,19 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "OK",
+                        "description": "Update availability results for each device",
                         "schema": {
                             "$ref": "#/definitions/types.CheckUpdateResponse"
                         }
                     },
                     "400": {
-                        "description": "Bad Request",
+                        "description": "Invalid request payload",
                         "schema": {
                             "$ref": "#/definitions/types.ErrorResponse"
                         }
                     },
                     "500": {
-                        "description": "Internal Server Error",
+                        "description": "Internal server error",
                         "schema": {
                             "$ref": "#/definitions/types.ErrorResponse"
                         }
@@ -278,9 +296,9 @@ const docTemplate = `{
                 }
             }
         },
-        "/firmware/{releaseID}/makeReleaseAvailable": {
+        "/firmware/updates/log": {
             "post": {
-                "description": "Updates the status of a release to available and creates a deployment",
+                "description": "Records the success or failure of a firmware update installation on a device. This endpoint is called by devices after attempting a firmware update.",
                 "consumes": [
                     "application/json"
                 ],
@@ -290,11 +308,59 @@ const docTemplate = `{
                 "tags": [
                     "Firmware Update"
                 ],
+                "summary": "Log Firmware Update Event",
+                "parameters": [
+                    {
+                        "description": "Firmware update log details including device ID, version, and status",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/types.LogFirmwareUpdateRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "202": {
+                        "description": "Update event logged successfully"
+                    },
+                    "400": {
+                        "description": "Invalid request payload or status value",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/firmware/{releaseID}/makeReleaseAvailable": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Updates the release status to 'AVAILABLE' and creates a deployment entry for the specified channel, making the firmware available for devices to download",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Firmware Update - Internal API"
+                ],
                 "summary": "Make Release Available",
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "Release ID",
+                        "description": "Unique identifier of the firmware release",
                         "name": "releaseID",
                         "in": "path",
                         "required": true
@@ -302,16 +368,22 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "204": {
-                        "description": "Success"
+                        "description": "Release successfully made available"
                     },
                     "400": {
-                        "description": "Bad Request",
+                        "description": "Invalid releaseID or request payload",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Release not found",
                         "schema": {
                             "$ref": "#/definitions/types.ErrorResponse"
                         }
                     },
                     "500": {
-                        "description": "Internal Server Error",
+                        "description": "Internal server error",
                         "schema": {
                             "$ref": "#/definitions/types.ErrorResponse"
                         }
@@ -2275,6 +2347,33 @@ const docTemplate = `{
                 },
                 "metaData": {
                     "$ref": "#/definitions/types.FirmwareReleaseMetaData"
+                }
+            }
+        },
+        "types.LogFirmwareUpdateRequest": {
+            "type": "object",
+            "required": [
+                "device_id",
+                "event_time",
+                "release_version",
+                "status"
+            ],
+            "properties": {
+                "device_id": {
+                    "type": "string"
+                },
+                "event_time": {
+                    "type": "string"
+                },
+                "release_version": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string",
+                    "enum": [
+                        "INSTALL_SUCCESS",
+                        "INSTALL_FAILED"
+                    ]
                 }
             }
         },

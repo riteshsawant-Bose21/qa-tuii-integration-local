@@ -13,4 +13,5 @@ type Firmware interface {
 	CheckForUpdates(ctx context.Context, request *types.CheckUpdateRequest) (*types.CheckUpdateResponse, error)
 	GetArtifactDownloadURL(ctx context.Context, platform, version string, logger *zap.Logger) (*types.DownloadArtifactResponse, error)
 	ListReleases(ctx context.Context, platform string, page, limit int, minVersion string) (*types.FirmwareReleaseListResponse, error)
+	LogFirmwareUpdate(ctx context.Context, req *types.LogFirmwareUpdateRequest) error
 }

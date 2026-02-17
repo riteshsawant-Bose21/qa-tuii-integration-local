@@ -288,6 +288,25 @@ definitions:
     - checksum
     - metaData
     type: object
+  types.LogFirmwareUpdateRequest:
+    properties:
+      device_id:
+        type: string
+      event_time:
+        type: string
+      release_version:
+        type: string
+      status:
+        enum:
+        - INSTALL_SUCCESS
+        - INSTALL_FAILED
+        type: string
+    required:
+    - device_id
+    - event_time
+    - release_version
+    - status
+    type: object
   types.OrganizationUsersResponse:
     properties:
       account:
@@ -923,21 +942,26 @@ paths:
     get:
       consumes:
       - application/json
-      description: List all firmware releases with pagination and filtering
+      description: Returns a paginated list of firmware releases with optional filtering
+        by platform and minimum version. Results are ordered by version in descending
+        order.
       parameters:
-      - description: Page number
+      - default: 1
+        description: 'Page number (default: 1)'
         in: query
         name: page
         type: integer
-      - description: Items per page
+      - default: 10
+        description: 'Items per page (default: 10, max: 100)'
         in: query
         name: limit
         type: integer
-      - description: Platform filter
+      - description: Filter by platform (e.g., 'amp-8x300', 'amp-4x150')
         in: query
         name: platform
         type: string
-      - description: Minimum version (returns versions newer than this)
+      - description: Minimum version filter - returns only versions newer than this
+          (e.g., '1.0.1')
         in: query
         name: min_version
         type: string
@@ -945,13 +969,19 @@ paths:
       - application/json
       responses:
         "200":
-          description: OK
+          description: List of firmware releases with pagination metadata
           schema:
             $ref: '#/definitions/types.FirmwareReleaseListResponse'
-        "500":
-          description: Internal Server Error
+        "400":
+          description: Invalid query parameters
           schema:
             $ref: '#/definitions/types.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+      security:
+      - BearerAuth: []
       summary: List Firmware Releases
       tags:
       - Firmware Update
@@ -959,9 +989,11 @@ paths:
     post:
       consumes:
       - application/json
-      description: Updates the status of a release to available and creates a deployment
+      description: Updates the release status to 'AVAILABLE' and creates a deployment
+        entry for the specified channel, making the firmware available for devices
+        to download
       parameters:
-      - description: Release ID
+      - description: Unique identifier of the firmware release
         in: path
         name: releaseID
         required: true
@@ -970,31 +1002,38 @@ paths:
       - application/json
       responses:
         "204":
-          description: Success
+          description: Release successfully made available
         "400":
-          description: Bad Request
+          description: Invalid releaseID or request payload
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+        "404":
+          description: Release not found
           schema:
             $ref: '#/definitions/types.ErrorResponse'
         "500":
-          description: Internal Server Error
+          description: Internal server error
           schema:
             $ref: '#/definitions/types.ErrorResponse'
+      security:
+      - BearerAuth: []
       summary: Make Release Available
       tags:
-      - Firmware Update
+      - Firmware Update - Internal API
   /firmware/getDownloadUrl/{platform}/{version}:
     get:
       consumes:
       - application/json
-      description: Provides a presigned S3 URL to download a specific firmware release
-        artifact
+      description: Generates a presigned S3 URL for downloading a specific firmware
+        release artifact. The URL is valid for 15 minutes and includes the file checksum
+        for integrity verification.
       parameters:
-      - description: Platform name
+      - description: Platform identifier (e.g., 'amp-8x300')
         in: path
         name: platform
         required: true
         type: string
-      - description: Firmware version
+      - description: Firmware version (e.g., '1.2.0')
         in: path
         name: version
         required: true
@@ -1003,19 +1042,19 @@ paths:
       - application/json
       responses:
         "200":
-          description: OK
+          description: Presigned download URL and file checksum
           schema:
             $ref: '#/definitions/types.DownloadArtifactResponse'
         "400":
-          description: Bad Request
+          description: Missing or invalid parameters
           schema:
             $ref: '#/definitions/types.ErrorResponse'
         "404":
-          description: Not Found
+          description: Firmware release not found for the specified platform and version
           schema:
             $ref: '#/definitions/types.ErrorResponse'
         "500":
-          description: Internal Server Error
+          description: Internal server error
           schema:
             $ref: '#/definitions/types.ErrorResponse'
       summary: Get Firmware Download URL
@@ -1025,10 +1064,12 @@ paths:
     post:
       consumes:
       - application/json
-      description: Insert release details to firmware_releases table and return a
-        presigned URL to upload the artifacts to s3
+      description: Creates a new firmware release entry in draft status and returns
+        a presigned S3 URL for uploading the firmware artifact. The upload URL is
+        valid for 15 minutes.
       parameters:
-      - description: Firmware release details
+      - description: Firmware release metadata including version, platform, release
+          notes, etc.
         in: body
         name: request
         required: true
@@ -1038,28 +1079,33 @@ paths:
       - application/json
       responses:
         "200":
-          description: Returns releaseId and presignedUrl
+          description: Returns releaseId and presignedUrl for artifact upload
           schema:
             $ref: '#/definitions/types.FormwareReleaseInitiateResposne'
         "400":
-          description: Bad Request
+          description: Invalid request payload or version already exists
           schema:
             $ref: '#/definitions/types.ErrorResponse'
         "500":
-          description: Internal Server Error
+          description: Internal server error
           schema:
             $ref: '#/definitions/types.ErrorResponse'
+      security:
+      - BearerAuth: []
       summary: Initiate Firmware Release
       tags:
-      - Firmware Update
+      - Firmware Update - Internal API
   /firmware/updates/check:
     post:
       consumes:
       - application/json
-      description: Checks for firmware updates for a list of devices based on their
-        current version and platform
+      description: Checks if newer firmware versions are available for a batch of
+        devices based on their current versions, platform, and deployment channel.
+        Returns update availability status and latest version information for each
+        device.
       parameters:
-      - description: Device details for update check
+      - description: List of devices with their current firmware versions and platform
+          information
         in: body
         name: request
         required: true
@@ -1069,18 +1115,49 @@ paths:
       - application/json
       responses:
         "200":
-          description: OK
+          description: Update availability results for each device
           schema:
             $ref: '#/definitions/types.CheckUpdateResponse'
         "400":
-          description: Bad Request
+          description: Invalid request payload
           schema:
             $ref: '#/definitions/types.ErrorResponse'
         "500":
-          description: Internal Server Error
+          description: Internal server error
           schema:
             $ref: '#/definitions/types.ErrorResponse'
       summary: Check for Firmware Updates
+      tags:
+      - Firmware Update
+  /firmware/updates/log:
+    post:
+      consumes:
+      - application/json
+      description: Records the success or failure of a firmware update installation
+        on a device. This endpoint is called by devices after attempting a firmware
+        update.
+      parameters:
+      - description: Firmware update log details including device ID, version, and
+          status
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/types.LogFirmwareUpdateRequest'
+      produces:
+      - application/json
+      responses:
+        "202":
+          description: Update event logged successfully
+        "400":
+          description: Invalid request payload or status value
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+      summary: Log Firmware Update Event
       tags:
       - Firmware Update
   /organization/role-management:

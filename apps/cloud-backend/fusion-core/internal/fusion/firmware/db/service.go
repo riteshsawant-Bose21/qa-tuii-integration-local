@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"fmt"
 	"time"
 
 	types "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/api/types"
@@ -169,6 +170,22 @@ func (s *Service) ListReleases(ctx context.Context, limit, offset int, platform 
 	}
 
 	return releases, total, nil
+}
+
+// LogFirmwareUpdate inserts a firmware update log entry
+func (s *Service) LogFirmwareUpdate(ctx context.Context, deviceID, releaseVersion, status string, eventTime time.Time) error {
+	log := &model.FirmwareUpdateLog{
+		DeviceID:  deviceID,
+		Status:    status,
+		EventTime: eventTime,
+	}
+
+	err := log.Insert(ctx, s.db, boil.Infer())
+	if err != nil {
+		return fmt.Errorf("failed to insert firmware update log: %w", err)
+	}
+
+	return nil
 }
 
 func (s *Service) GetLatestReleaseNewerThan(ctx context.Context, platformName, channelName, currentVersion string) (*model.FirmwareRelease, error) {

@@ -2,6 +2,14 @@ package types
 
 import "time"
 
+// LogFirmwareUpdateRequest represents a firmware update log entry from a device
+type LogFirmwareUpdateRequest struct {
+	DeviceID       string    `json:"device_id" binding:"required"`
+	ReleaseVersion string    `json:"release_version" binding:"required"`
+	Status         string    `json:"status" binding:"required,oneof=INSTALL_SUCCESS INSTALL_FAILED"`
+	EventTime      time.Time `json:"event_time" binding:"required"`
+}
+
 type InitiateFirmwareReleasePayload struct {
 	Checksum string                  `json:"checksum" binding:"required"`
 	MetaData FirmwareReleaseMetaData `json:"metaData" binding:"required"`

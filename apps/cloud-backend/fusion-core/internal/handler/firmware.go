@@ -26,7 +26,7 @@ func NewFirmwareUpdateHandler(firmware fusion.Firmware) *FirmwareUpdateHandler {
 // InitiateRelease creates a new firmware release draft and generates a presigned S3 upload URL
 // @Summary Initiate Firmware Release
 // @Description Creates a new firmware release entry in draft status and returns a presigned S3 URL for uploading the firmware artifact. The upload URL is valid for 15 minutes.
-// @Tags Firmware Update
+// @Tags Firmware Update - Internal API
 // @Accept json
 // @Produce json
 // @Security BearerAuth
@@ -67,12 +67,11 @@ func (h *FirmwareUpdateHandler) InitiateRelease(ctx *gin.Context) {
 // MakeReleaseAvailable publishes a firmware release to a deployment channel
 // @Summary Make Release Available
 // @Description Updates the release status to 'AVAILABLE' and creates a deployment entry for the specified channel, making the firmware available for devices to download
-// @Tags Firmware Update
+// @Tags Firmware Update - Internal API
 // @Accept json
 // @Produce json
 // @Security BearerAuth
 // @Param releaseID path string true "Unique identifier of the firmware release"
-// @Param request body types.MakeReleaseAvailablePayload true "Deployment configuration including channel"
 // @Success 204 "Release successfully made available"
 // @Failure 400 {object} types.ErrorResponse "Invalid releaseID or request payload"
 // @Failure 404 {object} types.ErrorResponse "Release not found"
@@ -212,4 +211,44 @@ func (h *FirmwareUpdateHandler) DownloadArtifact(ctx *gin.Context) {
 	}
 
 	response.OK(ctx, resp)
+}
+
+// LogFirmwareUpdate records a firmware update event from a device
+// @Summary Log Firmware Update Event
+// @Description Records the success or failure of a firmware update installation on a device. This endpoint is called by devices after attempting a firmware update.
+// @Tags Firmware Update
+// @Accept json
+// @Produce json
+// @Param request body types.LogFirmwareUpdateRequest true "Firmware update log details including device ID, version, and status"
+// @Success 202 "Update event logged successfully"
+// @Failure 400 {object} types.ErrorResponse "Invalid request payload or status value"
+// @Failure 500 {object} types.ErrorResponse "Internal server error"
+// @Router /firmware/updates/log [post]
+func (h *FirmwareUpdateHandler) LogFirmwareUpdate(ctx *gin.Context) {
+	var payload types.LogFirmwareUpdateRequest
+	if err := ctx.ShouldBindJSON(&payload); err != nil {
+		response.BadRequest(ctx, "Invalid request payload: "+err.Error())
+		return
+	}
+
+	loggerFromContext, exists := ctx.Get("logger")
+	if !exists {
+		response.InternalError(ctx)
+		return
+	}
+	logger := loggerFromContext.(*zap.Logger)
+
+	err := h.firmware.LogFirmwareUpdate(ctx, &payload)
+	if err != nil {
+		logger.Error("Failed to log firmware update",
+			zap.String("device_id", payload.DeviceID),
+			zap.String("version", payload.ReleaseVersion),
+			zap.String("status", payload.Status),
+			zap.Time("event_time", payload.EventTime),
+			zap.Error(err))
+		response.InternalError(ctx)
+		return
+	}
+
+	response.Accepted(ctx)
 }

@@ -72,4 +72,5 @@ const (
 	EndpointFirmwareMakeAvailable   = "/:releaseID/makeReleaseAvailable"
 	EndpointFirmwareUpdateCheck     = "/updates/check"
 	EndpointFirmwareDownload        = "/getDownloadUrl/:platform/:version"
+	EndpointFirmwareUpdateLog       = "/updates/log"
 )

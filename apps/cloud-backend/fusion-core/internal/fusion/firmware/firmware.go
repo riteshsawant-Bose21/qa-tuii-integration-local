@@ -205,3 +205,7 @@ func (s *Service) ListReleases(ctx context.Context, platform string, page, limit
 		Limit:    limit,
 	}, nil
 }
+
+func (s *Service) LogFirmwareUpdate(ctx context.Context, req *types.LogFirmwareUpdateRequest) error {
+	return s.dbService.LogFirmwareUpdate(ctx, req.DeviceID, req.ReleaseVersion, req.Status, req.EventTime)
+}
