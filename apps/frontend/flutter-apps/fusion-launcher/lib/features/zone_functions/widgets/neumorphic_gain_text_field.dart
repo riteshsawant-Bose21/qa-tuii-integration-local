@@ -13,6 +13,7 @@ class NeumorphicGainTextField extends StatefulWidget {
   final bool showDbSuffix;
   final bool enabled;
   final bool showCursor;
+  final Color? backgroundColor;
 
   const NeumorphicGainTextField({
     super.key,
@@ -26,6 +27,7 @@ class NeumorphicGainTextField extends StatefulWidget {
     this.showDbSuffix = true,
     this.enabled = true,
     this.showCursor = true,
+    this.backgroundColor,
   });
 
   @override
@@ -87,7 +89,7 @@ class _NeumorphicGainTextFieldState extends State<NeumorphicGainTextField> {
           height: widget.height,
           alignment: Alignment.center,
           raised: false,
-          color: context.colorScheme.elevation2,
+          color: widget.backgroundColor ?? context.colorScheme.elevation2,
           borderRadius: widget.borderRadius,
           child: TextField(
             showCursor: widget.showCursor,

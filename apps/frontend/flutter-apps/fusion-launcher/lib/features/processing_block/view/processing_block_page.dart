@@ -12,6 +12,7 @@ import 'package:provider/provider.dart';
 import '../viewmodel/algorithm_data_viewmodel.dart';
 import 'dynamic_grid_view.dart';
 import 'processing_blocks/agc/agc_block.dart';
+import 'processing_blocks/graphiceq/graphiceq_block.dart';
 
 class ProcessingBlockPage extends StatelessWidget {
   const ProcessingBlockPage({super.key, required this.processingBlock});
@@ -39,6 +40,8 @@ class ProcessingBlockPage extends StatelessWidget {
                   return const DelayBlock();
                 } else if (processingBlock.algorithmId == 'gain') {
                   return const GainBlock();
+                } else if (processingBlock.algorithmId == 'graphic_eq') {
+                  return const GraphicEqBlock();
                 }
                 final PBLayout? data = viewModel.layout;
 
