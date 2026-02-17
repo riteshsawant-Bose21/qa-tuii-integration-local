@@ -84,7 +84,7 @@ class GraphicEqBlock extends StatelessWidget {
                                           clipBehavior: Clip.none,
                                           children: <Widget>[
                                             Container(
-                                              margin: const EdgeInsets.only(bottom: 90),
+                                              margin: const EdgeInsets.only(bottom: 80),
                                               decoration: BoxDecoration(
                                                 color: index.isOdd ? context.colorScheme.elevation2 : null,
                                                 borderRadius: BorderRadius.circular(FusionSizes.borderRadius2),
@@ -116,7 +116,7 @@ class GraphicEqBlock extends StatelessWidget {
 
                                             // Number Field
                                             Positioned(
-                                              bottom: index.isEven ? 0 : 45,
+                                              bottom: index.isEven ? 0 : 35,
                                               left: -bandWidth * 0.3,
                                               child: SizedBox(
                                                 width: bandWidth * 1.5,
