@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:fusion_launcher/features/add_source_popup/view_model/add_source_viewmodel.dart';
+import 'package:fusion_launcher/features/processing_block/view/widgets/pb_textfield.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:provider/provider.dart';
 import 'package:fusion_launcher/features/processing_block/viewmodel/algorithm_data_viewmodel.dart';
 import 'package:fusion_lib/models/algorithm/property_settings.dart';
 import '../../../../zone_functions/widgets/neumorphic_audio_toggle_button.dart';
-import '../../../../zone_functions/widgets/neumorphic_gain_text_field.dart';
 import '../../widgets/pb_meter.dart';
 import '../../widgets/pb_slider.dart';
 import '../widgets/block_header.dart';
@@ -80,17 +80,18 @@ class GainBlock extends StatelessWidget {
                               child: Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: <Widget>[
-                                  /// gain value text field
-                                  NeumorphicGainTextField(
+                                  SizedBox(
                                     width: 80,
-                                    height: 25,
-                                    controllerValue: (context.watch<GainController>().currentGainValue ?? 0).toDouble(),
-                                    maxGain: 12,
-                                    minGain: -60,
-                                    showDbSuffix: false,
-                                    onSubmitted: (num value) {
-                                      context.read<GainController>().updateGainValue(value);
-                                    },
+                                    // height: 25,
+                                    child: PBNumberTextField(
+                                      // value: context.watch<LimiterController>().currentThreshold ?? 0,
+                                      value: (context.watch<GainController>().currentGainValue ?? 0).toDouble(),
+                                      onChanged: (num value) {
+                                        context.read<GainController>().updateGainValue(value);
+                                      },
+                                      min: 1,
+                                      max: 96000,
+                                    ),
                                   ),
 
                                   const SizedBox(width: 4),
