@@ -29,7 +29,7 @@ class FusionPopupMenu<T> extends StatelessWidget {
     var createTestId = semanticsId??SemanticHelper.createTestId(SemanticTypes.dropdown, tooltip ?? 'popup_menu');
     return SemanticHelper.button(
       testId: createTestId,
-      child: _PopupMenuButton<T>(
+      child: CustomPopupMenuButton<T>(
         tooltip: tooltip,
         menuSemanticLabel: "${createTestId}_container",
         position: PopupMenuPosition.under,
@@ -75,10 +75,10 @@ class FusionPopupMenu<T> extends StatelessWidget {
   }
 }
 
-class _PopupMenuButton<T> extends StatefulWidget {
+class CustomPopupMenuButton<T> extends StatefulWidget {
   /// Creates a button that shows a popup menu.
 
-  const _PopupMenuButton({
+  const CustomPopupMenuButton({
     super.key,
     required this.itemBuilder,
     this.initialValue,
@@ -336,14 +336,14 @@ class _PopupMenuButton<T> extends StatefulWidget {
   final bool? requestFocus;
 
   @override
-  _PopupMenuButtonState<T> createState() => _PopupMenuButtonState<T>();
+  _CustomPopupMenuButtonState<T> createState() => _CustomPopupMenuButtonState<T>();
 }
 
-/// The [State] for a [_PopupMenuButton].
+/// The [State] for a [CustomPopupMenuButton].
 ///
 /// See [showButtonMenu] for a way to programmatically open the popup menu
 /// of your button state.
-class _PopupMenuButtonState<T> extends State<_PopupMenuButton<T>> {
+class _CustomPopupMenuButtonState<T> extends State<CustomPopupMenuButton<T>> {
   bool _isMenuExpanded = false;
   RelativeRect? _lastPosition;
 
@@ -388,12 +388,12 @@ class _PopupMenuButtonState<T> extends State<_PopupMenuButton<T>> {
   }
 
   /// A method to show a popup menu with the items supplied to
-  /// [_PopupMenuButton.itemBuilder] at the position of your [_PopupMenuButton].
+  /// [CustomPopupMenuButton.itemBuilder] at the position of your [CustomPopupMenuButton].
   ///
-  /// By default, it is called when the user taps the button and [_PopupMenuButton.enabled]
+  /// By default, it is called when the user taps the button and [CustomPopupMenuButton.enabled]
   /// is set to `true`. Moreover, you can open the button by calling the method manually.
   ///
-  /// You would access your [_PopupMenuButtonState] using a [GlobalKey] and
+  /// You would access your [_CustomPopupMenuButtonState] using a [GlobalKey] and
   /// show the menu of the button with `globalKey.currentState.showButtonMenu`.
   void showButtonMenu() {
     final PopupMenuThemeData popupMenuTheme = PopupMenuTheme.of(context);
