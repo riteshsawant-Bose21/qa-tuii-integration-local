@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:fusion_launcher/core/service_locator.dart';
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
+import 'package:fusion_launcher/features/devices/presentation/widgets/settings/device_global_settings_tab.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
 import 'device_mapping_screen.dart';
@@ -24,8 +25,15 @@ class DeviceMappingDialog extends StatefulWidget {
 
 class _DeviceMappingDemoState extends State<DeviceMappingDialog> {
   int _selectedTabIndex = 0;
-  List<ProjectDevice> _projectDevices = <ProjectDevice>[];
   List<NetworkHardware> _networkHardware = <NetworkHardware>[];
+
+  List<HardwareComponent> get _fusionDevices {
+    // Combine DSPs, Amplifiers, and Controllers
+    final List<HardwareComponent> dsp = serviceLocator<ProjectViewModel>().fusionDsps;
+    final List<HardwareComponent> amplifiers = serviceLocator<ProjectViewModel>().amplifiers;
+    final List<HardwareComponent> controllers = serviceLocator<ProjectViewModel>().fusionControllers;
+    return <HardwareComponent>[...dsp, ...amplifiers, ...controllers];
+  }
 
   @override
   void initState() {
@@ -35,33 +43,6 @@ class _DeviceMappingDemoState extends State<DeviceMappingDialog> {
 
   void _initializeMockData() {
     // Mock project devices
-    _projectDevices = <ProjectDevice>[
-      ProjectDevice(
-        id: '1',
-        name: 'FM6-1',
-        location: 'Zone 1',
-      ),
-      ProjectDevice(
-        id: '2',
-        name: 'PSM8300-1',
-        location: 'Zone 1',
-      ),
-      ProjectDevice(
-        id: '3',
-        name: 'CPLT-1',
-        location: 'Zone 2',
-      ),
-      ProjectDevice(
-        id: '4',
-        name: 'CPLT-2',
-        location: 'Zone 2',
-      ),
-      ProjectDevice(
-        id: '5',
-        name: 'CPLT-2',
-        location: 'Zone 2',
-      ),
-    ];
 
     // Mock network hardware
     _networkHardware = <NetworkHardware>[
@@ -70,50 +51,59 @@ class _DeviceMappingDemoState extends State<DeviceMappingDialog> {
         modelName: 'Fusion Mini FM6',
         ipAddress: '192.168.50.100',
         firmware: 'v1.1.0',
+        type: NetworkHardwareType.dsp,
       ),
       NetworkHardware(
         id: 'hw2',
         modelName: 'Fusion Mini FM6',
         ipAddress: '192.168.50.100',
         firmware: 'v1.1.0',
+        type: NetworkHardwareType.dsp,
       ),
       NetworkHardware(
         id: 'hw3',
         modelName: 'Control Pal LT',
         ipAddress: '192.168.50.100',
         firmware: 'v1.1.0',
+        type: NetworkHardwareType.controller,
       ),
       NetworkHardware(
         id: 'hw4',
         modelName: 'Control Pal Pro',
         ipAddress: '192.168.50.100',
         firmware: 'v1.1.0',
+        type: NetworkHardwareType.controller,
       ),
       NetworkHardware(
         id: 'hw5',
         modelName: 'Power Smart 8300',
         ipAddress: '192.168.50.100',
         firmware: 'v1.1.0',
+        type: NetworkHardwareType.amplifier,
       ),
     ];
   }
 
-  void _handleAssignHardware(ProjectDevice device, NetworkHardware? hardware) {
+  void _handleAssignHardware(HardwareComponent device, NetworkHardware? hardware) {
     setState(() {
-      // Unassign previous hardware if any
-      if (device.assignedHardwareId != null) {
-        final NetworkHardware prevHardware = _networkHardware.firstWhere(
-          (NetworkHardware hw) => hw.id == device.assignedHardwareId,
-        );
-        prevHardware.assignedToDeviceId = null;
+      // 1. Unassign: Find any hardware currently assigned to THIS device and clear it.
+      // We iterate through the list to ensure we catch the specific hardware instance
+      // that is currently holding this device's ID.
+      for (final NetworkHardware hw in _networkHardware) {
+        if (hw.assignedToDeviceId == device.id) {
+          hw.assignedToDeviceId = null;
+        }
       }
 
-      // Assign new hardware
+      // 2. Assign: If a new hardware is selected, link it to this device.
       if (hardware != null) {
-        device.assignedHardwareId = hardware.id;
-        hardware.assignedToDeviceId = device.id;
-      } else {
-        device.assignedHardwareId = null;
+        // We look up the hardware in the main list to ensure we are modifying the
+        // source of truth (in case 'hardware' passed in is a copy).
+        final NetworkHardware targetHw = _networkHardware.firstWhere((NetworkHardware hw) => hw.id == hardware.id);
+
+        // Setting this automatically overwrites any previous device ID,
+        // handling the case where we "steal" hardware from another device.
+        targetHw.assignedToDeviceId = device.id;
       }
     });
   }
@@ -138,19 +128,11 @@ class _DeviceMappingDemoState extends State<DeviceMappingDialog> {
               child:
                   _selectedTabIndex == 0
                       ? DeviceMappingScreen(
-                        projectDevices: _projectDevices,
+                        devices: _fusionDevices,
                         networkHardware: _networkHardware,
                         onAssignHardware: _handleAssignHardware,
                       )
-                      : const Center(
-                        child: FusionAppText(
-                          text: 'Settings tab - Coming soon',
-                          style: TextStyle(
-                            color: Color(0xFFB4AFA6),
-                            fontSize: 16,
-                          ),
-                        ),
-                      ),
+                      : const DeviceGlobalSettingsTab(),
             ),
           ],
         ),
@@ -187,7 +169,9 @@ class _DeviceMappingDemoState extends State<DeviceMappingDialog> {
                   ),
                   onPressed: () {
                     Navigator.of(context).pop();
-                    serviceLocator<ProjectViewModel>().toggleControlMode();
+                    if (serviceLocator<ProjectViewModel>().virtualIP == null) {
+                      serviceLocator<ProjectViewModel>().toggleControlMode();
+                    }
                   },
                 ),
               ],

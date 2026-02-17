@@ -28,6 +28,9 @@ class FusionPopupMenu<T> extends StatelessWidget {
     final childKey = GlobalKey();
     var createTestId = semanticsId??SemanticHelper.createTestId(SemanticTypes.dropdown, tooltip ?? 'popup_menu');
     return SemanticHelper.button(
+      testId: SemanticHelper.createTestId(SemanticTypes.dropdown, tooltip ?? 'popup_menu'),
+      child: PopupMenuButton<T>(
+        tooltip: tooltip ?? '',
       testId: createTestId,
       child: _PopupMenuButton<T>(
         tooltip: tooltip,

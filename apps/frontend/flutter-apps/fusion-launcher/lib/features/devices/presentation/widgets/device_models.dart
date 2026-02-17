@@ -1,30 +1,7 @@
-/// Model for project devices (devices in your project)
-class ProjectDevice {
-  final String id;
-  final String name;
-  final String location;
-  String? assignedHardwareId;
-
-  ProjectDevice({
-    required this.id,
-    required this.name,
-    required this.location,
-    this.assignedHardwareId,
-  });
-
-  ProjectDevice copyWith({
-    String? id,
-    String? name,
-    String? location,
-    String? assignedHardwareId,
-  }) {
-    return ProjectDevice(
-      id: id ?? this.id,
-      name: name ?? this.name,
-      location: location ?? this.location,
-      assignedHardwareId: assignedHardwareId ?? this.assignedHardwareId,
-    );
-  }
+enum NetworkHardwareType {
+  dsp,
+  amplifier,
+  controller,
 }
 
 /// Model for network hardware (physical devices discovered on network)
@@ -33,6 +10,7 @@ class NetworkHardware {
   final String modelName;
   final String ipAddress;
   final String firmware;
+  final NetworkHardwareType? type;
   String? assignedToDeviceId;
 
   NetworkHardware({
@@ -40,6 +18,7 @@ class NetworkHardware {
     required this.modelName,
     required this.ipAddress,
     required this.firmware,
+    required this.type,
     this.assignedToDeviceId,
   });
 
@@ -48,6 +27,7 @@ class NetworkHardware {
     String? modelName,
     String? ipAddress,
     String? firmware,
+    NetworkHardwareType? type,
     String? assignedToDeviceId,
   }) {
     return NetworkHardware(
@@ -55,6 +35,7 @@ class NetworkHardware {
       modelName: modelName ?? this.modelName,
       ipAddress: ipAddress ?? this.ipAddress,
       firmware: firmware ?? this.firmware,
+      type: type ?? this.type,
       assignedToDeviceId: assignedToDeviceId ?? this.assignedToDeviceId,
     );
   }
@@ -64,6 +45,7 @@ class NetworkHardware {
       id: '',
       modelName: '--',
       ipAddress: '--',
+      type: null,
       firmware: '--',
     );
   }

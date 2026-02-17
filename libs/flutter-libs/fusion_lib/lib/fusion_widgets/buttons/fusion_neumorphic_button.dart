@@ -83,17 +83,23 @@ class FusionNeumorphicButton extends StatefulWidget {
   final TextStyle? textStyle;
   final Widget? child;
   final Color? color;
+  final EdgeInsetsGeometry? padding;
+  final EdgeInsetsGeometry? margin;
+  final bool enabled;
 
   const FusionNeumorphicButton({
     super.key,
     this.text,
     this.width,
-    this.height = 35,
+    this.height,
     required this.onTap,
     this.borderRadius = 12,
     this.textStyle,
     this.child,
     this.color,
+    this.padding,
+    this.margin,
+    this.enabled = true,
   });
 
   @override
@@ -113,33 +119,34 @@ class _FusionNeumorphicButtonState extends State<FusionNeumorphicButton> {
         "neumorphic_button_${widget.text}",
       ),
       child: GestureDetector(
-        onTapDown: (_) => setState(() => _isPressed = true),
+        onTapDown: (_) {
+          if (!widget.enabled) return;
+          setState(() => _isPressed = true);
+        },
         onTapCancel: () => setState(() => _isPressed = false),
         onTapUp: (_) {
+          if (!widget.enabled) return;
           setState(() => _isPressed = false);
           widget.onTap();
         },
         child: ClipRRect(
           borderRadius: BorderRadius.circular(widget.borderRadius),
           clipBehavior: _isPressed ? Clip.hardEdge : Clip.none,
-          child: Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: FusionContainer(
-              width: widget.width,
-              raised: !_isPressed,
-              borderRadius: widget.borderRadius,
-              height: widget.height,
-              alignment: Alignment.center,
-              color: widget.color,
-              child:
-                  widget.child ??
-                  FusionAppText(
-                    text: widget.text!,
-                    style:
-                        widget.textStyle ??
-                        Theme.of(context).textTheme.bodyMedium,
-                  ),
-            ),
+          child: FusionContainer(
+            width: widget.width,
+            raised: !_isPressed,
+            borderRadius: widget.borderRadius,
+            height: widget.height,
+            alignment: Alignment.center,
+            color: widget.color,
+            padding: widget.padding,
+            margin: widget.margin,
+            child:
+                widget.child ??
+                FusionAppText(
+                  text: widget.text!,
+                  style: widget.textStyle ?? context.textTheme.bodyMedium,
+                ),
           ),
         ),
       ),

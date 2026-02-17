@@ -124,7 +124,7 @@ class _ConfigureNetworkDialogState extends State<ConfigureNetworkDialog> {
   }
 
   void _showCloseDialog() {
-    if (widget.bluetoothOnly) {
+    if (widget.bluetoothOnly || serviceLocator<ProjectViewModel>().virtualIP != null) {
       Navigator.of(context).pop(); // Close the network configuration dialog
       return;
     }
@@ -312,6 +312,7 @@ class _ConfigureNetworkDialogState extends State<ConfigureNetworkDialog> {
     // Simulate VIP verification
     await Future<void>.delayed(const Duration(seconds: 1));
     if (mounted) {
+      serviceLocator<ProjectViewModel>().setVirtualIP(ip: vipAddress);
       FusionUiUtils.hideLoader(context);
       showSuccessPopup(
         context,

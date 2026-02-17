@@ -14,6 +14,7 @@ export 'fusion_theme/fusion_sizes.dart';
 export 'fusion_theme/fusion_theme_app.dart';
 export 'fusion_utils/app_enums.dart';
 export 'fusion_utils/fusion_utils.dart';
+export 'fusion_widgets/buttons/buttons.dart';
 export 'fusion_widgets/fusion_widgets.dart';
 export 'fusion_widgets/guide/controller/guide_showcase_controller.dart';
 export 'fusion_widgets/guide/pages/guide_showcase_wrapper.dart';
