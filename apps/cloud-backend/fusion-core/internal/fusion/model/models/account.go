@@ -949,7 +949,7 @@ func (accountL) LoadClaimedByDevices(ctx context.Context, e boil.ContextExecutor
 
 	for _, foreign := range resultSlice {
 		for _, local := range slice {
-			if queries.Equal(local.ID, foreign.ClaimedBy) {
+			if local.ID == foreign.ClaimedBy {
 				local.R.ClaimedByDevices = append(local.R.ClaimedByDevices, foreign)
 				if foreign.R == nil {
 					foreign.R = &deviceR{}
@@ -1184,7 +1184,7 @@ func (o *Account) AddClaimedByDevices(ctx context.Context, exec boil.ContextExec
 	var err error
 	for _, rel := range related {
 		if insert {
-			queries.Assign(&rel.ClaimedBy, o.ID)
+			rel.ClaimedBy = o.ID
 			if err = rel.Insert(ctx, exec, boil.Infer()); err != nil {
 				return errors.Wrap(err, "failed to insert into foreign table")
 			}
@@ -1194,7 +1194,7 @@ func (o *Account) AddClaimedByDevices(ctx context.Context, exec boil.ContextExec
 				strmangle.SetParamNames("\"", "\"", 1, []string{"claimed_by"}),
 				strmangle.WhereClause("\"", "\"", 2, devicePrimaryKeyColumns),
 			)
-			values := []interface{}{o.ID, rel.DeviceID}
+			values := []interface{}{o.ID, rel.ID}
 
 			if boil.IsDebug(ctx) {
 				writer := boil.DebugWriterFrom(ctx)
@@ -1205,7 +1205,7 @@ func (o *Account) AddClaimedByDevices(ctx context.Context, exec boil.ContextExec
 				return errors.Wrap(err, "failed to update foreign table")
 			}
 
-			queries.Assign(&rel.ClaimedBy, o.ID)
+			rel.ClaimedBy = o.ID
 		}
 	}
 
@@ -1226,80 +1226,6 @@ func (o *Account) AddClaimedByDevices(ctx context.Context, exec boil.ContextExec
 			rel.R.ClaimedByAccount = o
 		}
 	}
-	return nil
-}
-
-// SetClaimedByDevices removes all previously related items of the
-// account replacing them completely with the passed
-// in related items, optionally inserting them as new records.
-// Sets o.R.ClaimedByAccount's ClaimedByDevices accordingly.
-// Replaces o.R.ClaimedByDevices with related.
-// Sets related.R.ClaimedByAccount's ClaimedByDevices accordingly.
-func (o *Account) SetClaimedByDevices(ctx context.Context, exec boil.ContextExecutor, insert bool, related ...*Device) error {
-	query := "update \"device\" set \"claimed_by\" = null where \"claimed_by\" = $1"
-	values := []interface{}{o.ID}
-	if boil.IsDebug(ctx) {
-		writer := boil.DebugWriterFrom(ctx)
-		fmt.Fprintln(writer, query)
-		fmt.Fprintln(writer, values)
-	}
-	_, err := exec.ExecContext(ctx, query, values...)
-	if err != nil {
-		return errors.Wrap(err, "failed to remove relationships before set")
-	}
-
-	if o.R != nil {
-		for _, rel := range o.R.ClaimedByDevices {
-			queries.SetScanner(&rel.ClaimedBy, nil)
-			if rel.R == nil {
-				continue
-			}
-
-			rel.R.ClaimedByAccount = nil
-		}
-		o.R.ClaimedByDevices = nil
-	}
-
-	return o.AddClaimedByDevices(ctx, exec, insert, related...)
-}
-
-// RemoveClaimedByDevices relationships from objects passed in.
-// Removes related items from R.ClaimedByDevices (uses pointer comparison, removal does not keep order)
-// Sets related.R.ClaimedByAccount.
-func (o *Account) RemoveClaimedByDevices(ctx context.Context, exec boil.ContextExecutor, related ...*Device) error {
-	if len(related) == 0 {
-		return nil
-	}
-
-	var err error
-	for _, rel := range related {
-		queries.SetScanner(&rel.ClaimedBy, nil)
-		if rel.R != nil {
-			rel.R.ClaimedByAccount = nil
-		}
-		if _, err = rel.Update(ctx, exec, boil.Whitelist("claimed_by")); err != nil {
-			return err
-		}
-	}
-	if o.R == nil {
-		return nil
-	}
-
-	for _, rel := range related {
-		for i, ri := range o.R.ClaimedByDevices {
-			if rel != ri {
-				continue
-			}
-
-			ln := len(o.R.ClaimedByDevices)
-			if ln > 1 && i < ln-1 {
-				o.R.ClaimedByDevices[i] = o.R.ClaimedByDevices[ln-1]
-			}
-			o.R.ClaimedByDevices = o.R.ClaimedByDevices[:ln-1]
-			break
-		}
-	}
-
 	return nil
 }
 

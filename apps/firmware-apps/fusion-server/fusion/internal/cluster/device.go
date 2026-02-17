@@ -2,6 +2,8 @@ package cluster
 
 import (
 	"bytes"
+	"crypto/x509"
+	"encoding/pem"
 	"errors"
 	"fmt"
 	"fusion-services-core/logging"
@@ -15,6 +17,8 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"strings"
+	"time"
 
 	json "github.com/goccy/go-json"
 )
@@ -337,32 +341,6 @@ func (c *Cluster) GetCSR(w http.ResponseWriter, r *http.Request) {
 	w.Write(csrContent)
 }
 
-func (c *Cluster) SetCertificate(w http.ResponseWriter, r *http.Request) {
-	if !utils.RequirePost(w, r) {
-		return
-	}
-	defer r.Body.Close()
-
-	certContent, err := io.ReadAll(r.Body)
-	if err != nil {
-		http.Error(w, fmt.Sprintf("Error reading certificate data: %v", err), http.StatusBadRequest)
-		return
-	}
-
-	if len(certContent) == 0 {
-		http.Error(w, "Certificate data cannot be empty", http.StatusBadRequest)
-		return
-	}
-
-	if err := os.WriteFile("/var/lib/device-identity/device.x509.cert", certContent, 0644); err != nil {
-		logging.GetLogger().Error("Error writing certificate file: %v", err)
-		http.Error(w, fmt.Sprintf("Error writing certificate file: %v", err), http.StatusInternalServerError)
-		return
-	}
-
-	w.WriteHeader(http.StatusNoContent)
-}
-
 func (c *Cluster) SetDeviceCertificate(w http.ResponseWriter, r *http.Request) {
 	if !utils.RequirePost(w, r) {
 		return
@@ -397,17 +375,40 @@ func (c *Cluster) SetDeviceCertificate(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if c.hostIsLocal(targetDevice.Address) {
+
+		// Check if we should replace the certificate
+		shouldReplace, err := c.shouldReplaceCertificate("/var/lib/device-identity/device.x509.cert", certContent)
+		if err != nil {
+			logging.GetLogger().Error("Error checking certificate replacement: %v", err)
+			http.Error(w, fmt.Sprintf("Error checking certificate: %v", err), http.StatusInternalServerError)
+			return
+		}
+
+		if !shouldReplace {
+			logging.GetLogger().Info("Certificate is still valid and not near expiry, skipping replacement")
+			w.Header().Set(api.ContentType, api.JsonMIMEType)
+			w.WriteHeader(http.StatusOK)
+			json.NewEncoder(w).Encode(map[string]string{
+				"message": "Certificate not updated - existing certificate is still valid",
+				"action":  "skipped",
+				"reason":  "certificate_still_valid",
+			})
+			return
+		}
+
 		// If this is the local device, write certificate locally
 		if err := os.WriteFile("/var/lib/device-identity/device.x509.cert", certContent, 0644); err != nil {
 			logging.GetLogger().Error("Error writing certificate file: %v", err)
 			http.Error(w, fmt.Sprintf("Error writing certificate file: %v", err), http.StatusInternalServerError)
 			return
 		}
+		logging.GetLogger().Info("Certificate replaced successfully")
 		w.WriteHeader(http.StatusNoContent)
 	} else {
 		// Make HTTP POST request to the remote device's admin certificate endpoint
 		deviceAddress := net.JoinHostPort(targetDevice.Address, api.AdminPort)
-		url := getLocalURL(deviceAddress, routes.DevicesCertificateEndpoint)
+		endpoint := strings.Replace(routes.DevicesIDCertificateEndpoint, "{id}", deviceId, 1)
+		url := getLocalURL(deviceAddress, endpoint)
 
 		req, err := http.NewRequest(http.MethodPost, url, bytes.NewReader(certContent))
 		if err != nil {
@@ -649,4 +650,101 @@ func (c *Cluster) getVIPInLocalConfig(w http.ResponseWriter) {
 		"local": vipValue,
 		"vip":   vipValue,
 	})
+}
+
+// shouldReplaceCertificate determines if a certificate should be replaced
+// Returns true if:
+// - The file doesn't exist
+// - The existing certificate is expired
+// - The existing certificate is near expiry (within 3 months)
+// - The new certificate content is different from existing
+func (c *Cluster) shouldReplaceCertificate(certPath string, newCertContent []byte) (bool, error) {
+	// Check if file exists
+	if _, err := os.Stat(certPath); os.IsNotExist(err) {
+		logging.GetLogger().Info("Certificate file does not exist, will create new one")
+		return true, nil
+	}
+
+	// Read existing certificate
+	existingContent, err := os.ReadFile(certPath)
+	if err != nil {
+		return false, fmt.Errorf("failed to read existing certificate: %v", err)
+	}
+
+	// Check if content is the same
+	if bytes.Equal(existingContent, newCertContent) {
+		logging.GetLogger().Debug("Certificate content is identical, no replacement needed")
+		return false, nil
+	}
+
+	// Check if existing certificate is expired or near expiry
+	isExpiredOrNear, err := c.isCertificateExpiredOrNearExpiry(certPath, 3) // 3 months threshold
+	if err != nil {
+		logging.GetLogger().Warn("Failed to check certificate expiry, will replace: %v", err)
+		return true, nil
+	}
+
+	if isExpiredOrNear {
+		logging.GetLogger().Info("Certificate is expired or near expiry, will replace")
+		return true, nil
+	}
+
+	// Validate the new certificate to ensure it's not expired
+	newCertExpired, err := c.isCertificateContentExpiredOrNearExpiry(newCertContent, 0) // Check if new cert is already expired
+	if err != nil {
+		return false, fmt.Errorf("failed to validate new certificate: %v", err)
+	}
+
+	if newCertExpired {
+		return false, fmt.Errorf("new certificate is already expired or invalid")
+	}
+
+	// If existing cert is valid and new cert is different, replace it
+	logging.GetLogger().Info("Certificate content differs and new certificate is valid, will replace")
+	return true, nil
+}
+
+// isCertificateExpiredOrNearExpiry checks if a certificate file is expired or near expiry
+func (c *Cluster) isCertificateExpiredOrNearExpiry(certPath string, monthsThreshold int) (bool, error) {
+	certContent, err := os.ReadFile(certPath)
+	if err != nil {
+		return false, fmt.Errorf("failed to read certificate file: %v", err)
+	}
+
+	return c.isCertificateContentExpiredOrNearExpiry(certContent, monthsThreshold)
+}
+
+// isCertificateContentExpiredOrNearExpiry checks if certificate content is expired or near expiry
+func (c *Cluster) isCertificateContentExpiredOrNearExpiry(certContent []byte, monthsThreshold int) (bool, error) {
+	// Decode PEM block
+	block, _ := pem.Decode(certContent)
+	if block == nil {
+		return false, fmt.Errorf("failed to decode PEM block")
+	}
+
+	// Parse certificate
+	cert, err := x509.ParseCertificate(block.Bytes)
+	if err != nil {
+		return false, fmt.Errorf("failed to parse certificate: %v", err)
+	}
+
+	now := time.Now()
+
+	// Check if certificate is expired
+	if now.After(cert.NotAfter) {
+		logging.GetLogger().Info("Certificate expired on %v", cert.NotAfter)
+		return true, nil
+	}
+
+	// Check if certificate is near expiry (if monthsThreshold > 0)
+	if monthsThreshold > 0 {
+		thresholdDate := now.AddDate(0, monthsThreshold, 0)
+		if thresholdDate.After(cert.NotAfter) {
+			logging.GetLogger().Info("Certificate will expire on %v (within %d months)", cert.NotAfter, monthsThreshold)
+			return true, nil
+		}
+	}
+
+	logging.GetLogger().Debug("Certificate is valid until %v", cert.NotAfter)
+	return false, nil
 }

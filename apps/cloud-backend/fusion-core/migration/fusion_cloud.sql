@@ -185,27 +185,6 @@ CREATE TABLE product_sync_job (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
---- Edge and Device Management Tables ---
-
--- ENUM for claim status
-CREATE TYPE claim_status_enum AS ENUM (
-    'UNCLAIMED',
-    'CLAIMED',
-    'COMMISSIONED'
-);
-
-CREATE TABLE device (
-    device_id UUID PRIMARY KEY DEFAULT gen_random_uuid(), -- Globally unique device identity
-    device_serial_number VARCHAR(100) UNIQUE NOT NULL, -- Manufacturer serial number
-    device_model VARCHAR(100), -- Model identifier
-    certificate_fingerprint VARCHAR(255), -- The certificate fingerprint
-    claim_status claim_status_enum NOT NULL DEFAULT 'UNCLAIMED', -- UNCLAIMED / CLAIMED / COMMISSIONED
-    claimed_by UUID REFERENCES account(id), -- Customer account id
-    thing_name VARCHAR(255), -- Desired AWS Thing name
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, -- Audit / lifecycle tracking
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP -- Audit / lifecycle tracking
-);
-
 -- User profile table
 CREATE TABLE user_profile (
 	id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -245,4 +224,42 @@ CREATE TABLE user_settings (
     theme VARCHAR(20) DEFAULT 'system',
     created_at timestamp NOT NULL DEFAULT NOW(),
     updated_at timestamp
+);
+
+--- Edge and Device Management Tables ---
+
+-- ENUM for claim status
+CREATE TYPE claim_status_enum AS ENUM (
+    'UNCLAIMED',
+    'CLAIMED',
+    'COMMISSIONED'
+);
+
+CREATE TABLE device (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(), -- Globally unique device identity
+    device_id VARCHAR(100) UNIQUE NOT NULL, -- Unique device identifier
+    name VARCHAR(255), -- User-friendly device name
+
+    serial_number VARCHAR(100) UNIQUE NOT NULL, -- Manufacturer serial number
+    model_name VARCHAR(100) NOT NULL, -- Model identifier
+    thing_name VARCHAR(255) NOT NULL, -- AWS Thing name
+    mac_address VARCHAR(20) UNIQUE, -- MAC address for network identification
+
+    certificate_id VARCHAR(255) UNIQUE NOT NULL, -- The certificate ID associated with the device for AWS IoT authentication
+    claim_status claim_status_enum NOT NULL DEFAULT 'UNCLAIMED', -- UNCLAIMED / CLAIMED / COMMISSIONED
+    claimed_by UUID REFERENCES account(id) NOT NULL, -- Customer account id
+    project_id UUID REFERENCES project(id) NOT NULL, -- Associated project
+    
+    firmware_version VARCHAR(50) NOT NULL, -- Current firmware version
+
+    device_zone VARCHAR(100), -- e.g., "zone1", "zone2", etc.
+    device_location VARCHAR(255), -- e.g., "Rack A"
+
+    timezone VARCHAR(50), -- Device timezone
+    dst_enabled BOOLEAN DEFAULT false, -- Daylight Saving Time enabled
+    ntp_enabled BOOLEAN DEFAULT false, -- NTP enabled for time synchronization
+    ntp_server VARCHAR(255), -- NTP server address if ntp_enabled is true
+
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL, -- Audit / lifecycle tracking
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL -- Audit / lifecycle tracking
 );

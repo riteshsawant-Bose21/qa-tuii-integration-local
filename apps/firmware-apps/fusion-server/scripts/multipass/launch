@@ -26,7 +26,6 @@ TARGET_BINARY_ARCH=""
 HOST_TEMP_DIR=
 HOST_BUILD_DIR=
 HOST_BBOLT_DIR=
-HOST_GATEWAY_BUILD_DIR=
 
 # Color and formatting definitions
 declare -r RED='\033[0;31m'
@@ -232,7 +231,7 @@ show_instance_status() {
         mp_exec "$instance_name" networkctl status
         
         print_step "Service Status"
-        for service in fusion-server fusion-gateway keepalived haproxy chrony; do
+        for service in fusion-server keepalived haproxy chrony; do
             echo
             printf "${CYAN}=== %s ===${NC}\n" "$service"
             mp_exec "$instance_name" systemctl status "$service" --no-pager || true
@@ -245,7 +244,7 @@ show_instance_status() {
         mp_exec "$instance_name" "ps aux | grep -E 'fusion-server|keepalived|haproxy|chrony'" || true
     else
         print_header "Basic Status: $instance_name"
-        for service in fusion-server fusion-gateway keepalived haproxy chrony; do
+        for service in fusion-server keepalived haproxy chrony; do
             status=$(mp_exec "$instance_name" systemctl is-active "$service" || echo "inactive")
             if [ "$status" = "active" ]; then
                 print_success "$service is running"
@@ -287,7 +286,7 @@ verify_instance() {
         
         # Check services one by one
         local all_services_running=true
-        for service in fusion-server fusion-gateway keepalived haproxy; do
+        for service in fusion-server keepalived haproxy; do
             if ! mp_exec "$instance_name" systemctl is-active --quiet "$service"; then
                 print_warning "Service $service is not running"
                 all_services_running=false
@@ -388,12 +387,6 @@ setup_instance() {
         return 1
     fi
 
-    # Set the script used by systemd to launch fusion-gateway to executable
-    if ! mp_exec "$instance_name" sudo chmod 755 /usr/local/bin/fusion-gateway-start.sh; then
-        print_error "Failed to update fusion-gateway-start.sh"
-        return 1
-    fi
-
     print_step "Copying bbolt binary..."
     if ! mp_transfer "$HOST_BBOLT_DIR/bbolt-linux-$TARGET_BINARY_ARCH" "$instance_name":/tmp/bbolt; then
         print_error "Failed to copy bbolt binary"
@@ -409,22 +402,6 @@ setup_instance() {
         return 1
     fi
     print_success "bbolt installed successfully"
-
-    print_step "Copying fusion-gateway binary..."
-    if ! mp_transfer "$HOST_GATEWAY_BUILD_DIR/fusion-gateway" "$instance_name":/tmp/; then
-        print_error "Failed to copy fusion-gateway binary"
-        return 1
-    fi
-    print_success "fusion-gateway copied successfully"
-
-    print_step "Installing fusion-gateway..."
-    if ! mp_exec "$instance_name" sudo cp /tmp/fusion-gateway /usr/local/bin/ || \
-       ! mp_exec "$instance_name" sudo chmod 755 /usr/local/bin/fusion-gateway || \
-       ! mp_exec "$instance_name" rm /tmp/fusion-gateway; then
-        print_error "Failed to install fusion-gateway binary"
-        return 1
-    fi
-    print_success "fusion-gateway installed successfully"
 
     print_step "Creating device identity directory..."
     if ! mp_exec "$instance_name" "sudo mkdir -p /var/lib/device-identity"; then
@@ -484,7 +461,7 @@ setup_instance() {
         print_success "Daemon reload completed"
         
         # Now start each service
-        for service in fusion-server fusion-gateway keepalived haproxy; do
+        for service in fusion-server keepalived haproxy; do
             print_substep "Starting $service..."
             
             # Enable service without starting
@@ -723,28 +700,22 @@ host_setup() {
         HOST_TEMP_DIR="$my_multipass_dir/tmp"
         HOST_BUILD_DIR="$my_multipass_dir/build"
         HOST_BBOLT_DIR="$my_multipass_dir/tools/bbolt/cmd"
-        HOST_GATEWAY_BUILD_DIR="$my_multipass_dir/gateway-build"
         mkdir -p "$HOST_TEMP_DIR"
         mkdir -p "$HOST_BUILD_DIR"
         mkdir -p "$HOST_BBOLT_DIR"
-        mkdir -p "$HOST_GATEWAY_BUILD_DIR"
         # Copy the main binary to HOST_BUILD_DIR
         cp build/fusion-server "$HOST_BUILD_DIR/"
         # Copy the bbolt binary to HOST_BUILD_DIR
         cp "tools/bbolt/cmd/bbolt-linux-$TARGET_BINARY_ARCH" "$HOST_BBOLT_DIR/"
-        # Copy fusion-gateway binary
-        cp "../fusion-gateway/build/fusion-gateway" "$HOST_GATEWAY_BUILD_DIR/"
     else
         # Default host paths, works on MacOS.
         HOST_TEMP_DIR=/tmp
         HOST_BUILD_DIR=./build
         HOST_BBOLT_DIR=./tools/bbolt/cmd
-        HOST_GATEWAY_BUILD_DIR=../fusion-gateway/build
     fi
     print_substep "Using HOST_TEMP_DIR=$HOST_TEMP_DIR"
     print_substep "Using HOST_BUILD_DIR=$HOST_BUILD_DIR"
     print_substep "Using HOST_BBOLT_DIR=$HOST_BBOLT_DIR"
-    print_substep "Using HOST_GATEWAY_BUILD_DIR=$HOST_GATEWAY_BUILD_DIR"
 }
 
 resync_time_all_instances() {

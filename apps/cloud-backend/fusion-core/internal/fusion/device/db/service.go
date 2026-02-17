@@ -2,6 +2,8 @@ package db
 
 import (
 	"context"
+	"database/sql"
+	"errors"
 
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/api/types"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/model"
@@ -28,14 +30,40 @@ func NewService(db model.DBWithTransactions) *Service {
 	}
 }
 
-func (s *Service) Insert(ctx context.Context, req *types.DeviceCreateRequest, accountID string, logger *zap.Logger) error {
+func (s *Service) GetDeviceByID(ctx context.Context, deviceID string, logger *zap.Logger) (*models.Device, error) {
+	device, err := models.Devices(models.DeviceWhere.DeviceID.EQ(deviceID)).One(ctx, s.db)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			// Row not found, return nil, nil
+			return nil, nil
+		}
+		logger.Error("Failed to get device by ID", zap.String("deviceID", deviceID), zap.Error(err))
+		return nil, err
+	}
+
+	return device, nil
+}
+
+func (s *Service) Insert(ctx context.Context, req *types.DeviceCreateRequest, accountID string, certID *string, logger *zap.Logger) error {
 
 	device := models.Device{
-		DeviceSerialNumber: req.DeviceID,
-		DeviceModel:        null.NewString(req.DeviceName, req.DeviceName != ""),
-		ClaimedBy:          null.NewString(accountID, accountID != ""),
-		ClaimStatus:        "CLAIMED",
-		ThingName:          null.NewString(req.DeviceID, req.DeviceID != ""),
+		DeviceID:        req.DeviceID,
+		SerialNumber:    req.SerialNumber,
+		Name:            null.NewString(req.DeviceName, req.DeviceName != ""),
+		ModelName:       req.ModelName,
+		ThingName:       req.DeviceID,
+		MacAddress:      null.NewString(req.MacAddress, req.MacAddress != ""),
+		CertificateID:   *certID,
+		ClaimedBy:       accountID,
+		ClaimStatus:     "CLAIMED",
+		ProjectID:       req.ProjectID,
+		FirmwareVersion: req.FirmwareVersion,
+		DeviceZone:      null.NewString(req.DeviceZone, req.DeviceZone != ""),
+		DeviceLocation:  null.NewString(req.DeviceLocation, req.DeviceLocation != ""),
+		Timezone:        null.NewString(req.Timezone, req.Timezone != ""),
+		DSTEnabled:      null.NewBool(req.DstEnabled, req.DstEnabled),
+		NTPEnabled:      null.NewBool(req.NtpEnabled, req.NtpEnabled),
+		NTPServer:       null.NewString(req.NtpServer, req.NtpServer != ""),
 	}
 
 	err := device.Insert(ctx, s.db, boil.Infer())

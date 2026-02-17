@@ -105,20 +105,47 @@ definitions:
     properties:
       csr:
         type: string
-      deviceId:
+      device_id:
         type: string
-      deviceName:
+      device_location:
         type: string
-      deviceType:
+      device_name:
         type: string
-      firmwareVersion:
+      device_zone:
+        type: string
+      dst_enabled:
+        type: boolean
+      firmware_version:
+        type: string
+      mac_address:
+        type: string
+      model_name:
+        type: string
+      ntp_enabled:
+        type: boolean
+      ntp_server:
+        type: string
+      project_id:
+        type: string
+      serial_number:
+        type: string
+      timezone:
         type: string
     required:
     - csr
-    - deviceId
-    - deviceName
-    - deviceType
-    - firmwareVersion
+    - device_id
+    - device_location
+    - device_name
+    - device_zone
+    - dst_enabled
+    - firmware_version
+    - mac_address
+    - model_name
+    - ntp_enabled
+    - ntp_server
+    - project_id
+    - serial_number
+    - timezone
     type: object
   types.DeviceCreateResponse:
     properties:

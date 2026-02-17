@@ -282,7 +282,7 @@ func (app *App) setupPrivateRoutes() {
 
 	app.registerPrivateGET(routes.DeviceEndpoint, app.Cluster.GetDeviceInfo)
 	app.registerPrivateGET(routes.DevicesGetCSREndpoint, app.Cluster.GetCSR)
-	app.registerPrivatePOST(routes.DevicesCertificateEndpoint, app.Cluster.SetCertificate)
+	app.registerPrivatePOST(routes.DevicesIDCertificateEndpoint, app.Cluster.SetDeviceCertificate)
 	app.registerPrivatePOST(routes.DeviceEndpoint, app.Cluster.SetDeviceInfo)
 	app.registerPrivatePATCH(routes.DeviceEndpoint, app.Cluster.UpdateDeviceInfoLocal)
 	app.registerPrivatePOST(routes.DevicesSetVIPEndpoint, app.Cluster.UpdateVIPLocal)
