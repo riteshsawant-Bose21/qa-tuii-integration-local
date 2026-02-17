@@ -82,7 +82,7 @@ class _SchematicExpansionSectionState<T> extends State<SchematicExpansionSection
                       isExpanded
                           ? widget.items.isEmpty
                               ? Container(
-                                padding: const EdgeInsets.all(8),
+                                padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
                                 child: Center(
                                   child: FusionAppText(
                                     text: widget.emptyMessage,

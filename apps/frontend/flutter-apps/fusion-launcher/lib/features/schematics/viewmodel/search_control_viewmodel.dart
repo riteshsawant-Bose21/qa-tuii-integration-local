@@ -38,7 +38,7 @@ class SearchResultState {
 class SearchResultsViewModel extends Cubit<SearchResultState> {
   SearchResultsViewModel() : super(SearchResultState(query: "", results: <dynamic>[]));
 
-  void updateResults(List<dynamic> results) => emit(SearchResultState(query: state.query, results: <dynamic>[...state.results, ...results]));
+  void updateResults(List<dynamic> results) => emit(SearchResultState(query: state.query, results: <dynamic>{...state.results, ...results}.toList()));
 
   void onSearch(SearchState query) => emit(SearchResultState(query: query.searchQuery, results: <dynamic>[]));
 

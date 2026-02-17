@@ -29,9 +29,11 @@ class SchematicHardwareListing<T extends HardwareComponent, VM extends DeviceLis
       builder: (BuildContext context, DeviceListingState<T> state) {
         final ProjectViewModel projectViewModel = context.watch<ProjectViewModel>();
         final SearchResultsViewModel read = context.read<SearchResultsViewModel>();
-        read.updateResults(state.devices);
+        read.updateResults(state.devices.map((T e) => e.id).toList());
         if (state is DeviceSearchingState && state.devices.isEmpty) {
-          return const SizedBox();
+          if (read.state.results.isNotEmpty) {
+            return const SizedBox();
+          }
         }
         return SchematicExpansionSection<T>(
           title: title,
