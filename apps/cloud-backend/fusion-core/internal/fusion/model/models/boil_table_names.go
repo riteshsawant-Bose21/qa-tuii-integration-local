@@ -13,6 +13,7 @@ var TableNames = struct {
 	FeaturePermission   string
 	FirmwareDeployments string
 	FirmwareReleases    string
+	FirmwareUpdateLogs  string
 	Product             string
 	ProductPrice        string
 	ProductSyncJob      string
@@ -31,6 +32,7 @@ var TableNames = struct {
 	FeaturePermission:   "feature_permission",
 	FirmwareDeployments: "firmware_deployments",
 	FirmwareReleases:    "firmware_releases",
+	FirmwareUpdateLogs:  "firmware_update_logs",
 	Product:             "product",
 	ProductPrice:        "product_price",
 	ProductSyncJob:      "product_sync_job",
