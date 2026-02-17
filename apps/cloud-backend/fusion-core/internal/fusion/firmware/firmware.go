@@ -46,20 +46,38 @@ func (s *Service) InitiateRelease(ctx context.Context, releaseDetails *types.Ini
 		return "", "", fmt.Errorf("failed to validate firmware version format: %v", err)
 	}
 
-	// check if the version already exists for the platform or if a newer version exists
-	exists, err := s.dbService.CheckIfNewerVersionExists(ctx, releaseDetails.MetaData.Platform, releaseDetails.MetaData.FirmwareVersion)
+	// Check if a newer version already exists - prevent creating older versions
+	newerExists, err := s.dbService.CheckIfNewerVersionExists(ctx, releaseDetails.MetaData.Platform, releaseDetails.MetaData.FirmwareVersion)
 	if err != nil {
-		return "", "", err
+		return "", "", fmt.Errorf("failed to check for newer versions: %w", err)
 	}
-
-	if exists {
+	if newerExists {
 		return "", "", errorutil.ErrVersionExists
 	}
-	presignURL, err = s.generateFirmwareArtifactURL(ctx, releaseDetails.MetaData.Platform, releaseDetails.MetaData.FirmwareVersion, "firmware", time.Minute*15, "put", logger)
+
+	// Check if the version already exists
+	existingRelease, err := s.dbService.GetReleaseByPlatformVersion(ctx, releaseDetails.MetaData.Platform, releaseDetails.MetaData.FirmwareVersion)
 	if err != nil {
-		return "", "", fmt.Errorf("failed to generate presign URL: %v", err)
+		return "", "", fmt.Errorf("failed to check existing version: %w", err)
 	}
 
+	// If version exists and is not PENDING_UPLOAD, return error
+	if existingRelease != nil && existingRelease.Status != "PENDING_UPLOAD" {
+		return "", "", errorutil.ErrVersionExists
+	}
+
+	// Generate presigned URL (for both re-upload and new release)
+	presignURL, err = s.generateFirmwareArtifactURL(ctx, releaseDetails.MetaData.Platform, releaseDetails.MetaData.FirmwareVersion, "firmware", time.Minute*15, "put", logger)
+	if err != nil {
+		return "", "", fmt.Errorf("failed to generate presign URL: %w", err)
+	}
+
+	// If version exists with PENDING_UPLOAD, return existing releaseID with new presigned URL
+	if existingRelease != nil && existingRelease.Status == "PENDING_UPLOAD" {
+		return existingRelease.ID, presignURL, nil
+	}
+
+	// Version doesn't exist, create new release
 	// Insert to release table
 	ID, err := s.dbService.InsertRelease(ctx, releaseDetails.MetaData, "", fmt.Sprintf(firmwareArtifactPathFormat, releaseDetails.MetaData.Platform, releaseDetails.MetaData.FirmwareVersion, "firmware"), s.dbService.GetDB(ctx), logger)
 	if err != nil {

@@ -115,9 +115,14 @@ func (a *API) registerRoutes() {
 	firmwareHandler := handler.NewFirmwareUpdateHandler(a.firmware)
 
 	{
-		firmwareUpdate.GET(constants.EndpointFirmwareList, firmwareHandler.ListReleases)
+		// Internal APIs - TODO: Add Authentication
 		firmwareUpdate.POST(constants.EndpointFirmwareInitiateRelease, firmwareHandler.InitiateRelease)
 		firmwareUpdate.POST(constants.EndpointFirmwareMakeAvailable, firmwareHandler.MakeReleaseAvailable)
+	}
+
+	firmwareUpdate.Use(a.authMiddleware.Middleware())
+	{
+		firmwareUpdate.GET(constants.EndpointFirmwareList, firmwareHandler.ListReleases)
 		firmwareUpdate.POST(constants.EndpointFirmwareUpdateCheck, firmwareHandler.CheckUpdates)
 		firmwareUpdate.GET(constants.EndpointFirmwareDownload, firmwareHandler.DownloadArtifact)
 		firmwareUpdate.POST(constants.EndpointFirmwareUpdateLog, firmwareHandler.LogFirmwareUpdate)

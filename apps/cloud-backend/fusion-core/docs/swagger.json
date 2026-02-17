@@ -71,7 +71,7 @@
                 }
             }
         },
-        "/firmware": {
+        "/firmware/releases": {
             "get": {
                 "security": [
                     {
@@ -137,66 +137,7 @@
                         }
                     }
                 }
-            }
-        },
-        "/firmware/getDownloadUrl/{platform}/{version}": {
-            "get": {
-                "description": "Generates a presigned S3 URL for downloading a specific firmware release artifact. The URL is valid for 15 minutes and includes the file checksum for integrity verification.",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Firmware Update"
-                ],
-                "summary": "Get Firmware Download URL",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Platform identifier (e.g., 'amp-8x300')",
-                        "name": "platform",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "type": "string",
-                        "description": "Firmware version (e.g., '1.2.0')",
-                        "name": "version",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Presigned download URL and file checksum",
-                        "schema": {
-                            "$ref": "#/definitions/types.DownloadArtifactResponse"
-                        }
-                    },
-                    "400": {
-                        "description": "Missing or invalid parameters",
-                        "schema": {
-                            "$ref": "#/definitions/types.ErrorResponse"
-                        }
-                    },
-                    "404": {
-                        "description": "Firmware release not found for the specified platform and version",
-                        "schema": {
-                            "$ref": "#/definitions/types.ErrorResponse"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal server error",
-                        "schema": {
-                            "$ref": "#/definitions/types.ErrorResponse"
-                        }
-                    }
-                }
-            }
-        },
-        "/firmware/initiateRelease": {
+            },
             "post": {
                 "security": [
                     {
@@ -234,6 +175,58 @@
                     },
                     "400": {
                         "description": "Invalid request payload or version already exists",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/firmware/releases/{releaseID}/mark-available": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Updates the release status to 'AVAILABLE' and creates a deployment entry for the specified channel, making the firmware available for devices to download",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Firmware Update - Internal API"
+                ],
+                "summary": "Make Release Available",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Unique identifier of the firmware release",
+                        "name": "releaseID",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "Release successfully made available"
+                    },
+                    "400": {
+                        "description": "Invalid releaseID or request payload",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Release not found",
                         "schema": {
                             "$ref": "#/definitions/types.ErrorResponse"
                         }
@@ -336,14 +329,9 @@
                 }
             }
         },
-        "/firmware/{releaseID}/makeReleaseAvailable": {
-            "post": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Updates the release status to 'AVAILABLE' and creates a deployment entry for the specified channel, making the firmware available for devices to download",
+        "/firmware/updates/{platform}/{version}/download": {
+            "get": {
+                "description": "Generates a presigned S3 URL for downloading a specific firmware release artifact. The URL is valid for 15 minutes and includes the file checksum for integrity verification.",
                 "consumes": [
                     "application/json"
                 ],
@@ -351,30 +339,40 @@
                     "application/json"
                 ],
                 "tags": [
-                    "Firmware Update - Internal API"
+                    "Firmware Update"
                 ],
-                "summary": "Make Release Available",
+                "summary": "Get Firmware Download URL",
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "Unique identifier of the firmware release",
-                        "name": "releaseID",
+                        "description": "Platform identifier (e.g., 'amp-8x300')",
+                        "name": "platform",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Firmware version (e.g., '1.2.0')",
+                        "name": "version",
                         "in": "path",
                         "required": true
                     }
                 ],
                 "responses": {
-                    "204": {
-                        "description": "Release successfully made available"
+                    "200": {
+                        "description": "Presigned download URL and file checksum",
+                        "schema": {
+                            "$ref": "#/definitions/types.DownloadArtifactResponse"
+                        }
                     },
                     "400": {
-                        "description": "Invalid releaseID or request payload",
+                        "description": "Missing or invalid parameters",
                         "schema": {
                             "$ref": "#/definitions/types.ErrorResponse"
                         }
                     },
                     "404": {
-                        "description": "Release not found",
+                        "description": "Firmware release not found for the specified platform and version",
                         "schema": {
                             "$ref": "#/definitions/types.ErrorResponse"
                         }

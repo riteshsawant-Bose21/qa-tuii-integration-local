@@ -938,7 +938,7 @@ paths:
       summary: Get Auth0 tokens for automation testing
       tags:
       - auth
-  /firmware:
+  /firmware/releases:
     get:
       consumes:
       - application/json
@@ -985,7 +985,41 @@ paths:
       summary: List Firmware Releases
       tags:
       - Firmware Update
-  /firmware/{releaseID}/makeReleaseAvailable:
+    post:
+      consumes:
+      - application/json
+      description: Creates a new firmware release entry in draft status and returns
+        a presigned S3 URL for uploading the firmware artifact. The upload URL is
+        valid for 15 minutes.
+      parameters:
+      - description: Firmware release metadata including version, platform, release
+          notes, etc.
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/types.InitiateFirmwareReleasePayload'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Returns releaseId and presignedUrl for artifact upload
+          schema:
+            $ref: '#/definitions/types.FormwareReleaseInitiateResposne'
+        "400":
+          description: Invalid request payload or version already exists
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Initiate Firmware Release
+      tags:
+      - Firmware Update - Internal API
+  /firmware/releases/{releaseID}/mark-available:
     post:
       consumes:
       - application/json
@@ -1020,7 +1054,7 @@ paths:
       summary: Make Release Available
       tags:
       - Firmware Update - Internal API
-  /firmware/getDownloadUrl/{platform}/{version}:
+  /firmware/updates/{platform}/{version}/download:
     get:
       consumes:
       - application/json
@@ -1060,41 +1094,6 @@ paths:
       summary: Get Firmware Download URL
       tags:
       - Firmware Update
-  /firmware/initiateRelease:
-    post:
-      consumes:
-      - application/json
-      description: Creates a new firmware release entry in draft status and returns
-        a presigned S3 URL for uploading the firmware artifact. The upload URL is
-        valid for 15 minutes.
-      parameters:
-      - description: Firmware release metadata including version, platform, release
-          notes, etc.
-        in: body
-        name: request
-        required: true
-        schema:
-          $ref: '#/definitions/types.InitiateFirmwareReleasePayload'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: Returns releaseId and presignedUrl for artifact upload
-          schema:
-            $ref: '#/definitions/types.FormwareReleaseInitiateResposne'
-        "400":
-          description: Invalid request payload or version already exists
-          schema:
-            $ref: '#/definitions/types.ErrorResponse'
-        "500":
-          description: Internal server error
-          schema:
-            $ref: '#/definitions/types.ErrorResponse'
-      security:
-      - BearerAuth: []
-      summary: Initiate Firmware Release
-      tags:
-      - Firmware Update - Internal API
   /firmware/updates/check:
     post:
       consumes:

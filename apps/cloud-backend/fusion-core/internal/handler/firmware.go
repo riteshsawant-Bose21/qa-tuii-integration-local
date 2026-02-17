@@ -34,7 +34,7 @@ func NewFirmwareUpdateHandler(firmware fusion.Firmware) *FirmwareUpdateHandler {
 // @Success 200 {object} types.FormwareReleaseInitiateResposne "Returns releaseId and presignedUrl for artifact upload"
 // @Failure 400 {object} types.ErrorResponse "Invalid request payload or version already exists"
 // @Failure 500 {object} types.ErrorResponse "Internal server error"
-// @Router /firmware/initiateRelease [post]
+// @Router /firmware/releases [post]
 func (h *FirmwareUpdateHandler) InitiateRelease(ctx *gin.Context) {
 	var payload types.InitiateFirmwareReleasePayload
 	loggerFromContext, exists := ctx.Get("logger")
@@ -76,7 +76,7 @@ func (h *FirmwareUpdateHandler) InitiateRelease(ctx *gin.Context) {
 // @Failure 400 {object} types.ErrorResponse "Invalid releaseID or request payload"
 // @Failure 404 {object} types.ErrorResponse "Release not found"
 // @Failure 500 {object} types.ErrorResponse "Internal server error"
-// @Router /firmware/{releaseID}/makeReleaseAvailable [post]
+// @Router /firmware/releases/{releaseID}/mark-available [post]
 func (h *FirmwareUpdateHandler) MakeReleaseAvailable(ctx *gin.Context) {
 	releaseID := ctx.Param("releaseID")
 	if releaseID == "" {
@@ -119,7 +119,7 @@ func (h *FirmwareUpdateHandler) MakeReleaseAvailable(ctx *gin.Context) {
 // @Success 200 {object} types.FirmwareReleaseListResponse "List of firmware releases with pagination metadata"
 // @Failure 400 {object} types.ErrorResponse "Invalid query parameters"
 // @Failure 500 {object} types.ErrorResponse "Internal server error"
-// @Router /firmware [get]
+// @Router /firmware/releases [get]
 func (h *FirmwareUpdateHandler) ListReleases(ctx *gin.Context) {
 	page, _ := strconv.Atoi(ctx.DefaultQuery("page", "1"))
 	limit, _ := strconv.Atoi(ctx.DefaultQuery("limit", "10"))
@@ -182,7 +182,7 @@ func (h *FirmwareUpdateHandler) CheckUpdates(ctx *gin.Context) {
 // @Failure 400 {object} types.ErrorResponse "Missing or invalid parameters"
 // @Failure 404 {object} types.ErrorResponse "Firmware release not found for the specified platform and version"
 // @Failure 500 {object} types.ErrorResponse "Internal server error"
-// @Router /firmware/getDownloadUrl/{platform}/{version} [get]
+// @Router /firmware/updates/{platform}/{version}/download [get]
 func (h *FirmwareUpdateHandler) DownloadArtifact(ctx *gin.Context) {
 	platform := ctx.Param("platform")
 	version := ctx.Param("version")

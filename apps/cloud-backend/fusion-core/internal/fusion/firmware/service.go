@@ -18,6 +18,7 @@ type Service struct {
 // DatabaseService defines the interface for database operations related to firmware.
 type DatabaseService interface {
 	GetDB(ctx context.Context) customModel.DBWithTransactions
+	GetReleaseByPlatformVersion(ctx context.Context, platform string, version string) (*model.FirmwareRelease, error)
 	// GetReleaseByVersion(ctx context.Context, platform string, version string) (*model.FirmwareRelease, error)
 	CheckIfNewerVersionExists(ctx context.Context, platform string, version string) (bool, error)
 	GetReleaseByID(ctx context.Context, releaseID string) (*model.FirmwareRelease, error)

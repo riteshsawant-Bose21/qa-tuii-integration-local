@@ -65,7 +65,7 @@ func (s *Service) CheckIfNewerVersionExists(ctx context.Context, platform string
 
 	exists, err := model.FirmwareReleases(
 		qm.Where("platform = ?", platform),
-		qm.Where("version_parts >= string_to_array(?, '.')::int[]", version),
+		qm.Where("version_parts > string_to_array(?, '.')::int[]", version),
 	).Exists(ctx, s.db)
 
 	if err != nil {
@@ -208,6 +208,22 @@ func (s *Service) GetLatestReleaseNewerThan(ctx context.Context, platformName, c
 			return nil, nil // Return nil if no newer release found
 		}
 		return nil, err
+	}
+
+	return release, nil
+}
+
+func (s *Service) GetReleaseByPlatformVersion(ctx context.Context, platform string, version string) (*model.FirmwareRelease, error) {
+	release, err := model.FirmwareReleases(
+		model.FirmwareReleaseWhere.Platform.EQ(platform),
+		model.FirmwareReleaseWhere.Version.EQ(version),
+	).One(ctx, s.db)
+
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("failed to get release: %w", err)
 	}
 
 	return release, nil

@@ -67,10 +67,10 @@ const (
 	EndpointOrganizationUsers = "/users"
 
 	EndpointFirmware                = "/firmware"
-	EndpointFirmwareList            = ""
-	EndpointFirmwareInitiateRelease = "/initiateRelease"
-	EndpointFirmwareMakeAvailable   = "/:releaseID/makeReleaseAvailable"
+	EndpointFirmwareList            = "/releases"
+	EndpointFirmwareInitiateRelease = "/releases"
+	EndpointFirmwareMakeAvailable   = "/releases/:releaseID/mark-available"
 	EndpointFirmwareUpdateCheck     = "/updates/check"
-	EndpointFirmwareDownload        = "/getDownloadUrl/:platform/:version"
+	EndpointFirmwareDownload        = "/updates/:platform/:version/download"
 	EndpointFirmwareUpdateLog       = "/updates/log"
 )
