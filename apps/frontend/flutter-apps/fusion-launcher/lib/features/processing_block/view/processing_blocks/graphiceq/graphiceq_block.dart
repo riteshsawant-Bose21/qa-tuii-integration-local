@@ -102,7 +102,7 @@ class _GraphicEqBlockState extends State<GraphicEqBlock> {
                                                 width: _sectionWidth,
                                                 decoration: BoxDecoration(
                                                   color: index.isOdd ? context.colorScheme.elevation2 : null,
-                                                  borderRadius: BorderRadius.circular(FusionSizes.borderRadius2),
+                                                  borderRadius: BorderRadius.circular(FusionSizes.borderRadius4),
                                                 ),
                                                 child: Column(
                                                   children: <Widget>[

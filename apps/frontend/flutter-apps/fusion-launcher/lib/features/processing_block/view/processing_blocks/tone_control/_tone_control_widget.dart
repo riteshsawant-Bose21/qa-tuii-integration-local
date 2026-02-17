@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:fusion_launcher/features/processing_block/view/processing_blocks/widgets/disabled_widget_wrapper.dart';
 import 'package:fusion_launcher/features/processing_block/view/widgets/pb_slider.dart';
+import 'package:fusion_launcher/features/processing_block/view/widgets/pb_textfield.dart';
 import 'package:fusion_launcher/features/zone_functions/widgets/neumorphic_gain_text_field.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
@@ -83,16 +84,19 @@ class ToneControlWidget extends StatelessWidget {
                       mainAxisSize: MainAxisSize.min,
                       children: <Widget>[
                         /// threshold input
-                        NeumorphicGainTextField(
+                        SizedBox(
                           width: 80,
-                          height: 25,
-                          controllerValue: value.toDouble(),
-                          maxGain: 15,
-                          minGain: -15,
-                          showDbSuffix: false,
-                          onSubmitted: (num value) {
-                            onChanged(value);
-                          },
+                          // height: 25,
+                          child: PBNumberTextField(
+                            // value: context.watch<LimiterController>().currentThreshold ?? 0,
+                            value: value,
+                            onChanged: (num value) {
+                              onChanged(value);
+                              // context.read<LimiterController>().updateThreshold(value);
+                            },
+                            min: 1,
+                            max: 96000,
+                          ),
                         ),
                         const SizedBox(height: 4),
                         FusionAppText(text: "db", capitalize: false, style: context.textTheme.bodySmall),
