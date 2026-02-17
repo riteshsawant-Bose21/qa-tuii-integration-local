@@ -6,6 +6,7 @@ import 'package:fusion_launcher/features/processing_block/view/processing_blocks
 import 'package:fusion_launcher/features/processing_block/view/processing_blocks/gain/gain_block.dart';
 import 'package:fusion_launcher/features/processing_block/view/processing_blocks/limiter/limiter_block.dart';
 import 'package:fusion_launcher/features/processing_block/view/processing_blocks/peq/peq_block.dart';
+import 'package:fusion_launcher/features/processing_block/view/processing_blocks/tone_control/tone_control_block.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:provider/provider.dart';
 
@@ -39,6 +40,8 @@ class ProcessingBlockPage extends StatelessWidget {
                   return const DelayBlock();
                 } else if (processingBlock.algorithmId == 'gain') {
                   return const GainBlock();
+                } else if (processingBlock.algorithmId == 'tone_control') {
+                  return const ToneControlBlock();
                 }
                 final PBLayout? data = viewModel.layout;
 
