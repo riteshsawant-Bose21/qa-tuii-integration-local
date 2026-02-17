@@ -3,10 +3,16 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/models/project_entities/controller.dart';
 import 'package:fusion_lib/models/project_entities/endpoints.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../../core/models/products_data.dart';
 import '../../../../core/service_locator.dart';
+import '../../../add_source_popup/view/add_source_popup.dart' show AddSourcePopup;
 import '../../../configuration/presentation/viewmodel/project_view_model.dart';
+import '../../viewmodel/endpoints_viewmodel.dart';
+import '../../viewmodel/schematic_sources_viewmodel.dart';
+import '../../views/widgets/schematic_hardware_listing.dart';
+import '../../views/widgets/schematic_listing_section.dart';
 import '../widgets/common_devices_section_widget.dart';
 import '../widgets/common_reorderable_list_view.dart';
 import '../widgets/expandable_zone_widget.dart';
@@ -204,6 +210,43 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
                 /// Sources & Endpoints
+                Expanded(
+                  flex: 2,
+                  child: SchematicListingSection(
+                    sectionTitle: "Sources & Endpoints",
+                    sections: <Widget>[
+                      SchematicHardwareListing<Source, SchematicSourcesViewModel>(
+                        create: (BuildContext context) {
+                          return SchematicSourcesViewModel();
+                        },
+                        title: "Sources",
+                        addAction: AddSourcePopup(
+                          isFromBuildingPage: false,
+                          child: Icon(
+                            LucideIcons.plus200,
+                            size: 16,
+                            color: context.colorScheme.primaryWhite,
+                          ),
+                        ),
+                      ),
+
+                      SchematicHardwareListing<FusionEndpoints, SchematicEndpointsViewModel>(
+                        create: (BuildContext context) {
+                          return SchematicEndpointsViewModel();
+                        },
+                        title: "Endpoints",
+                        // addAction: AddSourcePopup(
+                        //   isFromBuildingPage: false,
+                        //   child: Icon(
+                        //     LucideIcons.plus200,
+                        //     size: 16,
+                        //     color: context.colorScheme.primaryWhite,
+                        //   ),
+                        // ),
+                      ),
+                    ],
+                  ),
+                ),
                 Expanded(
                   flex: 2,
                   child: CommonDevicesSectionWidget(
