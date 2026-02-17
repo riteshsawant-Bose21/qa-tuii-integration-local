@@ -1,6 +1,10 @@
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:fusion_launcher/features/add_source_popup/view_model/add_source_viewmodel.dart' show ListExtension;
+import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
 import 'package:fusion_lib/fusion_lib.dart';
+
+import '../../../core/service_locator.dart';
 
 part 'additional_settings_viewmodel_state.dart';
 
@@ -18,8 +22,29 @@ class ZoneFunctionAdditionalSettingsViewModel extends Cubit<ZoneFunctionAddition
         ),
       );
 
-  void init({required ZoneFunctionsType zoneFunctionsType}) {
+  ProjectViewModel get projectViewModel => serviceLocator<ProjectViewModel>();
+
+  bool hasSubZones = false;
+
+  void init({required ZoneFunctionsType zoneFunctionsType, required String zoneID}) {
     emit(state.copyWith(zoneFunctionsType: zoneFunctionsType));
+
+    // ===============================================================================================
+    // ZONE or SUBZONE volume range initialization
+    // ===============================================================================================
+    final List<SubZone> subZones = projectViewModel.getSubZonesForZone(parentZoneId: zoneID);
+    if (subZones.isEmpty) {
+      hasSubZones = false;
+      final SourceSelectAdditionalSettingsModel? updated = state.sourceSelectAdditionalSettingsModel?.copyWith(
+        zoneVolumeRange: VolumneRangeModel(zoneOrSubzoneId: zoneID),
+      );
+      emit(state.copyWith(sourceSelectAdditionalSettingsModel: updated));
+    } else {
+      hasSubZones = true;
+      final List<VolumneRangeModel> subZonesVolumes = subZones.map((SubZone subZone) => VolumneRangeModel(zoneOrSubzoneId: subZone.id)).toList();
+      final SourceSelectAdditionalSettingsModel? updated = state.sourceSelectAdditionalSettingsModel?.copyWith(subZonesVolumeRange: subZonesVolumes);
+      emit(state.copyWith(sourceSelectAdditionalSettingsModel: updated));
+    }
   }
 
   void updateZoneFunctionsType(ZoneFunctionsType zoneFunctionsType) => emit(state.copyWith(zoneFunctionsType: zoneFunctionsType));
@@ -93,26 +118,41 @@ class ZoneFunctionAdditionalSettingsViewModel extends Cubit<ZoneFunctionAddition
     }
   }
 
-  double get thresholdValue => state.sourceSelectAdditionalSettingsModel?.thresholdValue ?? 0;
-  void setThresholdValue(double? thresholdValue) {
-    emit(
-      state.copyWith(
-        sourceSelectAdditionalSettingsModel: state.sourceSelectAdditionalSettingsModel?.copyWith(
-          thresholdValue: thresholdValue,
-        ),
-      ),
-    );
+  double getThresholdValue(int index) {
+    final List<PriorityAdditionalSettingsModel> priorityAdditionalSettingsModel = <PriorityAdditionalSettingsModel>[
+      ...?state.sourceSelectAdditionalSettingsModel?.priorityAdditionalSettingsModel,
+    ];
+    if (index < priorityAdditionalSettingsModel.length) {
+      return priorityAdditionalSettingsModel[index].thresholdValue ?? 0;
+    }
+    return 0;
   }
 
-  double? get reductionValue => state.sourceSelectAdditionalSettingsModel?.reductionValue;
-  void setReductionValue(double? reductionValue) {
-    emit(
-      state.copyWith(
-        sourceSelectAdditionalSettingsModel: state.sourceSelectAdditionalSettingsModel?.copyWith(
-          reductionValue: reductionValue,
-        ),
-      ),
-    );
+  double getReductionValue(int index) {
+    final List<PriorityAdditionalSettingsModel> priorityAdditionalSettingsModel = <PriorityAdditionalSettingsModel>[
+      ...?state.sourceSelectAdditionalSettingsModel?.priorityAdditionalSettingsModel,
+    ];
+    if (index < priorityAdditionalSettingsModel.length) {
+      return priorityAdditionalSettingsModel[index].reductionValue ?? 0;
+    }
+    return 0;
+  }
+
+  bool isPriorityStateActive(int index) {
+    final List<PriorityAdditionalSettingsModel> priorityAdditionalSettingsModel = <PriorityAdditionalSettingsModel>[
+      ...?state.sourceSelectAdditionalSettingsModel?.priorityAdditionalSettingsModel,
+    ];
+    if (index < priorityAdditionalSettingsModel.length) {
+      return priorityAdditionalSettingsModel[index].isStateActive;
+    }
+    return false;
+  }
+
+  bool get isAssignToControllersEnabled => state.sourceSelectAdditionalSettingsModel?.assignToControllers ?? false;
+  void toggleAssignToControllers() {
+    final bool newValue = !isAssignToControllersEnabled;
+    final SourceSelectAdditionalSettingsModel? updated = state.sourceSelectAdditionalSettingsModel?.copyWith(assignToControllers: newValue);
+    emit(state.copyWith(sourceSelectAdditionalSettingsModel: updated));
   }
 
   bool isFieldsEnabled(int index) {
@@ -222,4 +262,118 @@ class ZoneFunctionAdditionalSettingsViewModel extends Cubit<ZoneFunctionAddition
 
   bool isPriorityControlTypePTT(int index) => getPriorityControlType(index) == AdditionalSettingsPriorityControlType.pttControler;
   bool isPriorityControlTypeThreshold(int index) => getPriorityControlType(index) == AdditionalSettingsPriorityControlType.threshold;
+
+  // ZONE AND SUBZONES related methods
+  void updateZoneProperties({
+    required String zoneOrSubzoneId,
+    double? upperLimit,
+    double? lowerLimit,
+    bool? allowMuteUnmute,
+  }) {
+    if (hasSubZones) {
+      final List<VolumneRangeModel> subZonesVolumeRange = state.sourceSelectAdditionalSettingsModel?.subZonesVolumeRange ?? <VolumneRangeModel>[];
+      final List<VolumneRangeModel> updatedSubZonesVolumeRange =
+          subZonesVolumeRange.map((VolumneRangeModel e) {
+            if (e.zoneOrSubzoneId == zoneOrSubzoneId) {
+              return e.copyWith(
+                lowerGain: lowerLimit ?? e.lowerGain,
+                upperGain: upperLimit ?? e.upperGain,
+                allowMute: allowMuteUnmute ?? e.allowMute,
+              );
+            }
+            return e;
+          }).toList();
+
+      emit(
+        state.copyWith(
+          sourceSelectAdditionalSettingsModel: state.sourceSelectAdditionalSettingsModel?.copyWith(
+            subZonesVolumeRange: updatedSubZonesVolumeRange,
+          ),
+        ),
+      );
+    } else {
+      VolumneRangeModel? zoneVolumeRange = state.sourceSelectAdditionalSettingsModel?.zoneVolumeRange;
+
+      zoneVolumeRange = zoneVolumeRange?.copyWith(
+        lowerGain: lowerLimit ?? zoneVolumeRange.lowerGain,
+        upperGain: upperLimit ?? zoneVolumeRange.upperGain,
+        allowMute: allowMuteUnmute ?? zoneVolumeRange.allowMute,
+      );
+
+      emit(
+        state.copyWith(
+          sourceSelectAdditionalSettingsModel: state.sourceSelectAdditionalSettingsModel?.copyWith(
+            zoneVolumeRange: zoneVolumeRange,
+          ),
+        ),
+      );
+    }
+  }
+
+  void updatePriorityProperties({
+    required String zoneOrSubzoneId,
+    required int index,
+    bool? isStateActive,
+    double? thresholdValue,
+    double? reductionValue,
+  }) {
+    final List<PriorityAdditionalSettingsModel> priorityAdditionalSettingsModel = <PriorityAdditionalSettingsModel>[
+      ...?state.sourceSelectAdditionalSettingsModel?.priorityAdditionalSettingsModel,
+    ];
+
+    if (index < priorityAdditionalSettingsModel.length) {
+      final PriorityAdditionalSettingsModel model = priorityAdditionalSettingsModel[index];
+      priorityAdditionalSettingsModel[index] = model.copyWith(
+        isStateActive: isStateActive,
+        thresholdValue: thresholdValue,
+        reductionValue: reductionValue,
+      );
+
+      emit(
+        state.copyWith(
+          sourceSelectAdditionalSettingsModel: state.sourceSelectAdditionalSettingsModel?.copyWith(
+            priorityAdditionalSettingsModel: priorityAdditionalSettingsModel,
+          ),
+        ),
+      );
+    }
+  }
+
+  double getLowerGain(String zoneOrSubzoneID) {
+    if (hasSubZones) {
+      final List<VolumneRangeModel> subZonesVolumeRange = state.sourceSelectAdditionalSettingsModel?.subZonesVolumeRange ?? <VolumneRangeModel>[];
+      final VolumneRangeModel? subZoneVolumeRange = subZonesVolumeRange.firstWhereOrNull((VolumneRangeModel e) => e.zoneOrSubzoneId == zoneOrSubzoneID);
+      if (subZoneVolumeRange != null) return subZoneVolumeRange.lowerGain;
+    } else {
+      final VolumneRangeModel? zoneVolumeRange = state.sourceSelectAdditionalSettingsModel?.zoneVolumeRange;
+      if (zoneVolumeRange != null) return zoneVolumeRange.lowerGain;
+    }
+
+    return 0;
+  }
+
+  double getUpperGain(String zoneOrSubzoneID) {
+    if (hasSubZones) {
+      final List<VolumneRangeModel> subZonesVolumeRange = state.sourceSelectAdditionalSettingsModel?.subZonesVolumeRange ?? <VolumneRangeModel>[];
+      final VolumneRangeModel? subZoneVolumeRange = subZonesVolumeRange.firstWhereOrNull((VolumneRangeModel e) => e.zoneOrSubzoneId == zoneOrSubzoneID);
+      if (subZoneVolumeRange != null) return subZoneVolumeRange.upperGain;
+    } else {
+      final VolumneRangeModel? zoneVolumeRange = state.sourceSelectAdditionalSettingsModel?.zoneVolumeRange;
+      if (zoneVolumeRange != null) return zoneVolumeRange.upperGain;
+    }
+
+    return 0;
+  }
+
+  bool isAllowMute(String zoneOrSubzoneID) {
+    if (hasSubZones) {
+      final List<VolumneRangeModel> subZonesVolumeRange = state.sourceSelectAdditionalSettingsModel?.subZonesVolumeRange ?? <VolumneRangeModel>[];
+      final VolumneRangeModel? subZoneVolumeRange = subZonesVolumeRange.firstWhereOrNull((VolumneRangeModel e) => e.zoneOrSubzoneId == zoneOrSubzoneID);
+      if (subZoneVolumeRange != null) return subZoneVolumeRange.allowMute;
+    } else {
+      final VolumneRangeModel? zoneVolumeRange = state.sourceSelectAdditionalSettingsModel?.zoneVolumeRange;
+      if (zoneVolumeRange != null) return zoneVolumeRange.allowMute;
+    }
+    return false;
+  }
 }

@@ -7,7 +7,9 @@ import 'package:fusion_launcher/features/zone_functions/widgets/neumorphic_gain_
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
+import '../viewmodel/additional_settings_viewmodel.dart';
 import '../widgets/horizontal_scroll_effect_wrapper.dart';
+import 'cubit_wrapper.dart';
 import 'source_select_additional_settings.dart';
 
 class SourceMixAdditionalSettings extends StatefulWidget {
@@ -123,11 +125,10 @@ class _SourceMixAdditionalSettingsState extends State<SourceMixAdditionalSetting
                       padding: const EdgeInsets.only(top: 50),
                       child: SemanticHelper.container(
                         testId: SemanticHelper.createTestId(SemanticTypes.container, "source_select_main_container"),
-                        child: BlocConsumer<ProjectViewModel, ProjectViewModelState>(
-                          listener: (BuildContext context, ProjectViewModelState state) {
-                            zoneFunction = projectViewModel.getZoneFunctionForZone(zoneId: widget.zoneID)!;
-                          },
-                          builder: (BuildContext context, ProjectViewModelState state) {
+                        child: ZoneFunctionAdditionalSettingsViewModelCubitWrapper(
+                          zoneID: widget.zoneID,
+                          zoneFunction: zoneFunction,
+                          builder: (BuildContext context, ZoneFunctionAdditionalSettingsViewmodelState state, ZoneFunctionAdditionalSettingsViewModel vm) {
                             return Container(
                               decoration: BoxDecoration(
                                 border: Border(
@@ -161,10 +162,10 @@ class _SourceMixAdditionalSettingsState extends State<SourceMixAdditionalSetting
                                       VerticalDivider(width: 1, color: context.colorScheme.strokeLight),
                                       Flexible(
                                         child: _MixSceneSetting(
-                                          allowController: false,
+                                          allowController: vm.isAssignToControllersEnabled,
                                           zoneId: widget.zoneID,
                                           onAllowControllerChanged: () {
-                                            //
+                                            vm.toggleAssignToControllers();
                                           },
                                         ),
                                       ),
@@ -174,7 +175,10 @@ class _SourceMixAdditionalSettingsState extends State<SourceMixAdditionalSetting
                                       // RIGHT COLUMN (Static)
                                       Flexible(
                                         flex: 2,
-                                        child: AdditionalPriorityZoneSubZoneSettingBuilder(zoneID: widget.zoneID),
+                                        child: AdditionalPriorityZoneSubZoneSettingBuilder(
+                                          zoneID: widget.zoneID,
+                                          vm: vm,
+                                        ),
                                       ),
                                     ],
                                   ),

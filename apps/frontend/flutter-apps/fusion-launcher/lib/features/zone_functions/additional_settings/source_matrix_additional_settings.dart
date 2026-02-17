@@ -6,6 +6,7 @@ import 'package:fusion_launcher/features/zone_functions/viewmodel/additional_set
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
+import 'cubit_wrapper.dart';
 import 'source_select_additional_settings.dart';
 
 class SourceMatrixAdditionalSettings extends StatefulWidget {
@@ -121,11 +122,10 @@ class _SourceMatrixAdditionalSettingsState extends State<SourceMatrixAdditionalS
                       padding: const EdgeInsets.only(top: 50),
                       child: SemanticHelper.container(
                         testId: SemanticHelper.createTestId(SemanticTypes.container, "source_select_main_container"),
-                        child: BlocConsumer<ProjectViewModel, ProjectViewModelState>(
-                          listener: (BuildContext context, ProjectViewModelState state) {
-                            zoneFunction = projectViewModel.getZoneFunctionForZone(zoneId: widget.zoneID)!;
-                          },
-                          builder: (BuildContext context, ProjectViewModelState state) {
+                        child: ZoneFunctionAdditionalSettingsViewModelCubitWrapper(
+                          zoneID: widget.zoneID,
+                          zoneFunction: zoneFunction,
+                          builder: (BuildContext context, ZoneFunctionAdditionalSettingsViewmodelState state, ZoneFunctionAdditionalSettingsViewModel vm) {
                             return Container(
                               decoration: BoxDecoration(
                                 border: Border(
@@ -174,10 +174,10 @@ class _SourceMatrixAdditionalSettingsState extends State<SourceMatrixAdditionalS
                                       ),
 
                                       // RIGHT COLUMN (Static)
-                                      Flexible(
-                                        flex: 2,
-                                        child: AdditionalPriorityZoneSubZoneSettingBuilder(zoneID: widget.zoneID),
-                                      ),
+                                      // Flexible(
+                                      //   flex: 2,
+                                      //   child: AdditionalPriorityZoneSubZoneSettingBuilder(zoneID: widget.zoneID, vm: ),
+                                      // ),
                                     ],
                                   ),
                                 ),
