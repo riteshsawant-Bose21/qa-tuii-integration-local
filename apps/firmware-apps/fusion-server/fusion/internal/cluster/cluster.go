@@ -15,6 +15,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"sync"
 	"time"
@@ -303,7 +304,21 @@ func (c *Cluster) restartKeepalived() error {
 
 // reboot the system...
 func (c *Cluster) restartSystem() error {
-	logging.GetLogger().Info("Rebooting Server in 5 seconds")
+	logger := logging.GetLogger()
+	logger.Info("Rebooting Server in 5 seconds")
+
+	if runtime.GOOS == "darwin" {
+		// macOS: use goroutine with sleep since systemd-run doesn't exist
+		go func() {
+			time.Sleep(5 * time.Second)
+			if err := exec.Command("reboot").Run(); err != nil {
+				logger.Error("Failed to reboot: %v", err)
+			}
+		}()
+		return nil
+	}
+
+	// Linux: use systemd-run for non-blocking delayed reboot
 	return exec.Command("systemd-run", "--on-active=5s", "/usr/bin/systemctl", "reboot").Run()
 }
 
