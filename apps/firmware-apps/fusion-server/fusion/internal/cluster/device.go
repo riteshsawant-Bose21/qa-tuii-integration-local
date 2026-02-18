@@ -317,9 +317,23 @@ func (c *Cluster) ReloadVIPLocal(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
-func (c *Cluster) RebootSystem(w http.ResponseWriter, r *http.Request) {}
+func (c *Cluster) RebootSystem(w http.ResponseWriter, r *http.Request) {
 
-func (c *Cluster) RebootSystemLocal(w http.ResponseWriter, r *http.Request) {}
+}
+
+func (c *Cluster) RebootSystemLocal(w http.ResponseWriter, r *http.Request) {
+	if !utils.RequirePost(w, r) {
+		return
+	}
+	defer r.Body.Close()
+
+	if err := c.rebootSystem(); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
+}
 
 // updateVIP updates keepalived configuration with the new VIP but DOES NOT restart keepalived.
 func (c *Cluster) updateVIP(vipValue string) error {
@@ -344,6 +358,10 @@ func (c *Cluster) reloadVIP() error {
 		return err
 	}
 
+	return nil
+}
+
+func (c *Cluster) rebootSystem() error {
 	return nil
 }
 
