@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:fusion_launcher/features/control_dashboard/presentation/entitity/event_item_entity.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
 import 'events_dashboard.dart';
 
 class EventCard extends StatelessWidget {
-  final EventItem item;
+  final EventItemEntity item;
   final EventTab type;
   final Function(bool)? onToggle;
   final VoidCallback? onClose;
@@ -44,7 +45,7 @@ class EventCard extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: <Widget>[
                         FusionAppText(
-                          text: item.time,
+                          text: "${item.time.hour.toString().padLeft(2, '0')}:${item.time.minute.toString().padLeft(2, '0')}",
                           style: context.textTheme.labelMedium,
                         ),
                         const SizedBox(height: 4),
@@ -52,13 +53,13 @@ class EventCard extends StatelessWidget {
                           children: <Widget>[
                             Icon(
                               // Simple logic to choose sun or moon icon
-                              item.period == "AM" ? Icons.wb_twilight : Icons.wb_sunny_outlined,
+                              item.time.hour < 12 ? Icons.wb_twilight : Icons.wb_sunny_outlined,
                               color: Colors.grey,
                               size: 14,
                             ),
                             const SizedBox(width: 4),
                             FusionAppText(
-                              text: item.period,
+                              text: item.time.hour < 12 ? "AM" : "PM",
                               style: context.textTheme.labelMedium,
                             ),
                           ],
@@ -88,7 +89,7 @@ class EventCard extends StatelessWidget {
                           ),
                           const SizedBox(height: 4),
                           FusionAppText(
-                            text: item.location,
+                            text: item.eventName,
                             style: context.textTheme.labelMedium!.copyWith(
                               color: context.colorScheme.textSecondary,
                             ),
@@ -104,18 +105,22 @@ class EventCard extends StatelessWidget {
                       FusionSwitch(
                         height: 22,
                         width: 36,
-                        value: true,
-                        onChanged: (bool val) {},
+                        value: item.isEnabled,
+                        onChanged: (bool val) {
+                          onToggle?.call(val);
+                        },
                       )
                     else
                       FusionContainer(
                         borderRadius: 8,
+                        color: context.colorScheme.elevation2,
+                        raised: true,
                         child: GestureDetector(
                           onTap: onClose,
                           child: Container(
                             padding: const EdgeInsets.all(8),
                             decoration: BoxDecoration(
-                              color: Colors.black26,
+                              color: context.colorScheme.elevation2,
                               borderRadius: BorderRadius.circular(8),
                             ),
                             child: const Icon(

@@ -46,6 +46,7 @@ class ConfigureNetworkDialog extends StatefulWidget {
 class _ConfigureNetworkDialogState extends State<ConfigureNetworkDialog> {
   NetworkConfigState _state = NetworkConfigState.initial;
   List<BluetoothDevice> _bluetoothDevices = <BluetoothDevice>[];
+  List<MdnsDevice> _mdnsDevices = <MdnsDevice>[];
   WiFiCredentials? _wifiCredentials;
   Timer? mockTimer;
 
@@ -210,6 +211,7 @@ class _ConfigureNetworkDialogState extends State<ConfigureNetworkDialog> {
 
       case NetworkConfigState.vipConfiguration:
         return VIPConfigurationScreen(
+          devices: _mdnsDevices,
           onVerify: (String vipAddress) => _verifyVIP(vipAddress),
         );
 
@@ -234,6 +236,18 @@ class _ConfigureNetworkDialogState extends State<ConfigureNetworkDialog> {
       if (mounted) {
         if (true) {
           setState(() {
+            _mdnsDevices = <MdnsDevice>[
+              MdnsDevice(
+                name: 'Fusion Mini FM6Y',
+                ip: '192.168.1.10', // Mock IP
+                port: 8080,
+              ),
+              MdnsDevice(
+                name: 'Fusion Mini FM8Y',
+                ip: '192.168.1.11',
+                port: 8080,
+              ),
+            ];
             _state = NetworkConfigState.vipConfiguration;
           });
         }

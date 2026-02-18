@@ -11,11 +11,13 @@ import 'package:fusion_lib/fusion_lib.dart';
 class AudioMeterContainer extends StatefulWidget {
   final double marginHorizontal;
   final double marginVertical;
+  final bool muted;
 
   const AudioMeterContainer({
     super.key,
     this.marginHorizontal = 16,
     this.marginVertical = 0,
+    this.muted = false,
   });
 
   @override
@@ -25,15 +27,22 @@ class AudioMeterContainer extends StatefulWidget {
 class _AudioMeterContainerState extends State<AudioMeterContainer> {
   // Initial value
   double _targetValue = -60;
-  late Timer _simulationTimer;
+  Timer? _simulationTimer;
   final Random _random = Random();
 
   @override
   void initState() {
     super.initState();
     // Update frequency: 120ms (approx 8 updates/sec) for fluid motion
+    if (!widget.muted) {
+      _startSimulation();
+    }
+  }
+
+  void _startSimulation() {
+    _simulationTimer?.cancel();
     _simulationTimer = Timer.periodic(const Duration(milliseconds: 150), (Timer timer) {
-      if (mounted) {
+      if (mounted && !widget.muted) {
         setState(() {
           _targetValue = _generateRealisticDb();
         });
@@ -62,8 +71,25 @@ class _AudioMeterContainerState extends State<AudioMeterContainer> {
 
   @override
   void dispose() {
-    _simulationTimer.cancel();
+    _simulationTimer?.cancel();
     super.dispose();
+  }
+
+  @override
+  void didUpdateWidget(covariant AudioMeterContainer oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.muted != oldWidget.muted) {
+      if (widget.muted) {
+        _simulationTimer?.cancel();
+        if (mounted) {
+          setState(() {
+            _targetValue = -60; // Reset to silence when muted
+          });
+        }
+      } else {
+        _startSimulation();
+      }
+    }
   }
 
   @override

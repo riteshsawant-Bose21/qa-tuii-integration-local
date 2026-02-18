@@ -1,10 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:fusion_lib/fusion_lib.dart';
-import 'package:fusion_lib/fusion_theme/app_theme.dart';
 
-import '../buttons/fusion_button.dart';
-import '../buttons/fusion_outlined_button.dart';
-import '../text_views/fusion_app_text.dart';
 
 /// A customizable and reusable dialog for the Fusion design system.
 ///
@@ -76,6 +72,9 @@ class FusionDialog extends StatelessWidget {
   /// Description text style. Defaults to `bodyMedium` from the theme.
   final TextStyle? descriptionTextStyle;
 
+  /// Color of the primary button.
+  final Color? primaryButtonColor;
+
   final double primaryButtonWidth;
 
   /// Creates a [FusionDialog].
@@ -95,6 +94,7 @@ class FusionDialog extends StatelessWidget {
     this.titleTextStyle,
     this.descriptionTextStyle,
     this.primaryButtonWidth = 90,
+    this.primaryButtonColor,
   });
 
   @override
@@ -161,6 +161,7 @@ class FusionDialog extends StatelessWidget {
                           color: context.colorScheme.primaryBlack,
                         ),
                         isActive: true,
+                        activeBackgroundColor: primaryButtonColor,
                         onTap: () {
                           onPrimaryPressed.call();
                         },

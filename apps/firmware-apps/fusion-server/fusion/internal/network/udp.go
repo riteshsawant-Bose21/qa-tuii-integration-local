@@ -14,7 +14,7 @@ import (
 	"github.com/oklog/ulid/v2"
 
 	"fusion/internal/api"
-	"fusion/internal/logging"
+	"fusion-services-core/logging"
 	"fusion/internal/server"
 	"fusion/internal/server/handler"
 )

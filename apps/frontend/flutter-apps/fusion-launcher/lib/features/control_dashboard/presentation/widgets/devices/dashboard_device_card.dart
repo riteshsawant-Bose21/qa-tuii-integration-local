@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math';
 
 import 'package:flutter/material.dart';
@@ -11,7 +12,7 @@ import '../../../../devices/presentation/widgets/themostat_painter.dart';
 import 'disk_usage_widget.dart';
 import 'guage_widget.dart';
 
-class DashboardDeviceCard extends StatelessWidget {
+class DashboardDeviceCard extends StatefulWidget {
   final HardwareComponent device;
   final int index;
 
@@ -21,13 +22,29 @@ class DashboardDeviceCard extends StatelessWidget {
     required this.index,
   });
 
+  @override
+  State<DashboardDeviceCard> createState() => _DashboardDeviceCardState();
+}
+
+class _DashboardDeviceCardState extends State<DashboardDeviceCard> {
+  bool _isPlayingAnimation = false;
+  String _loadingTitle = '';
+  String _loadingMessage = '';
+  Timer? _timer;
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
   String get location {
-    if (device.locationEntity.listeningAreaId != null) {
-      final Zone? zone = serviceLocator<ProjectViewModel>().getZonesForListeningArea(areaId: device.locationEntity.listeningAreaId!);
+    if (widget.device.locationEntity.listeningAreaId != null) {
+      final Zone? zone = serviceLocator<ProjectViewModel>().getZonesForListeningArea(areaId: widget.device.locationEntity.listeningAreaId!);
       if (zone != null) {
         return zone.name;
       }
-      final SubZone? subZone = serviceLocator<ProjectViewModel>().getSubZoneForListeningArea(areaId: device.locationEntity.listeningAreaId!);
+      final SubZone? subZone = serviceLocator<ProjectViewModel>().getSubZoneForListeningArea(areaId: widget.device.locationEntity.listeningAreaId!);
       if (subZone != null) {
         final Zone? parentZone = serviceLocator<ProjectViewModel>().getZoneForSubZone(subZoneId: subZone.id);
         if (parentZone != null) {
@@ -36,7 +53,7 @@ class DashboardDeviceCard extends StatelessWidget {
         return subZone.name;
       }
     }
-    final EquipLocation? location = serviceLocator<ProjectViewModel>().getEquipLocationForHardware(hardwareId: device.id);
+    final EquipLocation? location = serviceLocator<ProjectViewModel>().getEquipLocationForHardware(hardwareId: widget.device.id);
     if (location != null) {
       return location.name;
     }
@@ -45,14 +62,14 @@ class DashboardDeviceCard extends StatelessWidget {
 
   bool get isOnline {
     //Mock logic - In real implementation, this would be based on actual device status
-    return index != 4;
+    return widget.index != 4;
   }
 
   String? get alertMsg {
     //Mock logic - In real implementation, this would be based on actual device alerts
-    if (index % 5 == 0) {
+    if (widget.index % 5 == 0) {
       return "Open Circuit Fault Channel: 3 , Zone: Reception, Circuit: DM5SE";
-    } else if (index % 3 == 0) {
+    } else if (widget.index % 3 == 0) {
       return "High Temperature Warning";
     }
     return null;
@@ -60,7 +77,7 @@ class DashboardDeviceCard extends StatelessWidget {
 
   bool get isCritical {
     //Mock logic - In real implementation, this would be based on actual alert severity
-    return index % 5 == 0;
+    return widget.index % 5 == 0;
   }
 
   @override
@@ -71,11 +88,13 @@ class DashboardDeviceCard extends StatelessWidget {
 
     return InkWell(
       onTap: () {
-        Navigator.pushNamed(
-          context,
-          Routes.deviceDetails,
-          arguments: device.id,
-        );
+        if (!_isPlayingAnimation) {
+          Navigator.pushNamed(
+            context,
+            Routes.deviceDetails,
+            arguments: widget.device.id,
+          );
+        }
       },
       child: Container(
         margin: const EdgeInsets.only(bottom: 10),
@@ -84,7 +103,7 @@ class DashboardDeviceCard extends StatelessWidget {
           borderRadius: BorderRadius.circular(8),
           border: Border.all(
             color:
-                alertMsg != null
+                (alertMsg != null && !_isPlayingAnimation)
                     ? isCritical
                         ? context.colorScheme.errorStroke
                         : context.colorScheme.warningStroke
@@ -120,7 +139,7 @@ class DashboardDeviceCard extends StatelessWidget {
                                     // Placeholder for device icon - In real implementation, this would be an actual image/icon based on device type
                                     Center(
                                       child: FusionImage.asset(
-                                        device.assetImagePath,
+                                        widget.device.assetImagePath,
                                       ),
                                     ),
 
@@ -145,7 +164,7 @@ class DashboardDeviceCard extends StatelessWidget {
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: <Widget>[
                                     FusionAppText(
-                                      text: device.name,
+                                      text: widget.device.name,
                                       style: context.textTheme.labelMedium,
                                       textOverflow: TextOverflow.ellipsis,
                                       maxLine: 1,
@@ -155,7 +174,7 @@ class DashboardDeviceCard extends StatelessWidget {
                                       children: <Widget>[
                                         Flexible(
                                           child: FusionAppText(
-                                            text: device.hardwareName,
+                                            text: widget.device.hardwareName,
                                             style: context.textTheme.labelSmall!.copyWith(color: context.colorScheme.textPrimary, fontSize: 11),
                                             textOverflow: TextOverflow.ellipsis,
                                             maxLine: 1,
@@ -188,102 +207,144 @@ class DashboardDeviceCard extends StatelessWidget {
                           ),
                         ),
 
-                        // 2. Metrics (FLEX 2 EACH - MATCHES HEADER)
-                        Expanded(
-                          flex: 2,
-                          child:
-                              isOnline
-                                  ? Align(
-                                    alignment: Alignment.centerLeft,
-                                    child: CompactThermostatWidget(
-                                      temperature: temp,
-                                      maxTemperature: 100,
+                        if (_isPlayingAnimation) ...<Widget>[
+                          Expanded(
+                            flex: 6,
+                            child: Row(
+                              children: <Widget>[
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: <Widget>[
+                                      FusionAppText(
+                                        text: _loadingTitle,
+                                        style: context.textTheme.labelMedium?.copyWith(
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 4),
+                                      FusionAppText(
+                                        text: _loadingMessage,
+                                        style: context.textTheme.labelSmall?.copyWith(
+                                          color: context.colorScheme.textSecondary,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                const SizedBox(width: 16),
+                                const SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                  ),
+                                ),
+                                const SizedBox(width: 24),
+                              ],
+                            ),
+                          ),
+                        ] else ...<Widget>[
+                          // 2. Metrics (FLEX 2 EACH - MATCHES HEADER)
+                          Expanded(
+                            flex: 2,
+                            child:
+                                isOnline
+                                    ? Align(
+                                      alignment: Alignment.centerLeft,
+                                      child: CompactThermostatWidget(
+                                        temperature: temp,
+                                        maxTemperature: 100,
+                                      ),
+                                    )
+                                    : _buildDash(),
+                          ),
+
+                          Expanded(
+                            flex: 2,
+                            child:
+                                isOnline
+                                    ? Row(
+                                      children: <Widget>[
+                                        GaugeWidget(
+                                          value: 100 * disk,
+                                          size: const Size(24, 24),
+                                        ),
+                                        const SizedBox(width: 6),
+                                        FusionAppText(
+                                          text: "${(disk * 100).toInt()}%",
+                                          style: context.textTheme.labelMedium,
+                                        ),
+                                      ],
+                                    )
+                                    : _buildDash(),
+                          ),
+
+                          Expanded(
+                            flex: 2,
+                            child:
+                                isOnline
+                                    ? Row(
+                                      children: <Widget>[
+                                        DiskUsageWidget(
+                                          value: 100 * cpu,
+                                          size: const Size(24, 24),
+                                        ),
+                                        const SizedBox(width: 6),
+                                        FusionAppText(
+                                          text: "${(cpu * 100).toInt()}%",
+                                          style: context.textTheme.labelMedium,
+                                        ),
+                                      ],
+                                    )
+                                    : _buildDash(),
+                          ),
+
+                          // 3. Controls (FLEX 2 - MATCHES HEADER)
+                          Expanded(
+                            flex: 2,
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.end,
+                              children: <Widget>[
+                                if (widget.device is! FusionDsp) ...<Widget>[
+                                  FusionNeumorphicButton(
+                                    width: 26,
+                                    height: 26,
+                                    borderRadius: 6,
+                                    color: context.colorScheme.elevation2,
+                                    onTap: () {
+                                      _showStandbyConfirmation(context);
+                                    },
+                                    child: FusionImage.asset(
+                                      AssetIcons.standbyIcon,
+                                      height: 12,
+                                      width: 12,
+                                      assetColor: context.colorScheme.iconWhite,
                                     ),
-                                  )
-                                  : _buildDash(),
-                        ),
+                                  ),
+                                  const SizedBox(width: 10),
+                                ],
 
-                        Expanded(
-                          flex: 2,
-                          child:
-                              isOnline
-                                  ? Row(
-                                    children: <Widget>[
-                                      GaugeWidget(
-                                        value: 100 * disk,
-                                        size: const Size(24, 24),
-                                      ),
-                                      const SizedBox(width: 6),
-                                      FusionAppText(
-                                        text: "${(disk * 100).toInt()}%",
-                                        style: context.textTheme.labelMedium,
-                                      ),
-                                    ],
-                                  )
-                                  : _buildDash(),
-                        ),
-
-                        Expanded(
-                          flex: 2,
-                          child:
-                              isOnline
-                                  ? Row(
-                                    children: <Widget>[
-                                      DiskUsageWidget(
-                                        value: 100 * cpu,
-                                        size: const Size(24, 24),
-                                      ),
-                                      const SizedBox(width: 6),
-                                      FusionAppText(
-                                        text: "${(cpu * 100).toInt()}%",
-                                        style: context.textTheme.labelMedium,
-                                      ),
-                                    ],
-                                  )
-                                  : _buildDash(),
-                        ),
-
-                        // 3. Controls (FLEX 2 - MATCHES HEADER)
-                        Expanded(
-                          flex: 2,
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.end,
-                            children: <Widget>[
-                              if (device is! FusionDsp) ...<Widget>[
                                 FusionNeumorphicButton(
                                   width: 26,
                                   height: 26,
                                   borderRadius: 6,
+                                  color: context.colorScheme.elevation2,
                                   onTap: () {
-                                    // Handle click action here
+                                    _showRestartConfirmation(context);
                                   },
                                   child: FusionImage.asset(
-                                    AssetIcons.standbyIcon,
+                                    AssetIcons.rebootIcon,
                                     height: 12,
                                     width: 12,
                                     assetColor: context.colorScheme.iconWhite,
                                   ),
                                 ),
-                                const SizedBox(width: 10),
                               ],
-
-                              FusionNeumorphicButton(
-                                width: 26,
-                                height: 26,
-                                borderRadius: 6,
-                                onTap: () {
-                                  // Handle click action here
-                                },
-                                child: FusionImage.asset(
-                                  AssetIcons.rebootIcon,
-                                  height: 12,
-                                  width: 12,
-                                  assetColor: context.colorScheme.iconWhite,
-                                ),
-                              ),
-                            ],
+                            ),
                           ),
-                        ),
+                        ],
                       ],
                     ),
                   ),
@@ -291,7 +352,7 @@ class DashboardDeviceCard extends StatelessWidget {
               ),
             ),
             // Alert Banner code remains same...
-            if (alertMsg != null)
+            if (alertMsg != null && !_isPlayingAnimation)
               Container(
                 width: double.infinity,
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
@@ -324,6 +385,53 @@ class DashboardDeviceCard extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  void _showStandbyConfirmation(BuildContext context) {
+    showDialog(
+      context: context,
+      builder:
+          (BuildContext context) => FusionConfirmationPopup(
+            title: 'STANDBY',
+            description: 'Do you want to set ${widget.device.name} device to standby ?',
+            onConfirm: () {
+              // TODO: Implement actual standby logic
+              _startLoadingState('Please wait...', 'Device going standby');
+            },
+          ),
+    );
+  }
+
+  void _showRestartConfirmation(BuildContext context) {
+    showDialog(
+      context: context,
+      builder:
+          (BuildContext context) => FusionConfirmationPopup(
+            title: 'RESTART',
+            description: 'Do you want to restart ${widget.device.name} device?',
+            onConfirm: () {
+              // TODO: Implement actual restart logic
+              _startLoadingState('Please wait...', 'Device restarting');
+            },
+          ),
+    );
+  }
+
+  void _startLoadingState(String title, String message) {
+    setState(() {
+      _isPlayingAnimation = true;
+      _loadingTitle = title;
+      _loadingMessage = message;
+    });
+
+    _timer?.cancel();
+    _timer = Timer(const Duration(seconds: 3), () {
+      if (mounted) {
+        setState(() {
+          _isPlayingAnimation = false;
+        });
+      }
+    });
   }
 }
 
