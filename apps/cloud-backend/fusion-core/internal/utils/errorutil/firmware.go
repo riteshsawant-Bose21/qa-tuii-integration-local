@@ -12,4 +12,10 @@ var (
 
 	// ErrInvalidVersion indicates that the firmware version format is invalid
 	ErrInvalidVersion = errors.New("invalid version format")
+
+	// ErrInvalidChannel indicates that the distribution channel is invalid
+	ErrInvalidChannel = errors.New("invalid distribution channel")
+
+	// ErrInvalidReleaseStatus indicates that the release status is not suitable for the operation
+	ErrInvalidReleaseStatus = errors.New("invalid release status for this operation")
 )

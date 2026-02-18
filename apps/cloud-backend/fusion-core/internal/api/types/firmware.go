@@ -75,3 +75,7 @@ type DownloadArtifactResponse struct {
 	DownloadURL string `json:"download_url"`
 	Checksum    string `json:"checksum"`
 }
+
+type DeployReleasePayload struct {
+	Channel string `json:"channel" binding:"required"`
+}

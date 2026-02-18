@@ -62,6 +62,11 @@ func (m *MockFirmwareService) GetArtifactDownloadURL(ctx context.Context, platfo
 	return args.Get(0).(*types.DownloadArtifactResponse), args.Error(1)
 }
 
+func (m *MockFirmwareService) DeployRelease(ctx context.Context, releaseID string, channel string, logger *zap.Logger) error {
+	args := m.Called(ctx, releaseID, channel, logger)
+	return args.Error(0)
+}
+
 // --- Helper ---
 
 func setupTestContext(method, url string, body interface{}) (*httptest.ResponseRecorder, *gin.Context) {
@@ -948,6 +953,172 @@ func TestLogFirmwareUpdate(t *testing.T) {
 			// verify no body for 202 Accepted
 			if tt.expectedStatus == http.StatusAccepted {
 				assert.Empty(t, w.Body.String())
+			}
+
+			mockFirmware.AssertExpectations(t)
+		})
+	}
+}
+
+// ==================== DeployRelease Tests ====================
+
+func TestDeployRelease(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	validPayload := types.DeployReleasePayload{
+		Channel: "testing",
+	}
+
+	tests := []struct {
+		name           string
+		releaseID      string
+		requestBody    interface{}
+		setupLogger    bool
+		mockSetup      func(m *MockFirmwareService)
+		expectedStatus int
+		expectedBody   map[string]interface{}
+	}{
+		{
+			name:        "success - release deployed to testing channel",
+			releaseID:   "release-uuid-123",
+			requestBody: validPayload,
+			setupLogger: true,
+			mockSetup: func(m *MockFirmwareService) {
+				m.On("DeployRelease", mock.Anything, "release-uuid-123", "testing", mock.Anything).
+					Return(nil)
+			},
+			expectedStatus: http.StatusNoContent,
+		},
+		{
+			name:        "success - release deployed to stable channel",
+			releaseID:   "release-uuid-123",
+			requestBody: types.DeployReleasePayload{Channel: "stable"},
+			setupLogger: true,
+			mockSetup: func(m *MockFirmwareService) {
+				m.On("DeployRelease", mock.Anything, "release-uuid-123", "stable", mock.Anything).
+					Return(nil)
+			},
+			expectedStatus: http.StatusNoContent,
+		},
+		{
+			name:           "bad request - empty releaseID",
+			releaseID:      "",
+			requestBody:    validPayload,
+			setupLogger:    true,
+			mockSetup:      func(m *MockFirmwareService) {},
+			expectedStatus: http.StatusBadRequest,
+			expectedBody: map[string]interface{}{
+				"error": "releaseID is required",
+			},
+		},
+		{
+			name:           "bad request - invalid JSON",
+			releaseID:      "release-uuid-123",
+			requestBody:    "invalid json{",
+			setupLogger:    true,
+			mockSetup:      func(m *MockFirmwareService) {},
+			expectedStatus: http.StatusBadRequest,
+		},
+		{
+			name:           "bad request - missing channel",
+			releaseID:      "release-uuid-123",
+			requestBody:    map[string]interface{}{},
+			setupLogger:    true,
+			mockSetup:      func(m *MockFirmwareService) {},
+			expectedStatus: http.StatusBadRequest,
+		},
+		{
+			name:        "not found - release does not exist",
+			releaseID:   "non-existent-uuid",
+			requestBody: validPayload,
+			setupLogger: true,
+			mockSetup: func(m *MockFirmwareService) {
+				m.On("DeployRelease", mock.Anything, "non-existent-uuid", "testing", mock.Anything).
+					Return(errorutil.ErrReleaseNotFound)
+			},
+			expectedStatus: http.StatusNotFound,
+			expectedBody: map[string]interface{}{
+				"error": "Release not found",
+			},
+		},
+		{
+			name:        "internal server error - service failure",
+			releaseID:   "release-uuid-123",
+			requestBody: validPayload,
+			setupLogger: true,
+			mockSetup: func(m *MockFirmwareService) {
+				m.On("DeployRelease", mock.Anything, "release-uuid-123", "testing", mock.Anything).
+					Return(errors.New("database update failed"))
+			},
+			expectedStatus: http.StatusInternalServerError,
+			expectedBody: map[string]interface{}{
+				"error": "Internal Server Error",
+			},
+		},
+		{
+			name:        "bad request - invalid channel",
+			releaseID:   "release-uuid-123",
+			requestBody: types.DeployReleasePayload{Channel: "invalid-channel"},
+			setupLogger: true,
+			mockSetup: func(m *MockFirmwareService) {
+				m.On("DeployRelease", mock.Anything, "release-uuid-123", "invalid-channel", mock.Anything).
+					Return(errorutil.ErrInvalidChannel)
+			},
+			expectedStatus: http.StatusBadRequest,
+			expectedBody: map[string]interface{}{
+				"error": "Invalid distribution channel",
+			},
+		},
+		{
+			name:        "bad request - invalid release status",
+			releaseID:   "release-uuid-123",
+			requestBody: validPayload,
+			setupLogger: true,
+			mockSetup: func(m *MockFirmwareService) {
+				m.On("DeployRelease", mock.Anything, "release-uuid-123", "testing", mock.Anything).
+					Return(errorutil.ErrInvalidReleaseStatus)
+			},
+			expectedStatus: http.StatusBadRequest,
+			expectedBody: map[string]interface{}{
+				"error": "Only AVAILABLE releases can be deployed",
+			},
+		},
+		{
+			name:           "internal server error - logger not in context",
+			releaseID:      "release-uuid-123",
+			requestBody:    validPayload,
+			setupLogger:    false,
+			mockSetup:      func(m *MockFirmwareService) {},
+			expectedStatus: http.StatusInternalServerError,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mockFirmware := new(MockFirmwareService)
+			tt.mockSetup(mockFirmware)
+
+			h := NewFirmwareUpdateHandler(mockFirmware)
+
+			w, c := setupTestContext(http.MethodPost, "/firmware/releases/"+tt.releaseID+"/deploy", tt.requestBody)
+			c.Params = gin.Params{gin.Param{Key: "releaseID", Value: tt.releaseID}}
+			if !tt.setupLogger {
+				c.Keys = map[string]interface{}{}
+			}
+
+			h.DeployRelease(c)
+
+			// Use c.Writer.Status() for no-body responses (204) since httptest.ResponseRecorder
+			// only updates Code when WriteHeader is called via Write()
+			assert.Equal(t, tt.expectedStatus, c.Writer.Status())
+
+			if tt.expectedBody != nil {
+				var response map[string]interface{}
+				err := json.Unmarshal(w.Body.Bytes(), &response)
+				assert.NoError(t, err)
+				for key, expectedValue := range tt.expectedBody {
+					assert.Equal(t, expectedValue, response[key])
+				}
 			}
 
 			mockFirmware.AssertExpectations(t)

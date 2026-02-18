@@ -191,6 +191,67 @@ const docTemplate = `{
                 }
             }
         },
+        "/firmware/releases/{releaseID}/deploy": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Deploys an 'AVAILABLE' firmware release to a specific distribution channel (dev, testing, stable).",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Firmware Update"
+                ],
+                "summary": "Deploy Firmware Release",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Unique identifier of the firmware release",
+                        "name": "releaseID",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Deployment target channel",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/types.DeployReleasePayload"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "Release successfully deployed to channel"
+                    },
+                    "400": {
+                        "description": "Invalid channel or releaseID",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Release not found",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/firmware/releases/{releaseID}/mark-available": {
             "post": {
                 "security": [
@@ -2099,6 +2160,17 @@ const docTemplate = `{
                 "full_name": {
                     "type": "string",
                     "example": "Jane Smith"
+                }
+            }
+        },
+        "types.DeployReleasePayload": {
+            "type": "object",
+            "required": [
+                "channel"
+            ],
+            "properties": {
+                "channel": {
+                    "type": "string"
                 }
             }
         },

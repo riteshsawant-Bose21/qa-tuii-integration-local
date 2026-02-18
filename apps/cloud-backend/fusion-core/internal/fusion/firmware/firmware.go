@@ -16,6 +16,7 @@ const (
 	firmwareArtifactPathFormat = "%s/%s/%s.zip"
 
 	// Deployment channels
+	// TODO : create channel table to handle different channels
 	ChannelDev     = "dev"
 	ChannelTesting = "testing"
 	ChannelStable  = "stable"
@@ -123,7 +124,7 @@ func (s *Service) MakeReleaseAvailable(ctx context.Context, releaseID string, lo
 
 	// Insert into deployments
 	// Currently I am Deploying the release to the "dev" channel directly in the release step itself
-	// TODO : Add a new API to deploy the release to the desired channel
+	// TODO : remove this once the deployment flow is finalized
 	_, err = s.dbService.InsertDeployment(ctx, releaseID, tx, DefaultChannel(), logger)
 	if err != nil {
 		tx.Rollback()
@@ -237,4 +238,34 @@ func (s *Service) ListReleases(ctx context.Context, platform string, page, limit
 
 func (s *Service) LogFirmwareUpdate(ctx context.Context, req *types.LogFirmwareUpdateRequest) error {
 	return s.dbService.LogFirmwareUpdate(ctx, req.DeviceID, req.ReleaseVersion, req.Status, req.EventTime)
+}
+
+func (s *Service) DeployRelease(ctx context.Context, releaseID string, channel string, logger *zap.Logger) error {
+	// Validate channel
+	// TODO : create channel table to handle different channels
+	if channel != ChannelDev && channel != ChannelTesting && channel != ChannelStable {
+		return errorutil.ErrInvalidChannel
+	}
+
+	// Check if release exists
+	release, err := s.dbService.GetReleaseByID(ctx, releaseID)
+	if err != nil {
+		return fmt.Errorf("failed to get release: %v", err)
+	}
+	if release == nil {
+		return errorutil.ErrReleaseNotFound
+	}
+
+	// Only AVAILABLE releases can be deployed
+	if release.Status != "AVAILABLE" {
+		return errorutil.ErrInvalidReleaseStatus
+	}
+
+	// Insert into deployments
+	_, err = s.dbService.InsertDeployment(ctx, releaseID, s.dbService.GetDB(ctx), channel, logger)
+	if err != nil {
+		return fmt.Errorf("failed to insert deployment: %v", err)
+	}
+
+	return nil
 }

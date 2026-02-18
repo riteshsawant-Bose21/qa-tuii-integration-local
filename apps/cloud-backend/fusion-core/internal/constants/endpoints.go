@@ -73,4 +73,5 @@ const (
 	EndpointFirmwareUpdateCheck     = "/updates/check"
 	EndpointFirmwareDownload        = "/updates/:platform/:version/download"
 	EndpointFirmwareUpdateLog       = "/updates/log"
+	EndpointFirmwareDeploy          = "/releases/:releaseID/deploy"
 )

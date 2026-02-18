@@ -120,6 +120,13 @@ definitions:
     - email
     - full_name
     type: object
+  types.DeployReleasePayload:
+    properties:
+      channel:
+        type: string
+    required:
+    - channel
+    type: object
   types.DeviceUpdateCheckPayload:
     properties:
       current_firmware_version:
@@ -1019,6 +1026,46 @@ paths:
       summary: Initiate Firmware Release
       tags:
       - Firmware Update - Internal API
+  /firmware/releases/{releaseID}/deploy:
+    post:
+      consumes:
+      - application/json
+      description: Deploys an 'AVAILABLE' firmware release to a specific distribution
+        channel (dev, testing, stable).
+      parameters:
+      - description: Unique identifier of the firmware release
+        in: path
+        name: releaseID
+        required: true
+        type: string
+      - description: Deployment target channel
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/types.DeployReleasePayload'
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: Release successfully deployed to channel
+        "400":
+          description: Invalid channel or releaseID
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+        "404":
+          description: Release not found
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Deploy Firmware Release
+      tags:
+      - Firmware Update
   /firmware/releases/{releaseID}/mark-available:
     post:
       consumes:

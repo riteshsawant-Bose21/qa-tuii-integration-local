@@ -252,3 +252,60 @@ func (h *FirmwareUpdateHandler) LogFirmwareUpdate(ctx *gin.Context) {
 
 	response.Accepted(ctx)
 }
+
+// DeployRelease deploys a firmware release to a specific channel
+// @Summary Deploy Firmware Release
+// @Description Deploys an 'AVAILABLE' firmware release to a specific distribution channel (dev, testing, stable).
+// @Tags Firmware Update
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param releaseID path string true "Unique identifier of the firmware release"
+// @Param request body types.DeployReleasePayload true "Deployment target channel"
+// @Success 204 "Release successfully deployed to channel"
+// @Failure 400 {object} types.ErrorResponse "Invalid channel or releaseID"
+// @Failure 404 {object} types.ErrorResponse "Release not found"
+// @Failure 500 {object} types.ErrorResponse "Internal server error"
+// @Router /firmware/releases/{releaseID}/deploy [post]
+func (h *FirmwareUpdateHandler) DeployRelease(ctx *gin.Context) {
+	releaseID := ctx.Param("releaseID")
+	if releaseID == "" {
+		response.BadRequest(ctx, "releaseID is required")
+		return
+	}
+
+	var payload types.DeployReleasePayload
+	loggerFromContext, exists := ctx.Get("logger")
+	if !exists {
+		response.InternalError(ctx)
+		return
+	}
+	logger := loggerFromContext.(*zap.Logger)
+
+	if err := ctx.ShouldBindJSON(&payload); err != nil {
+		logger.Error("Failed to bind DeployRelease payload", zap.Error(err))
+		response.BadRequest(ctx, "Invalid request payload: "+err.Error())
+		return
+	}
+
+	err := h.firmware.DeployRelease(ctx, releaseID, payload.Channel, logger)
+	if err != nil {
+		logger.Error("Failed to deploy release", zap.String("releaseID", releaseID), zap.String("channel", payload.Channel), zap.Error(err))
+		if errors.Is(err, errorutil.ErrReleaseNotFound) {
+			response.NotFound(ctx, "Release not found")
+			return
+		}
+		if errors.Is(err, errorutil.ErrInvalidChannel) {
+			response.BadRequest(ctx, "Invalid distribution channel")
+			return
+		}
+		if errors.Is(err, errorutil.ErrInvalidReleaseStatus) {
+			response.BadRequest(ctx, "Only AVAILABLE releases can be deployed")
+			return
+		}
+		response.InternalError(ctx)
+		return
+	}
+
+	response.NoContent(ctx)
+}
