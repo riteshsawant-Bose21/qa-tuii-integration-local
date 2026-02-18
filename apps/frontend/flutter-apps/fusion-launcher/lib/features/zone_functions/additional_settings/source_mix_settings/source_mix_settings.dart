@@ -8,7 +8,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../widgets/horizontal_scroll_effect_wrapper.dart';
 import '../models/models.dart';
-import 'viewmodel/source_mix_additional_settings_viewmodel.dart';
+import 'viewmodel/source_mix_settings_vm.dart';
 
 class SourceMixAdditionalSettingsDialog extends StatefulWidget {
   final String zoneID;
@@ -125,8 +125,8 @@ class _SourceMixAdditionalSettingsState extends State<SourceMixAdditionalSetting
                         testId: SemanticHelper.createTestId(SemanticTypes.container, "source_select_main_container"),
                         child: BlocProvider<SourceMixAdditionalSettingsViewmodel>(
                           create: (_) => SourceMixAdditionalSettingsViewmodel()..init(zoneID: widget.zoneID),
-                          child: BlocBuilder<SourceMixAdditionalSettingsViewmodel, SourceMixAdditionalSettingsViewmodelState>(
-                            builder: (BuildContext context, SourceMixAdditionalSettingsViewmodelState state) {
+                          child: BlocBuilder<SourceMixAdditionalSettingsViewmodel, SourceMixAdditionalSettingsVmState>(
+                            builder: (BuildContext context, SourceMixAdditionalSettingsVmState state) {
                               final SourceMixAdditionalSettingsViewmodel vm = context.watch<SourceMixAdditionalSettingsViewmodel>();
 
                               return Container(
@@ -235,8 +235,8 @@ class __SourcesSettingState extends State<_SourcesSetting> {
 
     return BlocProvider<SourceMixAdditionalSettingsViewmodel>.value(
       value: widget.vm,
-      child: BlocBuilder<SourceMixAdditionalSettingsViewmodel, SourceMixAdditionalSettingsViewmodelState>(
-        builder: (BuildContext context, SourceMixAdditionalSettingsViewmodelState state) {
+      child: BlocBuilder<SourceMixAdditionalSettingsViewmodel, SourceMixAdditionalSettingsVmState>(
+        builder: (BuildContext context, SourceMixAdditionalSettingsVmState state) {
           return Column(
             children: <Widget>[
               Padding(
@@ -473,8 +473,8 @@ class _ZoneSubZoneSettingBuilderState extends State<_ZoneSubZoneBuilder> {
 
     return BlocProvider<SourceMixAdditionalSettingsViewmodel>.value(
       value: widget.vm,
-      child: BlocBuilder<SourceMixAdditionalSettingsViewmodel, SourceMixAdditionalSettingsViewmodelState>(
-        builder: (BuildContext context, SourceMixAdditionalSettingsViewmodelState state) {
+      child: BlocBuilder<SourceMixAdditionalSettingsViewmodel, SourceMixAdditionalSettingsVmState>(
+        builder: (BuildContext context, SourceMixAdditionalSettingsVmState state) {
           return Column(
             children: <Widget>[
               if (isSubZonesAvailable) ...<Widget>[

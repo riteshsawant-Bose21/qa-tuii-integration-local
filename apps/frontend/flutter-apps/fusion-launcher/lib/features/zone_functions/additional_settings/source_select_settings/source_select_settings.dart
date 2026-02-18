@@ -2,22 +2,22 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/core/service_locator.dart';
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
+import 'package:fusion_launcher/features/processing_block/view/processing_blocks/widgets/disabled_widget_wrapper.dart';
+import 'package:fusion_launcher/features/processing_block/view/widgets/pb_meter.dart';
+import 'package:fusion_launcher/features/processing_block/view/widgets/widgets.dart';
+import 'package:fusion_launcher/features/schematics/presentation/widgets/common_reorderable_list_view.dart';
+import 'package:fusion_launcher/features/zone_functions/widgets/neumorphic_gain_text_field.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
-import '../../../processing_block/view/processing_blocks/widgets/disabled_widget_wrapper.dart';
-import '../../../processing_block/view/widgets/pb_dropdown.dart';
-import '../../../processing_block/view/widgets/pb_meter.dart';
-import '../../../processing_block/view/widgets/pb_slider.dart';
 import '../../widgets/horizontal_scroll_effect_wrapper.dart';
-import '../../widgets/neumorphic_gain_text_field.dart';
 import '../models/models.dart';
-import 'viewmodel/source_matrix_additional_settings_viewmodel.dart';
+import 'viewmodel/source_select_settings_vm.dart';
 
-class SourceMatrixAdditionalSettingsDialog extends StatefulWidget {
+class SourceSelectAdditionalSettingsDialog extends StatefulWidget {
   final String zoneID;
 
-  const SourceMatrixAdditionalSettingsDialog({super.key, required this.zoneID});
+  const SourceSelectAdditionalSettingsDialog({super.key, required this.zoneID});
 
   static void showDialog(BuildContext context, {required String zoneID}) {
     showGeneralDialog(
@@ -27,7 +27,7 @@ class SourceMatrixAdditionalSettingsDialog extends StatefulWidget {
       barrierColor: Colors.black54,
       transitionDuration: const Duration(milliseconds: 200),
       pageBuilder: (BuildContext buildContext, _, __) {
-        return SourceMatrixAdditionalSettingsDialog(
+        return SourceSelectAdditionalSettingsDialog(
           zoneID: zoneID,
         );
       },
@@ -35,31 +35,25 @@ class SourceMatrixAdditionalSettingsDialog extends StatefulWidget {
   }
 
   @override
-  State<SourceMatrixAdditionalSettingsDialog> createState() => _SourceMatrixAdditionalSettingsState();
+  State<SourceSelectAdditionalSettingsDialog> createState() => _SourceSelectAdditionalSettingsState();
 }
 
-class _SourceMatrixAdditionalSettingsState extends State<SourceMatrixAdditionalSettingsDialog> {
-  late ZoneFunctions zoneFunction;
+class _SourceSelectAdditionalSettingsState extends State<SourceSelectAdditionalSettingsDialog> {
+  late List<Source> sources;
+  final ProjectViewModel projectViewModel = serviceLocator<ProjectViewModel>();
+  ZoneFunctions? zoneFunction;
+
   @override
   void initState() {
     super.initState();
-    zoneFunction = projectViewModel.getZoneFunctionForZone(zoneId: widget.zoneID)!;
-  }
-
-  final ProjectViewModel projectViewModel = serviceLocator<ProjectViewModel>();
-
-  MixScene? selectedMixScene(ZoneFunctions zoneFunction) {
-    final String? selectedId = zoneFunction.selectedMixSceneId;
-    if (selectedId == null) return null;
-    try {
-      return zoneFunction.mixScenes.firstWhere((MixScene scene) => scene.id == selectedId);
-    } catch (e) {
-      return null;
-    }
+    sources = projectViewModel.getSourcesAndSourceSetSourcesInZone(zoneId: widget.zoneID);
+    zoneFunction = projectViewModel.getZoneFunctionForZone(zoneId: widget.zoneID);
   }
 
   @override
   Widget build(BuildContext context) {
+    if (zoneFunction == null) return const SizedBox.shrink();
+
     return Material(
       color: Colors.transparent,
       type: MaterialType.transparency,
@@ -90,7 +84,7 @@ class _SourceMatrixAdditionalSettingsState extends State<SourceMatrixAdditionalS
                       child: Padding(
                         padding: const EdgeInsets.symmetric(vertical: 15, horizontal: 20),
                         child: FusionAppText(
-                          text: "SOURCE MIX - PRIORITY SETTINGS ",
+                          text: "SOURCE SELECT - PRIORITY SETTINGS",
                           style: context.textTheme.titleSmall,
                           maxLine: 1,
                         ),
@@ -123,17 +117,19 @@ class _SourceMatrixAdditionalSettingsState extends State<SourceMatrixAdditionalS
                     /// --------------------------------------------------------------------------------
                     ///                             MAIN CONTENT
                     /// --------------------------------------------------------------------------------
-                    Padding(
-                      padding: const EdgeInsets.only(top: 50),
-                      child: SemanticHelper.container(
-                        testId: SemanticHelper.createTestId(SemanticTypes.container, "source_select_main_container"),
-                        child: BlocProvider<SourceMatrixAdditionalSettingsViewmodel>(
-                          create: (_) => SourceMatrixAdditionalSettingsViewmodel()..init(zoneID: widget.zoneID),
-                          child: BlocBuilder<SourceMatrixAdditionalSettingsViewmodel, SourceMatrixSettingsViewmodelState>(
-                            builder: (BuildContext context, SourceMatrixSettingsViewmodelState state) {
-                              final SourceMatrixAdditionalSettingsViewmodel vm = context.watch<SourceMatrixAdditionalSettingsViewmodel>();
+                    BlocProvider<SourceSelectAdditionalSettingsViewmodel>(
+                      create: (_) => SourceSelectAdditionalSettingsViewmodel()..init(zoneID: widget.zoneID),
+                      child: BlocBuilder<SourceSelectAdditionalSettingsViewmodel, SourceSelectAdditionalSettingsVmState>(
+                        builder: (BuildContext context, SourceSelectAdditionalSettingsVmState SourceSelectAdditionalSettingsVmState) {
+                          final SourceSelectAdditionalSettingsViewmodel vm = context.watch<SourceSelectAdditionalSettingsViewmodel>();
 
-                              return Container(
+                          context.watch<ProjectViewModel>();
+
+                          return Padding(
+                            padding: const EdgeInsets.only(top: 50),
+                            child: SemanticHelper.container(
+                              testId: SemanticHelper.createTestId(SemanticTypes.container, "source_select_main_container"),
+                              child: Container(
                                 decoration: BoxDecoration(
                                   border: Border(
                                     top: BorderSide(
@@ -142,60 +138,222 @@ class _SourceMatrixAdditionalSettingsState extends State<SourceMatrixAdditionalS
                                     ),
                                   ),
                                 ),
-                                padding: const EdgeInsets.all(16.0),
-                                child: ClipRRect(
-                                  borderRadius: BorderRadius.circular(16),
-                                  child: Container(
-                                    decoration: BoxDecoration(
-                                      color: context.colorScheme.elevation2,
-                                      border: Border.all(color: context.colorScheme.strokeLight),
-                                      borderRadius: BorderRadius.circular(16),
-                                    ),
-                                    child: Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: <Widget>[
-                                        Flexible(
-                                          flex: 2,
-                                          child: _SourcesSetting(
-                                            zoneID: widget.zoneID,
-                                            zoneFunctions: zoneFunction,
-                                          ),
-                                        ),
+                                child: Padding(
+                                  padding: const EdgeInsets.all(16.0),
+                                  child: ClipRRect(
+                                    borderRadius: BorderRadius.circular(16),
+                                    child: Container(
+                                      decoration: BoxDecoration(
+                                        color: context.colorScheme.elevation2,
+                                        border: Border.all(color: context.colorScheme.strokeLight),
+                                        borderRadius: BorderRadius.circular(16),
+                                      ),
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: <Widget>[
+                                          // LEFT COLUMN (Reorderable List)
+                                          Flexible(
+                                            flex: 2,
+                                            child: Column(
+                                              children: <Widget>[
+                                                Container(
+                                                  width: double.infinity,
+                                                  alignment: Alignment.center,
+                                                  padding: const EdgeInsets.all(16.0),
+                                                  child: FusionAppText(
+                                                    text: "SOURCES",
+                                                    style: Theme.of(context).textTheme.labelSmall,
+                                                  ),
+                                                ),
+                                                Divider(color: context.colorScheme.strokeLight, height: 0),
 
-                                        VerticalDivider(width: 1, color: context.colorScheme.strokeLight),
-                                        Flexible(
-                                          child: _MixSceneSetting(
-                                            allowController: vm.isAssignToControllersEnabled,
+                                                Flexible(
+                                                  child: Builder(
+                                                    builder: (BuildContext context) {
+                                                      if (sources.isEmpty) {
+                                                        return Center(
+                                                          child: FusionAppText(
+                                                            text: "No sources selected for this function",
+                                                            style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                                                              color: context.colorScheme.primaryWhite,
+                                                            ),
+                                                          ),
+                                                        );
+                                                      }
+
+                                                      return CommonReorderableListView<Source>(
+                                                        items: sources,
+                                                        emptyMessage: "No sources selected for this function",
+                                                        keyExtractor: (Source item) => item.id,
+                                                        onReorder: (int oldIndex, int newIndex) {},
+                                                        itemBuilder: (BuildContext context, Source item, int index) {
+                                                          final Source source = sources[index];
+
+                                                          final bool isSourceSelected = vm.isSourceSelect(source.id);
+
+                                                          return MouseRegion(
+                                                            cursor: SystemMouseCursors.click,
+                                                            child: GestureDetector(
+                                                              onTap: () {
+                                                                vm.toggleSourceSelect(
+                                                                  source.id,
+                                                                );
+                                                              },
+                                                              behavior: HitTestBehavior.opaque,
+                                                              child: Padding(
+                                                                padding: const EdgeInsets.symmetric(horizontal: 12),
+                                                                child: Container(
+                                                                  key: ValueKey<String>(source.id),
+                                                                  padding: const EdgeInsets.all(12),
+
+                                                                  decoration: BoxDecoration(
+                                                                    border: Border(
+                                                                      bottom: BorderSide(
+                                                                        color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.3),
+                                                                      ),
+                                                                    ),
+                                                                  ),
+                                                                  child: Row(
+                                                                    children: <Widget>[
+                                                                      Icon(
+                                                                        Icons.drag_indicator,
+                                                                        size: FusionSizes.iconSize16,
+                                                                        color: context.colorScheme.iconDefault,
+                                                                      ),
+                                                                      Expanded(
+                                                                        flex: 2,
+                                                                        child: Center(
+                                                                          child: FusionAppText(
+                                                                            text: source.name,
+                                                                            maxLine: 1,
+                                                                            style: Theme.of(context).textTheme.labelSmall,
+                                                                          ),
+                                                                        ),
+                                                                      ),
+                                                                      MouseRegion(
+                                                                        cursor: SystemMouseCursors.click,
+                                                                        child: FusionCheckbox(
+                                                                          value: isSourceSelected,
+                                                                          onChanged: () {
+                                                                            vm.toggleSourceSelect(
+                                                                              source.id,
+                                                                            );
+                                                                          },
+                                                                        ),
+                                                                      ),
+                                                                    ],
+                                                                  ),
+                                                                ),
+                                                              ),
+                                                            ),
+                                                          );
+                                                        },
+                                                      );
+                                                    },
+                                                  ),
+                                                ),
+                                                MouseRegion(
+                                                  cursor: SystemMouseCursors.click,
+                                                  child: GestureDetector(
+                                                    onTap: () {},
+                                                    behavior: HitTestBehavior.opaque,
+                                                    child: Padding(
+                                                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                                                      child: Container(
+                                                        padding: const EdgeInsets.all(12),
+                                                        child: Row(
+                                                          children: <Widget>[
+                                                            Icon(
+                                                              Icons.drag_indicator,
+                                                              size: FusionSizes.iconSize16,
+                                                              color: context.colorScheme.iconDefault,
+                                                            ),
+                                                            Expanded(
+                                                              flex: 2,
+                                                              child: Center(
+                                                                child: FusionAppText(
+                                                                  text: "Off",
+                                                                  maxLine: 1,
+                                                                  style: Theme.of(context).textTheme.labelSmall,
+                                                                ),
+                                                              ),
+                                                            ),
+                                                            MouseRegion(
+                                                              cursor: SystemMouseCursors.click,
+                                                              child: FusionCheckbox(
+                                                                value: SourceSelectAdditionalSettingsVmState.useOff,
+                                                                onChanged: () => vm.toggleUseOff(),
+                                                              ),
+                                                            ),
+                                                          ],
+                                                        ),
+                                                      ),
+                                                    ),
+                                                  ),
+                                                ),
+                                                Padding(
+                                                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                                                  child: Divider(color: context.colorScheme.strokeLight, height: 0),
+                                                ),
+                                                MouseRegion(
+                                                  cursor: SystemMouseCursors.click,
+                                                  child: Padding(
+                                                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                                                    child: Container(
+                                                      padding: const EdgeInsets.all(12),
+                                                      child: Row(
+                                                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                                                        children: <Widget>[
+                                                          Flexible(
+                                                            flex: 2,
+                                                            child: Center(
+                                                              child: FusionAppText(
+                                                                text: "Use crossfade",
+                                                                maxLine: 1,
+                                                                style: Theme.of(context).textTheme.labelSmall,
+                                                              ),
+                                                            ),
+                                                          ),
+                                                          MouseRegion(
+                                                            cursor: SystemMouseCursors.click,
+                                                            child: FusionCheckbox(
+                                                              value: SourceSelectAdditionalSettingsVmState.useCrossfade,
+                                                              onChanged: () => vm.toggleUseCrossfade(),
+                                                            ),
+                                                          ),
+                                                        ],
+                                                      ),
+                                                    ),
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                          VerticalDivider(width: 1, color: context.colorScheme.strokeLight),
+
+                                          _PrioritySettingsWidget(
                                             zoneId: widget.zoneID,
-                                            onAllowControllerChanged: () {
-                                              vm.toggleAssignToControllers();
-                                            },
-                                          ),
-                                        ),
-
-                                        VerticalDivider(width: 1, color: context.colorScheme.strokeLight),
-                                        _PrioritySettingsWidget(
-                                          zoneId: widget.zoneID,
-                                          vm: vm,
-                                        ),
-
-                                        // RIGHT COLUMN (Static)
-                                        Flexible(
-                                          flex: 2,
-                                          child: _ZoneSubZoneWidget(
-                                            zoneID: widget.zoneID,
                                             vm: vm,
                                           ),
-                                        ),
-                                      ],
+
+                                          // RIGHT COLUMN (Static)
+                                          Flexible(
+                                            flex: 3,
+                                            child: _ZoneSubZoneWidget(
+                                              zoneID: widget.zoneID,
+                                              vm: vm,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
                                     ),
                                   ),
                                 ),
-                              );
-                            },
-                          ),
-                        ),
+                              ),
+                            ),
+                          );
+                        },
                       ),
                     ),
                   ],
@@ -209,189 +367,9 @@ class _SourceMatrixAdditionalSettingsState extends State<SourceMatrixAdditionalS
   }
 }
 
-class _SourcesSetting extends StatefulWidget {
-  final String zoneID;
-  final ZoneFunctions zoneFunctions;
-
-  const _SourcesSetting({
-    required this.zoneID,
-    required this.zoneFunctions,
-  });
-
-  @override
-  State<_SourcesSetting> createState() => __SourcesSettingState();
-}
-
-class __SourcesSettingState extends State<_SourcesSetting> {
-  late final ScrollController _scrollController = ScrollController();
-
-  late List<Source> sources;
-
-  @override
-  void initState() {
-    super.initState();
-    late final ProjectViewModel projectViewModel = serviceLocator<ProjectViewModel>();
-    sources = projectViewModel.getSourcesAndSourceSetSourcesInZone(zoneId: widget.zoneID);
-  }
-
-  @override
-  void dispose() {
-    _scrollController.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final ProjectViewModel projectViewModel = context.watch<ProjectViewModel>();
-
-    return Column(
-      children: <Widget>[
-        Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: FusionAppText(
-            text: "SOURCES",
-            textAlign: TextAlign.center,
-            style: context.textTheme.labelMedium,
-          ),
-        ),
-        Expanded(
-          child: Container(
-            padding: const EdgeInsets.all(16.0).copyWith(top: 0),
-            decoration: BoxDecoration(
-              border: Border(
-                top: BorderSide(
-                  color: context.colorScheme.strokeLight,
-                ),
-              ),
-            ),
-            child: Builder(
-              builder: (BuildContext context) {
-                if (sources.isEmpty) {
-                  return Center(
-                    child: FusionAppText(
-                      text: "No sources selected for this function",
-                      textAlign: TextAlign.center,
-                      style: context.textTheme.labelMedium?.copyWith(
-                        color: context.colorScheme.textPlaceholder,
-                      ),
-                    ),
-                  );
-                }
-
-                return Opacity(
-                  opacity: 0.4,
-                  child: ListView.separated(
-                    controller: _scrollController,
-                    padding: const EdgeInsets.all(0.0),
-                    itemBuilder: (BuildContext context, int index) {
-                      final Source source = sources[index];
-
-                      return Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 12),
-                        child: Container(
-                          key: ValueKey<String>(source.id),
-                          padding: const EdgeInsets.all(12),
-
-                          decoration: BoxDecoration(
-                            border: Border(
-                              bottom: BorderSide(
-                                color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.3),
-                              ),
-                            ),
-                          ),
-                          child: Row(
-                            spacing: 10,
-                            children: <Widget>[
-                              Container(
-                                width: 16,
-                                height: 16,
-                                decoration: BoxDecoration(
-                                  color: context.colorScheme.primaryColor,
-                                  borderRadius: BorderRadius.circular(4),
-                                ),
-                              ),
-                              Expanded(
-                                child: Center(
-                                  child: FusionAppText(
-                                    text: source.name,
-                                    maxLine: 1,
-                                    style: Theme.of(context).textTheme.labelSmall,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      );
-                    },
-                    separatorBuilder: (BuildContext context, int index) => const SizedBox(height: 10),
-                    itemCount: sources.length,
-                    physics: const ClampingScrollPhysics(),
-                  ),
-                );
-              },
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _MixSceneSetting extends StatelessWidget {
-  final String zoneId;
-  final bool allowController;
-  final VoidCallback onAllowControllerChanged;
-
-  const _MixSceneSetting({
-    required this.zoneId,
-    required this.allowController,
-    required this.onAllowControllerChanged,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: <Widget>[
-        Container(
-          padding: const EdgeInsets.all(16),
-          alignment: Alignment.center,
-          child: FusionAppText(
-            text: "MIX SCENES",
-            style: Theme.of(context).textTheme.labelSmall,
-          ),
-        ),
-        Divider(color: context.colorScheme.strokeLight, height: 0),
-        const SizedBox(height: 10),
-        Padding(
-          padding: const EdgeInsets.all(16),
-          child: Row(
-            spacing: 10,
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            children: <Widget>[
-              Flexible(
-                child: FusionAppText(
-                  text: "Assign to controllers",
-                  style: context.textTheme.labelMedium?.copyWith(
-                    color: context.colorScheme.textSecondary,
-                  ),
-                ),
-              ),
-              FusionCheckbox(
-                value: allowController,
-                onChanged: onAllowControllerChanged,
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-}
-
 class _PrioritySettingsWidget extends StatefulWidget {
   final String zoneId;
-  final SourceMatrixAdditionalSettingsViewmodel vm;
+  final SourceSelectAdditionalSettingsViewmodel vm;
   const _PrioritySettingsWidget({required this.zoneId, required this.vm});
 
   @override
@@ -447,7 +425,7 @@ class _AdditionalPrioritySettingsWidgetState extends State<_PrioritySettingsWidg
     return child;
   }
 
-  Widget _buildPriorityWidgets(SourceMatrixAdditionalSettingsViewmodel vm) {
+  Widget _buildPriorityWidgets(SourceSelectAdditionalSettingsViewmodel vm) {
     final ZoneFunctions? existingFunction = projectViewModel.getZoneFunctionForZone(zoneId: widget.zoneId);
     if (!(existingFunction?.hasPriority ?? false)) return const SizedBox.shrink();
 
@@ -881,7 +859,7 @@ class _AdditionalPrioritySettingsWidgetState extends State<_PrioritySettingsWidg
 
 class _ZoneSubZoneWidget extends StatefulWidget {
   final String zoneID;
-  final SourceMatrixAdditionalSettingsViewmodel vm;
+  final SourceSelectAdditionalSettingsViewmodel vm;
 
   const _ZoneSubZoneWidget({required this.zoneID, required this.vm});
 
@@ -915,10 +893,10 @@ class _ZoneSubZoneSettingBuilderState extends State<_ZoneSubZoneWidget> {
   Widget build(BuildContext context) {
     context.watch<ProjectViewModel>();
 
-    return BlocProvider<SourceMatrixAdditionalSettingsViewmodel>.value(
+    return BlocProvider<SourceSelectAdditionalSettingsViewmodel>.value(
       value: widget.vm,
-      child: BlocBuilder<SourceMatrixAdditionalSettingsViewmodel, SourceMatrixSettingsViewmodelState>(
-        builder: (BuildContext context, SourceMatrixSettingsViewmodelState sourceMatrixAdditionalSettingsState) {
+      child: BlocBuilder<SourceSelectAdditionalSettingsViewmodel, SourceSelectAdditionalSettingsVmState>(
+        builder: (BuildContext context, SourceSelectAdditionalSettingsVmState sourceSelectAdditionalSettingsState) {
           return Column(
             children: <Widget>[
               if (isSubZonesAvailable) ...<Widget>[

@@ -1,6 +1,6 @@
-part of 'source_select_additional_settings_viewmodel.dart';
+part of 'source_select_settings_vm.dart';
 
-class SourceSelectAdditionalSettingsState extends Equatable {
+class SourceSelectAdditionalSettingsVmState extends Equatable {
   final List<String> selectedSourcesIds;
   final bool useOff;
   final bool useCrossfade;
@@ -13,7 +13,7 @@ class SourceSelectAdditionalSettingsState extends Equatable {
   // SOURCE MIX
   final bool assignToControllers;
 
-  const SourceSelectAdditionalSettingsState({
+  const SourceSelectAdditionalSettingsVmState({
     this.selectedSourcesIds = const <String>[],
     this.useOff = false,
     this.useCrossfade = false,
@@ -23,7 +23,7 @@ class SourceSelectAdditionalSettingsState extends Equatable {
     this.assignToControllers = false,
   });
 
-  SourceSelectAdditionalSettingsState copyWith({
+  SourceSelectAdditionalSettingsVmState copyWith({
     List<String>? selectedSourcesIds,
     bool? useOff,
     bool? useCrossfade,
@@ -32,7 +32,7 @@ class SourceSelectAdditionalSettingsState extends Equatable {
     List<VolumneRangeModel>? subZonesVolumeRange,
     bool? assignToControllers,
   }) {
-    return SourceSelectAdditionalSettingsState(
+    return SourceSelectAdditionalSettingsVmState(
       selectedSourcesIds: selectedSourcesIds ?? this.selectedSourcesIds,
       useOff: useOff ?? this.useOff,
       useCrossfade: useCrossfade ?? this.useCrossfade,
