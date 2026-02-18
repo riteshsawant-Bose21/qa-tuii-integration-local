@@ -91,6 +91,10 @@ const (
 	TasksIdDisableEndpoint = TasksIdEndpoint + "/disable"
 	TasksIdEnableEndpoint  = TasksIdEndpoint + "/enable"
 
+	SystemEndpoint            = "/system"
+	SystemRebootEndpoint      = SystemEndpoint + "/reboot"
+	SystemRebootLocalEndpoint = SystemRebootEndpoint + "/local"
+
 	ValueEndpoint = "/value"
 
 	VersionEndpoint = "/version"
