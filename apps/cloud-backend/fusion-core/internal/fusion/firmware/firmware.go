@@ -112,6 +112,8 @@ func (s *Service) MakeReleaseAvailable(ctx context.Context, releaseID string, lo
 	}
 
 	// Insert into deployments
+	// Currently I am Deploying the release to the "dev" channel directly in the release step itself
+	// TODO : Add a new API to deploy the release to the desired channel
 	_, err = s.dbService.InsertDeployment(ctx, releaseID, tx, "dev", logger)
 	if err != nil {
 		tx.Rollback()
