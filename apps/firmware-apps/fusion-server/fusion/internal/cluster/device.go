@@ -376,6 +376,10 @@ func (c *Cluster) reloadVIP() error {
 }
 
 func (c *Cluster) rebootSystem() error {
+	if err := c.restartSystem(); err != nil {
+		return err
+	}
+
 	return nil
 }
 

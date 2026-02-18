@@ -301,6 +301,11 @@ func (c *Cluster) restartKeepalived() error {
 	return exec.Command("systemctl", "reload", "keepalived").Run()
 }
 
+// reboot the system...
+func (c *Cluster) restartSystem() error {
+	return exec.Command("reboot").Run()
+}
+
 // monitorState continuously monitors the cluster membership state
 func (c *Cluster) startStateMonitor() {
 	go func() {
