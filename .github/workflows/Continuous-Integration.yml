@@ -399,6 +399,23 @@ jobs:
           fi
           echo "git-hash=$HASH" >> $GITHUB_OUTPUT
 
+          ls -l ./
+          YAML_FILE="./manifests/platforms/Fusion-Mini-DSP.yaml"
+
+          # Install yq if not available
+          if ! command -v yq &> /dev/null; then
+            sudo wget -qO /usr/local/bin/yq https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64
+            sudo chmod +x /usr/local/bin/yq
+          fi
+
+          # Read firmwareBundleVersion from YAML
+          FIRMWARE_VERSION=$(yq e '.firmwareBundleVersion' "$YAML_FILE")
+          if [ -z "$FIRMWARE_VERSION" ] || [ "$FIRMWARE_VERSION" = "null" ]; then
+            echo "firmwareBundleVersion not found in YAML. Failing."
+            exit 1
+          fi
+          echo "firmware_bundle_version=$FIRMWARE_VERSION" >> $GITHUB_OUTPUT
+
   yocto-image-build:
     needs:
       - integration-tests
@@ -431,22 +448,6 @@ jobs:
           FILE="conf/fusion-nano_properties.inc"
           VERSION_INFO_FILE="recipes-bsp/fusion-init/fusion-init/fusion-nano/version_info.txt"
           MONOREPO_COMMIT_HASH=${{ needs.integration-tests.outputs.MONOREPO_COMMIT_HASH }}
-          ls -l ../fusion-monorepo/
-          YAML_FILE="../fusion-monorepo/fusion-monorepo/manifests/platforms/Fusion-Mini-DSP.yaml"
-
-          # Install yq if not available
-          if ! command -v yq &> /dev/null; then
-            sudo wget -qO /usr/local/bin/yq https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64
-            sudo chmod +x /usr/local/bin/yq
-          fi
-
-          # Read firmwareBundleVersion from YAML
-          FIRMWARE_VERSION=$(yq e '.firmwareBundleVersion' "$YAML_FILE")
-
-          if [ -z "$FIRMWARE_VERSION" ] || [ "$FIRMWARE_VERSION" = "null" ]; then
-            echo "firmwareBundleVersion not found in YAML. Failing."
-            exit 1
-          fi
 
           if [ ! -f "$FILE" ]; then
             echo "File $FILE does not exist. Failing the step."
@@ -462,9 +463,9 @@ jobs:
               echo "FUSION_MONOREPO_COMMIT_HASH=\"${MONOREPO_COMMIT_HASH}\"" >> "$FILE"
             fi
             if grep -q "^FIRMWARE_BUNDLE_VERSION=" "$FILE"; then
-              sed -i "s|^FIRMWARE_BUNDLE_VERSION=.*|FIRMWARE_BUNDLE_VERSION=\"${FIRMWARE_VERSION}\"|" "$FILE"
+              sed -i "s|^FIRMWARE_BUNDLE_VERSION=.*|FIRMWARE_BUNDLE_VERSION=\"${{ needs.integration-tests.outputs.firmware_bundle_version }}\"|" "$FILE"
             else
-              echo "FIRMWARE_BUNDLE_VERSION=\"${FIRMWARE_VERSION}\"" >> "$FILE"
+              echo "FIRMWARE_BUNDLE_VERSION=\"${{ needs.integration-tests.outputs.firmware_bundle_version }}\"" >> "$FILE"
             fi
           fi
 
