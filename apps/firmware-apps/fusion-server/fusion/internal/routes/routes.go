@@ -37,6 +37,9 @@ const (
 	ClusterNTPSkewEndpoint                     = ClusterEndpoint + "/ntp-skew"
 	ClusterStatusEndpoint                      = ClusterEndpoint + "/status"
 
+	ClusterRebootEndpoint      = ClusterEndpoint + "/reboot"
+	ClusterRebootLocalEndpoint = ClusterEndpoint + "/local"
+
 	ControllersEndpoint       = "/controllers"
 	ControllersIDEndpoint     = ControllersEndpoint + "/{id}"
 	ControllersIDWinkEndpoint = ControllersEndpoint + "/wink" + "/{id}"
@@ -90,10 +93,6 @@ const (
 	TasksIdEndpoint        = TasksEndpoint + "/{id}"
 	TasksIdDisableEndpoint = TasksIdEndpoint + "/disable"
 	TasksIdEnableEndpoint  = TasksIdEndpoint + "/enable"
-
-	SystemEndpoint            = "/system"
-	SystemRebootEndpoint      = SystemEndpoint + "/reboot"
-	SystemRebootLocalEndpoint = SystemRebootEndpoint + "/local"
 
 	ValueEndpoint = "/value"
 

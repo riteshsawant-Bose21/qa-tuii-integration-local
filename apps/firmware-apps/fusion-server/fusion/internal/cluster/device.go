@@ -4,9 +4,9 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"fusion-services-core/logging"
 	"fusion-services-core/vip"
 	"fusion/internal/api"
-	"fusion-services-core/logging"
 	"fusion/internal/persistence"
 	"fusion/internal/routes"
 	"fusion/internal/utils"
@@ -206,7 +206,7 @@ func (c *Cluster) GetVIP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if isVip {
-		
+
 		local, vipAddr, ok := vip.LocalForVIP(vipValue)
 		if !ok {
 			w.WriteHeader(http.StatusNotFound)
@@ -316,6 +316,10 @@ func (c *Cluster) ReloadVIPLocal(w http.ResponseWriter, r *http.Request) {
 
 	w.WriteHeader(http.StatusNoContent)
 }
+
+func (c *Cluster) RebootSystem(w http.ResponseWriter, r *http.Request) {}
+
+func (c *Cluster) RebootSystemLocal(w http.ResponseWriter, r *http.Request) {}
 
 // updateVIP updates keepalived configuration with the new VIP but DOES NOT restart keepalived.
 func (c *Cluster) updateVIP(vipValue string) error {
