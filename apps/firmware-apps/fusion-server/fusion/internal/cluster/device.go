@@ -325,7 +325,7 @@ func (c *Cluster) RebootSystem(w http.ResponseWriter, r *http.Request) {
 
 	go func() {
 		// Reboot system outside of request after updating all the nodes
-		if err := postRebootToAdmin(c, routes.DeviceReloadVIPEndpoint, c.reloadVIP); err != nil {
+		if err := postGenericToAdminLast(c, routes.ClusterRebootEndpoint, c.rebootSystem); err != nil {
 			// Log the error. Don't respond to client because it's async
 			logging.GetLogger().Error("Failed to reload VIP: %v", err)
 		}

@@ -500,11 +500,30 @@ func postGenericToAdmin(
 	return nil
 }
 
-func postRebootToAdmin(
+func postGenericToAdminLast(
 	c *Cluster,
 	endpoint string,
 	localFn func() error,
 ) error {
+	for _, addr := range c.getNodeAdminAddresses() {
+		// TODO: Make sure this local function happens last after all others have completed
+		if c.hostIsLocal(addr) {
+			// If this is the local address, invoke localFn() directly:
+			if err := localFn(); err != nil {
+				return fmt.Errorf("local function failed: %w", err)
+			}
+			continue
+		}
+
+		// POST to the remote node’s admin endpoint
+		urlStr := getLocalURL(addr, endpoint)
+		resp, err := http.Post(urlStr, "", nil)
+		if err != nil {
+			return err
+		}
+		resp.Body.Close()
+	}
+
 	return nil
 }
 
