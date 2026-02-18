@@ -506,12 +506,7 @@ func postGenericToAdminLast(
 	localFn func() error,
 ) error {
 	for _, addr := range c.getNodeAdminAddresses() {
-		// TODO: Make sure this local function happens last after all others have completed
 		if c.hostIsLocal(addr) {
-			// If this is the local address, invoke localFn() directly:
-			if err := localFn(); err != nil {
-				return fmt.Errorf("local function failed: %w", err)
-			}
 			continue
 		}
 
@@ -522,6 +517,11 @@ func postGenericToAdminLast(
 			return err
 		}
 		resp.Body.Close()
+	}
+
+	// Invoke local function only after all remote nodes were posted.
+	if err := localFn(); err != nil {
+		return fmt.Errorf("local function failed: %w", err)
 	}
 
 	return nil
