@@ -55,6 +55,24 @@ class SemanticHelper {
     );
   }
 
+  // Radio controls
+  static Widget radio({
+    required String testId,
+    required String value,
+    required Widget child,
+    String? label,
+    bool excludeChildSemantics = true,
+  }) {
+    return Semantics(
+      container: true,
+      identifier: testId,
+      value: value,
+      label: label,
+      excludeSemantics: excludeChildSemantics,
+      child: child,
+    );
+  }
+
   // List items with proper ordering
   static Widget listItem({
     required String testId,

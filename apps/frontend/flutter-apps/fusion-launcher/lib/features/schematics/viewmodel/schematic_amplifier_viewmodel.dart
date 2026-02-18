@@ -3,14 +3,14 @@ import 'package:fusion_launcher/features/configuration/presentation/viewmodel/pr
 import 'package:fusion_launcher/features/schematics/viewmodel/device_listing_cubit.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
-import '../usecase/amplifier_search_usecase.dart';
+import '../usecase/search/amplifier_search_usecase.dart';
 
 class SchematicAmplifiersViewModel extends DeviceListingViewModel<Amplifier> {
   SchematicAmplifiersViewModel();
 
   @override
   List<Amplifier> fetchDevices(String query) {
-    return AmplifierSearchUseCase().searchAmplifiers(
+    return AmplifierSearchUseCase().call(
       query,
       serviceLocator<ProjectViewModel>().amplifiers,
     );

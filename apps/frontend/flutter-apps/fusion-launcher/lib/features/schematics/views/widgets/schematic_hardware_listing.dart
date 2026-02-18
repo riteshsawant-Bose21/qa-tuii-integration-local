@@ -5,7 +5,7 @@ import 'package:fusion_launcher/features/configuration/presentation/viewmodel/pr
 import 'package:fusion_launcher/features/schematics/viewmodel/search_control_viewmodel.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
-import '../../presentation/widgets/hardware_item_card.dart';
+import 'elements/hardware_item_card.dart';
 import '../../state/device_listing_state.dart';
 import '../../viewmodel/device_listing_cubit.dart';
 import 'schematic_expansion_section.dart';

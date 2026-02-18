@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
-import '../../../../core/service_locator.dart';
-import '../../../configuration/presentation/viewmodel/project_view_model.dart';
-import '../../../projects/widget/building/side_panel_widgets/schematic_properties.dart';
+import '../../../../../core/service_locator.dart';
+import '../../../../configuration/presentation/viewmodel/project_view_model.dart';
+import '../../../../projects/widget/building/side_panel_widgets/schematic_properties.dart';
 
 class ListeningAreaDropdownWidget extends StatefulWidget {
   final List<ListeningArea> listeningAreas;
@@ -76,8 +76,6 @@ class _ListeningAreaDropdownWidgetState extends State<ListeningAreaDropdownWidge
           message: "Location '${newListeningArea.name}' created successfully",
         );
 
-        /// Automatically select the newly created area
-        print('New Listening Area ID: ${newListeningArea.id} and Floor ID: $floorId');
         widget.onSelectionChanged(<String>[newListeningArea.id], floorId);
         Navigator.of(context).pop();
       } catch (e) {

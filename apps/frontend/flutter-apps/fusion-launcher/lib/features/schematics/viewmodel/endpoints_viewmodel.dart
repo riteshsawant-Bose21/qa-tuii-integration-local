@@ -3,14 +3,14 @@ import 'package:fusion_launcher/features/configuration/presentation/viewmodel/pr
 import 'package:fusion_launcher/features/schematics/viewmodel/device_listing_cubit.dart';
 import 'package:fusion_lib/models/project_entities/endpoints.dart';
 
-import '../usecase/endpoint_search_usecase.dart';
+import '../usecase/search/endpoint_search_usecase.dart';
 
 class SchematicEndpointsViewModel extends DeviceListingViewModel<FusionEndpoints> {
   SchematicEndpointsViewModel();
 
   @override
   List<FusionEndpoints> fetchDevices(String query) {
-    return EndpointSearchUseCase().searchEndpoints(
+    return EndpointSearchUseCase().call(
       query,
       serviceLocator<ProjectViewModel>().fusionEndpoints,
     );

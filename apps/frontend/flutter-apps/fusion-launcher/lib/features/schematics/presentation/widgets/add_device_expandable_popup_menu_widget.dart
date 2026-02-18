@@ -10,7 +10,7 @@ import '../../../../core/models/products_data.dart';
 import '../../../configuration/presentation/viewmodel/project_view_model.dart';
 import '../../../product_query/presentation/pages/product_query.dart';
 import 'create_new_location_widget.dart';
-import 'listening_area_dropdown_widget.dart';
+import '../../views/widgets/forms/listening_area_dropdown_widget.dart';
 
 class AddDeviceExpandablePopupMenuWidget extends StatefulWidget {
   final String sectionTitle;

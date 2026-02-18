@@ -21,7 +21,7 @@ import '../../views/widgets/schematic_listing_section.dart';
 import '../widgets/common_devices_section_widget.dart';
 import '../widgets/common_reorderable_list_view.dart';
 import '../widgets/expandable_zone_widget.dart';
-import '../widgets/hardware_item_card.dart';
+import '../../views/widgets/elements/hardware_item_card.dart';
 
 class SchematicsListingview extends StatefulWidget {
   const SchematicsListingview({super.key});

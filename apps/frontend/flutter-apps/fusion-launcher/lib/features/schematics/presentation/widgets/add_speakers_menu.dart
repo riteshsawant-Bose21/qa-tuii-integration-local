@@ -16,7 +16,7 @@ import 'package:fusion_lib/models/project_entities/listening_area_model.dart';
 import '../../../../core/service_locator.dart';
 import '../../../configuration/presentation/viewmodel/project_view_model.dart';
 import '../../../product_query/presentation/pages/product_query.dart';
-import 'listening_area_dropdown_widget.dart';
+import '../../views/widgets/forms/listening_area_dropdown_widget.dart';
 
 /// Common reusable popup menu widget for adding a circuit (speaker group)
 class AddSpeakersMenu extends StatefulWidget {
