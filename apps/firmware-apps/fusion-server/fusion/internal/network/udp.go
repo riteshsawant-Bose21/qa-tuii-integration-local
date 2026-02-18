@@ -96,7 +96,10 @@ func NewUDPServer(addr string, handler *handler.Handler) (*UDPServer, error) {
 	}
 
 	srv.Start()
-	go srv.maintenanceLoop()
+	// go srv.maintenanceLoop()
+	logging.GetLogger().Warn(
+		"UDP client maintenance loop disabled. Enabled it in PR-295",
+	)
 	return srv, nil
 }
 
@@ -332,10 +335,7 @@ func (s *UDPServer) maintenanceLoop() {
 		case <-retryTicker.C:
 			s.retryPending()
 		case <-pruneTicker.C:
-			logging.GetLogger().Warn(
-				"UDP client prunning disabled. Enabled it in PR-295",
-			)
-			// s.pruneClients()
+			s.pruneClients()
 		}
 	}
 }
