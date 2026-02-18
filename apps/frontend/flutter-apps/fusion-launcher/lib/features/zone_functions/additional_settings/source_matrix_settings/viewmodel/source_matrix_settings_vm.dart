@@ -7,17 +7,17 @@ import 'package:fusion_lib/fusion_lib.dart';
 
 import '../../models/models.dart';
 
-part 'source_matrix_settings_viewmodel_state.dart';
+part 'source_matrix_settings_vm_state.dart';
 
-class SourceMatrixAdditionalSettingsViewmodel extends Cubit<SourceMatrixSettingsViewmodelState> {
-  SourceMatrixAdditionalSettingsViewmodel() : super(const SourceMatrixSettingsViewmodelState());
+class SourceMatrixAdditionalSettingsViewmodel extends Cubit<SourceMatrixSettingsVmState> {
+  SourceMatrixAdditionalSettingsViewmodel() : super(const SourceMatrixSettingsVmState());
 
   ProjectViewModel get projectViewModel => serviceLocator<ProjectViewModel>();
 
   bool hasSubZones = false;
 
   void init({required String zoneID}) {
-    SourceMatrixSettingsViewmodelState updatedState = state.copyWith(
+    SourceMatrixSettingsVmState updatedState = state.copyWith(
       priorityAdditionalSettingsModel: const <PriorityAdditionalSettingsModel>[
         // INITIALIZE with 2 models as we have 2 priority behaviors, if more are added in the future, this needs to be updated
         PriorityAdditionalSettingsModel(),
@@ -74,7 +74,7 @@ class SourceMatrixAdditionalSettingsViewmodel extends Cubit<SourceMatrixSettings
   bool get isAssignToControllersEnabled => state.assignToControllers;
   void toggleAssignToControllers() {
     final bool newValue = !isAssignToControllersEnabled;
-    final SourceMatrixSettingsViewmodelState updated = state.copyWith(assignToControllers: newValue);
+    final SourceMatrixSettingsVmState updated = state.copyWith(assignToControllers: newValue);
     emit(updated);
   }
 

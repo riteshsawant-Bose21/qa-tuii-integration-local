@@ -1,6 +1,6 @@
-part of 'source_matrix_additional_settings_viewmodel.dart';
+part of 'source_matrix_settings_vm.dart';
 
-class SourceMatrixSettingsViewmodelState extends Equatable {
+class SourceMatrixSettingsVmState extends Equatable {
   final List<String> selectedSourcesIds;
   final VolumneRangeModel? zoneVolumeRange;
   final List<VolumneRangeModel>? subZonesVolumeRange;
@@ -8,7 +8,7 @@ class SourceMatrixSettingsViewmodelState extends Equatable {
 
   final List<PriorityAdditionalSettingsModel> priorityAdditionalSettingsModel;
 
-  const SourceMatrixSettingsViewmodelState({
+  const SourceMatrixSettingsVmState({
     this.selectedSourcesIds = const <String>[],
     this.zoneVolumeRange,
     this.subZonesVolumeRange,
@@ -16,14 +16,14 @@ class SourceMatrixSettingsViewmodelState extends Equatable {
     this.priorityAdditionalSettingsModel = const <PriorityAdditionalSettingsModel>[],
   });
 
-  SourceMatrixSettingsViewmodelState copyWith({
+  SourceMatrixSettingsVmState copyWith({
     List<String>? selectedSourcesIds,
     VolumneRangeModel? zoneVolumeRange,
     List<VolumneRangeModel>? subZonesVolumeRange,
     bool? assignToControllers,
     List<PriorityAdditionalSettingsModel>? priorityAdditionalSettingsModel,
   }) {
-    return SourceMatrixSettingsViewmodelState(
+    return SourceMatrixSettingsVmState(
       selectedSourcesIds: selectedSourcesIds ?? this.selectedSourcesIds,
       zoneVolumeRange: zoneVolumeRange ?? this.zoneVolumeRange,
       subZonesVolumeRange: subZonesVolumeRange ?? this.subZonesVolumeRange,

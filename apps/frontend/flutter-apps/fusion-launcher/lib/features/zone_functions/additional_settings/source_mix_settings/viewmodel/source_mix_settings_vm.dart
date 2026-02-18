@@ -6,10 +6,10 @@ import 'package:fusion_launcher/features/configuration/presentation/viewmodel/pr
 import 'package:fusion_launcher/features/zone_functions/additional_settings/models/models.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
-part 'source_mix_additional_settings_viewmodel_state.dart';
+part 'source_mix_settings_vm_state.dart';
 
-class SourceMixAdditionalSettingsViewmodel extends Cubit<SourceMixAdditionalSettingsViewmodelState> {
-  SourceMixAdditionalSettingsViewmodel() : super(const SourceMixAdditionalSettingsViewmodelState());
+class SourceMixAdditionalSettingsViewmodel extends Cubit<SourceMixAdditionalSettingsVmState> {
+  SourceMixAdditionalSettingsViewmodel() : super(const SourceMixAdditionalSettingsVmState());
 
   ProjectViewModel get projectViewModel => serviceLocator<ProjectViewModel>();
 
@@ -18,7 +18,7 @@ class SourceMixAdditionalSettingsViewmodel extends Cubit<SourceMixAdditionalSett
   void init({required String zoneID}) {
     final List<Source> sources = projectViewModel.getSourcesInZone(zoneId: zoneID);
 
-    SourceMixAdditionalSettingsViewmodelState updatedState = state.copyWith(
+    SourceMixAdditionalSettingsVmState updatedState = state.copyWith(
       // ===============================================================================================
       // SOURCES volume range initialization
       // ===============================================================================================
@@ -50,7 +50,7 @@ class SourceMixAdditionalSettingsViewmodel extends Cubit<SourceMixAdditionalSett
   bool get isAssignToControllersEnabled => state.assignToControllers;
   void toggleAssignToControllers() {
     final bool newValue = !isAssignToControllersEnabled;
-    final SourceMixAdditionalSettingsViewmodelState updated = state.copyWith(assignToControllers: newValue);
+    final SourceMixAdditionalSettingsVmState updated = state.copyWith(assignToControllers: newValue);
     emit(updated);
   }
 

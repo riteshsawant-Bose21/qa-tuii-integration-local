@@ -7,17 +7,17 @@ import 'package:fusion_lib/fusion_lib.dart';
 
 import '../../models/models.dart';
 
-part 'source_select_additional_settings_viewmodel_state.dart';
+part 'source_select_settings_vm_state.dart';
 
-class SourceSelectAdditionalSettingsViewmodel extends Cubit<SourceSelectAdditionalSettingsState> {
-  SourceSelectAdditionalSettingsViewmodel() : super(const SourceSelectAdditionalSettingsState());
+class SourceSelectAdditionalSettingsViewmodel extends Cubit<SourceSelectAdditionalSettingsVmState> {
+  SourceSelectAdditionalSettingsViewmodel() : super(const SourceSelectAdditionalSettingsVmState());
 
   ProjectViewModel get projectViewModel => serviceLocator<ProjectViewModel>();
 
   bool hasSubZones = false;
 
   void init({required String zoneID}) {
-    SourceSelectAdditionalSettingsState updatedState = state.copyWith(
+    SourceSelectAdditionalSettingsVmState updatedState = state.copyWith(
       priorityAdditionalSettingsModel: const <PriorityAdditionalSettingsModel>[
         // INITIALIZE with 2 models as we have 2 priority behaviors, if more are added in the future, this needs to be updated
         PriorityAdditionalSettingsModel(),
@@ -90,7 +90,7 @@ class SourceSelectAdditionalSettingsViewmodel extends Cubit<SourceSelectAddition
   bool get isAssignToControllersEnabled => state.assignToControllers;
   void toggleAssignToControllers() {
     final bool newValue = !isAssignToControllersEnabled;
-    final SourceSelectAdditionalSettingsState updated = state.copyWith(assignToControllers: newValue);
+    final SourceSelectAdditionalSettingsVmState updated = state.copyWith(assignToControllers: newValue);
     emit(updated);
   }
 
