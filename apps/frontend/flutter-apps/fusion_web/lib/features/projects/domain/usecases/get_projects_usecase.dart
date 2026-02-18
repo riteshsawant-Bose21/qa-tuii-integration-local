@@ -1,0 +1,14 @@
+import 'package:fusion_web/core/usecases/usecase.dart';
+import 'package:fusion_web/features/projects/domain/entities/project_entity.dart';
+import 'package:fusion_web/features/projects/domain/repositories/projects_repository.dart';
+
+class GetProjectsUseCase implements UseCase<List<ProjectEntity>, NoParams> {
+  final ProjectsRepository repository;
+
+  const GetProjectsUseCase(this.repository);
+
+  @override
+  Future<List<ProjectEntity>> call(NoParams params) {
+    return repository.getProjects();
+  }
+}

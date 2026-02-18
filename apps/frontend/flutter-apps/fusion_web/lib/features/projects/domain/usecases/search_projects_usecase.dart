@@ -1,0 +1,14 @@
+import 'package:fusion_web/core/usecases/usecase.dart';
+import 'package:fusion_web/features/projects/domain/entities/project_entity.dart';
+import 'package:fusion_web/features/projects/domain/repositories/projects_repository.dart';
+
+class SearchProjectsUseCase implements UseCase<List<ProjectEntity>, String> {
+  final ProjectsRepository repository;
+
+  const SearchProjectsUseCase(this.repository);
+
+  @override
+  Future<List<ProjectEntity>> call(String query) async {
+    return await repository.searchProjects(query);
+  }
+}

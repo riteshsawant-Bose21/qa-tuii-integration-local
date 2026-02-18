@@ -1,7 +1,7 @@
 import 'package:fusion_web/core/presentation/base_viewmodel.dart';
 import 'package:fusion_web/core/usecases/usecase.dart';
 import 'package:fusion_web/features/projects/domain/entities/project_entity.dart';
-import 'package:fusion_web/features/projects/domain/usecases/projects_usecases.dart';
+import 'package:fusion_web/features/projects/domain/usecases/useCases.dart';
 
 class ProjectsViewModel extends BaseViewModel {
   final GetProjectsUseCase getProjectsUseCase;
@@ -67,7 +67,9 @@ class ProjectsViewModel extends BaseViewModel {
             (p) =>
                 p.title.toLowerCase().contains(query.toLowerCase()) ||
                 p.description.toLowerCase().contains(query.toLowerCase()) ||
-                (p.clientName?.toLowerCase().contains(query.toLowerCase()) ?? false),          )
+                (p.clientName?.toLowerCase().contains(query.toLowerCase()) ??
+                    false),
+          )
           .toList();
       notifyListeners();
     }
@@ -76,11 +78,13 @@ class ProjectsViewModel extends BaseViewModel {
   Future<void> getProject(String id) async {
     try {
       setLoading();
-      final project = await getProjectByIdUseCase(id);
+
+      final project = await getProjectByIdUseCase(GetProjectByIdParams(id));
+
       _selectedProject = project;
       setLoaded(project);
     } catch (e) {
-      setError('Failed to load project: ${e.toString()}');
+      setError('Failed to load project');
     }
   }
 

@@ -1,4 +1,3 @@
-// Project Entity - Represents a work project
 class ProjectEntity {
   final String id;
   final String title;
@@ -28,7 +27,33 @@ class ProjectEntity {
     required this.lastUpdated,
   });
 
-  // Equality check - ensures Flutter knows if two project objects are the same
+  ProjectEntity copyWith({
+    String? title,
+    String? description,
+    String? clientName,
+    String? region,
+    String? status,
+    int? healthyDevices,
+    int? warningDevices,
+    int? criticalDevices,
+    int? incidents,
+    DateTime? lastUpdated,
+  }) {
+    return ProjectEntity(
+      id: id,
+      title: title ?? this.title,
+      description: description ?? this.description,
+      clientName: clientName ?? this.clientName,
+      region: region ?? this.region,
+      status: status ?? this.status,
+      healthyDevices: healthyDevices ?? this.healthyDevices,
+      warningDevices: warningDevices ?? this.warningDevices,
+      criticalDevices: criticalDevices ?? this.criticalDevices,
+      incidents: incidents ?? this.incidents,
+      lastUpdated: lastUpdated ?? DateTime.now(),
+    );
+  }
+
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||

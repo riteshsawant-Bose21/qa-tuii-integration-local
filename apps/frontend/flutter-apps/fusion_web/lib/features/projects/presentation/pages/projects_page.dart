@@ -1,17 +1,21 @@
+// WORKING VERSION - before adding action button
 import 'package:flutter/material.dart';
+import 'package:fusion_web/features/projects/domain/usecases/useCases.dart';
+import 'package:fusion_web/features/projects/presentation/handlers/project_actions_handler.dart';
+import 'package:fusion_web/features/projects/presentation/widgets/project_actions_menu.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:fusion_web/features/projects/presentation/viewmodels/projects_viewmodel.dart';
 import 'package:fusion_web/features/projects/data/datasources/project_datasource.dart';
 import 'package:fusion_web/features/projects/data/repositories/projects_repository_impl.dart';
-import 'package:fusion_web/features/projects/domain/usecases/projects_usecases.dart';
 import 'package:fusion_web/features/projects/domain/entities/project_entity.dart';
 import 'package:fusion_web/core/services/service_locator.dart';
 import 'package:fusion_web/features/projects/presentation/pages/project_detail_page.dart';
 import 'package:fusion_web/core/constants/app_constants.dart';
-import 'package:fusion_lib/fusion_widgets/shared_widgets/project/new_project.dart';
+import 'package:fusion_lib/fusion_widgets/shared_widgets/project/project_dialog.dart';
 import 'package:fusion_lib/fusion_widgets/shared_widgets/project/animated_blur_dialog_route.dart';
 import 'dart:ui';
-
+import 'package:fusion_lib/fusion_widgets/shared_widgets/project/confirmation_dialog.dart';
+import 'package:fusion_web/features/projects/presentation/dialogs/invite_user_dialog.dart';
 
 class ProjectsPage extends StatefulWidget {
   const ProjectsPage({super.key});
@@ -129,69 +133,184 @@ class _ProjectsPageState extends State<ProjectsPage> {
   }
 
   void _navigateToDetail(ProjectEntity project) {
-    Navigator.pushNamed(
+    Navigator.push(
       context,
-      AppConstants.projectDetailRoute,
-      arguments: project,
+      MaterialPageRoute(
+        builder: (_) =>
+            ProjectDetailPage(project: project, viewModel: _viewModel),
+      ),
     );
   }
 
-  void _openNewProjectDialog() {
-    showGeneralDialog(
-      context: context,
-      barrierDismissible: true,
-      barrierLabel: "New Project",
-      barrierColor: Colors.black.withOpacity(0.15),
-      transitionDuration: const Duration(milliseconds: 350),
-      pageBuilder: (context, animation, secondaryAnimation) {
-        return const SizedBox.shrink(); // required but unused
-      },
-      transitionBuilder: (context, animation, secondaryAnimation, child) {
-        final curved = CurvedAnimation(
-          parent: animation,
-          curve: Curves.easeOutCubic,
-        );
+  // Future<void> _openProjectDialog() async {
+  //   final result = await showGeneralDialog<NewProjectFormData>(
+  //     context: context,
+  //     barrierDismissible: true,
+  //     barrierLabel: "New Project",
+  //     barrierColor: Colors.black.withOpacity(0.15),
+  //     transitionDuration: const Duration(milliseconds: 350),
+  //     pageBuilder: (context, animation, secondaryAnimation) {
+  //       return const SizedBox.shrink();
+  //     },
+  //     transitionBuilder: (context, animation, secondaryAnimation, child) {
+  //       final curved = CurvedAnimation(
+  //         parent: animation,
+  //         curve: Curves.easeOutCubic,
+  //       );
 
-        return Stack(
-          children: [
-            // Blur background
-            GestureDetector(
-              onTap: () => Navigator.pop(context),
-              child: BackdropFilter(
-                filter: ImageFilter.blur(
-                  sigmaX: 5 * animation.value,
-                  sigmaY: 5 * animation.value,
-                ),
-                child: Container(
-                  color: Colors.black.withOpacity(0.08 * animation.value),
-                ),
-              ),
-            ),
+  //       return Stack(
+  //         children: [
+  //           GestureDetector(
+  //             onTap: () => Navigator.pop(context),
+  //             child: BackdropFilter(
+  //               filter: ImageFilter.blur(
+  //                 sigmaX: 5 * animation.value,
+  //                 sigmaY: 5 * animation.value,
+  //               ),
+  //               child: Container(
+  //                 color: Colors.black.withOpacity(0.08 * animation.value),
+  //               ),
+  //             ),
+  //           ),
 
-            // Dialog
-            Center(
-              child: FadeTransition(
-                opacity: curved,
-                child: ScaleTransition(
-                  scale: Tween<double>(begin: 0.95, end: 1).animate(curved),
-                  child: Container(
-                    width: 1000,
-                    height: 820,
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(24),
-                    ),
-                    clipBehavior: Clip.antiAlias,
-                    child: const NewProjectDialog(),
-                  ),
-                ),
-              ),
-            ),
-          ],
-        );
-      },
-    );
-  }
+  //           Center(
+  //             child: FadeTransition(
+  //               opacity: curved,
+  //               child: ScaleTransition(
+  //                 scale: Tween<double>(begin: 0.95, end: 1).animate(curved),
+  //                 child: Container(
+  //                   width: 1000,
+  //                   height: 820,
+  //                   decoration: BoxDecoration(
+  //                     color: Colors.white,
+  //                     borderRadius: BorderRadius.circular(24),
+  //                   ),
+  //                   clipBehavior: Clip.antiAlias,
+  //                   child: ProjectDialog(
+  //                     onSubmit: (formData) {
+  //                       Navigator.pop(context, formData);
+  //                     },
+  //                   ),
+  //                 ),
+  //               ),
+  //             ),
+  //           ),
+  //         ],
+  //       );
+  //     },
+  //   );
+
+  //   if (result != null) {
+  //     final newProject = ProjectEntity(
+  //       id: UniqueKey().toString(),
+  //       title: result.name,
+  //       description: result.notes,
+  //       clientName: result.organization,
+  //       region: result.state,
+  //       status: "Active",
+  //       lastUpdated: DateTime.now(),
+  //       healthyDevices: 0,
+  //       warningDevices: 0,
+  //       criticalDevices: 0,
+  //       incidents: 0,
+  //     );
+
+  //     _viewModel.createProject(newProject);
+  //   }
+  // }
+
+  // void _showInviteUserDialog(ProjectEntity project) {
+  //   showDialog(
+  //     context: context,
+  //     builder: (_) => InviteUserDialog(project: project),
+  //   );
+  // }
+
+  // void _showDeleteDialog(ProjectEntity project) {
+  //   showDialog(
+  //     context: context,
+  //     builder: (_) => ConfirmationDialog(
+  //       title: "Delete Project?",
+  //       description:
+  //           "This action cannot be undone. The project will be permanently removed.",
+  //       confirmText: "Delete",
+  //       isDestructive: true,
+  //       onConfirm: () {
+  //         _viewModel.deleteProject(project.id);
+  //       },
+  //     ),
+  //   );
+  // }
+
+  // void _showArchiveDialog(ProjectEntity project) {
+  //   showDialog(
+  //     context: context,
+  //     builder: (_) => ConfirmationDialog(
+  //       title: "Archive Project?",
+  //       description:
+  //           "The project will be removed from active projects but can be restored later.",
+  //       confirmText: "Archive",
+  //       onConfirm: () {
+  //         _viewModel.updateProject(project.copyWith(status: "Archived"));
+  //       },
+  //     ),
+  //   );
+  // }
+
+  // Future<void> _openEditProjectDialog(ProjectEntity project) async {
+  //   final result = await showGeneralDialog<NewProjectFormData>(
+  //     context: context,
+  //     barrierDismissible: true,
+  //     barrierLabel: "Edit Project",
+  //     barrierColor: Colors.black.withOpacity(0.15),
+  //     transitionDuration: const Duration(milliseconds: 350),
+  //     pageBuilder: (_, __, ___) => const SizedBox.shrink(),
+  //     transitionBuilder: (context, animation, secondaryAnimation, child) {
+  //       final curved = CurvedAnimation(
+  //         parent: animation,
+  //         curve: Curves.easeOutCubic,
+  //       );
+
+  //       return Center(
+  //         child: FadeTransition(
+  //           opacity: curved,
+  //           child: ScaleTransition(
+  //             scale: Tween<double>(begin: 0.95, end: 1).animate(curved),
+  //             child: ProjectDialog(
+  //               initialData: NewProjectFormData(
+  //                 name: project.title,
+  //                 version: '',
+  //                 tags: '',
+  //                 author: '',
+  //                 organization: project.clientName,
+  //                 state: project.region,
+  //                 country: '',
+  //                 timeZone: '',
+  //                 building: '',
+  //                 notes: project.description,
+  //               ),
+  //               onSubmit: (formData) {
+  //                 Navigator.pop(context, formData);
+  //               },
+  //             ),
+  //           ),
+  //         ),
+  //       );
+  //     },
+  //   );
+
+  //   if (result != null) {
+  //     final updatedProject = project.copyWith(
+  //       title: result.name,
+  //       description: result.notes,
+  //       clientName: result.organization,
+  //       region: result.state,
+  //       lastUpdated: DateTime.now(),
+  //     );
+
+  //     _viewModel.updateProject(updatedProject);
+  //   }
+  // }
 
   @override
   Widget build(BuildContext context) {
@@ -247,7 +366,11 @@ class _ProjectsPageState extends State<ProjectsPage> {
 
         // RIGHT SIDE (New Project Button)
         ElevatedButton.icon(
-          onPressed: _openNewProjectDialog,
+          onPressed: () => ProjectActionsHandler.create(
+            context: context,
+            viewModel: _viewModel,
+          ),
+
           icon: const Icon(Icons.add, size: 18),
           label: Text(
             'New Project',
@@ -401,7 +524,7 @@ class _ProjectsPageState extends State<ProjectsPage> {
   }
 
   // ======================================================
-  // LIST VIEW — matches Figma images 2 & 3
+  // LIST VIEW
   // ======================================================
 
   Widget _buildListView(List<ProjectEntity> projects) {
@@ -416,7 +539,6 @@ class _ProjectsPageState extends State<ProjectsPage> {
         return InkWell(
           borderRadius: BorderRadius.circular(12),
           onTap: () => _navigateToDetail(p),
-          // onTap: (){},
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
             decoration: BoxDecoration(
@@ -425,10 +547,11 @@ class _ProjectsPageState extends State<ProjectsPage> {
               border: Border.all(color: Colors.grey[200]!),
             ),
             child: Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                // Title + client name
+                /// 1️⃣ TITLE
                 Expanded(
-                  flex: 3,
+                  flex: 4,
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -439,72 +562,124 @@ class _ProjectsPageState extends State<ProjectsPage> {
                           fontWeight: FontWeight.w600,
                           color: Colors.grey[900],
                         ),
+                        maxLines: 2,
+                        softWrap: true,
                       ),
-                      const SizedBox(height: 3),
+                      const SizedBox(height: 4),
                       Text(
                         p.clientName,
                         style: GoogleFonts.montserrat(
                           fontSize: 13,
                           color: Colors.grey[500],
                         ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ],
                   ),
                 ),
 
-                // Region
+                /// 2️⃣ REGION
                 Expanded(
                   flex: 2,
-                  child: Text(
-                    p.region,
-                    style: GoogleFonts.montserrat(
-                      fontSize: 14,
-                      color: Colors.grey[700],
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      p.region,
+                      style: GoogleFonts.montserrat(
+                        fontSize: 14,
+                        color: Colors.grey[700],
+                      ),
+                      maxLines: 2,
+                      softWrap: true,
                     ),
                   ),
                 ),
 
-                // Status badge
-                _statusBadge(p.status),
-
-                const SizedBox(width: 20),
-
-                // Device health stats — only show if any devices exist
-                if (totalDevices > 0) ...[
-                  _healthStat(
-                    Icons.check_circle_outline_rounded,
-                    const Color(0xFF22C55E),
-                    p.healthyDevices,
+                /// 3️⃣ STATUS
+                Expanded(
+                  flex: 2,
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: _statusBadge(p.status),
                   ),
-                  const SizedBox(width: 10),
-                  _healthStat(
-                    Icons.warning_amber_rounded,
-                    const Color(0xFFF59E0B),
-                    p.warningDevices,
-                  ),
-                  const SizedBox(width: 10),
-                  _healthStat(
-                    Icons.cancel_outlined,
-                    const Color(0xFFEF4444),
-                    p.criticalDevices,
-                  ),
-                  const SizedBox(width: 20),
-                ],
+                ),
 
-                // Incidents badge — only show if > 0
-                if (p.incidents > 0) ...[
-                  _incidentsBadge(p.incidents),
-                  const SizedBox(width: 20),
-                ] else ...[
-                  const SizedBox(width: 110), // keep layout stable
-                ],
+                /// 4️⃣ HEALTH
+                Expanded(
+                  flex: 2,
+                  child: Row(
+                    children: [
+                      if (totalDevices > 0) ...[
+                        _healthStat(
+                          Icons.check_circle_outline_rounded,
+                          const Color(0xFF22C55E),
+                          p.healthyDevices,
+                        ),
+                        const SizedBox(width: 12),
+                        _healthStat(
+                          Icons.warning_amber_rounded,
+                          const Color(0xFFF59E0B),
+                          p.warningDevices,
+                        ),
+                        const SizedBox(width: 12),
+                        _healthStat(
+                          Icons.cancel_outlined,
+                          const Color(0xFFEF4444),
+                          p.criticalDevices,
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
 
-                // Date
-                Text(
-                  _formatDate(p.lastUpdated),
-                  style: GoogleFonts.montserrat(
-                    fontSize: 13,
-                    color: Colors.grey[500],
+                /// 5️⃣ INCIDENTS
+                Expanded(
+                  flex: 2,
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: p.incidents > 0
+                        ? _incidentsBadge(p.incidents)
+                        : const SizedBox(),
+                  ),
+                ),
+
+                /// 6️⃣ DATE + MENU
+                Expanded(
+                  flex: 2,
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      Text(
+                        _formatDate(p.lastUpdated),
+                        style: GoogleFonts.montserrat(
+                          fontSize: 13,
+                          color: Colors.grey[500],
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      ProjectActionsMenu(
+                        onEdit: () => ProjectActionsHandler.edit(
+                          context: context,
+                          project: p,
+                          viewModel: _viewModel,
+                        ),
+                        onInvite: () => ProjectActionsHandler.invite(
+                          context: context,
+                          project: p,
+                        ),
+                        onArchive: () => ProjectActionsHandler.archive(
+                          context: context,
+                          project: p,
+                          viewModel: _viewModel,
+                        ),
+                        onDelete: () => ProjectActionsHandler.delete(
+                          context: context,
+                          project: p,
+                          viewModel: _viewModel,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ],
@@ -516,7 +691,7 @@ class _ProjectsPageState extends State<ProjectsPage> {
   }
 
   // ======================================================
-  // GRID VIEW — matches Figma images 4, 5 & 6
+  // GRID VIEW
   // ======================================================
 
   Widget _buildGridView(List<ProjectEntity> projects) {
@@ -614,12 +789,38 @@ class _ProjectsPageState extends State<ProjectsPage> {
                 const Spacer(),
 
                 // Updated date
-                Text(
-                  'Updated ${_formatDate(p.lastUpdated)}',
-                  style: GoogleFonts.montserrat(
-                    fontSize: 12,
-                    color: Colors.grey[400],
-                  ),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'Updated ${_formatDate(p.lastUpdated)}',
+                      style: GoogleFonts.montserrat(
+                        fontSize: 12,
+                        color: Colors.grey[400],
+                      ),
+                    ),
+                    ProjectActionsMenu(
+                      onEdit: () => ProjectActionsHandler.edit(
+                        context: context,
+                        project: p,
+                        viewModel: _viewModel,
+                      ),
+                      onInvite: () => ProjectActionsHandler.invite(
+                        context: context,
+                        project: p,
+                      ),
+                      onArchive: () => ProjectActionsHandler.archive(
+                        context: context,
+                        project: p,
+                        viewModel: _viewModel,
+                      ),
+                      onDelete: () => ProjectActionsHandler.delete(
+                        context: context,
+                        project: p,
+                        viewModel: _viewModel,
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
@@ -851,6 +1052,79 @@ class _ProjectsPageState extends State<ProjectsPage> {
     );
   }
 
+  // Widget _buildActionsMenu(ProjectEntity project) {
+  //   return PopupMenuButton<String>(
+  //     icon: Icon(Icons.more_vert, size: 18, color: Colors.grey[600]),
+  //     padding: EdgeInsets.zero,
+  //     onSelected: (value) {
+  //       switch (value) {
+  //         case 'edit':
+  //           _openEditProjectDialog(project);
+  //           break;
+
+  //         case 'invite':
+  //           _showInviteUserDialog(project);
+  //           break;
+
+  //         case 'archive':
+  //           _showArchiveDialog(project);
+  //           break;
+
+  //         case 'delete':
+  //           _showDeleteDialog(project);
+  //           break;
+  //       }
+  //     },
+
+  //     itemBuilder: (context) => [
+  //       PopupMenuItem(
+  //         value: 'edit',
+  //         child: Row(
+  //           children: [
+  //             Icon(Icons.edit_outlined, size: 16, color: Colors.grey[700]),
+  //             const SizedBox(width: 8),
+  //             const Text('Edit'),
+  //           ],
+  //         ),
+  //       ),
+  //       PopupMenuItem(
+  //         value: 'invite',
+  //         child: Row(
+  //           children: [
+  //             Icon(
+  //               Icons.person_add_outlined,
+  //               size: 16,
+  //               color: Colors.grey[700],
+  //             ),
+  //             const SizedBox(width: 8),
+  //             const Text('Invite User'),
+  //           ],
+  //         ),
+  //       ),
+  //       PopupMenuItem(
+  //         value: 'archive',
+  //         child: Row(
+  //           children: [
+  //             Icon(Icons.archive_outlined, size: 16, color: Colors.grey[700]),
+  //             const SizedBox(width: 8),
+  //             const Text('Archive'),
+  //           ],
+  //         ),
+  //       ),
+  //       PopupMenuItem(
+  //         value: 'delete',
+  //         child: Row(
+  //           children: [
+  //             const Icon(Icons.delete_outline, size: 16, color: Colors.red),
+  //             const SizedBox(width: 8),
+  //             const Text('Delete', style: TextStyle(color: Colors.red)),
+  //           ],
+  //         ),
+  //       ),
+  //     ],
+  //   );
+  // }
+
   InputDecoration _inputDecoration(String label, IconData icon) {
     return InputDecoration(
       labelText: label,
@@ -869,1529 +1143,3 @@ class _ProjectsPageState extends State<ProjectsPage> {
     );
   }
 }
-
-
-
-// import 'package:flutter/material.dart';
-// import 'package:google_fonts/google_fonts.dart';
-// import 'package:data_table_2/data_table_2.dart';
-// import 'package:fusion_web/features/projects/presentation/viewmodels/projects_viewmodel.dart';
-// import 'package:fusion_web/features/projects/data/datasources/project_datasource.dart';
-// import 'package:fusion_web/features/projects/data/repositories/projects_repository_impl.dart';
-// import 'package:fusion_web/features/projects/domain/usecases/projects_usecases.dart';
-// import 'package:fusion_web/features/projects/domain/entities/project_entity.dart';
-// import 'package:fusion_web/core/services/service_locator.dart';
-// import 'package:fusion_lib/fusion_widgets/shared_widgets/project/new_project.dart';
-
-// class ProjectsPage extends StatefulWidget {
-//   const ProjectsPage({super.key});
-
-//   @override
-//   State<ProjectsPage> createState() => _ProjectsPageState();
-// }
-
-// class _ProjectsPageState extends State<ProjectsPage> {
-//   late ProjectsViewModel _viewModel;
-//   final TextEditingController _searchController = TextEditingController();
-//   String _searchQuery = '';
-//   String _selectedRegions = 'All Regions';
-//   String _selectedStatus = 'All Status';
-//   String _selectedFilterType = 'Last Updated';
-//   bool _isGridView = false;
-
-//   @override
-//   void initState() {
-//     super.initState();
-//     _initializeViewModel();
-//     _searchController.addListener(() {
-//       setState(() {
-//         _searchQuery = _searchController.text;
-//       });
-//     });
-//   }
-
-//   void _initializeViewModel() {
-//     final apiService = ServiceLocator().apiService;
-//     final remoteDataSource = ProjectsRemoteDataSource(apiService: apiService);
-//     final localDataSource = ProjectsLocalDataSource();
-//     final repository = ProjectsRepositoryImpl(
-//       remoteDataSource: remoteDataSource,
-//       localDataSource: localDataSource,
-//     );
-
-//     _viewModel = ProjectsViewModel(
-//       getProjectsUseCase: GetProjectsUseCase(repository),
-//       getProjectByIdUseCase: GetProjectByIdUseCase(repository),
-//       createProjectUseCase: CreateProjectUseCase(repository),
-//       updateProjectUseCase: UpdateProjectUseCase(repository),
-//       deleteProjectUseCase: DeleteProjectUseCase(repository),
-//       searchProjectsUseCase: SearchProjectsUseCase(repository),
-//     );
-
-//     _viewModel.initialize();
-//   }
-
-//   @override
-//   void dispose() {
-//     _searchController.dispose();
-//     _viewModel.dispose();
-//     super.dispose();
-//   }
-
-//   List<ProjectEntity> get _filteredProjects {
-//     final projects = _viewModel.projects;
-//     if (projects.isEmpty) return [];
-
-//     List<ProjectEntity> filtered = List.from(projects);
-
-//     // Search filter
-//     if (_searchQuery.isNotEmpty) {
-//       filtered = filtered.where((project) {
-//         return project.title.toLowerCase().contains(
-//               _searchQuery.toLowerCase(),
-//             ) ||
-//             project.description.toLowerCase().contains(
-//               _searchQuery.toLowerCase(),
-//             ) ||
-//             project.clientName.toLowerCase().contains(
-//               _searchQuery.toLowerCase(),
-//             );
-//       }).toList();
-//     }
-
-//     // Region filter (FIXED)
-//     if (_selectedRegions != 'All Regions') {
-//       filtered = filtered
-//           .where(
-//             (project) =>
-//                 project.region.toLowerCase() == _selectedRegions.toLowerCase(),
-//           )
-//           .toList();
-//     }
-
-//     // Status filter (FIXED)
-//     if (_selectedStatus != 'All Status') {
-//       filtered = filtered
-//           .where(
-//             (project) =>
-//                 project.status.toLowerCase() == _selectedStatus.toLowerCase(),
-//           )
-//           .toList();
-//     }
-
-//     return filtered;
-//   }
-
-//   @override
-//   Widget build(BuildContext context) {
-//     return Scaffold(
-//       backgroundColor: Colors.grey[50],
-//       body: Padding(
-//         padding: const EdgeInsets.all(24),
-//         child: Column(
-//           crossAxisAlignment: CrossAxisAlignment.start,
-//           children: [
-//             // Header Section
-//             _buildHeader(),
-//             const SizedBox(height: 24),
-
-//             // Filters and Search Section
-//             _buildFiltersSection(),
-//             const SizedBox(height: 24),
-
-//             // Data Table Section
-//             Expanded(child: _buildDataTable()),
-//           ],
-//         ),
-//       ),
-//     );
-//   }
-
-//   Widget _buildHeader() {
-//     return Row(
-//       mainAxisAlignment: MainAxisAlignment.spaceBetween,
-//       crossAxisAlignment: CrossAxisAlignment.start,
-//       children: [
-//         Column(
-//           crossAxisAlignment: CrossAxisAlignment.start,
-//           children: [
-//             Column(
-//               children: [
-//                 Text(
-//                   'Projects',
-//                   style: GoogleFonts.montserrat(
-//                     fontSize: 32,
-//                     fontWeight: FontWeight.w700,
-//                     color: Colors.black87,
-//                   ),
-//                 ),
-//               ],
-//             ),
-//             const SizedBox(height: 4),
-//             Text(
-//               'Manage and monitor all projects across your organization',
-//               style: GoogleFonts.montserrat(
-//                 fontSize: 16,
-//                 color: Colors.grey[600],
-//               ),
-//             ),
-//           ],
-//         ),
-
-//         // Add Project Button
-//         ElevatedButton.icon(
-//           onPressed: () => _showAddProjectDialog(),
-//           icon: const Icon(Icons.add, size: 18),
-//           label: Text(
-//             'Add Project',
-//             style: GoogleFonts.montserrat(fontWeight: FontWeight.w600),
-//           ),
-//           style: ElevatedButton.styleFrom(
-//             backgroundColor: Colors.black87, // button color
-//             foregroundColor: Colors.white, // text & icon color
-//             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-//             shape: RoundedRectangleBorder(
-//               borderRadius: BorderRadius.circular(6),
-//             ),
-//             elevation: 0, // optional: matches your second button
-//           ),
-//         ),
-//       ],
-//     );
-//   }
-
-//   Widget _buildFiltersSection() {
-//     return Container(
-//       padding: const EdgeInsets.all(24),
-//       decoration: BoxDecoration(
-//         color: Colors.white,
-//         borderRadius: BorderRadius.circular(12),
-//         border: Border.all(color: Colors.grey[200]!),
-//         boxShadow: [
-//           BoxShadow(
-//             color: Colors.black.withOpacity(0.02),
-//             blurRadius: 8,
-//             offset: const Offset(0, 2),
-//           ),
-//         ],
-//       ),
-//       child: Row(
-//         children: [
-//           /// 🔎 Search Field (slightly bigger than dropdowns)
-//           Flexible(
-//             flex: 2, // proportionally bigger than dropdowns
-//             child: TextFormField(
-//               controller: _searchController,
-//               decoration: _inputDecoration('Search projects...', Icons.search),
-//             ),
-//           ),
-
-//           const SizedBox(width: 16),
-
-//           /// 🌍 Region Filter
-//           Flexible(
-//             flex: 2,
-//             child: DropdownButtonFormField<String>(
-//               value: _selectedRegions,
-//               decoration: _dropdownDecoration(),
-//               items: ['All Regions', 'North America', 'Europe']
-//                   .map(
-//                     (e) => DropdownMenuItem(
-//                       value: e,
-//                       child: Text(e, style: GoogleFonts.montserrat()),
-//                     ),
-//                   )
-//                   .toList(),
-//               onChanged: (value) => setState(() => _selectedRegions = value!),
-//             ),
-//           ),
-
-//           const SizedBox(width: 16),
-
-//           /// 📊 Status Filter
-//           Flexible(
-//             flex: 2,
-//             child: DropdownButtonFormField<String>(
-//               value: _selectedStatus,
-//               decoration: _dropdownDecoration(),
-//               items: ['All Status', 'Active', 'Inactive', 'Pending']
-//                   .map(
-//                     (e) => DropdownMenuItem(
-//                       value: e,
-//                       child: Text(e, style: GoogleFonts.montserrat()),
-//                     ),
-//                   )
-//                   .toList(),
-//               onChanged: (value) => setState(() => _selectedStatus = value!),
-//             ),
-//           ),
-
-//           const SizedBox(width: 16),
-
-//           /// 🔄 Sort Filter
-//           Flexible(
-//             flex: 2,
-//             child: DropdownButtonFormField<String>(
-//               value: _selectedFilterType,
-//               decoration: _dropdownDecoration(),
-//               items: ['Last Updated', 'Name', 'Device Count']
-//                   .map(
-//                     (e) => DropdownMenuItem(
-//                       value: e,
-//                       child: Text(e, style: GoogleFonts.montserrat()),
-//                     ),
-//                   )
-//                   .toList(),
-//               onChanged: (value) =>
-//                   setState(() => _selectedFilterType = value!),
-//             ),
-//           ),
-
-//           const SizedBox(width: 16),
-
-//           /// 🔲 Grid / List Toggle Buttons
-//           Row(
-//             mainAxisSize: MainAxisSize.min, // keeps buttons compact
-//             children: [
-//               _buildViewToggleButton(
-//                 icon: Icons.grid_view_rounded,
-//                 isSelected: _isGridView,
-//                 onTap: () => setState(() => _isGridView = true),
-//               ),
-//               const SizedBox(width: 8),
-//               _buildViewToggleButton(
-//                 icon: Icons.view_list_rounded,
-//                 isSelected: !_isGridView,
-//                 onTap: () => setState(() => _isGridView = false),
-//               ),
-//             ],
-//           ),
-//         ],
-//       ),
-//     );
-//   }
-
-//   InputDecoration _inputDecoration(String label, IconData icon) {
-//     return InputDecoration(
-//       labelText: label,
-//       prefixIcon: Icon(icon, color: Colors.grey[400]),
-//       filled: true,
-//       fillColor: Colors.grey[50],
-//       border: OutlineInputBorder(
-//         borderRadius: BorderRadius.circular(8),
-//         borderSide: BorderSide(color: Colors.grey[300]!),
-//       ),
-//       enabledBorder: OutlineInputBorder(
-//         borderRadius: BorderRadius.circular(8),
-//         borderSide: BorderSide(color: Colors.grey[300]!),
-//       ),
-//       focusedBorder: const OutlineInputBorder(
-//         borderSide: BorderSide(color: Colors.black87),
-//       ),
-//     );
-//   }
-
-//   InputDecoration _dropdownDecoration() {
-//     return InputDecoration(
-//       filled: true,
-//       fillColor: Colors.grey[50],
-//       border: OutlineInputBorder(
-//         borderRadius: BorderRadius.circular(8),
-//         borderSide: BorderSide(color: Colors.grey[300]!),
-//       ),
-//       enabledBorder: OutlineInputBorder(
-//         borderRadius: BorderRadius.circular(8),
-//         borderSide: BorderSide(color: Colors.grey[300]!),
-//       ),
-//     );
-//   }
-
-//   // Widget _buildFiltersSection() {
-//   //   return Container(
-//   //     padding: const EdgeInsets.all(24),
-//   //     decoration: BoxDecoration(
-//   //       color: Colors.white,
-//   //       borderRadius: BorderRadius.circular(12),
-//   //       border: Border.all(color: Colors.grey[200]!),
-//   //       boxShadow: [
-//   //         BoxShadow(
-//   //           color: Colors.black.withValues(alpha: 0.02),
-//   //           blurRadius: 8,
-//   //           spreadRadius: 0,
-//   //           offset: const Offset(0, 2),
-//   //         ),
-//   //       ],
-//   //     ),
-
-//   //     child: Wrap(
-//   //       spacing: 16,
-//   //       runSpacing: 16,
-//   //       crossAxisAlignment: WrapCrossAlignment.center,
-//   //       children: [
-//   //         // Search Field
-//   //         SizedBox(
-//   //           width: 220,
-//   //           child: TextFormField(
-//   //             controller: _searchController,
-//   //             decoration: InputDecoration(
-//   //               labelText: 'Search projects...',
-//   //               labelStyle: GoogleFonts.montserrat(color: Colors.grey[600]),
-//   //               prefixIcon: Icon(Icons.search, color: Colors.grey[400]),
-//   //               border: OutlineInputBorder(
-//   //                 borderRadius: BorderRadius.circular(8),
-//   //                 borderSide: BorderSide(color: Colors.grey[300]!),
-//   //               ),
-//   //               enabledBorder: OutlineInputBorder(
-//   //                 borderRadius: BorderRadius.circular(8),
-//   //                 borderSide: BorderSide(color: Colors.grey[300]!),
-//   //               ),
-//   //               focusedBorder: OutlineInputBorder(
-//   //                 borderRadius: BorderRadius.circular(8),
-//   //                 borderSide: const BorderSide(color: Colors.black87),
-//   //               ),
-//   //               filled: true,
-//   //               fillColor: Colors.grey[50],
-//   //             ),
-//   //           ),
-//   //         ),
-//   //         // const SizedBox(width: 16),
-
-//   //         // Regions Filter
-//   //         SizedBox(
-//   //           width: 180,
-//   //           child: DropdownButtonFormField<String>(
-//   //             value: _selectedRegions,
-//   //             decoration: InputDecoration(
-//   //               // labelText: 'Role',
-//   //               labelStyle: GoogleFonts.montserrat(color: Colors.grey[600]),
-//   //               border: OutlineInputBorder(
-//   //                 borderRadius: BorderRadius.circular(8),
-//   //                 borderSide: BorderSide(color: Colors.grey[300]!),
-//   //               ),
-//   //               enabledBorder: OutlineInputBorder(
-//   //                 borderRadius: BorderRadius.circular(8),
-//   //                 borderSide: BorderSide(color: Colors.grey[300]!),
-//   //               ),
-//   //               filled: true,
-//   //               fillColor: Colors.grey[50],
-//   //             ),
-//   //             items: ['All Regions', 'North America', 'Europe']
-//   //                 .map(
-//   //                   (role) => DropdownMenuItem(
-//   //                     value: role,
-//   //                     child: Text(role, style: GoogleFonts.montserrat()),
-//   //                   ),
-//   //                 )
-//   //                 .toList(),
-//   //             onChanged: (value) {
-//   //               setState(() {
-//   //                 _selectedRegions = value!;
-//   //               });
-//   //             },
-//   //           ),
-//   //         ),
-//   //         // const SizedBox(width: 16),
-
-//   //         // Role Status
-//   //         SizedBox(
-//   //           width: 180,
-//   //           child: DropdownButtonFormField<String>(
-//   //             value: _selectedStatus,
-//   //             decoration: InputDecoration(
-//   //               // labelText: 'Role',
-//   //               labelStyle: GoogleFonts.montserrat(color: Colors.grey[600]),
-//   //               border: OutlineInputBorder(
-//   //                 borderRadius: BorderRadius.circular(8),
-//   //                 borderSide: BorderSide(color: Colors.grey[300]!),
-//   //               ),
-//   //               enabledBorder: OutlineInputBorder(
-//   //                 borderRadius: BorderRadius.circular(8),
-//   //                 borderSide: BorderSide(color: Colors.grey[300]!),
-//   //               ),
-//   //               filled: true,
-//   //               fillColor: Colors.grey[50],
-//   //             ),
-//   //             items: ['All Status', 'Active', 'Inactive', 'Pending']
-//   //                 .map(
-//   //                   (role) => DropdownMenuItem(
-//   //                     value: role,
-//   //                     child: Text(role, style: GoogleFonts.montserrat()),
-//   //                   ),
-//   //                 )
-//   //                 .toList(),
-//   //             onChanged: (value) {
-//   //               setState(() {
-//   //                 _selectedStatus = value!;
-//   //               });
-//   //             },
-//   //           ),
-//   //         ),
-//   //         // const SizedBox(width: 16),
-
-//   //         // Status Filter type
-//   //         SizedBox(
-//   //           width: 180,
-//   //           child: DropdownButtonFormField<String>(
-//   //             value: _selectedFilterType,
-//   //             decoration: InputDecoration(
-//   //               // labelText: 'Status',
-//   //               labelStyle: GoogleFonts.montserrat(color: Colors.grey[600]),
-//   //               border: OutlineInputBorder(
-//   //                 borderRadius: BorderRadius.circular(8),
-//   //                 borderSide: BorderSide(color: Colors.grey[300]!),
-//   //               ),
-//   //               enabledBorder: OutlineInputBorder(
-//   //                 borderRadius: BorderRadius.circular(8),
-//   //                 borderSide: BorderSide(color: Colors.grey[300]!),
-//   //               ),
-//   //               filled: true,
-//   //               fillColor: Colors.grey[50],
-//   //             ),
-//   //             items: ['Last Updated', 'Name', 'Device Count']
-//   //                 .map(
-//   //                   (status) => DropdownMenuItem(
-//   //                     value: status,
-//   //                     child: Text(status, style: GoogleFonts.montserrat()),
-//   //                   ),
-//   //                 )
-//   //                 .toList(),
-//   //             onChanged: (value) {
-//   //               setState(() {
-//   //                 _selectedFilterType = value!;
-//   //               });
-//   //             },
-//   //           ),
-//   //         ),
-//   //         // const SizedBox(width: 16),
-
-//   //         // View Toggle Buttons
-//   //         Row(
-//   //           children: [
-//   //             _buildViewToggleButton(
-//   //               icon: Icons.grid_view_rounded,
-//   //               isSelected: _isGridView,
-//   //               onTap: () {
-//   //                 setState(() {
-//   //                   _isGridView = true;
-//   //                 });
-//   //               },
-//   //             ),
-//   //             const SizedBox(width: 8),
-//   //             _buildViewToggleButton(
-//   //               icon: Icons.view_list_rounded,
-//   //               isSelected: !_isGridView,
-//   //               onTap: () {
-//   //                 setState(() {
-//   //                   _isGridView = false;
-//   //                 });
-//   //               },
-//   //             ),
-//   //           ],
-//   //         ),
-//   //       ],
-//   //     ),
-//   //   );
-//   // }
-
-//   Widget _buildDataTable() {
-//     return Container(
-//       decoration: BoxDecoration(
-//         color: Colors.white,
-//         borderRadius: BorderRadius.circular(12),
-//         border: Border.all(color: Colors.grey[200]!),
-//         boxShadow: [
-//           BoxShadow(
-//             color: Colors.black.withValues(alpha: 0.02),
-//             blurRadius: 8,
-//             spreadRadius: 0,
-//             offset: const Offset(0, 2),
-//           ),
-//         ],
-//       ),
-//       child: ListenableBuilder(
-//         listenable: _viewModel,
-//         builder: (context, child) {
-//           if (_viewModel.isLoading) {
-//             return const Center(
-//               child: CircularProgressIndicator(color: Colors.black87),
-//             );
-//           }
-
-//           if (_viewModel.hasError) {
-//             return _buildErrorState();
-//           }
-
-//           final filteredProjects = _filteredProjects;
-
-//           if (filteredProjects.isEmpty) {
-//             return _buildEmptyState();
-//           }
-
-//           return Column(
-//             children: [
-//               // Results summary
-//               Container(
-//                 padding: const EdgeInsets.all(16),
-//                 decoration: BoxDecoration(
-//                   color: Colors.white,
-//                   borderRadius: const BorderRadius.only(
-//                     topLeft: Radius.circular(12),
-//                     topRight: Radius.circular(12),
-//                   ),
-//                 ),
-//                 child: Row(
-//                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
-//                   children: [
-//                     Text(
-//                       '${filteredProjects.length} projects found',
-//                       style: GoogleFonts.montserrat(
-//                         fontSize: 16,
-//                         fontWeight: FontWeight.w600,
-//                         color: Colors.black87,
-//                       ),
-//                     ),
-//                     Row(
-//                       children: [
-//                         IconButton(
-//                           onPressed: () => _viewModel.loadProjects(),
-//                           icon: const Icon(Icons.refresh, size: 18),
-//                           tooltip: 'Refresh',
-//                         ),
-//                         const SizedBox(width: 8),
-//                         ElevatedButton.icon(
-//                           onPressed: () => _showAddProjectDialog(),
-//                           icon: const Icon(Icons.add, size: 18),
-//                           label: Text(
-//                             'Add Project',
-//                             style: GoogleFonts.montserrat(
-//                               fontWeight: FontWeight.w600,
-//                             ),
-//                           ),
-//                           style: ElevatedButton.styleFrom(
-//                             backgroundColor: Colors.black87,
-//                             foregroundColor: Colors.white,
-//                             elevation: 0,
-//                             padding: const EdgeInsets.symmetric(
-//                               horizontal: 16,
-//                               vertical: 12,
-//                             ),
-//                             shape: RoundedRectangleBorder(
-//                               borderRadius: BorderRadius.circular(6),
-//                             ),
-//                           ),
-//                         ),
-//                       ],
-//                     ),
-//                   ],
-//                 ),
-//               ),
-
-//               // Enterprise Data Table
-//               Expanded(
-//                 child: Container(
-//                   decoration: BoxDecoration(
-//                     color: Colors.white,
-//                     borderRadius: const BorderRadius.only(
-//                       bottomLeft: Radius.circular(12),
-//                       bottomRight: Radius.circular(12),
-//                     ),
-//                     border: Border.all(color: Colors.grey[200]!),
-//                   ),
-//                   child: DataTable2(
-//                     columnSpacing: 12,
-//                     horizontalMargin: 24,
-//                     minWidth: 800,
-//                     dataRowHeight: 72,
-//                     headingRowHeight: 56,
-//                     headingRowColor: WidgetStateProperty.all(Colors.grey[50]),
-//                     border: TableBorder(
-//                       horizontalInside: BorderSide(
-//                         color: Colors.grey[200]!,
-//                         width: 1,
-//                       ),
-//                     ),
-//                     // ... inside _buildDataTable columns: [ ... ]
-//                     columns: [
-//                       DataColumn2(
-//                         label: Text(
-//                           'Project',
-//                           style: GoogleFonts.montserrat(
-//                             fontWeight: FontWeight.w600,
-//                           ),
-//                         ),
-//                         size: ColumnSize.L,
-//                       ),
-//                       DataColumn2(
-//                         label: Text(
-//                           'Category',
-//                           style: GoogleFonts.montserrat(
-//                             fontWeight: FontWeight.w600,
-//                           ),
-//                         ), // Changed from Role
-//                         size: ColumnSize.M,
-//                       ),
-//                       DataColumn2(
-//                         label: Text(
-//                           'Status',
-//                           style: GoogleFonts.montserrat(
-//                             fontWeight: FontWeight.w600,
-//                           ),
-//                         ),
-//                         size: ColumnSize.S,
-//                       ),
-//                       DataColumn2(
-//                         label: Text(
-//                           'Progress',
-//                           style: GoogleFonts.montserrat(
-//                             fontWeight: FontWeight.w600,
-//                           ),
-//                         ), // Changed from Last Login
-//                         size: ColumnSize.S,
-//                       ),
-//                       DataColumn2(
-//                         label: Text(
-//                           'Actions',
-//                           style: GoogleFonts.montserrat(
-//                             fontWeight: FontWeight.w600,
-//                           ),
-//                         ),
-//                         size: ColumnSize.S,
-//                         fixedWidth: 100,
-//                       ),
-//                     ],
-//                     rows: filteredProjects.map((project) {
-//                       return DataRow2(
-//                         cells: [
-//                           DataCell(_buildProjectCell(project)),
-//                           DataCell(
-//                             _buildRoleBadge(project.category),
-//                           ), // Using category now
-//                           DataCell(_buildStatusBadge(project.status)),
-//                           DataCell(
-//                             // Progress Column
-//                             Text(
-//                               '${(project.progress * 100).toInt()}%',
-//                               style: GoogleFonts.montserrat(
-//                                 fontSize: 13,
-//                                 color: Colors.grey[600],
-//                               ),
-//                             ),
-//                           ),
-//                           DataCell(_buildActionsMenu(project)),
-//                         ],
-//                       );
-//                     }).toList(),
-//                   ),
-//                 ),
-//               ),
-//             ],
-//           );
-//         },
-//       ),
-//     );
-//   }
-
-//   Widget _buildRoleBadge(String role) {
-//     Color color;
-//     switch (role.toLowerCase()) {
-//       case 'admin':
-//         color = Colors.purple;
-//         break;
-//       case 'manager':
-//         color = Colors.blue;
-//         break;
-//       case 'project':
-//         color = Colors.green;
-//         break;
-//       default:
-//         color = Colors.grey;
-//     }
-
-//     return Container(
-//       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-//       decoration: BoxDecoration(
-//         color: color.withValues(alpha: 0.1),
-//         borderRadius: BorderRadius.circular(12),
-//         border: Border.all(color: color.withValues(alpha: 0.3)),
-//       ),
-//       child: Text(
-//         role,
-//         style: GoogleFonts.montserrat(
-//           fontSize: 12,
-//           fontWeight: FontWeight.w500,
-//           color: _getShadeColor(color),
-//         ),
-//       ),
-//     );
-//   }
-
-//   Widget _buildStatusBadge(String status) {
-//     Color color;
-//     IconData icon;
-//     switch (status.toLowerCase()) {
-//       case 'active':
-//         color = Colors.green;
-//         icon = Icons.check_circle;
-//         break;
-//       case 'inactive':
-//         color = Colors.red;
-//         icon = Icons.cancel;
-//         break;
-//       case 'pending':
-//         color = Colors.orange;
-//         icon = Icons.schedule;
-//         break;
-//       default:
-//         color = Colors.grey;
-//         icon = Icons.help;
-//     }
-
-//     return Row(
-//       mainAxisSize: MainAxisSize.min,
-//       children: [
-//         Icon(icon, size: 14, color: color),
-//         const SizedBox(width: 6),
-//         Text(
-//           status,
-//           style: GoogleFonts.montserrat(
-//             fontSize: 13,
-//             fontWeight: FontWeight.w500,
-//             color: _getShadeColor(color),
-//           ),
-//         ),
-//       ],
-//     );
-//   }
-
-//   Widget _buildEmptyState() {
-//     return Center(
-//       child: Padding(
-//         padding: const EdgeInsets.all(48),
-//         child: Column(
-//           mainAxisAlignment: MainAxisAlignment.center,
-//           children: [
-//             Icon(Icons.people, size: 64, color: Colors.grey[400]),
-//             const SizedBox(height: 16),
-//             Text(
-//               'No projects found',
-//               style: GoogleFonts.montserrat(
-//                 fontSize: 18,
-//                 fontWeight: FontWeight.w600,
-//                 color: Colors.grey[600],
-//               ),
-//             ),
-//             const SizedBox(height: 8),
-//             Text(
-//               'Try adjusting your search criteria or add new projects',
-//               style: GoogleFonts.montserrat(
-//                 fontSize: 14,
-//                 color: Colors.grey[500],
-//               ),
-//             ),
-//           ],
-//         ),
-//       ),
-//     );
-//   }
-
-//   Widget _buildErrorState() {
-//     return Center(
-//       child: Padding(
-//         padding: const EdgeInsets.all(48),
-//         child: Column(
-//           mainAxisAlignment: MainAxisAlignment.center,
-//           children: [
-//             Icon(Icons.error_outline, size: 64, color: Colors.red[400]),
-//             const SizedBox(height: 16),
-//             Text(
-//               'Failed to load projects',
-//               style: GoogleFonts.montserrat(
-//                 fontSize: 18,
-//                 fontWeight: FontWeight.w600,
-//                 color: Colors.red[600],
-//               ),
-//             ),
-//             const SizedBox(height: 16),
-//             ElevatedButton.icon(
-//               onPressed: () => _viewModel.loadProjects(),
-//               icon: const Icon(Icons.refresh, size: 18),
-//               label: Text(
-//                 'Retry',
-//                 style: GoogleFonts.montserrat(fontWeight: FontWeight.w600),
-//               ),
-//               style: ElevatedButton.styleFrom(
-//                 backgroundColor: Colors.black87,
-//                 foregroundColor: Colors.white,
-//               ),
-//             ),
-//           ],
-//         ),
-//       ),
-//     );
-//   }
-
-//   // String _formatDate(DateTime date) {
-//   //   final now = DateTime.now();
-//   //   final difference = now.difference(date);
-
-//   //   if (difference.inDays == 0) {
-//   //     return 'Today';
-//   //   } else if (difference.inDays == 1) {
-//   //     return 'Yesterday';
-//   //   } else if (difference.inDays < 7) {
-//   //     return '${difference.inDays} days ago';
-//   //   } else {
-//   //     return '${date.day}/${date.month}/${date.year}';
-//   //   }
-//   // }
-
-//   // void _showAddProjectDialog() {
-//   //   // TODO: Implement add project dialog
-//   //   ScaffoldMessenger.of(context).showSnackBar(
-//   //     const SnackBar(content: Text('Add project functionality coming soon')),
-//   //   );
-//   // }
-
-//   void _showAddProjectDialog() {
-//     showDialog(
-//       context: context,
-//       barrierDismissible: false,
-//       builder: (context) {
-//         return Dialog(
-//           insetPadding: const EdgeInsets.all(24),
-//           shape: RoundedRectangleBorder(
-//             borderRadius: BorderRadius.circular(12),
-//           ),
-//           child: ConstrainedBox(
-//             constraints: const BoxConstraints(
-//               maxWidth: 600, // good for web
-//               maxHeight: 700,
-//             ),
-//             child: const NewProjectWidget(),
-//           ),
-//         );
-//       },
-//     );
-//   }
-
-//   void _showEditProjectDialog(ProjectEntity project) {
-//     // TODO: Implement edit project dialog
-//     ScaffoldMessenger.of(
-//       context,
-//     ).showSnackBar(SnackBar(content: Text('Edit project: ${project.title}')));
-//   }
-
-//   void _showDeleteProjectDialog(ProjectEntity project) {
-//     showDialog(
-//       context: context,
-//       builder: (context) => AlertDialog(
-//         title: Text(
-//           'Delete Project',
-//           style: GoogleFonts.montserrat(fontWeight: FontWeight.w600),
-//         ),
-//         content: Text(
-//           'Are you sure you want to delete ${project.title}? This action cannot be undone.',
-//           style: GoogleFonts.montserrat(),
-//         ),
-//         actions: [
-//           TextButton(
-//             onPressed: () => Navigator.of(context).pop(),
-//             child: Text('Cancel', style: GoogleFonts.montserrat()),
-//           ),
-//           ElevatedButton(
-//             onPressed: () {
-//               Navigator.of(context).pop();
-//               // TODO: Implement delete project
-//               ScaffoldMessenger.of(context).showSnackBar(
-//                 SnackBar(content: Text('Deleted project: ${project.title}')),
-//               );
-//             },
-//             style: ElevatedButton.styleFrom(
-//               backgroundColor: Colors.red,
-//               foregroundColor: Colors.white,
-//             ),
-//             child: Text(
-//               'Delete',
-//               style: GoogleFonts.montserrat(fontWeight: FontWeight.w600),
-//             ),
-//           ),
-//         ],
-//       ),
-//     );
-//   }
-
-//   Color _getShadeColor(Color color) {
-//     if (color == Colors.purple) return Colors.purple[700]!;
-//     if (color == Colors.blue) return Colors.blue[700]!;
-//     if (color == Colors.green) return Colors.green[700]!;
-//     if (color == Colors.orange) return Colors.orange[700]!;
-//     if (color == Colors.red) return Colors.red[700]!;
-//     return Colors.grey[700]!;
-//   }
-
-//   Widget _buildProjectCell(ProjectEntity project) {
-//     return Row(
-//       children: [
-//         CircleAvatar(
-//           radius: 20,
-//           backgroundColor: Colors.blue[100],
-//           child: Text(
-//             project.title.isNotEmpty
-//                 ? project.title
-//                       .split(' ')
-//                       .map((e) => e[0])
-//                       .take(2)
-//                       .join()
-//                       .toUpperCase()
-//                 : project.title[0].toUpperCase(),
-//             style: GoogleFonts.montserrat(
-//               fontWeight: FontWeight.w600,
-//               fontSize: 14,
-//               color: Colors.blue[700],
-//             ),
-//           ),
-//         ),
-//         const SizedBox(width: 12),
-//         Expanded(
-//           child: Column(
-//             crossAxisAlignment: CrossAxisAlignment.start,
-//             mainAxisAlignment: MainAxisAlignment.center,
-//             children: [
-//               Text(
-//                 project.title.isNotEmpty ? project.title : 'No Name',
-//                 style: GoogleFonts.montserrat(
-//                   fontSize: 14,
-//                   fontWeight: FontWeight.w600,
-//                   color: Colors.black87,
-//                 ),
-//                 overflow: TextOverflow.ellipsis,
-//               ),
-//               const SizedBox(height: 2),
-//               Text(
-//                 project.description,
-//                 style: GoogleFonts.montserrat(
-//                   fontSize: 12,
-//                   color: Colors.grey[600],
-//                 ),
-//                 overflow: TextOverflow.ellipsis,
-//               ),
-//             ],
-//           ),
-//         ),
-//       ],
-//     );
-//   }
-
-//   Widget _buildActionsMenu(ProjectEntity project) {
-//     return PopupMenuButton<String>(
-//       icon: Icon(Icons.more_vert, size: 18, color: Colors.grey[600]),
-//       offset: const Offset(-50, 0),
-//       itemBuilder: (context) => [
-//         PopupMenuItem(
-//           value: 'edit',
-//           child: Row(
-//             children: [
-//               Icon(Icons.edit_outlined, size: 16, color: Colors.grey[700]),
-//               const SizedBox(width: 8),
-//               Text('Edit', style: GoogleFonts.montserrat(fontSize: 13)),
-//             ],
-//           ),
-//         ),
-//         PopupMenuItem(
-//           value: 'delete',
-//           child: Row(
-//             children: [
-//               const Icon(Icons.delete_outline, size: 16, color: Colors.red),
-//               const SizedBox(width: 8),
-//               Text(
-//                 'Delete',
-//                 style: GoogleFonts.montserrat(fontSize: 13, color: Colors.red),
-//               ),
-//             ],
-//           ),
-//         ),
-//       ],
-//       onSelected: (value) {
-//         switch (value) {
-//           case 'edit':
-//             _showEditProjectDialog(project);
-//             break;
-//           case 'delete':
-//             _showDeleteProjectDialog(project);
-//             break;
-//         }
-//       },
-//     );
-//   }
-// }
-
-// Widget _buildViewToggleButton({
-//   required IconData icon,
-//   required bool isSelected,
-//   required VoidCallback onTap,
-// }) {
-//   return InkWell(
-//     onTap: onTap,
-//     borderRadius: BorderRadius.circular(8),
-//     child: Container(
-//       padding: const EdgeInsets.all(10),
-//       decoration: BoxDecoration(
-//         color: isSelected ? Colors.black87 : Colors.grey[100],
-//         borderRadius: BorderRadius.circular(8),
-//         border: Border.all(
-//           color: isSelected ? Colors.black87 : Colors.grey[300]!,
-//         ),
-//       ),
-//       child: Icon(
-//         icon,
-//         size: 20,
-//         color: isSelected ? Colors.white : Colors.grey[600],
-//       ),
-//     ),
-//   );
-// }
-
-
-//_______OLDER VERSION________
-
-// import 'package:data_table_2/data_table_2.dart';
-// import 'package:flutter/material.dart';
-// import 'package:google_fonts/google_fonts.dart';
-
-
-// class Project {
-//   final String title;
-//   final String client;
-//   final String deadline;
-//   final String status;
-//   VoidCallback? action;
-
-//   Project({
-//     required this.title,
-//     required this.client,
-//     this.deadline = "November",
-//     this.status = "demo",
-//     this.action,
-//   });
-// }
-
-// class ProjectsPage extends StatefulWidget {
-//   const ProjectsPage({super.key});
-
-//   @override
-//   State<ProjectsPage> createState() => _ProjectsPageState();
-// }
-
-// class _ProjectsPageState extends State<ProjectsPage> {
-// final List<Project> projects =  [
-//     Project(title: 'Website Redesign', client: 'A', status: "çompleted"),
-//     Project(title: 'Mobile App', client: 'B', deadline: 'August'),
-//     Project(title: 'Backend API', client: 'A', action: () {}),
-//   ];
-
-//   final TextEditingController _searchController = TextEditingController();
-//   String _searchQuery = '';
-//   String _selectedRole = 'All';
-//   String _selectedStatus = 'All';
-
-//   @override
-
-//   void initState() {
-//     super.initState();
-//     // _initializeViewModel();
-//     _searchController.addListener(() {
-//       setState(() {
-//         _searchQuery = _searchController.text;
-//       });
-//     });
-//   }
-
-//   Widget build(BuildContext context) {
-//     return Scaffold(
-//       backgroundColor: Colors.grey[50],
-//       body: Padding(
-//         padding: const EdgeInsets.all(24),
-//         child: Column(
-//           crossAxisAlignment: CrossAxisAlignment.start,
-//           children: [
-//             // Header Section
-//             _buildHeader(),
-//             const SizedBox(height: 24),
-
-//             // Filters and Search Section
-//             _buildFiltersSection(),
-//             const SizedBox(height: 24),
-
-//             //Data Table Section
-//             Expanded(child: _buildDataTable()),
-//           ],
-//         ),
-//       ),
-//     );
-//   }
-
-//   Widget _buildHeader() {
-//     return Row(
-//       mainAxisAlignment: MainAxisAlignment.spaceBetween,
-//       children: [
-//         Column(
-//           crossAxisAlignment: CrossAxisAlignment.start,
-//           children: [
-//             Text(
-//               'Project Management',
-//               style: GoogleFonts.montserrat(
-//                 fontSize: 32,
-//                 fontWeight: FontWeight.w700,
-//                 color: Colors.black87,
-//               ),
-//             ),
-//             const SizedBox(height: 4),
-//             Text(
-//               'Manage your projects and their users',
-//               style: GoogleFonts.montserrat(
-//                 fontSize: 16,
-//                 color: Colors.grey[600],
-//               ),
-//             ),
-//           ],
-//         ),
-//       ],
-//     );
-//   }
-
-//   Widget _buildFiltersSection() {
-//     return Container(
-//       padding: const EdgeInsets.all(24),
-//       decoration: BoxDecoration(
-//         color: Colors.white,
-//         borderRadius: BorderRadius.circular(12),
-//         border: Border.all(color: Colors.grey[200]!),
-//         boxShadow: [
-//           BoxShadow(
-//             color: Colors.black.withValues(alpha: 0.02),
-//             blurRadius: 8,
-//             spreadRadius: 0,
-//             offset: const Offset(0, 2),
-//           ),
-//         ],
-//       ),
-//       child: Row(
-//         children: [
-//           // Search Field
-//           Expanded(
-//             flex: 2,
-//             child: TextFormField(
-//               controller: _searchController,
-//               decoration: InputDecoration(
-//                 labelText: 'Search projects...',
-//                 labelStyle: GoogleFonts.montserrat(color: Colors.grey[600]),
-//                 prefixIcon: Icon(Icons.search, color: Colors.grey[400]),
-//                 border: OutlineInputBorder(
-//                   borderRadius: BorderRadius.circular(8),
-//                   borderSide: BorderSide(color: Colors.grey[300]!),
-//                 ),
-//                 enabledBorder: OutlineInputBorder(
-//                   borderRadius: BorderRadius.circular(8),
-//                   borderSide: BorderSide(color: Colors.grey[300]!),
-//                 ),
-//                 focusedBorder: OutlineInputBorder(
-//                   borderRadius: BorderRadius.circular(8),
-//                   borderSide: const BorderSide(color: Colors.black87),
-//                 ),
-//                 filled: true,
-//                 fillColor: Colors.grey[50],
-//               ),
-//             ),
-//           ),
-//           const SizedBox(width: 16),
-
-//           // Role Filter
-//           Expanded(
-//             child: DropdownButtonFormField<String>(
-//               value: _selectedRole,
-//               decoration: InputDecoration(
-//                 labelText: 'Client',
-//                 labelStyle: GoogleFonts.montserrat(color: Colors.grey[600]),
-//                 border: OutlineInputBorder(
-//                   borderRadius: BorderRadius.circular(8),
-//                   borderSide: BorderSide(color: Colors.grey[300]!),
-//                 ),
-//                 enabledBorder: OutlineInputBorder(
-//                   borderRadius: BorderRadius.circular(8),
-//                   borderSide: BorderSide(color: Colors.grey[300]!),
-//                 ),
-//                 filled: true,
-//                 fillColor: Colors.grey[50],
-//               ),
-//               items: ['All', 'Admin', 'Manager', 'User', 'Viewer']
-//                   .map(
-//                     (role) => DropdownMenuItem(
-//                       value: role,
-//                       child: Text(role, style: GoogleFonts.montserrat()),
-//                     ),
-//                   )
-//                   .toList(),
-//               onChanged: (value) {
-//                 setState(() {
-//                   _selectedRole = value!;
-//                 });
-//               },
-//             ),
-//           ),
-//           const SizedBox(width: 16),
-
-//           // Status Filter
-//           Expanded(
-//             child: DropdownButtonFormField<String>(
-//               value: _selectedStatus,
-//               decoration: InputDecoration(
-//                 labelText: 'Status',
-//                 labelStyle: GoogleFonts.montserrat(color: Colors.grey[600]),
-//                 border: OutlineInputBorder(
-//                   borderRadius: BorderRadius.circular(8),
-//                   borderSide: BorderSide(color: Colors.grey[300]!),
-//                 ),
-//                 enabledBorder: OutlineInputBorder(
-//                   borderRadius: BorderRadius.circular(8),
-//                   borderSide: BorderSide(color: Colors.grey[300]!),
-//                 ),
-//                 filled: true,
-//                 fillColor: Colors.grey[50],
-//               ),
-//               items: ['All', 'Active', 'Inactive', 'Pending']
-//                   .map(
-//                     (status) => DropdownMenuItem(
-//                       value: status,
-//                       child: Text(status, style: GoogleFonts.montserrat()),
-//                     ),
-//                   )
-//                   .toList(),
-//               onChanged: (value) {
-//                 setState(() {
-//                   _selectedStatus = value!;
-//                 });
-//               },
-//             ),
-//           ),
-//         ],
-//       ),
-//     );
-//   }
-
-//   //DATA TABLE
-//   Widget _buildDataTable() {
-//     return Scaffold(
-//         body: Column(
-//           children: [
-//             // Results summary
-//             Container(
-//               padding: const EdgeInsets.all(16),
-//               decoration: BoxDecoration(
-//                 color: Colors.white,
-//                 borderRadius: const BorderRadius.only(
-//                   topLeft: Radius.circular(12),
-//                   topRight: Radius.circular(12),
-//                 ),
-//               ),
-//               child: Row(
-//                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
-//                 children: [
-//                   Text(
-//                     '3 projects found',
-//                     style: GoogleFonts.montserrat(
-//                       fontSize: 16,
-//                       fontWeight: FontWeight.w600,
-//                       color: Colors.black87,
-//                     ),
-//                   ),
-//                   Row(
-//                     children: [
-//                       IconButton(
-//                         onPressed: () {},
-//                         icon: const Icon(Icons.refresh, size: 18),
-//                         tooltip: 'Refresh',
-//                       ),
-//                       const SizedBox(width: 8),
-//                       ElevatedButton.icon(
-//                         onPressed: () {},
-//                         icon: const Icon(Icons.add, size: 18),
-//                         label: Text(
-//                           'Add Project',
-//                           style: GoogleFonts.montserrat(
-//                             fontWeight: FontWeight.w600,
-//                           ),
-//                         ),
-//                         style: ElevatedButton.styleFrom(
-//                           backgroundColor: Colors.black87,
-//                           foregroundColor: Colors.white,
-//                           elevation: 0,
-//                           padding: const EdgeInsets.symmetric(
-//                             horizontal: 16,
-//                             vertical: 12,
-//                           ),
-//                           shape: RoundedRectangleBorder(
-//                             borderRadius: BorderRadius.circular(6),
-//                           ),
-//                         ),
-//                       ),
-//                     ],
-//                   ),
-//                 ],
-//               ),
-//             ),
-
-//             // Enterprise Data Table
-//             Expanded(
-//               child: Container(
-//                 decoration: BoxDecoration(
-//                   color: Colors.white,
-//                   borderRadius: const BorderRadius.only(
-//                     bottomLeft: Radius.circular(12),
-//                     bottomRight: Radius.circular(12),
-//                   ),
-//                   border: Border.all(color: Colors.grey[200]!),
-//                 ),
-//                 child: DataTable2(
-//                   columnSpacing: 12,
-//                   horizontalMargin: 24,
-//                   minWidth: 800,
-//                   dataRowHeight: 72,
-//                   headingRowHeight: 56,
-//                   headingRowColor: WidgetStateProperty.all(Colors.grey[50]),
-//                   border: TableBorder(
-//                     horizontalInside: BorderSide(
-//                       color: Colors.grey[200]!,
-//                       width: 1,
-//                     ),
-//                   ),
-//                   columns: [
-//                     DataColumn2(
-//                       label: Text(
-//                         'Project',
-//                         style: GoogleFonts.montserrat(
-//                           fontWeight: FontWeight.w600,
-//                           fontSize: 14,
-//                           color: Colors.black87,
-//                         ),
-//                       ),
-//                       size: ColumnSize.L,
-//                     ),
-//                     DataColumn2(
-//                       label: Text(
-//                         'Client',
-//                         style: GoogleFonts.montserrat(
-//                           fontWeight: FontWeight.w600,
-//                           fontSize: 14,
-//                           color: Colors.black87,
-//                         ),
-//                       ),
-//                       size: ColumnSize.S,
-//                     ),
-//                     DataColumn2(
-//                       label: Text(
-//                         'Deadline',
-//                         style: GoogleFonts.montserrat(
-//                           fontWeight: FontWeight.w600,
-//                           fontSize: 14,
-//                           color: Colors.black87,
-//                         ),
-//                       ),
-//                       size: ColumnSize.S,
-//                     ),
-//                     DataColumn2(
-//                       label: Text(
-//                         'Status',
-//                         style: GoogleFonts.montserrat(
-//                           fontWeight: FontWeight.w600,
-//                           fontSize: 14,
-//                           color: Colors.black87,
-//                         ),
-//                       ),
-//                       size: ColumnSize.M,
-//                     ),
-//                     DataColumn2(
-//                       label: Text(
-//                         'Actions',
-//                         style: GoogleFonts.montserrat(
-//                           fontWeight: FontWeight.w600,
-//                           fontSize: 14,
-//                           color: Colors.black87,
-//                         ),
-//                       ),
-//                       size: ColumnSize.S,
-//                       fixedWidth: 100,
-//                     ),
-//                   ],
-//                   rows: projects.map((project) {
-//                     return DataRow2(
-//                       cells: [
-//                         DataCell(Text(project.title)),
-//                         DataCell(Text(project.client)),
-//                         DataCell(Text(project.deadline)),
-//                         DataCell(Text(project.status)),
-//                         DataCell(_buildActionsMenu(project)),
-//                       ],
-//                     );
-//                   }).toList(),
-//                 ),
-//               ),
-//             ),
-//           ],
-//         ),
-//       );
-//     }
-
-
-// //ACTIONS MENU
-//     Widget _buildActionsMenu(Project project) {
-//       return PopupMenuButton<String>(
-//         icon: Icon(Icons.more_vert, size: 18, color: Colors.grey[600]),
-//         offset: const Offset(-50, 0),
-//         itemBuilder: (context) => [
-//           PopupMenuItem(
-//             value: 'edit',
-//             child: Row(
-//               children: [
-//                 Icon(Icons.edit_outlined, size: 16, color: Colors.grey[700]),
-//                 const SizedBox(width: 8),
-//                 Text('Edit', style: GoogleFonts.montserrat(fontSize: 13)),
-//               ],
-//             ),
-//           ),
-//           PopupMenuItem(
-//             value: 'delete',
-//             child: Row(
-//               children: [
-//                 const Icon(Icons.delete_outline, size: 16, color: Colors.red),
-//                 const SizedBox(width: 8),
-//                 Text(
-//                   'Delete',
-//                   style: GoogleFonts.montserrat(fontSize: 13, color: Colors.red),
-//                 ),
-//               ],
-//             ),
-//           ),
-//           PopupMenuItem(
-//             value: 'view',
-//             child: Row(
-//               children: [
-//                 Icon(Icons.remove_red_eye_outlined, size: 16, color: Colors.grey[700]),
-//                 const SizedBox(width: 8),
-//                 Text('View', style: GoogleFonts.montserrat(fontSize: 13)),
-//               ],
-//             ),
-//           ),
-//         ],
-//         // onSelected: (value) {
-//         //   switch (value) {
-//         //     case 'edit':
-//         //       _showEditUserDialog(user);
-//         //       break;
-//         //     case 'delete':
-//         //       _showDeleteUserDialog(user);
-//         //       break;
-//         //   }
-//         // },
-//       );
-//     }
-//   }
