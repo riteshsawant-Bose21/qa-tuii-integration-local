@@ -86,7 +86,7 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
                       index: widget.index,
                     ),
                   ),
-              
+
                   /// Zone Content - shows subzones when expanded
                   if (zoneExpanded) _buildZoneContent(),
                 ],
@@ -250,7 +250,7 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
                       final List<Speaker> speakers = _projectViewModel.getHardwareForCircuit(circuitId: circuitData.id).whereType<Speaker>().toList();
                       final String deviceId = circuitData.id;
                       final List<ListeningArea> location = _projectViewModel.getListeningAreasForCircuit(circuitId: circuitData.id);
-      
+
                       return DragTarget<CircuitModel>(
                         key: ValueKey<String>(deviceId),
                         // ignore: deprecated_member_use
@@ -265,9 +265,9 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
                           }
                           final List<Speaker> incomingSpeakers = _projectViewModel.getHardwareForCircuit(circuitId: incoming.id).whereType<Speaker>().toList();
                           final List<Speaker> currentData = _projectViewModel.getHardwareForCircuit(circuitId: circuitData.id).whereType<Speaker>().toList();
-      
+
                           final Zone? incomingZone = _projectViewModel.getZoneForCircuit(circuitId: incoming.id);
-      
+
                           return incomingSpeakers.first.speakerSKU == currentData.first.speakerSKU &&
                               incoming.id != circuitData.id &&
                               incomingZone != null &&
@@ -277,7 +277,7 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
                         onAccept: (CircuitModel incoming) {
                           /// Add speaker to target circuit
                           final List<Speaker> incomingSpeakers = _projectViewModel.getHardwareForCircuit(circuitId: incoming.id).whereType<Speaker>().toList();
-      
+
                           if (incomingSpeakers.isNotEmpty) {
                             for (final Speaker speaker in incomingSpeakers) {
                               // serviceLocator<ProjectViewModel>().addHardware(hardware: speaker, autoSave: false);
@@ -286,7 +286,7 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
                             }
                             _projectViewModel.setSelectedDevice(circuitData.id, SelectedItemType.circuit);
                           }
-      
+
                           /// Remove the dragged circuit from the zone
                           _projectViewModel.removeCircuit(circuitId: incoming.id);
                           setState(() {});
@@ -294,37 +294,16 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
                         builder: (BuildContext context, List<CircuitModel?> candidateData, List<dynamic> rejectedData) {
                           return Draggable<CircuitModel>(
                             data: circuitData,
-                            feedback: Material(
-                              color: Colors.transparent,
-                              child: CircuitDeviceWidget(
-                                index: index,
-                                deviceId: deviceId,
-                                circuitModel: circuitData,
-                                circuitDeviceName: circuitData.name,
-                                assetImagePath:
-                                    serviceLocator<ProjectViewModel>().getHardwareImage(
-                                      productId: speakers.isNotEmpty ? speakers.first.productId ?? 0 : 0,
-                                      currentImagePath: speakers.isNotEmpty ? speakers.first.assetImagePath : '',
-                                    ) ??
-                                    "",
-                                location: location,
-                                speakers: speakers,
-                                projectViewModel: _projectViewModel,
-                                circuitDeviceCount: speakers.length,
-                                onDecrementHardwareInCircuit: () {},
-                                onIncrementHardwareInCircuit: () {},
-                                onRename: () {},
-                                onDuplicate: () {},
-                                onDelete: () {},
-                              ),
-                            ),
-                            childWhenDragging: Material(
-                              color: Colors.transparent,
-                              child: Opacity(
-                                opacity: 0.8,
-                                child: SizedBox(
-                                  width: 220,
+                            feedback: SizedBox(
+                              width: 220,
+
+                              child: Material(
+                                color: Colors.transparent,
+                                child: AbsorbPointer(
+                                  absorbing: true,
+
                                   child: CircuitDeviceWidget(
+                                    prefix: "feedback_",
                                     index: index,
                                     deviceId: deviceId,
                                     circuitModel: circuitData,
@@ -348,7 +327,43 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
                                 ),
                               ),
                             ),
+                            childWhenDragging: Material(
+                              color: Colors.transparent,
+                              child: AbsorbPointer(
+                                absorbing: true,
+                                child: Opacity(
+                                  opacity: 0.8,
+                                  child: SizedBox(
+                                    width: 220,
+
+                                    child: CircuitDeviceWidget(
+                                      prefix: "child_drag_",
+                                      index: index,
+                                      deviceId: deviceId,
+                                      circuitModel: circuitData,
+                                      circuitDeviceName: circuitData.name,
+                                      assetImagePath:
+                                          serviceLocator<ProjectViewModel>().getHardwareImage(
+                                            productId: speakers.isNotEmpty ? speakers.first.productId ?? 0 : 0,
+                                            currentImagePath: speakers.isNotEmpty ? speakers.first.assetImagePath : '',
+                                          ) ??
+                                          "",
+                                      location: location,
+                                      speakers: speakers,
+                                      projectViewModel: _projectViewModel,
+                                      circuitDeviceCount: speakers.length,
+                                      onDecrementHardwareInCircuit: () {},
+                                      onIncrementHardwareInCircuit: () {},
+                                      onRename: () {},
+                                      onDuplicate: () {},
+                                      onDelete: () {},
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
                             child: CircuitDeviceWidget(
+                              prefix: "child_",
                               index: index,
                               deviceId: deviceId,
                               circuitModel: circuitData,
@@ -391,7 +406,7 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
               ),
               const SizedBox(height: 8),
             ],
-      
+
             /// Subzones list
             ReorderableListView.builder(
               shrinkWrap: true,
@@ -408,9 +423,9 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
               },
               itemBuilder: (BuildContext context, int index) {
                 final SubZone subZone = widget.subZones[index];
-      
+
                 final bool isLast = index == widget.subZones.length - 1;
-      
+
                 return ReorderableDragStartListener(
                   key: ValueKey<String>(subZone.id),
                   index: index,

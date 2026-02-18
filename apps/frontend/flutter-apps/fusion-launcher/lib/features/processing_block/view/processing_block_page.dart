@@ -14,6 +14,7 @@ import '../viewmodel/algorithm_data_viewmodel.dart';
 import 'dynamic_grid_view.dart';
 import 'processing_blocks/agc/agc_block.dart';
 import 'processing_blocks/graphiceq/graphiceq_block.dart';
+import 'processing_blocks/gate/gate_block.dart';
 
 class ProcessingBlockPage extends StatelessWidget {
   const ProcessingBlockPage({super.key, required this.processingBlock});
@@ -45,6 +46,9 @@ class ProcessingBlockPage extends StatelessWidget {
                   return const GraphicEqBlock();
                 } else if (processingBlock.algorithmId == 'tone_control') {
                   return const ToneControlBlock();
+                }
+                if (processingBlock.algorithmId == 'gate') {
+                  return const GateBlock();
                 }
                 final PBLayout? data = viewModel.layout;
 

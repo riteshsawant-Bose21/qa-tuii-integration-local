@@ -78,10 +78,14 @@ class ProcessingChainView extends StatelessWidget {
             child: Container(color: Colors.transparent),
           ),
 
-          Center(
+          Align(
+            alignment: Alignment.center,
             child: ClipRRect(
               borderRadius: BorderRadius.circular(16),
               child: Container(
+                height: 800,
+                width: 1500,
+                // constraints: const BoxConstraints(maxWidth: 1500),
                 margin: const EdgeInsets.all(24.0),
                 decoration: BoxDecoration(
                   color: context.colorScheme.elevation1,

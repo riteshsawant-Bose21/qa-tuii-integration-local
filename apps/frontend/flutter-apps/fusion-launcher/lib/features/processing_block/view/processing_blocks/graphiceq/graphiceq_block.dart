@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:fusion_launcher/features/processing_block/view/processing_blocks/widgets/block_header.dart';
 import 'package:fusion_launcher/features/processing_block/view/widgets/widgets.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:intl/intl.dart';
@@ -9,6 +8,7 @@ import '../../../../add_source_popup/view_model/add_source_viewmodel.dart';
 import '../../../viewmodel/algorithm_data_viewmodel.dart';
 import '../../widgets/pb_meter.dart';
 import '../widgets/disabled_widget_wrapper.dart';
+import '../widgets/pb_block_layout.dart';
 
 part '_graphiceq_controller.dart';
 
@@ -29,30 +29,11 @@ class GraphicEqBlock extends StatelessWidget {
         builder: (BuildContext context) {
           final ProcessingBlockModel pb = context.watch<AlgorithmDataViewmodel>().processingBlock;
 
-          return Stack(
-            children: <Widget>[
-              ...getBlockHeader(
-                context,
-                pb,
-                actions: <Widget>[
-                  const FusionAppText(text: "BYPASS"),
-                  const SizedBox(width: 10),
-                  FusionSwitch(
-                    inactiveTrackColor: context.colorScheme.elevation1,
-                    value: context.watch<GraphicEqController>().isGloballyBypassed,
-                    onChanged: (bool value) {
-                      context.read<GraphicEqController>().bypassGlobally(value);
-                    },
-                    height: 30,
-                    width: 50,
-                  ),
-                  const SizedBox(width: 20),
-                ],
-              ),
-
-              Padding(
-                padding: const EdgeInsetsGeometry.only(top: 50),
-                child: Column(
+          return PBBlockLayout(
+            pb: context.watch<AlgorithmDataViewmodel>().processingBlock,
+            onBypassChanged: context.read<GraphicEqController>().bypassGlobally,
+            bypassed: context.watch<GraphicEqController>().isGloballyBypassed,
+            body: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: <Widget>[
                     const SizedBox(height: 10),
@@ -203,8 +184,8 @@ class GraphicEqBlock extends StatelessWidget {
                     ),
                   ],
                 ),
-              ),
-            ],
+            
+
           );
         },
       ),
