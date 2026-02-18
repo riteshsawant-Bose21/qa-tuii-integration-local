@@ -318,6 +318,20 @@ func (c *Cluster) ReloadVIPLocal(w http.ResponseWriter, r *http.Request) {
 }
 
 func (c *Cluster) RebootSystem(w http.ResponseWriter, r *http.Request) {
+	if !utils.RequirePost(w, r) {
+		return
+	}
+	defer r.Body.Close()
+
+	go func() {
+		// Reboot system outside of request after updating all the nodes
+		if err := postRebootToAdmin(c, routes.DeviceReloadVIPEndpoint, c.reloadVIP); err != nil {
+			// Log the error. Don't respond to client because it's async
+			logging.GetLogger().Error("Failed to reload VIP: %v", err)
+		}
+	}()
+
+	w.WriteHeader(http.StatusNoContent)
 
 }
 

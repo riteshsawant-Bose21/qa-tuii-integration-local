@@ -500,6 +500,14 @@ func postGenericToAdmin(
 	return nil
 }
 
+func postRebootToAdmin(
+	c *Cluster,
+	endpoint string,
+	localFn func() error,
+) error {
+	return nil
+}
+
 // getLocalEndpointResponse calls a endpoint
 func getLocalEndpointResponse(c *Cluster, addr, endpoint string) (response *http.Response, err error) {
 
