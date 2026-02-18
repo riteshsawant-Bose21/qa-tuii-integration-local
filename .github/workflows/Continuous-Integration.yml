@@ -414,6 +414,7 @@ jobs:
             echo "firmwareBundleVersion not found in YAML. Failing."
             exit 1
           fi
+          echo "Firmware version set to $FIRMWARE_VERSION"
           echo "firmware_bundle_version=$FIRMWARE_VERSION" >> $GITHUB_OUTPUT
 
   yocto-image-build:
@@ -448,6 +449,7 @@ jobs:
           FILE="conf/fusion-nano_properties.inc"
           VERSION_INFO_FILE="recipes-bsp/fusion-init/fusion-init/fusion-nano/version_info.txt"
           MONOREPO_COMMIT_HASH=${{ needs.integration-tests.outputs.MONOREPO_COMMIT_HASH }}
+          FIRMWARE_BUNDLE_VERSION=${{ needs.integration-tests.outputs.firmware_bundle_version }}
 
           if [ ! -f "$FILE" ]; then
             echo "File $FILE does not exist. Failing the step."
@@ -463,9 +465,9 @@ jobs:
               echo "FUSION_MONOREPO_COMMIT_HASH=\"${MONOREPO_COMMIT_HASH}\"" >> "$FILE"
             fi
             if grep -q "^FIRMWARE_BUNDLE_VERSION=" "$FILE"; then
-              sed -i "s|^FIRMWARE_BUNDLE_VERSION=.*|FIRMWARE_BUNDLE_VERSION=\"${{ needs.integration-tests.outputs.firmware_bundle_version }}\"|" "$FILE"
+              sed -i "s|^FIRMWARE_BUNDLE_VERSION=.*|FIRMWARE_BUNDLE_VERSION=\"${FIRMWARE_BUNDLE_VERSION}\"|" "$FILE"
             else
-              echo "FIRMWARE_BUNDLE_VERSION=\"${{ needs.integration-tests.outputs.firmware_bundle_version }}\"" >> "$FILE"
+              echo "FIRMWARE_BUNDLE_VERSION=\"${FIRMWARE_BUNDLE_VERSION}\"" >> "$FILE"
             fi
           fi
 
