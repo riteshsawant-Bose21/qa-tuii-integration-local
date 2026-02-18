@@ -303,7 +303,8 @@ func (c *Cluster) restartKeepalived() error {
 
 // reboot the system...
 func (c *Cluster) restartSystem() error {
-	return exec.Command("reboot").Run()
+	logging.GetLogger().Info("Rebooting Server in 5 seconds")
+	return exec.Command("systemd-run", "--on-active=5s", "/usr/bin/systemctl", "reboot").Run()
 }
 
 // monitorState continuously monitors the cluster membership state
