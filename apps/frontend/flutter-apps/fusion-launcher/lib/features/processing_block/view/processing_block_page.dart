@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:fusion_launcher/core/models/algorithm/algorithm_metadata.dart';
 import 'package:fusion_launcher/core/service_locator.dart';
 import 'package:fusion_launcher/features/processing_block/dto/pb_layout.dart';
+import 'package:fusion_launcher/features/processing_block/view/processing_blocks/compressor/compressor_block.dart';
 import 'package:fusion_launcher/features/processing_block/view/processing_blocks/delay/delay_block.dart';
 import 'package:fusion_launcher/features/processing_block/view/processing_blocks/gain/gain_block.dart';
 import 'package:fusion_launcher/features/processing_block/view/processing_blocks/limiter/limiter_block.dart';
@@ -46,6 +47,8 @@ class ProcessingBlockPage extends StatelessWidget {
                   return const GraphicEqBlock();
                 } else if (processingBlock.algorithmId == 'tone_control') {
                   return const ToneControlBlock();
+                } else if (processingBlock.algorithmId == 'compressor') {
+                  return const CompressorBlock();
                 }
                 if (processingBlock.algorithmId == 'gate') {
                   return const GateBlock();
