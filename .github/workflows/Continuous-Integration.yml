@@ -454,7 +454,8 @@ jobs:
 
           if [ ! -f "$FILE" ]; then
             echo "File $FILE does not exist. Failing the step."
-            exit 1          else
+            exit 1          
+          else
             if grep -q "^FUSION_MONOREPO_BRANCH=" "$FILE"; then
               sed -i "s|^FUSION_MONOREPO_BRANCH=.*|FUSION_MONOREPO_BRANCH=\"${BRANCH_NAME}\"|" "$FILE"
             else
