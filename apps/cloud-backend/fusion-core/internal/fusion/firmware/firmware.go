@@ -14,7 +14,17 @@ import (
 
 const (
 	firmwareArtifactPathFormat = "%s/%s/%s.zip"
+
+	// Deployment channels
+	ChannelDev     = "dev"
+	ChannelTesting = "testing"
+	ChannelStable  = "stable"
 )
+
+// DefaultChannel returns the default deployment channel
+func DefaultChannel() string {
+	return ChannelDev
+}
 
 // generateProjectFileURL generates a presigned URL for firmware update file operations
 func (s *Service) generateFirmwareArtifactURL(ctx context.Context, platform string, version string, fileName string, ttl time.Duration, operation string, logger *zap.Logger) (string, error) {
@@ -114,7 +124,7 @@ func (s *Service) MakeReleaseAvailable(ctx context.Context, releaseID string, lo
 	// Insert into deployments
 	// Currently I am Deploying the release to the "dev" channel directly in the release step itself
 	// TODO : Add a new API to deploy the release to the desired channel
-	_, err = s.dbService.InsertDeployment(ctx, releaseID, tx, "dev", logger)
+	_, err = s.dbService.InsertDeployment(ctx, releaseID, tx, DefaultChannel(), logger)
 	if err != nil {
 		tx.Rollback()
 		return fmt.Errorf("failed to insert deployment: %v", err)
