@@ -15,16 +15,17 @@ class ReadonlyTextView extends StatelessWidget {
       children: <Widget>[
         FusionContainer(
           borderRadius: 6,
+          raised: true,
           child: Container(
             constraints: const BoxConstraints(
               minWidth: 150,
             ),
+            height: 32,
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
             alignment: Alignment.centerLeft,
             decoration: BoxDecoration(
               color: context.colorScheme.elevation1,
               borderRadius: BorderRadius.circular(6),
-              border: Border.all(color: Colors.white10),
             ),
             child: FusionAppText(
               text: value,

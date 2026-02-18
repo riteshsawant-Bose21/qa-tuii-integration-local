@@ -8,7 +8,6 @@ import '../../widgets/pb_dropdown.dart';
 import '../../widgets/pb_meter.dart';
 import '../../widgets/pb_textfield.dart';
 import '../widgets/pb_block_layout.dart';
-import '../widgets/pb_section.dart';
 
 part '_delay_controller.dart';
 
@@ -26,17 +25,22 @@ class DelayBlock extends StatelessWidget {
       update: (BuildContext context, AlgorithmDataViewmodel valueHandler, DelayController? previous) => DelayController(valueHandler),
       child: Builder(
         builder: (BuildContext context) {
-          /// Main content area
+          final DelayController controller = context.watch<DelayController>();
           return PBBlockLayout(
             pb: context.watch<AlgorithmDataViewmodel>().processingBlock,
             onBypassChanged: context.read<DelayController>().bypassGlobally,
-            bypassed: context.watch<DelayController>().isGloballyBypassed,
+            bypassed: controller.isGloballyBypassed,
             body: Row(
               spacing: 3,
               mainAxisSize: MainAxisSize.min,
               children: <Widget>[
-                PBSection(
-                  type: PBSectionType.left,
+                Container(
+                  decoration: BoxDecoration(
+                    color: context.colorScheme.elevation2,
+                    borderRadius: BorderRadius.horizontal(
+                      left: Radius.circular(context.mediumRadius),
+                    ),
+                  ),
                   padding: const EdgeInsets.all(20.0),
                   child: Column(
                     children: <Widget>[
@@ -72,10 +76,8 @@ class DelayBlock extends StatelessWidget {
                       Row(
                         mainAxisSize: MainAxisSize.min,
                         children: <Widget>[
-                          FusionContainer(
-                            alignment: Alignment.center,
+                          SizedBox(
                             width: 80,
-                            color: context.colorScheme.elevation2,
                             child: PBNumberTextField(
                               value: context.watch<DelayController>().currentDelay ?? 0,
                               onChanged: (num value) {
@@ -92,36 +94,39 @@ class DelayBlock extends StatelessWidget {
                     ],
                   ),
                 ),
-                PBSection(
-                  type: PBSectionType.right,
-                  child: SizedBox(
-                    width: 100,
-                    child: Column(
-                      children: <Widget>[
-                        Container(
-                          width: double.infinity,
-                          alignment: Alignment.center,
-                          padding: const EdgeInsets.symmetric(vertical: 12.0),
-
-                          decoration: BoxDecoration(
-                            border: Border(
-                              bottom: BorderSide(color: context.colorScheme.elevation5),
-                            ),
-                          ),
-                          child: FusionAppText(text: "OUTPUT", style: context.textTheme.bodyMedium),
-                        ),
-                        const Expanded(
-                          child: Padding(
-                            padding: EdgeInsets.all(12.0),
-                            child: VerticalMeter(
-                              value: -60,
-                              min: -60,
-                              max: 0,
-                            ),
-                          ),
-                        ),
-                      ],
+                Container(
+                  width: 100,
+                  decoration: BoxDecoration(
+                    color: context.colorScheme.elevation2,
+                    borderRadius: BorderRadius.horizontal(
+                      right: Radius.circular(context.mediumRadius),
                     ),
+                  ),
+                  child: Column(
+                    children: <Widget>[
+                      Container(
+                        width: double.infinity,
+                        alignment: Alignment.center,
+                        padding: const EdgeInsets.symmetric(vertical: 12.0),
+
+                        decoration: BoxDecoration(
+                          border: Border(
+                            bottom: BorderSide(color: context.colorScheme.elevation5),
+                          ),
+                        ),
+                        child: FusionAppText(text: "OUTPUT", style: context.textTheme.bodyMedium),
+                      ),
+                      const Expanded(
+                        child: Padding(
+                          padding: EdgeInsets.all(12.0),
+                          child: VerticalMeter(
+                            value: -60,
+                            min: -60,
+                            max: 0,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ],

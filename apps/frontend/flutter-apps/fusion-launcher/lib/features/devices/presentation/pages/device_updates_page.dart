@@ -7,6 +7,7 @@ import 'package:fusion_launcher/features/control_dashboard/presentation/widgets/
 import 'package:fusion_lib/fusion_lib.dart';
 
 // Assuming these exist in your project structure based on imports provided
+import '../../../../core/router/routes.dart';
 import '../widgets/device/firmware_update_flow.dart';
 
 // --- THE MAIN TAB WIDGET ---
@@ -124,7 +125,10 @@ class _DeviceUpdatesTabState extends State<DeviceUpdatesTab> {
         ),
         'deviceName': FusionTableCell(
           value: deviceName,
-          child: _buildLinkText(deviceName),
+          child: _buildLinkText(
+            deviceName: deviceName,
+            deviceId: device.id,
+          ),
         ),
         'model': FusionTableCell(
           value: modelName,
@@ -163,17 +167,29 @@ class _DeviceUpdatesTabState extends State<DeviceUpdatesTab> {
     );
   }
 
-  Widget _buildLinkText(String text) {
-    return Text(
-      text,
-      style: const TextStyle(
-        color: Color(0xFF4CAF50),
-        decoration: TextDecoration.underline,
-        decorationColor: Color(0xFF4CAF50),
-        fontSize: 13,
+  Widget _buildLinkText({
+    required String deviceName,
+    required String deviceId,
+  }) {
+    return InkWell(
+      onTap: () {
+        Navigator.pushNamed(
+          context,
+          Routes.deviceDetails,
+          arguments: deviceId,
+        );
+      },
+      child: FusionAppText(
+        text: deviceName,
+        style: context.textTheme.labelMedium!.copyWith(
+          color: context.colorScheme.green,
+          decoration: TextDecoration.underline,
+          decorationColor: context.colorScheme.green,
+          fontSize: 13,
+        ),
+        maxLine: 1,
+        textOverflow: TextOverflow.ellipsis,
       ),
-      maxLines: 1,
-      overflow: TextOverflow.ellipsis,
     );
   }
 }

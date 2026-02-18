@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:fusion_launcher/core/assets/asset_icons.dart';
+import 'package:fusion_launcher/core/service_locator.dart';
+import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
 import 'audio_meter_widget.dart';
@@ -7,11 +9,13 @@ import 'audio_meter_widget.dart';
 class DashboardCircuitWidget extends StatelessWidget {
   final CircuitModel circuit;
   final EdgeInsetsGeometry? margin;
+  final bool isZoneMuted;
 
   const DashboardCircuitWidget({
     super.key,
     required this.circuit,
     this.margin,
+    this.isZoneMuted = false,
   });
 
   @override
@@ -46,17 +50,24 @@ class DashboardCircuitWidget extends StatelessWidget {
               const Spacer(),
 
               InkWell(
-                onTap: () {},
+                onTap: () {
+                  serviceLocator<ProjectViewModel>().updateCircuit(
+                    circuit: circuit.copyWith(
+                      muted: !circuit.muted,
+                    ),
+                  );
+                },
                 child: Icon(
-                  Icons.volume_up_outlined,
+                  circuit.muted ? Icons.volume_off_outlined : Icons.volume_up_outlined,
                   size: 16,
                   color: context.colorScheme.onPrimary,
                 ),
               ),
             ],
           ),
-          const AudioMeterContainer(
+          AudioMeterContainer(
             marginHorizontal: 0,
+            muted: circuit.muted || isZoneMuted,
           ),
         ],
       ),

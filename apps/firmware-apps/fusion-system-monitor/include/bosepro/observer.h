@@ -13,6 +13,7 @@
 #include <mutex>
 #include <netinet/in.h>
 #include <poll.h>
+#include <spdlog/spdlog.h>
 #include <sstream>
 #include <stdexcept>
 #include <string>
@@ -21,6 +22,8 @@
 #include <unistd.h>
 #include <unordered_map>
 #include <vector>
+#include <pthread.h>
+#include <sched.h>
 
 /**
  * @brief Represents a component of a JSON path.
@@ -391,7 +394,11 @@ public:
     updateInternalState(path, new_state);
     Json::Value newData = data_;
 
-    if (oldData == newData) {
+    // Allow forced notifications for specific paths even if the value didn't change.
+    const bool force_notify =
+        (path.rfind("settings.fw.amp_control", 0) == 0);
+
+    if (!force_notify && oldData == newData) {
       if (verbose_) {
         log("No change detected for path: " + path);
       }
@@ -648,6 +655,8 @@ public:
     }
     requestInitialState(serverAddr_);
     receiveThread_ = std::thread(&UDPValueMonitor::receiveLoop, this);
+    name_thread(receiveThread_, "sm-obs-rx");
+    pin_thread(receiveThread_, "receiveThread");
   }
 
   ~UDPValueMonitor() { stop(); }
@@ -697,6 +706,24 @@ public:
   }
 
 private:
+  void pin_thread(std::thread &t, const char *thread_label) const {
+    constexpr int kTelemetryCpu = 0;
+    cpu_set_t cpuset;
+    CPU_ZERO(&cpuset);
+    CPU_SET(kTelemetryCpu, &cpuset);
+    int rc = pthread_setaffinity_np(t.native_handle(), sizeof(cpu_set_t), &cpuset);
+    if (rc != 0) {
+      SPDLOG_WARN("Failed to set {} affinity to CPU {}: {}", thread_label, kTelemetryCpu, strerror(rc));
+    }
+  }
+
+  void name_thread(std::thread &t, const char *name) const {
+    int rc = pthread_setname_np(t.native_handle(), name);
+    if (rc != 0) {
+      SPDLOG_WARN("Failed to set thread name '{}': {}", name, strerror(rc));
+    }
+  }
+
   // Logging helper.
   void log(const std::string &message) const {
     std::cout << "[UDPValueMonitor] " << message << std::endl;
@@ -731,7 +758,7 @@ private:
     std::string message;
 
     if (path_parts[0].key == "settings") {
-      if (old_val != new_val) {
+      if ((old_val != new_val) || (path_parts[2].key == "amp_control")) {
         message = "{ \"target\": \"" + path_parts[2].key + "\""
             + ", \"name\": \"" + path_parts[3].key + "\""
             + ((path_parts.size() > 4 && path_parts[4].isArrayAccess)

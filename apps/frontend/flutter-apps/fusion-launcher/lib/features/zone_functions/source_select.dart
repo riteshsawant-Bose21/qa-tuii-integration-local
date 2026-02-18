@@ -2,10 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/core/service_locator.dart';
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
-import 'package:fusion_launcher/features/zone_functions/settings/source_select_priority_settings.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
+import 'additional_settings/source_select_settings/source_select_settings.dart';
 import 'source_mix.dart';
 import 'widgets/priority_selection_widget.dart';
 
@@ -321,7 +321,7 @@ class _SourceSelectZoneControlPanelState extends State<SourceSelectZoneControlPa
                             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                             child: InkWell(
                               onTap: () {
-                                SourceSelectPrioritySettings.showDialog(
+                                SourceSelectAdditionalSettingsDialog.showDialog(
                                   context,
                                   zoneID: widget.zoneID,
                                 );

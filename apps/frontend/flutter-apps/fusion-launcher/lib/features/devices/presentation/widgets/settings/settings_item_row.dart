@@ -4,11 +4,17 @@ import 'package:fusion_lib/fusion_lib.dart';
 class SettingsItemRow extends StatelessWidget {
   final String label;
   final Widget child;
+  final int labelFlex;
+  final int childFlex;
+  final BoxConstraints childConstraints;
 
   const SettingsItemRow({
     super.key,
     required this.label,
     required this.child,
+    this.labelFlex = 2,
+    this.childFlex = 8,
+    this.childConstraints = const BoxConstraints(),
   });
 
   @override
@@ -18,14 +24,17 @@ class SettingsItemRow extends StatelessWidget {
       children: <Widget>[
         // Fixed width label for alignment
         Expanded(
-          flex: 2,
+          flex: labelFlex,
           child: FusionAppText(
             text: label,
             style: context.textTheme.labelMedium,
           ),
         ),
         // The input field/switches
-        Expanded(flex: 8, child: child),
+        Expanded(
+          flex: childFlex,
+          child: child,
+        ),
       ],
     );
   }

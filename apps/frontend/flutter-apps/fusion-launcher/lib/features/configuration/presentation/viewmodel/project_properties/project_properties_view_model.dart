@@ -111,7 +111,7 @@ extension ProjectPropertiesViewModel on ProjectViewModel {
       if (autoSave) {
         saveProject();
       }
-      updateProject();
+      emitVipUpdated(ip);
     } catch (e) {
       FusionLogger.log(tag: LogTag.project, message: "Failed to set virtual IP: $e");
       throwError("Failed to set virtual IP: $e");

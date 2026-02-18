@@ -42,4 +42,13 @@ class AssetIcons {
   static const String networkIcon = '$_path/network_icon2.webp';
   static const String timeIcon = '$_path/time_icon2.webp';
   static const String wifiIcon = '$_path/wifi_icon2.webp';
+  static const String diskUsage = '$_path/disk_usage.webp';
+  static const String eqLocation = '$_path/eq_location.webp';
+  static const String micIcon = '$_path/mic_icon.webp';
+  static const String musicPlayer = '$_path/music_player.webp';
+  static const String pagingMic = '$_path/paging_mic.webp';
+  static const String speaker = '$_path/speaker.webp';
+  static const String temperature = '$_path/temperature.webp';
+  static const String levelIndicator = '$_path/level_indicator.webp';
+  static const String webIcon = '$_path/web_icon.webp';
 }

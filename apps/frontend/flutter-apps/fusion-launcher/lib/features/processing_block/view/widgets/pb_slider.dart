@@ -166,6 +166,21 @@ class _VerticalSliderState extends State<VerticalSlider> {
     );
   }
 
+  void _jumpToPosition(double localDy, double height) {
+    final double trackRange = height - widget.thumbSize;
+    final double clampedDy = localDy.clamp(widget.thumbSize / 2, height - widget.thumbSize / 2);
+
+    final double normalized = 1 - ((clampedDy - widget.thumbSize / 2) / trackRange);
+
+    final num newValue = _fromNormalized(normalized);
+
+    setState(() {
+      _currentValue = num.parse(newValue.toStringAsFixed(2));
+    });
+
+    widget.onChanged?.call(_currentValue);
+  }
+
   @override
   Widget build(BuildContext context) {
     return LayoutBuilder(
@@ -235,86 +250,66 @@ class _VerticalSliderState extends State<VerticalSlider> {
                 SizedBox(
                   width: widget.thumbSize,
                   height: height,
-                  child: Stack(
-                    clipBehavior: Clip.none,
-                    children: <Widget>[
-                      // Track - centered
-                      Positioned.fill(
-                        child: Center(
-                          child: SizedBox(
-                            width: widget.trackWidth,
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: <Widget>[
-                                // Inactive (top)
-                                Container(
-                                  width: widget.trackWidth,
-                                  height: inactiveHeight,
-                                  decoration: BoxDecoration(
-                                    color: context.colorScheme.elevation5,
-                                    borderRadius: const BorderRadius.vertical(
-                                      top: Radius.circular(100),
+                  child: GestureDetector(
+                    behavior: HitTestBehavior.translucent,
+                    onTapDown: (TapDownDetails d) => _jumpToPosition(d.localPosition.dy, height),
+                    onVerticalDragStart: (DragStartDetails d) => _jumpToPosition(d.localPosition.dy, height),
+                    onVerticalDragUpdate: (DragUpdateDetails d) => _jumpToPosition(d.localPosition.dy, height),
+                    child: Stack(
+                      clipBehavior: Clip.none,
+                      children: <Widget>[
+                        // Track - centered
+                        Positioned.fill(
+                          child: Center(
+                            child: SizedBox(
+                              width: widget.trackWidth,
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: <Widget>[
+                                  // Inactive (top)
+                                  Container(
+                                    width: widget.trackWidth,
+                                    height: inactiveHeight,
+                                    decoration: BoxDecoration(
+                                      color: context.colorScheme.elevation5,
+                                      borderRadius: const BorderRadius.vertical(
+                                        top: Radius.circular(100),
+                                      ),
                                     ),
                                   ),
-                                ),
-                                // Active (bottom)
-                                Container(
-                                  width: widget.trackWidth,
-                                  height: activeHeight,
-                                  decoration: BoxDecoration(
-                                    color: widget.activeColor ?? context.colorScheme.primaryColor,
-                                    borderRadius: const BorderRadius.vertical(
-                                      bottom: Radius.circular(100),
+                                  // Active (bottom)
+                                  Container(
+                                    width: widget.trackWidth,
+                                    height: activeHeight,
+                                    decoration: BoxDecoration(
+                                      color: widget.activeColor ?? context.colorScheme.primaryColor,
+                                      borderRadius: const BorderRadius.vertical(
+                                        bottom: Radius.circular(100),
+                                      ),
                                     ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
-
-                      // Thumb - centered horizontally
-                      Positioned(
-                        left: 0,
-                        right: 0,
-                        bottom: thumbBottom,
-                        child: Center(
-                          child: GestureDetector(
-                            behavior: HitTestBehavior.opaque,
-                            onPanStart: _onPanStart,
-                            onPanUpdate: (DragUpdateDetails details) => _onPanUpdate(details, height),
-                            onPanEnd: _onPanEnd,
-                            child: Container(
-                              height: widget.thumbSize,
-                              width: widget.thumbSize,
-                              padding: EdgeInsets.all(widget.thumbSize * 0.25),
-                              decoration: BoxDecoration(
-                                color: context.colorScheme.primaryWhite,
-                                shape: BoxShape.circle,
-                                boxShadow: <BoxShadow>[
-                                  BoxShadow(
-                                    color: Colors.black.withOpacity(0.15),
-                                    blurRadius: 4,
-                                    offset: const Offset(0, 2),
                                   ),
                                 ],
                               ),
-                              child: Center(
-                                child: Container(
-                                  height: widget.thumbSize,
-                                  width: widget.thumbSize,
-                                  decoration: BoxDecoration(
-                                    color: context.colorScheme.textGrey,
-                                    shape: BoxShape.circle,
-                                  ),
-                                ),
-                              ),
                             ),
                           ),
                         ),
-                      ),
-                    ],
+
+                        // Thumb - centered horizontally
+                        Positioned(
+                          left: 0,
+                          right: 0,
+                          bottom: thumbBottom,
+                          child: Center(
+                            child: _Thumb(
+                              size: widget.thumbSize,
+                              onStart: _onPanStart,
+                              onUpdate: (DragUpdateDetails details) => _onPanUpdate(details, height),
+                              onEnd: _onPanEnd,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ],
@@ -462,7 +457,7 @@ class _VerticalRangeSelectionSliderState extends State<VerticalRangeSelectionSli
                         Container(
                           width: widget.intervalTickWidth,
                           height: 2,
-                          color: Colors.white,
+                          color: context.colorScheme.textPrimary,
                         ),
                       ],
                     ),
@@ -479,7 +474,7 @@ class _VerticalRangeSelectionSliderState extends State<VerticalRangeSelectionSli
                     child: Center(
                       child: Container(
                         width: widget.trackWidth,
-                        color: Colors.grey.shade700,
+                        color: context.colorScheme.strokeLight,
                       ),
                     ),
                   ),

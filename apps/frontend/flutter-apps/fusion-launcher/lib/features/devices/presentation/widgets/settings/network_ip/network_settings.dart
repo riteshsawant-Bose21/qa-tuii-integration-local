@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:fusion_launcher/features/devices/presentation/widgets/settings/labeled_switch.dart';
 import 'package:fusion_launcher/features/devices/presentation/widgets/settings/readonly_text_view.dart';
 import 'package:fusion_launcher/features/devices/presentation/widgets/settings/settings_item_row.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
+import '../network_dropdown.dart';
 import '../network_settings_header.dart';
 
 class NetworkSettingsPage extends StatefulWidget {
@@ -15,10 +15,6 @@ class NetworkSettingsPage extends StatefulWidget {
 
 class _NetworkSettingsPageState extends State<NetworkSettingsPage> {
   // State for the toggle switches
-  bool _logError = true;
-  bool _logWarning = true;
-  bool _logInfo = true;
-
   @override
   Widget build(BuildContext context) {
     return Padding(
@@ -61,31 +57,77 @@ class _NetworkSettingsPageState extends State<NetworkSettingsPage> {
 
           const SizedBox(height: 10),
 
-          // Form Field 3: Logging Switches
           SettingsItemRow(
             label: "Logging",
             child: Row(
               children: <Widget>[
-                LabeledSwitch(
-                  label: "Error",
-                  value: _logError,
-                  onChanged: (bool v) => setState(() => _logError = v),
-                ),
-                const SizedBox(width: 24),
-                LabeledSwitch(
-                  label: "Warning",
-                  value: _logWarning,
-                  onChanged: (bool v) => setState(() => _logWarning = v),
-                ),
-                const SizedBox(width: 24),
-                LabeledSwitch(
-                  label: "Info",
-                  value: _logInfo,
-                  onChanged: (bool v) => setState(() => _logInfo = v),
+                Container(
+                  constraints: const BoxConstraints(
+                    maxWidth: 200,
+                  ),
+                  child: NetworkDropdown<String>(
+                    items: <String>["Error", "Warning", "Info"],
+                    selectedValue: null,
+                    placeholder: "Select Log level",
+                    labelBuilder: (String tz) {
+                      return tz;
+                    },
+                    onChanged: (String? tz) {},
+                  ),
                 ),
               ],
             ),
           ),
+
+          const SizedBox(height: 10),
+
+          SettingsItemRow(
+            label: "Heartbeat",
+            child: Row(
+              children: <Widget>[
+                Container(
+                  constraints: const BoxConstraints(
+                    maxWidth: 200,
+                  ),
+                  child: NetworkDropdown<int>(
+                    items: <int>[10, 20, 30, 40, 50, 60, 70, 80, 90, 100],
+                    selectedValue: null,
+                    placeholder: "Select interval",
+                    labelBuilder: (int interval) {
+                      return "Every $interval seconds";
+                    },
+                    onChanged: (int? interval) {},
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          // Form Field 3: Logging Switches
+          // SettingsItemRow(
+          //   label: "Logging",
+          //   child: Row(
+          //     children: <Widget>[
+          //       LabeledSwitch(
+          //         label: "Error",
+          //         value: _logError,
+          //         onChanged: (bool v) => setState(() => _logError = v),
+          //       ),
+          //       const SizedBox(width: 24),
+          //       LabeledSwitch(
+          //         label: "Warning",
+          //         value: _logWarning,
+          //         onChanged: (bool v) => setState(() => _logWarning = v),
+          //       ),
+          //       const SizedBox(width: 24),
+          //       LabeledSwitch(
+          //         label: "Info",
+          //         value: _logInfo,
+          //         onChanged: (bool v) => setState(() => _logInfo = v),
+          //       ),
+          //     ],
+          //   ),
+          // ),
         ],
       ),
     );

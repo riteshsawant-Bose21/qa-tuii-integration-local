@@ -28,6 +28,7 @@ class ZoneControlCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    print("Zone ${zone.name} has  muted state: ${zone.muted}");
     return ClipRect(
       clipBehavior: Clip.antiAlias,
       child: Container(
@@ -46,8 +47,11 @@ class ZoneControlCard extends StatelessWidget {
           children: <Widget>[
             ZoneControlHeader(zone: zone),
 
+            AudioMeterContainer(
+              muted: zone.muted,
+            ),
+
             if (subZones.isEmpty) ...<Widget>[
-              const AudioMeterContainer(),
               if (circuits.isNotEmpty) ...<Widget>[
                 CircuitExpandableSection(
                   title: 'Circuits',
@@ -56,6 +60,7 @@ class ZoneControlCard extends StatelessWidget {
                           .map(
                             (CircuitModel circuit) => DashboardCircuitWidget(
                               circuit: circuit,
+                              isZoneMuted: zone.muted,
                             ),
                           )
                           .toList(),

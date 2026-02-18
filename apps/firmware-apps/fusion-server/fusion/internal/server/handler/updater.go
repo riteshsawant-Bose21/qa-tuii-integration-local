@@ -6,7 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"fusion/internal/api"
-	"fusion/internal/logging"
+	"fusion-services-core/logging"
 	"io"
 	"os"
 	"os/exec"

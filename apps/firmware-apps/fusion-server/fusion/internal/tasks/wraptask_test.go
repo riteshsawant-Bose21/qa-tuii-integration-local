@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"fusion/internal/api"
-	"fusion/internal/logging"
+	"fusion-services-core/logging"
 )
 
 type mockTM struct {

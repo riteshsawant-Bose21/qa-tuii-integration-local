@@ -1,16 +1,58 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:fusion_launcher/features/control_dashboard/presentation/widgets/devices/dashboard_device_listing.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
+import '../../../../core/router/routes.dart';
+import '../../../devices/presentation/pages/device_details_page.dart';
 import '../widgets/alerts/alerts_dashboard.dart';
 import '../widgets/dashboard_scroll_wrapper.dart';
 import '../widgets/events/events_dashboard.dart';
 import '../widgets/message_player/message_player_widget.dart';
 import '../widgets/zones/zone_dashboard.dart';
 
-class FusionControlDashboardPage extends StatelessWidget {
+class FusionControlDashboardPage extends StatefulWidget {
   const FusionControlDashboardPage({super.key});
 
+  @override
+  State<FusionControlDashboardPage> createState() => _FusionControlDashboardPageState();
+}
+
+class _FusionControlDashboardPageState extends State<FusionControlDashboardPage> {
+  final GlobalKey<NavigatorState> _navigatorKey = GlobalKey<NavigatorState>();
+
+  @override
+  Widget build(BuildContext context) {
+    return Navigator(
+      key: _navigatorKey,
+      onGenerateRoute: (RouteSettings settings) {
+        WidgetBuilder builder;
+        switch (settings.name) {
+          case '/':
+            builder = (BuildContext context) => const _FusionDashboard();
+            break;
+          case Routes.deviceDetails:
+            final String deviceId = settings.arguments as String;
+            builder = (BuildContext context) => DeviceDetailsPage(deviceId: deviceId);
+            // builder = (BuildContext context) => const Center(child: Text("Details"));
+            break;
+          default:
+            builder = (BuildContext context) => const _FusionDashboard();
+        }
+        return CupertinoPageRoute<void>(builder: builder, settings: settings);
+      },
+    );
+  }
+}
+
+class _FusionDashboard extends StatefulWidget {
+  const _FusionDashboard({super.key});
+
+  @override
+  State<_FusionDashboard> createState() => _FusionDashboardState();
+}
+
+class _FusionDashboardState extends State<_FusionDashboard> {
   @override
   Widget build(BuildContext context) {
     final Color bgBlack = context.colorScheme.primaryBlack;

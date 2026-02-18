@@ -7,7 +7,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../core/service_locator.dart';
 import '../configuration/presentation/viewmodel/project_view_model.dart';
-import 'settings/source_matrix_priority_settings.dart';
+import 'additional_settings/source_matrix_settings/source_matrix_settings.dart';
 import 'widgets/mix_scene.dart';
 import 'widgets/neumorphic_audio_toggle_button.dart';
 import 'widgets/neumorphic_text_with_popup_slider_button.dart';
@@ -230,7 +230,7 @@ class _SourceMatrixZoneControlPanelState extends State<SourceMatrixZoneControlPa
                             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                             child: InkWell(
                               onTap: () {
-                                SourceMatrixPrioritySettings.showDialog(
+                                SourceMatrixAdditionalSettingsDialog.showDialog(
                                   context,
                                   zoneID: widget.zoneID,
                                 );

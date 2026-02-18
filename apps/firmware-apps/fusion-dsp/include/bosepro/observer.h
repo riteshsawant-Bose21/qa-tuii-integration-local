@@ -24,6 +24,8 @@
 #include <unistd.h>
 #include <unordered_map>
 #include <vector>
+#include <pthread.h>
+#include <sched.h>
 
 /**
  * @brief Represents a component of a JSON path.
@@ -688,6 +690,8 @@ public:
     }
     requestInitialState(serverAddr_);
     receiveThread_ = std::thread(&UDPValueMonitor::receiveLoop, this);
+    name_thread(receiveThread_, "dsp-obs-rx");
+    pin_thread(receiveThread_, "receiveThread");
   }
 
   ~UDPValueMonitor() { stop(); }
@@ -714,6 +718,24 @@ public:
   }
 
 private:
+  void pin_thread(std::thread &t, const char *thread_label) const {
+    constexpr int kTelemetryCpu = 0;
+    cpu_set_t cpuset;
+    CPU_ZERO(&cpuset);
+    CPU_SET(kTelemetryCpu, &cpuset);
+    int rc = pthread_setaffinity_np(t.native_handle(), sizeof(cpu_set_t), &cpuset);
+    if (rc != 0) {
+      SPDLOG_WARN("Failed to set {} affinity to CPU {}: {}", thread_label, kTelemetryCpu, strerror(rc));
+    }
+  }
+
+  void name_thread(std::thread &t, const char *name) const {
+    int rc = pthread_setname_np(t.native_handle(), name);
+    if (rc != 0) {
+      SPDLOG_WARN("Failed to set thread name '{}': {}", name, strerror(rc));
+    }
+  }
+
   std::string getTimestamp() const {
     auto now = std::chrono::system_clock::now();
     auto now_c = std::chrono::system_clock::to_time_t(now);

@@ -1,6 +1,7 @@
 go 1.23.1
 
 use (
+	./fusion-gateway/gateway
 	./fusion-server/fusion
 	./fusion-services-core
 )
