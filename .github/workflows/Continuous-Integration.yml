@@ -431,7 +431,7 @@ jobs:
           FILE="conf/fusion-nano_properties.inc"
           VERSION_INFO_FILE="recipes-bsp/fusion-init/fusion-init/fusion-nano/version_info.txt"
           MONOREPO_COMMIT_HASH=${{ needs.integration-tests.outputs.MONOREPO_COMMIT_HASH }}
-          ls -l ../
+          ls -l ../fusion-monorepo/manifests/platforms/
           YAML_FILE="../fusion-monorepo/manifests/platforms/Fusion-Mini-DSP.yaml"
 
           # Install yq if not available
