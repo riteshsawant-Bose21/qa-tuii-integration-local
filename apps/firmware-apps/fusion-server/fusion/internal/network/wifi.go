@@ -2,13 +2,13 @@ package network
 
 import (
 	"fmt"
+	"fusion/internal/utils"
+	json "github.com/goccy/go-json"
 	"log"
 	"net"
 	"strconv"
 	"sync"
 	"time"
-
-	json "github.com/goccy/go-json"
 )
 
 // Device represents a discovered network device
@@ -45,7 +45,7 @@ type WifiCommunicator struct {
 // NewWifiCommunicator creates a new device communicator
 func NewWifiCommunicator(deviceID, deviceName string, port int) (*WifiCommunicator, error) {
 	// Get local IP address
-	localIP, err := getLocalIP()
+	localIP, err := utils.GetLocalIP()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get local IP: %v", err)
 	}

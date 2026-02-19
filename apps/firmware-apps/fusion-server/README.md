@@ -151,6 +151,14 @@ VIP:
 http://192.168.2.100:8080
 ```
 
+# Verbose mode
+The service file is located at 
+/lib/systemd/system/fusion-server.service
+
+add verbose at the end of the line like
+
+ExecStart=/usr/local/bin/fusion-server -verbose
+
 # REST API Overview
 
 ## Configuration
