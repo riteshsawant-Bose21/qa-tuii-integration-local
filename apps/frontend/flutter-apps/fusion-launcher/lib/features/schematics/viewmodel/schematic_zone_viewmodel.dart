@@ -1,18 +1,15 @@
 import 'package:fusion_launcher/core/service_locator.dart';
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
+import 'package:fusion_launcher/features/schematics/usecase/search/zone_search_usecase.dart';
 import 'package:fusion_launcher/features/schematics/viewmodel/device_listing_cubit.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
-import '../usecase/search/source_search_usecase.dart';
-
-class SchematicSourcesViewModel extends DeviceListingViewModel<Source> {
-
-
+class SchematicZoneViewModel extends DeviceListingViewModel<Zone> {
   @override
-  List<Source> fetchDevices(String query) {
-    return SourceSearchUseCase().call(
+  List<Zone> fetchDevices(String query) {
+    return ZoneSearchUseCase().call(
       query,
-      serviceLocator<ProjectViewModel>().sources,
+      serviceLocator<ProjectViewModel>().zones,
     );
   }
 }

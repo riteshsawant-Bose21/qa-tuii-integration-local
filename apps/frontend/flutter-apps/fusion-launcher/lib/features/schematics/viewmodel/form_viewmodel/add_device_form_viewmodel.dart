@@ -7,7 +7,7 @@ class AddDeviceFormViewModel<T> extends Cubit<DeviceFormState<DeviceFormData<T>>
   final GlobalKey<FormState> formKey = GlobalKey<FormState>();
 
   void selectDevice(T deviceId) => updateFormData(state.formData.copyWith(selectedDevice: deviceId));
-  void selectLocation(String locationId) => updateFormData(state.formData.copyWith(selectedLocation: locationId));
+  void selectLocation(String locationId, String floorId) => updateFormData(state.formData.copyWith(selectedLocation: locationId, floorId: floorId));
 
   void updateFormData(DeviceFormData<T> formData) => emit(
     state.copyWith(

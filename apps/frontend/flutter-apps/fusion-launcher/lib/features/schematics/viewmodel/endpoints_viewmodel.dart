@@ -6,7 +6,7 @@ import 'package:fusion_lib/models/project_entities/endpoints.dart';
 import '../usecase/search/endpoint_search_usecase.dart';
 
 class SchematicEndpointsViewModel extends DeviceListingViewModel<FusionEndpoints> {
-  SchematicEndpointsViewModel();
+
 
   @override
   List<FusionEndpoints> fetchDevices(String query) {

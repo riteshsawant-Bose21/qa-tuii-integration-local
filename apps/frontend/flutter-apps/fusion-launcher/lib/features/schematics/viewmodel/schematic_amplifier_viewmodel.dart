@@ -6,8 +6,6 @@ import 'package:fusion_lib/fusion_lib.dart';
 import '../usecase/search/amplifier_search_usecase.dart';
 
 class SchematicAmplifiersViewModel extends DeviceListingViewModel<Amplifier> {
-  SchematicAmplifiersViewModel();
-
   @override
   List<Amplifier> fetchDevices(String query) {
     return AmplifierSearchUseCase().call(

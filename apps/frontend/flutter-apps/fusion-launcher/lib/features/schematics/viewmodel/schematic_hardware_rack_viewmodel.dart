@@ -3,16 +3,14 @@ import 'package:fusion_launcher/features/configuration/presentation/viewmodel/pr
 import 'package:fusion_launcher/features/schematics/viewmodel/device_listing_cubit.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
-import '../usecase/search/source_search_usecase.dart';
+import '../usecase/search/network_switch_search_usecase.dart';
 
-class SchematicSourcesViewModel extends DeviceListingViewModel<Source> {
-
-
+class SchematicHardwareRacksViewModel extends DeviceListingViewModel<HardwareRack> {
   @override
-  List<Source> fetchDevices(String query) {
-    return SourceSearchUseCase().call(
+  List<HardwareRack> fetchDevices(String query) {
+    return HardwareRackSearchUseCase().call(
       query,
-      serviceLocator<ProjectViewModel>().sources,
+      serviceLocator<ProjectViewModel>().hardwareRacks,
     );
   }
 }

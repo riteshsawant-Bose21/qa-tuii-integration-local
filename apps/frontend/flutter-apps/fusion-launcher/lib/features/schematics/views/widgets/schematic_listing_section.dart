@@ -67,6 +67,15 @@ class _SchematicListingSectionState extends State<SchematicListingSection> {
                           child: ClipRect(
                             child: AnimatedSwitcher(
                               duration: const Duration(milliseconds: 200),
+                              layoutBuilder: (Widget? currentChild, List<Widget> previousChildren) {
+                                return Stack(
+                                  alignment: Alignment.centerLeft,
+                                  children: <Widget>[
+                                    ...previousChildren,
+                                    if (currentChild != null) currentChild,
+                                  ],
+                                );
+                              },
                               transitionBuilder:
                                   (Widget child, Animation<double> animation) => FadeTransition(
                                     opacity: animation,
@@ -151,7 +160,14 @@ class _SchematicListingSectionState extends State<SchematicListingSection> {
                 /// ---------------------------------------------------------------------------------------------------------------------
                 ///
                 ///
-                ...widget.sections,
+                Flexible(
+                  child: ListView(
+                    shrinkWrap: true,
+                    children: <Widget>[
+                      ...widget.sections,
+                    ],
+                  ),
+                ),
               ],
             );
           },

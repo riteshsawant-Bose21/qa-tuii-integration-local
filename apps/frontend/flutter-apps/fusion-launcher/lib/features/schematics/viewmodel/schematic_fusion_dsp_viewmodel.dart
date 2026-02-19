@@ -6,8 +6,6 @@ import 'package:fusion_lib/models/project_entities/fusion_dsp.dart';
 import '../usecase/search/fusion_device_search_usecase.dart';
 
 class SchematicFusionDeviceViewModel extends DeviceListingViewModel<FusionDsp> {
-  SchematicFusionDeviceViewModel();
-
   @override
   List<FusionDsp> fetchDevices(String query) {
     return FusionDspSearchUseCase().call(

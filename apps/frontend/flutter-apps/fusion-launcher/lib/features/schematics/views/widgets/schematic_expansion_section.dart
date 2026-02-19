@@ -47,7 +47,7 @@ class _SchematicExpansionSectionState<T> extends State<SchematicExpansionSection
                   child: Row(
                     children: <Widget>[
                       AnimatedRotation(
-                        turns: isExpanded ? 0.5 : 0.25,
+                        turns: isExpanded ? 0.0 : 0.25,
                         duration: const Duration(milliseconds: 200),
                         child: FusionSvgIcon(
                           icon: AssetSvg.expandUp,
