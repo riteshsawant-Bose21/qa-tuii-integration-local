@@ -1,4 +1,4 @@
-part of 'source_matrix_settings_vm.dart';
+part of 'matrix_settings_vm.dart';
 
 class SourceMatrixSettingsVmState extends Equatable {
   final List<String> selectedSourcesIds;

@@ -5,7 +5,7 @@ import 'package:fusion_launcher/features/processing_block/view/widgets/pb_slider
 import 'package:fusion_launcher/features/zone_functions/widgets/horizontal_scroll_effect_wrapper.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
-import '../../../configuration/presentation/viewmodel/project_view_model.dart';
+import '../../configuration/presentation/viewmodel/project_view_model.dart';
 
 class ZoneSubZoneBuilderWidget extends StatefulWidget {
   final String zoneID;

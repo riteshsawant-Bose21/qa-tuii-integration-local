@@ -3,13 +3,13 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/core/service_locator.dart';
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
 import 'package:fusion_launcher/features/schematics/presentation/widgets/common_reorderable_list_view.dart';
-import 'package:fusion_launcher/features/zone_functions/additional_settings/widgets/priority_setting_widget.dart';
+import 'package:fusion_launcher/features/zone_function_settings/widgets/priority_setting_widget.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../models/models.dart';
 import '../widgets/zone_subzone_builder.dart';
-import 'viewmodel/source_select_settings_vm.dart';
+import 'viewmodel/select_settings_vm.dart';
 
 class SourceSelectAdditionalSettingsDialog extends StatefulWidget {
   final String zoneID;

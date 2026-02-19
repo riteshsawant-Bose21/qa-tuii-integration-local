@@ -3,11 +3,11 @@ import 'package:fusion_launcher/core/service_locator.dart';
 import 'package:fusion_launcher/features/processing_block/view/widgets/pb_slider.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
-import '../../../configuration/presentation/viewmodel/project_view_model.dart';
-import '../../../processing_block/view/processing_blocks/widgets/disabled_widget_wrapper.dart';
-import '../../../processing_block/view/widgets/pb_dropdown.dart';
-import '../../../processing_block/view/widgets/pb_meter.dart';
-import '../../widgets/neumorphic_gain_text_field.dart';
+import '../../configuration/presentation/viewmodel/project_view_model.dart';
+import '../../processing_block/view/processing_blocks/widgets/disabled_widget_wrapper.dart';
+import '../../processing_block/view/widgets/pb_dropdown.dart';
+import '../../processing_block/view/widgets/pb_meter.dart';
+import '../../zone_functions/widgets/neumorphic_gain_text_field.dart';
 import '../models/models.dart';
 
 class PrioritySettingsWidget extends StatefulWidget {

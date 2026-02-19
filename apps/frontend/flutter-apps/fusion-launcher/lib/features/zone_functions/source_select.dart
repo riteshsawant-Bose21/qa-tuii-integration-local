@@ -5,7 +5,7 @@ import 'package:fusion_launcher/features/configuration/presentation/viewmodel/pr
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
-import 'additional_settings/source_select_settings/source_select_settings.dart';
+import '../zone_function_settings/select_settings/select_settings.dart';
 import 'source_mix.dart';
 import 'widgets/priority_selection_widget.dart';
 
