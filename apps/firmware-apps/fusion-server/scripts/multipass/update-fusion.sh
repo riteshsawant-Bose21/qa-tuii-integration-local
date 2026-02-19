@@ -61,13 +61,6 @@ if [ ! -f "$BINARY_PATH" ]; then
     exit 1
 fi
 
-# Check if launch script exists
-if [ ! -f "$SCRIPT_PATH" ]; then
-    echo "Error: Script not found at $SCRIPT_PATH"
-    exit 1
-fi
-
-
 # Get list of running multipass instances that start with the specified prefix
 instances=$(multipass list --format csv | tail -n +2 | cut -d',' -f1 | grep "^$PREFIX")
 
