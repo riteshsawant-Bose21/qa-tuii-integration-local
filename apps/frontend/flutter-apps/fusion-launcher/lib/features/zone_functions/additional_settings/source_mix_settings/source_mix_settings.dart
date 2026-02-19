@@ -8,6 +8,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../widgets/horizontal_scroll_effect_wrapper.dart';
 import '../models/models.dart';
+import '../widgets/zone_subzone_builder.dart';
 import 'viewmodel/source_mix_settings_vm.dart';
 
 class SourceMixAdditionalSettingsDialog extends StatefulWidget {
@@ -175,9 +176,29 @@ class _SourceMixAdditionalSettingsState extends State<SourceMixAdditionalSetting
                                         // RIGHT COLUMN (Static)
                                         Flexible(
                                           flex: 2,
-                                          child: _ZoneSubZoneBuilder(
+                                          child: ZoneSubZoneBuilderWidget(
                                             zoneID: widget.zoneID,
-                                            vm: vm,
+                                            getLowerGain: (String zoneOrSubzoneID) => vm.getLowerGain(zoneOrSubzoneID),
+                                            getUpperGain: (String zoneOrSubzoneID) => vm.getUpperGain(zoneOrSubzoneID),
+                                            isAllowMute: (String zoneOrSubzoneID) => vm.isAllowMute(zoneOrSubzoneID),
+                                            onLowerRangeChanged: (String zoneOrSubzoneID, num value) {
+                                              vm.updateZoneProperties(
+                                                zoneOrSubzoneId: zoneOrSubzoneID,
+                                                lowerLimit: value.toDouble(),
+                                              );
+                                            },
+                                            onUpperRangeChanged: (String zoneOrSubzoneID, num value) {
+                                              vm.updateZoneProperties(
+                                                zoneOrSubzoneId: zoneOrSubzoneID,
+                                                upperLimit: value.toDouble(),
+                                              );
+                                            },
+                                            onAllowMuteChanged: (String zoneOrSubzoneID, bool newValue) {
+                                              vm.updateZoneProperties(
+                                                zoneOrSubzoneId: zoneOrSubzoneID,
+                                                allowMuteUnmute: newValue,
+                                              );
+                                            },
                                           ),
                                         ),
                                       ],
@@ -431,171 +452,6 @@ class _MixSceneSetting extends StatelessWidget {
           ),
         ),
       ],
-    );
-  }
-}
-
-class _ZoneSubZoneBuilder extends StatefulWidget {
-  final String zoneID;
-  final SourceMixAdditionalSettingsViewmodel vm;
-
-  const _ZoneSubZoneBuilder({required this.zoneID, required this.vm});
-
-  @override
-  State<_ZoneSubZoneBuilder> createState() => _ZoneSubZoneSettingBuilderState();
-}
-
-class _ZoneSubZoneSettingBuilderState extends State<_ZoneSubZoneBuilder> {
-  late final ScrollController _scrollController = ScrollController();
-  late final ProjectViewModel projectViewModel = serviceLocator<ProjectViewModel>();
-
-  late List<SubZone> subZones;
-  late Zone? zone;
-  late bool isSubZonesAvailable;
-
-  @override
-  void initState() {
-    super.initState();
-    subZones = projectViewModel.getSubZonesForZone(parentZoneId: widget.zoneID);
-    if (subZones.isEmpty) zone = projectViewModel.getZone(zoneId: widget.zoneID);
-    isSubZonesAvailable = subZones.isNotEmpty;
-  }
-
-  @override
-  void dispose() {
-    _scrollController.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    context.watch<ProjectViewModel>();
-
-    return BlocProvider<SourceMixAdditionalSettingsViewmodel>.value(
-      value: widget.vm,
-      child: BlocBuilder<SourceMixAdditionalSettingsViewmodel, SourceMixAdditionalSettingsVmState>(
-        builder: (BuildContext context, SourceMixAdditionalSettingsVmState state) {
-          return Column(
-            children: <Widget>[
-              if (isSubZonesAvailable) ...<Widget>[
-                Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: FusionAppText(
-                    text: "SUB ZONE VOLUME",
-                    textAlign: TextAlign.center,
-                    style: context.textTheme.labelMedium,
-                  ),
-                ),
-              ],
-
-              /// SUBZONE VOLUME
-              Expanded(
-                child: HorizontalScrollWithShadows(
-                  controller: _scrollController,
-                  child: ListView.separated(
-                    itemCount: isSubZonesAvailable ? subZones.length : 1,
-                    shrinkWrap: true,
-                    scrollDirection: Axis.horizontal,
-                    physics: const ClampingScrollPhysics(),
-                    separatorBuilder: (BuildContext context, int index) => Divider(color: context.colorScheme.strokeLight, height: 0),
-                    itemBuilder: (BuildContext context, int index) {
-                      final SubZone? subZone = isSubZonesAvailable ? subZones[index] : null;
-
-                      final String? title = isSubZonesAvailable ? subZone!.name : zone?.name;
-                      if (title == null) return const SizedBox.shrink();
-
-                      final String zoneOrSubzoneID = isSubZonesAvailable ? subZone!.id : zone!.id;
-
-                      final bool isAllowMute = widget.vm.isAllowMute(zoneOrSubzoneID);
-
-                      return Container(
-                        width: 150,
-                        decoration: BoxDecoration(
-                          border: Border(
-                            top: BorderSide(color: context.colorScheme.strokeLight),
-                            right: BorderSide(color: context.colorScheme.strokeLight),
-                          ),
-                        ),
-                        child: Column(
-                          children: <Widget>[
-                            Container(
-                              padding: const EdgeInsets.all(16.0),
-                              alignment: Alignment.center,
-                              child: FusionAppText(
-                                text: title,
-                                textAlign: TextAlign.center,
-                                style: Theme.of(context).textTheme.labelMedium,
-                              ),
-                            ),
-                            Divider(color: context.colorScheme.strokeLight, height: 0),
-                            const SizedBox(height: 10),
-                            Expanded(
-                              child: Column(
-                                children: <Widget>[
-                                  Expanded(
-                                    child: VerticalRangeSelectionSlider(
-                                      min: -60,
-                                      max: 12,
-                                      lowerValue: widget.vm.getLowerGain(zoneOrSubzoneID),
-                                      upperValue: widget.vm.getUpperGain(zoneOrSubzoneID),
-                                      onLowerChanged: (num value) {
-                                        widget.vm.updateZoneProperties(
-                                          zoneOrSubzoneId: zoneOrSubzoneID,
-                                          lowerLimit: value.toDouble(),
-                                        );
-                                      },
-                                      onUpperChanged: (num value) {
-                                        widget.vm.updateZoneProperties(
-                                          zoneOrSubzoneId: zoneOrSubzoneID,
-                                          upperLimit: value.toDouble(),
-                                        );
-                                      },
-                                    ),
-                                  ),
-                                  Padding(
-                                    padding: const EdgeInsets.symmetric(vertical: 10),
-                                    child: Divider(color: context.colorScheme.strokeLight, height: 0),
-                                  ),
-                                  Padding(
-                                    padding: const EdgeInsets.symmetric(vertical: 10),
-                                    child: Row(
-                                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                                      children: <Widget>[
-                                        Flexible(
-                                          child: FusionAppText(
-                                            text: "Allow mute",
-                                            style: context.textTheme.labelMedium?.copyWith(
-                                              color: context.colorScheme.textSecondary,
-                                            ),
-                                          ),
-                                        ),
-                                        FusionCheckbox(
-                                          value: isAllowMute,
-                                          onChanged: () {
-                                            widget.vm.updateZoneProperties(
-                                              zoneOrSubzoneId: zoneOrSubzoneID,
-                                              allowMuteUnmute: !isAllowMute,
-                                            );
-                                          },
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                  const SizedBox(height: 10),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                      );
-                    },
-                  ),
-                ),
-              ),
-            ],
-          );
-        },
-      ),
     );
   }
 }

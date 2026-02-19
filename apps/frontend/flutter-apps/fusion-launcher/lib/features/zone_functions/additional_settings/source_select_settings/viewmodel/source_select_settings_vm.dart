@@ -94,7 +94,7 @@ class SourceSelectAdditionalSettingsViewmodel extends Cubit<SourceSelectAddition
     emit(updated);
   }
 
-  bool isFieldsEnabled(int index) {
+  bool enableBehaviorSettingsFields(int index) {
     final List<PriorityAdditionalSettingsModel> priorityAdditionalSettingsModel = <PriorityAdditionalSettingsModel>[
       ...state.priorityAdditionalSettingsModel,
     ];
