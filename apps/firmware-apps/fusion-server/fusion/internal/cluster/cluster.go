@@ -2,12 +2,10 @@ package cluster
 
 import (
 	"fmt"
-	coreNetwork "fusion-services-core/network"
 	"fusion-services-core/vip"
 
 	"fusion-services-core/logging"
 	"fusion/internal/api"
-	"fusion/internal/network"
 	"fusion/internal/routes"
 	"io"
 	"net"
@@ -20,7 +18,7 @@ import (
 	"time"
 
 	json "github.com/goccy/go-json"
-	"github.com/hashicorp/memberlist"
+	hashicorpMemberlist "github.com/hashicorp/memberlist"
 )
 
 const (
@@ -64,7 +62,7 @@ type Cluster struct {
 	appConfig        *api.AppConfig
 	delegate         *ClusterDelegate
 	httpClient       *http.Client
-	Memberlist       *memberlist.Memberlist
+	memberlist       *hashicorpMemberlist.Memberlist
 	vip              string
 	vipHolder        string
 	vipLock          sync.RWMutex
@@ -72,29 +70,24 @@ type Cluster struct {
 	Metrics          *MetricsCollector
 	networkLatencies *NetworkLatencyStore
 	vipMu            sync.Mutex
-	mdnsManager      *network.MDNSManager
 }
 
-func NewCluster(appConfig *api.AppConfig, delegate *ClusterDelegate, memberlist *memberlist.Memberlist, mdnsManager *network.MDNSManager) *Cluster {
+func NewCluster(appConfig *api.AppConfig, delegate *ClusterDelegate, memberlist *hashicorpMemberlist.Memberlist) *Cluster {
 
 	cluster := &Cluster{
 		appConfig:        appConfig,
 		delegate:         delegate,
 		httpClient:       &http.Client{Timeout: api.HTTPTimeout},
-		Memberlist:       memberlist,
+		memberlist:       memberlist,
 		configPath:       configPath,
 		Metrics:          NewMetricsCollector(memberlist, delegate.stateManager),
 		networkLatencies: NewNetworkLatencyStore(maxLatencyCount, latencyPruneTime),
-		mdnsManager:      mdnsManager,
 	}
 
 	logger := logging.GetLogger()
 
 	if !cluster.appConfig.Local {
 
-		if err := cluster.startVRRPListener(appConfig.NetIface); err != nil {
-			logger.Fatal("startVRRPListener: %v", err)
-		}
 
 		vipValue, multiple, err := vip.ReadFromKeepalivedConfig(cluster.configPath)
 		if err != nil {
@@ -126,12 +119,12 @@ func (c *Cluster) Stop() {
 
 // GetInfo returns detailed information about the cluster
 func (c *Cluster) GetInfo() ClusterInfo {
-	members := c.Memberlist.Members()
+	members := c.memberlist.Members()
 	clusterMembers := c.getMembers()
 
 	aliveCount := 0
 	for _, member := range members {
-		if member.State == memberlist.StateAlive {
+		if member.State == hashicorpMemberlist.StateAlive {
 			aliveCount++
 		}
 	}
@@ -139,14 +132,18 @@ func (c *Cluster) GetInfo() ClusterInfo {
 	return ClusterInfo{
 		MemberCount:    len(members),
 		AliveCount:     aliveCount,
-		LocalNode:      c.Memberlist.LocalNode().Name,
+		LocalNode:      c.memberlist.LocalNode().Name,
 		Members:        clusterMembers,
 		LastUpdateTime: time.Now().UTC(),
 	}
 }
 
-func (c *Cluster) SetMemberlist(memberlist *memberlist.Memberlist) {
-	c.Memberlist = memberlist
+func (c *Cluster) LocalNode() *hashicorpMemberlist.Node {
+	return c.memberlist.LocalNode()
+}
+
+func (c *Cluster) SetMemberlist(memberlist *hashicorpMemberlist.Memberlist) {
+	c.memberlist = memberlist
 	if err := c.JoinMemberlist(); err != nil {
 		logging.GetLogger().Error("Unable to join after setting memberlist: %v", err)
 	}
@@ -156,7 +153,7 @@ func (c *Cluster) SetMemberlist(memberlist *memberlist.Memberlist) {
 // getClusterIPs retrieves the list of IP addresses of all nodes in the cluster
 func (c *Cluster) getClusterIPs() []string {
 	var ips []string
-	for _, member := range c.Memberlist.Members() {
+	for _, member := range c.memberlist.Members() {
 		// Extract IP address of each member
 		ips = append(ips, member.Addr.String())
 	}
@@ -305,7 +302,7 @@ func (c *Cluster) restartKeepalived() error {
 func (c *Cluster) startStateMonitor() {
 	go func() {
 		for {
-			members := c.Memberlist.Members()
+			members := c.memberlist.Members()
 			logger := logging.GetLogger()
 
 			logger.Debug("[CLUSTER] Current cluster state:")
@@ -314,11 +311,11 @@ func (c *Cluster) startStateMonitor() {
 			for _, member := range members {
 				status := "ALIVE"
 				switch member.State {
-				case memberlist.StateAlive:
+				case hashicorpMemberlist.StateAlive:
 					status = "ALIVE"
-				case memberlist.StateSuspect:
+				case hashicorpMemberlist.StateSuspect:
 					status = "SUSPECT"
-				case memberlist.StateDead:
+				case hashicorpMemberlist.StateDead:
 					status = "DEAD"
 				default:
 					status = "UNKNOWN"
@@ -338,13 +335,13 @@ func (c *Cluster) startStateMonitor() {
 }
 
 // getStateString converts memberlist state to human-readable string
-func getStateString(state memberlist.NodeStateType) string {
+func getStateString(state hashicorpMemberlist.NodeStateType) string {
 	switch state {
-	case memberlist.StateAlive:
+	case hashicorpMemberlist.StateAlive:
 		return "ALIVE"
-	case memberlist.StateSuspect:
+	case hashicorpMemberlist.StateSuspect:
 		return "SUSPECT"
-	case memberlist.StateDead:
+	case hashicorpMemberlist.StateDead:
 		return "DEAD"
 	default:
 		return "UNKNOWN"
@@ -353,7 +350,7 @@ func getStateString(state memberlist.NodeStateType) string {
 
 // getClusterMembers returns the current list of cluster members
 func (c *Cluster) getMembers() []ClusterMember {
-	members := c.Memberlist.Members()
+	members := c.memberlist.Members()
 	result := make([]ClusterMember, len(members))
 
 	for i, member := range members {
@@ -529,7 +526,7 @@ func (c *Cluster) hostIsLocal(addr string) bool {
 			return false
 		}
 	}
-	return host == c.Memberlist.LocalNode().Addr.String()
+	return host == c.LocalNode().Addr.String()
 }
 
 // getLocalURL builds a full API URL to the endpoint
@@ -557,14 +554,14 @@ func ternary(cond bool, a, b string) string {
 }
 
 func (c *Cluster) initialAudioSync() {
-	peers := c.Memberlist.Members()
+	peers := c.memberlist.Members()
 	if len(peers) <= 1 {
 		return
 	}
 
-	var peer *memberlist.Node
+	var peer *hashicorpMemberlist.Node
 	for _, p := range peers {
-		if p.Name != c.Memberlist.LocalNode().Name {
+		if p.Name != c.memberlist.LocalNode().Name {
 			peer = p
 			break
 		}
@@ -577,7 +574,7 @@ func (c *Cluster) initialAudioSync() {
 	c.reconcileLocalAudioState()
 }
 
-func (c *Cluster) initialAudioSyncFromPeer(peer *memberlist.Node) error {
+func (c *Cluster) initialAudioSyncFromPeer(peer *hashicorpMemberlist.Node) error {
 	logger := logging.GetLogger()
 
 	url := fmt.Sprintf("http://%s:%s%s", peer.Addr, api.HTTPPort, routes.PAVAMessagesEndpoint)

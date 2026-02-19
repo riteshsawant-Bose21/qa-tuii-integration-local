@@ -364,6 +364,10 @@ func CalculateDiff(before, after any) map[string]any {
 	return map[string]any{"": after}
 }
 
+func BuildInternalURL(address, port, endpoint string) string {
+	return fmt.Sprintf("%s%s:%s%s", api.Protocol, address, port, endpoint)
+}
+
 func unwrapPrimitiveDiff(m map[string]any) (any, bool) {
 	if len(m) != 1 {
 		return nil, false

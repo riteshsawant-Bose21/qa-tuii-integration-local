@@ -5,6 +5,8 @@ import (
 	"context"
 	"fmt"
 	"fusion-services-core/logging"
+	coreNetwork "fusion-services-core/network"
+	"fusion-services-core/vip"
 	"fusion/internal/api"
 	"fusion/internal/cluster"
 	clustertransport "fusion/internal/cluster/transport"
@@ -78,9 +80,9 @@ func NewApp(config *api.AppConfig) *App {
 	memberlist := cluster.CreateMemberlist(config, delegate)
 	transport := clustertransport.NewMemberlistTransport(memberlist)
 	hub.SetClusterTransport(transport)
-	connectionHandler := handler.NewHandler(config, memberlist, persistence, stateManager, hub, controllerManager)
+	connectionHandler := handler.NewHandler(config, transport, persistence, stateManager, hub, controllerManager)
 	mdnsManager := initMDNSManager()
-	clusterInstance := cluster.NewCluster(config, delegate, memberlist, mdnsManager)
+	clusterInstance := cluster.NewCluster(config, delegate, memberlist)
 	bleServer := initBLEServer()
 	sapServer := initSAPServer(config, api.SAPPort, connectionHandler, hub)
 	udpServer := initUDPServer(api.UDPPort, connectionHandler, hub)
@@ -310,10 +312,12 @@ func (app *App) leaveCluster() {
 func (app *App) joinCluster(ip string) {
 	app.config.BindAddr = ip
 	memberlist := cluster.CreateMemberlist(app.config, app.Delegate)
+	clusterTransport := clustertransport.NewMemberlistTransport(memberlist)
 	app.memberlist = memberlist
-	app.ConnectionHandler.SetMemberlist(memberlist)
 	app.Cluster.SetMemberlist(memberlist)
 	app.StateManager.SetMemberlist(memberlist)
+	app.ConnectionHandler.SetClusterTransport(clusterTransport)
+
 }
 
 // startAPIServer starts the main HTTP API server

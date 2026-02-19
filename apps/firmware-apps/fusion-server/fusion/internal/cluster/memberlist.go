@@ -4,8 +4,8 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"fusion/internal/api"
 	"fusion-services-core/logging"
+	"fusion/internal/api"
 	"fusion/internal/persistence"
 	"fusion/internal/routes"
 	"io"
@@ -113,9 +113,9 @@ func (c *Cluster) JoinMemberlist() error {
 
 	for attempt := range retryTimes {
 		// Try to join the cluster
-		_, err := c.Memberlist.Join(joinAddrs)
+		_, err := c.memberlist.Join(joinAddrs)
 		if err == nil {
-			members := c.Memberlist.Members()
+			members := c.memberlist.Members()
 			logger.Debug("[MEMBERLIST] Successfully joined cluster of size %d", len(members))
 
 			c.updateDeviceInfo()

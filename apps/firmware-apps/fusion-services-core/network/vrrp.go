@@ -16,12 +16,14 @@ const (
 )
 
 type Logger interface {
+	Info(format string, args ...any)
 	Debug(format string, args ...any)
 	Error(format string, args ...any)
 }
 
 type noopLogger struct{}
 
+func (noopLogger) Info(string, ...any)  {}
 func (noopLogger) Debug(string, ...any) {}
 func (noopLogger) Error(string, ...any) {}
 

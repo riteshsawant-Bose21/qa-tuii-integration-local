@@ -2,8 +2,8 @@ package cluster
 
 import (
 	"fmt"
-	"fusion/internal/api"
 	"fusion-services-core/logging"
+	"fusion/internal/api"
 	"fusion/internal/routes"
 	"fusion/internal/utils"
 	"io"
@@ -417,7 +417,7 @@ func (c *Cluster) fetchAllLatencyStatus() []NodeLatencyStatus {
 
 func (c *Cluster) getNodeAdminAddresses() []string {
 	var addrs []string
-	for _, member := range c.Memberlist.Members() {
+	for _, member := range c.memberlist.Members() {
 		host := member.Addr.String()
 		addrs = append(addrs, net.JoinHostPort(host, api.AdminPort))
 	}
@@ -426,7 +426,7 @@ func (c *Cluster) getNodeAdminAddresses() []string {
 
 func (c *Cluster) getLocalLatencyStatus() []NodeLatencyStatus {
 
-	self := c.Memberlist.LocalNode().Addr.String()
+	self := c.memberlist.LocalNode().Addr.String()
 	status := NodeLatencyStatus{Node: self}
 
 	// Use last RTT to each peer
@@ -529,7 +529,7 @@ func (c *Cluster) startNetworkLatencyProbes() {
 
 		logger := logging.GetLogger()
 
-		addr := c.Memberlist.LocalNode().Addr.String()
+		addr := c.memberlist.LocalNode().Addr.String()
 		selfHost, _, err := net.SplitHostPort(addr)
 		if err != nil {
 			// Assume it's just an IP with no port

@@ -3,6 +3,7 @@ package handler
 import (
 	"fmt"
 	"fusion/internal/api"
+	"fusion/internal/cluster/transport"
 	"fusion/internal/controllers"
 	"fusion/internal/persistence"
 	"fusion/internal/pubsub"
@@ -16,12 +17,12 @@ import (
 
 // Handler is the container for server implimentations.
 type Handler struct {
-	appConfig    *api.AppConfig
-	memberlist   *memberlist.Memberlist
-	persistence  *persistence.Persistence
-	StateManager *persistence.StateManager
-	hub          *pubsub.Hub
-	endpoints    []string
+	appConfig        *api.AppConfig
+	clusterTransport transport.ClusterTransport
+	persistence      *persistence.Persistence
+	StateManager     *persistence.StateManager
+	hub              *pubsub.Hub
+	endpoints        []string
 
 	sessions     map[string]*SAPSession
 	sessionsLock sync.RWMutex
@@ -31,7 +32,7 @@ type Handler struct {
 
 func NewHandler(
 	appConfig *api.AppConfig,
-	memberlist *memberlist.Memberlist,
+	clusterTransport transport.ClusterTransport,
 	persistence *persistence.Persistence,
 	stateManager *persistence.StateManager,
 	hub *pubsub.Hub,
@@ -39,7 +40,7 @@ func NewHandler(
 ) *Handler {
 	return &Handler{
 		appConfig:         appConfig,
-		memberlist:        memberlist,
+		clusterTransport:  clusterTransport,
 		persistence:       persistence,
 		StateManager:      stateManager,
 		hub:               hub,
@@ -52,16 +53,16 @@ func (h *Handler) SetEndpoints(endpoints []string) {
 	h.endpoints = endpoints
 }
 
-func (h *Handler) SetMemberlist(memberlist *memberlist.Memberlist) {
-	h.memberlist = memberlist
-}
-
 func (h *Handler) GetInitialState() (WebSocketResponse, error) {
 	data := h.StateManager.GetStateMap()
 	return WebSocketResponse{
 		Type: "initial_state",
 		Data: data,
 	}, nil
+}
+
+func (h *Handler) SetClusterTransport(clusterTransport transport.ClusterTransport) {
+	h.clusterTransport = clusterTransport
 }
 
 func (h *Handler) HandleHTTPGet(key string) (any, error) {
@@ -137,7 +138,7 @@ func (h *Handler) HandleClearAllData() error {
 }
 
 func (h *Handler) GetMembers() []*memberlist.Node {
-	return h.memberlist.Members()
+	return h.clusterTransport.Members()
 }
 
 func (h *Handler) GetServerInfo() (map[string]any, error) {
@@ -145,9 +146,9 @@ func (h *Handler) GetServerInfo() (map[string]any, error) {
 		"name":       "Fusion Server",
 		"version":    version.Version,
 		"commit":     version.Commit,
-		"build_time": version.BuildTime, "node_id": h.memberlist.LocalNode().Name,
+		"build_time": version.BuildTime, "node_id": h.clusterTransport.LocalNode().Name,
 		"endpoints":    h.endpoints,
-		"cluster_size": len(h.memberlist.Members()),
+		"cluster_size": len(h.clusterTransport.Members()),
 	}
 
 	return info, nil
@@ -180,7 +181,7 @@ func (h *Handler) handleConfigUpdate(data map[string]any, clear bool) error {
 
 	message := api.NewNotifyMessage(
 		api.NotifyOpConfigUpdate,
-		h.memberlist.LocalNode().Name,
+		h.clusterTransport.LocalNode().Name,
 		api.WithConfigUpdate(configUpdate),
 	)
 
