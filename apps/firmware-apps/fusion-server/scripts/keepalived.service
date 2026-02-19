@@ -3,6 +3,7 @@
 Description=Keepalived VRRP Framework
 Wants=network-online.target
 After=network-online.target
+ConditionKernelCommandLine=service_profile=prod
 
 [Service]
 Type=notify

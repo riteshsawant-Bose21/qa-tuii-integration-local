@@ -5,8 +5,8 @@ import (
 	coreNetwork "fusion-services-core/network"
 	"fusion-services-core/vip"
 
+	"fusion-services-core/logging"
 	"fusion/internal/api"
-	"fusion/internal/logging"
 	"fusion/internal/network"
 	"fusion/internal/routes"
 	"io"

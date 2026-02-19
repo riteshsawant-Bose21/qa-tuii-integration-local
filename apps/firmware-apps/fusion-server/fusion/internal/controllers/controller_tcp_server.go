@@ -2,7 +2,7 @@ package controllers
 
 import (
 	"bufio"
-	"fusion/internal/logging"
+	"fusion-services-core/logging"
 	"net"
 	"sync"
 	"time"
@@ -59,8 +59,7 @@ func (s *WallControllerTCPServer) Start() error {
 	s.running = true
 
 	logger := logging.GetLogger()
-	logger.Info("🚀 Wall Controller TCP server listening on %s", s.addr)
-	logger.Info("🎯 Ready to accept wall controller connections...")
+	logger.Info("Wall Controller TCP server listening on %s", s.addr)
 
 	go s.acceptConnections()
 

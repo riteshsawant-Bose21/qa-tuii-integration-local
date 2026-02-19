@@ -18,6 +18,7 @@ function show_help() {
     echo "  --state       Run only state manager tests"     
     echo "  --tasks       Run only tasks tests"     
     echo "  --udp         Run only UDP tests"     
+    echo "  --integration Run only integration tests (ex: --integration --size 5) (build tag integration)"
     echo "  --websocket   Run only websocket tests"
     echo "  --test-name   Run only a specific Go test name or subtest"
     echo "  --list        List tests for the selected category"
@@ -30,6 +31,7 @@ vip="192.168.2.100:8080"
 test_name=""
 list_tests=false
 list_all_tests=false
+cluster_size="3"
 
 while [[ $# -gt 0 ]]; do
     case $1 in
@@ -48,10 +50,9 @@ while [[ $# -gt 0 ]]; do
         --tasks)        test_type="tasks"; shift ;;
         --udp)          test_type="udp"; shift ;;
         --websocket)    test_type="websocket"; shift ;;
-        --vip)
-            vip="$2"
-            shift 2
-            ;;
+        --integration)  test_type="integration"; shift ;;
+        --size)         cluster_size="$2"; shift 2 ;;
+        --vip)          vip="$2"; shift 2 ;;
         --test-name)
             if [[ $# -ge 2 && "$2" != --* ]]; then
                 test_name="$2"
@@ -112,6 +113,7 @@ function test_file_for_type() {
         tasks)        echo "tasks_test.go" ;;
         udp)          echo "udp_test.go" ;;
         websocket)    echo "websocket_test.go" ;;
+        integration)  echo "integration tests" ;;
         all)          echo "" ;;
     esac
 }
@@ -193,6 +195,23 @@ case "$test_type" in
     tasks)        run_test_file ./tasks_test.go ;;
     udp)          run_test_file ./udp_test.go ;;
     websocket)    run_test_file ./websocket_test.go ;;
+    integration)
+        # Export env for integration helpers
+        export FUSION_VIP="${vip%%:*}"
+        export FUSION_PORT="${vip##*:}"
+        export FUSION_ADMIN_PORT="9090"
+
+        if [ -n "$cluster_size" ]; then
+            export FUSION_CLUSTER_SIZE="$cluster_size"
+        fi
+        # Already inside fusion/test; run integration-tagged tests in ./integration
+        if [ ! -d "integration" ]; then
+            echo "Integration test directory ./integration not found (expected at fusion/test/integration)" >&2
+            exit 1
+        fi
+        # Disable test result caching to always re-run integration tests
+        go test -v --race -count=1 -tags=integration ./integration/...
+        ;;
 esac
 
 cd ../../ || exit 1

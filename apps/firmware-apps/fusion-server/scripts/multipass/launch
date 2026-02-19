@@ -807,7 +807,6 @@ fi
 system_checks
 host_setup
 
-
 # Set up trap but don't exit on errors
 trap cleanup EXIT
 

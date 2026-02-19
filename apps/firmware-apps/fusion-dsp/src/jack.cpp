@@ -107,7 +107,7 @@ void JackClient::jack_thread()
     // manage core affinity ourselves.
     int_fast32_t thread_affinity = task->get_cpu_affinity();
 
-    if (thread_affinity >= 0)
+    if (thread_affinity >= 0 && thread_affinity < CPU_SETSIZE)
     {
         cpu_set_t cpuset;
         CPU_ZERO(&cpuset);
@@ -118,6 +118,11 @@ void JackClient::jack_thread()
         {
             SPDLOG_ERROR("Couldn't set thread affinity {}.", thread_affinity);
         }
+    }
+    else if (thread_affinity >= CPU_SETSIZE)
+    {
+        SPDLOG_WARN("Ignoring out-of-range CPU affinity {} (max {}).",
+                    thread_affinity, CPU_SETSIZE - 1);
     }
 #endif
 
