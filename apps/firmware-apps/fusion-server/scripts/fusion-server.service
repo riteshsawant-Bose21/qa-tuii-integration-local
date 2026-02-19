@@ -1,8 +1,10 @@
 # Fusion fusion-server service file
+# This file is to be used only by multipass. 
+# If you edit this file, please edit the files in meta-fusion to maintain sync
+
 [Unit]
 Description=Fusion Server
 After=network.target
-ConditionKernelCommandLine=service_profile=prod
 After=network-online.target keepalived.service
 Wants=network-online.target
 Requires=keepalived.service
