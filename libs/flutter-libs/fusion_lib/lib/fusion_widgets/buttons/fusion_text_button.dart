@@ -110,6 +110,7 @@ class FusionTextButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SemanticHelper.button(
+      enabled: isActive,
       testId: SemanticHelper.createTestId(SemanticTypes.button, accessLabel ?? label),
       child: IgnorePointer(
         ignoring: isLoading || !isActive,

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:fusion_lib/fusion_lib.dart';
 
 class ReorderableRow<T> extends StatelessWidget {
   const ReorderableRow({
@@ -8,7 +9,9 @@ class ReorderableRow<T> extends StatelessWidget {
     required this.onReorder,
     required this.itemBuilder,
     this.extractId,
+    this.semanticId,
   });
+  final String? semanticId;
   final List<T> items;
   final String Function(T item)? extractId;
 
@@ -16,24 +19,33 @@ class ReorderableRow<T> extends StatelessWidget {
   final Widget Function(BuildContext context, T item) itemBuilder;
   @override
   Widget build(BuildContext context) {
-    return ReorderableFlex<T>(
-      direction: Axis.horizontal,
-      items: items,
-      onReorder: onReorder,
-      itemBuilder: itemBuilder,
-      extractId: extractId,
+    return SemanticHelper.container(
+      testId: SemanticHelper.createTestId(
+        SemanticTypes.section,
+        "fusion_reorderable_${semanticId ?? ""}",
+      ),
+      child: ReorderableFlex<T>(
+        direction: Axis.horizontal,
+        items: items,
+        onReorder: onReorder,
+        itemBuilder: itemBuilder,
+        extractId: extractId,
+      ),
     );
   }
 }
 
 class ReorderableColumn<T> extends StatelessWidget {
   const ReorderableColumn({
+    this.semanticId,
     super.key,
     required this.items,
     required this.onReorder,
     required this.itemBuilder,
     this.extractId,
   });
+  final String? semanticId;
+
   final List<T> items;
   final String Function(T item)? extractId;
 
@@ -41,12 +53,18 @@ class ReorderableColumn<T> extends StatelessWidget {
   final Widget Function(BuildContext context, T item) itemBuilder;
   @override
   Widget build(BuildContext context) {
-    return ReorderableFlex<T>(
-      direction: Axis.vertical,
-      items: items,
-      onReorder: onReorder,
-      itemBuilder: itemBuilder,
-      extractId: extractId,
+    return SemanticHelper.container(
+      testId: SemanticHelper.createTestId(
+        SemanticTypes.section,
+        "fusion_reorderable_${semanticId ?? ""}",
+      ),
+      child: ReorderableFlex<T>(
+        direction: Axis.vertical,
+        items: items,
+        onReorder: onReorder,
+        itemBuilder: itemBuilder,
+        extractId: extractId,
+      ),
     );
   }
 }
@@ -54,6 +72,7 @@ class ReorderableColumn<T> extends StatelessWidget {
 class ReorderableFlex<T> extends StatefulWidget {
   const ReorderableFlex({
     super.key,
+    this.semanticId,
     required this.items,
     required this.onReorder,
     required this.itemBuilder,
@@ -61,6 +80,7 @@ class ReorderableFlex<T> extends StatefulWidget {
     this.extractId,
   });
   final List<T> items;
+  final String? semanticId;
 
   final void Function(int oldIndex, int newIndex) onReorder;
   final Widget Function(BuildContext context, T item) itemBuilder;
@@ -89,23 +109,34 @@ class _ReorderableFlexState<T> extends State<ReorderableFlex<T>> {
 
   @override
   Widget build(BuildContext context) {
-    return ReorderableListView.builder(
-      scrollController: _scrollController,
-      scrollDirection: widget.direction,
-      buildDefaultDragHandles: false,
-      shrinkWrap: true,
-      onReorder: _handleReorder,
-      itemCount: widget.items.length,
-      itemBuilder: (context, index) {
-        return Padding(
-          key: ValueKey(widget.extractId != null ? widget.extractId!(widget.items[index]) : index),
-          padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 5),
-          child: ReorderableDragStartListener(
-            index: index,
-            child: widget.itemBuilder(context, widget.items[index]),
-          ),
-        );
-      },
+    return SemanticHelper.container(
+      testId: SemanticHelper.createTestId(
+        SemanticTypes.section,
+        "fusion_reorderable_${widget.semanticId ?? ""}",
+      ),
+
+      child: ReorderableListView.builder(
+        scrollController: _scrollController,
+        scrollDirection: widget.direction,
+        buildDefaultDragHandles: false,
+        shrinkWrap: true,
+        onReorder: _handleReorder,
+        itemCount: widget.items.length,
+        itemBuilder: (context, index) {
+          return Padding(
+            key: ValueKey(
+              widget.extractId != null
+                  ? widget.extractId!(widget.items[index])
+                  : index,
+            ),
+            padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 5),
+            child: ReorderableDragStartListener(
+              index: index,
+              child: widget.itemBuilder(context, widget.items[index]),
+            ),
+          );
+        },
+      ),
     );
   }
 }

@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:fusion_lib/fusion_lib.dart';
 
 /// A reusable widget for displaying a profile image clipped into an oval.
 ///
@@ -30,6 +31,7 @@ import 'package:flutter/material.dart';
 /// ),
 /// ```
 class FusionProfileImage extends StatelessWidget {
+  final String? semanticId;
   final double size;
   final BoxBorder? border;
   final Widget? placeholder;
@@ -37,13 +39,38 @@ class FusionProfileImage extends StatelessWidget {
   final String? assetPath;
   final File? file;
 
-  const FusionProfileImage({super.key, this.imageUrl, this.assetPath, this.file, this.size = 50, this.border, this.placeholder});
+  const FusionProfileImage({
+    super.key,
+    this.imageUrl,
+    this.assetPath,
+    this.file,
+    this.size = 50,
+    this.border,
+    this.placeholder,
+    this.semanticId,
+  });
 
   /// Named constructor for asset image
-  const FusionProfileImage.asset(this.assetPath, {super.key, this.size = 50, this.border, this.placeholder}) : imageUrl = null, file = null;
+  const FusionProfileImage.asset(
+    this.assetPath, {
+    super.key,
+    this.size = 50,
+    this.border,
+    this.placeholder,
+    this.semanticId,
+  }) : imageUrl = null,
+       file = null;
 
   /// Named constructor for file image
-  const FusionProfileImage.file(this.file, {super.key, this.size = 50, this.border, this.placeholder}) : imageUrl = null, assetPath = null;
+  const FusionProfileImage.file(
+    this.file, {
+    super.key,
+    this.size = 50,
+    this.border,
+    this.placeholder,
+    this.semanticId,
+  }) : imageUrl = null,
+       assetPath = null;
 
   @override
   Widget build(BuildContext context) {
@@ -59,27 +86,50 @@ class FusionProfileImage extends StatelessWidget {
           errorBuilder: (_, __, ___) => _buildPlaceholder(),
           loadingBuilder: (context, child, loadingProgress) {
             if (loadingProgress == null) return child;
-            return _buildPlaceholder();
+            return SemanticHelper.container(
+              testId: SemanticHelper.createTestId(
+                SemanticTypes.section,
+                "fusion_profile_image_${semanticId ?? ""}",
+              ),
+              child: _buildPlaceholder(),
+            );
           },
         ),
       );
     } else if (assetPath != null) {
       imageWidget = ClipOval(
-        child: Image.asset(assetPath!, width: size, height: size, fit: BoxFit.cover),
+        child: Image.asset(
+          assetPath!,
+          width: size,
+          height: size,
+          fit: BoxFit.cover,
+        ),
       );
     } else if (file != null) {
       imageWidget = ClipOval(
-        child: Image.file(file!, width: size, height: size, fit: BoxFit.cover, errorBuilder: (_, __, ___) => _buildPlaceholder()),
+        child: Image.file(
+          file!,
+          width: size,
+          height: size,
+          fit: BoxFit.cover,
+          errorBuilder: (_, __, ___) => _buildPlaceholder(),
+        ),
       );
     } else {
       imageWidget = ClipOval(child: _buildPlaceholder());
     }
 
-    return Container(
-      width: size,
-      height: size,
-      decoration: BoxDecoration(shape: BoxShape.circle, border: border),
-      child: imageWidget,
+    return SemanticHelper.container(
+      testId: SemanticHelper.createTestId(
+        SemanticTypes.section,
+        "fusion_profile_image_${semanticId ?? ""}",
+      ),
+      child: Container(
+        width: size,
+        height: size,
+        decoration: BoxDecoration(shape: BoxShape.circle, border: border),
+        child: imageWidget,
+      ),
     );
   }
 
@@ -87,7 +137,11 @@ class FusionProfileImage extends StatelessWidget {
     return placeholder ??
         Container(
           color: Colors.grey.shade300,
-          child: Icon(Icons.person, size: size * 0.6, color: Colors.grey.shade600),
+          child: Icon(
+            Icons.person,
+            size: size * 0.6,
+            color: Colors.grey.shade600,
+          ),
         );
   }
 }

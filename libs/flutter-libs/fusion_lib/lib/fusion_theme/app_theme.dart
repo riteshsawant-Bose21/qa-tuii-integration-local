@@ -178,7 +178,9 @@ class FusionAppTheme {
         radius: const Radius.circular(4),
         thumbColor: WidgetStateProperty.all(Colors.grey.shade400),
         trackColor: WidgetStateProperty.all(Colors.transparent),
-        thumbVisibility: WidgetStateProperty.all(true), // always visible (optional)
+        thumbVisibility: WidgetStateProperty.all(
+          true,
+        ), // always visible (optional)
       ),
 
       /// Outlined button styling with primary color border and text
@@ -325,7 +327,9 @@ class FusionAppTheme {
       scrollbarTheme: ScrollbarThemeData(
         thickness: WidgetStateProperty.all(3), // small thickness globally
         radius: const Radius.circular(4),
-        thumbVisibility: WidgetStateProperty.all(true), // always visible (optional)
+        thumbVisibility: WidgetStateProperty.all(
+          true,
+        ), // always visible (optional)
       ),
 
       /// Outlined button styling with primary color border for dark theme
@@ -453,106 +457,322 @@ extension FusionTextStyle on TextTheme {
     weight: FontWeight.w400,
   );
 
-  TextStyle get h1Bold => _fusionText(displayLarge!, size: 48, lineHeight: 56, letterSpacing: -2, weight: FontWeight.w700, fontFamily: 'EaseStd');
+  TextStyle get h1Bold => _fusionText(
+    displayLarge!,
+    size: 48,
+    lineHeight: 56,
+    letterSpacing: -2,
+    weight: FontWeight.w700,
+    fontFamily: 'EaseStd',
+  );
 
   /// ------------------------
   /// H2 – 40 / 48 / -1
   /// ------------------------
-  TextStyle get h2Regular => _fusionText(displayMedium!, size: 40, lineHeight: 48, letterSpacing: -1, weight: FontWeight.w400, fontFamily: 'EaseStd');
+  TextStyle get h2Regular => _fusionText(
+    displayMedium!,
+    size: 40,
+    lineHeight: 48,
+    letterSpacing: -1,
+    weight: FontWeight.w400,
+    fontFamily: 'EaseStd',
+  );
 
-  TextStyle get h2Bold => _fusionText(displayMedium!, size: 40, lineHeight: 48, letterSpacing: -1, weight: FontWeight.w700, fontFamily: 'EaseStd');
+  TextStyle get h2Bold => _fusionText(
+    displayMedium!,
+    size: 40,
+    lineHeight: 48,
+    letterSpacing: -1,
+    weight: FontWeight.w700,
+    fontFamily: 'EaseStd',
+  );
 
   /// ------------------------
   /// H3 – 32 / 40 / -1
   /// ------------------------
-  TextStyle get h3Regular => _fusionText(headlineLarge!, size: 32, lineHeight: 40, letterSpacing: -1, weight: FontWeight.w400, fontFamily: 'EaseStd');
+  TextStyle get h3Regular => _fusionText(
+    headlineLarge!,
+    size: 32,
+    lineHeight: 40,
+    letterSpacing: -1,
+    weight: FontWeight.w400,
+    fontFamily: 'EaseStd',
+  );
 
-  TextStyle get h3Bold => _fusionText(headlineLarge!, size: 32, lineHeight: 40, letterSpacing: -1, weight: FontWeight.w700, fontFamily: 'EaseStd');
+  TextStyle get h3Bold => _fusionText(
+    headlineLarge!,
+    size: 32,
+    lineHeight: 40,
+    letterSpacing: -1,
+    weight: FontWeight.w700,
+    fontFamily: 'EaseStd',
+  );
 
   /// ------------------------
   /// H4 – 24 / 32 / -1
   /// ------------------------
-  TextStyle get h4Regular => _fusionText(headlineSmall!, size: 24, lineHeight: 32, letterSpacing: -1, weight: FontWeight.w400, fontFamily: 'Inter');
+  TextStyle get h4Regular => _fusionText(
+    headlineSmall!,
+    size: 24,
+    lineHeight: 32,
+    letterSpacing: -1,
+    weight: FontWeight.w400,
+    fontFamily: 'Inter',
+  );
 
-  TextStyle get h4SemiBold => _fusionText(headlineSmall!, size: 24, lineHeight: 32, letterSpacing: -1, weight: FontWeight.w600, fontFamily: 'Inter');
+  TextStyle get h4SemiBold => _fusionText(
+    headlineSmall!,
+    size: 24,
+    lineHeight: 32,
+    letterSpacing: -1,
+    weight: FontWeight.w600,
+    fontFamily: 'Inter',
+  );
 
-  TextStyle get h4Bold => _fusionText(headlineSmall!, size: 24, lineHeight: 32, letterSpacing: -1, weight: FontWeight.w700, fontFamily: 'Inter');
+  TextStyle get h4Bold => _fusionText(
+    headlineSmall!,
+    size: 24,
+    lineHeight: 32,
+    letterSpacing: -1,
+    weight: FontWeight.w700,
+    fontFamily: 'Inter',
+  );
 
   /// ------------------------
   /// H5 – 20 / 24 / 0
   /// ------------------------
-  TextStyle get h5Regular => _fusionText(titleLarge!, size: 20, lineHeight: 24, weight: FontWeight.w400, fontFamily: 'EaseStd');
+  TextStyle get h5Regular => _fusionText(
+    titleLarge!,
+    size: 20,
+    lineHeight: 24,
+    weight: FontWeight.w400,
+    fontFamily: 'EaseStd',
+  );
 
-  TextStyle get h5Bold => _fusionText(titleLarge!, size: 20, lineHeight: 24, weight: FontWeight.w700, fontFamily: 'EaseStd');
+  TextStyle get h5Bold => _fusionText(
+    titleLarge!,
+    size: 20,
+    lineHeight: 24,
+    weight: FontWeight.w700,
+    fontFamily: 'EaseStd',
+  );
 
   /// ------------------------
   /// H6 – 18 / 24 / 0
   /// ------------------------
-  TextStyle get h6Regular => _fusionText(titleMedium!, size: 18, lineHeight: 24, weight: FontWeight.w400, fontFamily: 'EaseStd');
+  TextStyle get h6Regular => _fusionText(
+    titleMedium!,
+    size: 18,
+    lineHeight: 24,
+    weight: FontWeight.w400,
+    fontFamily: 'EaseStd',
+  );
 
-  TextStyle get h6Bold => _fusionText(titleMedium!, size: 18, lineHeight: 24, weight: FontWeight.w700, fontFamily: 'EaseStd');
+  TextStyle get h6Bold => _fusionText(
+    titleMedium!,
+    size: 18,
+    lineHeight: 24,
+    weight: FontWeight.w700,
+    fontFamily: 'EaseStd',
+  );
 
   /// ------------------------
   /// B1 – 16 / 24 / 0
   /// ------------------------
-  TextStyle get b1Regular => _fusionText(bodyLarge!, size: 16, lineHeight: 24, weight: FontWeight.w400, fontFamily: 'EaseStd');
+  TextStyle get b1Regular => _fusionText(
+    bodyLarge!,
+    size: 16,
+    lineHeight: 24,
+    weight: FontWeight.w400,
+    fontFamily: 'EaseStd',
+  );
 
-  TextStyle get b1Bold => _fusionText(bodyLarge!, size: 16, lineHeight: 24, weight: FontWeight.w700, fontFamily: 'EaseStd');
+  TextStyle get b1Bold => _fusionText(
+    bodyLarge!,
+    size: 16,
+    lineHeight: 24,
+    weight: FontWeight.w700,
+    fontFamily: 'EaseStd',
+  );
 
   /// ------------------------
   /// B2 – 16 / 24 / 0
   /// ------------------------
-  TextStyle get b2Regular => _fusionText(bodyMedium!, size: 16, lineHeight: 24, weight: FontWeight.w400, fontFamily: 'Inter');
+  TextStyle get b2Regular => _fusionText(
+    bodyMedium!,
+    size: 16,
+    lineHeight: 24,
+    weight: FontWeight.w400,
+    fontFamily: 'Inter',
+  );
 
-  TextStyle get b2Medium => _fusionText(bodyMedium!, size: 16, lineHeight: 24, weight: FontWeight.w500, fontFamily: 'Inter');
+  TextStyle get b2Medium => _fusionText(
+    bodyMedium!,
+    size: 16,
+    lineHeight: 24,
+    weight: FontWeight.w500,
+    fontFamily: 'Inter',
+  );
 
-  TextStyle get b2SemiBold => _fusionText(bodyMedium!, size: 16, lineHeight: 24, weight: FontWeight.w600, fontFamily: 'Inter');
+  TextStyle get b2SemiBold => _fusionText(
+    bodyMedium!,
+    size: 16,
+    lineHeight: 24,
+    weight: FontWeight.w600,
+    fontFamily: 'Inter',
+  );
 
-  TextStyle get b2Bold => _fusionText(bodyMedium!, size: 16, lineHeight: 24, weight: FontWeight.w700, fontFamily: 'Inter');
+  TextStyle get b2Bold => _fusionText(
+    bodyMedium!,
+    size: 16,
+    lineHeight: 24,
+    weight: FontWeight.w700,
+    fontFamily: 'Inter',
+  );
 
   /// ------------------------
   /// B3 – 14 / 20 / 0 & -3
   /// ------------------------
-  TextStyle get b3Regular => _fusionText(bodySmall!, size: 14, lineHeight: 20, weight: FontWeight.w400, fontFamily: 'Inter');
+  TextStyle get b3Regular => _fusionText(
+    bodySmall!,
+    size: 14,
+    lineHeight: 20,
+    weight: FontWeight.w400,
+    fontFamily: 'Inter',
+  );
 
-  TextStyle get b3Medium => _fusionText(bodySmall!, size: 14, lineHeight: 20, weight: FontWeight.w500, fontFamily: 'Inter');
+  TextStyle get b3Medium => _fusionText(
+    bodySmall!,
+    size: 14,
+    lineHeight: 20,
+    weight: FontWeight.w500,
+    fontFamily: 'Inter',
+  );
 
-  TextStyle get b3SemiBold => _fusionText(bodySmall!, size: 14, lineHeight: 20, weight: FontWeight.w600, fontFamily: 'Inter');
+  TextStyle get b3SemiBold => _fusionText(
+    bodySmall!,
+    size: 14,
+    lineHeight: 20,
+    weight: FontWeight.w600,
+    fontFamily: 'Inter',
+  );
 
-  TextStyle get b3Bold => _fusionText(bodySmall!, size: 14, lineHeight: 20, weight: FontWeight.w700, fontFamily: 'Inter');
+  TextStyle get b3Bold => _fusionText(
+    bodySmall!,
+    size: 14,
+    lineHeight: 20,
+    weight: FontWeight.w700,
+    fontFamily: 'Inter',
+  );
 
-  TextStyle get b3MediumTight => _fusionText(bodySmall!, size: 14, lineHeight: 20, letterSpacing: -3, weight: FontWeight.w500, fontFamily: 'Inter');
+  TextStyle get b3MediumTight => _fusionText(
+    bodySmall!,
+    size: 14,
+    lineHeight: 20,
+    letterSpacing: -3,
+    weight: FontWeight.w500,
+    fontFamily: 'Inter',
+  );
 
   /// ------------------------
   /// L1 – 12 / 16 / 0 & -3
   /// ------------------------
-  TextStyle get l1Regular => _fusionText(labelLarge!, size: 12, lineHeight: 16, weight: FontWeight.w400, fontFamily: 'Inter');
+  TextStyle get l1Regular => _fusionText(
+    labelLarge!,
+    size: 12,
+    lineHeight: 16,
+    weight: FontWeight.w400,
+    fontFamily: 'Inter',
+  );
 
-  TextStyle get l1Medium => _fusionText(labelLarge!, size: 12, lineHeight: 16, weight: FontWeight.w500, fontFamily: 'Inter');
+  TextStyle get l1Medium => _fusionText(
+    labelLarge!,
+    size: 12,
+    lineHeight: 16,
+    weight: FontWeight.w500,
+    fontFamily: 'Inter',
+  );
 
-  TextStyle get l1SemiBold => _fusionText(labelLarge!, size: 12, lineHeight: 16, weight: FontWeight.w600, fontFamily: 'Inter');
+  TextStyle get l1SemiBold => _fusionText(
+    labelLarge!,
+    size: 12,
+    lineHeight: 16,
+    weight: FontWeight.w600,
+    fontFamily: 'Inter',
+  );
 
-  TextStyle get l1Bold => _fusionText(labelLarge!, size: 12, lineHeight: 16, weight: FontWeight.w700, fontFamily: 'Inter');
+  TextStyle get l1Bold => _fusionText(
+    labelLarge!,
+    size: 12,
+    lineHeight: 16,
+    weight: FontWeight.w700,
+    fontFamily: 'Inter',
+  );
 
-  TextStyle get l1MediumTight => _fusionText(labelLarge!, size: 12, lineHeight: 16, letterSpacing: -3, weight: FontWeight.w500, fontFamily: 'Inter');
+  TextStyle get l1MediumTight => _fusionText(
+    labelLarge!,
+    size: 12,
+    lineHeight: 16,
+    letterSpacing: -3,
+    weight: FontWeight.w500,
+    fontFamily: 'Inter',
+  );
 
   /// ------------------------
   /// L2 – 10 / 12 / 0 & -2
   /// ------------------------
-  TextStyle get l2Regular => _fusionText(labelMedium!, size: 10, lineHeight: 12, weight: FontWeight.w400, fontFamily: 'Inter');
+  TextStyle get l2Regular => _fusionText(
+    labelMedium!,
+    size: 10,
+    lineHeight: 12,
+    weight: FontWeight.w400,
+    fontFamily: 'Inter',
+  );
 
-  TextStyle get l2Medium => _fusionText(labelMedium!, size: 10, lineHeight: 12, weight: FontWeight.w500, fontFamily: 'Inter');
+  TextStyle get l2Medium => _fusionText(
+    labelMedium!,
+    size: 10,
+    lineHeight: 12,
+    weight: FontWeight.w500,
+    fontFamily: 'Inter',
+  );
 
-  TextStyle get l2SemiBold => _fusionText(labelMedium!, size: 10, lineHeight: 12, weight: FontWeight.w600, fontFamily: 'Inter');
+  TextStyle get l2SemiBold => _fusionText(
+    labelMedium!,
+    size: 10,
+    lineHeight: 12,
+    weight: FontWeight.w600,
+    fontFamily: 'Inter',
+  );
 
-  TextStyle get l2Bold => _fusionText(labelMedium!, size: 10, lineHeight: 12, weight: FontWeight.w700, fontFamily: 'Inter');
+  TextStyle get l2Bold => _fusionText(
+    labelMedium!,
+    size: 10,
+    lineHeight: 12,
+    weight: FontWeight.w700,
+    fontFamily: 'Inter',
+  );
 
-  TextStyle get l2SemiBoldTight => _fusionText(labelMedium!, size: 10, lineHeight: 12, letterSpacing: -2, weight: FontWeight.w600, fontFamily: 'Inter');
+  TextStyle get l2SemiBoldTight => _fusionText(
+    labelMedium!,
+    size: 10,
+    lineHeight: 12,
+    letterSpacing: -2,
+    weight: FontWeight.w600,
+    fontFamily: 'Inter',
+  );
 
   /// ------------------------
   /// L3 – 8 / 12 / -2 / CAPS
   /// ------------------------
-  TextStyle get l3Caps => _fusionText(labelSmall!, size: 8, lineHeight: 12, letterSpacing: -2, weight: FontWeight.w600, fontFamily: 'Inter');
+  TextStyle get l3Caps => _fusionText(
+    labelSmall!,
+    size: 8,
+    lineHeight: 12,
+    letterSpacing: -2,
+    weight: FontWeight.w600,
+    fontFamily: 'Inter',
+  );
 }
 
 /// Extension on [BuildContext] to easily access commonly used theme properties.
@@ -584,7 +804,9 @@ extension type FusionInputDecoration(InputDecoration _) {
   }) {
     final finalFillColor = fillColor ?? colorScheme.primaryWhite;
     final isError = errorText != null && errorText.isNotEmpty;
-    final borderColor = isError ? const Color(0xFFD32F2F) : colorScheme.primaryBlack;
+    final borderColor = isError
+        ? const Color(0xFFD32F2F)
+        : colorScheme.primaryBlack;
 
     return InputDecoration(
       labelText: labelText,
@@ -599,7 +821,9 @@ extension type FusionInputDecoration(InputDecoration _) {
       isDense: isDense,
       enabled: isEnabled,
       floatingLabelBehavior: floatingLabelBehavior,
-      contentPadding: contentPadding ?? const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      contentPadding:
+          contentPadding ??
+          const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       labelStyle: TextStyle(
         fontSize: 13,
         fontWeight: FontWeight.w400,
@@ -620,8 +844,12 @@ extension type FusionInputDecoration(InputDecoration _) {
         fontWeight: FontWeight.w400,
         color: Color(0xFFD32F2F),
       ),
-      prefixIcon: prefixIcon != null ? Icon(prefixIcon, color: colorScheme.elevation1) : null,
-      suffixIcon: suffixIcon != null ? Icon(suffixIcon, color: colorScheme.elevation1) : null,
+      prefixIcon: prefixIcon != null
+          ? Icon(prefixIcon, color: colorScheme.elevation1)
+          : null,
+      suffixIcon: suffixIcon != null
+          ? Icon(suffixIcon, color: colorScheme.elevation1)
+          : null,
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(borderRadius),
         borderSide: BorderSide(color: borderColor),
@@ -687,8 +915,12 @@ extension type FusionInputDecoration(InputDecoration _) {
       filled: true,
       fillColor: colorScheme.elevation1,
       contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-      prefixIcon: prefixIcon != null ? Icon(prefixIcon, color: colorScheme.elevation1) : null,
-      suffixIcon: suffixIcon != null ? Icon(suffixIcon, color: colorScheme.elevation1) : null,
+      prefixIcon: prefixIcon != null
+          ? Icon(prefixIcon, color: colorScheme.elevation1)
+          : null,
+      suffixIcon: suffixIcon != null
+          ? Icon(suffixIcon, color: colorScheme.elevation1)
+          : null,
       labelStyle: TextStyle(
         fontSize: 13,
         fontWeight: FontWeight.w400,
@@ -727,8 +959,12 @@ extension type FusionInputDecoration(InputDecoration _) {
       labelText: labelText,
       hintText: hintText,
       errorText: errorText,
-      prefixIcon: prefixIcon != null ? Icon(prefixIcon, color: colorScheme.elevation1) : null,
-      suffixIcon: suffixIcon != null ? Icon(suffixIcon, color: colorScheme.elevation1) : null,
+      prefixIcon: prefixIcon != null
+          ? Icon(prefixIcon, color: colorScheme.elevation1)
+          : null,
+      suffixIcon: suffixIcon != null
+          ? Icon(suffixIcon, color: colorScheme.elevation1)
+          : null,
       labelStyle: TextStyle(
         fontSize: 13,
         fontWeight: FontWeight.w400,
@@ -773,8 +1009,12 @@ extension type FusionInputDecoration(InputDecoration _) {
       fillColor: colorScheme.primaryBlack,
       isDense: true,
       contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
-      prefixIcon: prefixIcon != null ? Icon(prefixIcon, color: colorScheme.elevation1) : null,
-      suffixIcon: suffixIcon != null ? Icon(suffixIcon, color: colorScheme.elevation1) : null,
+      prefixIcon: prefixIcon != null
+          ? Icon(prefixIcon, color: colorScheme.elevation1)
+          : null,
+      suffixIcon: suffixIcon != null
+          ? Icon(suffixIcon, color: colorScheme.elevation1)
+          : null,
       hintStyle: TextStyle(
         color: colorScheme.elevation1,
         fontSize: 12,
@@ -809,7 +1049,14 @@ extension FusionTextStyleColor on TextStyle {
 }
 
 /// Helper function to create a Fusion-styled TextStyle based on base style and parameters.
-TextStyle _fusionText(TextStyle base, {required double size, required double lineHeight, double letterSpacing = 0, FontWeight? weight, String? fontFamily}) {
+TextStyle _fusionText(
+  TextStyle base, {
+  required double size,
+  required double lineHeight,
+  double letterSpacing = 0,
+  FontWeight? weight,
+  String? fontFamily,
+}) {
   return base.copyWith(
     fontSize: size,
     height: lineHeight / size,

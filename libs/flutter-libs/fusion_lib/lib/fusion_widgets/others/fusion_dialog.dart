@@ -78,9 +78,12 @@ class FusionDialog extends StatelessWidget {
 
   final double primaryButtonWidth;
 
+  final String? semanticId;
+
   /// Creates a [FusionDialog].
   const FusionDialog({
     super.key,
+    this.semanticId,
     required this.title,
     this.description,
     this.icon,
@@ -99,76 +102,103 @@ class FusionDialog extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Dialog(
-      shape: roundedCorners ? RoundedRectangleBorder(borderRadius: BorderRadius.circular(borderRadius)) : null,
-      backgroundColor: backgroundColor ?? context.colorScheme.elevation1,
-      insetPadding: const EdgeInsets.symmetric(horizontal: 40, vertical: 24),
+    return SemanticHelper.container(
+      testId: SemanticHelper.createTestId(
+        SemanticTypes.container,
+        "fusion_dialog_${semanticId ?? ""}",
+      ),
+      child: Dialog(
+        shape: roundedCorners
+            ? RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(borderRadius),
+              )
+            : null,
+        backgroundColor: backgroundColor ?? context.colorScheme.elevation1,
+        insetPadding: const EdgeInsets.symmetric(horizontal: 40, vertical: 24),
 
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 50),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: IntrinsicHeight(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                if (icon != null) ...[Icon(icon, size: 48, color: iconColor ?? Theme.of(context).colorScheme.primaryWhite), const SizedBox(height: 16)],
-                FusionAppText(
-                  text: title,
-                  textAlign: TextAlign.center,
-                  style:
-                      titleTextStyle ??
-                      Theme.of(context).textTheme.bodySmall?.copyWith(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                      ),
-                ),
-                if (description != null) ...[
-                  const SizedBox(height: 12),
-                  Flexible(
-                    child: SingleChildScrollView(
-                      child: FusionAppText(
-                        text: description!,
-                        textAlign: TextAlign.center,
-                        style: descriptionTextStyle ?? Theme.of(context).textTheme.bodySmall?.copyWith(fontSize: 11),
-                      ),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 50),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: IntrinsicHeight(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (icon != null) ...[
+                    Icon(
+                      icon,
+                      size: 48,
+                      color:
+                          iconColor ??
+                          Theme.of(context).colorScheme.primaryWhite,
                     ),
+                    const SizedBox(height: 16),
+                  ],
+                  FusionAppText(
+                    text: title,
+                    textAlign: TextAlign.center,
+                    style:
+                        titleTextStyle ??
+                        Theme.of(context).textTheme.bodySmall?.copyWith(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                        ),
                   ),
-                ],
-                const SizedBox(height: 24),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
-                  children: [
-                    if (secondaryButtonLabel != null && onSecondaryPressed != null) ...[
-                      SizedBox(
-                        width: 90,
-                        child: FusionOutlinedButton(
-                          label: secondaryButtonLabel!,
-                          textStyle: Theme.of(context).textTheme.labelLarge?.copyWith(fontSize: 11),
-                          onTap: () {
-                            onSecondaryPressed?.call();
-                          },
+                  if (description != null) ...[
+                    const SizedBox(height: 12),
+                    Flexible(
+                      child: SingleChildScrollView(
+                        child: FusionAppText(
+                          text: description!,
+                          textAlign: TextAlign.center,
+                          style:
+                              descriptionTextStyle ??
+                              Theme.of(
+                                context,
+                              ).textTheme.bodySmall?.copyWith(fontSize: 11),
                         ),
-                      ),
-                      const SizedBox(width: 8),
-                    ],
-                    SizedBox(
-                      width: primaryButtonWidth,
-                      child: FusionButton(
-                        label: primaryButtonLabel,
-                        textStyle: Theme.of(context).textTheme.labelLarge?.copyWith(
-                          fontSize: 11,
-                          color: context.colorScheme.primaryBlack,
-                        ),
-                        isActive: true,
-                        onTap: () {
-                          onPrimaryPressed.call();
-                        },
                       ),
                     ),
                   ],
-                ),
-              ],
+                  const SizedBox(height: 24),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      if (secondaryButtonLabel != null &&
+                          onSecondaryPressed != null) ...[
+                        SizedBox(
+                          width: 90,
+                          child: FusionOutlinedButton(
+                            label: secondaryButtonLabel!,
+                            textStyle: Theme.of(
+                              context,
+                            ).textTheme.labelLarge?.copyWith(fontSize: 11),
+                            onTap: () {
+                              onSecondaryPressed?.call();
+                            },
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                      ],
+                      SizedBox(
+                        width: primaryButtonWidth,
+                        child: FusionButton(
+                          label: primaryButtonLabel,
+                          textStyle: Theme.of(context).textTheme.labelLarge
+                              ?.copyWith(
+                                fontSize: 11,
+                                color: context.colorScheme.primaryBlack,
+                              ),
+                          isActive: true,
+                          onTap: () {
+                            onPrimaryPressed.call();
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
             ),
           ),
         ),

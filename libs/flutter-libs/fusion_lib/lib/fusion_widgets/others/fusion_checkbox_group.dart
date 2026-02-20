@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/fusion_theme/app_theme.dart';
 
 class FusionCheckboxGroup<T> extends StatelessWidget {
@@ -25,8 +26,11 @@ class FusionCheckboxGroup<T> extends StatelessWidget {
   /// Interaction
   final bool enabled;
 
+  final String? semanticId;
+
   const FusionCheckboxGroup({
     super.key,
+    this.semanticId,
     required this.options,
     required this.selected,
     required this.labelBuilder,
@@ -53,36 +57,47 @@ class FusionCheckboxGroup<T> extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Wrap(
-      spacing: spacing,
-      runSpacing: runSpacing,
-      direction: direction,
-      children: options.map((T option) {
-        final bool isSelected = selected.contains(option);
-
-        return MouseRegion(
-          cursor: enabled ? SystemMouseCursors.click : SystemMouseCursors.basic,
-          child: GestureDetector(
-            behavior: HitTestBehavior.translucent,
-            onTap: enabled ? () => onClick(isSelected, option) : null,
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              spacing: 6,
-              children: <Widget>[
-                Icon(
-                  isSelected ? Icons.check_box : Icons.check_box_outline_blank,
-                  size: iconSize,
-                  color: context.colorScheme.onSurface,
-                ),
-                DefaultTextStyle.merge(
-                  style: labelStyle ?? Theme.of(context).textTheme.bodySmall,
-                  child: labelBuilder(context, option),
-                ),
-              ],
+    return SemanticHelper.button(
+      enabled: enabled,
+      testId: SemanticHelper.createTestId(
+        SemanticTypes.button,
+        "fusion_arrow_popup_${semanticId ?? ""}",
+      ),
+      label: selected.toString(),
+      child: Wrap(
+        spacing: spacing,
+        runSpacing: runSpacing,
+        direction: direction,
+        children: options.map((T option) {
+          final bool isSelected = selected.contains(option);
+          return MouseRegion(
+            cursor: enabled
+                ? SystemMouseCursors.click
+                : SystemMouseCursors.basic,
+            child: GestureDetector(
+              behavior: HitTestBehavior.translucent,
+              onTap: enabled ? () => onClick(isSelected, option) : null,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                spacing: 6,
+                children: <Widget>[
+                  Icon(
+                    isSelected
+                        ? Icons.check_box
+                        : Icons.check_box_outline_blank,
+                    size: iconSize,
+                    color: context.colorScheme.onSurface,
+                  ),
+                  DefaultTextStyle.merge(
+                    style: labelStyle ?? Theme.of(context).textTheme.bodySmall,
+                    child: labelBuilder(context, option),
+                  ),
+                ],
+              ),
             ),
-          ),
-        );
-      }).toList(),
+          );
+        }).toList(),
+      ),
     );
   }
 }

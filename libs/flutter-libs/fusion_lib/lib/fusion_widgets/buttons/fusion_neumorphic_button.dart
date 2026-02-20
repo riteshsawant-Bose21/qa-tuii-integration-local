@@ -114,6 +114,7 @@ class _FusionNeumorphicButtonState extends State<FusionNeumorphicButton> {
     assert(widget.text != null || widget.child != null);
 
     return SemanticHelper.button(
+      enabled: widget.enabled,
       testId: SemanticHelper.createTestId(
         SemanticTypes.button,
         "neumorphic_button_${widget.text}",

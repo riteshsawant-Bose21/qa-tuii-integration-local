@@ -130,10 +130,14 @@ class _FusionAppButtonState extends State<FusionAppButton> {
   @override
   Widget build(BuildContext context) {
     return SemanticHelper.button(
+      enabled: _isDisabled,
+      label: widget.text,
       testId: SemanticHelper.createTestId(
         SemanticTypes.button,
         "fusion_app_button${widget.semanticId ?? ""}",
       ),
+      ontap: widget.onPressed,
+
       child: MouseRegion(
         onEnter: (_) {
           if (!_isDisabled) {
@@ -507,16 +511,13 @@ class _FusionAppButtonState extends State<FusionAppButton> {
 
   BoxDecoration _brand() {
     return BoxDecoration(
-      color: () {
-        if (_isDisabled)
-          return context.colorScheme.GreenThemeDisabled;
-        else if (_isPressed || _isActive)
-          return context.colorScheme.spl600;
-        else if (_isHovered)
-          return context.colorScheme.spl500;
-        else
-          context.colorScheme.spl600;
-      }(),
+      color: _isDisabled
+          ? context.colorScheme.GreenThemeDisabled
+          : _isPressed || _isActive
+          ? context.colorScheme.spl600
+          : _isHovered
+          ? context.colorScheme.spl500
+          : context.colorScheme.spl600,
       borderRadius: BorderRadius.circular(12),
       border: Border.all(
         color: _isDisabled

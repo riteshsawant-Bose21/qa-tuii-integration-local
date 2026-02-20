@@ -81,7 +81,7 @@ class FusionDropdownButtonFormField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SemanticHelper.button(
+    return SemanticHelper.container(
       testId: SemanticHelper.createTestId(SemanticTypes.dropdown, semanticKey),
       child: DropdownButtonFormField<String>(
         key: key,

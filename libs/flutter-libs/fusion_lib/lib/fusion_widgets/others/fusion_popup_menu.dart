@@ -12,7 +12,7 @@ class FusionPopupMenu<T> extends StatelessWidget {
     required this.child,
     this.tooltip,
     this.popupOffset = const Offset(10, 10),
-    this.semanticsId
+    this.semanticsId,
   });
   final List<T> items;
   final ValueChanged<T> onSelected;
@@ -26,11 +26,13 @@ class FusionPopupMenu<T> extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final childKey = GlobalKey();
-    var createTestId = semanticsId??SemanticHelper.createTestId(SemanticTypes.dropdown, tooltip ?? 'popup_menu');
+    var createTestId =
+        semanticsId ??
+        SemanticHelper.createTestId(
+          SemanticTypes.dropdown,
+          tooltip ?? 'popup_menu',
+        );
     return SemanticHelper.button(
-      testId: SemanticHelper.createTestId(SemanticTypes.dropdown, tooltip ?? 'popup_menu'),
-      child: PopupMenuButton<T>(
-        tooltip: tooltip ?? '',
       testId: createTestId,
       child: _PopupMenuButton<T>(
         tooltip: tooltip,
@@ -47,14 +49,19 @@ class FusionPopupMenu<T> extends StatelessWidget {
           items.length,
           (index) {
             final T item = items[index];
-            var findRenderObject = (childKey.currentContext?.findRenderObject() as RenderBox?);
+            var findRenderObject =
+                (childKey.currentContext?.findRenderObject() as RenderBox?);
             var width2 = matchChildWidth ? findRenderObject?.size.width : null;
             return PopupMenuItem<T>(
               value: item,
 
               padding: EdgeInsets.all(0),
-              child: SemanticHelper.button(
-                testId: SemanticHelper.createTestId(SemanticTypes.dropdownItem, tooltip ?? 'popup_menu_item_$index'),
+              child: SemanticHelper.dropdown(
+                testId: SemanticHelper.createTestId(
+                  SemanticTypes.dropdown,
+                  tooltip ?? 'popup_menu_item_$index',
+                ),
+                value: tooltip,
                 child: SizedBox(
                   width: width2,
                   child: Padding(
@@ -62,7 +69,11 @@ class FusionPopupMenu<T> extends StatelessWidget {
                     child: itemBuilder != null
                         ? itemBuilder!(context, item)
                         : FusionAppText(
-                            text: itemLabels != null && itemLabels!.containsKey(item) ? itemLabels![item]! : item.toString(),
+                            text:
+                                itemLabels != null &&
+                                    itemLabels!.containsKey(item)
+                                ? itemLabels![item]!
+                                : item.toString(),
                             style: context.textTheme.bodySmall,
                           ),
                   ),
@@ -114,7 +125,10 @@ class _PopupMenuButton<T> extends StatefulWidget {
     this.style,
     this.menuSemanticLabel,
     this.requestFocus,
-  }) : assert(!(child != null && icon != null), 'You can only pass [child] or [icon], not both.');
+  }) : assert(
+         !(child != null && icon != null),
+         'You can only pass [child] or [icon], not both.',
+       );
 
   /// Called when the button is pressed to create the items to show in the menu.
   final PopupMenuItemBuilder<T> itemBuilder;
@@ -356,7 +370,8 @@ class _PopupMenuButtonState<T> extends State<_PopupMenuButton<T>> {
       // Even after the button has been unmounted and the context becomes invalid,
       // the route might keep displaying, and `_positionBuilder` must continue to
       // work in that case.
-      return _lastPosition ?? RelativeRect.fromSize(Rect.zero, constraints.biggest);
+      return _lastPosition ??
+          RelativeRect.fromSize(Rect.zero, constraints.biggest);
     }
 
     final PopupMenuThemeData popupMenuTheme = PopupMenuTheme.of(context);
@@ -367,7 +382,8 @@ class _PopupMenuButtonState<T> extends State<_PopupMenuButton<T>> {
               rootNavigator: widget.useRootNavigator,
             ).overlay!.context.findRenderObject()!
             as RenderBox;
-    final PopupMenuPosition popupMenuPosition = widget.position ?? popupMenuTheme.position ?? PopupMenuPosition.over;
+    final PopupMenuPosition popupMenuPosition =
+        widget.position ?? popupMenuTheme.position ?? PopupMenuPosition.over;
     late Offset offset;
     switch (popupMenuPosition) {
       case PopupMenuPosition.over:
@@ -382,7 +398,10 @@ class _PopupMenuButtonState<T> extends State<_PopupMenuButton<T>> {
     final RelativeRect position = RelativeRect.fromRect(
       Rect.fromPoints(
         button.localToGlobal(offset, ancestor: overlay),
-        button.localToGlobal(button.size.bottomRight(Offset.zero) + offset, ancestor: overlay),
+        button.localToGlobal(
+          button.size.bottomRight(Offset.zero) + offset,
+          ancestor: overlay,
+        ),
       ),
       Offset.zero & overlay.size,
     );
@@ -409,7 +428,8 @@ class _PopupMenuButtonState<T> extends State<_PopupMenuButton<T>> {
         context: context,
         elevation: widget.elevation ?? popupMenuTheme.elevation,
         shadowColor: widget.shadowColor ?? popupMenuTheme.shadowColor,
-        surfaceTintColor: widget.surfaceTintColor ?? popupMenuTheme.surfaceTintColor,
+        surfaceTintColor:
+            widget.surfaceTintColor ?? popupMenuTheme.surfaceTintColor,
         items: items,
         initialValue: widget.initialValue,
         positionBuilder: _positionBuilder,
@@ -438,7 +458,8 @@ class _PopupMenuButtonState<T> extends State<_PopupMenuButton<T>> {
   }
 
   bool get _canRequestFocus {
-    final NavigationMode mode = MediaQuery.maybeNavigationModeOf(context) ?? NavigationMode.traditional;
+    final NavigationMode mode =
+        MediaQuery.maybeNavigationModeOf(context) ?? NavigationMode.traditional;
     return switch (mode) {
       NavigationMode.traditional => widget.enabled,
       NavigationMode.directional => true,
@@ -450,13 +471,17 @@ class _PopupMenuButtonState<T> extends State<_PopupMenuButton<T>> {
   Widget build(BuildContext context) {
     final IconThemeData iconTheme = IconTheme.of(context);
     final PopupMenuThemeData popupMenuTheme = PopupMenuTheme.of(context);
-    final bool enableFeedback = widget.enableFeedback ?? PopupMenuTheme.of(context).enableFeedback ?? true;
+    final bool enableFeedback =
+        widget.enableFeedback ??
+        PopupMenuTheme.of(context).enableFeedback ??
+        true;
 
     assert(debugCheckHasMaterialLocalizations(context));
 
     if (widget.child != null) {
       final Widget child = Tooltip(
-        message: widget.tooltip ?? MaterialLocalizations.of(context).showMenuTooltip,
+        message:
+            widget.tooltip ?? MaterialLocalizations.of(context).showMenuTooltip,
         child: InkWell(
           borderRadius: widget.borderRadius,
           onTap: widget.enabled ? showButtonMenu : null,
@@ -466,7 +491,8 @@ class _PopupMenuButtonState<T> extends State<_PopupMenuButton<T>> {
           child: widget.child,
         ),
       );
-      final MaterialTapTargetSize tapTargetSize = widget.style?.tapTargetSize ?? MaterialTapTargetSize.shrinkWrap;
+      final MaterialTapTargetSize tapTargetSize =
+          widget.style?.tapTargetSize ?? MaterialTapTargetSize.shrinkWrap;
       if (tapTargetSize == MaterialTapTargetSize.padded) {
         return ConstrainedBox(
           constraints: const BoxConstraints(
@@ -482,12 +508,16 @@ class _PopupMenuButtonState<T> extends State<_PopupMenuButton<T>> {
     return Semantics(
       child: IconButton(
         key: StandardComponentType.moreButton.key,
-        icon: Semantics(expanded: _isMenuExpanded, child: widget.icon ?? Icon(Icons.adaptive.more)),
+        icon: Semantics(
+          expanded: _isMenuExpanded,
+          child: widget.icon ?? Icon(Icons.adaptive.more),
+        ),
         padding: widget.padding,
         splashRadius: widget.splashRadius,
         iconSize: widget.iconSize ?? popupMenuTheme.iconSize ?? iconTheme.size,
         color: widget.iconColor ?? popupMenuTheme.iconColor ?? iconTheme.color,
-        tooltip: widget.tooltip ?? MaterialLocalizations.of(context).showMenuTooltip,
+        tooltip:
+            widget.tooltip ?? MaterialLocalizations.of(context).showMenuTooltip,
         onPressed: widget.enabled ? showButtonMenu : null,
         enableFeedback: enableFeedback,
         style: widget.style,

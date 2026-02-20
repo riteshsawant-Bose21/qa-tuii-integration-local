@@ -204,8 +204,10 @@ class _PropertiesPanel extends StatelessWidget {
                                     ///
                                     FilePicker.platform
                                         .saveFile(
-                                          dialogTitle: 'Save Configuration JSON',
-                                          fileName: '${viewModel.algorithm.name}.json',
+                                          dialogTitle:
+                                              'Save Configuration JSON',
+                                          fileName:
+                                              '${viewModel.algorithm.name}.json',
                                           type: FileType.custom,
                                           allowedExtensions: <String>['json'],
                                         )

@@ -129,6 +129,8 @@ class FusionButton extends StatelessWidget {
         SemanticTypes.button,
         accessLabel ?? label,
       ),
+      enabled: isActive,
+      label: label,
       // Semantics(
       // button: true,
       // label: accessLabel ?? label,

@@ -636,15 +636,51 @@ class _CustomTextFieldState extends State<CustomTextField> {
     );
   }
 
+  bool isFocused(FusionFieldState state) {
+    return state == FusionFieldState.focused ||
+        state == FusionFieldState.errorFocused;
+  }
+
+  String semanticsValue(FusionFieldState state) {
+    switch (state) {
+      case FusionFieldState.defaultState:
+        return 'Empty';
+
+      case FusionFieldState.focused:
+        return 'Editing';
+
+      case FusionFieldState.filled:
+        return 'Filled';
+
+      case FusionFieldState.error:
+        return 'Error';
+
+      case FusionFieldState.errorFocused:
+        return 'Error, editing';
+
+      case FusionFieldState.blocked:
+        return 'Disabled';
+
+      case FusionFieldState.blockedFilled:
+        return 'Disabled, filled';
+    }
+  }
+
   // ---------------- BUILD ----------------
 
   @override
   Widget build(BuildContext context) {
-    return SemanticHelper.container(
+    return SemanticHelper.textInput(
       testId: SemanticHelper.createTestId(
-        SemanticTypes.container,
+        SemanticTypes.textInput,
         "textfield_${widget.semanticId ?? ""}",
       ),
+      enabled: widget.enabled,
+      focused: isFocused(_getFieldState()),
+      value: semanticsValue(_getFieldState()),
+      live:
+          _getFieldState() == FusionFieldState.error ||
+          _getFieldState() == FusionFieldState.errorFocused,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

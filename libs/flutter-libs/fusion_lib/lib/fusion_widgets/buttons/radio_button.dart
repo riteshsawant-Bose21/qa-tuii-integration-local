@@ -119,6 +119,16 @@ class _RadioButtonState extends State<RadioButton> {
   bool get _isChecked => widget.state == FusionSelectionState.checked;
   bool get _isPartial => widget.state == FusionSelectionState.partial;
   bool get _isEnabled => !widget.disabled;
+  bool? toSemanticsChecked() {
+    switch (widget.state) {
+      case FusionSelectionState.checked:
+        return true;
+      case FusionSelectionState.unchecked:
+        return false;
+      case FusionSelectionState.partial:
+        return null; // important
+    }
+  }
 
   // 🔹 Two-state variants
   bool get _isTwoStateVariant =>
@@ -134,10 +144,14 @@ class _RadioButtonState extends State<RadioButton> {
     }
 
     return SemanticHelper.button(
+      enabled: _isEnabled,
+      selected: _isChecked,
       testId: SemanticHelper.createTestId(
         SemanticTypes.button,
         "radio_button${widget.semanticId}",
       ),
+      label: widget.label,
+      state: toSemanticsChecked(),
       child: GestureDetector(
         onTap: _isEnabled
             ? () {
@@ -282,19 +296,16 @@ class _RadioButtonState extends State<RadioButton> {
         child: Center(
           child: Icon(
             size: 12,
-            Icons.check,
+            widget.variant == FusionSelectionVariant.radio
+                ? Icons.circle
+                : Icons.check,
             fontWeight: FontWeight.bold,
-            color: context.colorScheme.black,
+            color: widget.variant == FusionSelectionVariant.radio
+                ? context.colorScheme.iconWhite
+                : context.colorScheme.black,
           ),
         ),
       );
-    }
-    if (_isChecked) {
-      return Icon(Icons.check, size: 16, color: _iconColor);
-    }
-
-    if (_isPartial) {
-      return Icon(Icons.remove, size: 16, color: _iconColor);
     }
 
     // Partial only for 3-state
