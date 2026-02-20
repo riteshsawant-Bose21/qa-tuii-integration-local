@@ -21,7 +21,7 @@ class FusionArrowPopup extends StatefulWidget {
   final double blurAmount;
   final double? maxHeight; // New: Optional max height
   final double? maxWidth; // New: Optional max width
-
+  final String? semanticsId;
   const FusionArrowPopup({
     super.key,
     required this.content,
@@ -39,6 +39,7 @@ class FusionArrowPopup extends StatefulWidget {
     this.blurAmount = 0.0,
     this.maxHeight,
     this.maxWidth,
+    this.semanticsId,
   });
 
   @override
@@ -78,6 +79,7 @@ class _FusionArrowPopupState extends State<FusionArrowPopup> {
         childWidget: widget.child,
         maxHeight: widget.maxHeight,
         maxWidth: widget.maxWidth,
+        semanticsId: widget.semanticsId,
       ),
     );
   }
@@ -266,6 +268,7 @@ class _PopupRoute extends PopupRoute<void> {
   final double blurAmount;
   final double? maxHeight;
   final double? maxWidth;
+  final String? semanticsId;
 
   _PopupRoute({
     required this.targetRect,
@@ -279,6 +282,7 @@ class _PopupRoute extends PopupRoute<void> {
     required this.blurAmount,
     this.maxHeight,
     this.maxWidth,
+    this.semanticsId,
   });
 
   @override
@@ -355,6 +359,7 @@ class _PopupRoute extends PopupRoute<void> {
       content: content,
       maxHeight: maxHeight,
       maxWidth: maxWidth,
+      semanticsId: semanticsId,
     );
   }
 
@@ -370,7 +375,7 @@ class _PopupPositioner extends StatefulWidget {
   final Animation<double> animation;
   final double? maxHeight;
   final double? maxWidth;
-
+  final String? semanticsId;
   const _PopupPositioner({
     required this.targetRect,
     required this.content,
@@ -379,6 +384,7 @@ class _PopupPositioner extends StatefulWidget {
     required this.animation,
     this.maxHeight,
     this.maxWidth,
+    required this.semanticsId,
   });
 
   @override
@@ -497,15 +503,18 @@ class _PopupPositionerState extends State<_PopupPositioner> {
                     constraints: BoxConstraints(
                       maxWidth: maxWidth,
                     ),
-                    child: _PopupContent(
-                      key: _popupKey,
-                      arrowDirection: _arrowDirection,
-                      arrowX: _arrowX,
-                      backgroundColor: widget.backgroundColor ?? Theme.of(context).colorScheme.surface,
-                      borderColor: Theme.of(context).colorScheme.primaryBlack.withOpacity(0.3),
-                      showArrow: widget.showArrow,
-                      content: widget.content,
-                      maxHeight: _maxContentHeight,
+                    child: SemanticHelper.container(
+                      testId: SemanticHelper.createTestId(SemanticTypes.container, widget.semanticsId ?? 'popup'),
+                      child: _PopupContent(
+                        key: _popupKey,
+                        arrowDirection: _arrowDirection,
+                        arrowX: _arrowX,
+                        backgroundColor: widget.backgroundColor ?? Theme.of(context).colorScheme.surface,
+                        borderColor: Theme.of(context).colorScheme.primaryBlack.withOpacity(0.3),
+                        showArrow: widget.showArrow,
+                        content: widget.content,
+                        maxHeight: _maxContentHeight,
+                      ),
                     ),
                   ),
                 ),

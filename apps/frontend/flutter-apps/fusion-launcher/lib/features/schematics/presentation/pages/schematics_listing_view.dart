@@ -650,6 +650,7 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
                   child: SchematicListingSection(
                     sectionTitle: "Controllers",
                     action: FusionArrowPopup(
+                      semanticsId: "add_controller_popup",
                       content: SchematicAddDeviceForm<ProductQueryModel>(
                         semanticsId: "controllers",
                         products: ProductAPI.getControllers(),
