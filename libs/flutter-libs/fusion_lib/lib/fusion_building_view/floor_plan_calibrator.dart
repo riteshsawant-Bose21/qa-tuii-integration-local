@@ -1115,4 +1115,14 @@ enum MeasurementUnit {
       return null;
     }
   }
+
+  static MeasurementUnit? fromJson(String value) {
+    try {
+      return MeasurementUnit.values.firstWhere((MeasurementUnit element) => element.name == value);
+    } catch (e) {
+      return null;
+    }
+  }
+
+  String toJson() => name;
 }

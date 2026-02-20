@@ -119,12 +119,12 @@ extension ProjectPropertiesViewModel on ProjectViewModel {
   }
 
   //set meta data
-  void updateProjectMetadata({required ProjectMetadata metaData, bool autoSave = true}) {
+  void updateProjectMetaData({required ProjectMetaData metaData, bool autoSave = true}) {
     try {
       if (autoSave) {
         recordSnapshot();
       }
-      projectManager.updateProjectMetadata(metaData: metaData);
+      projectManager.updateProjectMetaData(metaData: metaData);
       if (autoSave) {
         saveProject();
       }
@@ -135,7 +135,7 @@ extension ProjectPropertiesViewModel on ProjectViewModel {
     }
   }
 
-  ProjectMetadata? get projectMetadata {
+  ProjectMetaData? get projectMetaData {
     try {
       return projectManager.getProjectMetadata();
     } catch (e) {

@@ -2,7 +2,7 @@ import 'package:fusion_lib/models/project_entities/project_metadata_model.dart';
 
 class NewProjectDetails {
   final String name;
-  final ProjectMetadata metadata;
+  final ProjectMetaData metadata;
 
   NewProjectDetails({
     required this.name,
@@ -14,5 +14,15 @@ class NewProjectDetails {
       'name': name,
       'metadata': metadata.toJson(),
     };
+  }
+
+  NewProjectDetails copyWith({
+    String? name,
+    ProjectMetaData? metadata,
+  }) {
+    return NewProjectDetails(
+      name: name ?? this.name,
+      metadata: metadata ?? this.metadata,
+    );
   }
 }

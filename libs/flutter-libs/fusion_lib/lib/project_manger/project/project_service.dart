@@ -34,7 +34,7 @@ class ProjectService {
   final DateTime? lastUploadedAt;
   final bool isDeleted;
   final bool isCloudInstance;
-  final ProjectMetadata metadata;
+  final ProjectMetaData metadata;
 
   final FloorRepository floors;
   final ListeningAreaRepository listeningAreas;
@@ -173,7 +173,7 @@ class ProjectService {
     bool? isDeleted,
     DateTime? lastUploadedAt,
     bool? isCloudInstance,
-    ProjectMetadata? metadata,
+    ProjectMetaData? metadata,
     FloorRepository? floors,
     ListeningAreaRepository? listeningAreas,
     ZoneRepository? zones,
@@ -358,7 +358,7 @@ class ProjectService {
       isDeleted: json["is_deleted"] ?? false,
       lastUploadedAt: json["lastUploadedAt"] != null ? DateTime.parse(json["lastUploadedAt"]) : null,
       isCloudInstance: json["isCloudInstance"] ?? false,
-      metadata: json['metadata'] != null ? ProjectMetadata.fromJson(json['metadata'] as Map<String, dynamic>) : ProjectMetadata.empty(),
+      metadata: json['metadata'] != null ? ProjectMetaData.fromJson(json['metadata'] as Map<String, dynamic>) : ProjectMetaData.empty(),
     );
 
     service.floors.fromJsonList(json["floors"], (m) => FloorModel.fromJson(m), "id");

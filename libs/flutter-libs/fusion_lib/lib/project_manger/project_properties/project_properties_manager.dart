@@ -82,7 +82,7 @@ extension ProjectPropertiesManager on ProjectManager {
     return projectService!.getAllFusionDevices();
   }
 
-  void updateProjectMetadata({required ProjectMetadata metaData}) {
+  void updateProjectMetaData({required ProjectMetaData metaData}) {
     try {
       if (projectService == null) {
         FusionLogger.log(tag: LogTag.exceptions, message: "No project is currently loaded. Cannot update metadata.");
@@ -97,7 +97,7 @@ extension ProjectPropertiesManager on ProjectManager {
     }
   }
 
-  ProjectMetadata? getProjectMetadata() {
+  ProjectMetaData? getProjectMetadata() {
     try {
       if (projectService == null) {
         FusionLogger.log(tag: LogTag.exceptions, message: "No project is currently loaded. Cannot get metadata.");
