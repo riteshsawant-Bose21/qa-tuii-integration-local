@@ -1,2 +1,2 @@
-buildVersion=1.1.0
+buildVersion=0.1.0
 echo $buildVersion
