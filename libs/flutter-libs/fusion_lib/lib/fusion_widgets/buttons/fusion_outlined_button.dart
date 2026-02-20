@@ -124,7 +124,7 @@ class FusionOutlinedButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SemanticHelper.button(
-      enabled: isActive,
+      isActive: isActive,
       testId: SemanticHelper.createTestId(
         SemanticTypes.button,
         semanticsId ?? label,

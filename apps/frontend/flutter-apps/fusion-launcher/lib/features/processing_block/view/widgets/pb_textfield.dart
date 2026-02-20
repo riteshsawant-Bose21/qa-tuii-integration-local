@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart' show TextInputFormatter, FilteringTextInputFormatter;
+import 'package:flutter/services.dart'
+    show TextInputFormatter, FilteringTextInputFormatter;
 import 'package:fusion_lib/fusion_lib.dart';
 
 import '../../dto/pb_item.dart';
@@ -20,60 +21,81 @@ class PBItemTextfield extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final PBTextfieldParam data = (handler?.resolveForItem(item) ?? item.param) as PBTextfieldParam;
+    final PBTextfieldParam data =
+        (handler?.resolveForItem(item) ?? item.param) as PBTextfieldParam;
 
-    return LayoutBuilder(
-      builder: (BuildContext context, BoxConstraints constraints) {
-        final num? value = DeserializationUtil.numDeserializer.deserialize(handler?.getValue(item) ?? item.value);
-        final double widthPerCell = constraints.maxWidth / item.width;
-        return FusionContainer(
-          raised: false,
-          // radius: widthPerCell * 2,
-          child: SizedBox(
-            width: constraints.maxWidth,
-            height: constraints.maxHeight,
-            child: Center(
-              child: TextFormField(
-                key: ValueKey<String>('${item.id}_textfield${value?.toString() ?? ''}'),
+    return SemanticHelper.textInput(
+      testId: SemanticHelper.createTestId(
+        SemanticTypes.container,
+        "PB_TextField",
+      ),
+      label: data.label,
+      child: LayoutBuilder(
+        builder: (BuildContext context, BoxConstraints constraints) {
+          final num? value = DeserializationUtil.numDeserializer.deserialize(
+            handler?.getValue(item) ?? item.value,
+          );
+          final double widthPerCell = constraints.maxWidth / item.width;
+          return FusionContainer(
+            raised: false,
+            // radius: widthPerCell * 2,
+            child: SizedBox(
+              width: constraints.maxWidth,
+              height: constraints.maxHeight,
+              child: Center(
+                child: TextFormField(
+                  key: ValueKey<String>(
+                    '${item.id}_textfield${value?.toString() ?? ''}',
+                  ),
 
-                decoration: InputDecoration(
-                  border: InputBorder.none,
-                  focusedBorder: InputBorder.none,
-                  enabledBorder: InputBorder.none,
-                  errorBorder: InputBorder.none,
-                  disabledBorder: InputBorder.none,
-                  fillColor: Colors.transparent,
+                  decoration: InputDecoration(
+                    border: InputBorder.none,
+                    focusedBorder: InputBorder.none,
+                    enabledBorder: InputBorder.none,
+                    errorBorder: InputBorder.none,
+                    disabledBorder: InputBorder.none,
+                    fillColor: Colors.transparent,
 
-                  filled: true,
-                  // contentPadding: EdgeInsets.symmetric(horizontal: widthPerCell * 0.2, vertical: widthPerCell * 0.1),
-                  hintText: data.label,
-                  // suffixText: data.unit ?? '',
-                  // isDense: true,
-                  // isCollapsed: true,
+                    filled: true,
+                    // contentPadding: EdgeInsets.symmetric(horizontal: widthPerCell * 0.2, vertical: widthPerCell * 0.1),
+                    hintText: data.label,
+                    // suffixText: data.unit ?? '',
+                    // isDense: true,
+                    // isCollapsed: true,
+                  ),
+                  style: context.textTheme.bodySmall,
+                  textAlign: TextAlign.center,
+                  textAlignVertical: TextAlignVertical.top,
+                  initialValue: value?.toString() ?? '',
+                  keyboardType: TextInputType.number,
+
+                  onFieldSubmitted: (String value) {
+                    final num? parsedValue = num.tryParse(value);
+                    if (parsedValue != null) {
+                      handler?.onValueChanged(
+                        item,
+                        parsedValue.clamp(data.min, data.max),
+                      );
+                    }
+                  },
                 ),
-                style: context.textTheme.bodySmall,
-                textAlign: TextAlign.center,
-                textAlignVertical: TextAlignVertical.top,
-                initialValue: value?.toString() ?? '',
-                keyboardType: TextInputType.number,
-
-                onFieldSubmitted: (String value) {
-                  final num? parsedValue = num.tryParse(value);
-                  if (parsedValue != null) {
-                    handler?.onValueChanged(item, parsedValue.clamp(data.min, data.max));
-                  }
-                },
               ),
             ),
-          ),
-        );
-      },
+          );
+        },
+      ),
     );
   }
 }
 
 class PBNumberTextField extends StatelessWidget {
-  const PBNumberTextField({super.key, this.value, required this.onChanged, this.min, this.max});
+  const PBNumberTextField({
+    super.key,
+    this.value,
+    required this.onChanged,
+    this.min,
+    this.max,
+  });
   final num? value;
   final ValueChanged<num> onChanged;
   final num? min;
@@ -82,7 +104,9 @@ class PBNumberTextField extends StatelessWidget {
   Widget build(BuildContext context) {
     return PBTextField(
       value: value?.toString(),
-      inputFormatters: <TextInputFormatter>[FilteringTextInputFormatter.allow(RegExp(r'^-?\d*\.?\d*$'))],
+      inputFormatters: <TextInputFormatter>[
+        FilteringTextInputFormatter.allow(RegExp(r'^-?\d*\.?\d*$')),
+      ],
       onChanged: (String value) {
         final num? parsedValue = num.tryParse(value);
         if (parsedValue != null) {
@@ -98,7 +122,12 @@ class PBNumberTextField extends StatelessWidget {
 }
 
 class PBTextField extends StatefulWidget {
-  const PBTextField({super.key, required this.value, this.onChanged, this.inputFormatters});
+  const PBTextField({
+    super.key,
+    required this.value,
+    this.onChanged,
+    this.inputFormatters,
+  });
   final String? value;
   final ValueChanged<String>? onChanged;
   final List<TextInputFormatter>? inputFormatters;

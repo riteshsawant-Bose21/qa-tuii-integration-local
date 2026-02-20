@@ -130,7 +130,7 @@ class _FusionAppButtonState extends State<FusionAppButton> {
   @override
   Widget build(BuildContext context) {
     return SemanticHelper.button(
-      enabled: _isDisabled,
+      isActive: _isDisabled,
       label: widget.text,
       testId: SemanticHelper.createTestId(
         SemanticTypes.button,

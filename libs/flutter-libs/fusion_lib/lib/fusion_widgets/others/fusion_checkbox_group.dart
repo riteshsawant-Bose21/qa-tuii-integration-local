@@ -58,7 +58,7 @@ class FusionCheckboxGroup<T> extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SemanticHelper.button(
-      enabled: enabled,
+      isActive: enabled,
       testId: SemanticHelper.createTestId(
         SemanticTypes.button,
         "fusion_arrow_popup_${semanticId ?? ""}",

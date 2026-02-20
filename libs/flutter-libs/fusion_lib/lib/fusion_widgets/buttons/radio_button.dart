@@ -144,7 +144,7 @@ class _RadioButtonState extends State<RadioButton> {
     }
 
     return SemanticHelper.button(
-      enabled: _isEnabled,
+      isActive: _isEnabled,
       selected: _isChecked,
       testId: SemanticHelper.createTestId(
         SemanticTypes.button,

@@ -11,7 +11,6 @@ class NeumorphicTextField extends StatefulWidget {
   final double? height;
   final double? width;
   final double borderRadius;
-  
 
   const NeumorphicTextField({
     super.key,
@@ -50,8 +49,12 @@ class _NeumorphicTextFieldState extends State<NeumorphicTextField> {
 
   @override
   Widget build(BuildContext context) {
-    return SemanticHelper.button(
-      testId: SemanticHelper.createTestId(SemanticTypes.button, "neumorphic_text_field"),
+    return SemanticHelper.textInput(
+      testId: SemanticHelper.createTestId(
+        SemanticTypes.textInput,
+        "neumorphic_text_field",
+      ),
+      label: widget.hintText,
       child: ClipRRect(
         borderRadius: BorderRadius.circular(widget.borderRadius),
         child: NeumorphicContainer(
@@ -64,7 +67,9 @@ class _NeumorphicTextFieldState extends State<NeumorphicTextField> {
               border: InputBorder.none,
               hintText: widget.hintText,
               isDense: true,
-              hintStyle: Theme.of(context).textTheme.labelLarge?.copyWith(color: Colors.grey),
+              hintStyle: Theme.of(
+                context,
+              ).textTheme.labelLarge?.copyWith(color: Colors.grey),
               contentPadding: const EdgeInsets.all(0),
             ),
             onChanged: widget.onChanged,

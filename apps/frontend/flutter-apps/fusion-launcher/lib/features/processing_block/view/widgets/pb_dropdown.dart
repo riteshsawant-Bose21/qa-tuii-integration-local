@@ -15,17 +15,24 @@ class PBItemDropdown extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final PBDropdownParam data = (handler?.resolveForItem(item) ?? item.param) as PBDropdownParam;
-    return PBDropdown<String>(
-      value: handler?.getValue(item) ?? item.value ?? data.label,
-      hintText: data.label,
-      onChanged: (String? value) {
-        handler?.onValueChanged(item, value);
-      },
-      items: data.options,
-      itemBuilder: (BuildContext context, String option) {
-        return Text(option);
-      },
+    final PBDropdownParam data =
+        (handler?.resolveForItem(item) ?? item.param) as PBDropdownParam;
+    return SemanticHelper.dropdown(
+      testId: SemanticHelper.createTestId(
+        SemanticTypes.container,
+        "DottedLine",
+      ),
+      child: PBDropdown<String>(
+        value: handler?.getValue(item) ?? item.value ?? data.label,
+        hintText: data.label,
+        onChanged: (String? value) {
+          handler?.onValueChanged(item, value);
+        },
+        items: data.options,
+        itemBuilder: (BuildContext context, String option) {
+          return Text(option);
+        },
+      ),
     );
   }
 }

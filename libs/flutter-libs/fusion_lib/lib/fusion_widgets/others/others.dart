@@ -20,3 +20,4 @@ export 'fusion_vertical_resizable_widget.dart';
 export 'hover_dropdown.dart';
 export 'fusion_table.dart';
 export 'dialog_box.dart';
+export 'fusion_vertical_slider.dart';

@@ -110,8 +110,11 @@ class FusionTextButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SemanticHelper.button(
-      enabled: isActive,
-      testId: SemanticHelper.createTestId(SemanticTypes.button, accessLabel ?? label),
+      isActive: isActive,
+      testId: SemanticHelper.createTestId(
+        SemanticTypes.button,
+        accessLabel ?? label,
+      ),
       child: IgnorePointer(
         ignoring: isLoading || !isActive,
         child: InkWell(
@@ -131,28 +134,45 @@ class FusionTextButton extends StatelessWidget {
                 ? const SizedBox(
                     width: 24,
                     height: 24,
-                    child: CircularProgressIndicator(strokeWidth: 2, valueColor: AlwaysStoppedAnimation<Color>(Colors.black)),
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      valueColor: AlwaysStoppedAnimation<Color>(Colors.black),
+                    ),
                   )
                 : Row(
                     mainAxisSize: MainAxisSize.min,
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       if (showPrefixIcon && prefixIcon != null) ...[
-                        Icon(prefixIcon, size: 16, color: isActive ? foregroundColor : foregroundColor.withValues(alpha: 0.5)),
+                        Icon(
+                          prefixIcon,
+                          size: 16,
+                          color: isActive
+                              ? foregroundColor
+                              : foregroundColor.withValues(alpha: 0.5),
+                        ),
                         const SizedBox(width: 8),
                       ],
                       Expanded(
                         child: Text(
                           label,
                           textAlign: TextAlign.center,
-                          style: textStyle ?? Theme.of(context).textTheme.labelLarge,
+                          style:
+                              textStyle ??
+                              Theme.of(context).textTheme.labelLarge,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),
                       if (showSuffixIcon && suffixIcon != null) ...[
                         const SizedBox(width: 8),
-                        Icon(suffixIcon, size: 16, color: isActive ? foregroundColor : foregroundColor.withValues(alpha: 0.5)),
+                        Icon(
+                          suffixIcon,
+                          size: 16,
+                          color: isActive
+                              ? foregroundColor
+                              : foregroundColor.withValues(alpha: 0.5),
+                        ),
                       ],
                     ],
                   ),

@@ -27,7 +27,7 @@ class FusionCheckbox extends StatelessWidget {
         SemanticTypes.button,
         "fusion_checkbox${semanticId ?? ''}",
       ),
-      enabled: enabled,
+      isActive: enabled,
       selected: value,
       child: MouseRegion(
         cursor: enabled ? SystemMouseCursors.click : SystemMouseCursors.basic,

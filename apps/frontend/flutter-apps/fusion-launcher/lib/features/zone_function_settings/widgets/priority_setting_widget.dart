@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:fusion_launcher/core/service_locator.dart';
-import 'package:fusion_launcher/features/processing_block/view/widgets/pb_slider.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
 import '../../configuration/presentation/viewmodel/project_view_model.dart';
@@ -31,7 +30,8 @@ class PrioritySettingsWidget extends StatefulWidget {
   final double? Function(int index) getRelease;
   final double? Function(int index) getReductionValue;
 
-  final AdditionalSettingPriorityBehavior? Function(int index) getPriorityBehavior;
+  final AdditionalSettingPriorityBehavior? Function(int index)
+  getPriorityBehavior;
 
   final void Function(int index, num value) onThresholdValueChanged;
   final void Function(int index, num value) onDepthValueChanged;
@@ -39,7 +39,8 @@ class PrioritySettingsWidget extends StatefulWidget {
   final void Function(int index, num value) onHoldValueChanged;
   final void Function(int index, num value) onReleaseValueChanged;
 
-  final void Function(int index, AdditionalSettingPriorityBehavior value) onPriorityBehaviorChanged;
+  final void Function(int index, AdditionalSettingPriorityBehavior value)
+  onPriorityBehaviorChanged;
 
   const PrioritySettingsWidget({
     super.key,
@@ -78,13 +79,17 @@ class PrioritySettingsWidgetState extends State<PrioritySettingsWidget> {
   @override
   void initState() {
     super.initState();
-    sources = projectViewModel.getSourcesAndSourceSetSourcesInZone(zoneId: widget.zoneId);
+    sources = projectViewModel.getSourcesAndSourceSetSourcesInZone(
+      zoneId: widget.zoneId,
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    final ZoneFunctions? existingFunction = projectViewModel.getZoneFunctionForZone(zoneId: widget.zoneId);
-    if (!(existingFunction?.hasPriority ?? false)) return const SizedBox.shrink();
+    final ZoneFunctions? existingFunction = projectViewModel
+        .getZoneFunctionForZone(zoneId: widget.zoneId);
+    if (!(existingFunction?.hasPriority ?? false))
+      return const SizedBox.shrink();
 
     final SizedBox child = SizedBox(
       width: 600,
@@ -113,17 +118,26 @@ class PrioritySettingsWidgetState extends State<PrioritySettingsWidget> {
                       shrinkWrap: true,
                       physics: const ClampingScrollPhysics(),
                       itemCount: 2,
-                      separatorBuilder: (BuildContext context, int index) => Divider(color: context.colorScheme.strokeLight, height: 0),
+                      separatorBuilder:
+                          (BuildContext context, int index) => Divider(
+                            color: context.colorScheme.strokeLight,
+                            height: 0,
+                          ),
                       itemBuilder: (BuildContext context, int index) {
                         // String? selectedSourceId;
                         String? selectedSourceName;
 
-                        final List<String> prioritySources = projectViewModel.getPrioritySourcesInZone(zoneId: widget.zoneId);
+                        final List<String> prioritySources = projectViewModel
+                            .getPrioritySourcesInZone(zoneId: widget.zoneId);
 
                         /// priority 1
                         if (index == 0) {
-                          if (prioritySources.isNotEmpty && prioritySources[0].isNotEmpty) {
-                            final HardwareComponent? sourceData = projectViewModel.getHardware(hardwareId: prioritySources[0]);
+                          if (prioritySources.isNotEmpty &&
+                              prioritySources[0].isNotEmpty) {
+                            final HardwareComponent? sourceData =
+                                projectViewModel.getHardware(
+                                  hardwareId: prioritySources[0],
+                                );
                             if (sourceData != null) {
                               selectedSourceName = sourceData.name;
                               // selectedSourceId = prioritySources[0];
@@ -131,8 +145,12 @@ class PrioritySettingsWidgetState extends State<PrioritySettingsWidget> {
                           }
                         } else {
                           /// priority 2
-                          if (prioritySources.length > 1 && prioritySources[1].isNotEmpty) {
-                            final HardwareComponent? sourceData = projectViewModel.getHardware(hardwareId: prioritySources[1]);
+                          if (prioritySources.length > 1 &&
+                              prioritySources[1].isNotEmpty) {
+                            final HardwareComponent? sourceData =
+                                projectViewModel.getHardware(
+                                  hardwareId: prioritySources[1],
+                                );
                             if (sourceData != null) {
                               selectedSourceName = sourceData.name;
                               // selectedSourceId = prioritySources[1];
@@ -143,7 +161,10 @@ class PrioritySettingsWidgetState extends State<PrioritySettingsWidget> {
                         final bool isStateActive = widget.isStateActive(index);
 
                         return SemanticHelper.button(
-                          testId: SemanticHelper.createTestId(SemanticTypes.button, "priority_selection_widget_$index"),
+                          testId: SemanticHelper.createTestId(
+                            SemanticTypes.button,
+                            "priority_selection_widget_$index",
+                          ),
                           child: SizedBox(
                             height: 600,
                             child: Column(
@@ -156,20 +177,27 @@ class PrioritySettingsWidgetState extends State<PrioritySettingsWidget> {
                                   padding: const EdgeInsets.all(16.0),
                                   child: FusionAppText(
                                     text: "PRIORITY ${index + 1}",
-                                    style: context.textTheme.labelMedium?.copyWith(
-                                      fontWeight: FontWeight.bold,
-                                    ),
+                                    style: context.textTheme.labelMedium
+                                        ?.copyWith(
+                                          fontWeight: FontWeight.bold,
+                                        ),
                                   ),
                                 ),
-                                Divider(color: context.colorScheme.strokeLight, height: 0), // // ========= CONTENT ======== //
+                                Divider(
+                                  color: context.colorScheme.strokeLight,
+                                  height: 0,
+                                ), // // ========= CONTENT ======== //
 
                                 Expanded(
                                   child: Builder(
                                     builder: (BuildContext context) {
                                       if (selectedSourceName == null) {
                                         return FusionAppText(
-                                          text: "No source selected for priority ${index + 1}.",
-                                          style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                                          text:
+                                              "No source selected for priority ${index + 1}.",
+                                          style: Theme.of(
+                                            context,
+                                          ).textTheme.labelSmall?.copyWith(
                                             fontSize: 10,
                                             color: const Color(0xFF888888),
                                           ),
@@ -177,57 +205,108 @@ class PrioritySettingsWidgetState extends State<PrioritySettingsWidget> {
                                       }
 
                                       return Row(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
                                         children: <Widget>[
                                           Expanded(
                                             child: Column(
                                               children: <Widget>[
                                                 Padding(
-                                                  padding: const EdgeInsets.all(16.0),
+                                                  padding: const EdgeInsets.all(
+                                                    16.0,
+                                                  ),
                                                   child: Row(
                                                     spacing: 4,
                                                     children: <Widget>[
                                                       Expanded(
                                                         child: FusionAppText(
                                                           text: "PTT/CONTROL",
-                                                          style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                                                            color: context.colorScheme.textSecondary,
-                                                          ),
+                                                          style: Theme.of(
+                                                                context,
+                                                              )
+                                                              .textTheme
+                                                              .labelMedium
+                                                              ?.copyWith(
+                                                                color:
+                                                                    context
+                                                                        .colorScheme
+                                                                        .textSecondary,
+                                                              ),
                                                         ),
                                                       ),
                                                       SemanticHelper.button(
-                                                        testId: SemanticHelper.createTestId(SemanticTypes.button, "priority_active_button_$index"),
+                                                        testId: SemanticHelper.createTestId(
+                                                          SemanticTypes.button,
+                                                          "priority_active_button_$index",
+                                                        ),
                                                         child: FusionSwitch(
-                                                          value: widget.isPriorityControlTypePTT(index),
+                                                          value: widget
+                                                              .isPriorityControlTypePTT(
+                                                                index,
+                                                              ),
                                                           width: 44,
                                                           height: 24,
-                                                          onChanged: (bool value) => widget.onPTTControlTypeChanged(index),
+                                                          onChanged:
+                                                              (
+                                                                bool value,
+                                                              ) => widget
+                                                                  .onPTTControlTypeChanged(
+                                                                    index,
+                                                                  ),
                                                         ),
                                                       ),
                                                     ],
                                                   ),
                                                 ),
-                                                Divider(color: context.colorScheme.strokeLight, height: 0),
+                                                Divider(
+                                                  color:
+                                                      context
+                                                          .colorScheme
+                                                          .strokeLight,
+                                                  height: 0,
+                                                ),
                                                 Padding(
-                                                  padding: const EdgeInsets.all(16.0),
+                                                  padding: const EdgeInsets.all(
+                                                    16.0,
+                                                  ),
                                                   child: Row(
                                                     spacing: 4,
                                                     children: <Widget>[
                                                       Expanded(
                                                         child: FusionAppText(
                                                           text: "THRESHOLD",
-                                                          style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                                                            color: context.colorScheme.textSecondary,
-                                                          ),
+                                                          style: Theme.of(
+                                                                context,
+                                                              )
+                                                              .textTheme
+                                                              .labelMedium
+                                                              ?.copyWith(
+                                                                color:
+                                                                    context
+                                                                        .colorScheme
+                                                                        .textSecondary,
+                                                              ),
                                                         ),
                                                       ),
                                                       SemanticHelper.button(
-                                                        testId: SemanticHelper.createTestId(SemanticTypes.button, "priority_active_button_$index"),
+                                                        testId: SemanticHelper.createTestId(
+                                                          SemanticTypes.button,
+                                                          "priority_active_button_$index",
+                                                        ),
                                                         child: FusionSwitch(
-                                                          value: widget.isPriorityControlTypeThreshold(index),
+                                                          value: widget
+                                                              .isPriorityControlTypeThreshold(
+                                                                index,
+                                                              ),
                                                           width: 44,
                                                           height: 24,
-                                                          onChanged: (bool value) => widget.onThresholdControlTypeChanged(index),
+                                                          onChanged:
+                                                              (
+                                                                bool value,
+                                                              ) => widget
+                                                                  .onThresholdControlTypeChanged(
+                                                                    index,
+                                                                  ),
                                                         ),
                                                       ),
                                                     ],
@@ -235,57 +314,112 @@ class PrioritySettingsWidgetState extends State<PrioritySettingsWidget> {
                                                 ),
 
                                                 const SizedBox(height: 10),
-                                                Divider(color: context.colorScheme.strokeLight, height: 0),
+                                                Divider(
+                                                  color:
+                                                      context
+                                                          .colorScheme
+                                                          .strokeLight,
+                                                  height: 0,
+                                                ),
                                                 const SizedBox(height: 10),
                                                 Expanded(
                                                   child: DisabledWidgetWrapper(
-                                                    isDisabled: widget.isPriorityControlTypePTT(index),
+                                                    isDisabled: widget
+                                                        .isPriorityControlTypePTT(
+                                                          index,
+                                                        ),
                                                     child: VerticalSlider(
-                                                      value: widget.getThresholdValue(index) ?? 0.0,
+                                                      value:
+                                                          widget
+                                                              .getThresholdValue(
+                                                                index,
+                                                              ) ??
+                                                          0.0,
                                                       min: -60,
                                                       max: 12,
-                                                      onChanged: (num value) => widget.onThresholdValueChanged(index, value),
+                                                      onChanged:
+                                                          (num value) => widget
+                                                              .onThresholdValueChanged(
+                                                                index,
+                                                                value,
+                                                              ),
                                                     ),
                                                   ),
                                                 ),
                                                 const SizedBox(height: 10),
-                                                Divider(color: context.colorScheme.strokeLight, height: 0),
+                                                Divider(
+                                                  color:
+                                                      context
+                                                          .colorScheme
+                                                          .strokeLight,
+                                                  height: 0,
+                                                ),
                                                 const SizedBox(height: 10),
                                                 DisabledWidgetWrapper(
-                                                  isDisabled: widget.isPriorityControlTypePTT(index),
+                                                  isDisabled: widget
+                                                      .isPriorityControlTypePTT(
+                                                        index,
+                                                      ),
                                                   child: NeumorphicGainTextField(
-                                                    controllerValue: widget.getThresholdValue(index),
+                                                    controllerValue: widget
+                                                        .getThresholdValue(
+                                                          index,
+                                                        ),
                                                     maxGain: 12,
                                                     minGain: -60,
-                                                    onSubmitted: (double value) => widget.onThresholdValueChanged(index, value),
+                                                    onSubmitted:
+                                                        (double value) => widget
+                                                            .onThresholdValueChanged(
+                                                              index,
+                                                              value,
+                                                            ),
                                                   ),
                                                 ),
                                                 const SizedBox(height: 10),
                                                 FusionAppText(
                                                   text: "dBFS",
-                                                  style: context.textTheme.labelSmall?.copyWith(
-                                                    color: context.colorScheme.textSecondary,
-                                                  ),
+                                                  style: context
+                                                      .textTheme
+                                                      .labelSmall
+                                                      ?.copyWith(
+                                                        color:
+                                                            context
+                                                                .colorScheme
+                                                                .textSecondary,
+                                                      ),
                                                 ),
                                                 const SizedBox(height: 10),
                                               ],
                                             ),
                                           ),
 
-                                          VerticalDivider(width: 1, color: context.colorScheme.strokeLight),
+                                          VerticalDivider(
+                                            width: 1,
+                                            color:
+                                                context.colorScheme.strokeLight,
+                                          ),
 
                                           Expanded(
                                             child: Padding(
-                                              padding: const EdgeInsets.all(16.0),
+                                              padding: const EdgeInsets.all(
+                                                16.0,
+                                              ),
                                               child: Column(
-                                                crossAxisAlignment: CrossAxisAlignment.start,
+                                                crossAxisAlignment:
+                                                    CrossAxisAlignment.start,
                                                 children: <Widget>[
                                                   Center(
                                                     child: FusionAppText(
                                                       text: "STATE",
-                                                      style: context.textTheme.labelMedium?.copyWith(
-                                                        color: context.colorScheme.textSecondary,
-                                                      ),
+                                                      style: context
+                                                          .textTheme
+                                                          .labelMedium
+                                                          ?.copyWith(
+                                                            color:
+                                                                context
+                                                                    .colorScheme
+                                                                    .textSecondary,
+                                                          ),
                                                     ),
                                                   ),
                                                   const SizedBox(height: 10),
@@ -293,35 +427,81 @@ class PrioritySettingsWidgetState extends State<PrioritySettingsWidget> {
                                                     height: 34,
                                                     width: double.infinity,
                                                     text: "Active",
-                                                    color: isStateActive ? context.colorScheme.primaryColor : context.colorScheme.elevation2,
-                                                    onTap: () => widget.onStateActiveChanged(index),
+                                                    color:
+                                                        isStateActive
+                                                            ? context
+                                                                .colorScheme
+                                                                .primaryColor
+                                                            : context
+                                                                .colorScheme
+                                                                .elevation2,
+                                                    onTap:
+                                                        () => widget
+                                                            .onStateActiveChanged(
+                                                              index,
+                                                            ),
                                                   ),
                                                   const SizedBox(height: 10),
-                                                  Divider(color: context.colorScheme.strokeLight, height: 0),
+                                                  Divider(
+                                                    color:
+                                                        context
+                                                            .colorScheme
+                                                            .strokeLight,
+                                                    height: 0,
+                                                  ),
                                                   const SizedBox(height: 10),
 
                                                   Center(
                                                     child: FusionAppText(
                                                       text: "BEHAVIOR",
-                                                      style: context.textTheme.labelMedium?.copyWith(
-                                                        color: context.colorScheme.textSecondary,
-                                                      ),
+                                                      style: context
+                                                          .textTheme
+                                                          .labelMedium
+                                                          ?.copyWith(
+                                                            color:
+                                                                context
+                                                                    .colorScheme
+                                                                    .textSecondary,
+                                                          ),
                                                     ),
                                                   ),
                                                   const SizedBox(height: 10),
 
-                                                  PBDropdown<AdditionalSettingPriorityBehavior>(
+                                                  PBDropdown<
+                                                    AdditionalSettingPriorityBehavior
+                                                  >(
                                                     hintText: "select",
-                                                    value: widget.getPriorityBehavior(index)?.displayName,
-                                                    items: AdditionalSettingPriorityBehavior.values,
-                                                    itemBuilder: (BuildContext context, AdditionalSettingPriorityBehavior mode) {
+                                                    value:
+                                                        widget
+                                                            .getPriorityBehavior(
+                                                              index,
+                                                            )
+                                                            ?.displayName,
+                                                    items:
+                                                        AdditionalSettingPriorityBehavior
+                                                            .values,
+                                                    itemBuilder: (
+                                                      BuildContext context,
+                                                      AdditionalSettingPriorityBehavior
+                                                      mode,
+                                                    ) {
                                                       return FusionAppText(
                                                         text: mode.displayName,
-                                                        style: context.textTheme.bodySmall,
+                                                        style:
+                                                            context
+                                                                .textTheme
+                                                                .bodySmall,
                                                       );
                                                     },
-                                                    onChanged: (AdditionalSettingPriorityBehavior value) {
-                                                      widget.onPriorityBehaviorChanged(index, value);
+                                                    onChanged: (
+                                                      AdditionalSettingPriorityBehavior
+                                                      value,
+                                                    ) {
+                                                      widget
+                                                          .onPriorityBehaviorChanged(
+                                                            index,
+                                                            value,
+                                                          );
                                                     },
                                                   ),
                                                   const SizedBox(height: 10),
@@ -331,17 +511,34 @@ class PrioritySettingsWidgetState extends State<PrioritySettingsWidget> {
                                                       Expanded(
                                                         child: FusionAppText(
                                                           text: "DEPTH",
-                                                          style: context.textTheme.labelMedium?.copyWith(
-                                                            color: context.colorScheme.textSecondary,
-                                                          ),
+                                                          style: context
+                                                              .textTheme
+                                                              .labelMedium
+                                                              ?.copyWith(
+                                                                color:
+                                                                    context
+                                                                        .colorScheme
+                                                                        .textSecondary,
+                                                              ),
                                                         ),
                                                       ),
                                                       NeumorphicGainTextField(
-                                                        enabled: widget.enableBehaviorSettingsFields(index),
-                                                        controllerValue: widget.getDepth(index),
+                                                        enabled: widget
+                                                            .enableBehaviorSettingsFields(
+                                                              index,
+                                                            ),
+                                                        controllerValue: widget
+                                                            .getDepth(index),
                                                         maxGain: 12,
                                                         minGain: -60,
-                                                        onSubmitted: (double value) => widget.onDepthValueChanged(index, value),
+                                                        onSubmitted:
+                                                            (
+                                                              double value,
+                                                            ) => widget
+                                                                .onDepthValueChanged(
+                                                                  index,
+                                                                  value,
+                                                                ),
                                                       ),
                                                     ],
                                                   ),
@@ -352,17 +549,34 @@ class PrioritySettingsWidgetState extends State<PrioritySettingsWidget> {
                                                       Expanded(
                                                         child: FusionAppText(
                                                           text: "ATTACK",
-                                                          style: context.textTheme.labelMedium?.copyWith(
-                                                            color: context.colorScheme.textSecondary,
-                                                          ),
+                                                          style: context
+                                                              .textTheme
+                                                              .labelMedium
+                                                              ?.copyWith(
+                                                                color:
+                                                                    context
+                                                                        .colorScheme
+                                                                        .textSecondary,
+                                                              ),
                                                         ),
                                                       ),
                                                       NeumorphicGainTextField(
-                                                        enabled: widget.enableBehaviorSettingsFields(index),
-                                                        controllerValue: widget.getAttack(index),
+                                                        enabled: widget
+                                                            .enableBehaviorSettingsFields(
+                                                              index,
+                                                            ),
+                                                        controllerValue: widget
+                                                            .getAttack(index),
                                                         maxGain: 12,
                                                         minGain: -60,
-                                                        onSubmitted: (double value) => widget.onAttackValueChanged(index, value),
+                                                        onSubmitted:
+                                                            (
+                                                              double value,
+                                                            ) => widget
+                                                                .onAttackValueChanged(
+                                                                  index,
+                                                                  value,
+                                                                ),
                                                       ),
                                                     ],
                                                   ),
@@ -373,18 +587,35 @@ class PrioritySettingsWidgetState extends State<PrioritySettingsWidget> {
                                                       Expanded(
                                                         child: FusionAppText(
                                                           text: "HOLD",
-                                                          style: context.textTheme.labelMedium?.copyWith(
-                                                            color: context.colorScheme.textSecondary,
-                                                          ),
+                                                          style: context
+                                                              .textTheme
+                                                              .labelMedium
+                                                              ?.copyWith(
+                                                                color:
+                                                                    context
+                                                                        .colorScheme
+                                                                        .textSecondary,
+                                                              ),
                                                         ),
                                                       ),
                                                       UnitNumberTextField(
-                                                        enabled: widget.enableBehaviorSettingsFields(index),
+                                                        enabled: widget
+                                                            .enableBehaviorSettingsFields(
+                                                              index,
+                                                            ),
                                                         min: 1,
                                                         max: null,
                                                         unit: "ms",
-                                                        controllerValue: widget.getHold(index),
-                                                        onSubmitted: (double value) => widget.onHoldValueChanged(index, value),
+                                                        controllerValue: widget
+                                                            .getHold(index),
+                                                        onSubmitted:
+                                                            (
+                                                              double value,
+                                                            ) => widget
+                                                                .onHoldValueChanged(
+                                                                  index,
+                                                                  value,
+                                                                ),
                                                       ),
                                                     ],
                                                   ),
@@ -395,18 +626,35 @@ class PrioritySettingsWidgetState extends State<PrioritySettingsWidget> {
                                                       Expanded(
                                                         child: FusionAppText(
                                                           text: "RELEASE",
-                                                          style: context.textTheme.labelMedium?.copyWith(
-                                                            color: context.colorScheme.textSecondary,
-                                                          ),
+                                                          style: context
+                                                              .textTheme
+                                                              .labelMedium
+                                                              ?.copyWith(
+                                                                color:
+                                                                    context
+                                                                        .colorScheme
+                                                                        .textSecondary,
+                                                              ),
                                                         ),
                                                       ),
                                                       UnitNumberTextField(
-                                                        enabled: widget.enableBehaviorSettingsFields(index),
+                                                        enabled: widget
+                                                            .enableBehaviorSettingsFields(
+                                                              index,
+                                                            ),
                                                         min: 1,
                                                         max: null,
                                                         unit: "ms",
-                                                        controllerValue: widget.getRelease(index),
-                                                        onSubmitted: (double value) => widget.onReleaseValueChanged(index, value),
+                                                        controllerValue: widget
+                                                            .getRelease(index),
+                                                        onSubmitted:
+                                                            (
+                                                              double value,
+                                                            ) => widget
+                                                                .onReleaseValueChanged(
+                                                                  index,
+                                                                  value,
+                                                                ),
                                                       ),
                                                     ],
                                                   ),
@@ -415,45 +663,74 @@ class PrioritySettingsWidgetState extends State<PrioritySettingsWidget> {
                                             ),
                                           ),
 
-                                          VerticalDivider(width: 1, color: context.colorScheme.strokeLight),
+                                          VerticalDivider(
+                                            width: 1,
+                                            color:
+                                                context.colorScheme.strokeLight,
+                                          ),
 
                                           Expanded(
                                             child: Column(
                                               children: <Widget>[
                                                 const Expanded(
                                                   child: Padding(
-                                                    padding: EdgeInsets.all(16.0),
+                                                    padding: EdgeInsets.all(
+                                                      16.0,
+                                                    ),
                                                     child: SizedBox(
                                                       width: 100,
-                                                      child: SimpleVerticalMeter(
-                                                        value: -20,
-                                                        min: -42,
-                                                        max: 0,
-                                                      ),
+                                                      child:
+                                                          SimpleVerticalMeter(
+                                                            value: -20,
+                                                            min: -42,
+                                                            max: 0,
+                                                          ),
                                                     ),
                                                   ),
                                                 ),
-                                                Divider(color: context.colorScheme.strokeLight, height: 0),
+                                                Divider(
+                                                  color:
+                                                      context
+                                                          .colorScheme
+                                                          .strokeLight,
+                                                  height: 0,
+                                                ),
                                                 const SizedBox(height: 10),
                                                 FusionContainer(
                                                   width: 100,
                                                   height: 32,
                                                   alignment: Alignment.center,
                                                   borderRadius: 8,
-                                                  color: context.colorScheme.elevation2,
+                                                  color:
+                                                      context
+                                                          .colorScheme
+                                                          .elevation2,
                                                   child: FusionAppText(
-                                                    text: "${widget.getReductionValue(index)}",
-                                                    style: context.textTheme.labelMedium?.copyWith(
-                                                      color: context.colorScheme.textSecondary,
-                                                    ),
+                                                    text:
+                                                        "${widget.getReductionValue(index)}",
+                                                    style: context
+                                                        .textTheme
+                                                        .labelMedium
+                                                        ?.copyWith(
+                                                          color:
+                                                              context
+                                                                  .colorScheme
+                                                                  .textSecondary,
+                                                        ),
                                                   ),
                                                 ),
                                                 const SizedBox(height: 10),
                                                 FusionAppText(
                                                   text: "dB",
-                                                  style: context.textTheme.labelSmall?.copyWith(
-                                                    color: context.colorScheme.textSecondary,
-                                                  ),
+                                                  style: context
+                                                      .textTheme
+                                                      .labelSmall
+                                                      ?.copyWith(
+                                                        color:
+                                                            context
+                                                                .colorScheme
+                                                                .textSecondary,
+                                                      ),
                                                 ),
                                                 const SizedBox(height: 10),
                                               ],

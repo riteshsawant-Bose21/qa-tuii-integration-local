@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:fusion_launcher/features/processing_block/view/processing_blocks/widgets/disabled_widget_wrapper.dart';
-import 'package:fusion_launcher/features/processing_block/view/widgets/pb_slider.dart';
 import 'package:fusion_launcher/features/processing_block/view/widgets/pb_textfield.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
@@ -30,7 +29,8 @@ class ToneControlWidget extends StatelessWidget {
       decoration: BoxDecoration(
         color: context.colorScheme.elevation2,
         borderRadius: BorderRadius.horizontal(
-          left: leftRadius ? Radius.circular(context.mediumRadius) : Radius.zero,
+          left:
+              leftRadius ? Radius.circular(context.mediumRadius) : Radius.zero,
         ),
       ),
       child: Column(
@@ -75,7 +75,9 @@ class ToneControlWidget extends StatelessWidget {
                     padding: const EdgeInsets.symmetric(vertical: 8.0),
                     decoration: BoxDecoration(
                       border: Border(
-                        bottom: BorderSide(color: context.colorScheme.strokeLight),
+                        bottom: BorderSide(
+                          color: context.colorScheme.strokeLight,
+                        ),
                         top: BorderSide(color: context.colorScheme.strokeLight),
                       ),
                     ),
@@ -98,7 +100,11 @@ class ToneControlWidget extends StatelessWidget {
                           ),
                         ),
                         const SizedBox(height: 4),
-                        FusionAppText(text: "db", capitalize: false, style: context.textTheme.bodySmall),
+                        FusionAppText(
+                          text: "db",
+                          capitalize: false,
+                          style: context.textTheme.bodySmall,
+                        ),
                       ],
                     ),
                   ),
@@ -113,7 +119,10 @@ class ToneControlWidget extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: <Widget>[
                 // by pass text with bypass toggle
-                FusionAppText(text: "Bypass", style: context.textTheme.bodySmall),
+                FusionAppText(
+                  text: "Bypass",
+                  style: context.textTheme.bodySmall,
+                ),
                 FusionSwitch(
                   inactiveTrackColor: context.colorScheme.elevation1,
                   value: isBypassed,

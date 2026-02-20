@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:fusion_lib/fusion_theme/app_theme.dart';
+import 'package:fusion_lib/fusion_widgets/semantics/semantic_helper.dart';
+import 'package:fusion_lib/fusion_widgets/semantics/semantic_type.dart';
 import 'package:fusion_lib/fusion_widgets/text_views/fusion_app_text.dart';
 
 import '../../dto/pb_item.dart';
@@ -20,13 +22,20 @@ class PBMeter extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final PBMeterParam data = (handler?.resolveForItem(item) ?? item.param) as PBMeterParam;
+    final PBMeterParam data =
+        (handler?.resolveForItem(item) ?? item.param) as PBMeterParam;
 
-    return VerticalMeter(
-      value: handler?.getValue(item) ?? item.value ?? 40,
-      min: data.min,
-      max: data.max,
-      showIntervals: showIntervals,
+    return SemanticHelper.container(
+      testId: SemanticHelper.createTestId(
+        SemanticTypes.container,
+        "PBMeter",
+      ),
+      child: VerticalMeter(
+        value: handler?.getValue(item) ?? item.value ?? 40,
+        min: data.min,
+        max: data.max,
+        showIntervals: showIntervals,
+      ),
     );
   }
 }
@@ -97,7 +106,8 @@ class VerticalMeter extends StatelessWidget {
         final double height = constraints.maxHeight;
         final double normalized = _toNormalized(value);
         final double activeHeight = normalized * height;
-        final List<num> intervals = showIntervals ? _generateIntervals(height) : <num>[];
+        final List<num> intervals =
+            showIntervals ? _generateIntervals(height) : <num>[];
 
         return Center(
           child: IntrinsicWidth(
@@ -144,7 +154,9 @@ class VerticalMeter extends StatelessWidget {
                             width: meterWidth,
                             height: height - activeHeight,
                             decoration: BoxDecoration(
-                              color: inactiveColor ?? context.colorScheme.elevation5,
+                              color:
+                                  inactiveColor ??
+                                  context.colorScheme.elevation5,
                               // no need to set radius here — already clipped by parent
                             ),
                           ),
@@ -179,7 +191,9 @@ class VerticalMeter extends StatelessWidget {
                                 ),
                                 FusionAppText(
                                   text: v.round().toString(),
-                                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                                  style: Theme.of(
+                                    context,
+                                  ).textTheme.labelSmall?.copyWith(
                                     color: context.colorScheme.textPrimary,
                                     fontWeight: FontWeight.w500,
                                     fontSize: 8,
@@ -303,7 +317,10 @@ class SimpleVerticalMeter extends StatelessWidget {
 
                     /// ACTIVE PART (direction aware)
                     Align(
-                      alignment: isBottomToTop ? Alignment.bottomCenter : Alignment.topCenter,
+                      alignment:
+                          isBottomToTop
+                              ? Alignment.bottomCenter
+                              : Alignment.topCenter,
                       child: AnimatedContainer(
                         duration: const Duration(milliseconds: 150),
                         curve: Curves.easeOut,

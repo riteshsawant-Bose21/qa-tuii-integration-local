@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:fusion_launcher/features/processing_block/view/processing_blocks/widgets/pb_section.dart';
 import 'package:fusion_launcher/features/processing_block/view/widgets/pb_meter.dart';
-import 'package:fusion_launcher/features/processing_block/view/widgets/widgets.dart';
 import 'package:fusion_launcher/features/zone_functions/widgets/neumorphic_gain_text_field.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:provider/provider.dart';
@@ -19,15 +18,22 @@ class AgcBlock extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final AlgorithmDataViewmodel watch = context.watch<AlgorithmDataViewmodel>();
+    final AlgorithmDataViewmodel watch =
+        context.watch<AlgorithmDataViewmodel>();
 
     return ProxyProvider<AlgorithmDataViewmodel, AgcController>(
       key: ValueKey<String>(watch.processingBlock.id),
       create: (BuildContext context) => AgcController(watch),
-      update: (BuildContext context, AlgorithmDataViewmodel valueHandler, AgcController? previous) => AgcController(valueHandler),
+      update:
+          (
+            BuildContext context,
+            AlgorithmDataViewmodel valueHandler,
+            AgcController? previous,
+          ) => AgcController(valueHandler),
       child: Builder(
         builder: (BuildContext context) {
-          final ProcessingBlockModel pb = context.watch<AlgorithmDataViewmodel>().processingBlock;
+          final ProcessingBlockModel pb =
+              context.watch<AlgorithmDataViewmodel>().processingBlock;
           final AgcController controller = context.watch<AgcController>();
           return PBBlockLayout(
             pb: context.watch<AlgorithmDataViewmodel>().processingBlock,
@@ -46,7 +52,13 @@ class AgcBlock extends StatelessWidget {
                         Container(
                           width: double.infinity,
                           padding: const EdgeInsets.all(16),
-                          decoration: BoxDecoration(border: Border(bottom: BorderSide(color: context.colorScheme.strokeLight))),
+                          decoration: BoxDecoration(
+                            border: Border(
+                              bottom: BorderSide(
+                                color: context.colorScheme.strokeLight,
+                              ),
+                            ),
+                          ),
                           child: Center(
                             child: FusionAppText(
                               text: "THRESHOLD",
@@ -60,23 +72,35 @@ class AgcBlock extends StatelessWidget {
                           child: Padding(
                             padding: const EdgeInsets.all(16),
                             child: VerticalSlider(
-                              value: context.watch<AgcController>().currentThreshold,
+                              value:
+                                  context
+                                      .watch<AgcController>()
+                                      .currentThreshold,
                               max: 12,
                               min: -60,
-                              onChanged: context.read<AgcController>().updateThreshold,
+                              onChanged:
+                                  context.read<AgcController>().updateThreshold,
                             ),
                           ),
                         ),
 
                         Container(
                           padding: const EdgeInsets.all(16),
-                          decoration: BoxDecoration(border: Border(top: BorderSide(color: context.colorScheme.strokeLight))),
+                          decoration: BoxDecoration(
+                            border: Border(
+                              top: BorderSide(
+                                color: context.colorScheme.strokeLight,
+                              ),
+                            ),
+                          ),
                           child: NeumorphicGainTextField(
-                            controllerValue: context.watch<AgcController>().currentThreshold,
+                            controllerValue:
+                                context.watch<AgcController>().currentThreshold,
                             maxGain: 12,
                             minGain: -60,
                             showDbSuffix: false,
-                            onSubmitted: context.read<AgcController>().updateThreshold,
+                            onSubmitted:
+                                context.read<AgcController>().updateThreshold,
                           ),
                         ),
                         FusionAppText(
@@ -90,7 +114,11 @@ class AgcBlock extends StatelessWidget {
                     ),
                   ),
                 ),
-                VerticalDivider(color: context.colorScheme.elevation1, width: 0, thickness: 2),
+                VerticalDivider(
+                  color: context.colorScheme.elevation1,
+                  width: 0,
+                  thickness: 2,
+                ),
                 PBSection(
                   type: PBSectionType.middle,
                   child: SizedBox(
@@ -102,7 +130,11 @@ class AgcBlock extends StatelessWidget {
                           padding: const EdgeInsets.all(16),
                           decoration: BoxDecoration(
                             color: context.colorScheme.elevation2,
-                            border: Border(bottom: BorderSide(color: context.colorScheme.strokeLight)),
+                            border: Border(
+                              bottom: BorderSide(
+                                color: context.colorScheme.strokeLight,
+                              ),
+                            ),
                           ),
                           child: Center(
                             child: FusionAppText(
@@ -117,7 +149,10 @@ class AgcBlock extends StatelessWidget {
                           child: Padding(
                             padding: const EdgeInsets.all(16.0),
                             child: SimpleVerticalMeter(
-                              value: context.watch<AgcController>().currentReduction,
+                              value:
+                                  context
+                                      .watch<AgcController>()
+                                      .currentReduction,
                               min: -60,
                               max: 12,
                             ),
@@ -128,14 +163,19 @@ class AgcBlock extends StatelessWidget {
                           padding: const EdgeInsets.all(16),
                           decoration: BoxDecoration(
                             color: context.colorScheme.elevation2,
-                            border: Border(top: BorderSide(color: context.colorScheme.strokeLight)),
+                            border: Border(
+                              top: BorderSide(
+                                color: context.colorScheme.strokeLight,
+                              ),
+                            ),
                           ),
                           child: NeumorphicGainTextField(
                             controllerValue: 10,
                             maxGain: 12,
                             minGain: -60,
                             showDbSuffix: false,
-                            onSubmitted: context.read<AgcController>().updateReduction,
+                            onSubmitted:
+                                context.read<AgcController>().updateReduction,
                           ),
                         ),
                         FusionAppText(
@@ -149,7 +189,11 @@ class AgcBlock extends StatelessWidget {
                     ),
                   ),
                 ),
-                VerticalDivider(color: context.colorScheme.elevation1, width: 0, thickness: 2),
+                VerticalDivider(
+                  color: context.colorScheme.elevation1,
+                  width: 0,
+                  thickness: 2,
+                ),
                 PBSection(
                   type: PBSectionType.right,
                   child: SizedBox(
@@ -161,7 +205,11 @@ class AgcBlock extends StatelessWidget {
                           padding: const EdgeInsets.all(16),
                           decoration: BoxDecoration(
                             color: context.colorScheme.elevation2,
-                            border: Border(bottom: BorderSide(color: context.colorScheme.strokeLight)),
+                            border: Border(
+                              bottom: BorderSide(
+                                color: context.colorScheme.strokeLight,
+                              ),
+                            ),
                           ),
                           child: Center(
                             child: FusionAppText(

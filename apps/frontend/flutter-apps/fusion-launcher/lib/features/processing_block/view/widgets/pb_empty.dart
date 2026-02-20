@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:fusion_lib/fusion_lib.dart';
 
 import '../../dto/pb_item.dart';
 import '../../view/item_widget_builder.dart';
@@ -9,6 +10,12 @@ class PBEmpty extends StatelessWidget {
   final PBWidgetValueHandler? handler;
   @override
   Widget build(BuildContext context) {
-    return Container();
+    return SemanticHelper.container(
+      testId: SemanticHelper.createTestId(
+        SemanticTypes.container,
+        "PBEmpty",
+      ),
+      child: Container(),
+    );
   }
 }

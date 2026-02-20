@@ -12,10 +12,11 @@ class SemanticHelper {
   static Widget button({
     required String testId,
     required Widget child,
-    bool isActive=true,
+    bool isActive = true,
     String? label,
     bool? state,
     VoidCallback? ontap,
+    bool? selected,
   }) {
     return Semantics(
       identifier: testId,
@@ -25,6 +26,7 @@ class SemanticHelper {
       enabled: isActive,
       label: label,
       child: child,
+      checked: selected,
     );
   }
 

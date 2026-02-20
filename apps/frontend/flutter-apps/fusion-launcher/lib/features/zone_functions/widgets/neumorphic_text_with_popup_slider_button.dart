@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
-import '../../processing_block/view/widgets/pb_slider.dart';
-
 class NeumorphicTextWithPopupSliderButton extends StatefulWidget {
   final bool isActive;
   final double? value;
@@ -28,10 +26,12 @@ class NeumorphicTextWithPopupSliderButton extends StatefulWidget {
   });
 
   @override
-  State<NeumorphicTextWithPopupSliderButton> createState() => _NeumorphicTextWithPopupSliderButtonState();
+  State<NeumorphicTextWithPopupSliderButton> createState() =>
+      _NeumorphicTextWithPopupSliderButtonState();
 }
 
-class _NeumorphicTextWithPopupSliderButtonState extends State<NeumorphicTextWithPopupSliderButton> {
+class _NeumorphicTextWithPopupSliderButtonState
+    extends State<NeumorphicTextWithPopupSliderButton> {
   @override
   Widget build(BuildContext context) {
     return ClipRRect(
@@ -66,7 +66,11 @@ class _NeumorphicTextWithPopupSliderButtonState extends State<NeumorphicTextWith
               ),
             ),
 
-            VerticalDivider(color: context.colorScheme.strokeLight, thickness: 1, width: 1),
+            VerticalDivider(
+              color: context.colorScheme.strokeLight,
+              thickness: 1,
+              width: 1,
+            ),
             Theme(
               data: Theme.of(context).copyWith(
                 popupMenuTheme: PopupMenuThemeData(
@@ -86,7 +90,10 @@ class _NeumorphicTextWithPopupSliderButtonState extends State<NeumorphicTextWith
                 tooltip: '',
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(9),
-                  side: BorderSide(color: context.colorScheme.strokeLight, width: 1),
+                  side: BorderSide(
+                    color: context.colorScheme.strokeLight,
+                    width: 1,
+                  ),
                 ),
                 offset: const Offset(0, 10),
                 padding: EdgeInsets.zero,
@@ -107,7 +114,10 @@ class _NeumorphicTextWithPopupSliderButtonState extends State<NeumorphicTextWith
                         height: 200,
                         child: Center(
                           child: SemanticHelper.button(
-                            testId: SemanticHelper.createTestId(SemanticTypes.button, "neumorphic_text_with_popup_slider_button"),
+                            testId: SemanticHelper.createTestId(
+                              SemanticTypes.button,
+                              "neumorphic_text_with_popup_slider_button",
+                            ),
                             child: VerticalSlider(
                               value: widget.value ?? 0.0,
                               min: -60,
@@ -126,7 +136,10 @@ class _NeumorphicTextWithPopupSliderButtonState extends State<NeumorphicTextWith
                   ];
                 },
                 child: SemanticHelper.button(
-                  testId: SemanticHelper.createTestId(SemanticTypes.button, "neumorphic_text_with_popup_slider_button"),
+                  testId: SemanticHelper.createTestId(
+                    SemanticTypes.button,
+                    "neumorphic_text_with_popup_slider_button",
+                  ),
                   child: AbsorbPointer(
                     child: Padding(
                       padding: const EdgeInsets.only(right: 2),

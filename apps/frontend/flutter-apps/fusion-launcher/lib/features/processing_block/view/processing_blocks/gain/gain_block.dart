@@ -7,7 +7,6 @@ import 'package:provider/provider.dart';
 
 import '../../../../zone_functions/widgets/neumorphic_audio_toggle_button.dart';
 import '../../widgets/pb_meter.dart';
-import '../../widgets/pb_slider.dart';
 import '../widgets/pb_block_layout.dart';
 
 part '_gain_controller.dart';
@@ -17,13 +16,19 @@ class GainBlock extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final AlgorithmDataViewmodel watch = context.watch<AlgorithmDataViewmodel>();
+    final AlgorithmDataViewmodel watch =
+        context.watch<AlgorithmDataViewmodel>();
     return ProxyProvider<AlgorithmDataViewmodel, GainController>(
       key: ValueKey<String>(watch.processingBlock.id),
       create: (BuildContext context) {
         return GainController(watch);
       },
-      update: (BuildContext context, AlgorithmDataViewmodel valueHandler, GainController? previous) => GainController(valueHandler),
+      update:
+          (
+            BuildContext context,
+            AlgorithmDataViewmodel valueHandler,
+            GainController? previous,
+          ) => GainController(valueHandler),
       child: Builder(
         builder: (BuildContext context) {
           return PBBlockLayout(
@@ -51,7 +56,9 @@ class GainBlock extends StatelessWidget {
                         padding: const EdgeInsets.symmetric(vertical: 8.0),
                         decoration: BoxDecoration(
                           border: Border(
-                            bottom: BorderSide(color: context.colorScheme.strokeLight),
+                            bottom: BorderSide(
+                              color: context.colorScheme.strokeLight,
+                            ),
                           ),
                         ),
                         child: Row(
@@ -62,9 +69,16 @@ class GainBlock extends StatelessWidget {
                               // height: 25,
                               child: PBNumberTextField(
                                 // value: context.watch<LimiterController>().currentThreshold ?? 0,
-                                value: (context.watch<GainController>().currentGainValue ?? 0).toDouble(),
+                                value:
+                                    (context
+                                                .watch<GainController>()
+                                                .currentGainValue ??
+                                            0)
+                                        .toDouble(),
                                 onChanged: (num value) {
-                                  context.read<GainController>().updateGainValue(value);
+                                  context
+                                      .read<GainController>()
+                                      .updateGainValue(value);
                                 },
                                 min: 1,
                                 max: 96000,
@@ -72,7 +86,11 @@ class GainBlock extends StatelessWidget {
                             ),
 
                             const SizedBox(width: 4),
-                            FusionAppText(text: "dB", capitalize: false, style: context.textTheme.bodySmall),
+                            FusionAppText(
+                              text: "dB",
+                              capitalize: false,
+                              style: context.textTheme.bodySmall,
+                            ),
                           ],
                         ),
                       ),
@@ -82,13 +100,19 @@ class GainBlock extends StatelessWidget {
                         child: Padding(
                           padding: const EdgeInsets.symmetric(vertical: 12.0),
                           child: VerticalSlider(
-                            value: context.watch<GainController>().currentGainSliderValue ?? 0,
+                            value:
+                                context
+                                    .watch<GainController>()
+                                    .currentGainSliderValue ??
+                                0,
                             min: -60.0,
                             max: 24.0,
                             showIntervals: true,
                             activeColor: context.colorScheme.primary,
                             onChanged: (num value) {
-                              context.read<GainController>().updateGainSliderValue(value);
+                              context
+                                  .read<GainController>()
+                                  .updateGainSliderValue(value);
                             },
                           ),
                         ),
@@ -102,7 +126,9 @@ class GainBlock extends StatelessWidget {
                         decoration: BoxDecoration(
                           color: context.colorScheme.elevation2,
                           border: Border(
-                            top: BorderSide(color: context.colorScheme.strokeLight),
+                            top: BorderSide(
+                              color: context.colorScheme.strokeLight,
+                            ),
                           ),
                         ),
                         child: NeumorphicAudioToggleButton(
@@ -110,8 +136,11 @@ class GainBlock extends StatelessWidget {
                           backgroundColor: context.colorScheme.elevation2,
                           width: 100,
                           onTap: () {
-                            final bool isCurrentlyMuted = context.read<GainController>().isGainMuted;
-                            context.read<GainController>().toggleGainMute(!isCurrentlyMuted);
+                            final bool isCurrentlyMuted =
+                                context.read<GainController>().isGainMuted;
+                            context.read<GainController>().toggleGainMute(
+                              !isCurrentlyMuted,
+                            );
                           },
                         ),
                       ),
@@ -137,10 +166,15 @@ class GainBlock extends StatelessWidget {
 
                         decoration: BoxDecoration(
                           border: Border(
-                            bottom: BorderSide(color: context.colorScheme.strokeLight),
+                            bottom: BorderSide(
+                              color: context.colorScheme.strokeLight,
+                            ),
                           ),
                         ),
-                        child: FusionAppText(text: "OUTPUT", style: context.textTheme.bodyMedium),
+                        child: FusionAppText(
+                          text: "OUTPUT",
+                          style: context.textTheme.bodyMedium,
+                        ),
                       ),
                       const Expanded(
                         child: Padding(

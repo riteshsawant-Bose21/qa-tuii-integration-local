@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:fusion_lib/fusion_widgets/others/fusion_vertical_slider.dart';
 
 import '../../processing_block/view/widgets/pb_meter.dart';
-import '../../processing_block/view/widgets/pb_slider.dart';
 
 class SliderAndMeterWidget extends StatelessWidget {
   final double sliderValue;
