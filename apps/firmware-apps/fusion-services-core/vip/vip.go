@@ -56,7 +56,7 @@ func Validate(v string) error {
 }
 
 // IsLocalVIP compares the VIP (which might be in CIDR format) to the IPs on local interfaces.
-func IsLocalVIP(v string) (bool, error) {
+func IsIPPresentOnLocalInterface(v string) (bool, error) {
 	expectedIP := net.ParseIP(v)
 	if expectedIP == nil {
 		ip, _, err := net.ParseCIDR(v)

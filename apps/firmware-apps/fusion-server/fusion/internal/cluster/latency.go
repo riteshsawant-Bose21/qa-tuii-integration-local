@@ -420,6 +420,15 @@ func (c *Cluster) getNodeAdminAddresses() []string {
 	for _, member := range c.memberlist.Members() {
 		host := member.Addr.String()
 		addrs = append(addrs, net.JoinHostPort(host, api.AdminPort))
+
+		//used in post anf get generic from admin. should we filter only alive members here or try all members?
+
+		// if member.State == memberlist.StateAlive {
+		// host := member.Addr.String()
+		// addrs = append(addrs, net.JoinHostPort(host, api.AdminPort))
+		// } else {
+		// 	logging.GetLogger().Debug("Skipping non-alive member %s (%s)", member.Name, member.Addr.String())
+		// }
 	}
 	return addrs
 }

@@ -5,7 +5,7 @@ import (
 	"context"
 	"fmt"
 	"fusion-services-core/logging"
-	coreNetwork "fusion-services-core/network"
+
 	"fusion-services-core/vip"
 	"fusion/internal/api"
 	"fusion/internal/cluster"
@@ -19,6 +19,7 @@ import (
 	"fusion/internal/server/handler"
 	"fusion/internal/tasks"
 	"fusion/internal/version"
+	vipmonitor "fusion/internal/vip_monitor"
 	"net"
 	"net/http"
 	"os"
@@ -62,6 +63,7 @@ type App struct {
 	publicRouter      *mux.Router
 	privateRouter     *mux.Router
 	MDNSManager       *network.MDNSManager
+	VIPMonitor        *vipmonitor.VIPMonitor
 }
 
 // NewApp is a factory function to set up the application
@@ -87,6 +89,10 @@ func NewApp(config *api.AppConfig) *App {
 	sapServer := initSAPServer(config, api.SAPPort, connectionHandler, hub)
 	udpServer := initUDPServer(api.UDPPort, connectionHandler, hub)
 	fusionServer := server.NewFusionServer(config.NodeName, connectionHandler, hub)
+
+	// Initialize VIPMonitor
+	vipMonitor := vipmonitor.NewVIPMonitor(config.NetIface, config.Local, clusterInstance)
+	clusterInstance.SetVIPMonitor(vipMonitor)
 
 	// Setup the public routes
 	publicRouter := mux.NewRouter()
@@ -118,8 +124,10 @@ func NewApp(config *api.AppConfig) *App {
 		publicRouter:      publicRouter,
 		privateRouter:     privateRouter,
 		MDNSManager:       mdnsManager,
+		VIPMonitor:        vipMonitor,
 	}
 
+	vipMonitor.SetCallback(app.handleVIPStateChange)
 	return app
 }
 
@@ -136,6 +144,9 @@ func (app *App) Close() {
 		if err := app.MDNSManager.Close(); err != nil {
 			app.Logger.Error("Failed to close mDNS manager: %v", err)
 		}
+	}
+	if app.VIPMonitor != nil {
+		app.VIPMonitor.Stop()
 	}
 	app.Cluster.Stop()
 	app.UDPServer.Stop()
@@ -194,9 +205,9 @@ func (app *App) setupPublicRoutes() {
 
 	// Device
 	app.registerPublicGET(routes.DevicesEndpoint, app.Cluster.GetDevicesInfo)
-	app.registerPublicGET(routes.DevicesVIPEndpoint, app.Cluster.GetVIP)
-	app.registerPublicPOST(routes.DevicesSetVIPEndpoint, app.Cluster.SetVIP)
-	app.registerPublicPOST(routes.DeviceReloadVIPEndpoint, app.Cluster.ReloadVIP)
+	app.registerPublicGET(routes.DevicesVIPEndpoint, app.VIPMonitor.HandleGetVIP)
+	app.registerPublicPOST(routes.DevicesSetVIPEndpoint, app.VIPMonitor.HandleSetVIP)
+	app.registerPublicPOST(routes.DeviceReloadVIPEndpoint, app.VIPMonitor.HandleReloadVIP)
 	app.registerPublicPATCH(routes.DevicesIDEndpoint, app.Cluster.UpdateDeviceInfo)
 
 	// Endpoints
@@ -278,8 +289,8 @@ func (app *App) setupPrivateRoutes() {
 	app.registerPrivateGET(routes.DeviceEndpoint, app.Cluster.GetDeviceInfo)
 	app.registerPrivatePOST(routes.DeviceEndpoint, app.Cluster.SetDeviceInfo)
 	app.registerPrivatePATCH(routes.DeviceEndpoint, app.Cluster.UpdateDeviceInfoLocal)
-	app.registerPrivatePOST(routes.DevicesSetVIPEndpoint, app.Cluster.UpdateVIPLocal)
-	app.registerPrivatePOST(routes.DeviceReloadVIPEndpoint, app.Cluster.ReloadVIPLocal)
+	app.registerPrivatePOST(routes.DevicesSetVIPEndpoint, app.VIPMonitor.HandleUpdateVIPLocal)
+	app.registerPrivatePOST(routes.DeviceReloadVIPEndpoint, app.VIPMonitor.HandleReloadVIPLocal)
 
 	app.registerPrivateGET(routes.DataEndpoint, app.Server.ExportData)
 	app.registerPrivatePOST(routes.DataEndpoint, app.Server.ImportData)
@@ -372,6 +383,10 @@ func (app *App) Start(ctx context.Context) {
 	app.ConnectionHandler.SetEndpoints(routes.Endpoints)
 
 	app.startNetworkMonitor()
+	if err := app.VIPMonitor.Start(); err != nil {
+		app.Logger.Error("Failed to start VIP monitoring: %v", err)
+	}
+
 	defer app.monitor.Stop()
 
 	var wg sync.WaitGroup
