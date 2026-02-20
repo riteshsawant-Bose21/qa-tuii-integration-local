@@ -30,21 +30,6 @@
                     ]
                 }
             ]
-        },
-        {
-            "name": "fusion_connect",
-            "property_settings": [
-                { "name": "period_ms", "value": 1000 }
-            ],
-            "blocks": [
-                {
-                    "name": "fusion_connect_client",
-                    "module": "fusion_connect_client",
-                    "parameters": [
-                        { "name": "audio_streams_update" }
-                    ]
-                }
-            ]
         }
     ]
 }

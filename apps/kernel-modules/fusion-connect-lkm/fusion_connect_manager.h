@@ -2,32 +2,28 @@
 
 #include <linux/kernel.h>
 #include <linux/hrtimer.h>
-#include <linux/ptp_clock_kernel.h>
-#include <linux/ptp_clock.h>
 #include <linux/list.h>
 #include <sound/pcm.h>
 #include "fusion_connect_alsa.h"
 #include "fusion_connect_rtp.h"
 #include "fusion_connect_netfilter.h"
 
-enum ptp_timing_mode {
-    TIMING_HRTIMER,
-    TIMING_GPT
-};
 
 enum fusion_cn_ctrl_cmd {
     FUSION_CN_CTRL_CMD_NONE = 0,
     FUSION_CN_CTRL_CMD_START_MANAGER,
     FUSION_CN_CTRL_CMD_STOP_MANAGER,
-    FUSION_CN_CTRL_CMD_SET_PTP_SYNC,
     FUSION_CN_CTRL_CMD_ADD_STREAM,
     FUSION_CN_CTRL_CMD_REMOVE_STREAM,
-    FUSION_CN_CTRL_CMD_GET_METRICS
+    FUSION_CN_CTRL_CMD_GET_METRICS,
+    FUSION_CN_CTRL_CMD_SET_PHC_ANCHOR,
+    FUSION_CN_CTRL_CMD_GET_PHC_STATUS,
+    FUSION_CN_CTRL_CMD_SET_DEBUG,
+    FUSION_CN_CTRL_CMD_SET_ETH_IFACE
 };
 
 struct fusion_cn_state {
     atomic_t is_started;
-    atomic_t ptp_synchronized;
 };
 
 struct fusion_cn_alsa {
@@ -36,11 +32,9 @@ struct fusion_cn_alsa {
     const struct fusion_cn_alsa_ops *alsa_callbacks;
 };
 
-struct fusion_cn_ptp {
-    enum ptp_timing_mode ptp_timing_mode;
-    struct hrtimer audio_timer;
-    u64 hrtimer_last_tick_ns;
-    u64 hrtimer_next_tick_ns;
+struct fusion_cn_timer {
+    u64 last_tick_ns;
+    u64 next_tick_ns;
     u8 tick_count;
 };
 
@@ -69,7 +63,7 @@ struct fusion_cn_manager {
     struct fusion_cn_state state;
     struct fusion_cn_alsa alsa;
     struct fusion_cn_rtp_manager rtp;
-    struct fusion_cn_ptp ptp;
+    struct fusion_cn_timer timer;
     struct fusion_cn_netfilter netfilter;
     struct fusion_cn_netlink netlink;
     struct platform_device *pdev;
@@ -92,5 +86,6 @@ struct message_handler_entry {
 
 int fusion_cn_mgr_init(struct fusion_cn_manager *mgr);
 void fusion_cn_mgr_destroy(struct fusion_cn_manager *mgr);
+u64 fusion_cn_get_phc_ns(void);
 
 extern const struct fusion_cn_alsa_ops fusion_cn_alsa_ops;

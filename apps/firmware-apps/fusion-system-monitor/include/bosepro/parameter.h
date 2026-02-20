@@ -342,16 +342,19 @@ public:
     /// @param  setting  The new setting for the parameter.
     virtual void set(const ParameterSetting &setting) override
     {
-        T value;
-        setting.get_value(value);
+        if (setting.has_value())
+        {
+            T value;
+            setting.get_value(value);
 
-        if (this->conversion_function == nullptr)
-        {
-            *block_value = value;
-        }
-        else
-        {
-            *block_value = this->conversion_function(value);
+            if (this->conversion_function == nullptr)
+            {
+                *block_value = value;
+            }
+            else
+            {
+                *block_value = this->conversion_function(value);
+            }
         }
 
         if (post_function != nullptr)
@@ -466,16 +469,19 @@ public:
     virtual void set(const ParameterSetting &setting) override
     {
         int row = setting.get_row();
-        T value;
-        setting.get_value(value);
+        if (setting.has_value())
+        {
+            T value;
+            setting.get_value(value);
 
-        if (this->conversion_function == nullptr)
-        {
-            block_value[row] = value;
-        }
-        else
-        {
-            block_value[row] = this->conversion_function(value);
+            if (this->conversion_function == nullptr)
+            {
+                block_value[row] = value;
+            }
+            else
+            {
+                block_value[row] = this->conversion_function(value);
+            }
         }
 
         if (post_function != nullptr)
@@ -602,16 +608,19 @@ public:
     {
         int row = setting.get_row();
         int column = setting.get_column();
-        T value;
-        setting.get_value(value);
+        if (setting.has_value())
+        {
+            T value;
+            setting.get_value(value);
 
-        if (this->conversion_function == nullptr)
-        {
-            block_value[row][column] = value;
-        }
-        else
-        {
-            block_value[row][column] = this->conversion_function(value);
+            if (this->conversion_function == nullptr)
+            {
+                block_value[row][column] = value;
+            }
+            else
+            {
+                block_value[row][column] = this->conversion_function(value);
+            }
         }
 
         if (post_function != nullptr)
