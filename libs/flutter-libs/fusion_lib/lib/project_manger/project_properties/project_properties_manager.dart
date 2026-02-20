@@ -28,11 +28,6 @@ extension ProjectPropertiesManager on ProjectManager {
     projectService = projectService!.copyWith(colors: colors);
   }
 
-  //get Project meta data
-  String getMetaData() {
-    return projectService!.getMetaData();
-  }
-
   //set Project meta data
   void setMetaData(String metaData) {
     projectService = projectService!.copyWith(metaData: metaData);
@@ -89,7 +84,7 @@ extension ProjectPropertiesManager on ProjectManager {
   }
 
   //get all fusion devices
-  List<FusionDevice> getAllFusionDevices() {
+  List<FusionDsp> getAllFusionDevices() {
     return projectService!.getAllFusionDevices();
   }
 }

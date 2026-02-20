@@ -5,11 +5,14 @@ import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:fusion_lib/fusion_logger/logger.dart';
 import 'package:fusion_lib/fusion_networking/network/rest_client/dio_client.dart';
+import 'package:fusion_lib/fusion_storage/fusion_secure_storage.dart';
+import 'package:fusion_lib/fusion_storage/fusion_secure_storage_impl.dart';
 import 'package:fusion_lib/models/response_callback.dart';
 
 import '../../fusion_utils/app_settings.dart';
 import '../../fusion_utils/shared_preference_handler.dart';
 import '../../fusion_utils/telemetry_data.dart';
+import '../../service/auth/fusion_auth_service.dart';
 import 'dartzmq_stub.dart' if (dart.library.io) 'package:dartzmq/dartzmq.dart';
 
 enum ServerUpdateType { forceUpdate, metadata, localValue }
@@ -18,78 +21,41 @@ class FusionNetworkClient {
   final DioClient httpClient;
   final SharedPreferencesHandler sharedPreferencesHandler;
   final TelemetryData telemetryData;
-  final FusionPreferences fusionPreferences;
+  final FusionSecureStorage secureStorageService;
+  final FusionAuthService fusionAuthService;
+  final String apiBaseUrl;
 
-  FusionNetworkClient({required this.httpClient, required this.sharedPreferencesHandler, required this.telemetryData, required this.fusionPreferences});
+  FusionNetworkClient({
+    required this.httpClient,
+    required this.sharedPreferencesHandler,
+    required this.telemetryData,
+    required this.secureStorageService,
+    required this.fusionAuthService,
+    required this.apiBaseUrl,
+  });
 
   ZSocket? subscriberSocket;
   final ZContext _context = ZContext();
-
-  String? _accessToken;
-  String? _refreshToken;
-  DateTime? _expiry;
-
-  String? get accessToken {
-    if (_accessToken != null && _expiry != null) {
-      if (DateTime.now().isAfter(_expiry!)) {
-        FusionLogger.log(tag: LogTag.fusion, message: "Access token expired");
-        return null;
-      }
-      return _accessToken;
-    } else {
-      final String? storedAccessToken = sharedPreferencesHandler.getString(SharedPreferenceKeys.accessToken);
-      final String? expiryTime = sharedPreferencesHandler.getString(SharedPreferenceKeys.expiry);
-      if (storedAccessToken != null && expiryTime != null) {
-        final DateTime dateTime = DateTime.parse(expiryTime);
-        if (DateTime.now().isAfter(dateTime)) {
-          FusionLogger.log(tag: LogTag.fusion, message: "Access token expired");
-          return null;
-        } else {
-          _accessToken = storedAccessToken;
-          _expiry = dateTime;
-          return _accessToken;
-        }
-      }
-    }
-    return null;
-  }
-
-  String? get refreshToken {
-    if (_refreshToken != null && _expiry != null) {
-      if (DateTime.now().isAfter(_expiry!)) {
-        FusionLogger.log(tag: LogTag.fusion, message: "Refresh token expired");
-        return null;
-      }
-      return _refreshToken;
-    } else {
-      final String? storedRefreshToken = sharedPreferencesHandler.getString(SharedPreferenceKeys.refreshToken);
-      if (storedRefreshToken != null) {
-        _refreshToken = storedRefreshToken;
-        return _refreshToken;
-      }
-    }
-    return null;
-  }
 
   String geApiUrl(FusionApiEndpoint api, {String? baseUrlToOverride}) {
     if (baseUrlToOverride != null) {
       return "http://$baseUrlToOverride${api.path}";
     }
     if (api.type == FusionApiType.droServer) {
-      return "http://${fusionPreferences.droServerUrl}${api.path}";
+      return "http://TODO${api.path}";
     } else if (api.type == FusionApiType.fusionServer) {
-      return "http://${fusionPreferences.virtualIp}:8080${api.path}";
+      return "http://TODO:8080${api.path}";
     } else if (api.type == FusionApiType.backendServer) {
-      return "http://${fusionPreferences.fusionCloudBackendUrl}/api/v1${api.path}";
+      return "$apiBaseUrl${api.path}";
     } else {
       throw Exception("Invalid API type: ${api.type}");
     }
   }
 
   // return token fro shared preferences only if FusionApiEndpoint api == FusionApiType.backendServer
-  String? getAccessTokenForApi(FusionApiEndpoint api) {
+  Future<String?> getAccessTokenForApi(FusionApiEndpoint api) async {
     if (api.type == FusionApiType.backendServer) {
-      final String? storedAccessToken = sharedPreferencesHandler.getString(SharedPreferenceKeys.accessToken);
+      final String? storedAccessToken = await fusionAuthService.getValidAccessToken();
       return storedAccessToken;
     }
     return null;
@@ -108,7 +74,7 @@ class FusionNetworkClient {
           : geApiUrl(api, baseUrlToOverride: baseUrlToOverride);
 
       final Map<String, dynamic> headers = httpClient.dioInstance.options.headers;
-      final String? token = getAccessTokenForApi(api);
+      final String? token = await getAccessTokenForApi(api);
       if (token != null && token.isNotEmpty) {
         headers['Authorization'] = 'Bearer $token';
       }
@@ -123,7 +89,8 @@ class FusionNetworkClient {
         if (isBinary) {
           return ResponseCallback<T>(success: true, message: "Binary file fetched successfully", data: response.data as T);
         } else {
-          return ResponseCallback<T>.fromJson(response.data, fromJson);
+          T data = fromJson != null ? fromJson(response.data) : response.data;
+          return ResponseCallback<T>.success(data);
         }
       } else {
         return ResponseCallback<T>(success: false, message: httpClient.handleStatusCodeError(response.statusCode));
@@ -148,7 +115,7 @@ class FusionNetworkClient {
           : geApiUrl(api, baseUrlToOverride: baseUrlToOverride);
 
       final Map<String, dynamic> headers = httpClient.dioInstance.options.headers;
-      final String? token = getAccessTokenForApi(api);
+      final String? token = await getAccessTokenForApi(api);
       if (token != null && token.isNotEmpty) {
         headers['Authorization'] = 'Bearer $token';
       }
@@ -158,57 +125,14 @@ class FusionNetworkClient {
       final Response<dynamic> response = await httpClient.dioInstance.put(url, options: options, data: data);
 
       if (response.data != null) {
-        return ResponseCallback<T>.fromJson(response.data, fromJson);
+        T data = fromJson != null ? fromJson(response.data) : response.data;
+        return ResponseCallback<T>.success(data);
       } else {
         return ResponseCallback<T>(success: false, message: httpClient.handleStatusCodeError(response.statusCode));
       }
     } catch (ex) {
       debugPrint("Exception in FusionNetworkClient.get() - $ex");
       return ResponseCallback<T>(success: false, message: "Exception in FusionNetworkClient.get() - $ex");
-    }
-  }
-
-  /// get list from get api
-  Future<ResponseCallback<List<T>>> getList<T>({
-    required FusionApiEndpoint api,
-    Map<String, dynamic>? urlParameters,
-    String? additionalPath,
-    String? baseUrlToOverride,
-    required T Function(Map<String, dynamic>) fromJson,
-  }) async {
-    try {
-      final String url = additionalPath != null
-          ? "${geApiUrl(api, baseUrlToOverride: baseUrlToOverride)}/$additionalPath"
-          : geApiUrl(api, baseUrlToOverride: baseUrlToOverride);
-
-      final Map<String, dynamic> headers = httpClient.dioInstance.options.headers;
-      final String? token = getAccessTokenForApi(api);
-      if (token != null && token.isNotEmpty) {
-        headers['Authorization'] = 'Bearer $token';
-      }
-
-      /// Detect content type based on data type
-      final Options options = Options(headers: <String, dynamic>{...headers});
-
-      final Response<dynamic> response = await httpClient.dioInstance.get(url, options: options, queryParameters: urlParameters);
-
-      final bool isSuccess = response.statusCode == 200 && response.data != null && response.data['status'] == 'success';
-
-      if (isSuccess) {
-        List<T> entities = <T>[];
-        if (response.data['data'] != null) {
-          final List<dynamic> dataList = response.data['data'] as List<dynamic>;
-
-          entities = dataList.map((dynamic item) => fromJson(item as Map<String, dynamic>)).toList();
-        }
-
-        return ResponseCallback<List<T>>(success: true, message: response.data['message'] ?? 'Success', data: entities);
-      } else {
-        return ResponseCallback<List<T>>(success: false, message: httpClient.handleStatusCodeError(response.statusCode));
-      }
-    } catch (ex) {
-      debugPrint("Exception in FusionNetworkClient.getList() - $ex");
-      return ResponseCallback<List<T>>(success: false, message: "Exception in FusionNetworkClient.getList() - $ex");
     }
   }
 
@@ -225,7 +149,7 @@ class FusionNetworkClient {
           : geApiUrl(api, baseUrlToOverride: baseUrlToOverride);
 
       final Map<String, dynamic> headers = httpClient.dioInstance.options.headers;
-      final String? token = getAccessTokenForApi(api);
+      final String? token = await getAccessTokenForApi(api);
       if (token != null && token.isNotEmpty) {
         headers['Authorization'] = 'Bearer $token';
       }
@@ -240,13 +164,14 @@ class FusionNetworkClient {
       final Response<dynamic> response = await httpClient.dioInstance.post(url, data: data, options: options);
 
       if (response.data != null) {
-        return ResponseCallback<T>.fromJson(response.data, fromJson);
+        T data = fromJson != null ? fromJson(response.data) : response.data;
+        return ResponseCallback<T>.success(data);
       } else {
         return ResponseCallback<T>(success: false, message: httpClient.handleStatusCodeError(response.statusCode));
       }
     } catch (ex) {
       debugPrint("Exception in FusionNetworkClient.post() - $ex");
-      return ResponseCallback<T>(success: false, message: "Exception in FusionNetworkClient.post() - $ex");
+      return ResponseCallback.failure("Exception in FusionNetworkClient.post() - $ex");
     }
   }
 
@@ -259,14 +184,26 @@ class FusionNetworkClient {
     T Function(Map<String, dynamic>)? fromJson,
   }) async {
     try {
+      final Map<String, dynamic> headers = httpClient.dioInstance.options.headers;
+      final String? token = await getAccessTokenForApi(api);
+      if (token != null && token.isNotEmpty) {
+        headers['Authorization'] = 'Bearer $token';
+      }
+
+      /// Detect content type based on data type
+      final Options options = Options(
+        headers: <String, dynamic>{...headers, if (data is FormData) 'Content-Type': 'multipart/form-data' else 'Content-Type': 'application/json'},
+      );
+
       final Response<dynamic> response = await httpClient.dioInstance.patch(
         additionalPath != null ? "${geApiUrl(api, baseUrlToOverride: baseUrlToOverride)}/$additionalPath" : geApiUrl(api, baseUrlToOverride: baseUrlToOverride),
-
+        options: options,
         data: data,
         queryParameters: urlParameters,
       );
       if (response.data != null) {
-        return ResponseCallback<T>.fromJson(response.data, fromJson);
+        T data = fromJson != null ? fromJson(response.data) : response.data;
+        return ResponseCallback<T>.success(data);
       } else {
         return ResponseCallback<T>(success: false, message: httpClient.handleStatusCodeError(response.statusCode));
       }
@@ -290,7 +227,7 @@ class FusionNetworkClient {
           : geApiUrl(api, baseUrlToOverride: baseUrlToOverride);
 
       final Map<String, dynamic> headers = httpClient.dioInstance.options.headers;
-      final String? token = getAccessTokenForApi(api);
+      final String? token = await getAccessTokenForApi(api);
       if (token != null && token.isNotEmpty) {
         headers['Authorization'] = 'Bearer $token';
       }
@@ -301,7 +238,10 @@ class FusionNetworkClient {
       final Response<dynamic> response = await httpClient.dioInstance.delete(url, options: options, queryParameters: urlParameters);
 
       if (response.data != null) {
-        return ResponseCallback<T>.fromJson(response.data, fromJson);
+        T? data = fromJson != null ? fromJson(response.data) : response.data;
+        return ResponseCallback<T>.success(data);
+      } else if (response.statusCode == 204 || response.statusCode == 200 || response.statusCode == 202) {
+        return ResponseCallback<T>(success: true, message: "Resource deleted successfully");
       } else {
         return ResponseCallback<T>(success: false, message: httpClient.handleStatusCodeError(response.statusCode));
       }
@@ -372,14 +312,8 @@ enum FusionApiEndpoint {
   fusionDelete('/clear', FusionApiType.fusionServer),
 
   //Backend server endpoints
-  register('/auth/register', FusionApiType.backendServer),
-  login('/auth/login', FusionApiType.backendServer),
-  projects('/projects', FusionApiType.backendServer),
-  uploadFile('/files/upload', FusionApiType.backendServer),
-  fetchFile('/files', FusionApiType.backendServer),
-  refreshToken('/auth/refresh-token', FusionApiType.backendServer),
-  saveProfile("/users/metadata", FusionApiType.backendServer),
-  getProfile("/users/me", FusionApiType.backendServer),
+  getProfile("/user/me/authorization", FusionApiType.backendServer),
+  projects("/projects", FusionApiType.backendServer),
 
   //fusion server setup apis
   fusionDevice('/devices', FusionApiType.fusionServer),
@@ -409,17 +343,10 @@ extension ApiEndpointTypeCheckExtension on String {
   }
 
   bool isBackendServerEndpoint() {
-    return contains(FusionApiEndpoint.register.path) ||
-        contains(FusionApiEndpoint.login.path) ||
-        contains(FusionApiEndpoint.projects.path) ||
-        contains(FusionApiEndpoint.uploadFile.path) ||
-        contains(FusionApiEndpoint.refreshToken.path) ||
-        contains(FusionApiEndpoint.fetchFile.path) ||
-        contains(FusionApiEndpoint.saveProfile.path) ||
-        contains(FusionApiEndpoint.getProfile.path);
+    return contains(FusionApiEndpoint.getProfile.path) || contains(FusionApiEndpoint.projects.path);
   }
 
   bool isTokenRequired() {
-    return isBackendServerEndpoint() && !contains(FusionApiEndpoint.login.path) && !contains(FusionApiEndpoint.register.path);
+    return isBackendServerEndpoint();
   }
 }

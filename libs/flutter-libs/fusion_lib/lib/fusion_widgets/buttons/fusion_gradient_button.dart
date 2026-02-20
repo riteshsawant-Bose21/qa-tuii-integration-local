@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:fusion_lib/fusion_theme/app_theme.dart';
+import 'package:fusion_lib/fusion_theme/color_scheme.dart';
 
 /// A customizable and reusable gradient button for the Fusion design system.
 ///
@@ -149,8 +150,8 @@ class FusionGradientButton extends StatelessWidget {
                             prefixIcon,
                             size: 16,
                             color: isActive
-                                ? foregroundColor ?? Theme.of(context).colorScheme.fusionButtonTextColor
-                                : foregroundColor?.withOpacity(0.5) ?? Theme.of(context).colorScheme.fusionButtonTextColor.withOpacity(0.5),
+                                ? foregroundColor ?? context.colorScheme.primaryBlack
+                                : foregroundColor?.withOpacity(0.5) ?? context.colorScheme.primaryBlack.withOpacity(0.5),
                           ),
                           const SizedBox(width: 8),
                         ],
@@ -169,8 +170,8 @@ class FusionGradientButton extends StatelessWidget {
                             suffixIcon,
                             size: 16,
                             color: isActive
-                                ? foregroundColor ?? Theme.of(context).colorScheme.fusionButtonTextColor
-                                : foregroundColor?.withOpacity(0.5) ?? Theme.of(context).colorScheme.fusionButtonTextColor.withOpacity(0.5),
+                                ? foregroundColor ?? context.colorScheme.primaryBlack
+                                : foregroundColor?.withOpacity(0.5) ?? context.colorScheme.primaryBlack.withOpacity(0.5),
                           ),
                         ],
                       ],

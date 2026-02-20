@@ -1,10 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:fusion_launcher/core/utils/fusion_utils.dart';
-import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_properties/project_properties_view_model.dart';
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
-import 'package:fusion_lib/fusion_networking/ble/ble_connection_manager.dart';
-import 'package:fusion_lib/fusion_networking/ble/commands/fusion_commands.dart';
-import 'package:fusion_lib/models/response_callback.dart';
+import 'package:fusion_lib/fusion_lib.dart';
 
 import '../../../../../core/service_locator.dart';
 
@@ -53,12 +50,12 @@ class _VipConfigurationState extends State<VipConfiguration> {
       return;
     }
 
-    FusionUtils.showLoader(context);
+    FusionUiUtils.showLoader(context);
     final ResponseCallback<dynamic> response = await serviceLocator<FusionBleCommands>().updateFusionVIP(_vipController.text.trim());
-    FusionUtils.hideLoader(context);
+    FusionUiUtils.hideLoader(context);
     BleConnectionManager().disconnect();
     if (response.success) {
-      serviceLocator<ProjectViewModel>().setVirtualIP(_vipController.text.trim());
+      serviceLocator<ProjectViewModel>().setVirtualIP(ip: _vipController.text.trim());
       if (mounted) Navigator.pop(context, true);
     }
   }
@@ -74,8 +71,8 @@ class _VipConfigurationState extends State<VipConfiguration> {
         children: <Widget>[
           Icon(Icons.settings_ethernet, color: colors.primary, size: 24),
           const SizedBox(width: 12),
-          Text(
-            'Virtual IP Configuration',
+          FusionAppText(
+            text: 'Virtual IP Configuration',
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.w600,
@@ -145,8 +142,9 @@ class _VipConfigurationState extends State<VipConfiguration> {
                       Icon(Icons.info_outline, color: colors.secondary, size: 20),
                       const SizedBox(width: 12),
                       Expanded(
-                        child: Text(
-                          'Add static IP of your device. This IP will be used for all further communication with the device, if you don\'t know static IP of your device please contact your IT team.',
+                        child: FusionAppText(
+                          text:
+                              'Add static IP of your device. This IP will be used for all further communication with the device, if you don\'t know static IP of your device please contact your IT team.',
                           style: TextStyle(
                             fontSize: 12,
                             color: colors.onSecondaryContainer,
@@ -165,7 +163,7 @@ class _VipConfigurationState extends State<VipConfiguration> {
       actions: <Widget>[
         TextButton(
           onPressed: () => Navigator.pop(context, false),
-          child: Text('Cancel', style: TextStyle(color: colors.onSurface)),
+          child: FusionAppText(text: 'Cancel', style: TextStyle(color: colors.onSurface)),
         ),
         FilledButton(
           onPressed: _setVIP,
@@ -173,7 +171,7 @@ class _VipConfigurationState extends State<VipConfiguration> {
             backgroundColor: colors.primary,
             foregroundColor: colors.onPrimary,
           ),
-          child: const Text('Set VIP'),
+          child: const FusionAppText(text: 'Set VIP'),
         ),
       ],
     );

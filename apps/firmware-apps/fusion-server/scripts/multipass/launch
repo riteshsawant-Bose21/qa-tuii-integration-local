@@ -48,6 +48,47 @@ usage() {
     exit 1
 }
 
+detect_network_settings() {
+    
+    echo "Detecting functional Multipass network..."
+
+    # Find any running instance to query
+    local sample_instance
+    sample_instance=$(multipass list --format csv | awk -F, 'NR>1 && $2=="Running"{print $1;exit}')
+    if [[ -z "$sample_instance" ]]; then
+        echo "No running instances yet; using defaults."
+        export VIRTUAL_IP=${VIRTUAL_IP:-192.168.2.100}
+        export NET_INTERFACE=${NET_INTERFACE:-enp0s1}
+        return
+    fi
+
+    # Determine which subnet is actually reachable from host
+    local host_pingable_ip
+    host_pingable_ip=$(multipass info "$sample_instance" | awk '/IPv4/{print $2}' | while read ip; do
+        if ping -c1 -W100 "$ip" >/dev/null 2>&1; then echo "$ip"; break; fi
+    done)
+
+    local subnet_base
+    subnet_base=$(echo "$host_pingable_ip" | awk -F. '{print $1"."$2"."$3}')
+    export VIRTUAL_IP="${subnet_base}.100"
+
+    # Find which interface inside the VM carries that subnet
+    export NET_INTERFACE=$(
+    multipass exec "$sample_instance" -- ip -o -4 addr show |
+    while read -r idx iface proto addr rest; do
+        # addr comes in like: 192.168.2.34/24
+        ip_clean="${addr%%/*}"   # strip "/mask"
+        if [[ "$ip_clean" == "$subnet_base."* ]]; then
+            echo "$iface"
+            break
+        fi
+    done
+    )
+
+    echo "Detected functional subnet: ${subnet_base}.x"
+    echo "Setting VIP=$VIRTUAL_IP  interface=$NET_INTERFACE"
+}
+
 # Function to check and enable IP forwarding
 check_ip_forwarding() {
     if [[ "$(uname)" == "Darwin" ]]; then  # Check if running on macOS
@@ -243,12 +284,6 @@ setup_instance() {
         return 1
     fi
     print_success "fusion-server installed successfully"
-    
-    # Set the script used by systemd to launch fusion-server to executable
-    if ! multipass exec "$instance_name" -- sudo chmod 755 /usr/local/bin/fusion-server-start.sh; then
-        print_error "Failed to update fusion-server-start.sh"
-        return 1
-    fi
 
     print_step "Copying bbolt binary..."
     if ! multipass transfer "$HOST_BBOLT_DIR/bbolt-linux-$TARGET_BINARY_ARCH" "$instance_name":/tmp/bbolt; then
@@ -330,10 +365,6 @@ launch_instance() {
 
     local cloud_init_file="$HOST_TEMP_DIR/fusion-server.yaml"
 
-    # Copy to an accesible location. Linux default security for the multipass
-    # snap prevents open access to the local filesystem.
-    cp fusion-server.yaml "$cloud_init_file"
-    
     # Copy to an accesible location. Linux default security for the multipass
     # snap prevents open access to the local filesystem.
     cp fusion-server.yaml "$cloud_init_file"
@@ -545,12 +576,15 @@ host_setup() {
 }
 
 resync_time_all_instances() {
-    print_header "Resyncing Time on All Instances"
+    print_header "Resyncing Time and Network Configuration on All Instances"
+
+    # Make sure we have up-to-date detection
+    detect_network_settings
 
     local instances=()
     while IFS=, read -r name state ipv4 release; do
-        if [[ "$name" == "Name" ]]; then
-            continue  # skip header line
+        if [[ "$name" == "Name" || "$state" != "Running" ]]; then
+            continue
         fi
         if [[ "$name" =~ ^"$BASE_NAME" ]]; then
             instances+=("$name")
@@ -558,17 +592,58 @@ resync_time_all_instances() {
     done < <(multipass list --format csv)
 
     if [ ${#instances[@]} -eq 0 ]; then
-        print_warning "No instances found with base name: $BASE_NAME"
+        print_warning "No running instances found with base name: $BASE_NAME"
         return
     fi
 
     for instance in "${instances[@]}"; do
-        print_step "Running chronyc makestep on $instance..."
-        if multipass exec "$instance" -- sudo chronyc makestep </dev/null; then
-            print_success "Time resynced on $instance"
+        print_step "Updating $instance to use VIP=$VIRTUAL_IP and interface=$NET_INTERFACE"
+
+        multipass exec "$instance" -- bash -lc "
+            echo 'Detected network interface in guest:'; ip -o -4 addr show | awk '{print \$2, \$4}'
+
+            # Verify that the detected interface exists, fallback if missing
+            if ! ip link show '$NET_INTERFACE' >/dev/null 2>&1; then
+                NET_IFACE=\$(ip route list 0.0.0.0/0 | awk '{print \$5; exit}')
+                echo 'Interface $NET_INTERFACE not found, using fallback:' \$NET_IFACE
+            else
+                NET_IFACE='$NET_INTERFACE'
+            fi
+
+            # Update keepalived configuration
+            if [ -f /etc/keepalived/keepalived.conf ]; then
+                sudo sed -i \
+                    -e \"s/^  interface .*/  interface \$NET_IFACE/\" \
+                    -e \"s/^  virtual_ipaddress.*/  virtual_ipaddress { $VIRTUAL_IP }/\" \
+                    /etc/keepalived/keepalived.conf
+                echo 'Updated keepalived.conf with interface='\$NET_IFACE' VIP=$VIRTUAL_IP'
+                sudo systemctl restart keepalived || true
+            fi
+
+            # Export interface for fusion-server env
+            echo \"export FUSION_NET_IFACE=\$NET_IFACE\" | sudo tee /etc/profile.d/fusion-netiface.sh >/dev/null
+        " </dev/null
+
+        print_substep "Synchronizing time on $instance..."
+        if multipass exec "$instance" -- bash -lc '
+            if command -v chronyc >/dev/null 2>&1; then
+                sudo chronyc makestep >/dev/null 2>&1
+                OFFSET=$(chronyc tracking | awk -F": " "/System time/{print \$2}")
+                echo "OK:$OFFSET"
+            elif command -v ntpdate >/dev/null 2>&1; then
+                sudo ntpdate -b pool.ntp.org 2>&1 | awk "{print \"OK:\" \$0}"
+            else
+                echo "ERR:No NTP client found"
+                exit 2
+            fi
+        ' 2>/dev/null | tee /tmp/chrony_status.$$ | grep -q "^OK:"; then
+            OFFSET=$(grep "^OK:" /tmp/chrony_status.$$ | sed 's/^OK://')
+            print_success "Time resynced on $instance ($OFFSET)"
         else
             print_error "Failed to resync time on $instance"
+            tail -n1 /tmp/chrony_status.$$ | grep -v '^OK:' || true
         fi
+        rm -f /tmp/chrony_status.$$ 2>/dev/null || true
     done
 }
 
@@ -611,6 +686,11 @@ done
 
 # Handle kill mode first
 if [ "$KILL_MODE" = true ]; then
+
+     # Prompt for sudo credentials upfront if we'll need them for DHCP cleanup
+    print_step "Requesting sudo access for DHCP cleanup..."
+    sudo -v
+    
     # If no specific kill base name provided, use the general base name
     if [ -z "$KILL_BASE_NAME" ]; then
         KILL_BASE_NAME="${BASE_NAME:-fusion}"
@@ -630,7 +710,6 @@ if [ "$KILL_MODE" = true ]; then
         print_warning "No instances found matching base name: $KILL_BASE_NAME"
         exit 0
     fi
-
     print_substep "Found ${#instances[@]} instance(s) to remove:"
     for instance in "${instances[@]}"; do
         state=$(multipass info "$instance" | grep "State:" | awk '{print $2}')
@@ -651,6 +730,21 @@ if [ "$KILL_MODE" = true ]; then
     
     print_step "Purging deleted instances..."
     multipass purge
+    
+    print_step "Cleaning up DHCP leases..."
+    if [ -f /var/db/dhcpd_leases ]; then
+        sudo rm /var/db/dhcpd_leases
+        print_substep "Removed DHCP leases file"
+        
+        # Signal bootpd to reload (if it's running)
+        if pgrep -q bootpd; then
+            sudo pkill -HUP bootpd
+            print_substep "Signaled bootpd to reload"
+        fi
+    else
+        print_substep "No DHCP leases file found"
+    fi
+    
     print_success "Successfully removed ${#instances[@]} instance(s)"
     exit 0
 fi

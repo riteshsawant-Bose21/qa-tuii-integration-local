@@ -1,32 +1,211 @@
 import 'dart:math';
 import 'dart:ui';
 
-import 'package:uuid/uuid.dart';
+import 'package:flutter/foundation.dart';
+
+import '../../fusion_utils/fusion_utilities.dart';
+
+enum VenueType {
+  indoor,
+  outdoor,
+  mixed,
+}
+
+extension VenueTypeExtension on VenueType {
+  String get name {
+    switch (this) {
+      case VenueType.indoor:
+        return 'Indoor';
+      case VenueType.outdoor:
+        return 'Outdoor';
+      case VenueType.mixed:
+        return 'Indoor+Outdoor';
+    }
+  }
+}
+
+enum MountingType {
+  surface,
+  pendant,
+  ceiling;
+
+  String get name {
+    switch (this) {
+      case MountingType.ceiling:
+        return 'Ceiling';
+      case MountingType.pendant:
+        return 'Pendant';
+      case MountingType.surface:
+        return 'Surface';
+    }
+  }
+
+  static MountingType? fromJson(String? value) {
+    switch (value?.toLowerCase()) {
+      case 'surface':
+        return MountingType.surface;
+      case 'pendant':
+        return MountingType.pendant;
+      case 'ceiling':
+        return MountingType.ceiling;
+      default:
+        return null;
+    }
+  }
+}
+
+enum LowFrequency {
+  vocal,
+  fullRange,
+  extended,
+  subwoofer,
+}
+
+extension LowFrequencyExtension on LowFrequency {
+  String get name {
+    switch (this) {
+      case LowFrequency.vocal:
+        return 'Vocal ';
+      case LowFrequency.fullRange:
+        return 'Full Range';
+      case LowFrequency.extended:
+        return 'Extended';
+      case LowFrequency.subwoofer:
+        return 'Subwoofer';
+    }
+  }
+}
+
+enum WiringType {
+  highImpedance,
+  lowImpedance,
+}
+
+extension WiringTypeExtension on WiringType {
+  String get name {
+    switch (this) {
+      case WiringType.highImpedance:
+        return 'Hi-Z';
+      case WiringType.lowImpedance:
+        return 'Lo-Z';
+    }
+  }
+}
+
+enum SplRange {
+  backgroundMusic,
+  paging,
+  foregroundMusic,
+  moderateLiveSound,
+  highSplLiveSound,
+}
+
+extension SplRangeExtension on SplRange {
+  String get name {
+    switch (this) {
+      case SplRange.backgroundMusic:
+        return 'Background Music';
+      case SplRange.paging:
+        return 'Paging';
+      case SplRange.foregroundMusic:
+        return 'Foreground Music';
+      case SplRange.moderateLiveSound:
+        return 'Moderate Live Sound reinforcement';
+      case SplRange.highSplLiveSound:
+        return 'High SPL Live Sound reinforcement';
+    }
+  }
+
+  Map<String, double> get splRangeValues {
+    switch (this) {
+      case SplRange.backgroundMusic:
+        return <String, double>{"min": 60.0, "max": 70.0};
+      case SplRange.paging:
+        return <String, double>{"min": 70.0, "max": 80.0};
+      case SplRange.foregroundMusic:
+        return <String, double>{"min": 75.0, "max": 90.0};
+      case SplRange.moderateLiveSound:
+        return <String, double>{"min": 90.0, "max": 100.0};
+      case SplRange.highSplLiveSound:
+        return <String, double>{"min": 100.0, "max": 120.0};
+    }
+  }
+
+  static SplRange getSplRange(double minSPL, double maxSPL) {
+    if (minSPL == 60.0 && maxSPL == 70.0) {
+      return SplRange.backgroundMusic;
+    } else if (minSPL == 70.0 && maxSPL == 80.0) {
+      return SplRange.paging;
+    } else if (minSPL == 75.0 && maxSPL == 90.0) {
+      return SplRange.foregroundMusic;
+    } else if (minSPL == 90.0 && maxSPL == 100.0) {
+      return SplRange.moderateLiveSound;
+    } else if (minSPL == 100.0 && maxSPL == 120.0) {
+      return SplRange.highSplLiveSound;
+    } else {
+      return SplRange.backgroundMusic;
+    }
+  }
+}
+
+enum ListeningPreference {
+  mono,
+  stereo,
+}
+
+extension ListeningPreferenceExtension on ListeningPreference {
+  String get name {
+    switch (this) {
+      case ListeningPreference.mono:
+        return 'Mono';
+      case ListeningPreference.stereo:
+        return 'Stereo';
+    }
+  }
+}
 
 class ListeningArea {
   final String id;
   final List<Offset> vertices;
   SplData? splData;
   final String name;
-  final String venuType;
+  final VenueType? venuType;
   final double listeningHeight;
   final String ceilingHeight;
   final double minSPL;
   final double maxSPL;
   final double customListeningAreaHeight;
+  final bool isDrawn;
+
+  final Color? preferredSpeakerColor;
+  final SplRange? splRange;
+  final ListeningPreference? listeningPreference;
+
+  /// THESE ARE FILTER OPTIONS
+  final Set<MountingType> mountingTypes;
+  final Set<LowFrequency> lowFrequencies;
+  final WiringType? wiringType;
 
   ListeningArea({
     String? id,
     required this.vertices,
     this.splData,
     this.name = '',
-    this.venuType = 'Indoor',
+    this.venuType,
     this.listeningHeight = 3.0, // Default to sitting height (3 ft)
     this.ceilingHeight = '',
     this.minSPL = 60.0,
     this.maxSPL = 70.0,
     this.customListeningAreaHeight = 0.0,
-  }) : id = id ?? const Uuid().v4();
+    this.mountingTypes = const <MountingType>{},
+    this.lowFrequencies = const <LowFrequency>{},
+    this.wiringType,
+    this.preferredSpeakerColor,
+    this.splRange,
+    this.listeningPreference,
+    bool? isDrawn,
+  }) : id = id ?? "AREA${FusionUtils.shortStringUUID()}",
+       isDrawn = isDrawn ?? vertices.isNotEmpty;
 
   List<Offset> getFieldPointsSet({int cols = 60, int rows = 60}) {
     if (vertices.isEmpty) return <Offset>[];
@@ -40,15 +219,14 @@ class ListeningArea {
     final double dx = (maxX - minX) / cols;
     final double dy = (maxY - minY) / rows;
 
-    // 2) build Path for polygon‐hit testing
-    final Path path = Path()..addPolygon(vertices, true);
+    // 2) use custom point-in-polygon for hit testing (Path cannot be used in isolates)
 
     // 3) sample grid and keep only points inside
     final List<Offset> pts = <Offset>[];
     for (int i = 0; i <= cols; i++) {
       for (int j = 0; j <= rows; j++) {
         final Offset p = Offset(minX + dx * i, minY + dy * j);
-        if (path.contains(p)) {
+        if (_polygonContains(vertices, p)) {
           pts.add(p);
         }
       }
@@ -74,8 +252,7 @@ class ListeningArea {
     final int cols = ((maxX - minX) / spacing).ceil();
     final int rows = ((maxY - minY) / spacing).ceil();
 
-    // 3) prepare polygon for hit‐testing
-    final Path path = Path()..addPolygon(vertices, true);
+    // 3) use custom point-in-polygon for hit testing (Path cannot be used in isolates)
 
     // 4) sample grid
     final List<Offset> pts = <Offset>[];
@@ -84,7 +261,7 @@ class ListeningArea {
       for (int j = 0; j <= rows; j++) {
         final double y = minY + j * spacing;
         final Offset p = Offset(x, y);
-        if (path.contains(p)) {
+        if (_polygonContains(vertices, p)) {
           pts.add(p);
         }
       }
@@ -93,18 +270,42 @@ class ListeningArea {
     return pts;
   }
 
+  Offset? getCenterPositionOfVertices() {
+    if (vertices.isEmpty) return null;
+
+    double sumX = 0.0;
+    double sumY = 0.0;
+
+    for (final Offset vertex in vertices) {
+      sumX += vertex.dx;
+      sumY += vertex.dy;
+    }
+
+    final double centerX = sumX / vertices.length;
+    final double centerY = sumY / vertices.length;
+
+    return Offset(centerX, centerY);
+  }
+
   ListeningArea copyWith({
     String? id,
     List<Offset>? vertices,
     SplData? splData,
     String? name,
     List<String>? hardwareComponentIds,
-    String? venuType,
+    VenueType? venuType,
     double? listeningHeight,
     String? ceilingHeight,
     double? customListeningAreaHeight,
     double? minSPL,
     double? maxSPL,
+    Set<MountingType>? mountingTypes,
+    Set<LowFrequency>? lowFrequencies,
+    WiringType? wiringType,
+    Color? preferredSpeakerColor,
+    SplRange? splRange,
+    ListeningPreference? listeningPreference,
+    bool? isDrawn,
   }) {
     return ListeningArea(
       vertices: vertices ?? this.vertices,
@@ -117,6 +318,13 @@ class ListeningArea {
       minSPL: minSPL ?? this.minSPL,
       maxSPL: maxSPL ?? this.maxSPL,
       customListeningAreaHeight: customListeningAreaHeight ?? this.customListeningAreaHeight,
+      mountingTypes: mountingTypes ?? this.mountingTypes,
+      lowFrequencies: lowFrequencies ?? this.lowFrequencies,
+      wiringType: wiringType ?? this.wiringType,
+      preferredSpeakerColor: preferredSpeakerColor ?? this.preferredSpeakerColor,
+      splRange: splRange ?? this.splRange,
+      listeningPreference: listeningPreference ?? this.listeningPreference,
+      isDrawn: isDrawn ?? this.isDrawn,
     );
   }
 
@@ -125,17 +333,25 @@ class ListeningArea {
     splData = SplData(surfaceId: id, fieldPoints: points, splValues: values);
   }
 
+  void clearSplData() {
+    splData = null;
+  }
+
   Map<String, dynamic> toJson() => <String, dynamic>{
     'id': id,
     'name': name,
     'vertices': vertices.map((Offset v) => <String, double>{'dx': v.dx, 'dy': v.dy}).toList(),
     'splData': null,
-    'venuType': venuType,
+    'venuType': venuType?.name,
     'listeningHeight': listeningHeight,
     'ceilingHeight': ceilingHeight,
     'minSPL': minSPL,
     'maxSPL': maxSPL,
     'customListeningAreaHeight': customListeningAreaHeight,
+    'isDrawn': isDrawn,
+    'preferredSpeakerColor': preferredSpeakerColor,
+    'splRange': splRange?.name,
+    'listeningPreference': listeningPreference?.name,
   };
 
   /// Parses back from JSON, turning the dynamic list into List<Offset>
@@ -156,12 +372,31 @@ class ListeningArea {
       vertices: verts,
       splData: null,
       name: json['name'] as String,
-      venuType: json['venuType'] as String? ?? '',
+      venuType: json['venuType'] != null
+          ? VenueType.values.firstWhere(
+              (VenueType vt) => vt.name == (json['venuType'] as String),
+              orElse: () => VenueType.indoor,
+            )
+          : null,
       listeningHeight: (json['listeningHeight'] as num?)?.toDouble() ?? 3.0,
       ceilingHeight: json['ceilingHeight'] as String? ?? '',
       customListeningAreaHeight: (json['customListeningAreaHeight'] as num?)?.toDouble() ?? 0.0,
       minSPL: (json['minSPL'] as num?)?.toDouble() ?? 60.0,
       maxSPL: (json['maxSPL'] as num?)?.toDouble() ?? 70.0,
+      isDrawn: json['isDrawn'] as bool? ?? (verts.isNotEmpty),
+      preferredSpeakerColor: json['preferredSpeakerColor'] != null ? Color(json['preferredSpeakerColor'] as int) : null,
+      splRange: json['splRange'] != null
+          ? SplRange.values.firstWhere(
+              (SplRange sr) => sr.name == (json['splRange'] as String),
+              orElse: () => SplRange.backgroundMusic,
+            )
+          : null,
+      listeningPreference: json['listeningPreference'] != null
+          ? ListeningPreference.values.firstWhere(
+              (ListeningPreference lp) => lp.name == (json['listeningPreference'] as String),
+              orElse: () => ListeningPreference.mono,
+            )
+          : null,
     );
   }
 
@@ -184,8 +419,7 @@ class ListeningArea {
     final int cols = ((maxX - minX) / spacing).ceil() + 1;
     final int rows = ((maxY - minY) / rowHeight).ceil() + 1;
 
-    // 3) build polygon path & extract edges
-    final Path poly = Path()..addPolygon(vertices, true);
+    // 3) extract polygon edges (avoid Path in isolates)
     final List<_Edge> edges = <_Edge>[];
     for (int i = 0; i < vertices.length; i++) {
       final Offset a = vertices[i];
@@ -204,14 +438,49 @@ class ListeningArea {
         final double x = minX + col * spacing + xOffset;
         final Offset p = Offset(x, y);
 
-        // keep if inside or within tolerance of any edge
-        if (poly.contains(p) || _minDistToEdges(p, edges) <= tolerance) {
+        // keep if inside polygon or within tolerance of any edge
+        if (_polygonContains(vertices, p) || _minDistToEdges(p, edges) <= tolerance) {
           points.add(p);
         }
       }
     }
 
     return points;
+  }
+
+  /// Point-in-polygon using ray casting. Works in isolates without dart:ui Path.
+  /// Returns true if [point] lies inside or on the boundary of the polygon [poly].
+  bool _polygonContains(List<Offset> poly, Offset point) {
+    final int n = poly.length;
+    if (n < 3) return false;
+
+    bool inside = false;
+    for (int i = 0, j = n - 1; i < n; j = i++) {
+      final Offset pi = poly[i];
+      final Offset pj = poly[j];
+
+      // Check if point is exactly on the segment pj->pi
+      if (_pointOnSegment(point, pj, pi)) return true;
+
+      final bool intersect =
+          ((pi.dy > point.dy) != (pj.dy > point.dy)) &&
+          (point.dx < (pj.dx - pi.dx) * (point.dy - pi.dy) / ((pj.dy - pi.dy) == 0 ? 1e-12 : (pj.dy - pi.dy)) + pi.dx);
+      if (intersect) inside = !inside;
+    }
+    return inside;
+  }
+
+  // Checks if point p lies on segment v->w within a small epsilon tolerance.
+  bool _pointOnSegment(Offset p, Offset v, Offset w, {double epsilon = 1e-6}) {
+    final double cross = (p.dy - v.dy) * (w.dx - v.dx) - (p.dx - v.dx) * (w.dy - v.dy);
+    if (cross.abs() > epsilon) return false; // not colinear
+
+    final double dot = (p.dx - v.dx) * (w.dx - v.dx) + (p.dy - v.dy) * (w.dy - v.dy);
+    if (dot < -epsilon) return false; // before v
+
+    final double lenSq = (w.dx - v.dx) * (w.dx - v.dx) + (w.dy - v.dy) * (w.dy - v.dy);
+    if (dot - lenSq > epsilon) return false; // beyond w
+    return true;
   }
 
   // helper: compute minimum distance from p to any edge
@@ -253,6 +522,19 @@ class SplData {
 
   SplData({required this.surfaceId, required this.fieldPoints, required this.splValues})
     : assert(fieldPoints.length == splValues.length, 'fieldPoints(${fieldPoints.length}) and splValues(${splValues.length}) must match');
+
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+    return other is SplData && other.surfaceId == surfaceId && listEquals(other.fieldPoints, fieldPoints) && listEquals(other.splValues, splValues);
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    surfaceId,
+    Object.hashAll(fieldPoints),
+    Object.hashAll(splValues),
+  );
 }
 
 class _Edge {

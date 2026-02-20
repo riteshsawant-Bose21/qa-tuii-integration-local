@@ -11,8 +11,8 @@
 // import 'package:fusion_launcher/core/services/project_list_manager.dart';
 // import 'package:path_provider/path_provider.dart';
 //
-// import '../../features/dashboard/data/models/upload_file_response_dto.dart';
-// import '../../features/dashboard/domain/entities/create_project_entity.dart';
+// import '../../features/home/data/models/upload_file_response_dto.dart';
+// import '../../features/home/domain/entities/create_project_entity.dart';
 // import '../models/algorithm/property_settings.dart';
 // import '../models/amplifer.dart';
 // import '../models/floor_entity.dart';

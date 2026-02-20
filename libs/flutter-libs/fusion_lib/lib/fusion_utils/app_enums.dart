@@ -29,3 +29,20 @@ enum ImpedanceLevel {
   low,
   high,
 }
+
+/// Zone and SubZone menu actions enum
+enum ZoneMenuAction {
+  edit,
+  subzone,
+  delete,
+}
+
+/// Device search scope enum (used for narrowing grouped section search results)
+enum DeviceSearchScope {
+  sources,
+  endpoints,
+  fusionDevices,
+  amplifiers,
+  racks,
+  switches,
+}

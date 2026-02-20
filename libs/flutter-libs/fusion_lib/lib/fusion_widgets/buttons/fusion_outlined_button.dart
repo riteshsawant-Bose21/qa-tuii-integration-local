@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/fusion_theme/app_theme.dart';
+
+import '../semantics/semantic_helper.dart';
+import '../semantics/semantic_type.dart';
 
 /// A customizable and reusable outlined button for the Fusion design system.
 ///
@@ -85,7 +89,7 @@ class FusionOutlinedButton extends StatelessWidget {
   final IconData? suffixIcon;
 
   /// Identifier for testing or accessibility tools.
-  final String? accessIdentifier;
+  final String? semanticsId;
 
   /// Semantic label for screen readers.
   final String? accessLabel;
@@ -97,8 +101,8 @@ class FusionOutlinedButton extends StatelessWidget {
     super.key,
     required this.label,
     required this.onTap,
-    this.height = 55,
-    this.width = 350,
+    this.height = 32,
+    this.width = 100,
     this.topMargin = 0,
     this.bottomMargin = 0,
     this.borderRadius = 4,
@@ -113,17 +117,14 @@ class FusionOutlinedButton extends StatelessWidget {
     this.prefixIcon,
     this.showSuffixIcon = false,
     this.suffixIcon,
-    this.accessIdentifier,
+    this.semanticsId,
     this.accessLabel,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Semantics(
-      button: true,
-      label: accessLabel ?? label,
-      identifier: accessIdentifier ?? label,
-      enabled: isActive,
+    return SemanticHelper.button(
+      testId: SemanticHelper.createTestId(SemanticTypes.button, semanticsId ?? label),
       child: Container(
         margin: EdgeInsets.only(top: topMargin, bottom: bottomMargin),
         child: IgnorePointer(
@@ -141,15 +142,15 @@ class FusionOutlinedButton extends StatelessWidget {
                 borderRadius: BorderRadius.circular(borderRadius),
                 border: Border.all(
                   color: isActive
-                      ? activeBorderColor ?? Theme.of(context).colorScheme.fusionOutlinedButtonColor
-                      : activeBorderColor?.withOpacity(0.5) ?? Theme.of(context).colorScheme.fusionOutlinedButtonColor.withOpacity(0.5),
+                      ? activeBorderColor ?? Theme.of(context).colorScheme.elevation4
+                      : activeBorderColor?.withOpacity(0.5) ?? Theme.of(context).colorScheme.elevation2,
                 ),
               ),
               child: isLoading
-                  ? const SizedBox(
+                  ? SizedBox(
                       width: 24,
                       height: 24,
-                      child: CircularProgressIndicator(strokeWidth: 2, valueColor: AlwaysStoppedAnimation<Color>(Colors.black)),
+                      child: CircularProgressIndicator(strokeWidth: 2, valueColor: AlwaysStoppedAnimation<Color>(context.colorScheme.primary)),
                     )
                   : Row(
                       mainAxisSize: MainAxisSize.min,
@@ -160,12 +161,12 @@ class FusionOutlinedButton extends StatelessWidget {
                           const SizedBox(width: 8),
                         ],
                         Expanded(
-                          child: Text(
-                            label,
+                          child: FusionAppText(
+                            text: label,
                             textAlign: TextAlign.center,
                             style: textStyle ?? Theme.of(context).textTheme.labelLarge,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
+                            maxLine: 1,
+                            textOverflow: TextOverflow.ellipsis,
                           ),
                         ),
                         if (showSuffixIcon && suffixIcon != null) ...[

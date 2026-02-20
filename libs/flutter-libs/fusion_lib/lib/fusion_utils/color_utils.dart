@@ -30,3 +30,4 @@ class ColorUtils {
     return '#${buffer.toString().toUpperCase()}';
   }
 }
+

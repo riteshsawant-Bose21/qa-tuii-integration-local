@@ -1,0 +1,1219 @@
+{
+  "audio_streams": [],
+  "devices": [
+    {
+      "device_type": "fusion_c0",
+      "dsp_static_config": {
+        "audio_tasks": [
+          {
+            "block_connections": [
+              {
+                "destination_block": "id_agc1",
+                "input_channel": 1,
+                "input_terminal": "in",
+                "output_channel": 1,
+                "output_terminal": "out",
+                "source_block": "id_usb_in"
+              },
+              {
+                "destination_block": "id_agc1",
+                "input_channel": 2,
+                "input_terminal": "in",
+                "output_channel": 2,
+                "output_terminal": "out",
+                "source_block": "id_usb_in"
+              },
+              {
+                "destination_block": "id_usb_in_id_mix1_jack_out",
+                "input_channel": 1,
+                "input_terminal": "in",
+                "output_channel": 1,
+                "output_terminal": "out",
+                "source_block": "id_agc1"
+              }
+            ],
+            "blocks": [
+              {
+                "algorithm": "alsa_in",
+                "name": "id_usb_in",
+                "property_settings": [
+                  {
+                    "name": "sample_rate",
+                    "value": 48000
+                  },
+                  {
+                    "name": "frame_size",
+                    "value": 32
+                  },
+                  {
+                    "name": "device_name",
+                    "value": "hw:UAC1Gadget,0"
+                  },
+                  {
+                    "name": "period_size",
+                    "value": 32
+                  }
+                ],
+                "terminal_channels": [
+                  {
+                    "channels": 2,
+                    "name": "out"
+                  }
+                ]
+              },
+              {
+                "algorithm": "agc",
+                "name": "id_agc1",
+                "property_settings": [
+                  {
+                    "name": "sample_rate",
+                    "value": 48000
+                  },
+                  {
+                    "name": "frame_size",
+                    "value": 32
+                  },
+                  {
+                    "name": "channels",
+                    "value": 2
+                  }
+                ]
+              },
+              {
+                "algorithm": "jack_out",
+                "name": "id_usb_in_id_mix1_jack_out",
+                "property_settings": [
+                  {
+                    "name": "sample_rate",
+                    "value": 48000
+                  },
+                  {
+                    "name": "frame_size",
+                    "value": 32
+                  },
+                  {
+                    "name": "client_name",
+                    "value": "id_usb_in"
+                  }
+                ],
+                "terminal_channels": [
+                  {
+                    "channels": 1,
+                    "name": "in"
+                  }
+                ]
+              }
+            ],
+            "name": "id_usb_in",
+            "property_settings": [
+              {
+                "name": "sample_rate",
+                "value": 48000
+              },
+              {
+                "name": "frame_size",
+                "value": 32
+              },
+              {
+                "name": "jack_client_name",
+                "value": "id_usb_in"
+              },
+              {
+                "name": "cpu_affinity",
+                "value": 1
+              }
+            ]
+          },
+          {
+            "block_connections": [
+              {
+                "destination_block": "id_agc2",
+                "input_channel": 1,
+                "input_terminal": "in",
+                "output_channel": 1,
+                "output_terminal": "out",
+                "source_block": "id_analog_in"
+              },
+              {
+                "destination_block": "id_analog_in_id_mix2_jack_out",
+                "input_channel": 1,
+                "input_terminal": "in",
+                "output_channel": 1,
+                "output_terminal": "out",
+                "source_block": "id_agc2"
+              }
+            ],
+            "blocks": [
+              {
+                "algorithm": "jack_in",
+                "name": "id_analog_in",
+                "property_settings": [
+                  {
+                    "name": "sample_rate",
+                    "value": 48000
+                  },
+                  {
+                    "name": "frame_size",
+                    "value": 32
+                  },
+                  {
+                    "name": "client_name",
+                    "value": "id_analog_in"
+                  }
+                ],
+                "terminal_channels": [
+                  {
+                    "channels": 1,
+                    "name": "out"
+                  }
+                ]
+              },
+              {
+                "algorithm": "agc",
+                "name": "id_agc2",
+                "property_settings": [
+                  {
+                    "name": "sample_rate",
+                    "value": 48000
+                  },
+                  {
+                    "name": "frame_size",
+                    "value": 32
+                  },
+                  {
+                    "name": "channels",
+                    "value": 1
+                  }
+                ]
+              },
+              {
+                "algorithm": "jack_out",
+                "name": "id_analog_in_id_mix2_jack_out",
+                "property_settings": [
+                  {
+                    "name": "sample_rate",
+                    "value": 48000
+                  },
+                  {
+                    "name": "frame_size",
+                    "value": 32
+                  },
+                  {
+                    "name": "client_name",
+                    "value": "id_analog_in"
+                  }
+                ],
+                "terminal_channels": [
+                  {
+                    "channels": 1,
+                    "name": "in"
+                  }
+                ]
+              }
+            ],
+            "name": "id_analog_in",
+            "property_settings": [
+              {
+                "name": "sample_rate",
+                "value": 48000
+              },
+              {
+                "name": "frame_size",
+                "value": 32
+              },
+              {
+                "name": "jack_client_name",
+                "value": "id_analog_in"
+              },
+              {
+                "name": "cpu_affinity",
+                "value": 1
+              }
+            ]
+          },
+          {
+            "block_connections": [
+              {
+                "destination_block": "id_paging_mic_in_hdr",
+                "input_channel": 1,
+                "input_terminal": "in",
+                "output_channel": 1,
+                "output_terminal": "out",
+                "source_block": "id_paging_mic_in"
+              },
+              {
+                "destination_block": "id_paging_mic_in_hdr",
+                "input_channel": 2,
+                "input_terminal": "in",
+                "output_channel": 2,
+                "output_terminal": "out",
+                "source_block": "id_paging_mic_in"
+              },
+              {
+                "destination_block": "id_paging_mic_in_id_zone1_jack_out",
+                "input_channel": 1,
+                "input_terminal": "in",
+                "output_channel": 1,
+                "output_terminal": "out",
+                "source_block": "id_paging_mic_in_hdr"
+              }
+            ],
+            "blocks": [
+              {
+                "algorithm": "jack_in",
+                "name": "id_paging_mic_in",
+                "property_settings": [
+                  {
+                    "name": "sample_rate",
+                    "value": 48000
+                  },
+                  {
+                    "name": "frame_size",
+                    "value": 32
+                  },
+                  {
+                    "name": "client_name",
+                    "value": "id_paging_mic_in"
+                  }
+                ],
+                "terminal_channels": [
+                  {
+                    "channels": 2,
+                    "name": "out"
+                  }
+                ]
+              },
+              {
+                "algorithm": "hdr_combiner",
+                "name": "id_paging_mic_in_hdr",
+                "property_settings": [
+                  {
+                    "name": "sample_rate",
+                    "value": 48000
+                  },
+                  {
+                    "name": "frame_size",
+                    "value": 32
+                  }
+                ]
+              },
+              {
+                "algorithm": "jack_out",
+                "name": "id_paging_mic_in_id_zone1_jack_out",
+                "property_settings": [
+                  {
+                    "name": "sample_rate",
+                    "value": 48000
+                  },
+                  {
+                    "name": "frame_size",
+                    "value": 32
+                  },
+                  {
+                    "name": "client_name",
+                    "value": "id_paging_mic_in"
+                  }
+                ],
+                "terminal_channels": [
+                  {
+                    "channels": 1,
+                    "name": "in"
+                  }
+                ]
+              }
+            ],
+            "name": "id_paging_mic_in",
+            "property_settings": [
+              {
+                "name": "sample_rate",
+                "value": 48000
+              },
+              {
+                "name": "frame_size",
+                "value": 32
+              },
+              {
+                "name": "jack_client_name",
+                "value": "id_paging_mic_in"
+              },
+              {
+                "name": "cpu_affinity",
+                "value": 1
+              }
+            ]
+          },
+          {
+            "block_connections": [
+              {
+                "destination_block": "id_announcement_in_id_zone1_jack_out",
+                "input_channel": 1,
+                "input_terminal": "in",
+                "output_channel": 1,
+                "output_terminal": "out",
+                "source_block": "id_announcement_in"
+              }
+            ],
+            "blocks": [
+              {
+                "algorithm": "message_player",
+                "name": "id_announcement_in",
+                "property_settings": [
+                  {
+                    "name": "sample_rate",
+                    "value": 48000
+                  },
+                  {
+                    "name": "frame_size",
+                    "value": 32
+                  }
+                ],
+                "terminal_channels": [
+                  {
+                    "channels": 1,
+                    "name": "out"
+                  }
+                ]
+              },
+              {
+                "algorithm": "jack_out",
+                "name": "id_announcement_in_id_zone1_jack_out",
+                "property_settings": [
+                  {
+                    "name": "sample_rate",
+                    "value": 48000
+                  },
+                  {
+                    "name": "frame_size",
+                    "value": 32
+                  },
+                  {
+                    "name": "client_name",
+                    "value": "id_announcement_in"
+                  }
+                ],
+                "terminal_channels": [
+                  {
+                    "channels": 1,
+                    "name": "in"
+                  }
+                ]
+              }
+            ],
+            "name": "id_announcement_in",
+            "property_settings": [
+              {
+                "name": "sample_rate",
+                "value": 48000
+              },
+              {
+                "name": "frame_size",
+                "value": 32
+              },
+              {
+                "name": "jack_client_name",
+                "value": "id_announcement_in"
+              },
+              {
+                "name": "cpu_affinity",
+                "value": 1
+              }
+            ]
+          },
+          {
+            "block_connections": [
+              {
+                "destination_block": "id_mix1",
+                "input_channel": 1,
+                "input_terminal": "in",
+                "output_channel": 1,
+                "output_terminal": "out",
+                "source_block": "id_usb_in_id_mix1_jack_in"
+              },
+              {
+                "destination_block": "id_tone1",
+                "input_channel": 1,
+                "input_terminal": "in",
+                "output_channel": 1,
+                "output_terminal": "out",
+                "source_block": "id_mix1"
+              },
+              {
+                "destination_block": "id_mix1_id_zone1_jack_out",
+                "input_channel": 1,
+                "input_terminal": "in",
+                "output_channel": 1,
+                "output_terminal": "out",
+                "source_block": "id_tone1"
+              }
+            ],
+            "blocks": [
+              {
+                "algorithm": "jack_in",
+                "name": "id_usb_in_id_mix1_jack_in",
+                "property_settings": [
+                  {
+                    "name": "sample_rate",
+                    "value": 48000
+                  },
+                  {
+                    "name": "frame_size",
+                    "value": 32
+                  },
+                  {
+                    "name": "client_name",
+                    "value": "id_mix1"
+                  }
+                ],
+                "terminal_channels": [
+                  {
+                    "channels": 1,
+                    "name": "out"
+                  }
+                ]
+              },
+              {
+                "algorithm": "matrix_mixer",
+                "name": "id_mix1",
+                "property_settings": [
+                  {
+                    "name": "sample_rate",
+                    "value": 48000
+                  },
+                  {
+                    "name": "frame_size",
+                    "value": 32
+                  }
+                ],
+                "terminal_channels": [
+                  {
+                    "channels": 1,
+                    "name": "in"
+                  },
+                  {
+                    "channels": 1,
+                    "name": "out"
+                  }
+                ]
+              },
+              {
+                "algorithm": "tone_control",
+                "name": "id_tone1",
+                "property_settings": [
+                  {
+                    "name": "sample_rate",
+                    "value": 48000
+                  },
+                  {
+                    "name": "frame_size",
+                    "value": 32
+                  },
+                  {
+                    "name": "channels",
+                    "value": 1
+                  }
+                ]
+              },
+              {
+                "algorithm": "jack_out",
+                "name": "id_mix1_id_zone1_jack_out",
+                "property_settings": [
+                  {
+                    "name": "sample_rate",
+                    "value": 48000
+                  },
+                  {
+                    "name": "frame_size",
+                    "value": 32
+                  },
+                  {
+                    "name": "client_name",
+                    "value": "id_mix1"
+                  }
+                ],
+                "terminal_channels": [
+                  {
+                    "channels": 1,
+                    "name": "in"
+                  }
+                ]
+              }
+            ],
+            "name": "id_mix1",
+            "property_settings": [
+              {
+                "name": "sample_rate",
+                "value": 48000
+              },
+              {
+                "name": "frame_size",
+                "value": 32
+              },
+              {
+                "name": "jack_client_name",
+                "value": "id_mix1"
+              },
+              {
+                "name": "cpu_affinity",
+                "value": 1
+              }
+            ]
+          },
+          {
+            "block_connections": [
+              {
+                "destination_block": "id_mix2",
+                "input_channel": 1,
+                "input_terminal": "in",
+                "output_channel": 1,
+                "output_terminal": "out",
+                "source_block": "id_analog_in_id_mix2_jack_in"
+              },
+              {
+                "destination_block": "id_tone2",
+                "input_channel": 1,
+                "input_terminal": "in",
+                "output_channel": 1,
+                "output_terminal": "out",
+                "source_block": "id_mix2"
+              },
+              {
+                "destination_block": "id_mix2_id_zone1_jack_out",
+                "input_channel": 1,
+                "input_terminal": "in",
+                "output_channel": 1,
+                "output_terminal": "out",
+                "source_block": "id_tone2"
+              }
+            ],
+            "blocks": [
+              {
+                "algorithm": "jack_in",
+                "name": "id_analog_in_id_mix2_jack_in",
+                "property_settings": [
+                  {
+                    "name": "sample_rate",
+                    "value": 48000
+                  },
+                  {
+                    "name": "frame_size",
+                    "value": 32
+                  },
+                  {
+                    "name": "client_name",
+                    "value": "id_mix2"
+                  }
+                ],
+                "terminal_channels": [
+                  {
+                    "channels": 1,
+                    "name": "out"
+                  }
+                ]
+              },
+              {
+                "algorithm": "matrix_mixer",
+                "name": "id_mix2",
+                "property_settings": [
+                  {
+                    "name": "sample_rate",
+                    "value": 48000
+                  },
+                  {
+                    "name": "frame_size",
+                    "value": 32
+                  }
+                ],
+                "terminal_channels": [
+                  {
+                    "channels": 1,
+                    "name": "in"
+                  },
+                  {
+                    "channels": 1,
+                    "name": "out"
+                  }
+                ]
+              },
+              {
+                "algorithm": "tone_control",
+                "name": "id_tone2",
+                "property_settings": [
+                  {
+                    "name": "sample_rate",
+                    "value": 48000
+                  },
+                  {
+                    "name": "frame_size",
+                    "value": 32
+                  },
+                  {
+                    "name": "channels",
+                    "value": 1
+                  }
+                ]
+              },
+              {
+                "algorithm": "jack_out",
+                "name": "id_mix2_id_zone1_jack_out",
+                "property_settings": [
+                  {
+                    "name": "sample_rate",
+                    "value": 48000
+                  },
+                  {
+                    "name": "frame_size",
+                    "value": 32
+                  },
+                  {
+                    "name": "client_name",
+                    "value": "id_mix2"
+                  }
+                ],
+                "terminal_channels": [
+                  {
+                    "channels": 1,
+                    "name": "in"
+                  }
+                ]
+              }
+            ],
+            "name": "id_mix2",
+            "property_settings": [
+              {
+                "name": "sample_rate",
+                "value": 48000
+              },
+              {
+                "name": "frame_size",
+                "value": 32
+              },
+              {
+                "name": "jack_client_name",
+                "value": "id_mix2"
+              },
+              {
+                "name": "cpu_affinity",
+                "value": 1
+              }
+            ]
+          },
+          {
+            "block_connections": [
+              {
+                "destination_block": "id_zone1",
+                "input_channel": 1,
+                "input_terminal": "in",
+                "output_channel": 1,
+                "output_terminal": "out",
+                "source_block": "id_mix2_id_zone1_jack_in"
+              },
+              {
+                "destination_block": "id_zone1",
+                "input_channel": 2,
+                "input_terminal": "in",
+                "output_channel": 2,
+                "output_terminal": "out",
+                "source_block": "id_mix2_id_zone1_jack_in"
+              },
+              {
+                "destination_block": "id_zone1_paging_router",
+                "input_channel": 1,
+                "input_terminal": "in",
+                "output_channel": 1,
+                "output_terminal": "out",
+                "source_block": "id_zone1"
+              },
+              {
+                "destination_block": "id_zone1_paging_router",
+                "input_channel": 1,
+                "input_terminal": "paging_in",
+                "output_channel": 1,
+                "output_terminal": "out",
+                "source_block": "id_announcement_in_id_zone1_jack_in"
+              },
+              {
+                "destination_block": "id_zone1_paging_router",
+                "input_channel": 2,
+                "input_terminal": "paging_in",
+                "output_channel": 2,
+                "output_terminal": "out",
+                "source_block": "id_announcement_in_id_zone1_jack_in"
+              },
+              {
+                "destination_block": "id_gain1",
+                "input_channel": 1,
+                "input_terminal": "in",
+                "output_channel": 1,
+                "output_terminal": "out",
+                "source_block": "id_zone1_paging_router"
+              },
+              {
+                "destination_block": "id_zone1_id_analog_out1_jack_out",
+                "input_channel": 1,
+                "input_terminal": "in",
+                "output_channel": 1,
+                "output_terminal": "out",
+                "source_block": "id_gain1"
+              }
+            ],
+            "blocks": [
+              {
+                "algorithm": "jack_in",
+                "name": "id_mix2_id_zone1_jack_in",
+                "property_settings": [
+                  {
+                    "name": "sample_rate",
+                    "value": 48000
+                  },
+                  {
+                    "name": "frame_size",
+                    "value": 32
+                  },
+                  {
+                    "name": "client_name",
+                    "value": "id_zone1"
+                  }
+                ],
+                "terminal_channels": [
+                  {
+                    "channels": 2,
+                    "name": "out"
+                  }
+                ]
+              },
+              {
+                "algorithm": "jack_in",
+                "name": "id_announcement_in_id_zone1_jack_in",
+                "property_settings": [
+                  {
+                    "name": "sample_rate",
+                    "value": 48000
+                  },
+                  {
+                    "name": "frame_size",
+                    "value": 32
+                  },
+                  {
+                    "name": "client_name",
+                    "value": "id_zone1"
+                  }
+                ],
+                "terminal_channels": [
+                  {
+                    "channels": 2,
+                    "name": "out"
+                  }
+                ]
+              },
+              {
+                "algorithm": "source_selector",
+                "name": "id_zone1",
+                "property_settings": [
+                  {
+                    "name": "sample_rate",
+                    "value": 48000
+                  },
+                  {
+                    "name": "frame_size",
+                    "value": 32
+                  }
+                ],
+                "terminal_channels": [
+                  {
+                    "channels": 4,
+                    "name": "in"
+                  }
+                ]
+              },
+              {
+                "algorithm": "paging_router",
+                "name": "id_zone1_paging_router",
+                "property_settings": [
+                  {
+                    "name": "sample_rate",
+                    "value": 48000
+                  },
+                  {
+                    "name": "frame_size",
+                    "value": 32
+                  },
+                  {
+                    "name": "channels",
+                    "value": 1
+                  }
+                ],
+                "terminal_channels": [
+                  {
+                    "channels": 4,
+                    "name": "paging_in"
+                  }
+                ]
+              },
+              {
+                "algorithm": "gain",
+                "name": "id_gain1",
+                "property_settings": [
+                  {
+                    "name": "sample_rate",
+                    "value": 48000
+                  },
+                  {
+                    "name": "frame_size",
+                    "value": 32
+                  },
+                  {
+                    "name": "channels",
+                    "value": 1
+                  }
+                ]
+              },
+              {
+                "algorithm": "jack_out",
+                "name": "id_zone1_id_analog_out1_jack_out",
+                "property_settings": [
+                  {
+                    "name": "sample_rate",
+                    "value": 48000
+                  },
+                  {
+                    "name": "frame_size",
+                    "value": 32
+                  },
+                  {
+                    "name": "client_name",
+                    "value": "id_zone1"
+                  }
+                ],
+                "terminal_channels": [
+                  {
+                    "channels": 1,
+                    "name": "in"
+                  }
+                ]
+              }
+            ],
+            "name": "id_zone1",
+            "property_settings": [
+              {
+                "name": "sample_rate",
+                "value": 48000
+              },
+              {
+                "name": "frame_size",
+                "value": 32
+              },
+              {
+                "name": "jack_client_name",
+                "value": "id_zone1"
+              },
+              {
+                "name": "cpu_affinity",
+                "value": 1
+              }
+            ]
+          },
+          {
+            "block_connections": [
+              {
+                "destination_block": "id_limiter1",
+                "input_channel": 1,
+                "input_terminal": "in",
+                "output_channel": 1,
+                "output_terminal": "out",
+                "source_block": "id_zone1_id_analog_out1_jack_in"
+              },
+              {
+                "destination_block": "id_limiter1",
+                "input_channel": 1,
+                "input_terminal": "peak_in",
+                "output_channel": 1,
+                "output_terminal": "out",
+                "source_block": "id_zone1_id_analog_out1_jack_in"
+              },
+              {
+                "destination_block": "id_delay1",
+                "input_channel": 1,
+                "input_terminal": "in",
+                "output_channel": 1,
+                "output_terminal": "out",
+                "source_block": "id_limiter1"
+              },
+              {
+                "destination_block": "id_analog_out1",
+                "input_channel": 1,
+                "input_terminal": "in",
+                "output_channel": 1,
+                "output_terminal": "out",
+                "source_block": "id_delay1"
+              }
+            ],
+            "blocks": [
+              {
+                "algorithm": "jack_in",
+                "name": "id_zone1_id_analog_out1_jack_in",
+                "property_settings": [
+                  {
+                    "name": "sample_rate",
+                    "value": 48000
+                  },
+                  {
+                    "name": "frame_size",
+                    "value": 32
+                  },
+                  {
+                    "name": "client_name",
+                    "value": "id_analog_out1"
+                  }
+                ],
+                "terminal_channels": [
+                  {
+                    "channels": 1,
+                    "name": "out"
+                  }
+                ]
+              },
+              {
+                "algorithm": "limiter",
+                "name": "id_limiter1",
+                "property_settings": [
+                  {
+                    "name": "sample_rate",
+                    "value": 48000
+                  },
+                  {
+                    "name": "frame_size",
+                    "value": 32
+                  },
+                  {
+                    "name": "channels",
+                    "value": 1
+                  }
+                ]
+              },
+              {
+                "algorithm": "delay",
+                "name": "id_delay1",
+                "property_settings": [
+                  {
+                    "name": "sample_rate",
+                    "value": 48000
+                  },
+                  {
+                    "name": "frame_size",
+                    "value": 32
+                  },
+                  {
+                    "name": "channels",
+                    "value": 1
+                  }
+                ]
+              },
+              {
+                "algorithm": "jack_out",
+                "name": "id_analog_out1",
+                "property_settings": [
+                  {
+                    "name": "sample_rate",
+                    "value": 48000
+                  },
+                  {
+                    "name": "frame_size",
+                    "value": 32
+                  },
+                  {
+                    "name": "client_name",
+                    "value": "id_analog_out1"
+                  }
+                ],
+                "terminal_channels": [
+                  {
+                    "channels": 1,
+                    "name": "in"
+                  }
+                ]
+              }
+            ],
+            "name": "id_analog_out1",
+            "property_settings": [
+              {
+                "name": "sample_rate",
+                "value": 48000
+              },
+              {
+                "name": "frame_size",
+                "value": 32
+              },
+              {
+                "name": "jack_client_name",
+                "value": "id_analog_out1"
+              },
+              {
+                "name": "cpu_affinity",
+                "value": 1
+              }
+            ]
+          }
+        ],
+        "parameter_settings": [
+          {
+            "index": [
+              1
+            ],
+            "name": "zone_name",
+            "target": "id_announcement_in",
+            "value": "id_zone1"
+          },
+          {
+            "index": [
+              1,
+              1
+            ],
+            "name": "mute",
+            "target": "id_mix1",
+            "value": false
+          },
+          {
+            "index": [
+              1,
+              1
+            ],
+            "name": "mute",
+            "target": "id_mix2",
+            "value": false
+          },
+          {
+            "index": [
+              1
+            ],
+            "name": "out_gain",
+            "target": "id_paging_mic_in_hdr",
+            "value": 40
+          },
+          {
+            "name": "input",
+            "target": "id_zone1",
+            "value": 2
+          },
+          {
+            "name": "bypass",
+            "target": "id_agc1",
+            "value": true
+          },
+          {
+            "name": "bypass",
+            "target": "id_agc2",
+            "value": true
+          }
+        ],
+        "session": {
+          "property_settings": [
+            {
+              "name": "sample_rate",
+              "value": 48000
+            },
+            {
+              "name": "frame_size",
+              "value": 32
+            }
+          ]
+        },
+        "task_connections": [
+          {
+            "destination_task": "id_mix1",
+            "input_block": "id_usb_in_id_mix1_jack_in",
+            "input_channel": 1,
+            "output_block": "id_usb_in_id_mix1_jack_out",
+            "output_channel": 1,
+            "source_task": "id_usb_in"
+          },
+          {
+            "destination_task": "id_mix2",
+            "input_block": "id_analog_in_id_mix2_jack_in",
+            "input_channel": 1,
+            "output_block": "id_analog_in_id_mix2_jack_out",
+            "output_channel": 1,
+            "source_task": "id_analog_in"
+          },
+          {
+            "destination_task": "id_zone1",
+            "input_block": "id_mix2_id_zone1_jack_in",
+            "input_channel": 1,
+            "output_block": "id_mix2_id_zone1_jack_out",
+            "output_channel": 1,
+            "source_task": "id_mix2"
+          },
+          {
+            "destination_task": "id_zone1",
+            "input_block": "id_mix2_id_zone1_jack_in",
+            "input_channel": 2,
+            "output_block": "id_mix1_id_zone1_jack_out",
+            "output_channel": 1,
+            "source_task": "id_mix1"
+          },
+          {
+            "destination_task": "id_zone1",
+            "input_block": "id_announcement_in_id_zone1_jack_in",
+            "input_channel": 1,
+            "output_block": "id_announcement_in_id_zone1_jack_out",
+            "output_channel": 1,
+            "source_task": "id_announcement_in"
+          },
+          {
+            "destination_task": "id_zone1",
+            "input_block": "id_announcement_in_id_zone1_jack_in",
+            "input_channel": 2,
+            "output_block": "id_paging_mic_in_id_zone1_jack_out",
+            "output_channel": 1,
+            "source_task": "id_paging_mic_in"
+          },
+          {
+            "destination_task": "id_analog_out1",
+            "input_block": "id_zone1_id_analog_out1_jack_in",
+            "input_channel": 1,
+            "output_block": "id_zone1_id_analog_out1_jack_out",
+            "output_channel": 1,
+            "source_task": "id_zone1"
+          },
+          {
+            "destination_task": "id_paging_mic_in",
+            "input_block": "id_paging_mic_in",
+            "input_channel": 1,
+            "output_block": "capture",
+            "output_channel": 9,
+            "source_task": "system"
+          },
+          {
+            "destination_task": "id_paging_mic_in",
+            "input_block": "id_paging_mic_in",
+            "input_channel": 2,
+            "output_block": "capture",
+            "output_channel": 10,
+            "source_task": "system"
+          },
+          {
+            "destination_task": "id_analog_in",
+            "input_block": "id_analog_in",
+            "input_channel": 1,
+            "output_block": "capture",
+            "output_channel": 1,
+            "source_task": "system"
+          },
+          {
+            "destination_task": "system",
+            "input_block": "playback",
+            "input_channel": 7,
+            "output_block": "id_analog_out1",
+            "output_channel": 1,
+            "source_task": "id_analog_out1"
+          }
+        ]
+      },
+      "id": "478448a3-6059-4aef-8c20-45dde637f2e6",
+      "label": "fusion_c0: 1 - 89b3a6b9-baec-43e2-af1f-00e032823b33",
+      "location": ""
+    }
+  ],
+  "settings": {
+    "audio": {}
+  }
+}

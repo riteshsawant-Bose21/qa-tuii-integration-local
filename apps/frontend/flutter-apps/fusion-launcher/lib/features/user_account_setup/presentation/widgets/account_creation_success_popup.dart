@@ -2,7 +2,6 @@ import 'dart:ui';
 
 import 'package:flutter/material.dart';
 
-
 Future<void> showSuccessPopup(BuildContext context, Function onDismiss, {int durationInMils = 1000}) {
   return showDialog(
     context: context,

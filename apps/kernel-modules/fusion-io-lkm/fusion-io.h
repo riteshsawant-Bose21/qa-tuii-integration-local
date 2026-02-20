@@ -26,8 +26,6 @@ enum endpoint_cmd_msg_op_size {
     ENDPOINT_CMD_MSG_OP_16BIT
 };
 
-#define ENDPOINT_CMD_MSG_ADDR_NONE 0xff
-
 struct endpoint_cmd_msg {
     u8                            reg_addr;
     enum endpoint_cmd_msg_op_size op_size;
@@ -93,21 +91,20 @@ struct endpoint_gpio {
 enum endpoint_cmd_type {
     EP_CMD_TYPE_CFG         = 0,
 
-    /* adc */
-    EP_CMD_TYPE_ADC_REGOP   = 1
+    EP_CMD_TYPE_REGOP   = 1
 };
 
 struct endpoint_cmd {
-    char                     name[MAX_STRING];
-    bool                     export;
-    enum endpoint_cmd_type   type;
+    char                    name[MAX_STRING];
+    bool                    export;
+    enum endpoint_cmd_type  type;
 
-    size_t                   num_msgs;
-    struct endpoint_cmd_msg  *msgs;
+    size_t                  num_msgs;
+    struct endpoint_cmd_msg *msgs;
 
-    struct device_attribute  dev_attr;
+    struct device_attribute dev_attr;
 
-    struct endpoint          *parent_endpoint;
+    struct endpoint         *parent_endpoint;
 };
 
 
@@ -362,6 +359,26 @@ enum ep9512t_regs {
     EP9512T_REG_EDID            = 0xFF  // EDID 256-byte block
 };
 
+struct config_sequence_cmd {
+    char                    name[MAX_STRING];
+    char                    parent_ep_name[MAX_STRING];
+    size_t                  num_msgs;
+    struct endpoint_cmd_msg *msgs;
+
+    u16                     seq_delay_ms;
+
+    struct endpoint         *parent_ep;
+};
+
+struct config_sequence {
+    size_t                     num_pwrup_cmds;
+    struct config_sequence_cmd *pwrup_cmds;
+    size_t                     num_cfg_cmds;
+    struct config_sequence_cmd *cfg_cmds;
+    size_t                     num_post_cfg_cmds;
+    struct config_sequence_cmd *post_cfg_cmds;
+};
+
 struct endpoint {
     char                    name[MAX_STRING];
     enum endpoint_type      type;
@@ -380,7 +397,7 @@ struct endpoint {
     struct endpoint_cmd     *cmds;
 
     int                     (*ep_handle_irq)(struct endpoint_gpio *);
-    int                     (*ep_configure)(struct endpoint *, struct endpoint_cmd *);
+    int                     (*ep_configure)(struct endpoint *, struct config_sequence_cmd *);
     
     struct base_device      *parent_base_device;
     struct io_card          *parent_io_card;
@@ -437,7 +454,7 @@ enum io_card_type {
 struct io_card {
     u8                      num_inputs;
     u8                      num_outputs;
-    u8                      slot;
+    u8                      sw_port;
 
     struct id_data          data;
     
@@ -455,7 +472,10 @@ enum base_device_type {
     BD_TYPE_NONE,
 
     BD_TYPE_FIXED_IO_START = BD_TYPE_NONE + 1,
-    BD_TYPE_FUSION_C0      = BD_TYPE_FIXED_IO_START,
+    BD_TYPE_FUSION_POWERSMART = BD_TYPE_FIXED_IO_START,
+    BD_TYPE_FUSION_C1_EVK,
+    BD_TYPE_FUSION_FM6,
+    BD_TYPE_FUSION_FM8Y,
     BD_TYPE_FIXED_IO_END,
 
     BD_TYPE_SLOT_IO_START  = BD_TYPE_FIXED_IO_END + 1,
@@ -464,6 +484,8 @@ enum base_device_type {
 
 struct base_device {
     struct id_data          data;
+
+    struct config_sequence  cfg_seq;
 
     size_t                  num_eps;
     struct endpoint         *endpoints;
@@ -481,7 +503,6 @@ struct fusion_io_base_drvdata {
     struct base_device     *fusion_device;
     struct i2c_adapter     *i2c_adapter;
     struct i2c_mux_core    *muxc;
-    bool                   ready;
 };
 
 
@@ -497,9 +518,9 @@ extern const struct base_device    *default_bds[];
 
 
 // x_configure callbacks defined in fusion_io_device.c
-int ads7128_configure(struct endpoint *, struct endpoint_cmd *);
-int tca9544_configure(struct endpoint *, struct endpoint_cmd *);
-int ep9512t_configure(struct endpoint *, struct endpoint_cmd *);
+int ads7128_configure(struct endpoint *, struct config_sequence_cmd *);
+int tca9544_configure(struct endpoint *, struct config_sequence_cmd *);
+int ep9512t_configure(struct endpoint *, struct config_sequence_cmd *);
 
 // x_handle_irq callbacks defined in fusion_io_device.c
 int tca9544_handle_irq(struct endpoint_gpio *);

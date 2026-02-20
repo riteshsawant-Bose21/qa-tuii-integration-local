@@ -1,7 +1,31 @@
 /// -------------------
 /// Relationship Manager
 /// -------------------
-enum RelationshipType { floorListening, zoneListening, zoneSourceSet, hardwareLocation }
+enum RelationshipType {
+  floorAreas,
+  zoneAreas,
+  zoneSourceSet,
+  zoneSources,
+  zoneSubZones,
+  sourceSetSources,
+  hardwareLocation,
+  equipLocation,
+  hardwareFloor,
+  circuitHardware,
+  zoneCircuits,
+  wireConnection,
+  processingBlock,
+  zonePriorities,
+  zoneFunctions,
+  sourcePriorityData,
+  sceneSetScenes,
+  sceneActions,
+  eventActions,
+  actionItemMapping,
+  actionValueMapping,
+  actionParamMapping,
+  eventsItemMapping,
+}
 
 class RelationshipManager {
   final Map<RelationshipType, Map<String, Set<String>>> _parentToChildren = {};
@@ -16,6 +40,13 @@ class RelationshipManager {
   void unlink(RelationshipType type, String parentId, String childId) {
     _parentToChildren[type]?[parentId]?.remove(childId);
     _childToParents[type]?[childId]?.remove(parentId);
+  }
+
+  void reOrder(RelationshipType type, String parentId, List<String> newOrder) {
+    if (!_parentToChildren.containsKey(type)) return;
+    if (!_parentToChildren[type]!.containsKey(parentId)) return;
+
+    _parentToChildren[type]?[parentId] = Set<String>.from(newOrder);
   }
 
   Set<String> getChildren(RelationshipType type, String parentId) => _parentToChildren[type]?[parentId] ?? {};
@@ -45,8 +76,8 @@ class RelationshipManager {
   /// --- JSON Support ---
   Map<String, dynamic> toJson() {
     return {
-      "parentToChildren": _parentToChildren.map((type, map) => MapEntry(type.toString(), map.map((k, v) => MapEntry(k, v.toList())))),
-      "childToParents": _childToParents.map((type, map) => MapEntry(type.toString(), map.map((k, v) => MapEntry(k, v.toList())))),
+      "parentToChildren": _parentToChildren.map((type, map) => MapEntry(type.name.toString(), map.map((k, v) => MapEntry(k, v.toList())))),
+      "childToParents": _childToParents.map((type, map) => MapEntry(type.name.toString(), map.map((k, v) => MapEntry(k, v.toList())))),
     };
   }
 
@@ -59,7 +90,7 @@ class RelationshipManager {
     final childJson = json["childToParents"] as Map<String, dynamic>? ?? {};
 
     for (final entry in parentJson.entries) {
-      final type = RelationshipType.values.firstWhere((e) => e.toString() == entry.key);
+      final type = RelationshipType.values.firstWhere((e) => e.name == entry.key);
       _parentToChildren[type] = {};
       (entry.value as Map<String, dynamic>).forEach((k, v) {
         _parentToChildren[type]![k] = Set<String>.from(v);
@@ -67,7 +98,7 @@ class RelationshipManager {
     }
 
     for (final entry in childJson.entries) {
-      final type = RelationshipType.values.firstWhere((e) => e.toString() == entry.key);
+      final type = RelationshipType.values.firstWhere((e) => e.name == entry.key);
       _childToParents[type] = {};
       (entry.value as Map<String, dynamic>).forEach((k, v) {
         _childToParents[type]![k] = Set<String>.from(v);

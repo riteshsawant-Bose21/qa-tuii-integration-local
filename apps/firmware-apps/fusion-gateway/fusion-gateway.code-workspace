@@ -1,0 +1,11 @@
+{
+	"folders": [
+		{
+			"path": "."
+		},
+		{
+			"path": "../fusion-services-core"
+		}
+	],
+	"settings": {}
+}

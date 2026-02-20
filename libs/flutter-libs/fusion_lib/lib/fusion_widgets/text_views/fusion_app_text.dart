@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:fusion_lib/fusion_lib.dart';
 
 /// A customizable text widget for the Fusion design system.
 ///
@@ -64,13 +65,16 @@ class FusionAppText extends StatelessWidget {
   final TextOverflow? textOverflow;
 
   /// Accessibility identifier for the text.
-  final String? accessIdentifier;
+  final String? semanticId;
 
   /// Accessibility label for the text.
   final String? accessLabel;
 
   /// Custom text style to override default styling.
   final TextStyle? style;
+
+  /// Whether the first letter of the text should be capitalized.
+  final bool capitalize;
 
   /// Creates a [FusionAppText] widget.
   ///
@@ -88,18 +92,20 @@ class FusionAppText extends StatelessWidget {
     this.maxLine,
     this.fontStyle = FontStyle.normal,
     this.underLine = false,
-    this.accessIdentifier,
+    this.capitalize = true,
+    this.semanticId,
     this.accessLabel,
     this.textOverflow,
   });
 
   @override
   Widget build(BuildContext context) {
+    /// Process the text for capitalization if needed
+    String displayText = capitalize && text.isNotEmpty ? text[0].toUpperCase() + text.substring(1) : text;
+
     /// Builds the FusionAppText widget with semantics for accessibility.
-    return Semantics(
-      container: true,
-      identifier: accessIdentifier ?? text,
-      label: accessLabel ?? text,
+    return SemanticHelper.staticText(
+      testId: SemanticHelper.createTestId(SemanticTypes.text, semanticId ?? text),
 
       /// Exclude semantics from the child widget to avoid redundancy.
       child: ExcludeSemantics(
@@ -107,7 +113,7 @@ class FusionAppText extends StatelessWidget {
 
         /// Displays the text with the specified properties.
         child: Text(
-          text,
+          displayText,
           textAlign: textAlign,
           overflow: textOverflow ?? ((maxLine != null) ? TextOverflow.ellipsis : null),
           maxLines: maxLine,

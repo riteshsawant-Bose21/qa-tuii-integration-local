@@ -11,3 +11,20 @@ dist
 
 # inteli j .idea
 .idea
+
+# vscode
+.vs*
+
+# environment files
+.env
+.env.local
+
+# kernel modules
+*.cmd*
+*.d
+*.o
+*.ko
+Module.symvers
+modules.order
+*.mod*
+

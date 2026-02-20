@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
-import 'package:fusion_lib/models/fusion_models.dart';
+import 'package:fusion_lib/fusion_lib.dart';
 
 import '../../../../../core/service_locator.dart';
 
@@ -12,7 +12,6 @@ Future<LocationModel?> showConfigureDeviceDialog(
   Function(FloorModel) onNewFloorCreated,
   Function(FloorModel) onFloorUpdated,
 ) async {
-  String? selectedFloorId = locationEntity.floorId;
   String? selectedListeningAreaId = locationEntity.listeningAreaId;
 
   bool isLocationSelected = locationEntity.floorId != null && locationEntity.listeningAreaId != null;
@@ -22,12 +21,10 @@ Future<LocationModel?> showConfigureDeviceDialog(
     barrierDismissible: false,
     builder: (BuildContext ctx) {
       final double width = 400;
-      final bool isSmallScreen = MediaQuery.of(context).size.width < 700;
 
       return BlocBuilder<ProjectViewModel, ProjectViewModelState>(
         builder: (BuildContext context, ProjectViewModelState state) {
           final List<FloorModel> floors = serviceLocator<ProjectViewModel>().floors;
-          final List<ListeningArea> allListeningAreas = serviceLocator<ProjectViewModel>().listeningAreas;
 
           return StatefulBuilder(
             builder: (BuildContext context, StateSetter setState) {
@@ -75,15 +72,15 @@ Future<LocationModel?> showConfigureDeviceDialog(
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: <Widget>[
-                                  Text(
-                                    'Configure Device',
+                                  FusionAppText(
+                                    text: 'Configure Device',
                                     style: Theme.of(
                                       context,
                                     ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold, color: Theme.of(context).primaryColor, fontSize: 18),
                                   ),
                                   const SizedBox(height: 4),
-                                  Text(
-                                    'Set location and port assignments',
+                                  FusionAppText(
+                                    text: 'Set location and port assignments',
                                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Theme.of(context).textTheme.bodySmall?.color, fontSize: 14),
                                   ),
                                 ],
@@ -140,7 +137,7 @@ Future<LocationModel?> showConfigureDeviceDialog(
                                         color: !isLocationSelected ? Theme.of(context).primaryColor : Colors.grey,
                                       ),
                                       const SizedBox(width: 12),
-                                      const Text('No specific location', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
+                                      const FusionAppText(text: 'No specific location', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
                                     ],
                                   ),
                                   value: 'none',
@@ -202,10 +199,15 @@ Future<LocationModel?> showConfigureDeviceDialog(
                                             crossAxisSpacing: 8,
                                             mainAxisExtent: 56,
                                           ),
-                                          itemCount: floor.listeningAreaIds.length,
+                                          itemCount:
+                                              serviceLocator<ProjectViewModel>()
+                                                  .getListeningAreasForFloor(
+                                                    floorId: floor.id,
+                                                  )
+                                                  .length,
                                           itemBuilder: (BuildContext context, int index) {
                                             final List<ListeningArea> allListeningAreaForFloor = serviceLocator<ProjectViewModel>().getListeningAreasForFloor(
-                                              floor.id,
+                                              floorId: floor.id,
                                             );
                                             final ListeningArea listeningArea = allListeningAreaForFloor[index];
                                             final bool isSelected = selectedListeningAreaId == listeningArea.id;
@@ -233,7 +235,7 @@ Future<LocationModel?> showConfigureDeviceDialog(
                                                     // Update the ListeningArea name in the parent widget
                                                     final ListeningArea updatedArea = listeningArea.copyWith(name: val);
 
-                                                    serviceLocator<ProjectViewModel>().updateListeningArea(updatedArea);
+                                                    serviceLocator<ProjectViewModel>().updateListeningArea(area: updatedArea);
                                                   },
                                                 ),
                                                 value: listeningArea.id,
@@ -245,7 +247,6 @@ Future<LocationModel?> showConfigureDeviceDialog(
                                                       floorId: floor.id,
                                                       listeningAreaId: val,
                                                     );
-                                                    selectedFloorId = floor.id;
                                                     selectedListeningAreaId = val;
                                                     isLocationSelected = true;
                                                   });
@@ -260,18 +261,14 @@ Future<LocationModel?> showConfigureDeviceDialog(
                                         InkWell(
                                           onTap: () {
                                             // Create a new ListeningArea
-                                            final String areaName = "Area ${floor.listeningAreaIds.length + 1}";
+                                            final String areaName = "Area ${serviceLocator<ProjectViewModel>().listeningAreas.length + 1}";
                                             final ListeningArea newListeningArea = ListeningArea(
                                               name: areaName,
-                                              vertices: <Offset>[
-                                                const Offset(-0.5, -0.5),
-                                                const Offset(0.5, -0.5),
-                                                const Offset(0.5, 0.5),
-                                                const Offset(-0.5, 0.5),
-                                              ],
+                                              vertices: <Offset>[],
+                                              isDrawn: false,
                                             );
 
-                                            serviceLocator<ProjectViewModel>().addListeningArea(newListeningArea, floor.id);
+                                            serviceLocator<ProjectViewModel>().addListeningArea(area: newListeningArea, floorId: floor.id);
                                           },
                                           child: Container(
                                             margin: const EdgeInsets.symmetric(horizontal: 1, vertical: 2),
@@ -287,8 +284,8 @@ Future<LocationModel?> showConfigureDeviceDialog(
                                                   Icons.add,
                                                   color: Theme.of(context).primaryColor,
                                                 ),
-                                                const Text(
-                                                  "Add new area",
+                                                const FusionAppText(
+                                                  text: "Add new area",
                                                   style: TextStyle(
                                                     fontSize: 14,
                                                     fontWeight: FontWeight.w600,
@@ -310,12 +307,10 @@ Future<LocationModel?> showConfigureDeviceDialog(
                                   //Create a new FloorEntity
                                   final FloorModel newFloor = FloorModel(
                                     name: 'Floor ${floors.length + 1}',
-                                    listeningAreaIds: <String>[],
                                     floorPlan: FloorPlanModel.defaultFloorPlan,
                                   );
 
-                                  serviceLocator<ProjectViewModel>().addFloor(newFloor);
-                                  // onNewFloorCreated(newFloor);
+                                  serviceLocator<ProjectViewModel>().addFloor(floor: newFloor);
                                 },
                                 child: Container(
                                   margin: const EdgeInsets.symmetric(horizontal: 5, vertical: 8),
@@ -330,8 +325,8 @@ Future<LocationModel?> showConfigureDeviceDialog(
                                         Icons.add,
                                         color: Theme.of(context).primaryColor,
                                       ),
-                                      title: const Text(
-                                        "Add new floor",
+                                      title: const FusionAppText(
+                                        text: "Add new floor",
                                         style: TextStyle(fontWeight: FontWeight.w600),
                                       ),
                                     ),
@@ -393,7 +388,7 @@ Future<LocationModel?> showConfigureDeviceDialog(
                                   borderRadius: BorderRadius.circular(8),
                                 ),
                               ),
-                              child: const Text('Cancel'),
+                              child: const FusionAppText(text: 'Cancel'),
                             ),
                             const SizedBox(width: 12),
                             ElevatedButton(
@@ -407,7 +402,7 @@ Future<LocationModel?> showConfigureDeviceDialog(
                                 ),
                                 elevation: 2,
                               ),
-                              child: const Text('Save Changes'),
+                              child: const FusionAppText(text: 'Save Changes'),
                             ),
                           ],
                         ),
@@ -439,15 +434,15 @@ Widget _buildSectionHeader(BuildContext context, String title, IconData icon, St
             color: Theme.of(context).primaryColor,
           ),
           const SizedBox(width: 8),
-          Text(
-            title,
+          FusionAppText(
+            text: title,
             style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold, color: Theme.of(context).primaryColor, fontSize: 16),
           ),
         ],
       ),
       const SizedBox(height: 4),
-      Text(
-        subtitle,
+      FusionAppText(
+        text: subtitle,
         style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Theme.of(context).textTheme.bodySmall?.color, fontSize: 14),
       ),
     ],
@@ -530,8 +525,8 @@ class _LocationConfigurationTabState extends State<LocationConfigurationTab> wit
                               Icons.home,
                               color: Theme.of(context).primaryColor,
                             ),
-                            title: Text(
-                              floor.name,
+                            title: FusionAppText(
+                              text: floor.name,
                               style: const TextStyle(fontWeight: FontWeight.w600),
                             ),
                             children: <Widget>[
@@ -544,9 +539,16 @@ class _LocationConfigurationTabState extends State<LocationConfigurationTab> wit
                                   crossAxisSpacing: 8,
                                   mainAxisExtent: 56,
                                 ),
-                                itemCount: floor.listeningAreaIds.length,
+                                itemCount:
+                                    serviceLocator<ProjectViewModel>()
+                                        .getListeningAreasForFloor(
+                                          floorId: floor.id,
+                                        )
+                                        .length,
                                 itemBuilder: (BuildContext context, int index) {
-                                  final List<ListeningArea> allListeningAreaForFloor = serviceLocator<ProjectViewModel>().getListeningAreasForFloor(floor.id);
+                                  final List<ListeningArea> allListeningAreaForFloor = serviceLocator<ProjectViewModel>().getListeningAreasForFloor(
+                                    floorId: floor.id,
+                                  );
                                   final ListeningArea listeningArea = allListeningAreaForFloor[index];
                                   final bool isSelected = widget.selectedListeningAreaId == listeningArea.id;
 
@@ -561,8 +563,8 @@ class _LocationConfigurationTabState extends State<LocationConfigurationTab> wit
                                     ),
                                     child: RadioListTile<String>(
                                       contentPadding: const EdgeInsets.symmetric(horizontal: 12),
-                                      title: Text(
-                                        listeningArea.name,
+                                      title: FusionAppText(
+                                        text: listeningArea.name,
                                         style: TextStyle(
                                           fontSize: 14,
                                           fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
@@ -637,10 +639,10 @@ class NewFloorRoomEntry extends StatefulWidget {
   });
 
   @override
-  _NewFloorRoomEntryState createState() => _NewFloorRoomEntryState();
+  NewFloorRoomEntryState createState() => NewFloorRoomEntryState();
 }
 
-class _NewFloorRoomEntryState extends State<NewFloorRoomEntry> {
+class NewFloorRoomEntryState extends State<NewFloorRoomEntry> {
   bool _isCreatingNewFloor = false;
 
   void _addNewListeningArea(FloorModel floor) {
@@ -649,31 +651,14 @@ class _NewFloorRoomEntryState extends State<NewFloorRoomEntry> {
       final ListeningArea newListeningArea = ListeningArea(
         name: area,
         //small Square at center, calculate default vertices for that
-        vertices: <Offset>[const Offset(-0.5, -0.5), const Offset(0.5, -0.5), const Offset(0.5, 0.5), const Offset(-0.5, 0.5)],
+        vertices: <Offset>[],
+        isDrawn: false,
       );
 
-      serviceLocator<ProjectViewModel>().addListeningArea(newListeningArea, floor.id);
+      serviceLocator<ProjectViewModel>().addListeningArea(area: newListeningArea, floorId: floor.id);
 
       // floor.listeningAreas.add(newListeningArea);
       // widget.onFloorUpdated(widget.existingFloors, LocationModel(floorId: floor.id, listeningAreaId: newListeningArea.id));
-    }
-  }
-
-  void _submit() {
-    if ((widget.selectedFloor != null || widget.floorController.text.trim().isNotEmpty) && widget.roomController.text.trim().isNotEmpty) {
-      final FloorModel floorEntity =
-          widget.selectedFloor ??
-          FloorModel(
-            name: widget.floorController.text,
-            listeningAreaIds: <String>[],
-            floorPlan: FloorPlanModel.defaultFloorPlan,
-          );
-
-      _addNewListeningArea(floorEntity);
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please select a floor and enter a room name')),
-      );
     }
   }
 
@@ -687,7 +672,7 @@ class _NewFloorRoomEntryState extends State<NewFloorRoomEntry> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: <Widget>[
-              const Text('Create New Floor'),
+              const FusionAppText(text: 'Create New Floor'),
               Switch(
                 value: _isCreatingNewFloor,
                 onChanged: (bool val) {
@@ -717,14 +702,14 @@ class _NewFloorRoomEntryState extends State<NewFloorRoomEntry> {
               children: <Widget>[
                 Expanded(
                   child: DropdownButtonFormField<FloorModel>(
-                    value: widget.selectedFloor,
+                    initialValue: widget.selectedFloor,
                     decoration: const InputDecoration(labelText: 'Select Floor'),
                     items:
                         widget.existingFloors
                             .map(
                               (FloorModel floor) => DropdownMenuItem<FloorModel>(
                                 value: floor,
-                                child: Text(floor.name),
+                                child: FusionAppText(text: floor.name),
                               ),
                             )
                             .toList(),
