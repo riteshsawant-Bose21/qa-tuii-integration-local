@@ -6,7 +6,7 @@ import (
 	"bytes"
 	"fmt"
 	"fusion/internal/api"
-	"fusion/internal/logging"
+	"fusion-services-core/logging"
 	"fusion/internal/routes"
 	"io"
 	"net/http"

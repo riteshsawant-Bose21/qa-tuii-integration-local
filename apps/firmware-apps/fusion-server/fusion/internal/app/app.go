@@ -4,11 +4,11 @@ import (
 	"bufio"
 	"context"
 	"fmt"
+	"fusion-services-core/logging"
 	"fusion/internal/api"
 	"fusion/internal/cluster"
 	clustertransport "fusion/internal/cluster/transport"
 	"fusion/internal/controllers"
-	"fusion/internal/logging"
 	"fusion/internal/network"
 	"fusion/internal/persistence"
 	"fusion/internal/pubsub"
@@ -90,11 +90,13 @@ func NewApp(config *api.AppConfig) *App {
 	publicRouter := mux.NewRouter()
 	publicRouter.Use(loggingMiddleware(config))
 	publicRouter.Use(recoveryMiddleware())
+	publicRouter.Use(corsMiddleware())
 
 	// Setup the private routes
 	privateRouter := mux.NewRouter()
 	privateRouter.Use(loggingMiddleware(config))
 	privateRouter.Use(recoveryMiddleware())
+	privateRouter.Use(corsMiddleware())
 
 	app := &App{
 		Logger:            logger,
@@ -593,4 +595,28 @@ func (rec *statusRecorder) Hijack() (net.Conn, *bufio.ReadWriter, error) {
 		return hijacker.Hijack()
 	}
 	return nil, nil, fmt.Errorf("underlying ResponseWriter does not implement http.Hijacker")
+}
+
+// corsMiddleware adds CORS headers to all responses
+func corsMiddleware() mux.MiddlewareFunc {
+	logging.GetLogger().Warn(
+		"Enabled CORS middleware for manufacturing tests. Review and adjust for production use.",
+	)
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			// Set CORS headers
+			w.Header().Set("Access-Control-Allow-Origin", "*")
+			w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS")
+			w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With")
+			w.Header().Set("Access-Control-Max-Age", "3600")
+
+			// Handle preflight OPTIONS request
+			if r.Method == "OPTIONS" {
+				w.WriteHeader(http.StatusOK)
+				return
+			}
+
+			next.ServeHTTP(w, r)
+		})
+	}
 }

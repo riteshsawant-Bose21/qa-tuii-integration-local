@@ -43,3 +43,5 @@ export 'project_cloud/project_list_response.dart';
 export 'project_entities/media_files/media_file_model.dart';
 
 export 'timezones/time_zone.dart';
+
+export 'mdns/mdns_device.dart';

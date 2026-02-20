@@ -153,28 +153,16 @@ class FusionButton extends StatelessWidget {
                 decoration: BoxDecoration(
                   gradient: isActive ? gradient : gradient?.withOpacity(0.3),
                   color: isActive
-                      ? (activeBackgroundColor ??
-                            context.colorScheme.elevation5)
-                      : (activeBackgroundColor?.withOpacity(0.3) ??
-                                Theme.of(context).colorScheme.elevation5)
-                            .withOpacity(0.3),
+                      ? (activeBackgroundColor ?? Theme.of(context).colorScheme.elevation5)
+                      : (activeBackgroundColor?.withOpacity(0.3) ?? Theme.of(context).colorScheme.elevation5).withOpacity(0.3),
                   borderRadius: BorderRadius.circular(borderRadius),
-                  border: Border.all(
-                    color: isActive || borderColor == Colors.transparent
-                        ? borderColor
-                        : borderColor.withOpacity(0.4),
-                  ),
+                  border: Border.all(color: isActive || borderColor == Colors.transparent ? borderColor : borderColor.withOpacity(0.4)),
                 ),
                 child: isLoading
                     ? const SizedBox(
                         width: 24,
                         height: 24,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          valueColor: AlwaysStoppedAnimation<Color>(
-                            Colors.white,
-                          ),
-                        ),
+                        child: CircularProgressIndicator(strokeWidth: 2, valueColor: AlwaysStoppedAnimation<Color>(Colors.white)),
                       )
                     : Row(
                         mainAxisSize: MainAxisSize.min,
@@ -185,11 +173,8 @@ class FusionButton extends StatelessWidget {
                               prefixIcon,
                               size: 16,
                               color: isActive
-                                  ? foregroundColor ??
-                                        context.colorScheme.primaryBlack
-                                  : foregroundColor?.withOpacity(0.5) ??
-                                        context.colorScheme.primaryBlack
-                                            .withOpacity(0.5),
+                                  ? foregroundColor ?? context.colorScheme.primaryBlack
+                                  : foregroundColor?.withOpacity(0.5) ?? context.colorScheme.primaryBlack.withOpacity(0.5),
                             ),
                             const SizedBox(width: 8),
                           ],
@@ -197,13 +182,7 @@ class FusionButton extends StatelessWidget {
                             child: Text(
                               label,
                               textAlign: TextAlign.center,
-                              style:
-                                  textStyle ??
-                                  Theme.of(
-                                    context,
-                                  ).textTheme.labelLarge?.copyWith(
-                                    color: context.colorScheme.primaryBlack,
-                                  ),
+                              style: textStyle ?? Theme.of(context).textTheme.labelLarge?.copyWith(color: context.colorScheme.primaryBlack),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                             ),
@@ -214,10 +193,8 @@ class FusionButton extends StatelessWidget {
                               suffixIcon,
                               size: 16,
                               color: isActive
-                                  ? foregroundColor ??
-                                        context.colorScheme.primaryBlack
-                                  : foregroundColor?.withOpacity(0.5) ??
-                                        context.colorScheme.primaryBlack,
+                                  ? foregroundColor ?? context.colorScheme.primaryBlack
+                                  : foregroundColor?.withOpacity(0.5) ?? context.colorScheme.primaryBlack,
                             ),
                           ],
                         ],

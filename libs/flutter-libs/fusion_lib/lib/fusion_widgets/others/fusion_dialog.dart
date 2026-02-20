@@ -1,10 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:fusion_lib/fusion_lib.dart';
-import 'package:fusion_lib/fusion_theme/app_theme.dart';
 
-import '../buttons/fusion_button.dart';
-import '../buttons/fusion_outlined_button.dart';
-import '../text_views/fusion_app_text.dart';
 
 /// A customizable and reusable dialog for the Fusion design system.
 ///
@@ -98,6 +94,7 @@ class FusionDialog extends StatelessWidget {
     this.titleTextStyle,
     this.descriptionTextStyle,
     this.primaryButtonWidth = 90,
+    this.primaryButtonColor,
   });
 
   @override
@@ -116,89 +113,72 @@ class FusionDialog extends StatelessWidget {
         backgroundColor: backgroundColor ?? context.colorScheme.elevation1,
         insetPadding: const EdgeInsets.symmetric(horizontal: 40, vertical: 24),
 
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 50),
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: IntrinsicHeight(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  if (icon != null) ...[
-                    Icon(
-                      icon,
-                      size: 48,
-                      color:
-                          iconColor ??
-                          Theme.of(context).colorScheme.primaryWhite,
-                    ),
-                    const SizedBox(height: 16),
-                  ],
-                  FusionAppText(
-                    text: title,
-                    textAlign: TextAlign.center,
-                    style:
-                        titleTextStyle ??
-                        Theme.of(context).textTheme.bodySmall?.copyWith(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                        ),
-                  ),
-                  if (description != null) ...[
-                    const SizedBox(height: 12),
-                    Flexible(
-                      child: SingleChildScrollView(
-                        child: FusionAppText(
-                          text: description!,
-                          textAlign: TextAlign.center,
-                          style:
-                              descriptionTextStyle ??
-                              Theme.of(
-                                context,
-                              ).textTheme.bodySmall?.copyWith(fontSize: 11),
-                        ),
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 50),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: IntrinsicHeight(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (icon != null) ...[Icon(icon, size: 48, color: iconColor ?? Theme.of(context).colorScheme.primaryWhite), const SizedBox(height: 16)],
+                FusionAppText(
+                  text: title,
+                  textAlign: TextAlign.center,
+                  style:
+                      titleTextStyle ??
+                      Theme.of(context).textTheme.bodySmall?.copyWith(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                      ),
+                ),
+                if (description != null) ...[
+                  const SizedBox(height: 12),
+                  Flexible(
+                    child: SingleChildScrollView(
+                      child: FusionAppText(
+                        text: description!,
+                        textAlign: TextAlign.center,
+                        style: descriptionTextStyle ?? Theme.of(context).textTheme.bodySmall?.copyWith(fontSize: 11),
                       ),
                     ),
-                  ],
-                  const SizedBox(height: 24),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.end,
-                    children: [
-                      if (secondaryButtonLabel != null &&
-                          onSecondaryPressed != null) ...[
-                        SizedBox(
-                          width: 90,
-                          child: FusionOutlinedButton(
-                            label: secondaryButtonLabel!,
-                            textStyle: Theme.of(
-                              context,
-                            ).textTheme.labelLarge?.copyWith(fontSize: 11),
-                            onTap: () {
-                              onSecondaryPressed?.call();
-                            },
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                      ],
+                  ),
+                ],
+                const SizedBox(height: 24),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    if (secondaryButtonLabel != null && onSecondaryPressed != null) ...[
                       SizedBox(
-                        width: primaryButtonWidth,
-                        child: FusionButton(
-                          label: primaryButtonLabel,
-                          textStyle: Theme.of(context).textTheme.labelLarge
-                              ?.copyWith(
-                                fontSize: 11,
-                                color: context.colorScheme.primaryBlack,
-                              ),
-                          isActive: true,
+                        width: 90,
+                        child: FusionOutlinedButton(
+                          label: secondaryButtonLabel!,
+                          textStyle: Theme.of(context).textTheme.labelLarge?.copyWith(fontSize: 11),
                           onTap: () {
-                            onPrimaryPressed.call();
+                            onSecondaryPressed?.call();
                           },
                         ),
                       ),
+                      const SizedBox(width: 8),
                     ],
-                  ),
-                ],
-              ),
+                    SizedBox(
+                      width: primaryButtonWidth,
+                      child: FusionButton(
+                        label: primaryButtonLabel,
+                        textStyle: Theme.of(context).textTheme.labelLarge?.copyWith(
+                          fontSize: 11,
+                          color: context.colorScheme.primaryBlack,
+                        ),
+                        isActive: true,
+                        activeBackgroundColor: primaryButtonColor,
+                        onTap: () {
+                          onPrimaryPressed.call();
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+              ],
             ),
           ),
         ),

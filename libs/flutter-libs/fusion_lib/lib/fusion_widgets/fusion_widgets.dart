@@ -41,3 +41,7 @@ export 'text_views/fusion_app_text.dart';
 export 'text_views/fusion_currency_text.dart';
 export 'text_views/fusion_gradient_text.dart';
 export 'text_views/fusion_rich_text.dart';
+
+//popups
+export 'popups/confirmation_popup.dart';
+export 'popups/action_popup.dart';

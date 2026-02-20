@@ -1,4 +1,5 @@
 import 'package:flutter/cupertino.dart';
+import 'package:flutter/services.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
 class VolumeControlButtons extends StatelessWidget {
@@ -37,6 +38,9 @@ class VolumeControlButtons extends StatelessWidget {
                 style: context.textTheme.labelSmall!.copyWith(
                   fontSize: 10,
                 ),
+                inputFormatters: <TextInputFormatter>[
+                  FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}')),
+                ],
                 hintStyle: context.textTheme.labelSmall!.copyWith(
                   fontSize: 10,
                 ),

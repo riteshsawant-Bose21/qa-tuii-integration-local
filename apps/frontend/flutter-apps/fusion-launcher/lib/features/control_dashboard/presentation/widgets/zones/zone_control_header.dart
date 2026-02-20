@@ -1,3 +1,4 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:fusion_launcher/core/assets/asset_icons.dart';
 import 'package:fusion_launcher/core/service_locator.dart';
@@ -5,7 +6,7 @@ import 'package:fusion_launcher/features/configuration/presentation/viewmodel/pr
 import 'package:fusion_launcher/features/control_dashboard/presentation/widgets/zones/volume_control_buttons.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
-class ZoneControlHeader extends StatelessWidget {
+class ZoneControlHeader extends StatefulWidget {
   const ZoneControlHeader({
     super.key,
     required this.zone,
@@ -13,9 +14,28 @@ class ZoneControlHeader extends StatelessWidget {
 
   final Zone zone;
 
+  @override
+  State<ZoneControlHeader> createState() => _ZoneControlHeaderState();
+}
+
+class _ZoneControlHeaderState extends State<ZoneControlHeader> {
   bool get shouldShowVolumeControl {
     //check if it has subzones, if it does not have subzones show volume control
-    return serviceLocator<ProjectViewModel>().getSubZonesForZone(parentZoneId: zone.id).isEmpty;
+    return serviceLocator<ProjectViewModel>().getSubZonesForZone(parentZoneId: widget.zone.id).isEmpty;
+  }
+
+  late final TextEditingController volumeController;
+
+  @override
+  void initState() {
+    volumeController = TextEditingController(text: "5.0");
+    super.initState();
+  }
+
+  @override
+  void dispose() {
+    volumeController.dispose();
+    super.dispose();
   }
 
   @override
@@ -23,7 +43,7 @@ class ZoneControlHeader extends StatelessWidget {
     return Container(
       height: 44,
       decoration: ShapeDecoration(
-        color: zone.color.withAlpha((0.5 * 255).toInt()),
+        color: widget.zone.color.withAlpha((0.5 * 255).toInt()),
         shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.only(
             topLeft: Radius.circular(8.0),
@@ -41,31 +61,54 @@ class ZoneControlHeader extends StatelessWidget {
         children: <Widget>[
           Expanded(
             child: FusionAppText(
-              text: zone.name,
+              text: widget.zone.name,
               style: context.textTheme.labelMedium,
             ),
           ),
 
           if (shouldShowVolumeControl) ...<Widget>[
             VolumeControlButtons(
+              volumeController: volumeController,
               onVolumeChanged: (double newVolume) {
-                // Handle volume change logic here
+                if (newVolume < 0.0) {
+                  newVolume = 0.0;
+                } else if (newVolume > 10.0) {
+                  newVolume = 10.0;
+                }
+                volumeController.text = newVolume.toStringAsFixed(1);
               },
               onIncrement: () {
-                // Handle increment logic here
+                double currentVolume = double.tryParse(volumeController.text) ?? 0.0;
+
+                currentVolume += 1.0;
+                if (currentVolume > 10.0) {
+                  currentVolume = 10.0;
+                }
+                volumeController.text = currentVolume.toStringAsFixed(1);
               },
               onDecrement: () {
-                // Handle decrement logic here
+                double currentVolume = double.tryParse(volumeController.text) ?? 0.0;
+
+                currentVolume -= 1.0;
+                if (currentVolume < 0.0) {
+                  currentVolume = 0.0;
+                }
+                volumeController.text = currentVolume.toStringAsFixed(1);
               },
             ),
 
             // Fix 1: Volume Icon
             IconButton(
-              onPressed: () {},
+              onPressed: () {
+                serviceLocator<ProjectViewModel>().muteZone(
+                  zoneId: widget.zone.id,
+                  isMuted: !widget.zone.muted,
+                );
+              },
               padding: EdgeInsets.zero, // Removes internal padding
               constraints: const BoxConstraints(), // Removes 48px limit
               icon: Icon(
-                Icons.volume_up_outlined,
+                widget.zone.muted ? Icons.volume_off_outlined : Icons.volume_up_outlined,
                 size: 16,
                 color: context.colorScheme.iconWhite,
               ),

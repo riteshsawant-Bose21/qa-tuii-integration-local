@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 
-import '../buttons/radio_button.dart';
-
 class SemanticHelper {
   // Core identifier generator
   static String createTestId(String type, String identifier) {
@@ -13,9 +11,8 @@ class SemanticHelper {
   // Button elements
   static Widget button({
     required String testId,
-    bool? enabled,
-    bool? selected,
     required Widget child,
+    bool isActive=true,
     String? label,
     bool? state,
     VoidCallback? ontap,
@@ -25,10 +22,9 @@ class SemanticHelper {
       button: true,
       onTap: ontap,
       container: true,
-      enabled: enabled,
+      enabled: isActive,
       label: label,
       child: child,
-      checked: state,
     );
   }
 
@@ -120,6 +116,7 @@ class SemanticHelper {
     String? label,
   }) {
     return Semantics(
+      container: true,
       identifier: testId,
       label: label,
       readOnly: true,

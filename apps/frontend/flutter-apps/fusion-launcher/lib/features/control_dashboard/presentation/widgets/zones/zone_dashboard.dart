@@ -1,6 +1,7 @@
 // --- 2. MAIN DASHBOARD ---
 
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'zone_control_widget.dart';
 import 'package:fusion_lib/fusion_theme/color_scheme.dart';
 import 'package:fusion_lib/models/project_entities/zone_model.dart';
@@ -30,23 +31,30 @@ class ZoneDashboard extends StatelessWidget {
           borderRadius: BorderRadius.circular(16),
         ),
       ),
-      child: Column(
-        children: <Widget>[
-          const DashboardSectionHeader(
-            title: 'ZONES',
-          ),
-          Expanded(
-            child: ListView.builder(
-              itemCount: serviceLocator<ProjectViewModel>().zones.length,
-              itemBuilder: (BuildContext context, int index) {
-                final Zone zone = serviceLocator<ProjectViewModel>().zones[index];
-                return ZoneControlCard(
-                  zone: zone,
-                );
-              },
-            ),
-          ),
-        ],
+      child: BlocConsumer<ProjectViewModel, ProjectViewModelState>(
+        listener: (BuildContext context, ProjectViewModelState state) {
+          // TODO: implement listener
+        },
+        builder: (BuildContext context, ProjectViewModelState state) {
+          return Column(
+            children: <Widget>[
+              const DashboardSectionHeader(
+                title: 'ZONES',
+              ),
+              Expanded(
+                child: ListView.builder(
+                  itemCount: serviceLocator<ProjectViewModel>().zones.length,
+                  itemBuilder: (BuildContext context, int index) {
+                    final Zone zone = serviceLocator<ProjectViewModel>().zones[index];
+                    return ZoneControlCard(
+                      zone: zone,
+                    );
+                  },
+                ),
+              ),
+            ],
+          );
+        },
       ),
     );
   }

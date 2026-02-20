@@ -188,4 +188,11 @@ extension EventsManager on ProjectManager {
       events: projectService!.events.copyWith(reorderedList),
     );
   }
+
+  List<FusionEvent> getAllTimedEvents() {
+    if (projectService == null) {
+      throw Exception('No project is currently open');
+    }
+    return projectService!.getAllTimedEvents();
+  }
 }

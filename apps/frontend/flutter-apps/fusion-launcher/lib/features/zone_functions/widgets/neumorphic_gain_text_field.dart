@@ -12,6 +12,8 @@ class NeumorphicGainTextField extends StatefulWidget {
   final double minGain;
   final bool showDbSuffix;
   final bool enabled;
+  final bool showCursor;
+  final Color? backgroundColor;
 
   const NeumorphicGainTextField({
     super.key,
@@ -24,6 +26,8 @@ class NeumorphicGainTextField extends StatefulWidget {
     this.controllerValue,
     this.showDbSuffix = true,
     this.enabled = true,
+    this.showCursor = true,
+    this.backgroundColor,
   });
 
   @override
@@ -85,14 +89,16 @@ class _NeumorphicGainTextFieldState extends State<NeumorphicGainTextField> {
           height: widget.height,
           alignment: Alignment.center,
           raised: false,
-          color: context.colorScheme.elevation2,
+          color: widget.backgroundColor ?? context.colorScheme.elevation2,
           borderRadius: widget.borderRadius,
           child: TextField(
+            showCursor: widget.showCursor,
             enabled: widget.enabled,
             controller: controller,
             textAlign: TextAlign.center,
             focusNode: _focusNode,
             style: Theme.of(context).textTheme.labelLarge,
+            mouseCursor: widget.enabled ? SystemMouseCursors.text : SystemMouseCursors.forbidden,
             inputFormatters: <TextInputFormatter>[FilteringTextInputFormatter.allow(RegExp(r'^-?\d*\.?\d{0,2}$'))],
             decoration: InputDecoration(
               border: InputBorder.none,
@@ -139,6 +145,7 @@ class UnitNumberTextField extends StatefulWidget {
   final double? max;
   final double? min;
   final String unit;
+  final bool enabled;
 
   const UnitNumberTextField({
     super.key,
@@ -150,6 +157,7 @@ class UnitNumberTextField extends StatefulWidget {
     this.width = 84,
     this.borderRadius = 8,
     this.controllerValue,
+    this.enabled = true,
   });
 
   @override
@@ -214,6 +222,8 @@ class _UnitNumberTextFieldState extends State<UnitNumberTextField> {
           color: context.colorScheme.elevation2,
           borderRadius: widget.borderRadius,
           child: TextField(
+            enabled: widget.enabled,
+            mouseCursor: widget.enabled ? SystemMouseCursors.text : SystemMouseCursors.forbidden,
             controller: controller,
             textAlign: TextAlign.center,
             focusNode: _focusNode,
