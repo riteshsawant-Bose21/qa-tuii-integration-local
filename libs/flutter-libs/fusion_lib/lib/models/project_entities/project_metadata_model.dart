@@ -3,19 +3,19 @@
 
 import 'dart:convert';
 
-class ProjectMetadataModel {
+class ProjectMetadata {
   final String fileId;
   final String projectName;
   final String thumbnailUrl;
 
-  ProjectMetadataModel({
+  ProjectMetadata({
     required this.fileId,
     required this.thumbnailUrl,
     required this.projectName,
   });
 
-  factory ProjectMetadataModel.fromJson(Map<String, dynamic> json) {
-    return ProjectMetadataModel(
+  factory ProjectMetadata.fromJson(Map<String, dynamic> json) {
+    return ProjectMetadata(
       fileId: json['file_id'] as String,
       thumbnailUrl: json['thumbnail_url'] as String,
       projectName: json['project_name'] as String? ?? '',
@@ -30,12 +30,20 @@ class ProjectMetadataModel {
     };
   }
 
-  ProjectMetadataModel copyWith({
+  static ProjectMetadata empty() {
+    return ProjectMetadata(
+      fileId: '',
+      thumbnailUrl: '',
+      projectName: '',
+    );
+  }
+
+  ProjectMetadata copyWith({
     String? fileId,
     String? thumbnailUrl,
     String? projectName,
   }) {
-    return ProjectMetadataModel(
+    return ProjectMetadata(
       fileId: fileId ?? this.fileId,
       thumbnailUrl: thumbnailUrl ?? this.thumbnailUrl,
       projectName: projectName ?? this.projectName,

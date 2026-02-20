@@ -1,6 +1,5 @@
 import 'package:flutter/cupertino.dart';
 import 'package:fusion_lib/fusion_lib.dart';
-import 'package:fusion_lib/project_manger/project_properties/project_properties_service.dart';
 
 extension ProjectPropertiesManager on ProjectManager {
   //get Project id
@@ -26,11 +25,6 @@ extension ProjectPropertiesManager on ProjectManager {
   //set Project colors
   void setProjectColors(List<Color> colors) {
     projectService = projectService!.copyWith(colors: colors);
-  }
-
-  //set Project meta data
-  void setMetaData(String metaData) {
-    projectService = projectService!.copyWith(metaData: metaData);
   }
 
   //get Project virtual IP
@@ -86,5 +80,33 @@ extension ProjectPropertiesManager on ProjectManager {
   //get all fusion devices
   List<FusionDsp> getAllFusionDevices() {
     return projectService!.getAllFusionDevices();
+  }
+
+  void updateProjectMetadata({required ProjectMetadata metaData}) {
+    try {
+      if (projectService == null) {
+        FusionLogger.log(tag: LogTag.exceptions, message: "No project is currently loaded. Cannot update metadata.");
+        return;
+      }
+      projectService = projectService!.copyWith(
+        metadata: metaData,
+      );
+      saveCurrentProject();
+    } catch (e) {
+      FusionLogger.log(tag: LogTag.exceptions, message: "Error updating project metadata: $e");
+    }
+  }
+
+  ProjectMetadata? getProjectMetadata() {
+    try {
+      if (projectService == null) {
+        FusionLogger.log(tag: LogTag.exceptions, message: "No project is currently loaded. Cannot get metadata.");
+        return null;
+      }
+      return projectService!.metadata;
+    } catch (e) {
+      FusionLogger.log(tag: LogTag.exceptions, message: "Error getting project metadata: $e");
+    }
+    return null;
   }
 }

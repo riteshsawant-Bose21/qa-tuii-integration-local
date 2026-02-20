@@ -1072,7 +1072,10 @@ class _CreateNewProjectDialogState extends State<CreateNewProjectDialog> {
                                         final String projectName = projectNameController.text.trim();
 
                                         FusionUiUtils.showLoader(context);
-                                        final NewProjectDetails newProject = NewProjectDetails(name: projectName);
+                                        final NewProjectDetails newProject = NewProjectDetails(
+                                          name: projectName,
+                                          metadata: ProjectMetadata.empty(),
+                                        );
                                         final ProjectData? projectData = await projectViewModel.createAndSaveNewProject(newProject);
                                         if (context.mounted) FusionUiUtils.hideLoader(context);
                                         projectViewModel.openProject(projectData!.id);
