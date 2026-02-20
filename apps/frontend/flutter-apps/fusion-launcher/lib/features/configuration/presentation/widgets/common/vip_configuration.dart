@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:fusion_lib/fusion_logger/logger.dart';
-import 'package:fusion_lib/fusion_networking/ble/ble_connection_manager.dart';
+import 'package:fusion_lib/fusion_lib.dart';
 
 import '../ble/ble_listing.dart';
 import '../ble/setup_vip_screen.dart';
@@ -19,12 +18,12 @@ void configureVip(BuildContext context) async {
 
     if (isVipSet == true && context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('VIP Configuration Successful')),
+        const SnackBar(content: FusionAppText(text: 'VIP Configuration Successful')),
       );
     } else {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('VIP Configuration Failed')),
+          const SnackBar(content: FusionAppText(text:'VIP Configuration Failed')),
         );
       }
     }

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:fusion_lib/fusion_lib.dart';
 
 class CleanIconButton extends StatelessWidget {
   final IconData icon;
@@ -120,8 +121,8 @@ class CleanDialog extends StatelessWidget {
     return AlertDialog(
       backgroundColor: Colors.white,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
-      title: Text(
-        title,
+      title: FusionAppText(
+        text: title,
         style: TextStyle(
           fontSize: 16,
           fontWeight: FontWeight.w500,

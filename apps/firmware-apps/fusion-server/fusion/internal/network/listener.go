@@ -7,7 +7,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"fusion/internal/logging"
+	"fusion-services-core/logging"
 )
 
 const defaultBufferSize = 65535
@@ -47,6 +47,7 @@ func isConnClosed(err error) bool {
 }
 
 func (l *Listener) Start() {
+
 	// Prevent accidental double-starts
 	if !l.started.CompareAndSwap(false, true) {
 		logging.GetLogger().Error("listener already started")

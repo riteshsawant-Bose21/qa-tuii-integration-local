@@ -8,9 +8,11 @@ import (
 	"time"
 
 	"fusion/internal/api"
-	"fusion/internal/logging"
+	"fusion-services-core/logging"
 	"fusion/internal/persistence"
 	"fusion/internal/utils"
+
+	"github.com/stretchr/testify/require"
 )
 
 const (
@@ -138,4 +140,38 @@ func TestChecksumCalculation(t *testing.T) {
 	if fullState.Checksum != checksum {
 		t.Errorf("Expected same checksum for identical state, got %s and %s", fullState.Checksum, checksum)
 	}
+}
+
+func TestSaveTasksPersistsFullAndDeletesMissing(t *testing.T) {
+	dir := t.TempDir()
+	dbPath := filepath.Join(dir, "tasks_test.db")
+
+	sm := persistence.NewStateManager(&api.AppConfig{NodeName: "test"})
+	p, err := persistence.NewPersistence(dbPath, sm)
+	require.NoError(t, err)
+
+	// 1. Save two tasks
+	original := map[string]*api.Task{
+		"one": {ID: "one", CronExpr: "* * * * *", Description: "t1", Type: api.TaskTypeSnapshot},
+		"two": {ID: "two", CronExpr: "* * * * *", Description: "t2", Type: api.TaskTypeSnapshot},
+	}
+	require.NoError(t, p.SaveTasks(original))
+
+	// Load tasks
+	loaded, err := p.LoadTasks()
+	require.NoError(t, err)
+	require.Len(t, loaded, 2)
+
+	// 2. Remove one task and save again
+	delete(original, "one")
+	require.NoError(t, p.SaveTasks(original))
+
+	// Load again
+	loaded2, err := p.LoadTasks()
+	require.NoError(t, err)
+
+	// Verify only "two" remains
+	require.Len(t, loaded2, 1)
+	require.NotNil(t, loaded2["two"])
+	require.Nil(t, loaded2["one"])
 }

@@ -327,6 +327,12 @@ public:
         return get_string("target");
     }
 
+    /// Test whether the parameter setting has a value specified.
+    bool has_value() const
+    {
+        return has_member("value");
+    }
+
 
     /// Get the row index for this parameter setting.  If the row is not set,
     /// this function returns 0.

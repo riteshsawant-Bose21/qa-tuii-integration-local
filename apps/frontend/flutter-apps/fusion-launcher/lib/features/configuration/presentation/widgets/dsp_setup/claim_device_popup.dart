@@ -1,10 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:fusion_launcher/core/service_locator.dart';
-import 'package:fusion_lib/fusion_utils/app_settings.dart';
-import 'package:fusion_lib/fusion_utils/shared_preference_handler.dart';
 import 'package:pretty_qr_code/pretty_qr_code.dart';
-
-import '../../../../../core/utils/broadcast_controllers.dart';
 
 class QRClaimPopup extends StatefulWidget {
   final String deviceIdToClaim;
@@ -42,16 +37,16 @@ class _QRClaimPopupState extends State<QRClaimPopup> {
 
   @override
   void initState() {
-    claimUrl =
-        "http://${serviceLocator<FusionPreferences>().cloudWebUrl}/claim/${widget.deviceIdToClaim}?token=${serviceLocator<SharedPreferencesHandler>().getString(SharedPreferenceKeys.accessToken)}";
+    // claimUrl =
+    //     "http://${serviceLocator<FusionPreferences>().cloudWebUrl}/claim/${widget.deviceIdToClaim}?token=${serviceLocator<SharedPreferencesHandler>().getString(SharedPreferenceKeys.accessToken)}";
     super.initState();
   }
 
   Future<void> _launchUrl(BuildContext context) async {
-    cloudRedirectUrl = "claim/${widget.deviceIdToClaim}?token=${serviceLocator<SharedPreferencesHandler>().getString(SharedPreferenceKeys.accessToken)}";
-    debugPrint("Claim URL: $claimUrl");
-    Navigator.pop(context);
-    projectTabBroadcastController.add(cloudTableIndex);
+    // cloudRedirectUrl = "claim/${widget.deviceIdToClaim}?token=${serviceLocator<SharedPreferencesHandler>().getString(SharedPreferenceKeys.accessToken)}";
+    // debugPrint("Claim URL: $claimUrl");
+    // Navigator.pop(context);
+    // projectTabBroadcastController.add(cloudTableIndex);
   }
 
   @override

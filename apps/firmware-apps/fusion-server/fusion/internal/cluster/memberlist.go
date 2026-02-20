@@ -5,7 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"fusion/internal/api"
-	"fusion/internal/logging"
+	"fusion-services-core/logging"
 	"fusion/internal/persistence"
 	"fusion/internal/routes"
 	"io"
@@ -22,22 +22,40 @@ import (
 )
 
 const (
-	gossipInterval   = 100 * time.Millisecond
-	probeInterval    = 5 * time.Second
-	probeTimeout     = 2 * time.Second
-	pushPullInterval = 30 * time.Second
-	retryInterval    = 2 * time.Second
-	retryTimes       = 5
-	serialPath       = "/sys/firmware/devicetree/base/serial-number"
-	serialUnknown    = "Unknown"
-	suspicionMult    = 3
-	tcpTimeout       = 10 * time.Second
+	gossipInterval      = 20 * time.Millisecond
+	gossipToTheDeadTime = 30 * time.Second
+	probeInterval       = 100 * time.Millisecond
+	probeTimeout        = 100 * time.Millisecond
+	pushPullInterval    = 1 * time.Second
+	retryInterval       = 2 * time.Second
+	retryTimes          = 5
+	serialPath          = "/sys/firmware/devicetree/base/serial-number"
+	serialUnknown       = "Unknown"
+	suspicionMult       = 3
+	tcpTimeout          = 10 * time.Second
 )
+
+type MemberlistTransport struct {
+	ml *memberlist.Memberlist
+}
+
+func (t *MemberlistTransport) LocalNode() *memberlist.Node {
+	return t.ml.LocalNode()
+}
+
+func (t *MemberlistTransport) Members() []*memberlist.Node {
+	return t.ml.Members()
+}
+
+func (t *MemberlistTransport) SendReliable(n *memberlist.Node, msg []byte) error {
+	return t.ml.SendReliable(n, msg)
+}
 
 // CreateMemberlist creates and configures a new memberlist instance
 func CreateMemberlist(appConfig *api.AppConfig, delegate *ClusterDelegate) *memberlist.Memberlist {
 	config := memberlist.DefaultLANConfig()
 	config.GossipInterval = gossipInterval
+	config.GossipToTheDeadTime = gossipToTheDeadTime
 	config.Name = appConfig.NodeName
 	config.BindAddr = appConfig.BindAddr
 	config.BindPort = appConfig.BindPort
@@ -50,7 +68,12 @@ func CreateMemberlist(appConfig *api.AppConfig, delegate *ClusterDelegate) *memb
 		config.Logger = log.New(io.Discard, "", 0)
 	}
 
+	logger := logging.GetLogger()
+	logger.Info("[GOSSIP] config bind=%s:%d advertise=%s:%d name=%s",
+		config.BindAddr, config.BindPort, config.AdvertiseAddr, config.AdvertisePort, config.Name)
+
 	config.Delegate = delegate
+	config.Events = &ClusterEventDelegate{}
 	config.TCPTimeout = tcpTimeout
 	config.DisableTcpPings = false
 	config.ProbeInterval = probeInterval
@@ -60,8 +83,10 @@ func CreateMemberlist(appConfig *api.AppConfig, delegate *ClusterDelegate) *memb
 
 	list, err := memberlist.Create(config)
 	if err != nil {
-		logging.GetLogger().Fatal("Failed to create memberlist: %v", err)
+		logger.Fatal("Failed to create memberlist: %v", err)
 	}
+	logger.Info("gossip config bind=%s:%d advertise=%s:%d ",
+		config.BindAddr, config.BindPort, config.AdvertiseAddr, config.AdvertisePort)
 
 	return list
 }
@@ -76,6 +101,7 @@ func (c *Cluster) JoinMemberlist() error {
 	}
 
 	logger := logging.GetLogger()
+	logger.Info("[GOSSIP] seeds=%v self=%s:%d", joinAddrs, c.appConfig.BindAddr, c.appConfig.BindPort)
 
 	if len(joinAddrs) == 0 {
 		// This is the first node in the cluster

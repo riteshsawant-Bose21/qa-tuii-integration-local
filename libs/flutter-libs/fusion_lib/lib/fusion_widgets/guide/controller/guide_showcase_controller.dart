@@ -56,7 +56,13 @@ class GuideShowCaseController extends Cubit<GuideShowCaseState> {
   final BuildContext context;
 
   GuideShowCaseController(this.context) : super(GuideShowCaseState.initial()) {
-    _initialize();
+    // _initialize();
+  }
+
+  bool shouldShowStep(GuideShowCaseSteps step) {
+    return false;
+    // if (state.isGuideCompleted) return false;
+    // return state.currentStep == step && !state.completedSteps.contains(step);
   }
 
   Future<void> guideNeeded() async {
@@ -76,11 +82,6 @@ class GuideShowCaseController extends Cubit<GuideShowCaseState> {
     final nextStep = _findNextStep({});
     emit(state.copyWith(currentStep: nextStep));
     // Notify UI (Cubit emit handles reactivity)
-  }
-
-  bool shouldShowStep(GuideShowCaseSteps step) {
-    if (state.isGuideCompleted) return false;
-    return state.currentStep == step && !state.completedSteps.contains(step);
   }
 
   bool isStepCompleted(GuideShowCaseSteps step) => state.completedSteps.contains(step);

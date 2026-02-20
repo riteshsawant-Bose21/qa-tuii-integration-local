@@ -2,7 +2,7 @@ package network
 
 import (
 	"fusion/internal/api"
-	"fusion/internal/logging"
+	"fusion-services-core/logging"
 	"fusion/internal/server/handler"
 	"net"
 	"time"
@@ -45,8 +45,6 @@ func NewSAPServer(groups []string, port string, handler *handler.Handler) (*SAPS
 		),
 		handler: handler,
 	}
-
-	sap.Start()
 
 	return sap, nil
 }

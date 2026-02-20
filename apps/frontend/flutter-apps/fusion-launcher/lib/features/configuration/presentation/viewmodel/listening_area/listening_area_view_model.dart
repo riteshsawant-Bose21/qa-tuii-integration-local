@@ -67,6 +67,16 @@ extension ListeningAreaViewModel on ProjectViewModel {
     }
   }
 
+  List<ListeningArea> getListeningAreasForCurrentFloor() {
+    try {
+      final String currentSelectedFloorId = currentFloor.id;
+      return getListeningAreasForFloor(floorId: currentSelectedFloorId);
+    } catch (e) {
+      FusionLogger.log(tag: LogTag.project, message: "Failed to get floor listening areas: $e");
+      return <ListeningArea>[];
+    }
+  }
+
   Zone? getZonesForListeningArea({required String areaId}) {
     try {
       return projectManager.getZoneForListeningArea(areaId);
@@ -124,6 +134,24 @@ extension ListeningAreaViewModel on ProjectViewModel {
       return projectManager.getAvailableListeningAreasForZone(id: zoneId);
     } catch (e) {
       FusionLogger.log(tag: LogTag.project, message: "Failed to get available listening areas for zone: $e");
+      return <ListeningArea>[];
+    }
+  }
+
+  List<ListeningArea> getPendingListeningAreaToDraw({required String floorId}) {
+    try {
+      return projectManager.getPendingListeningAreaToDraw(floorId: floorId);
+    } catch (e) {
+      FusionLogger.log(tag: LogTag.project, message: "Failed to get pending listening areas to draw for floor: $e");
+      return <ListeningArea>[];
+    }
+  }
+
+  List<ListeningArea> getAllDrawnListeningAreasForFloor({required String floorId}) {
+    try {
+      return projectManager.getAllDrawnListeningAreasForFloor(floorId: floorId);
+    } catch (e) {
+      FusionLogger.log(tag: LogTag.project, message: "Failed to get drawn listening areas for floor: $e");
       return <ListeningArea>[];
     }
   }

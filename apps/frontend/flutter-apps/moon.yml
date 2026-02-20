@@ -6,19 +6,19 @@ tasks:
   # Mac, iOS and Android build
   build-mac-ios-android:
     deps:
-      - "fusion-launcher:build-apk"
+      # - "fusion-launcher:build-apk"
       - "fusion-launcher:build-macos"
-      - "fusion-launcher:build-ios"
+      # - "fusion-launcher:build-ios"
   
   # Windows build
   build-win:
     deps:
       - "fusion-launcher:build-windows"
   
-  # Web build
-  build-web:
-    deps:
-      - "fusion-launcher:build-web"
+  # # Web build
+  # build-web:
+  #   deps:
+  #     - "fusion-launcher:build-web"
   
   win-automation-build:
     deps:

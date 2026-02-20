@@ -1,0 +1,14 @@
+# Fusion fusion-gateway service file
+[Unit]
+Description=Fusion Server
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/fusion-gateway-start.sh
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

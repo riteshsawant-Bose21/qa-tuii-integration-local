@@ -6,6 +6,8 @@
 #include <string>
 #include <functional>
 #include <thread>
+#include <pthread.h>
+#include <sched.h>
 #include <sys/un.h>
 #include <sys/socket.h>
 #include <cstring>
@@ -140,6 +142,10 @@ public:
             SPDLOG_INFO("Starting TelemetryMonitor...");
             monitor_thread = std::thread(&TelemetryMonitor::monitor_loop, this);
             events_thread = std::thread(&TelemetryMonitor::manage_events_loop, this);
+            name_thread(monitor_thread, "dsp-telm-mon");
+            name_thread(events_thread, "dsp-telm-evt");
+            pin_thread(monitor_thread, "monitor_thread");
+            pin_thread(events_thread, "events_thread");
 
             running = true;
         }
@@ -443,6 +449,28 @@ public:
 
 
 private:
+    void pin_thread(std::thread &t, const char *thread_label) const
+    {
+        constexpr int kTelemetryCpu = 0;
+        cpu_set_t cpuset;
+        CPU_ZERO(&cpuset);
+        CPU_SET(kTelemetryCpu, &cpuset);
+        int rc = pthread_setaffinity_np(t.native_handle(), sizeof(cpu_set_t), &cpuset);
+        if (rc != 0)
+        {
+            SPDLOG_WARN("Failed to set {} affinity to CPU {}: {}", thread_label, kTelemetryCpu, strerror(rc));
+        }
+    }
+
+    void name_thread(std::thread &t, const char *name) const
+    {
+        int rc = pthread_setname_np(t.native_handle(), name);
+        if (rc != 0)
+        {
+            SPDLOG_WARN("Failed to set thread name '{}': {}", name, strerror(rc));
+        }
+    }
+
     /// Callback to send event telemetry on UDS
     ///
     /// @param message the message to send
