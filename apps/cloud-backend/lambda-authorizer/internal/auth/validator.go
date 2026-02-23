@@ -51,7 +51,6 @@ func NewAuth0Validator(domain string) *Auth0Validator {
 }
 
 func (a *Auth0Validator) ValidateToken(tokenString string) (*jwt.MapClaims, error) {
-	fmt.Printf("[Lambda-Authorizer] Validating token: %s\n", tokenString)
 	tokenString = strings.TrimPrefix(tokenString, "Bearer ")
 	tokenString = strings.TrimPrefix(tokenString, "bearer ")
 	token, _, err := new(jwt.Parser).ParseUnverified(tokenString, jwt.MapClaims{})
@@ -131,7 +130,6 @@ func (a *Auth0Validator) getPublicKey(kid string) (*rsa.PublicKey, error) {
 
 func (a *Auth0Validator) fetchJWKS() (*JWKS, error) {
 	url := fmt.Sprintf("https://%s/.well-known/jwks.json", a.domain)
-	fmt.Printf("[Lambda-Authorizer] Fetching JWKS from: %s\n", url)
 	
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
@@ -144,18 +142,16 @@ func (a *Auth0Validator) fetchJWKS() (*JWKS, error) {
 		return nil, fmt.Errorf("failed to fetch JWKS: %w", err)
 	}
 	defer resp.Body.Close()
-	
+
 	if resp.StatusCode != http.StatusOK {
-		fmt.Printf("[Lambda-Authorizer] JWKS fetch failed: status %d from %s\n", resp.StatusCode, url)
 		return nil, fmt.Errorf("failed to fetch JWKS: status %d", resp.StatusCode)
 	}
-	
+
 	var jwks JWKS
 	if err := json.NewDecoder(resp.Body).Decode(&jwks); err != nil {
 		return nil, fmt.Errorf("failed to decode JWKS: %w", err)
 	}
-	
-	fmt.Printf("[Lambda-Authorizer] Successfully fetched JWKS with %d keys\n", len(jwks.Keys))
+
 	return &jwks, nil
 }
 

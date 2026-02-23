@@ -225,7 +225,10 @@ func (suite *ProductIntegrationTestSuite) setupAPI() error {
 	authSvc := &mockAuthService{}
 	authMiddleware := &mockMiddlewareStruct{}
 
-	apiServer, err := api.New(apiConfig, productSVC, projectSVC, userSVC, authSvc, authMiddleware, loggers)
+	// Initialize Role Management Service with nil since we don't need it for product tests
+	roleManagementSvc := userdb.NewRoleManagementService(suite.db)
+
+	apiServer, err := api.New(apiConfig, productSVC, projectSVC, userSVC, authSvc, authMiddleware, roleManagementSvc, loggers)
 	if err != nil {
 		return fmt.Errorf("failed to initialize API server: %w", err)
 	}

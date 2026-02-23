@@ -3,11 +3,21 @@ package authorizer
 import (
 	"context"
 	"strings"
-	"fmt"
+	"time"
+
+	"github.com/BoseProfessional/lambda-authorizer/internal/logger"
 )
 
 // HandleRequestAuthorizer supports API Gateway REQUEST authorizer events
 func HandleRequestAuthorizer(ctx context.Context, event map[string]interface{}) (map[string]interface{}, error) {
+	startTime := time.Now()
+	
+	// Extract request ID from context for structured logging
+	requestID := extractRequestID(event)
+	log := logger.NewLogger(requestID)
+
+	log.Info("Processing authorization request")
+
 	// Extract token from headers (case-insensitive)
 	headers, _ := event["headers"].(map[string]interface{})
 	token := ""
@@ -17,22 +27,30 @@ func HandleRequestAuthorizer(ctx context.Context, event map[string]interface{}) 
 			break
 		}
 	}
+
 	if strings.TrimSpace(token) == "" {
+		log.LogAuthAttempt("", "", "", false, "No token provided")
 		return denyResponse("anonymous", "No token provided"), nil
 	}
 
 	claims, err := validator.ValidateToken(token)
-	fmt.Printf("[Lambda-Authorizer] Recived claims: %v\n", claims)
+
 	if err != nil {
-		fmt.Printf("[Lambda-Authorizer] Token validation failed: %v - Denying request\n", err)
+		log.Error("Token validation failed", err)
+		log.LogAuthAttempt("", "", "", false, "Invalid token")
 		return denyResponse("anonymous", "Invalid token"), nil
 	}
 
 	email, err := validator.ExtractUserEmail(claims)
-	fmt.Printf("[Lambda-Authorizer] Extracted email: %s\n", email)
+
 	if err != nil {
+		log.Error("Failed to extract email from token", err)
 		return denyResponse("anonymous", "No email in token"), nil
 	}
+
+	log.WithFields("Token validated successfully", logger.LogLevelInfo, map[string]interface{}{
+		"email": email,
+	})
 
 	// Extract HTTP method and path from event
 	method := ""
@@ -41,16 +59,26 @@ func HandleRequestAuthorizer(ctx context.Context, event map[string]interface{}) 
 			method, _ = http["method"].(string)
 		}
 	}
+
 	path, _ := event["rawPath"].(string)
 	if method == "" || path == "" {
+		log.LogAuthAttempt(email, method, path, false, "Missing method or path")
 		return denyResponse(email, "Missing method or path"), nil
 	}
-	fmt.Printf("[Lambda-Authorizer] Checking permissions for %s %s\n", method, path)
 
+	// Check permissions with timing
+	permCheckStart := time.Now()
 	hasPermission, userCtx, err := permissionChecker.CheckEndpointPermissionWithContext(ctx, email, method, path)
-	fmt.Printf("[Lambda-Authorizer] Permission check result: %v, userCtx: %v, error: %v\n", hasPermission, userCtx, err)
+	permCheckDuration := time.Since(permCheckStart).Milliseconds()
 
-	if err != nil || !hasPermission {
+	if err != nil {
+		log.Error("Permission check failed", err)
+		log.LogAuthZDecision(email, method, path, false, "Permission check error", permCheckDuration)
+		return denyResponse(email, "Permission denied"), nil
+	}
+
+	if !hasPermission {
+		log.LogAuthZDecision(email, method, path, false, "Insufficient permissions", permCheckDuration)
 		return denyResponse(email, "Permission denied"), nil
 	}
 
@@ -64,6 +92,10 @@ func HandleRequestAuthorizer(ctx context.Context, event map[string]interface{}) 
 		"roleId":          userCtx.RoleID,
 		// "userPermissions": userCtx.Permissions, // e.g. comma-separated or JSON
 	}
+
+	// Log successful authorization with full context
+	totalDuration := time.Since(startTime).Milliseconds()
+	log.LogUserContext(email, method, path, contextMap, totalDuration)
 
 	return map[string]interface{}{
 		"principalId": email,
@@ -79,6 +111,16 @@ func HandleRequestAuthorizer(ctx context.Context, event map[string]interface{}) 
 		},
 		"context": contextMap,
 	}, nil
+}
+
+// extractRequestID extracts the request ID from the Lambda event
+func extractRequestID(event map[string]interface{}) string {
+	if rc, ok := event["requestContext"].(map[string]interface{}); ok {
+		if reqID, ok := rc["requestId"].(string); ok {
+			return reqID
+		}
+	}
+	return "UNKNOWN"
 }
 
 func denyResponse(principal, msg string) map[string]interface{} {
