@@ -68,8 +68,7 @@ INSERT INTO feature (id, name, description) VALUES
   (17,'project.unstar','Can unstar a project'),
   (18,'project.assign_user','Can assign a user to a project'),
   (19,'project.remove_user','Can remove a user from a project')
-  (20,'product.read','Can view product catalog and details')
-  ;
+  (20,'product.read','Can view product catalog and details');
 
 INSERT INTO feature_permission (id, feature_id, account_type_role_id, access_level_id, created_at) VALUES
   -- project_file.create

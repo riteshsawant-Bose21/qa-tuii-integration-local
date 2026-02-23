@@ -43,7 +43,6 @@ func New(cfg *Config,
 	userSvc fusion.User,
 	authSvc fusion.Auth,
 	authMiddleware middleware.AuthMiddleware,
-	roleManagementSvc *userdb.RoleManagementService,
 	loggers *log.Loggers,
 ) (*API, error) {
 
@@ -87,7 +86,6 @@ func New(cfg *Config,
 		user:                  userSvc,
 		auth:                  authSvc,
 		authMiddleware:        authMiddleware,
-		roleManagementService: roleManagementSvc,
 		appLog:                loggers.AppLogger,
 	}
 
