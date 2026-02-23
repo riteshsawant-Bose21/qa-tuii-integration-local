@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/src/services/text_formatter.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/features/create_new_project/viewmodel/create_new_project_vm.dart';
 import 'package:fusion_launcher/features/home/presentation/widgets/project_card.dart';
@@ -48,7 +49,7 @@ class _CreateNewProjectDialogState extends State<CreateNewProjectDialog> {
     final double borderRadius = 14;
 
     return BlocProvider<CreateNewProjectViewmodel>(
-      create: (_) => CreateNewProjectViewmodel()..init(isEditMode: widget.isEditMode),
+      create: (_) => CreateNewProjectViewmodel(isEditMode: widget.isEditMode),
       child: LayoutBuilder(
         builder: (BuildContext context, BoxConstraints constraints) {
           final double cardWidth = constraints.maxWidth * 0.5 > 660 ? 660 : constraints.maxWidth * 0.5;
@@ -127,7 +128,7 @@ class _CreateNewProjectDialogState extends State<CreateNewProjectDialog> {
                                             child: BorderedTextfield(
                                               controllerValue: state.name,
                                               autofocus: true,
-                                              label: "Project file name",
+                                              label: "Project file name *",
                                               hintText: "Project Name",
                                               validator: (String? value) {
                                                 if (value?.isEmpty ?? true) return "Project name cannot be empty";
@@ -155,18 +156,19 @@ class _CreateNewProjectDialogState extends State<CreateNewProjectDialog> {
                                         ],
                                       ),
                                       const SizedBox(height: 5),
-                                      BorderedTextfield(
-                                        controllerValue: state.metadata.tags?.join(','),
+                                      FusionCommaSeperatedTagTextfield(
+                                        values: state.metadata.tags ?? <String>[],
                                         label: "Project tags or categories",
                                         hintText: "Add tags or categories (separated by commas)",
-                                        onChanged: (String value) {
+                                        onChanged: (List<String> values) {
                                           createNewProjectViewmodel.updateMetaData(
-                                            state.metadata.copyWith(tags: value.split(',')),
+                                            state.metadata.copyWith(tags: values),
                                           );
                                         },
                                       ),
                                       const SizedBox(height: 5),
                                       Row(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
                                         spacing: 10,
                                         children: <Widget>[
                                           Expanded(
@@ -184,7 +186,7 @@ class _CreateNewProjectDialogState extends State<CreateNewProjectDialog> {
                                           Expanded(
                                             child: BorderedTextfield(
                                               controllerValue: state.metadata.organisationName,
-                                              label: "Organisation",
+                                              label: "Organisation *",
                                               hintText: "Organisation name",
                                               validator: (String? value) {
                                                 if (value?.isEmpty ?? true) return "Organisation cannot be empty";
@@ -241,6 +243,7 @@ class _CreateNewProjectDialogState extends State<CreateNewProjectDialog> {
 
                                                       const SizedBox(height: 5),
                                                       Row(
+                                                        crossAxisAlignment: CrossAxisAlignment.start,
                                                         spacing: 10,
                                                         children: <Widget>[
                                                           Expanded(
@@ -276,6 +279,7 @@ class _CreateNewProjectDialogState extends State<CreateNewProjectDialog> {
 
                                                       Row(
                                                         spacing: 10,
+                                                        crossAxisAlignment: CrossAxisAlignment.start,
                                                         children: <Widget>[
                                                           Expanded(
                                                             child: FusionDarkDropdown<FusionTimeZones>(
@@ -321,6 +325,7 @@ class _CreateNewProjectDialogState extends State<CreateNewProjectDialog> {
                                                       const SizedBox(height: 5),
                                                       Row(
                                                         spacing: 10,
+                                                        crossAxisAlignment: CrossAxisAlignment.start,
                                                         children: <Widget>[
                                                           Expanded(
                                                             child: FusionDarkDropdown<CurrencyType>(
@@ -341,6 +346,9 @@ class _CreateNewProjectDialogState extends State<CreateNewProjectDialog> {
                                                               controllerValue: state.metadata.budget,
                                                               label: "Target Budget",
                                                               hintText: "Budget",
+                                                              inputFormatters: <TextInputFormatter>[
+                                                                FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}')),
+                                                              ],
                                                               onChanged: (String value) {
                                                                 createNewProjectViewmodel.updateMetaData(
                                                                   state.metadata.copyWith(budget: value),
@@ -382,6 +390,7 @@ class _CreateNewProjectDialogState extends State<CreateNewProjectDialog> {
                                                       const SizedBox(height: 5),
                                                       Row(
                                                         spacing: 10,
+                                                        crossAxisAlignment: CrossAxisAlignment.start,
                                                         children: <Widget>[
                                                           Expanded(
                                                             child: FusionDarkDropdown<MeasurementUnit>(

@@ -8,20 +8,15 @@ import '../../../core/service_locator.dart';
 import '../../configuration/presentation/viewmodel/project_view_model.dart';
 
 class CreateNewProjectViewmodel extends Cubit<NewProjectDetails> {
-  CreateNewProjectViewmodel() : super(NewProjectDetails(name: '', metadata: ProjectMetaData.empty()));
+  final bool isEditMode;
 
-  bool isEditMode = false;
-
-  void init({bool isEditMode = false}) {
-    this.isEditMode = isEditMode;
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (isEditMode) {
-        final ProjectViewModel projectViewModel = serviceLocator<ProjectViewModel>();
-        final String currentProjectName = projectViewModel.projectName;
-        final ProjectMetaData? currentProjectMetaData = projectViewModel.projectMetaData;
-        emit(NewProjectDetails(name: currentProjectName, metadata: currentProjectMetaData ?? ProjectMetaData.empty()));
-      }
-    });
+  CreateNewProjectViewmodel({this.isEditMode = false}) : super(NewProjectDetails(name: '', metadata: ProjectMetaData.empty())) {
+    if (isEditMode) {
+      final ProjectViewModel projectViewModel = serviceLocator<ProjectViewModel>();
+      final String currentProjectName = projectViewModel.projectName;
+      final ProjectMetaData? currentProjectMetaData = projectViewModel.projectMetaData;
+      emit(NewProjectDetails(name: currentProjectName, metadata: currentProjectMetaData ?? ProjectMetaData.empty()));
+    }
   }
 
   void updateMetaData(ProjectMetaData updatedState) => emit(state.copyWith(metadata: updatedState));
