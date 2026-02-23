@@ -4,17 +4,26 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"log"
 	"strings"
 )
 
 const (
+	// Methods
+	MethodGet    = "GET"
+	MethodPost   = "POST"
+	MethodPut    = "PUT"
+	MethodPatch  = "PATCH"
+	MethodDelete = "DELETE"
+
 	// Project permissions
 	ProjectRead   = "project.read"
 	ProjectCreate = "project.create"
 	ProjectUpdate = "project.update"
 	ProjectDelete = "project.delete"
 	ProjectSync   = "project.sync"
+
+	// Product permissions
+	ProductRead = "product.read"
 
 	// User management permissions
 	UserRead   = "user.read"
@@ -137,30 +146,30 @@ func NewSQLPermissionChecker(db *sql.DB) *SQLPermissionChecker {
 // setupPermissions registers all endpoint permissions (same as fusion-core API)
 func (s *SQLPermissionChecker) setupPermissions() {
 	// Project permissions
-	s.registerPermission("GET", "/api/v1/projects", "project.read", "read", "View all projects")
-	s.registerPermission("POST", "/api/v1/projects", "project.create", "write", "Create new project")
-	s.registerPermission("PATCH", "/api/v1/projects/:id", "project.update", "write", "Update project")
-	s.registerPermission("DELETE", "/api/v1/projects/:id", "project.delete", "write", "Delete project")
-	s.registerPermission("PUT", "/api/v1/projects/assign-user", "project.update", "write", "Assign user to project")
-	s.registerPermission("DELETE", "/api/v1/projects/remove-user", "project.update", "write", "Remove user from project")
-	s.registerPermission("POST", "/api/v1/projects/star", "project.update", "read", "Star or unstar project")
-	s.registerPermission("POST", "/api/v1/projects/archive", "project.update", "write", "Archive or unarchive project")
-	s.registerPermission("POST", "/api/v1/projects/lock", "project.update", "write", "Lock or unlock project")
+	s.registerPermission(MethodGet, "/api/v1/projects", ProjectRead, "read", "View all projects")
+	s.registerPermission(MethodPost, "/api/v1/projects", ProjectCreate, "write", "Create new project")
+	s.registerPermission(MethodPatch, "/api/v1/projects/:id", ProjectUpdate, "write", "Update project")
+	s.registerPermission(MethodDelete, "/api/v1/projects/:id", ProjectDelete, "write", "Delete project")
+	s.registerPermission(MethodPut, "/api/v1/projects/assign-user", ProjectUpdate, "write", "Assign user to project")
+	s.registerPermission(MethodDelete, "/api/v1/projects/remove-user", ProjectUpdate, "write", "Remove user from project")
+	s.registerPermission(MethodPost, "/api/v1/projects/star", ProjectUpdate, "read", "Star or unstar project")
+	s.registerPermission(MethodPost, "/api/v1/projects/archive", ProjectUpdate, "write", "Archive or unarchive project")
+	s.registerPermission(MethodPost, "/api/v1/projects/lock", ProjectUpdate, "write", "Lock or unlock project")
 
 	// Product permissions
-	s.registerPermission("GET", "/api/v1/products", "product.read", "read", "View all products")
-	s.registerPermission("GET", "/api/v1/products/:id", "product.read", "read", "View a product details")
-	s.registerPermission("POST", "/api/v1/products/price", "product.update", "read", "View product price")
+	s.registerPermission(MethodGet, "/api/v1/products", ProductRead, "read", "View all products")
+	s.registerPermission(MethodGet, "/api/v1/products/:id", ProductRead, "read", "View a product details")
+	s.registerPermission(MethodPost, "/api/v1/products/price", ProductRead, "read", "View product price")
 
 	// User Profile permissions
-	s.registerPermission("GET", "/api/v1/users/profile", "users.profile.read", "read", "View user profile")
-	s.registerPermission("POST", "/api/v1/users/profile", "users.profile.create", "write", "Create user profile")
-	s.registerPermission("PUT", "/api/v1/users/profile/:id", "users.profile.update", "write", "Update user profile")
+	s.registerPermission(MethodGet, "/api/v1/users/profile", UserProfileRead, "read", "View user profile")
+	s.registerPermission(MethodPost, "/api/v1/users/profile", UserProfileCreate, "write", "Create user profile")
+	s.registerPermission(MethodPut, "/api/v1/users/profile/:id", UserProfileUpdate, "write", "Update user profile")
 
 	// User Settings permissions
-	s.registerPermission("GET", "/api/v1/users/settings", "users.settings.read", "read", "View user settings")
-	s.registerPermission("POST", "/api/v1/users/settings", "users.settings.create", "write", "Create user settings")
-	s.registerPermission("PUT", "/api/v1/users/settings/:id", "users.settings.update", "write", "Update user settings")
+	s.registerPermission(MethodGet, "/api/v1/users/settings", UserSettingsRead, "read", "View user settings")
+	s.registerPermission(MethodPost, "/api/v1/users/settings", UserSettingsCreate, "write", "Create user settings")
+	s.registerPermission(MethodPut, "/api/v1/users/settings/:id", UserSettingsUpdate, "write", "Update user settings")
 }
 
 // registerPermission registers a permission requirement for an endpoint
