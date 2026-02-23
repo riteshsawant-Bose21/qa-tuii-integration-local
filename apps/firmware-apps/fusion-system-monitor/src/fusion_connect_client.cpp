@@ -1274,7 +1274,8 @@ void FusionConnectClient::maybe_set_debug()
 void FusionConnectClient::update_ptp_state()
 {
     constexpr auto GM_FALSE_GRACE = std::chrono::seconds(25);
-    constexpr long long OFFSET_OK_NS = 5000; // 5 us window
+    constexpr long long OFFSET_OK_NS = 5000; // 5 us hysteresis window
+    constexpr long long OFFSET_LOCK_NS = 1000; // 1 us initial lock window
     const auto now = std::chrono::steady_clock::now();
 
     if (now - ptp_last_poll < std::chrono::milliseconds(period_ms)) return;
@@ -1317,7 +1318,8 @@ void FusionConnectClient::update_ptp_state()
     } else {
         if (master_offset_valid) {
             long long best_abs = master_offset ? std::llabs(master_offset) : 0;
-            good_now = gm_present && (best_abs <= OFFSET_OK_NS);
+            const long long thr = ptp_sync_good ? OFFSET_OK_NS : OFFSET_LOCK_NS;
+            good_now = gm_present && (best_abs <= thr);
         }
     }
 
