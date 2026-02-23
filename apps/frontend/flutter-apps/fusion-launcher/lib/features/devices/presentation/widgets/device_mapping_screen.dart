@@ -57,7 +57,7 @@ class _DeviceMappingScreenState extends State<DeviceMappingScreen> {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 24),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
@@ -85,7 +85,7 @@ class _DeviceMappingScreenState extends State<DeviceMappingScreen> {
                   color: context.colorScheme.strokeLight,
                 ),
 
-                const SizedBox(width: 24),
+                const SizedBox(width: 16),
 
                 // PANEL SECTION
                 Expanded(
@@ -377,13 +377,21 @@ class _DeviceMappingScreenState extends State<DeviceMappingScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
+        FusionAppText(
+          text: 'HARDWARES ON THE NETWORK',
+          style: context.textTheme.bodyMedium,
+        ),
+        const SizedBox(height: 12),
         Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+
           children: <Widget>[
             Icon(Icons.info_outline, size: 16, color: context.colorScheme.iconDefault),
             const SizedBox(width: 8),
             Expanded(
               child: FusionAppText(
-                text: 'Drag and drop hardware to map to devices.',
+                text: 'Drag and drop the hardwares to the unassigned area or just select the drop down to map the devices.',
+                textAlign: TextAlign.start,
                 style: TextStyle(
                   color: context.colorScheme.textBody,
                   fontSize: 13,
@@ -393,17 +401,10 @@ class _DeviceMappingScreenState extends State<DeviceMappingScreen> {
             ),
           ],
         ),
-        const SizedBox(height: 24),
-        FusionAppText(
-          text: 'HARDWARES ON THE NETWORK',
-          style: TextStyle(
-            color: context.colorScheme.textSecondary,
-            fontSize: 12,
-            fontWeight: FontWeight.w600,
-            letterSpacing: 0.5,
-          ),
-        ),
-        const SizedBox(height: 16),
+        const SizedBox(height: 12),
+        Divider(height: 1, color: context.colorScheme.strokeLight),
+        const SizedBox(height: 12),
+
         Expanded(
           child: ListView.builder(
             itemCount: widget.networkHardware.length,
@@ -423,7 +424,7 @@ class _DeviceMappingScreenState extends State<DeviceMappingScreen> {
         const SizedBox(height: 16),
         FusionNeumorphicButton(
           text: "Add a Wireless Device",
-          height: 35,
+          height: 48,
           onTap: () {
             ConfigureNetworkDialog.show(context, bluetoothOnly: true);
           },

@@ -106,7 +106,7 @@ class _ConfigureNetworkDialogState extends State<ConfigureNetworkDialog> {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: <Widget>[
           Text(
-            'CONFIGURE NETWORK & DEVICES',
+            'CONFIGURE NETWORK',
             style: TextStyle(
               color: Theme.of(context).colorScheme.textSecondary,
               fontSize: 12,

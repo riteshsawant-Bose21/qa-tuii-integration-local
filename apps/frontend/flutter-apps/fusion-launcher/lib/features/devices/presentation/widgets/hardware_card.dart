@@ -44,7 +44,7 @@ class HardwareCard extends StatelessWidget {
     return Container(
       // Use constrained width during drag, otherwise fit parent
       width: isDragging ? 280 : null,
-      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+      padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 6),
       decoration: BoxDecoration(
         // color: context.colorScheme.elevation2,
         borderRadius: BorderRadius.circular(8),
