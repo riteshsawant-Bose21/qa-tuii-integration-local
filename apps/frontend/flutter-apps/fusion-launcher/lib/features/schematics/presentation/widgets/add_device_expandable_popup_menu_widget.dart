@@ -9,9 +9,15 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../../../core/models/products_data.dart';
 import '../../../configuration/presentation/viewmodel/project_view_model.dart';
 import '../../../product_query/presentation/pages/product_query.dart';
-import 'create_new_location_widget.dart';
 import '../../views/widgets/forms/listening_area_dropdown_widget.dart';
+import 'create_new_location_widget.dart';
 
+///
+///
+/// Note: Retained the same file without any changes.
+/// Because this widget is going to change, it will be refactored later.
+///
+///
 class AddDeviceExpandablePopupMenuWidget extends StatefulWidget {
   final String sectionTitle;
   final void Function(dynamic item, String areaId, String floorId)? onTapAddDevice;
