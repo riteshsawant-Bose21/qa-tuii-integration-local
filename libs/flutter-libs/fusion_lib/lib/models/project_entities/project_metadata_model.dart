@@ -58,6 +58,10 @@ class ProjectMetaData {
   }
 
   factory ProjectMetaData.fromJson(Map<String, dynamic> json) {
+    if (json['file_version'] == null) {
+      return ProjectMetaData.empty();
+    }
+
     return ProjectMetaData(
       fileId: json['file_id'] as String,
       thumbnailUrl: json['thumbnail_url'] as String,
