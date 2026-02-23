@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -837,22 +839,29 @@ class _BorderedTextfieldState extends State<BorderedTextfield> {
               hintStyle: context.textTheme.labelLarge?.copyWith(
                 color: context.colorScheme.textPrimary.withValues(alpha: 0.4),
               ),
+              errorStyle: context.textTheme.labelLarge?.copyWith(
+                color: context.colorScheme.errorText,
+              ),
               isDense: true,
               filled: true,
               fillColor: Colors.transparent,
               contentPadding: const EdgeInsets.all(14),
               suffixIcon: widget.isObscured ? obsecuredWidget : null,
+              errorBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(borderRadius),
+                borderSide: BorderSide(color: context.colorScheme.errorText),
+              ),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(borderRadius),
-                borderSide: BorderSide(color: context.colorScheme.elevation4),
+                borderSide: BorderSide(color: context.colorScheme.strokeLight),
               ),
               disabledBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(borderRadius),
-                borderSide: BorderSide(color: context.colorScheme.elevation4),
+                borderSide: BorderSide(color: context.colorScheme.strokeLight),
               ),
               enabledBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(borderRadius),
-                borderSide: BorderSide(color: context.colorScheme.elevation4),
+                borderSide: BorderSide(color: context.colorScheme.strokeLight),
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(borderRadius),
@@ -865,6 +874,7 @@ class _BorderedTextfieldState extends State<BorderedTextfield> {
     );
   }
 }
+
 
 class FusionDarkDropdown<T> extends StatefulWidget {
   final String? title;
@@ -895,7 +905,7 @@ class _FusionDarkDropdownState<T> extends State<FusionDarkDropdown<T>> {
   Widget build(BuildContext context) {
     const double borderRadius = 12.0;
 
-    final GlobalKey<State<StatefulWidget>> childKey = GlobalKey();
+    final GlobalKey childKey = GlobalKey();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -908,130 +918,105 @@ class _FusionDarkDropdownState<T> extends State<FusionDarkDropdown<T>> {
               color: context.colorScheme.onSurface.withValues(alpha: 0.6),
             ),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 8),
         ],
-        Row(
-          children: <Widget>[
-            Expanded(
-              child: Theme(
-                data: Theme.of(context).copyWith(
-                  popupMenuTheme: const PopupMenuThemeData(
-                    color: Color(0xFFF5F5F5),
-                    elevation: 0,
-                    shadowColor: Colors.transparent,
-                    surfaceTintColor: Colors.transparent,
-                  ),
-                  splashColor: Colors.transparent,
-                  highlightColor: Colors.transparent,
-                  hoverColor: Colors.transparent,
-                ),
-                child: PopupMenuButton<T>(
-                  color: context.colorScheme.surface,
-                  shadowColor: Colors.transparent,
-                  position: PopupMenuPosition.under,
-                  tooltip: '',
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(9),
-                    side: BorderSide(
-                      color: context.colorScheme.onSurface.withValues(alpha: 0.3),
-                    ),
-                  ),
-                  offset: const Offset(0, 4),
-                  padding: EdgeInsets.zero,
-                  menuPadding: EdgeInsets.zero,
-                  clipBehavior: Clip.none,
-                  onSelected: (T value) {
-                    widget.onChanged?.call(value);
-                    setState(() => isMenuOpen = false);
-                  },
-                  onOpened: () => setState(() => isMenuOpen = true),
-                  onCanceled: () => setState(() => isMenuOpen = false),
-                  itemBuilder: (BuildContext context) {
-                    final RenderBox? findRenderObject = (childKey.currentContext?.findRenderObject() as RenderBox?);
-                    final double? childWidth = findRenderObject?.size.width;
+        SizedBox(
+          key: childKey,
+          child: GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: () async {
+              final RenderBox box = childKey.currentContext!.findRenderObject() as RenderBox;
 
-                    return <PopupMenuEntry<T>>[
-                      PopupMenuItem<T>(
-                        enabled: false,
-                        padding: const EdgeInsets.all(8),
-                        child: SizedBox(
-                          width: childWidth ?? double.maxFinite,
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
+              final Offset pos = box.localToGlobal(Offset.zero);
+              final double width = box.size.width;
+
+              setState(() => isMenuOpen = true);
+
+              final T? result = await showMenu<T>(
+                context: context,
+                color: context.colorScheme.surface,
+                elevation: 0,
+                constraints: BoxConstraints.tightFor(width: width),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(9),
+                  side: BorderSide(
+                    color: context.colorScheme.onSurface.withValues(alpha: 0.3),
+                  ),
+                ),
+                position: RelativeRect.fromLTRB(
+                  pos.dx,
+                  pos.dy + box.size.height + 4,
+                  pos.dx + width,
+                  0,
+                ),
+                items: <PopupMenuEntry<T>>[
+                  ...widget.items.map(
+                    (T item) {
+                      return PopupMenuItem<T>(
+                        value: item,
+                        padding: EdgeInsets.zero,
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                          child: Row(
                             children: <Widget>[
-                              ...widget.items.map((T item) {
-                                return Material(
-                                  color: Colors.transparent,
-                                  child: InkWell(
-                                    onTap: () {
-                                      widget.onChanged?.call(item);
-                                      Navigator.pop(context);
-                                    },
-                                    child: Row(
-                                      children: <Widget>[
-                                        Expanded(
-                                          child: Padding(
-                                            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
-                                            child: FusionAppText(
-                                              text: widget.labelBuilder(item),
-                                              style: context.textTheme.labelMedium,
-                                            ),
-                                          ),
-                                        ),
-                                        if (item == widget.selectedValue) ...<Widget>[
-                                          Icon(
-                                            LucideIcons.check,
-                                            color: context.colorScheme.onSurface,
-                                          ),
-                                          const SizedBox(width: 10),
-                                        ],
-                                      ],
-                                    ),
-                                  ),
-                                );
-                              }),
+                              Expanded(
+                                child: FusionAppText(
+                                  text: widget.labelBuilder(item),
+                                  style: context.textTheme.labelMedium,
+                                ),
+                              ),
                             ],
                           ),
                         ),
-                      ),
-                    ];
-                  },
-                  child: SemanticHelper.button(
-                    testId: SemanticHelper.createTestId(SemanticTypes.button, "${widget.title ?? 'dropdown'}_dropdown_button"),
-                    child: Container(
-                      padding: const EdgeInsets.all(10),
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(borderRadius),
-                        border: Border.all(
-                          color: isMenuOpen ? context.colorScheme.primaryWhite : context.colorScheme.elevation4,
+                      );
+                    },
+                  ),
+                ],
+              );
+
+              setState(() => isMenuOpen = false);
+
+              if (result != null) widget.onChanged?.call(result);
+            },
+            child: SemanticHelper.button(
+              testId: SemanticHelper.createTestId(
+                SemanticTypes.button,
+                "${widget.title ?? 'dropdown'}_dropdown_button",
+              ),
+              child: Container(
+                padding: const EdgeInsets.all(9),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(borderRadius),
+                  border: Border.all(
+                    color: isMenuOpen ? context.colorScheme.primaryWhite : context.colorScheme.strokeLight,
+                  ),
+                ),
+                child: Row(
+                  children: <Widget>[
+                    Expanded(
+                      child: FusionAppText(
+                        text: widget.selectedValue != null ? widget.labelBuilder(widget.selectedValue as T) : widget.placeholder,
+                        style: context.textTheme.labelLarge?.copyWith(
+                          color: context.colorScheme.textPrimary.withValues(
+                            alpha: widget.selectedValue != null ? 1.0 : 0.4,
+                          ),
                         ),
                       ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: <Widget>[
-                          Expanded(
-                            child: FusionAppText(
-                              text: widget.selectedValue != null ? widget.labelBuilder(widget.selectedValue as T) : widget.placeholder,
-                              style: context.textTheme.labelLarge?.copyWith(
-                                color: context.colorScheme.onSurface.withValues(
-                                  alpha: widget.selectedValue != null ? 1.0 : 0.4,
-                                ),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 4),
-                          Icon(
-                            LucideIcons.chevronDown,
-                            color: context.colorScheme.onSurface.withAlpha(150),
-                          ),
-                        ],
+                    ),
+                    const SizedBox(width: 4),
+                    Transform.rotate(
+                      angle: isMenuOpen ? math.pi : 0,
+                      child: Icon(
+                        LucideIcons.chevronDown,
+                        size: 16,
+                        color: context.colorScheme.iconDefault,
                       ),
                     ),
-                  ),
+                  ],
                 ),
               ),
             ),
-          ],
+          ),
         ),
       ],
     );
