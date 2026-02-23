@@ -65,7 +65,7 @@ class ProjectsViewModel extends BaseViewModel {
       _filteredProjects = _projects
           .where(
             (p) =>
-                p.title.toLowerCase().contains(query.toLowerCase()) ||
+                p.name.toLowerCase().contains(query.toLowerCase()) ||
                 p.description.toLowerCase().contains(query.toLowerCase()) ||
                 (p.clientName?.toLowerCase().contains(query.toLowerCase()) ??
                     false),

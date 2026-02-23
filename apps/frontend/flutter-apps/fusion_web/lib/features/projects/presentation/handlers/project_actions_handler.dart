@@ -71,7 +71,7 @@ class ProjectActionsHandler {
       context: context,
       builder: (_) => ProjectDialog(
         initialData: NewProjectFormData(
-          name: project.title,
+          name: project.name,
           version: '',
           tags: '',
           author: '',
@@ -91,7 +91,7 @@ class ProjectActionsHandler {
     if (result != null) {
       viewModel.updateProject(
         project.copyWith(
-          title: result.name,
+          name: result.name,
           description: result.notes,
           clientName: result.organization,
           region: result.state,
@@ -138,7 +138,7 @@ class ProjectActionsHandler {
     if (result != null) {
       final newProject = ProjectEntity(
         id: UniqueKey().toString(),
-        title: result.name,
+        name: result.name,
         description: result.notes,
         clientName: result.organization,
         region: result.state,

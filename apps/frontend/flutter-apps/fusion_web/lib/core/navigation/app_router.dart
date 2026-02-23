@@ -36,10 +36,35 @@ enum DashboardTabs {
 
 class AppRouter {
   static Route<dynamic> generateRoute(RouteSettings settings) {
+
     // ================= LOGIN =================
     if (settings.name == AppConstants.loginRoute) {
       return MaterialPageRoute(
         builder: (_) => const LoginPage(),
+        settings: settings,
+      );
+    }
+
+    // ================= PROJECT DETAILS (DYNAMIC) =================
+    if (settings.name != null &&
+        settings.name!.startsWith('${AppConstants.projectsRoute}/')) {
+
+      final uri = Uri.parse(settings.name!);
+      final projectId = uri.pathSegments.last;
+
+      final args = settings.arguments as Map<String, dynamic>?;
+
+      final project = args?['project'] as ProjectEntity?;
+      final viewModel = args?['viewModel'];
+
+      return MaterialPageRoute(
+        builder: (_) => MainLayout(
+          initialTab: DashboardTabs.projects,
+          child: ProjectDetailPage(
+            project: project!,
+            viewModel: viewModel,
+          ),
+        ),
         settings: settings,
       );
     }

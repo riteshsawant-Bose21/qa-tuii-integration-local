@@ -31,7 +31,7 @@ class _ProjectsPageState extends State<ProjectsPage> {
 
   String _searchQuery = '';
   String _selectedRegions = 'All Regions';
-  String _selectedStatus = 'All Status';
+  String _selectedStatus = 'All';
   String _selectedFilterType = 'Last Updated';
 
   bool _isGridView = false;
@@ -103,7 +103,7 @@ class _ProjectsPageState extends State<ProjectsPage> {
 
     if (_searchQuery.isNotEmpty) {
       filtered = filtered.where((project) {
-        return project.title.toLowerCase().contains(
+        return project.name.toLowerCase().contains(
               _searchQuery.toLowerCase(),
             ) ||
             project.description.toLowerCase().contains(
@@ -123,7 +123,7 @@ class _ProjectsPageState extends State<ProjectsPage> {
           .toList();
     }
 
-    if (_selectedStatus != 'All Status') {
+    if (_selectedStatus != 'All') {
       filtered = filtered
           .where((p) => p.status.toLowerCase() == _selectedStatus.toLowerCase())
           .toList();
@@ -133,12 +133,10 @@ class _ProjectsPageState extends State<ProjectsPage> {
   }
 
   void _navigateToDetail(ProjectEntity project) {
-    Navigator.push(
+    Navigator.pushNamed(
       context,
-      MaterialPageRoute(
-        builder: (_) =>
-            ProjectDetailPage(project: project, viewModel: _viewModel),
-      ),
+      '${AppConstants.projectsRoute}/${project.id}',
+      arguments: {'project': project, 'viewModel': _viewModel},
     );
   }
 
@@ -434,9 +432,9 @@ class _ProjectsPageState extends State<ProjectsPage> {
           Flexible(
             flex: 1,
             child: _dropdown(_selectedStatus, [
-              'All Status',
-              'Active',
-              'Completed',
+              'All',
+              'Proposal',
+              'Planning',
             ], (v) => setState(() => _selectedStatus = v!)),
           ),
           const SizedBox(width: 16),
@@ -556,7 +554,7 @@ class _ProjectsPageState extends State<ProjectsPage> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        p.title,
+                        p.name,
                         style: GoogleFonts.montserrat(
                           fontSize: 15,
                           fontWeight: FontWeight.w600,
@@ -735,7 +733,7 @@ class _ProjectsPageState extends State<ProjectsPage> {
                   children: [
                     Expanded(
                       child: Text(
-                        p.title,
+                        p.name,
                         style: GoogleFonts.montserrat(
                           fontSize: 15,
                           fontWeight: FontWeight.w700,
@@ -839,10 +837,10 @@ class _ProjectsPageState extends State<ProjectsPage> {
     Color bg;
     Color fg;
 
-    if (lower == 'active') {
+    if (lower == 'planning') {
       bg = const Color(0xFFDCFCE7);
       fg = const Color(0xFF16A34A);
-    } else if (lower == 'completed') {
+    } else if (lower == 'proposal') {
       bg = Colors.grey[200]!;
       fg = Colors.grey[600]!;
     } else {

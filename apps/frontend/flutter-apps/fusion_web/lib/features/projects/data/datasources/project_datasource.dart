@@ -19,8 +19,8 @@ class ProjectsRemoteDataSource implements ProjectsDataSource {
   @override
   Future<List<ProjectModel>> getProjects() async {
     try {
-      print('Projects API: Calling organization/projects endpoint');
-      final response = await _apiService.get('organization/projects');
+      print('Projects API: Calling /projects endpoint');
+      final response = await _apiService.get('/projects?is_archived=false');
 
       // Debug: Print the full response structure
       print('API Response keys: ${response.keys.toList()}');
@@ -51,16 +51,20 @@ class ProjectsRemoteDataSource implements ProjectsDataSource {
           .cast<ProjectModel>()
           .toList();
     } catch (e) {
-      // Fallback to mock data if API fails
-      print('API Error, using mock data: $e');
-      return ProjectModel.mockProjects();
+      print('REAL API ERROR: $e');
+      rethrow;
+
+      // } catch (e) {
+      //   // Fallback to mock data if API fails
+      //   print('API Error, using mock data: $e');
+      //   return ProjectModel.mockProjects();
     }
   }
 
   @override
   Future<ProjectModel> getProjectById(String id) async {
     try {
-      final response = await _apiService.get('organization/projects/$id');
+      final response = await _apiService.get('/projects/$id');
       final projectData =
           response['data'] as Map<String, dynamic>? ??
           response['project'] as Map<String, dynamic>? ??
@@ -78,10 +82,7 @@ class ProjectsRemoteDataSource implements ProjectsDataSource {
   @override
   Future<ProjectModel> createProject(ProjectModel project) async {
     try {
-      final response = await _apiService.post(
-        'organization/projects',
-        project.toJson(),
-      );
+      final response = await _apiService.post('/projects', project.toJson());
       final projectData =
           response['data'] as Map<String, dynamic>? ??
           response['project'] as Map<String, dynamic>? ??
@@ -100,7 +101,7 @@ class ProjectsRemoteDataSource implements ProjectsDataSource {
   Future<ProjectModel> updateProject(ProjectModel project) async {
     try {
       final response = await _apiService.put(
-        'organization/projects/${project.id}',
+        '/projects/${project.id}',
         project.toJson(),
       );
       final projectData =
@@ -120,7 +121,7 @@ class ProjectsRemoteDataSource implements ProjectsDataSource {
   @override
   Future<void> deleteProject(String id) async {
     try {
-      await _apiService.delete('organization/projects/$id');
+      await _apiService.delete('/projects/$id');
     } catch (e) {
       // Fallback behavior - simulate success for demo
       print('API Error, simulating deletion: $e');
@@ -132,7 +133,7 @@ class ProjectsRemoteDataSource implements ProjectsDataSource {
   Future<List<ProjectModel>> searchProjects(String query) async {
     try {
       final response = await _apiService.get(
-        'organization/projects/search?q=${Uri.encodeComponent(query)}',
+        '/projects/search?q=${Uri.encodeComponent(query)}',
       );
       final projectsJson =
           response['data'] as List<dynamic>? ??
@@ -149,9 +150,10 @@ class ProjectsRemoteDataSource implements ProjectsDataSource {
       return projects
           .where(
             (p) =>
-                p.title.toLowerCase().contains(query.toLowerCase()) ||
+                p.name.toLowerCase().contains(query.toLowerCase()) ||
                 p.description.toLowerCase().contains(query.toLowerCase()) ||
-                (p.clientName?.toLowerCase().contains(query.toLowerCase())?? false),
+                (p.clientName?.toLowerCase().contains(query.toLowerCase()) ??
+                    false),
           )
           .toList();
     }
@@ -206,9 +208,10 @@ class ProjectsLocalDataSource implements ProjectsDataSource {
       return _cachedProjects!
           .where(
             (p) =>
-                p.title.toLowerCase().contains(query.toLowerCase()) ||
+                p.name.toLowerCase().contains(query.toLowerCase()) ||
                 p.description.toLowerCase().contains(query.toLowerCase()) ||
-                (p.clientName?.toLowerCase().contains(query.toLowerCase())??false),
+                (p.clientName?.toLowerCase().contains(query.toLowerCase()) ??
+                    false),
           )
           .toList();
     }

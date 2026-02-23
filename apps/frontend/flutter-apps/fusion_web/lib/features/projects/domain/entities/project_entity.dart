@@ -1,6 +1,6 @@
 class ProjectEntity {
   final String id;
-  final String title;
+  final String name;
   final String description;
   final String clientName;
   final String region;
@@ -15,7 +15,7 @@ class ProjectEntity {
 
   const ProjectEntity({
     required this.id,
-    required this.title,
+    required this.name,
     required this.description,
     required this.clientName,
     required this.region,
@@ -28,7 +28,7 @@ class ProjectEntity {
   });
 
   ProjectEntity copyWith({
-    String? title,
+    String? name,
     String? description,
     String? clientName,
     String? region,
@@ -41,7 +41,7 @@ class ProjectEntity {
   }) {
     return ProjectEntity(
       id: id,
-      title: title ?? this.title,
+      name: name ?? this.name,
       description: description ?? this.description,
       clientName: clientName ?? this.clientName,
       region: region ?? this.region,

@@ -34,7 +34,7 @@ class ApiService {
 
   Future<Map<String, dynamic>> get(String endpoint) async {
     try {
-      final url = Uri.parse('$baseUrl/$endpoint');
+      final url = Uri.parse('$baseUrl$endpoint');
       print('API GET Request: $url');
       print('API Headers: ${_headers.keys.join(', ')}');
       print('Has Authorization: ${_headers.containsKey('Authorization')}');

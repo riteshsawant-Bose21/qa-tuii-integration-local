@@ -3,7 +3,7 @@ import 'package:fusion_web/features/projects/domain/entities/project_entity.dart
 class ProjectModel extends ProjectEntity {
   const ProjectModel({
     required super.id,
-    required super.title,
+    required super.name,
     required super.description,
     required super.clientName,
     required super.region,
@@ -33,23 +33,24 @@ class ProjectModel extends ProjectEntity {
 
     return ProjectModel(
       id: json['id']?.toString() ?? '',
-      title: json['title'] ?? '',
+      name: json['name'] ?? '',
       description: json['description'] ?? '',
-      clientName: json['client_name'] ?? '',
+      clientName: json['venue'] ?? '',
       region: json['region'] ?? '',
-      status: json['status'] ?? 'active',
-      healthyDevices: parseInt(json['healthy_devices']),
-      warningDevices: parseInt(json['warning_devices']),
-      criticalDevices: parseInt(json['critical_devices']),
-      incidents: parseInt(json['incidents']),
+      status: json['project_phase'] ?? '',
       lastUpdated: parseDateTime(json['last_updated']),
+      // TODO: Replace the below hardcoded part once API when available
+      healthyDevices: 12,
+      warningDevices: 2,
+      criticalDevices: 1,
+      incidents: 3,
     );
   }
 
   Map<String, dynamic> toJson() {
     return {
       'id': id,
-      'title': title,
+      'name': name,
       'description': description,
       'client_name': clientName,
       'region': region,
@@ -66,7 +67,7 @@ class ProjectModel extends ProjectEntity {
     return [
       ProjectModel(
         id: '1',
-        title: 'Skyline Resort & Spa',
+        name: 'Skyline Resort & Spa',
         description: 'Multi-zone audio system for resort property.',
         clientName: 'Skyline Hotels',
         region: 'North America',
@@ -79,7 +80,7 @@ class ProjectModel extends ProjectEntity {
       ),
       ProjectModel(
         id: '2',
-        title: 'Government Building Retrofit',
+        name: 'Government Building Retrofit',
         description: 'Audio infrastructure upgrade for government facility.',
         clientName: 'ProAudio Distribution NA',
         region: 'North America',
@@ -92,7 +93,7 @@ class ProjectModel extends ProjectEntity {
       ),
       ProjectModel(
         id: '3',
-        title: 'Metro University Campus Audio',
+        name: 'Metro University Campus Audio',
         description: 'Campus-wide distributed audio solution.',
         clientName: 'Metro University',
         region: 'North America',
@@ -105,7 +106,7 @@ class ProjectModel extends ProjectEntity {
       ),
       ProjectModel(
         id: '4',
-        title: 'Global Retail - London Flagship',
+        name: 'Global Retail - London Flagship',
         description: 'Retail flagship audio deployment.',
         clientName: 'Global Retail Chain',
         region: 'Europe',
@@ -118,7 +119,7 @@ class ProjectModel extends ProjectEntity {
       ),
       ProjectModel(
         id: '5',
-        title: 'Global Retail - Paris Store',
+        name: 'Global Retail - Paris Store',
         description: 'Retail audio installation for Paris store.',
         clientName: 'Global Retail Chain',
         region: 'Europe',
@@ -131,7 +132,7 @@ class ProjectModel extends ProjectEntity {
       ),
       ProjectModel(
         id: '6',
-        title: 'Skyline Downtown Conference Center',
+        name: 'Skyline Downtown Conference Center',
         description: 'Conference center multi-zone audio system.',
         clientName: 'Skyline Hotels',
         region: 'North America',
@@ -144,7 +145,7 @@ class ProjectModel extends ProjectEntity {
       ),
       ProjectModel(
         id: '7',
-        title: 'Corporate HQ Pilot Program',
+        name: 'Corporate HQ Pilot Program',
         description: 'Pilot deployment at corporate headquarters.',
         clientName: 'Bose Professional',
         region: 'North America',
@@ -157,7 +158,7 @@ class ProjectModel extends ProjectEntity {
       ),
       ProjectModel(
         id: '8',
-        title: 'Regional Theater Complex',
+        name: 'Regional Theater Complex',
         description: 'Full theater audio system implementation.',
         clientName: 'SoundTech Solutions',
         region: 'North America',

@@ -69,8 +69,7 @@ class _ProjectDetailPageState extends State<ProjectDetailPage> {
         ? 0
         : ((p.criticalDevices / totalDevices) * 100).round();
 
-    return Scaffold(
-      body: Container(
+    return Container(
         color: const Color(0xFFF7F7F7),
         padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 24),
         child: SingleChildScrollView(
@@ -107,7 +106,7 @@ class _ProjectDetailPageState extends State<ProjectDetailPage> {
                         Row(
                           children: [
                             Text(
-                              p.title,
+                              p.name,
                               style: GoogleFonts.montserrat(
                                 fontSize: 28,
                                 fontWeight: FontWeight.w700,
@@ -291,7 +290,6 @@ class _ProjectDetailPageState extends State<ProjectDetailPage> {
             ],
           ),
         ),
-      ),
     );
   }
 
@@ -396,7 +394,7 @@ class _ProjectDetailPageState extends State<ProjectDetailPage> {
   );
 
   Widget _incidentCard(
-    String title,
+    String name,
     String category,
     String priority,
     String status,
@@ -415,7 +413,7 @@ class _ProjectDetailPageState extends State<ProjectDetailPage> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  title,
+                  name,
                   style: GoogleFonts.montserrat(
                     fontSize: 15,
                     fontWeight: FontWeight.w600,
