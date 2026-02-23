@@ -318,36 +318,27 @@ func (c *Cluster) ReloadVIPLocal(w http.ResponseWriter, r *http.Request) {
 }
 
 func (c *Cluster) RebootSystem(w http.ResponseWriter, r *http.Request) {
-	logging.GetLogger().Info("Received request to reboot system")
 	if !utils.RequirePost(w, r) {
-		logging.GetLogger().Info("Invalid method for reboot system endpoint")
 		return
 	}
-	logging.GetLogger().Info("Validated POST method for reboot system endpoint")
 	defer r.Body.Close()
 
 	go func() {
 		// Reboot system outside of request after updating all the nodes
-		logging.GetLogger().Info("Initiating system reboot across cluster")
 		if err := postGenericToAdminLast(c, routes.ClusterRebootEndpoint, c.rebootSystem); err != nil {
 			// Log the error. Don't respond to client because it's async
 			logging.GetLogger().Error("Failed to reboot system: %v", err)
 		}
-		logging.GetLogger().Info("System reboot command issued to all nodes")
 	}()
 
-	logging.GetLogger().Info("Responding to client with 204 No Content for reboot system request")
 	w.WriteHeader(http.StatusNoContent)
 
 }
 
 func (c *Cluster) RebootSystemLocal(w http.ResponseWriter, r *http.Request) {
-	logging.GetLogger().Info("Received request to reboot local system")
 	if !utils.RequirePost(w, r) {
-		logging.GetLogger().Info("Invalid method for local reboot system endpoint")
 		return
 	}
-	logging.GetLogger().Info("Validated POST method for local reboot system endpoint")
 	defer r.Body.Close()
 
 	if err := c.rebootSystem(); err != nil {
@@ -356,7 +347,6 @@ func (c *Cluster) RebootSystemLocal(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	logging.GetLogger().Info("Local system reboot command issued successfully, responding with 204 No Content")
 	w.WriteHeader(http.StatusNoContent)
 }
 
