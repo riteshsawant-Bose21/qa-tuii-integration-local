@@ -526,25 +526,37 @@ func postGenericToAdminLast(
 	endpoint string,
 	localFn func() error,
 ) error {
+	logging.GetLogger().Info("Starting postGenericToAdminLast for endpoint %s", endpoint)
 	for _, addr := range c.getNodeAdminAddresses() {
 		if c.hostIsLocal(addr) {
+			logging.GetLogger().Info("Local address %s found, will invoke local function after posting to other nodes", addr)
 			continue
 		}
 
 		// POST to the remote node’s admin endpoint
 		urlStr := getLocalURL(addr, endpoint)
+		logging.GetLogger().Info("Posting to remote node %s at URL %s", addr, urlStr)
 		resp, err := http.Post(urlStr, "", nil)
 		if err != nil {
+			logging.GetLogger().Error("POST to %s failed: %v", urlStr, err)
 			return err
+		}
+		if resp.StatusCode == http.StatusNotFound {
+			logging.GetLogger().Warn("POST to %s returned 404 Not Found", urlStr)
+		} else {
+			logging.GetLogger().Info("POST to %s succeeded with status %d", urlStr, resp.StatusCode)
 		}
 		resp.Body.Close()
 	}
 
 	// Invoke local function only after all remote nodes were posted.
+	logging.GetLogger().Info("All remote POSTs completed, now invoking local function for endpoint %s", endpoint)
 	if err := localFn(); err != nil {
+		logging.GetLogger().Error("Local function for endpoint %s failed: %v", endpoint, err)
 		return fmt.Errorf("local function failed: %w", err)
 	}
 
+	logging.GetLogger().Info("Local function for endpoint %s completed successfully", endpoint)
 	return nil
 }
 
