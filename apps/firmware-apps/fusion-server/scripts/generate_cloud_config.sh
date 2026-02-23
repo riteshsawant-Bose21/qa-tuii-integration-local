@@ -3,14 +3,13 @@
 set -eu
 
 # Fusion server configuration and startup script
-fusion_server_start_path=/usr/local/bin/fusion-server-start.sh
-fusion_server_service_path=/etc/systemd/system/fusion-server.service
+fusion_server_service_path=/lib/systemd/system/fusion-server.service
 
 # haproxy confi
 haproxy_conf_data_path=/usr/local/bin/haproxy_conf_data.sh
 
 # Keepalived configuration
-keepalived_service_path=/etc/systemd/system/keepalived.service
+keepalived_service_path=/lib/systemd/system/keepalived.service
 keepalived_conf_path=/etc/keepalived/keepalived.conf
 keepalived_conf_data() {
   cat << EOF_K
@@ -43,7 +42,7 @@ EOF_K
 }
 
 # HAProxy configuration
-haproxy_service_path=/etc/systemd/system/haproxy.service
+haproxy_service_path=/lib/systemd/system/haproxy.service
 haproxy_conf_path=/etc/haproxy/haproxy.cfg
 haproxy_conf_data() {
   cat << EOF_H
@@ -103,11 +102,6 @@ packages:
   - ntpdate
   - wget
 write_files:
-  - path: $fusion_server_start_path
-    permissions: '0644'
-    owner: root:root
-    content: |
-$(indent_content "$scripts_dir/fusion-server-start.sh")
   - path: $fusion_server_service_path
     permissions: '0644'
     owner: root:root
