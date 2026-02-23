@@ -677,10 +677,13 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
                           return true;
                         },
                       ),
-                      child: Icon(
-                        LucideIcons.plus200,
-                        size: FusionSizes.iconSize16,
-                        color: context.colorScheme.primaryWhite,
+                      child: SemanticHelper.button(
+                        testId: SemanticHelper.createTestId(SemanticTypes.button, "add_controller"),
+                        child: Icon(
+                          LucideIcons.plus200,
+                          size: FusionSizes.iconSize16,
+                          color: context.colorScheme.primaryWhite,
+                        ),
                       ),
                     ),
                     sections: <Widget>[

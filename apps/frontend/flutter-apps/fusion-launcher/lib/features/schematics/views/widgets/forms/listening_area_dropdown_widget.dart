@@ -113,7 +113,7 @@ class _ListeningAreaDropdownWidgetState extends State<ListeningAreaDropdownWidge
 
   @override
   Widget build(BuildContext context) {
-    return PopupMenuButton<void>(
+    return CustomPopupMenuButton<void>(
       tooltip: "",
       constraints: const BoxConstraints(maxHeight: 400, maxWidth: 300),
       color: context.colorScheme.elevation1,
@@ -122,294 +122,298 @@ class _ListeningAreaDropdownWidgetState extends State<ListeningAreaDropdownWidge
         borderRadius: BorderRadius.circular(FusionSizes.borderRadius16),
         side: BorderSide(color: context.colorScheme.elevation2),
       ),
+      menuSemanticLabel: "select_location_dropdown_menu",
       itemBuilder: (BuildContext context) {
         return <PopupMenuEntry<void>>[
           PopupMenuItem<void>(
             enabled: false,
             padding: EdgeInsets.zero,
-            child: StatefulBuilder(
-              builder: (BuildContext context, StateSetter setDropdownState) {
-                return Container(
-                  width: 300,
-                  constraints: const BoxConstraints(maxHeight: 380, maxWidth: 300),
-                  color: context.colorScheme.elevation1,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: <Widget>[
-                      /// Header
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                        decoration: BoxDecoration(
-                          border: Border(
-                            bottom: BorderSide(color: context.colorScheme.elevation2),
+            child: SemanticHelper.container(
+              testId: SemanticHelper.createTestId(SemanticTypes.container, "select_location_dropdown_menu_container"),
+              child: StatefulBuilder(
+                builder: (BuildContext context, StateSetter setDropdownState) {
+                  return Container(
+                    width: 300,
+                    constraints: const BoxConstraints(maxHeight: 380, maxWidth: 300),
+                    color: context.colorScheme.elevation1,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: <Widget>[
+                        /// Header
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          decoration: BoxDecoration(
+                            border: Border(
+                              bottom: BorderSide(color: context.colorScheme.elevation2),
+                            ),
                           ),
-                        ),
-                        child: Row(
-                          children: <Widget>[
-                            Expanded(
-                              child: FusionAppText(
-                                text: "Location",
-                                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                  fontWeight: FontWeight.w600,
+                          child: Row(
+                            children: <Widget>[
+                              Expanded(
+                                child: FusionAppText(
+                                  text: "Location",
+                                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                    fontWeight: FontWeight.w600,
+                                  ),
                                 ),
                               ),
-                            ),
-                            IconButton(
-                              icon: const Icon(Icons.close, size: FusionSizes.iconSize16),
-                              color: context.colorScheme.primaryWhite,
-                              onPressed: () => Navigator.of(context).pop(),
-                              padding: EdgeInsets.zero,
-                              constraints: const BoxConstraints(),
-                            ),
-                          ],
+                              IconButton(
+                                icon: const Icon(Icons.close, size: FusionSizes.iconSize16),
+                                color: context.colorScheme.primaryWhite,
+                                onPressed: () => Navigator.of(context).pop(),
+                                padding: EdgeInsets.zero,
+                                constraints: const BoxConstraints(),
+                              ),
+                            ],
+                          ),
                         ),
-                      ),
 
-                      /// Listening Areas List
-                      Builder(
-                        builder: (BuildContext context) {
-                          if (widget.listeningAreas.isNotEmpty) {
-                            return Flexible(
-                              child: SingleChildScrollView(
-                                child: Column(
-                                  children:
-                                      widget.listeningAreas.map((ListeningArea area) {
-                                        final int index = widget.listeningAreas.indexOf(area);
+                        /// Listening Areas List
+                        Builder(
+                          builder: (BuildContext context) {
+                            if (widget.listeningAreas.isNotEmpty) {
+                              return Flexible(
+                                child: SingleChildScrollView(
+                                  child: Column(
+                                    children:
+                                        widget.listeningAreas.map((ListeningArea area) {
+                                          final int index = widget.listeningAreas.indexOf(area);
 
-                                        final bool isSelected = widget.selectedListeningAreaIds.contains(area.id);
-                                        final Zone? zoneData = serviceLocator<ProjectViewModel>().getZonesForListeningArea(areaId: area.id);
-                                        final FloorModel? floorName = serviceLocator<ProjectViewModel>().getFloorForListeningArea(areaId: area.id);
+                                          final bool isSelected = widget.selectedListeningAreaIds.contains(area.id);
+                                          final Zone? zoneData = serviceLocator<ProjectViewModel>().getZonesForListeningArea(areaId: area.id);
+                                          final FloorModel? floorName = serviceLocator<ProjectViewModel>().getFloorForListeningArea(areaId: area.id);
 
-                                        return InkWell(
-                                          onTap: () {
-                                            _toggleListeningAreaSelection(area.id, floorName?.id ?? '');
-                                          },
-                                          child: SemanticHelper.toggle(
-                                            testId: SemanticHelper.createTestId(SemanticTypes.toggle, "select_location_radio_button_${index}_container"),
-                                            value: isSelected,
-                                            child: Container(
-                                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
-                                              decoration: BoxDecoration(
-                                                color: isSelected ? context.colorScheme.elevation3 : null,
+                                          return InkWell(
+                                            onTap: () {
+                                              _toggleListeningAreaSelection(area.id, floorName?.id ?? '');
+                                            },
+                                            child: SemanticHelper.toggle(
+                                              testId: SemanticHelper.createTestId(SemanticTypes.toggle, "select_location_radio_button_${index}_container"),
+                                              value: isSelected,
+                                              child: Container(
+                                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+                                                decoration: BoxDecoration(
+                                                  color: isSelected ? context.colorScheme.elevation3 : null,
+                                                ),
+                                                child: Row(
+                                                  children: <Widget>[
+                                                    /// Radio Button
+                                                    SemanticHelper.toggle(
+                                                      testId: SemanticHelper.createTestId(SemanticTypes.toggle, "select_location_radio_button_${index}_radio"),
+                                                      value: isSelected,
+                                                      child: Radio<String>(
+                                                        value: area.id,
+                                                        activeColor: context.colorScheme.primaryWhite,
+                                                        groupValue: widget.selectedListeningAreaIds.isNotEmpty ? widget.selectedListeningAreaIds.first : null,
+                                                        onChanged: (String? value) {
+                                                          if (value != null) {
+                                                            _toggleListeningAreaSelection(value, floorName?.id ?? '');
+                                                          }
+                                                        },
+                                                        materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                                      ),
+                                                    ),
+                                                    const SizedBox(width: 8),
+                                                    Expanded(
+                                                      child: FusionAppText(
+                                                        text: area.name.isNotEmpty ? "${floorName?.name}/${area.name}" : 'Unnamed Location',
+                                                        style: Theme.of(context).textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w500, fontSize: 10),
+                                                      ),
+                                                    ),
+                                                    FusionAppText(
+                                                      text: zoneData?.name ?? "No zone",
+                                                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                                        fontSize: 9,
+                                                        color: Colors.grey[600],
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
                                               ),
-                                              child: Row(
-                                                children: <Widget>[
-                                                  /// Radio Button
-                                                  SemanticHelper.toggle(
-                                                    testId: SemanticHelper.createTestId(SemanticTypes.toggle, "select_location_radio_button_${index}_radio"),
-                                                    value: isSelected,
-                                                    child: Radio<String>(
-                                                      value: area.id,
-                                                      activeColor: context.colorScheme.primaryWhite,
-                                                      groupValue: widget.selectedListeningAreaIds.isNotEmpty ? widget.selectedListeningAreaIds.first : null,
-                                                      onChanged: (String? value) {
-                                                        if (value != null) {
-                                                          _toggleListeningAreaSelection(value, floorName?.id ?? '');
-                                                        }
-                                                      },
-                                                      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                                                    ),
-                                                  ),
-                                                  const SizedBox(width: 8),
-                                                  Expanded(
-                                                    child: FusionAppText(
-                                                      text: area.name.isNotEmpty ? "${floorName?.name}/${area.name}" : 'Unnamed Location',
-                                                      style: Theme.of(context).textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w500, fontSize: 10),
-                                                    ),
-                                                  ),
-                                                  FusionAppText(
-                                                    text: zoneData?.name ?? "No zone",
-                                                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                                      fontSize: 9,
-                                                      color: Colors.grey[600],
-                                                    ),
-                                                  ),
-                                                ],
+                                            ),
+                                          );
+                                        }).toList(),
+                                  ),
+                                ),
+                              );
+                            } else {
+                              return Padding(
+                                padding: const EdgeInsets.all(12),
+                                child: FusionAppText(
+                                  text: "No locations available. Please create a new location.",
+                                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                    fontSize: 10,
+                                  ),
+                                ),
+                              );
+                            }
+                          },
+                        ),
+
+                        /// Create New Location Section
+                        if (!widget.hideAddLocationButton)
+                          Container(
+                            decoration: BoxDecoration(
+                              border: Border(
+                                top: BorderSide(color: Colors.grey[300]!),
+                              ),
+                            ),
+                            child: Column(
+                              children: <Widget>[
+                                /// Create LoCATION Header
+                                InkWell(
+                                  onTap: () {
+                                    setDropdownState(() {
+                                      _isCreateAreaExpanded = !_isCreateAreaExpanded;
+                                    });
+                                  },
+                                  child: SemanticHelper.toggle(
+                                    testId: SemanticHelper.createTestId(SemanticTypes.toggle, "create_new_location_expand_collapse"),
+                                    value: _isCreateAreaExpanded,
+                                    child: Container(
+                                      padding: const EdgeInsets.all(12),
+                                      child: Row(
+                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                        children: <Widget>[
+                                          Expanded(
+                                            child: FusionAppText(
+                                              text: "Create new location",
+                                              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                                fontWeight: FontWeight.w500,
                                               ),
                                             ),
                                           ),
-                                        );
-                                      }).toList(),
+                                          Icon(
+                                            _isCreateAreaExpanded ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
+                                            size: 20,
+                                            color: Colors.grey[600],
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
                                 ),
-                              ),
-                            );
-                          } else {
-                            return Padding(
-                              padding: const EdgeInsets.all(12),
-                              child: FusionAppText(
-                                text: "No locations available. Please create a new location.",
-                                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                  fontSize: 10,
-                                ),
-                              ),
-                            );
-                          }
-                        },
-                      ),
 
-                      /// Create New Location Section
-                      if (!widget.hideAddLocationButton)
-                        Container(
-                          decoration: BoxDecoration(
-                            border: Border(
-                              top: BorderSide(color: Colors.grey[300]!),
-                            ),
-                          ),
-                          child: Column(
-                            children: <Widget>[
-                              /// Create LoCATION Header
-                              InkWell(
-                                onTap: () {
-                                  setDropdownState(() {
-                                    _isCreateAreaExpanded = !_isCreateAreaExpanded;
-                                  });
-                                },
-                                child: SemanticHelper.toggle(
-                                  testId: SemanticHelper.createTestId(SemanticTypes.toggle, "create_new_location_expand_collapse"),
-                                  value: _isCreateAreaExpanded,
-                                  child: Container(
-                                    padding: const EdgeInsets.all(12),
-                                    child: Row(
-                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                /// Create location form
+                                if (_isCreateAreaExpanded)
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                                    decoration: BoxDecoration(color: context.colorScheme.elevation1),
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
                                       children: <Widget>[
-                                        Expanded(
-                                          child: FusionAppText(
-                                            text: "Create new location",
-                                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                              fontWeight: FontWeight.w500,
+                                        /// Floor Dropdown
+                                        FusionAppText(
+                                          text: "Floor",
+                                          style: context.textTheme.bodySmall?.copyWith(
+                                            fontSize: FusionSizes.fontSize12,
+                                            color: context.colorScheme.primaryWhite,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 8),
+                                        Container(
+                                          height: 26,
+                                          decoration: BoxDecoration(
+                                            border: Border.all(color: context.colorScheme.elevation2),
+                                            borderRadius: BorderRadius.circular(4),
+                                          ),
+                                          child: DropdownButtonHideUnderline(
+                                            child: DropdownButton<String>(
+                                              dropdownColor: context.colorScheme.primaryBlack,
+                                              hint: const FusionAppText(text: "Select floor"),
+                                              value: _selectedFloor,
+                                              isExpanded: true,
+                                              padding: const EdgeInsets.symmetric(horizontal: 8),
+                                              items: <DropdownMenuItem<String>>[
+                                                ...serviceLocator<ProjectViewModel>().getAllFloors().map((FloorModel floor) {
+                                                  final int index = serviceLocator<ProjectViewModel>().getAllFloors().indexOf(floor);
+
+                                                  return DropdownMenuItem<String>(
+                                                    value: floor.name,
+                                                    child: SemanticHelper.container(
+                                                      testId: SemanticHelper.createTestId(
+                                                        SemanticTypes.container,
+                                                        "create_new_location_floor_dropdown_item_${index}_container",
+                                                      ),
+                                                      child: FusionAppText(
+                                                        text: floor.name,
+                                                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                                          color: context.colorScheme.primaryWhite,
+                                                          fontSize: 10,
+                                                        ),
+                                                      ),
+                                                    ),
+                                                  );
+                                                }),
+                                              ],
+                                              onChanged: (String? newValue) {
+                                                if (newValue != null) {
+                                                  setDropdownState(() {
+                                                    _selectedFloor = newValue;
+                                                    _selectedFloorId =
+                                                        serviceLocator<ProjectViewModel>()
+                                                            .getAllFloors()
+                                                            .firstWhere((FloorModel floor) => floor.name == newValue)
+                                                            .id;
+                                                  });
+                                                }
+                                              },
                                             ),
                                           ),
                                         ),
-                                        Icon(
-                                          _isCreateAreaExpanded ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
-                                          size: 20,
-                                          color: Colors.grey[600],
+                                        const SizedBox(height: 12),
+
+                                        /// location Name Field
+                                        FusionAppText(
+                                          text: "Location Name",
+                                          style: context.textTheme.bodySmall?.copyWith(
+                                            fontSize: FusionSizes.fontSize12,
+                                            color: context.colorScheme.primaryWhite,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 8),
+                                        SemanticHelper.formControl(
+                                          testId: SemanticHelper.createTestId(SemanticTypes.textInput, "create_new_location_name_field"),
+                                          child: PropertyTextField(
+                                            controller: _areaNameController,
+                                            hintText: "Enter location name",
+                                            onChanged: (String value) {
+                                              setDropdownState(() {}); // Update button state
+                                            },
+                                          ),
+                                        ),
+
+                                        const SizedBox(height: 12),
+
+                                        /// Create and Select Button
+                                        Align(
+                                          alignment: Alignment.centerRight,
+                                          child: SemanticHelper.button(
+                                            testId: SemanticHelper.createTestId(SemanticTypes.button, "create_new_location_add_button"),
+                                            child: FusionButton(
+                                              height: 32,
+                                              label: "Add",
+                                              activeBackgroundColor: context.colorScheme.primaryColor,
+                                              textStyle: context.textTheme.labelMedium?.copyWith(color: Colors.white),
+                                              isActive: _areaNameController.text.trim().isNotEmpty && _selectedFloorId.isNotEmpty,
+                                              onTap: () {
+                                                _createNewArea(floorId: _selectedFloorId);
+                                              },
+                                            ),
+                                          ),
                                         ),
                                       ],
                                     ),
                                   ),
-                                ),
-                              ),
-
-                              /// Create location form
-                              if (_isCreateAreaExpanded)
-                                Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 12),
-                                  decoration: BoxDecoration(color: context.colorScheme.elevation1),
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: <Widget>[
-                                      /// Floor Dropdown
-                                      FusionAppText(
-                                        text: "Floor",
-                                        style: context.textTheme.bodySmall?.copyWith(
-                                          fontSize: FusionSizes.fontSize12,
-                                          color: context.colorScheme.primaryWhite,
-                                        ),
-                                      ),
-                                      const SizedBox(height: 8),
-                                      Container(
-                                        height: 26,
-                                        decoration: BoxDecoration(
-                                          border: Border.all(color: context.colorScheme.elevation2),
-                                          borderRadius: BorderRadius.circular(4),
-                                        ),
-                                        child: DropdownButtonHideUnderline(
-                                          child: DropdownButton<String>(
-                                            dropdownColor: context.colorScheme.primaryBlack,
-                                            hint: const FusionAppText(text: "Select floor"),
-                                            value: _selectedFloor,
-                                            isExpanded: true,
-                                            padding: const EdgeInsets.symmetric(horizontal: 8),
-                                            items: <DropdownMenuItem<String>>[
-                                              ...serviceLocator<ProjectViewModel>().getAllFloors().map((FloorModel floor) {
-                                                final int index = serviceLocator<ProjectViewModel>().getAllFloors().indexOf(floor);
-
-                                                return DropdownMenuItem<String>(
-                                                  value: floor.name,
-                                                  child: SemanticHelper.container(
-                                                    testId: SemanticHelper.createTestId(
-                                                      SemanticTypes.container,
-                                                      "create_new_location_floor_dropdown_item_${index}_container",
-                                                    ),
-                                                    child: FusionAppText(
-                                                      text: floor.name,
-                                                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                                        color: context.colorScheme.primaryWhite,
-                                                        fontSize: 10,
-                                                      ),
-                                                    ),
-                                                  ),
-                                                );
-                                              }),
-                                            ],
-                                            onChanged: (String? newValue) {
-                                              if (newValue != null) {
-                                                setDropdownState(() {
-                                                  _selectedFloor = newValue;
-                                                  _selectedFloorId =
-                                                      serviceLocator<ProjectViewModel>()
-                                                          .getAllFloors()
-                                                          .firstWhere((FloorModel floor) => floor.name == newValue)
-                                                          .id;
-                                                });
-                                              }
-                                            },
-                                          ),
-                                        ),
-                                      ),
-                                      const SizedBox(height: 12),
-
-                                      /// location Name Field
-                                      FusionAppText(
-                                        text: "Location Name",
-                                        style: context.textTheme.bodySmall?.copyWith(
-                                          fontSize: FusionSizes.fontSize12,
-                                          color: context.colorScheme.primaryWhite,
-                                        ),
-                                      ),
-                                      const SizedBox(height: 8),
-                                      SemanticHelper.formControl(
-                                        testId: SemanticHelper.createTestId(SemanticTypes.textInput, "create_new_location_name_field"),
-                                        child: PropertyTextField(
-                                          controller: _areaNameController,
-                                          hintText: "Enter location name",
-                                          onChanged: (String value) {
-                                            setDropdownState(() {}); // Update button state
-                                          },
-                                        ),
-                                      ),
-
-                                      const SizedBox(height: 12),
-
-                                      /// Create and Select Button
-                                      Align(
-                                        alignment: Alignment.centerRight,
-                                        child: SemanticHelper.button(
-                                          testId: SemanticHelper.createTestId(SemanticTypes.button, "create_new_location_add_button"),
-                                          child: FusionButton(
-                                            height: 32,
-                                            label: "Add",
-                                            activeBackgroundColor: context.colorScheme.primaryColor,
-                                            textStyle: context.textTheme.labelMedium?.copyWith(color: Colors.white),
-                                            isActive: _areaNameController.text.trim().isNotEmpty && _selectedFloorId.isNotEmpty,
-                                            onTap: () {
-                                              _createNewArea(floorId: _selectedFloorId);
-                                            },
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                            ],
+                              ],
+                            ),
                           ),
-                        ),
-                    ],
-                  ),
-                );
-              },
+                      ],
+                    ),
+                  );
+                },
+              ),
             ),
           ),
         ];
