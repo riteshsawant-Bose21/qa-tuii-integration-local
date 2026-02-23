@@ -38,7 +38,7 @@ const (
 	ClusterStatusEndpoint                      = ClusterEndpoint + "/status"
 
 	ClusterRebootEndpoint      = ClusterEndpoint + "/reboot"
-	ClusterRebootLocalEndpoint = ClusterEndpoint + "/local"
+	ClusterRebootLocalEndpoint = ClusterRebootEndpoint
 
 	ControllersEndpoint       = "/controllers"
 	ControllersIDEndpoint     = ControllersEndpoint + "/{id}"
