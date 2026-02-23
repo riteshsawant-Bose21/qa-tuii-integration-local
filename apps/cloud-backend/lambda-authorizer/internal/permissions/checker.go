@@ -4,7 +4,40 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"log"
 	"strings"
+)
+
+const (
+	// Project permissions
+	ProjectRead   = "project.read"
+	ProjectCreate = "project.create"
+	ProjectUpdate = "project.update"
+	ProjectDelete = "project.delete"
+	ProjectSync   = "project.sync"
+
+	// User management permissions
+	UserRead   = "user.read"
+	UserCreate = "user.create"
+	UserUpdate = "user.update"
+	UserDelete = "user.delete"
+
+	// User profile permissions
+	UserProfileRead   = "users.profile.read"
+	UserProfileCreate = "users.profile.create"
+	UserProfileUpdate = "users.profile.update"
+
+	// User settings permissions
+	UserSettingsRead   = "users.settings.read"
+	UserSettingsCreate = "users.settings.create"
+	UserSettingsUpdate = "users.settings.update"
+
+	// Admin permissions
+	AdminFull = "admin"
+	AdminUser = "user.manage"
+
+	// Wildcard permissions
+	AllPermissions = "*"
 )
 
 type PermissionChecker interface {
@@ -24,6 +57,7 @@ type UserContext struct {
 	RoleID      string
 	Permissions string // Comma-separated or JSON string
 }
+
 // CheckEndpointPermissionWithContext checks permission and returns user context for Lambda response
 func (s *SQLPermissionChecker) CheckEndpointPermissionWithContext(ctx context.Context, userEmail, method, resource string) (bool, *UserContext, error) {
        // Check permission as before
@@ -34,6 +68,7 @@ func (s *SQLPermissionChecker) CheckEndpointPermissionWithContext(ctx context.Co
 
        // Fetch user info for context
        var userID, role, accountID, accountName, accountType, roleID string
+
        query := `SELECT u.id, r.name, u.account_id, a.name, at.name, r.id
 		 FROM app_user u
 		 JOIN account_type_role atr ON u.account_type_role_id = atr.id
@@ -41,21 +76,27 @@ func (s *SQLPermissionChecker) CheckEndpointPermissionWithContext(ctx context.Co
 		 JOIN account a ON u.account_id = a.id
 		 JOIN account_type at ON a.account_type_id = at.id
 		 WHERE u.email = $1`
-       err = s.db.QueryRowContext(ctx, query, userEmail).Scan(&userID, &role, &accountID, &accountName, &accountType, &roleID)
-       if err != nil {
+
+		 err = s.db.QueryRowContext(ctx, query, userEmail).Scan(&userID, &role, &accountID, &accountName, &accountType, &roleID)
+
+		 if err != nil {
 	       return false, nil, fmt.Errorf("failed to get user context: %w", err)
        }
 
        // Get permissions as comma-separated string
        perms, err := s.GetUserPermissions(ctx, userEmail)
-       if err != nil {
+
+	   if err != nil {
 	       return false, nil, fmt.Errorf("failed to get user permissions: %w", err)
        }
-       var permsList []string
-       for k, v := range perms {
+
+	   var permsList []string
+
+	   for k, v := range perms {
 	       permsList = append(permsList, fmt.Sprintf("%s:%s", k, v))
        }
-       permissionsStr := strings.Join(permsList, ",")
+
+	   permissionsStr := strings.Join(permsList, ",")
 
        userCtx := &UserContext{
 	       UserID:      userID,
@@ -67,6 +108,7 @@ func (s *SQLPermissionChecker) CheckEndpointPermissionWithContext(ctx context.Co
 	       RoleID:      roleID,
 	       Permissions: permissionsStr,
        }
+
        return true, userCtx, nil
 }
 
@@ -104,6 +146,11 @@ func (s *SQLPermissionChecker) setupPermissions() {
 	s.registerPermission("POST", "/api/v1/projects/star", "project.update", "read", "Star or unstar project")
 	s.registerPermission("POST", "/api/v1/projects/archive", "project.update", "write", "Archive or unarchive project")
 	s.registerPermission("POST", "/api/v1/projects/lock", "project.update", "write", "Lock or unlock project")
+
+	// Product permissions
+	s.registerPermission("GET", "/api/v1/products", "product.read", "read", "View all products")
+	s.registerPermission("GET", "/api/v1/products/:id", "product.read", "read", "View a product details")
+	s.registerPermission("POST", "/api/v1/products/price", "product.update", "read", "View product price")
 
 	// User Profile permissions
 	s.registerPermission("GET", "/api/v1/users/profile", "users.profile.read", "read", "View user profile")
@@ -195,14 +242,6 @@ func (s *SQLPermissionChecker) CheckEndpointPermission(ctx context.Context, user
 	userPerms, err := s.GetUserPermissions(ctx, userEmail)
 	if err != nil {
 		return false, fmt.Errorf("failed to get user permissions: %w", err)
-	}
-
-	// Check for admin or wildcard permissions first
-	if level, exists := userPerms["admin"]; exists && isPermissionSufficient(level, "read") {
-		return true, nil
-	}
-	if level, exists := userPerms["*"]; exists && isPermissionSufficient(level, "read") {
-		return true, nil
 	}
 
 	// Find matching endpoint permission

@@ -30,7 +30,6 @@ func ExtractUserFromHeaders() gin.HandlerFunc {
 		// Parse role ID
 		intRoleID, err := strconv.Atoi(roleID)
 		if err != nil {
-			// log.Printf("Error parsing role ID: %v", intRoleID)
 			ctx.JSON(400, gin.H{"error": "Invalid role ID format"})
 			ctx.Abort()
 			return

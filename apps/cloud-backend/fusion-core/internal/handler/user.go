@@ -126,9 +126,9 @@ func (h *UserHandler) CreateUser(ctx *gin.Context) {
 		response.BadRequest(ctx, "Invalid request body: "+err.Error())
 		return
 	}
-	log.Printf("Received CreateUser request: %+v", req)
+
 	user, err := h.user.CreateUser(ctx, &req)
-	log.Printf("CreateUser result: user=%+v, err=%v", user, err)
+
 	if err != nil {
 		response.InternalError(ctx)
 		return
@@ -377,7 +377,7 @@ func (h *UserHandler) GetUserProfileDetails(ctx *gin.Context) {
 	userProfile, err := h.user.GetUserProfile(ctx, userID)
 	if err != nil {
 		if err.Error() == "user profile not found" || err.Error() == "sql: no rows in result set" {
-			response.NotFound(ctx, "User profile not found1")
+			response.NotFound(ctx, "User profile not found")
 			return
 		}
 		response.InternalError(ctx)
@@ -402,7 +402,7 @@ func (h *UserHandler) CreateUserProfile(ctx *gin.Context) {
 	var profile types.UserProfile
 
 	if err := ctx.ShouldBindJSON(&profile); err != nil {
-		response.BadRequest(ctx, fmt.Sprintf("Invalid request body-: %v", err))
+		response.BadRequest(ctx, fmt.Sprintf("Invalid request body: %v", err))
 		return
 	}
 
