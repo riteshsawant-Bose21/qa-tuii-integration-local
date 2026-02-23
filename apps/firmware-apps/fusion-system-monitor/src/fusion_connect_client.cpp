@@ -592,6 +592,27 @@ static bool poll_time_status_np(bool *gm_present, bool *gm_present_valid,
     return true;
 }
 
+static bool set_pps_enable(bool enable)
+{
+    const char *path = "/sys/class/ptp/ptp0/pps_enable";
+    const char *val = enable ? "1" : "0";
+    int fd = open(path, O_WRONLY | O_CLOEXEC);
+    if (fd < 0) {
+        SPDLOG_ERROR("Failed to open {}: {}", path, strerror(errno));
+        return false;
+    }
+
+    ssize_t rc = write(fd, val, 1);
+    if (rc != 1) {
+        SPDLOG_ERROR("Failed to write {} to {}: rc={} err={}", val, path, rc, strerror(errno));
+        close(fd);
+        return false;
+    }
+
+    close(fd);
+    return true;
+}
+
 // Callback for curl to write response data
 size_t curl_write_callback(void* contents, size_t size, size_t nmemb, std::string* output) {
     size_t total_size = size * nmemb;
@@ -1251,7 +1272,7 @@ void FusionConnectClient::maybe_set_debug()
 void FusionConnectClient::update_ptp_state()
 {
     constexpr int GM_FALSE_CONSEC = 25;
-    constexpr long long OFFSET_OK_NS = 1000; // 1 us window
+    constexpr long long OFFSET_OK_NS = 5000; // 5 us window
     const auto now = std::chrono::steady_clock::now();
 
     if (now - ptp_last_poll < std::chrono::milliseconds(period_ms)) return;
@@ -1296,11 +1317,18 @@ void FusionConnectClient::update_ptp_state()
 
     if (!ptp_sync_good && was_good) {
         ptp_anchor_pending = true;
-        SPDLOG_WARN("PTP sync lost; clearing PHC anchor");
+        SPDLOG_WARN("PTP sync lost; clearing PHC anchor (master_offset={} ns, valid={})",
+                    master_offset, master_offset_valid);
         nl_set_phc_anchor(client, 0);
+        if (!set_pps_enable(false)) {
+            SPDLOG_WARN("Failed to disable PPS on sync loss");
+        }
     } else if (ptp_sync_good && !was_good) {
         ptp_anchor_pending = true;
         SPDLOG_INFO("PTP sync good; preparing PHC anchor");
+        if (!set_pps_enable(false) || !set_pps_enable(true)) {
+            SPDLOG_WARN("Failed to re-arm PPS on sync good");
+        }
     }
 
     SPDLOG_DEBUG("PTP status: gm_present_valid={} gm_present={} role={} master_offset_valid={} master_offset={} good={}",
