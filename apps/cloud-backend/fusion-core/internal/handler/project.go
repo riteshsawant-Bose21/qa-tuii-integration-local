@@ -4,6 +4,7 @@ import (
 	"strings"
 
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/api/types"
+	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/middleware"
 
 	response "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/api/response"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion"
@@ -47,12 +48,12 @@ func (h *ProjectHandler) CreateProject(ctx *gin.Context) {
 
 	logger := loggerFromContext.(*zap.Logger)
 
-	userAuth, exists := ctx.Get("user_auth")
-	if !exists {
-		response.Unauthorized(ctx, errorutil.MsgUnauthorized)
+	// Get user auth from context (populated by ExtractUserFromHeaders middleware)
+	user, err := middleware.GetUserAuth(ctx)
+	if err != nil {
+		response.Unauthorized(ctx, err.Error())
 		return
 	}
-	user := userAuth.(*types.UserAuthorizationResponse)
 
 	var p types.ProjectCreateRequest
 	if err := ctx.ShouldBindJSON(&p); err != nil {
@@ -106,15 +107,10 @@ func (h *ProjectHandler) GetAllProjects(ctx *gin.Context) {
 
 	params := types.GetAllProjectsParams{}
 
-	userAuth, exists := ctx.Get("user_auth")
-	if !exists {
-		response.Unauthorized(ctx, errorutil.MsgUnauthorized)
-		return
-	}
-
-	user, ok := userAuth.(*types.UserAuthorizationResponse)
-	if !ok || user == nil {
-		response.Unauthorized(ctx, errorutil.MsgUnauthorized)
+	// Get user auth from context (populated by ExtractUserFromHeaders middleware)
+	user, err := middleware.GetUserAuth(ctx)
+	if err != nil {
+		response.Unauthorized(ctx, err.Error())
 		return
 	}
 
@@ -171,14 +167,12 @@ func (h *ProjectHandler) UpdateProject(ctx *gin.Context) {
 
 	projectID := ctx.Param("projectId")
 
-	userAuth, exists := ctx.Get("user_auth")
-
-	if !exists {
-		response.Unauthorized(ctx, errorutil.MsgUnauthorized)
+	// Get user auth from context (populated by ExtractUserFromHeaders middleware)
+	user, err := middleware.GetUserAuth(ctx)
+	if err != nil {
+		response.Unauthorized(ctx, err.Error())
 		return
 	}
-
-	user := userAuth.(*types.UserAuthorizationResponse)
 
 	// Validate UUIDs
 	if !validation.IsValidUUID(projectID) {
@@ -254,13 +248,12 @@ func (h *ProjectHandler) DeleteProject(ctx *gin.Context) {
 
 	projectID := ctx.Param("projectId")
 
-	userAuth, exists := ctx.Get("user_auth")
-	if !exists {
-		response.Unauthorized(ctx, errorutil.MsgUnauthorized)
+	// Get user auth from context (populated by ExtractUserFromHeaders middleware)
+	user, err := middleware.GetUserAuth(ctx)
+	if err != nil {
+		response.Unauthorized(ctx, err.Error())
 		return
 	}
-
-	user := userAuth.(*types.UserAuthorizationResponse)
 
 	// Validate UUIDs
 	if !validation.IsValidUUID(projectID) {
@@ -315,12 +308,13 @@ func (h *ProjectHandler) AssignUserToProject(ctx *gin.Context) {
 
 	projectID := ctx.Param("projectId")
 	userEmail := strings.TrimSpace(ctx.Param("userEmail"))
-	userAuth, exists := ctx.Get("user_auth")
-	if !exists {
-		response.Unauthorized(ctx, errorutil.MsgUnauthorized)
+	
+	// Get user auth from context (populated by ExtractUserFromHeaders middleware)
+	user, err := middleware.GetUserAuth(ctx)
+	if err != nil {
+		response.Unauthorized(ctx, err.Error())
 		return
 	}
-	user := userAuth.(*types.UserAuthorizationResponse)
 
 	// Validate projectID UUID
 	if !validation.IsValidUUID(projectID) {
@@ -328,7 +322,7 @@ func (h *ProjectHandler) AssignUserToProject(ctx *gin.Context) {
 		return
 	}
 
-	_, err := h.project.AssignUserToProject(ctx, projectID, userEmail, *user, logger)
+	_, err = h.project.AssignUserToProject(ctx, projectID, userEmail, *user, logger)
 	if err != nil {
 		errorMsg := err.Error()
 		// Check for specific error types
@@ -368,12 +362,12 @@ func (h *ProjectHandler) RemoveUserFromProject(ctx *gin.Context) {
 	projectID := ctx.Param("projectId")
 	userEmail := strings.TrimSpace(ctx.Param("userEmail"))
 
-	userAuth, exists := ctx.Get("user_auth")
-	if !exists {
-		response.Unauthorized(ctx, errorutil.MsgUnauthorized)
+	// Get user auth from context (populated by ExtractUserFromHeaders middleware)
+	user, err := middleware.GetUserAuth(ctx)
+	if err != nil {
+		response.Unauthorized(ctx, err.Error())
 		return
 	}
-	user := userAuth.(*types.UserAuthorizationResponse)
 
 	// Validate projectID UUID
 	if !validation.IsValidUUID(projectID) {
@@ -381,7 +375,7 @@ func (h *ProjectHandler) RemoveUserFromProject(ctx *gin.Context) {
 		return
 	}
 
-	_, err := h.project.RemoveUserFromProject(ctx, projectID, userEmail, *user, logger)
+	_, err = h.project.RemoveUserFromProject(ctx, projectID, userEmail, *user, logger)
 	if err != nil {
 		errorMsg := err.Error()
 		// Check for specific error types
@@ -426,12 +420,12 @@ func (h *ProjectHandler) UpdateProjectStar(ctx *gin.Context) {
 
 	projectID := ctx.Param("projectId")
 
-	userAuth, exists := ctx.Get("user_auth")
-	if !exists {
-		response.Unauthorized(ctx, errorutil.MsgUnauthorized)
+	// Get user auth from context (populated by ExtractUserFromHeaders middleware)
+	user, errAuth := middleware.GetUserAuth(ctx)
+	if errAuth != nil {
+		response.Unauthorized(ctx, errAuth.Error())
 		return
 	}
-	user := userAuth.(*types.UserAuthorizationResponse)
 
 	// Validate UUIDs
 	if !validation.IsValidUUID(projectID) {
@@ -502,12 +496,12 @@ func (h *ProjectHandler) UpdateProjectArchive(ctx *gin.Context) {
 
 	projectID := ctx.Param("projectId")
 
-	userAuth, exists := ctx.Get("user_auth")
-	if !exists {
-		response.Unauthorized(ctx, errorutil.MsgUnauthorized)
+	// Get user auth from context (populated by ExtractUserFromHeaders middleware)
+	user, errAuth := middleware.GetUserAuth(ctx)
+	if errAuth != nil {
+		response.Unauthorized(ctx, errAuth.Error())
 		return
 	}
-	user := userAuth.(*types.UserAuthorizationResponse)
 
 	// Validate UUIDs
 	if !validation.IsValidUUID(projectID) {
@@ -581,12 +575,12 @@ func (h *ProjectHandler) UpdateProjectLock(ctx *gin.Context) {
 
 	projectID := ctx.Param("projectId")
 
-	userAuth, exists := ctx.Get("user_auth")
-	if !exists {
-		response.Unauthorized(ctx, errorutil.MsgUnauthorized)
+	// Get user auth from context (populated by ExtractUserFromHeaders middleware)
+	user, errAuth := middleware.GetUserAuth(ctx)
+	if errAuth != nil {
+		response.Unauthorized(ctx, errAuth.Error())
 		return
 	}
-	user := userAuth.(*types.UserAuthorizationResponse)
 
 	// Validate UUIDs
 	if !validation.IsValidUUID(projectID) {

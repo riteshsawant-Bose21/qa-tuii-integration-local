@@ -2,6 +2,7 @@ package handler
 
 import (
 	"fmt"
+	"log"
 	"strings"
 
 	"github.com/gin-gonic/gin"
@@ -10,6 +11,7 @@ import (
 	response "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/api/response"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/api/types"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion"
+	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/middleware"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/utils/errorutil"
 )
 
@@ -38,24 +40,15 @@ func NewUserHandler(userSvc fusion.User) *UserHandler {
 // @Failure 500 {object} types.ErrorResponse "Internal server error"
 // @Router /users/authorization [get]
 func (h *UserHandler) GetUserAuthorization(ctx *gin.Context) {
-	// Get user email from JWT token (set by Auth0 middleware)
-	email, exists := ctx.Get("user_email")
-	if !exists {
-		email, exists = ctx.Get("email")
-	}
-	if !exists {
-		response.Unauthorized(ctx, errorutil.MsgUserEmailNotFoundInToken)
-		return
-	}
-
-	emailStr, ok := email.(string)
-	if !ok {
-		response.Unauthorized(ctx, errorutil.MsgInvalidToken)
+	// Get user auth from context (populated by ExtractUserFromHeaders middleware)
+	user, err := middleware.GetUserAuth(ctx)
+	if err != nil {
+		response.Unauthorized(ctx, err.Error())
 		return
 	}
 
 	// Get authorization details from service using email
-	authDetails, err := h.user.GetUserAuthorization(ctx, emailStr)
+	authDetails, err := h.user.GetUserAuthorization(ctx, user.User.Email)
 	if err != nil {
 		// Check if it's a "user not found" error
 		if strings.Contains(err.Error(), "user not found") {
@@ -133,8 +126,9 @@ func (h *UserHandler) CreateUser(ctx *gin.Context) {
 		response.BadRequest(ctx, "Invalid request body: "+err.Error())
 		return
 	}
-
+	log.Printf("Received CreateUser request: %+v", req)
 	user, err := h.user.CreateUser(ctx, &req)
+	log.Printf("CreateUser result: user=%+v, err=%v", user, err)
 	if err != nil {
 		response.InternalError(ctx)
 		return
@@ -289,6 +283,7 @@ func (h *UserHandler) CreateUserSettings(ctx *gin.Context) {
 	}
 
 	userSettingsID, err := h.user.CreateUserSettings(ctx, &settings)
+	log.Printf("CreateUserSettings result: userSettingsID=%s, err=%v", userSettingsID, err)
 	if err != nil {
 		response.InternalError(ctx)
 		return
@@ -382,7 +377,7 @@ func (h *UserHandler) GetUserProfileDetails(ctx *gin.Context) {
 	userProfile, err := h.user.GetUserProfile(ctx, userID)
 	if err != nil {
 		if err.Error() == "user profile not found" || err.Error() == "sql: no rows in result set" {
-			response.NotFound(ctx, "User profile not found")
+			response.NotFound(ctx, "User profile not found1")
 			return
 		}
 		response.InternalError(ctx)
@@ -407,7 +402,7 @@ func (h *UserHandler) CreateUserProfile(ctx *gin.Context) {
 	var profile types.UserProfile
 
 	if err := ctx.ShouldBindJSON(&profile); err != nil {
-		response.BadRequest(ctx, fmt.Sprintf("Invalid request body: %v", err))
+		response.BadRequest(ctx, fmt.Sprintf("Invalid request body-: %v", err))
 		return
 	}
 
@@ -457,25 +452,26 @@ func (h *UserHandler) UpdateUserProfile(ctx *gin.Context) {
 		response.BadRequest(ctx, fmt.Sprintf("Invalid JSON format: %v", err))
 		return
 	}
-
+	log.Printf("Received UpdateUserProfile request: profileID=%s, profile=%+v", profileID, profile)
 	if _, err := uuid.Parse(profileID); err != nil {
 		response.BadRequest(ctx, "Invalid ID format: must be a valid UUID")
 		return
 	}
-
+	log.Printf("Parsed profileID: %s", profileID)
 	userAuth, exists := ctx.Get("user_auth")
 	if !exists {
 		response.Unauthorized(ctx, errorutil.MsgUnauthorized)
 		return
 	}
-
+	log.Printf("User auth from context: %+v", userAuth)
 	auth, ok := userAuth.(*types.UserAuthorizationResponse)
 	if !ok {
 		response.Unauthorized(ctx, errorutil.MsgUnauthorized)
 		return
 	}
-
+	log.Printf("Parsed user auth: %+v", auth)
 	if err := h.user.UpdateUserProfile(ctx, &profile, profileID, auth.User.ID); err != nil {
+		log.Printf("Error updating user profile: %v", err)
 		if err.Error() == "user profile not found" {
 			response.NotFound(ctx, "User profile not found")
 			return

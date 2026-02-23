@@ -43,6 +43,7 @@ func New(cfg *Config,
 	userSvc fusion.User,
 	authSvc fusion.Auth,
 	authMiddleware middleware.AuthMiddleware,
+	roleManagementSvc *userdb.RoleManagementService,
 	loggers *log.Loggers,
 ) (*API, error) {
 
@@ -80,13 +81,14 @@ func New(cfg *Config,
 	}
 
 	api := &API{
-		engine:         engine,
-		product:        productSvc,
-		project:        project,
-		user:           userSvc,
-		auth:           authSvc,
-		authMiddleware: authMiddleware,
-		appLog:         loggers.AppLogger,
+		engine:                engine,
+		product:               productSvc,
+		project:               project,
+		user:                  userSvc,
+		auth:                  authSvc,
+		authMiddleware:        authMiddleware,
+		roleManagementService: roleManagementSvc,
+		appLog:                loggers.AppLogger,
 	}
 
 	api.registerRoutes()
