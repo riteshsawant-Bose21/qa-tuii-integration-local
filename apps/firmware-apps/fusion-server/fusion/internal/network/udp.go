@@ -13,8 +13,8 @@ import (
 	json "github.com/goccy/go-json"
 	"github.com/oklog/ulid/v2"
 
-	"fusion/internal/api"
 	"fusion-services-core/logging"
+	"fusion/internal/api"
 	"fusion/internal/server"
 	"fusion/internal/server/handler"
 )
@@ -96,7 +96,10 @@ func NewUDPServer(addr string, handler *handler.Handler) (*UDPServer, error) {
 	}
 
 	srv.Start()
-	go srv.maintenanceLoop()
+	// go srv.maintenanceLoop()
+	logging.GetLogger().Warn(
+		"UDP client maintenance loop disabled. Enabled it in PR-295",
+	)
 	return srv, nil
 }
 
