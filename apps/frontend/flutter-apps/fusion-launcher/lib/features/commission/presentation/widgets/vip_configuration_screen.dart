@@ -46,38 +46,45 @@ class _VIPConfigurationScreenState extends State<VIPConfigurationScreen> {
       child: Column(
         children: <Widget>[
           Expanded(
-            child:
-                _isAutoSelect
-                    ? Center(
-                      child: ConstrainedBox(
-                        constraints: const BoxConstraints(
-                          maxWidth: 500,
-                        ),
-                        child: _buildFormSection(),
-                      ),
-                    )
-                    : Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: <Widget>[
-                        // Left side - Form
-                        Expanded(
-                          flex: 1,
+            child: AnimatedSwitcher(
+              duration: const Duration(milliseconds: 300),
+              switchInCurve: Curves.easeInOut,
+              switchOutCurve: Curves.easeInOut,
+              child:
+                  _isAutoSelect
+                      ? Center(
+                        key: const ValueKey<String>('autoSelect_true'),
+                        child: ConstrainedBox(
+                          constraints: const BoxConstraints(
+                            maxWidth: 500,
+                          ),
                           child: _buildFormSection(),
                         ),
-                        const SizedBox(width: 20),
-                        // Divider
-                        VerticalDivider(
-                          thickness: 1,
-                          color: context.colorScheme.strokeLight,
-                        ),
-                        const SizedBox(width: 20),
-                        // Right side - Devices
-                        Expanded(
-                          flex: 1,
-                          child: _buildDeviceListSection(),
-                        ),
-                      ],
-                    ),
+                      )
+                      : Row(
+                        key: const ValueKey<String>('autoSelect_false'),
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: <Widget>[
+                          // Left side - Form
+                          Expanded(
+                            flex: 1,
+                            child: _buildFormSection(),
+                          ),
+                          const SizedBox(width: 20),
+                          // Divider
+                          VerticalDivider(
+                            thickness: 1,
+                            color: context.colorScheme.strokeLight,
+                          ),
+                          const SizedBox(width: 20),
+                          // Right side - Devices
+                          Expanded(
+                            flex: 1,
+                            child: _buildDeviceListSection(),
+                          ),
+                        ],
+                      ),
+            ),
           ),
           const SizedBox(height: 32),
           // Bottom Button
@@ -124,7 +131,7 @@ class _VIPConfigurationScreenState extends State<VIPConfigurationScreen> {
             ),
             const SizedBox(width: 8),
             Text(
-              'Select hardware automatically',
+              'Select device automatically',
               style: TextStyle(
                 color: context.colorScheme.textBody,
                 fontSize: 13,
