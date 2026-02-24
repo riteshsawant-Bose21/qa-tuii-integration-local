@@ -146,8 +146,8 @@ func (c *Cluster) JoinMemberlist() error {
 	return fmt.Errorf("failed to join cluster after %d attempts: %w", retryTimes, lastErr)
 }
 
-// isMember returns true if the address is a member of the memberlist
-func (c *Cluster) isMember() (bool, error) {
+// IsMember returns true if the address is a member of the memberlist
+func (c *Cluster) IsMember() (bool, error) {
 
 	liveAddrs, err := c.GetLiveNodeAddresses()
 	if err != nil {
@@ -184,7 +184,14 @@ func (c *Cluster) GetLiveNodeAddresses() ([]string, error) {
 func (c *Cluster) getClusterMembersFromVip() ([]*memberlist.Node, error) {
 	vip := c.getCurrentVIP()
 	if vip == "" {
-		// VIP not configured yet
+		logging.GetLogger().Warn("getClusterMembersFromVip: VIP not configured yet")
+		// it could be the VIP is not configured yet
+		// OR
+		// the vip monitor is still stabilizing and hasn't detected the VIP
+
+		//if the VIP monitor is still stabilizing,
+		// it will check if its a member in the handler
+		// for VIP monitor events and trigger a retry to get members
 		return nil, nil
 	}
 

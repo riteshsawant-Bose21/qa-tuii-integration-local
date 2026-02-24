@@ -62,7 +62,6 @@ func StartVRRPListener(logger Logger, onUpdate func(vip string, srcIP string)) e
 		defer syscall.Close(fd)
 
 		buf := make([]byte, VRRPBufSize)
-		var lastSrc, lastVIP string
 
 		for {
 			n, from, err := syscall.Recvfrom(fd, buf, 0)
@@ -82,13 +81,8 @@ func StartVRRPListener(logger Logger, onUpdate func(vip string, srcIP string)) e
 				logger.Error("VRRP parse error: %v", err)
 				continue
 			}
-
-			if srcIP != lastSrc || vip != lastVIP {
-				lastSrc = srcIP
-				lastVIP = vip
-				logger.Debug("VRRP update: %s binds %s", srcIP, vip)
-				onUpdate(vip, srcIP)
-			}
+			// logger.Debug("VRRP packet from %s for VIP %s", srcIP, vip)
+			onUpdate(vip, srcIP)
 		}
 	}()
 

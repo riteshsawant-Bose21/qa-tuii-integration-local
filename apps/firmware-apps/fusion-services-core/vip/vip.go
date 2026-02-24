@@ -152,8 +152,8 @@ func ReadFromKeepalivedConfig(path string) (string, bool, error) {
 	configText := string(data)
 
 	// This regex looks for a block starting with "virtual_ipaddress" and
-	// captures everything until the closing brace.
-	re := regexp.MustCompile(`virtual_ipaddress\s*{([^}]+)}`)
+	// captures everything until the closing brace (including empty blocks).
+	re := regexp.MustCompile(`virtual_ipaddress\s*{([^}]*)}`) // Note: * allows empty content
 	matches := re.FindStringSubmatch(configText)
 	if len(matches) < 2 {
 		return "", false, fmt.Errorf("no virtual_ipaddress block found")

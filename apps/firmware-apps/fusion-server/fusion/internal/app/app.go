@@ -313,6 +313,272 @@ func (app *App) startNetworkMonitor() {
 	app.monitor.Start()
 }
 
+// handleVIPStateChange is called when VIP state changes (gained/lost/moved)
+func (app *App) handleVIPStateChange(event vipmonitor.VIPEvent) {
+
+	logger := logging.GetLogger()
+
+	logger.Debug("[VIP] State change: type=%s vip=%s holder=%s isLocal=%v",
+		event.EventType, event.VIP, event.Holder, event.IsLocalOwner)
+
+	// Handle explicit VIP removal (empty VIP)
+	if event.VIP == "" {
+		logger.Warn("VIP event has VIP empty")
+
+		// // Stop mDNS service
+		// if err := app.MDNSManager.Close(); err != nil {
+		// 	logger.Error("[Discovery] Failed to stop mDNS service: %v", err)
+		// } else {
+		// 	logger.Debug("[Discovery] mDNS service stopped")
+		// }
+
+		// // Send local status notification
+		// if err := vip.SendLocalStatus("", "", false); err != nil {
+		// 	logger.Error("Failed to send UDP status: %v", err)
+		// }
+		return
+	}
+
+	// Ensure we’re in the memberlist irrespective of the event type
+	// This adds a safety check for split clusters.
+	if member, err := app.Cluster.IsMember(); err != nil {
+		logger.Error("isMember: %v", err)
+	} else if !member {
+		if err := app.Cluster.JoinMemberlist(); err != nil {
+			logger.Error("JoinMemberlist: %v", err)
+		} else {
+			logger.Info("Joined memberlist with VIP %s", event.VIP)
+		}
+	}
+
+	switch event.EventType {
+
+	case vipmonitor.EventGainedOnLocalInterface:
+		// VIP gained locally
+		logger.Info("VIP %s gained locally", event.VIP)
+
+		// Send local status notification
+		if err := vip.SendLocalStatus(event.VIP, app.config.BindAddr, true); err != nil {
+			logger.Error("Failed to send UDP status: %v", err)
+		}
+
+		// Start mDNS service
+		if ip := net.ParseIP(event.VIP); ip == nil {
+			logger.Error("[Discovery] Invalid VIP %s for mDNS", event.VIP)
+		} else {
+			if err := app.MDNSManager.StartWithVIP(ip); err != nil {
+				logger.Error("[Discovery] Failed to start mDNS service: %v", err)
+			} else {
+				logger.Info("[Discovery] mDNS service started with VIP %s", event.VIP)
+			}
+		}
+
+	case vipmonitor.EventLostOnLocalInterface:
+		// VIP lost locally
+		logger.Info("VIP %s lost", event.VIP)
+
+		// Send local status notification
+		if err := vip.SendLocalStatus(event.VIP, event.Holder, false); err != nil {
+			logger.Error("Failed to send UDP status: %v", err)
+		}
+
+		// Stop mDNS service
+		if err := app.MDNSManager.Close(); err != nil {
+			logger.Error("[Discovery] Failed to stop mDNS service: %v", err)
+		} else {
+			logger.Debug("[Discovery] mDNS service stopped")
+		}
+
+	case vipmonitor.EventGainedOnVRRPUpdate:
+		// VIP gained locally (detected via VRRP update - rare case)
+		logger.Info("VIP %s gained (VRRP update), holder=%s", event.VIP, event.Holder)
+
+		// Send local status notification
+		if err := vip.SendLocalStatus(event.VIP, app.config.BindAddr, true); err != nil {
+			logger.Error("Failed to send UDP status: %v", err)
+		}
+
+		// Start mDNS service
+		if ip := net.ParseIP(event.VIP); ip == nil {
+			logger.Error("[Discovery] Invalid VIP %s for mDNS", event.VIP)
+		} else {
+			if err := app.MDNSManager.StartWithVIP(ip); err != nil {
+				logger.Error("[Discovery] Failed to start mDNS service: %v", err)
+			} else {
+				logger.Info("[Discovery] mDNS service started with VIP %s", event.VIP)
+			}
+		}
+
+	case vipmonitor.EventLostOnVRRPUpdate:
+		// VIP lost locally (detected via VRRP update)
+		logger.Info("VIP %s lost (VRRP update), holder=%s", event.VIP, event.Holder)
+
+		// Send local status notification
+		if err := vip.SendLocalStatus(event.VIP, event.Holder, false); err != nil {
+			logger.Error("Failed to send UDP status: %v", err)
+		}
+
+		// Stop mDNS service
+		if err := app.MDNSManager.Close(); err != nil {
+			logger.Error("[Discovery] Failed to stop mDNS service: %v", err)
+		} else {
+			logger.Debug("[Discovery] mDNS service stopped")
+		}
+	case vipmonitor.EventMovedOnVRRPUpdate:
+		// VIP moved to different remote node
+		logger.Info("VIP %s moved from %s to %s", event.VIP, event.OldHolder, event.Holder)
+
+		// Send status notification
+		if err := vip.SendLocalStatus(event.VIP, event.Holder, false); err != nil {
+			logger.Error("Failed to send UDP status: %v", err)
+		}
+
+		// Stop mDNS service if it was running
+		if err := app.MDNSManager.Close(); err != nil {
+			logger.Error("[Discovery] Failed to stop mDNS service: %v", err)
+		} else {
+			logger.Debug("[Discovery] mDNS service stopped")
+		}
+
+	case vipmonitor.EventAddressChanged:
+		// VIP address changed (config already updated, need to restart monitoring)
+		logger.Info("VIP address changed from %s to %s", event.OldVIP, event.VIP)
+
+		// Update mDNS with new VIP
+		if ip := net.ParseIP(event.VIP); ip == nil {
+			logger.Error("[Discovery] Invalid VIP %s for mDNS", event.VIP)
+		} else {
+			if err := app.MDNSManager.StartWithVIP(ip); err != nil {
+				logger.Error("[Discovery] Failed to update mDNS service: %v", err)
+			} else {
+				logger.Info("[Discovery] mDNS service updated with new VIP %s", event.VIP)
+			}
+		}
+	}
+}
+
+// // listenerUpdated is called when VRRP state changes
+// func (c *Cluster) listenerUpdated(vipAddr, srcIP string) {
+
+// 	logger := logging.GetLogger()
+
+// 	newVIP := vip.Canonicalize(vipAddr)
+
+// 	c.vipLock.Lock()
+// 	defer c.vipLock.Unlock()
+
+// 	oldVIP := c.vip
+// 	oldHolder := c.vipHolder
+// 	logger.Debug("[CLUSTER] listenerUpdated called: oldVIP=%s oldHolder=%s vip=%s srcIP=%s",
+// 		oldVIP, oldHolder, c.vip, srcIP,
+// 	)
+
+// 	// VIP has been removed entirely
+// 	if newVIP == "" {
+// 		if oldVIP == "" {
+// 			// no change
+// 			logger.Warn("[CLUSTER] Both oldVIP and newVIP are empty - no change.")
+// 			return
+// 		}
+
+// 		logger.Debug("[CLUSTER] VIP %s removed (old holder %s)", oldVIP, oldHolder)
+
+// 		c.vip = ""
+// 		c.vipHolder = ""
+
+// 		c.notifyLocalVIPChange(false)
+// 		if err := c.mdnsManager.Close(); err != nil {
+// 			logger.Error("[Discovery] Failed to stop mDNS service: %v", err)
+// 		} else {
+// 			logger.Debug("[Discovery] mDNS service stopped successfully via manager")
+// 		}
+// 		return
+// 	}
+
+// 	if newVIP == oldVIP && srcIP == oldHolder {
+// 		logger.Warn("listenerUpdated called but VIP state is unchanged.")
+// 		return
+// 	}
+
+// 	// Determine ownership
+
+// 	oldLocal, err := vip.IsLocalVIP(oldHolder)
+// 	if err != nil {
+// 		logger.Error("isLocalVIP(oldHolder): %v", err)
+// 	}
+
+// 	newLocal, err := vip.IsLocalVIP(srcIP)
+// 	if err != nil {
+// 		logger.Error("isLocalVIP(srcIP): %v", err)
+// 	}
+
+// 	// VIP address changed
+// 	if newVIP != oldVIP {
+// 		logger.Info("VIP changed: oldVIP=%s newVIP=%s", oldVIP, newVIP)
+// 		if err := c.updateVIP(newVIP); err != nil {
+// 			logger.Error("updateVIP(%q): %v", newVIP, err)
+// 			return
+// 		}
+
+// 		if err := c.reloadVIP(); err != nil {
+// 			logger.Error("reloadVIP: %v", err)
+// 			return
+// 		}
+
+// 		// Parse the VIP string into net.IP before passing to mDNS manager
+// 		if ip := net.ParseIP(newVIP); ip == nil {
+// 			logger.Error("[Discovery] Invalid VIP %s for mDNS", newVIP)
+// 		} else {
+// 			if err := c.mdnsManager.StartWithVIP(ip); err != nil {
+// 				logger.Error("[Discovery] Failed to start mDNS service: %v", err)
+// 			}
+// 		}
+// 	}
+
+// 	c.vip = newVIP
+// 	c.vipHolder = srcIP
+
+// 	logger.Debug("VIP update: oldVIP=%s newVIP=%s oldHolder=%s newHolder=%s oldLocal=%v newLocal=%v",
+// 		oldVIP, newVIP, oldHolder, srcIP, oldLocal, newLocal)
+
+// 	// Handle ownership transition
+// 	switch {
+// 	case oldLocal && !newLocal:
+// 		logger.Info("VIP %s moved (was %s, now %s)", newVIP, oldHolder, srcIP)
+// 		c.notifyLocalVIPChange(false)
+
+// 		if err := c.mdnsManager.Close(); err != nil {
+// 			logger.Error("[Discovery] Failed to stop mDNS service: %v", err)
+// 		} else {
+// 			logger.Debug("[Discovery] mDNS service stopped successfully via manager")
+// 		}
+
+// 	case !oldLocal && newLocal:
+// 		logger.Debug("VIP %s gained locally (holder %s)", newVIP, srcIP)
+
+// 		// Ensure we’re in the memberlist
+// 		if member, err := c.isMember(); err != nil {
+// 			logger.Error("isMember: %v", err)
+// 		} else if !member {
+// 			if err := c.JoinMemberlist(); err != nil {
+// 				logger.Error("JoinMemberlist: %v", err)
+// 			} else {
+// 				logger.Info("Joined memberlist with VIP %s", newVIP)
+// 			}
+// 		}
+// 		c.notifyLocalVIPChange(true)
+
+// 		// Parse the VIP string into net.IP before passing to mDNS manager
+// 		if ip := net.ParseIP(newVIP); ip == nil {
+// 			logger.Error("[Discovery] Invalid VIP %s for mDNS", newVIP)
+// 		} else {
+// 			if err := c.mdnsManager.StartWithVIP(ip); err != nil {
+// 				logger.Error("[Discovery] Failed to start mDNS service: %v", err)
+// 			}
+// 		}
+// 	}
+// }
+
 // leaveCluster leaves the cluster
 func (app *App) leaveCluster() {
 	app.memberlist.Leave(clusterLeaveTime)

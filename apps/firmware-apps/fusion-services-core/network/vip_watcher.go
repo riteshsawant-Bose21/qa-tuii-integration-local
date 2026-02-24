@@ -1,6 +1,7 @@
 package network
 
 import (
+	"fmt"
 	"net"
 	"sync"
 
@@ -18,6 +19,7 @@ type VIPWatcher struct {
 	mu      sync.Mutex
 	done    chan struct{}
 	running bool
+	wg      sync.WaitGroup
 }
 
 func NewVIPWatcher(logger Logger, iface string) *VIPWatcher {
@@ -31,9 +33,9 @@ func (w *VIPWatcher) Start(expectedVIP net.IPNet, onUpdate func(gained bool)) er
 	w.mu.Lock()
 	defer w.mu.Unlock()
 
-	// Stop existing watcher if running
+	// Prevent starting if already running
 	if w.running {
-		w.stopLocked()
+		return fmt.Errorf("watcher already running, call Stop() first")
 	}
 
 	w.expectedVIP = expectedVIP
@@ -48,7 +50,7 @@ func (w *VIPWatcher) Start(expectedVIP net.IPNet, onUpdate func(gained bool)) er
 		return err
 	}
 	linkIndex := link.Attrs().Index
-
+	w.wg.Add(1)
 	go w.watch(linkIndex)
 	w.running = true
 
@@ -57,8 +59,15 @@ func (w *VIPWatcher) Start(expectedVIP net.IPNet, onUpdate func(gained bool)) er
 
 func (w *VIPWatcher) Stop() {
 	w.mu.Lock()
-	defer w.mu.Unlock()
-	w.stopLocked()
+	if w.running && w.done != nil {
+		close(w.done)
+		w.running = false
+	}
+	w.mu.Unlock()
+
+	// Wait for watch goroutine to exit
+	w.wg.Wait()
+	w.logger.Debug("[VIP watcher] Stopped")
 }
 
 func (w *VIPWatcher) stopLocked() {
@@ -70,6 +79,8 @@ func (w *VIPWatcher) stopLocked() {
 }
 
 func (w *VIPWatcher) watch(linkIndex int) {
+	defer w.wg.Done()
+
 	updates := make(chan netlink.AddrUpdate, updateChannels)
 
 	defer func() {
