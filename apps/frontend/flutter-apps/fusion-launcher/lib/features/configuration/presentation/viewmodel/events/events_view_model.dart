@@ -1,4 +1,7 @@
+import 'dart:ui';
+
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
+import 'package:fusion_launcher/features/control_dashboard/presentation/entitity/event_item_entity.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
 extension EventsViewModel on ProjectViewModel {
@@ -313,6 +316,105 @@ extension EventsViewModel on ProjectViewModel {
       updateProject();
     } catch (ex) {
       throwError("Failed to reorder events: $ex");
+    }
+  }
+
+  List<FusionEvent> getAllTimedEvents() {
+    try {
+      return projectManager.getAllTimedEvents();
+    } catch (ex) {
+      throwError("Failed to retrieve all timed events: $ex");
+      return <FusionEvent>[];
+    }
+  }
+
+  ScheduleConfig? getScheduleForEvent({required String eventId}) {
+    try {
+      final FusionEvent event = projectManager.getEventById(eventId);
+      final ScheduleConfig? scheduleConfig = projectManager.getScheduleById(event.item!.itemId);
+      return scheduleConfig;
+    } catch (ex) {
+      throwError("Failed to retrieve schedule for event: $ex");
+      return null;
+    }
+  }
+
+  List<EventItemEntity> getAllScheduledEvents() {
+    try {
+      final List<FusionEvent> timedEvents = getAllTimedEvents();
+      final List<EventItemEntity> scheduledEventItems =
+          timedEvents.map((FusionEvent event) {
+            final ScheduleConfig? schedule = getScheduleById(event.item!.itemId);
+            if (schedule != null) {
+              return EventItemEntity(
+                time: schedule.time,
+                title: schedule.name,
+                eventName: event.name,
+                eventId: event.id,
+                accentColor: Color(int.parse(schedule.colorHex.replaceFirst('#', '0xFF'))), // Convert hex string to Color
+                isEnabled: event.isEnabled,
+              );
+            } else {
+              throw Exception("No schedule found for event ${event.id}");
+            }
+          }).toList();
+      return scheduledEventItems;
+    } catch (ex) {
+      throwError("Failed to retrieve scheduled events: $ex");
+      return <EventItemEntity>[];
+    }
+  }
+
+  //get upcoming events for the next 24 hours
+  List<EventItemEntity> getAllUpcomingEvents() {
+    try {
+      final List<FusionEvent> timedEvents = getAllTimedEvents();
+      final DateTime now = DateTime.now();
+      final DateTime next24Hours = now.add(const Duration(hours: 24));
+
+      final List<EventItemEntity> upcomingEventItems =
+          timedEvents
+              .where((FusionEvent event) {
+                final ScheduleConfig? schedule = getScheduleById(event.item!.itemId);
+                if (schedule != null) {
+                  return schedule.time.isAfter(now) && schedule.time.isBefore(next24Hours);
+                }
+                return false;
+              })
+              .map((FusionEvent event) {
+                final ScheduleConfig? schedule = getScheduleById(event.item!.itemId);
+                return EventItemEntity(
+                  time: schedule!.time,
+                  title: schedule.name,
+                  eventName: event.name,
+                  eventId: event.id,
+                  accentColor: Color(int.parse(schedule.colorHex.replaceFirst('#', '0xFF'))), // Convert hex string to Color
+                  isEnabled: event.isEnabled,
+                );
+              })
+              .toList();
+
+      return upcomingEventItems;
+    } catch (ex) {
+      throwError("Failed to retrieve upcoming events: $ex");
+      return <EventItemEntity>[];
+    }
+  }
+
+  void toggleEvent({required String eventId, required bool isEnabled, bool autoSave = true}) {
+    try {
+      if (autoSave) {
+        recordSnapshot();
+      }
+      final FusionEvent event = projectManager.getEventById(eventId);
+      final FusionEvent updatedEvent = event.copyWith(isEnabled: isEnabled);
+      projectManager.updateEvent(updatedEvent);
+      if (autoSave) {
+        saveProject();
+      }
+      updateProject();
+    } catch (ex) {
+      throwError("Failed to toggle event: $ex");
     }
   }
 }

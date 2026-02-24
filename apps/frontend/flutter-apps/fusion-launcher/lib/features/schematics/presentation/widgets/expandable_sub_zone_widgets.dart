@@ -91,14 +91,13 @@ class _ExpandableSubZoneWidgetState extends State<ExpandableSubZoneWidget> {
                               child: GestureDetector(
                                 onTap: () {
                                   /// Select  subzone on tap
-                                  if (widget.subZoneId == null) return;
                                   _projectViewModel.setSelectedDevice(widget.subZoneId!, SelectedItemType.subzone);
                                 },
                                 // onTap: () => _isZoneExpanded.value = !_isZoneExpanded.value,
                                 child: _buildZoneName(context, widget.name),
                               ),
                             ),
-                
+
                             // /// Add device button
                             // AddSpeakersMenu(
                             //   zoneId: widget.zoneId ?? "",

@@ -12,11 +12,13 @@ class SemanticHelper {
   static Widget button({
     required String testId,
     required Widget child,
+    bool isActive = true,
   }) {
     return Semantics(
       identifier: testId,
       button: true,
       container: true,
+      enabled: isActive,
       child: child,
     );
   }
@@ -51,6 +53,37 @@ class SemanticHelper {
       toggled: value,
       label: label,
       excludeSemantics: excludeChildSemantics,
+      child: child,
+    );
+  }
+
+  // Radio controls
+  static Widget radio({
+    required String testId,
+    required bool value,
+    required Widget child,
+    String? label,
+    bool excludeChildSemantics = true,
+  }) {
+    return Semantics(
+      container: true,
+      identifier: testId,
+      selected: value,
+      label: label,
+      excludeSemantics: excludeChildSemantics,
+      child: child,
+    );
+  }
+
+  static Widget radioGroup({
+    required String testId,
+    required Widget child,
+    String? label,
+  }) {
+    return Semantics(
+      container: true,
+      identifier: testId,
+      label: label,
       child: child,
     );
   }

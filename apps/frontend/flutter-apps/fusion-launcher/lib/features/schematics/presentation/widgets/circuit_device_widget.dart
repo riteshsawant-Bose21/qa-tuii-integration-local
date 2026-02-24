@@ -96,7 +96,7 @@ class _CircuitDeviceWidgetState extends State<CircuitDeviceWidget> {
                       ),
                     ),
                     const SizedBox(width: 6),
-                
+
                     /// Device icon, name and location
                     Expanded(
                       child: Column(
@@ -122,7 +122,7 @@ class _CircuitDeviceWidgetState extends State<CircuitDeviceWidget> {
                             ],
                           ),
                           const SizedBox(height: 6),
-                
+
                           /// Device location
                           widget.location.isEmpty
                               ? const SizedBox.shrink()
@@ -155,11 +155,11 @@ class _CircuitDeviceWidgetState extends State<CircuitDeviceWidget> {
                         ],
                       ),
                     ),
-                
+
                     const SizedBox(width: 4),
                     if (!widget.circuitModel.addedInBuildingPage) ...<Widget>[
                       _buildAddOrRemoveButton(context: context),
-                
+
                       /// Kebab menu
                       const SizedBox(width: 8),
                       _buildKebabMenu(context),

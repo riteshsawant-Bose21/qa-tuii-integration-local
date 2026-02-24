@@ -24,6 +24,7 @@ class HardwareComponentProperties extends StatefulWidget {
 }
 
 class _HardwareComponentPropertiesState extends State<HardwareComponentProperties> {
+  final TextEditingController nameController = TextEditingController();
   final TextEditingController gainController = TextEditingController();
 
   final TextEditingController rollController = TextEditingController();
@@ -37,6 +38,7 @@ class _HardwareComponentPropertiesState extends State<HardwareComponentPropertie
   //dispose controllers
   @override
   void dispose() {
+    nameController.dispose();
     gainController.dispose();
     pitchController.dispose();
     yawController.dispose();
@@ -66,6 +68,7 @@ class _HardwareComponentPropertiesState extends State<HardwareComponentPropertie
     return BlocBuilder<ProjectViewModel, ProjectViewModelState>(
       builder: (BuildContext context, Object? state) {
         final ProjectViewModel viewModel = serviceLocator<ProjectViewModel>();
+        nameController.text = widget.selectedHardware.name;
         gainController.text = widget.selectedHardware is Speaker ? (widget.selectedHardware as Speaker).gain.toString() : '0.0';
         pitchController.text = widget.selectedHardware is Speaker ? (widget.selectedHardware as Speaker).pitch.toString() : '0.0';
         yawController.text = widget.selectedHardware is Speaker ? (widget.selectedHardware as Speaker).yaw.toString() : '0.0';
@@ -157,8 +160,7 @@ class _HardwareComponentPropertiesState extends State<HardwareComponentPropertie
                 SemanticHelper.formControl(
                   testId: SemanticHelper.createTestId(SemanticTypes.textInput, "hardware_name_edit"),
                   child: PropertyTextField(
-                    initialValue: widget.selectedHardware.name,
-                    maxLength: 24,
+                    controller: nameController,
                     hintText: 'Hardware Name',
                     onSubmitted: (String v) {
                       // Validate that the name is not empty or just whitespace

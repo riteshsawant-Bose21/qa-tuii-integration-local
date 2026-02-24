@@ -428,8 +428,8 @@ jobs:
         env:
           BRANCH_NAME: ${{ github.head_ref || github.ref_name }}
         run: |
-          FILE="conf/fusion-mini_properties.inc"
-          VERSION_INFO_FILE="recipes-bsp/fusion-init/fusion-init/fusion-mini/version_info.txt"
+          FILE="conf/fusion-nano_properties.inc"
+          VERSION_INFO_FILE="recipes-bsp/fusion-init/fusion-init/fusion-nano/version_info.txt"
           MONOREPO_COMMIT_HASH=${{ needs.integration-tests.outputs.MONOREPO_COMMIT_HASH }}
 
           # Create file if it doesn't exist
@@ -489,8 +489,8 @@ jobs:
           else
             echo "FUSION_DSP_VERSION=\"${{ needs.fusion-dsp-build.outputs.fusion_dsp_version }}\"" >> "$VERSION_INFO_FILE"
           fi
-          git add conf/fusion-mini_properties.inc
-          git add recipes-bsp/fusion-init/fusion-init/fusion-mini/version_info.txt
+          git add conf/fusion-nano_properties.inc
+          git add recipes-bsp/fusion-init/fusion-init/fusion-nano/version_info.txt
           git commit -m "CI: Build trigger from Fusion Monorepo branch: ${{ github.ref_name }}" || echo "No changes to commit"
 
       - name: Push commit to target repo

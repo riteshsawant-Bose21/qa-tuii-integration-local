@@ -46,6 +46,7 @@ class ConfigureNetworkDialog extends StatefulWidget {
 class _ConfigureNetworkDialogState extends State<ConfigureNetworkDialog> {
   NetworkConfigState _state = NetworkConfigState.initial;
   List<BluetoothDevice> _bluetoothDevices = <BluetoothDevice>[];
+  List<MdnsDevice> _mdnsDevices = <MdnsDevice>[];
   WiFiCredentials? _wifiCredentials;
   Timer? mockTimer;
 
@@ -124,7 +125,7 @@ class _ConfigureNetworkDialogState extends State<ConfigureNetworkDialog> {
   }
 
   void _showCloseDialog() {
-    if (widget.bluetoothOnly) {
+    if (widget.bluetoothOnly || serviceLocator<ProjectViewModel>().virtualIP != null) {
       Navigator.of(context).pop(); // Close the network configuration dialog
       return;
     }
@@ -210,6 +211,7 @@ class _ConfigureNetworkDialogState extends State<ConfigureNetworkDialog> {
 
       case NetworkConfigState.vipConfiguration:
         return VIPConfigurationScreen(
+          devices: _mdnsDevices,
           onVerify: (String vipAddress) => _verifyVIP(vipAddress),
         );
 
@@ -234,6 +236,18 @@ class _ConfigureNetworkDialogState extends State<ConfigureNetworkDialog> {
       if (mounted) {
         if (true) {
           setState(() {
+            _mdnsDevices = <MdnsDevice>[
+              MdnsDevice(
+                name: 'Fusion Mini FM6Y',
+                ip: '192.168.1.10', // Mock IP
+                port: 8080,
+              ),
+              MdnsDevice(
+                name: 'Fusion Mini FM8Y',
+                ip: '192.168.1.11',
+                port: 8080,
+              ),
+            ];
             _state = NetworkConfigState.vipConfiguration;
           });
         }
@@ -312,6 +326,7 @@ class _ConfigureNetworkDialogState extends State<ConfigureNetworkDialog> {
     // Simulate VIP verification
     await Future<void>.delayed(const Duration(seconds: 1));
     if (mounted) {
+      serviceLocator<ProjectViewModel>().setVirtualIP(ip: vipAddress);
       FusionUiUtils.hideLoader(context);
       showSuccessPopup(
         context,
