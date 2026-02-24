@@ -592,6 +592,27 @@ static bool poll_time_status_np(bool *gm_present, bool *gm_present_valid,
     return true;
 }
 
+static bool set_pps_enable(bool enable)
+{
+    const char *path = "/sys/class/ptp/ptp0/pps_enable";
+    const char *val = enable ? "1" : "0";
+    int fd = open(path, O_WRONLY | O_CLOEXEC);
+    if (fd < 0) {
+        SPDLOG_ERROR("Failed to open {}: {}", path, strerror(errno));
+        return false;
+    }
+
+    ssize_t rc = write(fd, val, 1);
+    if (rc != 1) {
+        SPDLOG_ERROR("Failed to write {} to {}: rc={} err={}", val, path, rc, strerror(errno));
+        close(fd);
+        return false;
+    }
+
+    close(fd);
+    return true;
+}
+
 // Callback for curl to write response data
 size_t curl_write_callback(void* contents, size_t size, size_t nmemb, std::string* output) {
     size_t total_size = size * nmemb;
@@ -731,6 +752,7 @@ private:
     int ptp_false_streak;
     std::chrono::steady_clock::time_point ptp_last_poll;
     std::chrono::steady_clock::time_point ptp_last_role_probe;
+    std::chrono::steady_clock::time_point ptp_last_gm_present;
     std::chrono::steady_clock::time_point ptp_last_anchor;
     std::chrono::steady_clock::time_point ptp_last_status_poll;
     std::chrono::steady_clock::time_point mgr_last_start_attempt;
@@ -779,6 +801,7 @@ FusionConnectClient::FusionConnectClient(const bosepro::BlockConfiguration &conf
 
     ptp_last_poll = std::chrono::steady_clock::now();
     ptp_last_role_probe = ptp_last_poll;
+    ptp_last_gm_present = ptp_last_poll;
     ptp_last_anchor = ptp_last_poll - std::chrono::seconds(60);
     ptp_last_status_poll = ptp_last_poll - std::chrono::seconds(1);
     mgr_last_start_attempt = ptp_last_poll - std::chrono::seconds(2);
@@ -1250,8 +1273,9 @@ void FusionConnectClient::maybe_set_debug()
 
 void FusionConnectClient::update_ptp_state()
 {
-    constexpr int GM_FALSE_CONSEC = 25;
-    constexpr long long OFFSET_OK_NS = 1000; // 1 us window
+    constexpr auto GM_FALSE_GRACE = std::chrono::seconds(25);
+    constexpr long long OFFSET_OK_NS = 5000; // 5 us hysteresis window
+    constexpr long long OFFSET_LOCK_NS = 1000; // 1 us initial lock window
     const auto now = std::chrono::steady_clock::now();
 
     if (now - ptp_last_poll < std::chrono::milliseconds(period_ms)) return;
@@ -1266,12 +1290,20 @@ void FusionConnectClient::update_ptp_state()
         return;
     }
 
+    if (!gm_present_valid) {
+        SPDLOG_DEBUG("PTP status missing gmPresent; keeping previous sync state");
+        return;
+    }
+
     if (gm_present_valid) {
         if (gm_present) {
             ptp_role_flag = 1;
             ptp_false_streak = 0;
+            ptp_last_gm_present = now;
         } else if (ptp_role_flag != 0) {
-            if (++ptp_false_streak >= GM_FALSE_CONSEC) ptp_role_flag = 0;
+            if (now - ptp_last_gm_present >= GM_FALSE_GRACE) {
+                ptp_role_flag = 0;
+            }
         }
         ptp_last_role_probe = now;
     } else if (now - ptp_last_role_probe > std::chrono::seconds(3)) {
@@ -1282,11 +1314,12 @@ void FusionConnectClient::update_ptp_state()
     bool good_now = false;
 
     if (i_am_gm) {
-        good_now = (gm_present_valid && !gm_present);
+        good_now = !gm_present;
     } else {
         if (master_offset_valid) {
             long long best_abs = master_offset ? std::llabs(master_offset) : 0;
-            good_now = (best_abs <= OFFSET_OK_NS);
+            const long long thr = ptp_sync_good ? OFFSET_OK_NS : OFFSET_LOCK_NS;
+            good_now = gm_present && (best_abs <= thr);
         }
     }
 
@@ -1296,11 +1329,18 @@ void FusionConnectClient::update_ptp_state()
 
     if (!ptp_sync_good && was_good) {
         ptp_anchor_pending = true;
-        SPDLOG_WARN("PTP sync lost; clearing PHC anchor");
+        SPDLOG_WARN("PTP sync lost; clearing PHC anchor (master_offset={} ns, valid={})",
+                    master_offset, master_offset_valid);
         nl_set_phc_anchor(client, 0);
+        if (!set_pps_enable(false)) {
+            SPDLOG_WARN("Failed to disable PPS on sync loss");
+        }
     } else if (ptp_sync_good && !was_good) {
         ptp_anchor_pending = true;
         SPDLOG_INFO("PTP sync good; preparing PHC anchor");
+        if (!set_pps_enable(false) || !set_pps_enable(true)) {
+            SPDLOG_WARN("Failed to re-arm PPS on sync good");
+        }
     }
 
     SPDLOG_DEBUG("PTP status: gm_present_valid={} gm_present={} role={} master_offset_valid={} master_offset={} good={}",
