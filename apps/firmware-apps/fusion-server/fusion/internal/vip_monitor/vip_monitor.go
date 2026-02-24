@@ -728,8 +728,6 @@ func (m *VIPMonitor) HandleReloadVIPLocal(w http.ResponseWriter, r *http.Request
 	w.WriteHeader(http.StatusNoContent)
 }
 
-}
-
 // getVIPInLocalConfig is for use in "local" development mode only
 func (m *VIPMonitor) getVIPInLocalConfig(w http.ResponseWriter) {
 	vipValue, err := vip.ReadFromLocalConfig(serverPrefix, vip.DefaultConfFile)
