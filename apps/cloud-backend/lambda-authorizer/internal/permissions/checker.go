@@ -5,53 +5,8 @@ import (
 	"database/sql"
 	"fmt"
 	"strings"
-)
 
-const (
-	// Methods
-	MethodGet    = "GET"
-	MethodPost   = "POST"
-	MethodPut    = "PUT"
-	MethodPatch  = "PATCH"
-	MethodDelete = "DELETE"
-
-	// Project permissions
-	ProjectRead   = "project.read"
-	ProjectCreate = "project.create"
-	ProjectUpdate = "project.update"
-	ProjectDelete = "project.delete"
-	ProjectSync   = "project.sync"
-
-	// Product permissions
-	ProductRead = "product.read"
-
-	// User management permissions
-	UserRead   = "user.read"
-	UserCreate = "user.create"
-	UserUpdate = "user.update"
-	UserDelete = "user.delete"
-
-	// User profile permissions
-	UserProfileRead   = "users.profile.read"
-	UserProfileCreate = "users.profile.create"
-	UserProfileUpdate = "users.profile.update"
-
-	// User settings permissions
-	UserSettingsRead   = "users.settings.read"
-	UserSettingsCreate = "users.settings.create"
-	UserSettingsUpdate = "users.settings.update"
-
-	// Admin permissions
-	AdminFull = "admin"
-	AdminUser = "user.manage"
-
-	// Permission levels
-	PermissionRead  = "read"
-	PermissionWrite = "write"
-	PermissionEdit  = "edit" // alias for write
-	PermissionAdmin = "admin"
-	// Wildcard permissions
-	AllPermissions = "*"
+	"github.com/BoseProfessional/lambda-authorizer/internal/constants"
 )
 
 type PermissionChecker interface {
@@ -151,30 +106,30 @@ func NewSQLPermissionChecker(db *sql.DB) *SQLPermissionChecker {
 // setupPermissions registers all endpoint permissions (same as fusion-core API)
 func (s *SQLPermissionChecker) setupPermissions() {
 	// Project permissions
-	s.registerPermission(MethodGet, "/api/v1/projects", ProjectRead, PermissionRead, "View all projects")
-	s.registerPermission(MethodPost, "/api/v1/projects", ProjectCreate, PermissionWrite, "Create new project")
-	s.registerPermission(MethodPatch, "/api/v1/projects/:id", ProjectUpdate, PermissionWrite, "Update project")
-	s.registerPermission(MethodDelete, "/api/v1/projects/:id", ProjectDelete, PermissionWrite, "Delete project")
-	s.registerPermission(MethodPut, "/api/v1/projects/:projectId/users/:userEmail", ProjectUpdate, PermissionWrite, "Assign user to project")
-	s.registerPermission(MethodDelete, "/api/v1/projects/:projectId/users/:userEmail", ProjectUpdate, PermissionWrite, "Remove user from project")
-	s.registerPermission(MethodPost, "/api/v1/projects/:projectId/star/:userId", ProjectUpdate, PermissionRead, "Star or unstar project")
-	s.registerPermission(MethodPost, "/api/v1/projects/:projectId/archive", ProjectUpdate, PermissionWrite, "Archive or unarchive project")
-	s.registerPermission(MethodPost, "/api/v1/projects/:projectId/lock", ProjectUpdate, PermissionWrite, "Lock or unlock project")
+	s.registerPermission(constants.MethodGet, "/api/v1/projects", constants.ProjectRead, constants.PermissionRead, "View all projects")
+	s.registerPermission(constants.MethodPost, "/api/v1/projects", constants.ProjectCreate, constants.PermissionWrite, "Create new project")
+	s.registerPermission(constants.MethodPatch, "/api/v1/projects/:id", constants.ProjectUpdate, constants.PermissionWrite, "Update project")
+	s.registerPermission(constants.MethodDelete, "/api/v1/projects/:id", constants.ProjectDelete, constants.PermissionWrite, "Delete project")
+	s.registerPermission(constants.MethodPut, "/api/v1/projects/:projectId/users/:userEmail", constants.ProjectUpdate, constants.PermissionWrite, "Assign user to project")
+	s.registerPermission(constants.MethodDelete, "/api/v1/projects/:projectId/users/:userEmail", constants.ProjectUpdate, constants.PermissionWrite, "Remove user from project")
+	s.registerPermission(constants.MethodPost, "/api/v1/projects/:projectId/star/:userId", constants.ProjectUpdate, constants.PermissionRead, "Star or unstar project")
+	s.registerPermission(constants.MethodPost, "/api/v1/projects/:projectId/archive", constants.ProjectUpdate, constants.PermissionWrite, "Archive or unarchive project")
+	s.registerPermission(constants.MethodPost, "/api/v1/projects/:projectId/lock", constants.ProjectUpdate, constants.PermissionWrite, "Lock or unlock project")
 
 	// Product permissions
-	s.registerPermission(MethodGet, "/api/v1/products", ProductRead, PermissionRead, "View all products")
-	s.registerPermission(MethodGet, "/api/v1/products/:id", ProductRead, PermissionRead, "View a product details")
-	s.registerPermission(MethodPost, "/api/v1/products/price", ProductRead, PermissionRead, "View product price")
+	s.registerPermission(constants.MethodGet, "/api/v1/products", constants.ProductRead, constants.PermissionRead, "View all products")
+	s.registerPermission(constants.MethodGet, "/api/v1/products/:id", constants.ProductRead, constants.PermissionRead, "View a product details")
+	s.registerPermission(constants.MethodPost, "/api/v1/products/price", constants.ProductRead, constants.PermissionRead, "View product price")
 
 	// User Profile permissions
-	s.registerPermission(MethodGet, "/api/v1/users/profile", UserProfileRead, PermissionRead, "View user profile")
-	s.registerPermission(MethodPost, "/api/v1/users/profile", UserProfileCreate, PermissionWrite, "Create user profile")
-	s.registerPermission(MethodPut, "/api/v1/users/profile/:id", UserProfileUpdate, PermissionWrite, "Update user profile")
+	s.registerPermission(constants.MethodGet, "/api/v1/users/profile", constants.UserProfileRead, constants.PermissionRead, "View user profile")
+	s.registerPermission(constants.MethodPost, "/api/v1/users/profile", constants.UserProfileCreate, constants.PermissionWrite, "Create user profile")
+	s.registerPermission(constants.MethodPut, "/api/v1/users/profile/:id", constants.UserProfileUpdate, constants.PermissionWrite, "Update user profile")
 
 	// User Settings permissions
-	s.registerPermission(MethodGet, "/api/v1/users/settings", UserSettingsRead, PermissionRead, "View user settings")
-	s.registerPermission(MethodPost, "/api/v1/users/settings", UserSettingsCreate, PermissionWrite, "Create user settings")
-	s.registerPermission(MethodPut, "/api/v1/users/settings/:id", UserSettingsUpdate, PermissionWrite, "Update user settings")
+	s.registerPermission(constants.MethodGet, "/api/v1/users/settings", constants.UserSettingsRead, constants.PermissionRead, "View user settings")
+	s.registerPermission(constants.MethodPost, "/api/v1/users/settings", constants.UserSettingsCreate, constants.PermissionWrite, "Create user settings")
+	s.registerPermission(constants.MethodPut, "/api/v1/users/settings/:id", constants.UserSettingsUpdate, constants.PermissionWrite, "Update user settings")
 }
 
 // registerPermission registers a permission requirement for an endpoint
