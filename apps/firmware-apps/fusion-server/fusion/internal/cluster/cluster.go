@@ -307,6 +307,12 @@ func (c *Cluster) restartSystem() error {
 	logger := logging.GetLogger()
 	logger.Info("Rebooting Server in 5 seconds")
 
+	// If running in local mode, skip reboot
+	if c.appConfig != nil && c.appConfig.Local {
+		logger.Info("Local mode enabled (appConfig.Local), skipping reboot.")
+		return nil
+	}
+
 	if runtime.GOOS == "darwin" {
 		// macOS: use goroutine with sleep since systemd-run doesn't exist
 		go func() {
