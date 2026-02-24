@@ -60,6 +60,7 @@ type PermissionChecker interface {
 	CheckEndpointPermission(ctx context.Context, userEmail, method, resource string) (bool, error)
 	CheckEndpointPermissionWithContext(ctx context.Context, userEmail, method, resource string) (bool, *UserContext, error)
 }
+
 // UserContext holds user identity and permission info for Lambda response
 type UserContext struct {
 	UserID      string
@@ -74,16 +75,16 @@ type UserContext struct {
 
 // CheckEndpointPermissionWithContext checks permission and returns user context for Lambda response
 func (s *SQLPermissionChecker) CheckEndpointPermissionWithContext(ctx context.Context, userEmail, method, resource string) (bool, *UserContext, error) {
-       // Check permission as before
-       allowed, err := s.CheckEndpointPermission(ctx, userEmail, method, resource)
-       if err != nil || !allowed {
-	       return allowed, nil, err
-       }
+	// Check permission as before
+	allowed, err := s.CheckEndpointPermission(ctx, userEmail, method, resource)
+	if err != nil || !allowed {
+		return allowed, nil, err
+	}
 
-       // Fetch user info for context
-       var userID, role, accountID, accountName, accountType, roleID string
+	// Fetch user info for context
+	var userID, role, accountID, accountName, accountType, roleID string
 
-       query := `SELECT u.id, r.name, u.account_id, a.name, at.name, r.id
+	query := `SELECT u.id, r.name, u.account_id, a.name, at.name, r.id
 		 FROM app_user u
 		 JOIN account_type_role atr ON u.account_type_role_id = atr.id
 		 JOIN role r ON atr.role_id = r.id
@@ -91,41 +92,40 @@ func (s *SQLPermissionChecker) CheckEndpointPermissionWithContext(ctx context.Co
 		 JOIN account_type at ON a.account_type_id = at.id
 		 WHERE u.email = $1`
 
-		 err = s.db.QueryRowContext(ctx, query, userEmail).Scan(&userID, &role, &accountID, &accountName, &accountType, &roleID)
+	err = s.db.QueryRowContext(ctx, query, userEmail).Scan(&userID, &role, &accountID, &accountName, &accountType, &roleID)
 
-		 if err != nil {
-	       return false, nil, fmt.Errorf("failed to get user context: %w", err)
-       }
+	if err != nil {
+		return false, nil, fmt.Errorf("failed to get user context: %w", err)
+	}
 
-       // Get permissions as comma-separated string
-       perms, err := s.GetUserPermissions(ctx, userEmail)
+	// Get permissions as comma-separated string
+	perms, err := s.GetUserPermissions(ctx, userEmail)
 
-	   if err != nil {
-	       return false, nil, fmt.Errorf("failed to get user permissions: %w", err)
-       }
+	if err != nil {
+		return false, nil, fmt.Errorf("failed to get user permissions: %w", err)
+	}
 
-	   var permsList []string
+	var permsList []string
 
-	   for k, v := range perms {
-	       permsList = append(permsList, fmt.Sprintf("%s:%s", k, v))
-       }
+	for k, v := range perms {
+		permsList = append(permsList, fmt.Sprintf("%s:%s", k, v))
+	}
 
-	   permissionsStr := strings.Join(permsList, ",")
+	permissionsStr := strings.Join(permsList, ",")
 
-       userCtx := &UserContext{
-	       UserID:      userID,
-	       Email:       userEmail,
-	       Role:        role,
-	       AccountID:   accountID,
-	       AccountName: accountName,
-	       AccountType: accountType,
-	       RoleID:      roleID,
-	       Permissions: permissionsStr,
-       }
+	userCtx := &UserContext{
+		UserID:      userID,
+		Email:       userEmail,
+		Role:        role,
+		AccountID:   accountID,
+		AccountName: accountName,
+		AccountType: accountType,
+		RoleID:      roleID,
+		Permissions: permissionsStr,
+	}
 
-       return true, userCtx, nil
+	return true, userCtx, nil
 }
-
 
 // EndpointPermission defines the required permission for an endpoint
 type EndpointPermission struct {
@@ -155,11 +155,11 @@ func (s *SQLPermissionChecker) setupPermissions() {
 	s.registerPermission(MethodPost, "/api/v1/projects", ProjectCreate, PermissionWrite, "Create new project")
 	s.registerPermission(MethodPatch, "/api/v1/projects/:id", ProjectUpdate, PermissionWrite, "Update project")
 	s.registerPermission(MethodDelete, "/api/v1/projects/:id", ProjectDelete, PermissionWrite, "Delete project")
-	s.registerPermission(MethodPut, "/api/v1/projects/assign-user", ProjectUpdate, PermissionWrite, "Assign user to project")
-	s.registerPermission(MethodDelete, "/api/v1/projects/remove-user", ProjectUpdate, PermissionWrite, "Remove user from project")
-	s.registerPermission(MethodPost, "/api/v1/projects/star", ProjectUpdate, PermissionRead, "Star or unstar project")
-	s.registerPermission(MethodPost, "/api/v1/projects/archive", ProjectUpdate, PermissionWrite, "Archive or unarchive project")
-	s.registerPermission(MethodPost, "/api/v1/projects/lock", ProjectUpdate, PermissionWrite, "Lock or unlock project")
+	s.registerPermission(MethodPut, "/api/v1/projects/:projectId/users/:userEmail", ProjectUpdate, PermissionWrite, "Assign user to project")
+	s.registerPermission(MethodDelete, "/api/v1/projects/:projectId/users/:userEmail", ProjectUpdate, PermissionWrite, "Remove user from project")
+	s.registerPermission(MethodPost, "/api/v1/projects/:projectId/star/:userId", ProjectUpdate, PermissionRead, "Star or unstar project")
+	s.registerPermission(MethodPost, "/api/v1/projects/:projectId/archive", ProjectUpdate, PermissionWrite, "Archive or unarchive project")
+	s.registerPermission(MethodPost, "/api/v1/projects/:projectId/lock", ProjectUpdate, PermissionWrite, "Lock or unlock project")
 
 	// Product permissions
 	s.registerPermission(MethodGet, "/api/v1/products", ProductRead, PermissionRead, "View all products")
@@ -260,6 +260,7 @@ func (s *SQLPermissionChecker) CheckEndpointPermission(ctx context.Context, user
 
 	// Find matching endpoint permission
 	permission := s.findEndpointPermission(method, resource)
+
 	if permission == nil {
 		// No specific permission registered for this endpoint - deny by default
 		return false, nil
@@ -287,6 +288,7 @@ func (s *SQLPermissionChecker) CheckEndpointPermission(ctx context.Context, user
 func (s *SQLPermissionChecker) findEndpointPermission(method, resource string) *EndpointPermission {
 	// Try exact match first
 	key := fmt.Sprintf("%s:%s", strings.ToUpper(method), resource)
+
 	if perm, exists := s.permissions[key]; exists {
 		return perm
 	}
@@ -317,6 +319,7 @@ func matchesPathPattern(pattern, path string) bool {
 	patternParts := strings.Split(pattern, "/")
 	pathParts := strings.Split(path, "/")
 
+	// Length mismatch means no match
 	if len(patternParts) != len(pathParts) {
 		return false
 	}
