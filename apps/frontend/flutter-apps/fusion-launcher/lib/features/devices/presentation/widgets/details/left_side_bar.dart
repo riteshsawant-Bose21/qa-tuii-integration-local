@@ -182,23 +182,26 @@ class DeviceLeftSideBar extends StatelessWidget {
                         ),
                         const SizedBox(height: 8),
                         // CPU / Disk Row
-                        const Row(
+                        Row(
                           children: <Widget>[
-                            Expanded(
+                            const Expanded(
                               child: DeviceInfoCard(
                                 label: "CPU Usage",
                                 value: "63%",
                                 assetPath: AssetIcons.levelIndicator,
                               ),
                             ),
-                            SizedBox(width: 8),
-                            Expanded(
-                              child: DeviceInfoCard(
-                                label: "Disk Usage",
-                                value: "63%",
-                                assetPath: AssetIcons.diskUsage,
+
+                            if (device is FusionDsp) ...<Widget>[
+                              const SizedBox(width: 8),
+                              const Expanded(
+                                child: DeviceInfoCard(
+                                  label: "Disk Usage",
+                                  value: "63%",
+                                  assetPath: AssetIcons.diskUsage,
+                                ),
                               ),
-                            ),
+                            ],
                           ],
                         ),
                       ],

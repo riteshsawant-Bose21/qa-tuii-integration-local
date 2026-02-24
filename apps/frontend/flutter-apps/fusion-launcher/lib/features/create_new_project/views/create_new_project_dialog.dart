@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/src/services/text_formatter.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/features/create_new_project/viewmodel/create_new_project_vm.dart';
 import 'package:fusion_launcher/features/home/presentation/widgets/project_card.dart';
