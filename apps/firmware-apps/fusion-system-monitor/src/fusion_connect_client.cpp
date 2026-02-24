@@ -748,6 +748,7 @@ private:
     bool ptp_sync_good;
     bool ptp_anchor_pending;
     int ptp_good_streak;
+    int ptp_bad_streak;
     int ptp_role_flag;
     int ptp_false_streak;
     std::chrono::steady_clock::time_point ptp_last_poll;
@@ -778,7 +779,7 @@ FusionConnectClient::FusionConnectClient(const bosepro::BlockConfiguration &conf
       enet_iface("lan1"), period_ms(1000), debug_enabled(false),
       debug_sent(false), iface_sent(false), phc_anchor_logged(false), sap_announcer(""),
       ptp_sync_good(false), ptp_anchor_pending(true), ptp_good_streak(0),
-      ptp_role_flag(-1), ptp_false_streak(0), mgr_start_failures(0) {
+      ptp_bad_streak(0), ptp_role_flag(-1), ptp_false_streak(0), mgr_start_failures(0) {
     system_ip = "";
 
     if (!client.is_valid()) {
@@ -1274,8 +1275,10 @@ void FusionConnectClient::maybe_set_debug()
 void FusionConnectClient::update_ptp_state()
 {
     constexpr auto GM_FALSE_GRACE = std::chrono::seconds(25);
-    constexpr long long OFFSET_OK_NS = 5000; // 5 us hysteresis window
-    constexpr long long OFFSET_LOCK_NS = 1000; // 1 us initial lock window
+    constexpr long long OFFSET_LOCK_NS = 1000; // 1 us lock window
+    constexpr long long OFFSET_REPORT_NS = 1000; // report above 1 us
+    constexpr long long OFFSET_LOSS_NS = 10000; // 10 us loss threshold
+    constexpr int LOSS_CONSEC = 3;
     const auto now = std::chrono::steady_clock::now();
 
     if (now - ptp_last_poll < std::chrono::milliseconds(period_ms)) return;
@@ -1315,17 +1318,33 @@ void FusionConnectClient::update_ptp_state()
 
     if (i_am_gm) {
         good_now = !gm_present;
+        ptp_bad_streak = 0;
     } else {
         if (master_offset_valid) {
             long long best_abs = master_offset ? std::llabs(master_offset) : 0;
-            const long long thr = ptp_sync_good ? OFFSET_OK_NS : OFFSET_LOCK_NS;
-            good_now = gm_present && (best_abs <= thr);
+            good_now = gm_present && (best_abs <= OFFSET_LOCK_NS);
+            if (gm_present && best_abs > OFFSET_REPORT_NS) {
+                SPDLOG_WARN("PTP offset {} ns exceeds {} ns", master_offset, OFFSET_REPORT_NS);
+            }
+            if (gm_present && best_abs > OFFSET_LOSS_NS) {
+                ptp_bad_streak++;
+            } else {
+                ptp_bad_streak = 0;
+            }
+        } else {
+            ptp_bad_streak = 0;
         }
     }
 
-    ptp_good_streak = good_now ? (ptp_good_streak + 1) : 0;
     const bool was_good = ptp_sync_good;
-    ptp_sync_good = (ptp_good_streak >= 3);
+    ptp_good_streak = good_now ? (ptp_good_streak + 1) : 0;
+    if (!ptp_sync_good && ptp_good_streak >= 3) {
+        ptp_sync_good = true;
+    }
+    if (was_good && ptp_bad_streak >= LOSS_CONSEC) {
+        ptp_sync_good = false;
+        ptp_good_streak = 0;
+    }
 
     if (!ptp_sync_good && was_good) {
         ptp_anchor_pending = true;
