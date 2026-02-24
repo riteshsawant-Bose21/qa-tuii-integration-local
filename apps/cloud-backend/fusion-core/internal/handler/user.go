@@ -2,7 +2,6 @@ package handler
 
 import (
 	"fmt"
-	"log"
 	"strings"
 
 	"github.com/gin-gonic/gin"
@@ -283,7 +282,7 @@ func (h *UserHandler) CreateUserSettings(ctx *gin.Context) {
 	}
 
 	userSettingsID, err := h.user.CreateUserSettings(ctx, &settings)
-	log.Printf("CreateUserSettings result: userSettingsID=%s, err=%v", userSettingsID, err)
+
 	if err != nil {
 		response.InternalError(ctx)
 		return
@@ -452,26 +451,25 @@ func (h *UserHandler) UpdateUserProfile(ctx *gin.Context) {
 		response.BadRequest(ctx, fmt.Sprintf("Invalid JSON format: %v", err))
 		return
 	}
-	log.Printf("Received UpdateUserProfile request: profileID=%s, profile=%+v", profileID, profile)
+
 	if _, err := uuid.Parse(profileID); err != nil {
 		response.BadRequest(ctx, "Invalid ID format: must be a valid UUID")
 		return
 	}
-	log.Printf("Parsed profileID: %s", profileID)
+
 	userAuth, exists := ctx.Get("user_auth")
 	if !exists {
 		response.Unauthorized(ctx, errorutil.MsgUnauthorized)
 		return
 	}
-	log.Printf("User auth from context: %+v", userAuth)
+
 	auth, ok := userAuth.(*types.UserAuthorizationResponse)
 	if !ok {
 		response.Unauthorized(ctx, errorutil.MsgUnauthorized)
 		return
 	}
-	log.Printf("Parsed user auth: %+v", auth)
+
 	if err := h.user.UpdateUserProfile(ctx, &profile, profileID, auth.User.ID); err != nil {
-		log.Printf("Error updating user profile: %v", err)
 		if err.Error() == "user profile not found" {
 			response.NotFound(ctx, "User profile not found")
 			return
