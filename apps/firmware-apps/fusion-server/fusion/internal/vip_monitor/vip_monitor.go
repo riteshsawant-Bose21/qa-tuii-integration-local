@@ -170,6 +170,14 @@ func (m *VIPMonitor) Start() error {
 		return fmt.Errorf("VIP monitoring already active")
 	}
 
+	// // Start VRRP listener (non-local mode only)
+	// NOTE: In a case where the VIP is not set, the VRRP listener will still
+	// be started but the vip_watcher will only start when the vip is set
+	if !m.isLocal {
+		m.stopWg.Add(1)
+		go m.startVRRPListener()
+	}
+
 	// Read expected VIP from config
 	var expectedVIPStr string
 	var err error
@@ -217,12 +225,6 @@ func (m *VIPMonitor) Start() error {
 	// Initialize current VIP from config
 	m.currentVIP = vip.Canonicalize(expectedVIPStr)
 	m.stateMu.Unlock()
-
-	// Start VRRP listener (non-local mode only)
-	if !m.isLocal {
-		m.stopWg.Add(1)
-		go m.startVRRPListener()
-	}
 
 	// Start VIP watcher (netlink monitoring)
 	if err := m.vipWatcher.Start(*expectedVIPNet, m.handleVIPWatcherUpdate); err != nil {
@@ -724,6 +726,8 @@ func (m *VIPMonitor) HandleReloadVIPLocal(w http.ResponseWriter, r *http.Request
 	}
 
 	w.WriteHeader(http.StatusNoContent)
+}
+
 }
 
 // getVIPInLocalConfig is for use in "local" development mode only
