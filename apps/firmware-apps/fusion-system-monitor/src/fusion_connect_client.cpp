@@ -752,6 +752,7 @@ private:
     int ptp_false_streak;
     std::chrono::steady_clock::time_point ptp_last_poll;
     std::chrono::steady_clock::time_point ptp_last_role_probe;
+    std::chrono::steady_clock::time_point ptp_last_gm_present;
     std::chrono::steady_clock::time_point ptp_last_anchor;
     std::chrono::steady_clock::time_point ptp_last_status_poll;
     std::chrono::steady_clock::time_point mgr_last_start_attempt;
@@ -800,6 +801,7 @@ FusionConnectClient::FusionConnectClient(const bosepro::BlockConfiguration &conf
 
     ptp_last_poll = std::chrono::steady_clock::now();
     ptp_last_role_probe = ptp_last_poll;
+    ptp_last_gm_present = ptp_last_poll;
     ptp_last_anchor = ptp_last_poll - std::chrono::seconds(60);
     ptp_last_status_poll = ptp_last_poll - std::chrono::seconds(1);
     mgr_last_start_attempt = ptp_last_poll - std::chrono::seconds(2);
@@ -1271,8 +1273,9 @@ void FusionConnectClient::maybe_set_debug()
 
 void FusionConnectClient::update_ptp_state()
 {
-    constexpr int GM_FALSE_CONSEC = 25;
-    constexpr long long OFFSET_OK_NS = 5000; // 5 us window
+    constexpr auto GM_FALSE_GRACE = std::chrono::seconds(25);
+    constexpr long long OFFSET_OK_NS = 5000; // 5 us hysteresis window
+    constexpr long long OFFSET_LOCK_NS = 1000; // 1 us initial lock window
     const auto now = std::chrono::steady_clock::now();
 
     if (now - ptp_last_poll < std::chrono::milliseconds(period_ms)) return;
@@ -1287,12 +1290,20 @@ void FusionConnectClient::update_ptp_state()
         return;
     }
 
+    if (!gm_present_valid) {
+        SPDLOG_DEBUG("PTP status missing gmPresent; keeping previous sync state");
+        return;
+    }
+
     if (gm_present_valid) {
         if (gm_present) {
             ptp_role_flag = 1;
             ptp_false_streak = 0;
+            ptp_last_gm_present = now;
         } else if (ptp_role_flag != 0) {
-            if (++ptp_false_streak >= GM_FALSE_CONSEC) ptp_role_flag = 0;
+            if (now - ptp_last_gm_present >= GM_FALSE_GRACE) {
+                ptp_role_flag = 0;
+            }
         }
         ptp_last_role_probe = now;
     } else if (now - ptp_last_role_probe > std::chrono::seconds(3)) {
@@ -1303,11 +1314,12 @@ void FusionConnectClient::update_ptp_state()
     bool good_now = false;
 
     if (i_am_gm) {
-        good_now = (gm_present_valid && !gm_present);
+        good_now = !gm_present;
     } else {
         if (master_offset_valid) {
             long long best_abs = master_offset ? std::llabs(master_offset) : 0;
-            good_now = (best_abs <= OFFSET_OK_NS);
+            const long long thr = ptp_sync_good ? OFFSET_OK_NS : OFFSET_LOCK_NS;
+            good_now = gm_present && (best_abs <= thr);
         }
     }
 
