@@ -168,6 +168,13 @@ class _DeviceMappingScreenState extends State<DeviceMappingScreen> {
           child: _buildAssignmentDropdown(device, assignedHardware),
         ),
       },
+      onWillAccept: (String hardwareId) {
+        final NetworkHardware hw = widget.networkHardware.firstWhere(
+          (NetworkHardware h) => h.id == hardwareId,
+          orElse: () => NetworkHardware.empty(),
+        );
+        return hw.modelName == device.hardwareName;
+      },
       // DRAG & DROP LOGIC
       onDragEnter: (String id) => setState(() => _draggedHardwareId = id),
       onDragLeave: () => setState(() => _draggedHardwareId = null),
@@ -176,8 +183,10 @@ class _DeviceMappingScreenState extends State<DeviceMappingScreen> {
           (NetworkHardware h) => h.id == hardwareId,
           orElse: () => NetworkHardware.empty(),
         );
-        if (!hw.isEmpty) {
-          widget.onAssignHardware(device, hw);
+        if (hw.modelName == device.hardwareName) {
+          if (!hw.isEmpty) {
+            widget.onAssignHardware(device, hw);
+          }
         }
         setState(() => _draggedHardwareId = null);
       },

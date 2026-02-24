@@ -29,6 +29,7 @@ class FusionTableRow {
   final Function(String)? onDragEnter;
   final VoidCallback? onDragLeave;
   final Function(String)? onDrop;
+  final Function(String)? onWillAccept;
   final bool isDragTarget;
 
   const FusionTableRow({
@@ -36,6 +37,7 @@ class FusionTableRow {
     required this.cells,
     this.onDragEnter,
     this.onDragLeave,
+    this.onWillAccept,
     this.onDrop,
     this.isDragTarget = false,
   });
@@ -166,8 +168,10 @@ class _FusionTableState extends State<FusionTable> {
 
   Widget _buildDataRow(FusionTableRow row, int index) {
     return DragTarget<String>(
-      onWillAccept: (_) => row.onDrop != null,
-      onAccept: (String id) => row.onDrop?.call(id),
+      onWillAcceptWithDetails: (DragTargetDetails<String> details) {
+        return row.onWillAccept != null ? row.onWillAccept!(details.data) : false;
+      },
+      onAcceptWithDetails: (DragTargetDetails<String> details) => row.onDrop?.call(details.data),
       onMove: (DragTargetDetails<String> d) => row.onDragEnter?.call(d.data),
       onLeave: (_) => row.onDragLeave?.call(),
       builder: (BuildContext context, List<String?> candidateData, List<dynamic> rejectedData) {
