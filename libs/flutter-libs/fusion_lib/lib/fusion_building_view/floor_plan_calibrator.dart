@@ -9,7 +9,6 @@ import 'package:fusion_lib/strings/fusion_strings.dart';
 
 import '../constants/test_keys.dart';
 import '../di/service_locator.dart';
-import '../fusion_widgets/buttons/fusion_text_button.dart';
 
 class FloorPlanCalibrationDialog extends StatelessWidget {
   final ui.Image floorPlanImage;
@@ -141,6 +140,10 @@ class FloorPlanCalibrator extends StatefulWidget {
 }
 
 class _FloorPlanCalibratorState extends State<FloorPlanCalibrator> {
+  // --- zoom/pan state ---
+  double _zoomScale = 1.0;
+  Offset _panOffset = Offset.zero;
+  static const double minZoom = 0.1, maxZoom = 10.0;
   // --- measurement state ---
   Offset? _startPointNormalized;
   Offset? _endPointNormalized;
@@ -151,6 +154,14 @@ class _FloorPlanCalibratorState extends State<FloorPlanCalibrator> {
   // --- crop state (normalized to the displayed image rect 0..1) ---
   Rect _cropRectN = const Rect.fromLTWH(0, 0, 1, 1);
   _CropHandle _activeHandle = _CropHandle.none;
+
+  // --- zoom/pan state ---
+  Offset _panZoomStartPan = Offset.zero;
+  Offset _panZoomStartFocal = Offset.zero;
+  double _panZoomStartScale = 1.0;
+  bool _isMiddleMousePanning = false;
+  Offset _middleMousePanStart = Offset.zero;
+  Offset _middleMousePanOffset = Offset.zero;
 
   // --- UI/controls ---
   final TextEditingController _distanceController = TextEditingController(text: '5.00');
@@ -170,15 +181,36 @@ class _FloorPlanCalibratorState extends State<FloorPlanCalibrator> {
   Offset? _screenToNormalized(Offset p) {
     final r = _imageRect;
     if (r == null) return null;
-    final x = ((p.dx - r.left) / r.width).clamp(0.0, 1.0);
-    final y = ((p.dy - r.top) / r.height).clamp(0.0, 1.0);
+    // Adjust for pan/zoom
+    final local = (p - _panOffset) / _zoomScale;
+    final x = ((local.dx - r.left) / r.width).clamp(0.0, 1.0);
+    final y = ((local.dy - r.top) / r.height).clamp(0.0, 1.0);
     return Offset(x, y);
   }
 
-  Offset? _normalizedToScreen(Offset n) {
+  Offset _screenToCanvas(Offset p) => (p - _panOffset) / _zoomScale;
+
+  Offset _canvasToScreen(Offset p) => p * _zoomScale + _panOffset;
+
+  Offset? _normalizedToCanvas(Offset n) {
     final r = _imageRect;
     if (r == null) return null;
     return Offset(r.left + n.dx * r.width, r.top + n.dy * r.height);
+  }
+
+  // Handle mouse wheel/trackpad zoom
+  void _handleScrollWheelZoom(PointerSignalEvent p) {
+    if (p is PointerScrollEvent) {
+      final double d = p.scrollDelta.dy;
+      final Offset f = p.localPosition;
+      setState(() {
+        final double prop = _zoomScale * (1 - d * 0.001);
+        final double c = prop.clamp(minZoom, maxZoom);
+        final double zf = c / _zoomScale;
+        _panOffset = (_panOffset - f) * zf + f;
+        _zoomScale = c;
+      });
+    }
   }
 
   Offset _normalizedToImagePx(Offset n) => Offset(n.dx * widget.floorPlanImage.width, n.dy * widget.floorPlanImage.height);
@@ -187,11 +219,12 @@ class _FloorPlanCalibratorState extends State<FloorPlanCalibrator> {
   void _onMeasureTapDown(TapDownDetails d) {
     final n = _screenToNormalized(d.localPosition);
     if (n == null) return;
+    final local = _screenToCanvas(d.localPosition);
 
     if (_startPointNormalized == null || !_isDrawing) {
       setState(() {
         _startPointNormalized = n;
-        _startPointDisplay = d.localPosition;
+        _startPointDisplay = local;
         _endPointNormalized = null;
         _endPointDisplay = null;
         _isDrawing = true;
@@ -199,7 +232,7 @@ class _FloorPlanCalibratorState extends State<FloorPlanCalibrator> {
     } else {
       setState(() {
         _endPointNormalized = n;
-        _endPointDisplay = d.localPosition;
+        _endPointDisplay = local;
         _isDrawing = false;
       });
       fusionLibLocator<GuideShowCaseController>().completeStep(GuideShowCaseSteps.showFloorPickCalibration);
@@ -212,7 +245,7 @@ class _FloorPlanCalibratorState extends State<FloorPlanCalibrator> {
     if (n == null) return;
     setState(() {
       _endPointNormalized = n;
-      _endPointDisplay = d.localPosition;
+      _endPointDisplay = _screenToCanvas(d.localPosition);
     });
   }
 
@@ -222,7 +255,7 @@ class _FloorPlanCalibratorState extends State<FloorPlanCalibrator> {
     if (n == null) return;
     setState(() {
       _endPointNormalized = n;
-      _endPointDisplay = e.localPosition;
+      _endPointDisplay = _screenToCanvas(e.localPosition);
     });
   }
 
@@ -261,9 +294,11 @@ class _FloorPlanCalibratorState extends State<FloorPlanCalibrator> {
     // but clamp the resulting crop rectangle to valid ranges
     final screenPos = d.localPosition;
 
+    final local = _screenToCanvas(screenPos);
+
     // Convert screen position to normalized coordinates relative to image
-    final normalizedX = ((screenPos.dx - r.left) / r.width).clamp(0.0, 1.0);
-    final normalizedY = ((screenPos.dy - r.top) / r.height).clamp(0.0, 1.0);
+    final normalizedX = ((local.dx - r.left) / r.width).clamp(0.0, 1.0);
+    final normalizedY = ((local.dy - r.top) / r.height).clamp(0.0, 1.0);
     final n = Offset(normalizedX, normalizedY);
 
     Rect newN = _cropRectN;
@@ -359,14 +394,14 @@ class _FloorPlanCalibratorState extends State<FloorPlanCalibrator> {
     final centerY = (crop.top + crop.bottom) / 2;
 
     return <_CropHandle, Offset>{
-      _CropHandle.topLeft: Offset(crop.left, crop.top),
-      _CropHandle.top: Offset(centerX, crop.top),
-      _CropHandle.topRight: Offset(crop.right, crop.top),
-      _CropHandle.right: Offset(crop.right, centerY),
-      _CropHandle.bottomRight: Offset(crop.right, crop.bottom),
-      _CropHandle.bottom: Offset(centerX, crop.bottom),
-      _CropHandle.bottomLeft: Offset(crop.left, crop.bottom),
-      _CropHandle.left: Offset(crop.left, centerY),
+      _CropHandle.topLeft: _canvasToScreen(Offset(crop.left, crop.top)),
+      _CropHandle.top: _canvasToScreen(Offset(centerX, crop.top)),
+      _CropHandle.topRight: _canvasToScreen(Offset(crop.right, crop.top)),
+      _CropHandle.right: _canvasToScreen(Offset(crop.right, centerY)),
+      _CropHandle.bottomRight: _canvasToScreen(Offset(crop.right, crop.bottom)),
+      _CropHandle.bottom: _canvasToScreen(Offset(centerX, crop.bottom)),
+      _CropHandle.bottomLeft: _canvasToScreen(Offset(crop.left, crop.bottom)),
+      _CropHandle.left: _canvasToScreen(Offset(crop.left, centerY)),
     };
   }
 
@@ -390,6 +425,48 @@ class _FloorPlanCalibratorState extends State<FloorPlanCalibrator> {
     // you could also reset crop + measurement.
     _resetCrop();
     _clearMeasurement();
+    setState(() {
+      _zoomScale = 1.0;
+      _panOffset = Offset.zero;
+    });
+  }
+
+  void _handlePanZoomStart(PointerPanZoomStartEvent e) {
+    _panZoomStartScale = _zoomScale;
+    _panZoomStartPan = _panOffset;
+    _panZoomStartFocal = e.position;
+  }
+
+  void _handlePanZoomUpdate(PointerPanZoomUpdateEvent e) {
+    final double nextScale = (_panZoomStartScale * e.scale).clamp(minZoom, maxZoom);
+    final double zf = nextScale / _panZoomStartScale;
+    setState(() {
+      _panOffset = (_panZoomStartPan - _panZoomStartFocal) * zf + _panZoomStartFocal + e.pan;
+      _zoomScale = nextScale;
+    });
+  }
+
+  void _handlePointerDown(PointerDownEvent e) {
+    if (e.kind == PointerDeviceKind.mouse && e.buttons == kMiddleMouseButton) {
+      _isMiddleMousePanning = true;
+      _middleMousePanStart = e.localPosition;
+      _middleMousePanOffset = _panOffset;
+    }
+  }
+
+  void _handlePointerMove(PointerMoveEvent e) {
+    if (_isMiddleMousePanning) {
+      final delta = e.localPosition - _middleMousePanStart;
+      setState(() {
+        _panOffset = _middleMousePanOffset + delta;
+      });
+    }
+  }
+
+  void _handlePointerUp(PointerUpEvent e) {
+    if (_isMiddleMousePanning) {
+      _isMiddleMousePanning = false;
+    }
   }
 
   // ---------- image cropping ----------
@@ -667,71 +744,81 @@ class _FloorPlanCalibratorState extends State<FloorPlanCalibrator> {
 
         // Canvas
         Expanded(
-          child: Container(
-            clipBehavior: Clip.hardEdge,
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.surfaceContainerLow,
-            ),
-            child: MouseRegion(
-              cursor: _mode == _ToolMode.measure ? SystemMouseCursors.precise : SystemMouseCursors.resizeUpLeftDownRight,
-              onHover: _mode == _ToolMode.measure ? _onMeasureHover : null,
-              child: GestureDetector(
-                behavior: HitTestBehavior.opaque,
-                onTapDown: _mode == _ToolMode.measure ? _onMeasureTapDown : null,
-                onPanUpdate: _mode == _ToolMode.measure ? _onMeasurePanUpdate : _onCropPanUpdate,
-                onPanStart: _mode == _ToolMode.crop ? _onCropPanStart : null,
-                onPanEnd: (d) {
-                  if (_mode == _ToolMode.crop) _onCropPanEnd(d);
-                  if (_mode == _ToolMode.measure && _isDrawing) {
-                    setState(() => _isDrawing = false);
-                  }
-                },
-                child: GuideShowcaseWrapper(
-                  step: GuideShowCaseSteps.showFloorPickCalibration,
-                  onHighlightedSpotTap: (TapDownDetails details) {
-                    if (_mode == _ToolMode.measure) {
-                      // Get the exact RenderBox of the CustomPaint
-                      final RenderBox? renderBox = _customPaintKey.currentContext?.findRenderObject() as RenderBox?;
-                      if (renderBox != null) {
-                        final Offset localPosition = renderBox.globalToLocal(details.globalPosition);
-
-                        // Create new TapDownDetails with local position
-                        final TapDownDetails localDetails = TapDownDetails(
-                          globalPosition: details.globalPosition,
-                          localPosition: localPosition,
-                          kind: details.kind,
-                        );
-
-                        _onMeasureTapDown(localDetails);
-                      }
+          child: Listener(
+            onPointerSignal: _handleScrollWheelZoom,
+            onPointerPanZoomStart: _handlePanZoomStart,
+            onPointerPanZoomUpdate: _handlePanZoomUpdate,
+            onPointerDown: _handlePointerDown,
+            onPointerMove: _handlePointerMove,
+            onPointerUp: _handlePointerUp,
+            child: Container(
+              clipBehavior: Clip.hardEdge,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: Colors.white,
+              ),
+              child: MouseRegion(
+                cursor: _mode == _ToolMode.measure ? SystemMouseCursors.precise : SystemMouseCursors.resizeUpLeftDownRight,
+                onHover: _mode == _ToolMode.measure ? _onMeasureHover : null,
+                child: GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTapDown: _mode == _ToolMode.measure ? _onMeasureTapDown : null,
+                  onPanUpdate: _mode == _ToolMode.measure ? _onMeasurePanUpdate : _onCropPanUpdate,
+                  onPanStart: _mode == _ToolMode.crop ? _onCropPanStart : null,
+                  onPanEnd: (d) {
+                    if (_mode == _ToolMode.crop) _onCropPanEnd(d);
+                    if (_mode == _ToolMode.measure && _isDrawing) {
+                      setState(() => _isDrawing = false);
                     }
                   },
-                  child: Center(
-                    child: SemanticHelper.container(
-                      testId: SemanticHelper.createTestId(SemanticTypes.container, FusionTestKeys.floorCalibrationCanvas),
-                      child: CustomPaint(
-                        key: _customPaintKey,
-                        painter: FloorPlanCalibrationPainter(
-                          image: widget.floorPlanImage,
-                          startPoint: _startPointDisplay,
-                          endPoint: _endPointDisplay,
-                          distanceText: _distanceController.text.trim(),
-                          unit: _selectedUnit,
-                          cropRectNormalized: _cropRectN,
-                          showCropHandles: _mode == _ToolMode.crop,
-                          onImageRectChanged: (ui.Rect r) {
-                            _imageRect = r;
-                            // keep display points in sync if image rect changes
-                            if (_startPointNormalized != null) {
-                              _startPointDisplay = _normalizedToScreen(_startPointNormalized!);
-                            }
-                            if (_endPointNormalized != null) {
-                              _endPointDisplay = _normalizedToScreen(_endPointNormalized!);
-                            }
-                          },
+                  child: GuideShowcaseWrapper(
+                    step: GuideShowCaseSteps.showFloorPickCalibration,
+                    onHighlightedSpotTap: (TapDownDetails details) {
+                      if (_mode == _ToolMode.measure) {
+                        // Get the exact RenderBox of the CustomPaint
+                        final RenderBox? renderBox = _customPaintKey.currentContext?.findRenderObject() as RenderBox?;
+                        if (renderBox != null) {
+                          final Offset localPosition = renderBox.globalToLocal(details.globalPosition);
+
+                          // Create new TapDownDetails with local position
+                          final TapDownDetails localDetails = TapDownDetails(
+                            globalPosition: details.globalPosition,
+                            localPosition: localPosition,
+                            kind: details.kind,
+                          );
+
+                          _onMeasureTapDown(localDetails);
+                        }
+                      }
+                    },
+                    child: Center(
+                      child: SemanticHelper.container(
+                        testId: SemanticHelper.createTestId(SemanticTypes.container, FusionTestKeys.floorCalibrationCanvas),
+                        child: CustomPaint(
+                          key: _customPaintKey,
+                          painter: FloorPlanCalibrationPainter(
+                            image: widget.floorPlanImage,
+                            startPoint: _startPointDisplay,
+                            endPoint: _endPointDisplay,
+                            distanceText: _distanceController.text.trim(),
+                            unit: _selectedUnit,
+                            cropRectNormalized: _cropRectN,
+                            showCropHandles: _mode == _ToolMode.crop,
+                            zoomScale: _zoomScale,
+                            panOffset: _panOffset,
+                            onImageRectChanged: (ui.Rect r) {
+                              _imageRect = r;
+                              // keep display points in sync if image rect changes
+                              if (_startPointNormalized != null) {
+                                _startPointDisplay = _normalizedToCanvas(_startPointNormalized!);
+                              }
+                              if (_endPointNormalized != null) {
+                                _endPointDisplay = _normalizedToCanvas(_endPointNormalized!);
+                              }
+                            },
+                          ),
+                          child: const SizedBox.expand(),
                         ),
-                        child: const SizedBox.expand(),
                       ),
                     ),
                   ),
@@ -864,6 +951,8 @@ class FloorPlanCalibrationPainter extends CustomPainter {
   final MeasurementUnit unit;
   final Rect? cropRectNormalized; // 0..1 inside the displayed image rect
   final bool showCropHandles;
+  final double zoomScale;
+  final Offset panOffset;
   final Function(Rect)? onImageRectChanged;
 
   FloorPlanCalibrationPainter({
@@ -874,6 +963,8 @@ class FloorPlanCalibrationPainter extends CustomPainter {
     required this.unit,
     this.cropRectNormalized,
     this.showCropHandles = false,
+    this.zoomScale = 1.0,
+    this.panOffset = Offset.zero,
     this.onImageRectChanged,
   });
 
@@ -881,6 +972,11 @@ class FloorPlanCalibrationPainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     if (size.width <= 0 || size.height <= 0) return;
     if (image.width <= 0 || image.height <= 0) return;
+
+    // Apply pan/zoom
+    canvas.save();
+    canvas.translate(panOffset.dx, panOffset.dy);
+    canvas.scale(zoomScale, zoomScale);
 
     final imageAR = image.width / image.height;
     final canvasAR = size.width / size.height;
@@ -923,7 +1019,7 @@ class FloorPlanCalibrationPainter extends CustomPainter {
       final Path overlay = Path.combine(PathOperation.difference, outside, hole);
       canvas.drawPath(
         overlay,
-        Paint()..color = Colors.black.withValues(alpha: 0.25),
+        Paint()..color = Colors.white,
       );
 
       // crop border
@@ -971,16 +1067,16 @@ class FloorPlanCalibrationPainter extends CustomPainter {
 
       final base = Paint()
         ..color = Colors.black
-        ..strokeWidth = 2.5
-        ..style = PaintingStyle.stroke;
+        ..strokeWidth = 2.5;
+      // ..style = PaintingStyle.stroke;
 
-      final guide = Paint()
-        ..color = Colors.white
-        ..strokeWidth = 6
-        ..style = PaintingStyle.stroke;
+      // final guide = Paint()
+      //   ..color = Colors.black
+      //   ..strokeWidth = 6
+      //   ..style = PaintingStyle.stroke;
 
-      // draw white guide underlay for contrast
-      canvas.drawLine(p1, p2, guide);
+      // // draw white guide underlay for contrast
+      // canvas.drawLine(p1, p2, guide);
       // main line
       canvas.drawLine(p1, p2, base);
 
@@ -1019,6 +1115,7 @@ class FloorPlanCalibrationPainter extends CustomPainter {
       canvas.drawRRect(bg, Paint()..color = Colors.black.withValues(alpha: 0.8));
       tp.paint(canvas, labPos);
     }
+    canvas.restore();
   }
 
   void _drawArrowHead(Canvas canvas, Offset from, Offset to, Paint p) {
@@ -1050,7 +1147,9 @@ class FloorPlanCalibrationPainter extends CustomPainter {
       old.distanceText != distanceText ||
       old.unit != unit ||
       old.cropRectNormalized != cropRectNormalized ||
-      old.showCropHandles != showCropHandles;
+      old.showCropHandles != showCropHandles ||
+      old.zoomScale != zoomScale ||
+      old.panOffset != panOffset;
 }
 
 class CalibrationData {

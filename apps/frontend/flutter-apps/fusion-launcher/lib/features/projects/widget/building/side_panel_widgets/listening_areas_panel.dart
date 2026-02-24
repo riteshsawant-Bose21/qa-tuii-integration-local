@@ -185,14 +185,14 @@ class ListeningAreasPanelState extends State<ListeningAreasPanel> with TickerPro
                         Expanded(
                           child: Row(
                             children: <Widget>[
-                              FusionAppText(
-                                text: "$floorName /",
-                                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                  fontSize: 11,
-                                  fontWeight: isSelected ? FontWeight.w500 : FontWeight.w400,
-                                  color: (!area.isDrawn) ? context.colorScheme.error : null,
-                                ),
-                              ),
+                              // FusionAppText(
+                              //   text: "$floorName /",
+                              //   style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              //     fontSize: 11,
+                              //     fontWeight: isSelected ? FontWeight.w500 : FontWeight.w400,
+                              //     color: (!area.isDrawn) ? context.colorScheme.error : null,
+                              //   ),
+                              // ),
                               Expanded(
                                 child: SemanticHelper.formControl(
                                   testId: SemanticHelper.createTestId(SemanticTypes.textInput, "listening_area_name_input_$index"),

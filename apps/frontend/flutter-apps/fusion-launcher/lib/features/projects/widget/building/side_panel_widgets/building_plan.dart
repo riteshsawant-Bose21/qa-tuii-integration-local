@@ -100,6 +100,9 @@ class _BuildingPlanState extends State<BuildingPlan> {
     viewModel.setCurrentFloorIndex(selectedIndex);
 
     _clearFields();
+
+    // Set toolbar mode to acoustics mode for new floor.
+    viewModel.setToolbarMode(ToolbarMode.acoustics);
   }
 
   /// Delete the selected floor
