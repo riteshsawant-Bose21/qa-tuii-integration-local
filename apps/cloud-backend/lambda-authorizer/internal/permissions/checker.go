@@ -143,6 +143,7 @@ func (s *SQLPermissionChecker) registerPermission(method, path, feature, level, 
 }
 
 func (s *SQLPermissionChecker) GetUserPermissions(ctx context.Context, userEmail string) (map[string]string, error) {
+	// Not using the SQLBoiler ORM since the models are defined in fusion-core, but we can switch to ORM if we want to duplicate models here
 	query := `
 		SELECT f.name, a.key
 		FROM app_user u
@@ -169,6 +170,7 @@ func (s *SQLPermissionChecker) GetUserPermissions(ctx context.Context, userEmail
 }
 
 func (s *SQLPermissionChecker) CheckUserPermission(ctx context.Context, userEmail, feature, requiredLevel string) (bool, error) {
+	// Not using the SQLBoiler ORM since the models are defined in fusion-core, but we can switch to ORM if we want to duplicate models here
 	query := `
 		SELECT a.key
 		FROM app_user u
