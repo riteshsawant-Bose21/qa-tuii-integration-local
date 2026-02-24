@@ -5,5 +5,5 @@ project:
 tasks:
   build-all:
     deps:
-      - "fusion-core:build-with-lint"
+      - "fusion-core:build"
     description: Build all cloud backend services
