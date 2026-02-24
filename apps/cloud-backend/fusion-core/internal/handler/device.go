@@ -73,3 +73,67 @@ func (h *DeviceHandler) CreateDevice(ctx *gin.Context) {
 	response.Created(ctx, res)
 }
 
+// UpdateDevice updates an existing device.
+// @Summary Update a device
+// @Description Update device details (non-static fields only)
+// @Tags devices
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param device_id path string true "Device ID"
+// @Param body body types.DeviceUpdateRequest true "Device update details"
+// @Success 204 "Successfully updated device"
+// @Failure 400 {object} types.ErrorResponse "Bad request - Invalid payload"
+// @Failure 401 {object} types.ErrorResponse "Unauthorized - User not authorized to update this device"
+// @Failure 404 {object} types.ErrorResponse "Device not found"
+// @Failure 500 {object} types.ErrorResponse "Internal server error"
+// @Router /devices/{device_id} [patch]
+func (h *DeviceHandler) UpdateDevice(ctx *gin.Context) {
+	loggerFromContext, exists := ctx.Get("logger")
+
+	if !exists {
+		response.InternalError(ctx)
+		return
+	}
+
+	logger := loggerFromContext.(*zap.Logger)
+
+	userAuth, exists := ctx.Get("user_auth")
+	if !exists {
+		response.Unauthorized(ctx, errorutil.MsgUnauthorized)
+		return
+	}
+	user := userAuth.(*types.UserAuthorizationResponse)
+
+	deviceID := ctx.Param("device_id")
+	if deviceID == "" {
+		logger.Error("Device ID is required")
+		response.BadRequest(ctx, "device_id is required")
+		return
+	}
+
+	var p types.DeviceUpdateRequest
+	if err := ctx.ShouldBindJSON(&p); err != nil {
+		logger.Error("Failed to bind JSON", zap.Error(err))
+		response.BadRequest(ctx, err.Error())
+		return
+	}
+
+	err := h.device.UpdateDevice(ctx, deviceID, &p, *user, logger)
+
+	if err != nil {
+		logger.Error("Failed to update device", zap.Error(err))
+		if err.Error() == errorutil.ErrMsgDeviceNotFound || err.Error() == errorutil.ErrMsgProjectNotFound {
+			response.NotFound(ctx, err.Error())
+			return
+		} else if err.Error() == errorutil.MsgUnauthorized {
+			response.Unauthorized(ctx, err.Error())
+			return
+		}
+		// Internal server errors
+		response.InternalError(ctx)
+		return
+	}
+
+	response.NoContent(ctx)
+}

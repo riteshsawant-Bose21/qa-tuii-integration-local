@@ -20,3 +20,15 @@ type DeviceCreateRequest struct {
 type DeviceCreateResponse struct {
 	Certificate string `json:"certificate"`
 }
+
+type DeviceUpdateRequest struct {
+	DeviceName      string `json:"device_name"`
+	FirmwareVersion string `json:"firmware_version"`
+	DeviceZone      string `json:"device_zone"`
+	DeviceLocation  string `json:"device_location"`
+	Timezone        string `json:"timezone"`
+	DstEnabled      *bool  `json:"dst_enabled"`
+	NtpEnabled      *bool  `json:"ntp_enabled"`
+	NtpServer       string `json:"ntp_server"`
+	ProjectID       string `json:"project_id"`
+}

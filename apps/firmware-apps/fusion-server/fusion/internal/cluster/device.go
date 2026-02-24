@@ -402,6 +402,16 @@ func (c *Cluster) SetDeviceCertificate(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, fmt.Sprintf("Error writing certificate file: %v", err), http.StatusInternalServerError)
 			return
 		}
+
+		info, err := c.delegate.persistence.GetDeviceInfo()
+
+		info.IsClaimed = true
+
+		if err := c.delegate.persistence.SetDeviceInfo(info); err != nil {
+			http.Error(w, fmt.Sprintf("Failed to set device info: %v", err), http.StatusInternalServerError)
+			return
+		}
+
 		logging.GetLogger().Info("Certificate replaced successfully")
 		w.WriteHeader(http.StatusNoContent)
 	} else {

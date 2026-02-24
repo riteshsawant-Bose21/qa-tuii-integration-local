@@ -5,6 +5,7 @@ package errorutil
 const (
 	MsgUnauthorized           = "Unauthorized"
 	ErrMsgDeviceAlreadyExists = "Device with the given ID already exists"
+	ErrMsgDeviceNotFound       = "Device not found"
 	MsgAccessDenied           = "Access denied"
 	MsgInternalServerError    = "Internal Server Error"
 	MsgBadRequest             = "Bad Request"
