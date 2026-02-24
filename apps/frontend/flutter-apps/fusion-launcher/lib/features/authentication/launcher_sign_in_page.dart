@@ -8,6 +8,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../core/service_locator.dart';
 import '../../core/utils/fusion_utils.dart';
+import '../processing_block/view/processing_blocks/widgets/disabled_widget_wrapper.dart';
 import '../user_account_setup/presentation/widgets/account_creation_success_popup.dart';
 
 class LauncherSignInPage extends StatelessWidget {
@@ -222,45 +223,48 @@ class NeumorphicDarkTextField extends StatelessWidget {
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.all(2.0),
-      child: FusionContainer(
-        width: width,
-        height: height,
-        borderRadius: borderRadius,
-        color: color,
+      child: DisabledWidgetWrapper(
+        isDisabled: !enabled,
+        child: FusionContainer(
+          width: width,
+          height: height,
+          borderRadius: borderRadius,
+          color: color,
 
-        // margin: const EdgeInsets.all(2),
-        // decoration: BoxDecoration(
-        //   boxShadow: <BoxShadow>[
-        //     const BoxShadow(color: Colors.black54, blurRadius: 1, offset: Offset(-2, -2), blurStyle: BlurStyle.inner),
-        //     const BoxShadow(color: Colors.white12, blurRadius: 1, offset: Offset(2, 2), blurStyle: BlurStyle.inner),
-        //     const BoxShadow(color: FusionDarkColorPallette.dark70, blurRadius: 4, blurStyle: BlurStyle.inner),
-        //   ],
-        //   borderRadius: BorderRadius.circular(borderRadius),
-        // ),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(borderRadius),
-          child: TextFormField(
-            controller: controller,
-            onChanged: onChanged,
-            keyboardType: keyboardType,
-            validator: validator,
-            style: textStyle ?? context.textTheme.labelLarge,
-            obscureText: isObscured,
-            enabled: enabled,
-            decoration: InputDecoration(
-              prefixIcon: prefix,
-              prefixIconConstraints: const BoxConstraints(minWidth: 0, minHeight: 0),
-              suffixIcon: suffix,
-              suffixIconConstraints: const BoxConstraints(minWidth: 0, minHeight: 0),
-              filled: false,
-              isDense: true,
-              border: InputBorder.none,
-              enabledBorder: InputBorder.none,
-              focusedBorder: InputBorder.none,
-              hintText: hintText,
-              hoverColor: Colors.transparent,
-              contentPadding: contentPadding ?? const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-              hintStyle: hintStyle ?? context.textTheme.labelLarge?.copyWith(color: Colors.grey),
+          // margin: const EdgeInsets.all(2),
+          // decoration: BoxDecoration(
+          //   boxShadow: <BoxShadow>[
+          //     const BoxShadow(color: Colors.black54, blurRadius: 1, offset: Offset(-2, -2), blurStyle: BlurStyle.inner),
+          //     const BoxShadow(color: Colors.white12, blurRadius: 1, offset: Offset(2, 2), blurStyle: BlurStyle.inner),
+          //     const BoxShadow(color: FusionDarkColorPallette.dark70, blurRadius: 4, blurStyle: BlurStyle.inner),
+          //   ],
+          //   borderRadius: BorderRadius.circular(borderRadius),
+          // ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(borderRadius),
+            child: TextFormField(
+              controller: controller,
+              onChanged: onChanged,
+              keyboardType: keyboardType,
+              validator: validator,
+              style: textStyle ?? context.textTheme.labelLarge,
+              obscureText: isObscured,
+              enabled: enabled,
+              decoration: InputDecoration(
+                prefixIcon: prefix,
+                prefixIconConstraints: const BoxConstraints(minWidth: 0, minHeight: 0),
+                suffixIcon: suffix,
+                suffixIconConstraints: const BoxConstraints(minWidth: 0, minHeight: 0),
+                filled: false,
+                isDense: true,
+                border: InputBorder.none,
+                enabledBorder: InputBorder.none,
+                focusedBorder: InputBorder.none,
+                hintText: hintText,
+                hoverColor: Colors.transparent,
+                contentPadding: contentPadding ?? const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+                hintStyle: hintStyle ?? context.textTheme.labelLarge?.copyWith(color: Colors.grey),
+              ),
             ),
           ),
         ),

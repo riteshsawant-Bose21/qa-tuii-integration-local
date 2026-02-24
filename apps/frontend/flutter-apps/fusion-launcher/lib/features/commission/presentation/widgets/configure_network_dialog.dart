@@ -93,7 +93,7 @@ class _ConfigureNetworkDialogState extends State<ConfigureNetworkDialog> {
 
   Widget _buildHeader(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
       decoration: BoxDecoration(
         border: Border(
           bottom: BorderSide(

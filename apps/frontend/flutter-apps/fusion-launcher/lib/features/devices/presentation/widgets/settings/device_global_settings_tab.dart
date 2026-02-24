@@ -100,6 +100,7 @@ class _SettingsDashboardState extends State<SettingsDashboard> {
     return Container(
       decoration: BoxDecoration(
         color: context.colorScheme.elevation1,
+        borderRadius: BorderRadius.circular(8),
       ),
       child: Row(
         children: <Widget>[

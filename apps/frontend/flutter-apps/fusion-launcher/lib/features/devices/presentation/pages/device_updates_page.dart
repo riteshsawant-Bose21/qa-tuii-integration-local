@@ -26,7 +26,8 @@ class _DeviceUpdatesTabState extends State<DeviceUpdatesTab> {
     final List<HardwareComponent> dsp = serviceLocator<ProjectViewModel>().fusionDsps;
     final List<HardwareComponent> amplifiers = serviceLocator<ProjectViewModel>().amplifiers;
     final List<HardwareComponent> controllers = serviceLocator<ProjectViewModel>().fusionControllers;
-    return <HardwareComponent>[...dsp, ...amplifiers, ...controllers];
+    final List<HardwareComponent> endpoints = serviceLocator<ProjectViewModel>().fusionEndpoints;
+    return <HardwareComponent>[...dsp, ...amplifiers, ...controllers, ...endpoints];
   }
 
   // Location Logic (Ported from DashboardDeviceCard)
@@ -74,7 +75,7 @@ class _DeviceUpdatesTabState extends State<DeviceUpdatesTab> {
           ),
         ),
 
-        const SizedBox(width: 24),
+        const SizedBox(width: 4),
 
         // --- RIGHT SIDE: ALERTS SIDEBAR ---
         const Expanded(

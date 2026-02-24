@@ -32,7 +32,8 @@ class _DeviceMappingDemoState extends State<DeviceMappingDialog> {
     final List<HardwareComponent> dsp = serviceLocator<ProjectViewModel>().fusionDsps;
     final List<HardwareComponent> amplifiers = serviceLocator<ProjectViewModel>().amplifiers;
     final List<HardwareComponent> controllers = serviceLocator<ProjectViewModel>().fusionControllers;
-    return <HardwareComponent>[...dsp, ...amplifiers, ...controllers];
+    final List<HardwareComponent> endpoints = serviceLocator<ProjectViewModel>().fusionEndpoints;
+    return <HardwareComponent>[...dsp, ...amplifiers, ...controllers, ...endpoints];
   }
 
   @override
@@ -48,38 +49,67 @@ class _DeviceMappingDemoState extends State<DeviceMappingDialog> {
     _networkHardware = <NetworkHardware>[
       NetworkHardware(
         id: 'hw1',
-        modelName: 'Fusion Mini FM6',
+        modelName: 'FM6',
+        deviceName: 'Fusion Mini FM6',
         ipAddress: '192.168.50.100',
         firmware: 'v1.1.0',
         type: NetworkHardwareType.dsp,
       ),
       NetworkHardware(
         id: 'hw2',
-        modelName: 'Fusion Mini FM6',
-        ipAddress: '192.168.50.100',
+        modelName: 'FM8Y',
+        ipAddress: '192.168.50.101',
+        deviceName: 'Fusion Mini FM8Y',
         firmware: 'v1.1.0',
         type: NetworkHardwareType.dsp,
       ),
       NetworkHardware(
         id: 'hw3',
-        modelName: 'Control Pal LT',
-        ipAddress: '192.168.50.100',
+        modelName: 'ControlPal LT',
+        ipAddress: '192.168.50.110',
+        deviceName: "ControlPal LT",
         firmware: 'v1.1.0',
         type: NetworkHardwareType.controller,
       ),
       NetworkHardware(
         id: 'hw4',
-        modelName: 'Control Pal Pro',
-        ipAddress: '192.168.50.100',
+        modelName: 'ControlPal Pro',
+        ipAddress: '192.168.50.120',
+        deviceName: "ControlPal Pro",
         firmware: 'v1.1.0',
         type: NetworkHardwareType.controller,
       ),
       NetworkHardware(
         id: 'hw5',
-        modelName: 'Power Smart 8300',
-        ipAddress: '192.168.50.100',
+        deviceName: 'PowerPure 8300',
+        modelName: 'PP-8300',
+        ipAddress: '192.168.50.130',
         firmware: 'v1.1.0',
         type: NetworkHardwareType.amplifier,
+      ),
+      NetworkHardware(
+        id: 'hw6',
+        deviceName: 'Power Smart 8300',
+        modelName: 'PSM-8300',
+        ipAddress: '192.168.50.136',
+        firmware: 'v1.1.0',
+        type: NetworkHardwareType.amplifier,
+      ),
+      NetworkHardware(
+        id: 'hw7',
+        deviceName: 'XLR Pal',
+        modelName: 'XLRPal',
+        ipAddress: '192.168.50.138',
+        firmware: 'v1.1.0',
+        type: NetworkHardwareType.endpoint,
+      ),
+      NetworkHardware(
+        id: 'hw8',
+        deviceName: 'BLue Pal',
+        modelName: 'BluePal',
+        ipAddress: '192.168.50.140',
+        firmware: 'v1.1.0',
+        type: NetworkHardwareType.endpoint,
       ),
     ];
   }

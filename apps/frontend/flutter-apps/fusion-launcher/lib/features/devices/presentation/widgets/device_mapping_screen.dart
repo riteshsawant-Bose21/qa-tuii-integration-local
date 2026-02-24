@@ -311,7 +311,10 @@ class _DeviceMappingScreenState extends State<DeviceMappingScreen> {
     };
 
     final Iterable<NetworkHardware> availableHardware = widget.networkHardware.where(
-      (NetworkHardware hw) => (hw.assignedToDeviceId == null || hw.assignedToDeviceId == device.id) && (requiredType == null || hw.type == requiredType),
+      (NetworkHardware hw) =>
+          (hw.assignedToDeviceId == null || hw.assignedToDeviceId == device.id) &&
+          (requiredType == null || hw.type == requiredType) &&
+          (hw.modelName == device.hardwareName),
     );
 
     for (NetworkHardware hw in availableHardware) {
@@ -423,10 +426,11 @@ class _DeviceMappingScreenState extends State<DeviceMappingScreen> {
         ),
         const SizedBox(height: 16),
         FusionNeumorphicButton(
-          text: "Add a Wireless Device",
+          text: "Recommission Network",
           height: 48,
           onTap: () {
-            ConfigureNetworkDialog.show(context, bluetoothOnly: true);
+            Navigator.pop(context);
+            ConfigureNetworkDialog.show(context, bluetoothOnly: false);
           },
         ),
       ],
