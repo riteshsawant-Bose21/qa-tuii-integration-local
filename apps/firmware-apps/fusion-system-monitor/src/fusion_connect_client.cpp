@@ -1338,8 +1338,9 @@ void FusionConnectClient::update_ptp_state()
 
     const bool was_good = ptp_sync_good;
     ptp_good_streak = good_now ? (ptp_good_streak + 1) : 0;
-    ptp_sync_good = (ptp_good_streak >= 3);
-
+    if (!ptp_sync_good && ptp_good_streak >= 3) {
+        ptp_sync_good = true;
+    }
     if (was_good && ptp_bad_streak >= LOSS_CONSEC) {
         ptp_sync_good = false;
         ptp_good_streak = 0;
