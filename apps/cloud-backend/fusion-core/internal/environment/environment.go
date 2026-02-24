@@ -20,6 +20,7 @@ func New(loadLookuper LoadLookuper) *Environment {
 	return &Environment{loadLookuper}
 }
 
+// Load loads environment variables from the specified file path.
 func (e *Environment) Load(fpath string) error {
 	if err := e.loadLookuper.Load(fpath); err != nil {
 		return fmt.Errorf("can't load config from env file %s: %v", fpath, err)

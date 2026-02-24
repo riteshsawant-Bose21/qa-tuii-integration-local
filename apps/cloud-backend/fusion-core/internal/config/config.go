@@ -1,6 +1,8 @@
 package config
 
-import "errors"
+import (
+	"errors"
+)
 
 // Service provides methods to fetch configuration settings.
 type Service struct {

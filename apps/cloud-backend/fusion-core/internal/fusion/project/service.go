@@ -2,31 +2,58 @@ package project
 
 import (
 	"context"
+	"time"
 
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/api/types"
+	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/model"
+	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/model/models"
+	"go.uber.org/zap"
 )
 
 // Service provides methods to interact with the project database
 type Service struct {
 	dbService DatabaseService
+	presigner PresignerService
 }
 
 // DatabaseService defines the interface for database operations related to projects.
 type DatabaseService interface {
-	Insert(ctx context.Context, project *types.Project) error
-	SelectByID(ctx context.Context, id string) (*types.Project, error)
-	SelectAll(ctx context.Context) ([]*types.Project, error)
-	Update(ctx context.Context, id string, project *types.Project) error
-	Delete(ctx context.Context, id string) error
-	SyncProject(ctx context.Context, projectID string, metaData map[string]interface{}, zipFileURL string) error
+	GetProjectByID(ctx context.Context, id string, logger *zap.Logger) (*models.Project, error)
+	GetDB(ctx context.Context) model.DBWithTransactions
+	Insert(ctx context.Context, project *types.ProjectCreateRequest, accountID string, tx model.DBTxExecutor, logger *zap.Logger) (string, error)
+	InsertProjectUser(ctx context.Context, projectID, userID string, tx model.DBTxExecutor, logger *zap.Logger) error
+	SelectAll(ctx context.Context, queryParams *types.GetAllProjectsParams, userAuth types.UserAuthorizationResponse, logger *zap.Logger) ([]types.Project, error)
+	Update(ctx context.Context, projectRow *models.Project, project *types.ProjectUpdateRequest, logger *zap.Logger) error
+	Delete(ctx context.Context, projectRow *models.Project, logger *zap.Logger) error
+	AssignUser(ctx context.Context, projectID, userID string, logger *zap.Logger) error
+	RemoveUser(ctx context.Context, projectID, userID string, logger *zap.Logger) error
+	IsUserAssigned(ctx context.Context, projectID, userID string, logger *zap.Logger) (bool, error)
+	ProjectExists(ctx context.Context, projectID string, logger *zap.Logger) (bool, error)
+	UserExists(ctx context.Context, userID string, logger *zap.Logger) (bool, error)
+	GetUserIDByEmail(ctx context.Context, email string, logger *zap.Logger) (string, error)
+	StarProject(ctx context.Context, projectID, userID string, logger *zap.Logger) error
+	UnstarProject(ctx context.Context, projectID, userID string, logger *zap.Logger) error
+	ArchiveProject(ctx context.Context, projectID string, logger *zap.Logger) error
+	UnarchiveProject(ctx context.Context, projectID string, logger *zap.Logger) error
+	LockProject(ctx context.Context, projectID, userID string, logger *zap.Logger) error
+	UnlockProject(ctx context.Context, projectID string, logger *zap.Logger) error
+	GetProjectLockUserID(ctx context.Context, projectID string) (isLocked bool, lockedByUserID string, err error)
+	GetUserEmailByID(ctx context.Context, userID string) (string, error)
+}
+
+// PresignerService defines the interface for generating presigned URLs.
+type PresignerService interface {
+	PresignGet(ctx context.Context, objectKey string, ttl time.Duration, logger *zap.Logger) (string, error)
+	PresignPut(ctx context.Context, objectKey string, ttl time.Duration, logger *zap.Logger) (string, error)
 }
 
 // NewService creates a new project service.
-func NewService(dbService DatabaseService) *Service {
+func NewService(dbService DatabaseService, presigner PresignerService) *Service {
 	if dbService == nil {
 		panic("dbService cannot be nil")
 	}
 	return &Service{
 		dbService: dbService,
+		presigner: presigner,
 	}
 }
