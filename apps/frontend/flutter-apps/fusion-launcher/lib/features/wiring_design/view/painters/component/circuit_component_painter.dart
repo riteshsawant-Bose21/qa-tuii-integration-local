@@ -41,7 +41,9 @@ class CircuitComponentPainter extends ComponentDataPainter {
           ..style = PaintingStyle.fill;
     final Paint freePortPaint =
         Paint()
-          ..color = painter.colorScheme.inactivePortBG
+          ..color =
+              Colors
+                  .black //painter.colorScheme.inactivePortBG
           ..strokeWidth = WiringViewConstants.portRadius * 0.10
           ..style = PaintingStyle.stroke;
     for (final CircuitPort port in component.ports) {

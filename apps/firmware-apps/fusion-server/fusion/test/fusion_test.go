@@ -65,7 +65,23 @@ var (
 	clusterConfig *ClusterConfig
 )
 
+func isLocalTestMode() bool {
+	if os.Getenv("FUSION_TEST_LOCAL") != "" {
+		return true
+	}
+
+	nodesEnv := os.Getenv("FUSION_TEST_NODES")
+	vipEnv := os.Getenv("FUSION_TEST_VIP")
+	if nodesEnv == "" || vipEnv == "" {
+		return false
+	}
+
+	return strings.Contains(nodesEnv, "127.0.0.1") && strings.Contains(vipEnv, "127.0.0.1")
+}
+
 func TestMain(m *testing.M) {
+	flag.Parse()
+
 	cfg, err := getClusterConfig()
 	if err != nil {
 		fmt.Printf("Failed to get cluster configuration: %v\n", err)
@@ -1214,6 +1230,9 @@ func TestClearEndpoint(t *testing.T) {
 
 // TestUDPGet runs the "get" command inside the default instance.
 func TestUDPGet(t *testing.T) {
+	if isLocalTestMode() {
+		t.Skip("Skipping multipass UDP test in local mode; use fusion/test/udp_test.go instead.")
+	}
 	command := fmt.Sprintf(`echo '{"action":"get"}' | %s %s`, ncCommand, instancePort)
 	out, err := runMultipassCommand(t, command)
 	if err != nil {
@@ -1223,6 +1242,9 @@ func TestUDPGet(t *testing.T) {
 
 // TestUDPSet runs the "set" command inside the default instance.
 func TestUDPSet(t *testing.T) {
+	if isLocalTestMode() {
+		t.Skip("Skipping multipass UDP test in local mode; use fusion/test/udp_test.go instead.")
+	}
 	command := fmt.Sprintf(`echo '{"action":"set","test":"hello"}' | %s %s`, ncCommand, instancePort)
 	out, err := runMultipassCommand(t, command)
 	if err != nil {
@@ -1232,6 +1254,9 @@ func TestUDPSet(t *testing.T) {
 
 // TestUDPSetAndGet sets a value and then verifies it with a get command on the default instance.
 func TestUDPSetAndGet(t *testing.T) {
+	if isLocalTestMode() {
+		t.Skip("Skipping multipass UDP test in local mode; use fusion/test/udp_test.go instead.")
+	}
 	// Set the value on instance1.
 	setCommand := fmt.Sprintf(`echo '{"action":"set","payload":{"test":"hello"}}' | %s %s`, ncCommand, instancePort)
 	setOut, err := runMultipassCommand(t, setCommand)
@@ -1254,6 +1279,9 @@ func TestUDPSetAndGet(t *testing.T) {
 
 // TestUDPPropagation sets a value on instance1 and verifies that it propagates to instance2.
 func TestUDPPropagation(t *testing.T) {
+	if isLocalTestMode() {
+		t.Skip("Skipping multipass UDP test in local mode; use fusion/test/udp_test.go instead.")
+	}
 	// Build commands once
 	setCmd := fmt.Sprintf(`echo '{"action":"set","payload":{"test":"hello"}}' | %s %s`, ncCommand, instancePort)
 	getCmd := fmt.Sprintf(`echo '{"action":"get"}' | %s %s`, ncCommand, instancePort)
@@ -1285,6 +1313,9 @@ type UDPResult struct {
 // TestHTTPSetAndVerifyViaUDP POSTs to /value and then does a UDP "get"
 // to verify the entire state is returned over UDP.
 func TestHTTPSetAndVerifyViaUDP(t *testing.T) {
+	if isLocalTestMode() {
+		t.Skip("Skipping multipass UDP test in local mode; use fusion/test/udp_test.go instead.")
+	}
 	// Define the payload
 	payload := map[string]any{
 		"alpha": "one",
@@ -1363,6 +1394,9 @@ func TestHTTPSetAndVerifyViaUDP(t *testing.T) {
 }
 
 func TestUDPSetAndVerifyViaHTTP(t *testing.T) {
+	if isLocalTestMode() {
+		t.Skip("Skipping multipass UDP test in local mode; use fusion/test/udp_test.go instead.")
+	}
 
 	payload := map[string]any{
 		"alpha": "one",

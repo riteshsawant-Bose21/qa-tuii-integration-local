@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:fusion_lib/fusion_widgets/others/hover_dropdown.dart';
 
+import '../constants/test_keys.dart';
+import '../fusion_lib.dart';
 import 'spl_range_controller.dart';
 
 /// Enums for SPL (Sound Pressure Level) mapping attributes panel
@@ -524,7 +525,13 @@ class _SplPanelState extends State<SplPanel> {
                                 .map(
                                   (SplFrequency e) => DropdownMenuItem<SplFrequency>(
                                     value: e,
-                                    child: Text(e.displayName, style: const TextStyle(fontSize: 12)),
+                                    child: FusionAppText(
+                                      text: e.displayName,
+                                      style: context.textTheme.bodyMedium!.copyWith(
+                                        fontSize: 12,
+                                        color: context.colorScheme.textPrimary,
+                                      ),
+                                    ),
                                   ),
                                 )
                                 .toList(),
@@ -552,8 +559,12 @@ class _SplPanelState extends State<SplPanel> {
                               errorBorder: InputBorder.none,
                               disabledBorder: InputBorder.none,
                             ),
-                            icon: const Icon(Icons.arrow_drop_down, size: 16),
-                            style: const TextStyle(fontSize: 12, color: Colors.black),
+                            icon: Icon(
+                              Icons.arrow_drop_down,
+                              size: 16,
+                              color: context.colorScheme.iconDefault,
+                            ),
+                            style: context.textTheme.bodyMedium!.copyWith(color: context.colorScheme.iconDefault),
                           ),
                         ),
                       ),
@@ -589,27 +600,33 @@ class _SplPanelState extends State<SplPanel> {
                     _row(
                       label: 'Upper Limit (dB)',
                       labelStyle: labelStyle,
-                      control: _tf(
-                        controller: _splUpper,
-                        focusNode: _splUpperFocusNode,
-                        hint: 'Value',
-                        enabled: !_splAutoScale,
-                        onSubmitted: (value) {
-                          _submitSpl(isUpper: true);
-                        },
+                      control: SemanticHelper.button(
+                        testId: SemanticHelper.createTestId(SemanticTypes.button, FusionTestKeys.splUpperLimitTextField),
+                        child: _tf(
+                          controller: _splUpper,
+                          focusNode: _splUpperFocusNode,
+                          hint: 'Value',
+                          enabled: !_splAutoScale,
+                          onSubmitted: (value) {
+                            _submitSpl(isUpper: true);
+                          },
+                        ),
                       ),
                     ),
                     _row(
                       label: 'Lower Limit (dB)',
                       labelStyle: labelStyle,
-                      control: _tf(
-                        controller: _splLower,
-                        focusNode: _splLowerFocusNode,
-                        hint: 'Value',
-                        enabled: !_splAutoScale,
-                        onSubmitted: (value) {
-                          _submitSpl(isUpper: false);
-                        },
+                      control: SemanticHelper.button(
+                        testId: SemanticHelper.createTestId(SemanticTypes.button, FusionTestKeys.splLowerLimitTextField),
+                        child: _tf(
+                          controller: _splLower,
+                          focusNode: _splLowerFocusNode,
+                          hint: 'Value',
+                          enabled: !_splAutoScale,
+                          onSubmitted: (value) {
+                            _submitSpl(isUpper: false);
+                          },
+                        ),
                       ),
                     ),
                   ],
@@ -651,11 +668,14 @@ class _SplPanelState extends State<SplPanel> {
       children: <Widget>[
         Padding(
           padding: const EdgeInsets.only(right: 8, top: 4, bottom: 4),
-          child: Text(label, style: labelStyle),
+          child: FusionAppText(text: label, style: labelStyle),
         ),
-        Padding(
-          padding: const EdgeInsets.only(top: 4, bottom: 4),
-          child: control,
+        SemanticHelper.button(
+          testId: SemanticHelper.createTestId(SemanticTypes.button, label),
+          child: Padding(
+            padding: const EdgeInsets.only(top: 4, bottom: 4),
+            child: control,
+          ),
         ),
       ],
     );
@@ -669,29 +689,26 @@ class _SplPanelState extends State<SplPanel> {
   }) {
     return SizedBox(
       height: 32,
-      child: DropdownButtonFormField<T>(
-        // initialValue: value,
+      child: DropdownButton<T>(
+        value: value,
         isExpanded: true,
-        style: const TextStyle(fontSize: 12, color: Colors.black),
-        items: items
-            .map(
-              (T e) => DropdownMenuItem<T>(
-                value: e,
-                child: Text(
-                  (e as dynamic).displayName,
+        style: TextStyle(fontSize: 12, color: context.colorScheme.textPrimary),
+        items: items.map(
+          (T e) {
+            return DropdownMenuItem<T>(
+              value: e,
+              child: SemanticHelper.button(
+                testId: SemanticHelper.createTestId(SemanticTypes.button, (e as dynamic).displayName),
+                child: FusionAppText(
+                  text: (e as dynamic).displayName,
                   style: const TextStyle(fontSize: 12),
                 ),
               ),
-            )
-            .toList(),
+            );
+          },
+        ).toList(),
         onChanged: onChanged,
-        decoration: const InputDecoration(
-          border: InputBorder.none,
-          enabledBorder: InputBorder.none,
-          focusedBorder: InputBorder.none,
-          errorBorder: InputBorder.none,
-          disabledBorder: InputBorder.none,
-        ),
+        underline: Container(),
         icon: const Icon(Icons.arrow_drop_down, size: 16),
       ),
     );
@@ -732,10 +749,16 @@ class _SplPanelState extends State<SplPanel> {
         Transform.scale(
           scale: 0.7,
           alignment: Alignment.centerLeft,
-          child: Switch.adaptive(value: value, onChanged: onChanged),
+          child: SemanticHelper.button(
+            testId: SemanticHelper.createTestId(SemanticTypes.button, FusionTestKeys.splInvertColorToggle),
+            child: Switch.adaptive(
+              value: value,
+              onChanged: onChanged,
+            ),
+          ),
         ),
         const SizedBox(width: 2),
-        Text(label, style: const TextStyle(fontSize: 12)),
+        FusionAppText(text: label, style: const TextStyle(fontSize: 12)),
       ],
     );
   }
@@ -837,8 +860,8 @@ class _Section extends StatelessWidget {
         initiallyExpanded: initiallyExpanded,
         onExpansionChanged: onExpansionChanged,
         tilePadding: EdgeInsets.zero,
-        title: Text(
-          title,
+        title: FusionAppText(
+          text: title,
           style: const TextStyle(
             fontWeight: FontWeight.w500,
             fontSize: 13,

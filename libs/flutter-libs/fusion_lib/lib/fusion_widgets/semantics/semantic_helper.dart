@@ -5,18 +5,20 @@ class SemanticHelper {
   // Core identifier generator
   static String createTestId(String type, String identifier) {
     final String sanitizedIdentifier = identifier.replaceAll(' ', '_');
-    return '${type}_$sanitizedIdentifier';
+    return '${type}_${sanitizedIdentifier.toLowerCase()}';
   }
 
   // Button elements
   static Widget button({
     required String testId,
     required Widget child,
+    bool isActive=true,
   }) {
     return Semantics(
       identifier: testId,
       button: true,
       container: true,
+      enabled: isActive,
       child: child,
     );
   }
@@ -46,6 +48,7 @@ class SemanticHelper {
     bool excludeChildSemantics = true,
   }) {
     return Semantics(
+      container: true,
       identifier: testId,
       toggled: value,
       label: label,
@@ -93,6 +96,7 @@ class SemanticHelper {
     String? label,
   }) {
     return Semantics(
+      container: true,
       identifier: testId,
       label: label,
       readOnly: true,

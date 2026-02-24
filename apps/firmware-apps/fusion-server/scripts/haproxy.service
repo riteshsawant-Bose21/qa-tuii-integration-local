@@ -1,8 +1,10 @@
 # Fusion haproxy service file
+# This file is to be used only by multipass. 
+# If you edit this file, please edit the files in meta-fusion to maintain sync
+
 [Unit]
 Description=HAProxy Load Balancer
-Wants=network-online.target
-After=network-online.target
+After=network.target
 
 [Service]
 Environment="CONFIG=/etc/haproxy/haproxy.cfg"

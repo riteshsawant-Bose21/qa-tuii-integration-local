@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:fusion_launcher/core/service_locator.dart';
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
 import 'package:fusion_lib/models/fusion_models.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../../../core/constants.dart';
 import '../common/location_configuration_widget.dart';
@@ -181,7 +182,7 @@ class _SourceWidgetState extends State<SourceWidget> {
             //       ],
             //     ),
             //   ),
-            if (widget.source.type == SourceType.aes67input) ...<Widget>[
+            if (widget.source.connectionType == SourceConnectionType.aes67input) ...<Widget>[
               const SizedBox(height: 12),
               IPAddressField(
                 initialValue: widget.source.ipAddress,
@@ -288,7 +289,7 @@ class _SourceWidgetState extends State<SourceWidget> {
           // ),
           if (!widget.isControlMode)
             IconButton(
-              icon: const Icon(Icons.delete_outline, color: AppColors.errorSoft, size: 16),
+              icon: const Icon(LucideIcons.trash200, color: AppColors.errorSoft, size: 16),
               onPressed: widget.onDelete,
               padding: EdgeInsets.zero,
               constraints: const BoxConstraints(minWidth: 24, minHeight: 24),

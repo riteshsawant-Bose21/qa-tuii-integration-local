@@ -297,6 +297,58 @@ inline bool patternMatchesPath(const std::vector<PatternComponent> &pattern,
   return (pIdx == pattern.size() && pathIdx == path.size());
 }
 
+/**
+ * @brief Determine whether an incoming update should be accepted based on
+ *        Lamport epoch+counter ordering.
+ *
+ * Rules:
+ *   1. New epoch always wins.
+ *   2. Within the same epoch, counter must increase.
+ *   3. Older epoch is rejected.
+ */
+static bool
+shouldAcceptUpdate(long long incomingEpoch, long long incomingVersion,
+                   long long &lastEpoch, long long &lastCounter, bool verbose,
+                   const std::function<void(const std::string &)> &log) {
+  // New epoch: always accept
+  if (incomingEpoch > lastEpoch) {
+    if (verbose) {
+      log("Accepting update: new epoch " + std::to_string(incomingEpoch) +
+          " (old=" + std::to_string(lastEpoch) + ")");
+    }
+    lastEpoch = incomingEpoch;
+    lastCounter = incomingVersion;
+    return true;
+  }
+
+  // Same epoch: Accept only if counter increases
+  if (incomingEpoch == lastEpoch) {
+    if (incomingVersion > lastCounter) {
+      if (verbose) {
+        log("Accepting update: counter " + std::to_string(lastCounter) + " → " +
+            std::to_string(incomingVersion));
+      }
+      lastCounter = incomingVersion;
+      return true;
+    } else {
+      if (verbose) {
+        log("Rejecting stale update: epoch=" + std::to_string(incomingEpoch) +
+            " counter=" + std::to_string(incomingVersion) +
+            " lastCounter=" + std::to_string(lastCounter));
+      }
+      return false;
+    }
+  }
+
+  // Older epoch: reject
+  if (verbose) {
+    log("Rejecting update with older epoch: incoming=" +
+        std::to_string(incomingEpoch) +
+        " < lastEpoch=" + std::to_string(lastEpoch));
+  }
+  return false;
+}
+
 // -----------------------------------------------------------------------------
 // Class: JsonMonitor
 // -----------------------------------------------------------------------------
@@ -818,31 +870,32 @@ private:
     }
   }
 
-  void handleUpdateMessage(const Json::Value &update) {
+  void handleUpdateMessage(const Json::Value &update, bool useVersion = true) {
     if (verbose_)
       log("Processing incoming JSON update: " + update.toStyledString());
 
-    static long long lastSeenFusionVersion = -1;
+    static long long lastEpoch = -1;
+    static long long lastCounter = -1;
 
-    if (update.isMember("_fusion_version")) {
-      long long incoming = update["_fusion_version"].asInt64();
-
-      if (incoming <= lastSeenFusionVersion) {
-        if (verbose_) {
-          log("Ignoring stale broadcast: version=" + std::to_string(incoming) +
-              ", lastSeen=" + std::to_string(lastSeenFusionVersion));
-        }
+    if (useVersion) {
+      if (!update.isMember("_fusion_epoch")) {
+        log("Ignoring update without epoch");
         return;
       }
 
-      // Accept and update our version tracker
-      lastSeenFusionVersion = incoming;
-    } else {
-      // No version: ignore to avoid regressing state.
-      if (verbose_) {
-        log("Ignoring update with no _fusion_version");
+      if (!update.isMember("_fusion_version")) {
+        log("Ignoring update without version");
+        return;
       }
-      return;
+
+      long long incomingEpoch = update["_fusion_epoch"].asInt64();
+      long long incomingVersion = update["_fusion_version"].asInt64();
+
+      if (!shouldAcceptUpdate(incomingEpoch, incomingVersion, lastEpoch,
+                              lastCounter, verbose_,
+                              [this](const std::string &msg) { log(msg); })) {
+        return;
+      }
     }
 
     for (const auto &path : targetPaths_) {
@@ -910,10 +963,21 @@ private:
         std::istringstream iss(buffer);
         std::string errs;
         if (Json::parseFromStream(readerBuilder, iss, &response, &errs)) {
+          std::string msgId;
+          if (response.isMember("_fusion_msg_id")) {
+            msgId = response["_fusion_msg_id"].asString();
+          } else if (response.isMember("data") &&
+                     response["data"].isMember("_fusion_msg_id")) {
+            msgId = response["data"]["_fusion_msg_id"].asString();
+          }
+          if (!msgId.empty()) {
+            sendAck(msgId);
+          }
+
           if (response.isMember("status") && response.isMember("data")) {
             if (verbose_)
               log("Processing initial state response");
-            handleUpdateMessage(response["data"]);
+            handleUpdateMessage(response["data"], false);
           } else {
             if (verbose_)
               log("Processing update message");
@@ -923,6 +987,21 @@ private:
           std::cerr << "Failed to parse JSON: " << errs << std::endl;
         }
       }
+    }
+  }
+
+  void sendAck(const std::string &msgId) {
+    Json::Value ack;
+    ack["operation"] = "ack";
+    ack["id"] = msgId;
+    Json::StreamWriterBuilder writerBuilder;
+    writerBuilder["indentation"] = "";
+    std::string jsonStr = Json::writeString(writerBuilder, ack);
+    ssize_t sent = sendto(udpSocket_.get(), jsonStr.c_str(), jsonStr.length(), 0,
+                          reinterpret_cast<const sockaddr *>(&serverAddr_),
+                          sizeof(serverAddr_));
+    if (sent < 0 && verbose_) {
+      log("Failed to send ack: " + std::string(strerror(errno)));
     }
   }
 

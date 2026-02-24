@@ -1,12 +1,18 @@
 # Fusion fusion-server service file
+# This file is to be used only by multipass. 
+# If you edit this file, please edit the files in meta-fusion to maintain sync
+
 [Unit]
 Description=Fusion Server
-After=network-online.target
+After=network.target
+After=network-online.target keepalived.service
 Wants=network-online.target
+Requires=keepalived.service
 
 [Service]
 Type=simple
-ExecStart=/usr/local/bin/fusion-server-start.sh
+Environment=FUSION_NET_IFACE=enp0s1
+ExecStart=/usr/local/bin/fusion-server
 Restart=always
 RestartSec=5
 

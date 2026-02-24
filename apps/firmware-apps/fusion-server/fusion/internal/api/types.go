@@ -28,15 +28,21 @@ func (a *AppConfig) SelfUrl() string {
 // Version encodes a Lamport counter plus the origin node's ID.
 // https://en.wikipedia.org/wiki/Lamport_timestamp
 type Version struct {
-	Counter int64  `json:"counter"`
+	Epoch   uint64 `json:"epoch"`
+	Counter uint64 `json:"counter"`
 	NodeID  string `json:"node_id"`
 }
 
 // Compare returns true if v is less than the other.
 func (v Version) Less(other Version) bool {
+	if v.Epoch != other.Epoch {
+		return v.Epoch < other.Epoch
+	}
+
 	if v.Counter != other.Counter {
 		return v.Counter < other.Counter
 	}
+
 	return v.NodeID < other.NodeID
 }
 
@@ -65,7 +71,34 @@ type AudioSyncUpdate struct {
 	URL      string        `json:"url"`
 }
 
-// ConfigUpdate represents a data update in the system
+// ConfigUpdate represents a full or partial snapshot of state for a top-level key.
+//
+//   - ConfigUpdate is a replication primitive used by memberlist to achieve
+//     eventual consistency with Lamport ordering.
+//
+//   - ConfigUpdate.Data does not behave like a PATCH. It is not a partial,
+//     deep-merge update. Instead:
+//
+//     Each top-level entry in Data is considered a complete authoritative
+//     snapshot for that key.
+//
+//     That means:
+//
+//     ConfigUpdate{Data: {"config": {"param2": "updated"}}}
+//
+//     replaces the entire "config" entry on receivers.
+//
+//   - Partial/deep/nested updates must use the HTTP PATCH system, which applies
+//     rich semantics (array index updates, nested map merges, deletes, diffs).
+//
+// In short:
+//
+//	PATCH  = mutating local configuration with nested semantics
+//	POST/PUT = full replacement
+//	ConfigUpdate = replication of authoritative state snapshots across nodes.
+//
+// This separation keeps replication simple and Lamport-correct, while PATCH
+// provides advanced local update semantics.
 type ConfigUpdate struct {
 	Hash    string         `json:"hash"`
 	Data    map[string]any `json:"data"`
@@ -101,6 +134,13 @@ type MemberMetadata struct {
 	Metadata DatabaseMetadata
 }
 
+// RecurringWindow contains info to manage recurring tasks
+type RecurringWindow struct {
+	StartTime string `json:"start_time"` // HH:MM in local time
+	EndTime   string `json:"end_time"`   // HH:MM in local time
+	Days      []int  `json:"days"`       // 0=Sun ... 6=Sat
+}
+
 // RemoteStateSnapshot is what we send/receive during anti-entropy.
 type RemoteStateSnapshot struct {
 	Version Version                `json:"version"`
@@ -108,11 +148,10 @@ type RemoteStateSnapshot struct {
 	State   map[string]*StateEntry `json:"state"`
 }
 
-// SnapshotUpdate represents a snapshot update operation broadcast across the cluster.
-type SnapshotUpdate struct {
-	Name      string         `json:"name"`
-	Data      map[string]any `json:"data,omitempty"`
-	Timestamp time.Time      `json:"timestamp"`
+// SnapshotOperation represents a snapshot operation broadcast across the cluster.
+type SnapshotOperation struct {
+	Name      string    `json:"name"`
+	Timestamp time.Time `json:"timestamp"`
 }
 
 // TaskType represents scheduled task
@@ -125,28 +164,51 @@ const (
 
 // Task represents a task
 type Task struct {
-	ID          string         `json:"id"`
-	Description string         `json:"description"`
-	CronExpr    string         `json:"cron_expr"`
-	Enabled     bool           `json:"active"`
-	Type        TaskType       `json:"type"`
-	Params      map[string]any `json:"params"`
-	CronEntryID cron.EntryID   `json:"-"`
+	ID          string           `json:"id"`
+	Description string           `json:"description"`
+	Type        TaskType         `json:"type"`
+	CronExpr    string           `json:"cron_expr"`
+	StartAt     time.Time        `json:"start_at"`
+	EndAt       time.Time        `json:"end_at"`
+	Recurrence  *RecurringWindow `json:"recurrence,omitempty"`
+	Params      map[string]any   `json:"params"`
+	Enabled     bool             `json:"enabled"`
+	CronEntryID cron.EntryID     `json:"-"`
 }
 
 // TaskMessage represents a message playback task
 type TaskMessage struct {
-	ID          string `json:"id"`
-	MessageID   string `json:"message_id"`
-	Description string `json:"description"`
-	CronExpr    string `json:"cron_expr"`
+	ID          string           `json:"id"`
+	Description string           `json:"description"`
+	CronExpr    string           `json:"cron_expr"`
+	StartAt     time.Time        `json:"start_at"`
+	EndAt       time.Time        `json:"end_at"`
+	Recurrence  *RecurringWindow `json:"recurrence,omitempty"`
+	MessageID   string           `json:"message_id"`
+	Priority    int64            `json:"priority"`
+	Zones       string           `json:"zones"`
+}
+
+// TaskMessagePatch represents a patchable message task
+type TaskMessagePatch struct {
+	Description *string          `json:"description,omitempty"`
+	CronExpr    *string          `json:"cron_expr,omitempty"`
+	StartAt     *time.Time       `json:"start_at,omitempty"`
+	EndAt       *time.Time       `json:"end_at,omitempty"`
+	Recurrence  *RecurringWindow `json:"recurrence,omitempty"`
+	MessageID   *string          `json:"message_id,omitempty"`
+	Priority    *int64           `json:"priority"`
+	Zones       *string          `json:"zones"`
 }
 
 // TaskSnapshopPatch represents a patchable snapshot task
 type TaskSnapshopPatch struct {
-	Description *string `json:"description,omitempty"`
-	CronExpr    *string `json:"cron_expr,omitempty"`
-	Snapshot    *string `json:"snapshot,omitempty"`
+	Description *string          `json:"description,omitempty"`
+	CronExpr    *string          `json:"cron_expr,omitempty"`
+	StartAt     *time.Time       `json:"start_at,omitempty"`
+	EndAt       *time.Time       `json:"end_at,omitempty"`
+	Recurrence  *RecurringWindow `json:"recurrence,omitempty"`
+	Snapshot    *string          `json:"snapshot,omitempty"`
 }
 
 // StateEntry represents a single entry in the state
@@ -165,6 +227,7 @@ type VersionUpdate struct {
 	Type    string          `json:"type"`
 	Payload json.RawMessage `json:"payload"`
 }
+
 type ControllerTCPMessage struct {
 	Action  string          `json:"action"`
 	Payload json.RawMessage `json:"payload"`

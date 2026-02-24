@@ -10,10 +10,10 @@ mixin CanvasHandlerMixin on ChangeNotifier {
   Size? canvasSize;
 
   bool isWithinViewport(Offset position) {
-    final bool contains =
-        (-canvasState.offset & (canvasSize ?? const Size(100, 100))).contains(
-          position,
-        );
+    final Rect rect = (canvasState.offset & ((canvasSize ?? const Size(100, 100)) * canvasState.scale));
+    final bool contains = rect.contains(
+      position,
+    );
     return contains;
   }
 
@@ -21,7 +21,7 @@ mixin CanvasHandlerMixin on ChangeNotifier {
     setCanvasState(
       canvasState.recenter(
         center,
-        ((canvasSize ?? const Size(100, 100)) * 0.5),
+        ((canvasSize ?? const Size(100, 100))),
       ),
     );
   }
@@ -41,13 +41,19 @@ mixin CanvasHandlerMixin on ChangeNotifier {
     saveState();
   }
 
+  double? _startScale;
   void onScaleStart(ScaleStartDetails details) {
     // Handle scale start if needed
+    _startScale = 1;
   }
 
   void onScaleUpdate(double scale, Offset focalPoint) {
+    final double diffScale = _startScale != null ? scale - _startScale! : scale;
+    if (_startScale != null) {
+      _startScale = scale;
+    }
     final double oldScale = canvasState.scale;
-    final double newScale = (canvasState.scale + scale).clamp(
+    final double newScale = (canvasState.scale + diffScale).clamp(
       minScale,
       maxScale,
     );
@@ -57,9 +63,7 @@ mixin CanvasHandlerMixin on ChangeNotifier {
 
     // Adjust offset to zoom towards focal point
     // The focal point should remain at the same screen position
-    final Offset delta =
-        (focalPoint - (focalPoint - canvasState.offset) * actualScaleChange) -
-        canvasState.offset;
+    final Offset delta = (focalPoint - (focalPoint - canvasState.offset) * actualScaleChange) - canvasState.offset;
     setCanvasState(canvasState.scaleCanvas(newScale, offset: delta));
 
     notifyListeners();
@@ -69,6 +73,7 @@ mixin CanvasHandlerMixin on ChangeNotifier {
     // Handle scale end if needed
     setCanvasState(canvasState.idle());
     saveState();
+    _startScale = null;
   }
 
   void saveState();
