@@ -184,7 +184,7 @@ class _DeviceListTabState extends State<DeviceListTab> {
         'cpu': FusionTableCell(
           value: cpuUsage,
           child:
-              isOnline
+              (isOnline && (device is FusionDsp || (device is Amplifier && device.hardwareName.startsWith("PSM"))))
                   ? Row(
                     children: <Widget>[
                       DiskUsageWidget(

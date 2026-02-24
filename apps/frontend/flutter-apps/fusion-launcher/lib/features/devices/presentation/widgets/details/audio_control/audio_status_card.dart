@@ -15,7 +15,7 @@ class AudioStatusCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: const Color(0xFF1E1E1E), // Dark card background
+        color: context.colorScheme.elevation2,
         borderRadius: BorderRadius.circular(12),
       ),
       padding: const EdgeInsets.all(24), // Increased padding
@@ -25,13 +25,15 @@ class AudioStatusCard extends StatelessWidget {
           FusionAppText(
             text: title.toUpperCase(),
             style: context.textTheme.labelSmall!.copyWith(
-              color: const Color(0xFF9E9E9E), // Grey header text
               letterSpacing: 0.5,
               fontWeight: FontWeight.w500,
             ),
           ),
           const SizedBox(height: 16),
-          const Divider(height: 1, color: Color(0xFF333333)), // Subtle divider
+          Divider(
+            height: 1,
+            color: context.colorScheme.strokeDark,
+          ), // Subtle divider
           const SizedBox(height: 16),
           content,
         ],
