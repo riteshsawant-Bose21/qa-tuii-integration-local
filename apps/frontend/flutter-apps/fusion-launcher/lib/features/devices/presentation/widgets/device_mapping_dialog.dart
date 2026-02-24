@@ -142,7 +142,7 @@ class _DeviceMappingDemoState extends State<DeviceMappingDialog> {
 
   Widget _buildHeader() {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 24),
+      padding: const EdgeInsets.only(left: 16, right: 16, top: 12),
       decoration: BoxDecoration(
         border: Border(
           bottom: BorderSide(
@@ -162,12 +162,12 @@ class _DeviceMappingDemoState extends State<DeviceMappingDialog> {
                   text: 'CONFIGURE NETWORK',
                   style: context.textTheme.labelMedium,
                 ),
-                IconButton(
-                  icon: Icon(
+                InkWell(
+                  child: Icon(
                     Icons.close,
                     color: context.colorScheme.iconWhite,
                   ),
-                  onPressed: () {
+                  onTap: () {
                     Navigator.of(context).pop();
                     if (serviceLocator<ProjectViewModel>().virtualIP == null) {
                       serviceLocator<ProjectViewModel>().toggleControlMode();
@@ -200,7 +200,7 @@ class _DeviceMappingDemoState extends State<DeviceMappingDialog> {
         });
       },
       child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 12),
+        padding: const EdgeInsets.only(top: 14, bottom: 4),
         decoration: BoxDecoration(
           border: Border(
             bottom: BorderSide(
@@ -212,9 +212,9 @@ class _DeviceMappingDemoState extends State<DeviceMappingDialog> {
         child: FusionAppText(
           text: label,
           style: TextStyle(
-            color: isSelected ? context.colorScheme.primary : const Color(0xFF77746E),
+            color: isSelected ? context.colorScheme.textPrimary : context.colorScheme.iconDefault,
             fontSize: 14,
-            fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
+            fontWeight: isSelected ? FontWeight.w600 : FontWeight.w200,
           ),
         ),
       ),

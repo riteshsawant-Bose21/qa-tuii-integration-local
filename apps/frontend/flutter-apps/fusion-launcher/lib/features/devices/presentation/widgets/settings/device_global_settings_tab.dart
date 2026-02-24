@@ -100,7 +100,6 @@ class _SettingsDashboardState extends State<SettingsDashboard> {
     return Container(
       decoration: BoxDecoration(
         color: context.colorScheme.elevation1,
-        borderRadius: BorderRadius.circular(16),
       ),
       child: Row(
         children: <Widget>[
@@ -108,7 +107,7 @@ class _SettingsDashboardState extends State<SettingsDashboard> {
           Expanded(
             flex: 1,
             child: Container(
-              padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 12),
+              padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
               child: Column(
                 children: <Widget>[
                   // Render the list of buttons dynamically
@@ -146,7 +145,7 @@ class _SettingsDashboardState extends State<SettingsDashboard> {
                               ),
                             ),
                             dense: true,
-                            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 0),
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                           ),
                         );
