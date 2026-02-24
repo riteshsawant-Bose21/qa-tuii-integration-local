@@ -7,8 +7,10 @@ class NeumorphicContainer extends StatelessWidget {
     this.inner = false,
     required this.child,
     this.radius = 12,
+    required this.semanticId,
   });
   final bool inner;
+  final String semanticId;
   final Widget child;
   final double radius;
   @override
@@ -16,7 +18,7 @@ class NeumorphicContainer extends StatelessWidget {
     return SemanticHelper.container(
       testId: SemanticHelper.createTestId(
         SemanticTypes.container,
-        "neumorphic_container",
+        "neumorphic_container${semanticId}",
       ),
       child: FusionContainer(
         borderRadius: radius,

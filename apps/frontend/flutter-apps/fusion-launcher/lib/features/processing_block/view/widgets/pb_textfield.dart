@@ -13,11 +13,13 @@ class PBItemTextfield extends StatelessWidget {
     required this.item,
     this.showIntervals = true,
     this.handler,
+    this.semanticId,
   });
 
   final PBItem item;
   final bool showIntervals;
   final PBWidgetValueHandler? handler;
+  final String? semanticId;
 
   @override
   Widget build(BuildContext context) {
@@ -27,7 +29,7 @@ class PBItemTextfield extends StatelessWidget {
     return SemanticHelper.textInput(
       testId: SemanticHelper.createTestId(
         SemanticTypes.container,
-        "PB_TextField",
+        "PB_TextField_${semanticId ?? ''}",
       ),
       label: data.label,
       child: LayoutBuilder(
@@ -95,28 +97,37 @@ class PBNumberTextField extends StatelessWidget {
     required this.onChanged,
     this.min,
     this.max,
+    this.semanticId,
   });
   final num? value;
   final ValueChanged<num> onChanged;
+  final String? semanticId;
   final num? min;
   final num? max;
   @override
   Widget build(BuildContext context) {
-    return PBTextField(
-      value: value?.toString(),
-      inputFormatters: <TextInputFormatter>[
-        FilteringTextInputFormatter.allow(RegExp(r'^-?\d*\.?\d*$')),
-      ],
-      onChanged: (String value) {
-        final num? parsedValue = num.tryParse(value);
-        if (parsedValue != null) {
-          if (min != null && max != null) {
-            onChanged(parsedValue.clamp(min!, max!));
-          } else {
-            onChanged(parsedValue);
+    return SemanticHelper.textInput(
+      testId: SemanticHelper.createTestId(
+        SemanticTypes.textInput,
+        'pb_number_textfield${semanticId}',
+      ),
+      label: value?.toString(),
+      child: PBTextField(
+        value: value?.toString(),
+        inputFormatters: <TextInputFormatter>[
+          FilteringTextInputFormatter.allow(RegExp(r'^-?\d*\.?\d*$')),
+        ],
+        onChanged: (String value) {
+          final num? parsedValue = num.tryParse(value);
+          if (parsedValue != null) {
+            if (min != null && max != null) {
+              onChanged(parsedValue.clamp(min!, max!));
+            } else {
+              onChanged(parsedValue);
+            }
           }
-        }
-      },
+        },
+      ),
     );
   }
 }
@@ -126,9 +137,11 @@ class PBTextField extends StatefulWidget {
     super.key,
     required this.value,
     this.onChanged,
+    this.semanticId,
     this.inputFormatters,
   });
   final String? value;
+  final String? semanticId;
   final ValueChanged<String>? onChanged;
   final List<TextInputFormatter>? inputFormatters;
 
@@ -160,38 +173,45 @@ class _PBTextFieldState extends State<PBTextField> {
 
   @override
   Widget build(BuildContext context) {
-    return FusionContainer(
-      alignment: Alignment.center,
-      color: context.colorScheme.elevation2,
-      borderRadius: 8,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4),
-        child: TextFormField(
-          focusNode: focusNode,
-          keyboardType: TextInputType.number,
-          controller: controller,
-          style: context.textTheme.bodySmall,
-          inputFormatters: widget.inputFormatters,
-          textAlign: TextAlign.center,
-          decoration: const InputDecoration(
-            border: InputBorder.none,
-            focusedBorder: InputBorder.none,
-            enabledBorder: InputBorder.none,
-            errorBorder: InputBorder.none,
-            disabledBorder: InputBorder.none,
-            fillColor: Colors.transparent,
-            filled: true,
-            hintText: '',
-            contentPadding: EdgeInsets.all(0),
-            isCollapsed: true,
-            isDense: true,
+    return SemanticHelper.textInput(
+      testId: SemanticHelper.createTestId(
+        SemanticTypes.textInput,
+        "pb_textfield_${widget.semanticId}",
+      ),
+      label: controller.text,
+      child: FusionContainer(
+        alignment: Alignment.center,
+        color: context.colorScheme.elevation2,
+        borderRadius: 8,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4),
+          child: TextFormField(
+            focusNode: focusNode,
+            keyboardType: TextInputType.number,
+            controller: controller,
+            style: context.textTheme.bodySmall,
+            inputFormatters: widget.inputFormatters,
+            textAlign: TextAlign.center,
+            decoration: const InputDecoration(
+              border: InputBorder.none,
+              focusedBorder: InputBorder.none,
+              enabledBorder: InputBorder.none,
+              errorBorder: InputBorder.none,
+              disabledBorder: InputBorder.none,
+              fillColor: Colors.transparent,
+              filled: true,
+              hintText: '',
+              contentPadding: EdgeInsets.all(0),
+              isCollapsed: true,
+              isDense: true,
+            ),
+            onFieldSubmitted: (String value) {
+              widget.onChanged?.call(value);
+            },
+            onTapOutside: (PointerDownEvent event) {
+              controller.text = widget.value ?? '';
+            },
           ),
-          onFieldSubmitted: (String value) {
-            widget.onChanged?.call(value);
-          },
-          onTapOutside: (PointerDownEvent event) {
-            controller.text = widget.value ?? '';
-          },
         ),
       ),
     );

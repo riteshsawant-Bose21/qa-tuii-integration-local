@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/fusion_theme/app_theme.dart';
 
-import '../../constants/test_keys.dart';
 import '../../models/dock_item_config.dart';
 import '../../models/fusion_dock_item.dart';
 
@@ -39,79 +38,102 @@ class FusionDockSidebar extends StatelessWidget {
       onAccept: (DockItem item) {
         print("Item ${item.title} docked to $side sidebar");
       },
-      builder: (BuildContext context, List<DockItem?> candidateItems, List<dynamic> rejectedItems) {
-        final bool hasIncomingData = candidateItems.isNotEmpty;
-        return SemanticHelper.container(
-          testId: SemanticHelper.createTestId(SemanticTypes.container, side == "left" ? FusionTestKeys.dockLeftSideBar : FusionTestKeys.dockRightSideBar),
-          child: Container(
-            width: 240,
-            clipBehavior: Clip.hardEdge,
-            height: double.infinity,
-            margin: const EdgeInsets.symmetric(horizontal: 1, vertical: 4),
+      builder:
+          (
+            BuildContext context,
+            List<DockItem?> candidateItems,
+            List<dynamic> rejectedItems,
+          ) {
+            final bool hasIncomingData = candidateItems.isNotEmpty;
+            return SemanticHelper.container(
+              testId: SemanticHelper.createTestId(
+                SemanticTypes.container,
+                side == "left"
+                    ? FusionTestKeys.dockLeftSideBar
+                    : FusionTestKeys.dockRightSideBar,
+              ),
+              child: Container(
+                width: 240,
+                clipBehavior: Clip.hardEdge,
+                height: double.infinity,
+                margin: const EdgeInsets.symmetric(horizontal: 1, vertical: 4),
 
-            decoration: BoxDecoration(
-              color: hasIncomingData ? context.colorScheme.elevation1.withAlpha(80) : Colors.transparent,
-              // border: Border.all(color: context.colorScheme.elevation2, width: 1),
-              // borderRadius: const BorderRadius.all(Radius.circular(12)),
-              // border: Border(
-              //   right: side == "left" ? BorderSide(color: Theme.of(context).colorScheme.primaryBlack, width: 1) : BorderSide.none,
-              //   left: side == "right" ? BorderSide(color: Theme.of(context).colorScheme.primaryBlack, width: 1) : BorderSide.none,
-              // ),
-            ),
-            child: ListView(
-              physics: const ClampingScrollPhysics(),
-              padding: EdgeInsets.zero,
-              children: items.map((item) {
-                final config = getConfigForItem(item.id);
-                if (config == null || !config.isVisible) {
-                  return const SizedBox.shrink();
-                }
+                decoration: BoxDecoration(
+                  color: hasIncomingData
+                      ? context.colorScheme.elevation1.withAlpha(80)
+                      : Colors.transparent,
+                  // border: Border.all(color: context.colorScheme.elevation2, width: 1),
+                  // borderRadius: const BorderRadius.all(Radius.circular(12)),
+                  // border: Border(
+                  //   right: side == "left" ? BorderSide(color: Theme.of(context).colorScheme.primaryBlack, width: 1) : BorderSide.none,
+                  //   left: side == "right" ? BorderSide(color: Theme.of(context).colorScheme.primaryBlack, width: 1) : BorderSide.none,
+                  // ),
+                ),
+                child: ListView(
+                  physics: const ClampingScrollPhysics(),
+                  padding: EdgeInsets.zero,
+                  children: items.map((item) {
+                    final config = getConfigForItem(item.id);
+                    if (config == null || !config.isVisible) {
+                      return const SizedBox.shrink();
+                    }
 
-                // Only show items that are configured for this tab
-                final bool isConfiguredForThisTab = itemConfigs.any((c) => c.id == item.id);
-                if (!isConfiguredForThisTab) {
-                  return const SizedBox.shrink();
-                }
+                    // Only show items that are configured for this tab
+                    final bool isConfiguredForThisTab = itemConfigs.any(
+                      (c) => c.id == item.id,
+                    );
+                    if (!isConfiguredForThisTab) {
+                      return const SizedBox.shrink();
+                    }
 
-                if (config.isCollapsibleSection) {
-                  final int index = items.indexOf(item);
-                  return SemanticHelper.listItem(
-                    testId: SemanticHelper.createTestId(SemanticTypes.listItem, "${config.title}_$index"),
-                    index: index,
-                    child: Container(
-                      margin: const EdgeInsets.only(bottom: 4),
-                      padding: const EdgeInsets.symmetric(vertical: 8),
-                      decoration: BoxDecoration(
-                        color: context.colorScheme.elevation1,
-                        borderRadius: BorderRadius.circular(FusionSizes.borderRadius16),
-                      ),
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(FusionSizes.borderRadius16),
-                        child: FusionExpandableTileWidget(
-                          item: item,
-                          config: config,
-                          onUndock: onItemUndock,
-                          onExpansionChanged: onExpansionChanged,
-                          controller: config.controller,
+                    if (config.isCollapsibleSection) {
+                      final int index = items.indexOf(item);
+                      return SemanticHelper.listItem(
+                        testId: SemanticHelper.createTestId(
+                          SemanticTypes.listItem,
+                          "${config.title}_$index",
                         ),
-                      ),
-                    ),
-                  );
-                } else {
-                  return Container(
-                    margin: const EdgeInsets.only(bottom: 4),
-                    decoration: BoxDecoration(
-                      color: context.colorScheme.elevation1,
-                      borderRadius: BorderRadius.circular(FusionSizes.borderRadius16),
-                    ),
-                    child: config.dockItemWidget,
-                  );
-                }
-              }).toList(),
-            ),
-          ),
-        );
-      },
+                        index: index,
+                        child: Container(
+                          margin: const EdgeInsets.only(bottom: 4),
+                          padding: const EdgeInsets.symmetric(vertical: 8),
+                          decoration: BoxDecoration(
+                            color: context.colorScheme.elevation1,
+                            borderRadius: BorderRadius.circular(
+                              FusionSizes.borderRadius16,
+                            ),
+                          ),
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(
+                              FusionSizes.borderRadius16,
+                            ),
+                            child: FusionExpandableTileWidget(
+                              item: item,
+                              config: config,
+                              onUndock: onItemUndock,
+                              onExpansionChanged: onExpansionChanged,
+                              controller: config.controller,
+                            ),
+                          ),
+                        ),
+                      );
+                    } else {
+                      return Container(
+                        margin: const EdgeInsets.only(bottom: 4),
+                        decoration: BoxDecoration(
+                          color: context.colorScheme.elevation1,
+                          borderRadius: BorderRadius.circular(
+                            FusionSizes.borderRadius16,
+                          ),
+                        ),
+                        child: config.dockItemWidget,
+                      );
+                    }
+                  }).toList(),
+                ),
+              ),
+            );
+          },
     );
   }
 }

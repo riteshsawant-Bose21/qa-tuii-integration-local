@@ -8,19 +8,21 @@ class DottedLine extends StatelessWidget {
     this.spacing = 4,
     this.color = Colors.black,
     this.direction = Axis.horizontal,
+    required this.semanticId,
   });
 
   final double dotSize;
   final double spacing;
   final Color color;
   final Axis direction;
+  final String semanticId;
 
   @override
   Widget build(BuildContext context) {
     return SemanticHelper.container(
       testId: SemanticHelper.createTestId(
         SemanticTypes.container,
-        "DottedLine",
+        "DottedLine_${semanticId}",
       ),
       child: LayoutBuilder(
         builder: (_, BoxConstraints constraints) {

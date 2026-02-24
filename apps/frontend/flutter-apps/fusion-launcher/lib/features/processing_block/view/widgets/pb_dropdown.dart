@@ -9,9 +9,15 @@ const double _bRadius = 12;
 const double _blurRadius = 10;
 
 class PBItemDropdown extends StatelessWidget {
-  const PBItemDropdown({super.key, required this.item, this.handler});
+  const PBItemDropdown({
+    super.key,
+    required this.item,
+    this.handler,
+    required this.semanticId,
+  });
   final PBItem item;
   final PBWidgetValueHandler? handler;
+  final String semanticId;
 
   @override
   Widget build(BuildContext context) {
@@ -19,8 +25,8 @@ class PBItemDropdown extends StatelessWidget {
         (handler?.resolveForItem(item) ?? item.param) as PBDropdownParam;
     return SemanticHelper.dropdown(
       testId: SemanticHelper.createTestId(
-        SemanticTypes.container,
-        "DottedLine",
+        SemanticTypes.dropdownItem,
+        "pb_dropdown_item_$semanticId",
       ),
       child: PBDropdown<String>(
         value: handler?.getValue(item) ?? item.value ?? data.label,
@@ -41,6 +47,7 @@ class PBDropdown<T> extends StatelessWidget {
   final String? value;
   final String hintText;
   // final PopupMenuItemBuilder<T> itemBuilder;
+  final String? semanticId;
   final List<T> items;
   final Widget Function(BuildContext, T) itemBuilder;
   final ValueChanged<T> onChanged;
@@ -49,6 +56,7 @@ class PBDropdown<T> extends StatelessWidget {
 
   const PBDropdown({
     super.key,
+    this.semanticId,
     this.value,
     required this.hintText,
     required this.items,
@@ -60,34 +68,41 @@ class PBDropdown<T> extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return FusionContainer(
-      raised: true,
-      color: context.colorScheme.elevation2,
-      child: ClipRRect(
-        borderRadius: BorderRadiusGeometry.circular(_bRadius),
-        child: Padding(
-          padding: const EdgeInsets.all(8.0),
-          child: FusionPopupMenu<T>(
-            items: items,
+    return SemanticHelper.dropdown(
+      testId: SemanticHelper.createTestId(
+        SemanticTypes.dropdown,
+        "pb_dropdown_$semanticId",
+      ),
+      value: value,
+      child: FusionContainer(
+        raised: true,
+        color: context.colorScheme.elevation2,
+        child: ClipRRect(
+          borderRadius: BorderRadiusGeometry.circular(_bRadius),
+          child: Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: FusionPopupMenu<T>(
+              items: items,
 
-            // color: context.colorScheme.elevation2,
-            // elevation: 1,
-            // position: PopupMenuPosition.under,
-            itemBuilder: itemBuilder,
-            onSelected: onChanged,
-            child: Padding(
-              padding: const EdgeInsets.only(left: 10),
-              child: Row(
-                children: <Widget>[
-                  Expanded(
-                    child: FusionAppText(
-                      text: value ?? hintText,
-                      maxLine: 1,
-                      style: context.textTheme.bodySmall,
+              // color: context.colorScheme.elevation2,
+              // elevation: 1,
+              // position: PopupMenuPosition.under,
+              itemBuilder: itemBuilder,
+              onSelected: onChanged,
+              child: Padding(
+                padding: const EdgeInsets.only(left: 10),
+                child: Row(
+                  children: <Widget>[
+                    Expanded(
+                      child: FusionAppText(
+                        text: value ?? hintText,
+                        maxLine: 1,
+                        style: context.textTheme.bodySmall,
+                      ),
                     ),
-                  ),
-                  const Icon(Icons.keyboard_arrow_down),
-                ],
+                    const Icon(Icons.keyboard_arrow_down),
+                  ],
+                ),
               ),
             ),
           ),

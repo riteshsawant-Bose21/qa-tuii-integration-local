@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-import '../constants/test_keys.dart';
 import '../fusion_lib.dart';
 import 'spl_range_controller.dart';
 
@@ -70,7 +69,9 @@ enum SplFrequency {
   /// Get frequency value as integer Hz (round if decimal)
   int get frequencyValue {
     if (displayName.contains('kHz')) {
-      final numericPart = displayName.replaceAll(' kHz', '').replaceAll(' ', '');
+      final numericPart = displayName
+          .replaceAll(' kHz', '')
+          .replaceAll(' ', '');
       return (double.parse(numericPart) * 1000).round();
     } else if (displayName.contains('Hz')) {
       final numericPart = displayName.replaceAll(' Hz', '').replaceAll(' ', '');
@@ -118,13 +119,17 @@ enum SplResolution {
 /// Extension methods to get lists of display names for dropdowns
 /// Note: This extension is now deprecated since we use enums directly
 extension SplEnumExtensions on Object {
-  static List<String> get weightingOptions => SplWeighting.values.map((SplWeighting e) => e.displayName).toList();
+  static List<String> get weightingOptions =>
+      SplWeighting.values.map((SplWeighting e) => e.displayName).toList();
 
-  static List<String> get frequencyOptions => SplFrequency.values.map((SplFrequency e) => e.displayName).toList();
+  static List<String> get frequencyOptions =>
+      SplFrequency.values.map((SplFrequency e) => e.displayName).toList();
 
-  static List<String> get bandwidthOptions => SplBandwidth.values.map((SplBandwidth e) => e.displayName).toList();
+  static List<String> get bandwidthOptions =>
+      SplBandwidth.values.map((SplBandwidth e) => e.displayName).toList();
 
-  static List<String> get resolutionOptions => SplResolution.values.map((SplResolution e) => e.displayName).toList();
+  static List<String> get resolutionOptions =>
+      SplResolution.values.map((SplResolution e) => e.displayName).toList();
 }
 
 /// Panel widget for configuring SPL mapping attributes
@@ -165,7 +170,9 @@ class _SplPanelState extends State<SplPanel> {
     FilteringTextInputFormatter.allow(RegExp(r'[-]?\d*\.?\d*')),
   ];
 
-  bool get _needsFrequency => _bandwidth == SplBandwidth.oneThirdOctave || _bandwidth == SplBandwidth.oneOctave;
+  bool get _needsFrequency =>
+      _bandwidth == SplBandwidth.oneThirdOctave ||
+      _bandwidth == SplBandwidth.oneOctave;
 
   /// Allowed ISO centers by bandwidth
   List<SplFrequency> _allowedFrequenciesFor(SplBandwidth bw) {
@@ -470,13 +477,19 @@ class _SplPanelState extends State<SplPanel> {
           const IntrinsicColumnWidth col0 = IntrinsicColumnWidth();
 
           return Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 12.0),
+            padding: const EdgeInsets.symmetric(
+              horizontal: 12.0,
+              vertical: 12.0,
+            ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
                 // Top selectors (Weighting/Frequency/Bandwidth/Resolution)
                 Table(
-                  columnWidths: const <int, TableColumnWidth>{0: col0, 1: FlexColumnWidth()},
+                  columnWidths: const <int, TableColumnWidth>{
+                    0: col0,
+                    1: FlexColumnWidth(),
+                  },
                   defaultVerticalAlignment: TableCellVerticalAlignment.middle,
                   children: <TableRow>[
                     _row(
@@ -518,21 +531,30 @@ class _SplPanelState extends State<SplPanel> {
                             itemHeight: 48, // or null to use default
                             isDense: true,
                             isExpanded: true,
-                            value: _allowedFrequenciesFor(_bandwidth).contains(_frequency)
+                            value:
+                                _allowedFrequenciesFor(
+                                  _bandwidth,
+                                ).contains(_frequency)
                                 ? _frequency
-                                : (_allowedFrequenciesFor(_bandwidth).isNotEmpty ? _allowedFrequenciesFor(_bandwidth).first : null),
+                                : (_allowedFrequenciesFor(_bandwidth).isNotEmpty
+                                      ? _allowedFrequenciesFor(_bandwidth).first
+                                      : null),
                             items: _allowedFrequenciesFor(_bandwidth)
                                 .map(
-                                  (SplFrequency e) => DropdownMenuItem<SplFrequency>(
-                                    value: e,
-                                    child: FusionAppText(
-                                      text: e.displayName,
-                                      style: context.textTheme.bodyMedium!.copyWith(
-                                        fontSize: 12,
-                                        color: context.colorScheme.textPrimary,
+                                  (SplFrequency e) =>
+                                      DropdownMenuItem<SplFrequency>(
+                                        value: e,
+                                        child: FusionAppText(
+                                          text: e.displayName,
+                                          style: context.textTheme.bodyMedium!
+                                              .copyWith(
+                                                fontSize: 12,
+                                                color: context
+                                                    .colorScheme
+                                                    .textPrimary,
+                                              ),
+                                        ),
                                       ),
-                                    ),
-                                  ),
                                 )
                                 .toList(),
                             onChanged: (SplFrequency? v) {
@@ -552,7 +574,10 @@ class _SplPanelState extends State<SplPanel> {
                             },
                             decoration: const InputDecoration(
                               isDense: true,
-                              contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                              contentPadding: EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 8,
+                              ),
                               border: InputBorder.none,
                               enabledBorder: InputBorder.none,
                               focusedBorder: InputBorder.none,
@@ -564,7 +589,9 @@ class _SplPanelState extends State<SplPanel> {
                               size: 16,
                               color: context.colorScheme.iconDefault,
                             ),
-                            style: context.textTheme.bodyMedium!.copyWith(color: context.colorScheme.iconDefault),
+                            style: context.textTheme.bodyMedium!.copyWith(
+                              color: context.colorScheme.iconDefault,
+                            ),
                           ),
                         ),
                       ),
@@ -594,14 +621,20 @@ class _SplPanelState extends State<SplPanel> {
                 const SizedBox(height: 6),
 
                 Table(
-                  columnWidths: const <int, TableColumnWidth>{0: col0, 1: FlexColumnWidth()},
+                  columnWidths: const <int, TableColumnWidth>{
+                    0: col0,
+                    1: FlexColumnWidth(),
+                  },
                   defaultVerticalAlignment: TableCellVerticalAlignment.middle,
                   children: <TableRow>[
                     _row(
                       label: 'Upper Limit (dB)',
                       labelStyle: labelStyle,
                       control: SemanticHelper.button(
-                        testId: SemanticHelper.createTestId(SemanticTypes.button, FusionTestKeys.splUpperLimitTextField),
+                        testId: SemanticHelper.createTestId(
+                          SemanticTypes.button,
+                          FusionTestKeys.splUpperLimitTextField,
+                        ),
                         child: _tf(
                           controller: _splUpper,
                           focusNode: _splUpperFocusNode,
@@ -617,7 +650,10 @@ class _SplPanelState extends State<SplPanel> {
                       label: 'Lower Limit (dB)',
                       labelStyle: labelStyle,
                       control: SemanticHelper.button(
-                        testId: SemanticHelper.createTestId(SemanticTypes.button, FusionTestKeys.splLowerLimitTextField),
+                        testId: SemanticHelper.createTestId(
+                          SemanticTypes.button,
+                          FusionTestKeys.splLowerLimitTextField,
+                        ),
                         child: _tf(
                           controller: _splLower,
                           focusNode: _splLowerFocusNode,
@@ -698,7 +734,10 @@ class _SplPanelState extends State<SplPanel> {
             return DropdownMenuItem<T>(
               value: e,
               child: SemanticHelper.button(
-                testId: SemanticHelper.createTestId(SemanticTypes.button, (e as dynamic).displayName),
+                testId: SemanticHelper.createTestId(
+                  SemanticTypes.button,
+                  (e as dynamic).displayName,
+                ),
                 child: FusionAppText(
                   text: (e as dynamic).displayName,
                   style: const TextStyle(fontSize: 12),
@@ -750,7 +789,10 @@ class _SplPanelState extends State<SplPanel> {
           scale: 0.7,
           alignment: Alignment.centerLeft,
           child: SemanticHelper.button(
-            testId: SemanticHelper.createTestId(SemanticTypes.button, FusionTestKeys.splInvertColorToggle),
+            testId: SemanticHelper.createTestId(
+              SemanticTypes.button,
+              FusionTestKeys.splInvertColorToggle,
+            ),
             child: Switch.adaptive(
               value: value,
               onChanged: onChanged,

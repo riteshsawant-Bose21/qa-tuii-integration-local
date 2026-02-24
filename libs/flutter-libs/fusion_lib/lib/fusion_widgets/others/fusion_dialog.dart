@@ -165,12 +165,11 @@ class FusionDialog extends StatelessWidget {
                           onSecondaryPressed != null) ...[
                         SizedBox(
                           width: 90,
-                          child: FusionOutlinedButton(
-                            label: secondaryButtonLabel!,
-                            textStyle: Theme.of(
-                              context,
-                            ).textTheme.labelLarge?.copyWith(fontSize: 11),
-                            onTap: () {
+                          child: FusionAppButton(
+                            semanticId: 'dialog_box',
+                            text: secondaryButtonLabel!,
+                            style: FusionAppButtonStyle.secondary,
+                            onPressed: () {
                               onSecondaryPressed?.call();
                             },
                           ),
@@ -179,16 +178,12 @@ class FusionDialog extends StatelessWidget {
                       ],
                       SizedBox(
                         width: primaryButtonWidth,
-                        child: FusionButton(
-                          label: primaryButtonLabel,
-                          textStyle: Theme.of(context).textTheme.labelLarge
-                              ?.copyWith(
-                                fontSize: 11,
-                                color: context.colorScheme.primaryBlack,
-                              ),
-                          isActive: true,
-                          activeBackgroundColor: primaryButtonColor,
-                          onTap: () {
+                        child: FusionAppButton(
+                          semanticId: 'dialog_box',
+                          text: primaryButtonLabel,
+                          style: FusionAppButtonStyle.primary,
+                          enabled: true,
+                          onPressed: () {
                             onPrimaryPressed.call();
                           },
                         ),

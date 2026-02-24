@@ -21,3 +21,6 @@ export 'hover_dropdown.dart';
 export 'fusion_table.dart';
 export 'dialog_box.dart';
 export 'fusion_vertical_slider.dart';
+export 'fusion_vertical_range_selection_slider.dart';
+export 'fusion_simple_vertical_meter.dart';
+export 'fusion_vertical_meter.dart';

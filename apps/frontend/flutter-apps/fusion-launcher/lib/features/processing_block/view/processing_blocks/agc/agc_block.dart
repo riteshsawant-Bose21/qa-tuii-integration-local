@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:fusion_launcher/features/processing_block/view/processing_blocks/widgets/pb_section.dart';
-import 'package:fusion_launcher/features/processing_block/view/widgets/pb_meter.dart';
 import 'package:fusion_launcher/features/zone_functions/widgets/neumorphic_gain_text_field.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:provider/provider.dart';
@@ -44,6 +43,7 @@ class AgcBlock extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               children: <Widget>[
                 PBSection(
+                  semanticId: 'agc_threshold_section',
                   type: PBSectionType.left,
                   child: SizedBox(
                     width: _sectionWidth,
@@ -72,6 +72,7 @@ class AgcBlock extends StatelessWidget {
                           child: Padding(
                             padding: const EdgeInsets.all(16),
                             child: VerticalSlider(
+                              semanticId: 'agc_threshold_slider',
                               value:
                                   context
                                       .watch<AgcController>()
@@ -94,6 +95,7 @@ class AgcBlock extends StatelessWidget {
                             ),
                           ),
                           child: NeumorphicGainTextField(
+                            semanticId: 'agc_threshold_text_field',
                             controllerValue:
                                 context.watch<AgcController>().currentThreshold,
                             maxGain: 12,
@@ -120,6 +122,7 @@ class AgcBlock extends StatelessWidget {
                   thickness: 2,
                 ),
                 PBSection(
+                  semanticId: 'agc_reduction',
                   type: PBSectionType.middle,
                   child: SizedBox(
                     width: _sectionWidth,
@@ -149,6 +152,7 @@ class AgcBlock extends StatelessWidget {
                           child: Padding(
                             padding: const EdgeInsets.all(16.0),
                             child: SimpleVerticalMeter(
+                              semanticId: 'agc_reduction_meter',
                               value:
                                   context
                                       .watch<AgcController>()
@@ -170,6 +174,7 @@ class AgcBlock extends StatelessWidget {
                             ),
                           ),
                           child: NeumorphicGainTextField(
+                            semanticId: 'agc_reduction_text_field',
                             controllerValue: 10,
                             maxGain: 12,
                             minGain: -60,
@@ -195,6 +200,7 @@ class AgcBlock extends StatelessWidget {
                   thickness: 2,
                 ),
                 PBSection(
+                  semanticId: 'agc_output_section',
                   type: PBSectionType.right,
                   child: SizedBox(
                     width: _sectionWidth,
@@ -224,6 +230,7 @@ class AgcBlock extends StatelessWidget {
                           child: Padding(
                             padding: EdgeInsets.all(16.0),
                             child: VerticalMeter(
+                              semanticId: 'agc_output_meter',
                               min: -60,
                               max: 0,
                               value: -10,

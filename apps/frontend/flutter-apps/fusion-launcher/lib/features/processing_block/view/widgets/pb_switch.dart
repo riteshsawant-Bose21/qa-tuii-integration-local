@@ -7,9 +7,15 @@ import '../../dto/pb_item_param.dart';
 import '../../view/item_widget_builder.dart';
 
 class PBSwitch extends StatelessWidget {
-  const PBSwitch({super.key, required this.item, this.handler});
+  const PBSwitch({
+    super.key,
+    required this.item,
+    this.handler,
+    this.semanticId,
+  });
   final PBItem item;
   final PBWidgetValueHandler? handler;
+  final String? semanticId;
   @override
   Widget build(BuildContext context) {
     final PBSwitchParam data =
@@ -17,7 +23,7 @@ class PBSwitch extends StatelessWidget {
     return SemanticHelper.button(
       testId: SemanticHelper.createTestId(
         SemanticTypes.container,
-        "PBSwitch",
+        "PBSwitch_${semanticId ?? ''}",
       ),
       child: LayoutBuilder(
         builder: (BuildContext context, BoxConstraints constraints) {

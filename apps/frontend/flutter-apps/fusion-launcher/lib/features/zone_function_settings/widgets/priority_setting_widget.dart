@@ -5,7 +5,6 @@ import 'package:fusion_lib/fusion_lib.dart';
 import '../../configuration/presentation/viewmodel/project_view_model.dart';
 import '../../processing_block/view/processing_blocks/widgets/disabled_widget_wrapper.dart';
 import '../../processing_block/view/widgets/pb_dropdown.dart';
-import '../../processing_block/view/widgets/pb_meter.dart';
 import '../../zone_functions/widgets/neumorphic_gain_text_field.dart';
 import '../models/models.dart';
 
@@ -329,6 +328,8 @@ class PrioritySettingsWidgetState extends State<PrioritySettingsWidget> {
                                                           index,
                                                         ),
                                                     child: VerticalSlider(
+                                                      semanticId:
+                                                          'priority_threshold_slider',
                                                       value:
                                                           widget
                                                               .getThresholdValue(
@@ -361,6 +362,8 @@ class PrioritySettingsWidgetState extends State<PrioritySettingsWidget> {
                                                         index,
                                                       ),
                                                   child: NeumorphicGainTextField(
+                                                    semanticId:
+                                                        'priority_threshold_text_field',
                                                     controllerValue: widget
                                                         .getThresholdValue(
                                                           index,
@@ -523,6 +526,8 @@ class PrioritySettingsWidgetState extends State<PrioritySettingsWidget> {
                                                         ),
                                                       ),
                                                       NeumorphicGainTextField(
+                                                        semanticId:
+                                                            'priority_depth_text_field',
                                                         enabled: widget
                                                             .enableBehaviorSettingsFields(
                                                               index,
@@ -561,6 +566,8 @@ class PrioritySettingsWidgetState extends State<PrioritySettingsWidget> {
                                                         ),
                                                       ),
                                                       NeumorphicGainTextField(
+                                                        semanticId:
+                                                            'priority_attack_text_field',
                                                         enabled: widget
                                                             .enableBehaviorSettingsFields(
                                                               index,

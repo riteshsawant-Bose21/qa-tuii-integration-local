@@ -6,9 +6,15 @@ import '../../dto/pb_item_param.dart';
 import '../../view/item_widget_builder.dart';
 
 class PBIndicator extends StatelessWidget {
-  const PBIndicator({super.key, required this.item, this.handler});
+  const PBIndicator({
+    super.key,
+    required this.item,
+    this.handler,
+    this.semanticId,
+  });
   final PBItem item;
   final PBWidgetValueHandler? handler;
+  final String? semanticId;
 
   @override
   Widget build(BuildContext context) {
@@ -16,7 +22,7 @@ class PBIndicator extends StatelessWidget {
     return SemanticHelper.container(
       testId: SemanticHelper.createTestId(
         SemanticTypes.container,
-        "PB_indicator",
+        "PB_indicator_${semanticId ?? ''}",
       ),
       child: LayoutBuilder(
         builder: (BuildContext context, BoxConstraints constraints) {

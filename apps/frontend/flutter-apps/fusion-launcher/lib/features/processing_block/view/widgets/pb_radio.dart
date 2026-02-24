@@ -6,6 +6,7 @@ class PBRadio extends StatelessWidget {
   final ValueChanged<bool> onChanged;
   final Size? size;
   final EdgeInsetsGeometry? padding;
+  final String semanticId;
 
   const PBRadio({
     super.key,
@@ -13,6 +14,7 @@ class PBRadio extends StatelessWidget {
     required this.onChanged,
     this.size,
     this.padding,
+    required this.semanticId,
   });
 
   @override
@@ -23,7 +25,7 @@ class PBRadio extends StatelessWidget {
     return SemanticHelper.container(
       testId: SemanticHelper.createTestId(
         SemanticTypes.button,
-        "PBradio",
+        "PBradio_$semanticId",
       ),
       child: LayoutBuilder(
         builder: (BuildContext context, BoxConstraints constraints) {

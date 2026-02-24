@@ -397,6 +397,7 @@ class DialogBox extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               FusionAppButton(
+                semanticId: 'dialog_box_horizontal',
                 width: 210,
                 style: secondaryButtonStyle,
                 text: secondaryButtonText,
@@ -404,6 +405,7 @@ class DialogBox extends StatelessWidget {
               ),
               const SizedBox(width: 12),
               FusionAppButton(
+                semanticId: 'dialog_box_horizontal',
                 width: 210,
                 style: primaryButtonStyle,
                 text: primaryButtonText,
@@ -415,12 +417,14 @@ class DialogBox extends StatelessWidget {
             spacing: 12,
             children: [
               FusionAppButton(
+                semanticId: 'dialog_box_vertical',
                 width: 438,
                 style: primaryButtonStyle,
                 text: primaryButtonText!,
                 onPressed: onPrimaryPressed,
               ),
               FusionAppButton(
+                semanticId: 'dialog_box_vertical',
                 width: 438,
                 style: secondaryButtonStyle,
                 text: secondaryButtonText!,
@@ -433,6 +437,7 @@ class DialogBox extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               FusionAppButton(
+                semanticId: 'dialog_box_horizontal',
                 width: 210,
                 style: secondaryButtonStyle,
                 text: secondaryButtonText!,
@@ -440,6 +445,7 @@ class DialogBox extends StatelessWidget {
               ),
               const SizedBox(width: 12),
               FusionAppButton(
+                semanticId: 'dialog_box_horizontal',
                 width: 210,
                 style: primaryButtonStyle,
                 text: primaryButtonText!,
@@ -452,12 +458,14 @@ class DialogBox extends StatelessWidget {
             spacing: 12,
             children: [
               FusionAppButton(
+                semanticId: 'dialog_box_vertical',
                 width: 438,
                 style: primaryButtonStyle,
                 text: primaryButtonText!,
                 onPressed: onPrimaryPressed,
               ),
               FusionAppButton(
+                semanticId: 'dialog_box_vertical',
                 width: 438,
                 style: secondaryButtonStyle,
                 text: secondaryButtonText!,

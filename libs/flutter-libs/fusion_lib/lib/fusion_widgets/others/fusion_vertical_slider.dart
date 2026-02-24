@@ -2,6 +2,8 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
 import '../../fusion_theme/app_theme.dart';
+import '../semantics/semantic_helper.dart';
+import '../semantics/semantic_type.dart';
 import '../text_views/fusion_app_text.dart';
 
 class VerticalSlider extends StatefulWidget {
@@ -19,6 +21,7 @@ class VerticalSlider extends StatefulWidget {
     this.intervalSpacing = 50.0,
     this.intervalTickWidth = 10.0,
     this.intervalGap,
+    required this.semanticId,
   });
 
   final num value;
@@ -26,6 +29,7 @@ class VerticalSlider extends StatefulWidget {
   final num max;
   final ValueChanged<num>? onChanged;
   final bool showIntervals;
+  final String semanticId;
 
   // Styling
   final Color? activeColor;
@@ -144,150 +148,162 @@ class _VerticalSliderState extends State<VerticalSlider> {
 
   @override
   Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (BuildContext context, BoxConstraints constraints) {
-        final double height = constraints.maxHeight;
-        final double normalizedValue = _toNormalized(_currentValue);
+    return SemanticHelper.button(
+      testId: SemanticHelper.createTestId(
+        SemanticTypes.button,
+        'fusion_vertical_slider${widget.semanticId ?? ''}',
+      ),
+      label: widget.value.toString(),
+      child: LayoutBuilder(
+        builder: (BuildContext context, BoxConstraints constraints) {
+          final double height = constraints.maxHeight;
+          final double normalizedValue = _toNormalized(_currentValue);
 
-        // Thumb center travels from halfThumb to (height - halfThumb)
-        // So it touches line ends perfectly
-        final double halfThumb = widget.thumbSize / 2;
-        final double trackHeight = height - widget.thumbSize;
-        final double thumbCenter = halfThumb + (normalizedValue * trackHeight);
-        final double thumbBottom = thumbCenter - halfThumb;
+          // Thumb center travels from halfThumb to (height - halfThumb)
+          // So it touches line ends perfectly
+          final double halfThumb = widget.thumbSize / 2;
+          final double trackHeight = height - widget.thumbSize;
+          final double thumbCenter =
+              halfThumb + (normalizedValue * trackHeight);
+          final double thumbBottom = thumbCenter - halfThumb;
 
-        // Track sections based on thumb center
-        final double activeHeight = thumbCenter - (widget.thumbSize / 2);
-        final double inactiveHeight = height - thumbCenter;
+          // Track sections based on thumb center
+          final double activeHeight = thumbCenter - (widget.thumbSize / 2);
+          final double inactiveHeight = height - thumbCenter;
 
-        final List<num> intervals = widget.showIntervals
-            ? _generateIntervals(height)
-            : <num>[];
+          final List<num> intervals = widget.showIntervals
+              ? _generateIntervals(height)
+              : <num>[];
 
-        return Center(
-          child: IntrinsicWidth(
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: <Widget>[
-                // Intervals (if enabled)
-                if (widget.showIntervals)
-                  Padding(
-                    padding: EdgeInsets.symmetric(
-                      vertical: widget.thumbSize / 4,
+          return Center(
+            child: IntrinsicWidth(
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: <Widget>[
+                  // Intervals (if enabled)
+                  if (widget.showIntervals)
+                    Padding(
+                      padding: EdgeInsets.symmetric(
+                        vertical: widget.thumbSize / 4,
+                      ),
+                      child: SizedBox(
+                        height: height,
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          children: <Widget>[
+                            ...intervals.map((num v) {
+                              return Row(
+                                spacing: 2,
+                                mainAxisSize: MainAxisSize.min,
+                                children: <Widget>[
+                                  FusionAppText(
+                                    text: v.round().toString(),
+                                    style: context.textTheme.labelSmall
+                                        ?.copyWith(
+                                          color:
+                                              context.colorScheme.textPrimary,
+                                          fontWeight: FontWeight.w500,
+                                          fontSize: 8,
+                                        ),
+                                  ),
+                                  Container(
+                                    height: 2,
+                                    width: widget.intervalTickWidth,
+                                    decoration: BoxDecoration(
+                                      color: context.colorScheme.textPrimary,
+                                      borderRadius: BorderRadius.circular(1),
+                                    ),
+                                  ),
+                                ],
+                              );
+                            }),
+                          ],
+                        ),
+                      ),
                     ),
-                    child: SizedBox(
-                      height: height,
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        crossAxisAlignment: CrossAxisAlignment.end,
+
+                  // Slider area with track and thumb
+                  SizedBox(
+                    width: widget.thumbSize,
+                    height: height,
+                    child: GestureDetector(
+                      behavior: HitTestBehavior.translucent,
+                      onTapDown: (TapDownDetails d) =>
+                          _jumpToPosition(d.localPosition.dy, height),
+                      onVerticalDragStart: (DragStartDetails d) =>
+                          _jumpToPosition(d.localPosition.dy, height),
+                      onVerticalDragUpdate: (DragUpdateDetails d) =>
+                          _jumpToPosition(d.localPosition.dy, height),
+                      child: Stack(
+                        clipBehavior: Clip.none,
                         children: <Widget>[
-                          ...intervals.map((num v) {
-                            return Row(
-                              spacing: 2,
-                              mainAxisSize: MainAxisSize.min,
-                              children: <Widget>[
-                                FusionAppText(
-                                  text: v.round().toString(),
-                                  style: context.textTheme.labelSmall?.copyWith(
-                                    color: context.colorScheme.textPrimary,
-                                    fontWeight: FontWeight.w500,
-                                    fontSize: 8,
-                                  ),
+                          // Track - centered
+                          Positioned.fill(
+                            child: Center(
+                              child: SizedBox(
+                                width: widget.trackWidth,
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: <Widget>[
+                                    // Inactive (top)
+                                    Container(
+                                      width: widget.trackWidth,
+                                      height: inactiveHeight,
+                                      decoration: BoxDecoration(
+                                        color: context.colorScheme.elevation5,
+                                        borderRadius:
+                                            const BorderRadius.vertical(
+                                              top: Radius.circular(100),
+                                            ),
+                                      ),
+                                    ),
+                                    // Active (bottom)
+                                    Container(
+                                      width: widget.trackWidth,
+                                      height: activeHeight,
+                                      decoration: BoxDecoration(
+                                        color:
+                                            widget.activeColor ??
+                                            context.colorScheme.primaryColor,
+                                        borderRadius:
+                                            const BorderRadius.vertical(
+                                              bottom: Radius.circular(100),
+                                            ),
+                                      ),
+                                    ),
+                                  ],
                                 ),
-                                Container(
-                                  height: 2,
-                                  width: widget.intervalTickWidth,
-                                  decoration: BoxDecoration(
-                                    color: context.colorScheme.textPrimary,
-                                    borderRadius: BorderRadius.circular(1),
-                                  ),
-                                ),
-                              ],
-                            );
-                          }),
+                              ),
+                            ),
+                          ),
+
+                          // Thumb - centered horizontally
+                          Positioned(
+                            left: 0,
+                            right: 0,
+                            bottom: thumbBottom,
+                            child: Center(
+                              child: Thumb(
+                                size: widget.thumbSize,
+                                onStart: _onPanStart,
+                                onUpdate: (DragUpdateDetails details) =>
+                                    _onPanUpdate(details, height),
+                                onEnd: _onPanEnd,
+                              ),
+                            ),
+                          ),
                         ],
                       ),
                     ),
                   ),
-
-                // Slider area with track and thumb
-                SizedBox(
-                  width: widget.thumbSize,
-                  height: height,
-                  child: GestureDetector(
-                    behavior: HitTestBehavior.translucent,
-                    onTapDown: (TapDownDetails d) =>
-                        _jumpToPosition(d.localPosition.dy, height),
-                    onVerticalDragStart: (DragStartDetails d) =>
-                        _jumpToPosition(d.localPosition.dy, height),
-                    onVerticalDragUpdate: (DragUpdateDetails d) =>
-                        _jumpToPosition(d.localPosition.dy, height),
-                    child: Stack(
-                      clipBehavior: Clip.none,
-                      children: <Widget>[
-                        // Track - centered
-                        Positioned.fill(
-                          child: Center(
-                            child: SizedBox(
-                              width: widget.trackWidth,
-                              child: Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: <Widget>[
-                                  // Inactive (top)
-                                  Container(
-                                    width: widget.trackWidth,
-                                    height: inactiveHeight,
-                                    decoration: BoxDecoration(
-                                      color: context.colorScheme.elevation5,
-                                      borderRadius: const BorderRadius.vertical(
-                                        top: Radius.circular(100),
-                                      ),
-                                    ),
-                                  ),
-                                  // Active (bottom)
-                                  Container(
-                                    width: widget.trackWidth,
-                                    height: activeHeight,
-                                    decoration: BoxDecoration(
-                                      color:
-                                          widget.activeColor ??
-                                          context.colorScheme.primaryColor,
-                                      borderRadius: const BorderRadius.vertical(
-                                        bottom: Radius.circular(100),
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ),
-
-                        // Thumb - centered horizontally
-                        Positioned(
-                          left: 0,
-                          right: 0,
-                          bottom: thumbBottom,
-                          child: Center(
-                            child: Thumb(
-                              size: widget.thumbSize,
-                              onStart: _onPanStart,
-                              onUpdate: (DragUpdateDetails details) =>
-                                  _onPanUpdate(details, height),
-                              onEnd: _onPanEnd,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-        );
-      },
+          );
+        },
+      ),
     );
   }
 }

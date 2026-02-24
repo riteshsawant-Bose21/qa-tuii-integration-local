@@ -7,16 +7,22 @@ import '../../dto/pb_item_param.dart';
 import '../../view/item_widget_builder.dart';
 
 class PBText extends StatelessWidget {
-  const PBText({super.key, required this.item, this.handler});
+  const PBText({
+    super.key,
+    required this.item,
+    this.handler,
+    required this.semanticId,
+  });
   final PBItem item;
   final PBWidgetValueHandler? handler;
+  final String semanticId;
   @override
   Widget build(BuildContext context) {
     final PBTextParam data = item.param as PBTextParam;
     return SemanticHelper.staticText(
       testId: SemanticHelper.createTestId(
         SemanticTypes.text,
-        "PB_text",
+        "PB_text_$semanticId",
       ),
       label: data.label,
       child: LayoutBuilder(

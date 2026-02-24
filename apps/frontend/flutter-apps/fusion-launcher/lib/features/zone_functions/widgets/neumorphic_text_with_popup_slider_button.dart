@@ -119,6 +119,8 @@ class _NeumorphicTextWithPopupSliderButtonState
                               "neumorphic_text_with_popup_slider_button",
                             ),
                             child: VerticalSlider(
+                              semanticId:
+                                  'neumorphic_text_with_popup_slider_button',
                               value: widget.value ?? 0.0,
                               min: -60,
                               max: 12,

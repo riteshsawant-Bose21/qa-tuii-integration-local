@@ -9,8 +9,14 @@ import '../../dto/pb_item_param.dart';
 import '../../view/item_widget_builder.dart';
 
 class PBButton extends StatelessWidget {
-  const PBButton({super.key, required this.item, this.handler});
+  const PBButton({
+    super.key,
+    required this.item,
+    this.handler,
+    required this.semanticId,
+  });
   final PBItem item;
+  final String semanticId;
   final PBWidgetValueHandler? handler;
   @override
   Widget build(BuildContext context) {
@@ -19,7 +25,7 @@ class PBButton extends StatelessWidget {
     return SemanticHelper.button(
       testId: SemanticHelper.createTestId(
         SemanticTypes.container,
-        "DottedLine",
+        "pb_button_$semanticId",
       ),
       child: LayoutBuilder(
         builder: (BuildContext context, BoxConstraints constraints) {
@@ -35,6 +41,7 @@ class PBButton extends StatelessWidget {
             },
             borderRadius: BorderRadius.circular(20),
             child: NeumorphicContainer(
+              semanticId: "pb_button_layout",
               inner: value,
               child: Center(
                 child: SvgPicture.asset(

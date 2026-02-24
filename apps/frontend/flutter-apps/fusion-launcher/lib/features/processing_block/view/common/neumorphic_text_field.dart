@@ -58,6 +58,7 @@ class _NeumorphicTextFieldState extends State<NeumorphicTextField> {
       child: ClipRRect(
         borderRadius: BorderRadius.circular(widget.borderRadius),
         child: NeumorphicContainer(
+          semanticId: "neumorphic_text_field",
           child: TextField(
             controller: widget.controller,
             textAlign: TextAlign.center,
