@@ -98,7 +98,7 @@ class _CeilingPendantSpeakerLayoutWidgetState extends State<CeilingPendantSpeake
       }
 
       // Ensure boundary threshold is within valid range
-      final double clampedBoundaryThreshold = _boundaryOverlapThreshold.clamp(0.3, 0.9);
+      final double clampedBoundaryThreshold = _boundaryOverlapThreshold.clamp(0.01, 0.9);
 
       // Calculate placement with enhanced details
       final PlacementResult result = AutoSpeakerPlacement.calculatePlacement(
