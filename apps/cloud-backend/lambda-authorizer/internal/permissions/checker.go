@@ -207,18 +207,20 @@ func isPermissionSufficient(userLevel, requiredLevel string) bool {
 
 // CheckEndpointPermission checks if a user has permission to access a specific endpoint
 func (s *SQLPermissionChecker) CheckEndpointPermission(ctx context.Context, userEmail, method, resource string) (bool, error) {
-	// Get user permissions
-	userPerms, err := s.GetUserPermissions(ctx, userEmail)
-	if err != nil {
-		return false, fmt.Errorf("failed to get user permissions: %w", err)
-	}
-
 	// Find matching endpoint permission
 	permission := s.findEndpointPermission(method, resource)
 
 	if permission == nil {
-		// No specific permission registered for this endpoint - deny by default
-		return false, nil
+		// No specific permission registered for this endpoint - allow (authentication-only)
+		// Token validation already happened, so user is authenticated
+		return true, nil
+	}
+
+	// Permission is registered, so we need to check authorization
+	// Get user permissions from database
+	userPerms, err := s.GetUserPermissions(ctx, userEmail)
+	if err != nil {
+		return false, fmt.Errorf("failed to get user permissions: %w", err)
 	}
 
 	// Check if user has the required permission
