@@ -223,6 +223,16 @@ func TestCheckEndpointPermission_CriticalEndpoints(t *testing.T) {
 	}{
 		{
 			name:     "CRITICAL: Prevent unauthorized project deletion",
+			method:   "GET",
+			resource: "/api/v1/products",
+			userPerms: map[string]string{
+				"product.read": "read",
+			},
+			shouldAllow: true,
+			reason:      "User only has read permission, attempting to delete",
+		},
+		{
+			name:     "CRITICAL: Prevent unauthorized project deletion",
 			method:   "DELETE",
 			resource: "/api/v1/projects/12345",
 			userPerms: map[string]string{
@@ -426,5 +436,512 @@ func BenchmarkCheckEndpointPermission(b *testing.B) {
 			WillReturnRows(rows)
 
 		checker.CheckEndpointPermission(ctx, "user@example.com", "GET", "/api/v1/projects")
+	}
+}
+
+// TestAllRegisteredEndpoints_WithCorrectPermissions ensures all registered endpoints
+// allow users with the proper permissions
+func TestAllRegisteredEndpoints_WithCorrectPermissions(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("failed to create sqlmock: %v", err)
+	}
+	defer db.Close()
+
+	checker := NewSQLPermissionChecker(db)
+	ctx := context.Background()
+
+	// Test every single registered endpoint
+	testCases := []struct {
+		name          string
+		method        string
+		path          string
+		requiredPerms map[string]string
+		description   string
+	}{
+		// Project endpoints
+		{
+			name:   "Get all projects",
+			method: "GET",
+			path:   "/api/v1/projects",
+			requiredPerms: map[string]string{
+				"project.read": "read",
+			},
+			description: "User with project.read:read can list projects",
+		},
+		{
+			name:   "Create project",
+			method: "POST",
+			path:   "/api/v1/projects",
+			requiredPerms: map[string]string{
+				"project.create": "write",
+			},
+			description: "User with project.create:write can create projects",
+		},
+		{
+			name:   "Update project",
+			method: "PATCH",
+			path:   "/api/v1/projects/abc-123-def-456",
+			requiredPerms: map[string]string{
+				"project.update": "write",
+			},
+			description: "User with project.update:write can update projects",
+		},
+		{
+			name:   "Delete project",
+			method: "DELETE",
+			path:   "/api/v1/projects/abc-123-def-456",
+			requiredPerms: map[string]string{
+				"project.delete": "write",
+			},
+			description: "User with project.delete:write can delete projects",
+		},
+		{
+			name:   "Assign user to project",
+			method: "PUT",
+			path:   "/api/v1/projects/abc-123/users/user@example.com",
+			requiredPerms: map[string]string{
+				"project.update": "write",
+			},
+			description: "User with project.update:write can assign users to projects",
+		},
+		{
+			name:   "Remove user from project",
+			method: "DELETE",
+			path:   "/api/v1/projects/abc-123/users/user@example.com",
+			requiredPerms: map[string]string{
+				"project.update": "write",
+			},
+			description: "User with project.update:write can remove users from projects",
+		},
+		{
+			name:   "Star project",
+			method: "POST",
+			path:   "/api/v1/projects/abc-123/star/user-456",
+			requiredPerms: map[string]string{
+				"project.update": "read",
+			},
+			description: "User with project.update:read can star projects",
+		},
+		{
+			name:   "Archive project",
+			method: "POST",
+			path:   "/api/v1/projects/abc-123/archive",
+			requiredPerms: map[string]string{
+				"project.update": "write",
+			},
+			description: "User with project.update:write can archive projects",
+		},
+		{
+			name:   "Lock project",
+			method: "POST",
+			path:   "/api/v1/projects/abc-123/lock",
+			requiredPerms: map[string]string{
+				"project.update": "write",
+			},
+			description: "User with project.update:write can lock projects",
+		},
+		// Product endpoints
+		{
+			name:   "Get all products",
+			method: "GET",
+			path:   "/api/v1/products",
+			requiredPerms: map[string]string{
+				"product.read": "read",
+			},
+			description: "User with product.read:read can list products",
+		},
+		{
+			name:   "Get product details",
+			method: "GET",
+			path:   "/api/v1/products/product-123",
+			requiredPerms: map[string]string{
+				"product.read": "read",
+			},
+			description: "User with product.read:read can view product details",
+		},
+		{
+			name:   "Get product price",
+			method: "POST",
+			path:   "/api/v1/products/price",
+			requiredPerms: map[string]string{
+				"product.read": "read",
+			},
+			description: "User with product.read:read can get product prices",
+		},
+		// User Profile endpoints
+		{
+			name:   "Get user profile",
+			method: "GET",
+			path:   "/api/v1/users/profile",
+			requiredPerms: map[string]string{
+				"users.profile.read": "read",
+			},
+			description: "User with users.profile.read:read can view their profile",
+		},
+		{
+			name:   "Create user profile",
+			method: "POST",
+			path:   "/api/v1/users/profile",
+			requiredPerms: map[string]string{
+				"users.profile.create": "write",
+			},
+			description: "User with users.profile.create:write can create profile",
+		},
+		{
+			name:   "Update user profile",
+			method: "PUT",
+			path:   "/api/v1/users/profile/profile-123",
+			requiredPerms: map[string]string{
+				"users.profile.update": "write",
+			},
+			description: "User with users.profile.update:write can update profile",
+		},
+		// User Settings endpoints
+		{
+			name:   "Get user settings",
+			method: "GET",
+			path:   "/api/v1/users/settings",
+			requiredPerms: map[string]string{
+				"users.settings.read": "read",
+			},
+			description: "User with users.settings.read:read can view settings",
+		},
+		{
+			name:   "Create user settings",
+			method: "POST",
+			path:   "/api/v1/users/settings",
+			requiredPerms: map[string]string{
+				"users.settings.create": "write",
+			},
+			description: "User with users.settings.create:write can create settings",
+		},
+		{
+			name:   "Update user settings",
+			method: "PUT",
+			path:   "/api/v1/users/settings/settings-123",
+			requiredPerms: map[string]string{
+				"users.settings.update": "write",
+			},
+			description: "User with users.settings.update:write can update settings",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			// Mock user permissions - user HAS the required permissions
+			rows := sqlmock.NewRows([]string{"name", "key"})
+			for feature, level := range tc.requiredPerms {
+				rows.AddRow(feature, level)
+			}
+
+			mock.ExpectQuery("SELECT f.name, a.key FROM app_user").
+				WithArgs("authorized@example.com").
+				WillReturnRows(rows)
+
+			allowed, err := checker.CheckEndpointPermission(ctx, "authorized@example.com", tc.method, tc.path)
+
+			if err != nil {
+				t.Fatalf("Unexpected error: %v", err)
+			}
+
+			if !allowed {
+				t.Errorf("AUTHORIZATION FAILURE: %s should ALLOW user with correct permissions\n"+
+					"Method: %s, Path: %s\n"+
+					"Required: %v\n"+
+					"Description: %s",
+					tc.name, tc.method, tc.path, tc.requiredPerms, tc.description)
+			}
+
+			if err := mock.ExpectationsWereMet(); err != nil {
+				t.Errorf("Unfulfilled expectations: %v", err)
+			}
+		})
+	}
+}
+
+// TestAllRegisteredEndpoints_WithoutPermissions ensures all registered endpoints
+// deny users without the proper permissions
+func TestAllRegisteredEndpoints_WithoutPermissions(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("failed to create sqlmock: %v", err)
+	}
+	defer db.Close()
+
+	checker := NewSQLPermissionChecker(db)
+	ctx := context.Background()
+
+	// Test every endpoint with NO permissions
+	testCases := []struct {
+		name        string
+		method      string
+		path        string
+		description string
+	}{
+		{"Get all projects", "GET", "/api/v1/projects", "User with no permissions cannot list projects"},
+		{"Create project", "POST", "/api/v1/projects", "User with no permissions cannot create projects"},
+		{"Update project", "PATCH", "/api/v1/projects/abc-123", "User with no permissions cannot update projects"},
+		{"Delete project", "DELETE", "/api/v1/projects/abc-123", "User with no permissions cannot delete projects"},
+		{"Assign user to project", "PUT", "/api/v1/projects/abc-123/users/user@example.com", "User with no permissions cannot assign users"},
+		{"Remove user from project", "DELETE", "/api/v1/projects/abc-123/users/user@example.com", "User with no permissions cannot remove users"},
+		{"Star project", "POST", "/api/v1/projects/abc-123/star/user-456", "User with no permissions cannot star projects"},
+		{"Archive project", "POST", "/api/v1/projects/abc-123/archive", "User with no permissions cannot archive projects"},
+		{"Lock project", "POST", "/api/v1/projects/abc-123/lock", "User with no permissions cannot lock projects"},
+		{"Get all products", "GET", "/api/v1/products", "User with no permissions cannot list products"},
+		{"Get product details", "GET", "/api/v1/products/product-123", "User with no permissions cannot view products"},
+		{"Get product price", "POST", "/api/v1/products/price", "User with no permissions cannot get prices"},
+		{"Get user profile", "GET", "/api/v1/users/profile", "User with no permissions cannot view profile"},
+		{"Create user profile", "POST", "/api/v1/users/profile", "User with no permissions cannot create profile"},
+		{"Update user profile", "PUT", "/api/v1/users/profile/profile-123", "User with no permissions cannot update profile"},
+		{"Get user settings", "GET", "/api/v1/users/settings", "User with no permissions cannot view settings"},
+		{"Create user settings", "POST", "/api/v1/users/settings", "User with no permissions cannot create settings"},
+		{"Update user settings", "PUT", "/api/v1/users/settings/settings-123", "User with no permissions cannot update settings"},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			// Mock empty permissions - user has NO permissions
+			rows := sqlmock.NewRows([]string{"name", "key"})
+
+			mock.ExpectQuery("SELECT f.name, a.key FROM app_user").
+				WithArgs("unauthorized@example.com").
+				WillReturnRows(rows)
+
+			allowed, err := checker.CheckEndpointPermission(ctx, "unauthorized@example.com", tc.method, tc.path)
+
+			if err != nil {
+				t.Fatalf("Unexpected error: %v", err)
+			}
+
+			if allowed {
+				t.Errorf("SECURITY VIOLATION: %s should DENY user without permissions\n"+
+					"Method: %s, Path: %s\n"+
+					"Description: %s",
+					tc.name, tc.method, tc.path, tc.description)
+			}
+
+			if err := mock.ExpectationsWereMet(); err != nil {
+				t.Errorf("Unfulfilled expectations: %v", err)
+			}
+		})
+	}
+}
+
+// TestAllRegisteredEndpoints_WithWrongPermissions ensures endpoints deny users
+// with permissions for the wrong feature
+func TestAllRegisteredEndpoints_WithWrongPermissions(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("failed to create sqlmock: %v", err)
+	}
+	defer db.Close()
+
+	checker := NewSQLPermissionChecker(db)
+	ctx := context.Background()
+
+	testCases := []struct {
+		name        string
+		method      string
+		path        string
+		wrongPerms  map[string]string
+		description string
+	}{
+		{
+			name:   "Create project with product permission",
+			method: "POST",
+			path:   "/api/v1/projects",
+			wrongPerms: map[string]string{
+				"product.read": "write", // Wrong feature
+			},
+			description: "User with product.read cannot create projects",
+		},
+		{
+			name:   "Delete project with read permission",
+			method: "DELETE",
+			path:   "/api/v1/projects/abc-123",
+			wrongPerms: map[string]string{
+				"project.read": "write", // Wrong feature (needs project.delete)
+			},
+			description: "User with project.read cannot delete projects",
+		},
+		{
+			name:   "Assign user with create permission",
+			method: "PUT",
+			path:   "/api/v1/projects/abc-123/users/user@example.com",
+			wrongPerms: map[string]string{
+				"project.create": "write", // Wrong feature (needs project.update)
+			},
+			description: "User with project.create cannot assign users",
+		},
+		{
+			name:   "Get products with project permission",
+			method: "GET",
+			path:   "/api/v1/products",
+			wrongPerms: map[string]string{
+				"project.read": "read", // Wrong feature
+			},
+			description: "User with project.read cannot view products",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			// Mock wrong permissions
+			rows := sqlmock.NewRows([]string{"name", "key"})
+			for feature, level := range tc.wrongPerms {
+				rows.AddRow(feature, level)
+			}
+
+			mock.ExpectQuery("SELECT f.name, a.key FROM app_user").
+				WithArgs("user@example.com").
+				WillReturnRows(rows)
+
+			allowed, err := checker.CheckEndpointPermission(ctx, "user@example.com", tc.method, tc.path)
+
+			if err != nil {
+				t.Fatalf("Unexpected error: %v", err)
+			}
+
+			if allowed {
+				t.Errorf("SECURITY VIOLATION: %s should DENY\n"+
+					"Method: %s, Path: %s\n"+
+					"Wrong Permissions: %v\n"+
+					"Description: %s",
+					tc.name, tc.method, tc.path, tc.wrongPerms, tc.description)
+			}
+
+			if err := mock.ExpectationsWereMet(); err != nil {
+				t.Errorf("Unfulfilled expectations: %v", err)
+			}
+		})
+	}
+}
+
+// TestAllRegisteredEndpoints_WithInsufficientLevel ensures endpoints deny users
+// with correct feature but insufficient permission level
+func TestAllRegisteredEndpoints_WithInsufficientLevel(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("failed to create sqlmock: %v", err)
+	}
+	defer db.Close()
+
+	checker := NewSQLPermissionChecker(db)
+	ctx := context.Background()
+
+	testCases := []struct {
+		name              string
+		method            string
+		path              string
+		insufficientPerms map[string]string
+		description       string
+	}{
+		{
+			name:   "Create project with read level",
+			method: "POST",
+			path:   "/api/v1/projects",
+			insufficientPerms: map[string]string{
+				"project.create": "read", // Has feature but insufficient level (needs write)
+			},
+			description: "User with project.create:read cannot create (needs write)",
+		},
+		{
+			name:   "Delete project with read level",
+			method: "DELETE",
+			path:   "/api/v1/projects/abc-123",
+			insufficientPerms: map[string]string{
+				"project.delete": "read", // Has feature but insufficient level (needs write)
+			},
+			description: "User with project.delete:read cannot delete (needs write)",
+		},
+		{
+			name:   "Update project with read level",
+			method: "PATCH",
+			path:   "/api/v1/projects/abc-123",
+			insufficientPerms: map[string]string{
+				"project.update": "read", // Has feature but insufficient level (needs write)
+			},
+			description: "User with project.update:read cannot update (needs write)",
+		},
+		{
+			name:   "Assign user with read level",
+			method: "PUT",
+			path:   "/api/v1/projects/abc-123/users/user@example.com",
+			insufficientPerms: map[string]string{
+				"project.update": "read", // Has feature but insufficient level (needs write)
+			},
+			description: "User with project.update:read cannot assign users (needs write)",
+		},
+		// User Profile endpoints
+		{
+			name:   "Create user profile with read level",
+			method: "POST",
+			path:   "/api/v1/users/profile",
+			insufficientPerms: map[string]string{
+				"users.profile.create": "read", // Has feature but insufficient level (needs write)
+			},
+			description: "User with users.profile.create:read cannot create profile (needs write)",
+		},
+		{
+			name:   "Update user profile with read level",
+			method: "PUT",
+			path:   "/api/v1/users/profile/profile-123",
+			insufficientPerms: map[string]string{
+				"users.profile.update": "read", // Has feature but insufficient level (needs write)
+			},
+			description: "User with users.profile.update:read cannot update profile (needs write)",
+		},
+		// User Settings endpoints
+		{
+			name:   "Create user settings with read level",
+			method: "POST",
+			path:   "/api/v1/users/settings",
+			insufficientPerms: map[string]string{
+				"users.settings.create": "read", // Has feature but insufficient level (needs write)
+			},
+			description: "User with users.settings.create:read cannot create settings (needs write)",
+		},
+		{
+			name:   "Update user settings with read level",
+			method: "PUT",
+			path:   "/api/v1/users/settings/settings-123",
+			insufficientPerms: map[string]string{
+				"users.settings.update": "read", // Has feature but insufficient level (needs write)
+			},
+			description: "User with users.settings.update:read cannot update settings (needs write)",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			// Mock insufficient permission level
+			rows := sqlmock.NewRows([]string{"name", "key"})
+			for feature, level := range tc.insufficientPerms {
+				rows.AddRow(feature, level)
+			}
+
+			mock.ExpectQuery("SELECT f.name, a.key FROM app_user").
+				WithArgs("user@example.com").
+				WillReturnRows(rows)
+
+			allowed, err := checker.CheckEndpointPermission(ctx, "user@example.com", tc.method, tc.path)
+
+			if err != nil {
+				t.Fatalf("Unexpected error: %v", err)
+			}
+
+			if allowed {
+				t.Errorf("SECURITY VIOLATION: %s should DENY\n"+
+					"Method: %s, Path: %s\n"+
+					"Insufficient Permissions: %v\n"+
+					"Description: %s",
+					tc.name, tc.method, tc.path, tc.insufficientPerms, tc.description)
+			}
+
+			if err := mock.ExpectationsWereMet(); err != nil {
+				t.Errorf("Unfulfilled expectations: %v", err)
+			}
+		})
 	}
 }
