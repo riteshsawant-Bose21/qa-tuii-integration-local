@@ -1,0 +1,36 @@
+project:
+  name: fusion-core
+  description: Core services for Fusion Cloud Backend
+
+tasks:
+  lint:
+    command: bash
+    args: ["scripts/lint.sh"]
+    description: Run Go linters on the codebase
+
+  # build:
+  #   command: go
+  #   args: ["build", "-o", "fusion-web-services", "cmd/api/main.go"]
+  #   description: Build the Fusion Web Services binary
+
+  build:
+    command: make
+    args: ["build"]
+    description: Build the Fusion Web Services binary
+
+  test:
+    command: make
+    args: ["test"]
+    description: Run tests with coverage
+
+  integration-tests:
+    command: make
+    args: ["test-integration"]
+    description: Run tests with coverage
+  
+  build-with-lint:
+    command: go
+    args: ["build", "-o", "fusion-web-services", "cmd/api/main.go"]
+    deps:
+      - lint
+    description: Build the Fusion Web Services binary with linting
