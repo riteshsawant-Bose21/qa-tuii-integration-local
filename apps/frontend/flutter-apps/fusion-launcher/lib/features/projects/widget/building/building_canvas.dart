@@ -12,6 +12,7 @@ import 'package:fusion_lib/fusion_building_view/floor_plan_calibrator.dart';
 import 'package:fusion_lib/fusion_building_view/spl_range_controller.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/fusion_utils/image_loader_service.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../configuration/presentation/viewmodel/project_view_model.dart';
 import 'toolbar/building_toolbar.dart';
@@ -806,98 +807,97 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
 
     await showDialog(
       context: context,
-      builder:
-          (BuildContext ctx) => Dialog(
-            backgroundColor: Theme.of(context).colorScheme.elevation1,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-            child: Container(
-              width: 720,
-              height: 600,
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: <Widget>[
-                  // Header
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: <Widget>[
-                      Expanded(
-                        child: FusionAppText(
-                          text: 'Upload Floor Plan',
-                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.w600,
-                            color: context.colorScheme.textPrimary,
-                          ),
+      builder: (BuildContext ctx) {
+        return Dialog(
+          backgroundColor: Theme.of(context).colorScheme.elevation1,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+          child: Container(
+            width: 720,
+            height: 500,
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8).copyWith(right: 8),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                // Header
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: <Widget>[
+                    Expanded(
+                      child: FusionAppText(
+                        text: 'Upload Floor Plan',
+                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.w600,
+                          color: context.colorScheme.textPrimary,
                         ),
                       ),
-                      SemanticHelper.button(
-                        testId: SemanticHelper.createTestId(SemanticTypes.button, FusionTestKeys.closeX),
-                        child: IconButton(
-                          onPressed: () => Navigator.of(ctx).pop(),
-                          icon: Icon(
-                            Icons.close,
-                            color: context.colorScheme.primaryWhite,
-                            size: 20,
-                          ),
-                          splashRadius: 16,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 24),
-
-                  // Import Section (Primary)
-                  Expanded(
-                    flex: 3,
-                    child: _buildImportSection(ctx),
-                  ),
-
-                  const SizedBox(height: 24),
-
-                  // Divider
-                  Row(
-                    children: <Widget>[
-                      Expanded(child: Divider(color: context.colorScheme.elevation2)),
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 16),
-                        child: FusionAppText(
-                          text: 'or choose from samples',
-                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: context.colorScheme.primaryWhite,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      ),
-                      Expanded(child: Divider(color: context.colorScheme.elevation2)),
-                    ],
-                  ),
-
-                  const SizedBox(height: 16),
-
-                  Row(
-                    children: List<Widget>.generate(
-                      plans.length,
-                      (int index) {
-                        final String planPath = plans[index];
-                        return Expanded(
-                          child: _buildSamplePlanCard(index, planPath),
-                        );
-                      },
                     ),
+                    SemanticHelper.button(
+                      testId: SemanticHelper.createTestId(SemanticTypes.button, FusionTestKeys.closeX),
+                      child: IconButton(
+                        onPressed: () => Navigator.of(ctx).pop(),
+                        icon: Icon(
+                          Icons.close,
+                          color: context.colorScheme.primaryWhite,
+                          size: 20,
+                        ),
+                        splashRadius: 16,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+
+                // Import Section (Primary)
+                Expanded(
+                  flex: 2,
+                  child: _buildImportSection(ctx),
+                ),
+
+                const SizedBox(height: 16),
+
+                // Divider
+                Row(
+                  children: <Widget>[
+                    Expanded(child: Divider(color: context.colorScheme.elevation2)),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: FusionAppText(
+                        text: 'or choose from samples',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: context.colorScheme.primaryWhite,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                    Expanded(child: Divider(color: context.colorScheme.elevation2)),
+                  ],
+                ),
+
+                const SizedBox(height: 16),
+
+                Row(
+                  children: List<Widget>.generate(
+                    plans.length,
+                    (int index) {
+                      final String planPath = plans[index];
+                      return Expanded(
+                        child: _buildSamplePlanCard(index, planPath),
+                      );
+                    },
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
+        );
+      },
     );
   }
 
   Widget _buildImportSection(BuildContext ctx) {
     return DragTarget<String>(
       onWillAcceptWithDetails: (DragTargetDetails<String> details) => true,
-      onAcceptWithDetails: (DragTargetDetails<String> details) {
-        _importFloorPlan();
-      },
+      onAcceptWithDetails: (DragTargetDetails<String> details) => _importFloorPlan(),
       builder: (BuildContext context, List<String?> candidateData, List<dynamic> rejectedData) {
         final bool isDragActive = candidateData.isNotEmpty;
 
@@ -907,6 +907,7 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
             width: double.infinity,
             decoration: BoxDecoration(
               color: isDragActive ? Theme.of(context).colorScheme.primaryColor.withValues(alpha: 0.05) : context.colorScheme.elevation1,
+              borderRadius: BorderRadius.circular(16),
               border: Border.all(
                 width: isDragActive ? 2 : 1,
                 color: isDragActive ? Theme.of(context).colorScheme.primaryWhite : context.colorScheme.elevation2,
@@ -916,43 +917,31 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: <Widget>[
-                AnimatedContainer(
-                  duration: const Duration(milliseconds: 200),
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: isDragActive ? context.colorScheme.primaryWhite.withValues(alpha: 0.15) : context.colorScheme.primaryWhite.withValues(alpha: 0.1),
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(
-                    isDragActive ? Icons.file_download : Icons.cloud_upload_outlined,
-                    size: 48,
-                    color: context.colorScheme.primaryWhite,
-                  ),
+                Icon(
+                  isDragActive ? LucideIcons.download200 : LucideIcons.cloudUpload200,
+                  size: 48,
+                  color: context.colorScheme.primaryWhite,
                 ),
                 const SizedBox(height: 16),
                 FusionAppText(
                   text: isDragActive ? 'Drop your file here!' : 'Click here to upload',
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w600,
+                  style: context.textTheme.titleMedium?.copyWith(
                     color: isDragActive ? context.colorScheme.primaryWhite : context.colorScheme.textPrimary,
                   ),
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: 4),
                 FusionAppText(
                   text: 'Upload .JPEG and .PNG files',
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  style: context.textTheme.bodyMedium?.copyWith(
                     color: isDragActive ? context.colorScheme.primaryWhite : context.colorScheme.elevation4,
                   ),
                 ),
-                const SizedBox(height: 16),
-                FusionOutlinedButton(
+                const SizedBox(height: 8),
+                FusionNeumorphicButton(
                   height: 36,
                   width: 140,
-                  label: 'Browse Files',
+                  text: 'Browse Files',
                   textStyle: Theme.of(context).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w500),
-                  foregroundColor: Theme.of(context).colorScheme.textPrimary,
-                  activeBorderColor: Theme.of(context).colorScheme.primaryWhite,
-                  backgroundColor: Theme.of(context).colorScheme.primaryColor.withValues(alpha: 0.05),
                   onTap: () => _importFloorPlan(),
                 ),
               ],
@@ -1128,23 +1117,24 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
       final CalibrationData? calibrationData = await showDialog<CalibrationData>(
         context: context,
         barrierDismissible: true,
-        builder:
-            (_) => Dialog(
-              child: FloorPlanCalibrationDialog(
-                floorPlanImage: image,
-                onCalibrationComplete: (CalibrationData data) {
-                  serviceLocator<GuideShowCaseController>().completeStep(GuideShowCaseSteps.confirmFloorCalibrated);
-                  if (context.mounted) {
-                    Navigator.of(context).pop(data);
-                  }
-                },
-                onCancel: () {
-                  if (context.mounted) {
-                    Navigator.of(context).pop();
-                  }
-                },
-              ),
+        builder: (_) {
+          return Dialog(
+            child: FloorPlanCalibrationDialog(
+              floorPlanImage: image,
+              onCalibrationComplete: (CalibrationData data) {
+                serviceLocator<GuideShowCaseController>().completeStep(GuideShowCaseSteps.confirmFloorCalibrated);
+                if (context.mounted) {
+                  Navigator.of(context).pop(data);
+                }
+              },
+              onCancel: () {
+                if (context.mounted) {
+                  Navigator.of(context).pop();
+                }
+              },
             ),
+          );
+        },
       );
 
       if (calibrationData != null) {

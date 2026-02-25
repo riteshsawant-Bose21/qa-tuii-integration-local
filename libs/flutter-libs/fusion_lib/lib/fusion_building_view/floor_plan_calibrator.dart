@@ -1,4 +1,3 @@
-import 'dart:developer';
 import 'dart:math' as math;
 import 'dart:ui' as ui;
 
@@ -6,6 +5,7 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/strings/fusion_strings.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../constants/test_keys.dart';
 import '../di/service_locator.dart';
@@ -121,7 +121,7 @@ class _FloorPlanShell extends StatelessWidget {
   }
 }
 
-enum _ToolMode { measure, crop }
+enum _ToolMode { measure, crop, rotate, skew }
 
 class FloorPlanCalibrator extends StatefulWidget {
   final ui.Image floorPlanImage;
@@ -140,6 +140,9 @@ class FloorPlanCalibrator extends StatefulWidget {
 }
 
 class _FloorPlanCalibratorState extends State<FloorPlanCalibrator> {
+  // --- image transform state ---
+  bool _flipHorizontal = false;
+  bool _flipVertical = false;
   // --- zoom/pan state ---
   double _zoomScale = 1.0;
   Offset _panOffset = Offset.zero;
@@ -428,6 +431,8 @@ class _FloorPlanCalibratorState extends State<FloorPlanCalibrator> {
     setState(() {
       _zoomScale = 1.0;
       _panOffset = Offset.zero;
+      _flipHorizontal = false;
+      _flipVertical = false;
     });
   }
 
@@ -471,27 +476,56 @@ class _FloorPlanCalibratorState extends State<FloorPlanCalibrator> {
 
   // ---------- image cropping ----------
   Future<ui.Image?> _getCroppedImage() async {
-    final image = widget.floorPlanImage;
+    ui.Image sourceImage = widget.floorPlanImage;
 
-    // Convert normalized crop rect to actual pixel coordinates
+    // First apply flips to the full image if needed
+    if (_flipHorizontal || _flipVertical) {
+      try {
+        final recorder = ui.PictureRecorder();
+        final canvas = Canvas(recorder);
+
+        final fullWidth = sourceImage.width.toDouble();
+        final fullHeight = sourceImage.height.toDouble();
+
+        // Set up flip transformation
+        canvas.save();
+        canvas.translate(fullWidth / 2, fullHeight / 2);
+        canvas.scale(_flipHorizontal ? -1.0 : 1.0, _flipVertical ? -1.0 : 1.0);
+        canvas.translate(-fullWidth / 2, -fullHeight / 2);
+
+        // Draw the flipped image
+        canvas.drawImage(sourceImage, Offset.zero, Paint());
+        canvas.restore();
+
+        final picture = recorder.endRecording();
+        sourceImage = await picture.toImage(
+          sourceImage.width,
+          sourceImage.height,
+        );
+      } catch (e) {
+        // If flip fails, continue with original image
+      }
+    }
+
+    // Now apply cropping to the (potentially flipped) image
     final cropRect = Rect.fromLTRB(
-      (_cropRectN.left * image.width).round().toDouble(),
-      (_cropRectN.top * image.height).round().toDouble(),
-      (_cropRectN.right * image.width).round().toDouble(),
-      (_cropRectN.bottom * image.height).round().toDouble(),
+      (_cropRectN.left * sourceImage.width).round().toDouble(),
+      (_cropRectN.top * sourceImage.height).round().toDouble(),
+      (_cropRectN.right * sourceImage.width).round().toDouble(),
+      (_cropRectN.bottom * sourceImage.height).round().toDouble(),
     );
 
     // Ensure crop rect is within image bounds
     final clampedRect = Rect.fromLTRB(
-      cropRect.left.clamp(0.0, image.width.toDouble()),
-      cropRect.top.clamp(0.0, image.height.toDouble()),
-      cropRect.right.clamp(0.0, image.width.toDouble()),
-      cropRect.bottom.clamp(0.0, image.height.toDouble()),
+      cropRect.left.clamp(0.0, sourceImage.width.toDouble()),
+      cropRect.top.clamp(0.0, sourceImage.height.toDouble()),
+      cropRect.right.clamp(0.0, sourceImage.width.toDouble()),
+      cropRect.bottom.clamp(0.0, sourceImage.height.toDouble()),
     );
 
-    // If crop rect is the full image, return the original
-    if (clampedRect.left <= 0 && clampedRect.top <= 0 && clampedRect.right >= image.width && clampedRect.bottom >= image.height) {
-      return image;
+    // If no cropping needed, return the (potentially flipped) full image
+    if (clampedRect.left <= 0 && clampedRect.top <= 0 && clampedRect.right >= sourceImage.width && clampedRect.bottom >= sourceImage.height) {
+      return sourceImage;
     }
 
     try {
@@ -499,18 +533,21 @@ class _FloorPlanCalibratorState extends State<FloorPlanCalibrator> {
       final recorder = ui.PictureRecorder();
       final canvas = Canvas(recorder);
 
-      // Draw the cropped portion of the image
+      final outputWidth = clampedRect.width;
+      final outputHeight = clampedRect.height;
+
+      // Draw the cropped portion of the (flipped) image
       canvas.drawImageRect(
-        image,
+        sourceImage,
         clampedRect,
-        Rect.fromLTWH(0, 0, clampedRect.width, clampedRect.height),
+        Rect.fromLTWH(0, 0, outputWidth, outputHeight),
         Paint(),
       );
 
       final picture = recorder.endRecording();
       return await picture.toImage(
-        clampedRect.width.round(),
-        clampedRect.height.round(),
+        outputWidth.round(),
+        outputHeight.round(),
       );
     } catch (e) {
       // If cropping fails, return null
@@ -602,36 +639,68 @@ class _FloorPlanCalibratorState extends State<FloorPlanCalibrator> {
             border: Border(bottom: BorderSide(color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.3))),
           ),
           child: Row(
+            spacing: 8,
             children: <Widget>[
               // Left: tool icons
               _ToolbarIcon(
-                icon: Icons.edit,
+                icon: LucideIcons.rulerDimensionLine200,
                 seemanticKey: FusionTestKeys.measureScale,
                 tooltip: 'Measure scale (draw line)',
                 active: _mode == _ToolMode.measure,
                 onTap: () => setState(() => _mode = _ToolMode.measure),
               ),
-              const SizedBox(width: 8),
               _ToolbarIcon(
-                icon: Icons.crop,
+                icon: LucideIcons.crop200,
                 seemanticKey: FusionTestKeys.cropImage,
                 tooltip: 'Crop',
                 active: _mode == _ToolMode.crop,
                 onTap: () => setState(() => _mode = _ToolMode.crop),
               ),
-              const SizedBox(width: 8),
               _ToolbarIcon(
-                icon: Icons.center_focus_strong,
-                seemanticKey: FusionTestKeys.fitToScreen,
-                tooltip: 'Fit to screen',
-                onTap: _fitToScreen,
+                icon: LucideIcons.rotateCcw200,
+                seemanticKey: FusionTestKeys.rotateImage,
+                tooltip: 'Rotate',
+                active: _mode == _ToolMode.rotate,
+                onTap: () => setState(() => _mode = _ToolMode.rotate),
               ),
-              // const SizedBox(width: 8),
-              // _ToolbarIcon(
-              //   icon: Icons.open_in_full,
-              //   tooltip: 'Full screen',
-              //   onTap: () {}, // hook up if you add a full-screen route
-              // ),
+              _ToolbarIcon(
+                icon: LucideIcons.flipHorizontal2200,
+                seemanticKey: FusionTestKeys.flipHorizontal,
+                tooltip: 'Flip Horizontal',
+                active: _flipHorizontal,
+                onTap: () => setState(() => _flipHorizontal = !_flipHorizontal),
+              ),
+              _ToolbarIcon(
+                icon: LucideIcons.flipVertical2200,
+                seemanticKey: FusionTestKeys.flipVertical,
+                tooltip: 'Flip Vertical',
+                active: _flipVertical,
+                onTap: () => setState(() => _flipVertical = !_flipVertical),
+              ),
+              _ToolbarIcon(
+                svgIcon: "packages/fusion_lib/lib/assets/svgs/skew.svg",
+                seemanticKey: FusionTestKeys.skew,
+                tooltip: 'Skew',
+                active: _mode == _ToolMode.skew,
+                onTap: () => setState(() => _mode = _ToolMode.skew),
+              ),
+              _ToolbarIcon(
+                svgIcon: "packages/fusion_lib/lib/assets/svgs/reset.svg",
+                seemanticKey: FusionTestKeys.reset,
+                tooltip: 'Reset',
+                enabled: _startPointNormalized != null || _endPointNormalized != null,
+                onTap: () {
+                  if (_startPointNormalized != null || _endPointNormalized != null) {
+                    _clearMeasurement();
+                  }
+                },
+              ),
+              _ToolbarIcon(
+                seemanticKey: FusionTestKeys.fitToScreen,
+                icon: LucideIcons.expand200,
+                tooltip: 'Fit to screen',
+                onTap: () => _fitToScreen(),
+              ),
               const Spacer(),
               // Right: distance + units controls
               FusionAppText(
@@ -640,101 +709,38 @@ class _FloorPlanCalibratorState extends State<FloorPlanCalibrator> {
                   color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.8),
                 ),
               ),
-              const SizedBox(width: 8),
               SizedBox(
                 width: 96,
                 child: SemanticHelper.formControl(
                   testId: SemanticHelper.createTestId(SemanticTypes.textInput, FusionTestKeys.calibrationDistance),
-                  child: TextField(
+                  child: PropertyTextField(
                     controller: _distanceController,
+                    hintText: '1.00',
                     textAlign: TextAlign.right,
                     keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: Theme.of(context).colorScheme.onSurface,
-                    ),
-                    decoration: InputDecoration(
-                      isDense: true,
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
-                      hintText: '1.00',
-                      hintStyle: TextStyle(
-                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
-                      ),
-                      fillColor: context.colorScheme.elevation1,
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(6),
-                        borderSide: BorderSide(
-                          color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.5),
-                        ),
-                      ),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(6),
-                        borderSide: BorderSide(
-                          color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.5),
-                        ),
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(6),
-                        borderSide: BorderSide(
-                          color: Theme.of(context).colorScheme.primary,
-                        ),
-                      ),
-                    ),
                     onChanged: (value) {
                       setState(() {});
                     },
                   ),
                 ),
               ),
-              const SizedBox(width: 12),
+              const SizedBox(width: 8),
               FusionAppText(
                 text: 'Units',
                 style: Theme.of(context).textTheme.labelMedium?.copyWith(
                   color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.8),
                 ),
               ),
-              const SizedBox(width: 8),
               SizedBox(
-                width: 140,
-                child: FusionDropdownButtonFormField(
-                  value: '${_selectedUnit.displayName} (${_selectedUnit.symbol})',
-                  semanticKey: FusionTestKeys.calibrationUnit,
-                  options: MeasurementUnit.values.map((u) => '${u.displayName} (${u.symbol})').toList(),
-                  isDense: true,
-                  decoration: InputDecoration(
-                    fillColor: context.colorScheme.elevation1,
-                    isDense: true,
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(6),
-                      borderSide: BorderSide(
-                        color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.5),
-                      ),
-                    ),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(6),
-                      borderSide: BorderSide(
-                        color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.5),
-                      ),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(6),
-                      borderSide: BorderSide(
-                        color: Theme.of(context).colorScheme.primary,
-                      ),
-                    ),
-                  ),
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: Theme.of(context).colorScheme.onSurface,
-                  ),
-                  dropdownColor: Theme.of(context).colorScheme.surface,
-                  borderRadius: BorderRadius.circular(6),
-                  onChanged: (String? value) {
-                    if (value != null) {
-                      final selectedUnit = MeasurementUnit.values.firstWhere(
-                        (u) => '${u.displayName} (${u.symbol})' == value,
-                      );
-                      setState(() => _selectedUnit = selectedUnit);
-                    }
+                width: 160,
+                child: FusionDropdown2<MeasurementUnit>(
+                  padding: EdgeInsets.all(6),
+                  borderRadius: 6,
+                  selectedValue: _selectedUnit,
+                  items: MeasurementUnit.values,
+                  labelBuilder: (item) => '${item.displayName} (${item.symbol})',
+                  onChanged: (MeasurementUnit value) {
+                    setState(() => _selectedUnit = value);
                   },
                 ),
               ),
@@ -806,6 +812,8 @@ class _FloorPlanCalibratorState extends State<FloorPlanCalibrator> {
                             showCropHandles: _mode == _ToolMode.crop,
                             zoomScale: _zoomScale,
                             panOffset: _panOffset,
+                            flipHorizontal: _flipHorizontal,
+                            flipVertical: _flipVertical,
                             onImageRectChanged: (ui.Rect r) {
                               _imageRect = r;
                               // keep display points in sync if image rect changes
@@ -838,15 +846,6 @@ class _FloorPlanCalibratorState extends State<FloorPlanCalibrator> {
           ),
           child: Row(
             children: <Widget>[
-              // Optional quick actions on the left
-              if (_startPointNormalized != null || _endPointNormalized != null)
-                FusionTextButton(
-                  label: 'Clear Line',
-                  width: 120,
-                  onTap: () {
-                    _clearMeasurement();
-                  },
-                ),
               const Spacer(),
               FusionOutlinedButton(
                 width: 120,
@@ -870,7 +869,6 @@ class _FloorPlanCalibratorState extends State<FloorPlanCalibrator> {
                   height: 36,
                   activeBackgroundColor: context.colorScheme.primaryColor,
                   onTap: () {
-                    log("$_startPointNormalized   $_endPointNormalized && ${_distanceController.text.trim().isNotEmpty}");
                     if (_startPointNormalized != null && _endPointNormalized != null && _distanceController.text.trim().isNotEmpty) {
                       _completeCalibration();
                     }
@@ -886,43 +884,63 @@ class _FloorPlanCalibratorState extends State<FloorPlanCalibrator> {
 }
 
 class _ToolbarIcon extends StatelessWidget {
-  final IconData icon;
+  final IconData? icon;
+  final String? svgIcon;
   final String tooltip;
   final String seemanticKey;
   final VoidCallback? onTap;
   final bool active;
+  final bool enabled;
 
   const _ToolbarIcon({
-    required this.icon,
+    this.icon,
+    this.svgIcon,
     required this.tooltip,
     required this.seemanticKey,
     this.onTap,
     this.active = false,
+    this.enabled = true,
   });
 
   @override
   Widget build(BuildContext context) {
     return SemanticHelper.button(
       testId: SemanticHelper.createTestId(SemanticTypes.button, seemanticKey),
-      child: Tooltip(
-        message: tooltip,
-        child: InkResponse(
-          onTap: onTap,
-          radius: 22,
-          child: Container(
-            width: 28,
-            height: 28,
-            decoration: BoxDecoration(
-              color: active ? Theme.of(context).colorScheme.onSurface : Theme.of(context).colorScheme.surface,
-              border: Border.all(
-                color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.4),
+      child: MouseRegion(
+        cursor: enabled ? SystemMouseCursors.click : SystemMouseCursors.forbidden,
+        child: Tooltip(
+          message: tooltip,
+          child: InkResponse(
+            onTap: enabled ? onTap : null,
+            radius: 22,
+            child: Container(
+              width: 28,
+              height: 28,
+              padding: EdgeInsets.all(6),
+              decoration: BoxDecoration(
+                color: active ? context.colorScheme.elevation3 : null,
+                border: Border.all(
+                  color: context.colorScheme.outline.withValues(alpha: 0.4),
+                ),
+                borderRadius: BorderRadius.circular(6),
               ),
-              borderRadius: BorderRadius.circular(6),
-            ),
-            child: Icon(
-              icon,
-              size: 16,
-              color: active ? Theme.of(context).colorScheme.surface : Theme.of(context).colorScheme.onSurface,
+              child: FittedBox(
+                child: Builder(
+                  builder: (context) {
+                    if (svgIcon != null) {
+                      return FusionSvgIcon(
+                        icon: svgIcon!,
+                        color: active ? context.colorScheme.primaryWhite : context.colorScheme.iconDefault,
+                      );
+                    }
+                    return Icon(
+                      icon,
+                      size: 16,
+                      color: active ? context.colorScheme.primaryWhite : context.colorScheme.iconDefault,
+                    );
+                  },
+                ),
+              ),
             ),
           ),
         ),
@@ -953,6 +971,8 @@ class FloorPlanCalibrationPainter extends CustomPainter {
   final bool showCropHandles;
   final double zoomScale;
   final Offset panOffset;
+  final bool flipHorizontal;
+  final bool flipVertical;
   final Function(Rect)? onImageRectChanged;
 
   FloorPlanCalibrationPainter({
@@ -965,6 +985,8 @@ class FloorPlanCalibrationPainter extends CustomPainter {
     this.showCropHandles = false,
     this.zoomScale = 1.0,
     this.panOffset = Offset.zero,
+    this.flipHorizontal = false,
+    this.flipVertical = false,
     this.onImageRectChanged,
   });
 
@@ -995,6 +1017,17 @@ class FloorPlanCalibrationPainter extends CustomPainter {
 
     onImageRectChanged?.call(imageRect);
 
+    // Flip transform
+    if (flipHorizontal || flipVertical) {
+      canvas.save();
+      // Center of imageRect
+      final cx = imageRect.left + imageRect.width / 2;
+      final cy = imageRect.top + imageRect.height / 2;
+      canvas.translate(cx, cy);
+      canvas.scale(flipHorizontal ? -1.0 : 1.0, flipVertical ? -1.0 : 1.0);
+      canvas.translate(-cx, -cy);
+    }
+
     // draw image
     canvas.drawImageRect(
       image,
@@ -1002,6 +1035,10 @@ class FloorPlanCalibrationPainter extends CustomPainter {
       imageRect,
       Paint()..filterQuality = FilterQuality.high,
     );
+
+    if (flipHorizontal || flipVertical) {
+      canvas.restore();
+    }
 
     // --- crop overlay + handles (like screenshot) ---
     if (cropRectNormalized != null) {
@@ -1149,7 +1186,9 @@ class FloorPlanCalibrationPainter extends CustomPainter {
       old.cropRectNormalized != cropRectNormalized ||
       old.showCropHandles != showCropHandles ||
       old.zoomScale != zoomScale ||
-      old.panOffset != panOffset;
+      old.panOffset != panOffset ||
+      old.flipHorizontal != flipHorizontal ||
+      old.flipVertical != flipVertical;
 }
 
 class CalibrationData {

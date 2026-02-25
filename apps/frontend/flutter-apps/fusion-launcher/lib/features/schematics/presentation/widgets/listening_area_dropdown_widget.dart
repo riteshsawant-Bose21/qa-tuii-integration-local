@@ -3,7 +3,6 @@ import 'package:fusion_lib/fusion_lib.dart';
 
 import '../../../../core/service_locator.dart';
 import '../../../configuration/presentation/viewmodel/project_view_model.dart';
-import '../../../projects/widget/building/side_panel_widgets/schematic_properties.dart';
 
 class ListeningAreaDropdownWidget extends StatefulWidget {
   final List<ListeningArea> listeningAreas;

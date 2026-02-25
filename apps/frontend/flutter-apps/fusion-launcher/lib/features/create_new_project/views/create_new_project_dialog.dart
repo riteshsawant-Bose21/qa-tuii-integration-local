@@ -247,7 +247,7 @@ class _CreateNewProjectDialogState extends State<CreateNewProjectDialog> {
                                                         spacing: 10,
                                                         children: <Widget>[
                                                           Expanded(
-                                                            child: FusionDarkDropdown<FusionCountries>(
+                                                            child: FusionDropdown2<FusionCountries>(
                                                               selectedValue: state.metadata.country,
                                                               title: "Project country",
                                                               placeholder: "Select country",
@@ -282,7 +282,7 @@ class _CreateNewProjectDialogState extends State<CreateNewProjectDialog> {
                                                         crossAxisAlignment: CrossAxisAlignment.start,
                                                         children: <Widget>[
                                                           Expanded(
-                                                            child: FusionDarkDropdown<FusionTimeZones>(
+                                                            child: FusionDropdown2<FusionTimeZones>(
                                                               selectedValue: state.metadata.timeZone,
                                                               title: "Project time zone",
                                                               placeholder: "Select time zone",
@@ -328,7 +328,7 @@ class _CreateNewProjectDialogState extends State<CreateNewProjectDialog> {
                                                         crossAxisAlignment: CrossAxisAlignment.start,
                                                         children: <Widget>[
                                                           Expanded(
-                                                            child: FusionDarkDropdown<CurrencyType>(
+                                                            child: FusionDropdown2<CurrencyType>(
                                                               selectedValue: state.metadata.currency,
                                                               title: "Currency",
                                                               placeholder: "Select currency",
@@ -393,7 +393,7 @@ class _CreateNewProjectDialogState extends State<CreateNewProjectDialog> {
                                                         crossAxisAlignment: CrossAxisAlignment.start,
                                                         children: <Widget>[
                                                           Expanded(
-                                                            child: FusionDarkDropdown<MeasurementUnit>(
+                                                            child: FusionDropdown2<MeasurementUnit>(
                                                               selectedValue: state.metadata.measurementUnit,
                                                               title: "Measurement Units",
                                                               placeholder: "Select",
@@ -407,7 +407,7 @@ class _CreateNewProjectDialogState extends State<CreateNewProjectDialog> {
                                                             ),
                                                           ),
                                                           Expanded(
-                                                            child: FusionDarkDropdown<String>(
+                                                            child: FusionDropdown2<String>(
                                                               selectedValue: state.metadata.temperature,
                                                               title: "Temperature",
                                                               placeholder: "Select",

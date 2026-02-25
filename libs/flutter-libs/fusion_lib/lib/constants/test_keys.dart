@@ -37,4 +37,9 @@ sealed class FusionTestKeys {
   static String dockRightSideBar = 'dock_sidebar_right';
   static const String listingViewIcon = 'listing_view_icon';
   static const String wiringViewIcon = 'wiring_view_icon';
+  static const String rotateImage = 'rotate_image';
+  static const String flipHorizontal = 'flip_horizontal';
+  static const String flipVertical = 'flip_vertical';
+  static const String skew = 'skew';
+  static const String reset = 'reset';
 }

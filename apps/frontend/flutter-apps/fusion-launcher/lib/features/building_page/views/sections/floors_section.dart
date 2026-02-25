@@ -5,16 +5,16 @@ import 'package:fusion_lib/fusion_lib.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../../../core/service_locator.dart';
-import '../../../../configuration/presentation/viewmodel/project_view_model.dart';
+import '../../../configuration/presentation/viewmodel/project_view_model.dart';
 
-class BuildingPlan extends StatefulWidget {
-  const BuildingPlan({super.key});
+class FloorsSection extends StatefulWidget {
+  const FloorsSection({super.key});
 
   @override
-  State<BuildingPlan> createState() => _BuildingPlanState();
+  State<FloorsSection> createState() => _FloorsSectionState();
 }
 
-class _BuildingPlanState extends State<BuildingPlan> {
+class _FloorsSectionState extends State<FloorsSection> {
   int selectedIndex = 0;
   final TextEditingController _floorNameController = TextEditingController();
   final FocusNode _floorNameFocusNode = FocusNode();
@@ -28,7 +28,6 @@ class _BuildingPlanState extends State<BuildingPlan> {
   @override
   void initState() {
     super.initState();
-
     /// Initialize selectedIndex from ProjectViewModel's current floor index
     final ProjectViewModel viewModel = serviceLocator<ProjectViewModel>();
     selectedIndex = viewModel.currentFloorIndex;
