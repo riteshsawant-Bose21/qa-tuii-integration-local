@@ -3,7 +3,7 @@ package network
 import (
 	"context"
 	"fmt"
-	"fusion/internal/logging"
+	"fusion-services-core/logging"
 	"fusion/internal/version"
 	"net"
 	"os"
