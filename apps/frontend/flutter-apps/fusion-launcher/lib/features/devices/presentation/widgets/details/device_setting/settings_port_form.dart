@@ -5,12 +5,13 @@ import 'package:fusion_launcher/features/devices/presentation/widgets/settings/s
 import 'package:fusion_launcher/features/devices/presentation/widgets/settings/network_dropdown.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
-class SettingsPortForm extends StatelessWidget {
+class SettingsPortForm extends StatefulWidget {
   final bool isPrimary;
   final TextEditingController ipController;
   final TextEditingController subnetController;
   final TextEditingController gatewayController;
   final TextEditingController macController;
+  final HardwareComponent device;
 
   const SettingsPortForm({
     super.key,
@@ -19,7 +20,15 @@ class SettingsPortForm extends StatelessWidget {
     required this.subnetController,
     required this.gatewayController,
     required this.macController,
+    required this.device,
   });
+
+  @override
+  State<SettingsPortForm> createState() => _SettingsPortFormState();
+}
+
+class _SettingsPortFormState extends State<SettingsPortForm> {
+  String selectedNetworkMode = "DHCP";
 
   @override
   Widget build(BuildContext context) {
@@ -30,9 +39,13 @@ class SettingsPortForm extends StatelessWidget {
           labelFlex: 3,
           child: NetworkDropdown<String>(
             items: const <String>["DHCP", "Static"],
-            selectedValue: "DHCP",
+            selectedValue: selectedNetworkMode,
             labelBuilder: (String s) => s,
-            onChanged: (String? v) {},
+            onChanged: (String? v) {
+              if (v != null) {
+                setState(() => selectedNetworkMode = v);
+              }
+            },
           ),
         ),
         const SizedBox(height: 12),
@@ -40,7 +53,8 @@ class SettingsPortForm extends StatelessWidget {
           label: "IP address",
           labelFlex: 3,
           child: NeumorphicDarkTextField(
-            controller: ipController,
+            controller: widget.ipController,
+            enabled: selectedNetworkMode == "Static",
             height: 32,
             borderRadius: 8,
           ),
@@ -50,7 +64,8 @@ class SettingsPortForm extends StatelessWidget {
           label: "Subnet Mask",
           labelFlex: 3,
           child: NeumorphicDarkTextField(
-            controller: subnetController,
+            controller: widget.subnetController,
+            enabled: selectedNetworkMode == "Static",
             height: 32,
             borderRadius: 8,
           ),
@@ -60,7 +75,8 @@ class SettingsPortForm extends StatelessWidget {
           label: "Default Gateway",
           labelFlex: 3,
           child: NeumorphicDarkTextField(
-            controller: gatewayController,
+            controller: widget.gatewayController,
+            enabled: selectedNetworkMode == "Static",
             height: 32,
             borderRadius: 8,
           ),
@@ -70,7 +86,7 @@ class SettingsPortForm extends StatelessWidget {
           label: "MAC Address",
           labelFlex: 3,
           child: NeumorphicDarkTextField(
-            controller: macController,
+            controller: widget.macController,
             enabled: false,
             height: 32,
             borderRadius: 8,
@@ -81,31 +97,33 @@ class SettingsPortForm extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 12),
-        SettingsItemRow(
-          label: "VLAN",
-          labelFlex: 3,
-          child: LabeledSwitch(label: "", value: true, onChanged: (bool v) {}),
-        ),
-        const SizedBox(height: 12),
-        SettingsItemRow(
-          label: "ID",
-          labelFlex: 3,
-          child: NeumorphicDarkTextField(
-            controller: TextEditingController(text: "1024"),
-            height: 32,
-            borderRadius: 8,
+        if (widget.device is FusionDsp) ...<Widget>[
+          SettingsItemRow(
+            label: "VLAN",
+            labelFlex: 3,
+            child: LabeledSwitch(label: "", value: true, onChanged: (bool v) {}),
           ),
-        ),
-        const SizedBox(height: 12),
-        SettingsItemRow(
-          label: "Priority",
-          labelFlex: 3,
-          child: NeumorphicDarkTextField(
-            controller: TextEditingController(text: "1"),
-            height: 32,
-            borderRadius: 8,
+          const SizedBox(height: 12),
+          SettingsItemRow(
+            label: "ID",
+            labelFlex: 3,
+            child: NeumorphicDarkTextField(
+              controller: TextEditingController(text: "1024"),
+              height: 32,
+              borderRadius: 8,
+            ),
           ),
-        ),
+          const SizedBox(height: 12),
+          SettingsItemRow(
+            label: "Priority",
+            labelFlex: 3,
+            child: NeumorphicDarkTextField(
+              controller: TextEditingController(text: "1"),
+              height: 32,
+              borderRadius: 8,
+            ),
+          ),
+        ],
       ],
     );
   }

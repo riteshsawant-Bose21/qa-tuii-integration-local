@@ -1183,7 +1183,7 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with TickerProviderSt
 
             child: IconButton(
               icon: Icon(
-                Icons.arrow_back_ios,
+                Icons.home,
                 color: Theme.of(context).colorScheme.primaryWhite,
                 size: 20,
               ),

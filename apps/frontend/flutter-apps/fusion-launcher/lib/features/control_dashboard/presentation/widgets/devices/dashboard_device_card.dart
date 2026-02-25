@@ -284,7 +284,7 @@ class _DashboardDeviceCardState extends State<DashboardDeviceCard> {
                           Expanded(
                             flex: 2,
                             child:
-                                isOnline
+                                (isOnline && (widget.device is FusionDsp || (widget.device is Amplifier && widget.device.hardwareName.startsWith("PSM"))))
                                     ? Row(
                                       children: <Widget>[
                                         DiskUsageWidget(

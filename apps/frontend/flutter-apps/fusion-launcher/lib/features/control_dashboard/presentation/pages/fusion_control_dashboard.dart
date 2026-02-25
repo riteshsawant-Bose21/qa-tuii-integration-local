@@ -62,7 +62,7 @@ class _FusionDashboardState extends State<_FusionDashboard> {
       body: const DashboardScrollWrapper(
         minWidth: 1280, // Set this to the ideal width of  design
         child: Padding(
-          padding: EdgeInsets.all(16.0),
+          padding: EdgeInsets.all(4.0),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
@@ -76,7 +76,7 @@ class _FusionDashboardState extends State<_FusionDashboard> {
                       flex: 3,
                       child: DashboardDeviceListing(),
                     ),
-                    SizedBox(height: 16),
+                    SizedBox(height: 4),
 
                     // 2. BOTTOM ROW (Media + Events)
                     Expanded(
@@ -87,7 +87,7 @@ class _FusionDashboardState extends State<_FusionDashboard> {
                           Expanded(
                             child: MessagePlayerWidget(),
                           ),
-                          SizedBox(width: 16),
+                          SizedBox(width: 4),
                           // UPCOMING EVENTS
                           Expanded(
                             child: EventsDashboard(),
@@ -99,7 +99,7 @@ class _FusionDashboardState extends State<_FusionDashboard> {
                 ),
               ),
 
-              SizedBox(width: 16),
+              SizedBox(width: 4),
 
               // MIDDLE COLUMN (ZONES) - Flex 4
               Expanded(
@@ -107,7 +107,7 @@ class _FusionDashboardState extends State<_FusionDashboard> {
                 child: ZoneDashboard(),
               ),
 
-              SizedBox(width: 16),
+              SizedBox(width: 4),
 
               // RIGHT COLUMN (ALERTS) - Flex 3
               Expanded(
