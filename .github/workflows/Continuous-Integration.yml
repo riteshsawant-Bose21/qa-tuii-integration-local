@@ -52,7 +52,7 @@ jobs:
             cloudServicesUI:
               - "./apps/frontend/react-apps/**"
             cloudServicesBackend:
-              - "./apps/cloud-backend/fusion-cloud/**"
+              - "./apps/cloud-backend/fusion-core/**"
             fusionDSP:
               - "./apps/firmware-apps/fusion-dsp/**"
             fusionServer:
@@ -137,23 +137,23 @@ jobs:
       #     nexus_url: ${{ secrets.NEXUS_BASE_URL }}
       #     keychain_password: ${{ secrets.KEYCHAIN_PASSWORD }}
 
-  cloud-servicesUI-build:
-    needs: buildChecks
-    if: needs.buildChecks.outputs.cloudServicesUI == 'true'
-    concurrency:
-      group: cloud-servicesUI-build
-    runs-on: ubuntu-agent
-    timeout-minutes: 30
+  # cloud-servicesUI-build:
+  #   needs: buildChecks
+  #   if: needs.buildChecks.outputs.cloudServicesUI == 'true'
+  #   concurrency:
+  #     group: cloud-servicesUI-build
+  #   runs-on: ubuntu-agent
+  #   timeout-minutes: 30
 
-    steps:
-      - name: Clone project
-        uses: actions/checkout@v4
+  #   steps:
+  #     - name: Clone project
+  #       uses: actions/checkout@v4
 
-      - name: Setup Monorepo Toolchain
-        uses: ./.github/reusable-actions/setup-toolchain
+  #     - name: Setup Monorepo Toolchain
+  #       uses: ./.github/reusable-actions/setup-toolchain
 
-      - name: Build Apps
-        uses: ./.github/reusable-actions/build-cloud-servicesUI
+  #     - name: Build Apps
+  #       uses: ./.github/reusable-actions/build-cloud-servicesUI
 
   cloud-web-backend-build:
     needs: buildChecks
@@ -170,12 +170,26 @@ jobs:
       - name: Setup Monorepo Toolchain
         uses: ./.github/reusable-actions/setup-toolchain
 
-      - name: Build Apps
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@v9
+        with:
+          version: v2.6
+          problem-matchers: true
+          working-directory: apps/cloud-backend/fusion-core
+
+      - name: Build & Run Tests
         uses: ./.github/reusable-actions/build-cloud-web-backend
         with:
           cloud_backend_sonar_token: ${{ secrets.CLOUD_BACKEND_SONAR_TOKEN }}
           nexus_password: ${{ secrets.NEXUS_PASSWORD }}
-          nexus_url: ${{ secrets.NEXUS_BASE_URL }}     
+          nexus_url: ${{ secrets.NEXUS_BASE_URL }}
+          AWS_ACCESS_KEY_ID_DEV: ${{ secrets.AWS_ACCESS_KEY_ID_DEV }}
+          AWS_SECRET_ACCESS_KEY_DEV: ${{ secrets.AWS_SECRET_ACCESS_KEY_DEV }}
+          DOCKER_REGISTRY_DEV: ${{ vars.DOCKER_REGISTRY_DEV }}
+          AWS_ECS_CLUSTER: ${{ vars.AWS_ECS_CLUSTER }} 
+          AWS_ECS_SERVICE: ${{ vars.AWS_ECS_SERVICE }}
+          AWS_ECS_TASK_DEFINITION: ${{ vars.AWS_ECS_TASK_DEFINITION }}
+          AWS_DEFAULT_REGION: ${{ vars.AWS_DEFAULT_REGION }}
 
   fusion-dsp-build:
     needs: buildChecks
