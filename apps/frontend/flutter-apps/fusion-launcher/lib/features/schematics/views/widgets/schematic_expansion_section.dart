@@ -28,8 +28,6 @@ class _SchematicExpansionSectionState<T> extends State<SchematicExpansionSection
   @override
   Widget build(BuildContext context) {
     return SemanticHelper.button(
-      testId: SemanticHelper.createTestId(SemanticTypes.button, "expandable_sections_container"),
-      child: SemanticHelper.button(
         testId: SemanticHelper.createTestId(SemanticTypes.button, "expandable_section_${widget.title}"),
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 12),
@@ -110,7 +108,7 @@ class _SchematicExpansionSectionState<T> extends State<SchematicExpansionSection
               ),
             ],
           ),
-        ),
+        
       ),
     );
   }
