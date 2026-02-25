@@ -867,7 +867,7 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with TickerProviderSt
                         children: <Widget>[
                           if (!isInDesignMode && serviceLocator<ProjectViewModel>().virtualIP != null)
                             Container(
-                              width: 100,
+                              width: 160,
                               decoration: BoxDecoration(
                                 color: context.colorScheme.elevation1,
                                 border: Border(
@@ -884,7 +884,7 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with TickerProviderSt
                                   height: 20,
                                   borderRadius: 6,
                                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                                  text: "Sync",
+                                  text: "Push Configuration",
                                   textStyle: context.textTheme.labelMedium,
                                 ),
                               ),
