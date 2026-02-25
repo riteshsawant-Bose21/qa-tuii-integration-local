@@ -98,7 +98,7 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
+    return MaterialApp.router(
       title: AppConstants.appName,
       debugShowCheckedModeBanner: false,
       theme: FusionAppTheme.lightTheme.copyWith(
@@ -112,8 +112,7 @@ class MyApp extends StatelessWidget {
         ),
       ),
       themeMode: ThemeMode.light,
-      onGenerateRoute: AppRouter.generateRoute,
-      initialRoute: AppConstants.loginRoute,
+      routerConfig: appRouter,
     );
   }
 }

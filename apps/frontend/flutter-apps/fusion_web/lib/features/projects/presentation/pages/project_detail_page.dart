@@ -768,7 +768,6 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:fusion_web/features/projects/presentation/handlers/project_actions_handler.dart';
 import 'package:fusion_web/features/projects/presentation/viewmodels/projects_viewmodel.dart';
 import 'package:fusion_web/features/projects/presentation/widgets/project_actions_menu.dart';
-import 'package:fusion_web/features/projects/domain/entities/project_entity.dart';
 
 enum DetailTab { incidents, devices, activity }
 

@@ -1,6 +1,5 @@
 // WORKING VERSION - before adding action button
 import 'package:flutter/material.dart';
-import 'package:fusion_web/features/projects/domain/usecases/useCases.dart';
 import 'package:fusion_web/features/projects/presentation/handlers/project_actions_handler.dart';
 import 'package:fusion_web/features/projects/presentation/widgets/project_actions_menu.dart';
 import 'package:google_fonts/google_fonts.dart';

@@ -1,114 +1,106 @@
-// // import 'package:flutter/material.dart';
-// // import 'package:fusion_web/core/constants/app_constants.dart';
-// // import 'package:fusion_web/core/widgets/main_layout.dart';
-// // import 'package:fusion_web/features/auth/presentation/pages/login_page.dart';
-// // import 'package:fusion_web/features/projects/data/models/project_model.dart';
-// // import 'package:fusion_web/features/projects/domain/entities/project_entity.dart';
-// // import 'package:fusion_web/features/projects/presentation/pages/project_detail_page.dart';
+// import 'package:flutter/material.dart';
+// import 'package:fusion_web/core/constants/app_constants.dart';
+// import 'package:fusion_web/core/widgets/main_layout.dart';
+// import 'package:fusion_web/features/auth/presentation/pages/login_page.dart';
+// import 'package:fusion_web/features/projects/data/models/project_model.dart';
+// import 'package:fusion_web/features/projects/presentation/pages/project_detail_page.dart';
 
-// // enum DashboardTabs {
-// //   dashboard("Dashboard"),
-// //   projects("Projects"),
-// //   devices("Devices"),
-// //   users("Users"),
-// //   roles("Roles"),
-// //   settings("Settings");
+// enum DashboardTabs {
+//   dashboard("Dashboard"),
+//   projects("Projects"),
+//   devices("Devices"),
+//   users("Users"),
+//   roles("Roles"),
+//   settings("Settings");
 
-// //   final String title;
-// //   const DashboardTabs(this.title);
+//   final String title;
+//   const DashboardTabs(this.title);
 
-// //   String get route {
-// //     switch (this) {
-// //       case DashboardTabs.dashboard:
-// //         return AppConstants.dashboardRoute;
-// //       case DashboardTabs.projects:
-// //         return AppConstants.projectsRoute;
-// //       case DashboardTabs.devices:
-// //         return AppConstants.devicesRoute;
-// //       case DashboardTabs.users:
-// //         return AppConstants.usersRoute;
-// //       case DashboardTabs.roles:
-// //         return AppConstants.rolesRoute;
-// //       case DashboardTabs.settings:
-// //         return AppConstants.settingsRoute;
-// //     }
-// //   }
-// // }
+//   String get route {
+//     switch (this) {
+//       case DashboardTabs.dashboard:
+//         return AppConstants.dashboardRoute;
+//       case DashboardTabs.projects:
+//         return AppConstants.projectsRoute;
+//       case DashboardTabs.devices:
+//         return AppConstants.devicesRoute;
+//       case DashboardTabs.users:
+//         return AppConstants.usersRoute;
+//       case DashboardTabs.roles:
+//         return AppConstants.rolesRoute;
+//       case DashboardTabs.settings:
+//         return AppConstants.settingsRoute;
+//     }
+//   }
+// }
 
-// // class AppRouter {
-// //   static Route<dynamic> generateRoute(RouteSettings settings) {
+// class AppRouter {
+//   static Route<dynamic> generateRoute(RouteSettings settings) {
 
-// //     // ================= LOGIN =================
-// //     if (settings.name == AppConstants.loginRoute) {
-// //       return MaterialPageRoute(
-// //         builder: (_) => const LoginPage(),
-// //         settings: settings,
-// //       );
-// //     }
+//     // LOGIN
+//     if (settings.name == AppConstants.loginRoute) {
+//       return MaterialPageRoute(
+//         builder: (_) => const LoginPage(),
+//         settings: settings,
+//       );
+//     }
 
-// //     // ================= PROJECT DETAILS (DYNAMIC) =================
-// //     if (settings.name != null &&
-// //         settings.name!.startsWith('${AppConstants.projectsRoute}/')) {
+//     // PROJECT DETAILS
+//     if (settings.name != null &&
+//         settings.name!.startsWith('${AppConstants.projectsRoute}/')) {
 
-// //       final uri = Uri.parse(settings.name!);
-// //       final projectId = uri.pathSegments.last;
+//       final uri = Uri.parse(settings.name!);
+//       final projectId = uri.pathSegments.last;
 
-// //       final args = settings.arguments as Map<String, dynamic>?;
+//       final args = settings.arguments as Map<String, dynamic>?;
 
-// //       final project = args?['project'] as ProjectModel?;
-// //       final viewModel = args?['viewModel'];
+//       final project = args?['project'];
+//       final viewModel = args?['viewModel'];
 
-// //       return MaterialPageRoute(
-// //         builder: (_) => MainLayout(
-// //           initialTab: DashboardTabs.projects,
-// //           child: ProjectDetailPage(
-// //             project: project!,
-// //             viewModel: viewModel,
-// //           ),
-// //         ),
-// //         settings: settings,
-// //       );
-// //     }
+//       return MaterialPageRoute(
+//         builder: (_) => MainLayout(
+//           initialTab: DashboardTabs.projects,
+//           child: ProjectDetailPage(
+//             project: project,
+//             viewModel: viewModel,
+//           ),
+//         ),
+//         settings: settings,
+//       );
+//     }
 
-// //     // ================= NORMAL DASHBOARD TABS =================
-// //     DashboardTabs initialTab;
+//     // NORMAL TABS
+//     DashboardTabs initialTab;
 
-// //     switch (settings.name) {
-// //       case AppConstants.dashboardRoute:
-// //         initialTab = DashboardTabs.dashboard;
-// //         break;
-// //       case AppConstants.projectsRoute:
-// //         initialTab = DashboardTabs.projects;
-// //         break;
-// //       case AppConstants.usersRoute:
-// //         initialTab = DashboardTabs.users;
-// //         break;
-// //       case AppConstants.devicesRoute:
-// //         initialTab = DashboardTabs.devices;
-// //         break;
-// //       case AppConstants.rolesRoute:
-// //         initialTab = DashboardTabs.roles;
-// //         break;
-// //       case AppConstants.settingsRoute:
-// //         initialTab = DashboardTabs.settings;
-// //         break;
-// //       default:
-// //         initialTab = DashboardTabs.dashboard;
-// //     }
+//     switch (settings.name) {
+//       case AppConstants.dashboardRoute:
+//         initialTab = DashboardTabs.dashboard;
+//         break;
+//       case AppConstants.projectsRoute:
+//         initialTab = DashboardTabs.projects;
+//         break;
+//       default:
+//         initialTab = DashboardTabs.dashboard;
+//     }
 
-// //     return MaterialPageRoute(
-// //       builder: (_) => MainLayout(initialTab: initialTab),
-// //       settings: settings,
-// //     );
-// //   }
-// // }
+//     return MaterialPageRoute(
+//       builder: (_) => MainLayout(initialTab: initialTab),
+//       settings: settings,
+//     );
+//   }
+// }
+
 import 'package:flutter/material.dart';
+import 'package:fusion_web/features/devices/presentation/pages/devices_page.dart';
+import 'package:fusion_web/features/roles/presentation/pages/roles_page.dart';
+import 'package:fusion_web/features/settings/presentation/pages/settings_page.dart';
+import 'package:fusion_web/features/users/presentation/pages/users_page.dart';
+import 'package:go_router/go_router.dart';
 import 'package:fusion_web/core/constants/app_constants.dart';
 import 'package:fusion_web/core/widgets/main_layout.dart';
 import 'package:fusion_web/features/auth/presentation/pages/login_page.dart';
-import 'package:fusion_web/features/projects/data/models/project_model.dart';
-import 'package:fusion_web/features/projects/domain/entities/project_entity.dart';
-import 'package:fusion_web/features/projects/presentation/pages/project_detail_page.dart';
+import 'package:fusion_web/features/dashboard/presentation/pages/dashboard_page.dart';
+import 'package:fusion_web/features/projects/presentation/pages/projects_page.dart';
 
 enum DashboardTabs {
   dashboard("Dashboard"),
@@ -139,58 +131,80 @@ enum DashboardTabs {
   }
 }
 
-class AppRouter {
-  static Route<dynamic> generateRoute(RouteSettings settings) {
+final GoRouter appRouter = GoRouter(
+  initialLocation: AppConstants.dashboardRoute,
+  routes: [
+    // LOGIN (outside shell)
+    GoRoute(
+      path: AppConstants.loginRoute,
+      builder: (context, state) => const LoginPage(),
+    ),
 
-    // LOGIN
-    if (settings.name == AppConstants.loginRoute) {
-      return MaterialPageRoute(
-        builder: (_) => const LoginPage(),
-        settings: settings,
-      );
-    }
-
-    // PROJECT DETAILS
-    if (settings.name != null &&
-        settings.name!.startsWith('${AppConstants.projectsRoute}/')) {
-
-      final uri = Uri.parse(settings.name!);
-      final projectId = uri.pathSegments.last;
-
-      final args = settings.arguments as Map<String, dynamic>?;
-
-      final project = args?['project'];
-      final viewModel = args?['viewModel'];
-
-      return MaterialPageRoute(
-        builder: (_) => MainLayout(
-          initialTab: DashboardTabs.projects,
-          child: ProjectDetailPage(
-            project: project,
-            viewModel: viewModel,
-          ),
+    // SHELL ROUTE
+    ShellRoute(
+      builder: (context, state, child) {
+        return MainLayout(
+          initialTab: _getInitialTab(state.uri.path),
+          child: child,
+        );
+      },
+      routes: [
+        GoRoute(
+          path: AppConstants.dashboardRoute,
+          builder: (_, __) => const DashboardPage(),
         ),
-        settings: settings,
-      );
-    }
 
-    // NORMAL TABS
-    DashboardTabs initialTab;
+        GoRoute(
+          path: AppConstants.projectsRoute,
+          builder: (_, __) => const ProjectsPage(),
+        ),
 
-    switch (settings.name) {
-      case AppConstants.dashboardRoute:
-        initialTab = DashboardTabs.dashboard;
-        break;
-      case AppConstants.projectsRoute:
-        initialTab = DashboardTabs.projects;
-        break;
-      default:
-        initialTab = DashboardTabs.dashboard;
-    }
+        GoRoute(
+          path: AppConstants.devicesRoute,
+          builder: (_, __) => const DevicesPage(),
+        ),
 
-    return MaterialPageRoute(
-      builder: (_) => MainLayout(initialTab: initialTab),
-      settings: settings,
-    );
+        GoRoute(
+          path: AppConstants.usersRoute,
+          builder: (_, __) => const UsersPage(),
+        ),
+
+        GoRoute(
+          path: AppConstants.rolesRoute,
+          builder: (_, __) => const RolesPage(),
+        ),
+
+        GoRoute(
+          path: AppConstants.settingsRoute,
+          builder: (_, __) => const SettingsPage(),
+        ),
+      ],
+    ),
+  ],
+);
+
+// DashboardTabs _getInitialTab(String path) {
+//   if (path.startsWith(AppConstants.projectsRoute)) {
+//     return DashboardTabs.projects;
+//   }
+//   return DashboardTabs.dashboard;
+// }
+
+DashboardTabs _getInitialTab(String path) {
+  if (path.startsWith(AppConstants.projectsRoute)) {
+    return DashboardTabs.projects;
   }
+  if (path.startsWith(AppConstants.devicesRoute)) {
+    return DashboardTabs.devices;
+  }
+  if (path.startsWith(AppConstants.usersRoute)) {
+    return DashboardTabs.users;
+  }
+  if (path.startsWith(AppConstants.rolesRoute)) {
+    return DashboardTabs.roles;
+  }
+  if (path.startsWith(AppConstants.settingsRoute)) {
+    return DashboardTabs.settings;
+  }
+  return DashboardTabs.dashboard;
 }
