@@ -1,10 +1,9 @@
 platform: fusion-mini-DSP
 firmwareBundleVersion: 1.0.0
-manufacturer: Fusion Audio
 model: Fusion-Mini DSP
 deviceType: DSP
 
 compatibility:
-  fusionServicesApiLevel: 1.1.0
-  minDesktopAppVersion: 1.0.0
-  cloudServicesApiLevel: 1.0.0
+  fusionServicesApiLevel: 1.3.0
+  minDesktopAppVersion: 0.3.5
+  cloudServicesApiLevel: 1.0.1
