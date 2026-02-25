@@ -71,9 +71,7 @@ class _BuildingPageDronDownState<T> extends State<BuildingPageDronDown<T>> {
         // menuPadding: EdgeInsets.zero,
         // clipBehavior: Clip.none,
         items: widget.items,
-        onSelected: (T value) {
-          widget.onSelect(value);
-        },
+        onSelected: widget.onSelect,
         popupOffset: const Offset(0, 10),
         itemBuilder: (BuildContext context, T option) => widget.valueBuilder != null ? widget.valueBuilder!(option) : widget.labelBuilder(option),
         // itemBuilder: (BuildContext context) {
