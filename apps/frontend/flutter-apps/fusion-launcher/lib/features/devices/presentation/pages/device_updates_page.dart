@@ -127,8 +127,7 @@ class _DeviceUpdatesTabState extends State<DeviceUpdatesTab> {
         'deviceName': FusionTableCell(
           value: deviceName,
           child: _buildLinkText(
-            deviceName: deviceName,
-            deviceId: device.id,
+            device: device,
           ),
         ),
         'model': FusionTableCell(
@@ -169,19 +168,20 @@ class _DeviceUpdatesTabState extends State<DeviceUpdatesTab> {
   }
 
   Widget _buildLinkText({
-    required String deviceName,
-    required String deviceId,
+    required HardwareComponent device,
   }) {
     return InkWell(
       onTap: () {
-        Navigator.pushNamed(
-          context,
-          Routes.deviceDetails,
-          arguments: deviceId,
-        );
+        if (device is! Amplifier || !device.hardwareName.toLowerCase().startsWith("pp")) {
+          Navigator.pushNamed(
+            context,
+            Routes.deviceDetails,
+            arguments: device.id,
+          );
+        }
       },
       child: FusionAppText(
-        text: deviceName,
+        text: device.name,
         style: context.textTheme.labelMedium!.copyWith(
           color: context.colorScheme.green,
           decoration: TextDecoration.underline,

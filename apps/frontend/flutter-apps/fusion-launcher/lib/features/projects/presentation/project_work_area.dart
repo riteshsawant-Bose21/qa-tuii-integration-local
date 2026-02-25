@@ -85,7 +85,7 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with TickerProviderSt
 
   final List<Widget> _designTabs = const <Widget>[
     Tab(text: 'Building'),
-    Tab(text: 'Schematic'),
+    Tab(text: 'System'),
     // Tab(text: 'Cost'),
     Tab(text: 'Configuration'),
     // Tab(text: 'Cloud'),

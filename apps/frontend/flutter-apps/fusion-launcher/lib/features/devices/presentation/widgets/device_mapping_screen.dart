@@ -4,7 +4,6 @@ import 'package:fusion_launcher/features/configuration/presentation/viewmodel/pr
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/models/project_entities/controller.dart';
 
-import '../../../commission/presentation/widgets/configure_network_dialog.dart';
 import 'device_models.dart';
 import 'hardware_card.dart';
 
@@ -439,7 +438,7 @@ class _DeviceMappingScreenState extends State<DeviceMappingScreen> {
           height: 48,
           onTap: () {
             Navigator.pop(context);
-            ConfigureNetworkDialog.show(context, bluetoothOnly: false);
+            serviceLocator<ProjectViewModel>().setVirtualIP(ip: null);
           },
         ),
       ],
