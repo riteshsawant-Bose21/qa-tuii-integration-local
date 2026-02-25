@@ -1286,9 +1286,12 @@ void FusionConnectClient::update_ptp_state()
     constexpr int LOCK_CONSEC = 3;
     constexpr int LOSS_CONSEC = 3;
     const auto now = std::chrono::steady_clock::now();
+    constexpr auto STATUS_POLL_PERIOD = std::chrono::seconds(1);
 
     if (now - ptp_last_poll < std::chrono::milliseconds(period_ms)) return;
+    if (now - ptp_last_status_poll < STATUS_POLL_PERIOD) return;
     ptp_last_poll = now;
+    ptp_last_status_poll = now;
 
     bool gm_present = false;
     bool gm_present_valid = false;
