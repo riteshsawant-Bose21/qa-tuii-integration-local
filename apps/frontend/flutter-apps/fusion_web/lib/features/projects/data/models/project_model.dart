@@ -1,19 +1,35 @@
-import 'package:fusion_web/features/projects/domain/entities/project_entity.dart';
+class ProjectModel {
+  final String id;
+  final String name;
+  final String description;
+  final String clientName;
+  final String region;   // indoor / outdoor / hybrid
+  final String status;   // Proposal / Development / Commissioned
 
-class ProjectModel extends ProjectEntity {
+  final int healthyDevices;
+  final int warningDevices;
+  final int criticalDevices;
+  final int incidents;
+
+  final DateTime lastUpdated;
+
   const ProjectModel({
-    required super.id,
-    required super.name,
-    required super.description,
-    required super.clientName,
-    required super.region,
-    required super.status,
-    required super.healthyDevices,
-    required super.warningDevices,
-    required super.criticalDevices,
-    required super.incidents,
-    required super.lastUpdated,
+    required this.id,
+    required this.name,
+    required this.description,
+    required this.clientName,
+    required this.region,
+    required this.status,
+    required this.healthyDevices,
+    required this.warningDevices,
+    required this.criticalDevices,
+    required this.incidents,
+    required this.lastUpdated,
   });
+
+  // ---------------------------
+  // FROM JSON (API → APP)
+  // ---------------------------
 
   factory ProjectModel.fromJson(Map<String, dynamic> json) {
     DateTime parseDateTime(dynamic value) {
@@ -25,149 +41,130 @@ class ProjectModel extends ProjectEntity {
       }
     }
 
-    int parseInt(dynamic value) {
-      if (value == null) return 0;
-      if (value is num) return value.toInt();
-      return int.tryParse(value.toString()) ?? 0;
-    }
-
     return ProjectModel(
       id: json['id']?.toString() ?? '',
       name: json['name'] ?? '',
       description: json['description'] ?? '',
       clientName: json['venue'] ?? '',
-      region: json['region'] ?? '',
+      region: json['environment_type'] ?? '',
       status: json['project_phase'] ?? '',
-      lastUpdated: parseDateTime(json['last_updated']),
-      // TODO: Replace the below hardcoded part once API when available
-      healthyDevices: 12,
-      warningDevices: 2,
-      criticalDevices: 1,
-      incidents: 3,
+      lastUpdated: parseDateTime(json['updated_at']),
+      healthyDevices: 0,
+      warningDevices: 0,
+      criticalDevices: 0,
+      incidents: 0,
     );
   }
 
+  // ---------------------------
+  // COPY WITH
+  // ---------------------------
+
+  ProjectModel copyWith({
+    String? name,
+    String? description,
+    String? clientName,
+    String? region,
+    String? status,
+    int? healthyDevices,
+    int? warningDevices,
+    int? criticalDevices,
+    int? incidents,
+    DateTime? lastUpdated,
+  }) {
+    return ProjectModel(
+      id: id,
+      name: name ?? this.name,
+      description: description ?? this.description,
+      clientName: clientName ?? this.clientName,
+      region: region ?? this.region,
+      status: status ?? this.status,
+      healthyDevices: healthyDevices ?? this.healthyDevices,
+      warningDevices: warningDevices ?? this.warningDevices,
+      criticalDevices: criticalDevices ?? this.criticalDevices,
+      incidents: incidents ?? this.incidents,
+      lastUpdated: lastUpdated ?? this.lastUpdated,
+    );
+  }
+
+  // ---------------------------
+  // SAFE NORMALIZATION HELPERS
+  // ---------------------------
+
+  String _safeProjectPhase(String value) {
+    switch (value.toLowerCase()) {
+      case "proposal":
+        return "Proposal";
+      case "development":
+        return "Development";
+      case "commissioned":
+        return "Commissioned";
+      default:
+        return "Proposal"; // fallback prevents 400 error
+    }
+  }
+
+  String _safeEnvironment(String value) {
+    switch (value.toLowerCase()) {
+      case "indoor":
+        return "indoor";
+      case "outdoor":
+        return "outdoor";
+      case "hybrid":
+        return "hybrid";
+      default:
+        return "indoor"; // fallback prevents 400 error
+    }
+  }
+
+  // ---------------------------
+  // TO JSON (APP → API)
+  // ---------------------------
+
   Map<String, dynamic> toJson() {
     return {
-      'id': id,
-      'name': name,
-      'description': description,
-      'client_name': clientName,
-      'region': region,
-      'status': status,
-      'healthy_devices': healthyDevices,
-      'warning_devices': warningDevices,
-      'critical_devices': criticalDevices,
-      'incidents': incidents,
-      'last_updated': lastUpdated.toIso8601String(),
+      "project_id": id.isEmpty
+          ? "50000001-0000-4000-8000-000000000008"
+          : id,
+      "name": name.isEmpty
+          ? "Lollapalooza Stadium Concert Audio System"
+          : name,
+      "description": description.isEmpty
+          ? "Designing a state-of-the-art audio system for a large stadium concert."
+          : description,
+      "venue": clientName.isEmpty
+          ? "Grant Park, Chicago"
+          : clientName,
+      "application": "Audio System Design",
+      "environment_type": _safeEnvironment(region),
+      "project_phase": _safeProjectPhase(status),
+      "is_project_file_created": false,
+      "is_project_thumbnail_created": false,
+      "budget": {
+        "amount": 50000,
+        "currency": "USD",
+      },
     };
   }
+
+  // ---------------------------
+  // MOCK DATA
+  // ---------------------------
 
   static List<ProjectModel> mockProjects() {
     return [
       ProjectModel(
         id: '1',
-        name: 'Skyline Resort & Spa',
-        description: 'Multi-zone audio system for resort property.',
-        clientName: 'Skyline Hotels',
-        region: 'North America',
-        status: 'active',
-        healthyDevices: 56,
-        warningDevices: 4,
-        criticalDevices: 2,
-        incidents: 3,
-        lastUpdated: DateTime(2026, 2, 6),
-      ),
-      ProjectModel(
-        id: '2',
-        name: 'Government Building Retrofit',
-        description: 'Audio infrastructure upgrade for government facility.',
-        clientName: 'ProAudio Distribution NA',
-        region: 'North America',
-        status: 'active',
-        healthyDevices: 60,
-        warningDevices: 0,
-        criticalDevices: 0,
-        incidents: 0,
-        lastUpdated: DateTime(2026, 2, 5),
-      ),
-      ProjectModel(
-        id: '3',
-        name: 'Metro University Campus Audio',
-        description: 'Campus-wide distributed audio solution.',
-        clientName: 'Metro University',
-        region: 'North America',
-        status: 'active',
-        healthyDevices: 78,
-        warningDevices: 2,
-        criticalDevices: 0,
-        incidents: 1,
-        lastUpdated: DateTime(2026, 2, 5),
-      ),
-      ProjectModel(
-        id: '4',
-        name: 'Global Retail - London Flagship',
-        description: 'Retail flagship audio deployment.',
-        clientName: 'Global Retail Chain',
-        region: 'Europe',
-        status: 'active',
-        healthyDevices: 32,
-        warningDevices: 1,
-        criticalDevices: 0,
-        incidents: 0,
-        lastUpdated: DateTime(2026, 2, 4),
-      ),
-      ProjectModel(
-        id: '5',
-        name: 'Global Retail - Paris Store',
-        description: 'Retail audio installation for Paris store.',
-        clientName: 'Global Retail Chain',
-        region: 'Europe',
-        status: 'active',
-        healthyDevices: 28,
+        name: 'Mock Project',
+        description: 'Temporary mock data',
+        clientName: 'Mock Venue',
+        region: 'indoor',
+        status: 'Development',
+        healthyDevices: 10,
         warningDevices: 2,
         criticalDevices: 1,
         incidents: 1,
-        lastUpdated: DateTime(2026, 2, 4),
-      ),
-      ProjectModel(
-        id: '6',
-        name: 'Skyline Downtown Conference Center',
-        description: 'Conference center multi-zone audio system.',
-        clientName: 'Skyline Hotels',
-        region: 'North America',
-        status: 'active',
-        healthyDevices: 45,
-        warningDevices: 3,
-        criticalDevices: 1,
-        incidents: 2,
-        lastUpdated: DateTime(2026, 2, 3),
-      ),
-      ProjectModel(
-        id: '7',
-        name: 'Corporate HQ Pilot Program',
-        description: 'Pilot deployment at corporate headquarters.',
-        clientName: 'Bose Professional',
-        region: 'North America',
-        status: 'active',
-        healthyDevices: 12,
-        warningDevices: 0,
-        criticalDevices: 0,
-        incidents: 0,
-        lastUpdated: DateTime(2026, 2, 1),
-      ),
-      ProjectModel(
-        id: '8',
-        name: 'Regional Theater Complex',
-        description: 'Full theater audio system implementation.',
-        clientName: 'SoundTech Solutions',
-        region: 'North America',
-        status: 'completed',
-        healthyDevices: 64,
-        warningDevices: 0,
-        criticalDevices: 0,
-        incidents: 0,
-        lastUpdated: DateTime(2025, 12, 15),
+        lastUpdated: DateTime.now(),
       ),
     ];
   }

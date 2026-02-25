@@ -7,7 +7,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:fusion_web/features/projects/presentation/viewmodels/projects_viewmodel.dart';
 import 'package:fusion_web/features/projects/data/datasources/project_datasource.dart';
 import 'package:fusion_web/features/projects/data/repositories/projects_repository_impl.dart';
-import 'package:fusion_web/features/projects/domain/entities/project_entity.dart';
+import 'package:fusion_web/features/projects/data/models/project_model.dart';
 import 'package:fusion_web/core/services/service_locator.dart';
 import 'package:fusion_web/features/projects/presentation/pages/project_detail_page.dart';
 import 'package:fusion_web/core/constants/app_constants.dart';
@@ -30,7 +30,7 @@ class _ProjectsPageState extends State<ProjectsPage> {
   final TextEditingController _searchController = TextEditingController();
 
   String _searchQuery = '';
-  String _selectedRegions = 'All Regions';
+  String _selectedRegions = 'All';
   String _selectedStatus = 'All';
   String _selectedFilterType = 'Last Updated';
 
@@ -59,12 +59,7 @@ class _ProjectsPageState extends State<ProjectsPage> {
     );
 
     _viewModel = ProjectsViewModel(
-      getProjectsUseCase: GetProjectsUseCase(repository),
-      getProjectByIdUseCase: GetProjectByIdUseCase(repository),
-      createProjectUseCase: CreateProjectUseCase(repository),
-      updateProjectUseCase: UpdateProjectUseCase(repository),
-      deleteProjectUseCase: DeleteProjectUseCase(repository),
-      searchProjectsUseCase: SearchProjectsUseCase(repository),
+      repository: repository,
     );
 
     _viewModel.initialize();
@@ -95,11 +90,11 @@ class _ProjectsPageState extends State<ProjectsPage> {
     return '${months[date.month - 1]} ${date.day}, ${date.year}';
   }
 
-  List<ProjectEntity> get _filteredProjects {
+  List<ProjectModel> get _filteredProjects {
     final projects = _viewModel.projects;
     if (projects.isEmpty) return [];
 
-    List<ProjectEntity> filtered = List.from(projects);
+    List<ProjectModel> filtered = List.from(projects);
 
     if (_searchQuery.isNotEmpty) {
       filtered = filtered.where((project) {
@@ -115,7 +110,7 @@ class _ProjectsPageState extends State<ProjectsPage> {
       }).toList();
     }
 
-    if (_selectedRegions != 'All Regions') {
+    if (_selectedRegions != 'All') {
       filtered = filtered
           .where(
             (p) => p.region.toLowerCase() == _selectedRegions.toLowerCase(),
@@ -132,184 +127,14 @@ class _ProjectsPageState extends State<ProjectsPage> {
     return filtered;
   }
 
-  void _navigateToDetail(ProjectEntity project) {
+  void _navigateToDetail(ProjectModel project) {
     Navigator.pushNamed(
       context,
       '${AppConstants.projectsRoute}/${project.id}',
       arguments: {'project': project, 'viewModel': _viewModel},
     );
   }
-
-  // Future<void> _openProjectDialog() async {
-  //   final result = await showGeneralDialog<NewProjectFormData>(
-  //     context: context,
-  //     barrierDismissible: true,
-  //     barrierLabel: "New Project",
-  //     barrierColor: Colors.black.withOpacity(0.15),
-  //     transitionDuration: const Duration(milliseconds: 350),
-  //     pageBuilder: (context, animation, secondaryAnimation) {
-  //       return const SizedBox.shrink();
-  //     },
-  //     transitionBuilder: (context, animation, secondaryAnimation, child) {
-  //       final curved = CurvedAnimation(
-  //         parent: animation,
-  //         curve: Curves.easeOutCubic,
-  //       );
-
-  //       return Stack(
-  //         children: [
-  //           GestureDetector(
-  //             onTap: () => Navigator.pop(context),
-  //             child: BackdropFilter(
-  //               filter: ImageFilter.blur(
-  //                 sigmaX: 5 * animation.value,
-  //                 sigmaY: 5 * animation.value,
-  //               ),
-  //               child: Container(
-  //                 color: Colors.black.withOpacity(0.08 * animation.value),
-  //               ),
-  //             ),
-  //           ),
-
-  //           Center(
-  //             child: FadeTransition(
-  //               opacity: curved,
-  //               child: ScaleTransition(
-  //                 scale: Tween<double>(begin: 0.95, end: 1).animate(curved),
-  //                 child: Container(
-  //                   width: 1000,
-  //                   height: 820,
-  //                   decoration: BoxDecoration(
-  //                     color: Colors.white,
-  //                     borderRadius: BorderRadius.circular(24),
-  //                   ),
-  //                   clipBehavior: Clip.antiAlias,
-  //                   child: ProjectDialog(
-  //                     onSubmit: (formData) {
-  //                       Navigator.pop(context, formData);
-  //                     },
-  //                   ),
-  //                 ),
-  //               ),
-  //             ),
-  //           ),
-  //         ],
-  //       );
-  //     },
-  //   );
-
-  //   if (result != null) {
-  //     final newProject = ProjectEntity(
-  //       id: UniqueKey().toString(),
-  //       title: result.name,
-  //       description: result.notes,
-  //       clientName: result.organization,
-  //       region: result.state,
-  //       status: "Active",
-  //       lastUpdated: DateTime.now(),
-  //       healthyDevices: 0,
-  //       warningDevices: 0,
-  //       criticalDevices: 0,
-  //       incidents: 0,
-  //     );
-
-  //     _viewModel.createProject(newProject);
-  //   }
-  // }
-
-  // void _showInviteUserDialog(ProjectEntity project) {
-  //   showDialog(
-  //     context: context,
-  //     builder: (_) => InviteUserDialog(project: project),
-  //   );
-  // }
-
-  // void _showDeleteDialog(ProjectEntity project) {
-  //   showDialog(
-  //     context: context,
-  //     builder: (_) => ConfirmationDialog(
-  //       title: "Delete Project?",
-  //       description:
-  //           "This action cannot be undone. The project will be permanently removed.",
-  //       confirmText: "Delete",
-  //       isDestructive: true,
-  //       onConfirm: () {
-  //         _viewModel.deleteProject(project.id);
-  //       },
-  //     ),
-  //   );
-  // }
-
-  // void _showArchiveDialog(ProjectEntity project) {
-  //   showDialog(
-  //     context: context,
-  //     builder: (_) => ConfirmationDialog(
-  //       title: "Archive Project?",
-  //       description:
-  //           "The project will be removed from active projects but can be restored later.",
-  //       confirmText: "Archive",
-  //       onConfirm: () {
-  //         _viewModel.updateProject(project.copyWith(status: "Archived"));
-  //       },
-  //     ),
-  //   );
-  // }
-
-  // Future<void> _openEditProjectDialog(ProjectEntity project) async {
-  //   final result = await showGeneralDialog<NewProjectFormData>(
-  //     context: context,
-  //     barrierDismissible: true,
-  //     barrierLabel: "Edit Project",
-  //     barrierColor: Colors.black.withOpacity(0.15),
-  //     transitionDuration: const Duration(milliseconds: 350),
-  //     pageBuilder: (_, __, ___) => const SizedBox.shrink(),
-  //     transitionBuilder: (context, animation, secondaryAnimation, child) {
-  //       final curved = CurvedAnimation(
-  //         parent: animation,
-  //         curve: Curves.easeOutCubic,
-  //       );
-
-  //       return Center(
-  //         child: FadeTransition(
-  //           opacity: curved,
-  //           child: ScaleTransition(
-  //             scale: Tween<double>(begin: 0.95, end: 1).animate(curved),
-  //             child: ProjectDialog(
-  //               initialData: NewProjectFormData(
-  //                 name: project.title,
-  //                 version: '',
-  //                 tags: '',
-  //                 author: '',
-  //                 organization: project.clientName,
-  //                 state: project.region,
-  //                 country: '',
-  //                 timeZone: '',
-  //                 building: '',
-  //                 notes: project.description,
-  //               ),
-  //               onSubmit: (formData) {
-  //                 Navigator.pop(context, formData);
-  //               },
-  //             ),
-  //           ),
-  //         ),
-  //       );
-  //     },
-  //   );
-
-  //   if (result != null) {
-  //     final updatedProject = project.copyWith(
-  //       title: result.name,
-  //       description: result.notes,
-  //       clientName: result.organization,
-  //       region: result.state,
-  //       lastUpdated: DateTime.now(),
-  //     );
-
-  //     _viewModel.updateProject(updatedProject);
-  //   }
-  // }
-
+  
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -423,9 +248,10 @@ class _ProjectsPageState extends State<ProjectsPage> {
           Flexible(
             flex: 1,
             child: _dropdown(_selectedRegions, [
-              'All Regions',
-              'North America',
-              'Europe',
+              'All',
+              'Indoor',
+              'Outdoor',
+              'Hybrid',
             ], (v) => setState(() => _selectedRegions = v!)),
           ),
           const SizedBox(width: 16),
@@ -435,6 +261,7 @@ class _ProjectsPageState extends State<ProjectsPage> {
               'All',
               'Proposal',
               'Planning',
+              'Commissioned',
             ], (v) => setState(() => _selectedStatus = v!)),
           ),
           const SizedBox(width: 16),
@@ -525,7 +352,7 @@ class _ProjectsPageState extends State<ProjectsPage> {
   // LIST VIEW
   // ======================================================
 
-  Widget _buildListView(List<ProjectEntity> projects) {
+  Widget _buildListView(List<ProjectModel> projects) {
     return ListView.separated(
       itemCount: projects.length,
       separatorBuilder: (_, __) => const SizedBox(height: 12),
@@ -547,7 +374,7 @@ class _ProjectsPageState extends State<ProjectsPage> {
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                /// 1️⃣ TITLE
+                /// 1️⃣ name (earlier was named title)
                 Expanded(
                   flex: 4,
                   child: Column(
@@ -579,7 +406,7 @@ class _ProjectsPageState extends State<ProjectsPage> {
 
                 /// 2️⃣ REGION
                 Expanded(
-                  flex: 2,
+                  flex: 1,
                   child: Align(
                     alignment: Alignment.centerLeft,
                     child: Text(
@@ -608,25 +435,23 @@ class _ProjectsPageState extends State<ProjectsPage> {
                   flex: 2,
                   child: Row(
                     children: [
-                      if (totalDevices > 0) ...[
-                        _healthStat(
-                          Icons.check_circle_outline_rounded,
-                          const Color(0xFF22C55E),
-                          p.healthyDevices,
-                        ),
-                        const SizedBox(width: 12),
-                        _healthStat(
-                          Icons.warning_amber_rounded,
-                          const Color(0xFFF59E0B),
-                          p.warningDevices,
-                        ),
-                        const SizedBox(width: 12),
-                        _healthStat(
-                          Icons.cancel_outlined,
-                          const Color(0xFFEF4444),
-                          p.criticalDevices,
-                        ),
-                      ],
+                      _healthStat(
+                        Icons.check_circle_outline_rounded,
+                        const Color(0xFF22C55E),
+                        p.healthyDevices,
+                      ),
+                      const SizedBox(width: 12),
+                      _healthStat(
+                        Icons.warning_amber_rounded,
+                        const Color(0xFFF59E0B),
+                        p.warningDevices,
+                      ),
+                      const SizedBox(width: 12),
+                      _healthStat(
+                        Icons.cancel_outlined,
+                        const Color(0xFFEF4444),
+                        p.criticalDevices,
+                      ),
                     ],
                   ),
                 ),
@@ -636,9 +461,7 @@ class _ProjectsPageState extends State<ProjectsPage> {
                   flex: 2,
                   child: Align(
                     alignment: Alignment.centerLeft,
-                    child: p.incidents > 0
-                        ? _incidentsBadge(p.incidents)
-                        : const SizedBox(),
+                    child: _incidentsBadge(p.incidents),
                   ),
                 ),
 
@@ -692,7 +515,7 @@ class _ProjectsPageState extends State<ProjectsPage> {
   // GRID VIEW
   // ======================================================
 
-  Widget _buildGridView(List<ProjectEntity> projects) {
+  Widget _buildGridView(List<ProjectModel> projects) {
     return GridView.builder(
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 3,
@@ -772,13 +595,13 @@ class _ProjectsPageState extends State<ProjectsPage> {
                 const SizedBox(height: 14),
 
                 // Device Health box — only if devices exist
-                if (totalDevices > 0) ...[
+                if (totalDevices >= 0) ...[
                   _deviceHealthBox(p),
                   const SizedBox(height: 12),
                 ],
 
                 // Open incidents warning — only if > 0
-                if (p.incidents > 0) ...[
+                if (p.incidents >= 0) ...[
                   _openIncidentsWarning(p.incidents),
                   const SizedBox(height: 12),
                 ],
@@ -973,7 +796,7 @@ class _ProjectsPageState extends State<ProjectsPage> {
     );
   }
 
-  Widget _deviceHealthBox(ProjectEntity p) {
+  Widget _deviceHealthBox(ProjectModel p) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(12),
@@ -1050,7 +873,7 @@ class _ProjectsPageState extends State<ProjectsPage> {
     );
   }
 
-  // Widget _buildActionsMenu(ProjectEntity project) {
+  // Widget _buildActionsMenu(ProjectModel project) {
   //   return PopupMenuButton<String>(
   //     icon: Icon(Icons.more_vert, size: 18, color: Colors.grey[600]),
   //     padding: EdgeInsets.zero,

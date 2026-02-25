@@ -1,16 +1,16 @@
 import 'package:flutter/material.dart';
-import 'package:fusion_web/features/projects/domain/entities/project_entity.dart';
+import 'package:fusion_web/features/projects/data/models/project_model.dart';
 import 'package:fusion_web/features/projects/presentation/viewmodels/projects_viewmodel.dart';
 import 'package:fusion_lib/fusion_widgets/shared_widgets/project/confirmation_dialog.dart';
 import 'package:fusion_web/features/projects/presentation/dialogs/invite_user_dialog.dart';
 import 'package:fusion_lib/fusion_widgets/shared_widgets/project/project_dialog.dart';
+import 'package:uuid/uuid.dart';
 
 class ProjectActionsHandler {
-
   // ================= INVITE =================
   static void invite({
     required BuildContext context,
-    required ProjectEntity project,
+    required ProjectModel project,
   }) {
     showDialog(
       context: context,
@@ -18,11 +18,12 @@ class ProjectActionsHandler {
     );
   }
 
-  // ================= DELETE =================
+  //  ================= DELETE =================
   static void delete({
     required BuildContext context,
-    required ProjectEntity project,
+    required ProjectModel project,
     required ProjectsViewModel viewModel,
+    VoidCallback? onDeleted, // 👈 add this
   }) {
     showDialog(
       context: context,
@@ -32,8 +33,12 @@ class ProjectActionsHandler {
             "This action cannot be undone. The project will be permanently removed.",
         confirmText: "Delete",
         isDestructive: true,
-        onConfirm: () {
-          viewModel.deleteProject(project.id);
+        onConfirm: () async {
+          Navigator.pop(context); // close dialog
+          await viewModel.deleteProject(project.id);
+          if (onDeleted != null) {
+            onDeleted(); // 👈 delegate navigation
+          }
         },
       ),
     );
@@ -42,7 +47,7 @@ class ProjectActionsHandler {
   // ================= ARCHIVE =================
   static void archive({
     required BuildContext context,
-    required ProjectEntity project,
+    required ProjectModel project,
     required ProjectsViewModel viewModel,
   }) {
     showDialog(
@@ -53,9 +58,7 @@ class ProjectActionsHandler {
             "The project will be removed from active projects but can be restored later.",
         confirmText: "Archive",
         onConfirm: () {
-          viewModel.updateProject(
-            project.copyWith(status: "Archived"),
-          );
+          viewModel.updateProject(project.copyWith(status: "Archived"));
         },
       ),
     );
@@ -64,7 +67,7 @@ class ProjectActionsHandler {
   // ================= EDIT =================
   static Future<void> edit({
     required BuildContext context,
-    required ProjectEntity project,
+    required ProjectModel project,
     required ProjectsViewModel viewModel,
   }) async {
     final result = await showDialog<NewProjectFormData>(
@@ -136,13 +139,13 @@ class ProjectActionsHandler {
     );
 
     if (result != null) {
-      final newProject = ProjectEntity(
-        id: UniqueKey().toString(),
+      final newProject = ProjectModel(
+        id: const Uuid().v4(),
         name: result.name,
         description: result.notes,
         clientName: result.organization,
         region: result.state,
-        status: "Active",
+        status: "proposal",
         lastUpdated: DateTime.now(),
         healthyDevices: 0,
         warningDevices: 0,
@@ -150,7 +153,7 @@ class ProjectActionsHandler {
         incidents: 0,
       );
 
-      viewModel.createProject(newProject);
+      await viewModel.createProject(newProject);
     }
   }
 }

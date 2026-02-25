@@ -13,7 +13,7 @@
 //   });
 
 //   @override
-//   Future<List<ProjectEntity>> getProjects() async {
+//   Future<List<ProjectModel>> getProjects() async {
 //     try {
 //       final remoteData = await remoteDataSource.getProjects();
 //       localDataSource.cacheProjects(remoteData);
@@ -28,7 +28,7 @@
 //   }
 
 //   @override
-//   Future<ProjectEntity> getProjectById(String id) async {
+//   Future<ProjectModel> getProjectById(String id) async {
 //     try {
 //       return await remoteDataSource.getProjectById(id);
 //     } catch (_) {
@@ -41,7 +41,7 @@
 //   }
 
 //   @override
-//   Future<ProjectEntity> createProject(ProjectEntity project) async {
+//   Future<ProjectModel> createProject(ProjectModel project) async {
 //     final projectModel = ProjectModel(
 //       id: project.id,
 //       title: project.title,
@@ -66,7 +66,7 @@
 //   }
 
 //   @override
-//   Future<ProjectEntity> updateProject(ProjectEntity project) async {
+//   Future<ProjectModel> updateProject(ProjectModel project) async {
 //     final projectModel = ProjectModel(
 //       id: project.id,
 //       title: project.title,
@@ -101,7 +101,7 @@
 //   }
 
 //   @override
-//   Future<List<ProjectEntity>> searchProjects(String query) async {
+//   Future<List<ProjectModel>> searchProjects(String query) async {
 //     try {
 //       return await remoteDataSource.searchProjects(query);
 //     } catch (_) {
@@ -140,7 +140,7 @@ class ProjectsRepositoryImpl implements ProjectsRepository {
   // GET ALL PROJECTS
   // =========================
   @override
-  Future<List<ProjectEntity>> getProjects() async {
+  Future<List<ProjectModel>> getProjects() async {
     try {
       final remoteData = await remoteDataSource.getProjects();
       localDataSource.cacheProjects(remoteData);
@@ -155,7 +155,7 @@ class ProjectsRepositoryImpl implements ProjectsRepository {
   // GET PROJECT BY ID
   // =========================
   @override
-  Future<ProjectEntity> getProjectById(String id) async {
+  Future<ProjectModel> getProjectById(String id) async {
     try {
       return await remoteDataSource.getProjectById(id);
     } catch (e) {
@@ -167,7 +167,7 @@ class ProjectsRepositoryImpl implements ProjectsRepository {
   // CREATE PROJECT
   // =========================
   @override
-  Future<ProjectEntity> createProject(ProjectEntity project) async {
+  Future<ProjectModel> createProject(ProjectModel project) async {
     final projectModel = ProjectModel(
       id: project.id,
       name: project.name,
@@ -191,7 +191,7 @@ class ProjectsRepositoryImpl implements ProjectsRepository {
   // UPDATE PROJECT
   // =========================
   @override
-  Future<ProjectEntity> updateProject(ProjectEntity project) async {
+  Future<ProjectModel> updateProject(ProjectModel project) async {
     final projectModel = ProjectModel(
       id: project.id,
       name: project.name,
@@ -224,7 +224,7 @@ class ProjectsRepositoryImpl implements ProjectsRepository {
   // SEARCH PROJECTS
   // =========================
   @override
-  Future<List<ProjectEntity>> searchProjects(String query) async {
+  Future<List<ProjectModel>> searchProjects(String query) async {
     return await remoteDataSource.searchProjects(query);
   }
 }

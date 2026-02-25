@@ -100,6 +100,30 @@ class ApiService {
     }
   }
 
+  Future<Map<String, dynamic>> patch(
+    String endpoint,
+    Map<String, dynamic> data,
+  ) async {
+    try {
+      final url = Uri.parse('$baseUrl/$endpoint');
+
+      print('API PATCH Request: $url');
+      print('PATCH Body: $data');
+
+      final response = await _client.patch(
+        url,
+        headers: _headers,
+        body: jsonEncode(data),
+      );
+
+      print('API PATCH Status: ${response.statusCode}');
+
+      return _handleResponse(response);
+    } catch (e) {
+      throw ApiException('PATCH request failed: $e');
+    }
+  }
+
   Map<String, dynamic> _handleResponse(http.Response response) {
     print('Response body: ${response.body}');
 

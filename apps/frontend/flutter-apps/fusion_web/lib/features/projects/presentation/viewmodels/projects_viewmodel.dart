@@ -1,44 +1,32 @@
 import 'package:fusion_web/core/presentation/base_viewmodel.dart';
 import 'package:fusion_web/core/usecases/usecase.dart';
-import 'package:fusion_web/features/projects/domain/entities/project_entity.dart';
-import 'package:fusion_web/features/projects/domain/usecases/useCases.dart';
+import 'package:fusion_web/features/projects/data/models/project_model.dart';
+import 'package:fusion_web/features/projects/domain/repositories/projects_repository.dart';
 
 class ProjectsViewModel extends BaseViewModel {
-  final GetProjectsUseCase getProjectsUseCase;
-  final GetProjectByIdUseCase getProjectByIdUseCase;
-  final CreateProjectUseCase createProjectUseCase;
-  final UpdateProjectUseCase updateProjectUseCase;
-  final DeleteProjectUseCase deleteProjectUseCase;
-  final SearchProjectsUseCase searchProjectsUseCase;
+  final ProjectsRepository repository;
 
-  List<ProjectEntity> _projects = [];
-  List<ProjectEntity> _filteredProjects = [];
-  ProjectEntity? _selectedProject;
+  ProjectsViewModel({required this.repository});
+
+  List<ProjectModel> _projects = [];
+  List<ProjectModel> _filteredProjects = [];
+  ProjectModel? _selectedProject;
   String _searchQuery = '';
 
-  ProjectsViewModel({
-    required this.getProjectsUseCase,
-    required this.getProjectByIdUseCase,
-    required this.createProjectUseCase,
-    required this.updateProjectUseCase,
-    required this.deleteProjectUseCase,
-    required this.searchProjectsUseCase,
-  });
-
-  List<ProjectEntity> get projects {
+  List<ProjectModel> get projects {
     if (_filteredProjects.isNotEmpty) {
       return _filteredProjects;
     }
     return _projects;
   }
 
-  ProjectEntity? get selectedProject => _selectedProject;
+  ProjectModel? get selectedProject => _selectedProject;
   String get searchQuery => _searchQuery;
 
   Future<void> loadProjects() async {
     try {
       setLoading();
-      final projects = await getProjectsUseCase(const NoParams());
+      final projects = await repository.getProjects();
       _projects = projects;
       _filteredProjects = [];
       setLoaded(projects);
@@ -58,7 +46,7 @@ class ProjectsViewModel extends BaseViewModel {
     }
 
     try {
-      final results = await searchProjectsUseCase(query);
+      final results = await repository.searchProjects(query);
       _filteredProjects = results;
       notifyListeners();
     } catch (e) {
@@ -79,7 +67,7 @@ class ProjectsViewModel extends BaseViewModel {
     try {
       setLoading();
 
-      final project = await getProjectByIdUseCase(GetProjectByIdParams(id));
+      final project = await repository.getProjectById(id);
 
       _selectedProject = project;
       setLoaded(project);
@@ -88,20 +76,23 @@ class ProjectsViewModel extends BaseViewModel {
     }
   }
 
-  Future<void> createProject(ProjectEntity project) async {
+  Future<void> createProject(ProjectModel project) async {
+    print("🔥 VIEWMODEL CREATE CALLED");
     try {
       setLoading();
-      await createProjectUseCase(project);
+      await repository.createProject(project);
+      print("🔥 CREATE API FINISHED");
       await loadProjects();
     } catch (e) {
+      print("🔥 CREATE ERROR: $e");
       setError('Failed to create project: ${e.toString()}');
     }
   }
 
-  Future<void> updateProject(ProjectEntity project) async {
+  Future<void> updateProject(ProjectModel project) async {
     try {
       setLoading();
-      await updateProjectUseCase(project);
+      await repository.updateProject(project);
       await loadProjects();
     } catch (e) {
       setError('Failed to update project: ${e.toString()}');
@@ -109,20 +100,23 @@ class ProjectsViewModel extends BaseViewModel {
   }
 
   Future<void> deleteProject(String id) async {
-    try {
-      setLoading();
-      await deleteProjectUseCase(id);
-      await loadProjects();
-    } catch (e) {
-      setError('Failed to delete project: ${e.toString()}');
-    }
+  try {
+    await repository.deleteProject(id);
+
+    _projects.removeWhere((p) => p.id == id);
+    _filteredProjects.removeWhere((p) => p.id == id);
+
+    notifyListeners();
+  } catch (e) {
+    setError('Failed to delete project');
   }
+}
 
   void initialize() {
     loadProjects();
   }
 
-  void selectProject(ProjectEntity project) {
+  void selectProject(ProjectModel project) {
     _selectedProject = project;
     notifyListeners();
   }

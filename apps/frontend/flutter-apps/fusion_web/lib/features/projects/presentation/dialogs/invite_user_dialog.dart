@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:fusion_web/features/projects/domain/entities/project_entity.dart';
+import 'package:fusion_web/features/projects/data/models/project_model.dart';
 
 class InviteUserDialog extends StatefulWidget {
-  final ProjectEntity project;
+  final ProjectModel project;
 
   const InviteUserDialog({
     super.key,

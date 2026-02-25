@@ -82,7 +82,10 @@ class ProjectsRemoteDataSource implements ProjectsDataSource {
   @override
   Future<ProjectModel> createProject(ProjectModel project) async {
     try {
-      final response = await _apiService.post('/projects', project.toJson());
+      final response = await _apiService.post('projects', project.toJson());
+
+      print('Create response: $response');
+
       final projectData =
           response['data'] as Map<String, dynamic>? ??
           response['project'] as Map<String, dynamic>? ??
@@ -90,18 +93,16 @@ class ProjectsRemoteDataSource implements ProjectsDataSource {
 
       return ProjectModel.fromJson(projectData);
     } catch (e) {
-      // Fallback behavior - return the project as-is for demo
-      print('API Error, simulating creation: $e');
-      await Future.delayed(const Duration(milliseconds: 800));
-      return project;
+      print('CREATE PROJECT API ERROR: $e');
+      rethrow;
     }
   }
 
   @override
   Future<ProjectModel> updateProject(ProjectModel project) async {
     try {
-      final response = await _apiService.put(
-        '/projects/${project.id}',
+      final response = await _apiService.patch(
+        'projects/${project.id}',
         project.toJson(),
       );
       final projectData =
@@ -121,7 +122,7 @@ class ProjectsRemoteDataSource implements ProjectsDataSource {
   @override
   Future<void> deleteProject(String id) async {
     try {
-      await _apiService.delete('/projects/$id');
+      await _apiService.delete('projects/$id');
     } catch (e) {
       // Fallback behavior - simulate success for demo
       print('API Error, simulating deletion: $e');
