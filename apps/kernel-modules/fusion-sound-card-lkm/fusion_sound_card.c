@@ -10,6 +10,7 @@
 #include <linux/of.h>
 #include <linux/clk.h>
 #include <sound/pcm_params.h>
+#include <sound/pcm.h>
 
 #include <sound/soc/fsl/fsl_sai.h>
 
@@ -25,6 +26,8 @@ struct fusion_sound_card_priv {
     struct snd_soc_card card;
     u32 sample_rate;
     snd_pcm_format_t sample_format;
+    bool period_coalesce;
+    bool period_coalesce_master_capture;
 };
 
 //static const struct snd_soc_dapm_widget fusion_sound_card_dapm_widgets[] = {
@@ -97,10 +100,32 @@ static int fusion_sound_card_startup(struct snd_pcm_substream *substream)
     return 0;
 }
 
+static int fusion_sound_card_prepare(struct snd_pcm_substream *substream)
+{
+    struct snd_soc_pcm_runtime *rtd = snd_soc_substream_to_rtd(substream);
+    struct fusion_sound_card_priv *priv = snd_soc_card_get_drvdata(rtd->card);
+    struct snd_pcm_runtime *runtime = substream->runtime;
+    bool is_capture;
+    bool is_master;
+
+    if (!runtime)
+        return 0;
+
+    if (!priv->period_coalesce)
+        return 0;
+
+    is_capture = substream->stream == SNDRV_PCM_STREAM_CAPTURE;
+    is_master = priv->period_coalesce_master_capture ? is_capture : !is_capture;
+    runtime->no_period_wakeup = is_master ? 0 : 1;
+
+    return 0;
+}
+
 static const struct snd_soc_ops fusion_sound_card_ops = {
     .hw_params = fusion_sound_card_hw_params,
     .hw_free = fusion_sound_card_hw_free,
     .startup = fusion_sound_card_startup,
+    .prepare = fusion_sound_card_prepare,
 };
 
 SND_SOC_DAILINK_DEFS(analog,
@@ -126,6 +151,7 @@ static int fusion_sound_card_probe(struct platform_device *pdev)
     struct device_node *cpu_np, *codec_np;
     struct platform_device *cpu_pdev;
     const char *format;
+    const char *coalesce_master;
     int ret;
     u32 slots, slot_width;
 
@@ -168,6 +194,22 @@ static int fusion_sound_card_probe(struct platform_device *pdev)
         priv->cpu_priv.slot_width = slot_width;
     } else {
         dev_err(&pdev->dev, "Failed to read slot-width property.\n");
+    }
+
+    priv->period_coalesce = of_property_read_bool(np, "bose,coalesce-period-elapsed");
+    priv->period_coalesce_master_capture = true;
+    if (priv->period_coalesce) {
+        ret = of_property_read_string(np, "bose,coalesce-master", &coalesce_master);
+        if (ret || !strcmp(coalesce_master, "capture")) {
+            priv->period_coalesce_master_capture = true;
+        } else if (!strcmp(coalesce_master, "playback")) {
+            priv->period_coalesce_master_capture = false;
+        } else {
+            dev_warn(&pdev->dev,
+                     "Invalid bose,coalesce-master='%s', defaulting to capture\n",
+                     coalesce_master);
+            priv->period_coalesce_master_capture = true;
+        }
     }
 
     cpu_node = of_get_child_by_name(np, "cpu");

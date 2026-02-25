@@ -4,7 +4,7 @@ $schema: './cache/schemas/workspace.json'
 # extends: './shared/workspace.yml'
 
 projects:
-  - 'apps/cloud-backend/fusion-cloud'
+  - 'apps/cloud-backend/*'
   - 'apps/frontend/flutter-apps/*'
   - 'apps/frontend/react-apps/*'
   - 'apps/firmware-apps/fusion-dsp'
