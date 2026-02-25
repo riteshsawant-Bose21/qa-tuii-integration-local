@@ -381,6 +381,7 @@ jobs:
     outputs:
       ran: ${{ steps.set-output.outputs.ran }}
       MONOREPO_COMMIT_HASH: ${{ steps.hash-step.outputs.git-hash }}
+      FIRMWARE_BUNDLE_VERSION: ${{ steps.hash-step.outputs.firmware_bundle_version }}
     timeout-minutes: 30
     steps:
       - name: Make changes in target repo
@@ -398,6 +399,24 @@ jobs:
             HASH=$(git rev-parse HEAD)
           fi
           echo "git-hash=$HASH" >> $GITHUB_OUTPUT
+
+          ls -l ./
+          YAML_FILE="./manifests/platforms/Fusion-Mini-DSP.yaml"
+
+          # Install yq if not available
+          if ! command -v yq &> /dev/null; then
+            sudo wget -qO /usr/local/bin/yq https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64
+            sudo chmod +x /usr/local/bin/yq
+          fi
+
+          # Read firmwareBundleVersion from YAML
+          FIRMWARE_VERSION=$(yq e '.firmwareBundleVersion' "$YAML_FILE")
+          if [ -z "$FIRMWARE_VERSION" ] || [ "$FIRMWARE_VERSION" = "null" ]; then
+            echo "firmwareBundleVersion not found in YAML. Failing."
+            exit 1
+          fi
+          echo "Firmware version set to $FIRMWARE_VERSION"
+          echo "firmware_bundle_version=$FIRMWARE_VERSION" >> $GITHUB_OUTPUT
 
   yocto-image-build:
     needs:
@@ -431,13 +450,12 @@ jobs:
           FILE="conf/fusion-nano_properties.inc"
           VERSION_INFO_FILE="recipes-bsp/fusion-init/fusion-init/fusion-nano/version_info.txt"
           MONOREPO_COMMIT_HASH=${{ needs.integration-tests.outputs.MONOREPO_COMMIT_HASH }}
+          FIRMWARE_BUNDLE_VERSION=${{ needs.integration-tests.outputs.FIRMWARE_BUNDLE_VERSION }}
 
-          # Create file if it doesn't exist
           if [ ! -f "$FILE" ]; then
             echo "File $FILE does not exist. Failing the step."
-            exit 1
+            exit 1          
           else
-            # Replace the line or append it
             if grep -q "^FUSION_MONOREPO_BRANCH=" "$FILE"; then
               sed -i "s|^FUSION_MONOREPO_BRANCH=.*|FUSION_MONOREPO_BRANCH=\"${BRANCH_NAME}\"|" "$FILE"
             else
@@ -448,50 +466,17 @@ jobs:
             else
               echo "FUSION_MONOREPO_COMMIT_HASH=\"${MONOREPO_COMMIT_HASH}\"" >> "$FILE"
             fi
+            if grep -q "^FIRMWARE_BUNDLE_VERSION=" "$FILE"; then
+              sed -i "s|^FIRMWARE_BUNDLE_VERSION=.*|FIRMWARE_BUNDLE_VERSION=\"${FIRMWARE_BUNDLE_VERSION}\"|" "$FILE"
+            else
+              echo "FIRMWARE_BUNDLE_VERSION=\"${FIRMWARE_BUNDLE_VERSION}\"" >> "$FILE"
+            fi
           fi
 
-          if [ ! -f "$VERSION_INFO_FILE" ]; then
-            echo "File $VERSION_INFO_FILE does not exist. Failing the step."
-            exit 1
-          fi
-
-          # --- FUSION_SERVER_VERSION ---
-          if grep -q "^FUSION_SERVER_VERSION=" "$VERSION_INFO_FILE"; then
-            sed -i "s|^FUSION_SERVER_VERSION=.*|FUSION_SERVER_VERSION=\"${{ needs.fusion-server-build.outputs.fusion_server_version }}\"|" "$VERSION_INFO_FILE"
-          else
-            echo "FUSION_SERVER_VERSION=\"${{ needs.fusion-server-build.outputs.fusion_server_version }}\"" >> "$VERSION_INFO_FILE"
-          fi
-
-          # --- FUSION_SYSTEM_MONITOR_VERSION ---
-          if grep -q "^FUSION_SYSTEM_MONITOR_VERSION=" "$VERSION_INFO_FILE"; then
-            sed -i "s|^FUSION_SYSTEM_MONITOR_VERSION=.*|FUSION_SYSTEM_MONITOR_VERSION=\"${{ needs.fusion-system-monitor-build.outputs.fusion_system_monitor_version }}\"|" "$VERSION_INFO_FILE"
-          else
-            echo "FUSION_SYSTEM_MONITOR_VERSION=\"${{ needs.fusion-system-monitor-build.outputs.fusion_system_monitor_version }}\"" >> "$VERSION_INFO_FILE"
-          fi
-
-          # --- FUSION_EDGE_GATEWAY_VERSION ---
-          if grep -q "^FUSION_EDGE_GATEWAY_VERSION=" "$VERSION_INFO_FILE"; then
-            sed -i "s|^FUSION_EDGE_GATEWAY_VERSION=.*|FUSION_EDGE_GATEWAY_VERSION=\"${{ needs.fusion-edge-gateway-build.outputs.fusion_edge_gateway_version }}\"|" "$VERSION_INFO_FILE"
-          else
-            echo "FUSION_EDGE_GATEWAY_VERSION=\"${{ needs.fusion-edge-gateway-build.outputs.fusion_edge_gateway_version }}\"" >> "$VERSION_INFO_FILE"
-          fi
-
-          # --- FUSION_TELEMETRY_CORE_VERSION ---
-          if grep -q "^FUSION_TELEMETRY_CORE_VERSION=" "$VERSION_INFO_FILE"; then
-            sed -i "s|^FUSION_TELEMETRY_CORE_VERSION=.*|FUSION_TELEMETRY_CORE_VERSION=\"${{ needs.fusion-telemetry-core-build.outputs.fusion_telemetry_core_version }}\"|" "$VERSION_INFO_FILE"
-          else
-            echo "FUSION_TELEMETRY_CORE_VERSION=\"${{ needs.fusion-telemetry-core-build.outputs.fusion_telemetry_core_version }}\"" >> "$VERSION_INFO_FILE"
-          fi
-
-          # --- FUSION_DSP_VERSION ---
-          if grep -q "^FUSION_DSP_VERSION=" "$VERSION_INFO_FILE"; then
-            sed -i "s|^FUSION_DSP_VERSION=.*|FUSION_DSP_VERSION=\"${{ needs.fusion-dsp-build.outputs.fusion_dsp_version }}\"|" "$VERSION_INFO_FILE"
-          else
-            echo "FUSION_DSP_VERSION=\"${{ needs.fusion-dsp-build.outputs.fusion_dsp_version }}\"" >> "$VERSION_INFO_FILE"
-          fi
+          git status
           git add conf/fusion-nano_properties.inc
-          git add recipes-bsp/fusion-init/fusion-init/fusion-nano/version_info.txt
           git commit -m "CI: Build trigger from Fusion Monorepo branch: ${{ github.ref_name }}" || echo "No changes to commit"
+
 
       - name: Push commit to target repo
         run: |
