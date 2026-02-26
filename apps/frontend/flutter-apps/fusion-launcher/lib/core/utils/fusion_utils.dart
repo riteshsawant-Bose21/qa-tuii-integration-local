@@ -5,7 +5,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:fusion_lib/fusion_networking/network/fusion_network_client.dart';
+import 'package:fusion_lib/fusion_lib.dart';
 
 import '../router/navigation_observer.dart';
 
@@ -136,36 +136,36 @@ class FusionUiUtils {
         return StatefulBuilder(
           builder: (BuildContext context, StateSetter setState) {
             final List<Widget> contentChildren = <Widget>[
-              _buildErrorSection('Request URL', '$method $url'),
+              _buildErrorSection(context, 'Request URL', '$method $url'),
             ];
 
             if (showDetails) {
               contentChildren.addAll(<Widget>[
                 const SizedBox(height: 16),
-                _buildErrorSection('Request Headers', const JsonEncoder.withIndent('  ').convert(headers)),
+                _buildErrorSection(context, 'Request Headers', const JsonEncoder.withIndent('  ').convert(headers)),
                 const SizedBox(height: 16),
-                _buildErrorSection('Request Payload', formattedRequestData),
+                _buildErrorSection(context, 'Request Payload', formattedRequestData),
                 const SizedBox(height: 16),
-                _buildErrorSection('Response Data', formattedResponseData),
+                _buildErrorSection(context, 'Response Data', formattedResponseData),
               ]);
               if (errorMessage != null) {
                 contentChildren.addAll(<Widget>[
                   const SizedBox(height: 16),
-                  _buildErrorSection('Error Message', errorMessage),
+                  _buildErrorSection(context, 'Error Message', errorMessage),
                 ]);
               }
             } else {
               if (errorMessage != null) {
                 contentChildren.addAll(<Widget>[
                   const SizedBox(height: 16),
-                  _buildErrorSection('Error Message', errorMessage),
+                  _buildErrorSection(context, 'Error Message', errorMessage),
                 ]);
               }
             }
 
             return AlertDialog(
-              title: Text(
-                '⚠️ API Error ${statusCode != null ? '($statusCode)' : ''}',
+              title: FusionAppText(
+                text: '⚠️ API Error ${statusCode != null ? '($statusCode)' : ''}',
                 style: const TextStyle(
                   color: Colors.red,
                   fontWeight: FontWeight.bold,
@@ -184,19 +184,19 @@ class FusionUiUtils {
               actions: <Widget>[
                 TextButton(
                   onPressed: () => Navigator.of(context).pop(),
-                  child: const Text('Close', style: TextStyle(color: Colors.blueAccent)),
+                  child: const FusionAppText(text: 'Close', style: TextStyle(color: Colors.blueAccent)),
                 ),
                 TextButton(
                   onPressed: () => setState(() => showDetails = !showDetails),
-                  child: Text(
-                    showDetails ? 'Hide Details' : 'Show Details',
+                  child: FusionAppText(
+                    text: showDetails ? 'Hide Details' : 'Show Details',
                     style: const TextStyle(color: Colors.blueAccent),
                   ),
                 ),
                 if (showDetails) ...<Widget>[
                   TextButton(
                     onPressed: () => _copyRequestData(context, requestData),
-                    child: const Text('Copy Request', style: TextStyle(color: Colors.blueAccent)),
+                    child: const FusionAppText(text: 'Copy Request', style: TextStyle(color: Colors.blueAccent)),
                   ),
                   TextButton(
                     onPressed: () {
@@ -211,7 +211,7 @@ Status Code: ${statusCode ?? 'None'}
 ''';
                       _copyToClipboard(context, errorDetails);
                     },
-                    child: const Text('Copy All', style: TextStyle(color: Colors.blueAccent)),
+                    child: const FusionAppText(text: 'Copy All', style: TextStyle(color: Colors.blueAccent)),
                   ),
                 ],
               ],
@@ -254,7 +254,7 @@ Status Code: ${statusCode ?? 'None'}
     // Show confirmation
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
-        content: Text('Data copied to clipboard'),
+        content: FusionAppText(text: 'Data copied to clipboard'),
         duration: Duration(seconds: 2),
       ),
     );
@@ -262,12 +262,12 @@ Status Code: ${statusCode ?? 'None'}
     // Navigator.of(context).pop();
   }
 
-  static Widget _buildErrorSection(String title, String content) {
+  static Widget _buildErrorSection(BuildContext context, String title, String content) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
-        Text(
-          title,
+        FusionAppText(
+          text: title,
           style: const TextStyle(
             fontWeight: FontWeight.bold,
             fontSize: 14,
@@ -278,9 +278,9 @@ Status Code: ${statusCode ?? 'None'}
           width: double.infinity,
           padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
-            color: Colors.grey[100],
+            color: context.colorScheme.elevation1,
             borderRadius: BorderRadius.circular(4),
-            border: Border.all(color: Colors.grey[300]!),
+            border: Border.all(color: context.colorScheme.textPrimary),
           ),
           child: SelectableText(
             content,

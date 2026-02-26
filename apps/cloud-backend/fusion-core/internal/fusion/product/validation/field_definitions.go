@@ -1,3 +1,4 @@
+// Package validation provides data validation functionality for product data.
 package validation
 
 // getProductFieldDefinitions returns field definitions using struct tags approach

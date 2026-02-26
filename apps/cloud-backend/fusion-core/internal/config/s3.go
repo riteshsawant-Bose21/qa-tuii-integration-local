@@ -6,7 +6,7 @@ import (
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/environment"
 )
 
-// S3 holds the configuration settings for connecting to an S3 service.
+// S3Config holds the configuration settings for connecting to an S3 service.
 type S3Config struct {
 	PriceBucket   string
 	ProductBucket string

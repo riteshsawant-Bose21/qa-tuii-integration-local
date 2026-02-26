@@ -103,7 +103,11 @@ func (s *Service) Execute(ctx context.Context, request *types.SyncRequest) (*typ
 	if err != nil {
 		return nil, fmt.Errorf("failed to create data source: %w", err)
 	}
-	defer dataSource.Close()
+	defer func() {
+		if err := dataSource.Close(); err != nil {
+			s.logger.Error("failed to close data source", zap.Error(err))
+		}
+	}()
 
 	// 2. Read data from source (single read to avoid stream consumption issues)
 	data, err := dataSource.ReadAll()
@@ -158,7 +162,7 @@ func (s *Service) Execute(ctx context.Context, request *types.SyncRequest) (*typ
 
 	// 6. Update job status to in_progress
 	if err := s.UpdateJobStatus(ctx, jobID, "in_progress", &startTime, nil); err != nil {
-		// Log warning but don't fail
+		s.logger.Warn("failed to update job status to in_progress", zap.Error(err))
 	}
 
 	// 7. Execute sync based on type (data already read above)
@@ -170,13 +174,17 @@ func (s *Service) Execute(ctx context.Context, request *types.SyncRequest) (*typ
 		syncResult, err = s.SyncPrices(ctx, data, s.validationCfg)
 	default:
 		errMsg := fmt.Sprintf("invalid sync type: %s", request.SyncType)
-		s.UpdateJobStatus(ctx, jobID, "failed", nil, &errMsg)
+		if updateErr := s.UpdateJobStatus(ctx, jobID, "failed", nil, &errMsg); updateErr != nil {
+			s.logger.Error("failed to update job status", zap.Error(updateErr))
+		}
 		return nil, fmt.Errorf("unsupported sync type: %s", request.SyncType)
 	}
 
 	if err != nil {
 		errMsg := fmt.Sprintf("processing failed: %v", err)
-		s.UpdateJobStatus(ctx, jobID, "failed", &startTime, &errMsg)
+		if updateErr := s.UpdateJobStatus(ctx, jobID, "failed", &startTime, &errMsg); updateErr != nil {
+			s.logger.Error("failed to update job status", zap.Error(updateErr))
+		}
 		return nil, fmt.Errorf("sync processing failed: %w", err)
 	}
 
@@ -193,7 +201,7 @@ func (s *Service) Execute(ctx context.Context, request *types.SyncRequest) (*typ
 		errMsg = &msg
 	}
 
-	s.UpdateStatusAndResults(
+	if updateErr := s.UpdateStatusAndResults(
 		ctx,
 		jobID,
 		"completed",
@@ -202,7 +210,10 @@ func (s *Service) Execute(ctx context.Context, request *types.SyncRequest) (*typ
 		syncResult.Failed,
 		syncResult.ValidationWarnings,
 		errMsg,
-	)
+	); updateErr != nil {
+		s.logger.Error("failed to update final job status", zap.Error(updateErr))
+		// Don't return error here as the sync itself was successful
+	}
 
 	return syncResult, nil
 }
@@ -248,6 +259,7 @@ type LocalFileSource struct {
 	filePath string
 }
 
+// ReadAll reads all data from the local file
 func (l *LocalFileSource) ReadAll() ([]byte, error) {
 	data, err := os.ReadFile(l.filePath)
 	if err != nil {
@@ -256,10 +268,12 @@ func (l *LocalFileSource) ReadAll() ([]byte, error) {
 	return data, nil
 }
 
+// GetPath returns the local file path
 func (l *LocalFileSource) GetPath() string {
 	return l.filePath
 }
 
+// GetSize returns the size of the local file
 func (l *LocalFileSource) GetSize() (*int64, error) {
 	info, err := os.Stat(l.filePath)
 	if err != nil {
@@ -269,6 +283,7 @@ func (l *LocalFileSource) GetSize() (*int64, error) {
 	return &size, nil
 }
 
+// Close closes the local file
 func (l *LocalFileSource) Close() error {
 	// No resources to close for local file source
 	return nil
@@ -388,8 +403,9 @@ func (s *Service) SyncProducts(ctx context.Context, jsonData []byte, jobID strin
 
 	// Store validation warnings and errors in sync job if any were collected
 	if len(result.ValidationWarnings) > 0 || len(result.Errors) > 0 {
-		// Log validation details for debugging
-		// In a real implementation, this would update the sync job record
+		s.logger.Debug("validation completed",
+			zap.Int("warnings", len(result.ValidationWarnings)),
+			zap.Int("errors", len(result.Errors)))
 	}
 
 	result.Duration = time.Since(startTime)
@@ -731,7 +747,7 @@ func (s *Service) createProductBatches(products []types.Product, batchSize int) 
 }
 
 // processBatch processes a batch of products using database transactions for better performance
-func (s *Service) processBatch(ctx context.Context, products []types.Product, productType string, validationEnabled bool, batchIndex int) *BatchResult {
+func (s *Service) processBatch(ctx context.Context, products []types.Product, productType string, validationEnabled bool, _ int) *BatchResult {
 	result := &BatchResult{
 		Successful:         0,
 		Failed:             0,
@@ -1188,7 +1204,9 @@ func (s *Service) SyncPrices(ctx context.Context, data []byte, validationCfg *co
 
 	// Create logger for error collection
 	logger, _ := zap.NewProduction()
-	defer logger.Sync()
+	defer func() {
+		_ = logger.Sync() // Logger sync errors are not critical
+	}()
 
 	result := &types.SyncResult{
 		SyncType:           "price",

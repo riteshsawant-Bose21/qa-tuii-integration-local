@@ -6,7 +6,7 @@ import (
 	json "github.com/goccy/go-json"
 
 	"fusion/internal/api"
-	"fusion/internal/logging"
+	"fusion-services-core/logging"
 )
 
 // HandleUDPMessage handles and decodes UDP messages
@@ -32,6 +32,8 @@ func (h *Handler) HandleUDPMessage(data []byte) (any, error) {
 
 	case api.NotifyOpValueGet:
 		state := h.StateManager.GetStateMap()
+		state[api.FusionVersion] = h.StateManager.GetVersion().Counter
+		state[api.FusionEpoch] = h.StateManager.GetVersion().Epoch
 		return map[string]any{
 			"status": "success",
 			"data":   state,

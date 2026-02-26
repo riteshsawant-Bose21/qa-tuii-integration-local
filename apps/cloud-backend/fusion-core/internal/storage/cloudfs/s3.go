@@ -28,6 +28,7 @@ type presignClient interface {
 	PresignPutObject(ctx context.Context, params *s3.PutObjectInput, optFns ...func(*s3.PresignOptions)) (*v4.PresignedHTTPRequest, error)
 }
 
+// S3 provides S3 cloud storage operations
 type S3 struct {
 	Client        s3Client
 	PresignClient presignClient
@@ -35,11 +36,10 @@ type S3 struct {
 }
 
 type s3Config struct {
-	accessKey string
-	secretKey string
-	region    string
+	region string
 }
 
+// NewS3Client creates a new S3 client with the specified region
 func NewS3Client(ctx context.Context, region string) (*S3, error) {
 
 	cfg, err := config.LoadDefaultConfig(ctx, config.WithRegion(region))
@@ -78,6 +78,7 @@ func (s *S3) Bucket(name string) BucketHandle {
 	}
 }
 
+// Object returns an object handle for the specified object name
 func (b *S3BucketHandle) Object(name string) ObjectHandle {
 	return &S3ObjectHandle{
 		handle: b,
@@ -87,10 +88,12 @@ func (b *S3BucketHandle) Object(name string) ObjectHandle {
 	}
 }
 
-func (b *S3BucketHandle) Upload(ctx context.Context, name string, content io.Reader, contentType *string) error {
+// Upload uploads content to an S3 object
+func (b *S3BucketHandle) Upload(_ context.Context, _ string, _ io.Reader, _ *string) error {
 	return nil
 }
 
+// ObjectExists checks if an object exists in the S3 bucket
 func (b *S3BucketHandle) ObjectExists(ctx context.Context, name string, logger *zap.Logger) (bool, error) {
 	_, err := b.client.HeadObject(ctx, &s3.HeadObjectInput{
 		Bucket: aws.String(b.bucketName),
@@ -113,6 +116,7 @@ func (b *S3BucketHandle) ObjectExists(ctx context.Context, name string, logger *
 	return true, nil
 }
 
+// PresignGet generates a presigned URL for downloading an object
 func (b *S3BucketHandle) PresignGet(ctx context.Context, objectKey string, ttl time.Duration, logger *zap.Logger) (string, error) {
 
 	exists, err := b.ObjectExists(ctx, objectKey, logger)
@@ -134,6 +138,7 @@ func (b *S3BucketHandle) PresignGet(ctx context.Context, objectKey string, ttl t
 	return req.URL, nil
 }
 
+// PresignPut generates a presigned URL for uploading an object
 func (b *S3BucketHandle) PresignPut(ctx context.Context, objectKey string, ttl time.Duration, logger *zap.Logger) (string, error) {
 
 	req, err := b.presignClient.PresignPutObject(ctx, &s3.PutObjectInput{
@@ -155,6 +160,7 @@ type S3ObjectHandle struct {
 	bucket string
 }
 
+// NewReader creates a new reader for the S3 object.
 func (o *S3ObjectHandle) NewReader(ctx context.Context) (io.ReadCloser, error) {
 	resp, err := o.client.GetObject(ctx, &s3.GetObjectInput{
 		Bucket: aws.String(o.bucket),
@@ -199,6 +205,7 @@ type S3Source struct {
 	s3Client *S3
 }
 
+// NewS3Source creates a new S3 data source for reading objects
 func NewS3Source(s3Client *S3, bucket, key, region string) (*S3Source, error) {
 	if bucket == "" || key == "" {
 		return nil, fmt.Errorf("bucket and key are required for S3 source")
@@ -215,6 +222,7 @@ func NewS3Source(s3Client *S3, bucket, key, region string) (*S3Source, error) {
 	}, nil
 }
 
+// ReadAll reads all data from the S3 object
 func (s *S3Source) ReadAll() ([]byte, error) {
 	ctx := context.Background()
 
@@ -228,7 +236,9 @@ func (s *S3Source) ReadAll() ([]byte, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to get S3 object %s/%s: %w", s.bucket, s.key, err)
 	}
-	defer resp.Body.Close()
+	defer func() {
+		_ = resp.Body.Close() // Log body close errors but don't fail the operation - these are usually not critical
+	}()
 
 	// Read all data
 	data, err := io.ReadAll(resp.Body)
@@ -239,15 +249,18 @@ func (s *S3Source) ReadAll() ([]byte, error) {
 	return data, nil
 }
 
+// GetPath returns the S3 object path
 func (s *S3Source) GetPath() string {
 	return fmt.Sprintf("s3://%s/%s", s.bucket, s.key)
 }
 
+// GetSize returns the size of the S3 object
 func (s *S3Source) GetSize() (*int64, error) {
 	// TODO: Implement S3 size retrieval
 	return nil, fmt.Errorf("S3 source size retrieval not implemented")
 }
 
+// Close closes the S3 source (no-op for S3)
 func (s *S3Source) Close() error {
 	// No resources to close for S3 source
 	return nil

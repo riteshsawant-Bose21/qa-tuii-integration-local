@@ -12,7 +12,7 @@ import (
 type ErrorCategory string
 
 const (
-	// Data-related errors
+	// ValidationError represents data validation related errors.
 	ValidationError ErrorCategory = "VALIDATION"
 )
 
@@ -28,7 +28,9 @@ var (
 // ErrorSeverity represents how critical the error is
 type ErrorSeverity string
 
+// Error severity constants.
 const (
+	// SeverityCritical represents errors that stop the entire sync operation.
 	SeverityCritical ErrorSeverity = "CRITICAL" // Stops entire sync
 	SeverityHigh     ErrorSeverity = "HIGH"     // Affects many items
 	SeverityMedium   ErrorSeverity = "MEDIUM"   // Affects single item
@@ -295,9 +297,9 @@ type ErrorSummary struct {
 
 // copyMap creates a copy of a map to prevent external modification
 func copyMap[K comparable, V any](original map[K]V) map[K]V {
-	copy := make(map[K]V, len(original))
+	result := make(map[K]V, len(original))
 	for k, v := range original {
-		copy[k] = v
+		result[k] = v
 	}
-	return copy
+	return result
 }

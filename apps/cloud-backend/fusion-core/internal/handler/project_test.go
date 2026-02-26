@@ -125,7 +125,7 @@ func (m *MockProjectService) GetProjectLockUserID(ctx context.Context, projectID
 	return args.Bool(0), args.String(1), args.Error(2)
 }
 
-func (m *MockProjectService) GetUserEmailByID(ctx context.Context, userID string) (string, error) {
+func (m *MockProjectService) GetUserEmailByID(ctx context.Context, _ string) (string, error) {
 	args := m.Called(ctx, testUserID)
 	return args.String(0), args.Error(1)
 }
@@ -135,7 +135,7 @@ func (m *MockProjectService) ProjectExists(ctx context.Context, projectID string
 	return args.Bool(0), args.Error(1)
 }
 
-func (m *MockProjectService) IsUserAssigned(ctx context.Context, projectID, userID string, logger *zap.Logger) (bool, error) {
+func (m *MockProjectService) IsUserAssigned(ctx context.Context, projectID, _ string, logger *zap.Logger) (bool, error) {
 	args := m.Called(ctx, projectID, testUserID, logger)
 	return args.Bool(0), args.Error(1)
 }

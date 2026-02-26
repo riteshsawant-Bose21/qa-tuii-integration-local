@@ -2,14 +2,19 @@ import 'package:fusion_lib/fusion_lib.dart';
 
 extension HardwareManager on ProjectManager {
   //Add Hardware
-  void addHardware(HardwareComponent hardware) {
+  void addHardware(HardwareComponent hardware, {bool addToCircuit = true}) {
     if (projectService == null) {
       throw Exception('No project is currently open');
     }
-    if (projectService!.hardware.exists(hardware.id)) {
-      throw Exception('Hardware with id ${hardware.id} already exists');
+
+    projectService!.addHardware(hw: hardware, addToCircuit: addToCircuit);
+  }
+
+  void migrateAllSpeakersTo({required Speaker speaker, required String targetListeningAreaId}) {
+    if (projectService == null) {
+      throw Exception('No project is currently open');
     }
-    projectService!.addHardware(hardware);
+    projectService!.migrateAllSpeakersTo(speaker: speaker, targetListeningAreaId: targetListeningAreaId);
   }
 
   /// Remove Hardware
@@ -55,6 +60,34 @@ extension HardwareManager on ProjectManager {
     return projectService!.getHardwareForListeningArea(listeningAreaId);
   }
 
+  List<HardwareComponent> getAllHardwareInFloorWithPosition(String floorId) {
+    if (projectService == null) {
+      throw Exception('No project is currently open');
+    }
+    return projectService!.getAllHardwareInFloorWithPosition(floorId: floorId);
+  }
+
+  List<HardwareComponent> getAllHardwareInFloorWithoutPosition(String floorId) {
+    if (projectService == null) {
+      throw Exception('No project is currently open');
+    }
+    return projectService!.getAllHardwareInFloorWithoutPosition(floorId: floorId);
+  }
+
+  List<HardwareComponent> getAllHardwareInListeningAreaWithPosition(String listeningAreaId) {
+    if (projectService == null) {
+      throw Exception('No project is currently open');
+    }
+    return projectService!.getAllHardwareInListeningAreaWithPosition(listeningAreaId: listeningAreaId);
+  }
+
+  List<HardwareComponent> getAllHardwareInListeningAreaWithoutPosition(String listeningAreaId) {
+    if (projectService == null) {
+      throw Exception('No project is currently open');
+    }
+    return projectService!.getAllHardwareInListeningAreaWithoutPosition(listeningAreaId: listeningAreaId);
+  }
+
   List<HardwareComponent> getHardwareForFloor(String floorId) {
     if (projectService == null) {
       throw Exception('No project is currently open');
@@ -86,7 +119,7 @@ extension HardwareManager on ProjectManager {
     if (projectService == null) {
       throw Exception('No project is currently open');
     }
-    addHardware(hw);
+    addHardware(hw, addToCircuit: false);
     projectService!.addHardwareToCircuit(hw.id, circuitId);
   }
 

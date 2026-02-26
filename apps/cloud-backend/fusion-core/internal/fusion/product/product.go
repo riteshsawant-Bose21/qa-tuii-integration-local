@@ -1,3 +1,4 @@
+// Package product provides product management and synchronization functionality.
 package product
 
 import (

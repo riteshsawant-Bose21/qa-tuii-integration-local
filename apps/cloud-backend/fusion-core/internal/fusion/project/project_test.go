@@ -272,7 +272,11 @@ func TestCreateProject(t *testing.T) {
 			if err != nil {
 				t.Fatalf("Failed to create mock DB: %v", err)
 			}
-			defer dbWithTx.Close()
+			defer func() {
+				if err := dbWithTx.Close(); err != nil {
+					t.Logf("Failed to close test database: %v", err)
+				}
+			}()
 
 			// Set up sqlmock expectations for transaction flow
 			if tt.mockErr == nil {
@@ -474,7 +478,7 @@ func TestGetAllProjects(t *testing.T) {
 func TestUpdateProject(t *testing.T) {
 	mockProjectRow := &models.Project{
 		ID:                    "1",
-		PrimaryOwnerAccountID: null.NewString("123", true),
+		PrimaryOwnerAccountID: "123",
 		Name:                  null.NewString(updatedProjectName, true),
 		IsArchived:            false,
 		IsDeleted:             false,
@@ -1759,7 +1763,7 @@ func TestValidateProjectNotLockedByOtherUser(t *testing.T) {
 				LockedByUserID: null.String{},
 			},
 			userID: testUserID1,
-			mockSetup: func(m *mockDBService) {
+			mockSetup: func(_ *mockDBService) {
 				// No mocks needed for unlocked project
 			},
 		},
@@ -1770,7 +1774,7 @@ func TestValidateProjectNotLockedByOtherUser(t *testing.T) {
 				LockedByUserID: null.NewString(testUserID1, true),
 			},
 			userID: testUserID1,
-			mockSetup: func(m *mockDBService) {
+			mockSetup: func(_ *mockDBService) {
 				// No mocks needed when locked by same user
 			},
 		},

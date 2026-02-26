@@ -1,3 +1,4 @@
+// Package db provides database models and utilities for project-related operations.
 package db
 
 import (
@@ -10,15 +11,21 @@ import (
 )
 
 var (
+	// ProjectTable holds the name of the project table.
 	ProjectTable string = model.TableNames.Project
 )
 
 var (
-	ProjectColumnID          string = model.ProjectColumns.ID
-	ProjectColumnName        string = model.ProjectColumns.Name
+	// ProjectColumnID holds the ID column name for the project table.
+	ProjectColumnID string = model.ProjectColumns.ID
+	// ProjectColumnName holds the Name column name for the project table.
+	ProjectColumnName string = model.ProjectColumns.Name
+	// ProjectColumnDescription holds the Description column name for the project table.
 	ProjectColumnDescription string = model.ProjectColumns.Description
-	ProjectColumnCreatedAt   string = model.ProjectColumns.CreatedAt
-	ProjectColumnUpdatedAt   string = model.ProjectColumns.UpdatedAt
+	// ProjectColumnCreatedAt holds the CreatedAt column name for the project table.
+	ProjectColumnCreatedAt string = model.ProjectColumns.CreatedAt
+	// ProjectColumnUpdatedAt holds the UpdatedAt column name for the project table.
+	ProjectColumnUpdatedAt string = model.ProjectColumns.UpdatedAt
 )
 
 // newProject returns a new Project node from the provided Project row

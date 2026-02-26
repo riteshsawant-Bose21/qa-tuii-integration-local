@@ -15,6 +15,11 @@ const (
 	ProjectDelete = "project.delete"
 	ProjectSync   = "project.sync"
 
+	// Device permissions
+	DeviceCreate = "device.create"
+	DeviceUpdate = "device.update"
+	DeviceDelete = "device.delete"
+
 	// User management permissions
 	UserRead   = "user.read"
 	UserCreate = "user.create"
@@ -87,7 +92,11 @@ func SetupUserSettingsPermissions(acc *AccessControlConfig) {
 
 func SetupDevicePermissions(acc *AccessControlConfig) {
 	// Device CREATE endpoint - require write permission
-	acc.RegisterPermission("POST", "/api/v1/devices", "project.create", PermissionWrite, "Create new device")
+	acc.RegisterPermission("POST", "/api/v1/devices", "device.create", PermissionWrite, "Create new device")
+	// Device UPDATE endpoint - require write permission
+	acc.RegisterPermission("PATCH", "/api/v1/devices/:device_id", "device.update", PermissionWrite, "Update device")
+	// Device RESET endpoint - require write permission
+	acc.RegisterPermission("DELETE", "/api/v1/devices/:device_id/reset", "device.delete", PermissionWrite, "Reset device")
 }
 
 // SetupCommonPermissions configures common permission patterns
@@ -100,4 +109,3 @@ func SetupCommonPermissions(acc *AccessControlConfig) {
 	// SetupUserPermissions(acc)
 	// SetupProductPermissions(acc)
 }
-

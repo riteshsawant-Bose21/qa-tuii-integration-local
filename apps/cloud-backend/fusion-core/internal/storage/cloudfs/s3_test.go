@@ -52,12 +52,12 @@ func (m *mockPresignClient) PresignPutObject(ctx context.Context, params *s3.Put
 
 func TestPresignGet(t *testing.T) {
 	mockClient := &mockS3Client{
-		headObjectFunc: func(ctx context.Context, params *s3.HeadObjectInput, optFns ...func(*s3.Options)) (*s3.HeadObjectOutput, error) {
+		headObjectFunc: func(_ context.Context, _ *s3.HeadObjectInput, _ ...func(*s3.Options)) (*s3.HeadObjectOutput, error) {
 			return &s3.HeadObjectOutput{}, nil
 		},
 	}
 	mockPresign := &mockPresignClient{
-		presignGetFunc: func(ctx context.Context, params *s3.GetObjectInput, optFns ...func(*s3.PresignOptions)) (*v4.PresignedHTTPRequest, error) {
+		presignGetFunc: func(_ context.Context, _ *s3.GetObjectInput, _ ...func(*s3.PresignOptions)) (*v4.PresignedHTTPRequest, error) {
 			return &v4.PresignedHTTPRequest{URL: "https://example.com/get"}, nil
 		},
 	}
@@ -74,7 +74,7 @@ func TestPresignGet(t *testing.T) {
 
 func TestPresignPut(t *testing.T) {
 	mockPresign := &mockPresignClient{
-		presignPutFunc: func(ctx context.Context, params *s3.PutObjectInput, optFns ...func(*s3.PresignOptions)) (*v4.PresignedHTTPRequest, error) {
+		presignPutFunc: func(_ context.Context, _ *s3.PutObjectInput, _ ...func(*s3.PresignOptions)) (*v4.PresignedHTTPRequest, error) {
 			return &v4.PresignedHTTPRequest{URL: "https://example.com/put"}, nil
 		},
 	}
@@ -91,7 +91,7 @@ func TestPresignPut(t *testing.T) {
 func TestNewReaderSuccess(t *testing.T) {
 	mockBody := io.NopCloser(bytes.NewBufferString("hello world"))
 	mockClient := &mockS3Client{
-		getObjectFunc: func(ctx context.Context, params *s3.GetObjectInput, optFns ...func(*s3.Options)) (*s3.GetObjectOutput, error) {
+		getObjectFunc: func(_ context.Context, _ *s3.GetObjectInput, _ ...func(*s3.Options)) (*s3.GetObjectOutput, error) {
 			return &s3.GetObjectOutput{Body: mockBody}, nil
 		},
 	}
@@ -109,7 +109,7 @@ func TestNewReaderSuccess(t *testing.T) {
 
 func TestNewReaderError(t *testing.T) {
 	mockClient := &mockS3Client{
-		getObjectFunc: func(ctx context.Context, params *s3.GetObjectInput, optFns ...func(*s3.Options)) (*s3.GetObjectOutput, error) {
+		getObjectFunc: func(_ context.Context, _ *s3.GetObjectInput, _ ...func(*s3.Options)) (*s3.GetObjectOutput, error) {
 			return nil, errors.New("get error")
 		},
 	}

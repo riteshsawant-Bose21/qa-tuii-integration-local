@@ -7,10 +7,12 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 )
 
+// Service provides authentication services
 type Service struct {
 	authZeroService AuthZeroService
 }
 
+// AuthZeroService defines the interface for Auth0 authentication operations
 type AuthZeroService interface {
 	// Token generation
 	GetAuthTokensByResourceOwnerPassword(ctx context.Context, username string) (*types.AuthTokenResponse, error)
@@ -22,6 +24,7 @@ type AuthZeroService interface {
 	ExtractTokenFromHeader(authHeader string) (string, error)
 }
 
+// NewService creates a new authentication service
 func NewService(authZeroService AuthZeroService) *Service {
 	if authZeroService == nil {
 		panic("auth0Service cannot be nil")

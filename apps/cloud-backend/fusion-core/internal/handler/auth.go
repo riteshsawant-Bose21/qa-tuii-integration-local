@@ -1,3 +1,4 @@
+// Package handler provides HTTP request handlers for the API endpoints.
 package handler
 
 import (

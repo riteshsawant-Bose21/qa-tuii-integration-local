@@ -53,16 +53,14 @@ func makeCacheKey(cols boil.Columns, nzDefaults []string) string {
 
 // Enum values for ClaimStatusEnum
 const (
-	ClaimStatusEnumUNCLAIMED    string = "UNCLAIMED"
-	ClaimStatusEnumCLAIMED      string = "CLAIMED"
-	ClaimStatusEnumCOMMISSIONED string = "COMMISSIONED"
+	ClaimStatusEnumUNCLAIMED string = "UNCLAIMED"
+	ClaimStatusEnumCLAIMED   string = "CLAIMED"
 )
 
 func AllClaimStatusEnum() []string {
 	return []string{
 		ClaimStatusEnumUNCLAIMED,
 		ClaimStatusEnumCLAIMED,
-		ClaimStatusEnumCOMMISSIONED,
 	}
 }
 
@@ -74,6 +72,7 @@ const (
 	ProductTypeEnumController string = "controller"
 	ProductTypeEnumIoEndpoint string = "io_endpoint"
 	ProductTypeEnumAccessory  string = "accessory"
+	ProductTypeEnumUnknown    string = "unknown"
 )
 
 func AllProductTypeEnum() []string {
@@ -84,6 +83,7 @@ func AllProductTypeEnum() []string {
 		ProductTypeEnumController,
 		ProductTypeEnumIoEndpoint,
 		ProductTypeEnumAccessory,
+		ProductTypeEnumUnknown,
 	}
 }
 

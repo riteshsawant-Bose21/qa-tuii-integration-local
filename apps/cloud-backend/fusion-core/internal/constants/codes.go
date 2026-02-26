@@ -1,10 +1,11 @@
+// Package constants provides shared constant values used across the application.
 package constants
 
 // Authentication Error Codes
 const (
 	CodeInvalidToken           = "INVALID_TOKEN"
 	CodeTokenExpired           = "TOKEN_EXPIRED"
-	CodeTokenMalformed         = "TOKEN_MALFORMED"
+	CodeTokenMalformed         = "TOKEN_MALFORMED" //nolint:gosec // G101: False positive - this is just a constant string, not credentials
 	CodeInvalidSignature       = "INVALID_SIGNATURE"
 	CodeUnsupportedTokenFormat = "UNSUPPORTED_TOKEN_FORMAT"
 	CodeUnauthorized           = "UNAUTHORIZED"

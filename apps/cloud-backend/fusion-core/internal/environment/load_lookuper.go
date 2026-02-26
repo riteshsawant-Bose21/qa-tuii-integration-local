@@ -6,6 +6,7 @@ import (
 	"github.com/joho/godotenv"
 )
 
+// DefaultLoadLookuper is the default load lookuper service implementation.
 var DefaultLoadLookuper = defaultLoadLookuperService{}
 
 // defaultLoadLookuperService is the default implementation of LoadLookuper

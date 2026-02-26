@@ -262,6 +262,20 @@ func (mc *MetricsCollector) UpdateWSCount(delta int) {
 	mc.wsConnCount += delta
 }
 
+// GetSystemMetrics returns a copy of the current system metrics for external consumers
+func (mc *MetricsCollector) GetSystemMetrics() SystemMetrics {
+	mc.mutex.RLock()
+	defer mc.mutex.RUnlock()
+	return mc.metrics
+}
+
+// GetClusterInfo returns a copy of the current cluster info
+func (mc *MetricsCollector) GetClusterInfo() ClusterInfo {
+	mc.mutex.RLock()
+	defer mc.mutex.RUnlock()
+	return mc.clusterInfo
+}
+
 func (mc *MetricsCollector) monitorCluster() {
 	ticker := time.NewTicker(5 * time.Second)
 	startTime := time.Now()

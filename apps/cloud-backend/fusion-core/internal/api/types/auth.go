@@ -1,3 +1,4 @@
+// Package types defines common data structures used throughout the API.
 package types
 
 // AuthTokenResponse represents the response containing Auth0 tokens

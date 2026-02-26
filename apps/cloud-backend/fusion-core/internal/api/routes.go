@@ -1,3 +1,4 @@
+// Package api provides HTTP routing and endpoint definitions for the REST API.
 package api
 
 import (
@@ -10,14 +11,10 @@ import (
 )
 
 // registerRoutes sets up the API routes.
+// Authentication and authorization are handled by the lambda-authorizer. The extract user middleware is used to pull user 
+// info from headers set by the authorizer and make it available to handlers via context.
 func (a *API) registerRoutes() {
 	v1 := a.engine.Group(constants.APIV1Path)
-
-	// Initialize Access Control Middleware
-	accessControl := middleware.NewAccessControlMiddleware(a.user)
-
-	// Setup permissions for all endpoints
-	middleware.SetupCommonPermissions(accessControl)
 
 	// Swagger documentation route
 	a.engine.GET(constants.EndpointDocs, ginSwagger.WrapHandler(swaggerFiles.Handler))
@@ -25,21 +22,19 @@ func (a *API) registerRoutes() {
 	// Product routes (no authentication required)
 	productHandler := handler.NewProductHandler(a.product)
 	products := v1.Group(constants.EndpointProducts)
+	products.Use(middleware.ExtractUserFromHeaders())
 	{
 		products.GET("", productHandler.GetAllProducts)
 		products.GET(constants.EndpointProductByID, productHandler.GetProductByID)
 		products.GET(constants.EndpointProductPrices, productHandler.GetProductPrices)
 	}
 
-	// Project routes with authentication and access control
+	// Project routes (auth handled by lambda-authorizer)
 	projectHandler := handler.NewProjectHandler(a.project)
 	projects := v1.Group(constants.EndpointProjects)
 	{
-		// Apply auth middleware first to establish authentication
-		projects.Use(a.authMiddleware.Middleware())
-
-		// Then apply access control middleware
-		projects.Use(accessControl.GlobalAccessControlMiddleware())
+		// Extract user context from headers set by API Gateway/Lambda authorizer
+		projects.Use(middleware.ExtractUserFromHeaders())
 
 		projects.POST("", projectHandler.CreateProject)
 		projects.GET("", projectHandler.GetAllProjects)
@@ -52,12 +47,12 @@ func (a *API) registerRoutes() {
 		projects.POST(constants.EndpointProjectLock, projectHandler.UpdateProjectLock)
 	}
 
-	// User routes with authentication
+	// User routes (auth handled by lambda-authorizer)
 	userHandler := handler.NewUserHandler(a.user)
 	users := v1.Group(constants.EndpointUsers)
 
-	// Apply auth middleware to protected user routes
-	users.Use(a.authMiddleware.Middleware())
+	// Extract user context from headers set by API Gateway/Lambda authorizer
+	users.Use(middleware.ExtractUserFromHeaders())
 
 	{
 		users.GET(constants.EndpointAuthorization, userHandler.GetUserAuthorization)
@@ -68,9 +63,8 @@ func (a *API) registerRoutes() {
 
 	// user profile management routes (/user/profile/*)
 	userProfile := users.Group(constants.EndpointUserProfile)
+	userProfile.Use(middleware.ExtractUserFromHeaders())
 	{
-		userProfile.Use(accessControl.GlobalAccessControlMiddleware())
-
 		userProfile.GET("", userHandler.GetUserProfileDetails)
 		userProfile.POST("", userHandler.CreateUserProfile)
 		userProfile.PUT(constants.EndpointUserProfileByID, userHandler.UpdateUserProfile)
@@ -78,30 +72,27 @@ func (a *API) registerRoutes() {
 
 	// user settings management routes (/user/settings/*)
 	userSettings := users.Group(constants.EndpointUserSettings)
+	userSettings.Use(middleware.ExtractUserFromHeaders())
 	{
-		userSettings.Use(accessControl.GlobalAccessControlMiddleware())
-
 		userSettings.GET("", userHandler.GetUserSettings)
 		userSettings.POST("", userHandler.CreateUserSettings)
 		userSettings.PUT(constants.EndpointUserSettingsByID, userHandler.UpdateUserSettings)
 	}
 
 	// Auth endpoints
-	auth := v1.Group(constants.EndpointAuth)
+	// auth := v1.Group("/auth")
 
-	// Auth automation route (no authentication required)
-	if a.auth != nil {
-		authHandler := handler.NewAuthHandler(a.auth)
-		auth.GET(constants.EndpointAuthTokens, authHandler.GetAuthTokensByResourceOwnerPassword)
-	}
+	// // Auth automation route (no authentication required)
+	// if a.auth != nil {
+	// 	authHandler := handler.NewAuthHandler(a.auth)
+	// 	auth.GET("/automation/tokens", authHandler.GetAuthTokensByResourceOwnerPassword)
+	// }
 
-	// Role Management routes for organization admins
+	// Role Management routes for organization admins (auth handled by lambda-authorizer)
 	roleManagementHandler := handler.NewRoleManagementHandler(a.user, a.roleManagementService)
 	organization := v1.Group(constants.EndpointOrganization)
 
-	// Apply auth middleware to protected organization routes
-	organization.Use(a.authMiddleware.Middleware())
-
+	organization.Use(middleware.ExtractUserFromHeaders())
 	{
 		organization.GET(constants.EndpointRoleManagement, roleManagementHandler.GetOrganizationRoleManagement)
 		organization.POST(constants.EndpointRoles, roleManagementHandler.CreateRole)
@@ -118,5 +109,7 @@ func (a *API) registerRoutes() {
 		devices.Use(a.authMiddleware.Middleware())
 		devices.Use(accessControl.GlobalAccessControlMiddleware())
 		devices.POST("", deviceHandler.CreateDevice)
+		devices.PATCH(constants.EndpointDeviceByID, deviceHandler.UpdateDevice)
+		devices.DELETE(constants.EndpointDeviceReset, deviceHandler.ResetDevice)
 	}
 }

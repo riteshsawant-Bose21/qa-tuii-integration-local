@@ -1,3 +1,4 @@
+// Package api provides server configuration and setup for API endpoints.
 package api
 
 import (
@@ -11,7 +12,7 @@ type APIconfig struct {
 	Server   *config.APIConfig
 	Postgres *config.Postgres
 	S3       *config.S3Config
-	AuthZero   *config.AuthZero
+	AuthZero *config.AuthZero
 }
 
 // NewAPIConfig initializes and returns the API configuration by loading necessary settings.

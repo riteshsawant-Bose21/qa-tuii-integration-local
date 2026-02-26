@@ -1,11 +1,14 @@
 package cluster
 
 import (
-	"bufio"
 	"bytes"
+	"crypto/x509"
+	"encoding/pem"
+	"errors"
 	"fmt"
+	"fusion-services-core/logging"
+	"fusion-services-core/vip"
 	"fusion/internal/api"
-	"fusion/internal/logging"
 	"fusion/internal/persistence"
 	"fusion/internal/routes"
 	"fusion/internal/utils"
@@ -14,8 +17,8 @@ import (
 	"net/http"
 	"net/url"
 	"os"
-	"path/filepath"
 	"strings"
+	"time"
 
 	json "github.com/goccy/go-json"
 )
@@ -190,17 +193,25 @@ func (c *Cluster) GetVIP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	vip, err := c.getVIPFromConfig()
+	vipValue, multiple, err := vip.ReadFromKeepalivedConfig(c.configPath)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+	if multiple {
+		logging.GetLogger().Warn("More than one VIP found.")
+	}
 
 	w.Header().Set(api.ContentType, api.JsonMIMEType)
 
-	if isVip := c.isLocalVIP(vip); isVip {
+	isVip, err := vip.IsLocalVIP(vipValue)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	if isVip {
 
-		local, vip, ok := c.getLocalForVIP(vip)
+		local, vipAddr, ok := vip.LocalForVIP(vipValue)
 		if !ok {
 			w.WriteHeader(http.StatusNotFound)
 			return
@@ -208,7 +219,7 @@ func (c *Cluster) GetVIP(w http.ResponseWriter, r *http.Request) {
 
 		json.NewEncoder(w).Encode(map[string]string{
 			"local": local.String(),
-			"vip":   vip.String(),
+			"vip":   vipAddr.String(),
 		})
 		return
 	}
@@ -222,23 +233,23 @@ func (c *Cluster) SetVIP(w http.ResponseWriter, r *http.Request) {
 	}
 	defer r.Body.Close()
 
-	vip, err := utils.ExtractValue(r, "vip")
+	vipValue, err := utils.ExtractValue(r, "vip")
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	if err := validateVIP(vip); err != nil {
+	if err := vip.Validate(vipValue); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	endpoint := routes.DevicesVIPEndpoint + "/" + url.QueryEscape(vip)
+	endpoint := routes.DevicesVIPEndpoint + "/" + url.QueryEscape(vipValue)
 
 	// Wrap c.updateVIP(vip) in a zero argument func() returning an error
 	// so we can use it with postGenericToAdmin
 	localFn := func() error {
-		return c.updateVIP(vip)
+		return c.updateVIP(vipValue)
 	}
 
 	if err := postGenericToAdmin(c, endpoint, localFn); err != nil {
@@ -265,13 +276,13 @@ func (c *Cluster) UpdateVIPLocal(w http.ResponseWriter, r *http.Request) {
 	}
 	defer r.Body.Close()
 
-	vip, err := utils.ExtractValue(r, "vip")
+	vipValue, err := utils.ExtractValue(r, "vip")
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	if err := c.updateVIP(vip); err != nil {
+	if err := c.updateVIP(vipValue); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
@@ -310,18 +321,279 @@ func (c *Cluster) ReloadVIPLocal(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
+func (c *Cluster) GetCSR(w http.ResponseWriter, r *http.Request) {
+	if !utils.RequireGet(w, r) {
+		return
+	}
+
+	csrContent, err := os.ReadFile("/var/lib/device-identity/device.csr")
+	if err != nil {
+		if os.IsNotExist(err) {
+			http.Error(w, "CSR file not found", http.StatusNotFound)
+			return
+		}
+		logging.GetLogger().Error("Error reading CSR file: %v", err)
+		http.Error(w, fmt.Sprintf("Error reading CSR file: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set(api.ContentType, "text/plain")
+	w.Write(csrContent)
+}
+
+func (c *Cluster) resetLocalDevice() error {
+	info, err := c.delegate.persistence.GetDeviceInfo()
+	if err != nil {
+		return fmt.Errorf("error loading device info: %v", err)
+	}
+	err = os.Remove("/var/lib/device-identity/device.x509.cert")
+	if err != nil && !os.IsNotExist(err) {
+		return fmt.Errorf("error removing certificate file: %v", err)
+	}
+
+	info.IsClaimed = false
+
+	if err := c.delegate.persistence.SetDeviceInfo(info); err != nil {
+		return fmt.Errorf("failed to set device info: %v", err)
+	}
+
+	return nil
+}
+
+func (c *Cluster) SetDeviceCertificate(w http.ResponseWriter, r *http.Request) {
+	if !utils.RequirePost(w, r) {
+		return
+	}
+	defer r.Body.Close()
+
+	deviceId, err := utils.ExtractId(r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	deviceInfos := c.fetchAllDeviceInfos()
+
+	var targetDevice *persistence.DeviceInfo
+	for _, info := range deviceInfos {
+		if info.Id == deviceId {
+			targetDevice = &info
+			break
+		}
+	}
+
+	if targetDevice == nil {
+		http.Error(w, fmt.Sprintf("Device %s not found", deviceId), http.StatusNotFound)
+		return
+	}
+
+	certContent, err := io.ReadAll(r.Body)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("Error reading certificate data: %v", err), http.StatusBadRequest)
+		return
+	}
+
+	if c.hostIsLocal(targetDevice.Address) {
+
+		// Check if we should replace the certificate
+		shouldReplace, err := c.shouldReplaceCertificate("/var/lib/device-identity/device.x509.cert", certContent)
+		if err != nil {
+			logging.GetLogger().Error("Error checking certificate replacement: %v", err)
+			http.Error(w, fmt.Sprintf("Error checking certificate: %v", err), http.StatusInternalServerError)
+			return
+		}
+
+		if !shouldReplace {
+			logging.GetLogger().Info("Certificate is still valid and not near expiry, skipping replacement")
+			w.Header().Set(api.ContentType, api.JsonMIMEType)
+			w.WriteHeader(http.StatusOK)
+			json.NewEncoder(w).Encode(map[string]string{
+				"message": "Certificate not updated - existing certificate is still valid",
+				"action":  "skipped",
+				"reason":  "certificate_still_valid",
+			})
+			return
+		}
+
+		// If this is the local device, write certificate locally
+		if err := os.WriteFile("/var/lib/device-identity/device.x509.cert", certContent, 0644); err != nil {
+			logging.GetLogger().Error("Error writing certificate file: %v", err)
+			http.Error(w, fmt.Sprintf("Error writing certificate file: %v", err), http.StatusInternalServerError)
+			return
+		}
+
+		info, err := c.delegate.persistence.GetDeviceInfo()
+
+		info.IsClaimed = true
+
+		if err := c.delegate.persistence.SetDeviceInfo(info); err != nil {
+			http.Error(w, fmt.Sprintf("Failed to set device info: %v", err), http.StatusInternalServerError)
+			return
+		}
+
+		logging.GetLogger().Info("Certificate replaced successfully")
+		w.WriteHeader(http.StatusNoContent)
+	} else {
+		// Make HTTP POST request to the remote device's admin certificate endpoint
+		deviceAddress := net.JoinHostPort(targetDevice.Address, api.AdminPort)
+		endpoint := strings.Replace(routes.DevicesIDCertificateEndpoint, "{id}", deviceId, 1)
+		url := getLocalURL(deviceAddress, endpoint)
+
+		req, err := http.NewRequest(http.MethodPost, url, bytes.NewReader(certContent))
+		if err != nil {
+			http.Error(w, fmt.Sprintf("Failed to create POST request: %v", err), http.StatusInternalServerError)
+			return
+		}
+		req.Header.Set(api.ContentType, "text/plain")
+
+		resp, err := c.httpClient.Do(req)
+		if err != nil {
+			http.Error(w, fmt.Sprintf("Failed to send certificate to device: %v", err), http.StatusBadGateway)
+			return
+		}
+		defer resp.Body.Close()
+
+		if resp.StatusCode != http.StatusNoContent {
+			body, _ := io.ReadAll(resp.Body)
+			logging.GetLogger().Error("Remote certificate request to %s failed with status %d: %s", url, resp.StatusCode, string(body))
+			http.Error(w, fmt.Sprintf("Device returned error: %s", string(body)), resp.StatusCode)
+			return
+		}
+
+		w.WriteHeader(http.StatusNoContent)
+	}
+}
+
+func (c *Cluster) GetDeviceCSR(w http.ResponseWriter, r *http.Request) {
+	if !utils.RequireGet(w, r) {
+		return
+	}
+
+	deviceId, err := utils.ExtractId(r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	deviceInfos := c.fetchAllDeviceInfos()
+
+	var targetDevice *persistence.DeviceInfo
+	for _, info := range deviceInfos {
+		if info.Id == deviceId {
+			targetDevice = &info
+			break
+		}
+	}
+
+	if targetDevice == nil {
+		http.Error(w, fmt.Sprintf("Device %s not found", deviceId), http.StatusNotFound)
+		return
+	}
+
+	if c.hostIsLocal(targetDevice.Address) {
+		// If this is the local device, call the local GetCSR function
+		c.GetCSR(w, r)
+		return
+	} else {
+		// Make HTTP request to the remote device's admin CSR endpoint
+		deviceAddress := net.JoinHostPort(targetDevice.Address, api.AdminPort)
+		url := getLocalURL(deviceAddress, routes.DevicesGetCSREndpoint)
+
+		resp, err := c.httpClient.Get(url)
+		if err != nil {
+			http.Error(w, fmt.Sprintf("Failed to get CSR from device: %v", err), http.StatusBadGateway)
+			return
+		}
+		defer resp.Body.Close()
+
+		if resp.StatusCode != http.StatusOK {
+			body, _ := io.ReadAll(resp.Body)
+			logging.GetLogger().Error("Remote CSR request to %s failed with status %d: %s", url, resp.StatusCode, string(body))
+			http.Error(w, fmt.Sprintf("Device returned error: %s", string(body)), resp.StatusCode)
+			return
+		}
+
+		// Copy the response headers and body
+		w.Header().Set(api.ContentType, "text/plain")
+		io.Copy(w, resp.Body)
+	}
+}
+
+func (c *Cluster) ResetDevice(w http.ResponseWriter, r *http.Request) {
+	if !utils.RequireDelete(w, r) {
+		return
+	}
+
+	deviceId, err := utils.ExtractId(r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	deviceInfos := c.fetchAllDeviceInfos()
+
+	var targetDevice *persistence.DeviceInfo
+	for _, info := range deviceInfos {
+		if info.Id == deviceId {
+			targetDevice = &info
+			break
+		}
+	}
+
+	if targetDevice == nil {
+		http.Error(w, fmt.Sprintf("Device %s not found", deviceId), http.StatusNotFound)
+		return
+	}
+
+	if c.hostIsLocal(targetDevice.Address) {
+		// If this is the local device, perform reset locally
+		if err := c.resetLocalDevice(); err != nil {
+			http.Error(w, fmt.Sprintf("Failed to reset device: %v", err), http.StatusInternalServerError)
+			return
+		}
+		w.WriteHeader(http.StatusNoContent)
+		return
+	} else {
+		// Make HTTP DELETE request to the remote device's admin reset endpoint
+		deviceAddress := net.JoinHostPort(targetDevice.Address, api.AdminPort)
+		endpoint := strings.Replace(routes.DevicesIDResetEndpoint, "{id}", deviceId, 1)
+		url := getLocalURL(deviceAddress, endpoint)
+
+		req, err := http.NewRequest(http.MethodDelete, url, nil)
+		if err != nil {
+			http.Error(w, fmt.Sprintf("Failed to create DELETE request: %v", err), http.StatusInternalServerError)
+			return
+		}
+
+		resp, err := c.httpClient.Do(req)
+		if err != nil {
+			http.Error(w, fmt.Sprintf("Failed to send reset request to device: %v", err), http.StatusBadGateway)
+			return
+		}
+		defer resp.Body.Close()
+
+		if resp.StatusCode != http.StatusNoContent {
+			body, _ := io.ReadAll(resp.Body)
+			logging.GetLogger().Error("Remote reset request to %s failed with status %d: %s", url, resp.StatusCode, string(body))
+			http.Error(w, fmt.Sprintf("Device returned error: %s", string(body)), resp.StatusCode)
+			return
+		}
+		w.WriteHeader(http.StatusNoContent)
+	}
+}
+
 // updateVIP updates keepalived configuration with the new VIP but DOES NOT restart keepalived.
-func (c *Cluster) updateVIP(vip string) error {
+func (c *Cluster) updateVIP(vipValue string) error {
 
-	if err := validateVIP(vip); err != nil {
+	if err := vip.Validate(vipValue); err != nil {
 		return err
 	}
 
-	if err := c.setVIPInConfig(vip); err != nil {
+	if err := c.setVIPInConfig(vipValue); err != nil {
 		return err
 	}
 
-	logging.GetLogger().Debug("Updated VIP: %s", vip)
+	logging.GetLogger().Debug("Updated VIP: %s", vipValue)
 
 	return nil
 }
@@ -334,23 +606,6 @@ func (c *Cluster) reloadVIP() error {
 	}
 
 	return nil
-}
-
-// validateVIP checks that the string is a valid IP address
-func validateVIP(vip string) error {
-	vip = strings.TrimSpace(vip)
-
-	// Try parsing as CIDR (IP/prefix)
-	if _, _, err := net.ParseCIDR(vip); err == nil {
-		return nil
-	}
-
-	// If that fails, try parsing as plain IP
-	if ip := net.ParseIP(vip); ip != nil {
-		return nil
-	}
-
-	return fmt.Errorf("invalid VIP format: %q", vip)
 }
 
 func (c *Cluster) fetchAllDeviceInfos() []persistence.DeviceInfo {
@@ -373,13 +628,16 @@ func (c *Cluster) getLocalDeviceInfo() persistence.DeviceInfo {
 
 func (c *Cluster) isLocalNodePrimary() bool {
 
-	vip, err := c.getVIPFromConfig()
+	vipValue, multiple, err := vip.ReadFromKeepalivedConfig(c.configPath)
 	if err != nil {
 		logging.GetLogger().Error("Failed to get VIP from config: %v", err)
 		return false
 	}
+	if multiple {
+		logging.GetLogger().Warn("More than one VIP found.")
+	}
 
-	_, _, isLocal := c.getLocalForVIP(vip)
+	_, _, isLocal := vip.LocalForVIP(vipValue)
 	return isLocal
 }
 
@@ -448,98 +706,32 @@ func (c *Cluster) setVIPInConfig(newVIP string) error {
 	logger := logging.GetLogger()
 
 	if c.appConfig.Local {
-		return setVIPInLocalConfig(newVIP)
+		return vip.WriteToLocalConfig(serverPrefix, vip.DefaultConfFile, newVIP)
 	}
 
-	newVIP = canonicalVIP(newVIP)
+	newVIP = vip.Canonicalize(newVIP)
 	logger.Debug("Updating virtual_ipaddress in %s → %s", c.configPath, newVIP)
 
 	// Ensure only one goroutine updates keepalived.conf at a time
 	c.vipMu.Lock()
 	defer c.vipMu.Unlock()
 
-	data, err := os.ReadFile(c.configPath)
-	if err != nil {
-		return fmt.Errorf("unable to read config file: %w", err)
-	}
-
-	lines := strings.Split(string(data), "\n")
-	var outLines []string
-	parser := vipParser{}
-
-	for _, line := range lines {
-		out, _ := parser.processLine(line, newVIP)
-		outLines = append(outLines, out...)
-	}
-
-	if !parser.found {
-		return fmt.Errorf("no virtual_ipaddress block found")
-	}
-	if parser.inBlock {
-		return fmt.Errorf("unterminated virtual_ipaddress block")
-	}
-
-	content := strings.Join(outLines, "\n") + "\n"
-	if len(strings.TrimSpace(content)) == 0 {
-		return fmt.Errorf("refusing to write empty config")
-	}
-
-	if err := atomicReplaceConfig(c.configPath, content, ".bak"); err != nil {
-		return fmt.Errorf("failed to update config file: %w", err)
+	if err := vip.WriteToKeepalivedConfig(c.configPath, newVIP); err != nil {
+		return err
 	}
 
 	logger.Debug("VIP updated successfully: %s", newVIP)
 	return nil
 }
 
-// setVIPInLocalConfig is for use in "local" development mode only
-func setVIPInLocalConfig(newVIP string) error {
-	cfgDir, err := os.UserConfigDir()
-	if err != nil {
-		return fmt.Errorf("cannot determine user config directory: %w", err)
-	}
-
-	dir := filepath.Join(cfgDir, serverPrefix)
-	if err := os.MkdirAll(dir, 0o755); err != nil {
-		return fmt.Errorf("cannot create local config directory: %w", err)
-	}
-
-	path := filepath.Join(dir, ConfFile)
-	data := []byte(newVIP + "\n")
-	if err := os.WriteFile(path, data, 0o644); err != nil {
-		return fmt.Errorf("cannot write local VIP file: %w", err)
-	}
-
-	return nil
-}
-
 // getVIPInLocalConfig is for use in "local" development mode only
 func (c *Cluster) getVIPInLocalConfig(w http.ResponseWriter) {
-
-	cfgDir, err := os.UserConfigDir()
+	vipValue, err := vip.ReadFromLocalConfig(serverPrefix, vip.DefaultConfFile)
 	if err != nil {
-		http.Error(w, fmt.Sprintf("cannot find user config dir: %v", err),
-			http.StatusInternalServerError)
-		return
-	}
-	localPath := filepath.Join(cfgDir, serverPrefix, ConfFile)
-
-	f, err := os.Open(localPath)
-	if err != nil {
-		http.Error(w, fmt.Sprintf("cannot open local config: %v", err),
-			http.StatusNotFound)
-		return
-	}
-	defer f.Close()
-
-	scanner := bufio.NewScanner(f)
-	if !scanner.Scan() {
-		http.Error(w, "local config is empty", http.StatusNotFound)
-		return
-	}
-
-	vip := strings.TrimSpace(scanner.Text())
-	if err := scanner.Err(); err != nil {
+		if os.IsNotExist(err) || errors.Is(err, vip.ErrLocalConfigEmpty) {
+			http.Error(w, err.Error(), http.StatusNotFound)
+			return
+		}
 		http.Error(w, fmt.Sprintf("error reading local config: %v", err),
 			http.StatusInternalServerError)
 		return
@@ -547,83 +739,104 @@ func (c *Cluster) getVIPInLocalConfig(w http.ResponseWriter) {
 
 	w.Header().Set(api.ContentType, api.JsonMIMEType)
 	json.NewEncoder(w).Encode(map[string]string{
-		"local": vip,
-		"vip":   vip,
+		"local": vipValue,
+		"vip":   vipValue,
 	})
 }
 
-func atomicReplaceConfig(oldPath, newContent, backupSuffix string) error {
-	dir := filepath.Dir(oldPath)
-	base := filepath.Base(oldPath)
+// shouldReplaceCertificate determines if a certificate should be replaced
+// Returns true if:
+// - The file doesn't exist
+// - The existing certificate is expired
+// - The existing certificate is near expiry (within 3 months)
+// - The new certificate content is different from existing
+func (c *Cluster) shouldReplaceCertificate(certPath string, newCertContent []byte) (bool, error) {
+	// Check if file exists
+	if _, err := os.Stat(certPath); os.IsNotExist(err) {
+		logging.GetLogger().Info("Certificate file does not exist, will create new one")
+		return true, nil
+	}
 
-	tmp, err := os.CreateTemp(dir, base+".tmp")
+	// Read existing certificate
+	existingContent, err := os.ReadFile(certPath)
 	if err != nil {
-		return fmt.Errorf("create temp file: %w", err)
+		return false, fmt.Errorf("failed to read existing certificate: %v", err)
 	}
-	tmpPath := tmp.Name()
-	defer func() {
-		tmp.Close()
-		os.Remove(tmpPath)
-	}()
 
-	// Preserve mode from existing file
-	if info, err := os.Stat(oldPath); err == nil {
-		if chmodErr := os.Chmod(tmpPath, info.Mode()); chmodErr != nil {
-			logging.GetLogger().Debug("chmod failed on temp config: %v", chmodErr)
+	// Check if content is the same
+	if bytes.Equal(existingContent, newCertContent) {
+		logging.GetLogger().Debug("Certificate content is identical, no replacement needed")
+		return false, nil
+	}
+
+	// Check if existing certificate is expired or near expiry
+	isExpiredOrNear, err := c.isCertificateExpiredOrNearExpiry(certPath, 3) // 3 months threshold
+	if err != nil {
+		logging.GetLogger().Warn("Failed to check certificate expiry, will replace: %v", err)
+		return true, nil
+	}
+
+	if isExpiredOrNear {
+		logging.GetLogger().Info("Certificate is expired or near expiry, will replace")
+		return true, nil
+	}
+
+	// Validate the new certificate to ensure it's not expired
+	newCertExpired, err := c.isCertificateContentExpiredOrNearExpiry(newCertContent, 0) // Check if new cert is already expired
+	if err != nil {
+		return false, fmt.Errorf("failed to validate new certificate: %v", err)
+	}
+
+	if newCertExpired {
+		return false, fmt.Errorf("new certificate is already expired or invalid")
+	}
+
+	// If existing cert is valid and new cert is different, replace it
+	logging.GetLogger().Info("Certificate content differs and new certificate is valid, will replace")
+	return true, nil
+}
+
+// isCertificateExpiredOrNearExpiry checks if a certificate file is expired or near expiry
+func (c *Cluster) isCertificateExpiredOrNearExpiry(certPath string, monthsThreshold int) (bool, error) {
+	certContent, err := os.ReadFile(certPath)
+	if err != nil {
+		return false, fmt.Errorf("failed to read certificate file: %v", err)
+	}
+
+	return c.isCertificateContentExpiredOrNearExpiry(certContent, monthsThreshold)
+}
+
+// isCertificateContentExpiredOrNearExpiry checks if certificate content is expired or near expiry
+func (c *Cluster) isCertificateContentExpiredOrNearExpiry(certContent []byte, monthsThreshold int) (bool, error) {
+	// Decode PEM block
+	block, _ := pem.Decode(certContent)
+	if block == nil {
+		return false, fmt.Errorf("failed to decode PEM block")
+	}
+
+	// Parse certificate
+	cert, err := x509.ParseCertificate(block.Bytes)
+	if err != nil {
+		return false, fmt.Errorf("failed to parse certificate: %v", err)
+	}
+
+	now := time.Now()
+
+	// Check if certificate is expired
+	if now.After(cert.NotAfter) {
+		logging.GetLogger().Info("Certificate expired on %v", cert.NotAfter)
+		return true, nil
+	}
+
+	// Check if certificate is near expiry (if monthsThreshold > 0)
+	if monthsThreshold > 0 {
+		thresholdDate := now.AddDate(0, monthsThreshold, 0)
+		if thresholdDate.After(cert.NotAfter) {
+			logging.GetLogger().Info("Certificate will expire on %v (within %d months)", cert.NotAfter, monthsThreshold)
+			return true, nil
 		}
 	}
 
-	if _, err := tmp.WriteString(newContent); err != nil {
-		return fmt.Errorf("write temp config: %w", err)
-	}
-	if err := tmp.Sync(); err != nil {
-		return fmt.Errorf("sync temp config: %w", err)
-	}
-	if err := tmp.Close(); err != nil {
-		return fmt.Errorf("close temp config: %w", err)
-	}
-
-	backupPath := oldPath + backupSuffix
-	if err := os.Rename(oldPath, backupPath); err != nil {
-		return fmt.Errorf("backup original config: %w", err)
-	}
-
-	if err := os.Rename(tmpPath, oldPath); err != nil {
-		os.Rename(backupPath, oldPath)
-		return fmt.Errorf("replace config file: %w", err)
-	}
-
-	return nil
-}
-
-type vipParser struct {
-	inBlock bool
-	found   bool
-	indent  string
-}
-
-func (p *vipParser) processLine(line, newVIP string) ([]string, bool) {
-	trim := strings.TrimSpace(line)
-
-	if !p.inBlock {
-		if trim == "virtual_ipaddress {" {
-			p.found, p.inBlock = true, true
-			if idx := strings.Index(line, "virtual_ipaddress"); idx >= 0 {
-				p.indent = line[:idx]
-			}
-			return []string{
-				p.indent + "virtual_ipaddress {",
-				p.indent + "  " + newVIP,
-			}, false
-		}
-		return []string{line}, false
-	}
-
-	if trim == "}" {
-		p.inBlock = false
-		return []string{p.indent + "}"}, false
-	}
-
-	// Skip old VIP lines inside the block
-	return nil, false
+	logging.GetLogger().Debug("Certificate is valid until %v", cert.NotAfter)
+	return false, nil
 }

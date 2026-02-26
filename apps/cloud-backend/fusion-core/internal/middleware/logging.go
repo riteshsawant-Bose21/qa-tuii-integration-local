@@ -9,6 +9,7 @@ import (
 	"go.uber.org/zap"
 )
 
+// RequestIDKey is the key used for request ID in the context
 const RequestIDKey = "requestID"
 
 // RequestLoggerMiddleware logs HTTP requests to the audit log

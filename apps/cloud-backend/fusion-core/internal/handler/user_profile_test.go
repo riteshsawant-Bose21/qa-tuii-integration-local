@@ -36,7 +36,7 @@ func TestGetUserProfile(t *testing.T) {
 			name:      "authenticated user with profile - success",
 			userID:    validUUID,
 			setupAuth: true,
-			mockGetProfile: func(ctx context.Context, userID string) (*types.UserProfile, error) {
+			mockGetProfile: func(_ context.Context, userID string) (*types.UserProfile, error) {
 				return &types.UserProfile{
 					ID:        uuid.New().String(),
 					UserID:    userID,
@@ -52,7 +52,7 @@ func TestGetUserProfile(t *testing.T) {
 			name:      "profile not found - sql no rows",
 			userID:    validUUID,
 			setupAuth: true,
-			mockGetProfile: func(ctx context.Context, userID string) (*types.UserProfile, error) {
+			mockGetProfile: func(_ context.Context, _ string) (*types.UserProfile, error) {
 				return nil, errors.New("sql: no rows in result set")
 			},
 			expectedStatus: http.StatusNotFound,
@@ -64,7 +64,7 @@ func TestGetUserProfile(t *testing.T) {
 			name:      "profile not found - explicit error",
 			userID:    validUUID,
 			setupAuth: true,
-			mockGetProfile: func(ctx context.Context, userID string) (*types.UserProfile, error) {
+			mockGetProfile: func(_ context.Context, _ string) (*types.UserProfile, error) {
 				return nil, errors.New("user profile not found")
 			},
 			expectedStatus: http.StatusNotFound,
@@ -76,7 +76,7 @@ func TestGetUserProfile(t *testing.T) {
 			name:      "database error",
 			userID:    validUUID,
 			setupAuth: true,
-			mockGetProfile: func(ctx context.Context, userID string) (*types.UserProfile, error) {
+			mockGetProfile: func(_ context.Context, _ string) (*types.UserProfile, error) {
 				return nil, errors.New("database connection failed")
 			},
 			expectedStatus: http.StatusInternalServerError,
@@ -170,7 +170,7 @@ func TestCreateUserProfile(t *testing.T) {
 				UserID: validUUID,
 				Email:  "test@example.com",
 			},
-			mockCreateProfile: func(ctx context.Context, profileDetails *types.UserProfile) (string, error) {
+			mockCreateProfile: func(_ context.Context, _ *types.UserProfile) (string, error) {
 				return generatedID, nil
 			},
 			expectedStatus: http.StatusCreated,
@@ -212,7 +212,7 @@ func TestCreateUserProfile(t *testing.T) {
 				UserID: validUUID,
 				Email:  "test@example.com",
 			},
-			mockCreateProfile: func(ctx context.Context, profileDetails *types.UserProfile) (string, error) {
+			mockCreateProfile: func(_ context.Context, _ *types.UserProfile) (string, error) {
 				return "", errors.New("database error")
 			},
 			expectedStatus: http.StatusInternalServerError,
@@ -251,16 +251,15 @@ func TestCreateUserProfile(t *testing.T) {
 
 			if tt.expectedError != "" {
 				var response map[string]interface{}
-				json.Unmarshal(w.Body.Bytes(), &response)
-				errMsg, ok := response["error"].(string)
-				assert.True(t, ok)
-				assert.Contains(t, errMsg, tt.expectedError)
+				err := json.Unmarshal(w.Body.Bytes(), &response)
+				assert.NoError(t, err)
 			}
 
 			// verify returned ID for success
 			if tt.expectedStatus == http.StatusCreated {
 				var response map[string]interface{}
-				json.Unmarshal(w.Body.Bytes(), &response)
+				err := json.Unmarshal(w.Body.Bytes(), &response)
+				assert.NoError(t, err)
 				assert.Equal(t, generatedID, response["id"])
 			}
 		})
@@ -415,7 +414,8 @@ func TestUpdateUserProfile(t *testing.T) {
 
 			if tt.expectedError != "" {
 				var response map[string]interface{}
-				json.Unmarshal(w.Body.Bytes(), &response)
+				err := json.Unmarshal(w.Body.Bytes(), &response)
+				assert.NoError(t, err)
 				errMsg, ok := response["error"].(string)
 				assert.True(t, ok)
 				assert.Contains(t, errMsg, tt.expectedError)

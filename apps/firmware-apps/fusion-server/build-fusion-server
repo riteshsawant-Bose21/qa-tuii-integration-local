@@ -78,7 +78,7 @@ BUILD_DATE="$(date -u -Iseconds)"
 EOF_VERSION
     
     tar -czhf "build/fusion-server_${full_version}.tar.gz" scripts/*.service scripts/generate_cloud_config.sh \
-              build/$BINARY_NAME build/fusion-server.info scripts/fusion-server-start.sh
+              build/$BINARY_NAME build/fusion-server.info
     rm build/fusion-server.info
 fi
 

@@ -2,7 +2,7 @@ package config
 
 import "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/environment"
 
-// Auth0 holds the configuration settings for Auth0 integration.
+// AuthZero holds the configuration settings for Auth0 integration.
 type AuthZero struct {
 	Domain                           string
 	AccessTokenEndpoint              string
@@ -12,7 +12,7 @@ type AuthZero struct {
 	DefaultResourceOwnerPassword     string
 }
 
-// Auth0 retrieves the Auth0 configuration from the store.
+// AuthZero retrieves the Auth0 configuration from the store.
 func (c *Service) AuthZero() (*AuthZero, error) {
 	domain, err := c.store.ReqString(environment.Auth0.Domain)
 	if err != nil {

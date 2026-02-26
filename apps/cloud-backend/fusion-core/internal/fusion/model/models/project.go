@@ -39,7 +39,7 @@ type Project struct {
 	LockedByUserID        null.String       `boil:"locked_by_user_id" json:"locked_by_user_id,omitempty" toml:"locked_by_user_id" yaml:"locked_by_user_id,omitempty"`
 	CreatedAt             time.Time         `boil:"created_at" json:"created_at" toml:"created_at" yaml:"created_at"`
 	UpdatedAt             time.Time         `boil:"updated_at" json:"updated_at" toml:"updated_at" yaml:"updated_at"`
-	PrimaryOwnerAccountID null.String       `boil:"primary_owner_account_id" json:"primary_owner_account_id,omitempty" toml:"primary_owner_account_id" yaml:"primary_owner_account_id,omitempty"`
+	PrimaryOwnerAccountID string            `boil:"primary_owner_account_id" json:"primary_owner_account_id" toml:"primary_owner_account_id" yaml:"primary_owner_account_id"`
 
 	R *projectR `boil:"-" json:"-" toml:"-" yaml:"-"`
 	L projectL  `boil:"-" json:"-" toml:"-" yaml:"-"`
@@ -150,27 +150,6 @@ func (w whereHelperbool) LTE(x bool) qm.QueryMod { return qmhelper.Where(w.field
 func (w whereHelperbool) GT(x bool) qm.QueryMod  { return qmhelper.Where(w.field, qmhelper.GT, x) }
 func (w whereHelperbool) GTE(x bool) qm.QueryMod { return qmhelper.Where(w.field, qmhelper.GTE, x) }
 
-type whereHelpertime_Time struct{ field string }
-
-func (w whereHelpertime_Time) EQ(x time.Time) qm.QueryMod {
-	return qmhelper.Where(w.field, qmhelper.EQ, x)
-}
-func (w whereHelpertime_Time) NEQ(x time.Time) qm.QueryMod {
-	return qmhelper.Where(w.field, qmhelper.NEQ, x)
-}
-func (w whereHelpertime_Time) LT(x time.Time) qm.QueryMod {
-	return qmhelper.Where(w.field, qmhelper.LT, x)
-}
-func (w whereHelpertime_Time) LTE(x time.Time) qm.QueryMod {
-	return qmhelper.Where(w.field, qmhelper.LTE, x)
-}
-func (w whereHelpertime_Time) GT(x time.Time) qm.QueryMod {
-	return qmhelper.Where(w.field, qmhelper.GT, x)
-}
-func (w whereHelpertime_Time) GTE(x time.Time) qm.QueryMod {
-	return qmhelper.Where(w.field, qmhelper.GTE, x)
-}
-
 var ProjectWhere = struct {
 	ID                    whereHelperstring
 	Application           whereHelpernull_String
@@ -186,7 +165,7 @@ var ProjectWhere = struct {
 	LockedByUserID        whereHelpernull_String
 	CreatedAt             whereHelpertime_Time
 	UpdatedAt             whereHelpertime_Time
-	PrimaryOwnerAccountID whereHelpernull_String
+	PrimaryOwnerAccountID whereHelperstring
 }{
 	ID:                    whereHelperstring{field: "\"project\".\"id\""},
 	Application:           whereHelpernull_String{field: "\"project\".\"application\""},
@@ -202,25 +181,31 @@ var ProjectWhere = struct {
 	LockedByUserID:        whereHelpernull_String{field: "\"project\".\"locked_by_user_id\""},
 	CreatedAt:             whereHelpertime_Time{field: "\"project\".\"created_at\""},
 	UpdatedAt:             whereHelpertime_Time{field: "\"project\".\"updated_at\""},
-	PrimaryOwnerAccountID: whereHelpernull_String{field: "\"project\".\"primary_owner_account_id\""},
+	PrimaryOwnerAccountID: whereHelperstring{field: "\"project\".\"primary_owner_account_id\""},
 }
 
 // ProjectRels is where relationship names are stored.
 var ProjectRels = struct {
-	LockedByUser        string
-	PrimaryOwnerAccount string
-	ProjectUsers        string
+	LockedByUser           string
+	PrimaryOwnerAccount    string
+	Devices                string
+	DeviceProjectHistories string
+	ProjectUsers           string
 }{
-	LockedByUser:        "LockedByUser",
-	PrimaryOwnerAccount: "PrimaryOwnerAccount",
-	ProjectUsers:        "ProjectUsers",
+	LockedByUser:           "LockedByUser",
+	PrimaryOwnerAccount:    "PrimaryOwnerAccount",
+	Devices:                "Devices",
+	DeviceProjectHistories: "DeviceProjectHistories",
+	ProjectUsers:           "ProjectUsers",
 }
 
 // projectR is where relationships are stored.
 type projectR struct {
-	LockedByUser        *AppUser         `boil:"LockedByUser" json:"LockedByUser" toml:"LockedByUser" yaml:"LockedByUser"`
-	PrimaryOwnerAccount *Account         `boil:"PrimaryOwnerAccount" json:"PrimaryOwnerAccount" toml:"PrimaryOwnerAccount" yaml:"PrimaryOwnerAccount"`
-	ProjectUsers        ProjectUserSlice `boil:"ProjectUsers" json:"ProjectUsers" toml:"ProjectUsers" yaml:"ProjectUsers"`
+	LockedByUser           *AppUser                  `boil:"LockedByUser" json:"LockedByUser" toml:"LockedByUser" yaml:"LockedByUser"`
+	PrimaryOwnerAccount    *Account                  `boil:"PrimaryOwnerAccount" json:"PrimaryOwnerAccount" toml:"PrimaryOwnerAccount" yaml:"PrimaryOwnerAccount"`
+	Devices                DeviceSlice               `boil:"Devices" json:"Devices" toml:"Devices" yaml:"Devices"`
+	DeviceProjectHistories DeviceProjectHistorySlice `boil:"DeviceProjectHistories" json:"DeviceProjectHistories" toml:"DeviceProjectHistories" yaml:"DeviceProjectHistories"`
+	ProjectUsers           ProjectUserSlice          `boil:"ProjectUsers" json:"ProjectUsers" toml:"ProjectUsers" yaml:"ProjectUsers"`
 }
 
 // NewStruct creates a new relationship struct
@@ -260,6 +245,38 @@ func (r *projectR) GetPrimaryOwnerAccount() *Account {
 	return r.PrimaryOwnerAccount
 }
 
+func (o *Project) GetDevices() DeviceSlice {
+	if o == nil {
+		return nil
+	}
+
+	return o.R.GetDevices()
+}
+
+func (r *projectR) GetDevices() DeviceSlice {
+	if r == nil {
+		return nil
+	}
+
+	return r.Devices
+}
+
+func (o *Project) GetDeviceProjectHistories() DeviceProjectHistorySlice {
+	if o == nil {
+		return nil
+	}
+
+	return o.R.GetDeviceProjectHistories()
+}
+
+func (r *projectR) GetDeviceProjectHistories() DeviceProjectHistorySlice {
+	if r == nil {
+		return nil
+	}
+
+	return r.DeviceProjectHistories
+}
+
 func (o *Project) GetProjectUsers() ProjectUserSlice {
 	if o == nil {
 		return nil
@@ -281,8 +298,8 @@ type projectL struct{}
 
 var (
 	projectAllColumns            = []string{"id", "application", "budget_amount", "currency", "description", "name", "project_phase", "venue", "environment_type", "is_archived", "is_deleted", "locked_by_user_id", "created_at", "updated_at", "primary_owner_account_id"}
-	projectColumnsWithoutDefault = []string{"id"}
-	projectColumnsWithDefault    = []string{"application", "budget_amount", "currency", "description", "name", "project_phase", "venue", "environment_type", "is_archived", "is_deleted", "locked_by_user_id", "created_at", "updated_at", "primary_owner_account_id"}
+	projectColumnsWithoutDefault = []string{"id", "primary_owner_account_id"}
+	projectColumnsWithDefault    = []string{"application", "budget_amount", "currency", "description", "name", "project_phase", "venue", "environment_type", "is_archived", "is_deleted", "locked_by_user_id", "created_at", "updated_at"}
 	projectPrimaryKeyColumns     = []string{"id"}
 	projectGeneratedColumns      = []string{}
 )
@@ -614,6 +631,34 @@ func (o *Project) PrimaryOwnerAccount(mods ...qm.QueryMod) accountQuery {
 	return Accounts(queryMods...)
 }
 
+// Devices retrieves all the device's Devices with an executor.
+func (o *Project) Devices(mods ...qm.QueryMod) deviceQuery {
+	var queryMods []qm.QueryMod
+	if len(mods) != 0 {
+		queryMods = append(queryMods, mods...)
+	}
+
+	queryMods = append(queryMods,
+		qm.Where("\"device\".\"project_id\"=?", o.ID),
+	)
+
+	return Devices(queryMods...)
+}
+
+// DeviceProjectHistories retrieves all the device_project_history's DeviceProjectHistories with an executor.
+func (o *Project) DeviceProjectHistories(mods ...qm.QueryMod) deviceProjectHistoryQuery {
+	var queryMods []qm.QueryMod
+	if len(mods) != 0 {
+		queryMods = append(queryMods, mods...)
+	}
+
+	queryMods = append(queryMods,
+		qm.Where("\"device_project_history\".\"project_id\"=?", o.ID),
+	)
+
+	return DeviceProjectHistories(queryMods...)
+}
+
 // ProjectUsers retrieves all the project_user's ProjectUsers with an executor.
 func (o *Project) ProjectUsers(mods ...qm.QueryMod) projectUserQuery {
 	var queryMods []qm.QueryMod
@@ -785,9 +830,7 @@ func (projectL) LoadPrimaryOwnerAccount(ctx context.Context, e boil.ContextExecu
 		if object.R == nil {
 			object.R = &projectR{}
 		}
-		if !queries.IsNil(object.PrimaryOwnerAccountID) {
-			args[object.PrimaryOwnerAccountID] = struct{}{}
-		}
+		args[object.PrimaryOwnerAccountID] = struct{}{}
 
 	} else {
 		for _, obj := range slice {
@@ -795,9 +838,7 @@ func (projectL) LoadPrimaryOwnerAccount(ctx context.Context, e boil.ContextExecu
 				obj.R = &projectR{}
 			}
 
-			if !queries.IsNil(obj.PrimaryOwnerAccountID) {
-				args[obj.PrimaryOwnerAccountID] = struct{}{}
-			}
+			args[obj.PrimaryOwnerAccountID] = struct{}{}
 
 		}
 	}
@@ -862,12 +903,238 @@ func (projectL) LoadPrimaryOwnerAccount(ctx context.Context, e boil.ContextExecu
 
 	for _, local := range slice {
 		for _, foreign := range resultSlice {
-			if queries.Equal(local.PrimaryOwnerAccountID, foreign.ID) {
+			if local.PrimaryOwnerAccountID == foreign.ID {
 				local.R.PrimaryOwnerAccount = foreign
 				if foreign.R == nil {
 					foreign.R = &accountR{}
 				}
 				foreign.R.PrimaryOwnerAccountProjects = append(foreign.R.PrimaryOwnerAccountProjects, local)
+				break
+			}
+		}
+	}
+
+	return nil
+}
+
+// LoadDevices allows an eager lookup of values, cached into the
+// loaded structs of the objects. This is for a 1-M or N-M relationship.
+func (projectL) LoadDevices(ctx context.Context, e boil.ContextExecutor, singular bool, maybeProject interface{}, mods queries.Applicator) error {
+	var slice []*Project
+	var object *Project
+
+	if singular {
+		var ok bool
+		object, ok = maybeProject.(*Project)
+		if !ok {
+			object = new(Project)
+			ok = queries.SetFromEmbeddedStruct(&object, &maybeProject)
+			if !ok {
+				return errors.New(fmt.Sprintf("failed to set %T from embedded struct %T", object, maybeProject))
+			}
+		}
+	} else {
+		s, ok := maybeProject.(*[]*Project)
+		if ok {
+			slice = *s
+		} else {
+			ok = queries.SetFromEmbeddedStruct(&slice, maybeProject)
+			if !ok {
+				return errors.New(fmt.Sprintf("failed to set %T from embedded struct %T", slice, maybeProject))
+			}
+		}
+	}
+
+	args := make(map[interface{}]struct{})
+	if singular {
+		if object.R == nil {
+			object.R = &projectR{}
+		}
+		args[object.ID] = struct{}{}
+	} else {
+		for _, obj := range slice {
+			if obj.R == nil {
+				obj.R = &projectR{}
+			}
+			args[obj.ID] = struct{}{}
+		}
+	}
+
+	if len(args) == 0 {
+		return nil
+	}
+
+	argsSlice := make([]interface{}, len(args))
+	i := 0
+	for arg := range args {
+		argsSlice[i] = arg
+		i++
+	}
+
+	query := NewQuery(
+		qm.From(`device`),
+		qm.WhereIn(`device.project_id in ?`, argsSlice...),
+	)
+	if mods != nil {
+		mods.Apply(query)
+	}
+
+	results, err := query.QueryContext(ctx, e)
+	if err != nil {
+		return errors.Wrap(err, "failed to eager load device")
+	}
+
+	var resultSlice []*Device
+	if err = queries.Bind(results, &resultSlice); err != nil {
+		return errors.Wrap(err, "failed to bind eager loaded slice device")
+	}
+
+	if err = results.Close(); err != nil {
+		return errors.Wrap(err, "failed to close results in eager load on device")
+	}
+	if err = results.Err(); err != nil {
+		return errors.Wrap(err, "error occurred during iteration of eager loaded relations for device")
+	}
+
+	if len(deviceAfterSelectHooks) != 0 {
+		for _, obj := range resultSlice {
+			if err := obj.doAfterSelectHooks(ctx, e); err != nil {
+				return err
+			}
+		}
+	}
+	if singular {
+		object.R.Devices = resultSlice
+		for _, foreign := range resultSlice {
+			if foreign.R == nil {
+				foreign.R = &deviceR{}
+			}
+			foreign.R.Project = object
+		}
+		return nil
+	}
+
+	for _, foreign := range resultSlice {
+		for _, local := range slice {
+			if queries.Equal(local.ID, foreign.ProjectID) {
+				local.R.Devices = append(local.R.Devices, foreign)
+				if foreign.R == nil {
+					foreign.R = &deviceR{}
+				}
+				foreign.R.Project = local
+				break
+			}
+		}
+	}
+
+	return nil
+}
+
+// LoadDeviceProjectHistories allows an eager lookup of values, cached into the
+// loaded structs of the objects. This is for a 1-M or N-M relationship.
+func (projectL) LoadDeviceProjectHistories(ctx context.Context, e boil.ContextExecutor, singular bool, maybeProject interface{}, mods queries.Applicator) error {
+	var slice []*Project
+	var object *Project
+
+	if singular {
+		var ok bool
+		object, ok = maybeProject.(*Project)
+		if !ok {
+			object = new(Project)
+			ok = queries.SetFromEmbeddedStruct(&object, &maybeProject)
+			if !ok {
+				return errors.New(fmt.Sprintf("failed to set %T from embedded struct %T", object, maybeProject))
+			}
+		}
+	} else {
+		s, ok := maybeProject.(*[]*Project)
+		if ok {
+			slice = *s
+		} else {
+			ok = queries.SetFromEmbeddedStruct(&slice, maybeProject)
+			if !ok {
+				return errors.New(fmt.Sprintf("failed to set %T from embedded struct %T", slice, maybeProject))
+			}
+		}
+	}
+
+	args := make(map[interface{}]struct{})
+	if singular {
+		if object.R == nil {
+			object.R = &projectR{}
+		}
+		args[object.ID] = struct{}{}
+	} else {
+		for _, obj := range slice {
+			if obj.R == nil {
+				obj.R = &projectR{}
+			}
+			args[obj.ID] = struct{}{}
+		}
+	}
+
+	if len(args) == 0 {
+		return nil
+	}
+
+	argsSlice := make([]interface{}, len(args))
+	i := 0
+	for arg := range args {
+		argsSlice[i] = arg
+		i++
+	}
+
+	query := NewQuery(
+		qm.From(`device_project_history`),
+		qm.WhereIn(`device_project_history.project_id in ?`, argsSlice...),
+	)
+	if mods != nil {
+		mods.Apply(query)
+	}
+
+	results, err := query.QueryContext(ctx, e)
+	if err != nil {
+		return errors.Wrap(err, "failed to eager load device_project_history")
+	}
+
+	var resultSlice []*DeviceProjectHistory
+	if err = queries.Bind(results, &resultSlice); err != nil {
+		return errors.Wrap(err, "failed to bind eager loaded slice device_project_history")
+	}
+
+	if err = results.Close(); err != nil {
+		return errors.Wrap(err, "failed to close results in eager load on device_project_history")
+	}
+	if err = results.Err(); err != nil {
+		return errors.Wrap(err, "error occurred during iteration of eager loaded relations for device_project_history")
+	}
+
+	if len(deviceProjectHistoryAfterSelectHooks) != 0 {
+		for _, obj := range resultSlice {
+			if err := obj.doAfterSelectHooks(ctx, e); err != nil {
+				return err
+			}
+		}
+	}
+	if singular {
+		object.R.DeviceProjectHistories = resultSlice
+		for _, foreign := range resultSlice {
+			if foreign.R == nil {
+				foreign.R = &deviceProjectHistoryR{}
+			}
+			foreign.R.Project = object
+		}
+		return nil
+	}
+
+	for _, foreign := range resultSlice {
+		for _, local := range slice {
+			if local.ID == foreign.ProjectID {
+				local.R.DeviceProjectHistories = append(local.R.DeviceProjectHistories, foreign)
+				if foreign.R == nil {
+					foreign.R = &deviceProjectHistoryR{}
+				}
+				foreign.R.Project = local
 				break
 			}
 		}
@@ -1096,7 +1363,7 @@ func (o *Project) SetPrimaryOwnerAccount(ctx context.Context, exec boil.ContextE
 		return errors.Wrap(err, "failed to update local table")
 	}
 
-	queries.Assign(&o.PrimaryOwnerAccountID, related.ID)
+	o.PrimaryOwnerAccountID = related.ID
 	if o.R == nil {
 		o.R = &projectR{
 			PrimaryOwnerAccount: related,
@@ -1116,35 +1383,182 @@ func (o *Project) SetPrimaryOwnerAccount(ctx context.Context, exec boil.ContextE
 	return nil
 }
 
-// RemovePrimaryOwnerAccount relationship.
-// Sets o.R.PrimaryOwnerAccount to nil.
-// Removes o from all passed in related items' relationships struct.
-func (o *Project) RemovePrimaryOwnerAccount(ctx context.Context, exec boil.ContextExecutor, related *Account) error {
+// AddDevices adds the given related objects to the existing relationships
+// of the project, optionally inserting them as new records.
+// Appends related to o.R.Devices.
+// Sets related.R.Project appropriately.
+func (o *Project) AddDevices(ctx context.Context, exec boil.ContextExecutor, insert bool, related ...*Device) error {
 	var err error
+	for _, rel := range related {
+		if insert {
+			queries.Assign(&rel.ProjectID, o.ID)
+			if err = rel.Insert(ctx, exec, boil.Infer()); err != nil {
+				return errors.Wrap(err, "failed to insert into foreign table")
+			}
+		} else {
+			updateQuery := fmt.Sprintf(
+				"UPDATE \"device\" SET %s WHERE %s",
+				strmangle.SetParamNames("\"", "\"", 1, []string{"project_id"}),
+				strmangle.WhereClause("\"", "\"", 2, devicePrimaryKeyColumns),
+			)
+			values := []interface{}{o.ID, rel.ID}
 
-	queries.SetScanner(&o.PrimaryOwnerAccountID, nil)
-	if _, err = o.Update(ctx, exec, boil.Whitelist("primary_owner_account_id")); err != nil {
-		return errors.Wrap(err, "failed to update local table")
+			if boil.IsDebug(ctx) {
+				writer := boil.DebugWriterFrom(ctx)
+				fmt.Fprintln(writer, updateQuery)
+				fmt.Fprintln(writer, values)
+			}
+			if _, err = exec.ExecContext(ctx, updateQuery, values...); err != nil {
+				return errors.Wrap(err, "failed to update foreign table")
+			}
+
+			queries.Assign(&rel.ProjectID, o.ID)
+		}
+	}
+
+	if o.R == nil {
+		o.R = &projectR{
+			Devices: related,
+		}
+	} else {
+		o.R.Devices = append(o.R.Devices, related...)
+	}
+
+	for _, rel := range related {
+		if rel.R == nil {
+			rel.R = &deviceR{
+				Project: o,
+			}
+		} else {
+			rel.R.Project = o
+		}
+	}
+	return nil
+}
+
+// SetDevices removes all previously related items of the
+// project replacing them completely with the passed
+// in related items, optionally inserting them as new records.
+// Sets o.R.Project's Devices accordingly.
+// Replaces o.R.Devices with related.
+// Sets related.R.Project's Devices accordingly.
+func (o *Project) SetDevices(ctx context.Context, exec boil.ContextExecutor, insert bool, related ...*Device) error {
+	query := "update \"device\" set \"project_id\" = null where \"project_id\" = $1"
+	values := []interface{}{o.ID}
+	if boil.IsDebug(ctx) {
+		writer := boil.DebugWriterFrom(ctx)
+		fmt.Fprintln(writer, query)
+		fmt.Fprintln(writer, values)
+	}
+	_, err := exec.ExecContext(ctx, query, values...)
+	if err != nil {
+		return errors.Wrap(err, "failed to remove relationships before set")
 	}
 
 	if o.R != nil {
-		o.R.PrimaryOwnerAccount = nil
+		for _, rel := range o.R.Devices {
+			queries.SetScanner(&rel.ProjectID, nil)
+			if rel.R == nil {
+				continue
+			}
+
+			rel.R.Project = nil
+		}
+		o.R.Devices = nil
 	}
-	if related == nil || related.R == nil {
+
+	return o.AddDevices(ctx, exec, insert, related...)
+}
+
+// RemoveDevices relationships from objects passed in.
+// Removes related items from R.Devices (uses pointer comparison, removal does not keep order)
+// Sets related.R.Project.
+func (o *Project) RemoveDevices(ctx context.Context, exec boil.ContextExecutor, related ...*Device) error {
+	if len(related) == 0 {
 		return nil
 	}
 
-	for i, ri := range related.R.PrimaryOwnerAccountProjects {
-		if queries.Equal(o.PrimaryOwnerAccountID, ri.PrimaryOwnerAccountID) {
-			continue
+	var err error
+	for _, rel := range related {
+		queries.SetScanner(&rel.ProjectID, nil)
+		if rel.R != nil {
+			rel.R.Project = nil
 		}
+		if _, err = rel.Update(ctx, exec, boil.Whitelist("project_id")); err != nil {
+			return err
+		}
+	}
+	if o.R == nil {
+		return nil
+	}
 
-		ln := len(related.R.PrimaryOwnerAccountProjects)
-		if ln > 1 && i < ln-1 {
-			related.R.PrimaryOwnerAccountProjects[i] = related.R.PrimaryOwnerAccountProjects[ln-1]
+	for _, rel := range related {
+		for i, ri := range o.R.Devices {
+			if rel != ri {
+				continue
+			}
+
+			ln := len(o.R.Devices)
+			if ln > 1 && i < ln-1 {
+				o.R.Devices[i] = o.R.Devices[ln-1]
+			}
+			o.R.Devices = o.R.Devices[:ln-1]
+			break
 		}
-		related.R.PrimaryOwnerAccountProjects = related.R.PrimaryOwnerAccountProjects[:ln-1]
-		break
+	}
+
+	return nil
+}
+
+// AddDeviceProjectHistories adds the given related objects to the existing relationships
+// of the project, optionally inserting them as new records.
+// Appends related to o.R.DeviceProjectHistories.
+// Sets related.R.Project appropriately.
+func (o *Project) AddDeviceProjectHistories(ctx context.Context, exec boil.ContextExecutor, insert bool, related ...*DeviceProjectHistory) error {
+	var err error
+	for _, rel := range related {
+		if insert {
+			rel.ProjectID = o.ID
+			if err = rel.Insert(ctx, exec, boil.Infer()); err != nil {
+				return errors.Wrap(err, "failed to insert into foreign table")
+			}
+		} else {
+			updateQuery := fmt.Sprintf(
+				"UPDATE \"device_project_history\" SET %s WHERE %s",
+				strmangle.SetParamNames("\"", "\"", 1, []string{"project_id"}),
+				strmangle.WhereClause("\"", "\"", 2, deviceProjectHistoryPrimaryKeyColumns),
+			)
+			values := []interface{}{o.ID, rel.ID}
+
+			if boil.IsDebug(ctx) {
+				writer := boil.DebugWriterFrom(ctx)
+				fmt.Fprintln(writer, updateQuery)
+				fmt.Fprintln(writer, values)
+			}
+			if _, err = exec.ExecContext(ctx, updateQuery, values...); err != nil {
+				return errors.Wrap(err, "failed to update foreign table")
+			}
+
+			rel.ProjectID = o.ID
+		}
+	}
+
+	if o.R == nil {
+		o.R = &projectR{
+			DeviceProjectHistories: related,
+		}
+	} else {
+		o.R.DeviceProjectHistories = append(o.R.DeviceProjectHistories, related...)
+	}
+
+	for _, rel := range related {
+		if rel.R == nil {
+			rel.R = &deviceProjectHistoryR{
+				Project: o,
+			}
+		} else {
+			rel.R.Project = o
+		}
 	}
 	return nil
 }

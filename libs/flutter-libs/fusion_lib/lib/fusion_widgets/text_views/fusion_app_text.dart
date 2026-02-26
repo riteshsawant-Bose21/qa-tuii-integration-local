@@ -73,6 +73,9 @@ class FusionAppText extends StatelessWidget {
   /// Custom text style to override default styling.
   final TextStyle? style;
 
+  /// Whether the first letter of the text should be capitalized.
+  final bool capitalize;
+
   /// Creates a [FusionAppText] widget.
   ///
   /// [text] is required and specifies the string to display.
@@ -89,6 +92,7 @@ class FusionAppText extends StatelessWidget {
     this.maxLine,
     this.fontStyle = FontStyle.normal,
     this.underLine = false,
+    this.capitalize = true,
     this.semanticId,
     this.accessLabel,
     this.textOverflow,
@@ -96,6 +100,9 @@ class FusionAppText extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    /// Process the text for capitalization if needed
+    String displayText = capitalize && text.isNotEmpty ? text[0].toUpperCase() + text.substring(1) : text;
+
     /// Builds the FusionAppText widget with semantics for accessibility.
     return SemanticHelper.staticText(
       testId: SemanticHelper.createTestId(SemanticTypes.text, semanticId ?? text),
@@ -106,7 +113,7 @@ class FusionAppText extends StatelessWidget {
 
         /// Displays the text with the specified properties.
         child: Text(
-          text,
+          displayText,
           textAlign: textAlign,
           overflow: textOverflow ?? ((maxLine != null) ? TextOverflow.ellipsis : null),
           maxLines: maxLine,

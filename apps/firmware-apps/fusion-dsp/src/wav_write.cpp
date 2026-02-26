@@ -12,6 +12,7 @@ namespace {
 class WavWrite : public bosepro::Algorithm {
 public:
     WavWrite(const bosepro::BlockConfiguration &configuration);
+    virtual ~WavWrite();
     virtual void process() override;
 
 private:
@@ -42,6 +43,15 @@ WavWrite::WavWrite(const bosepro::BlockConfiguration &configuration)
     sfinfo.format = SF_FORMAT_WAV | SF_FORMAT_PCM_16;
     get_property("filename", filename);
     sndfile = sf_open(filename.c_str(), SFM_WRITE, &sfinfo);
+}
+
+
+WavWrite::~WavWrite()
+{
+    if (sndfile)
+    {
+        sf_close(sndfile);
+    }
 }
 
 

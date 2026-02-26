@@ -4,10 +4,12 @@ import (
 	"bufio"
 	"context"
 	"fmt"
+	"fusion-services-core/logging"
 	"fusion/internal/api"
 	"fusion/internal/cluster"
+	clustertransport "fusion/internal/cluster/transport"
 	"fusion/internal/controllers"
-	"fusion/internal/logging"
+	"fusion/internal/iot"
 	"fusion/internal/network"
 	"fusion/internal/persistence"
 	"fusion/internal/pubsub"
@@ -45,7 +47,6 @@ type App struct {
 	StateManager      *persistence.StateManager
 	Persistence       *persistence.Persistence
 	TaskManager       *tasks.TaskManager
-	Updater           *handler.Updater
 	ConnectionHandler *handler.Handler
 	Cluster           *cluster.Cluster
 	Delegate          *cluster.ClusterDelegate
@@ -54,11 +55,13 @@ type App struct {
 	SAPServer         *network.SAPServer
 	UDPServer         *network.UDPServer
 	ControllerManager *controllers.ControllerManager
+	IoTPublisher      *iot.Publisher
 	memberlist        *memberlist.Memberlist
 	monitor           *network.Monitor
 	config            *api.AppConfig
 	publicRouter      *mux.Router
 	privateRouter     *mux.Router
+	MDNSManager       *network.MDNSManager
 }
 
 // NewApp is a factory function to set up the application
@@ -70,36 +73,39 @@ func NewApp(config *api.AppConfig) *App {
 
 	stateManager := initStateManager(config)
 	persistence := initPersistence(fusionDatabasePath, stateManager)
-	taskManager := initTaskManager(config, persistence)
-	updater := handler.NewUpdater()
-	hub := pubsub.NewHub()
-
-	controllerManager := controllers.NewControllerManager(hub, "7950")
-	delegate := cluster.NewClusterDelegate(config, persistence, stateManager, taskManager, updater, hub)
+	hub := pubsub.NewHub(stateManager, persistence)
+	taskManager := initTaskManager(config, persistence, hub)
+	controllerManager := controllers.NewControllerManager(hub, api.ControllerPort)
+	delegate := cluster.NewClusterDelegate(config, persistence, stateManager, taskManager, hub)
 	memberlist := cluster.CreateMemberlist(config, delegate)
-	connectionHandler := handler.NewHandler(config, memberlist, persistence, stateManager, updater, hub, controllerManager)
-	clusterInstance := cluster.NewCluster(config, delegate, memberlist)
+	transport := clustertransport.NewMemberlistTransport(memberlist)
+	hub.SetClusterTransport(transport)
+	connectionHandler := handler.NewHandler(config, memberlist, persistence, stateManager, hub, controllerManager)
+	mdnsManager := initMDNSManager()
+	clusterInstance := cluster.NewCluster(config, delegate, memberlist, mdnsManager)
 	bleServer := initBLEServer()
 	sapServer := initSAPServer(config, api.SAPPort, connectionHandler, hub)
 	udpServer := initUDPServer(api.UDPPort, connectionHandler, hub)
 	fusionServer := server.NewFusionServer(config.NodeName, connectionHandler, hub)
+	iotPublisher := initIoTPublisher(config, clusterInstance.Metrics)
 
 	// Setup the public routes
 	publicRouter := mux.NewRouter()
 	publicRouter.Use(loggingMiddleware(config))
 	publicRouter.Use(recoveryMiddleware())
+	publicRouter.Use(corsMiddleware())
 
 	// Setup the private routes
 	privateRouter := mux.NewRouter()
 	privateRouter.Use(loggingMiddleware(config))
 	privateRouter.Use(recoveryMiddleware())
+	privateRouter.Use(corsMiddleware())
 
 	app := &App{
 		Logger:            logger,
 		StateManager:      stateManager,
 		Persistence:       persistence,
 		TaskManager:       taskManager,
-		Updater:           updater,
 		ConnectionHandler: connectionHandler,
 		Cluster:           clusterInstance,
 		Delegate:          delegate,
@@ -108,10 +114,12 @@ func NewApp(config *api.AppConfig) *App {
 		SAPServer:         sapServer,
 		UDPServer:         udpServer,
 		ControllerManager: controllerManager,
+		IoTPublisher:      iotPublisher,
 		memberlist:        memberlist,
 		config:            config,
 		publicRouter:      publicRouter,
 		privateRouter:     privateRouter,
+		MDNSManager:       mdnsManager,
 	}
 
 	return app
@@ -125,6 +133,14 @@ func (app *App) Close() {
 	}
 	if app.ControllerManager != nil {
 		app.ControllerManager.Stop()
+	}
+	if app.IoTPublisher != nil {
+		app.IoTPublisher.Stop()
+	}
+	if app.MDNSManager != nil {
+		if err := app.MDNSManager.Close(); err != nil {
+			app.Logger.Error("Failed to close mDNS manager: %v", err)
+		}
 	}
 	app.Cluster.Stop()
 	app.UDPServer.Stop()
@@ -156,6 +172,10 @@ func (app *App) registerPrivateGET(route string, handler http.HandlerFunc) {
 	routes.RegisterPrivateGET(app.privateRouter, route, handler)
 }
 
+func (app *App) registerPrivateDELETE(route string, handler http.HandlerFunc) {
+	routes.RegisterPrivateDELETE(app.privateRouter, route, handler)
+}
+
 func (app *App) registerPrivatePATCH(route string, handler http.HandlerFunc) {
 	routes.RegisterPrivatePATCH(app.privateRouter, route, handler)
 }
@@ -183,10 +203,14 @@ func (app *App) setupPublicRoutes() {
 
 	// Device
 	app.registerPublicGET(routes.DevicesEndpoint, app.Cluster.GetDevicesInfo)
+	app.registerPublicGET(routes.DevicesGetCSREndpoint, app.Cluster.GetDeviceCSR)
+	app.registerPublicPOST(routes.DevicesIDCertificateEndpoint, app.Cluster.SetDeviceCertificate)
 	app.registerPublicGET(routes.DevicesVIPEndpoint, app.Cluster.GetVIP)
 	app.registerPublicPOST(routes.DevicesSetVIPEndpoint, app.Cluster.SetVIP)
 	app.registerPublicPOST(routes.DeviceReloadVIPEndpoint, app.Cluster.ReloadVIP)
 	app.registerPublicPATCH(routes.DevicesIDEndpoint, app.Cluster.UpdateDeviceInfo)
+
+	app.registerPublicDELETE(routes.DevicesIDResetEndpoint, app.Cluster.ResetDevice)
 
 	// Endpoints
 	app.registerPublicGET(routes.EndpointsEndpoint, routes.ListRegisteredEndpoints)
@@ -209,6 +233,7 @@ func (app *App) setupPublicRoutes() {
 	app.registerPublicGET(routes.PAVAMessageStreamEndpoint, app.Server.StreamMessage)
 	app.registerPublicGET(routes.PAVAScheduleEndpoint, app.TaskManager.ListScheduledMessages)
 	app.registerPublicPOST(routes.PAVAScheduleEndpoint, app.TaskManager.CreateScheduleMessageTask)
+	app.registerPublicPATCH(routes.PAVAScheduleIDEndpoint, app.TaskManager.UpdateScheduleMessageTask)
 	app.registerPublicPUT(routes.PAVAMessageTriggerEndpoint, app.TaskManager.TriggerMessage)
 	// app.registerPublicGET(routes.PAVAZonesEndpoint, app.Server.ListZones)
 	// app.registerPublicGET(routes.PAVAZoneStatusEndpoint, app.Server.GetZoneStatus)
@@ -224,20 +249,20 @@ func (app *App) setupPublicRoutes() {
 	app.registerPublicGET(routes.SessionsIdEndpoint, app.Server.GetSession)
 
 	// Snapshots
-	// NOTE: These must be added before the {name} parameter endpoints to avoid conflicts
-	app.registerPublicGET(routes.SnapshotsEndpoint, app.Server.ListSnapshots)
+	app.registerPublicPOST(routes.SnapshotsActivateEndpoint, app.Server.ActivateSnapshot)
+	app.registerPublicPOST(routes.SnapshotsUpdateEndpoint, app.Server.SaveSnapshot)
 	app.registerPublicPOST(routes.SnapshotsNameEndpoint, app.Server.CreateSnapshot)
+	app.registerPublicGET(routes.SnapshotsEndpoint, app.Server.ListSnapshots)
+	app.registerPublicGET(routes.SnapshotsActiveEndpoint, app.Server.GetActiveSnapshotName)
 	app.registerPublicGET(routes.SnapshotsNameEndpoint, app.Server.GetSnapshot)
 	app.registerPublicDELETE(routes.SnapshotsNameEndpoint, app.Server.DeleteSnapshot)
-	app.registerPublicPOST(routes.SnapshotsActivateEndpoint, app.Server.ActivateSnapshot)
 
 	// Tasks
-	// NOTE: These must be added before the {id} parameter endpoints to avoid conflicts
 	app.registerPublicGET(routes.TasksHistoryEndpoint, app.TaskManager.GetHistory)
 	app.registerPublicDELETE(routes.TasksHistoryEndpoint, app.TaskManager.ClearHistory)
 	app.registerPublicGET(routes.TasksEndpoint, app.TaskManager.GetTasks)
 	app.registerPublicPOST(routes.TasksEndpoint, app.TaskManager.CreateApplySnapshotTask)
-	app.registerPublicGET(routes.TasksIdEndpoint, app.TaskManager.GetTask)
+	app.registerPublicGET(routes.TasksIdEndpoint, app.TaskManager.GetTaskHandler)
 	app.registerPublicPATCH(routes.TasksIdEndpoint, app.TaskManager.UpdateApplySnapshotTask)
 	app.registerPublicDELETE(routes.TasksIdEndpoint, app.TaskManager.DeleteTask)
 	app.registerPublicPOST(routes.TasksIdEnableEndpoint, app.TaskManager.EnableTask)
@@ -251,8 +276,6 @@ func (app *App) setupPublicRoutes() {
 
 	// Versioning
 	app.registerPublicGET(routes.VersionEndpoint, app.Server.GetVersion)
-	app.registerPublicPOST(routes.VersionEndpoint, app.Server.RollbackVersion)
-	app.registerPublicPUT(routes.VersionEndpoint, app.Server.UpdateVersion)
 
 	// WebSocket
 	app.registerPublicGET(routes.WebsocketEndpoint, withWebSocketMetrics(app.config, app.Server.HandleWebSocket, app.Cluster.Metrics))
@@ -266,6 +289,9 @@ func (app *App) setupPrivateRoutes() {
 	app.registerPrivateGET(routes.ClusterLatencyStatusLocalEndpoint, app.Cluster.GetLatencyStatusLocal)
 
 	app.registerPrivateGET(routes.DeviceEndpoint, app.Cluster.GetDeviceInfo)
+	app.registerPrivateGET(routes.DevicesGetCSREndpoint, app.Cluster.GetCSR)
+	app.registerPrivateDELETE(routes.DevicesIDResetEndpoint, app.Cluster.ResetDevice)
+	app.registerPrivatePOST(routes.DevicesIDCertificateEndpoint, app.Cluster.SetDeviceCertificate)
 	app.registerPrivatePOST(routes.DeviceEndpoint, app.Cluster.SetDeviceInfo)
 	app.registerPrivatePATCH(routes.DeviceEndpoint, app.Cluster.UpdateDeviceInfoLocal)
 	app.registerPrivatePOST(routes.DevicesSetVIPEndpoint, app.Cluster.UpdateVIPLocal)
@@ -283,7 +309,7 @@ func (app *App) startNetworkMonitor() {
 	logger := logging.GetLogger()
 	logger.Info("Network monitor is active")
 
-	app.monitor = network.NewMonitor(networkMonitorInterval, func(oldIP, newIP string) {
+	app.monitor = network.NewMonitor(networkMonitorInterval, app.config.NetIface, func(oldIP, newIP string) {
 		logger.Debug("IP changed from %s to %s.", oldIP, newIP)
 		app.leaveCluster()
 		app.joinCluster(newIP)
@@ -384,6 +410,13 @@ func (app *App) Start(ctx context.Context) {
 		app.Logger.Error("Failed to start ControllerManager: %v", err)
 	}
 
+	// Start the IoT publisher for AWS IoT Core metrics
+	if app.IoTPublisher != nil {
+		if err := app.IoTPublisher.Start(); err != nil {
+			app.Logger.Error("Failed to start IoT publisher: %v", err)
+		}
+	}
+
 	wg.Wait()
 }
 
@@ -445,8 +478,8 @@ func initStateManager(config *api.AppConfig) *persistence.StateManager {
 }
 
 // initTaskManager initializes the timer manager.
-func initTaskManager(config *api.AppConfig, persistence *persistence.Persistence) *tasks.TaskManager {
-	taskManager := tasks.NewTaskManager(config, persistence)
+func initTaskManager(config *api.AppConfig, persistence *persistence.Persistence, hub *pubsub.Hub) *tasks.TaskManager {
+	taskManager := tasks.NewTaskManager(config, persistence, hub)
 	taskManager.Start()
 	return taskManager
 }
@@ -514,6 +547,52 @@ func initLogging(config *api.AppConfig) *logging.Logger {
 	return logging.GetLogger()
 }
 
+func initMDNSManager() *network.MDNSManager {
+	logger := logging.GetLogger()
+	logger.Info("Initializing mDNS manager")
+
+	manager := network.NewMDNSManager()
+
+	logger.Info("mDNS manager initialized successfully")
+	return manager
+}
+
+// initIoTPublisher initializes the AWS IoT Core publisher
+func initIoTPublisher(config *api.AppConfig, metrics *cluster.MetricsCollector) *iot.Publisher {
+	logger := logging.GetLogger()
+
+	if !config.IoTEnabled {
+		logger.Info("IoT publisher disabled")
+		return nil
+	}
+
+	if config.IoTEndpoint == "" {
+		logger.Warn("IoT endpoint not configured, disabling IoT publisher")
+		return nil
+	}
+
+	clientID := config.IoTClientID
+	if clientID == "" {
+		clientID = config.NodeName
+	}
+
+	iotConfig := &iot.Config{
+		Endpoint:    config.IoTEndpoint,
+		ClientID:    clientID,
+		TopicPrefix: config.IoTTopicPrefix,
+		Enabled:     config.IoTEnabled,
+	}
+
+	publisher, err := iot.NewPublisher(iotConfig, metrics)
+	if err != nil {
+		logger.Error("Failed to create IoT publisher: %v", err)
+		return nil
+	}
+
+	logger.Info("IoT publisher initialized for endpoint: %s", config.IoTEndpoint)
+	return publisher
+}
+
 // withWebSocketMetrics adds metrics for WebSocket connections
 func withWebSocketMetrics(config *api.AppConfig, handler http.HandlerFunc, metrics *cluster.MetricsCollector) http.HandlerFunc {
 	if config.Verbose {
@@ -577,4 +656,28 @@ func (rec *statusRecorder) Hijack() (net.Conn, *bufio.ReadWriter, error) {
 		return hijacker.Hijack()
 	}
 	return nil, nil, fmt.Errorf("underlying ResponseWriter does not implement http.Hijacker")
+}
+
+// corsMiddleware adds CORS headers to all responses
+func corsMiddleware() mux.MiddlewareFunc {
+	logging.GetLogger().Warn(
+		"Enabled CORS middleware for manufacturing tests. Review and adjust for production use.",
+	)
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			// Set CORS headers
+			w.Header().Set("Access-Control-Allow-Origin", "*")
+			w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS")
+			w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With")
+			w.Header().Set("Access-Control-Max-Age", "3600")
+
+			// Handle preflight OPTIONS request
+			if r.Method == "OPTIONS" {
+				w.WriteHeader(http.StatusOK)
+				return
+			}
+
+			next.ServeHTTP(w, r)
+		})
+	}
 }

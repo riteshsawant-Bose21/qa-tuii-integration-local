@@ -68,6 +68,10 @@ INSERT INTO feature (id, name, description) VALUES
   (17,'project.unstar','Can unstar a project'),
   (18,'project.assign_user','Can assign a user to a project'),
   (19,'project.remove_user','Can remove a user from a project');
+  (20,'device.create','Can create a new device'),
+  (21,'device.update','Can update device details'),
+  (22,'device.delete','Can reset/delete a device');
+
 
 INSERT INTO feature_permission (id, feature_id, account_type_role_id, access_level_id, created_at) VALUES
   -- project_file.create
@@ -150,9 +154,20 @@ INSERT INTO feature_permission (id, feature_id, account_type_role_id, access_lev
   (96,16,9,3,now()),  -- project.start (star)
   (97,17,9,3,now()),  -- project.unstar
   (98,18,9,3,now()),  -- project.assign_user
-  (99,19,9,3,now());  -- project.remove_user
+  (99,19,9,3,now()), -- project.remove_user
+  (121,20,9,3,now()), -- device.create
+  (122,21,9,3,now()), -- device.update
+  (123,22,9,3,now()); -- device.delete
 
 -- Advance sequence to latest id
 SELECT setval('feature_permission_id_seq',99,true);
 
 -- (Removed prior duplicate COPY-converted INSERT blocks.)
+
+-- Insert data to User profile table
+INSERT INTO user_profile (user_id, email, first_name, last_name, job_title, phone, address_line_1, city, state_province, country, zip_postal_code, gdpr_opt_out, privacy_policy_accepted, timezone, unit_system, customer_type, company_name, currency)
+VALUES ('60000001-0000-4000-8000-000000000006', 'test@domain.com', 'David', 'Admin', 'Audio Engineer', '+1-555-0101', '123 Main Street', 'New York', 'NY', 'USA', '10001', false, true, 'America/New_York', 'imperial', 'enterprise', 'Acme Corp', 'USD');
+
+-- Insert data to User settings table
+INSERT INTO user_settings (user_id, language, theme)
+VALUES ('60000001-0000-4000-8000-000000000006', 'en-US', 'system');

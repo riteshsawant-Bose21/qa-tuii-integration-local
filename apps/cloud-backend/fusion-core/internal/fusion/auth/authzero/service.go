@@ -1,3 +1,4 @@
+// Package auth0 provides Auth0 authentication and JWT validation services.
 package auth0
 
 import (
@@ -16,12 +17,14 @@ import (
 	"go.uber.org/zap"
 )
 
+// Service provides Auth0 authentication services
 type Service struct {
 	authZeroConfig *config.AuthZero
 	logger         *zap.Logger
 	validator      *Auth0Validator
 }
 
+// NewService creates a new Auth0 service with the provided configuration and logger
 func NewService(authZeroConfig *config.AuthZero, logger *zap.Logger) *Service {
 	if authZeroConfig == nil {
 		panic("auth0Config cannot be nil")
@@ -71,7 +74,7 @@ func (s *Service) GetAuthTokensByResourceOwnerPassword(ctx context.Context, user
 
 	if !enabled {
 		s.logger.Warn("Resource Owner Password flow is disabled")
-		return nil, fmt.Errorf("Resource Owner Password flow is disabled")
+		return nil, fmt.Errorf("resource owner password flow is disabled")
 	}
 
 	s.logger.Info("Generating Auth0 tokens", zap.String("username", username))
@@ -112,12 +115,17 @@ func (s *Service) GetAuthTokensByResourceOwnerPassword(ctx context.Context, user
 		s.logger.Error("Failed to make request to Auth0", zap.String("username", username), zap.Error(err))
 		return nil, fmt.Errorf("failed to make request to Auth0: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() {
+		_ = resp.Body.Close() // Body close errors are usually not critical
+	}()
 
 	// Handle non-200 responses
 	if resp.StatusCode != http.StatusOK {
 		var errorResponse map[string]interface{}
-		json.NewDecoder(resp.Body).Decode(&errorResponse)
+		if decodeErr := json.NewDecoder(resp.Body).Decode(&errorResponse); decodeErr != nil {
+			// If we can't decode the error response, use a generic error
+			errorResponse = map[string]interface{}{"error": "unknown_error", "error_description": "Unable to decode error response"}
+		}
 		s.logger.Error("Auth0 returned non-200 status",
 			zap.String("username", username),
 			zap.Int("status_code", resp.StatusCode),

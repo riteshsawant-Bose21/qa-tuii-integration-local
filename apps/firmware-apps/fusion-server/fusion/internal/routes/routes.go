@@ -46,10 +46,16 @@ const (
 	DeviceReloadVIPEndpoint = DeviceReloadEndpoint + "/vip"
 	DeviceIDEndpoint        = DeviceEndpoint + "/{id}"
 
-	DevicesEndpoint       = "/devices"
-	DevicesIDEndpoint     = DevicesEndpoint + "/{id}"
-	DevicesVIPEndpoint    = DevicesEndpoint + "/vip"
-	DevicesSetVIPEndpoint = DevicesVIPEndpoint + "/{vip}"
+	DevicesEndpoint                = "/devices"
+	DevicesIDEndpoint              = DevicesEndpoint + "/{id}"
+	DevicesVIPEndpoint             = DevicesEndpoint + "/vip"
+	DevicesSetVIPEndpoint          = DevicesVIPEndpoint + "/{vip}"
+	DevicesGetCSREndpoint          = DevicesIDEndpoint + "/csr"
+	DevicesGetCSRForDeviceEndpoint = DevicesEndpoint + "/csr"
+	DevicesIDCertificateEndpoint   = DevicesIDEndpoint + "/certificate"
+	DevicesCertificateEndpoint     = DevicesEndpoint + "/certificate"
+	DevicesIDResetEndpoint         = DevicesIDEndpoint + "/reset"
+	DevicesResetEndpoint           = DevicesEndpoint + "/reset"
 
 	EndpointsEndpoint = "/endpoints"
 
@@ -68,6 +74,7 @@ const (
 	PAVAZonesEndpoint          = PAVAEndpoint + "/zones"
 	PAVAMessagesIDEndpoint     = PAVAMessagesEndpoint + "/{id}"
 	PAVAMessagesTagsEndpoint   = PAVAMessagesEndpoint + "/tags"
+	PAVAScheduleIDEndpoint     = PAVAScheduleEndpoint + "/{id}"
 	PAVAMessageStreamEndpoint  = PAVAMessagesIDEndpoint + "/stream"
 	PAVAMessageTriggerEndpoint = PAVAMessagesIDEndpoint + "/trigger"
 	PAVAZoneStatusEndpoint     = PAVAZonesEndpoint + "/status/{name}"
@@ -78,13 +85,16 @@ const (
 	SessionsIdEndpoint = SessionsEndpoint + "/{id}"
 
 	SnapshotsEndpoint         = "/snapshots"
+	SnapshotsMetaEndpoint     = SnapshotsEndpoint + "/meta"
+	SnapshotsActiveEndpoint   = SnapshotsMetaEndpoint + "/active"
 	SnapshotsNameEndpoint     = SnapshotsEndpoint + "/{name}"
 	SnapshotsActivateEndpoint = SnapshotsEndpoint + "/activate/{name}"
+	SnapshotsUpdateEndpoint   = SnapshotsEndpoint + "/update/{name}"
 
 	TasksEndpoint          = "/tasks"
 	TasksHistoryEndpoint   = TasksEndpoint + "/history"
 	TasksIdEndpoint        = TasksEndpoint + "/{id}"
-	TasksIdDisableEndpoint = TasksIdEndpoint + "/enable"
+	TasksIdDisableEndpoint = TasksIdEndpoint + "/disable"
 	TasksIdEnableEndpoint  = TasksIdEndpoint + "/enable"
 
 	ValueEndpoint = "/value"
@@ -117,6 +127,10 @@ func RegisterPrivatePOST(router *mux.Router, pattern string, handler http.Handle
 	RegisterPrivateEndpoint(router, "POST", pattern, handler)
 }
 
+func RegisterPrivateDELETE(router *mux.Router, pattern string, handler http.HandlerFunc) {
+	RegisterPrivateEndpoint(router, "DELETE", pattern, handler)
+}
+
 func RegisterPublicEndpoint(router *mux.Router, method string, pattern string, handler http.HandlerFunc) {
 	RegisterEndpoint(router, method, pattern, handler, true)
 }
@@ -147,6 +161,10 @@ func RegisterEndpoint(router *mux.Router, method string, pattern string, handler
 		Endpoints = append(Endpoints, fmt.Sprintf("%s %s", method, pattern))
 	}
 	router.HandleFunc(pattern, handler).Methods(method)
+	// Register OPTIONS method for CORS preflight requests
+	router.HandleFunc(pattern, func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}).Methods("OPTIONS")
 }
 
 func ListRegisteredEndpoints(w http.ResponseWriter, r *http.Request) {

@@ -48,4 +48,13 @@ fi
 
 echo "Starting fusion-server on $IP_ADDR"
 
-exec /usr/local/bin/fusion-server -bind-addr "$IP_ADDR"
+# AWS IoT Core Configuration
+IOT_ENABLED="${FUSION_IOT_ENABLED:-true}"
+IOT_ENDPOINT="${FUSION_IOT_ENDPOINT:-a1a77o9cigolk4-ats.iot.us-east-2.amazonaws.com}"
+IOT_TOPIC_PREFIX="${FUSION_IOT_TOPIC_PREFIX:-logs/}"
+
+exec /usr/local/bin/fusion-server \
+    -bind-addr "$IP_ADDR" \
+    -iot-enabled="$IOT_ENABLED" \
+    -iot-endpoint="$IOT_ENDPOINT" \
+    -iot-topic-prefix="$IOT_TOPIC_PREFIX"

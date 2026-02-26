@@ -21,6 +21,7 @@ func (s *Service) SelectUserSettingsByUserID(ctx context.Context, userID string)
 	return newUserSettings(row)
 }
 
+// SelectUserSettingsBySettingsIDAndUserID retrieves user settings by settings ID and user ID
 func (s *Service) SelectUserSettingsBySettingsIDAndUserID(ctx context.Context, settingsID string, userID string) (*types.UserSettings, error) {
 	row, err := model.UserSettings(model.UserSettingWhere.ID.EQ(settingsID), model.UserSettingWhere.UserID.EQ(userID)).One(ctx, s.db)
 	if err != nil {

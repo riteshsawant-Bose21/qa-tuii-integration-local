@@ -7,6 +7,7 @@ import (
 	"go.uber.org/zap"
 )
 
+// Project defines the interface for project-related operations
 type Project interface {
 	CreateProject(ctx context.Context, project *types.ProjectCreateRequest, userAuth types.UserAuthorizationResponse, logger *zap.Logger) (*types.ProjectCreateResponse, error)
 	GetAllProjects(ctx context.Context, queryParams *types.GetAllProjectsParams, userAuth types.UserAuthorizationResponse, logger *zap.Logger) (*types.GetAllProjectsResponse, error)

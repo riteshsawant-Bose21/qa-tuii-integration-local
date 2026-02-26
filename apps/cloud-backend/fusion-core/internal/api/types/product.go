@@ -7,15 +7,21 @@ import (
 )
 
 var (
-	ProductCategorySpeaker                string = "speaker"
-	ProductCategoryAmplifier              string = "amplifier"
-	ProductCategoryDigitalSignalProcessor string = "dsp"
-	ProductCategoryController             string = "controller"
-	ProductCategoryEndpoint               string = "io_endpoint"
-	ProductCategoryAccessory              string = "accessory"
+	// ProductCategorySpeaker represents the speaker product category.
+	ProductCategorySpeaker = "speaker"
+	// ProductCategoryAmplifier represents the amplifier product category.
+	ProductCategoryAmplifier = "amplifier"
+	// ProductCategoryDigitalSignalProcessor represents the digital signal processor product category.
+	ProductCategoryDigitalSignalProcessor = "dsp"
+	// ProductCategoryController represents the controller product category.
+	ProductCategoryController = "controller"
+	// ProductCategoryEndpoint represents the IO endpoint product category.
+	ProductCategoryEndpoint = "io_endpoint"
+	// ProductCategoryAccessory represents the accessory product category.
+	ProductCategoryAccessory = "accessory"
 )
 
-// Generic product item response used for all product types
+// ProductItemResponse represents a generic product item response used for all product types.
 type ProductItemResponse struct {
 	ProductID          int         `json:"product_id"`
 	Assets             interface{} `json:"assets"`
@@ -26,7 +32,7 @@ type ProductItemResponse struct {
 	IsFusionCompatible bool        `json:"is_fusion_compatible"`
 }
 
-// New API response structure matching the required schema
+// ProductResponse represents the API response structure matching the required schema.
 type ProductResponse struct {
 	Version    string                `json:"version"`
 	Speaker    []ProductItemResponse `json:"speaker,omitempty"`
@@ -37,7 +43,7 @@ type ProductResponse struct {
 	IOEndpoint []ProductItemResponse `json:"io_endpoint,omitempty"`
 }
 
-// Individual product response when fetching by ID
+// SingleProductResponse represents an individual product response when fetching by ID.
 type SingleProductResponse struct {
 	Version    string               `json:"version"`
 	Speaker    *ProductItemResponse `json:"speaker,omitempty"`
@@ -48,30 +54,40 @@ type SingleProductResponse struct {
 	IOEndpoint *ProductItemResponse `json:"io_endpoint,omitempty"`
 }
 
-// Price API response types
+// PriceResponse represents the price API response structure.
 type PriceResponse struct {
 	Version   string        `json:"version"`
 	ProductID int           `json:"product_id"`
 	Prices    []PriceDetail `json:"prices"`
 }
 
+// PriceDetail represents individual price details for a product variant.
 type PriceDetail struct {
 	Variant  string  `json:"variant,omitempty"`
 	Currency string  `json:"currency"`
 	Price    float64 `json:"price"`
 }
 
+// SyncOperation represents the type of synchronization operation.
 type SyncOperation string
+
+// SyncStatus represents the status of a synchronization operation.
 type SyncStatus string
+
+// ProductType represents the type/category of a product.
 type ProductType string
 
+// Sync operation constants.
 const (
+	// SyncOperationFullSync represents a full synchronization operation.
 	SyncOperationFullSync      SyncOperation = "full_sync"
 	SyncOperationManualSync    SyncOperation = "manual_sync"
 	SyncOperationScheduledSync SyncOperation = "scheduled_sync"
 )
 
+// Sync status constants.
 const (
+	// SyncStatusPending represents a pending synchronization status.
 	SyncStatusPending    SyncStatus = "pending"
 	SyncStatusInProgress SyncStatus = "in_progress"
 	SyncStatusCompleted  SyncStatus = "completed"
@@ -79,14 +95,21 @@ const (
 )
 
 const (
-	ProductTypeSpeaker    ProductType = "speaker"
-	ProductTypeAmplifier  ProductType = "amplifier"
-	ProductTypeDSP        ProductType = "dsp"
+	// ProductTypeSpeaker represents the speaker product type
+	ProductTypeSpeaker ProductType = "speaker"
+	// ProductTypeAmplifier represents the amplifier product type
+	ProductTypeAmplifier ProductType = "amplifier"
+	// ProductTypeDSP represents the digital signal processor product type
+	ProductTypeDSP ProductType = "dsp"
+	// ProductTypeController represents the controller product type
 	ProductTypeController ProductType = "controller"
+	// ProductTypeIOEndpoint represents the IO endpoint product type
 	ProductTypeIOEndpoint ProductType = "io_endpoint"
-	ProductTypeAccessory  ProductType = "accessory"
+	// ProductTypeAccessory represents the accessory product type
+	ProductTypeAccessory ProductType = "accessory"
 )
 
+// SyncJobResult represents the result of a data synchronization job
 type SyncJobResult struct {
 	ID               int                    `json:"id"`
 	JobID            string                 `json:"job_id"`
@@ -167,6 +190,7 @@ type DBPrice struct {
 	CreatedAt *string `json:"created_at,omitempty"` // Optional creation timestamp
 }
 
+// PriceKey represents a unique identifier for product pricing information
 type PriceKey struct {
 	ProductID int    `json:"product_id"`
 	Currency  string `json:"currency"`

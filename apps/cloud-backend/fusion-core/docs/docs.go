@@ -34,7 +34,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "devices"
+                    "auth"
                 ],
                 "summary": "Get Auth0 tokens for automation testing",
                 "parameters": [
@@ -74,6 +74,188 @@ const docTemplate = `{
                 }
             }
         },
+        "/devices": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Create a new device in the system",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "devices"
+                ],
+                "summary": "Create a new device",
+                "parameters": [
+                    {
+                        "description": "Device details",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/types.DeviceCreateRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Successfully created device",
+                        "schema": {
+                            "$ref": "#/definitions/types.DeviceCreateResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad request - Invalid payload or device already exists",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized - User not authorized",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Project not found",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/devices/{device_id}": {
+            "patch": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Update device details (non-static fields only)",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "devices"
+                ],
+                "summary": "Update a device",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Device ID",
+                        "name": "device_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Device update details",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/types.DeviceUpdateRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "Successfully updated device"
+                    },
+                    "400": {
+                        "description": "Bad request - Invalid payload",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized - User not authorized to update this device",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Device or project not found",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/devices/{device_id}/reset": {
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Reset a device to factory settings",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "devices"
+                ],
+                "summary": "Reset a device",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Device ID",
+                        "name": "device_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "Successfully reset device"
+                    },
+                    "401": {
+                        "description": "Unauthorized - User not authorized to reset this device",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Device not found",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/organization/role-management": {
             "get": {
                 "security": [
@@ -96,7 +278,7 @@ const docTemplate = `{
                     "200": {
                         "description": "Successfully retrieved role management data",
                         "schema": {
-                            "$ref": "#/definitions/github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.RoleManagementResponse"
+                            "$ref": "#/definitions/types.RoleManagementResponse"
                         }
                     },
                     "401": {
@@ -154,7 +336,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.CreateRoleRequest"
+                            "$ref": "#/definitions/types.CreateRoleRequest"
                         }
                     }
                 ],
@@ -162,7 +344,7 @@ const docTemplate = `{
                     "201": {
                         "description": "Successfully created role",
                         "schema": {
-                            "$ref": "#/definitions/github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.RoleWithPermissions"
+                            "$ref": "#/definitions/types.RoleWithPermissions"
                         }
                     },
                     "400": {
@@ -238,7 +420,7 @@ const docTemplate = `{
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.PermissionUpdateRequest"
+                                "$ref": "#/definitions/types.PermissionUpdateRequest"
                             }
                         }
                     }
@@ -314,7 +496,7 @@ const docTemplate = `{
                     "200": {
                         "description": "Successfully retrieved organization users",
                         "schema": {
-                            "$ref": "#/definitions/github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.OrganizationUsersResponse"
+                            "$ref": "#/definitions/types.OrganizationUsersResponse"
                         }
                     },
                     "401": {
@@ -379,7 +561,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.AssignRoleRequest"
+                            "$ref": "#/definitions/types.AssignRoleRequest"
                         }
                     }
                 ],
@@ -449,7 +631,7 @@ const docTemplate = `{
                     "200": {
                         "description": "Successful response with all products",
                         "schema": {
-                            "$ref": "#/definitions/github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.ProductResponse"
+                            "$ref": "#/definitions/types.ProductResponse"
                         }
                     },
                     "500": {
@@ -487,7 +669,7 @@ const docTemplate = `{
                     "200": {
                         "description": "Successful response with product details",
                         "schema": {
-                            "$ref": "#/definitions/github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.SingleProductResponse"
+                            "$ref": "#/definitions/types.SingleProductResponse"
                         }
                     },
                     "400": {
@@ -549,7 +731,7 @@ const docTemplate = `{
                     "200": {
                         "description": "Successful response with product prices",
                         "schema": {
-                            "$ref": "#/definitions/github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.PriceResponse"
+                            "$ref": "#/definitions/types.PriceResponse"
                         }
                     },
                     "400": {
@@ -619,7 +801,7 @@ const docTemplate = `{
                     "200": {
                         "description": "Successfully retrieved all projects",
                         "schema": {
-                            "$ref": "#/definitions/github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.GetAllProjectsResponse"
+                            "$ref": "#/definitions/types.GetAllProjectsResponse"
                         }
                     },
                     "400": {
@@ -660,7 +842,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.ProjectCreateRequest"
+                            "$ref": "#/definitions/types.ProjectCreateRequest"
                         }
                     }
                 ],
@@ -668,7 +850,7 @@ const docTemplate = `{
                     "201": {
                         "description": "Successfully created project",
                         "schema": {
-                            "$ref": "#/definitions/github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.ProjectCreateResponse"
+                            "$ref": "#/definitions/types.ProjectCreateResponse"
                         }
                     },
                     "400": {
@@ -774,7 +956,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.ProjectUpdateRequest"
+                            "$ref": "#/definitions/types.ProjectUpdateRequest"
                         }
                     }
                 ],
@@ -782,7 +964,7 @@ const docTemplate = `{
                     "200": {
                         "description": "Successfully updated project",
                         "schema": {
-                            "$ref": "#/definitions/github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.ProjectUpdateResponse"
+                            "$ref": "#/definitions/types.ProjectUpdateResponse"
                         }
                     },
                     "400": {
@@ -844,7 +1026,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.ProjectArchiveRequest"
+                            "$ref": "#/definitions/types.ProjectArchiveRequest"
                         }
                     }
                 ],
@@ -911,7 +1093,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.ProjectLockRequest"
+                            "$ref": "#/definitions/types.ProjectLockRequest"
                         }
                     }
                 ],
@@ -978,7 +1160,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.ProjectStarRequest"
+                            "$ref": "#/definitions/types.ProjectStarRequest"
                         }
                     }
                 ],
@@ -1142,7 +1324,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.CreateUserRequest"
+                            "$ref": "#/definitions/types.CreateUserRequest"
                         }
                     }
                 ],
@@ -1150,7 +1332,7 @@ const docTemplate = `{
                     "201": {
                         "description": "Successfully created user",
                         "schema": {
-                            "$ref": "#/definitions/github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.User"
+                            "$ref": "#/definitions/types.User"
                         }
                     },
                     "400": {
@@ -1190,7 +1372,7 @@ const docTemplate = `{
                     "200": {
                         "description": "Successfully retrieved user authorization details",
                         "schema": {
-                            "$ref": "#/definitions/github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.UserAuthorizationResponse"
+                            "$ref": "#/definitions/types.UserAuthorizationResponse"
                         }
                     },
                     "401": {
@@ -1534,7 +1716,7 @@ const docTemplate = `{
                     "200": {
                         "description": "Successfully retrieved user",
                         "schema": {
-                            "$ref": "#/definitions/github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.User"
+                            "$ref": "#/definitions/types.User"
                         }
                     },
                     "404": {
@@ -1584,7 +1766,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.UpdateUserRequest"
+                            "$ref": "#/definitions/types.UpdateUserRequest"
                         }
                     }
                 ],
@@ -1592,7 +1774,7 @@ const docTemplate = `{
                     "200": {
                         "description": "Successfully updated user",
                         "schema": {
-                            "$ref": "#/definitions/github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.User"
+                            "$ref": "#/definitions/types.User"
                         }
                     },
                     "400": {
@@ -1618,7 +1800,7 @@ const docTemplate = `{
         }
     },
     "definitions": {
-        "github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.AccessLevel": {
+        "types.AccessLevel": {
             "type": "object",
             "properties": {
                 "id": {
@@ -1635,7 +1817,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.AccountInfo": {
+        "types.AccountInfo": {
             "type": "object",
             "properties": {
                 "description": {
@@ -1656,7 +1838,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.AssignRoleRequest": {
+        "types.AssignRoleRequest": {
             "type": "object",
             "required": [
                 "role_id",
@@ -1694,7 +1876,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.Budget": {
+        "types.Budget": {
             "type": "object",
             "required": [
                 "currency"
@@ -1710,7 +1892,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.CreateRoleRequest": {
+        "types.CreateRoleRequest": {
             "type": "object",
             "required": [
                 "description",
@@ -1731,7 +1913,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.CreateUserRequest": {
+        "types.CreateUserRequest": {
             "type": "object",
             "required": [
                 "account_id",
@@ -1758,34 +1940,57 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.DeviceCreateRequest": {
+        "types.DeviceCreateRequest": {
             "type": "object",
             "required": [
                 "csr",
-                "deviceId",
-                "deviceName",
-                "deviceType",
-                "firmwareVersion"
+                "device_id",
+                "device_location",
+                "device_name",
+                "device_zone",
+                "firmware_version",
+                "mac_address",
+                "model_name",
+                "project_id",
+                "serial_number"
             ],
             "properties": {
                 "csr": {
                     "type": "string"
                 },
-                "deviceId": {
+                "device_id": {
                     "type": "string"
                 },
-                "deviceName": {
+                "device_location": {
                     "type": "string"
                 },
-                "deviceType": {
+                "device_name": {
                     "type": "string"
                 },
-                "firmwareVersion": {
+                "device_zone": {
+                    "type": "string"
+                },
+                "firmware_version": {
+                    "type": "string"
+                },
+                "is_primary": {
+                    "type": "boolean"
+                },
+                "mac_address": {
+                    "type": "string"
+                },
+                "model_name": {
+                    "type": "string"
+                },
+                "project_id": {
+                    "type": "string"
+                },
+                "serial_number": {
                     "type": "string"
                 }
             }
         },
-        "github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.DeviceCreateResponse": {
+        "types.DeviceCreateResponse": {
             "type": "object",
             "properties": {
                 "certificate": {
@@ -1793,7 +1998,30 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.EnvironmentType": {
+        "types.DeviceUpdateRequest": {
+            "type": "object",
+            "properties": {
+                "device_location": {
+                    "type": "string"
+                },
+                "device_name": {
+                    "type": "string"
+                },
+                "device_zone": {
+                    "type": "string"
+                },
+                "firmware_version": {
+                    "type": "string"
+                },
+                "is_primary": {
+                    "type": "boolean"
+                },
+                "project_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "types.EnvironmentType": {
             "type": "string",
             "enum": [
                 "indoor",
@@ -1832,7 +2060,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.FeaturePermissionDetail": {
+        "types.FeaturePermissionDetail": {
             "type": "object",
             "properties": {
                 "access_label": {
@@ -1863,7 +2091,7 @@ const docTemplate = `{
                 "data": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.Project"
+                        "$ref": "#/definitions/types.Project"
                     }
                 },
                 "page": {
@@ -1884,17 +2112,17 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "account": {
-                    "$ref": "#/definitions/github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.AccountInfo"
+                    "$ref": "#/definitions/types.AccountInfo"
                 },
                 "users": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.UserWithRole"
+                        "$ref": "#/definitions/types.UserWithRole"
                     }
                 }
             }
         },
-        "github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.PermissionUpdateRequest": {
+        "types.PermissionUpdateRequest": {
             "type": "object",
             "required": [
                 "access_level_id",
@@ -1921,7 +2149,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.PriceDetail": {
+        "types.PriceDetail": {
             "type": "object",
             "properties": {
                 "currency": {
@@ -1935,13 +2163,13 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.PriceResponse": {
+        "types.PriceResponse": {
             "type": "object",
             "properties": {
                 "prices": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.PriceDetail"
+                        "$ref": "#/definitions/types.PriceDetail"
                     }
                 },
                 "product_id": {
@@ -1952,7 +2180,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.ProductItemResponse": {
+        "types.ProductItemResponse": {
             "type": "object",
             "properties": {
                 "assets": {},
@@ -1974,43 +2202,43 @@ const docTemplate = `{
                 "specifications": {}
             }
         },
-        "github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.ProductResponse": {
+        "types.ProductResponse": {
             "type": "object",
             "properties": {
                 "accessory": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.ProductItemResponse"
+                        "$ref": "#/definitions/types.ProductItemResponse"
                     }
                 },
                 "amplifier": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.ProductItemResponse"
+                        "$ref": "#/definitions/types.ProductItemResponse"
                     }
                 },
                 "controller": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.ProductItemResponse"
+                        "$ref": "#/definitions/types.ProductItemResponse"
                     }
                 },
                 "dsp": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.ProductItemResponse"
+                        "$ref": "#/definitions/types.ProductItemResponse"
                     }
                 },
                 "io_endpoint": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.ProductItemResponse"
+                        "$ref": "#/definitions/types.ProductItemResponse"
                     }
                 },
                 "speaker": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.ProductItemResponse"
+                        "$ref": "#/definitions/types.ProductItemResponse"
                     }
                 },
                 "version": {
@@ -2018,7 +2246,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.Project": {
+        "types.Project": {
             "type": "object",
             "properties": {
                 "application": {
@@ -2026,7 +2254,7 @@ const docTemplate = `{
                     "example": "Audio System Design"
                 },
                 "budget": {
-                    "$ref": "#/definitions/github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.Budget"
+                    "$ref": "#/definitions/types.Budget"
                 },
                 "created_at": {
                     "type": "string",
@@ -2039,7 +2267,7 @@ const docTemplate = `{
                 "environment_type": {
                     "allOf": [
                         {
-                            "$ref": "#/definitions/github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.EnvironmentType"
+                            "$ref": "#/definitions/types.EnvironmentType"
                         }
                     ],
                     "example": "indoor"
@@ -2071,7 +2299,7 @@ const docTemplate = `{
                 "project_phase": {
                     "allOf": [
                         {
-                            "$ref": "#/definitions/github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.ProjectPhase"
+                            "$ref": "#/definitions/types.ProjectPhase"
                         }
                     ],
                     "example": "Development"
@@ -2090,7 +2318,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.ProjectArchiveRequest": {
+        "types.ProjectArchiveRequest": {
             "type": "object",
             "required": [
                 "is_archived"
@@ -2102,7 +2330,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.ProjectCreateRequest": {
+        "types.ProjectCreateRequest": {
             "type": "object",
             "required": [
                 "application",
@@ -2118,7 +2346,7 @@ const docTemplate = `{
                     "example": "Audio System Design"
                 },
                 "budget": {
-                    "$ref": "#/definitions/github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.Budget"
+                    "$ref": "#/definitions/types.Budget"
                 },
                 "description": {
                     "type": "string",
@@ -2128,7 +2356,7 @@ const docTemplate = `{
                 "environment_type": {
                     "allOf": [
                         {
-                            "$ref": "#/definitions/github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.EnvironmentType"
+                            "$ref": "#/definitions/types.EnvironmentType"
                         }
                     ],
                     "example": "indoor"
@@ -2154,7 +2382,7 @@ const docTemplate = `{
                 "project_phase": {
                     "allOf": [
                         {
-                            "$ref": "#/definitions/github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.ProjectPhase"
+                            "$ref": "#/definitions/types.ProjectPhase"
                         }
                     ],
                     "example": "Proposal"
@@ -2166,7 +2394,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.ProjectCreateResponse": {
+        "types.ProjectCreateResponse": {
             "type": "object",
             "properties": {
                 "id": {
@@ -2183,7 +2411,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.ProjectLockRequest": {
+        "types.ProjectLockRequest": {
             "type": "object",
             "required": [
                 "is_locked"
@@ -2195,7 +2423,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.ProjectPhase": {
+        "types.ProjectPhase": {
             "type": "string",
             "enum": [
                 "Proposal",
@@ -2208,7 +2436,7 @@ const docTemplate = `{
                 "ProjectPhaseCommissioned"
             ]
         },
-        "github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.ProjectStarRequest": {
+        "types.ProjectStarRequest": {
             "type": "object",
             "required": [
                 "is_starred"
@@ -2220,7 +2448,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.ProjectUpdateRequest": {
+        "types.ProjectUpdateRequest": {
             "type": "object",
             "properties": {
                 "application": {
@@ -2230,7 +2458,7 @@ const docTemplate = `{
                     "example": "Audio System Design"
                 },
                 "budget": {
-                    "$ref": "#/definitions/github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.Budget"
+                    "$ref": "#/definitions/types.Budget"
                 },
                 "description": {
                     "type": "string",
@@ -2240,7 +2468,7 @@ const docTemplate = `{
                 "environment_type": {
                     "allOf": [
                         {
-                            "$ref": "#/definitions/github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.EnvironmentType"
+                            "$ref": "#/definitions/types.EnvironmentType"
                         }
                     ],
                     "example": "indoor"
@@ -2262,7 +2490,7 @@ const docTemplate = `{
                 "project_phase": {
                     "allOf": [
                         {
-                            "$ref": "#/definitions/github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.ProjectPhase"
+                            "$ref": "#/definitions/types.ProjectPhase"
                         }
                     ],
                     "example": "Development"
@@ -2274,7 +2502,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.ProjectUpdateResponse": {
+        "types.ProjectUpdateResponse": {
             "type": "object",
             "properties": {
                 "project_upload_url": {
@@ -2287,7 +2515,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.RoleInfo": {
+        "types.RoleInfo": {
             "type": "object",
             "properties": {
                 "id": {
@@ -2300,36 +2528,36 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.RoleManagementResponse": {
+        "types.RoleManagementResponse": {
             "type": "object",
             "properties": {
                 "access_levels": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.AccessLevel"
+                        "$ref": "#/definitions/types.AccessLevel"
                     }
                 },
                 "features": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.Feature"
+                        "$ref": "#/definitions/types.Feature"
                     }
                 },
                 "roles": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.RoleWithPermissions"
+                        "$ref": "#/definitions/types.RoleWithPermissions"
                     }
                 },
                 "users": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.UserBasicInfo"
+                        "$ref": "#/definitions/types.UserBasicInfo"
                     }
                 }
             }
         },
-        "github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.RoleWithPermissions": {
+        "types.RoleWithPermissions": {
             "type": "object",
             "properties": {
                 "created_at": {
@@ -2351,7 +2579,7 @@ const docTemplate = `{
                 "permissions": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.FeaturePermissionDetail"
+                        "$ref": "#/definitions/types.FeaturePermissionDetail"
                     }
                 },
                 "user_count": {
@@ -2360,26 +2588,26 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.SingleProductResponse": {
+        "types.SingleProductResponse": {
             "type": "object",
             "properties": {
                 "accessory": {
-                    "$ref": "#/definitions/github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.ProductItemResponse"
+                    "$ref": "#/definitions/types.ProductItemResponse"
                 },
                 "amplifier": {
-                    "$ref": "#/definitions/github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.ProductItemResponse"
+                    "$ref": "#/definitions/types.ProductItemResponse"
                 },
                 "controller": {
-                    "$ref": "#/definitions/github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.ProductItemResponse"
+                    "$ref": "#/definitions/types.ProductItemResponse"
                 },
                 "dsp": {
-                    "$ref": "#/definitions/github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.ProductItemResponse"
+                    "$ref": "#/definitions/types.ProductItemResponse"
                 },
                 "io_endpoint": {
-                    "$ref": "#/definitions/github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.ProductItemResponse"
+                    "$ref": "#/definitions/types.ProductItemResponse"
                 },
                 "speaker": {
-                    "$ref": "#/definitions/github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.ProductItemResponse"
+                    "$ref": "#/definitions/types.ProductItemResponse"
                 },
                 "version": {
                     "type": "string"
@@ -2404,7 +2632,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.UpdateUserRequest": {
+        "types.UpdateUserRequest": {
             "type": "object",
             "properties": {
                 "account_id": {
@@ -2465,11 +2693,11 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.UserAuthorizationResponse": {
+        "types.UserAuthorizationResponse": {
             "type": "object",
             "properties": {
                 "account": {
-                    "$ref": "#/definitions/github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.AccountInfo"
+                    "$ref": "#/definitions/types.AccountInfo"
                 },
                 "permissions": {
                     "type": "object",
@@ -2478,14 +2706,14 @@ const docTemplate = `{
                     }
                 },
                 "role": {
-                    "$ref": "#/definitions/github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.RoleInfo"
+                    "$ref": "#/definitions/types.RoleInfo"
                 },
                 "user": {
-                    "$ref": "#/definitions/github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.UserInfo"
+                    "$ref": "#/definitions/types.UserInfo"
                 }
             }
         },
-        "github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.UserBasicInfo": {
+        "types.UserBasicInfo": {
             "type": "object",
             "properties": {
                 "email": {
@@ -2510,7 +2738,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.UserInfo": {
+        "types.UserInfo": {
             "type": "object",
             "properties": {
                 "email": {
@@ -2726,7 +2954,7 @@ const docTemplate = `{
                     "example": "2023-01-15T10:30:00Z"
                 },
                 "role": {
-                    "$ref": "#/definitions/github_com_BoseProfessional_fusion-monorepo_apps_cloud-backend_fusion-core_internal_api_types.RoleInfo"
+                    "$ref": "#/definitions/types.RoleInfo"
                 },
                 "status": {
                     "description": "active, pending, suspended",

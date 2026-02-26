@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:fusion_lib/models/fusion_models.dart';
+import 'package:fusion_lib/fusion_lib.dart';
 
 class MultiselectDropdown extends StatefulWidget {
   final List<Source> allSources;
@@ -96,8 +96,8 @@ class _MultiselectDropdownState extends State<MultiselectDropdown> {
                         ),
                         const SizedBox(width: 8),
                         Expanded(
-                          child: Text(
-                            "Select Source",
+                          child: FusionAppText(
+                            text: "Select Source",
                             style: TextStyle(fontSize: 14, color: Colors.blue[600]),
                           ),
                         ),
@@ -201,8 +201,8 @@ class _MultiselectDropdownState extends State<MultiselectDropdown> {
                                       ),
                                       const SizedBox(width: 12),
                                       Expanded(
-                                        child: Text(
-                                          item.name,
+                                        child: FusionAppText(
+                                          text: item.name,
                                           style: TextStyle(
                                             fontSize: 14,
                                             color: isSelected ? Colors.black87 : Colors.black54,
@@ -230,7 +230,7 @@ class _MultiselectDropdownState extends State<MultiselectDropdown> {
           // Selected Items Display
           if (_selectedItems.isNotEmpty) ...<Widget>[
             //
-            // const Text(
+            // const FusionAppText(text:
             //   'Audio Mix Levels:',
             //   style: TextStyle(
             //     fontSize: 16,
@@ -268,8 +268,8 @@ class _MultiselectDropdownState extends State<MultiselectDropdown> {
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: <Widget>[
                             Expanded(
-                              child: Text(
-                                item.name,
+                              child: FusionAppText(
+                                text: item.name,
                                 style: const TextStyle(
                                   fontSize: 14,
                                   fontWeight: FontWeight.w500,
@@ -286,8 +286,8 @@ class _MultiselectDropdownState extends State<MultiselectDropdown> {
                                 color: Colors.grey[100],
                                 borderRadius: BorderRadius.circular(4),
                               ),
-                              child: Text(
-                                '${currentValue.toInt()} dB',
+                              child: FusionAppText(
+                                text: '${currentValue.toInt()} dB',
                                 style: TextStyle(
                                   fontSize: 12,
                                   fontWeight: FontWeight.w500,
@@ -318,8 +318,8 @@ class _MultiselectDropdownState extends State<MultiselectDropdown> {
                         // Slider
                         Row(
                           children: <Widget>[
-                            Text(
-                              '-80',
+                            FusionAppText(
+                              text: '-80',
                               style: TextStyle(
                                 fontSize: 10,
                                 color: Colors.grey[600],
@@ -351,8 +351,8 @@ class _MultiselectDropdownState extends State<MultiselectDropdown> {
                                 ),
                               ),
                             ),
-                            Text(
-                              '0',
+                            FusionAppText(
+                              text: '0',
                               style: TextStyle(
                                 fontSize: 10,
                                 color: Colors.grey[600],

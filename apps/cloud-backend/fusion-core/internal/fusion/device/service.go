@@ -4,19 +4,35 @@ import (
 	"context"
 
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/api/types"
+	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/model"
+	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/model/models"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/storage/cloudfs"
 	"go.uber.org/zap"
 )
 
+// Service orchestrates device operations between IoT and database services.
 type Service struct {
 	dbService  DatabaseService
 	iotService cloudfs.IoT
 }
 
+// DatabaseService defines the contract for device database operations.
 type DatabaseService interface {
-	Insert(ctx context.Context, project *types.DeviceCreateRequest, accountID string, logger *zap.Logger) (error)
+	// GetDB returns the database instance for transaction management.
+	GetDB(ctx context.Context) model.DBWithTransactions
+
+	// Query operations
+	GetDeviceByID(ctx context.Context, deviceID string, logger *zap.Logger) (*models.Device, error)
+	GetProjectByID(ctx context.Context, projectID string, logger *zap.Logger) (*models.Project, error)
+
+	// Write operations (all require transaction)
+	Insert(ctx context.Context, req *types.DeviceCreateRequest, accountID string, cert types.CertificateInfo, tx model.DBTxExecutor, logger *zap.Logger) error
+	ClaimDevice(ctx context.Context, device models.Device, accountID string, cert types.CertificateInfo, req *types.DeviceCreateRequest, tx model.DBTxExecutor, logger *zap.Logger) error
+	Update(ctx context.Context, device models.Device, req *types.DeviceUpdateRequest, tx model.DBTxExecutor, logger *zap.Logger) error
+	Reset(ctx context.Context, device models.Device, tx model.DBTxExecutor, logger *zap.Logger) error
 }
 
+// NewService creates a new device service instance.
 func NewService(dbService DatabaseService, iotService cloudfs.IoT) *Service {
 	return &Service{
 		dbService:  dbService,

@@ -1,10 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:fusion_lib/fusion_theme/app_theme.dart';
+import 'package:fusion_lib/fusion_lib.dart';
 
 import '../../models/dock_item_config.dart';
 import '../../models/fusion_dock_item.dart';
-import '../dockable_side_bar/fusion_dock_floating_panel.dart';
-import '../text_views/fusion_app_text.dart';
 
 /// A custom expandable tile widget with drag gesture support for Fusion applications.
 ///
@@ -103,20 +101,17 @@ class _FusionExpandableTileWidgetState extends State<FusionExpandableTileWidget>
     return Theme(
       data: theme.copyWith(dividerColor: Colors.transparent),
       child: Container(
-        decoration: BoxDecoration(
-          color: theme.colorScheme.white,
-          border: Border(bottom: BorderSide(color: theme.colorScheme.dividerColor, width: 1)),
-        ),
+        color: theme.colorScheme.elevation1,
         child: ExpansionTile(
           key: ValueKey<String>(widget.config.title),
           minTileHeight: 24,
           controller: widget.controller,
           dense: true,
           tilePadding: const EdgeInsets.only(right: 16, left: 16),
-          trailing: _RotatingIcon(animation: _rotationAnimation, color: theme.colorScheme.fusionTextViewColor),
+          trailing: _RotatingIcon(animation: _rotationAnimation, color: theme.colorScheme.textPrimary),
           onExpansionChanged: _handleExpansionChanged,
-          iconColor: theme.colorScheme.fusionTextViewColor,
-          collapsedIconColor: theme.colorScheme.fusionTextViewColor,
+          iconColor: theme.colorScheme.textPrimary,
+          collapsedIconColor: theme.colorScheme.textPrimary,
           title: Draggable<DockItem>(
             data: widget.item,
             feedback: FloatingWidget(
@@ -142,7 +137,10 @@ class _FusionExpandableTileWidgetState extends State<FusionExpandableTileWidget>
           ),
 
           initiallyExpanded: widget.config.initiallyExpanded,
-          children: <Widget>[widget.config.dockItemWidget()],
+          children: <Widget>[
+            Divider(height: 1, color: theme.colorScheme.elevation2),
+            widget.config.dockItemWidget,
+          ],
         ),
       ),
     );

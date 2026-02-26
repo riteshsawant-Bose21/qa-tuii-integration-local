@@ -1,3 +1,4 @@
+// Package user provides user management functionality including profiles and settings.
 package user
 
 import (

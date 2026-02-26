@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:fusion_lib/fusion_widgets/semantics/semantic_helper.dart';
-import 'package:fusion_lib/fusion_widgets/semantics/semantic_type.dart';
+import 'package:fusion_lib/fusion_lib.dart';
 
 class GradientActionButton extends StatelessWidget {
   /// Width of the button. Defaults to 240.
@@ -86,7 +85,7 @@ class GradientActionButton extends StatelessWidget {
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: <Widget>[
-                    Text(label, style: textStyle),
+                    FusionAppText(text: label, style: textStyle),
                     if (trailing != null) ...<Widget>[
                       const SizedBox(width: 12),
                       trailing!,
