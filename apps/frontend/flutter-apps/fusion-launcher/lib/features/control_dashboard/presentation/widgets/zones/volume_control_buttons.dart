@@ -30,7 +30,7 @@ class VolumeControlButtons extends StatelessWidget {
             borderRadius: BorderRadius.circular(12),
             child: FusionContainer(
               child: FusionTextField(
-                hintText: '5.0',
+                hintText: '10.0',
                 controller: volumeController,
                 keyboardType: TextInputType.number,
                 textAlign: TextAlign.center,
@@ -44,10 +44,12 @@ class VolumeControlButtons extends StatelessWidget {
                 hintStyle: context.textTheme.labelSmall!.copyWith(
                   fontSize: 10,
                 ),
-                onChanged: (String value) {
+                onSubmitted: (String value) {
                   final double? newVolume = double.tryParse(value);
                   if (newVolume != null) {
                     onVolumeChanged(newVolume);
+                  } else {
+                    onVolumeChanged(0.0);
                   }
                 },
                 // Padding prevents text from sliding under the buttons

@@ -14,6 +14,7 @@
 #include <linux/math64.h>
 #include <linux/seqlock.h>
 #include <linux/clk.h>
+#include <linux/rcupdate.h>
 #include "fusion_gpt_client.h"
 
 #define GPT_CR      0x00
@@ -126,11 +127,11 @@ u64 fusion_gpt_read_ticks64(void)
 	struct fusion_gpt *g;
 	u64 ret = 0;
 
-	mutex_lock(&gpt_singleton_lock);
-	g = gpt_singleton;
+	rcu_read_lock();
+	g = rcu_dereference(gpt_singleton);
 	if (g)
 		ret = gpt_read_ticks64(g);
-	mutex_unlock(&gpt_singleton_lock);
+	rcu_read_unlock();
 
 	return ret;
 }
@@ -274,9 +275,12 @@ u64 fusion_gpt_read_phc_ns(void)
 	u64 now64, epoch_cnt64, epoch_ns, dt_ticks, ns = 0;
 	bool valid;
 
-	mutex_lock(&gpt_singleton_lock);
-	g = gpt_singleton;
-	mutex_unlock(&gpt_singleton_lock);
+	rcu_read_lock();
+	g = rcu_dereference(gpt_singleton);
+	if (!g) {
+		rcu_read_unlock();
+		return 0;
+	}
 	if (!g) return 0;
 
 	/* Snapshot epoch under pps_lock */
@@ -285,7 +289,10 @@ u64 fusion_gpt_read_phc_ns(void)
 	epoch_ns    = g->phc_epoch_ns;
 	epoch_cnt64 = g->pps_epoch_cnt64;
 	raw_spin_unlock_irqrestore(&g->pps_lock, flags);
-	if (!valid) return 0;
+	if (!valid) {
+		rcu_read_unlock();
+		return 0;
+	}
 
 	/* Read current 64-bit counter safely */
 	now64 = gpt_read_ticks64(g);
@@ -293,6 +300,7 @@ u64 fusion_gpt_read_phc_ns(void)
 	/* Convert ticks→ns with 10 MHz = 100 ns/tick */
 	dt_ticks = now64 - epoch_cnt64;
 	ns = epoch_ns + dt_ticks * 100ULL;
+	rcu_read_unlock();
 	return ns;
 }
 EXPORT_SYMBOL(fusion_gpt_read_phc_ns);
@@ -557,7 +565,7 @@ static int gpt_probe(struct platform_device *pdev)
 
 	/* publish after start */
 	mutex_lock(&gpt_singleton_lock);
-	gpt_singleton = g;
+	rcu_assign_pointer(gpt_singleton, g);
 	mutex_unlock(&gpt_singleton_lock);
 
 	dev_info(&pdev->dev,
@@ -576,8 +584,9 @@ static void gpt_remove(struct platform_device *pdev)
 	u32 cr = rdl(g, GPT_CR);
 
 	mutex_lock(&gpt_singleton_lock);
-	gpt_singleton = NULL;
+	rcu_assign_pointer(gpt_singleton, NULL);
 	mutex_unlock(&gpt_singleton_lock);
+	synchronize_rcu();
 
 	wrl(g, 0, GPT_IR);                               /* mask all */
 	wrl(g, SR_OF1 | SR_IF1 | SR_IF2, GPT_SR);        /* W1C clear any latched */

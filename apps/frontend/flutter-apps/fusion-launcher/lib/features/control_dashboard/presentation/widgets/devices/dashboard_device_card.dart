@@ -89,11 +89,13 @@ class _DashboardDeviceCardState extends State<DashboardDeviceCard> {
     return InkWell(
       onTap: () {
         if (!_isPlayingAnimation) {
-          Navigator.pushNamed(
-            context,
-            Routes.deviceDetails,
-            arguments: widget.device.id,
-          );
+          if (widget.device is! Amplifier || !widget.device.hardwareName.toLowerCase().startsWith("pp")) {
+            Navigator.pushNamed(
+              context,
+              Routes.deviceDetails,
+              arguments: widget.device.id,
+            );
+          }
         }
       },
       child: Container(
@@ -250,7 +252,7 @@ class _DashboardDeviceCardState extends State<DashboardDeviceCard> {
                           Expanded(
                             flex: 2,
                             child:
-                                isOnline
+                                (isOnline && (widget.device is! Amplifier || !widget.device.hardwareName.toLowerCase().startsWith("pp")))
                                     ? Align(
                                       alignment: Alignment.centerLeft,
                                       child: CompactThermostatWidget(
@@ -264,7 +266,7 @@ class _DashboardDeviceCardState extends State<DashboardDeviceCard> {
                           Expanded(
                             flex: 2,
                             child:
-                                isOnline
+                                (isOnline && (widget.device is! Amplifier || !widget.device.hardwareName.toLowerCase().startsWith("pp")))
                                     ? Row(
                                       children: <Widget>[
                                         GaugeWidget(
@@ -307,7 +309,8 @@ class _DashboardDeviceCardState extends State<DashboardDeviceCard> {
                             child: Row(
                               mainAxisAlignment: MainAxisAlignment.end,
                               children: <Widget>[
-                                if (widget.device is! FusionDsp) ...<Widget>[
+                                if (widget.device is! FusionDsp &&
+                                    (widget.device is! Amplifier || !widget.device.hardwareName.toLowerCase().startsWith("pp"))) ...<Widget>[
                                   FusionNeumorphicButton(
                                     width: 26,
                                     height: 26,
@@ -326,21 +329,22 @@ class _DashboardDeviceCardState extends State<DashboardDeviceCard> {
                                   const SizedBox(width: 10),
                                 ],
 
-                                FusionNeumorphicButton(
-                                  width: 26,
-                                  height: 26,
-                                  borderRadius: 6,
-                                  color: context.colorScheme.elevation2,
-                                  onTap: () {
-                                    _showRestartConfirmation(context);
-                                  },
-                                  child: FusionImage.asset(
-                                    AssetIcons.rebootIcon,
-                                    height: 12,
-                                    width: 12,
-                                    assetColor: context.colorScheme.iconWhite,
+                                if (widget.device is! Amplifier || !widget.device.hardwareName.toLowerCase().startsWith("pp"))
+                                  FusionNeumorphicButton(
+                                    width: 26,
+                                    height: 26,
+                                    borderRadius: 6,
+                                    color: context.colorScheme.elevation2,
+                                    onTap: () {
+                                      _showRestartConfirmation(context);
+                                    },
+                                    child: FusionImage.asset(
+                                      AssetIcons.rebootIcon,
+                                      height: 12,
+                                      width: 12,
+                                      assetColor: context.colorScheme.iconWhite,
+                                    ),
                                   ),
-                                ),
                               ],
                             ),
                           ),

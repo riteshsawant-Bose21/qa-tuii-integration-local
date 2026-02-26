@@ -1,0 +1,45 @@
+{
+    "speakers": [
+      {
+        "id": 28337,
+        "model_name": "DM2SE",
+        "skus": [
+            28337
+        ]
+      }
+    ],
+    "amplifiers": [
+      {
+        "id": 29832,
+        "description": "4-channel power amplifier with PowerShare technology for flexible loudspeaker management.",
+        "short_description": "4-channel power amplifier with PowerShare technology.",
+        "power_output": {
+          "symmetrical": {
+            "rated_per_channel": {
+              "at": [
+                {
+                  "impedance": {
+                    "unit": "ohms",
+                    "value": 8
+                  },
+                  "power": {
+                    "unit": "Watts",
+                    "value": 100
+                  }
+                }
+              ]
+            }
+          }
+        }
+      }
+    ],
+    "digital_signal_processors": [
+      {
+        "id": 29853,
+        "skus": [
+          29853
+        ],
+        "short_description": "8x8 digital signal processor with Fusion Connect and Dante networking."
+      }
+    ]
+}

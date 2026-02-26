@@ -468,6 +468,7 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
   /// Zone name widget
   Widget _buildZoneName({required BuildContext context, required String name}) {
     return FusionAppText(
+      semanticId: 'zone_name',
       text: name,
       maxLine: 1,
       textOverflow: TextOverflow.ellipsis,

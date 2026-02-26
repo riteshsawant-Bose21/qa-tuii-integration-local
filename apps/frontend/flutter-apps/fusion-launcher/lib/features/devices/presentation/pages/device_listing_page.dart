@@ -134,7 +134,7 @@ class _DeviceListTabState extends State<DeviceListTab> {
         ),
         'deviceName': FusionTableCell(
           value: deviceName,
-          child: _buildLinkText(deviceName, device.id),
+          child: _buildLinkText(device),
         ),
         // 'model': FusionTableCell(
         //   value: modelName,
@@ -150,12 +150,15 @@ class _DeviceListTabState extends State<DeviceListTab> {
         ),
         'firmware': FusionTableCell(
           value: dummyFirmware,
-          child: FusionAppText(text: dummyFirmware, style: context.textTheme.labelMedium, maxLine: 1),
+          child:
+              (device is! Amplifier || !device.hardwareName.toLowerCase().startsWith("pp"))
+                  ? FusionAppText(text: dummyFirmware, style: context.textTheme.labelMedium, maxLine: 1)
+                  : Text("-", style: TextStyle(color: context.colorScheme.primaryWhite)),
         ),
         'temp': FusionTableCell(
           value: tempCelsius,
           child:
-              isOnline
+              (isOnline && (device is! Amplifier || !device.hardwareName.toLowerCase().startsWith("pp")))
                   ? CompactThermostatWidget(
                     temperature: tempCelsius,
                     maxTemperature: 100,
@@ -165,7 +168,7 @@ class _DeviceListTabState extends State<DeviceListTab> {
         'disk': FusionTableCell(
           value: diskUsage,
           child:
-              isOnline
+              (isOnline && (device is! Amplifier || !device.hardwareName.toLowerCase().startsWith("pp")))
                   ? Row(
                     children: <Widget>[
                       GaugeWidget(
@@ -205,7 +208,7 @@ class _DeviceListTabState extends State<DeviceListTab> {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.start,
             children: <Widget>[
-              if (device is! FusionDsp) ...<Widget>[
+              if (device is! FusionDsp && (device is! Amplifier || !device.hardwareName.toLowerCase().startsWith("pp"))) ...<Widget>[
                 FusionNeumorphicButton(
                   width: 26,
                   height: 26,
@@ -223,20 +226,21 @@ class _DeviceListTabState extends State<DeviceListTab> {
                 const SizedBox(width: 10),
               ],
 
-              FusionNeumorphicButton(
-                width: 26,
-                height: 26,
-                borderRadius: 6,
-                onTap: () {
-                  _showRebootConfirmation(context, device);
-                },
-                child: FusionImage.asset(
-                  AssetIcons.rebootIcon,
-                  height: 12,
-                  width: 12,
-                  assetColor: context.colorScheme.iconWhite,
+              if (device is! Amplifier || !device.hardwareName.toLowerCase().startsWith("pp"))
+                FusionNeumorphicButton(
+                  width: 26,
+                  height: 26,
+                  borderRadius: 6,
+                  onTap: () {
+                    _showRebootConfirmation(context, device);
+                  },
+                  child: FusionImage.asset(
+                    AssetIcons.rebootIcon,
+                    height: 12,
+                    width: 12,
+                    assetColor: context.colorScheme.iconWhite,
+                  ),
                 ),
-              ),
             ],
           ),
         ),
@@ -257,17 +261,19 @@ class _DeviceListTabState extends State<DeviceListTab> {
     );
   }
 
-  Widget _buildLinkText(String deviceName, String deviceId) {
+  Widget _buildLinkText(HardwareComponent device) {
     return InkWell(
       onTap: () {
-        Navigator.pushNamed(
-          context,
-          Routes.deviceDetails,
-          arguments: deviceId,
-        );
+        if (device is! Amplifier || !device.hardwareName.toLowerCase().startsWith("pp")) {
+          Navigator.pushNamed(
+            context,
+            Routes.deviceDetails,
+            arguments: device.id,
+          );
+        }
       },
       child: FusionAppText(
-        text: deviceName,
+        text: device.name,
         style: context.textTheme.labelMedium!.copyWith(
           color: context.colorScheme.green,
           decoration: TextDecoration.underline,

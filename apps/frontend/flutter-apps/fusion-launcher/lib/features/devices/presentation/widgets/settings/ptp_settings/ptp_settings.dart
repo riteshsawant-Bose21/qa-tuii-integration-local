@@ -163,11 +163,13 @@ class _PtpSettingsPageState extends State<PtpSettingsPage> {
           value: device.name,
           child: InkWell(
             onTap: () {
-              Navigator.pushNamed(
-                context,
-                Routes.deviceDetails,
-                arguments: device.id,
-              );
+              if (device is! Amplifier || !device.hardwareName.toLowerCase().startsWith("pp")) {
+                Navigator.pushNamed(
+                  context,
+                  Routes.deviceDetails,
+                  arguments: device.id,
+                );
+              }
             },
             child: FusionAppText(text: device.name, style: greenLinkStyle, maxLine: 1),
           ),

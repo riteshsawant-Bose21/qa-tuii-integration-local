@@ -229,6 +229,7 @@ Widget _buildListeningAreaSelectionSection(
                 children: <Widget>[
                   Expanded(
                     child: FusionAppText(
+                      semanticId: "listening_areas_dropdown",
                       text: totalListeningAreasSelected == 0 ? 'Select listening areas' : '$totalListeningAreasSelected listening areas selected',
                       style: context.textTheme.labelLarge?.copyWith(
                         fontSize: 12,

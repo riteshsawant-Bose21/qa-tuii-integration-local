@@ -1,0 +1,303 @@
+{
+  "version": "1.0",
+  "title": "Bose Professional Product Data Schema",
+  "description": "JSON Schema for Bose Professional audio products including speakers, amplifiers, DSPs, controllers, and I/O endpoints",
+    "speakers": [
+      {
+        "id": 28337,
+        "skus": [
+            28337
+        ],
+        "bsf_file_url": "https://www.designmax.com/products/dm2se/dm2se.bsf",
+        "power_handling": {
+          "unit": "Watts",
+          "long_term_rms": 50,
+          "peak": 100
+        },
+        "sensitivity": {
+          "unit": "dB",
+          "at": [
+            {
+              "key": "1W/1m",
+              "value": 88,
+              "unit": "dB"
+            }
+          ]
+        },
+        "max_spl": {
+          "unit": "dB",
+          "at": [
+            {
+              "key": "peak",
+              "value": 108,
+              "unit": "dB"
+            }
+          ]
+        },
+        "frequency_range": {
+          "unit": "Hz",
+          "low": 80,
+          "high": 20000
+        },
+        "nominal_impedance": {
+          "unit": "ohms",
+          "value": 8
+        },
+        "coverage": [
+          {
+            "frequency_range": {
+              "low": {
+                "unit": "Hz",
+                "value": 80
+              },
+              "high": {
+                "unit": "Hz",
+                "value": 20000
+              }
+            },
+            "type": "rectangular",
+            "horizontal_deg": 90,
+            "vertical_deg": 60
+          }
+        ],
+        "description": "Compact 2-inch loudspeaker with excellent sound quality for background music and voice applications.",
+        "short_description": "Compact 2-inch loudspeaker for background music and voice.",
+        "environment": "Indoor",
+        "mount_type": "Surface",
+        "impedance": {
+          "unit": "ohms",
+          "low": 6,
+          "high": 8
+        },
+        "available_taps": {
+          "70v": [
+            0.5,
+            1,
+            2,
+            4
+          ],
+          "100v": [
+            0.5,
+            1,
+            2
+          ]
+        },
+        "images": [
+          {
+            "black": [
+              "dm2se_black_front.jpg",
+              "dm2se_black_rear.jpg"
+            ],
+            "white": [
+              "dm2se_white_front.jpg",
+              "dm2se_white_rear.jpg"
+            ]
+          }
+        ],
+        "is_subwoofer": false,
+        "is_weather_rated": false,
+        "is_high_impedance_rated": true,
+        "high_impedance_taps": [
+          0.5,
+          1,
+          2,
+          4
+        ],
+        "model_family": "DesignMax",
+        "model_name": "DM2SE"
+      }
+    ],
+    "amplifiers": [
+      {
+        "id": 29832,
+        "skus": [
+          29832
+        ],
+        "description": "4-channel power amplifier with PowerShare technology for flexible loudspeaker management.",
+        "short_description": "4-channel power amplifier with PowerShare technology.",
+        "power_output": {
+          "symmetrical": {
+            "rated_per_channel": {
+              "at": [
+                {
+                  "impedance": {
+                    "unit": "ohms",
+                    "value": 8
+                  },
+                  "power": {
+                    "unit": "Watts",
+                    "value": 100
+                  }
+                },
+                {
+                  "impedance": {
+                    "unit": "ohms",
+                    "value": 4
+                  },
+                  "power": {
+                    "unit": "Watts",
+                    "value": 150
+                  }
+                }
+              ]
+            },
+            "peak_per_channel": {
+              "unit": "Watts",
+              "at": [
+                {
+                  "key": "8 ohms",
+                  "value": 200
+                },
+                {
+                  "key": "4 ohms",
+                  "value": 300
+                }
+              ]
+            }
+          }
+        },
+        "number_of_inputs_and_outputs": {
+          "analog": {
+            "inputs": 4,
+            "outputs": 4
+          },
+          "fusion_connect": {
+            "max_inputs": 4,
+            "max_outputs": 4
+          }
+        },
+        "images": {
+          "front_panel": ["ps404a_front_panel.jpg"],
+          "rear_panel": ["ps404a_rear_panel.jpg"]
+        },
+        "power": {
+          "unit": "Watts",
+          "at": [
+            {
+              "key": "idle",
+              "value": 15,
+              "unit": "Watts"
+            },
+            {
+              "key": "1/8 power",
+              "value": 45,
+              "unit": "Watts"
+            }
+          ]
+        },
+        "model_family": "PowerShare",
+        "model_name": "PS404A",
+        "number_of_loudspeaker_inputs": 4
+      }
+    ],
+    "digital_signal_processors": [
+      {
+        "id": 29853,
+        "skus": [
+          29853
+        ],
+        "short_description": "8x8 digital signal processor with Fusion Connect and Dante networking.",
+        "description": "8x8 digital signal processor with Fusion Connect and Dante networking for versatile",
+        "images" : {
+          "black": [
+            "esp880_black_front.jpg",
+            "esp880_black_rear.jpg"
+          ],
+          "white": [
+            "esp880_white_front.jpg",
+            "esp880_white_rear.jpg"
+          ]
+        },
+        "number_of_inputs_and_outputs": {
+          "analog": {
+            "inputs": 8,
+            "outputs": 8
+          },
+          "fusion_connect": {
+            "max_inputs": 8,
+            "max_outputs": 8
+          },
+          "dante": {
+            "max_inputs": 8,
+            "max_outputs": 8
+          }
+        },
+        "max_number_of_digital_control": 8,
+        "max_number_of_analog_control": 8,
+        "gpio_logic_ports": {
+          "inputs": 4,
+          "outputs": 4
+        },
+        "model_family": "ControlSpace DSP",
+        "model_name": "ESP-880"
+      }
+    ],
+    "controllers": [
+      {
+        "id": 4001,
+        "model_family": "Wall ControlSpace",
+        "description": "Advanced wall-mounted controller with multiple zone control and ambient light sensor.",
+        "short_description": "Wall-mounted controller with multiple zone control.",
+        "model_name": "CC-64",
+        "zone_control_count": "Multiple",
+        "control_type": "Encoder",
+        "additional_sensors": [
+          "Proximity",
+          "ambient_light"
+        ],
+        "images": [
+          {
+            "black": [
+              "cc64_black_front.jpg",
+              "cc64_black_installed.jpg"
+            ],
+            "white": [
+              "cc64_white_front.jpg",
+              "cc64_white_installed.jpg"
+            ]
+          }
+        ],
+        "physical_size": "Single gang US/EU",
+        "applicable_regions": [
+          "North America",
+          "Europe",
+          "Asia Pacific"
+        ]
+      }
+    ],
+    "i_o_endpoints": [
+      {
+        "id": 5001,
+        "model_family": "EdgeMax",
+        "description": "Compact I/O endpoint with 2 inputs and 0 outputs, featuring Dante networking.",
+        "short_description": "Compact I/O endpoint with Dante networking.",
+        "model_name": "EM180",
+        "inputs": {
+          "quantity": 2,
+          "type": "XLR"
+        },
+        "outputs": {
+          "quantity": 0,
+          "type": "XLR"
+        },
+        "network": true,
+        "images": {
+          "black": [
+            "em180_black.jpg"
+          ]
+        }
+      }
+    ],
+    "additional_accessories": [
+      {
+        "id": 6001,
+        "model_name": "Mounting Bracket Kit",
+        "model_family": "Accessories",
+        "description": "Mounting bracket kit for secure installation of DesignMax speakers.",
+        "short_description": "Mounting bracket kit for DesignMax speakers.",
+        "type": "optional",
+        "quantity": 1,
+        "sku": "MB-KIT-100"
+      }
+    ]
+}

@@ -34,7 +34,7 @@ extension ProjectPropertiesManager on ProjectManager {
 
   //set Project virtual IP
   void setVirtualIP(String? virtualIP) {
-    projectService = projectService!.copyWith(virtualIP: virtualIP);
+    projectService = projectService!.updateVip(virtualIP);
   }
 
   //get Project min SPL
