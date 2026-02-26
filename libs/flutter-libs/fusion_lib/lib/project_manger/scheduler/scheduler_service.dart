@@ -49,4 +49,8 @@ extension SchedulerService on ProjectService {
     // Convert back to Map
     return {for (var s in items) s.id: s};
   }
+
+  ScheduleConfig? getScheduleById(String scheduleId) {
+    return schedulerConfig.get(scheduleId);
+  }
 }

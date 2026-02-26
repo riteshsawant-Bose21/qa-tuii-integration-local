@@ -2,6 +2,7 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/hardware/product_viewmodel.dart';
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
+import 'package:fusion_launcher/features/projects/models/eql_product.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/product_data/models/amplifier_product.dart';
 import 'package:fusion_lib/product_data/models/dsp_product.dart';
@@ -115,6 +116,7 @@ class EqlProductsVm extends Cubit<EQLProductsState> {
     }
 
     final EQLProductFilters filters = state.filters;
+    final EqlProductsSort? sort = state.sortBy;
     final List<EQLProduct> filteredProducts =
         allProducts
             .where((EQLProduct product) {
@@ -125,12 +127,41 @@ class EqlProductsVm extends Cubit<EQLProductsState> {
             })
             .where((EQLProduct e) => e.searchingFields.toLowerCase().contains(filters.searchQuery?.toLowerCase() ?? ''))
             .toList();
+
+    if (sort != null) {
+      switch (sort) {
+        case EqlProductsSort.priceLowToHigh:
+          filteredProducts.sort((EQLProduct a, EQLProduct b) => a.price.compareTo(b.price));
+          break;
+        case EqlProductsSort.priceHighToLow:
+          filteredProducts.sort((EQLProduct a, EQLProduct b) => b.price.compareTo(a.price));
+          break;
+        case EqlProductsSort.nameAToZ:
+          filteredProducts.sort((EQLProduct a, EQLProduct b) => a.name.compareTo(b.name));
+          break;
+        case EqlProductsSort.nameZToA:
+          filteredProducts.sort((EQLProduct a, EQLProduct b) => b.name.compareTo(a.name));
+          break;
+      }
+    }
     emit(
       EQLProductsState(
         filters: filters,
+        sortBy: sort,
         data: EQLProductsLoaded(products: filteredProducts),
       ),
     );
+  }
+
+  void updateSort(EqlProductsSort? newSort) {
+    emit(
+      EQLProductsState(
+        filters: state.filters,
+        data: state.data,
+        sortBy: newSort,
+      ),
+    );
+    loadProducts();
   }
 
   void updateFilters(EQLProductFilters newFilters) {
@@ -150,14 +181,6 @@ class EqlProductsVm extends Cubit<EQLProductsState> {
       portData: product.portData,
       modelFamily: product.modelFamily,
     );
-    // hardware.inputPortsData.clear();
-    // hardware.outputPortsData.clear();
-    // hardware.communicationPorts.clear();
-    // hardware.inputPortsData.addAll(
-    //   product.portData.getInputPorts(_getProductType(product.deviceType), product.modelFamily.toLowerCase().contains("powersmart")),
-    // );
-    // hardware.outputPortsData.addAll(product.portData.getOutputPorts(_getProductType(product.deviceType)));
-    // hardware.communicationPorts.addAll(product.portData.comPorts);
 
     projectViewModel.addHardware(hardware: hardware);
     projectViewModel.addHardwareToEquipLocation(
@@ -184,7 +207,7 @@ class EqlProductsVm extends Cubit<EQLProductsState> {
         EQLDeviceType.amplifier => ProductType.amplifier,
         EQLDeviceType.endpoint => ProductType.endpoints,
         EQLDeviceType.processor => ProductType.dsps,
-        EQLDeviceType.mixerAmp => ProductType.amplifier,
+        // EQLDeviceType.mixerAmp => ProductType.amplifier,
       },
       sku: product.name,
       // sku: switch (product.data) {
@@ -204,16 +227,38 @@ class EqlProductsVm extends Cubit<EQLProductsState> {
         return ProductType.endpoints;
       case EQLDeviceType.processor:
         return ProductType.dsps;
-      case EQLDeviceType.mixerAmp:
-        return ProductType.amplifier;
+      // case EQLDeviceType.mixerAmp:
+      //   return ProductType.amplifier;
     }
   }
+
+  Future<void> refresh() async {
+    emit(
+      EQLProductsState(
+        filters: state.filters,
+        data: EQLProductsLoading(),
+        sortBy: state.sortBy,
+      ),
+    );
+    await Future<void>.delayed(const Duration(milliseconds: 500));
+    loadProducts();
+  }
+}
+
+enum EqlProductsSort {
+  nameAToZ("Name: A to Z"),
+  nameZToA("Name: Z to A"),
+  priceLowToHigh("Price: Low to High"),
+  priceHighToLow("Price: High to Low");
+
+  const EqlProductsSort(this.label);
+  final String label;
 }
 
 enum EQLDeviceType {
   processor("Processor"),
   amplifier("Amplifier"),
-  mixerAmp("Mixer-Amp"),
+  // mixerAmp("Mixer-Amp"),
   endpoint("Endpoint");
 
   const EQLDeviceType(this.displayName);
@@ -262,9 +307,11 @@ class EQLProductFilters {
 class EQLProductsState {
   final EQLProductFilters filters;
   final EQLProductDataState data;
+  final EqlProductsSort? sortBy;
   EQLProductsState({
     required this.filters,
     required this.data,
+    this.sortBy,
   });
 }
 
@@ -280,29 +327,4 @@ class EQLProductsLoaded extends EQLProductDataState {
 class EQLProductsError extends EQLProductDataState {
   final String message;
   EQLProductsError({required this.message});
-}
-
-class EQLProduct {
-  final String name;
-  final String? assetPath;
-  final String description;
-  final String modelFamily;
-  final dynamic data;
-  final String searchingFields;
-  final EQLDeviceType deviceType;
-  final double price;
-  final Map<String, String> specifications;
-  final ProductPortData portData;
-  EQLProduct({
-    required this.name,
-    required this.assetPath,
-    required this.description,
-    required this.modelFamily,
-    required this.data,
-    required this.searchingFields,
-    required this.deviceType,
-    required this.price,
-    required this.specifications,
-    required this.portData,
-  });
 }

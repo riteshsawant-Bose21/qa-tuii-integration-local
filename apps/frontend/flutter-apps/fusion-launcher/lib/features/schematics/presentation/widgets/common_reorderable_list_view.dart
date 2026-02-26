@@ -43,13 +43,16 @@ class CommonReorderableListView<T> extends StatelessWidget {
       physics: const ClampingScrollPhysics(),
       buildDefaultDragHandles: false,
       itemCount: items.length,
-      onReorder: onReorder,
+      onReorder: (int oldIndex, int newIndex) {
+        final int adjustedNewIndex = newIndex > oldIndex ? newIndex - 1 : newIndex;
+        onReorder(oldIndex, adjustedNewIndex);
+      },
       itemBuilder: (BuildContext context, int index) {
         final T item = items[index];
         return ReorderableDragStartListener(
           key: ValueKey<String>(keyExtractor(item)),
           index: index,
-          child: itemBuilder(context, item, index),
+          child: Material(color: Colors.transparent, child: itemBuilder(context, item, index)),
         );
       },
     );
