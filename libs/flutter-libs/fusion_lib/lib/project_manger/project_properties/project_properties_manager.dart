@@ -1,6 +1,5 @@
 import 'package:flutter/cupertino.dart';
 import 'package:fusion_lib/fusion_lib.dart';
-import 'package:fusion_lib/project_manger/project_properties/project_properties_service.dart';
 
 extension ProjectPropertiesManager on ProjectManager {
   //get Project id
@@ -28,11 +27,6 @@ extension ProjectPropertiesManager on ProjectManager {
     projectService = projectService!.copyWith(colors: colors);
   }
 
-  //set Project meta data
-  void setMetaData(String metaData) {
-    projectService = projectService!.copyWith(metaData: metaData);
-  }
-
   //get Project virtual IP
   String? getVirtualIP() {
     return projectService!.getVirtualIP();
@@ -40,7 +34,7 @@ extension ProjectPropertiesManager on ProjectManager {
 
   //set Project virtual IP
   void setVirtualIP(String? virtualIP) {
-    projectService = projectService!.copyWith(virtualIP: virtualIP);
+    projectService = projectService!.updateVip(virtualIP);
   }
 
   //get Project min SPL
@@ -86,5 +80,33 @@ extension ProjectPropertiesManager on ProjectManager {
   //get all fusion devices
   List<FusionDsp> getAllFusionDevices() {
     return projectService!.getAllFusionDevices();
+  }
+
+  void updateProjectMetaData({required ProjectMetaData metaData}) {
+    try {
+      if (projectService == null) {
+        FusionLogger.log(tag: LogTag.exceptions, message: "No project is currently loaded. Cannot update metadata.");
+        return;
+      }
+      projectService = projectService!.copyWith(
+        metadata: metaData,
+      );
+      saveCurrentProject();
+    } catch (e) {
+      FusionLogger.log(tag: LogTag.exceptions, message: "Error updating project metadata: $e");
+    }
+  }
+
+  ProjectMetaData? getProjectMetadata() {
+    try {
+      if (projectService == null) {
+        FusionLogger.log(tag: LogTag.exceptions, message: "No project is currently loaded. Cannot get metadata.");
+        return null;
+      }
+      return projectService!.metadata;
+    } catch (e) {
+      FusionLogger.log(tag: LogTag.exceptions, message: "Error getting project metadata: $e");
+    }
+    return null;
   }
 }

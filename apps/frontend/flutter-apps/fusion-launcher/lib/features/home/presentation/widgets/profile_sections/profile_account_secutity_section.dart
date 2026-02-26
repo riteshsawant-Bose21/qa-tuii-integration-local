@@ -32,7 +32,7 @@ class AccountCredentialsTab extends StatelessWidget {
             ),
             const SizedBox(height: 10),
             BorderedTextfield(
-              initialValue: security.username,
+              controllerValue: security.username,
               label: "User Name",
               hintText: "e.g. John",
               // isEnabled: false,
@@ -45,7 +45,7 @@ class AccountCredentialsTab extends StatelessWidget {
                 Expanded(
                   flex: 2,
                   child: BorderedTextfield(
-                    initialValue: security.password,
+                    controllerValue: security.password,
                     label: "Password",
                     hintText: "Password",
                     // isEnabled: false,
@@ -78,7 +78,7 @@ class AccountCredentialsTab extends StatelessWidget {
             ),
             const SizedBox(height: 10),
             BorderedTextfield(
-              initialValue: security.username,
+              controllerValue: security.username,
               label: "Email",
               hintText: "e.g. john.doe@example.com",
               isEnabled: false,

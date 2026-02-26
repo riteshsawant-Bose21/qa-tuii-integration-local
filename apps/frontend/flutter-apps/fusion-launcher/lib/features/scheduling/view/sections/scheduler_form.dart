@@ -2,7 +2,6 @@ import 'package:calendar_date_picker2/calendar_date_picker2.dart';
 import 'package:flutter/material.dart';
 import 'package:fusion_launcher/features/projects/widget/building/side_panel_widgets/schematic_properties.dart';
 import 'package:fusion_lib/fusion_lib.dart';
-import 'package:fusion_lib/fusion_theme/app_theme.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
@@ -289,7 +288,7 @@ class SchedulerForm extends StatelessWidget {
                                       _DatePickerField(
                                         validator: (DateTime? value) {
                                           if (viewModel.endDate == null) {
-                                            return "Please select an end date";
+                                            return null;
                                           }
                                           if (viewModel.startDate != null && viewModel.endDate!.isBefore(viewModel.startDate!)) {
                                             return "End date cannot be before start date";
@@ -531,9 +530,9 @@ class _WeeklyDaySelection extends StatelessWidget {
                             },
                             materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                             visualDensity: VisualDensity.compact,
-                            side: MaterialStateBorderSide.resolveWith(
+                            side: WidgetStateBorderSide.resolveWith(
                               (Set<WidgetState> states) {
-                                if (states.contains(MaterialState.selected)) {
+                                if (states.contains(WidgetState.selected)) {
                                   return BorderSide(
                                     color: context.colorScheme.elevation4,
                                     width: 1,

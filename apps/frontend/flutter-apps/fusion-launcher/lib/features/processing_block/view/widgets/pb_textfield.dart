@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show TextInputFormatter, FilteringTextInputFormatter;
 import 'package:fusion_lib/fusion_lib.dart';
 
 import '../../dto/pb_item.dart';
@@ -81,6 +82,7 @@ class PBNumberTextField extends StatelessWidget {
   Widget build(BuildContext context) {
     return PBTextField(
       value: value?.toString(),
+      inputFormatters: <TextInputFormatter>[FilteringTextInputFormatter.allow(RegExp(r'^-?\d*\.?\d*$'))],
       onChanged: (String value) {
         final num? parsedValue = num.tryParse(value);
         if (parsedValue != null) {
@@ -96,9 +98,10 @@ class PBNumberTextField extends StatelessWidget {
 }
 
 class PBTextField extends StatefulWidget {
-  const PBTextField({super.key, required this.value, this.onChanged});
+  const PBTextField({super.key, required this.value, this.onChanged, this.inputFormatters});
   final String? value;
   final ValueChanged<String>? onChanged;
+  final List<TextInputFormatter>? inputFormatters;
 
   @override
   State<PBTextField> createState() => _PBTextFieldState();
@@ -129,14 +132,18 @@ class _PBTextFieldState extends State<PBTextField> {
   @override
   Widget build(BuildContext context) {
     return FusionContainer(
+      alignment: Alignment.center,
       color: context.colorScheme.elevation2,
+      borderRadius: 8,
       child: Padding(
-        padding: const EdgeInsets.all(8.0),
+        padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4),
         child: TextFormField(
           focusNode: focusNode,
           keyboardType: TextInputType.number,
           controller: controller,
           style: context.textTheme.bodySmall,
+          inputFormatters: widget.inputFormatters,
+          textAlign: TextAlign.center,
           decoration: const InputDecoration(
             border: InputBorder.none,
             focusedBorder: InputBorder.none,

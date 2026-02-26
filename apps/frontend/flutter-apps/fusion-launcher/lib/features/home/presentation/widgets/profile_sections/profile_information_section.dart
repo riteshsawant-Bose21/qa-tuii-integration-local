@@ -4,7 +4,6 @@ import 'package:fusion_launcher/core/services/user_profile_manager.dart';
 import 'package:fusion_launcher/features/home/presentation/widgets/profile_tab_content.dart';
 import 'package:fusion_launcher/features/home/presentation/widgets/saved_projects_tab.dart';
 import 'package:fusion_lib/fusion_lib.dart';
-import 'package:fusion_lib/fusion_theme/app_theme.dart';
 
 import '../../../../../core/service_locator.dart';
 
@@ -34,7 +33,7 @@ class ProfileInformationTab extends StatelessWidget {
         ),
         const SizedBox(height: 10),
         BorderedTextfield(
-          initialValue: personalInfo.name,
+          controllerValue: personalInfo.name,
           label: "Full Name",
           hintText: "e.g. John",
           isEnabled: false,
@@ -45,7 +44,7 @@ class ProfileInformationTab extends StatelessWidget {
           children: <Widget>[
             Expanded(
               child: BorderedTextfield(
-                initialValue: personalInfo.organization,
+                controllerValue: personalInfo.organization,
                 label: "Organization",
                 hintText: "e.g. Bose Professional",
                 isEnabled: false,
@@ -53,7 +52,7 @@ class ProfileInformationTab extends StatelessWidget {
             ),
             Expanded(
               child: BorderedTextfield(
-                initialValue: personalInfo.jobTitle,
+                controllerValue: personalInfo.jobTitle,
                 label: "Role",
                 hintText: "Job Title/Role",
                 isEnabled: false,
@@ -63,7 +62,7 @@ class ProfileInformationTab extends StatelessWidget {
         ),
         const SizedBox(height: 10),
         BorderedTextfield(
-          initialValue: security.username,
+          controllerValue: security.username,
           label: "Email",
           hintText: "e.g. john.doe@example.com",
           isEnabled: false,
@@ -74,7 +73,7 @@ class ProfileInformationTab extends StatelessWidget {
           children: <Widget>[
             Expanded(
               child: BorderedTextfield(
-                initialValue: personalInfo.phone,
+                controllerValue: personalInfo.phone,
                 label: "Phone Numner",
                 hintText: "e.g. 00-0000-0000",
                 isEnabled: false,
@@ -82,7 +81,7 @@ class ProfileInformationTab extends StatelessWidget {
             ),
             Expanded(
               child: BorderedTextfield(
-                initialValue: address.zipCode,
+                controllerValue: address.zipCode,
                 label: "Zip Code",
                 hintText: "000000",
                 isEnabled: false,
@@ -96,7 +95,7 @@ class ProfileInformationTab extends StatelessWidget {
           children: <Widget>[
             Expanded(
               child: BorderedTextfield(
-                initialValue: address.country,
+                controllerValue: address.country,
                 label: "Country",
                 hintText: "Country",
                 isEnabled: false,
@@ -104,7 +103,7 @@ class ProfileInformationTab extends StatelessWidget {
             ),
             Expanded(
               child: BorderedTextfield(
-                initialValue: address.city,
+                controllerValue: address.city,
                 label: "City",
                 hintText: "City",
                 isEnabled: false,
@@ -114,7 +113,7 @@ class ProfileInformationTab extends StatelessWidget {
         ),
         const SizedBox(height: 10),
         BorderedTextfield(
-          initialValue: location,
+          controllerValue: location,
           label: "Business Address",
           hintText: "Address",
           isEnabled: false,
