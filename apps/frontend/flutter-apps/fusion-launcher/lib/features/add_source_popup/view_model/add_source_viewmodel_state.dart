@@ -94,7 +94,7 @@ enum SourceSectionType {
       case SourceSectionType.microPhone:
         return <SourceConnectionType>[
           SourceConnectionType.analogInput,
-          SourceConnectionType.xlr,
+          // SourceConnectionType.xlr,
           // SourceConnectionType.ethernet,
         ];
       case SourceSectionType.mediaSources:

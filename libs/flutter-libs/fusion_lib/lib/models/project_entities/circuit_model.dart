@@ -11,6 +11,7 @@ class CircuitModel {
   final Offset? wiringPos;
   final String? speakerSKU;
   final bool addedInBuildingPage;
+  final bool muted;
 
   CircuitModel({
     String? id,
@@ -21,6 +22,7 @@ class CircuitModel {
     this.wiringPos,
     this.speakerSKU,
     required this.addedInBuildingPage,
+    this.muted = false,
   }) : id = id ?? "CIRCUIT${FusionUtils.shortStringUUID()}",
        inputPort =
            inputPort ??
@@ -45,6 +47,7 @@ class CircuitModel {
     Offset? wiringPos,
     String? speakerSKU,
     bool? createdInBuildingPage,
+    bool? muted,
   }) {
     return CircuitModel(
       id: id ?? this.id,
@@ -55,6 +58,7 @@ class CircuitModel {
       wiringPos: wiringPos ?? this.wiringPos,
       speakerSKU: speakerSKU ?? this.speakerSKU,
       addedInBuildingPage: createdInBuildingPage ?? this.addedInBuildingPage,
+      muted: muted ?? this.muted,
     );
   }
 
@@ -73,6 +77,7 @@ class CircuitModel {
             )
           : null,
       addedInBuildingPage: json['createdInBuildingPage'] ?? false,
+      muted: json['muted'] ?? false,
     );
   }
 
@@ -86,6 +91,7 @@ class CircuitModel {
       'speakerSKU': speakerSKU,
       'wiringPos': wiringPos != null ? <String, double>{'dx': wiringPos!.dx, 'dy': wiringPos!.dy} : null,
       'createdInBuildingPage': addedInBuildingPage,
+      'muted': muted,
     };
   }
 }

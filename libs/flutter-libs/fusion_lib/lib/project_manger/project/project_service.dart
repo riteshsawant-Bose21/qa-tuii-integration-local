@@ -34,6 +34,7 @@ class ProjectService {
   final DateTime? lastUploadedAt;
   final bool isDeleted;
   final bool isCloudInstance;
+  final ProjectMetaData metadata;
 
   final FloorRepository floors;
   final ListeningAreaRepository listeningAreas;
@@ -96,6 +97,8 @@ class ProjectService {
     this.venue,
     this.lastUploadedAt,
     this.isCloudInstance = false,
+    required this.metadata,
+
     FloorRepository? floors,
     ListeningAreaRepository? listeningAreas,
     ZoneRepository? zones,
@@ -143,6 +146,68 @@ class ProjectService {
        events = events ?? EventsRepository(),
        mediaFiles = mediaFiles ?? MediaFileRepository();
 
+  ProjectService updateVip(String? vip) {
+    ProjectService projectService = ProjectService(
+      id: id,
+      name: name,
+      projectName: projectName,
+      colors: colors,
+      virtualIP: vip,
+      currentFloorIndex: currentFloorIndex,
+      droResponse: droResponse,
+      createdAt: createdAt,
+      updatedAt: updatedAt,
+      minSPL: minSPL,
+      maxSPL: maxSPL,
+      isInControlMode: isInControlMode,
+      application: application,
+      budget: budget,
+      description: description,
+      environmentType: environmentType,
+      isArchived: isArchived,
+      isStarred: isStarred,
+      lockedByUser: lockedByUser,
+      projectFileUrl: projectFileUrl,
+      projectPhase: projectPhase,
+      thumbnailUrl: thumbnailUrl,
+      venue: venue,
+      isDeleted: isDeleted,
+      lastUploadedAt: lastUploadedAt,
+      floors: floors,
+      listeningAreas: listeningAreas,
+      zones: zones,
+      subZones: subZones,
+      sourceSets: sourceSets,
+      hardware: hardware,
+      fusionDevices: fusionDevices,
+      suggestedFusionDevices: suggestedFusionDevices,
+      amplifiers: amplifiers,
+      circuits: circuits,
+      wiringConnection: wiringConnection,
+      processingBlocks: processingBlocks,
+      relationships: relationships,
+      isInHardwareMode: isInHardwareMode,
+      isCloudInstance: isCloudInstance,
+      zoneFunctions: zoneFunctions,
+      prioritySourceData: prioritySourceData,
+      equipLocations: equipLocations,
+      scenesRepository: snapshots,
+      sceneActionRepository: sceneActions,
+      sceneSetRepository: sceneSets,
+      gpioRepository: gpioConfigs,
+      schedulerConfig: schedulerConfig,
+      events: events,
+      mediaFiles: mediaFiles,
+      metadata: metadata,
+    );
+
+    // Preserve undo/redo stacks
+    projectService.undoStack = List.from(undoStack);
+    projectService.redoStack = List.from(redoStack);
+
+    return projectService;
+  }
+
   ProjectService copyWith({
     String? id,
     String? name,
@@ -153,7 +218,6 @@ class ProjectService {
     Map<String, dynamic>? droResponse,
     DateTime? createdAt,
     DateTime? updatedAt,
-    String? metaData,
     double? minSPL,
     double? maxSPL,
     bool? isInControlMode,
@@ -171,6 +235,7 @@ class ProjectService {
     bool? isDeleted,
     DateTime? lastUploadedAt,
     bool? isCloudInstance,
+    ProjectMetaData? metadata,
     FloorRepository? floors,
     ListeningAreaRepository? listeningAreas,
     ZoneRepository? zones,
@@ -247,6 +312,7 @@ class ProjectService {
       schedulerConfig: schedulerConfig ?? this.schedulerConfig,
       events: events ?? this.events,
       mediaFiles: mediaFiles ?? this.mediaFiles,
+      metadata: metadata ?? this.metadata,
     );
 
     // Preserve undo/redo stacks
@@ -321,6 +387,7 @@ class ProjectService {
       "schedulerConfig": schedulerConfig.toJson((s) => s.toJson()),
       "events": events.toJson((e) => e.toJson()),
       "mediaFiles": mediaFiles.toJson((m) => m.toJson()),
+      'metadata': metadata.toJson(),
     };
   }
 
@@ -353,6 +420,7 @@ class ProjectService {
       isDeleted: json["is_deleted"] ?? false,
       lastUploadedAt: json["lastUploadedAt"] != null ? DateTime.parse(json["lastUploadedAt"]) : null,
       isCloudInstance: json["isCloudInstance"] ?? false,
+      metadata: json['metadata'] != null ? ProjectMetaData.fromJson(json['metadata'] as Map<String, dynamic>) : ProjectMetaData.empty(),
     );
 
     service.floors.fromJsonList(json["floors"], (m) => FloorModel.fromJson(m), "id");

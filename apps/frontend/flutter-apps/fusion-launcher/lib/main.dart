@@ -13,12 +13,12 @@ import 'package:fusion_launcher/features/authentication/viewmodel/auth_view_mode
 import 'package:fusion_launcher/features/authentication/viewmodel/session_view_model.dart';
 import 'package:fusion_launcher/features/projects/view_model/project_sync_view_model.dart';
 import 'package:fusion_lib/fusion_lib.dart';
-import 'package:fusion_lib/fusion_theme/app_theme.dart';
 import 'package:fusion_lib/fusion_theme/fusion_theme_notifier.dart';
 import 'package:nested/nested.dart' show SingleChildWidget;
 import 'package:universal_platform/universal_platform.dart';
 
 import 'core/config/app_config.dart';
+import 'features/commission/view_models/mdns_search_viewmodel.dart';
 import 'features/configuration/presentation/viewmodel/project_view_model.dart';
 import 'features/home/presentation/pages/launcher_home_page.dart';
 import 'features/dynamic_config/presentation/bloc/panel_bloc.dart';
@@ -122,6 +122,9 @@ class MyApp extends StatelessWidget {
         ),
         BlocProvider<GuideShowCaseController>(
           create: (BuildContext context) => serviceLocator<GuideShowCaseController>(),
+        ),
+        BlocProvider<MdnsScanViewModel>(
+          create: (BuildContext context) => serviceLocator<MdnsScanViewModel>(),
         ),
       ],
       child: FusionThemeBuilder(
