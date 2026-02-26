@@ -129,7 +129,7 @@ class _ListeningAreaDropdownWidgetState extends State<ListeningAreaDropdownWidge
             enabled: false,
             padding: EdgeInsets.zero,
             child: SemanticHelper.container(
-              testId: SemanticHelper.createTestId(SemanticTypes.container, "select_location_dropdown_menu_container"),
+              testId: SemanticHelper.createTestId(SemanticTypes.container, "listening_area_container"),
               child: StatefulBuilder(
                 builder: (BuildContext context, StateSetter setDropdownState) {
                   return Container(
@@ -158,12 +158,15 @@ class _ListeningAreaDropdownWidgetState extends State<ListeningAreaDropdownWidge
                                   ),
                                 ),
                               ),
-                              IconButton(
-                                icon: const Icon(Icons.close, size: FusionSizes.iconSize16),
-                                color: context.colorScheme.primaryWhite,
-                                onPressed: () => Navigator.of(context).pop(),
-                                padding: EdgeInsets.zero,
-                                constraints: const BoxConstraints(),
+                               SemanticHelper.button(
+              testId: SemanticHelper.createTestId(SemanticTypes.button, "listening_area_close_button"),
+                                child: IconButton(
+                                  icon: const Icon(Icons.close, size: FusionSizes.iconSize16),
+                                  color: context.colorScheme.primaryWhite,
+                                  onPressed: () => Navigator.of(context).pop(),
+                                  padding: EdgeInsets.zero,
+                                  constraints: const BoxConstraints(),
+                                ),
                               ),
                             ],
                           ),
@@ -188,9 +191,9 @@ class _ListeningAreaDropdownWidgetState extends State<ListeningAreaDropdownWidge
                                             onTap: () {
                                               _toggleListeningAreaSelection(area.id, floorName?.id ?? '');
                                             },
-                                            child: SemanticHelper.toggle(
-                                              testId: SemanticHelper.createTestId(SemanticTypes.toggle, "select_location_radio_button_${index}_container"),
-                                              value: isSelected,
+                                            child: SemanticHelper.container(
+                                              testId: SemanticHelper.createTestId(SemanticTypes.toggle, "select_listening_areas_item_$index"),
+                                              // value: isSelected,
                                               child: Container(
                                                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
                                                 decoration: BoxDecoration(
@@ -217,11 +220,13 @@ class _ListeningAreaDropdownWidgetState extends State<ListeningAreaDropdownWidge
                                                     const SizedBox(width: 8),
                                                     Expanded(
                                                       child: FusionAppText(
+                                                        semanticId: "listening_areas_name",
                                                         text: area.name.isNotEmpty ? "${floorName?.name}/${area.name}" : 'Unnamed Location',
                                                         style: Theme.of(context).textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w500, fontSize: 10),
                                                       ),
                                                     ),
                                                     FusionAppText(
+                                                      semanticId: "listening_area_zone_name",
                                                       text: zoneData?.name ?? "No zone",
                                                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
                                                         fontSize: 9,
@@ -269,7 +274,7 @@ class _ListeningAreaDropdownWidgetState extends State<ListeningAreaDropdownWidge
                                     });
                                   },
                                   child: SemanticHelper.toggle(
-                                    testId: SemanticHelper.createTestId(SemanticTypes.toggle, "create_new_location_expand_collapse"),
+                                    testId: SemanticHelper.createTestId(SemanticTypes.toggle, "create_new_listening_area_toggle"),
                                     value: _isCreateAreaExpanded,
                                     child: Container(
                                       padding: const EdgeInsets.all(12),
