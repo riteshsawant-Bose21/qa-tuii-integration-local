@@ -12,6 +12,9 @@ class SnapshotsState extends Equatable {
   /// List of all scene sets
   final List<SceneSetModel> sceneSets;
 
+  /// List of actions for the currently selected snapshot
+  final List<SceneActionModel> actions;
+
   /// Currently selected snapshot ID
   final String? selectedSnapshotId;
 
@@ -33,6 +36,7 @@ class SnapshotsState extends Equatable {
   const SnapshotsState({
     this.snapshots = const <SnapshotsModel>[],
     this.sceneSets = const <SceneSetModel>[],
+    this.actions = const <SceneActionModel>[],
     this.selectedSnapshotId,
     this.draggingSnapshotId,
     this.draggingFromSection,
@@ -63,9 +67,19 @@ class SnapshotsState extends Equatable {
     }
   }
 
+  /// Get action by ID from current actions list
+  SceneActionModel? getActionById(String actionId) {
+    try {
+      return actions.firstWhere((SceneActionModel a) => a.id == actionId);
+    } catch (_) {
+      return null;
+    }
+  }
+
   SnapshotsState copyWith({
     List<SnapshotsModel>? snapshots,
     List<SceneSetModel>? sceneSets,
+    List<SceneActionModel>? actions,
     String? selectedSnapshotId,
     String? draggingSnapshotId,
     DragSection? draggingFromSection,
@@ -80,6 +94,7 @@ class SnapshotsState extends Equatable {
     return SnapshotsState(
       snapshots: snapshots ?? this.snapshots,
       sceneSets: sceneSets ?? this.sceneSets,
+      actions: actions ?? this.actions,
       selectedSnapshotId: clearSelectedSnapshotId ? null : (selectedSnapshotId ?? this.selectedSnapshotId),
       draggingSnapshotId: clearDraggingSnapshotId ? null : (draggingSnapshotId ?? this.draggingSnapshotId),
       draggingFromSection: clearDraggingFromSection ? null : (draggingFromSection ?? this.draggingFromSection),
@@ -93,6 +108,7 @@ class SnapshotsState extends Equatable {
   List<Object?> get props => <Object?>[
     snapshots,
     sceneSets,
+    actions,
     selectedSnapshotId,
     draggingSnapshotId,
     draggingFromSection,

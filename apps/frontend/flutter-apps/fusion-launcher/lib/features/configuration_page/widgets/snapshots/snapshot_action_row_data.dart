@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:fusion_launcher/features/configuration_page/cubit/snapshots/snapshots_cubit.dart';
+import 'package:fusion_launcher/features/configuration_page/cubit/snapshots/snapshots_state.dart';
 import 'package:fusion_launcher/features/configuration_page/widgets/snapshots/snapshot_value_widget.dart';
 import 'package:fusion_lib/fusion_theme/app_theme.dart';
 import 'package:fusion_lib/fusion_widgets/others/fusion_image.dart';
@@ -8,11 +11,9 @@ import 'package:fusion_lib/fusion_widgets/semantics/semantic_type.dart';
 import 'package:fusion_lib/models/project_entities/non_processing/snapshot_model.dart';
 
 import '../../../../core/constants/assets_constants.dart';
-import '../../../../core/service_locator.dart';
-import '../../../configuration/presentation/viewmodel/project_view_model.dart';
 import 'action_drop_down.dart';
 
-class SnapshotActionRowData extends StatefulWidget {
+class SnapshotActionRowData extends StatelessWidget {
   final SceneActionModel action;
   final int index;
 
@@ -23,94 +24,40 @@ class SnapshotActionRowData extends StatefulWidget {
   });
 
   @override
-  State<SnapshotActionRowData> createState() => _SnapshotActionRowDataState();
+  Widget build(BuildContext context) {
+    return BlocBuilder<SnapshotsCubit, SnapshotsState>(
+      builder: (BuildContext context, SnapshotsState state) {
+        // Get the latest action data from state
+        final SceneActionModel? currentAction = state.getActionById(action.id);
+        if (currentAction == null) {
+          return const SizedBox.shrink();
+        }
+
+        return _SnapshotActionRowContent(
+          action: currentAction,
+          index: index,
+        );
+      },
+    );
+  }
 }
 
-class _SnapshotActionRowDataState extends State<SnapshotActionRowData> {
-  ProjectViewModel get _projectViewModel => serviceLocator<ProjectViewModel>();
+class _SnapshotActionRowContent extends StatelessWidget {
+  final SceneActionModel action;
+  final int index;
 
-  List<SceneItemDropdown> get _itemList =>
-      widget.action.actionType != null ? _projectViewModel.getActionItemsByType(widget.action.actionType!) : <SceneItemDropdown>[];
-
-  ///
-  List<SceneParam> get _paramList {
-    final SceneActionModel action = widget.action;
-    if (action.actionType == null) return <SceneParam>[];
-
-    if (action.actionType == SceneActionType.snapshot) {
-      return _projectViewModel.getParamsByActionTypeAndItem(
-        actionType: action.actionType!,
-        item: SceneItem(itemId: ''),
-      );
-    }
-
-    return action.item != null
-        ? _projectViewModel.getParamsByActionTypeAndItem(
-          actionType: action.actionType!,
-          item: action.item!,
-        )
-        : <SceneParam>[];
-  }
-
-  void _updateActionType(SceneActionType? selected) {
-    if (selected != null) {
-      _projectViewModel.updateSceneActionType(actionId: widget.action.id, actionType: selected);
-    }
-  }
-
-  void _updateActionItem(SceneItemDropdown? selected) {
-    if (selected != null) {
-      _projectViewModel.updateSceneActionItem(
-        actionId: widget.action.id,
-        item: SceneItem(itemId: selected.id),
-      );
-    }
-  }
-
-  void _updateActionParam(SceneParam? selected) {
-    if (selected != null) {
-      _projectViewModel.updateSceneActionParam(actionId: widget.action.id, param: selected);
-      setState(() {});
-    }
-  }
-
-  void _updateActionValue(SceneValue selected) {
-    _projectViewModel.updateSceneActionValue(actionId: widget.action.id, value: selected);
-  }
-
-  void _deleteAction() {
-    // showDialog(
-    //   context: context,
-    //   builder:
-    //       (_) => FusionDialog(
-    //         title: 'Delete Action?',
-    //         description: "This will remove action from the Action list.",
-    //         primaryButtonLabel: 'Delete',
-    //         secondaryButtonLabel: 'Cancel',
-    //         onSecondaryPressed: () => Navigator.of(context).pop(),
-    //         onPrimaryPressed: () {
-    //           _projectViewModel.removeSceneAction(actionId: widget.action.id);
-    //           FusionToast.success(context, message: "Action deleted successfully");
-    //           Navigator.of(context).pop();
-    //         },
-    //       ),
-    // );
-
-    _projectViewModel.removeSceneAction(actionId: widget.action.id);
-    FusionToast.success(context, message: "Action deleted successfully");
-  }
-
-  void _duplicateAction() {
-    _projectViewModel.duplicateSceneAction(actionId: widget.action.id);
-    FusionToast.success(context, message: "Action duplicated successfully");
-  }
+  const _SnapshotActionRowContent({
+    required this.action,
+    required this.index,
+  });
 
   @override
   Widget build(BuildContext context) {
-    final SceneActionModel action = widget.action;
+    final SnapshotsCubit cubit = context.read<SnapshotsCubit>();
     final ColorScheme colorScheme = Theme.of(context).colorScheme;
-    final List<SceneItemDropdown> itemList = _itemList;
-    final List<SceneParam> paramList = _paramList;
+
+    final List<SceneItemDropdown> itemList = _getItemList(cubit);
+    final List<SceneParam> paramList = _getParamList(cubit);
     final bool isItemEnabled = action.actionType == null || itemList.isNotEmpty;
 
     return Container(
@@ -122,20 +69,42 @@ class _SnapshotActionRowDataState extends State<SnapshotActionRowData> {
       child: Row(
         spacing: 12,
         children: <Widget>[
-          _buildDragHandle(),
-          _buildActionTypeDropdown(action),
-          _buildItemDropdown(action, itemList, isItemEnabled),
-          _buildParamDropdown(action, paramList),
-          _buildValueWidget(action),
-          _buildActionButtons(),
+          _buildDragHandle(context),
+          _buildActionTypeDropdown(context, cubit),
+          _buildItemDropdown(context, cubit, itemList, isItemEnabled),
+          _buildParamDropdown(context, cubit, paramList),
+          _buildValueWidget(context, cubit),
+          _buildActionButtons(context, cubit),
         ],
       ),
     );
   }
 
-  Widget _buildDragHandle() {
+  List<SceneItemDropdown> _getItemList(SnapshotsCubit cubit) {
+    return action.actionType != null ? cubit.getActionItemsByType(action.actionType!) : <SceneItemDropdown>[];
+  }
+
+  List<SceneParam> _getParamList(SnapshotsCubit cubit) {
+    if (action.actionType == null) return <SceneParam>[];
+
+    if (action.actionType == SceneActionType.snapshot) {
+      return cubit.getParamsByActionTypeAndItem(
+        actionType: action.actionType!,
+        item: SceneItem(itemId: ''),
+      );
+    }
+
+    return action.item != null
+        ? cubit.getParamsByActionTypeAndItem(
+          actionType: action.actionType!,
+          item: action.item!,
+        )
+        : <SceneParam>[];
+  }
+
+  Widget _buildDragHandle(BuildContext context) {
     return ReorderableDragStartListener(
-      index: widget.index,
+      index: index,
       child: SizedBox(
         width: 30,
         child: Opacity(
@@ -146,30 +115,34 @@ class _SnapshotActionRowDataState extends State<SnapshotActionRowData> {
     );
   }
 
-  Widget _buildActionTypeDropdown(SceneActionModel action) {
+  Widget _buildActionTypeDropdown(BuildContext context, SnapshotsCubit cubit) {
     return Expanded(
       child: SemanticHelper.button(
-        testId: SemanticHelper.createTestId(SemanticTypes.button, "snapshot_action_type_${widget.index}"),
+        testId: SemanticHelper.createTestId(SemanticTypes.button, "snapshot_action_type_$index"),
         child: FusionDropdown<SceneActionType>(
           value: action.actionType,
           hint: "Select Action Type",
-          items: _projectViewModel.getSceneActionTypes(isFromSnapshot: true),
+          items: cubit.getSceneActionTypes(isFromSnapshot: true),
           display: (SceneActionType e) => e.displayName,
-          onChanged: _updateActionType,
+          onChanged: (SceneActionType? selected) {
+            if (selected != null) {
+              cubit.updateActionType(actionId: action.id, actionType: selected);
+            }
+          },
         ),
       ),
     );
   }
 
   Widget _buildItemDropdown(
-    SceneActionModel action,
+    BuildContext context,
+    SnapshotsCubit cubit,
     List<SceneItemDropdown> itemList,
     bool isEnabled,
   ) {
     SceneItemDropdown? selected;
     if (action.item != null && itemList.isNotEmpty) {
       selected = itemList.where((SceneItemDropdown e) => e.id == action.item!.itemId).firstOrNull;
-      if (selected == null) action.item = null;
     }
 
     final String hint =
@@ -181,20 +154,30 @@ class _SnapshotActionRowDataState extends State<SnapshotActionRowData> {
 
     return Expanded(
       child: SemanticHelper.button(
-        testId: SemanticHelper.createTestId(SemanticTypes.button, "snapshot_action_type_${widget.index}"),
+        testId: SemanticHelper.createTestId(SemanticTypes.button, "snapshot_action_item_$index"),
         child: FusionDropdown<SceneItemDropdown>(
           value: selected,
           items: itemList,
           hint: hint,
           display: (SceneItemDropdown e) => e.name,
           isEnabled: isEnabled,
-          onChanged: isEnabled ? _updateActionItem : null,
+          onChanged:
+              isEnabled
+                  ? (SceneItemDropdown? selected) {
+                    if (selected != null) {
+                      cubit.updateActionItem(
+                        actionId: action.id,
+                        item: SceneItem(itemId: selected.id),
+                      );
+                    }
+                  }
+                  : null,
         ),
       ),
     );
   }
 
-  Widget _buildParamDropdown(SceneActionModel action, List<SceneParam> paramList) {
+  Widget _buildParamDropdown(BuildContext context, SnapshotsCubit cubit, List<SceneParam> paramList) {
     SceneParam? selected;
     if (action.param != null && paramList.isNotEmpty) {
       selected =
@@ -205,24 +188,28 @@ class _SnapshotActionRowDataState extends State<SnapshotActionRowData> {
 
     return Expanded(
       child: SemanticHelper.button(
-        testId: SemanticHelper.createTestId(SemanticTypes.button, "snapshot_action_param_${widget.index}"),
+        testId: SemanticHelper.createTestId(SemanticTypes.button, "snapshot_action_param_$index"),
         child: FusionDropdown<SceneParam>(
           hint: "Select Parameter",
           value: selected,
           items: paramList,
           display: (SceneParam e) => e.label,
-          onChanged: _updateActionParam,
+          onChanged: (SceneParam? selected) {
+            if (selected != null) {
+              cubit.updateActionParam(actionId: action.id, param: selected);
+            }
+          },
         ),
       ),
     );
   }
 
-  Widget _buildValueWidget(SceneActionModel action) {
+  Widget _buildValueWidget(BuildContext context, SnapshotsCubit cubit) {
     if (action.param == null) return const Expanded(child: SizedBox.shrink());
 
     return Expanded(
       child: SemanticHelper.button(
-        testId: SemanticHelper.createTestId(SemanticTypes.button, "snapshot_action_value_${widget.index}"),
+        testId: SemanticHelper.createTestId(SemanticTypes.button, "snapshot_action_value_$index"),
         child: SnapshotValueWidget(
           actionId: action.id,
           value:
@@ -233,23 +220,26 @@ class _SnapshotActionRowDataState extends State<SnapshotActionRowData> {
                 valueType: action.param!.valueType,
               ),
           onChanged: (SceneValue val) {
-            _updateActionValue(val);
+            cubit.updateActionValue(actionId: action.id, value: val);
           },
         ),
       ),
     );
   }
 
-  Widget _buildActionButtons() {
+  Widget _buildActionButtons(BuildContext context, SnapshotsCubit cubit) {
     return SizedBox(
       width: 46,
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: <Widget>[
           SemanticHelper.button(
-            testId: SemanticHelper.createTestId(SemanticTypes.button, "snapshot_action_delete_${widget.index}"),
+            testId: SemanticHelper.createTestId(SemanticTypes.button, "snapshot_action_delete_$index"),
             child: GestureDetector(
-              onTap: _deleteAction,
+              onTap: () {
+                cubit.deleteAction(actionId: action.id);
+                FusionToast.success(context, message: "Action deleted successfully");
+              },
               child: FusionImage.asset(
                 Assets.deleteIcon,
                 width: 20,
@@ -261,9 +251,12 @@ class _SnapshotActionRowDataState extends State<SnapshotActionRowData> {
           ),
           const SizedBox(width: 6),
           SemanticHelper.button(
-            testId: SemanticHelper.createTestId(SemanticTypes.button, "snapshot_action_duplicate_${widget.index}"),
+            testId: SemanticHelper.createTestId(SemanticTypes.button, "snapshot_action_duplicate_$index"),
             child: GestureDetector(
-              onTap: _duplicateAction,
+              onTap: () {
+                cubit.duplicateAction(actionId: action.id);
+                FusionToast.success(context, message: "Action duplicated successfully");
+              },
               child: FusionImage.asset(
                 Assets.duplicateIcon,
                 width: 20,

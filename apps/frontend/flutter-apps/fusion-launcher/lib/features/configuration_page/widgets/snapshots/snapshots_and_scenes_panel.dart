@@ -18,8 +18,6 @@ class SnapshotsAndScenesPanel extends StatefulWidget {
 }
 
 class _SnapshotsAndScenesPanelState extends State<SnapshotsAndScenesPanel> {
-  final TextEditingController _snapshotsNameController = TextEditingController();
-  final TextEditingController _scenesNameController = TextEditingController();
   bool _isInitialized = false;
 
   SnapshotsCubit get _cubit => context.read<SnapshotsCubit>();
@@ -36,8 +34,6 @@ class _SnapshotsAndScenesPanelState extends State<SnapshotsAndScenesPanel> {
 
   @override
   void dispose() {
-    _snapshotsNameController.dispose();
-    _scenesNameController.dispose();
     super.dispose();
   }
 

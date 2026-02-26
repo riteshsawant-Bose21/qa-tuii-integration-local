@@ -63,7 +63,7 @@ class ActionList extends StatelessWidget {
                 );
               }
 
-              final List<SceneActionModel> actionsList = cubit.getActionsForSelectedSnapshot();
+              final List<SceneActionModel> actionsList = state.actions;
               final SnapshotsModel? selectedScene = cubit.getSelectedSnapshotModel();
               final SceneSetModel? sceneSet = cubit.getSceneSetForSelectedSnapshot();
 

@@ -17,11 +17,15 @@ class SnapshotsCubit extends Cubit<SnapshotsState> {
 
   /// Sync state with ProjectViewModel
   void syncWithProjectViewModel() {
+    final String? selectedId = _projectViewModel.selectedSnapshotId;
+    final List<SceneActionModel> actions = selectedId != null ? _projectViewModel.getSceneActionsForSnapshot(selectedId) : <SceneActionModel>[];
+
     emit(
       state.copyWith(
         snapshots: _projectViewModel.getAllSnapshots(),
         sceneSets: _projectViewModel.getAllSceneSets(),
-        selectedSnapshotId: _projectViewModel.selectedSnapshotId,
+        selectedSnapshotId: selectedId,
+        actions: actions,
       ),
     );
   }
@@ -32,9 +36,12 @@ class SnapshotsCubit extends Cubit<SnapshotsState> {
   /// Set the selected snapshot ID
   void selectSnapshot(String? snapshotId) {
     _projectViewModel.setSelectedSnapshotId(snapshotId);
+    final List<SceneActionModel> actions = snapshotId != null ? _projectViewModel.getSceneActionsForSnapshot(snapshotId) : <SceneActionModel>[];
+
     emit(
       state.copyWith(
         selectedSnapshotId: snapshotId,
+        actions: actions,
         clearSelectedSnapshotId: snapshotId == null,
       ),
     );
@@ -249,10 +256,14 @@ class SnapshotsCubit extends Cubit<SnapshotsState> {
     emit(state.copyWith(sourcesHeight: initialHeight));
   }
 
-  /// Get actions for the selected snapshot
+  /// Get actions for the selected snapshot (from state)
   List<SceneActionModel> getActionsForSelectedSnapshot() {
-    if (state.selectedSnapshotId == null) return <SceneActionModel>[];
-    return _projectViewModel.getSceneActionsForSnapshot(state.selectedSnapshotId!);
+    return state.actions;
+  }
+
+  /// Get a specific action by ID from state
+  SceneActionModel? getActionById(String actionId) {
+    return state.getActionById(actionId);
   }
 
   /// Get the selected snapshot model
@@ -288,6 +299,69 @@ class SnapshotsCubit extends Cubit<SnapshotsState> {
       newIndex: newIndex,
     );
     syncWithProjectViewModel();
+  }
+
+  // ==================== Action Row Operations ====================
+
+  /// Update action type for a specific action
+  void updateActionType({required String actionId, required SceneActionType actionType}) {
+    _projectViewModel.updateSceneActionType(actionId: actionId, actionType: actionType);
+    syncWithProjectViewModel();
+  }
+
+  /// Update action item for a specific action
+  void updateActionItem({required String actionId, required SceneItem item}) {
+    _projectViewModel.updateSceneActionItem(actionId: actionId, item: item);
+    syncWithProjectViewModel();
+  }
+
+  /// Update action param for a specific action
+  void updateActionParam({required String actionId, required SceneParam param}) {
+    _projectViewModel.updateSceneActionParam(actionId: actionId, param: param);
+    syncWithProjectViewModel();
+  }
+
+  /// Update action value for a specific action
+  void updateActionValue({required String actionId, required SceneValue value}) {
+    _projectViewModel.updateSceneActionValue(actionId: actionId, value: value);
+    syncWithProjectViewModel();
+  }
+
+  /// Delete a specific action
+  void deleteAction({required String actionId}) {
+    _projectViewModel.removeSceneAction(actionId: actionId);
+    syncWithProjectViewModel();
+  }
+
+  /// Duplicate a specific action
+  void duplicateAction({required String actionId}) {
+    _projectViewModel.duplicateSceneAction(actionId: actionId);
+    syncWithProjectViewModel();
+  }
+
+  // ==================== Dropdown Data Getters ====================
+
+  /// Get scene action types for dropdown
+  List<SceneActionType> getSceneActionTypes({bool isFromSnapshot = true}) {
+    return _projectViewModel.getSceneActionTypes(isFromSnapshot: isFromSnapshot);
+  }
+
+  /// Get action items by type for dropdown
+  List<SceneItemDropdown> getActionItemsByType(SceneActionType actionType) {
+    return _projectViewModel.getActionItemsByType(actionType);
+  }
+
+  /// Get params by action type and item for dropdown
+  List<SceneParam> getParamsByActionTypeAndItem({
+    required SceneActionType actionType,
+    required SceneItem item,
+  }) {
+    return _projectViewModel.getParamsByActionTypeAndItem(actionType: actionType, item: item);
+  }
+
+  /// Get scene value dropdown items
+  List<SceneValueDropdown> getSceneValueDropdownItems(String actionId) {
+    return _projectViewModel.getSceneValueDropdownItems(actionId);
   }
 
   @override

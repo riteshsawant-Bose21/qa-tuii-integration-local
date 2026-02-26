@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:fusion_launcher/features/configuration_page/cubit/snapshots/snapshots_cubit.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
-import '../../../../core/service_locator.dart';
-import '../../../configuration/presentation/viewmodel/project_view_model.dart';
 import 'action_drop_down.dart';
 
 class SnapshotValueWidget extends StatefulWidget {
@@ -22,7 +22,7 @@ class SnapshotValueWidget extends StatefulWidget {
 }
 
 class _SnapshotValueWidgetState extends State<SnapshotValueWidget> {
-  ProjectViewModel get _projectViewModel => serviceLocator<ProjectViewModel>();
+  SnapshotsCubit get _cubit => context.read<SnapshotsCubit>();
 
   @override
   Widget build(BuildContext context) {
@@ -111,7 +111,7 @@ class _SnapshotValueWidgetState extends State<SnapshotValueWidget> {
 
         print('Fetching dropdown items for actionId: ${widget.actionId}');
 
-        final List<SceneValueDropdown> items = _projectViewModel.getSceneValueDropdownItems(widget.actionId);
+        final List<SceneValueDropdown> items = _cubit.getSceneValueDropdownItems(widget.actionId);
 
         /// Find selected value by matching the stored string value with item labels
         SceneValueDropdown? selectedValue;
