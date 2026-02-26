@@ -52,6 +52,7 @@ class _PropertiesPanel extends StatelessWidget {
                   const Text("X"),
                   Expanded(
                     child: TextFormField(
+                      key: ValueKey<String>(selected.x.toString()),
                       initialValue: selected.x.toString(),
                       onFieldSubmitted: (String? newValue) {
                         final Offset currentOffset = Offset(selected.x.toDouble(), selected.y.toDouble());
@@ -69,6 +70,7 @@ class _PropertiesPanel extends StatelessWidget {
                   const Text("Y"),
                   Expanded(
                     child: TextFormField(
+                      key: ValueKey<String>(selected.y.toString()),
                       initialValue: selected.y.toString(),
                       onFieldSubmitted: (String? newValue) {
                         final Offset currentOffset = Offset(selected.x.toDouble(), selected.y.toDouble());
@@ -86,6 +88,7 @@ class _PropertiesPanel extends StatelessWidget {
                   const Text("Width"),
                   Expanded(
                     child: TextFormField(
+                      key: ValueKey<String>(selected.width.toString()),
                       initialValue: selected.width.toString(),
                       onFieldSubmitted: (String? newValue) {
                         viewModel.resize(num.tryParse(newValue ?? ""), null);
@@ -100,6 +103,7 @@ class _PropertiesPanel extends StatelessWidget {
                   const Text("Height"),
                   Expanded(
                     child: TextFormField(
+                      key: ValueKey<String>(selected.height.toString()),
                       initialValue: selected.height.toString(),
                       onFieldSubmitted: (String? newValue) {
                         viewModel.resize(null, num.tryParse(newValue ?? ""));
@@ -116,6 +120,7 @@ class _PropertiesPanel extends StatelessWidget {
                     Text(key),
                     Expanded(
                       child: TextFormField(
+                        key: ValueKey<String?>(selectedParams[key]?.toString()),
                         initialValue: selectedParams[key]?.toString(),
                         onFieldSubmitted: (String? newValue) {
                           viewModel.updateProperty(key, newValue ?? "");
@@ -170,7 +175,8 @@ class _PropertiesPanel extends StatelessWidget {
                                     ///
                                     /// Save the configuration JSON to a file
                                     ///
-                                    FilePicker.platform.saveFile(
+                                    FilePicker.platform
+                                        .saveFile(
                                           dialogTitle: 'Save Configuration JSON',
                                           fileName: '${viewModel.algorithm.name}.json',
                                           type: FileType.custom,

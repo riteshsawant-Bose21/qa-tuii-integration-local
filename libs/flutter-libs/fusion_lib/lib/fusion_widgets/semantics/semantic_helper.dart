@@ -50,7 +50,7 @@ class SemanticHelper {
     return Semantics(
       container: true,
       identifier: testId,
-      toggled: value,
+      checked: value,
       label: label,
       excludeSemantics: excludeChildSemantics,
       child: child,

@@ -44,9 +44,9 @@ class HardwareCard extends StatelessWidget {
     return Container(
       // Use constrained width during drag, otherwise fit parent
       width: isDragging ? 280 : null,
-      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+      padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 6),
       decoration: BoxDecoration(
-        color: context.colorScheme.elevation2,
+        // color: context.colorScheme.elevation2,
         borderRadius: BorderRadius.circular(8),
         border: Border.all(color: context.colorScheme.strokeLight),
       ),
@@ -69,7 +69,7 @@ class HardwareCard extends StatelessWidget {
                       // 2. FLEXIBLE: Ensures text doesn't force width issues
                       Flexible(
                         child: FusionAppText(
-                          text: hardware.modelName,
+                          text: hardware.deviceName,
                           style: context.textTheme.bodyMedium,
                           textOverflow: TextOverflow.ellipsis,
                           maxLine: 1,
@@ -97,7 +97,7 @@ class HardwareCard extends StatelessWidget {
               Icon(
                 Icons.lightbulb_outline,
                 size: 20,
-                color: isAssigned ? context.colorScheme.iconDisabled : context.colorScheme.primaryColor,
+                color: context.colorScheme.iconWhite,
               ),
             ],
           );
