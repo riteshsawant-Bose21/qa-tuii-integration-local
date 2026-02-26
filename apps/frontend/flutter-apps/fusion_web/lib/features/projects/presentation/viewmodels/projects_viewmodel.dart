@@ -1,7 +1,7 @@
 import 'package:fusion_web/core/presentation/base_viewmodel.dart';
 import 'package:fusion_web/core/usecases/usecase.dart';
 import 'package:fusion_web/features/projects/data/models/project_model.dart';
-import 'package:fusion_web/features/projects/domain/repositories/projects_repository.dart';
+import 'package:fusion_web/features/projects/data/repositories/projects_repository.dart';
 
 class ProjectsViewModel extends BaseViewModel {
   final ProjectsRepository repository;
