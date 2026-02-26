@@ -59,12 +59,12 @@ class MeasureToolPainter extends FusionBasePainter {
 
     final RRect textBox = RRect.fromRectAndRadius(
       Rect.fromLTWH(
-        textPosition.dx - 10,
-        textPosition.dy - 5,
-        textPainter.width + 20,
-        textPainter.height + 15,
+        textPosition.dx - 10 * (1 / painter.state.scale),
+        textPosition.dy - 5 * (1 / painter.state.scale),
+        textPainter.width + 20 * (1 / painter.state.scale),
+        textPainter.height + 15 * (1 / painter.state.scale),
       ),
-      const Radius.circular(10),
+      Radius.circular(10 * (1 / painter.state.scale)),
     );
 
     canvas.drawRRect(textBox, boxPaint);
