@@ -1,4 +1,5 @@
 import 'dart:math' as math;
+import 'dart:typed_data';
 import 'dart:ui' as ui;
 
 import 'package:flutter/gestures.dart';
@@ -140,9 +141,31 @@ class FloorPlanCalibrator extends StatefulWidget {
 }
 
 class _FloorPlanCalibratorState extends State<FloorPlanCalibrator> {
-  // --- image transform state ---
-  bool _flipHorizontal = false;
-  bool _flipVertical = false;
+  // --- working image state (updated when crop/transforms are applied) ---
+  ui.Image? _workingImage;
+
+  // --- rotation state ---
+  double _rotationAngle = 0.0; // in radians
+  bool _isRotating = false;
+  double _rotationStartAngle = 0.0;
+  double _initialRotation = 0.0;
+  _RotationHandle _activeRotationHandle = _RotationHandle.none;
+  static const double _quickRotateAngle = 90.0 * math.pi / 180; // 90 degrees in radians
+  // --- skew/transform state (4-point free transform with corner offsets) ---
+  // Corner offsets are normalized relative to image dimensions (-1.0 to 1.0)
+  Offset _cornerOffsetTL = Offset.zero; // topLeft offset
+  Offset _cornerOffsetTR = Offset.zero; // topRight offset
+  Offset _cornerOffsetBL = Offset.zero; // bottomLeft offset
+  Offset _cornerOffsetBR = Offset.zero; // bottomRight offset
+  bool _isSkewing = false;
+  _SkewHandle _activeSkewHandle = _SkewHandle.none;
+  Offset _skewStartPosition = Offset.zero;
+  // Store starting offsets for all corners (needed for pivot-based skew)
+  Offset _cornerStartTL = Offset.zero;
+  Offset _cornerStartTR = Offset.zero;
+  Offset _cornerStartBL = Offset.zero;
+  Offset _cornerStartBR = Offset.zero;
+  bool _hasPendingSkew = false; // true when skew is modified but not yet applied
   // --- zoom/pan state ---
   double _zoomScale = 1.0;
   Offset _panOffset = Offset.zero;
@@ -157,6 +180,10 @@ class _FloorPlanCalibratorState extends State<FloorPlanCalibrator> {
   // --- crop state (normalized to the displayed image rect 0..1) ---
   Rect _cropRectN = const Rect.fromLTWH(0, 0, 1, 1);
   _CropHandle _activeHandle = _CropHandle.none;
+  bool _hasPendingCrop = false; // true when crop rect is modified but not yet applied
+
+  // Helper to get the current display image
+  ui.Image get _currentImage => _workingImage ?? widget.floorPlanImage;
 
   // --- zoom/pan state ---
   Offset _panZoomStartPan = Offset.zero;
@@ -216,7 +243,7 @@ class _FloorPlanCalibratorState extends State<FloorPlanCalibrator> {
     }
   }
 
-  Offset _normalizedToImagePx(Offset n) => Offset(n.dx * widget.floorPlanImage.width, n.dy * widget.floorPlanImage.height);
+  Offset _normalizedToImagePx(Offset n) => Offset(n.dx * _currentImage.width, n.dy * _currentImage.height);
 
   // ---------- measure interactions ----------
   void _onMeasureTapDown(TapDownDetails d) {
@@ -299,9 +326,21 @@ class _FloorPlanCalibratorState extends State<FloorPlanCalibrator> {
 
     final local = _screenToCanvas(screenPos);
 
+    // Apply inverse rotation to get coordinates in the unrotated image space
+    final imgCx = r.center.dx;
+    final imgCy = r.center.dy;
+    final cos = math.cos(-_rotationAngle); // Inverse rotation
+    final sin = math.sin(-_rotationAngle);
+    final dx = local.dx - imgCx;
+    final dy = local.dy - imgCy;
+    final unrotatedLocal = Offset(
+      imgCx + dx * cos - dy * sin,
+      imgCy + dx * sin + dy * cos,
+    );
+
     // Convert screen position to normalized coordinates relative to image
-    final normalizedX = ((local.dx - r.left) / r.width).clamp(0.0, 1.0);
-    final normalizedY = ((local.dy - r.top) / r.height).clamp(0.0, 1.0);
+    final normalizedX = ((unrotatedLocal.dx - r.left) / r.width).clamp(0.0, 1.0);
+    final normalizedY = ((unrotatedLocal.dy - r.top) / r.height).clamp(0.0, 1.0);
     final n = Offset(normalizedX, normalizedY);
 
     Rect newN = _cropRectN;
@@ -378,11 +417,431 @@ class _FloorPlanCalibratorState extends State<FloorPlanCalibrator> {
         break;
     }
 
-    setState(() => _cropRectN = newN);
+    setState(() {
+      _cropRectN = newN;
+      // Mark as pending crop if the crop rect is not full image
+      _hasPendingCrop = newN != const Rect.fromLTWH(0, 0, 1, 1);
+    });
   }
 
   void _onCropPanEnd(DragEndDetails d) {
     _activeHandle = _CropHandle.none;
+  }
+
+  // ---------- rotation interactions ----------
+  Map<_RotationHandle, Offset> _rotationHandlesInScreen(Rect imageRect) {
+    // Apply rotation to get the actual corner positions
+    final center = imageRect.center;
+    final cos = math.cos(_rotationAngle);
+    final sin = math.sin(_rotationAngle);
+
+    Offset rotatePoint(Offset p) {
+      final dx = p.dx - center.dx;
+      final dy = p.dy - center.dy;
+      return Offset(
+        center.dx + dx * cos - dy * sin,
+        center.dy + dx * sin + dy * cos,
+      );
+    }
+
+    return <_RotationHandle, Offset>{
+      _RotationHandle.topLeft: _canvasToScreen(rotatePoint(imageRect.topLeft)),
+      _RotationHandle.topRight: _canvasToScreen(rotatePoint(imageRect.topRight)),
+      _RotationHandle.bottomRight: _canvasToScreen(rotatePoint(imageRect.bottomRight)),
+      _RotationHandle.bottomLeft: _canvasToScreen(rotatePoint(imageRect.bottomLeft)),
+    };
+  }
+
+  void _onRotatePanStart(DragStartDetails d) {
+    final r = _imageRect;
+    if (r == null) return;
+
+    final handles = _rotationHandlesInScreen(r);
+    const hitSize = 20.0;
+    final p = d.localPosition;
+
+    _activeRotationHandle = _RotationHandle.none;
+
+    for (final entry in handles.entries) {
+      final handlePos = entry.value;
+      final distance = (handlePos - p).distance;
+      if (distance <= hitSize) {
+        _activeRotationHandle = entry.key;
+        break;
+      }
+    }
+
+    if (_activeRotationHandle != _RotationHandle.none) {
+      // Calculate the center of the image in screen space
+      final center = _canvasToScreen(r.center);
+      // Calculate the initial angle from center to pointer
+      _rotationStartAngle = math.atan2(
+        p.dy - center.dy,
+        p.dx - center.dx,
+      );
+      _initialRotation = _rotationAngle;
+      setState(() => _isRotating = true);
+    }
+  }
+
+  void _onRotatePanUpdate(DragUpdateDetails d) {
+    if (_activeRotationHandle == _RotationHandle.none || !_isRotating) return;
+
+    final r = _imageRect;
+    if (r == null) return;
+
+    final p = d.localPosition;
+    final center = _canvasToScreen(r.center);
+
+    // Calculate current angle from center to pointer
+    final currentAngle = math.atan2(
+      p.dy - center.dy,
+      p.dx - center.dx,
+    );
+
+    // Calculate the rotation delta and apply to initial rotation
+    final deltaAngle = currentAngle - _rotationStartAngle;
+    setState(() {
+      _rotationAngle = _initialRotation + deltaAngle;
+    });
+  }
+
+  void _onRotatePanEnd(DragEndDetails d) {
+    _activeRotationHandle = _RotationHandle.none;
+    setState(() => _isRotating = false);
+  }
+
+  void _rotateLeft() {
+    setState(() {
+      _rotationAngle -= _quickRotateAngle;
+    });
+  }
+
+  void _rotateRight() {
+    setState(() {
+      _rotationAngle += _quickRotateAngle;
+    });
+  }
+
+  // ---------- 4-point free transform interaction ----------
+
+  // Get the actual corner positions with offsets applied (in canvas coordinates)
+  Map<_SkewHandle, Offset> _getTransformCorners(Rect imageRect) {
+    final w = imageRect.width;
+    final h = imageRect.height;
+
+    // Base corners + their offsets (offsets are normalized, multiply by dimensions)
+    final topLeft = imageRect.topLeft + Offset(_cornerOffsetTL.dx * w, _cornerOffsetTL.dy * h);
+    final topRight = imageRect.topRight + Offset(_cornerOffsetTR.dx * w, _cornerOffsetTR.dy * h);
+    final bottomLeft = imageRect.bottomLeft + Offset(_cornerOffsetBL.dx * w, _cornerOffsetBL.dy * h);
+    final bottomRight = imageRect.bottomRight + Offset(_cornerOffsetBR.dx * w, _cornerOffsetBR.dy * h);
+
+    // Edge midpoints (calculated from actual corner positions)
+    final topCenter = Offset((topLeft.dx + topRight.dx) / 2, (topLeft.dy + topRight.dy) / 2);
+    final bottomCenter = Offset((bottomLeft.dx + bottomRight.dx) / 2, (bottomLeft.dy + bottomRight.dy) / 2);
+    final leftCenter = Offset((topLeft.dx + bottomLeft.dx) / 2, (topLeft.dy + bottomLeft.dy) / 2);
+    final rightCenter = Offset((topRight.dx + bottomRight.dx) / 2, (topRight.dy + bottomRight.dy) / 2);
+
+    return {
+      _SkewHandle.topLeft: topLeft,
+      _SkewHandle.topRight: topRight,
+      _SkewHandle.bottomLeft: bottomLeft,
+      _SkewHandle.bottomRight: bottomRight,
+      _SkewHandle.topCenter: topCenter,
+      _SkewHandle.bottomCenter: bottomCenter,
+      _SkewHandle.leftCenter: leftCenter,
+      _SkewHandle.rightCenter: rightCenter,
+    };
+  }
+
+  Map<_SkewHandle, Offset> _skewHandlesInScreen(Rect imageRect) {
+    final cx = imageRect.center.dx;
+    final cy = imageRect.center.dy;
+
+    // Get corners with offsets applied
+    final corners = _getTransformCorners(imageRect);
+
+    // Apply rotation transform to handle positions
+    final cos = math.cos(_rotationAngle);
+    final sin = math.sin(_rotationAngle);
+
+    Offset rotatePoint(Offset p) {
+      final dx = p.dx - cx;
+      final dy = p.dy - cy;
+      return Offset(
+        cx + dx * cos - dy * sin,
+        cy + dx * sin + dy * cos,
+      );
+    }
+
+    // Transform all corners: rotate, then convert to screen coords
+    // Flip is now applied immediately to working image, so no flip transform needed here
+    return corners.map((key, value) {
+      final point = rotatePoint(value);
+      // Convert to screen coordinates
+      return MapEntry(
+        key,
+        Offset(
+          point.dx * _zoomScale + _panOffset.dx,
+          point.dy * _zoomScale + _panOffset.dy,
+        ),
+      );
+    });
+  }
+
+  _SkewHandle _hitTestSkewHandle(Offset p) {
+    final r = _imageRect;
+    if (r == null) return _SkewHandle.none;
+
+    final handles = _skewHandlesInScreen(r);
+    const double tolerance = 20;
+
+    // Check corners first (higher priority)
+    for (final corner in [_SkewHandle.topLeft, _SkewHandle.topRight, _SkewHandle.bottomLeft, _SkewHandle.bottomRight]) {
+      if ((handles[corner]! - p).distance <= tolerance) {
+        return corner;
+      }
+    }
+    // Then check edge centers
+    for (final edge in [_SkewHandle.topCenter, _SkewHandle.bottomCenter, _SkewHandle.leftCenter, _SkewHandle.rightCenter]) {
+      if ((handles[edge]! - p).distance <= tolerance) {
+        return edge;
+      }
+    }
+    return _SkewHandle.none;
+  }
+
+  void _onSkewPanStart(DragStartDetails d) {
+    final handle = _hitTestSkewHandle(d.localPosition);
+    if (handle != _SkewHandle.none) {
+      setState(() {
+        _activeSkewHandle = handle;
+        _isSkewing = true;
+        _skewStartPosition = d.localPosition;
+        // Store starting offsets for ALL corners (needed for pivot-based skew)
+        _cornerStartTL = _cornerOffsetTL;
+        _cornerStartTR = _cornerOffsetTR;
+        _cornerStartBL = _cornerOffsetBL;
+        _cornerStartBR = _cornerOffsetBR;
+      });
+    }
+  }
+
+  void _onSkewPanUpdate(DragUpdateDetails d) {
+    if (_activeSkewHandle == _SkewHandle.none || !_isSkewing) return;
+
+    final r = _imageRect;
+    if (r == null) return;
+
+    // Get screen delta
+    final screenDelta = d.localPosition - _skewStartPosition;
+
+    // Convert screen delta to object-local coordinate space by applying inverse rotation
+    final cos = math.cos(-_rotationAngle);
+    final sin = math.sin(-_rotationAngle);
+    var localDeltaX = screenDelta.dx * cos - screenDelta.dy * sin;
+    var localDeltaY = screenDelta.dx * sin + screenDelta.dy * cos;
+
+    // Normalize delta by image dimensions and zoom
+    final normalizedDeltaX = localDeltaX / (r.width * _zoomScale);
+    final normalizedDeltaY = localDeltaY / (r.height * _zoomScale);
+
+    final normalizedDelta = Offset(normalizedDeltaX, normalizedDeltaY);
+
+    setState(() {
+      switch (_activeSkewHandle) {
+        // Corner handles - only the dragged corner moves, all others stay fixed
+        case _SkewHandle.topLeft:
+          _cornerOffsetTL = _cornerStartTL + normalizedDelta;
+          // All other corners stay fixed
+          _cornerOffsetTR = _cornerStartTR;
+          _cornerOffsetBL = _cornerStartBL;
+          _cornerOffsetBR = _cornerStartBR;
+          break;
+        case _SkewHandle.topRight:
+          _cornerOffsetTR = _cornerStartTR + normalizedDelta;
+          // All other corners stay fixed
+          _cornerOffsetTL = _cornerStartTL;
+          _cornerOffsetBL = _cornerStartBL;
+          _cornerOffsetBR = _cornerStartBR;
+          break;
+        case _SkewHandle.bottomLeft:
+          _cornerOffsetBL = _cornerStartBL + normalizedDelta;
+          // All other corners stay fixed
+          _cornerOffsetTL = _cornerStartTL;
+          _cornerOffsetTR = _cornerStartTR;
+          _cornerOffsetBR = _cornerStartBR;
+          break;
+        case _SkewHandle.bottomRight:
+          _cornerOffsetBR = _cornerStartBR + normalizedDelta;
+          // All other corners stay fixed
+          _cornerOffsetTL = _cornerStartTL;
+          _cornerOffsetTR = _cornerStartTR;
+          _cornerOffsetBL = _cornerStartBL;
+          break;
+
+        // Edge handles - move two corners together (pivot = opposite edge)
+        case _SkewHandle.topCenter:
+          // Pivot = bottom edge (BL, BR stay fixed)
+          // Move both top corners together
+          _cornerOffsetTL = _cornerStartTL + normalizedDelta;
+          _cornerOffsetTR = _cornerStartTR + normalizedDelta;
+          _cornerOffsetBL = _cornerStartBL;
+          _cornerOffsetBR = _cornerStartBR;
+          break;
+        case _SkewHandle.bottomCenter:
+          // Pivot = top edge (TL, TR stay fixed)
+          // Move both bottom corners together
+          _cornerOffsetBL = _cornerStartBL + normalizedDelta;
+          _cornerOffsetBR = _cornerStartBR + normalizedDelta;
+          _cornerOffsetTL = _cornerStartTL;
+          _cornerOffsetTR = _cornerStartTR;
+          break;
+        case _SkewHandle.leftCenter:
+          // Pivot = right edge (TR, BR stay fixed)
+          // Move both left corners together
+          _cornerOffsetTL = _cornerStartTL + normalizedDelta;
+          _cornerOffsetBL = _cornerStartBL + normalizedDelta;
+          _cornerOffsetTR = _cornerStartTR;
+          _cornerOffsetBR = _cornerStartBR;
+          break;
+        case _SkewHandle.rightCenter:
+          // Pivot = left edge (TL, BL stay fixed)
+          // Move both right corners together
+          _cornerOffsetTR = _cornerStartTR + normalizedDelta;
+          _cornerOffsetBR = _cornerStartBR + normalizedDelta;
+          _cornerOffsetTL = _cornerStartTL;
+          _cornerOffsetBL = _cornerStartBL;
+          break;
+        case _SkewHandle.none:
+          break;
+      }
+
+      // Mark as pending skew if any corner has been modified
+      _hasPendingSkew = _cornerOffsetTL != Offset.zero || _cornerOffsetTR != Offset.zero || _cornerOffsetBL != Offset.zero || _cornerOffsetBR != Offset.zero;
+    });
+  }
+
+  void _onSkewPanEnd(DragEndDetails d) {
+    _activeSkewHandle = _SkewHandle.none;
+    setState(() => _isSkewing = false);
+  }
+
+  void _resetSkew() {
+    setState(() {
+      _cornerOffsetTL = Offset.zero;
+      _cornerOffsetTR = Offset.zero;
+      _cornerOffsetBL = Offset.zero;
+      _cornerOffsetBR = Offset.zero;
+      _hasPendingSkew = false;
+    });
+  }
+
+  void _cancelSkew() {
+    _resetSkew();
+  }
+
+  Future<void> _applySkew() async {
+    if (!_hasPendingSkew) return;
+
+    final sourceImage = _currentImage;
+
+    try {
+      final recorder = ui.PictureRecorder();
+      final canvas = Canvas(recorder);
+
+      final fullWidth = sourceImage.width.toDouble();
+      final fullHeight = sourceImage.height.toDouble();
+
+      // Calculate transformed corner positions
+      final tl = Offset(
+        _cornerOffsetTL.dx * fullWidth,
+        _cornerOffsetTL.dy * fullHeight,
+      );
+      final tr = Offset(
+        fullWidth + _cornerOffsetTR.dx * fullWidth,
+        _cornerOffsetTR.dy * fullHeight,
+      );
+      final br = Offset(
+        fullWidth + _cornerOffsetBR.dx * fullWidth,
+        fullHeight + _cornerOffsetBR.dy * fullHeight,
+      );
+      final bl = Offset(
+        _cornerOffsetBL.dx * fullWidth,
+        fullHeight + _cornerOffsetBL.dy * fullHeight,
+      );
+
+      // Calculate bounding box of transformed corners
+      final minX = [tl.dx, tr.dx, br.dx, bl.dx].reduce((a, b) => a < b ? a : b);
+      final maxX = [tl.dx, tr.dx, br.dx, bl.dx].reduce((a, b) => a > b ? a : b);
+      final minY = [tl.dy, tr.dy, br.dy, bl.dy].reduce((a, b) => a < b ? a : b);
+      final maxY = [tl.dy, tr.dy, br.dy, bl.dy].reduce((a, b) => a > b ? a : b);
+
+      final newWidth = maxX - minX;
+      final newHeight = maxY - minY;
+
+      // Translate corners to positive coordinates
+      final tlAdjusted = Offset(tl.dx - minX, tl.dy - minY);
+      final trAdjusted = Offset(tr.dx - minX, tr.dy - minY);
+      final brAdjusted = Offset(br.dx - minX, br.dy - minY);
+      final blAdjusted = Offset(bl.dx - minX, bl.dy - minY);
+
+      // Create shader from source image
+      final shader = ImageShader(
+        sourceImage,
+        TileMode.clamp,
+        TileMode.clamp,
+        Matrix4.identity().storage,
+      );
+
+      // Build vertices for two triangles covering the quadrilateral
+      final positions = Float32List.fromList([
+        // Triangle 1: TL, TR, BR
+        tlAdjusted.dx, tlAdjusted.dy,
+        trAdjusted.dx, trAdjusted.dy,
+        brAdjusted.dx, brAdjusted.dy,
+        // Triangle 2: TL, BR, BL
+        tlAdjusted.dx, tlAdjusted.dy,
+        brAdjusted.dx, brAdjusted.dy,
+        blAdjusted.dx, blAdjusted.dy,
+      ]);
+
+      final textureCoords = Float32List.fromList([
+        // Triangle 1: TL, TR, BR
+        0, 0,
+        fullWidth, 0,
+        fullWidth, fullHeight,
+        // Triangle 2: TL, BR, BL
+        0, 0,
+        fullWidth, fullHeight,
+        0, fullHeight,
+      ]);
+
+      final vertices = ui.Vertices.raw(
+        VertexMode.triangles,
+        positions,
+        textureCoordinates: textureCoords,
+      );
+
+      final paint = Paint()..shader = shader;
+      canvas.drawVertices(vertices, BlendMode.srcOver, paint);
+
+      final picture = recorder.endRecording();
+      final resultImage = await picture.toImage(newWidth.round(), newHeight.round());
+
+      setState(() {
+        _workingImage = resultImage;
+        // Reset skew offsets since they've been applied
+        _cornerOffsetTL = Offset.zero;
+        _cornerOffsetTR = Offset.zero;
+        _cornerOffsetBL = Offset.zero;
+        _cornerOffsetBR = Offset.zero;
+        _hasPendingSkew = false;
+      });
+    } catch (e) {
+      // If skew fails, just reset the pending state
+      setState(() => _hasPendingSkew = false);
+    }
   }
 
   Map<_CropHandle, Offset> _handlesInScreen(Rect imageRect, Rect cropN) {
@@ -396,15 +855,30 @@ class _FloorPlanCalibratorState extends State<FloorPlanCalibrator> {
     final centerX = (crop.left + crop.right) / 2;
     final centerY = (crop.top + crop.bottom) / 2;
 
+    // Apply rotation to handle positions
+    final imgCx = imageRect.center.dx;
+    final imgCy = imageRect.center.dy;
+    final cos = math.cos(_rotationAngle);
+    final sin = math.sin(_rotationAngle);
+
+    Offset rotatePoint(Offset p) {
+      final dx = p.dx - imgCx;
+      final dy = p.dy - imgCy;
+      return Offset(
+        imgCx + dx * cos - dy * sin,
+        imgCy + dx * sin + dy * cos,
+      );
+    }
+
     return <_CropHandle, Offset>{
-      _CropHandle.topLeft: _canvasToScreen(Offset(crop.left, crop.top)),
-      _CropHandle.top: _canvasToScreen(Offset(centerX, crop.top)),
-      _CropHandle.topRight: _canvasToScreen(Offset(crop.right, crop.top)),
-      _CropHandle.right: _canvasToScreen(Offset(crop.right, centerY)),
-      _CropHandle.bottomRight: _canvasToScreen(Offset(crop.right, crop.bottom)),
-      _CropHandle.bottom: _canvasToScreen(Offset(centerX, crop.bottom)),
-      _CropHandle.bottomLeft: _canvasToScreen(Offset(crop.left, crop.bottom)),
-      _CropHandle.left: _canvasToScreen(Offset(crop.left, centerY)),
+      _CropHandle.topLeft: _canvasToScreen(rotatePoint(Offset(crop.left, crop.top))),
+      _CropHandle.top: _canvasToScreen(rotatePoint(Offset(centerX, crop.top))),
+      _CropHandle.topRight: _canvasToScreen(rotatePoint(Offset(crop.right, crop.top))),
+      _CropHandle.right: _canvasToScreen(rotatePoint(Offset(crop.right, centerY))),
+      _CropHandle.bottomRight: _canvasToScreen(rotatePoint(Offset(crop.right, crop.bottom))),
+      _CropHandle.bottom: _canvasToScreen(rotatePoint(Offset(centerX, crop.bottom))),
+      _CropHandle.bottomLeft: _canvasToScreen(rotatePoint(Offset(crop.left, crop.bottom))),
+      _CropHandle.left: _canvasToScreen(rotatePoint(Offset(crop.left, centerY))),
     };
   }
 
@@ -420,20 +894,310 @@ class _FloorPlanCalibratorState extends State<FloorPlanCalibrator> {
   }
 
   void _resetCrop() {
-    setState(() => _cropRectN = const Rect.fromLTWH(0, 0, 1, 1));
+    setState(() {
+      _cropRectN = const Rect.fromLTWH(0, 0, 1, 1);
+      _hasPendingCrop = false;
+    });
+  }
+
+  void _cancelCrop() {
+    // Reset crop rect to full image
+    setState(() {
+      _cropRectN = const Rect.fromLTWH(0, 0, 1, 1);
+      _hasPendingCrop = false;
+    });
+  }
+
+  Future<void> _applyCrop() async {
+    if (!_hasPendingCrop) return;
+
+    final sourceImage = _currentImage;
+
+    try {
+      ui.Image resultImage = sourceImage;
+
+      // Step 1: Apply crop FIRST to the source image (in unrotated space)
+      // Because _cropRectN coordinates are in unrotated image space
+      final cropRect = Rect.fromLTRB(
+        (_cropRectN.left * sourceImage.width).round().toDouble(),
+        (_cropRectN.top * sourceImage.height).round().toDouble(),
+        (_cropRectN.right * sourceImage.width).round().toDouble(),
+        (_cropRectN.bottom * sourceImage.height).round().toDouble(),
+      );
+
+      final clampedRect = Rect.fromLTRB(
+        cropRect.left.clamp(0.0, sourceImage.width.toDouble()),
+        cropRect.top.clamp(0.0, sourceImage.height.toDouble()),
+        cropRect.right.clamp(0.0, sourceImage.width.toDouble()),
+        cropRect.bottom.clamp(0.0, sourceImage.height.toDouble()),
+      );
+
+      if (clampedRect.width > 0 && clampedRect.height > 0) {
+        final recorder = ui.PictureRecorder();
+        final canvas = Canvas(recorder);
+
+        canvas.drawImageRect(
+          sourceImage,
+          clampedRect,
+          Rect.fromLTWH(0, 0, clampedRect.width, clampedRect.height),
+          Paint(),
+        );
+
+        final picture = recorder.endRecording();
+        resultImage = await picture.toImage(
+          clampedRect.width.round(),
+          clampedRect.height.round(),
+        );
+      }
+
+      // Step 2: Apply rotation to the cropped image
+      if (_rotationAngle != 0.0) {
+        final recorder = ui.PictureRecorder();
+        final canvas = Canvas(recorder);
+
+        final fullWidth = resultImage.width.toDouble();
+        final fullHeight = resultImage.height.toDouble();
+
+        // For rotation, we need a larger canvas to fit the rotated image
+        final cos = math.cos(_rotationAngle).abs();
+        final sin = math.sin(_rotationAngle).abs();
+        final newWidth = fullWidth * cos + fullHeight * sin;
+        final newHeight = fullWidth * sin + fullHeight * cos;
+
+        // Translate to center, rotate, then translate back
+        canvas.translate(newWidth / 2, newHeight / 2);
+        canvas.rotate(_rotationAngle);
+        canvas.translate(-fullWidth / 2, -fullHeight / 2);
+
+        // Draw the rotated image
+        canvas.drawImage(resultImage, Offset.zero, Paint());
+
+        final picture = recorder.endRecording();
+        resultImage = await picture.toImage(newWidth.round(), newHeight.round());
+      }
+
+      // Step 2.5: Apply corner offsets (4-point free transform) to the rotated image
+      if (_cornerOffsetTL != Offset.zero || _cornerOffsetTR != Offset.zero || _cornerOffsetBL != Offset.zero || _cornerOffsetBR != Offset.zero) {
+        final recorder = ui.PictureRecorder();
+        final canvas = Canvas(recorder);
+
+        final fullWidth = resultImage.width.toDouble();
+        final fullHeight = resultImage.height.toDouble();
+
+        // Calculate transformed corner positions
+        final tl = Offset(
+          _cornerOffsetTL.dx * fullWidth,
+          _cornerOffsetTL.dy * fullHeight,
+        );
+        final tr = Offset(
+          fullWidth + _cornerOffsetTR.dx * fullWidth,
+          _cornerOffsetTR.dy * fullHeight,
+        );
+        final br = Offset(
+          fullWidth + _cornerOffsetBR.dx * fullWidth,
+          fullHeight + _cornerOffsetBR.dy * fullHeight,
+        );
+        final bl = Offset(
+          _cornerOffsetBL.dx * fullWidth,
+          fullHeight + _cornerOffsetBL.dy * fullHeight,
+        );
+
+        // Calculate bounding box of transformed corners
+        final minX = [tl.dx, tr.dx, br.dx, bl.dx].reduce((a, b) => a < b ? a : b);
+        final maxX = [tl.dx, tr.dx, br.dx, bl.dx].reduce((a, b) => a > b ? a : b);
+        final minY = [tl.dy, tr.dy, br.dy, bl.dy].reduce((a, b) => a < b ? a : b);
+        final maxY = [tl.dy, tr.dy, br.dy, bl.dy].reduce((a, b) => a > b ? a : b);
+
+        final newWidth = maxX - minX;
+        final newHeight = maxY - minY;
+
+        // Translate corners to positive coordinates
+        final tlAdjusted = Offset(tl.dx - minX, tl.dy - minY);
+        final trAdjusted = Offset(tr.dx - minX, tr.dy - minY);
+        final brAdjusted = Offset(br.dx - minX, br.dy - minY);
+        final blAdjusted = Offset(bl.dx - minX, bl.dy - minY);
+
+        // Create shader from image
+        final shader = ImageShader(
+          resultImage,
+          TileMode.clamp,
+          TileMode.clamp,
+          Matrix4.identity().storage,
+        );
+
+        // Build vertices for two triangles covering the quadrilateral
+        final positions = Float32List.fromList([
+          // Triangle 1: TL, TR, BR
+          tlAdjusted.dx, tlAdjusted.dy,
+          trAdjusted.dx, trAdjusted.dy,
+          brAdjusted.dx, brAdjusted.dy,
+          // Triangle 2: TL, BR, BL
+          tlAdjusted.dx, tlAdjusted.dy,
+          brAdjusted.dx, brAdjusted.dy,
+          blAdjusted.dx, blAdjusted.dy,
+        ]);
+
+        final textureCoords = Float32List.fromList([
+          // Triangle 1: TL, TR, BR
+          0, 0,
+          fullWidth, 0,
+          fullWidth, fullHeight,
+          // Triangle 2: TL, BR, BL
+          0, 0,
+          fullWidth, fullHeight,
+          0, fullHeight,
+        ]);
+
+        final vertices = ui.Vertices.raw(
+          VertexMode.triangles,
+          positions,
+          textureCoordinates: textureCoords,
+        );
+
+        final paint = Paint()..shader = shader;
+        canvas.drawVertices(vertices, BlendMode.srcOver, paint);
+
+        final picture = recorder.endRecording();
+        resultImage = await picture.toImage(newWidth.round(), newHeight.round());
+      }
+
+      // Flip is now applied immediately to working image, so no flip step needed here
+
+      setState(() {
+        _workingImage = resultImage;
+        _cropRectN = const Rect.fromLTWH(0, 0, 1, 1);
+        _hasPendingCrop = false;
+        // Reset transforms since they've been applied
+        _rotationAngle = 0.0;
+        _cornerOffsetTL = Offset.zero;
+        _cornerOffsetTR = Offset.zero;
+        _cornerOffsetBL = Offset.zero;
+        _cornerOffsetBR = Offset.zero;
+      });
+    } catch (e) {
+      // If crop fails, just reset the pending state
+      setState(() => _hasPendingCrop = false);
+    }
   }
 
   void _fitToScreen() {
-    // our painter always fits; this is a placeholder to match the UI
-    // you could also reset crop + measurement.
+    // Reset zoom and pan to fit the current image (with all applied changes) to screen
+    // Does NOT reset transformations or working image - keeps all edits
+    // Must account for rotation when calculating fit
+
+    final r = _imageRect;
+    if (r == null) {
+      // Fallback if no image rect yet
+      setState(() {
+        _zoomScale = 1.0;
+        _panOffset = Offset.zero;
+      });
+      return;
+    }
+
+    // Calculate the bounding box of the rotated image
+    final w = r.width;
+    final h = r.height;
+
+    // For rotation, calculate the bounding box dimensions
+    final cos = math.cos(_rotationAngle).abs();
+    final sin = math.sin(_rotationAngle).abs();
+    final rotatedWidth = w * cos + h * sin;
+    final rotatedHeight = w * sin + h * cos;
+
+    // Calculate the scale needed to fit the rotated bounding box
+    // The painter already fits the unrotated image to canvas at scale 1.0
+    // We need to scale down if the rotated bounds are larger
+    final scaleX = w / rotatedWidth;
+    final scaleY = h / rotatedHeight;
+    final fitScale = math.min(scaleX, scaleY);
+
+    // Calculate pan offset to keep image centered after scaling
+    // When we scale around origin, we need to offset to re-center the image
+    // panOffset = center * (1 - scale) keeps the center in place
+    final center = r.center;
+    final panOffset = Offset(
+      center.dx * (1 - fitScale),
+      center.dy * (1 - fitScale),
+    );
+
+    setState(() {
+      _zoomScale = fitScale;
+      _panOffset = panOffset;
+    });
+  }
+
+  void _resetToOriginal() {
+    // Reset everything back to the original image, removing all changes
     _resetCrop();
     _clearMeasurement();
     setState(() {
       _zoomScale = 1.0;
       _panOffset = Offset.zero;
-      _flipHorizontal = false;
-      _flipVertical = false;
+      _rotationAngle = 0.0;
+      _cornerOffsetTL = Offset.zero;
+      _cornerOffsetTR = Offset.zero;
+      _cornerOffsetBL = Offset.zero;
+      _cornerOffsetBR = Offset.zero;
+      _workingImage = null; // Reset to original image
+      _hasPendingCrop = false;
     });
+  }
+
+  Future<void> _applyFlipHorizontal() async {
+    final sourceImage = _currentImage;
+
+    try {
+      final recorder = ui.PictureRecorder();
+      final canvas = Canvas(recorder);
+
+      final fullWidth = sourceImage.width.toDouble();
+      final fullHeight = sourceImage.height.toDouble();
+
+      canvas.save();
+      canvas.translate(fullWidth / 2, fullHeight / 2);
+      canvas.scale(-1.0, 1.0);
+      canvas.translate(-fullWidth / 2, -fullHeight / 2);
+      canvas.drawImage(sourceImage, Offset.zero, Paint());
+      canvas.restore();
+
+      final picture = recorder.endRecording();
+      final resultImage = await picture.toImage(sourceImage.width, sourceImage.height);
+
+      setState(() {
+        _workingImage = resultImage;
+      });
+    } catch (e) {
+      // If flip fails, do nothing
+    }
+  }
+
+  Future<void> _applyFlipVertical() async {
+    final sourceImage = _currentImage;
+
+    try {
+      final recorder = ui.PictureRecorder();
+      final canvas = Canvas(recorder);
+
+      final fullWidth = sourceImage.width.toDouble();
+      final fullHeight = sourceImage.height.toDouble();
+
+      canvas.save();
+      canvas.translate(fullWidth / 2, fullHeight / 2);
+      canvas.scale(1.0, -1.0);
+      canvas.translate(-fullWidth / 2, -fullHeight / 2);
+      canvas.drawImage(sourceImage, Offset.zero, Paint());
+      canvas.restore();
+
+      final picture = recorder.endRecording();
+      final resultImage = await picture.toImage(sourceImage.width, sourceImage.height);
+
+      setState(() {
+        _workingImage = resultImage;
+      });
+    } catch (e) {
+      // If flip fails, do nothing
+    }
   }
 
   void _handlePanZoomStart(PointerPanZoomStartEvent e) {
@@ -476,38 +1240,13 @@ class _FloorPlanCalibratorState extends State<FloorPlanCalibrator> {
 
   // ---------- image cropping ----------
   Future<ui.Image?> _getCroppedImage() async {
-    ui.Image sourceImage = widget.floorPlanImage;
+    ui.Image sourceImage = _currentImage;
 
-    // First apply flips to the full image if needed
-    if (_flipHorizontal || _flipVertical) {
-      try {
-        final recorder = ui.PictureRecorder();
-        final canvas = Canvas(recorder);
+    // The _cropRectN coordinates are in the UNROTATED image coordinate space
+    // (because _onCropPanUpdate applies inverse rotation when calculating crop handles).
+    // So we must: 1) Crop first, 2) Then rotate, 3) Then flip
 
-        final fullWidth = sourceImage.width.toDouble();
-        final fullHeight = sourceImage.height.toDouble();
-
-        // Set up flip transformation
-        canvas.save();
-        canvas.translate(fullWidth / 2, fullHeight / 2);
-        canvas.scale(_flipHorizontal ? -1.0 : 1.0, _flipVertical ? -1.0 : 1.0);
-        canvas.translate(-fullWidth / 2, -fullHeight / 2);
-
-        // Draw the flipped image
-        canvas.drawImage(sourceImage, Offset.zero, Paint());
-        canvas.restore();
-
-        final picture = recorder.endRecording();
-        sourceImage = await picture.toImage(
-          sourceImage.width,
-          sourceImage.height,
-        );
-      } catch (e) {
-        // If flip fails, continue with original image
-      }
-    }
-
-    // Now apply cropping to the (potentially flipped) image
+    // Step 1: Apply cropping FIRST (in unrotated coordinate space)
     final cropRect = Rect.fromLTRB(
       (_cropRectN.left * sourceImage.width).round().toDouble(),
       (_cropRectN.top * sourceImage.height).round().toDouble(),
@@ -523,36 +1262,162 @@ class _FloorPlanCalibratorState extends State<FloorPlanCalibrator> {
       cropRect.bottom.clamp(0.0, sourceImage.height.toDouble()),
     );
 
-    // If no cropping needed, return the (potentially flipped) full image
-    if (clampedRect.left <= 0 && clampedRect.top <= 0 && clampedRect.right >= sourceImage.width && clampedRect.bottom >= sourceImage.height) {
-      return sourceImage;
+    // Apply crop if needed
+    final needsCrop = !(clampedRect.left <= 0 && clampedRect.top <= 0 && clampedRect.right >= sourceImage.width && clampedRect.bottom >= sourceImage.height);
+
+    if (needsCrop) {
+      try {
+        final recorder = ui.PictureRecorder();
+        final canvas = Canvas(recorder);
+
+        final outputWidth = clampedRect.width;
+        final outputHeight = clampedRect.height;
+
+        canvas.drawImageRect(
+          sourceImage,
+          clampedRect,
+          Rect.fromLTWH(0, 0, outputWidth, outputHeight),
+          Paint(),
+        );
+
+        final picture = recorder.endRecording();
+        sourceImage = await picture.toImage(
+          outputWidth.round(),
+          outputHeight.round(),
+        );
+      } catch (e) {
+        // If cropping fails, continue with original
+      }
     }
 
-    try {
-      // Create a picture recorder to draw the cropped portion
-      final recorder = ui.PictureRecorder();
-      final canvas = Canvas(recorder);
+    // Step 2: Apply rotation (if any) to the cropped image
+    if (_rotationAngle != 0.0) {
+      try {
+        final recorder = ui.PictureRecorder();
+        final canvas = Canvas(recorder);
 
-      final outputWidth = clampedRect.width;
-      final outputHeight = clampedRect.height;
+        final fullWidth = sourceImage.width.toDouble();
+        final fullHeight = sourceImage.height.toDouble();
 
-      // Draw the cropped portion of the (flipped) image
-      canvas.drawImageRect(
-        sourceImage,
-        clampedRect,
-        Rect.fromLTWH(0, 0, outputWidth, outputHeight),
-        Paint(),
-      );
+        // For rotation, we need a larger canvas to fit the rotated image
+        final cos = math.cos(_rotationAngle).abs();
+        final sin = math.sin(_rotationAngle).abs();
+        final newWidth = fullWidth * cos + fullHeight * sin;
+        final newHeight = fullWidth * sin + fullHeight * cos;
 
-      final picture = recorder.endRecording();
-      return await picture.toImage(
-        outputWidth.round(),
-        outputHeight.round(),
-      );
-    } catch (e) {
-      // If cropping fails, return null
-      return null;
+        // Translate to center, rotate, then translate back
+        canvas.translate(newWidth / 2, newHeight / 2);
+        canvas.rotate(_rotationAngle);
+        canvas.translate(-fullWidth / 2, -fullHeight / 2);
+
+        // Draw the rotated image
+        canvas.drawImage(sourceImage, Offset.zero, Paint());
+
+        final picture = recorder.endRecording();
+        sourceImage = await picture.toImage(
+          newWidth.round(),
+          newHeight.round(),
+        );
+      } catch (e) {
+        // If rotation fails, continue with current image
+      }
     }
+
+    // Step 2.5: Apply corner offsets (4-point free transform) to the rotated image
+    if (_cornerOffsetTL != Offset.zero || _cornerOffsetTR != Offset.zero || _cornerOffsetBL != Offset.zero || _cornerOffsetBR != Offset.zero) {
+      try {
+        final recorder = ui.PictureRecorder();
+        final canvas = Canvas(recorder);
+
+        final fullWidth = sourceImage.width.toDouble();
+        final fullHeight = sourceImage.height.toDouble();
+
+        // Calculate transformed corner positions
+        final tl = Offset(
+          _cornerOffsetTL.dx * fullWidth,
+          _cornerOffsetTL.dy * fullHeight,
+        );
+        final tr = Offset(
+          fullWidth + _cornerOffsetTR.dx * fullWidth,
+          _cornerOffsetTR.dy * fullHeight,
+        );
+        final br = Offset(
+          fullWidth + _cornerOffsetBR.dx * fullWidth,
+          fullHeight + _cornerOffsetBR.dy * fullHeight,
+        );
+        final bl = Offset(
+          _cornerOffsetBL.dx * fullWidth,
+          fullHeight + _cornerOffsetBL.dy * fullHeight,
+        );
+
+        // Calculate bounding box of transformed corners
+        final minX = [tl.dx, tr.dx, br.dx, bl.dx].reduce((a, b) => a < b ? a : b);
+        final maxX = [tl.dx, tr.dx, br.dx, bl.dx].reduce((a, b) => a > b ? a : b);
+        final minY = [tl.dy, tr.dy, br.dy, bl.dy].reduce((a, b) => a < b ? a : b);
+        final maxY = [tl.dy, tr.dy, br.dy, bl.dy].reduce((a, b) => a > b ? a : b);
+
+        final newWidth = maxX - minX;
+        final newHeight = maxY - minY;
+
+        // Translate corners to positive coordinates
+        final tlAdjusted = Offset(tl.dx - minX, tl.dy - minY);
+        final trAdjusted = Offset(tr.dx - minX, tr.dy - minY);
+        final brAdjusted = Offset(br.dx - minX, br.dy - minY);
+        final blAdjusted = Offset(bl.dx - minX, bl.dy - minY);
+
+        // Create shader from image
+        final shader = ImageShader(
+          sourceImage,
+          TileMode.clamp,
+          TileMode.clamp,
+          Matrix4.identity().storage,
+        );
+
+        // Build vertices for two triangles covering the quadrilateral
+        final positions = Float32List.fromList([
+          // Triangle 1: TL, TR, BR
+          tlAdjusted.dx, tlAdjusted.dy,
+          trAdjusted.dx, trAdjusted.dy,
+          brAdjusted.dx, brAdjusted.dy,
+          // Triangle 2: TL, BR, BL
+          tlAdjusted.dx, tlAdjusted.dy,
+          brAdjusted.dx, brAdjusted.dy,
+          blAdjusted.dx, blAdjusted.dy,
+        ]);
+
+        final textureCoords = Float32List.fromList([
+          // Triangle 1: TL, TR, BR
+          0, 0,
+          fullWidth, 0,
+          fullWidth, fullHeight,
+          // Triangle 2: TL, BR, BL
+          0, 0,
+          fullWidth, fullHeight,
+          0, fullHeight,
+        ]);
+
+        final vertices = ui.Vertices.raw(
+          VertexMode.triangles,
+          positions,
+          textureCoordinates: textureCoords,
+        );
+
+        final paint = Paint()..shader = shader;
+        canvas.drawVertices(vertices, BlendMode.srcOver, paint);
+
+        final picture = recorder.endRecording();
+        sourceImage = await picture.toImage(
+          newWidth.round(),
+          newHeight.round(),
+        );
+      } catch (e) {
+        // If corner transform fails, continue with current image
+      }
+    }
+
+    // Flip is now applied immediately to working image, so no flip step needed here
+
+    return sourceImage;
   }
 
   void _completeCalibration() async {
@@ -575,8 +1440,8 @@ class _FloorPlanCalibratorState extends State<FloorPlanCalibrator> {
       realWorldDistance: distance,
       unit: _selectedUnit,
       imageSize: Size(
-        widget.floorPlanImage.width.toDouble(),
-        widget.floorPlanImage.height.toDouble(),
+        _currentImage.width.toDouble(),
+        _currentImage.height.toDouble(),
       ),
       croppedImage: croppedImage,
     );
@@ -591,7 +1456,7 @@ class _FloorPlanCalibratorState extends State<FloorPlanCalibrator> {
   // ---------- build ----------
   @override
   Widget build(BuildContext context) {
-    final imageInvalid = widget.floorPlanImage.width <= 0 || widget.floorPlanImage.height <= 0;
+    final imageInvalid = _currentImage.width <= 0 || _currentImage.height <= 0;
 
     if (imageInvalid) {
       return Center(
@@ -613,7 +1478,7 @@ class _FloorPlanCalibratorState extends State<FloorPlanCalibrator> {
             ),
             const SizedBox(height: 6),
             FusionAppText(
-              text: 'Image dimensions: ${widget.floorPlanImage.width}×${widget.floorPlanImage.height}',
+              text: 'Image dimensions: ${_currentImage.width}×${_currentImage.height}',
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                 color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
               ),
@@ -647,6 +1512,7 @@ class _FloorPlanCalibratorState extends State<FloorPlanCalibrator> {
                 seemanticKey: FusionTestKeys.measureScale,
                 tooltip: 'Measure scale (draw line)',
                 active: _mode == _ToolMode.measure,
+                enabled: !_hasPendingSkew && !_hasPendingCrop,
                 onTap: () => setState(() => _mode = _ToolMode.measure),
               ),
               _ToolbarIcon(
@@ -654,6 +1520,7 @@ class _FloorPlanCalibratorState extends State<FloorPlanCalibrator> {
                 seemanticKey: FusionTestKeys.cropImage,
                 tooltip: 'Crop',
                 active: _mode == _ToolMode.crop,
+                enabled: !_hasPendingSkew,
                 onTap: () => setState(() => _mode = _ToolMode.crop),
               ),
               _ToolbarIcon(
@@ -661,46 +1528,94 @@ class _FloorPlanCalibratorState extends State<FloorPlanCalibrator> {
                 seemanticKey: FusionTestKeys.rotateImage,
                 tooltip: 'Rotate',
                 active: _mode == _ToolMode.rotate,
+                enabled: !_hasPendingSkew && !_hasPendingCrop,
                 onTap: () => setState(() => _mode = _ToolMode.rotate),
               ),
+
               _ToolbarIcon(
                 icon: LucideIcons.flipHorizontal2200,
                 seemanticKey: FusionTestKeys.flipHorizontal,
                 tooltip: 'Flip Horizontal',
-                active: _flipHorizontal,
-                onTap: () => setState(() => _flipHorizontal = !_flipHorizontal),
+                enabled: !_hasPendingSkew && !_hasPendingCrop,
+                onTap: _applyFlipHorizontal,
               ),
               _ToolbarIcon(
                 icon: LucideIcons.flipVertical2200,
                 seemanticKey: FusionTestKeys.flipVertical,
                 tooltip: 'Flip Vertical',
-                active: _flipVertical,
-                onTap: () => setState(() => _flipVertical = !_flipVertical),
+                enabled: !_hasPendingSkew && !_hasPendingCrop,
+                onTap: _applyFlipVertical,
               ),
               _ToolbarIcon(
                 svgIcon: "packages/fusion_lib/lib/assets/svgs/skew.svg",
                 seemanticKey: FusionTestKeys.skew,
                 tooltip: 'Skew',
                 active: _mode == _ToolMode.skew,
+                enabled: !_hasPendingCrop,
                 onTap: () => setState(() => _mode = _ToolMode.skew),
               ),
               _ToolbarIcon(
                 svgIcon: "packages/fusion_lib/lib/assets/svgs/reset.svg",
                 seemanticKey: FusionTestKeys.reset,
-                tooltip: 'Reset',
-                enabled: _startPointNormalized != null || _endPointNormalized != null,
-                onTap: () {
-                  if (_startPointNormalized != null || _endPointNormalized != null) {
-                    _clearMeasurement();
-                  }
-                },
+                tooltip: 'Reset to original',
+                enabled: !_hasPendingSkew && !_hasPendingCrop,
+                onTap: _resetToOriginal,
               ),
               _ToolbarIcon(
                 seemanticKey: FusionTestKeys.fitToScreen,
                 icon: LucideIcons.expand200,
                 tooltip: 'Fit to screen',
+                enabled: !_hasPendingSkew && !_hasPendingCrop,
                 onTap: () => _fitToScreen(),
               ),
+              Spacer(),
+              // Rotate Left/Right buttons (visible when in rotate mode)
+              if (_mode == _ToolMode.rotate) ...<Widget>[
+                _ToolbarIcon(
+                  icon: LucideIcons.rotateCcw200,
+                  seemanticKey: FusionTestKeys.rotateLeft,
+                  tooltip: 'Rotate Left (90°)',
+                  onTap: _rotateLeft,
+                ),
+                _ToolbarIcon(
+                  icon: LucideIcons.rotateCw200,
+                  seemanticKey: FusionTestKeys.rotateRight,
+                  tooltip: 'Rotate Right (90°)',
+                  onTap: _rotateRight,
+                ),
+              ],
+
+              // Crop confirm/cancel buttons (visible when in crop mode with pending crop)
+              if (_mode == _ToolMode.crop && _hasPendingCrop) ...<Widget>[
+                _ToolbarIcon(
+                  icon: LucideIcons.check200,
+                  seemanticKey: FusionTestKeys.cropConfirm,
+                  tooltip: 'Apply Crop',
+                  onTap: _applyCrop,
+                ),
+                _ToolbarIcon(
+                  icon: LucideIcons.x200,
+                  seemanticKey: FusionTestKeys.cropCancel,
+                  tooltip: 'Cancel Crop',
+                  onTap: _cancelCrop,
+                ),
+              ],
+
+              // Skew reset/apply buttons (visible when in skew mode with pending skew)
+              if (_mode == _ToolMode.skew && _hasPendingSkew) ...<Widget>[
+                _ToolbarIcon(
+                  icon: LucideIcons.check200,
+                  seemanticKey: FusionTestKeys.skewApply,
+                  tooltip: 'Apply Skew',
+                  onTap: _applySkew,
+                ),
+                _ToolbarIcon(
+                  icon: LucideIcons.x200,
+                  seemanticKey: FusionTestKeys.skewReset,
+                  tooltip: 'Cancel Skew',
+                  onTap: _cancelSkew,
+                ),
+              ],
               const Spacer(),
               // Right: distance + units controls
               FusionAppText(
@@ -760,19 +1675,39 @@ class _FloorPlanCalibratorState extends State<FloorPlanCalibrator> {
             child: Container(
               clipBehavior: Clip.hardEdge,
               alignment: Alignment.center,
-              decoration: BoxDecoration(
-                color: Colors.white,
-              ),
+              decoration: BoxDecoration(color: Colors.white),
               child: MouseRegion(
-                cursor: _mode == _ToolMode.measure ? SystemMouseCursors.precise : SystemMouseCursors.resizeUpLeftDownRight,
+                cursor: _mode == _ToolMode.measure
+                    ? SystemMouseCursors.precise
+                    : _mode == _ToolMode.rotate
+                    ? (_isRotating ? SystemMouseCursors.grabbing : SystemMouseCursors.grab)
+                    : _mode == _ToolMode.skew
+                    ? (_isSkewing ? SystemMouseCursors.grabbing : SystemMouseCursors.grab)
+                    : SystemMouseCursors.resizeUpLeftDownRight,
                 onHover: _mode == _ToolMode.measure ? _onMeasureHover : null,
                 child: GestureDetector(
                   behavior: HitTestBehavior.opaque,
                   onTapDown: _mode == _ToolMode.measure ? _onMeasureTapDown : null,
-                  onPanUpdate: _mode == _ToolMode.measure ? _onMeasurePanUpdate : _onCropPanUpdate,
-                  onPanStart: _mode == _ToolMode.crop ? _onCropPanStart : null,
+                  onPanStart: _mode == _ToolMode.crop
+                      ? _onCropPanStart
+                      : _mode == _ToolMode.rotate
+                      ? _onRotatePanStart
+                      : _mode == _ToolMode.skew
+                      ? _onSkewPanStart
+                      : null,
+                  onPanUpdate: _mode == _ToolMode.measure
+                      ? _onMeasurePanUpdate
+                      : _mode == _ToolMode.crop
+                      ? _onCropPanUpdate
+                      : _mode == _ToolMode.rotate
+                      ? _onRotatePanUpdate
+                      : _mode == _ToolMode.skew
+                      ? _onSkewPanUpdate
+                      : null,
                   onPanEnd: (d) {
                     if (_mode == _ToolMode.crop) _onCropPanEnd(d);
+                    if (_mode == _ToolMode.rotate) _onRotatePanEnd(d);
+                    if (_mode == _ToolMode.skew) _onSkewPanEnd(d);
                     if (_mode == _ToolMode.measure && _isDrawing) {
                       setState(() => _isDrawing = false);
                     }
@@ -803,17 +1738,24 @@ class _FloorPlanCalibratorState extends State<FloorPlanCalibrator> {
                         child: CustomPaint(
                           key: _customPaintKey,
                           painter: FloorPlanCalibrationPainter(
-                            image: widget.floorPlanImage,
+                            image: _currentImage,
                             startPoint: _startPointDisplay,
                             endPoint: _endPointDisplay,
                             distanceText: _distanceController.text.trim(),
                             unit: _selectedUnit,
                             cropRectNormalized: _cropRectN,
                             showCropHandles: _mode == _ToolMode.crop,
+                            showRotationHandles: _mode == _ToolMode.rotate,
+                            showSkewHandles: _mode == _ToolMode.skew,
+                            rotationAngle: _rotationAngle,
+                            cornerOffsetTL: _cornerOffsetTL,
+                            cornerOffsetTR: _cornerOffsetTR,
+                            cornerOffsetBL: _cornerOffsetBL,
+                            cornerOffsetBR: _cornerOffsetBR,
                             zoomScale: _zoomScale,
                             panOffset: _panOffset,
-                            flipHorizontal: _flipHorizontal,
-                            flipVertical: _flipVertical,
+                            flipHorizontal: false,
+                            flipVertical: false,
                             onImageRectChanged: (ui.Rect r) {
                               _imageRect = r;
                               // keep display points in sync if image rect changes
@@ -850,6 +1792,7 @@ class _FloorPlanCalibratorState extends State<FloorPlanCalibrator> {
               FusionOutlinedButton(
                 width: 120,
                 height: 36,
+                borderRadius: 12,
                 label: FusionStrings.cancelButton,
                 onTap: () {
                   widget.onCancel!();
@@ -867,6 +1810,8 @@ class _FloorPlanCalibratorState extends State<FloorPlanCalibrator> {
                   label: FusionStrings.confirmButton,
                   width: 120,
                   height: 36,
+                  borderRadius: 12,
+                  textStyle: context.textTheme.labelLarge?.copyWith(color: Colors.white, fontWeight: FontWeight.w600),
                   activeBackgroundColor: context.colorScheme.primaryColor,
                   onTap: () {
                     if (_startPointNormalized != null && _endPointNormalized != null && _distanceController.text.trim().isNotEmpty) {
@@ -918,9 +1863,9 @@ class _ToolbarIcon extends StatelessWidget {
               height: 28,
               padding: EdgeInsets.all(6),
               decoration: BoxDecoration(
-                color: active ? context.colorScheme.elevation3 : null,
+                color: enabled ? (active ? context.colorScheme.elevation3 : null) : null,
                 border: Border.all(
-                  color: context.colorScheme.outline.withValues(alpha: 0.4),
+                  color: enabled ? context.colorScheme.elevation4 : context.colorScheme.elevation3,
                 ),
                 borderRadius: BorderRadius.circular(6),
               ),
@@ -930,13 +1875,13 @@ class _ToolbarIcon extends StatelessWidget {
                     if (svgIcon != null) {
                       return FusionSvgIcon(
                         icon: svgIcon!,
-                        color: active ? context.colorScheme.primaryWhite : context.colorScheme.iconDefault,
+                        color: enabled ? (active ? context.colorScheme.primaryWhite : context.colorScheme.iconDefault) : context.colorScheme.elevation5,
                       );
                     }
                     return Icon(
                       icon,
                       size: 16,
-                      color: active ? context.colorScheme.primaryWhite : context.colorScheme.iconDefault,
+                      color: enabled ? (active ? context.colorScheme.primaryWhite : context.colorScheme.iconDefault) : context.colorScheme.elevation5,
                     );
                   },
                 ),
@@ -961,6 +1906,29 @@ enum _CropHandle {
   left,
 }
 
+enum _RotationHandle {
+  none,
+  topLeft,
+  topRight,
+  bottomRight,
+  bottomLeft,
+}
+
+// Transform handles: 4 corners for independent movement + 4 edge midpoints for paired movement
+enum _SkewHandle {
+  none,
+  // Edge handles (move two corners together)
+  topCenter, // move topLeft and topRight together
+  bottomCenter, // move bottomLeft and bottomRight together
+  leftCenter, // move topLeft and bottomLeft together
+  rightCenter, // move topRight and bottomRight together
+  // Corner handles (independent movement)
+  topLeft,
+  topRight,
+  bottomLeft,
+  bottomRight,
+}
+
 class FloorPlanCalibrationPainter extends CustomPainter {
   final ui.Image image;
   final Offset? startPoint;
@@ -969,6 +1937,14 @@ class FloorPlanCalibrationPainter extends CustomPainter {
   final MeasurementUnit unit;
   final Rect? cropRectNormalized; // 0..1 inside the displayed image rect
   final bool showCropHandles;
+  final bool showRotationHandles;
+  final bool showSkewHandles;
+  final double rotationAngle;
+  // 4-point free transform corner offsets (normalized)
+  final Offset cornerOffsetTL;
+  final Offset cornerOffsetTR;
+  final Offset cornerOffsetBL;
+  final Offset cornerOffsetBR;
   final double zoomScale;
   final Offset panOffset;
   final bool flipHorizontal;
@@ -983,6 +1959,13 @@ class FloorPlanCalibrationPainter extends CustomPainter {
     required this.unit,
     this.cropRectNormalized,
     this.showCropHandles = false,
+    this.showRotationHandles = false,
+    this.showSkewHandles = false,
+    this.rotationAngle = 0.0,
+    this.cornerOffsetTL = Offset.zero,
+    this.cornerOffsetTR = Offset.zero,
+    this.cornerOffsetBL = Offset.zero,
+    this.cornerOffsetBR = Offset.zero,
     this.zoomScale = 1.0,
     this.panOffset = Offset.zero,
     this.flipHorizontal = false,
@@ -1017,27 +2000,320 @@ class FloorPlanCalibrationPainter extends CustomPainter {
 
     onImageRectChanged?.call(imageRect);
 
-    // Flip transform
-    if (flipHorizontal || flipVertical) {
-      canvas.save();
-      // Center of imageRect
-      final cx = imageRect.left + imageRect.width / 2;
-      final cy = imageRect.top + imageRect.height / 2;
-      canvas.translate(cx, cy);
-      canvas.scale(flipHorizontal ? -1.0 : 1.0, flipVertical ? -1.0 : 1.0);
-      canvas.translate(-cx, -cy);
+    // Calculate 4-point transform corners (base corners + offsets)
+    final w = imageRect.width;
+    final h = imageRect.height;
+    var topLeft = imageRect.topLeft + Offset(cornerOffsetTL.dx * w, cornerOffsetTL.dy * h);
+    var topRight = imageRect.topRight + Offset(cornerOffsetTR.dx * w, cornerOffsetTR.dy * h);
+    var bottomLeft = imageRect.bottomLeft + Offset(cornerOffsetBL.dx * w, cornerOffsetBL.dy * h);
+    var bottomRight = imageRect.bottomRight + Offset(cornerOffsetBR.dx * w, cornerOffsetBR.dy * h);
+
+    // Center for transforms
+    final cx = imageRect.left + w / 2;
+    final cy = imageRect.top + h / 2;
+
+    // Helper to rotate a point around center
+    Offset rotatePoint(Offset p, double cos, double sin) {
+      final dx = p.dx - cx;
+      final dy = p.dy - cy;
+      return Offset(cx + dx * cos - dy * sin, cy + dx * sin + dy * cos);
     }
 
-    // draw image
-    canvas.drawImageRect(
-      image,
-      Rect.fromLTWH(0, 0, image.width.toDouble(), image.height.toDouble()),
-      imageRect,
-      Paint()..filterQuality = FilterQuality.high,
-    );
+    // Helper to flip a point around center
+    Offset flipPoint(Offset p) {
+      final dx = p.dx - cx;
+      final dy = p.dy - cy;
+      return Offset(
+        cx + (flipHorizontal ? -dx : dx),
+        cy + (flipVertical ? -dy : dy),
+      );
+    }
 
+    // Apply rotation if needed
+    if (rotationAngle != 0.0) {
+      final cos = math.cos(rotationAngle);
+      final sin = math.sin(rotationAngle);
+      topLeft = rotatePoint(topLeft, cos, sin);
+      topRight = rotatePoint(topRight, cos, sin);
+      bottomLeft = rotatePoint(bottomLeft, cos, sin);
+      bottomRight = rotatePoint(bottomRight, cos, sin);
+    }
+
+    // Apply flip if needed (after rotation)
     if (flipHorizontal || flipVertical) {
-      canvas.restore();
+      topLeft = flipPoint(topLeft);
+      topRight = flipPoint(topRight);
+      bottomLeft = flipPoint(bottomLeft);
+      bottomRight = flipPoint(bottomRight);
+
+      // Swap corners if flipped to maintain correct vertex order
+      if (flipHorizontal) {
+        final tempL = topLeft;
+        final tempBL = bottomLeft;
+        topLeft = topRight;
+        topRight = tempL;
+        bottomLeft = bottomRight;
+        bottomRight = tempBL;
+      }
+      if (flipVertical) {
+        final tempT = topLeft;
+        final tempTR = topRight;
+        topLeft = bottomLeft;
+        bottomLeft = tempT;
+        topRight = bottomRight;
+        bottomRight = tempTR;
+      }
+    }
+
+    // Check if we have any corner offsets (4-point transform needed)
+    final hasCornerOffsets = cornerOffsetTL != Offset.zero || cornerOffsetTR != Offset.zero || cornerOffsetBL != Offset.zero || cornerOffsetBR != Offset.zero;
+
+    if (hasCornerOffsets) {
+      // Use drawVertices for 4-point transform (renders image as textured quadrilateral)
+      // Split quad into 2 triangles: TL-TR-BR and TL-BR-BL
+      final positions = Float32List.fromList([
+        topLeft.dx, topLeft.dy, // 0: TL
+        topRight.dx, topRight.dy, // 1: TR
+        bottomRight.dx, bottomRight.dy, // 2: BR
+        topLeft.dx, topLeft.dy, // 3: TL (repeated)
+        bottomRight.dx, bottomRight.dy, // 4: BR (repeated)
+        bottomLeft.dx, bottomLeft.dy, // 5: BL
+      ]);
+
+      // Texture coordinates mapping to image
+      final textureCoords = Float32List.fromList([
+        0.0, 0.0, // 0: TL -> image (0,0)
+        image.width.toDouble(), 0.0, // 1: TR -> image (w,0)
+        image.width.toDouble(), image.height.toDouble(), // 2: BR -> image (w,h)
+        0.0, 0.0, // 3: TL
+        image.width.toDouble(), image.height.toDouble(), // 4: BR
+        0.0, image.height.toDouble(), // 5: BL -> image (0,h)
+      ]);
+
+      final vertices = ui.Vertices.raw(
+        VertexMode.triangles,
+        positions,
+        textureCoordinates: textureCoords,
+      );
+
+      // Create shader from image
+      final shader = ImageShader(
+        image,
+        TileMode.clamp,
+        TileMode.clamp,
+        Matrix4.identity().storage,
+        filterQuality: FilterQuality.high,
+      );
+
+      canvas.drawVertices(
+        vertices,
+        BlendMode.srcOver,
+        Paint()..shader = shader,
+      );
+    } else {
+      // No corner offsets - use simple drawImageRect with rotation/flip
+      if (rotationAngle != 0.0) {
+        canvas.save();
+        canvas.translate(cx, cy);
+        canvas.rotate(rotationAngle);
+        canvas.translate(-cx, -cy);
+      }
+
+      if (flipHorizontal || flipVertical) {
+        canvas.save();
+        canvas.translate(cx, cy);
+        canvas.scale(flipHorizontal ? -1.0 : 1.0, flipVertical ? -1.0 : 1.0);
+        canvas.translate(-cx, -cy);
+      }
+
+      canvas.drawImageRect(
+        image,
+        Rect.fromLTWH(0, 0, image.width.toDouble(), image.height.toDouble()),
+        imageRect,
+        Paint()..filterQuality = FilterQuality.high,
+      );
+
+      if (flipHorizontal || flipVertical) {
+        canvas.restore();
+      }
+
+      if (rotationAngle != 0.0) {
+        canvas.restore();
+      }
+    }
+
+    // --- rotation handles (4 corners) ---
+    if (showRotationHandles) {
+      final cos = math.cos(rotationAngle);
+      final sin = math.sin(rotationAngle);
+
+      Offset rotatePoint(Offset p) {
+        final dx = p.dx - cx;
+        final dy = p.dy - cy;
+        return Offset(
+          cx + dx * cos - dy * sin,
+          cy + dx * sin + dy * cos,
+        );
+      }
+
+      final corners = <Offset>[
+        rotatePoint(imageRect.topLeft),
+        rotatePoint(imageRect.topRight),
+        rotatePoint(imageRect.bottomRight),
+        rotatePoint(imageRect.bottomLeft),
+      ];
+
+      // Draw bounding box outline
+      final boundingPath = Path()
+        ..moveTo(corners[0].dx, corners[0].dy)
+        ..lineTo(corners[1].dx, corners[1].dy)
+        ..lineTo(corners[2].dx, corners[2].dy)
+        ..lineTo(corners[3].dx, corners[3].dy)
+        ..close();
+
+      canvas.drawPath(
+        boundingPath,
+        Paint()
+          ..color = Colors.blue
+          ..strokeWidth = 2.0
+          ..style = PaintingStyle.stroke,
+      );
+
+      // Draw corner handles
+      const double handleSize = 14;
+      final Paint handleFill = Paint()
+        ..color = Colors.white
+        ..style = PaintingStyle.fill;
+      final Paint handleStroke = Paint()
+        ..color = Colors.blue
+        ..strokeWidth = 2
+        ..style = PaintingStyle.stroke;
+
+      for (final corner in corners) {
+        // Draw circular handles
+        canvas.drawCircle(corner, handleSize / 2, handleFill);
+        canvas.drawCircle(corner, handleSize / 2, handleStroke);
+      }
+
+      // Draw rotation angle indicator
+      if (rotationAngle != 0.0) {
+        final angleDeg = (rotationAngle * 180 / math.pi) % 360;
+        final angleText = '${angleDeg.toStringAsFixed(1)}°';
+        final tp = TextPainter(
+          text: TextSpan(
+            text: angleText,
+            style: const TextStyle(
+              color: Colors.blue,
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          textDirection: TextDirection.ltr,
+        )..layout();
+
+        const double pad = 4;
+        final Offset labPos = Offset(cx - tp.width / 2, cy - tp.height / 2);
+        final RRect bg = RRect.fromRectAndRadius(
+          Rect.fromLTWH(
+            labPos.dx - pad,
+            labPos.dy - pad,
+            tp.width + pad * 2,
+            tp.height + pad * 2,
+          ),
+          const Radius.circular(4),
+        );
+
+        canvas.drawRRect(bg, Paint()..color = Colors.white.withValues(alpha: 0.9));
+        tp.paint(canvas, labPos);
+      }
+    }
+
+    // --- transform handles (8 handles: 4 corners + 4 edge midpoints) ---
+    if (showSkewHandles) {
+      final cos = math.cos(rotationAngle);
+      final sin = math.sin(rotationAngle);
+
+      // Calculate corner positions with offsets
+      final w = imageRect.width;
+      final h = imageRect.height;
+      var tl = imageRect.topLeft + Offset(cornerOffsetTL.dx * w, cornerOffsetTL.dy * h);
+      var tr = imageRect.topRight + Offset(cornerOffsetTR.dx * w, cornerOffsetTR.dy * h);
+      var bl = imageRect.bottomLeft + Offset(cornerOffsetBL.dx * w, cornerOffsetBL.dy * h);
+      var br = imageRect.bottomRight + Offset(cornerOffsetBR.dx * w, cornerOffsetBR.dy * h);
+
+      // Apply rotation to corner positions
+      Offset rotateP(Offset p) {
+        final dx = p.dx - cx;
+        final dy = p.dy - cy;
+        return Offset(cx + dx * cos - dy * sin, cy + dx * sin + dy * cos);
+      }
+
+      tl = rotateP(tl);
+      tr = rotateP(tr);
+      bl = rotateP(bl);
+      br = rotateP(br);
+
+      // Calculate edge midpoints from actual corner positions
+      final topMid = Offset((tl.dx + tr.dx) / 2, (tl.dy + tr.dy) / 2);
+      final bottomMid = Offset((bl.dx + br.dx) / 2, (bl.dy + br.dy) / 2);
+      final leftMid = Offset((tl.dx + bl.dx) / 2, (tl.dy + bl.dy) / 2);
+      final rightMid = Offset((tr.dx + br.dx) / 2, (tr.dy + br.dy) / 2);
+
+      // Draw bounding quadrilateral
+      final boundingPath = Path()
+        ..moveTo(tl.dx, tl.dy)
+        ..lineTo(tr.dx, tr.dy)
+        ..lineTo(br.dx, br.dy)
+        ..lineTo(bl.dx, bl.dy)
+        ..close();
+
+      canvas.drawPath(
+        boundingPath,
+        Paint()
+          ..color = Colors.black
+          ..strokeWidth = 2.0
+          ..style = PaintingStyle.stroke,
+      );
+
+      // Handle dimensions
+      const double edgeHandleWidth = 20;
+      const double edgeHandleHeight = 8;
+      const double cornerHandleSize = 12;
+
+      final Paint handleFill = Paint()
+        ..color = Colors.white
+        ..style = PaintingStyle.fill;
+      final Paint handleStroke = Paint()
+        ..color = Colors.black
+        ..strokeWidth = 2
+        ..style = PaintingStyle.stroke;
+
+      // Draw corner handles (squares for independent corner movement)
+      for (final pt in [tl, tr, bl, br]) {
+        final rect = Rect.fromCenter(center: pt, width: cornerHandleSize, height: cornerHandleSize);
+        canvas.drawRect(rect, handleFill);
+        canvas.drawRect(rect, handleStroke);
+      }
+
+      // Draw top/bottom edge handles (horizontal rectangles)
+      for (final pt in [topMid, bottomMid]) {
+        final rect = RRect.fromRectAndRadius(
+          Rect.fromCenter(center: pt, width: edgeHandleWidth, height: edgeHandleHeight),
+          const Radius.circular(3),
+        );
+        canvas.drawRRect(rect, handleFill);
+        canvas.drawRRect(rect, handleStroke);
+      }
+
+      // Draw left/right edge handles (vertical rectangles)
+      for (final pt in [leftMid, rightMid]) {
+        final rect = RRect.fromRectAndRadius(
+          Rect.fromCenter(center: pt, width: edgeHandleHeight, height: edgeHandleWidth),
+          const Radius.circular(3),
+        );
+        canvas.drawRRect(rect, handleFill);
+        canvas.drawRRect(rect, handleStroke);
+      }
     }
 
     // --- crop overlay + handles (like screenshot) ---
@@ -1050,14 +2326,19 @@ class FloorPlanCalibrationPainter extends CustomPainter {
         imageRect.top + c.bottom * imageRect.height,
       );
 
+      // Apply rotation transform to crop overlay (same as image)
+      if (rotationAngle != 0.0) {
+        canvas.save();
+        canvas.translate(cx, cy);
+        canvas.rotate(rotationAngle);
+        canvas.translate(-cx, -cy);
+      }
+
       // darken outside
       final Path outside = Path()..addRect(Offset.zero & size);
       final Path hole = Path()..addRect(crop);
       final Path overlay = Path.combine(PathOperation.difference, outside, hole);
-      canvas.drawPath(
-        overlay,
-        Paint()..color = Colors.white,
-      );
+      canvas.drawPath(overlay, Paint()..color = Colors.transparent);
 
       // crop border
       final border = Paint()
@@ -1093,6 +2374,10 @@ class FloorPlanCalibrationPainter extends CustomPainter {
           canvas.drawRect(r, hp);
           canvas.drawRect(r, hb);
         }
+      }
+
+      if (rotationAngle != 0.0) {
+        canvas.restore();
       }
     }
 
@@ -1185,6 +2470,8 @@ class FloorPlanCalibrationPainter extends CustomPainter {
       old.unit != unit ||
       old.cropRectNormalized != cropRectNormalized ||
       old.showCropHandles != showCropHandles ||
+      old.showRotationHandles != showRotationHandles ||
+      old.rotationAngle != rotationAngle ||
       old.zoomScale != zoomScale ||
       old.panOffset != panOffset ||
       old.flipHorizontal != flipHorizontal ||

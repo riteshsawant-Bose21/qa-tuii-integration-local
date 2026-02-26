@@ -38,8 +38,14 @@ sealed class FusionTestKeys {
   static const String listingViewIcon = 'listing_view_icon';
   static const String wiringViewIcon = 'wiring_view_icon';
   static const String rotateImage = 'rotate_image';
+  static const String rotateLeft = 'rotate_left';
+  static const String rotateRight = 'rotate_right';
   static const String flipHorizontal = 'flip_horizontal';
   static const String flipVertical = 'flip_vertical';
   static const String skew = 'skew';
+  static const String skewReset = 'skew_reset';
+  static const String skewApply = 'skew_apply';
   static const String reset = 'reset';
+  static const String cropConfirm = 'crop_confirm';
+  static const String cropCancel = 'crop_cancel';
 }
