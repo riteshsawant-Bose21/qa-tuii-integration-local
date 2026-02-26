@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:fusion_launcher/features/configuration_page/cubit/snapshots/snapshots_cubit.dart';
+import 'package:fusion_launcher/features/configuration_page/cubit/snapshots/snapshots_state.dart';
 import 'package:fusion_launcher/features/configuration_page/widgets/snapshots/snapshot_action_row_data.dart';
 import 'package:fusion_launcher/features/configuration_page/widgets/snapshots/snapshot_action_row_header.dart';
 import 'package:fusion_launcher/features/configuration_page/widgets/snapshots/snapshot_header_widget.dart';
@@ -8,12 +10,7 @@ import 'package:fusion_lib/fusion_widgets/text_views/fusion_app_text.dart';
 import 'package:fusion_lib/models/project_entities/non_processing/scene_set_model.dart';
 import 'package:fusion_lib/models/project_entities/non_processing/snapshot_model.dart';
 
-import '../../../../core/service_locator.dart';
-import '../../../configuration/presentation/viewmodel/project_view_model.dart';
-
 class ActionList extends StatelessWidget {
-  ProjectViewModel get _projectViewModel => serviceLocator<ProjectViewModel>();
-
   const ActionList({super.key});
 
   @override
@@ -27,50 +24,17 @@ class ActionList extends StatelessWidget {
       ),
       child: Column(
         children: <Widget>[
-          /// Header with Search Bar
-          // Container(
-          //   height: 44,
-          //   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 0),
-          //   decoration: BoxDecoration(
-          //     color: Colors.white,
-          //     border: Border(
-          //       bottom: BorderSide(width: 1, color: context.colorScheme.primaryBlack),
-          //     ),
-          //   ),
-          //   child: Row(
-          //     children: <Widget>[
-          //       Container(
-          //         alignment: Alignment.center,
-          //
-          //         // width 30% of the parent width
-          //         width: MediaQuery.of(context).size.width * 0.2,
-          //         decoration: BoxDecoration(
-          //           color: Colors.white,
-          //           border: Border(
-          //             right: BorderSide(width: 1, color: context.colorScheme.primaryBlack),
-          //           ),
-          //         ),
-          //         child: SearchBarSources(
-          //           searchController: TextEditingController(),
-          //           isFromActionList: true,
-          //           hasActiveFilters: () => false,
-          //           onClearSearch: () {},
-          //           onSearchChanged: (String value) {},
-          //         ),
-          //       ),
-          //     ],
-          //   ),
-          // ),
           /// Action List
-          BlocBuilder<ProjectViewModel, ProjectViewModelState>(
-            builder: (BuildContext context, ProjectViewModelState state) {
-              final String? selectedSnapshotId = _projectViewModel.selectedSnapshotId;
+          BlocBuilder<SnapshotsCubit, SnapshotsState>(
+            builder: (BuildContext context, SnapshotsState state) {
+              final SnapshotsCubit cubit = context.read<SnapshotsCubit>();
+              final String? selectedSnapshotId = state.selectedSnapshotId;
+
               if (selectedSnapshotId == null) {
                 /// No snapshot selected
                 return Expanded(
                   child: Center(
                     child: Container(
-                      // 40%
                       width: MediaQuery.of(context).size.width * 0.4,
                       padding: const EdgeInsets.all(100.0),
                       child: Column(
@@ -83,7 +47,6 @@ class ActionList extends StatelessWidget {
                             text:
                                 "Snapshots are predefined configurations that allow you to switch between different audio setups quickly. Each snapshot can contain multiple actions that define how audio sources are routed and managed within the system.",
                             style: Theme.of(context).textTheme.bodySmall,
-
                             textAlign: TextAlign.center,
                           ),
                           const SizedBox(height: 8),
@@ -99,11 +62,10 @@ class ActionList extends StatelessWidget {
                   ),
                 );
               }
-              final List<SceneActionModel> actionsList = _projectViewModel.getSceneActionsForSnapshot(selectedSnapshotId);
 
-              /// get selected snapshot name
-              final SnapshotsModel? selectedScene = _projectViewModel.getSnapshotById(sceneId: selectedSnapshotId);
-              final SceneSetModel? sceneSet = _projectViewModel.getSceneSetForSnapshot(snapshotId: selectedSnapshotId);
+              final List<SceneActionModel> actionsList = cubit.getActionsForSelectedSnapshot();
+              final SnapshotsModel? selectedScene = cubit.getSelectedSnapshotModel();
+              final SceneSetModel? sceneSet = cubit.getSceneSetForSelectedSnapshot();
 
               return Expanded(
                 child: Column(
@@ -112,13 +74,13 @@ class ActionList extends StatelessWidget {
                     SnapshotHeaderWidget(
                       snapshotName: sceneSet != null ? "${sceneSet.name} > ${selectedScene?.name}" : selectedScene?.name ?? "",
                       onNameChanged: (String newName) {
-                        final SnapshotsModel scene = selectedScene!.copyWith(name: newName);
-                        _projectViewModel.updateSnapshots(scene: scene);
+                        if (selectedScene != null) {
+                          final SnapshotsModel scene = selectedScene.copyWith(name: newName);
+                          cubit.updateSnapshot(scene);
+                        }
                       },
                       onAdd: () {
-                        final SceneActionModel action = SceneActionModel();
-
-                        _projectViewModel.addSceneActionToSnapshot(sceneId: selectedSnapshotId, action: action);
+                        cubit.addActionToSelectedSnapshot();
                       },
                       onReorder: () {},
                     ),
@@ -132,7 +94,6 @@ class ActionList extends StatelessWidget {
                           actionsList.isEmpty
                               ? Center(
                                 child: Container(
-                                  // 40%
                                   width: MediaQuery.of(context).size.width * 0.4,
                                   padding: const EdgeInsets.all(100.0),
                                   child: Column(
@@ -152,15 +113,7 @@ class ActionList extends StatelessWidget {
                                 physics: const ClampingScrollPhysics(),
                                 itemCount: actionsList.length,
                                 onReorder: (int oldIndex, int newIndex) {
-                                  // Adjust newIndex when dragging down
-                                  if (newIndex > oldIndex) {
-                                    newIndex -= 1;
-                                  }
-                                  _projectViewModel.reOderSceneActionsInSnapshot(
-                                    sceneId: selectedSnapshotId,
-                                    oldIndex: oldIndex,
-                                    newIndex: newIndex,
-                                  );
+                                  cubit.reorderActionsInSelectedSnapshot(oldIndex, newIndex);
                                 },
                                 itemBuilder: (BuildContext context, int index) {
                                   final SceneActionModel action = actionsList[index];
