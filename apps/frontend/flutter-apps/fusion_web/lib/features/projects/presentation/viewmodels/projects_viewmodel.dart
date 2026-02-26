@@ -39,6 +39,7 @@ class ProjectsViewModel extends BaseViewModel {
 
   Future<void> searchProjects(String query) async {
     _searchQuery = query;
+
     if (query.isEmpty) {
       _filteredProjects = [];
       notifyListeners();
@@ -46,20 +47,15 @@ class ProjectsViewModel extends BaseViewModel {
     }
 
     try {
+      setLoading();
+
       final results = await repository.searchProjects(query);
       _filteredProjects = results;
-      notifyListeners();
+
+      setLoaded(results);
     } catch (e) {
-      _filteredProjects = _projects
-          .where(
-            (p) =>
-                p.name.toLowerCase().contains(query.toLowerCase()) ||
-                p.description.toLowerCase().contains(query.toLowerCase()) ||
-                (p.clientName?.toLowerCase().contains(query.toLowerCase()) ??
-                    false),
-          )
-          .toList();
-      notifyListeners();
+      _filteredProjects = [];
+      setError('Failed to search projects: ${e.toString()}');
     }
   }
 
@@ -100,18 +96,17 @@ class ProjectsViewModel extends BaseViewModel {
   }
 
   Future<void> deleteProject(String id) async {
-  try {
-    await repository.deleteProject(id);
+    try {
+      await repository.deleteProject(id);
 
-    _projects.removeWhere((p) => p.id == id);
-    _filteredProjects.removeWhere((p) => p.id == id);
+      _projects.removeWhere((p) => p.id == id);
+      _filteredProjects.removeWhere((p) => p.id == id);
 
-    notifyListeners();
-    
-  } catch (e) {
-    setError('Failed to delete project');
+      notifyListeners();
+    } catch (e) {
+      setError('Failed to delete project');
+    }
   }
-}
 
   void initialize() {
     loadProjects();
