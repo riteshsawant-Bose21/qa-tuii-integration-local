@@ -22,7 +22,6 @@ jobs:
     outputs:
       all: ${{ steps.filter.outputs.all }}
       fusionLauncher: ${{ steps.filter.outputs.fusionLauncher }}
-      cloudServicesUI: ${{ steps.filter.outputs.cloudServicesUI }}
       cloudServicesBackend: ${{ steps.filter.outputs.cloudServicesBackend }}
       fusionDSP: ${{ steps.filter.outputs.fusionDSP }}
       fusionServer: ${{ steps.filter.outputs.fusionServer }}
@@ -49,8 +48,6 @@ jobs:
               - "./apps/**"
             fusionLauncher:
               - "./apps/frontend/flutter-apps/**"
-            cloudServicesUI:
-              - "./apps/frontend/react-apps/**"
             cloudServicesBackend:
               - "./apps/cloud-backend/fusion-core/**"
             fusionDSP:
@@ -136,24 +133,6 @@ jobs:
       #     nexus_password: ${{ secrets.NEXUS_PASSWORD }}
       #     nexus_url: ${{ secrets.NEXUS_BASE_URL }}
       #     keychain_password: ${{ secrets.KEYCHAIN_PASSWORD }}
-
-  # cloud-servicesUI-build:
-  #   needs: buildChecks
-  #   if: needs.buildChecks.outputs.cloudServicesUI == 'true'
-  #   concurrency:
-  #     group: cloud-servicesUI-build
-  #   runs-on: ubuntu-agent
-  #   timeout-minutes: 30
-
-  #   steps:
-  #     - name: Clone project
-  #       uses: actions/checkout@v4
-
-  #     - name: Setup Monorepo Toolchain
-  #       uses: ./.github/reusable-actions/setup-toolchain
-
-  #     - name: Build Apps
-  #       uses: ./.github/reusable-actions/build-cloud-servicesUI
 
   cloud-web-backend-build:
     needs: buildChecks

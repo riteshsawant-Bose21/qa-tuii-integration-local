@@ -6,7 +6,6 @@ $schema: './cache/schemas/workspace.json'
 projects:
   - 'apps/cloud-backend/*'
   - 'apps/frontend/flutter-apps/*'
-  - 'apps/frontend/react-apps/*'
   - 'apps/firmware-apps/fusion-dsp'
   - 'apps/firmware-apps/fusion-server'
   - 'apps/firmware-apps/fusion-system-monitor'
