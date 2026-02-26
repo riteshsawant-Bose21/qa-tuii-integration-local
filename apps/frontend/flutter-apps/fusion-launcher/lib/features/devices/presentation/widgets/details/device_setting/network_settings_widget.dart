@@ -7,16 +7,20 @@ import 'package:fusion_launcher/features/devices/presentation/widgets/settings/n
 import 'package:fusion_launcher/features/devices/presentation/widgets/settings/settings_item_row.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
+import '../../../../../processing_block/view/processing_blocks/widgets/disabled_widget_wrapper.dart';
+
 class NetworkSettingsWidget extends StatefulWidget {
   final bool showOnlyNetworkSettings;
   final bool poeEnabled;
   final ValueChanged<bool> onPoeChanged;
+  final HardwareComponent device;
 
   const NetworkSettingsWidget({
     super.key,
     required this.showOnlyNetworkSettings,
     required this.poeEnabled,
     required this.onPoeChanged,
+    required this.device,
   });
 
   @override
@@ -59,6 +63,8 @@ class _NetworkSettingsWidgetState extends State<NetworkSettingsWidget> {
     super.dispose();
   }
 
+  String selectedNetworkMode = "Isolated";
+
   @override
   Widget build(BuildContext context) {
     return SettingsSectionContainer(
@@ -70,10 +76,17 @@ class _NetworkSettingsWidgetState extends State<NetworkSettingsWidget> {
               label: "Network Mode",
               labelFlex: 3,
               child: NetworkDropdown<String>(
-                items: const <String>["Isolated", "Switched", "Primary Only"],
-                selectedValue: "Isolated",
+                items: const <String>[
+                  "Isolated",
+                  "Switched",
+                ],
+                selectedValue: selectedNetworkMode,
                 labelBuilder: (String s) => s,
-                onChanged: (String? v) {},
+                onChanged: (String? v) {
+                  if (v != null) {
+                    setState(() => selectedNetworkMode = v);
+                  }
+                },
               ),
             ),
             const SizedBox(height: 24),
@@ -99,6 +112,7 @@ class _NetworkSettingsWidgetState extends State<NetworkSettingsWidget> {
                       subnetController: _subPri,
                       gatewayController: _gwPri,
                       macController: _macPri,
+                      device: widget.device,
                     ),
                   ),
                 ],
@@ -127,12 +141,16 @@ class _NetworkSettingsWidgetState extends State<NetworkSettingsWidget> {
                 ),
 
                 const SizedBox(height: 10),
-                SettingsPortForm(
-                  isPrimary: false,
-                  ipController: _ipSec,
-                  subnetController: _subSec,
-                  gatewayController: _gwSec,
-                  macController: _macSec,
+                DisabledWidgetWrapper(
+                  isDisabled: selectedNetworkMode == "Switched",
+                  child: SettingsPortForm(
+                    isPrimary: false,
+                    ipController: _ipSec,
+                    subnetController: _subSec,
+                    gatewayController: _gwSec,
+                    macController: _macSec,
+                    device: widget.device,
+                  ),
                 ),
               ],
             ],

@@ -122,7 +122,8 @@ Widget _buildListeningAreaSelectionSection(
                                                 children: <Widget>[
                                                   GestureDetector(
                                                     onTap: isAvailable ? () => onListeningAreaTap(isListeningAreaSelected, area, setPopupState) : null,
-                                                    child: SemanticHelper.button(
+                                                    child: SemanticHelper.toggle(
+                                                      value: isListeningAreaSelected,
                                                       testId: SemanticHelper.createTestId(SemanticTypes.button, "select_listening_areas_checkbox_$index"),
                                                       child: Icon(
                                                         (isAvailable ? isListeningAreaSelected : true) ? Icons.check_box : Icons.check_box_outline_blank,
@@ -136,6 +137,7 @@ Widget _buildListeningAreaSelectionSection(
                                                   /// Area and zone names
                                                   Expanded(
                                                     child: FusionAppText(
+                                                      semanticId: "listening_area_name",
                                                       text: area.name.isNotEmpty ? "${floorName?.name}/${area.name}" : 'Unnamed Area',
                                                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
                                                         fontWeight: FontWeight.w500,
@@ -147,9 +149,9 @@ Widget _buildListeningAreaSelectionSection(
                                                       ),
                                                     ),
                                                   ),
-
                                                   /// Zone name
                                                   FusionAppText(
+                                                    semanticId: "listening_area_zone_name",
                                                     text: zoneName(area.id) ?? "No zone",
                                                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
                                                       fontSize: 9,
@@ -227,6 +229,7 @@ Widget _buildListeningAreaSelectionSection(
                 children: <Widget>[
                   Expanded(
                     child: FusionAppText(
+                      semanticId: "listening_areas_dropdown",
                       text: totalListeningAreasSelected == 0 ? 'Select listening areas' : '$totalListeningAreasSelected listening areas selected',
                       style: context.textTheme.labelLarge?.copyWith(
                         fontSize: 12,

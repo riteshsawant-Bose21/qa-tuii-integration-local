@@ -119,12 +119,12 @@ extension ProjectPropertiesViewModel on ProjectViewModel {
   }
 
   //set meta data
-  void setMetaData({required String metaData, bool autoSave = true}) {
+  void updateProjectMetaData({required ProjectMetaData metaData, bool autoSave = true}) {
     try {
       if (autoSave) {
         recordSnapshot();
       }
-      projectManager.setMetaData(metaData);
+      projectManager.updateProjectMetaData(metaData: metaData);
       if (autoSave) {
         saveProject();
       }
@@ -132,6 +132,16 @@ extension ProjectPropertiesViewModel on ProjectViewModel {
     } catch (e) {
       FusionLogger.log(tag: LogTag.project, message: "Failed to set meta data: $e");
       throwError("Failed to set meta data: $e");
+    }
+  }
+
+  ProjectMetaData? get projectMetaData {
+    try {
+      return projectManager.getProjectMetadata();
+    } catch (e) {
+      FusionLogger.log(tag: LogTag.project, message: "Failed to get project metadata: $e");
+      throwError("Failed to get project metadata: $e");
+      return null;
     }
   }
 

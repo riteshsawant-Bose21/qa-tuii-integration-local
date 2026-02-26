@@ -28,7 +28,7 @@ class NetworkSettingsHeader extends StatelessWidget {
 
         const SizedBox(height: 5),
         Divider(
-          color: context.colorScheme.elevation2,
+          color: context.colorScheme.strokeLight,
           thickness: 1,
         ),
         const SizedBox(height: 5),

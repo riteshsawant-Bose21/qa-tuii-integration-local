@@ -284,12 +284,6 @@ setup_instance() {
         return 1
     fi
     print_success "fusion-server installed successfully"
-    
-    # Set the script used by systemd to launch fusion-server to executable
-    if ! multipass exec "$instance_name" -- sudo chmod 755 /usr/local/bin/fusion-server-start.sh; then
-        print_error "Failed to update fusion-server-start.sh"
-        return 1
-    fi
 
     print_step "Copying bbolt binary..."
     if ! multipass transfer "$HOST_BBOLT_DIR/bbolt-linux-$TARGET_BINARY_ARCH" "$instance_name":/tmp/bbolt; then

@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:fusion_launcher/core/assets/asset_icons.dart';
 import 'package:fusion_launcher/features/devices/presentation/widgets/details/device_setting/bluetooth_settings_widget.dart';
-import 'package:fusion_launcher/features/devices/presentation/widgets/details/device_setting/general_settings_widget.dart';
 import 'package:fusion_launcher/features/devices/presentation/widgets/details/device_setting/network_settings_widget.dart';
 import 'package:fusion_launcher/features/devices/presentation/widgets/details/device_setting/wifi_settings_widget.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/models/project_entities/controller.dart';
+import 'package:fusion_lib/models/project_entities/endpoints.dart';
 
 class DeviceSettingsTab extends StatefulWidget {
   final HardwareComponent hardwareComponent;
@@ -21,7 +21,6 @@ class DeviceSettingsTab extends StatefulWidget {
 
 class _DeviceSettingsTabState extends State<DeviceSettingsTab> {
   // General State
-  bool _allowMaster = true;
   bool _poeEnabled = true;
   bool _bluetoothEnabled = false;
 
@@ -31,26 +30,28 @@ class _DeviceSettingsTabState extends State<DeviceSettingsTab> {
 
   bool get isDsp => widget.hardwareComponent is FusionDsp;
 
-  bool get showOnlyNetworkSettings => isAmplifier || isController;
+  bool get isEndpoint => widget.hardwareComponent is FusionEndpoints;
+
+  bool get showOnlyNetworkSettings => isAmplifier || isController || isEndpoint;
   int _selectedIndex = 0;
 
   List<DeviceSettingsTabMenuItem> get _menuItems {
     final List<DeviceSettingsTabMenuItem> items = <DeviceSettingsTabMenuItem>[];
 
     // General (Hidden for Amps/Controllers)
-    if (!showOnlyNetworkSettings) {
-      items.add(
-        DeviceSettingsTabMenuItem(
-          title: "General",
-          // Using generic icon if specific asset not imported/guaranteed, or could import AssetIcons
-          icon: AssetIcons.webIcon,
-          content: GeneralSettingsWidget(
-            allowMaster: _allowMaster,
-            onChanged: (bool v) => setState(() => _allowMaster = v),
-          ),
-        ),
-      );
-    }
+    // if (!showOnlyNetworkSettings) {
+    //   items.add(
+    //     DeviceSettingsTabMenuItem(
+    //       title: "General",
+    //       // Using generic icon if specific asset not imported/guaranteed, or could import AssetIcons
+    //       icon: AssetIcons.webIcon,
+    //       content: GeneralSettingsWidget(
+    //         allowMaster: _allowMaster,
+    //         onChanged: (bool v) => setState(() => _allowMaster = v),
+    //       ),
+    //     ),
+    //   );
+    // }
 
     // Network (Always shown)
     items.add(
@@ -58,6 +59,7 @@ class _DeviceSettingsTabState extends State<DeviceSettingsTab> {
         title: "Network (Ethernet)",
         icon: AssetIcons.networkIcon,
         content: NetworkSettingsWidget(
+          device: widget.hardwareComponent,
           showOnlyNetworkSettings: showOnlyNetworkSettings,
           poeEnabled: _poeEnabled,
           onPoeChanged: (bool v) => setState(() => _poeEnabled = v),
@@ -77,7 +79,9 @@ class _DeviceSettingsTabState extends State<DeviceSettingsTab> {
     }
 
     // Bluetooth (Hidden for Amps/Controllers)
-    if (!showOnlyNetworkSettings) {
+    if (!showOnlyNetworkSettings ||
+        (isEndpoint && widget.hardwareComponent.hardwareName.toLowerCase() == "BluePal".toLowerCase()) ||
+        (isController && widget.hardwareComponent.hardwareName.toLowerCase() == "ControlPal Pro".toLowerCase())) {
       items.add(
         DeviceSettingsTabMenuItem(
           title: "Bluetooth",

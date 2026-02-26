@@ -12,6 +12,7 @@ import 'package:fusion_launcher/core/assets/asset_svg.dart';
 import 'package:fusion_launcher/core/spl_calculation/isolate_mace_calculation_manager.dart';
 import 'package:fusion_launcher/core/utils/fusion_utils.dart';
 import 'package:fusion_launcher/features/configuration_page/pages/configuration_events.dart';
+import 'package:fusion_launcher/features/create_new_project/views/create_new_project_dialog.dart';
 import 'package:fusion_launcher/features/media_files/view/configuration_media_files_pages.dart';
 import 'package:fusion_launcher/features/media_files/viewModel/media_files_view_model.dart';
 import 'package:fusion_launcher/features/projects/view_model/project_sync_view_model.dart';
@@ -84,7 +85,7 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with TickerProviderSt
 
   final List<Widget> _designTabs = const <Widget>[
     Tab(text: 'Building'),
-    Tab(text: 'Schematic'),
+    Tab(text: 'System'),
     // Tab(text: 'Cost'),
     Tab(text: 'Configuration'),
     // Tab(text: 'Cloud'),
@@ -866,7 +867,7 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with TickerProviderSt
                         children: <Widget>[
                           if (!isInDesignMode && serviceLocator<ProjectViewModel>().virtualIP != null)
                             Container(
-                              width: 100,
+                              width: 160,
                               decoration: BoxDecoration(
                                 color: context.colorScheme.elevation1,
                                 border: Border(
@@ -883,7 +884,7 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with TickerProviderSt
                                   height: 20,
                                   borderRadius: 6,
                                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                                  text: "Sync",
+                                  text: "Push Configuration",
                                   textStyle: context.textTheme.labelMedium,
                                 ),
                               ),
@@ -1156,7 +1157,7 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with TickerProviderSt
 
             child: IconButton(
               icon: Icon(
-                Icons.arrow_back_ios,
+                Icons.home,
                 color: Theme.of(context).colorScheme.primaryWhite,
                 size: 20,
               ),
@@ -1170,7 +1171,7 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with TickerProviderSt
 
           /// Project Name Section
           InkWell(
-            onTap: _showEditProjectNameDropdown,
+            onTap: () => CreateNewProjectDialog.show(context, isEditMode: true),
             child: Container(
               key: _projectNameKey,
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
@@ -1220,147 +1221,6 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with TickerProviderSt
           ),
         ],
       ),
-    );
-  }
-
-  /// Show Edit Project Name Dropdown
-  void _showEditProjectNameDropdown() {
-    final RenderBox button = _projectNameKey.currentContext!.findRenderObject() as RenderBox;
-    final RenderBox overlay = Overlay.of(context).context.findRenderObject() as RenderBox;
-
-    final RelativeRect position = RelativeRect.fromRect(
-      Rect.fromPoints(
-        button.localToGlobal(Offset.zero, ancestor: overlay),
-        button.localToGlobal(
-          button.size.bottomRight(Offset.zero),
-          ancestor: overlay,
-        ),
-      ),
-      const Offset(-100, -20) & overlay.size,
-    );
-
-    showMenu<String>(
-      context: context,
-      position: position,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(6),
-        side: BorderSide(color: Theme.of(context).colorScheme.elevation2),
-      ),
-      color: Theme.of(context).colorScheme.elevation1,
-      elevation: 1,
-      constraints: const BoxConstraints(minWidth: 189, maxWidth: 189),
-      // Match container width
-      items: <PopupMenuEntry<String>>[
-        PopupMenuItem<String>(
-          enabled: false,
-          padding: EdgeInsets.zero,
-          child: StatefulBuilder(
-            builder: (BuildContext context, StateSetter setMenuState) {
-              /// Auto-focus the text field when the menu opens
-              WidgetsBinding.instance.addPostFrameCallback((_) {
-                _projectNameFocusNode.requestFocus();
-              });
-
-              return Container(
-                width: 189,
-                padding: const EdgeInsets.all(12),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: <Widget>[
-                    FusionAppText(
-                      text: "Edit Project Name",
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    SemanticHelper.formControl(
-                      testId: SemanticHelper.createTestId(SemanticTypes.textInput, FusionTestKeys.projectNameInput),
-                      child: PropertyTextField(
-                        controller: _projectNameController,
-                        focusNode: _projectNameFocusNode,
-                        maxLength: 24,
-                        autofocus: true,
-                        hintText: 'Enter project name',
-                        onChanged: (String value) {
-                          if (_projectNameError != null) {
-                            setMenuState(() {
-                              _projectNameError = null;
-                            });
-                          }
-                        },
-                        onSubmitted: (String value) {
-                          final String trimmedName = value.trim();
-                          if (trimmedName.isNotEmpty) {
-                            serviceLocator<ProjectViewModel>().setProjectName(name: trimmedName);
-                            Navigator.of(context).pop();
-                          } else {
-                            setMenuState(() {
-                              _projectNameError = "Name cannot be empty";
-                            });
-                          }
-                        },
-                      ),
-                    ),
-                    if (_projectNameError != null) ...<Widget>[
-                      const SizedBox(height: 4),
-                      FusionAppText(
-                        text: _projectNameError!,
-                        semanticId: FusionTestKeys.projectNameInputError,
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          fontSize: 10,
-                          color: Colors.red,
-                        ),
-                      ),
-                    ],
-                    const SizedBox(height: 18),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.end,
-                      children: <Widget>[
-                        FusionOutlinedButton(
-                          height: 28,
-                          width: 64,
-                          label: "Cancel",
-                          textStyle: Theme.of(
-                            context,
-                          ).textTheme.labelLarge?.copyWith(fontSize: 10),
-                          onTap: () {
-                            Navigator.of(context).pop();
-                          },
-                        ),
-                        const SizedBox(width: 8),
-                        FusionButton(
-                          height: 28,
-                          width: 84,
-                          textStyle: Theme.of(context).textTheme.labelLarge?.copyWith(
-                            fontSize: 10,
-                            color: Theme.of(context).colorScheme.primaryBlack,
-                          ),
-
-                          label: "Edit Name",
-                          onTap: () {
-                            final String trimmedName = _projectNameController.text.trim();
-                            if (trimmedName.isNotEmpty) {
-                              serviceLocator<ProjectViewModel>().setProjectName(name: trimmedName);
-                              Navigator.of(context).pop();
-                            } else {
-                              setMenuState(() {
-                                _projectNameError = "Name cannot be empty";
-                              });
-                            }
-                          },
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              );
-            },
-          ),
-        ),
-      ],
     );
   }
 

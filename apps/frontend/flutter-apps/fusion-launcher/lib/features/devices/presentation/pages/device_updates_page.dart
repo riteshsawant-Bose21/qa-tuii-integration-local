@@ -26,7 +26,8 @@ class _DeviceUpdatesTabState extends State<DeviceUpdatesTab> {
     final List<HardwareComponent> dsp = serviceLocator<ProjectViewModel>().fusionDsps;
     final List<HardwareComponent> amplifiers = serviceLocator<ProjectViewModel>().amplifiers;
     final List<HardwareComponent> controllers = serviceLocator<ProjectViewModel>().fusionControllers;
-    return <HardwareComponent>[...dsp, ...amplifiers, ...controllers];
+    final List<HardwareComponent> endpoints = serviceLocator<ProjectViewModel>().fusionEndpoints;
+    return <HardwareComponent>[...dsp, ...amplifiers, ...controllers, ...endpoints];
   }
 
   // Location Logic (Ported from DashboardDeviceCard)
@@ -74,7 +75,7 @@ class _DeviceUpdatesTabState extends State<DeviceUpdatesTab> {
           ),
         ),
 
-        const SizedBox(width: 24),
+        const SizedBox(width: 4),
 
         // --- RIGHT SIDE: ALERTS SIDEBAR ---
         const Expanded(
@@ -126,8 +127,7 @@ class _DeviceUpdatesTabState extends State<DeviceUpdatesTab> {
         'deviceName': FusionTableCell(
           value: deviceName,
           child: _buildLinkText(
-            deviceName: deviceName,
-            deviceId: device.id,
+            device: device,
           ),
         ),
         'model': FusionTableCell(
@@ -168,19 +168,20 @@ class _DeviceUpdatesTabState extends State<DeviceUpdatesTab> {
   }
 
   Widget _buildLinkText({
-    required String deviceName,
-    required String deviceId,
+    required HardwareComponent device,
   }) {
     return InkWell(
       onTap: () {
-        Navigator.pushNamed(
-          context,
-          Routes.deviceDetails,
-          arguments: deviceId,
-        );
+        if (device is! Amplifier || !device.hardwareName.toLowerCase().startsWith("pp")) {
+          Navigator.pushNamed(
+            context,
+            Routes.deviceDetails,
+            arguments: device.id,
+          );
+        }
       },
       child: FusionAppText(
-        text: deviceName,
+        text: device.name,
         style: context.textTheme.labelMedium!.copyWith(
           color: context.colorScheme.green,
           decoration: TextDecoration.underline,

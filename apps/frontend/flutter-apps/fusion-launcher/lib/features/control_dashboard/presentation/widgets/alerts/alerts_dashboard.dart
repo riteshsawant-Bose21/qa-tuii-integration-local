@@ -119,7 +119,7 @@ class _AlertsDashboardState extends State<AlertsDashboard> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                 decoration: BoxDecoration(
-                  color: Colors.grey[800],
+                  color: context.colorScheme.elevation2,
                   borderRadius: BorderRadius.circular(4),
                 ),
                 child: FusionAppText(
