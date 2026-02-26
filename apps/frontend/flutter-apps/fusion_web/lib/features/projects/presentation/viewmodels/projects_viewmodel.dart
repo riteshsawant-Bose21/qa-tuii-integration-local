@@ -107,6 +107,7 @@ class ProjectsViewModel extends BaseViewModel {
     _filteredProjects.removeWhere((p) => p.id == id);
 
     notifyListeners();
+    
   } catch (e) {
     setError('Failed to delete project');
   }

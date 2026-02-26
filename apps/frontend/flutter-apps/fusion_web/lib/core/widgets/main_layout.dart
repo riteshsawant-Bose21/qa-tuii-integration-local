@@ -47,7 +47,7 @@ class _MainLayoutState extends State<MainLayout> {
       });
     }
   }
-  
+
   Future<void> _checkAuthenticationAndRestoreToken() async {
     try {
       final authViewModel = ServiceLocator().authViewModel;
@@ -71,12 +71,10 @@ class _MainLayoutState extends State<MainLayout> {
   }
 
   void _redirectToLogin() {
-    Navigator.pushNamedAndRemoveUntil(
-      context,
-      AppConstants.loginRoute,
-      (route) => false,
-    );
+  if (mounted) {
+    context.go(AppConstants.loginRoute);
   }
+}
 
   Widget _getScreenForTab(DashboardTabs tab) {
     switch (tab) {

@@ -15,6 +15,8 @@ import 'package:fusion_lib/fusion_widgets/shared_widgets/project/animated_blur_d
 import 'dart:ui';
 import 'package:fusion_lib/fusion_widgets/shared_widgets/project/confirmation_dialog.dart';
 import 'package:fusion_web/features/projects/presentation/dialogs/invite_user_dialog.dart';
+import 'package:go_router/go_router.dart';
+
 
 class ProjectsPage extends StatefulWidget {
   const ProjectsPage({super.key});
@@ -24,7 +26,9 @@ class ProjectsPage extends StatefulWidget {
 }
 
 class _ProjectsPageState extends State<ProjectsPage> {
-  late ProjectsViewModel _viewModel;
+
+  late final ProjectsViewModel _viewModel =
+    ServiceLocator().projectsViewModel;
 
   final TextEditingController _searchController = TextEditingController();
 
@@ -38,8 +42,7 @@ class _ProjectsPageState extends State<ProjectsPage> {
   @override
   void initState() {
     super.initState();
-    _initializeViewModel();
-
+    _viewModel.loadProjects();
     _searchController.addListener(() {
       setState(() {
         _searchQuery = _searchController.text;
@@ -47,27 +50,9 @@ class _ProjectsPageState extends State<ProjectsPage> {
     });
   }
 
-  void _initializeViewModel() {
-    final apiService = ServiceLocator().apiService;
-    final remoteDataSource = ProjectsRemoteDataSource(apiService: apiService);
-    final localDataSource = ProjectsLocalDataSource();
-
-    final repository = ProjectsRepositoryImpl(
-      remoteDataSource: remoteDataSource,
-      localDataSource: localDataSource,
-    );
-
-    _viewModel = ProjectsViewModel(
-      repository: repository,
-    );
-
-    _viewModel.initialize();
-  }
-
   @override
   void dispose() {
     _searchController.dispose();
-    _viewModel.dispose();
     super.dispose();
   }
 
@@ -127,12 +112,10 @@ class _ProjectsPageState extends State<ProjectsPage> {
   }
 
   void _navigateToDetail(ProjectModel project) {
-    Navigator.pushNamed(
-      context,
-      '${AppConstants.projectsRoute}/${project.id}',
-      arguments: {'project': project, 'viewModel': _viewModel},
-    );
-  }
+  context.go(
+    '${AppConstants.projectsRoute}/${project.id}',
+  );
+}
   
   @override
   Widget build(BuildContext context) {

@@ -122,6 +122,7 @@ class ProjectsRemoteDataSource implements ProjectsDataSource {
   @override
   Future<void> deleteProject(String id) async {
     try {
+      
       await _apiService.delete('projects/$id');
     } catch (e) {
       // Fallback behavior - simulate success for demo

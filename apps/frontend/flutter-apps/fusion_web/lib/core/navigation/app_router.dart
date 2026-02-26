@@ -92,6 +92,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:fusion_web/features/devices/presentation/pages/devices_page.dart';
+import 'package:fusion_web/features/projects/presentation/pages/project_detail_page.dart';
 import 'package:fusion_web/features/roles/presentation/pages/roles_page.dart';
 import 'package:fusion_web/features/settings/presentation/pages/settings_page.dart';
 import 'package:fusion_web/features/users/presentation/pages/users_page.dart';
@@ -159,6 +160,14 @@ final GoRouter appRouter = GoRouter(
           builder: (_, __) => const ProjectsPage(),
         ),
 
+        GoRoute(
+          path: '${AppConstants.projectsRoute}/:id',
+          builder: (context, state) {
+            final id = state.pathParameters['id']!;
+            return ProjectDetailPage(projectId: id);
+          },
+        ),
+        
         GoRoute(
           path: AppConstants.devicesRoute,
           builder: (_, __) => const DevicesPage(),

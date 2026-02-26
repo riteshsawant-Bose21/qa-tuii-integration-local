@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:fusion_web/core/constants/app_constants.dart';
 import 'package:fusion_web/features/projects/data/models/project_model.dart';
 import 'package:fusion_web/features/projects/presentation/viewmodels/projects_viewmodel.dart';
 import 'package:fusion_lib/fusion_widgets/shared_widgets/project/confirmation_dialog.dart';
 import 'package:fusion_web/features/projects/presentation/dialogs/invite_user_dialog.dart';
 import 'package:fusion_lib/fusion_widgets/shared_widgets/project/project_dialog.dart';
 import 'package:uuid/uuid.dart';
+import 'package:go_router/go_router.dart';
 
 class ProjectActionsHandler {
   // ================= INVITE =================
@@ -19,28 +21,29 @@ class ProjectActionsHandler {
   }
 
   //  ================= DELETE =================
-  static void delete({
+  static Future<void> delete({
     required BuildContext context,
     required ProjectModel project,
     required ProjectsViewModel viewModel,
-    VoidCallback? onDeleted, // 👈 add this
   }) {
-    showDialog(
+    return showDialog(
       context: context,
-      builder: (_) => ConfirmationDialog(
-        title: "Delete Project?",
-        description:
-            "This action cannot be undone. The project will be permanently removed.",
-        confirmText: "Delete",
-        isDestructive: true,
-        onConfirm: () async {
-          Navigator.pop(context); // close dialog
-          await viewModel.deleteProject(project.id);
-          if (onDeleted != null) {
-            onDeleted(); // 👈 delegate navigation
-          }
-        },
-      ),
+      builder: (dialogContext) {
+        return ConfirmationDialog(
+          title: "Delete Project?",
+          description:
+              "This action cannot be undone. The project will be permanently removed.",
+          confirmText: "Delete",
+          isDestructive: true,
+          onConfirm: () async {
+            await viewModel.deleteProject(project.id);
+
+            if (dialogContext.mounted) {
+              Navigator.of(dialogContext).pop();
+            }
+          },
+        );
+      },
     );
   }
 
