@@ -4,6 +4,7 @@ import (
 	response "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/api/response"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/api/types"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion"
+	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/middleware"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/utils/errorutil"
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
@@ -33,12 +34,12 @@ func (h *DeviceHandler) getLoggerAndUser(ctx *gin.Context) (*zap.Logger, *types.
 	}
 	logger := loggerFromContext.(*zap.Logger)
 
-	userAuth, exists := ctx.Get("user_auth")
-	if !exists {
-		response.Unauthorized(ctx, errorutil.MsgUnauthorized)
+	// Get user auth from context (populated by ExtractUserFromHeaders middleware)
+	user, errAuth := middleware.GetUserAuth(ctx)
+	if errAuth != nil {
+		response.Unauthorized(ctx, errAuth.Error())
 		return nil, nil, false
 	}
-	user := userAuth.(*types.UserAuthorizationResponse)
 
 	return logger, user, true
 }
