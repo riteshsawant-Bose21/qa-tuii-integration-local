@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/core/widgets/title_text_field_switcher.dart';
+import 'package:fusion_launcher/features/configuration_page/cubit/snapshots/scene_sets_cubit.dart';
 import 'package:fusion_launcher/features/configuration_page/cubit/snapshots/snapshots_cubit.dart';
 import 'package:fusion_launcher/features/configuration_page/cubit/snapshots/snapshots_state.dart';
 import 'package:fusion_launcher/features/configuration_page/widgets/snapshots/snapshot_list.dart';
@@ -53,7 +54,8 @@ class ScenesExpandableCard extends StatefulWidget {
 
 class _ScenesExpandableCardState extends State<ScenesExpandableCard> {
   late ValueNotifier<bool> _isScenesExpanded;
-  SnapshotsCubit get _cubit => context.read<SnapshotsCubit>();
+  SnapshotsCubit get _snapshotsCubit => context.read<SnapshotsCubit>();
+  SceneSetsCubit get _sceneSetsCubit => context.read<SceneSetsCubit>();
   final TextEditingController _snapshotsNameController = TextEditingController();
 
   bool _isHovered = false;
@@ -72,7 +74,7 @@ class _ScenesExpandableCardState extends State<ScenesExpandableCard> {
   }
 
   void _addNewSceneToSceneSet() {
-    _cubit.addSnapshotToSceneSet(widget.sceneSetData.id);
+    _sceneSetsCubit.addSnapshotToSceneSet(widget.sceneSetData.id);
 
     /// expand the scene set to show the new item
     _isScenesExpanded.value = true;
@@ -114,7 +116,12 @@ class _ScenesExpandableCardState extends State<ScenesExpandableCard> {
               _isScenesExpanded.value = true;
 
               /// Delegate drop handling to cubit
-              _cubit.handleDropOnSceneSet(widget.sceneSetData.id, details.data);
+              _sceneSetsCubit.handleDropOnSceneSet(
+                sceneSetId: widget.sceneSetData.id,
+                snapshot: details.data,
+                isDraggingFromScenes: widget.draggingFromSection == 'scenes',
+              );
+              _snapshotsCubit.endDrag();
             },
             builder: (BuildContext context, List<SnapshotsModel?> candidateData, List<dynamic> rejectedData) {
               final bool isHovered =
@@ -168,7 +175,7 @@ class _ScenesExpandableCardState extends State<ScenesExpandableCard> {
                                 save: (String value) {
                                   if (value.isNotEmpty) {
                                     final SceneSetModel newScenesSet = widget.sceneSetData.copyWith(name: value);
-                                    _cubit.updateSceneSet(newScenesSet);
+                                    _sceneSetsCubit.updateSceneSet(newScenesSet);
                                   }
                                 },
                               ),
@@ -282,17 +289,18 @@ class _ScenesExpandableCardState extends State<ScenesExpandableCard> {
                                       }
                                     },
                                     onReorder: (int oldIndex, int newIndex) {
-                                      _cubit.reorderSnapshotsInSceneSet(
-                                        widget.sceneSetData.id,
-                                        oldIndex,
-                                        newIndex,
+                                      _sceneSetsCubit.reorderSnapshotsInSceneSet(
+                                        sceneSetId: widget.sceneSetData.id,
+                                        oldIndex: oldIndex,
+                                        newIndex: newIndex,
+                                        draggingSnapshotId: state.draggingSnapshotId,
                                       );
                                     },
                                     onDragStarted: widget.onDragStarted,
                                     onDragEnd: widget.onDragEnd,
                                     draggingSnapshotId: widget.draggingSnapshotId,
                                     onRenameSave: (String value, SnapshotsModel newSnapshot) {
-                                      _cubit.updateSnapshot(newSnapshot);
+                                      _snapshotsCubit.updateSnapshot(newSnapshot);
                                     },
                                   );
                                 },

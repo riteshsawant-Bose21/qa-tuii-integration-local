@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:fusion_launcher/features/configuration_page/cubit/snapshots/snapshot_actions_cubit.dart';
+import 'package:fusion_launcher/features/configuration_page/cubit/snapshots/snapshot_actions_state.dart';
 import 'package:fusion_launcher/features/configuration_page/cubit/snapshots/snapshots_cubit.dart';
-import 'package:fusion_launcher/features/configuration_page/cubit/snapshots/snapshots_state.dart';
 import 'package:fusion_launcher/features/configuration_page/widgets/snapshots/snapshot_action_row_data.dart';
 import 'package:fusion_launcher/features/configuration_page/widgets/snapshots/snapshot_action_row_header.dart';
 import 'package:fusion_launcher/features/configuration_page/widgets/snapshots/snapshot_header_widget.dart';
@@ -25,10 +26,11 @@ class ActionList extends StatelessWidget {
       child: Column(
         children: <Widget>[
           /// Action List
-          BlocBuilder<SnapshotsCubit, SnapshotsState>(
-            builder: (BuildContext context, SnapshotsState state) {
-              final SnapshotsCubit cubit = context.read<SnapshotsCubit>();
-              final String? selectedSnapshotId = state.selectedSnapshotId;
+          BlocBuilder<SnapshotActionsCubit, SnapshotActionsState>(
+            builder: (BuildContext context, SnapshotActionsState actionsState) {
+              final SnapshotActionsCubit actionsCubit = context.read<SnapshotActionsCubit>();
+              final SnapshotsCubit snapshotsCubit = context.read<SnapshotsCubit>();
+              final String? selectedSnapshotId = actionsState.selectedSnapshotId;
 
               if (selectedSnapshotId == null) {
                 /// No snapshot selected
@@ -63,9 +65,9 @@ class ActionList extends StatelessWidget {
                 );
               }
 
-              final List<SceneActionModel> actionsList = state.actions;
-              final SnapshotsModel? selectedScene = cubit.getSelectedSnapshotModel();
-              final SceneSetModel? sceneSet = cubit.getSceneSetForSelectedSnapshot();
+              final List<SceneActionModel> actionsList = actionsState.actions;
+              final SnapshotsModel? selectedScene = snapshotsCubit.getSelectedSnapshotModel();
+              final SceneSetModel? sceneSet = snapshotsCubit.getSceneSetForSelectedSnapshot();
 
               return Expanded(
                 child: Column(
@@ -76,11 +78,11 @@ class ActionList extends StatelessWidget {
                       onNameChanged: (String newName) {
                         if (selectedScene != null) {
                           final SnapshotsModel scene = selectedScene.copyWith(name: newName);
-                          cubit.updateSnapshot(scene);
+                          snapshotsCubit.updateSnapshot(scene);
                         }
                       },
                       onAdd: () {
-                        cubit.addActionToSelectedSnapshot();
+                        actionsCubit.addAction();
                       },
                       onReorder: () {},
                     ),
@@ -113,7 +115,7 @@ class ActionList extends StatelessWidget {
                                 physics: const ClampingScrollPhysics(),
                                 itemCount: actionsList.length,
                                 onReorder: (int oldIndex, int newIndex) {
-                                  cubit.reorderActionsInSelectedSnapshot(oldIndex, newIndex);
+                                  actionsCubit.reorderActions(oldIndex, newIndex);
                                 },
                                 itemBuilder: (BuildContext context, int index) {
                                   final SceneActionModel action = actionsList[index];

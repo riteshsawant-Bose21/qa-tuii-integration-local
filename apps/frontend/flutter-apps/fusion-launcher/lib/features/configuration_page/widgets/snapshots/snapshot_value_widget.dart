@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:fusion_launcher/features/configuration_page/cubit/snapshots/snapshots_cubit.dart';
+import 'package:fusion_launcher/features/configuration_page/cubit/snapshots/snapshot_actions_cubit.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
 import 'action_drop_down.dart';
@@ -22,7 +22,7 @@ class SnapshotValueWidget extends StatefulWidget {
 }
 
 class _SnapshotValueWidgetState extends State<SnapshotValueWidget> {
-  SnapshotsCubit get _cubit => context.read<SnapshotsCubit>();
+  SnapshotActionsCubit get _cubit => context.read<SnapshotActionsCubit>();
 
   @override
   Widget build(BuildContext context) {

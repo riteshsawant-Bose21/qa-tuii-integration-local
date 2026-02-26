@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:fusion_launcher/features/configuration_page/cubit/snapshots/scene_sets_cubit.dart';
+import 'package:fusion_launcher/features/configuration_page/cubit/snapshots/scene_sets_state.dart';
 import 'package:fusion_launcher/features/configuration_page/cubit/snapshots/snapshots_cubit.dart';
 import 'package:fusion_launcher/features/configuration_page/cubit/snapshots/snapshots_state.dart';
 import 'package:fusion_launcher/features/configuration_page/widgets/section_header.dart';
@@ -20,14 +22,15 @@ class SnapshotsAndScenesPanel extends StatefulWidget {
 class _SnapshotsAndScenesPanelState extends State<SnapshotsAndScenesPanel> {
   bool _isInitialized = false;
 
-  SnapshotsCubit get _cubit => context.read<SnapshotsCubit>();
+  SnapshotsCubit get _snapshotsCubit => context.read<SnapshotsCubit>();
+  SceneSetsCubit get _sceneSetsCubit => context.read<SceneSetsCubit>();
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
     if (!_isInitialized) {
       final double screenHeight = MediaQuery.of(context).size.height;
-      _cubit.initializeSourcesHeight(screenHeight);
+      _snapshotsCubit.initializeSourcesHeight(screenHeight);
       _isInitialized = true;
     }
   }
@@ -39,103 +42,108 @@ class _SnapshotsAndScenesPanelState extends State<SnapshotsAndScenesPanel> {
 
   void _updateSourcesHeight(double delta) {
     final double screenHeight = MediaQuery.of(context).size.height;
-    _cubit.updateSourcesHeight(delta, screenHeight);
+    _snapshotsCubit.updateSourcesHeight(delta, screenHeight);
   }
 
   @override
   Widget build(BuildContext context) {
     return BlocBuilder<SnapshotsCubit, SnapshotsState>(
-      builder: (BuildContext context, SnapshotsState state) {
-        return Container(
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(12),
-            color: Theme.of(context).colorScheme.primaryBlack,
-          ),
-          child: Column(
-            children: <Widget>[
-              /// Snapshots Section
-              SectionHeader(
-                title: 'Snapshots',
-                trailing: GestureDetector(
-                  onTap: () {
-                    _cubit.addSnapshot();
-                    FusionToast.success(context, message: "Snapshot created");
-                  },
-                  child: Icon(
-                    Icons.add_sharp,
-                    size: 16,
-                    color: context.colorScheme.iconWhite,
-                  ),
-                ),
+      builder: (BuildContext context, SnapshotsState snapshotsState) {
+        return BlocBuilder<SceneSetsCubit, SceneSetsState>(
+          builder: (BuildContext context, SceneSetsState sceneSetsState) {
+            return Container(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(12),
+                color: Theme.of(context).colorScheme.primaryBlack,
               ),
-
-              /// Snapshots list with drag target
-              DragTarget<SnapshotsModel>(
-                onWillAcceptWithDetails: (DragTargetDetails<SnapshotsModel> details) {
-                  return _cubit.shouldAcceptDropOnSnapshots();
-                },
-                onLeave: (SnapshotsModel? data) {},
-                onAcceptWithDetails: (DragTargetDetails<SnapshotsModel> details) {
-                  _cubit.handleDropOnSnapshots(details.data);
-                },
-                builder: (BuildContext context, List<SnapshotsModel?> candidateData, List<dynamic> rejectedData) {
-                  final bool isHovered = candidateData.isNotEmpty && state.isDraggingFromScenes;
-                  return Container(
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                      color: isHovered ? Theme.of(context).colorScheme.primary.withOpacity(0.1) : context.colorScheme.elevation1,
-                      border:
-                          isHovered
-                              ? Border.all(
-                                color: Theme.of(context).colorScheme.primary.withOpacity(0.3),
-                                width: 2,
-                              )
-                              : Border.symmetric(
-                                vertical: BorderSide(color: context.colorScheme.elevation2, width: 1),
-                              ),
-                    ),
-                    height: state.sourcesHeight,
-                    child: SingleChildScrollView(
-                      child: _buildSnapshotsList(context, state),
-                    ),
-                  );
-                },
-              ),
-
-              /// Draggable divider
-              DragDivider(onDragUpdate: _updateSourcesHeight),
-
-              /// Scenes Section
-              SectionHeader(
-                title: 'Scene Sets',
-                isRounded: false,
-                trailing: GestureDetector(
-                  onTap: () {
-                    _cubit.addSceneSet();
-                    FusionToast.success(context, message: 'Scene Set created');
-                  },
-                  child: Icon(Icons.add_sharp, size: 16, color: context.colorScheme.primaryWhite),
-                ),
-              ),
-
-              /// List of Scenes
-              Expanded(
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: context.colorScheme.elevation1,
-                    borderRadius: const BorderRadius.only(
-                      bottomRight: Radius.circular(12),
-                      bottomLeft: Radius.circular(12),
-                    ),
-                    border: Border.symmetric(
-                      vertical: BorderSide(color: context.colorScheme.elevation2, width: 1),
+              child: Column(
+                children: <Widget>[
+                  /// Snapshots Section
+                  SectionHeader(
+                    title: 'Snapshots',
+                    trailing: GestureDetector(
+                      onTap: () {
+                        _snapshotsCubit.addSnapshot();
+                        FusionToast.success(context, message: "Snapshot created");
+                      },
+                      child: Icon(
+                        Icons.add_sharp,
+                        size: 16,
+                        color: context.colorScheme.iconWhite,
+                      ),
                     ),
                   ),
-                  child: _buildSceneSetsList(context, state),
-                ),
+
+                  /// Snapshots list with drag target
+                  DragTarget<SnapshotsModel>(
+                    onWillAcceptWithDetails: (DragTargetDetails<SnapshotsModel> details) {
+                      return _snapshotsCubit.shouldAcceptDropOnSnapshots();
+                    },
+                    onLeave: (SnapshotsModel? data) {},
+                    onAcceptWithDetails: (DragTargetDetails<SnapshotsModel> details) {
+                      _snapshotsCubit.handleDropOnSnapshots(details.data);
+                      _sceneSetsCubit.syncWithProjectViewModel();
+                    },
+                    builder: (BuildContext context, List<SnapshotsModel?> candidateData, List<dynamic> rejectedData) {
+                      final bool isHovered = candidateData.isNotEmpty && snapshotsState.isDraggingFromScenes;
+                      return Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: isHovered ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.1) : context.colorScheme.elevation1,
+                          border:
+                              isHovered
+                                  ? Border.all(
+                                    color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.3),
+                                    width: 2,
+                                  )
+                                  : Border.symmetric(
+                                    vertical: BorderSide(color: context.colorScheme.elevation2, width: 1),
+                                  ),
+                        ),
+                        height: snapshotsState.sourcesHeight,
+                        child: SingleChildScrollView(
+                          child: _buildSnapshotsList(context, snapshotsState),
+                        ),
+                      );
+                    },
+                  ),
+
+                  /// Draggable divider
+                  DragDivider(onDragUpdate: _updateSourcesHeight),
+
+                  /// Scenes Section
+                  SectionHeader(
+                    title: 'Scene Sets',
+                    isRounded: false,
+                    trailing: GestureDetector(
+                      onTap: () {
+                        _sceneSetsCubit.addSceneSet();
+                        FusionToast.success(context, message: 'Scene Set created');
+                      },
+                      child: Icon(Icons.add_sharp, size: 16, color: context.colorScheme.primaryWhite),
+                    ),
+                  ),
+
+                  /// List of Scenes
+                  Expanded(
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: context.colorScheme.elevation1,
+                        borderRadius: const BorderRadius.only(
+                          bottomRight: Radius.circular(12),
+                          bottomLeft: Radius.circular(12),
+                        ),
+                        border: Border.symmetric(
+                          vertical: BorderSide(color: context.colorScheme.elevation2, width: 1),
+                        ),
+                      ),
+                      child: _buildSceneSetsList(context, snapshotsState, sceneSetsState),
+                    ),
+                  ),
+                ],
               ),
-            ],
-          ),
+            );
+          },
         );
       },
     );
@@ -159,35 +167,35 @@ class _SnapshotsAndScenesPanelState extends State<SnapshotsAndScenesPanel> {
     return SnapshotList(
       snapShotList: snapShotList,
       onDelete: (String sceneId) {
-        _cubit.deleteSnapshot(sceneId);
+        _snapshotsCubit.deleteSnapshot(sceneId);
         FusionToast.success(context, message: "Snapshot deleted successfully");
       },
       selectedSnapshotId: state.selectedSnapshotId,
       onSelect: (String sceneId) {
-        _cubit.selectSnapshot(sceneId);
+        _snapshotsCubit.selectSnapshot(sceneId);
       },
       onDuplicate: (String sceneId) {
-        _cubit.duplicateSnapshot(sceneId);
+        _snapshotsCubit.duplicateSnapshot(sceneId);
         FusionToast.success(context, message: "Snapshot duplicated successfully");
       },
       onReorder: (int oldIndex, int newIndex) {
-        _cubit.reorderSnapshots(oldIndex, newIndex);
+        _snapshotsCubit.reorderSnapshots(oldIndex, newIndex);
       },
       onDragStarted: (String sceneId) {
-        _cubit.startDrag(sceneId, DragSection.snapshots);
+        _snapshotsCubit.startDrag(sceneId, DragSection.snapshots);
       },
       onDragEnd: () {
-        _cubit.endDrag();
+        _snapshotsCubit.endDrag();
       },
       draggingSnapshotId: state.draggingSnapshotId,
       onRenameSave: (String value, SnapshotsModel newSnapshot) {
-        _cubit.updateSnapshot(newSnapshot);
+        _snapshotsCubit.updateSnapshot(newSnapshot);
       },
     );
   }
 
-  Widget _buildSceneSetsList(BuildContext context, SnapshotsState state) {
-    final List<SceneSetModel> scenesSetList = state.sceneSets;
+  Widget _buildSceneSetsList(BuildContext context, SnapshotsState snapshotsState, SceneSetsState sceneSetsState) {
+    final List<SceneSetModel> scenesSetList = sceneSetsState.sceneSets;
     if (scenesSetList.isEmpty) {
       return Container(
         alignment: Alignment.center,
@@ -205,44 +213,51 @@ class _SnapshotsAndScenesPanelState extends State<SnapshotsAndScenesPanel> {
       physics: const ClampingScrollPhysics(),
       itemBuilder: (BuildContext context, int index) {
         final SceneSetModel sceneSetData = scenesSetList[index];
-        final List<SnapshotsModel> associatedScenes = _cubit.getSnapshotsInSceneSet(sceneSetData.id);
+        final List<SnapshotsModel> associatedScenes = _sceneSetsCubit.getSnapshotsInSceneSet(sceneSetData.id);
         return ScenesExpandableCard(
           sceneSetData: sceneSetData,
           isDragHovered: false,
           snapShotList: associatedScenes,
           onSelect: (String sceneId) {
-            _cubit.selectSnapshot(sceneId);
+            _snapshotsCubit.selectSnapshot(sceneId);
           },
           onSceneSetDelete: (String sceneSetId) {
-            _cubit.deleteSceneSet(sceneSetId);
+            _sceneSetsCubit.deleteSceneSet(sceneSetId);
             FusionToast.success(context, message: "Scenes deleted successfully");
           },
           onSceneSetDuplicate: (String sceneSetId) {
-            _cubit.duplicateSceneSet(sceneSetId);
+            _sceneSetsCubit.duplicateSceneSet(sceneSetId);
             FusionToast.success(context, message: "Scene Set duplicated successfully");
           },
           onScenesSnapshotDelete: (String sceneId) {
-            _cubit.deleteSnapshot(sceneId);
+            _snapshotsCubit.deleteSnapshot(sceneId);
+            _sceneSetsCubit.syncWithProjectViewModel();
             FusionToast.success(context, message: "Snapshot deleted successfully");
           },
           onScenesSnapshotDuplicate: (String sceneId) {
-            _cubit.duplicateSnapshot(sceneId);
+            _snapshotsCubit.duplicateSnapshot(sceneId);
+            _sceneSetsCubit.syncWithProjectViewModel();
             FusionToast.success(context, message: "Snapshot duplicated successfully");
           },
           onReorderScenes: (String sceneSetId, int oldIndex, int newIndex) {
-            _cubit.reorderSnapshotsInSceneSet(sceneSetId, oldIndex, newIndex);
+            _sceneSetsCubit.reorderSnapshotsInSceneSet(
+              sceneSetId: sceneSetId,
+              oldIndex: oldIndex,
+              newIndex: newIndex,
+              draggingSnapshotId: snapshotsState.draggingSnapshotId,
+            );
           },
           onDragStarted: (String sceneId) {
-            _cubit.startDrag(sceneId, DragSection.scenes);
+            _snapshotsCubit.startDrag(sceneId, DragSection.scenes);
           },
           onDragEnd: () {
-            _cubit.endDrag();
+            _snapshotsCubit.endDrag();
           },
-          draggingSnapshotId: state.draggingSnapshotId,
+          draggingSnapshotId: snapshotsState.draggingSnapshotId,
           draggingFromSection:
-              state.draggingFromSection == DragSection.snapshots
+              snapshotsState.draggingFromSection == DragSection.snapshots
                   ? 'snapshots'
-                  : state.draggingFromSection == DragSection.scenes
+                  : snapshotsState.draggingFromSection == DragSection.scenes
                   ? 'scenes'
                   : null,
         );
