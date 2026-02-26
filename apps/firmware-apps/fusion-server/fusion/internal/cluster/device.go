@@ -263,7 +263,7 @@ func (c *Cluster) SetVIP(w http.ResponseWriter, r *http.Request) {
 		}()
 	}
 
-	w.WriteHeader(http.StatusNoContent)
+	w.WriteHeader(http.StatusAccepted)
 }
 
 func (c *Cluster) UpdateVIPLocal(w http.ResponseWriter, r *http.Request) {
@@ -300,7 +300,7 @@ func (c *Cluster) ReloadVIP(w http.ResponseWriter, r *http.Request) {
 		}
 	}()
 
-	w.WriteHeader(http.StatusNoContent)
+	w.WriteHeader(http.StatusAccepted)
 }
 
 func (c *Cluster) ReloadVIPLocal(w http.ResponseWriter, r *http.Request) {
