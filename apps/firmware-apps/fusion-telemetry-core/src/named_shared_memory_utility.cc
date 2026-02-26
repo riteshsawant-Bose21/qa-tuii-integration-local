@@ -42,6 +42,7 @@ void bosepro::Metadata::deserialize(const char* buffer, std::size_t bufferSize) 
     // Deserialize writeBlocks
     // Read the writeBlocks from memory
     writeBlocks.clear();
+    writeBlocks.reserve(numberOfWriteBlocks);
     for (std::size_t i = 0; i < numberOfWriteBlocks; ++i) {
         WriteBlock block;
         std::memcpy(&block, bufferPtr, sizeof(WriteBlock));
@@ -61,6 +62,9 @@ void bosepro::Metadata::serialize(char* buffer, std::size_t bufferSize) const {
     // Check if the buffer size is sufficient
     if (bufferSize < expectedSize) {
         throw std::runtime_error("Buffer size is smaller than the expected metadata size");
+    }
+    if (writeBlocks.size() > MAX_WRITE_BLOCKS) {
+        throw std::runtime_error("Number of WriteBlocks exceeds MAX_WRITE_BLOCKS");
     }
 
     // Pointer to traverse the buffer

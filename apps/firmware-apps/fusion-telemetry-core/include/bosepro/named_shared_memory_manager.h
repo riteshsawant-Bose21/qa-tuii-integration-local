@@ -83,6 +83,7 @@ private:
 
 
     std::map<std::string, std::unique_ptr<NamedSharedMemory>> sharedMemoryMap_; // Managed shared memory regions
+    mutable std::mutex mapMutex_;
     static std::set<std::string> globalSharedMemoryNames_;                     // Global set of shared memory names
     static std::mutex globalMutex_;                                           // Mutex for thread-safe access to global names
 };
