@@ -341,6 +341,25 @@ func (c *Cluster) GetCSR(w http.ResponseWriter, r *http.Request) {
 	w.Write(csrContent)
 }
 
+func (c *Cluster) resetLocalDevice() error {
+	info, err := c.delegate.persistence.GetDeviceInfo()
+	if err != nil {
+		return fmt.Errorf("error loading device info: %v", err)
+	}
+	err = os.Remove("/var/lib/device-identity/device.x509.cert")
+	if err != nil && !os.IsNotExist(err) {
+		return fmt.Errorf("error removing certificate file: %v", err)
+	}
+
+	info.IsClaimed = false
+
+	if err := c.delegate.persistence.SetDeviceInfo(info); err != nil {
+		return fmt.Errorf("failed to set device info: %v", err)
+	}
+
+	return nil
+}
+
 func (c *Cluster) SetDeviceCertificate(w http.ResponseWriter, r *http.Request) {
 	if !utils.RequirePost(w, r) {
 		return
@@ -497,6 +516,69 @@ func (c *Cluster) GetDeviceCSR(w http.ResponseWriter, r *http.Request) {
 		// Copy the response headers and body
 		w.Header().Set(api.ContentType, "text/plain")
 		io.Copy(w, resp.Body)
+	}
+}
+
+func (c *Cluster) ResetDevice(w http.ResponseWriter, r *http.Request) {
+	if !utils.RequireDelete(w, r) {
+		return
+	}
+
+	deviceId, err := utils.ExtractId(r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	deviceInfos := c.fetchAllDeviceInfos()
+
+	var targetDevice *persistence.DeviceInfo
+	for _, info := range deviceInfos {
+		if info.Id == deviceId {
+			targetDevice = &info
+			break
+		}
+	}
+
+	if targetDevice == nil {
+		http.Error(w, fmt.Sprintf("Device %s not found", deviceId), http.StatusNotFound)
+		return
+	}
+
+	if c.hostIsLocal(targetDevice.Address) {
+		// If this is the local device, perform reset locally
+		if err := c.resetLocalDevice(); err != nil {
+			http.Error(w, fmt.Sprintf("Failed to reset device: %v", err), http.StatusInternalServerError)
+			return
+		}
+		w.WriteHeader(http.StatusNoContent)
+		return
+	} else {
+		// Make HTTP DELETE request to the remote device's admin reset endpoint
+		deviceAddress := net.JoinHostPort(targetDevice.Address, api.AdminPort)
+		endpoint := strings.Replace(routes.DevicesIDResetEndpoint, "{id}", deviceId, 1)
+		url := getLocalURL(deviceAddress, endpoint)
+
+		req, err := http.NewRequest(http.MethodDelete, url, nil)
+		if err != nil {
+			http.Error(w, fmt.Sprintf("Failed to create DELETE request: %v", err), http.StatusInternalServerError)
+			return
+		}
+
+		resp, err := c.httpClient.Do(req)
+		if err != nil {
+			http.Error(w, fmt.Sprintf("Failed to send reset request to device: %v", err), http.StatusBadGateway)
+			return
+		}
+		defer resp.Body.Close()
+
+		if resp.StatusCode != http.StatusNoContent {
+			body, _ := io.ReadAll(resp.Body)
+			logging.GetLogger().Error("Remote reset request to %s failed with status %d: %s", url, resp.StatusCode, string(body))
+			http.Error(w, fmt.Sprintf("Device returned error: %s", string(body)), resp.StatusCode)
+			return
+		}
+		w.WriteHeader(http.StatusNoContent)
 	}
 }
 

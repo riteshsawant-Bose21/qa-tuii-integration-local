@@ -31,17 +31,15 @@ type Device struct {
 	ModelName       string      `boil:"model_name" json:"model_name" toml:"model_name" yaml:"model_name"`
 	ThingName       string      `boil:"thing_name" json:"thing_name" toml:"thing_name" yaml:"thing_name"`
 	MacAddress      null.String `boil:"mac_address" json:"mac_address,omitempty" toml:"mac_address" yaml:"mac_address,omitempty"`
-	CertificateID   string      `boil:"certificate_id" json:"certificate_id" toml:"certificate_id" yaml:"certificate_id"`
+	IsPrimary       null.Bool   `boil:"is_primary" json:"is_primary,omitempty" toml:"is_primary" yaml:"is_primary,omitempty"`
+	CertificateID   null.String `boil:"certificate_id" json:"certificate_id,omitempty" toml:"certificate_id" yaml:"certificate_id,omitempty"`
+	CertificateArn  null.String `boil:"certificate_arn" json:"certificate_arn,omitempty" toml:"certificate_arn" yaml:"certificate_arn,omitempty"`
 	ClaimStatus     string      `boil:"claim_status" json:"claim_status" toml:"claim_status" yaml:"claim_status"`
-	ClaimedBy       string      `boil:"claimed_by" json:"claimed_by" toml:"claimed_by" yaml:"claimed_by"`
-	ProjectID       string      `boil:"project_id" json:"project_id" toml:"project_id" yaml:"project_id"`
+	ClaimedBy       null.String `boil:"claimed_by" json:"claimed_by,omitempty" toml:"claimed_by" yaml:"claimed_by,omitempty"`
+	ProjectID       null.String `boil:"project_id" json:"project_id,omitempty" toml:"project_id" yaml:"project_id,omitempty"`
 	FirmwareVersion string      `boil:"firmware_version" json:"firmware_version" toml:"firmware_version" yaml:"firmware_version"`
 	DeviceZone      null.String `boil:"device_zone" json:"device_zone,omitempty" toml:"device_zone" yaml:"device_zone,omitempty"`
 	DeviceLocation  null.String `boil:"device_location" json:"device_location,omitempty" toml:"device_location" yaml:"device_location,omitempty"`
-	Timezone        null.String `boil:"timezone" json:"timezone,omitempty" toml:"timezone" yaml:"timezone,omitempty"`
-	DSTEnabled      null.Bool   `boil:"dst_enabled" json:"dst_enabled,omitempty" toml:"dst_enabled" yaml:"dst_enabled,omitempty"`
-	NTPEnabled      null.Bool   `boil:"ntp_enabled" json:"ntp_enabled,omitempty" toml:"ntp_enabled" yaml:"ntp_enabled,omitempty"`
-	NTPServer       null.String `boil:"ntp_server" json:"ntp_server,omitempty" toml:"ntp_server" yaml:"ntp_server,omitempty"`
 	CreatedAt       time.Time   `boil:"created_at" json:"created_at" toml:"created_at" yaml:"created_at"`
 	UpdatedAt       time.Time   `boil:"updated_at" json:"updated_at" toml:"updated_at" yaml:"updated_at"`
 
@@ -57,17 +55,15 @@ var DeviceColumns = struct {
 	ModelName       string
 	ThingName       string
 	MacAddress      string
+	IsPrimary       string
 	CertificateID   string
+	CertificateArn  string
 	ClaimStatus     string
 	ClaimedBy       string
 	ProjectID       string
 	FirmwareVersion string
 	DeviceZone      string
 	DeviceLocation  string
-	Timezone        string
-	DSTEnabled      string
-	NTPEnabled      string
-	NTPServer       string
 	CreatedAt       string
 	UpdatedAt       string
 }{
@@ -78,17 +74,15 @@ var DeviceColumns = struct {
 	ModelName:       "model_name",
 	ThingName:       "thing_name",
 	MacAddress:      "mac_address",
+	IsPrimary:       "is_primary",
 	CertificateID:   "certificate_id",
+	CertificateArn:  "certificate_arn",
 	ClaimStatus:     "claim_status",
 	ClaimedBy:       "claimed_by",
 	ProjectID:       "project_id",
 	FirmwareVersion: "firmware_version",
 	DeviceZone:      "device_zone",
 	DeviceLocation:  "device_location",
-	Timezone:        "timezone",
-	DSTEnabled:      "dst_enabled",
-	NTPEnabled:      "ntp_enabled",
-	NTPServer:       "ntp_server",
 	CreatedAt:       "created_at",
 	UpdatedAt:       "updated_at",
 }
@@ -101,17 +95,15 @@ var DeviceTableColumns = struct {
 	ModelName       string
 	ThingName       string
 	MacAddress      string
+	IsPrimary       string
 	CertificateID   string
+	CertificateArn  string
 	ClaimStatus     string
 	ClaimedBy       string
 	ProjectID       string
 	FirmwareVersion string
 	DeviceZone      string
 	DeviceLocation  string
-	Timezone        string
-	DSTEnabled      string
-	NTPEnabled      string
-	NTPServer       string
 	CreatedAt       string
 	UpdatedAt       string
 }{
@@ -122,17 +114,15 @@ var DeviceTableColumns = struct {
 	ModelName:       "device.model_name",
 	ThingName:       "device.thing_name",
 	MacAddress:      "device.mac_address",
+	IsPrimary:       "device.is_primary",
 	CertificateID:   "device.certificate_id",
+	CertificateArn:  "device.certificate_arn",
 	ClaimStatus:     "device.claim_status",
 	ClaimedBy:       "device.claimed_by",
 	ProjectID:       "device.project_id",
 	FirmwareVersion: "device.firmware_version",
 	DeviceZone:      "device.device_zone",
 	DeviceLocation:  "device.device_location",
-	Timezone:        "device.timezone",
-	DSTEnabled:      "device.dst_enabled",
-	NTPEnabled:      "device.ntp_enabled",
-	NTPServer:       "device.ntp_server",
 	CreatedAt:       "device.created_at",
 	UpdatedAt:       "device.updated_at",
 }
@@ -192,17 +182,15 @@ var DeviceWhere = struct {
 	ModelName       whereHelperstring
 	ThingName       whereHelperstring
 	MacAddress      whereHelpernull_String
-	CertificateID   whereHelperstring
+	IsPrimary       whereHelpernull_Bool
+	CertificateID   whereHelpernull_String
+	CertificateArn  whereHelpernull_String
 	ClaimStatus     whereHelperstring
-	ClaimedBy       whereHelperstring
-	ProjectID       whereHelperstring
+	ClaimedBy       whereHelpernull_String
+	ProjectID       whereHelpernull_String
 	FirmwareVersion whereHelperstring
 	DeviceZone      whereHelpernull_String
 	DeviceLocation  whereHelpernull_String
-	Timezone        whereHelpernull_String
-	DSTEnabled      whereHelpernull_Bool
-	NTPEnabled      whereHelpernull_Bool
-	NTPServer       whereHelpernull_String
 	CreatedAt       whereHelpertime_Time
 	UpdatedAt       whereHelpertime_Time
 }{
@@ -213,34 +201,38 @@ var DeviceWhere = struct {
 	ModelName:       whereHelperstring{field: "\"device\".\"model_name\""},
 	ThingName:       whereHelperstring{field: "\"device\".\"thing_name\""},
 	MacAddress:      whereHelpernull_String{field: "\"device\".\"mac_address\""},
-	CertificateID:   whereHelperstring{field: "\"device\".\"certificate_id\""},
+	IsPrimary:       whereHelpernull_Bool{field: "\"device\".\"is_primary\""},
+	CertificateID:   whereHelpernull_String{field: "\"device\".\"certificate_id\""},
+	CertificateArn:  whereHelpernull_String{field: "\"device\".\"certificate_arn\""},
 	ClaimStatus:     whereHelperstring{field: "\"device\".\"claim_status\""},
-	ClaimedBy:       whereHelperstring{field: "\"device\".\"claimed_by\""},
-	ProjectID:       whereHelperstring{field: "\"device\".\"project_id\""},
+	ClaimedBy:       whereHelpernull_String{field: "\"device\".\"claimed_by\""},
+	ProjectID:       whereHelpernull_String{field: "\"device\".\"project_id\""},
 	FirmwareVersion: whereHelperstring{field: "\"device\".\"firmware_version\""},
 	DeviceZone:      whereHelpernull_String{field: "\"device\".\"device_zone\""},
 	DeviceLocation:  whereHelpernull_String{field: "\"device\".\"device_location\""},
-	Timezone:        whereHelpernull_String{field: "\"device\".\"timezone\""},
-	DSTEnabled:      whereHelpernull_Bool{field: "\"device\".\"dst_enabled\""},
-	NTPEnabled:      whereHelpernull_Bool{field: "\"device\".\"ntp_enabled\""},
-	NTPServer:       whereHelpernull_String{field: "\"device\".\"ntp_server\""},
 	CreatedAt:       whereHelpertime_Time{field: "\"device\".\"created_at\""},
 	UpdatedAt:       whereHelpertime_Time{field: "\"device\".\"updated_at\""},
 }
 
 // DeviceRels is where relationship names are stored.
 var DeviceRels = struct {
-	ClaimedByAccount string
-	Project          string
+	ClaimedByAccount         string
+	Project                  string
+	DeviceOwnershipHistories string
+	DeviceProjectHistories   string
 }{
-	ClaimedByAccount: "ClaimedByAccount",
-	Project:          "Project",
+	ClaimedByAccount:         "ClaimedByAccount",
+	Project:                  "Project",
+	DeviceOwnershipHistories: "DeviceOwnershipHistories",
+	DeviceProjectHistories:   "DeviceProjectHistories",
 }
 
 // deviceR is where relationships are stored.
 type deviceR struct {
-	ClaimedByAccount *Account `boil:"ClaimedByAccount" json:"ClaimedByAccount" toml:"ClaimedByAccount" yaml:"ClaimedByAccount"`
-	Project          *Project `boil:"Project" json:"Project" toml:"Project" yaml:"Project"`
+	ClaimedByAccount         *Account                    `boil:"ClaimedByAccount" json:"ClaimedByAccount" toml:"ClaimedByAccount" yaml:"ClaimedByAccount"`
+	Project                  *Project                    `boil:"Project" json:"Project" toml:"Project" yaml:"Project"`
+	DeviceOwnershipHistories DeviceOwnershipHistorySlice `boil:"DeviceOwnershipHistories" json:"DeviceOwnershipHistories" toml:"DeviceOwnershipHistories" yaml:"DeviceOwnershipHistories"`
+	DeviceProjectHistories   DeviceProjectHistorySlice   `boil:"DeviceProjectHistories" json:"DeviceProjectHistories" toml:"DeviceProjectHistories" yaml:"DeviceProjectHistories"`
 }
 
 // NewStruct creates a new relationship struct
@@ -280,13 +272,45 @@ func (r *deviceR) GetProject() *Project {
 	return r.Project
 }
 
+func (o *Device) GetDeviceOwnershipHistories() DeviceOwnershipHistorySlice {
+	if o == nil {
+		return nil
+	}
+
+	return o.R.GetDeviceOwnershipHistories()
+}
+
+func (r *deviceR) GetDeviceOwnershipHistories() DeviceOwnershipHistorySlice {
+	if r == nil {
+		return nil
+	}
+
+	return r.DeviceOwnershipHistories
+}
+
+func (o *Device) GetDeviceProjectHistories() DeviceProjectHistorySlice {
+	if o == nil {
+		return nil
+	}
+
+	return o.R.GetDeviceProjectHistories()
+}
+
+func (r *deviceR) GetDeviceProjectHistories() DeviceProjectHistorySlice {
+	if r == nil {
+		return nil
+	}
+
+	return r.DeviceProjectHistories
+}
+
 // deviceL is where Load methods for each relationship are stored.
 type deviceL struct{}
 
 var (
-	deviceAllColumns            = []string{"id", "device_id", "name", "serial_number", "model_name", "thing_name", "mac_address", "certificate_id", "claim_status", "claimed_by", "project_id", "firmware_version", "device_zone", "device_location", "timezone", "dst_enabled", "ntp_enabled", "ntp_server", "created_at", "updated_at"}
-	deviceColumnsWithoutDefault = []string{"device_id", "serial_number", "model_name", "thing_name", "certificate_id", "claimed_by", "project_id", "firmware_version"}
-	deviceColumnsWithDefault    = []string{"id", "name", "mac_address", "claim_status", "device_zone", "device_location", "timezone", "dst_enabled", "ntp_enabled", "ntp_server", "created_at", "updated_at"}
+	deviceAllColumns            = []string{"id", "device_id", "name", "serial_number", "model_name", "thing_name", "mac_address", "is_primary", "certificate_id", "certificate_arn", "claim_status", "claimed_by", "project_id", "firmware_version", "device_zone", "device_location", "created_at", "updated_at"}
+	deviceColumnsWithoutDefault = []string{"device_id", "serial_number", "model_name", "thing_name", "firmware_version"}
+	deviceColumnsWithDefault    = []string{"id", "name", "mac_address", "is_primary", "certificate_id", "certificate_arn", "claim_status", "claimed_by", "project_id", "device_zone", "device_location", "created_at", "updated_at"}
 	devicePrimaryKeyColumns     = []string{"id"}
 	deviceGeneratedColumns      = []string{}
 )
@@ -618,6 +642,34 @@ func (o *Device) Project(mods ...qm.QueryMod) projectQuery {
 	return Projects(queryMods...)
 }
 
+// DeviceOwnershipHistories retrieves all the device_ownership_history's DeviceOwnershipHistories with an executor.
+func (o *Device) DeviceOwnershipHistories(mods ...qm.QueryMod) deviceOwnershipHistoryQuery {
+	var queryMods []qm.QueryMod
+	if len(mods) != 0 {
+		queryMods = append(queryMods, mods...)
+	}
+
+	queryMods = append(queryMods,
+		qm.Where("\"device_ownership_history\".\"device_id\"=?", o.ID),
+	)
+
+	return DeviceOwnershipHistories(queryMods...)
+}
+
+// DeviceProjectHistories retrieves all the device_project_history's DeviceProjectHistories with an executor.
+func (o *Device) DeviceProjectHistories(mods ...qm.QueryMod) deviceProjectHistoryQuery {
+	var queryMods []qm.QueryMod
+	if len(mods) != 0 {
+		queryMods = append(queryMods, mods...)
+	}
+
+	queryMods = append(queryMods,
+		qm.Where("\"device_project_history\".\"device_id\"=?", o.ID),
+	)
+
+	return DeviceProjectHistories(queryMods...)
+}
+
 // LoadClaimedByAccount allows an eager lookup of values, cached into the
 // loaded structs of the objects. This is for an N-1 relationship.
 func (deviceL) LoadClaimedByAccount(ctx context.Context, e boil.ContextExecutor, singular bool, maybeDevice interface{}, mods queries.Applicator) error {
@@ -651,7 +703,9 @@ func (deviceL) LoadClaimedByAccount(ctx context.Context, e boil.ContextExecutor,
 		if object.R == nil {
 			object.R = &deviceR{}
 		}
-		args[object.ClaimedBy] = struct{}{}
+		if !queries.IsNil(object.ClaimedBy) {
+			args[object.ClaimedBy] = struct{}{}
+		}
 
 	} else {
 		for _, obj := range slice {
@@ -659,7 +713,9 @@ func (deviceL) LoadClaimedByAccount(ctx context.Context, e boil.ContextExecutor,
 				obj.R = &deviceR{}
 			}
 
-			args[obj.ClaimedBy] = struct{}{}
+			if !queries.IsNil(obj.ClaimedBy) {
+				args[obj.ClaimedBy] = struct{}{}
+			}
 
 		}
 	}
@@ -724,7 +780,7 @@ func (deviceL) LoadClaimedByAccount(ctx context.Context, e boil.ContextExecutor,
 
 	for _, local := range slice {
 		for _, foreign := range resultSlice {
-			if local.ClaimedBy == foreign.ID {
+			if queries.Equal(local.ClaimedBy, foreign.ID) {
 				local.R.ClaimedByAccount = foreign
 				if foreign.R == nil {
 					foreign.R = &accountR{}
@@ -771,7 +827,9 @@ func (deviceL) LoadProject(ctx context.Context, e boil.ContextExecutor, singular
 		if object.R == nil {
 			object.R = &deviceR{}
 		}
-		args[object.ProjectID] = struct{}{}
+		if !queries.IsNil(object.ProjectID) {
+			args[object.ProjectID] = struct{}{}
+		}
 
 	} else {
 		for _, obj := range slice {
@@ -779,7 +837,9 @@ func (deviceL) LoadProject(ctx context.Context, e boil.ContextExecutor, singular
 				obj.R = &deviceR{}
 			}
 
-			args[obj.ProjectID] = struct{}{}
+			if !queries.IsNil(obj.ProjectID) {
+				args[obj.ProjectID] = struct{}{}
+			}
 
 		}
 	}
@@ -844,12 +904,238 @@ func (deviceL) LoadProject(ctx context.Context, e boil.ContextExecutor, singular
 
 	for _, local := range slice {
 		for _, foreign := range resultSlice {
-			if local.ProjectID == foreign.ID {
+			if queries.Equal(local.ProjectID, foreign.ID) {
 				local.R.Project = foreign
 				if foreign.R == nil {
 					foreign.R = &projectR{}
 				}
 				foreign.R.Devices = append(foreign.R.Devices, local)
+				break
+			}
+		}
+	}
+
+	return nil
+}
+
+// LoadDeviceOwnershipHistories allows an eager lookup of values, cached into the
+// loaded structs of the objects. This is for a 1-M or N-M relationship.
+func (deviceL) LoadDeviceOwnershipHistories(ctx context.Context, e boil.ContextExecutor, singular bool, maybeDevice interface{}, mods queries.Applicator) error {
+	var slice []*Device
+	var object *Device
+
+	if singular {
+		var ok bool
+		object, ok = maybeDevice.(*Device)
+		if !ok {
+			object = new(Device)
+			ok = queries.SetFromEmbeddedStruct(&object, &maybeDevice)
+			if !ok {
+				return errors.New(fmt.Sprintf("failed to set %T from embedded struct %T", object, maybeDevice))
+			}
+		}
+	} else {
+		s, ok := maybeDevice.(*[]*Device)
+		if ok {
+			slice = *s
+		} else {
+			ok = queries.SetFromEmbeddedStruct(&slice, maybeDevice)
+			if !ok {
+				return errors.New(fmt.Sprintf("failed to set %T from embedded struct %T", slice, maybeDevice))
+			}
+		}
+	}
+
+	args := make(map[interface{}]struct{})
+	if singular {
+		if object.R == nil {
+			object.R = &deviceR{}
+		}
+		args[object.ID] = struct{}{}
+	} else {
+		for _, obj := range slice {
+			if obj.R == nil {
+				obj.R = &deviceR{}
+			}
+			args[obj.ID] = struct{}{}
+		}
+	}
+
+	if len(args) == 0 {
+		return nil
+	}
+
+	argsSlice := make([]interface{}, len(args))
+	i := 0
+	for arg := range args {
+		argsSlice[i] = arg
+		i++
+	}
+
+	query := NewQuery(
+		qm.From(`device_ownership_history`),
+		qm.WhereIn(`device_ownership_history.device_id in ?`, argsSlice...),
+	)
+	if mods != nil {
+		mods.Apply(query)
+	}
+
+	results, err := query.QueryContext(ctx, e)
+	if err != nil {
+		return errors.Wrap(err, "failed to eager load device_ownership_history")
+	}
+
+	var resultSlice []*DeviceOwnershipHistory
+	if err = queries.Bind(results, &resultSlice); err != nil {
+		return errors.Wrap(err, "failed to bind eager loaded slice device_ownership_history")
+	}
+
+	if err = results.Close(); err != nil {
+		return errors.Wrap(err, "failed to close results in eager load on device_ownership_history")
+	}
+	if err = results.Err(); err != nil {
+		return errors.Wrap(err, "error occurred during iteration of eager loaded relations for device_ownership_history")
+	}
+
+	if len(deviceOwnershipHistoryAfterSelectHooks) != 0 {
+		for _, obj := range resultSlice {
+			if err := obj.doAfterSelectHooks(ctx, e); err != nil {
+				return err
+			}
+		}
+	}
+	if singular {
+		object.R.DeviceOwnershipHistories = resultSlice
+		for _, foreign := range resultSlice {
+			if foreign.R == nil {
+				foreign.R = &deviceOwnershipHistoryR{}
+			}
+			foreign.R.Device = object
+		}
+		return nil
+	}
+
+	for _, foreign := range resultSlice {
+		for _, local := range slice {
+			if local.ID == foreign.DeviceID {
+				local.R.DeviceOwnershipHistories = append(local.R.DeviceOwnershipHistories, foreign)
+				if foreign.R == nil {
+					foreign.R = &deviceOwnershipHistoryR{}
+				}
+				foreign.R.Device = local
+				break
+			}
+		}
+	}
+
+	return nil
+}
+
+// LoadDeviceProjectHistories allows an eager lookup of values, cached into the
+// loaded structs of the objects. This is for a 1-M or N-M relationship.
+func (deviceL) LoadDeviceProjectHistories(ctx context.Context, e boil.ContextExecutor, singular bool, maybeDevice interface{}, mods queries.Applicator) error {
+	var slice []*Device
+	var object *Device
+
+	if singular {
+		var ok bool
+		object, ok = maybeDevice.(*Device)
+		if !ok {
+			object = new(Device)
+			ok = queries.SetFromEmbeddedStruct(&object, &maybeDevice)
+			if !ok {
+				return errors.New(fmt.Sprintf("failed to set %T from embedded struct %T", object, maybeDevice))
+			}
+		}
+	} else {
+		s, ok := maybeDevice.(*[]*Device)
+		if ok {
+			slice = *s
+		} else {
+			ok = queries.SetFromEmbeddedStruct(&slice, maybeDevice)
+			if !ok {
+				return errors.New(fmt.Sprintf("failed to set %T from embedded struct %T", slice, maybeDevice))
+			}
+		}
+	}
+
+	args := make(map[interface{}]struct{})
+	if singular {
+		if object.R == nil {
+			object.R = &deviceR{}
+		}
+		args[object.ID] = struct{}{}
+	} else {
+		for _, obj := range slice {
+			if obj.R == nil {
+				obj.R = &deviceR{}
+			}
+			args[obj.ID] = struct{}{}
+		}
+	}
+
+	if len(args) == 0 {
+		return nil
+	}
+
+	argsSlice := make([]interface{}, len(args))
+	i := 0
+	for arg := range args {
+		argsSlice[i] = arg
+		i++
+	}
+
+	query := NewQuery(
+		qm.From(`device_project_history`),
+		qm.WhereIn(`device_project_history.device_id in ?`, argsSlice...),
+	)
+	if mods != nil {
+		mods.Apply(query)
+	}
+
+	results, err := query.QueryContext(ctx, e)
+	if err != nil {
+		return errors.Wrap(err, "failed to eager load device_project_history")
+	}
+
+	var resultSlice []*DeviceProjectHistory
+	if err = queries.Bind(results, &resultSlice); err != nil {
+		return errors.Wrap(err, "failed to bind eager loaded slice device_project_history")
+	}
+
+	if err = results.Close(); err != nil {
+		return errors.Wrap(err, "failed to close results in eager load on device_project_history")
+	}
+	if err = results.Err(); err != nil {
+		return errors.Wrap(err, "error occurred during iteration of eager loaded relations for device_project_history")
+	}
+
+	if len(deviceProjectHistoryAfterSelectHooks) != 0 {
+		for _, obj := range resultSlice {
+			if err := obj.doAfterSelectHooks(ctx, e); err != nil {
+				return err
+			}
+		}
+	}
+	if singular {
+		object.R.DeviceProjectHistories = resultSlice
+		for _, foreign := range resultSlice {
+			if foreign.R == nil {
+				foreign.R = &deviceProjectHistoryR{}
+			}
+			foreign.R.Device = object
+		}
+		return nil
+	}
+
+	for _, foreign := range resultSlice {
+		for _, local := range slice {
+			if local.ID == foreign.DeviceID {
+				local.R.DeviceProjectHistories = append(local.R.DeviceProjectHistories, foreign)
+				if foreign.R == nil {
+					foreign.R = &deviceProjectHistoryR{}
+				}
+				foreign.R.Device = local
 				break
 			}
 		}
@@ -885,7 +1171,7 @@ func (o *Device) SetClaimedByAccount(ctx context.Context, exec boil.ContextExecu
 		return errors.Wrap(err, "failed to update local table")
 	}
 
-	o.ClaimedBy = related.ID
+	queries.Assign(&o.ClaimedBy, related.ID)
 	if o.R == nil {
 		o.R = &deviceR{
 			ClaimedByAccount: related,
@@ -902,6 +1188,39 @@ func (o *Device) SetClaimedByAccount(ctx context.Context, exec boil.ContextExecu
 		related.R.ClaimedByDevices = append(related.R.ClaimedByDevices, o)
 	}
 
+	return nil
+}
+
+// RemoveClaimedByAccount relationship.
+// Sets o.R.ClaimedByAccount to nil.
+// Removes o from all passed in related items' relationships struct.
+func (o *Device) RemoveClaimedByAccount(ctx context.Context, exec boil.ContextExecutor, related *Account) error {
+	var err error
+
+	queries.SetScanner(&o.ClaimedBy, nil)
+	if _, err = o.Update(ctx, exec, boil.Whitelist("claimed_by")); err != nil {
+		return errors.Wrap(err, "failed to update local table")
+	}
+
+	if o.R != nil {
+		o.R.ClaimedByAccount = nil
+	}
+	if related == nil || related.R == nil {
+		return nil
+	}
+
+	for i, ri := range related.R.ClaimedByDevices {
+		if queries.Equal(o.ClaimedBy, ri.ClaimedBy) {
+			continue
+		}
+
+		ln := len(related.R.ClaimedByDevices)
+		if ln > 1 && i < ln-1 {
+			related.R.ClaimedByDevices[i] = related.R.ClaimedByDevices[ln-1]
+		}
+		related.R.ClaimedByDevices = related.R.ClaimedByDevices[:ln-1]
+		break
+	}
 	return nil
 }
 
@@ -932,7 +1251,7 @@ func (o *Device) SetProject(ctx context.Context, exec boil.ContextExecutor, inse
 		return errors.Wrap(err, "failed to update local table")
 	}
 
-	o.ProjectID = related.ID
+	queries.Assign(&o.ProjectID, related.ID)
 	if o.R == nil {
 		o.R = &deviceR{
 			Project: related,
@@ -949,6 +1268,145 @@ func (o *Device) SetProject(ctx context.Context, exec boil.ContextExecutor, inse
 		related.R.Devices = append(related.R.Devices, o)
 	}
 
+	return nil
+}
+
+// RemoveProject relationship.
+// Sets o.R.Project to nil.
+// Removes o from all passed in related items' relationships struct.
+func (o *Device) RemoveProject(ctx context.Context, exec boil.ContextExecutor, related *Project) error {
+	var err error
+
+	queries.SetScanner(&o.ProjectID, nil)
+	if _, err = o.Update(ctx, exec, boil.Whitelist("project_id")); err != nil {
+		return errors.Wrap(err, "failed to update local table")
+	}
+
+	if o.R != nil {
+		o.R.Project = nil
+	}
+	if related == nil || related.R == nil {
+		return nil
+	}
+
+	for i, ri := range related.R.Devices {
+		if queries.Equal(o.ProjectID, ri.ProjectID) {
+			continue
+		}
+
+		ln := len(related.R.Devices)
+		if ln > 1 && i < ln-1 {
+			related.R.Devices[i] = related.R.Devices[ln-1]
+		}
+		related.R.Devices = related.R.Devices[:ln-1]
+		break
+	}
+	return nil
+}
+
+// AddDeviceOwnershipHistories adds the given related objects to the existing relationships
+// of the device, optionally inserting them as new records.
+// Appends related to o.R.DeviceOwnershipHistories.
+// Sets related.R.Device appropriately.
+func (o *Device) AddDeviceOwnershipHistories(ctx context.Context, exec boil.ContextExecutor, insert bool, related ...*DeviceOwnershipHistory) error {
+	var err error
+	for _, rel := range related {
+		if insert {
+			rel.DeviceID = o.ID
+			if err = rel.Insert(ctx, exec, boil.Infer()); err != nil {
+				return errors.Wrap(err, "failed to insert into foreign table")
+			}
+		} else {
+			updateQuery := fmt.Sprintf(
+				"UPDATE \"device_ownership_history\" SET %s WHERE %s",
+				strmangle.SetParamNames("\"", "\"", 1, []string{"device_id"}),
+				strmangle.WhereClause("\"", "\"", 2, deviceOwnershipHistoryPrimaryKeyColumns),
+			)
+			values := []interface{}{o.ID, rel.ID}
+
+			if boil.IsDebug(ctx) {
+				writer := boil.DebugWriterFrom(ctx)
+				fmt.Fprintln(writer, updateQuery)
+				fmt.Fprintln(writer, values)
+			}
+			if _, err = exec.ExecContext(ctx, updateQuery, values...); err != nil {
+				return errors.Wrap(err, "failed to update foreign table")
+			}
+
+			rel.DeviceID = o.ID
+		}
+	}
+
+	if o.R == nil {
+		o.R = &deviceR{
+			DeviceOwnershipHistories: related,
+		}
+	} else {
+		o.R.DeviceOwnershipHistories = append(o.R.DeviceOwnershipHistories, related...)
+	}
+
+	for _, rel := range related {
+		if rel.R == nil {
+			rel.R = &deviceOwnershipHistoryR{
+				Device: o,
+			}
+		} else {
+			rel.R.Device = o
+		}
+	}
+	return nil
+}
+
+// AddDeviceProjectHistories adds the given related objects to the existing relationships
+// of the device, optionally inserting them as new records.
+// Appends related to o.R.DeviceProjectHistories.
+// Sets related.R.Device appropriately.
+func (o *Device) AddDeviceProjectHistories(ctx context.Context, exec boil.ContextExecutor, insert bool, related ...*DeviceProjectHistory) error {
+	var err error
+	for _, rel := range related {
+		if insert {
+			rel.DeviceID = o.ID
+			if err = rel.Insert(ctx, exec, boil.Infer()); err != nil {
+				return errors.Wrap(err, "failed to insert into foreign table")
+			}
+		} else {
+			updateQuery := fmt.Sprintf(
+				"UPDATE \"device_project_history\" SET %s WHERE %s",
+				strmangle.SetParamNames("\"", "\"", 1, []string{"device_id"}),
+				strmangle.WhereClause("\"", "\"", 2, deviceProjectHistoryPrimaryKeyColumns),
+			)
+			values := []interface{}{o.ID, rel.ID}
+
+			if boil.IsDebug(ctx) {
+				writer := boil.DebugWriterFrom(ctx)
+				fmt.Fprintln(writer, updateQuery)
+				fmt.Fprintln(writer, values)
+			}
+			if _, err = exec.ExecContext(ctx, updateQuery, values...); err != nil {
+				return errors.Wrap(err, "failed to update foreign table")
+			}
+
+			rel.DeviceID = o.ID
+		}
+	}
+
+	if o.R == nil {
+		o.R = &deviceR{
+			DeviceProjectHistories: related,
+		}
+	} else {
+		o.R.DeviceProjectHistories = append(o.R.DeviceProjectHistories, related...)
+	}
+
+	for _, rel := range related {
+		if rel.R == nil {
+			rel.R = &deviceProjectHistoryR{
+				Device: o,
+			}
+		} else {
+			rel.R.Device = o
+		}
+	}
 	return nil
 }
 

@@ -1,5 +1,6 @@
 package types
 
+// DeviceCreateRequest represents the request payload for creating a new device.
 type DeviceCreateRequest struct {
 	DeviceID        string `json:"device_id" binding:"required"`
 	DeviceName      string `json:"device_name" binding:"required"`
@@ -9,26 +10,28 @@ type DeviceCreateRequest struct {
 	MacAddress      string `json:"mac_address" binding:"required"`
 	DeviceZone      string `json:"device_zone" binding:"required"`
 	DeviceLocation  string `json:"device_location" binding:"required"`
-	Timezone        string `json:"timezone" binding:"required"`
-	DstEnabled      bool   `json:"dst_enabled" binding:"required"`
-	NtpEnabled      bool   `json:"ntp_enabled" binding:"required"`
-	NtpServer       string `json:"ntp_server" binding:"required"`
 	ProjectID       string `json:"project_id" binding:"required"`
+	IsPrimary       bool   `json:"is_primary"`
 	CSR             string `json:"csr" binding:"required"`
 }
 
+// DeviceCreateResponse represents the response payload after successfully creating a device.
 type DeviceCreateResponse struct {
 	Certificate string `json:"certificate"`
 }
 
+// DeviceUpdateRequest represents the request payload for updating an existing device.
 type DeviceUpdateRequest struct {
 	DeviceName      string `json:"device_name"`
 	FirmwareVersion string `json:"firmware_version"`
 	DeviceZone      string `json:"device_zone"`
 	DeviceLocation  string `json:"device_location"`
-	Timezone        string `json:"timezone"`
-	DstEnabled      *bool  `json:"dst_enabled"`
-	NtpEnabled      *bool  `json:"ntp_enabled"`
-	NtpServer       string `json:"ntp_server"`
 	ProjectID       string `json:"project_id"`
+	IsPrimary       *bool  `json:"is_primary"`
+}
+
+// CertificateInfo contains IoT certificate details for a device.
+type CertificateInfo struct {
+	ID  string // Certificate ID from AWS IoT
+	Arn string // Certificate ARN from AWS IoT
 }

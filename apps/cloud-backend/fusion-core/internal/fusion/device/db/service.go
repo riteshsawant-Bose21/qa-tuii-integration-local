@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"time"
 
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/api/types"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/model"
@@ -14,55 +15,121 @@ import (
 	"go.uber.org/zap"
 )
 
-// Service is a service for managing projects in the database.
+// Service handles database operations for device management.
 type Service struct {
 	db model.DBWithTransactions
 }
 
-// NewService creates a new database service.
+// NewService creates a new database service instance.
 func NewService(db model.DBWithTransactions) *Service {
 	if db == nil {
 		panic("db cannot be nil")
 	}
-
-	// Initialize the database connection here and return an instance of Service.
-	return &Service{
-		db: db,
-	}
+	return &Service{db: db}
 }
 
-// GetDeviceByID retrieves a device by its ID from the database.
+// GetDB returns the database instance for transaction management.
+func (s *Service) GetDB(_ context.Context) model.DBWithTransactions {
+	return s.db
+}
+
+// ---------------------------------------------------------------------------
+// Query Operations
+// ---------------------------------------------------------------------------
+
+// GetDeviceByID retrieves a device by its device_id field.
+// Returns nil, nil if the device is not found.
 func (s *Service) GetDeviceByID(ctx context.Context, deviceID string, logger *zap.Logger) (*models.Device, error) {
 	device, err := models.Devices(models.DeviceWhere.DeviceID.EQ(deviceID)).One(ctx, s.db)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			// Row not found, return nil, nil
 			return nil, nil
 		}
 		logger.Error("Failed to get device by ID", zap.String("deviceID", deviceID), zap.Error(err))
 		return nil, err
 	}
-
 	return device, nil
 }
 
+// GetProjectByID retrieves a project by its ID.
+// Returns nil, nil if the project is not found.
 func (s *Service) GetProjectByID(ctx context.Context, projectID string, logger *zap.Logger) (*models.Project, error) {
 	project, err := models.Projects(models.ProjectWhere.ID.EQ(projectID)).One(ctx, s.db)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			// Row not found, return nil, nil
 			return nil, nil
 		}
 		logger.Error("Failed to get project by ID", zap.String("projectID", projectID), zap.Error(err))
 		return nil, err
 	}
-
 	return project, nil
 }
 
-// Insert inserts a new device into the database.
-func (s *Service) Insert(ctx context.Context, req *types.DeviceCreateRequest, accountID string, certID *string, logger *zap.Logger) error {
+// ---------------------------------------------------------------------------
+// Internal Helper Functions
+// ---------------------------------------------------------------------------
 
+// insertOwnershipHistory creates a new device ownership history record.
+func (s *Service) insertOwnershipHistory(ctx context.Context, deviceUUID, accountID, certID, certArn string, tx model.DBTxExecutor, logger *zap.Logger) error {
+	history := models.DeviceOwnershipHistory{
+		DeviceID:       deviceUUID,
+		AccountID:      accountID,
+		CertificateID:  certID,
+		CertificateArn: certArn,
+		ClaimedAt:      time.Now(),
+	}
+
+	if err := history.Insert(ctx, tx, boil.Infer()); err != nil {
+		logger.Error("Failed to insert device ownership history", zap.Error(err))
+		return err
+	}
+	return nil
+}
+
+// insertProjectHistory creates a new device project history record.
+func (s *Service) insertProjectHistory(ctx context.Context, deviceUUID, projectID string, tx model.DBTxExecutor, logger *zap.Logger) error {
+	history := models.DeviceProjectHistory{
+		DeviceID:       deviceUUID,
+		ProjectID:      projectID,
+		CommissionedAt: time.Now(),
+	}
+
+	if err := history.Insert(ctx, tx, boil.Infer()); err != nil {
+		logger.Error("Failed to insert device project history", zap.Error(err))
+		return err
+	}
+	return nil
+}
+
+// decommissionCurrentProject marks the current project assignment as decommissioned.
+func (s *Service) decommissionCurrentProject(ctx context.Context, deviceUUID, projectID string, tx model.DBTxExecutor, logger *zap.Logger) error {
+	history, err := models.DeviceProjectHistories(
+		models.DeviceProjectHistoryWhere.DeviceID.EQ(deviceUUID),
+		models.DeviceProjectHistoryWhere.ProjectID.EQ(projectID),
+	).One(ctx, tx)
+	if err != nil {
+		logger.Error("Failed to get device project history",
+			zap.String("deviceUUID", deviceUUID),
+			zap.String("projectID", projectID),
+			zap.Error(err))
+		return err
+	}
+
+	history.DecommissionedAt = null.NewTime(time.Now(), true)
+	if _, err = history.Update(ctx, tx, boil.Infer()); err != nil {
+		logger.Error("Failed to decommission device project history", zap.Error(err))
+		return err
+	}
+	return nil
+}
+
+// ---------------------------------------------------------------------------
+// Write Operations
+// ---------------------------------------------------------------------------
+
+// Insert creates a new device record with associated ownership and project history.
+func (s *Service) Insert(ctx context.Context, req *types.DeviceCreateRequest, accountID string, cert types.CertificateInfo, tx model.DBTxExecutor, logger *zap.Logger) error {
+	// Create device record
 	device := models.Device{
 		DeviceID:        req.DeviceID,
 		SerialNumber:    req.SerialNumber,
@@ -70,33 +137,70 @@ func (s *Service) Insert(ctx context.Context, req *types.DeviceCreateRequest, ac
 		ModelName:       req.ModelName,
 		ThingName:       req.DeviceID,
 		MacAddress:      null.NewString(req.MacAddress, req.MacAddress != ""),
-		CertificateID:   *certID,
-		ClaimedBy:       accountID,
+		IsPrimary:       null.NewBool(req.IsPrimary, true),
+		CertificateID:   null.NewString(cert.ID, cert.ID != ""),
+		CertificateArn:  null.NewString(cert.Arn, cert.Arn != ""),
+		ClaimedBy:       null.NewString(accountID, accountID != ""),
 		ClaimStatus:     "CLAIMED",
-		ProjectID:       req.ProjectID,
+		ProjectID:       null.NewString(req.ProjectID, req.ProjectID != ""),
 		FirmwareVersion: req.FirmwareVersion,
 		DeviceZone:      null.NewString(req.DeviceZone, req.DeviceZone != ""),
 		DeviceLocation:  null.NewString(req.DeviceLocation, req.DeviceLocation != ""),
-		Timezone:        null.NewString(req.Timezone, req.Timezone != ""),
-		DSTEnabled:      null.NewBool(req.DstEnabled, req.DstEnabled),
-		NTPEnabled:      null.NewBool(req.NtpEnabled, req.NtpEnabled),
-		NTPServer:       null.NewString(req.NtpServer, req.NtpServer != ""),
 	}
 
-	err := device.Insert(ctx, s.db, boil.Infer())
+	if err := device.Insert(ctx, tx, boil.Infer()); err != nil {
+		logger.Error("Failed to insert device", zap.String("deviceID", req.DeviceID), zap.Error(err))
+		return err
+	}
 
-	if err != nil {
-		logger.Error("Failed to insert device into database", zap.Error(err))
+	// Create ownership history
+	if err := s.insertOwnershipHistory(ctx, device.ID, accountID, cert.ID, cert.Arn, tx, logger); err != nil {
+		return err
+	}
+
+	// Create project history
+	if err := s.insertProjectHistory(ctx, device.ID, req.ProjectID, tx, logger); err != nil {
 		return err
 	}
 
 	return nil
 }
 
-// Update updates an existing device in the database.
-func (s *Service) Update(ctx context.Context, device models.Device, req *types.DeviceUpdateRequest, logger *zap.Logger) error {
+// ClaimDevice claims an existing unclaimed device for a new owner.
+func (s *Service) ClaimDevice(ctx context.Context, device models.Device, accountID string, cert types.CertificateInfo, req *types.DeviceCreateRequest, tx model.DBTxExecutor, logger *zap.Logger) error {
+	// Update device with new claim details
+	device.ProjectID = null.NewString(req.ProjectID, req.ProjectID != "")
+	device.ClaimedBy = null.NewString(accountID, accountID != "")
+	device.CertificateID = null.NewString(cert.ID, cert.ID != "")
+	device.CertificateArn = null.NewString(cert.Arn, cert.Arn != "")
+	device.ClaimStatus = "CLAIMED"
+	device.DeviceZone = null.NewString(req.DeviceZone, req.DeviceZone != "")
+	device.DeviceLocation = null.NewString(req.DeviceLocation, req.DeviceLocation != "")
+	device.FirmwareVersion = req.FirmwareVersion
+	device.IsPrimary = null.NewBool(req.IsPrimary, true)
+	device.Name = null.NewString(req.DeviceName, req.DeviceName != "")
 
-	// Update only non-static fields
+	if _, err := device.Update(ctx, tx, boil.Infer()); err != nil {
+		logger.Error("Failed to claim device", zap.String("deviceID", device.DeviceID), zap.Error(err))
+		return err
+	}
+
+	// Create ownership history
+	if err := s.insertOwnershipHistory(ctx, device.ID, accountID, cert.ID, cert.Arn, tx, logger); err != nil {
+		return err
+	}
+
+	// Create project history
+	if err := s.insertProjectHistory(ctx, device.ID, req.ProjectID, tx, logger); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// Update modifies an existing device's mutable fields.
+func (s *Service) Update(ctx context.Context, device models.Device, req *types.DeviceUpdateRequest, tx model.DBTxExecutor, logger *zap.Logger) error {
+	// Update mutable fields if provided
 	if req.DeviceName != "" {
 		device.Name = null.NewString(req.DeviceName, true)
 	}
@@ -109,38 +213,95 @@ func (s *Service) Update(ctx context.Context, device models.Device, req *types.D
 	if req.DeviceLocation != "" {
 		device.DeviceLocation = null.NewString(req.DeviceLocation, true)
 	}
-	if req.Timezone != "" {
-		device.Timezone = null.NewString(req.Timezone, true)
-	}
-	if req.DstEnabled != nil {
-		device.DSTEnabled = null.NewBool(*req.DstEnabled, true)
-	}
-	if req.NtpEnabled != nil {
-		device.NTPEnabled = null.NewBool(*req.NtpEnabled, true)
-	}
-	if req.NtpServer != "" {
-		device.NTPServer = null.NewString(req.NtpServer, true)
+	if req.IsPrimary != nil {
+		device.IsPrimary = null.NewBool(*req.IsPrimary, true)
 	}
 
-	// If project ID is being updated, verify that the new project exists and belongs to the same account as the device
-	if req.ProjectID != "" && device.ProjectID != req.ProjectID {
-		project, err := models.Projects(models.ProjectWhere.ID.EQ(req.ProjectID)).One(ctx, s.db)
-		if err != nil {
-			logger.Error("Failed to get project by ID", zap.String("projectID", req.ProjectID), zap.Error(err))
-			return errors.New(errorutil.ErrMsgProjectNotFound)
+	// Handle project change if requested
+	if req.ProjectID != "" && device.ProjectID.String != req.ProjectID {
+		if err := s.handleProjectChange(ctx, &device, req.ProjectID, tx, logger); err != nil {
+			return err
 		}
-
-		if project.PrimaryOwnerAccountID != device.ClaimedBy {
-			logger.Error("Unauthorized project change attempt", zap.String("deviceID", device.DeviceID), zap.String("accountID", device.ClaimedBy), zap.String("newProjectID", req.ProjectID))
-			return errors.New(errorutil.MsgUnauthorized)
-		}
-
-		device.ProjectID = req.ProjectID
 	}
 
-	_, err := device.Update(ctx, s.db, boil.Infer())
+	if _, err := device.Update(ctx, tx, boil.Infer()); err != nil {
+		logger.Error("Failed to update device", zap.String("deviceID", device.DeviceID), zap.Error(err))
+		return err
+	}
+
+	return nil
+}
+
+// handleProjectChange validates and processes a device's project reassignment.
+func (s *Service) handleProjectChange(ctx context.Context, device *models.Device, newProjectID string, tx model.DBTxExecutor, logger *zap.Logger) error {
+	// Verify the new project exists and belongs to the device owner
+	project, err := s.GetProjectByID(ctx, newProjectID, logger)
 	if err != nil {
-		logger.Error("Failed to update device in database", zap.Error(err))
+		return err
+	}
+	if project == nil {
+		return errors.New(errorutil.ErrMsgProjectNotFound)
+	}
+	if project.PrimaryOwnerAccountID != device.ClaimedBy.String {
+		logger.Error("Unauthorized project change attempt",
+			zap.String("deviceID", device.DeviceID),
+			zap.String("accountID", device.ClaimedBy.String),
+			zap.String("newProjectID", newProjectID))
+		return errors.New(errorutil.MsgUnauthorized)
+	}
+
+	// Decommission current project assignment
+	if err := s.decommissionCurrentProject(ctx, device.ID, device.ProjectID.String, tx, logger); err != nil {
+		return err
+	}
+
+	// Update device's project reference
+	device.ProjectID = null.NewString(newProjectID, newProjectID != "")
+
+	// Create new project history record
+	if err := s.insertProjectHistory(ctx, device.ID, newProjectID, tx, logger); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// Reset releases a device from its current owner, marking it as unclaimed.
+func (s *Service) Reset(ctx context.Context, device models.Device, tx model.DBTxExecutor, logger *zap.Logger) error {
+
+	// Mark ownership as released
+	ownerHistory, err := models.DeviceOwnershipHistories(
+		models.DeviceOwnershipHistoryWhere.DeviceID.EQ(device.ID),
+		models.DeviceOwnershipHistoryWhere.AccountID.EQ(device.ClaimedBy.String),
+	).One(ctx, tx)
+	if err != nil {
+		logger.Error("Failed to get device ownership history", zap.Error(err))
+		return err
+	}
+
+	ownerHistory.ReleasedAt = null.NewTime(time.Now(), true)
+	if _, err = ownerHistory.Update(ctx, tx, boil.Infer()); err != nil {
+		logger.Error("Failed to update device ownership history", zap.Error(err))
+		return err
+	}
+
+	// Decommission current project
+	if err := s.decommissionCurrentProject(ctx, device.ID, device.ProjectID.String, tx, logger); err != nil {
+		return err
+	}
+
+	// Clear device claim data
+	device.ClaimStatus = "UNCLAIMED"
+	device.ClaimedBy = null.NewString("", false)
+	device.ProjectID = null.NewString("", false)
+	device.CertificateID = null.NewString("", false)
+	device.CertificateArn = null.NewString("", false)
+	device.DeviceZone = null.NewString("", false)
+	device.DeviceLocation = null.NewString("", false)
+	device.FirmwareVersion = ""
+
+	if _, err = device.Update(ctx, tx, boil.Infer()); err != nil {
+		logger.Error("Failed to reset device", zap.String("deviceID", device.DeviceID), zap.Error(err))
 		return err
 	}
 

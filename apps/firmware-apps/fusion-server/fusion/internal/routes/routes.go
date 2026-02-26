@@ -54,6 +54,8 @@ const (
 	DevicesGetCSRForDeviceEndpoint = DevicesEndpoint + "/csr"
 	DevicesIDCertificateEndpoint   = DevicesIDEndpoint + "/certificate"
 	DevicesCertificateEndpoint     = DevicesEndpoint + "/certificate"
+	DevicesIDResetEndpoint         = DevicesIDEndpoint + "/reset"
+	DevicesResetEndpoint           = DevicesEndpoint + "/reset"
 
 	EndpointsEndpoint = "/endpoints"
 
@@ -123,6 +125,10 @@ func RegisterPrivatePATCH(router *mux.Router, pattern string, handler http.Handl
 
 func RegisterPrivatePOST(router *mux.Router, pattern string, handler http.HandlerFunc) {
 	RegisterPrivateEndpoint(router, "POST", pattern, handler)
+}
+
+func RegisterPrivateDELETE(router *mux.Router, pattern string, handler http.HandlerFunc) {
+	RegisterPrivateEndpoint(router, "DELETE", pattern, handler)
 }
 
 func RegisterPublicEndpoint(router *mux.Router, method string, pattern string, handler http.HandlerFunc) {

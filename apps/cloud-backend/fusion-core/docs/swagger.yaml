@@ -113,23 +113,17 @@ definitions:
         type: string
       device_zone:
         type: string
-      dst_enabled:
-        type: boolean
       firmware_version:
         type: string
+      is_primary:
+        type: boolean
       mac_address:
         type: string
       model_name:
         type: string
-      ntp_enabled:
-        type: boolean
-      ntp_server:
-        type: string
       project_id:
         type: string
       serial_number:
-        type: string
-      timezone:
         type: string
     required:
     - csr
@@ -137,19 +131,30 @@ definitions:
     - device_location
     - device_name
     - device_zone
-    - dst_enabled
     - firmware_version
     - mac_address
     - model_name
-    - ntp_enabled
-    - ntp_server
     - project_id
     - serial_number
-    - timezone
     type: object
   types.DeviceCreateResponse:
     properties:
       certificate:
+        type: string
+    type: object
+  types.DeviceUpdateRequest:
+    properties:
+      device_location:
+        type: string
+      device_name:
+        type: string
+      device_zone:
+        type: string
+      firmware_version:
+        type: string
+      is_primary:
+        type: boolean
+      project_id:
         type: string
     type: object
   types.EnvironmentType:
@@ -865,8 +870,15 @@ paths:
           schema:
             $ref: '#/definitions/types.DeviceCreateResponse'
         "400":
-          description: Bad request - Invalid payload or user not found or device Id
-            already exists
+          description: Bad request - Invalid payload or device already exists
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+        "401":
+          description: Unauthorized - User not authorized
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+        "404":
+          description: Project not found
           schema:
             $ref: '#/definitions/types.ErrorResponse'
         "500":
@@ -876,6 +888,82 @@ paths:
       security:
       - BearerAuth: []
       summary: Create a new device
+      tags:
+      - devices
+  /devices/{device_id}:
+    patch:
+      consumes:
+      - application/json
+      description: Update device details (non-static fields only)
+      parameters:
+      - description: Device ID
+        in: path
+        name: device_id
+        required: true
+        type: string
+      - description: Device update details
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/types.DeviceUpdateRequest'
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: Successfully updated device
+        "400":
+          description: Bad request - Invalid payload
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+        "401":
+          description: Unauthorized - User not authorized to update this device
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+        "404":
+          description: Device or project not found
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Update a device
+      tags:
+      - devices
+  /devices/{device_id}/reset:
+    delete:
+      consumes:
+      - application/json
+      description: Reset a device to factory settings
+      parameters:
+      - description: Device ID
+        in: path
+        name: device_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: Successfully reset device
+        "401":
+          description: Unauthorized - User not authorized to reset this device
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+        "404":
+          description: Device not found
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Reset a device
       tags:
       - devices
   /organization/role-management:

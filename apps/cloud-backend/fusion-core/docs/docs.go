@@ -111,7 +111,138 @@ const docTemplate = `{
                         }
                     },
                     "400": {
-                        "description": "Bad request - Invalid payload or user not found or device Id already exists",
+                        "description": "Bad request - Invalid payload or device already exists",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized - User not authorized",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Project not found",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/devices/{device_id}": {
+            "patch": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Update device details (non-static fields only)",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "devices"
+                ],
+                "summary": "Update a device",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Device ID",
+                        "name": "device_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Device update details",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/types.DeviceUpdateRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "Successfully updated device"
+                    },
+                    "400": {
+                        "description": "Bad request - Invalid payload",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized - User not authorized to update this device",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Device or project not found",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/devices/{device_id}/reset": {
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Reset a device to factory settings",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "devices"
+                ],
+                "summary": "Reset a device",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Device ID",
+                        "name": "device_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "Successfully reset device"
+                    },
+                    "401": {
+                        "description": "Unauthorized - User not authorized to reset this device",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Device not found",
                         "schema": {
                             "$ref": "#/definitions/types.ErrorResponse"
                         }
@@ -1817,15 +1948,11 @@ const docTemplate = `{
                 "device_location",
                 "device_name",
                 "device_zone",
-                "dst_enabled",
                 "firmware_version",
                 "mac_address",
                 "model_name",
-                "ntp_enabled",
-                "ntp_server",
                 "project_id",
-                "serial_number",
-                "timezone"
+                "serial_number"
             ],
             "properties": {
                 "csr": {
@@ -1843,11 +1970,11 @@ const docTemplate = `{
                 "device_zone": {
                     "type": "string"
                 },
-                "dst_enabled": {
-                    "type": "boolean"
-                },
                 "firmware_version": {
                     "type": "string"
+                },
+                "is_primary": {
+                    "type": "boolean"
                 },
                 "mac_address": {
                     "type": "string"
@@ -1855,19 +1982,10 @@ const docTemplate = `{
                 "model_name": {
                     "type": "string"
                 },
-                "ntp_enabled": {
-                    "type": "boolean"
-                },
-                "ntp_server": {
-                    "type": "string"
-                },
                 "project_id": {
                     "type": "string"
                 },
                 "serial_number": {
-                    "type": "string"
-                },
-                "timezone": {
                     "type": "string"
                 }
             }
@@ -1876,6 +1994,29 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "certificate": {
+                    "type": "string"
+                }
+            }
+        },
+        "types.DeviceUpdateRequest": {
+            "type": "object",
+            "properties": {
+                "device_location": {
+                    "type": "string"
+                },
+                "device_name": {
+                    "type": "string"
+                },
+                "device_zone": {
+                    "type": "string"
+                },
+                "firmware_version": {
+                    "type": "string"
+                },
+                "is_primary": {
+                    "type": "boolean"
+                },
+                "project_id": {
                     "type": "string"
                 }
             }

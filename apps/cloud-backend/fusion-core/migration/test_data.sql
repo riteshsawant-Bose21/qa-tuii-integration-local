@@ -68,6 +68,10 @@ INSERT INTO feature (id, name, description) VALUES
   (17,'project.unstar','Can unstar a project'),
   (18,'project.assign_user','Can assign a user to a project'),
   (19,'project.remove_user','Can remove a user from a project');
+  (20,'device.create','Can create a new device'),
+  (21,'device.update','Can update device details'),
+  (22,'device.delete','Can reset/delete a device');
+
 
 INSERT INTO feature_permission (id, feature_id, account_type_role_id, access_level_id, created_at) VALUES
   -- project_file.create
@@ -150,7 +154,10 @@ INSERT INTO feature_permission (id, feature_id, account_type_role_id, access_lev
   (96,16,9,3,now()),  -- project.start (star)
   (97,17,9,3,now()),  -- project.unstar
   (98,18,9,3,now()),  -- project.assign_user
-  (99,19,9,3,now());  -- project.remove_user
+  (99,19,9,3,now()), -- project.remove_user
+  (121,20,9,3,now()), -- device.create
+  (122,21,9,3,now()), -- device.update
+  (123,22,9,3,now()); -- device.delete
 
 -- Advance sequence to latest id
 SELECT setval('feature_permission_id_seq',99,true);

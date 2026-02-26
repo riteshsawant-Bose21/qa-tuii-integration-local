@@ -65,4 +65,11 @@ const (
 	EndpointRolePermissions = "/roles/:roleID/permissions"
 	// EndpointOrganizationUsers is the endpoint for organization user operations.
 	EndpointOrganizationUsers = "/users"
+
+	// EndpointDevices is the base endpoint for device operations.
+	EndpointDevices = "/devices"
+	// EndpointDeviceByID is the endpoint for operations on a specific device.
+	EndpointDeviceByID = "/:device_id"
+	// EndpointDeviceReset is the endpoint for resetting a device.
+	EndpointDeviceReset = "/:device_id/reset"
 )
