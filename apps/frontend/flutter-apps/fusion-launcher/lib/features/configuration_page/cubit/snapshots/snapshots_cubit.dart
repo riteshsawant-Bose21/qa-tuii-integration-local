@@ -11,18 +11,54 @@ class SnapshotsCubit extends Cubit<SnapshotsState> {
   SnapshotsCubit({
     required ProjectViewModel projectViewModel,
   }) : _projectViewModel = projectViewModel,
-       super(SnapshotsState.initial()) {
-    syncWithProjectViewModel();
+       super(const SnapshotsInitial()) {
+    _loadSnapshots();
+  }
+
+  /// Load snapshots from ProjectViewModel
+  void _loadSnapshots() {
+    // emit(const SnapshotsLoading());
+
+    try {
+      final List<SnapshotsModel> snapshots = _projectViewModel.getAllSnapshots();
+      print("emitting snapshots loaded with ${snapshots.length} snapshots and selectedSnapshotId: ${_projectViewModel.selectedSnapshotId}");
+      emit(
+        SnapshotsLoaded(
+          snapshots: snapshots,
+          selectedSnapshotId: _projectViewModel.selectedSnapshotId,
+        ),
+      );
+    } catch (e) {
+      emit(SnapshotsError(message: e.toString()));
+    }
   }
 
   /// Sync state with ProjectViewModel
   void syncWithProjectViewModel() {
-    emit(
-      state.copyWith(
-        snapshots: _projectViewModel.getAllSnapshots(),
-        selectedSnapshotId: _projectViewModel.selectedSnapshotId,
-      ),
-    );
+    final SnapshotsState currentState = state;
+
+    try {
+      final List<SnapshotsModel> snapshots = _projectViewModel.getAllSnapshots();
+      print("emitting snapshots loaded with ${snapshots.length} snapshots and selectedSnapshotId: ${_projectViewModel.selectedSnapshotId}");
+
+      if (currentState is SnapshotsLoaded) {
+        emit(
+          currentState.copyWith(
+            snapshots: snapshots,
+            selectedSnapshotId: _projectViewModel.selectedSnapshotId,
+          ),
+        );
+      } else {
+        emit(
+          SnapshotsLoaded(
+            snapshots: snapshots,
+            selectedSnapshotId: _projectViewModel.selectedSnapshotId,
+          ),
+        );
+      }
+    } catch (e) {
+      emit(SnapshotsError(message: e.toString()));
+    }
   }
 
   /// Refresh data from ProjectViewModel
@@ -31,12 +67,16 @@ class SnapshotsCubit extends Cubit<SnapshotsState> {
   /// Set the selected snapshot ID
   void selectSnapshot(String? snapshotId) {
     _projectViewModel.setSelectedSnapshotId(snapshotId);
-    emit(
-      state.copyWith(
-        selectedSnapshotId: snapshotId,
-        clearSelectedSnapshotId: snapshotId == null,
-      ),
-    );
+
+    final SnapshotsState currentState = state;
+    if (currentState is SnapshotsLoaded) {
+      emit(
+        currentState.copyWith(
+          selectedSnapshotId: snapshotId,
+          clearSelectedSnapshotId: snapshotId == null,
+        ),
+      );
+    }
   }
 
   /// Clear the selected snapshot
@@ -110,22 +150,28 @@ class SnapshotsCubit extends Cubit<SnapshotsState> {
 
   /// Start dragging a snapshot
   void startDrag(String snapshotId, DragSection fromSection) {
-    emit(
-      state.copyWith(
-        draggingSnapshotId: snapshotId,
-        draggingFromSection: fromSection,
-      ),
-    );
+    final SnapshotsState currentState = state;
+    if (currentState is SnapshotsLoaded) {
+      emit(
+        currentState.copyWith(
+          draggingSnapshotId: snapshotId,
+          draggingFromSection: fromSection,
+        ),
+      );
+    }
   }
 
   /// End dragging
   void endDrag() {
-    emit(
-      state.copyWith(
-        clearDraggingSnapshotId: true,
-        clearDraggingFromSection: true,
-      ),
-    );
+    final SnapshotsState currentState = state;
+    if (currentState is SnapshotsLoaded) {
+      emit(
+        currentState.copyWith(
+          clearDraggingSnapshotId: true,
+          clearDraggingFromSection: true,
+        ),
+      );
+    }
   }
 
   /// Handle drop on snapshots section
@@ -160,17 +206,23 @@ class SnapshotsCubit extends Cubit<SnapshotsState> {
 
   /// Update the height of the sources panel
   void updateSourcesHeight(double delta, double screenHeight) {
-    final double minHeight = screenHeight * 0.15;
-    final double maxHeight = screenHeight * 0.5;
-    final double newHeight = (state.sourcesHeight + delta).clamp(minHeight, maxHeight);
-    emit(state.copyWith(sourcesHeight: newHeight));
+    final SnapshotsState currentState = state;
+    if (currentState is SnapshotsLoaded) {
+      final double minHeight = screenHeight * 0.15;
+      final double maxHeight = screenHeight * 0.5;
+      final double newHeight = (currentState.sourcesHeight + delta).clamp(minHeight, maxHeight);
+      emit(currentState.copyWith(sourcesHeight: newHeight));
+    }
   }
 
   /// Initialize sources height based on screen size
   void initializeSourcesHeight(double screenHeight) {
-    final double totalHeight = screenHeight;
-    final double initialHeight = (totalHeight - 100) * 0.4;
-    emit(state.copyWith(sourcesHeight: initialHeight));
+    final SnapshotsState currentState = state;
+    if (currentState is SnapshotsLoaded) {
+      final double totalHeight = screenHeight;
+      final double initialHeight = (totalHeight - 100) * 0.4;
+      emit(currentState.copyWith(sourcesHeight: initialHeight));
+    }
   }
 
   @override

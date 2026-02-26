@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:fusion_launcher/features/configuration_page/cubit/snapshots/snapshot_actions_cubit.dart';
+import 'package:fusion_launcher/features/configuration_page/cubit/actions/snapshot_actions_cubit.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
 import 'action_drop_down.dart';

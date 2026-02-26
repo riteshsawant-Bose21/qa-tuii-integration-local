@@ -1,8 +1,7 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
+import 'package:fusion_launcher/features/configuration_page/cubit/actions/snapshot_actions_state.dart';
 import 'package:fusion_lib/fusion_lib.dart';
-
-import 'snapshot_actions_state.dart';
 
 /// Cubit for managing Snapshot Actions feature state and business logic
 class SnapshotActionsCubit extends Cubit<SnapshotActionsState> {
@@ -11,35 +10,57 @@ class SnapshotActionsCubit extends Cubit<SnapshotActionsState> {
   SnapshotActionsCubit({
     required ProjectViewModel projectViewModel,
   }) : _projectViewModel = projectViewModel,
-       super(SnapshotActionsState.initial());
+       super(const SnapshotActionsInitial());
 
   /// Load actions for a specific snapshot
   void loadActionsForSnapshot(String? snapshotId) {
     if (snapshotId == null) {
-      emit(
-        state.copyWith(
-          actions: <SceneActionModel>[],
-          clearSelectedSnapshotId: true,
-        ),
-      );
+      emit(const SnapshotActionsInitial());
       return;
     }
 
-    final List<SceneActionModel> actions = _projectViewModel.getSceneActionsForSnapshot(snapshotId);
-    emit(
-      state.copyWith(
-        actions: actions,
-        selectedSnapshotId: snapshotId,
-      ),
-    );
+    /// Emit loading state
+    emit(SnapshotActionsLoading(selectedSnapshotId: snapshotId));
+
+    try {
+      final List<SceneActionModel> actions = _projectViewModel.getSceneActionsForSnapshot(snapshotId);
+      emit(
+        SnapshotActionsLoaded(
+          actions: actions,
+          selectedSnapshotId: snapshotId,
+        ),
+      );
+    } catch (e) {
+      emit(
+        SnapshotActionsError(
+          message: e.toString(),
+          selectedSnapshotId: snapshotId,
+        ),
+      );
+    }
   }
 
   /// Sync state with ProjectViewModel (refresh current actions)
   void syncWithProjectViewModel() {
-    if (state.selectedSnapshotId == null) return;
+    final SnapshotActionsState currentState = state;
+    if (currentState.selectedSnapshotId == null) return;
 
-    final List<SceneActionModel> actions = _projectViewModel.getSceneActionsForSnapshot(state.selectedSnapshotId!);
-    emit(state.copyWith(actions: actions));
+    try {
+      final List<SceneActionModel> actions = _projectViewModel.getSceneActionsForSnapshot(currentState.selectedSnapshotId!);
+      emit(
+        SnapshotActionsLoaded(
+          actions: actions,
+          selectedSnapshotId: currentState.selectedSnapshotId,
+        ),
+      );
+    } catch (e) {
+      emit(
+        SnapshotActionsError(
+          message: e.toString(),
+          selectedSnapshotId: currentState.selectedSnapshotId,
+        ),
+      );
+    }
   }
 
   /// Refresh data from ProjectViewModel
@@ -57,11 +78,12 @@ class SnapshotActionsCubit extends Cubit<SnapshotActionsState> {
 
   /// Add action to selected snapshot
   void addAction() {
-    if (state.selectedSnapshotId == null) return;
+    final SnapshotActionsState currentState = state;
+    if (currentState.selectedSnapshotId == null) return;
 
     final SceneActionModel action = SceneActionModel();
     _projectViewModel.addSceneActionToSnapshot(
-      sceneId: state.selectedSnapshotId!,
+      sceneId: currentState.selectedSnapshotId!,
       action: action,
     );
     syncWithProjectViewModel();
@@ -81,20 +103,21 @@ class SnapshotActionsCubit extends Cubit<SnapshotActionsState> {
 
   /// Reorder actions in the selected snapshot
   void reorderActions(int oldIndex, int newIndex) {
-    if (state.selectedSnapshotId == null) return;
+    final SnapshotActionsState currentState = state;
+    if (currentState.selectedSnapshotId == null) return;
 
     int adjustedNewIndex = newIndex;
     if (newIndex > oldIndex) adjustedNewIndex -= 1;
 
     _projectViewModel.reOderSceneActionsInSnapshot(
-      sceneId: state.selectedSnapshotId!,
+      sceneId: currentState.selectedSnapshotId!,
       oldIndex: oldIndex,
       newIndex: adjustedNewIndex,
     );
     syncWithProjectViewModel();
   }
 
-  // ==================== Action Row Operations ====================
+  /// ==================== Action Row Operations ====================
 
   /// Update action type for a specific action
   void updateActionType({required String actionId, required SceneActionType actionType}) {
@@ -120,7 +143,7 @@ class SnapshotActionsCubit extends Cubit<SnapshotActionsState> {
     syncWithProjectViewModel();
   }
 
-  // ==================== Dropdown Data Getters ====================
+  /// ==================== Dropdown Data Getters ====================
 
   /// Get scene action types for dropdown
   List<SceneActionType> getSceneActionTypes({bool isFromSnapshot = true}) {

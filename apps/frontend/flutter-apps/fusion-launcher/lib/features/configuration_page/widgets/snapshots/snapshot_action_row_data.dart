@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:fusion_launcher/features/configuration_page/cubit/snapshots/snapshot_actions_cubit.dart';
-import 'package:fusion_launcher/features/configuration_page/cubit/snapshots/snapshot_actions_state.dart';
+import 'package:fusion_launcher/features/configuration_page/cubit/actions/snapshot_actions_cubit.dart';
+import 'package:fusion_launcher/features/configuration_page/cubit/actions/snapshot_actions_state.dart';
 import 'package:fusion_launcher/features/configuration_page/widgets/snapshots/snapshot_value_widget.dart';
 import 'package:fusion_lib/fusion_theme/app_theme.dart';
 import 'package:fusion_lib/fusion_widgets/others/fusion_image.dart';

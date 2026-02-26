@@ -4,41 +4,24 @@ import 'package:fusion_lib/fusion_lib.dart';
 /// Enum representing the section from which a snapshot is being dragged
 enum DragSection { snapshots, scenes }
 
-/// State class for the Snapshots feature
-class SnapshotsState extends Equatable {
-  /// List of all standalone snapshots
-  final List<SnapshotsModel> snapshots;
+/// Base state class for the Snapshots feature
+sealed class SnapshotsState extends Equatable {
+  const SnapshotsState();
 
-  /// Currently selected snapshot ID
-  final String? selectedSnapshotId;
+  /// Get snapshots list (empty for non-loaded states)
+  List<SnapshotsModel> get snapshots => <SnapshotsModel>[];
 
-  /// ID of the snapshot currently being dragged
-  final String? draggingSnapshotId;
+  /// Get selected snapshot ID
+  String? get selectedSnapshotId => null;
 
-  /// Section from which the drag originated
-  final DragSection? draggingFromSection;
+  /// Get dragging snapshot ID
+  String? get draggingSnapshotId => null;
 
-  /// Height of the snapshots panel (for drag divider)
-  final double sourcesHeight;
+  /// Get dragging from section
+  DragSection? get draggingFromSection => null;
 
-  /// Loading state
-  final bool isLoading;
-
-  /// Error message if any
-  final String? errorMessage;
-
-  const SnapshotsState({
-    this.snapshots = const <SnapshotsModel>[],
-    this.selectedSnapshotId,
-    this.draggingSnapshotId,
-    this.draggingFromSection,
-    this.sourcesHeight = 200,
-    this.isLoading = false,
-    this.errorMessage,
-  });
-
-  /// Initial state factory
-  factory SnapshotsState.initial() => const SnapshotsState();
+  /// Get sources height
+  double get sourcesHeight => 200;
 
   /// Check if currently dragging from snapshots section
   bool get isDraggingFromSnapshots => draggingFromSection == DragSection.snapshots;
@@ -59,27 +42,62 @@ class SnapshotsState extends Equatable {
     }
   }
 
-  SnapshotsState copyWith({
+  @override
+  List<Object?> get props => <Object?>[];
+}
+
+/// Initial state - no data loaded yet
+class SnapshotsInitial extends SnapshotsState {
+  const SnapshotsInitial();
+}
+
+/// Loading state - fetching snapshots
+class SnapshotsLoading extends SnapshotsState {
+  const SnapshotsLoading();
+}
+
+/// Loaded state - snapshots successfully loaded
+class SnapshotsLoaded extends SnapshotsState {
+  @override
+  final List<SnapshotsModel> snapshots;
+
+  @override
+  final String? selectedSnapshotId;
+
+  @override
+  final String? draggingSnapshotId;
+
+  @override
+  final DragSection? draggingFromSection;
+
+  @override
+  final double sourcesHeight;
+
+  const SnapshotsLoaded({
+    required this.snapshots,
+    this.selectedSnapshotId,
+    this.draggingSnapshotId,
+    this.draggingFromSection,
+    this.sourcesHeight = 200,
+  });
+
+  /// Create a copy with updated values
+  SnapshotsLoaded copyWith({
     List<SnapshotsModel>? snapshots,
     String? selectedSnapshotId,
     String? draggingSnapshotId,
     DragSection? draggingFromSection,
     double? sourcesHeight,
-    bool? isLoading,
-    String? errorMessage,
     bool clearSelectedSnapshotId = false,
     bool clearDraggingSnapshotId = false,
     bool clearDraggingFromSection = false,
-    bool clearErrorMessage = false,
   }) {
-    return SnapshotsState(
+    return SnapshotsLoaded(
       snapshots: snapshots ?? this.snapshots,
       selectedSnapshotId: clearSelectedSnapshotId ? null : (selectedSnapshotId ?? this.selectedSnapshotId),
       draggingSnapshotId: clearDraggingSnapshotId ? null : (draggingSnapshotId ?? this.draggingSnapshotId),
       draggingFromSection: clearDraggingFromSection ? null : (draggingFromSection ?? this.draggingFromSection),
       sourcesHeight: sourcesHeight ?? this.sourcesHeight,
-      isLoading: isLoading ?? this.isLoading,
-      errorMessage: clearErrorMessage ? null : (errorMessage ?? this.errorMessage),
     );
   }
 
@@ -90,7 +108,15 @@ class SnapshotsState extends Equatable {
     draggingSnapshotId,
     draggingFromSection,
     sourcesHeight,
-    isLoading,
-    errorMessage,
   ];
+}
+
+/// Error state - failed to load snapshots
+class SnapshotsError extends SnapshotsState {
+  final String message;
+
+  const SnapshotsError({required this.message});
+
+  @override
+  List<Object?> get props => <Object?>[message];
 }

@@ -1,8 +1,7 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
+import 'package:fusion_launcher/features/configuration_page/cubit/scene_set/scene_sets_state.dart';
 import 'package:fusion_lib/fusion_lib.dart';
-
-import 'scene_sets_state.dart';
 
 /// Cubit for managing Scene Sets feature state and business logic
 class SceneSetsCubit extends Cubit<SceneSetsState> {
@@ -11,17 +10,41 @@ class SceneSetsCubit extends Cubit<SceneSetsState> {
   SceneSetsCubit({
     required ProjectViewModel projectViewModel,
   }) : _projectViewModel = projectViewModel,
-       super(SceneSetsState.initial()) {
-    syncWithProjectViewModel();
+       super(const SceneSetsInitial()) {
+    _loadSceneSets();
+  }
+
+  /// Load scene sets from ProjectViewModel
+  void _loadSceneSets() {
+    emit(const SceneSetsLoading());
+
+    try {
+      final List<SceneSetModel> sceneSets = _projectViewModel.getAllSceneSets();
+      emit(
+        SceneSetsLoaded(
+          sceneSets: sceneSets,
+        ),
+      );
+    } catch (e) {
+      emit(SceneSetsError(message: e.toString()));
+    }
   }
 
   /// Sync state with ProjectViewModel
   void syncWithProjectViewModel() {
-    emit(
-      state.copyWith(
-        sceneSets: _projectViewModel.getAllSceneSets(),
-      ),
-    );
+    final SceneSetsState currentState = state;
+
+    try {
+      final List<SceneSetModel> sceneSets = _projectViewModel.getAllSceneSets();
+
+      if (currentState is SceneSetsLoaded) {
+        emit(currentState.copyWith(sceneSets: sceneSets));
+      } else {
+        emit(SceneSetsLoaded(sceneSets: sceneSets));
+      }
+    } catch (e) {
+      emit(SceneSetsError(message: e.toString()));
+    }
   }
 
   /// Refresh data from ProjectViewModel
