@@ -107,7 +107,6 @@ func (a *API) registerRoutes() {
 
 	{
 		devices.Use(a.authMiddleware.Middleware())
-		devices.Use(accessControl.GlobalAccessControlMiddleware())
 		devices.POST("", deviceHandler.CreateDevice)
 		devices.PATCH(constants.EndpointDeviceByID, deviceHandler.UpdateDevice)
 		devices.DELETE(constants.EndpointDeviceReset, deviceHandler.ResetDevice)
