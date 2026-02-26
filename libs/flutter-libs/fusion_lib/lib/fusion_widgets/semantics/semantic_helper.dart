@@ -127,6 +127,7 @@ class SemanticHelper {
     String? label,
   }) {
     return Semantics(
+      container: true,
       identifier: testId,
       label: label,
       readOnly: true,

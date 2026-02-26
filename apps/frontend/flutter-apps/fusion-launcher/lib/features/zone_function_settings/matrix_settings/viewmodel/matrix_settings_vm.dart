@@ -7,7 +7,7 @@ import 'package:fusion_lib/fusion_lib.dart';
 
 import '../../models/models.dart';
 
-part 'source_matrix_settings_vm_state.dart';
+part 'matrix_settings_vm_state.dart';
 
 class SourceMatrixAdditionalSettingsViewmodel extends Cubit<SourceMatrixSettingsVmState> {
   SourceMatrixAdditionalSettingsViewmodel() : super(const SourceMatrixSettingsVmState());
@@ -78,7 +78,7 @@ class SourceMatrixAdditionalSettingsViewmodel extends Cubit<SourceMatrixSettings
     emit(updated);
   }
 
-  bool isFieldsEnabled(int index) {
+  bool enableBehaviorSettingsFields(int index) {
     final List<PriorityAdditionalSettingsModel> priorityAdditionalSettingsModel = <PriorityAdditionalSettingsModel>[
       ...state.priorityAdditionalSettingsModel,
     ];

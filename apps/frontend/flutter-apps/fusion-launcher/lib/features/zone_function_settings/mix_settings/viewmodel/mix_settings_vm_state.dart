@@ -1,4 +1,4 @@
-part of 'source_mix_settings_vm.dart';
+part of 'mix_settings_vm.dart';
 
 class SourceMixAdditionalSettingsVmState extends Equatable {
   final List<SourceVolumneRangeModel> sources;

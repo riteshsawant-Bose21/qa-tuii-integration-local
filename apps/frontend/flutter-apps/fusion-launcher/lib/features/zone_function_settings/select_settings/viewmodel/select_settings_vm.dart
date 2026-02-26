@@ -7,7 +7,7 @@ import 'package:fusion_lib/fusion_lib.dart';
 
 import '../../models/models.dart';
 
-part 'source_select_settings_vm_state.dart';
+part 'select_settings_vm_state.dart';
 
 class SourceSelectAdditionalSettingsViewmodel extends Cubit<SourceSelectAdditionalSettingsVmState> {
   SourceSelectAdditionalSettingsViewmodel() : super(const SourceSelectAdditionalSettingsVmState());
@@ -94,7 +94,7 @@ class SourceSelectAdditionalSettingsViewmodel extends Cubit<SourceSelectAddition
     emit(updated);
   }
 
-  bool isFieldsEnabled(int index) {
+  bool enableBehaviorSettingsFields(int index) {
     final List<PriorityAdditionalSettingsModel> priorityAdditionalSettingsModel = <PriorityAdditionalSettingsModel>[
       ...state.priorityAdditionalSettingsModel,
     ];

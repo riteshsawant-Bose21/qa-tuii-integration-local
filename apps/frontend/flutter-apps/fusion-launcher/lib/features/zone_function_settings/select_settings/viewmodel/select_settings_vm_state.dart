@@ -1,4 +1,4 @@
-part of 'source_select_settings_vm.dart';
+part of 'select_settings_vm.dart';
 
 class SourceSelectAdditionalSettingsVmState extends Equatable {
   final List<String> selectedSourcesIds;
