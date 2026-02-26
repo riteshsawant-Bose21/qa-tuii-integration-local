@@ -386,7 +386,7 @@ int AlsaDevice::adjust_buffer_depth(int samples)
 
         if (rewound != samples)
         {
-            SPDLOG_ERROR("Unexpected number of samples rewound: {}",
+            SPDLOG_DEBUG("Unexpected number of samples rewound: {}",
                     rewound);
         }
     }

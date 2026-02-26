@@ -112,16 +112,6 @@ if [ ! -f "$BINARY_PATH" ]; then
     exit 1
 fi
 
-# Path to the launch script
-SCRIPT_PATH="scripts/fusion-server-start.sh"
-
-# Check if launch script exists
-if [ ! -f "$SCRIPT_PATH" ]; then
-    echo "Error: Script not found at $SCRIPT_PATH"
-    exit 1
-fi
-
-
 # Get list of running multipass instances that start with the specified prefix
 instances=$(multipass list --format csv | tail -n +2 | cut -d',' -f1 | grep "^$PREFIX")
 
@@ -143,30 +133,22 @@ for instance in $instances; do
         continue
     fi
     
-    # Copy the new launch script to the instance
-    echo "  Copying launch script..."
-    if ! mp_transfer "$SCRIPT_PATH" "$instance:/tmp/fusion-server-start.sh"; then
-        echo "  Error: Failed to copy launch script to $instance"
-        continue
-    fi
-
     # Execute commands on the instance to update and restart the service
-    echo "  Stopping service..."
-    mp_exec "$instance" sudo systemctl stop fusion-server
-    
-    echo "  Installing binary..."
-    mp_exec "$instance" sudo cp /tmp/fusion-server /usr/local/bin/
-    mp_exec "$instance" sudo chmod +x /usr/local/bin/fusion-server
-    mp_exec "$instance" rm /tmp/fusion-server
-    
-    echo "  Installing launch script..."
-    mp_exec "$instance" sudo cp /tmp/fusion-server-start.sh /usr/local/bin/
-    
-    echo "  Starting service..."
-    mp_exec "$instance" sudo systemctl start fusion-server
-    
-    echo "  Verifying service status..."
-    mp_exec "$instance" sudo systemctl status fusion-server --no-pager
-    
-    echo "  Done updating $instance"
+    multipass exec "$instance" -- sudo bash -c '
+        # Stop the service
+        systemctl stop fusion-server
+        
+        # Copy new binary to destination
+        cp /tmp/fusion-server /usr/local/bin/
+        chmod +x /usr/local/bin/fusion-server
+        
+        # Clean up temp file
+        rm /tmp/fusion-server
+        
+        # Start the service
+        systemctl start fusion-server
+        
+        # Verify service status
+        systemctl status fusion-server --no-pager
+    '
 done

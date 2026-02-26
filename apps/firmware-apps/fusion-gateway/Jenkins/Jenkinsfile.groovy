@@ -4,7 +4,7 @@
 import JenkinsJobCleanup
 def JobCleanup = new JenkinsJobCleanup()
 def VERSION = ''
-def NEXUS_TARGET = "Fusion-Gatway/%s/%s"
+def NEXUS_TARGET = "Fusion-Gateway/%s/%s"
 
 pipeline {
 	agent { label 'pro-win' }
