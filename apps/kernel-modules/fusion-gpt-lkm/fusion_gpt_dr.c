@@ -17,6 +17,11 @@
 #include <linux/rcupdate.h>
 #include "fusion_gpt_client.h"
 
+// VCXO Disiplining
+#include <linux/workqueue.h>
+#include <linux/i2c.h>
+#include <linux/delay.h>
+
 #define GPT_CR      0x00
 #define GPT_PR      0x04
 #define GPT_SR      0x08
@@ -35,6 +40,7 @@
 #define CR_CLKSRC_EXT   (0x3 << CR_CLKSRC_SHIFT)
 #define CR_FRR          BIT(9)
 #define CR_IM1_SHIFT    16
+#define CR_IM1_RISING   (0x1 << CR_IM1_SHIFT)
 #define CR_IM1_BOTH     (0x3 << CR_IM1_SHIFT) /* 1pps on both edges */
 #define CR_IM2_SHIFT    18
 #define CR_IM2_RISING   (0x1 << CR_IM2_SHIFT) /* LRCLK on rising edge */
@@ -79,6 +85,8 @@ struct fusion_gpt
 	u32  pps_icr1_last32;         /* raw 32-bit capture value for latest PPS */
 	u64  pps_icr1_last64;         /* 64-bit extended capture */
 	bool pps_valid;
+  u64 last_if2_cap64; /* Timestamp of the last 48k capture */
+  bool if2_valid;     /* True if we have captured at least one 48k pulse */
 
 	u64  phc_epoch_ns;            /* PHC time at the anchored PPS */
 	u64  pps_epoch_cnt64;         /* 64-bit CNT at the anchored PPS */
@@ -90,7 +98,20 @@ struct fusion_gpt
 	/* "Arm-next-PPS" anchor from userspace (pps_seq == 0 mode) */
 	bool pending_future_anchor;
 	u64  pending_future_phc_ns;
+
+  /* DAC control */
+  struct work_struct dac_work;
+  struct i2c_client *dac_client;
+  u16 current_dac_value;
+  long latest_freq_error;    /* The most recent frequency delta */
+
+  /* PI loop */
+  long error_integrator;
+  u64 sq_err_sum;
+  u32 err_count;
+  int dac_target;
 };
+
 
 static struct fusion_gpt *gpt_singleton;
 static DEFINE_MUTEX(gpt_singleton_lock);
@@ -322,11 +343,12 @@ static irqreturn_t gpt_irq(int irq, void *dev_id)
 {
 	struct fusion_gpt *g = dev_id;
 	u32 sr = rdl(g, GPT_SR);
-	u32 clr = 0;
-
+  u32 clr = 0;
+  static DEFINE_RATELIMIT_STATE(_rs, HZ, 1);
 	if (!sr) return IRQ_NONE;
 
-	/* extend 64-bit ticks on any event */
+
+		/* extend 64-bit ticks on any event */
 	write_seqlock(&g->ticks_sl);
 	{
 		u32 cnt = rdl(g, GPT_CNT);
@@ -339,22 +361,107 @@ static irqreturn_t gpt_irq(int irq, void *dev_id)
 	if (!(sr & SR_OF1) && (s32)(g->next_ocr1 - g->last32) <= 0)
 		gpt_program_next_compare(g);
 
-	if (sr & SR_IF1) {
-		u32 cap = rdl(g, GPT_ICR1);   /* latches & clears capture1 */
-		u64 prev_cap64 = 0;
-		bool had_prev = false;
-		bool epoch_valid = false;
-		u64 epoch_ns = 0;
-		u64 epoch_cnt64 = 0;
+  /* ------------------------------------------------------------------
+   * IF2: 48kHz Capture (Processed first to update timestamp for IF1 stats)
+   * ------------------------------------------------------------------ */
+  if (sr & SR_IF2) {
+    u32 cap = rdl(g, GPT_ICR2);   /* latches & clears capture2 */
 
-		/* Build a monotonic 64-bit capture close to 'now' */
-		u64 now64 = gpt_read_ticks64(g);                /* seq-safe read */
-		u64 cap64 = (now64 & ~0xffffffffULL) | cap;
-		if (cap64 > now64)
-			cap64 -= 1ULL << 32;
+    /* Reconstruct 64-bit capture time */
+    u64 now64 = gpt_read_ticks64(g);
+    u64 cap64 = (now64 & ~0xffffffffULL) | cap;
 
-		raw_spin_lock(&g->pps_lock);
-		had_prev = g->pps_valid;
+    /* Handle wrap-around where capture happened before the upper 32-bits incremented */
+    if (cap64 > now64)
+        cap64 -= 1ULL << 32;
+
+    g->last_if2_cap64 = cap64;
+    g->if2_valid = true;
+
+    clr |= SR_IF2;
+  }
+
+  /* IF1: 1PPS capture and disciplining */
+  if (sr & SR_IF1) {
+      u32 cap = rdl(g, GPT_ICR1);   /* latches & clears capture1 */
+      u64 prev_cap64 = 0;
+      bool had_prev = false;
+      bool epoch_valid = false;
+      u64 epoch_ns = 0;
+      u64 epoch_cnt64 = 0;
+
+      /* Build a monotonic 64-bit capture close to "now" */
+      u64 now64 = gpt_read_ticks64(g);                /* seq-safe read */
+      u64 cap64 = (now64 & ~0xffffffffULL) | cap;
+      if (cap64 > now64)
+          cap64 -= 1ULL << 32;
+
+      raw_spin_lock(&g->pps_lock);
+      had_prev = g->pps_valid;
+
+      if (g->pps_valid) {
+          u64 diff = cap64 - g->pps_icr1_last64;
+          long freq_error = (long)diff - 10000000L;
+          long phase_error = 0;
+          
+          /* Accumulate squared error for RMS jitter */
+          g->sq_err_sum += (s64)freq_error * (s64)freq_error;
+          g->err_count++;
+
+          /* Accumulate error into the integrator */
+          g->error_integrator += freq_error;
+
+          /* Threshold in ticks for dithering */
+          const int INTEGRATOR_LIMIT = 5; 
+
+          if (g->error_integrator > INTEGRATOR_LIMIT) {
+              /* Positive error (too fast): slow down */
+              g->dac_target--; 
+              g->error_integrator = 0;
+          } 
+          else if (g->error_integrator < -INTEGRATOR_LIMIT) {
+              /* Negative error (too slow): speed up */
+              g->dac_target++;
+              g->error_integrator = 0;
+          }
+          // g->dac_request = g->dac_target; 
+          if (g->dac_target > 255)
+              g->dac_target = 255;
+          else if (g->dac_target < 0)
+              g->dac_target = 0;
+
+          /* 48kHz offset: time from last 48k edge to current PPS */
+          long if2_offset_ns = 0;
+          if (g->if2_valid) {
+              if2_offset_ns = (long)(cap64 - g->last_if2_cap64) * 100L;
+              
+              /* Normalize to a positive phase within one 48k period */
+              if (if2_offset_ns < 0) {
+                   if2_offset_ns += 20833;
+              }
+          }
+
+          if (g->phc_epoch_valid) {
+               u64 ticks_from_start = cap64 - g->pps_epoch_cnt64;
+               long rem = ticks_from_start % 10000000l;
+               if (rem > 5000000) phase_error = rem - 10000000l;
+               else phase_error = rem;
+          }
+          g->latest_freq_error = freq_error;
+
+          u32 rms_jitter = 0;
+          if (g->err_count > 0) {
+              rms_jitter = int_sqrt(g->sq_err_sum / g->err_count);
+          }
+
+          if (__ratelimit(&_rs)) {
+              pr_alert("fusion_gpt: [PPS] diff=%llutick err=%ldtick rms=%utick | [48K] off=%ldns | DAC=%d\n",
+                       diff, freq_error, rms_jitter, if2_offset_ns, g->dac_target);
+              
+              g->sq_err_sum = 0;
+              g->err_count = 0;
+          }
+      }
 		prev_cap64 = g->pps_icr1_last64;
 		epoch_valid = g->phc_epoch_valid;
 		epoch_ns = g->phc_epoch_ns;
@@ -395,13 +502,13 @@ static irqreturn_t gpt_irq(int irq, void *dev_id)
 				phc_ns = epoch_ns + (cap64 - epoch_cnt64) * 100ULL;
 		}
 
+    schedule_work(&g->dac_work);
 		clr |= SR_IF1;
+
 	}
 
-	if (sr & SR_IF2) {
-		(void)rdl(g, GPT_ICR2);
+	if (sr & SR_IF2)
 		clr |= SR_IF2;
-	}
 
 	if (sr & SR_OF1) {
 		bool do_align = false;
@@ -472,6 +579,39 @@ static irqreturn_t gpt_irq(int irq, void *dev_id)
 	return IRQ_HANDLED;
 }
 
+static void fusion_dac_work_handler(struct work_struct *work)
+{
+    struct fusion_gpt *g = container_of(work, struct fusion_gpt, dac_work);
+    int ret;
+    u8 buf[3];
+
+    int target = READ_ONCE(g->dac_target);
+
+    target = clamp(target, 0, 255);
+
+    if (target == g->current_dac_value) {
+        return;
+    }
+
+    buf[0] = 0x00; /* Register/Command Byte (device specific) */
+    buf[1] = 0x00; /* Often MSB or Control */
+    buf[2] = (u8)(target & 0xFF); 
+
+    if (g->dac_client) {
+        ret = i2c_master_send(g->dac_client, buf, 3);
+        
+        if (ret < 0) {
+            pr_err_ratelimited("fusion_gpt: I2C DAC write failed: %d\n", ret);
+        } else {
+            g->current_dac_value = target;
+            
+            pr_info_ratelimited("fusion_gpt: Updated DAC to %u (Integrator Move)\n", target);
+        }
+    } else {
+        pr_info_ratelimited("fusion_gpt: DAC client missing\n");
+    } 
+}
+
 static int gpt_start(struct fusion_gpt *g)
 {
 	u32 cr;
@@ -514,6 +654,10 @@ static int gpt_probe(struct platform_device *pdev)
 	struct fusion_gpt *g;
 	struct resource *res;
 	int irq, ret;
+  struct i2c_adapter *adapter;
+  struct i2c_board_info dac_info = {
+      I2C_BOARD_INFO("mcp4725", 0x62), // Use your DAC's name or a dummy string
+  };
 
 	g = devm_kzalloc(&pdev->dev, sizeof(*g), GFP_KERNEL);
 	if (!g)
@@ -528,6 +672,7 @@ static int gpt_probe(struct platform_device *pdev)
 	if (irq < 0)
 		return irq;
 	g->irq = irq;
+  dev_info(&pdev->dev, "Fusion GPT assigned IRQ: %d\n", g->irq);
 
 	/* Get and enable clocks */
 	g->clk_ipg = devm_clk_get(&pdev->dev, "ipg");
@@ -560,6 +705,25 @@ static int gpt_probe(struct platform_device *pdev)
 			       dev_name(&pdev->dev), g);
 	if (ret) goto err_disable_clks;
 
+  /* DAC handler */
+  g->dac_target = 128;
+  adapter = i2c_get_adapter(0); /* Bus 0 */
+  if (!adapter) {
+    dev_dbg(&pdev->dev, "I2C bus not ready yet, deferring probe...\n");
+    ret = -EPROBE_DEFER;
+    goto err_disable_clks;
+  }
+  g->dac_client = i2c_new_client_device(adapter, &dac_info);
+  i2c_put_adapter(adapter); // Release the adapter reference once client is made
+
+  if (IS_ERR(g->dac_client)) {
+    dev_err(&pdev->dev, "Failed to create I2C client for DAC\n");
+    ret = PTR_ERR(g->dac_client);
+    goto err_disable_clks;
+  } else {
+    INIT_WORK(&g->dac_work, fusion_dac_work_handler);
+  }
+
 	ret = gpt_start(g);
 	if (ret) goto err_disable_clks;
 
@@ -570,7 +734,8 @@ static int gpt_probe(struct platform_device *pdev)
 
 	dev_info(&pdev->dev,
 		 "GPT1 shim running (EXT 10MHz, 1/3ms compares)\n");
-	return 0;
+	dev_info(&pdev->dev, ">>> Fusion GPT1 Nate's build enviornment! Test 3 <<<\n");
+  return 0;
 
 err_disable_clks:
 	clk_disable_unprepare(g->clk_per);
@@ -595,6 +760,8 @@ static void gpt_remove(struct platform_device *pdev)
 	/* Gate clocks */
 	clk_disable_unprepare(g->clk_per);
 	clk_disable_unprepare(g->clk_ipg);
+  if (g->dac_client)
+    i2c_unregister_device(g->dac_client);
 }
 
 static const struct of_device_id of_match[] = {
@@ -615,4 +782,5 @@ module_platform_driver(drv);
 
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR("Bose Pro");
-MODULE_DESCRIPTION("GPT1 shim exporting 1/3ms ticks");
+MODULE_DESCRIPTION("GPT1 SHIM EXPORTING 1/3MS TICKS");
+MODULE_VERSION("1.0.6-Servo");
