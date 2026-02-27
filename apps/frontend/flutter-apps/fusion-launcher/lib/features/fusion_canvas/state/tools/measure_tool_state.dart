@@ -2,11 +2,16 @@ import 'dart:ui';
 
 import 'package:fusion_launcher/features/fusion_canvas/state/fusion_tool_state.dart';
 
-class MeasureToolState extends FusionToolState {
-  final Offset? start;
+abstract class MeasureToolState extends FusionToolState {}
+
+class IdleMeasureToolState extends MeasureToolState {}
+
+class DrawingMeasureToolState extends MeasureToolState {
+  final Offset start;
   final Offset? end;
-  MeasureToolState({
-    this.start,
+
+  DrawingMeasureToolState({
+    required this.start,
     this.end,
   });
 
@@ -14,19 +19,22 @@ class MeasureToolState extends FusionToolState {
   bool operator ==(covariant FusionToolState other) {
     if (identical(this, other)) return true;
 
-    return other is MeasureToolState && other.start == start && other.end == end;
+    return other is DrawingMeasureToolState && other.start == start && other.end == end;
   }
 
   @override
   int get hashCode => start.hashCode ^ end.hashCode;
 
-  MeasureToolState copyWith({
+  DrawingMeasureToolState copyWith({
     Offset? start,
     Offset? end,
   }) {
-    return MeasureToolState(
+    return DrawingMeasureToolState(
       start: start ?? this.start,
       end: end ?? this.end,
     );
   }
+
+  /// Whether this measurement is complete
+  bool get isComplete => end != null;
 }

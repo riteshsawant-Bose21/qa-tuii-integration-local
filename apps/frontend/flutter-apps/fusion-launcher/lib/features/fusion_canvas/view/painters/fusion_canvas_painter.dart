@@ -168,4 +168,30 @@ abstract class FusionBasePainter {
     canvas.drawLine(from, arrowPoint1, paint);
     canvas.drawLine(from, arrowPoint2, paint);
   }
+
+   void drawDashedLine(Canvas canvas, Offset start, Offset end, Paint paint, FusionCanvasPainter painter) {
+    const double dashLength = 5.0;
+    const double gapLength = 3.0;
+
+    final double distance = (end - start).distance;
+    final Offset direction = (end - start) / distance;
+
+    double currentDistance = 0;
+    bool isDash = true;
+
+    while (currentDistance < distance) {
+      final double segmentLength = isDash ? dashLength : gapLength;
+      final double remainingDistance = distance - currentDistance;
+      final double actualLength = segmentLength > remainingDistance ? remainingDistance : segmentLength;
+
+      if (isDash) {
+        final Offset segmentStart = start + direction * currentDistance;
+        final Offset segmentEnd = start + direction * (currentDistance + actualLength);
+        canvas.drawLine(segmentStart, segmentEnd, paint);
+      }
+
+      currentDistance += actualLength;
+      isDash = !isDash;
+    }
+  }
 }

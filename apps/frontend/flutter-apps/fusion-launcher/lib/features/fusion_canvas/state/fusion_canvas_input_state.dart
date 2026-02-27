@@ -6,7 +6,10 @@ class FusionCanvasInputState {
   final Offset? mousePosition;
   final List<LogicalKeyboardKey> pressedKeys;
 
-  FusionCanvasInputState({required this.mousePosition, required this.pressedKeys});
+  FusionCanvasInputState({
+    required this.mousePosition,
+    required this.pressedKeys,
+  });
 
   @override
   bool operator ==(covariant FusionCanvasInputState other) {

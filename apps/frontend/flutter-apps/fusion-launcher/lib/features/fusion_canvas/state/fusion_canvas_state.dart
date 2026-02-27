@@ -38,4 +38,10 @@ extension FusionCanvasStateMutation on FusionCanvasState {
       scale: scale,
     );
   }
+
+  Offset transformPosition(Offset position) {
+    final Offset offset = this.offset;
+    final double scale = this.scale;
+    return (position * scale) + offset;
+  }
 }

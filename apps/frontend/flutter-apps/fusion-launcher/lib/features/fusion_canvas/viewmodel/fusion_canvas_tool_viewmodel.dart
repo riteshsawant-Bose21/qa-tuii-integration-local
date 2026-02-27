@@ -6,10 +6,12 @@ import '../state/fusion_tool_state.dart';
 import '../state/tools/measure_tool_state.dart';
 import '../state/tools/pen_tool_state.dart';
 import 'fusion_canvas_input_viewmodel.dart';
+import 'fusion_snap_viewmodel.dart';
 
 class FusionCanvasToolViewModel extends Cubit<FusionToolState> {
   final FusionCanvasInputViewModel inputViewModel;
-  FusionCanvasToolViewModel({required this.inputViewModel}) : super(FusionCanvasIdleToolState()) {
+  final FusionSnapViewModel snapViewModel;
+  FusionCanvasToolViewModel({required this.inputViewModel, required this.snapViewModel}) : super(FusionCanvasIdleToolState()) {
     inputViewModel.addListener(
       _listener,
     );
@@ -20,14 +22,22 @@ class FusionCanvasToolViewModel extends Cubit<FusionToolState> {
   );
 
   void onTapUp(Offset position) {
+    // Use effective position (snapped if available) instead of raw position
+    final Offset effectivePosition = snapViewModel.state.effectivePosition ?? position;
+
     if (state is MeasureToolState) {
-      final MeasureToolState measureState = state as MeasureToolState;
-      if (measureState.start == null) {
-        setTool(measureState.copyWith(start: position));
-      } else if (measureState.end == null) {
-        setTool(measureState.copyWith(end: position));
-      } else {
-        setTool(MeasureToolState(start: position));
+      if (state is IdleMeasureToolState) {
+        // Start new measurement
+        setTool(DrawingMeasureToolState(start: effectivePosition));
+      } else if (state is DrawingMeasureToolState) {
+        final DrawingMeasureToolState measureState = state as DrawingMeasureToolState;
+        if (!measureState.isComplete) {
+          // Complete the measurement
+          setTool(measureState.copyWith(end: effectivePosition));
+        } else {
+          // Start new measurement
+          setTool(DrawingMeasureToolState(start: effectivePosition));
+        }
       }
     } else if (state is PenToolState) {
       final bool isCtrCmdPressed = inputViewModel.isMetaPressed;
@@ -37,9 +47,9 @@ class FusionCanvasToolViewModel extends Cubit<FusionToolState> {
           points: <FusionCanvasPoint>[
             ...state is DrawingPenToolState ? (penState as DrawingPenToolState).points : <FusionCanvasPoint>[],
             FusionCanvasPoint(
-              position: position,
-              handleIn: isCtrCmdPressed ? position + const Offset(50, 50) : null,
-              handleOut: isCtrCmdPressed ? position + const Offset(-50, -50) : null,
+              position: effectivePosition,
+              handleIn: isCtrCmdPressed ? effectivePosition + const Offset(50, 50) : null,
+              handleOut: isCtrCmdPressed ? effectivePosition + const Offset(-50, -50) : null,
             ),
           ],
         ),

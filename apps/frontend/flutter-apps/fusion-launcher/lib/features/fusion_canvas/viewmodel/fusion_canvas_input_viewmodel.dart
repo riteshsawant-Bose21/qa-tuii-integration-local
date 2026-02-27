@@ -7,18 +7,34 @@ import '../state/fusion_canvas_input_state.dart';
 class FusionCanvasInputViewModel extends Cubit<FusionCanvasInputState> {
   FusionCanvasInputViewModel() : super(FusionCanvasInputState(mousePosition: null, pressedKeys: <LogicalKeyboardKey>[]));
   final List<FusionInputEventsListener> _listeners = <FusionInputEventsListener>[];
+
   void updateMousePosition(Offset? position) {
-    emit(FusionCanvasInputState(mousePosition: position, pressedKeys: state.pressedKeys));
+    emit(
+      FusionCanvasInputState(
+        mousePosition: position,
+        pressedKeys: state.pressedKeys,
+      ),
+    );
   }
 
   void onKeyEvent(KeyEvent event) {
     final LogicalKeyboardKey logicalKey = event.logicalKey;
     if (event is KeyDownEvent) {
       if (!state.pressedKeys.contains(logicalKey)) {
-        emit(FusionCanvasInputState(mousePosition: state.mousePosition, pressedKeys: List<LogicalKeyboardKey>.from(state.pressedKeys)..add(logicalKey)));
+        emit(
+          FusionCanvasInputState(
+            mousePosition: state.mousePosition,
+            pressedKeys: List<LogicalKeyboardKey>.from(state.pressedKeys)..add(logicalKey),
+          ),
+        );
       }
     } else if (event is KeyUpEvent) {
-      emit(FusionCanvasInputState(mousePosition: state.mousePosition, pressedKeys: List<LogicalKeyboardKey>.from(state.pressedKeys)..remove(logicalKey)));
+      emit(
+        FusionCanvasInputState(
+          mousePosition: state.mousePosition,
+          pressedKeys: List<LogicalKeyboardKey>.from(state.pressedKeys)..remove(logicalKey),
+        ),
+      );
     }
   }
 
@@ -38,17 +54,11 @@ class FusionCanvasInputViewModel extends Cubit<FusionCanvasInputState> {
     }
   }
 
-  bool get isShiftPressed =>
-      state.pressedKeys.contains(LogicalKeyboardKey.shiftLeft) ||
-      state.pressedKeys.contains(LogicalKeyboardKey.shiftRight);
+  bool get isShiftPressed => state.pressedKeys.contains(LogicalKeyboardKey.shiftLeft) || state.pressedKeys.contains(LogicalKeyboardKey.shiftRight);
 
-  bool get isControlPressed =>
-      state.pressedKeys.contains(LogicalKeyboardKey.controlLeft) ||
-      state.pressedKeys.contains(LogicalKeyboardKey.controlRight);
+  bool get isControlPressed => state.pressedKeys.contains(LogicalKeyboardKey.controlLeft) || state.pressedKeys.contains(LogicalKeyboardKey.controlRight);
 
-  bool get isMetaPressed =>
-      state.pressedKeys.contains(LogicalKeyboardKey.metaLeft) ||
-      state.pressedKeys.contains(LogicalKeyboardKey.metaRight);
+  bool get isMetaPressed => state.pressedKeys.contains(LogicalKeyboardKey.metaLeft) || state.pressedKeys.contains(LogicalKeyboardKey.metaRight);
 }
 
 class FusionInputEventsListener {
