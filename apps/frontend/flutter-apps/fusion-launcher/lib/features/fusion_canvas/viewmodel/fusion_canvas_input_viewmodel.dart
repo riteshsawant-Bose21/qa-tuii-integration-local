@@ -37,6 +37,18 @@ class FusionCanvasInputViewModel extends Cubit<FusionCanvasInputState> {
       }
     }
   }
+
+  bool get isShiftPressed =>
+      state.pressedKeys.contains(LogicalKeyboardKey.shiftLeft) ||
+      state.pressedKeys.contains(LogicalKeyboardKey.shiftRight);
+
+  bool get isControlPressed =>
+      state.pressedKeys.contains(LogicalKeyboardKey.controlLeft) ||
+      state.pressedKeys.contains(LogicalKeyboardKey.controlRight);
+
+  bool get isMetaPressed =>
+      state.pressedKeys.contains(LogicalKeyboardKey.metaLeft) ||
+      state.pressedKeys.contains(LogicalKeyboardKey.metaRight);
 }
 
 class FusionInputEventsListener {

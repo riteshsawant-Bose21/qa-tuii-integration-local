@@ -30,9 +30,7 @@ class FusionCanvasToolViewModel extends Cubit<FusionToolState> {
         setTool(MeasureToolState(start: position));
       }
     } else if (state is PenToolState) {
-      final bool isCtrCmdPressed =
-          inputViewModel.state.pressedKeys.contains(LogicalKeyboardKey.controlLeft) ||
-          inputViewModel.state.pressedKeys.contains(LogicalKeyboardKey.controlRight);
+      final bool isCtrCmdPressed = inputViewModel.isMetaPressed;
       final PenToolState penState = state as PenToolState;
       setTool(
         DrawingPenToolState(
