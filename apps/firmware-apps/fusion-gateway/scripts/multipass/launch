@@ -165,57 +165,6 @@ print_progress() {
     fi
 }
 
-# SSH key path for direct SSH fallback (multipass 1.16.1 bug workaround)
-MULTIPASS_SSH_KEY="/var/root/Library/Application Support/multipassd/ssh-keys/id_rsa"
-
-# Helper function to get instance IP
-get_instance_ip() {
-    local instance_name="$1"
-    multipass info "$instance_name" 2>/dev/null | awk '/IPv4/{print $2; exit}'
-}
-
-# Wrapper for multipass exec with direct SSH fallback
-mp_exec() {
-    local instance_name="$1"
-    shift
-    local cmd="$*"
-    
-    # Try multipass exec first
-    if multipass exec "$instance_name" -- $cmd 2>/dev/null; then
-        return 0
-    fi
-    
-    # Fall back to direct SSH
-    local ip=$(get_instance_ip "$instance_name")
-    if [ -n "$ip" ]; then
-        sudo ssh -i "$MULTIPASS_SSH_KEY" -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=ERROR ubuntu@"$ip" "$cmd" 2>/dev/null
-        return $?
-    fi
-    return 1
-}
-
-# Wrapper for multipass transfer with direct SCP fallback
-mp_transfer() {
-    local src="$1"
-    local dest="$2"
-    
-    # Try multipass transfer first
-    if multipass transfer "$src" "$dest" 2>/dev/null; then
-        return 0
-    fi
-    
-    # Parse destination (instance_name:/path)
-    local instance_name="${dest%%:*}"
-    local remote_path="${dest#*:}"
-    local ip=$(get_instance_ip "$instance_name")
-    
-    if [ -n "$ip" ]; then
-        sudo scp -i "$MULTIPASS_SSH_KEY" -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=ERROR "$src" ubuntu@"$ip":"$remote_path" 2>/dev/null
-        return $?
-    fi
-    return 1
-}
-
 show_instance_status() {
     local instance_name="$1"
     
@@ -223,24 +172,24 @@ show_instance_status() {
         print_header "Instance Status: $instance_name"
         
         print_step "Network Configuration"
-        mp_exec "$instance_name" networkctl status
+        multipass exec "$instance_name" -- networkctl status
         
         print_step "Service Status"
         for service in fusion-gateway keepalived haproxy chrony; do
             echo
             printf "${CYAN}=== %s ===${NC}\n" "$service"
-            mp_exec "$instance_name" systemctl status "$service" --no-pager || true
+            multipass exec "$instance_name" -- systemctl status "$service" --no-pager || true
         done
         
         print_step "IP Configuration"
-        mp_exec "$instance_name" ip addr show
+        multipass exec "$instance_name" -- ip addr show
 
         print_step "Process Status"
-        mp_exec "$instance_name" "ps aux | grep -E 'fusion-gateway|keepalived|haproxy|chrony'" || true
+        multipass exec "$instance_name" -- ps aux | grep -E 'fusion-gateway|keepalived|haproxy|chrony' || true
     else
         print_header "Basic Status: $instance_name"
         for service in fusion-gateway keepalived haproxy chrony; do
-            status=$(mp_exec "$instance_name" systemctl is-active "$service" || echo "inactive")
+            status=$(multipass exec "$instance_name" -- systemctl is-active "$service" || echo "inactive")
             if [ "$status" = "active" ]; then
                 print_success "$service is running"
             else
@@ -272,7 +221,7 @@ verify_instance() {
     print_step "Checking Services"
     while [ $retry_count -lt $max_retries ]; do
         # Check if binary exists
-        if ! mp_exec "$instance_name" test -x /usr/local/bin/fusion-gateway; then
+        if ! multipass exec "$instance_name" -- test -x /usr/local/bin/fusion-gateway; then
             print_progress $retry_count $max_retries "Waiting for fusion-gateway binary..."
             sleep 5
             ((retry_count++))
@@ -282,7 +231,7 @@ verify_instance() {
         # Check services one by one
         local all_services_running=true
         for service in fusion-gateway keepalived haproxy; do
-            if ! mp_exec "$instance_name" systemctl is-active --quiet "$service"; then
+            if ! multipass exec "$instance_name" -- systemctl is-active --quiet "$service"; then
                 print_warning "Service $service is not running"
                 all_services_running=false
                 break
@@ -294,7 +243,7 @@ verify_instance() {
             print_substep "Checking VIP accessibility..."
             
             local response
-            response=$(mp_exec "$instance_name" curl -sf http://$VIRTUAL_IP:8080 2>/dev/null)
+            response=$(multipass exec "$instance_name" -- curl -sf http://$VIRTUAL_IP:8080 2>/dev/null)
             if [ $? -eq 0 ]; then
                 print_success "VIP is accessible"
                 printf "${CYAN}Server response: ${NC}%s\n" "$response"
@@ -319,81 +268,40 @@ setup_instance() {
     local instance_number="$2"
     
     print_header "Setting Up Instance: $instance_name"
-    
-    # Wait for the instance to be ready for SSH connections
-    print_step "Waiting for instance to be ready..."
-    local max_wait_retries=60
-    local wait_count=0
-    local instance_ip=$(get_instance_ip "$instance_name")
-    
-    while [ $wait_count -lt $max_wait_retries ]; do
-        # Check if instance is running via multipass info (avoids TTY bug with exec + stdout redirect in 1.16.1)
-        # Then verify SSH connectivity without redirecting stdout
-        if multipass info "$instance_name" 2>/dev/null | grep -q "State:.*Running"; then
-            # Test actual SSH connectivity - only redirect stderr (stdout redirect causes hang in 1.16.1)
-            if multipass exec "$instance_name" -- true 2>/dev/null; then
-                print_success "Instance is ready for connections"
-                break
-            fi
-        fi
-        # Direct SSH fallback
-        instance_ip=$(get_instance_ip "$instance_name")
-        if [ -n "$instance_ip" ] && sudo ssh -i "$MULTIPASS_SSH_KEY" -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=3 -o LogLevel=ERROR ubuntu@"$instance_ip" true 2>/dev/null; then
-            print_success "Instance is ready for connections (direct SSH)"
-            break
-        fi
-        print_progress $wait_count $max_wait_retries "Waiting for SSH connectivity..."
-        sleep 2
-        ((wait_count++))
-    done
-    
-    if [ $wait_count -ge $max_wait_retries ]; then
-        print_error "Instance failed to become ready for SSH connections"
-        return 1
-    fi
-    
-    # Wait for cloud-init to complete
-    # Note: Only redirect stderr - stdout redirect causes hang in multipass 1.16.1
-    print_step "Waiting for cloud-init to complete..."
-    if mp_exec "$instance_name" cloud-init status --wait 2>/dev/null; then
-        print_success "Cloud-init completed"
-    else
-        print_warning "Cloud-init may not have completed properly"
-    fi
         
     print_step "Copying fusion-gateway binary..."
-    if ! mp_transfer "$HOST_BUILD_DIR/fusion-gateway" "$instance_name":/tmp/; then
+    if ! multipass transfer "$HOST_BUILD_DIR/fusion-gateway" "$instance_name":/tmp/; then
         print_error "Failed to copy fusion-gateway binary"
         return 1
     fi
     print_success "fusion-gateway copied successfully"
     
     print_step "Installing fusion-gateway..."
-    if ! mp_exec "$instance_name" sudo cp /tmp/fusion-gateway /usr/local/bin/ || \
-       ! mp_exec "$instance_name" sudo chmod 755 /usr/local/bin/fusion-gateway || \
-       ! mp_exec "$instance_name" rm /tmp/fusion-gateway; then
+    if ! multipass exec "$instance_name" -- sudo cp /tmp/fusion-gateway /usr/local/bin/ || \
+       ! multipass exec "$instance_name" -- sudo chmod 755 /usr/local/bin/fusion-gateway || \
+       ! multipass exec "$instance_name" -- rm /tmp/fusion-gateway; then
         print_error "Failed to install fusion-gateway binary"
         return 1
     fi
     print_success "fusion-gateway installed successfully"
     
     # Set the script used by systemd to launch fusion-gateway to executable
-    if ! mp_exec "$instance_name" sudo chmod 755 /usr/local/bin/fusion-gateway-start.sh; then
+    if ! multipass exec "$instance_name" -- sudo chmod 755 /usr/local/bin/fusion-gateway-start.sh; then
         print_error "Failed to update fusion-gateway-start.sh"
         return 1
     fi
 
     print_step "Copying bbolt binary..."
-    if ! mp_transfer "$HOST_BBOLT_DIR/bbolt-linux-$TARGET_BINARY_ARCH" "$instance_name":/tmp/bbolt; then
+    if ! multipass transfer "$HOST_BBOLT_DIR/bbolt-linux-$TARGET_BINARY_ARCH" "$instance_name":/tmp/bbolt; then
         print_error "Failed to copy bbolt binary"
         return 1
     fi
     print_success "bbolt copied successfully"
 
     print_step "Installing bbolt..."
-    if ! mp_exec "$instance_name" sudo cp /tmp/bbolt /usr/local/bin/ || \
-       ! mp_exec "$instance_name" sudo chmod 755 /usr/local/bin/bbolt || \
-       ! mp_exec "$instance_name" rm /tmp/bbolt; then
+    if ! multipass exec "$instance_name" -- sudo cp /tmp/bbolt /usr/local/bin/ || \
+       ! multipass exec "$instance_name" -- sudo chmod 755 /usr/local/bin/bbolt || \
+       ! multipass exec "$instance_name" -- rm /tmp/bbolt; then
         print_error "Failed to install bbolt binary"
         return 1
     fi
@@ -401,15 +309,15 @@ setup_instance() {
 
     print_step "Configuring keepalived priority..."
     local priority=$((100 - instance_number))
-    mp_exec "$instance_name" sudo sed -i "s/priority 100/priority ${priority}/" /etc/keepalived/keepalived.conf
+    multipass exec "$instance_name" -- sudo sed -i "s/priority 100/priority ${priority}/" /etc/keepalived/keepalived.conf
     print_success "Priority set to $priority"
     
     print_step "Starting services..."
     local services_started=true
 
-    # Do daemon-reload once before starting services
+    # Do daemon-reload once before starting services, with explicit stdin handling
     print_substep "Reloading systemd daemon..."
-    if ! mp_exec "$instance_name" sudo systemctl daemon-reload; then
+    if ! multipass exec "$instance_name" -- sudo systemctl daemon-reload </dev/null; then
         print_error "Failed to reload systemd daemon"
         services_started=false
     else
@@ -420,21 +328,21 @@ setup_instance() {
             print_substep "Starting $service..."
             
             # Enable service without starting
-            if ! mp_exec "$instance_name" sudo systemctl enable "$service"; then
+            if ! multipass exec "$instance_name" -- sudo systemctl enable "$service" </dev/null; then
                 print_error "Failed to enable $service"
                 services_started=false
                 break
             fi
             
             # Start service
-            if ! mp_exec "$instance_name" sudo systemctl start "$service"; then
+            if ! multipass exec "$instance_name" -- sudo systemctl start "$service" </dev/null; then
                 print_error "Failed to start $service"
                 services_started=false
                 break
             fi
             
             # Verify service is running
-            if ! mp_exec "$instance_name" sudo systemctl is-active --quiet "$service"; then
+            if ! multipass exec "$instance_name" -- sudo systemctl is-active --quiet "$service" </dev/null; then
                 print_error "$service on $instance_name failed to start properly"
                 services_started=false
                 break
@@ -449,8 +357,8 @@ setup_instance() {
     fi
     
     print_step "Synchronizing time..."    
-    mp_exec "$instance_name" sudo chronyc makestep || true
-    mp_exec "$instance_name" sudo ntpdate pool.ntp.org || true
+    multipass exec "$instance_name" -- sudo chronyc makestep || true
+    multipass exec "$instance_name" -- sudo ntpdate pool.ntp.org || true
 
     [ "$VERBOSE" = true ] && show_instance_status "$instance_name"
     
@@ -470,7 +378,7 @@ launch_instance() {
     
     # Create and launch instance
     print_step "Creating multipass instance..."
-    if ! multipass launch jammy --name "$instance_name" --cloud-init "$cloud_init_file" --memory 2G --cpus 2; then
+    if ! multipass launch jammy --name "$instance_name" --network en0 --cloud-init "$cloud_init_file" --memory 2G --cpus 2; then
         print_error "Failed to launch instance $instance_name"
         return 1
     fi

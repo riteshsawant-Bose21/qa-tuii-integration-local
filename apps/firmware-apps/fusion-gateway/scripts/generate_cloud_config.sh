@@ -137,12 +137,6 @@ $(indent_content 'haproxy_conf_data')
     permissions: '0755'
     owner: root:root
     content: |
-runcmd:
-  # Disable auto-started services - they will be started manually after setup
-  - systemctl stop keepalived || true
-  - systemctl disable keepalived || true
-  - systemctl stop haproxy || true
-  - systemctl disable haproxy || true
 EOF
 }
 
