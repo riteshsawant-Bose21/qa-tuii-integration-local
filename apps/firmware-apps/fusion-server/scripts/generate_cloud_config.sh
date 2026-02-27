@@ -5,10 +5,6 @@ set -eu
 # Fusion server configuration and startup script
 fusion_server_service_path=/lib/systemd/system/fusion-server.service
 
-# Fusion gateway configuration and startup script
-fusion_gateway_start_path=/usr/local/bin/fusion-gateway-start.sh
-fusion_gateway_service_path=/etc/systemd/system/fusion-gateway.service
-
 # haproxy confi
 haproxy_conf_data_path=/usr/local/bin/haproxy_conf_data.sh
 
@@ -111,16 +107,6 @@ write_files:
     owner: root:root
     content: |
 $(indent_content "$scripts_dir/fusion-server.service")
-  - path: $fusion_gateway_start_path
-    permissions: '0644'
-    owner: root:root
-    content: |
-$(indent_content "$scripts_dir/fusion-gateway-start.sh")
-  - path: $fusion_gateway_service_path
-    permissions: '0644'
-    owner: root:root
-    content: |
-$(indent_content "$scripts_dir/fusion-gateway.service")
   - path: $keepalived_service_path
     permissions: '0644'
     owner: root:root
@@ -145,12 +131,6 @@ $(indent_content 'haproxy_conf_data')
     permissions: '0755'
     owner: root:root
     content: |
-runcmd:
-  # Disable auto-started services - they will be started manually after setup
-  - systemctl stop keepalived || true
-  - systemctl disable keepalived || true
-  - systemctl stop haproxy || true
-  - systemctl disable haproxy || true
 EOF
 }
 
