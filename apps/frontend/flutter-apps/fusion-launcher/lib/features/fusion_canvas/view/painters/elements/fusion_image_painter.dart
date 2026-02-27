@@ -3,7 +3,7 @@ import 'dart:ui';
 import '../fusion_canvas_painter.dart';
 
 class FusionImagePainter extends FusionBasePainter {
-  final Image? image;
+  final String image;
   final Offset position;
   final Size size;
 
@@ -15,9 +15,13 @@ class FusionImagePainter extends FusionBasePainter {
 
   @override
   void paint(Canvas canvas, Size size, FusionCanvasPainter painter) {
-    if (image == null) return;
     final Rect dstRect = Rect.fromLTWH(position.dx, position.dy, this.size.width, this.size.height);
-    canvas.drawImageRect(image!, Rect.fromLTWH(0, 0, image!.width.toDouble(), image!.height.toDouble()), dstRect, Paint());
+    drawImage(
+      canvas: canvas,
+      imagePath: image,
+      rect: dstRect,
+      painter: painter,
+    );
   }
 
   @override

@@ -1,14 +1,22 @@
 import 'dart:math' as math;
+import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../wiring_design/view/painters/dotted_grid_painter.dart';
 import '../../state/fusion_canvas_state.dart';
+import '../../viewmodel/fusion_canvas_image_viewmodel.dart';
 
 class FusionCanvasPainter extends CustomPainter {
   final FusionCanvasState state;
   final List<FusionBasePainter> layers;
-  FusionCanvasPainter({required this.state, this.layers = const <FusionBasePainter>[]});
+  final BuildContext context;
+  FusionCanvasPainter({
+    required this.state,
+    this.layers = const <FusionBasePainter>[],
+    required this.context,
+  });
   @override
   void paint(Canvas canvas, Size size) {
     canvas.save();
@@ -41,6 +49,10 @@ class FusionCanvasPainter extends CustomPainter {
               p.shouldRepaint(oldDelegate.layers.firstWhere((FusionBasePainter op) => op.runtimeType == p.runtimeType, orElse: () => p)),
         );
   }
+
+  ui.Image? getImage(String s) {
+    return context.read<FusionCanvasImageViewModel>().getImage(s);
+  }
 }
 
 abstract class FusionBasePainter {
@@ -55,26 +67,27 @@ abstract class FusionBasePainter {
     return value * (1 / painter.state.scale);
   }
 
-  // bool drawImage({
-  //   required Canvas canvas,
-  //   required String path,
-  //   required Rect rect,
-  //   Paint? paint,
-  // }) {
-  //   final ui.Image? image = getImage(path);
-  //   if (image != null) {
-  //     final Rect src = Rect.fromLTWH(
-  //       0,
-  //       0,
-  //       image.width.toDouble(),
-  //       image.height.toDouble(),
-  //     );
+  bool drawImage({
+    required Canvas canvas,
+    required String imagePath,
+    required Rect rect,
+    required FusionCanvasPainter painter,
+    Paint? paint,
+  }) {
+    final ui.Image? image = painter.getImage(imagePath);
+    if (image != null) {
+      final Rect src = Rect.fromLTWH(
+        0,
+        0,
+        image.width.toDouble(),
+        image.height.toDouble(),
+      );
 
-  //     canvas.drawImageRect(image, src, rect, paint ?? Paint());
-  //     return true;
-  //   }
-  //   return false;
-  // }
+      canvas.drawImageRect(image, src, rect, paint ?? Paint());
+      return true;
+    }
+    return false;
+  }
 
   ///
   /// All Paint functions which will help in painting.

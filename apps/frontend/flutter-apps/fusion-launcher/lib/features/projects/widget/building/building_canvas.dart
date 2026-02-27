@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/core/service_locator.dart';
+import 'package:fusion_launcher/features/fusion_canvas/view/painters/elements/fusion_image_painter.dart';
 import 'package:fusion_lib/constants/test_keys.dart';
 import 'package:fusion_lib/fusion_building_view/floor_canvas_controller.dart';
 import 'package:fusion_lib/fusion_building_view/floor_plan_calibrator.dart';
@@ -15,6 +16,7 @@ import 'package:fusion_lib/fusion_utils/image_loader_service.dart';
 
 import '../../../configuration/presentation/viewmodel/project_view_model.dart';
 import '../../../fusion_canvas/view/fusion_canvas.dart';
+import '../../../fusion_canvas/view/painters/fusion_canvas_painter.dart';
 import 'toolbar/building_toolbar.dart';
 
 class BuildingCanvas extends StatefulWidget {
@@ -183,8 +185,8 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
                                     child: SemanticHelper.container(
                                       testId: SemanticHelper.createTestId(SemanticTypes.container, "building_floor_canvas"),
                                       child: FusionCanvas(
-                                        elements: <FusionCanvasElement>[
-                                          FusionCanvasImageElement(
+                                        elements: <FusionBasePainter>[
+                                          FusionImagePainter(
                                             image: floor.floorPlan.imagePath,
                                             position: floor.floorPlan.position,
                                             size: floor.floorPlan.size,
