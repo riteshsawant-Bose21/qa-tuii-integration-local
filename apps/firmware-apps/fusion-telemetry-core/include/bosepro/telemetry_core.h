@@ -1,4 +1,4 @@
-#include "named_shared_memory_manager_factory.h"
+#include <bosepro/named_shared_memory_manager_factory.h>
 #include "navigator.h"
 #include "telemetry_configuration.h"
 #include <arpa/inet.h>

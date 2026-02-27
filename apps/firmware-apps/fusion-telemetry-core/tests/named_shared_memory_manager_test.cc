@@ -9,7 +9,7 @@
 
 #include <boost/interprocess/shared_memory_object.hpp>
 
-#include "named_shared_memory_manager_factory.h"
+#include <bosepro/named_shared_memory_manager_factory.h>
 
 namespace {
 

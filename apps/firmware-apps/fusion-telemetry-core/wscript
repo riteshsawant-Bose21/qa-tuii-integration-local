@@ -100,14 +100,27 @@ def configure(conf):
             conf.env.HAVE_GTEST = True
 
 def build(bld):
-    bld(export_includes=['./include', './include/bosepro'], name='default-include')
+    shared_include = '../libs/cpp/named_shared_memory/include'
+    shared_sources = [
+        '../libs/cpp/named_shared_memory/src/named_shared_memory.cc',
+        '../libs/cpp/named_shared_memory/src/named_shared_memory_utility.cc',
+        '../libs/cpp/named_shared_memory/src/named_shared_memory_manager.cc',
+        '../libs/cpp/named_shared_memory/src/named_shared_memory_manager_factory.cc',
+    ]
+
+    bld(export_includes=['./include', './include/bosepro', shared_include], name='default-include')
 
     libs = ['boost_program_options', 'fmt', 'jsoncpp', 'zmq']
     if not bld.env['IS_MACOS']:
         libs.append('spdlog')
 
     bld.program(target=APPNAME,
-                source=bld.path.ant_glob(['src/*.cc']),
+                source=bld.path.ant_glob(['src/*.cc'], excl=[
+                    'src/named_shared_memory.cc',
+                    'src/named_shared_memory_utility.cc',
+                    'src/named_shared_memory_manager.cc',
+                    'src/named_shared_memory_manager_factory.cc',
+                ]) + shared_sources,
                 use=['default-include'],
                 # Note: pthread or mac-threads is determined above.
                 lib=libs)
@@ -119,11 +132,7 @@ def build(bld):
                 'tests/main.cc',
                 'tests/named_shared_memory_test.cc',
                 'tests/named_shared_memory_manager_test.cc',
-                'src/named_shared_memory.cc',
-                'src/named_shared_memory_utility.cc',
-                'src/named_shared_memory_manager.cc',
-                'src/named_shared_memory_manager_factory.cc',
-            ],
+            ] + shared_sources,
             use=['default-include'],
             uselib=['GTEST'],
         )

@@ -11,8 +11,8 @@
 
 #include <boost/interprocess/shared_memory_object.hpp>
 
-#include "named_shared_memory.h"
-#include "named_shared_memory_utility.h"
+#include <bosepro/named_shared_memory.h>
+#include <bosepro/named_shared_memory_utility.h>
 
 namespace {
 
