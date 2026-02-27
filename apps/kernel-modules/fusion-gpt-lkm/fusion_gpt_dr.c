@@ -656,7 +656,7 @@ static int gpt_probe(struct platform_device *pdev)
 	int irq, ret;
   struct i2c_adapter *adapter;
   struct i2c_board_info dac_info = {
-      I2C_BOARD_INFO("mcp4725", 0x62), // Use your DAC's name or a dummy string
+      I2C_BOARD_INFO("mcp4725", 0x62), // Use DAC's name or a dummy string
   };
 
 	g = devm_kzalloc(&pdev->dev, sizeof(*g), GFP_KERNEL);
@@ -672,7 +672,6 @@ static int gpt_probe(struct platform_device *pdev)
 	if (irq < 0)
 		return irq;
 	g->irq = irq;
-  dev_info(&pdev->dev, "Fusion GPT assigned IRQ: %d\n", g->irq);
 
 	/* Get and enable clocks */
 	g->clk_ipg = devm_clk_get(&pdev->dev, "ipg");
@@ -734,7 +733,6 @@ static int gpt_probe(struct platform_device *pdev)
 
 	dev_info(&pdev->dev,
 		 "GPT1 shim running (EXT 10MHz, 1/3ms compares)\n");
-	dev_info(&pdev->dev, ">>> Fusion GPT1 Nate's build enviornment! Test 3 <<<\n");
   return 0;
 
 err_disable_clks:
@@ -783,4 +781,4 @@ module_platform_driver(drv);
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR("Bose Pro");
 MODULE_DESCRIPTION("GPT1 SHIM EXPORTING 1/3MS TICKS");
-MODULE_VERSION("1.0.6-Servo");
+MODULE_VERSION("1.0.1");
