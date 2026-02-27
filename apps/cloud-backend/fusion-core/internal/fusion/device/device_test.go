@@ -236,10 +236,6 @@ func createClaimedDevice() *models.Device {
 	}
 }
 
-func ptrString(s string) *string {
-	return &s
-}
-
 // ---------------------------------------------------------------------------
 // CreateDevice Tests
 // ---------------------------------------------------------------------------
