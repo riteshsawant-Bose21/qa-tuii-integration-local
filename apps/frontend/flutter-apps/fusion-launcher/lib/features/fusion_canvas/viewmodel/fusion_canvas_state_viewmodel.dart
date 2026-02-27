@@ -8,6 +8,9 @@ class FusionCanvasStateViewModel extends Cubit<FusionCanvasState> {
   double get minScale => 0.25;
   double get maxScale => 2.0;
 
+
+  
+
   Size? canvasSize;
   bool isWithinViewport(Offset position) {
     final Rect rect = (state.offset & ((canvasSize ?? const Size(100, 100)) * state.scale));
@@ -85,4 +88,6 @@ class FusionCanvasStateViewModel extends Cubit<FusionCanvasState> {
     final double scale = state.scale;
     return (position * scale) + offset;
   }
+
+  
 }

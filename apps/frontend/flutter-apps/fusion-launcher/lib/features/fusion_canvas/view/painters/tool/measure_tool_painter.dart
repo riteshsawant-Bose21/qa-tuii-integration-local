@@ -28,11 +28,11 @@ class MeasureToolPainter extends FusionBasePainter {
     // Calculate center point for text positioning
     final Offset center = Offset(
       (start.dx + end.dx) / 2,
-      (start.dy + end.dy) / 2,
+      ((start.dy + end.dy) / 2) - 30,
     );
     drawText(
       canvas: canvas,
-      text: (start - end).distance.toStringAsFixed(2),
+      text: "${((start - end).distance / 100).toStringAsFixed(2)} M",
       position: center,
       positionAlignment: Alignment.bottomCenter,
       style: TextStyle(fontSize: nonScaling(14, painter), color: Colors.white),

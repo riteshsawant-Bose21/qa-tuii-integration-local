@@ -32,7 +32,14 @@ class FusionCanvasPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant CustomPainter oldDelegate) {
-    return false;
+    return oldDelegate is! FusionCanvasPainter ||
+        oldDelegate.state != state ||
+        oldDelegate.layers != layers ||
+        layers.any(
+          (FusionBasePainter p) =>
+              !oldDelegate.layers.contains(p) ||
+              p.shouldRepaint(oldDelegate.layers.firstWhere((FusionBasePainter op) => op.runtimeType == p.runtimeType, orElse: () => p)),
+        );
   }
 }
 
@@ -40,9 +47,13 @@ abstract class FusionBasePainter {
   void paint(Canvas canvas, Size size, FusionCanvasPainter painter);
   bool shouldRepaint(covariant FusionBasePainter oldDelegate);
 
-  // ui.Image? getImage(String path) {
-  //   return controller.imagesCache[path];
-  // }
+  ///
+  /// Util function for number that should not scale with canvas zoom
+  ///
+
+  double nonScaling(num value, FusionCanvasPainter painter) {
+    return value * (1 / painter.state.scale);
+  }
 
   // bool drawImage({
   //   required Canvas canvas,
@@ -64,13 +75,6 @@ abstract class FusionBasePainter {
   //   }
   //   return false;
   // }
-
-  ///
-  /// Util function for number that should not scale with canvas zoom
-  ///
-  double nonScaling(num value, FusionCanvasPainter painter) {
-    return value * (1 / painter.state.scale);
-  }
 
   ///
   /// All Paint functions which will help in painting.

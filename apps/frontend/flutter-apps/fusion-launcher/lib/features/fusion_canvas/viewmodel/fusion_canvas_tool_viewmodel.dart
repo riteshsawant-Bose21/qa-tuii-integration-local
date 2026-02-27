@@ -10,11 +10,13 @@ class FusionCanvasToolViewModel extends Cubit<FusionToolState> {
   final FusionCanvasInputViewModel inputViewModel;
   FusionCanvasToolViewModel({required this.inputViewModel}) : super(FusionCanvasIdleToolState()) {
     inputViewModel.addListener(
-      FusionInputEventsListener(
-        onTapUp: onTapUp,
-      ),
+      _listener,
     );
   }
+
+  late final FusionInputEventsListener _listener = FusionInputEventsListener(
+    onTapUp: onTapUp,
+  );
 
   void onTapUp(Offset position) {
     if (state is MeasureToolState) {
@@ -31,5 +33,13 @@ class FusionCanvasToolViewModel extends Cubit<FusionToolState> {
 
   void setTool(FusionToolState toolState) {
     emit(toolState);
+  }
+
+  @override
+  Future<void> close() {
+    inputViewModel.removeListener(
+      _listener,
+    );
+    return super.close();
   }
 }

@@ -3,25 +3,31 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/core/widgets/app_button_widget.dart';
 import 'package:fusion_launcher/features/fusion_canvas/state/tools/measure_tool_state.dart';
+import 'package:fusion_launcher/features/fusion_canvas/view/painters/elements/fusion_image_painter.dart';
 import 'package:fusion_launcher/features/fusion_canvas/viewmodel/fusion_canvas_tool_viewmodel.dart';
 import 'package:nested/nested.dart';
 
 import '../state/fusion_canvas_input_state.dart';
 import '../state/fusion_canvas_state.dart';
+import '../viewmodel/fusion_canvas_image_viewmodel.dart';
 import '../viewmodel/fusion_canvas_input_viewmodel.dart';
 import '../viewmodel/fusion_canvas_state_viewmodel.dart';
 import 'painters/fusion_canvas_painter.dart';
 import 'painters/tool_painter.dart';
 
 class FusionCanvas extends StatelessWidget {
-  const FusionCanvas({super.key});
-
+  const FusionCanvas({
+    super.key,
+    required this.elements,
+  });
+  final List<FusionCanvasElement> elements;
   @override
   Widget build(BuildContext context) {
     return MultiBlocProvider(
       providers: <SingleChildWidget>[
         BlocProvider<FusionCanvasStateViewModel>(create: (BuildContext context) => FusionCanvasStateViewModel()),
         BlocProvider<FusionCanvasInputViewModel>(create: (BuildContext context) => FusionCanvasInputViewModel()),
+        BlocProvider<FusionCanvasImageViewModel>(create: (BuildContext context) => FusionCanvasImageViewModel()),
         BlocProvider<FusionCanvasToolViewModel>(
           create:
               (BuildContext context) => FusionCanvasToolViewModel(
@@ -39,6 +45,13 @@ class FusionCanvas extends StatelessWidget {
                 painter: FusionCanvasPainter(
                   state: state,
                   layers: <FusionBasePainter>[
+                    for (final FusionCanvasElement element in elements)
+                      if (element is FusionCanvasImageElement)
+                        FusionImagePainter(
+                          image: context.watch<FusionCanvasImageViewModel>().getImage(element.image),
+                          position: element.position,
+                          size: element.size,
+                        ),
                     ToolPainter(
                       state: context.watch<FusionCanvasToolViewModel>().state,
                       cursor: context.watch<FusionCanvasInputViewModel>().state.mousePosition,
@@ -51,8 +64,9 @@ class FusionCanvas extends StatelessWidget {
                   child: Stack(
                     children: <Widget>[
                       // FusionCanvasCursor(),
-                      Align(
-                        alignment: Alignment.topRight,
+                      Positioned(
+                        top: 0,
+                        right: 0,
                         child: AppButton(
                           btnWidth: 150,
                           onTap: () {
@@ -165,4 +179,18 @@ class FusionCanvasCursor extends StatelessWidget {
       },
     );
   }
+}
+
+abstract class FusionCanvasElement {}
+
+class FusionCanvasImageElement extends FusionCanvasElement {
+  FusionCanvasImageElement({
+    required this.image,
+    required this.position,
+    required this.size,
+  });
+
+  final String image;
+  final Offset position;
+  final Size size;
 }

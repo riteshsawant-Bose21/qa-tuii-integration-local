@@ -182,7 +182,15 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
                                     step: GuideShowCaseSteps.showListeningAreaSelectionArea,
                                     child: SemanticHelper.container(
                                       testId: SemanticHelper.createTestId(SemanticTypes.container, "building_floor_canvas"),
-                                      child: const FusionCanvas(),
+                                      child: FusionCanvas(
+                                        elements: <FusionCanvasElement>[
+                                          FusionCanvasImageElement(
+                                            image: floor.floorPlan.imagePath,
+                                            position: floor.floorPlan.position,
+                                            size: floor.floorPlan.size,
+                                          ),
+                                        ],
+                                      ),
                                       // FloorCanvas(
                                       //   gridSize: 100,
                                       //   controller: widget.floorCanvasController,
