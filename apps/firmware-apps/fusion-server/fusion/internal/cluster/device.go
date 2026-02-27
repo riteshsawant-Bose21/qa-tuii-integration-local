@@ -347,7 +347,7 @@ func (c *Cluster) RebootSystemLocal(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.WriteHeader(http.StatusNoContent)
+	w.WriteHeader(http.StatusAccepted)
 }
 
 // updateVIP updates keepalived configuration with the new VIP but DOES NOT restart keepalived.

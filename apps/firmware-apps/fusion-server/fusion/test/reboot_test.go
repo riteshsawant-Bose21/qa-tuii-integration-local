@@ -15,5 +15,5 @@ func TestClusterRebootLocal(t *testing.T) {
 	resp, err := http.Post(url, "application/json", nil)
 	require.NoError(t, err, "POST /cluster/reboot should not error")
 	defer resp.Body.Close()
-	assert.Equal(t, http.StatusNoContent, resp.StatusCode, "Expected 204 No Content for reboot in local mode")
+	assert.Equal(t, http.StatusAccepted, resp.StatusCode, "Expected 204 No Content for reboot in local mode")
 }
