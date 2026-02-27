@@ -67,7 +67,7 @@ INSERT INTO feature (id, name, description) VALUES
   (16,'project.start','Can star a project'),
   (17,'project.unstar','Can unstar a project'),
   (18,'project.assign_user','Can assign a user to a project'),
-  (19,'project.remove_user','Can remove a user from a project');
+  (19,'project.remove_user','Can remove a user from a project'),
   (20,'device.create','Can create a new device'),
   (21,'device.update','Can update device details'),
   (22,'device.delete','Can reset/delete a device');
@@ -137,7 +137,7 @@ INSERT INTO product_sync_job (sync_operation, status, s3_bucket, s3_key, file_si
 SELECT setval('role_id_seq',8,true);
 SELECT setval('access_level_id_seq',3,true);
 SELECT setval('account_type_role_id_seq',11,true);
-SELECT setval('feature_id_seq',19,true);
+SELECT setval('feature_id_seq',22,true);
 SELECT setval('feature_permission_id_seq',88,true);
 SELECT setval('project_user_id_seq',8,true);
 
@@ -160,7 +160,7 @@ INSERT INTO feature_permission (id, feature_id, account_type_role_id, access_lev
   (123,22,9,3,now()); -- device.delete
 
 -- Advance sequence to latest id
-SELECT setval('feature_permission_id_seq',99,true);
+SELECT setval('feature_permission_id_seq',123,true);
 
 -- (Removed prior duplicate COPY-converted INSERT blocks.)
 
