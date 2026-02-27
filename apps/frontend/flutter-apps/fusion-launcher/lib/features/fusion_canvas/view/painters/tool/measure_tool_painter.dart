@@ -1,5 +1,3 @@
-import 'dart:math' as math;
-
 import 'package:flutter/material.dart';
 import 'package:fusion_launcher/features/fusion_canvas/state/tools/measure_tool_state.dart';
 
@@ -17,89 +15,31 @@ class MeasureToolPainter extends FusionBasePainter {
     final Paint paint =
         Paint()
           ..color = const Color(0xFF000000)
-          ..strokeWidth = 3 * (1 / painter.state.scale)
+          ..strokeWidth = nonScaling(2, painter)
+          ..strokeCap = StrokeCap.round
           ..style = PaintingStyle.stroke;
 
     // Draw the main line
     canvas.drawLine(start, end, paint);
-
     // Draw arrows at both ends
-    _drawArrow(canvas, start, end, paint, painter);
-    _drawArrow(canvas, end, start, paint, painter);
+    drawArrow(canvas, start, end, paint, painter);
+    drawArrow(canvas, end, start, paint, painter);
 
     // Calculate center point for text positioning
     final Offset center = Offset(
       (start.dx + end.dx) / 2,
       (start.dy + end.dy) / 2,
     );
-
-    final TextPainter textPainter = TextPainter(
-      text: TextSpan(
-        text: (start - end).distance.toStringAsFixed(2),
-        style: TextStyle(
-          color: const Color(0xFFFFFFFF),
-          fontSize: 16 * (1 / painter.state.scale),
-        ),
-      ),
-      textDirection: TextDirection.ltr,
+    drawText(
+      canvas: canvas,
+      text: (start - end).distance.toStringAsFixed(2),
+      position: center,
+      positionAlignment: Alignment.bottomCenter,
+      style: TextStyle(fontSize: nonScaling(14, painter), color: Colors.white),
+      backgroundPaint: Paint()..color = Colors.black,
+      backgroundPadding: EdgeInsets.symmetric(horizontal: nonScaling(6, painter), vertical: nonScaling(3, painter)),
+      backgroundBorderRadius: Radius.circular(nonScaling(5, painter)),
     );
-    textPainter.layout();
-
-    // Position text above the center of the line
-    final Offset textPosition = Offset(
-      center.dx - textPainter.width / 2,
-      center.dy - textPainter.height - 5,
-    );
-
-    // Draw black box behind text
-    final Paint boxPaint =
-        Paint()
-          ..color = const Color(0xFF000000)
-          ..style = PaintingStyle.fill;
-
-    final RRect textBox = RRect.fromRectAndRadius(
-      Rect.fromLTWH(
-        textPosition.dx - 10 * (1 / painter.state.scale),
-        textPosition.dy - 5 * (1 / painter.state.scale),
-        textPainter.width + 20 * (1 / painter.state.scale),
-        textPainter.height + 15 * (1 / painter.state.scale),
-      ),
-      Radius.circular(10 * (1 / painter.state.scale)),
-    );
-
-    canvas.drawRRect(textBox, boxPaint);
-    textPainter.paint(canvas, textPosition);
-  }
-
-  void _drawArrow(Canvas canvas, Offset from, Offset to, Paint paint, FusionCanvasPainter painter) {
-    final double arrowLength = 15.0 * (1 / painter.state.scale);
-    final double arrowAngle = 0.5; // radians
-
-    // Calculate direction vector
-    final Offset direction = (to - from);
-    final double distance = direction.distance;
-    if (distance == 0) return;
-
-    final Offset normalizedDirection = direction / distance;
-
-    // Calculate arrow points
-    final double angle = normalizedDirection.direction;
-    final Offset arrowPoint1 =
-        from +
-        Offset(
-          arrowLength * math.cos(angle - arrowAngle),
-          arrowLength * math.sin(angle - arrowAngle),
-        );
-    final Offset arrowPoint2 =
-        from +
-        Offset(
-          arrowLength * math.cos(angle + arrowAngle),
-          arrowLength * math.sin(angle + arrowAngle),
-        );
-
-    // Draw arrow lines
-    canvas.drawLine(from, arrowPoint1, paint);
-    canvas.drawLine(from, arrowPoint2, paint);
   }
 
   @override

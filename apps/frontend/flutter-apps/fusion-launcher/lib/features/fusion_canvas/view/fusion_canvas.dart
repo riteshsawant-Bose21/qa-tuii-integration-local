@@ -38,7 +38,7 @@ class FusionCanvas extends StatelessWidget {
               child: CustomPaint(
                 painter: FusionCanvasPainter(
                   state: state,
-                  childPainters: <FusionBasePainter>[
+                  layers: <FusionBasePainter>[
                     ToolPainter(
                       state: context.watch<FusionCanvasToolViewModel>().state,
                       cursor: context.watch<FusionCanvasInputViewModel>().state.mousePosition,
