@@ -5,11 +5,10 @@ RUN apk add --no-cache ca-certificates
 
 WORKDIR /workspace
 
-COPY go.mod go.sum ./
+COPY . .
+
 RUN go mod download
 RUN go install github.com/swaggo/swag/cmd/swag@latest
-
-COPY . .
 
 RUN swag init -g cmd/api/main.go
 RUN CGO_ENABLED=0 go build -ldflags='-w -s' -o fusion-web-services cmd/api/main.go
