@@ -3,73 +3,53 @@ import 'package:fusion_web/core/usecases/usecase.dart';
 import 'package:fusion_web/features/projects/data/models/project_model.dart';
 import 'package:fusion_web/features/projects/data/repositories/projects_repository.dart';
 
-class ProjectsViewModel extends BaseViewModel {
+class ProjectsViewModel extends BaseViewModel<List<ProjectModel>> {
   final ProjectsRepository repository;
 
   ProjectsViewModel({required this.repository});
 
-  List<ProjectModel> _projects = [];
-  List<ProjectModel> _filteredProjects = [];
-  ProjectModel? _selectedProject;
-  String _searchQuery = '';
+  // List<ProjectModel> _projects = [];
+  // List<ProjectModel> _filteredProjects = [];
+  // ProjectModel? _selectedProject;
+  // String _searchQuery = '';
 
-  List<ProjectModel> get projects {
-    if (_filteredProjects.isNotEmpty) {
-      return _filteredProjects;
-    }
-    return _projects;
-  }
+  // List<ProjectModel> get projects {
+  //   if (_filteredProjects.isNotEmpty) {
+  //     return _filteredProjects;
+  //   }
+  //   return _projects;
+  // }
 
-  ProjectModel? get selectedProject => _selectedProject;
-  String get searchQuery => _searchQuery;
+  // ProjectModel? get selectedProject => _selectedProject;
+  // String get searchQuery => _searchQuery;
 
-  Future<void> loadProjects() async {
+  Future<void> loadProjects({String? searchQuery}) async {
     try {
       setLoading();
-      final projects = await repository.getProjects();
-      _projects = projects;
-      _filteredProjects = [];
+      final projects = searchQuery != null && searchQuery.isNotEmpty
+          ? await repository.searchProjects(searchQuery)
+          : await repository.getProjects();
+
       setLoaded(projects);
     } catch (e) {
-      _projects = [];
-      _filteredProjects = [];
       setError('Failed to load projects: ${e.toString()}');
     }
   }
 
   Future<void> searchProjects(String query) async {
-    _searchQuery = query;
-
-    if (query.isEmpty) {
-      _filteredProjects = [];
-      notifyListeners();
-      return;
-    }
-
-    try {
-      setLoading();
-
-      final results = await repository.searchProjects(query);
-      _filteredProjects = results;
-
-      setLoaded(results);
-    } catch (e) {
-      _filteredProjects = [];
-      setError('Failed to search projects: ${e.toString()}');
-    }
+    loadProjects(searchQuery: query);
   }
 
   Future<void> getProject(String id) async {
-    try {
-      setLoading();
+    // try {
+    //   setLoading();
 
-      final project = await repository.getProjectById(id);
+    //   final project = await repository.getProjectById(id);
 
-      _selectedProject = project;
-      setLoaded(project);
-    } catch (e) {
-      setError('Failed to load project');
-    }
+    //   setLoaded(project);
+    // } catch (e) {
+    //   setError('Failed to load project');
+    // }
   }
 
   Future<void> createProject(ProjectModel project) async {
@@ -99,10 +79,7 @@ class ProjectsViewModel extends BaseViewModel {
     try {
       await repository.deleteProject(id);
 
-      _projects.removeWhere((p) => p.id == id);
-      _filteredProjects.removeWhere((p) => p.id == id);
-
-      notifyListeners();
+      loadProjects();
     } catch (e) {
       setError('Failed to delete project');
     }
@@ -113,13 +90,14 @@ class ProjectsViewModel extends BaseViewModel {
   }
 
   void selectProject(ProjectModel project) {
-    _selectedProject = project;
-    notifyListeners();
+    // _selectedProject = project;
+    // notifyListeners();
   }
 
   void clearSearch() {
-    _searchQuery = '';
-    _filteredProjects = [];
-    notifyListeners();
+    loadProjects();
+    // _searchQuery = '';
+    // _filteredProjects = [];
+    // notifyListeners();
   }
 }

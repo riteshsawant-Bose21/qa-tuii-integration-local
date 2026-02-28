@@ -1,4 +1,3 @@
-
 import 'package:fusion_web/features/projects/data/datasources/project_datasource.dart';
 import 'package:fusion_web/features/projects/data/models/project_model.dart';
 import 'package:fusion_web/features/projects/data/repositories/projects_repository.dart';
@@ -30,12 +29,23 @@ class ProjectsRepositoryImpl implements ProjectsRepository {
   // =========================
   // GET PROJECT BY ID
   // =========================
+  // @override
+  // Future<ProjectModel> getProjectById(String id) async {
+  //   try {
+  //     return await remoteDataSource.getProjectById(id);
+  //   } catch (e) {
+  //     return await localDataSource.getProjectById(id);
+  //   }
+  // }
   @override
   Future<ProjectModel> getProjectById(String id) async {
     try {
+      // Try real endpoint first (when backend is ready later)
       return await remoteDataSource.getProjectById(id);
-    } catch (e) {
-      return await localDataSource.getProjectById(id);
+    } catch (_) {
+      // TEMP: use working list API and filter
+      final projects = await remoteDataSource.getProjects();
+      return projects.firstWhere((p) => p.id == id);
     }
   }
 

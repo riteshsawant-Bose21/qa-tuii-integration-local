@@ -122,7 +122,6 @@ class ProjectsRemoteDataSource implements ProjectsDataSource {
   @override
   Future<void> deleteProject(String id) async {
     try {
-      
       await _apiService.delete('projects/$id');
     } catch (e) {
       // Fallback behavior - simulate success for demo
@@ -180,6 +179,17 @@ class ProjectsLocalDataSource implements ProjectsDataSource {
     }
     throw Exception('No cached projects available');
   }
+  // @override
+  // Future<ProjectModel> getProjectById(String id) async {
+  //   try {
+  //     // Try real endpoint first (when backend is ready later)
+  //     return await remoteDataSource.getProjectById(id);
+  //   } catch (_) {
+  //     // TEMPORARY: use list endpoint and filter
+  //     final projects = await remoteDataSource.getProjects();
+  //     return projects.firstWhere((p) => p.id == id);
+  //   }
+  // }
 
   @override
   Future<ProjectModel> createProject(ProjectModel project) async {
