@@ -34,7 +34,7 @@
         {
             "name": "bt_control",
             "property_settings": [
-                { "name": "period_ms", "value": 200 }
+                { "name": "period_ms", "value": 500 }
             ],
             "blocks": [
                 {
