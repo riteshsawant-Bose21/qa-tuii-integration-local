@@ -32,6 +32,18 @@
             ]
         },
         {
+            "name": "bt_control",
+            "property_settings": [
+                { "name": "period_ms", "value": 200 }
+            ],
+            "blocks": [
+                {
+                    "name": "bt_control",
+                    "module": "bt_control"
+                }
+            ]
+        },
+        {
             "name": "hw_control",
             "blocks": [
                 {

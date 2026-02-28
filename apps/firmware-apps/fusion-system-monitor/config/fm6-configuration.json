@@ -28,6 +28,10 @@
                         { "name": "usb_storage" },
                         { "name": "usb_connected" }
                     ]
+                },
+                {
+                    "name": "bt_control",
+                    "module": "bt_control"
                 }
             ]
         },
