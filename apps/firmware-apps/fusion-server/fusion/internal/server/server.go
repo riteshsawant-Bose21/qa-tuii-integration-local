@@ -11,8 +11,8 @@ import (
 
 	json "github.com/goccy/go-json"
 
-	"fusion/internal/api"
 	"fusion-services-core/logging"
+	"fusion/internal/api"
 	"fusion/internal/persistence"
 	"fusion/internal/pubsub"
 	"fusion/internal/server/handler"
@@ -22,37 +22,53 @@ import (
 )
 
 const (
-	wsBufferSize = 1024
-	wsPingTime   = 30
-	wsPongTime   = 60
-	wsTimeout    = 10
+	wsBufferSize     = 1024        // Increased buffer size for better performance
+	wsPingTime       = 30          // Ping interval in seconds
+	wsPongTime       = 60          // Pong timeout in seconds
+	wsTimeout        = 10          // Connection timeout in seconds
+	wsMaxMessageSize = 1024 * 1024 // Max message size (1MB)
+	wsMaxConnections = 1000        // Max concurrent connections
 )
 
 // FusionServer handles networks connections to manage Fusion state.
 type FusionServer struct {
-	node      string
-	handler   *handler.Handler
-	wsClients map[*websocket.Conn]bool
-	wsLock    sync.RWMutex
-	upgrader  websocket.Upgrader
+	node          string
+	handler       *handler.Handler
+	wsClients     map[*websocket.Conn]bool
+	subscriptions map[string]map[*websocket.Conn]bool // Topic-based subscriptions: topic -> connections
+	wsLock        sync.RWMutex
+	upgrader      websocket.Upgrader
+	wsStats       *api.WebSocketStats
+	statsLock     sync.RWMutex
+
+	maxConnections int
 }
 
 // NewFusionServer creates and initializes a new configuration server with the provided node name,
 // handler and cluster member list. It also sets up a WebSocket upgrader with custom options.
 func NewFusionServer(node string, handler *handler.Handler, hub *pubsub.Hub) *FusionServer {
 	server := &FusionServer{
-		node:      node,
-		handler:   handler,
-		wsClients: make(map[*websocket.Conn]bool),
-		upgrader: websocket.Upgrader{
-			CheckOrigin: func(r *http.Request) bool {
-				return true
-			},
-			HandshakeTimeout:  wsTimeout * time.Second,
-			EnableCompression: true,
-			ReadBufferSize:    wsBufferSize,
-			WriteBufferSize:   wsBufferSize,
+		node:           node,
+		handler:        handler,
+		wsClients:      make(map[*websocket.Conn]bool),
+		subscriptions:  make(map[string]map[*websocket.Conn]bool),
+		maxConnections: wsMaxConnections,
+		wsStats: &api.WebSocketStats{
+			Connections:    0,
+			Messages:       0,
+			Errors:         0,
+			Uptime:         0,
+			LastReset:      time.Now(),
+			MessagesByType: make(map[string]int64),
 		},
+	}
+
+	// Set up the WebSocket upgrader after server creation
+	server.upgrader = websocket.Upgrader{
+		HandshakeTimeout:  wsTimeout * time.Second,
+		EnableCompression: true,
+		ReadBufferSize:    wsBufferSize,
+		WriteBufferSize:   wsBufferSize,
 	}
 	hub.Register(server)
 	return server
@@ -61,17 +77,112 @@ func NewFusionServer(node string, handler *handler.Handler, hub *pubsub.Hub) *Fu
 // BroadcastMessage sends a notification message to all connected WebSocket clients.
 // It acquires a read lock on the clients list to ensure thread-safe access.
 func (s *FusionServer) BroadcastMessage(message *api.NotifyMessage) error {
-	s.wsLock.RLock()
-	defer s.wsLock.RUnlock()
+	// Convert NotifyMessage to appropriate WebSocket format based on operation
+	switch message.Operation {
+	case api.NotifyOpDeviceUpdate:
+		if message.DeviceUpdate != nil {
+			// Convert device update to WebSocket response format
+			updateMessage := &api.WebSocketResponse{
+				ID:      nil, // Push notifications have null ID
+				Version: api.WSCurrentVersion,
+				Type:    api.WSMsgTypeDeviceUpdate,
+				Code:    api.WSCodeDeviceUpdated,
+				Status:  api.WSStatusEvent,
+				Message: fmt.Sprintf("Device %s %s", message.DeviceUpdate.DeviceID, message.DeviceUpdate.UpdateType),
+				Data: map[string]interface{}{
+					"device_id":   message.DeviceUpdate.DeviceID,
+					"update_type": message.DeviceUpdate.UpdateType,
+					"device_data": message.DeviceUpdate.DeviceData,
+				},
+				Timestamp: time.Now(),
+			}
+			// Send to topic-based subscribers
+			return s.BroadcastToTopic("device_updates", updateMessage)
+		}
+	default:
+		// For other message types, broadcast to all connected clients
+		s.wsLock.RLock()
+		defer s.wsLock.RUnlock()
 
-	for conn := range s.wsClients {
-		if err := conn.WriteJSON(message); err != nil {
-			logging.GetLogger().Error("Error broadcasting to WebSocket client: %v", err)
-			conn.Close()
-			delete(s.wsClients, conn)
+		for conn := range s.wsClients {
+			if err := conn.WriteJSON(message); err != nil {
+				logging.GetLogger().Error("Error broadcasting to WebSocket client: %v", err)
+				conn.Close()
+				delete(s.wsClients, conn)
+			}
 		}
 	}
 	return nil
+}
+
+// SubscribeToTopic subscribes a WebSocket connection to a specific topic
+func (s *FusionServer) SubscribeToTopic(conn *websocket.Conn, topic string) {
+	s.wsLock.Lock()
+	if s.subscriptions[topic] == nil {
+		s.subscriptions[topic] = make(map[*websocket.Conn]bool)
+	}
+	s.subscriptions[topic][conn] = true
+	s.wsLock.Unlock()
+	logging.GetLogger().Info("WebSocket client subscribed to topic: %s", topic)
+}
+
+// UnsubscribeFromTopic unsubscribes a WebSocket connection from a specific topic
+func (s *FusionServer) UnsubscribeFromTopic(conn *websocket.Conn, topic string) {
+	s.wsLock.Lock()
+	if s.subscriptions[topic] != nil {
+		delete(s.subscriptions[topic], conn)
+		// Clean up empty topic maps
+		if len(s.subscriptions[topic]) == 0 {
+			delete(s.subscriptions, topic)
+		}
+	}
+	s.wsLock.Unlock()
+	logging.GetLogger().Info("WebSocket client unsubscribed from topic: %s", topic)
+}
+
+// BroadcastToTopic sends a message to all clients subscribed to a specific topic
+func (s *FusionServer) BroadcastToTopic(topic string, message *api.WebSocketResponse) error {
+	s.wsLock.RLock()
+	subscribers := s.subscriptions[topic]
+	s.wsLock.RUnlock()
+
+	if len(subscribers) == 0 {
+		return nil // No subscribers
+	}
+
+	// Send to all subscribers of this topic
+	var failedConnections []*websocket.Conn
+	for conn := range subscribers {
+		if err := conn.WriteJSON(message); err != nil {
+			logging.GetLogger().Error("Error sending message to WebSocket client on topic %s: %v", topic, err)
+			failedConnections = append(failedConnections, conn)
+		}
+	}
+
+	// Clean up failed connections
+	if len(failedConnections) > 0 {
+		s.wsLock.Lock()
+		for _, conn := range failedConnections {
+			delete(s.subscriptions[topic], conn)
+			conn.Close()
+		}
+		// Clean up empty topic maps
+		if len(s.subscriptions[topic]) == 0 {
+			delete(s.subscriptions, topic)
+		}
+		s.wsLock.Unlock()
+	}
+
+	return nil
+}
+
+// checkConnectionLimit verifies if the server can accept more connections
+func (s *FusionServer) checkConnectionLimit() bool {
+	s.wsLock.RLock()
+	count := len(s.wsClients)
+	s.wsLock.RUnlock()
+
+	return count < s.maxConnections
 }
 
 // GetValue handles HTTP GET requests to retrieve a configuration value based on a "key" query parameter.
@@ -240,71 +351,87 @@ func (s *FusionServer) ImportState(w http.ResponseWriter, r *http.Request) {
 	s.handler.StateManager.SetState(state.State)
 }
 
-// HandleWebSocket upgrades an HTTP connection to a WebSocket connection, sets up ping handlers,
-// sends an initial state to the client, and listens for incoming messages.
+// HandleWebSocket upgrades an HTTP connection to a WebSocket connection.
 func (s *FusionServer) HandleWebSocket(w http.ResponseWriter, r *http.Request) {
-	// Upgrade the HTTP connection to a WebSocket connection.
-	conn, err := s.upgrader.Upgrade(w, r, nil)
-	if err != nil {
-		logging.GetLogger().Error("Failed to upgrade connection: %v", err)
+	logger := logging.GetLogger()
+
+	// Check connection limit
+	if !s.checkConnectionLimit() {
+		logger.Warn("WebSocket connection refused: connection limit reached")
+		http.Error(w, "Connection limit reached", http.StatusTooManyRequests)
 		return
 	}
 
-	// Set initial read deadline and pong handler for connection keep-alive.
-	conn.SetReadDeadline(time.Now().Add(wsPongTime * time.Second))
-	conn.SetPongHandler(func(string) error {
-		conn.SetReadDeadline(time.Now().Add(wsPongTime * time.Second))
-		return nil
-	})
+	// Upgrade the HTTP connection to a WebSocket connection
+	conn, err := s.upgrader.Upgrade(w, r, nil)
+	if err != nil {
+		logger.Error("Failed to upgrade connection: %v", err)
+		return
+	}
 
-	// Start a ticker to periodically send ping messages.
-	pingTicker := time.NewTicker(wsPingTime * time.Second)
-	go func() {
-		defer pingTicker.Stop()
-		for range pingTicker.C {
-			if err := conn.WriteControl(websocket.PingMessage, []byte{}, time.Now().Add(10*time.Second)); err != nil {
-				logging.GetLogger().Error("Ping failed: %v", err)
-				return
-			}
-		}
-	}()
+	// Set message size limit
+	conn.SetReadLimit(wsMaxMessageSize)
 
-	// Add the connection to the list of WebSocket clients.
+	// Add the connection to the client list
 	s.wsLock.Lock()
 	s.wsClients[conn] = true
 	s.wsLock.Unlock()
 
-	// Ensure cleanup when the function returns.
+	// Ensure cleanup when the function returns
 	defer func() {
-		pingTicker.Stop()
 		conn.Close()
 		s.wsLock.Lock()
 		delete(s.wsClients, conn)
+		// Clean up all topic subscriptions for this connection
+		for topic, subscribers := range s.subscriptions {
+			delete(subscribers, conn)
+			// Clean up empty topic maps
+			if len(subscribers) == 0 {
+				delete(s.subscriptions, topic)
+			}
+		}
 		s.wsLock.Unlock()
+		logger.Info("WebSocket connection closed")
 	}()
 
-	// Send the initial state to the client.
-	state, err := s.handler.HandleHTTPGet("")
+	logger.Info("WebSocket connection established")
+
+	// Send initial state to the client
+	initialState, err := s.handler.GetInitialState()
 	if err != nil {
-		logging.GetLogger().Error("Failed to get data: %v", err)
+		logger.Error("Failed to get initial state: %v", err)
 		return
 	}
 
-	if err := conn.WriteJSON(state); err != nil {
-		logging.GetLogger().Error("Failure sending initial state: %v", err)
+	// Send welcome message with connection info
+	welcomeResponse := &api.WebSocketResponse{
+		ID:        nil, // null for server push
+		Version:   api.WSCurrentVersion,
+		Type:      "welcome",
+		Code:      api.WSCodeConnected,
+		Status:    api.WSStatusEvent,
+		Message:   "Connected successfully",
+		Data:      initialState,
+		Timestamp: time.Now(),
+	}
+
+	if err := conn.WriteJSON(welcomeResponse); err != nil {
+		logger.Error("Failed to send welcome message: %v", err)
 		return
 	}
 
-	// Listen for messages from the WebSocket client.
+	// Listen for messages from the WebSocket client
 	for {
 		messageType, data, err := conn.ReadMessage()
 		if err != nil {
 			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
-				logging.GetLogger().Error("WebSocket error: %v", err)
+				logger.Error("WebSocket error: %v", err)
 			}
 			break
 		}
+
 		if messageType == websocket.TextMessage {
+			// Process the message
 			s.handleWebSocketMessage(conn, data)
 		}
 	}
@@ -665,18 +792,35 @@ func getSingleQueryParam(r *http.Request, param string) (string, error) {
 // handleWebSocketMessage processes a message received over the WebSocket connection.
 // It delegates the message handling to the handler and sends the response back to the client.
 func (s *FusionServer) handleWebSocketMessage(conn *websocket.Conn, data []byte) {
-	response, err := s.handler.HandleWebSocketMessage(data)
+	logger := logging.GetLogger()
+
+	// Handle the WebSocket message
+	response, err := s.handler.HandleWebSocketMessageWithConn(data, conn, s)
 	if err != nil {
-		if err := conn.WriteJSON(map[string]any{
-			"type":    "error",
-			"message": err.Error(),
-		}); err != nil {
-			logging.GetLogger().Error("Error sending error response: %v", err)
-		}
+		logger.Error("WebSocket handler error: %v", err)
+		s.sendErrorToConnection(conn, "", api.WSCodeApplicationError, err.Error(), "error")
 		return
 	}
 
 	if err := conn.WriteJSON(response); err != nil {
-		logging.GetLogger().Error("Error sending response: %v", err)
+		logger.Error("Error sending response: %v", err)
+	}
+}
+
+// sendErrorToConnection sends an error response to a specific WebSocket connection
+func (s *FusionServer) sendErrorToConnection(conn *websocket.Conn, requestID string, code int, message, status string) {
+	errorResponse := &api.WebSocketResponse{
+		ID:        nil, // null for server errors
+		Version:   api.WSCurrentVersion,
+		Type:      api.WSMsgTypeError,
+		Code:      code,
+		Status:    status,
+		Message:   message,
+		Data:      nil,
+		Timestamp: time.Now(),
+	}
+
+	if err := conn.WriteJSON(errorResponse); err != nil {
+		logging.GetLogger().Error("Failed to send error response: %v", err)
 	}
 }

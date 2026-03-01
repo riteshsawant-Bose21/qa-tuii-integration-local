@@ -3,9 +3,9 @@ package pubsub
 import (
 	"encoding/json"
 	"fmt"
+	"fusion-services-core/logging"
 	"fusion/internal/api"
 	"fusion/internal/cluster/transport"
-	"fusion-services-core/logging"
 	"fusion/internal/persistence"
 )
 
@@ -137,6 +137,11 @@ func (h *Hub) BroadcastToNodes(message *api.NotifyMessage) error {
 	case api.NotifyOpSnapDelete:
 		if err := h.persistence.DeleteSnapshot(message.SnapshotOperation.Name); err != nil {
 			return fmt.Errorf("error deleting snapshot: %v", err)
+		}
+
+	case api.NotifyOpDeviceUpdate:
+		if message.DeviceUpdate == nil {
+			return fmt.Errorf("DeviceUpdate required for operation")
 		}
 
 	default:

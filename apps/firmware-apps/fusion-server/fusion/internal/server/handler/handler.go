@@ -14,14 +14,21 @@ import (
 	"github.com/hashicorp/memberlist"
 )
 
+// DeviceInfoProvider defines interface for getting and updating device information
+type DeviceInfoProvider interface {
+	GetAllDeviceInfos() []persistence.DeviceInfo
+	UpdateDeviceInfoForWebSocket(deviceID string, patch *persistence.DevicePatch) error
+}
+
 // Handler is the container for server implimentations.
 type Handler struct {
-	appConfig    *api.AppConfig
-	memberlist   *memberlist.Memberlist
-	persistence  *persistence.Persistence
-	StateManager *persistence.StateManager
-	hub          *pubsub.Hub
-	endpoints    []string
+	appConfig      *api.AppConfig
+	memberlist     *memberlist.Memberlist
+	persistence    *persistence.Persistence
+	StateManager   *persistence.StateManager
+	hub            *pubsub.Hub
+	endpoints      []string
+	deviceProvider DeviceInfoProvider // Provides device info using same logic as REST API
 
 	sessions     map[string]*SAPSession
 	sessionsLock sync.RWMutex
@@ -56,12 +63,9 @@ func (h *Handler) SetMemberlist(memberlist *memberlist.Memberlist) {
 	h.memberlist = memberlist
 }
 
-func (h *Handler) GetInitialState() (WebSocketResponse, error) {
+func (h *Handler) GetInitialState() (map[string]any, error) {
 	data := h.StateManager.GetStateMap()
-	return WebSocketResponse{
-		Type: "initial_state",
-		Data: data,
-	}, nil
+	return data, nil
 }
 
 func (h *Handler) HandleHTTPGet(key string) (any, error) {
@@ -189,4 +193,9 @@ func (h *Handler) handleConfigUpdate(data map[string]any, clear bool) error {
 	}
 
 	return nil
+}
+
+// SetDeviceProvider sets the device info provider
+func (h *Handler) SetDeviceProvider(provider DeviceInfoProvider) {
+	h.deviceProvider = provider
 }

@@ -4,8 +4,9 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"fusion/internal/api"
 	"fusion-services-core/logging"
+	"fusion/internal/api"
+	"fusion/internal/network"
 	"fusion/internal/persistence"
 	"fusion/internal/routes"
 	"io"
@@ -30,7 +31,9 @@ const (
 	retryInterval       = 2 * time.Second
 	retryTimes          = 5
 	serialPath          = "/sys/firmware/devicetree/base/serial-number"
+	firmwarePath        = "/sys/firmware/devicetree/base/firmware-version"
 	serialUnknown       = "Unknown"
+	firmwareUnknown     = "Unknown"
 	suspicionMult       = 3
 	tcpTimeout          = 10 * time.Second
 )
@@ -237,6 +240,25 @@ func (c *Cluster) updateDeviceInfo() {
 			info.SerialNumber = serialUnknown
 		} else {
 			info.SerialNumber = string(bytes.TrimRight(data, "\x00\n"))
+		}
+	}
+
+	if info.FirmwareVersion == "" {
+		data, err := os.ReadFile(firmwarePath)
+		if err != nil {
+			logging.GetLogger().Warn("%s not found.", firmwarePath)
+			info.FirmwareVersion = firmwareUnknown
+		} else {
+			info.FirmwareVersion = string(bytes.TrimRight(data, "\x00\n"))
+		}
+	}
+
+	if info.MacAddress == "" || info.MacAddress == "Unknown" {
+		macAddr, err := network.GetMacAddress()
+		if err != nil {
+			logging.GetLogger().Error("Unable to read MAC address: %v", err)
+		} else {
+			info.MacAddress = macAddr
 		}
 	}
 
