@@ -168,6 +168,20 @@ class ZoneFunctions {
       selectedSourceId: json['selectedSourceId'],
     );
   }
+
+  String get algorithmName {
+    switch (type) {
+      case ZoneFunctionsType.sourceSelect:
+      case ZoneFunctionsType.sourceSelectWithPriority:
+        return "source_select";
+      case ZoneFunctionsType.sourceMix:
+      case ZoneFunctionsType.sourceMixWithPriority:
+        return "source_mix";
+      case ZoneFunctionsType.sourceMatrix:
+      case ZoneFunctionsType.sourceMatrixWithPriority:
+        return "mini_matrix";
+    }
+  }
 }
 
 ZoneFunctions getNewZoneFunction({required ZoneFunctionsType type, String? name}) {

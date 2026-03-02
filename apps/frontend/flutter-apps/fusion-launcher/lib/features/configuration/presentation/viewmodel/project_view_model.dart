@@ -4,6 +4,7 @@ import 'package:bloc/bloc.dart';
 import 'package:flutter/material.dart';
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
 import 'package:fusion_lib/fusion_lib.dart';
+import 'package:fusion_lib/project_manger/dro/dro_input_mapper.dart';
 
 export 'circuit/circuit_viewmodel.dart';
 export 'equip_location/equip_location_view_model.dart';
@@ -321,6 +322,10 @@ class ProjectViewModel extends Cubit<ProjectViewModelState> {
   /// get Project json
   Map<String, dynamic> getProjectJson() {
     return projectManager.getCurrentProjectJson();
+  }
+
+  DroInputModel getDroInputData() {
+    return projectManager.getDroInputData();
   }
 
   /// Clears the current project selection.
