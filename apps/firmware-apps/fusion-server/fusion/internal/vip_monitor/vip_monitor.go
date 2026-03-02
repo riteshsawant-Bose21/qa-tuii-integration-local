@@ -728,6 +728,76 @@ func (m *VIPMonitor) HandleReloadVIPLocal(w http.ResponseWriter, r *http.Request
 	w.WriteHeader(http.StatusNoContent)
 }
 
+// HandleDeleteVIP handles DELETE /devices/vip (deletes VIP on all nodes)
+func (m *VIPMonitor) HandleDeleteVIP(w http.ResponseWriter, r *http.Request) {
+	if !utils.RequireDelete(w, r) {
+		return
+	}
+	defer r.Body.Close()
+
+	// Delete VIP on all nodes in cluster
+	endpoint := routes.DevicesDeleteVIPLocalEndpoint
+	localFn := func() error {
+		return m.DeleteVIP()
+	}
+
+	if err := cluster.PostGenericToAdmin(m.cluster, endpoint, localFn); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// Reload keepalived on all nodes (async)
+	if !m.isLocal {
+		go func() {
+			if err := cluster.PostGenericToAdmin(m.cluster, routes.DeviceReloadVIPEndpoint, m.ReloadKeepalived); err != nil {
+				logging.GetLogger().Error("Failed to reload VIP after delete: %v", err)
+			}
+		}()
+	}
+
+	w.WriteHeader(http.StatusNoContent)
+}
+
+// HandleDeleteVIPLocal handles POST /devices/vip/local on admin port (local delete only)
+func (m *VIPMonitor) HandleDeleteVIPLocal(w http.ResponseWriter, r *http.Request) {
+	if !utils.RequirePost(w, r) {
+		return
+	}
+	defer r.Body.Close()
+
+	if err := m.DeleteVIP(); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
+}
+
+// DeleteVIP removes the VIP configuration from keepalived.conf (does NOT reload keepalived)
+func (m *VIPMonitor) DeleteVIP() error {
+	logger := logging.GetLogger()
+
+	if m.isLocal {
+		logger.Debug("Skipping VIP delete in local mode")
+		return nil
+	}
+
+	logger.Debug("Deleting VIP from %s", m.configPath)
+
+	if err := vip.DeleteFromKeepalivedConfig(m.configPath); err != nil {
+		return fmt.Errorf("failed to delete VIP from config: %w", err)
+	}
+
+	// Update internal state
+	m.stateMu.Lock()
+	m.currentVIP = ""
+	m.currentHolder = ""
+	m.stateMu.Unlock()
+
+	logger.Info("VIP deleted successfully from config")
+	return nil
+}
+
 // getVIPInLocalConfig is for use in "local" development mode only
 func (m *VIPMonitor) getVIPInLocalConfig(w http.ResponseWriter) {
 	vipValue, err := vip.ReadFromLocalConfig(serverPrefix, vip.DefaultConfFile)
