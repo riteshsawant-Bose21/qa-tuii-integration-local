@@ -130,37 +130,57 @@ class ProjectsRemoteDataSource implements ProjectsDataSource {
     }
   }
 
+  //search implementation when backend is 
+  
+  // @override
+  // Future<List<ProjectModel>> searchProjects(String query) async {
+  //   try {
+  //     final response = await _apiService.get(
+  //       '/projects/search?q=${Uri.encodeComponent(query)}',
+  //     );
+
+  //         final projectsJson =
+  //           response['data'] as List<dynamic>? ??
+  //           response['projects'] as List<dynamic>? ??
+  //           [];
+
+  //       return projectsJson
+  //           .map((json) => ProjectModel.fromJson(json as Map<String, dynamic>))
+  //           .toList();
+  //     } catch (e) {
+  //       // Fallback to local search on mock data
+  //       print('API Error, using mock search: $e');
+  //       final projects = ProjectModel.mockProjects();
+  //       return projects
+  //           .where(
+  //             (p) =>
+  //                 p.name.toLowerCase().contains(query.toLowerCase()) ||
+  //                 p.description.toLowerCase().contains(query.toLowerCase()) ||
+  //                 (p.clientName?.toLowerCase().contains(query.toLowerCase()) ??
+  //                     false),
+  //           )
+  //           .toList();
+  //     }
+  //   }
+  // }
+
+  //below is the temporary search implementation until backend is ready
   @override
   Future<List<ProjectModel>> searchProjects(String query) async {
-    try {
-      final response = await _apiService.get(
-        '/projects/search?q=${Uri.encodeComponent(query)}',
-      );
-      final projectsJson =
-          response['data'] as List<dynamic>? ??
-          response['projects'] as List<dynamic>? ??
-          [];
+    final allProjects = await getProjects();
 
-      return projectsJson
-          .map((json) => ProjectModel.fromJson(json as Map<String, dynamic>))
-          .toList();
-    } catch (e) {
-      // Fallback to local search on mock data
-      print('API Error, using mock search: $e');
-      final projects = ProjectModel.mockProjects();
-      return projects
-          .where(
-            (p) =>
-                p.name.toLowerCase().contains(query.toLowerCase()) ||
-                p.description.toLowerCase().contains(query.toLowerCase()) ||
-                (p.clientName?.toLowerCase().contains(query.toLowerCase()) ??
-                    false),
-          )
-          .toList();
-    }
+    return allProjects
+        .where(
+          (p) =>
+              p.name.toLowerCase().contains(query.toLowerCase()) ||
+              p.description.toLowerCase().contains(query.toLowerCase()) ||
+              (p.clientName?.toLowerCase().contains(query.toLowerCase()) ??
+                  false),
+        )
+        .toList();
   }
 }
-
+//above is the temporary search implementation until backend is ready 
 class ProjectsLocalDataSource implements ProjectsDataSource {
   List<ProjectModel>? _cachedProjects;
 
@@ -172,6 +192,7 @@ class ProjectsLocalDataSource implements ProjectsDataSource {
     throw Exception('No cached projects available');
   }
 
+//temporary implementation until backend is ready - getProjectByID
   @override
   Future<ProjectModel> getProjectById(String id) async {
     if (_cachedProjects != null) {
@@ -179,6 +200,8 @@ class ProjectsLocalDataSource implements ProjectsDataSource {
     }
     throw Exception('No cached projects available');
   }
+
+  //when backend is ready use this instead
   // @override
   // Future<ProjectModel> getProjectById(String id) async {
   //   try {

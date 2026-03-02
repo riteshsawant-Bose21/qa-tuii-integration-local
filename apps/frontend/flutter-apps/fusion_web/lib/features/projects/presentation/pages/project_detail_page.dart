@@ -581,7 +581,7 @@ class _ProjectDetailPageState extends State<ProjectDetailPage> {
                 children: [
                   /// BACK
                   InkWell(
-                    onTap: () => Navigator.pop(context),
+                    onTap: () => context.go(AppConstants.projectsRoute),
                     child: Row(
                       children: [
                         const Icon(Icons.arrow_back, size: 18),
