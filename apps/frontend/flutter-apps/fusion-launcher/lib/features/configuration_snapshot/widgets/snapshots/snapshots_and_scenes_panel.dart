@@ -1,16 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:fusion_launcher/features/configuration_page/cubit/scene_set/scene_sets_cubit.dart';
-import 'package:fusion_launcher/features/configuration_page/cubit/scene_set/scene_sets_state.dart';
-import 'package:fusion_launcher/features/configuration_page/cubit/snapshots/snapshots_cubit.dart';
-import 'package:fusion_launcher/features/configuration_page/cubit/snapshots/snapshots_state.dart';
+import 'package:fusion_launcher/features/configuration_snapshot/viewModel/scenes_viewmodel/scene_sets_cubit.dart';
+import 'package:fusion_launcher/features/configuration_snapshot/viewModel/scenes_viewmodel/scene_sets_state.dart';
+import 'package:fusion_launcher/features/configuration_snapshot/viewModel/snapshot_viewmodel/snapshots_cubit.dart';
 import 'package:fusion_launcher/features/configuration_page/widgets/section_header.dart';
-import 'package:fusion_launcher/features/configuration_page/widgets/snapshots/scenes_expandable_card.dart';
-import 'package:fusion_launcher/features/configuration_page/widgets/snapshots/snapshot_list.dart';
+import 'package:fusion_launcher/features/configuration_snapshot/viewModel/snapshot_viewmodel/snapshots_state.dart';
+import 'package:fusion_launcher/features/configuration_snapshot/widgets/scenes_sets/scenes_expandable_card.dart';
+import 'package:fusion_launcher/features/configuration_snapshot/widgets/snapshots/snapshot_list.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/fusion_theme/app_theme.dart';
 
-import '../drag_divider.dart';
+import '../../../../core/widgets/configuration_widgets/drag_divider.dart';
 
 class SnapshotsAndScenesPanel extends StatefulWidget {
   const SnapshotsAndScenesPanel({super.key});

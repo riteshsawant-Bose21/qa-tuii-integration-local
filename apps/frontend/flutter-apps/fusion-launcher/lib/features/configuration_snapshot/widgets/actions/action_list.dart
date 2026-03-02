@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:fusion_launcher/features/configuration_page/cubit/actions/snapshot_actions_cubit.dart';
-import 'package:fusion_launcher/features/configuration_page/cubit/actions/snapshot_actions_state.dart';
-import 'package:fusion_launcher/features/configuration_page/cubit/snapshots/snapshots_cubit.dart';
-import 'package:fusion_launcher/features/configuration_page/widgets/snapshots/snapshot_action_row_data.dart';
-import 'package:fusion_launcher/features/configuration_page/widgets/snapshots/snapshot_action_row_header.dart';
-import 'package:fusion_launcher/features/configuration_page/widgets/snapshots/snapshot_header_widget.dart';
+import 'package:fusion_launcher/features/configuration_snapshot/viewModel/actions_viewmodel/snapshot_actions_cubit.dart';
+import 'package:fusion_launcher/features/configuration_snapshot/viewModel/actions_viewmodel/snapshot_actions_state.dart';
+import 'package:fusion_launcher/features/configuration_snapshot/viewModel/snapshot_viewmodel/snapshots_cubit.dart';
+import 'package:fusion_launcher/features/configuration_snapshot/widgets/actions/snapshot_action_row_data.dart';
+import 'package:fusion_launcher/features/configuration_snapshot/widgets/actions/snapshot_action_row_header.dart';
+import 'package:fusion_launcher/features/configuration_snapshot/widgets/actions/snapshot_header_widget.dart';
 import 'package:fusion_lib/fusion_theme/app_theme.dart';
 import 'package:fusion_lib/fusion_widgets/text_views/fusion_app_text.dart';
 import 'package:fusion_lib/models/project_entities/non_processing/scene_set_model.dart';

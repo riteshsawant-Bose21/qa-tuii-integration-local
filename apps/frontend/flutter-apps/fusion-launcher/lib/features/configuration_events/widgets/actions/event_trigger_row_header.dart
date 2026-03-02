@@ -1,13 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:fusion_launcher/features/configuration_page/cubit/events/events_cubit.dart';
+import 'package:fusion_launcher/core/widgets/configuration_widgets/action_drop_down.dart';
+import 'package:fusion_launcher/features/configuration_events/viewModel/events_viewmodel/events_cubit.dart';
 import 'package:fusion_lib/fusion_theme/app_theme.dart';
 import 'package:fusion_lib/fusion_widgets/semantics/semantic_helper.dart';
 import 'package:fusion_lib/fusion_widgets/semantics/semantic_type.dart';
 import 'package:fusion_lib/fusion_widgets/text_views/fusion_app_text.dart';
 import 'package:fusion_lib/models/project_entities/non_processing/fusion_event.dart';
-
-import '../snapshots/action_drop_down.dart';
 
 /// Event Trigger Row Header Widget
 /// This widget displays the header row for event triggers, including dropdowns for selecting trigger type, item, action, condition, and value.

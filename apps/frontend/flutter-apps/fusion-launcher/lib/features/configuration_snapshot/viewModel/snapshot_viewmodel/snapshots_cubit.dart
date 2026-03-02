@@ -1,8 +1,7 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
+import 'package:fusion_launcher/features/configuration_snapshot/viewModel/snapshot_viewmodel/snapshots_state.dart';
 import 'package:fusion_lib/fusion_lib.dart';
-
-import 'snapshots_state.dart';
 
 /// Cubit for managing Snapshots feature state and business logic
 class SnapshotsCubit extends Cubit<SnapshotsState> {

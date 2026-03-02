@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/core/widgets/title_text_field_switcher.dart';
-import 'package:fusion_launcher/features/configuration_page/cubit/scene_set/scene_sets_cubit.dart';
-import 'package:fusion_launcher/features/configuration_page/cubit/snapshots/snapshots_cubit.dart';
-import 'package:fusion_launcher/features/configuration_page/cubit/snapshots/snapshots_state.dart';
-import 'package:fusion_launcher/features/configuration_page/widgets/snapshots/snapshot_list.dart';
+import 'package:fusion_launcher/features/configuration_snapshot/viewModel/scenes_viewmodel/scene_sets_cubit.dart';
+import 'package:fusion_launcher/features/configuration_snapshot/viewModel/snapshot_viewmodel/snapshots_cubit.dart';
+import 'package:fusion_launcher/features/configuration_snapshot/widgets/snapshots/snapshot_list.dart';
+import 'package:fusion_launcher/features/configuration_snapshot/viewModel/snapshot_viewmodel/snapshots_state.dart';
 import 'package:fusion_lib/fusion_theme/app_theme.dart';
 import 'package:fusion_lib/fusion_widgets/others/fusion_dialog.dart';
 import 'package:fusion_lib/fusion_widgets/others/fusion_image.dart';

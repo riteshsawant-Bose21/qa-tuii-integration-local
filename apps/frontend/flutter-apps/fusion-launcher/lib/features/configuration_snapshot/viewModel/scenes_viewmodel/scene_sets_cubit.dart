@@ -1,6 +1,6 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
-import 'package:fusion_launcher/features/configuration_page/cubit/scene_set/scene_sets_state.dart';
+import 'package:fusion_launcher/features/configuration_snapshot/viewModel/scenes_viewmodel/scene_sets_state.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
 /// Cubit for managing Scene Sets feature state and business logic

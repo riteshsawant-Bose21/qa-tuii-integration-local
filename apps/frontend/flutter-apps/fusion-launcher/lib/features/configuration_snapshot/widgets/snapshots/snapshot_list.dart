@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:fusion_launcher/features/configuration_page/widgets/snapshots/snapshot_item_card.dart';
+import 'package:fusion_launcher/features/configuration_snapshot/widgets/snapshots/snapshot_item_card.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
 /// A widget that displays a list of snapshot items in a reorderable list view.

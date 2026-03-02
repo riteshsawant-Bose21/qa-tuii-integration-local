@@ -1,6 +1,6 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
-import 'package:fusion_launcher/features/configuration_page/cubit/actions/snapshot_actions_state.dart';
+import 'package:fusion_launcher/features/configuration_snapshot/viewModel/actions_viewmodel/snapshot_actions_state.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
 /// Cubit for managing Snapshot Actions feature state and business logic

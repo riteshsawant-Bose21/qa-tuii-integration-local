@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:fusion_launcher/features/configuration_page/cubit/events/events_cubit.dart';
-import 'package:fusion_launcher/features/configuration_page/cubit/events/events_state.dart';
+import 'package:fusion_launcher/features/configuration_events/viewModel/events_viewmodel/events_cubit.dart';
+import 'package:fusion_launcher/features/configuration_events/viewModel/events_viewmodel/events_state.dart';
 import 'package:fusion_launcher/features/configuration_page/widgets/section_header.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/fusion_theme/app_theme.dart';

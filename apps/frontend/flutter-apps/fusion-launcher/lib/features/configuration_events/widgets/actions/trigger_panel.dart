@@ -1,16 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:fusion_launcher/features/configuration_page/cubit/events/event_actions_cubit.dart';
-import 'package:fusion_launcher/features/configuration_page/cubit/events/event_actions_state.dart';
-import 'package:fusion_launcher/features/configuration_page/cubit/events/events_cubit.dart';
-import 'package:fusion_launcher/features/configuration_page/widgets/events/event_action_row_data.dart';
+import 'package:fusion_launcher/features/configuration_events/viewModel/actions_viewmodel/event_actions_cubit.dart';
+import 'package:fusion_launcher/features/configuration_events/viewModel/actions_viewmodel/event_actions_state.dart';
+import 'package:fusion_launcher/features/configuration_events/viewModel/events_viewmodel/events_cubit.dart';
+import 'package:fusion_launcher/features/configuration_events/widgets/actions/event_action_row_data.dart';
 import 'package:fusion_lib/fusion_theme/app_theme.dart';
 import 'package:fusion_lib/fusion_widgets/text_views/fusion_app_text.dart';
 import 'package:fusion_lib/models/project_entities/non_processing/fusion_event.dart';
 import 'package:fusion_lib/models/project_entities/non_processing/snapshot_model.dart';
 
 import 'event_action_row_header.dart';
-import 'event_header_widget.dart';
+import '../events/event_header_widget.dart';
 import 'event_trigger_row_header.dart';
 
 class TriggerPanel extends StatelessWidget {
