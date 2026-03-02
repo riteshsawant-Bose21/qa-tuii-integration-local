@@ -31,7 +31,7 @@ const (
 	retryInterval       = 2 * time.Second
 	retryTimes          = 5
 	serialPath          = "/sys/firmware/devicetree/base/serial-number"
-	firmwarePath        = "/sys/firmware/devicetree/base/firmware-version"
+	firmwarePath        = "/etc/buildinfo"
 	serialUnknown       = "Unknown"
 	firmwareUnknown     = "Unknown"
 	suspicionMult       = 3

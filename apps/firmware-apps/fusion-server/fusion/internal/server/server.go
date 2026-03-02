@@ -80,36 +80,46 @@ func (s *FusionServer) BroadcastMessage(message *api.NotifyMessage) error {
 	// Convert NotifyMessage to appropriate WebSocket format based on operation
 	switch message.Operation {
 	case api.NotifyOpDeviceUpdate:
-		if message.DeviceUpdate != nil {
+		if message.DeviceInfo != nil {
 			// Convert device update to WebSocket response format
 			updateMessage := &api.WebSocketResponse{
-				ID:      nil, // Push notifications have null ID
-				Version: api.WSCurrentVersion,
-				Type:    api.WSMsgTypeDeviceUpdate,
-				Code:    api.WSCodeDeviceUpdated,
-				Status:  api.WSStatusEvent,
-				Message: fmt.Sprintf("Device %s %s", message.DeviceUpdate.DeviceID, message.DeviceUpdate.UpdateType),
-				Data: map[string]interface{}{
-					"device_id":   message.DeviceUpdate.DeviceID,
-					"update_type": message.DeviceUpdate.UpdateType,
-					"device_data": message.DeviceUpdate.DeviceData,
-				},
+				ID:        nil, // Push notifications have null ID
+				Version:   api.WSCurrentVersion,
+				Type:      api.WSMsgTypeDeviceUpdate,
+				Code:      api.WSCodeDeviceUpdated,
+				Status:    api.WSStatusEvent,
+				Message:   fmt.Sprintf("Device %s updated", message.DeviceInfo.Id),
+				Data:      message.DeviceInfo,
 				Timestamp: time.Now(),
 			}
 			// Send to topic-based subscribers
-			return s.BroadcastToTopic("device_updates", updateMessage)
+			return s.BroadcastToTopic(handler.TopicDeviceUpdates, updateMessage)
 		}
 	default:
 		// For other message types, broadcast to all connected clients
 		s.wsLock.RLock()
-		defer s.wsLock.RUnlock()
-
+		clients := make([]*websocket.Conn, 0, len(s.wsClients))
 		for conn := range s.wsClients {
+			clients = append(clients, conn)
+		}
+		s.wsLock.RUnlock()
+
+		var failedConnections []*websocket.Conn
+		for _, conn := range clients {
 			if err := conn.WriteJSON(message); err != nil {
 				logging.GetLogger().Error("Error broadcasting to WebSocket client: %v", err)
-				conn.Close()
-				delete(s.wsClients, conn)
+				failedConnections = append(failedConnections, conn)
 			}
+		}
+
+		// Clean up failed connections
+		if len(failedConnections) > 0 {
+			s.wsLock.Lock()
+			for _, conn := range failedConnections {
+				delete(s.wsClients, conn)
+				conn.Close()
+			}
+			s.wsLock.Unlock()
 		}
 	}
 	return nil
@@ -355,13 +365,6 @@ func (s *FusionServer) ImportState(w http.ResponseWriter, r *http.Request) {
 func (s *FusionServer) HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 	logger := logging.GetLogger()
 
-	// Check connection limit
-	if !s.checkConnectionLimit() {
-		logger.Warn("WebSocket connection refused: connection limit reached")
-		http.Error(w, "Connection limit reached", http.StatusTooManyRequests)
-		return
-	}
-
 	// Upgrade the HTTP connection to a WebSocket connection
 	conn, err := s.upgrader.Upgrade(w, r, nil)
 	if err != nil {
@@ -372,8 +375,21 @@ func (s *FusionServer) HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 	// Set message size limit
 	conn.SetReadLimit(wsMaxMessageSize)
 
-	// Add the connection to the client list
+	// Set up ping/pong handlers for connection keepalive
+	conn.SetReadDeadline(time.Now().Add(wsPongTime * time.Second))
+	conn.SetPongHandler(func(string) error {
+		conn.SetReadDeadline(time.Now().Add(wsPongTime * time.Second))
+		return nil
+	})
+
+	// Atomically check connection limit and add connection
 	s.wsLock.Lock()
+	if len(s.wsClients) >= s.maxConnections {
+		s.wsLock.Unlock()
+		logger.Warn("WebSocket connection refused: connection limit reached")
+		conn.Close()
+		return
+	}
 	s.wsClients[conn] = true
 	s.wsLock.Unlock()
 
@@ -419,6 +435,29 @@ func (s *FusionServer) HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 		logger.Error("Failed to send welcome message: %v", err)
 		return
 	}
+
+	// Start ping ticker for connection keepalive
+	pingTicker := time.NewTicker(wsPingTime * time.Second)
+	defer pingTicker.Stop()
+
+	// Channel to signal when to stop the ping goroutine
+	done := make(chan struct{})
+	defer close(done)
+
+	// Start ping goroutine
+	go func() {
+		for {
+			select {
+			case <-pingTicker.C:
+				if err := conn.WriteMessage(websocket.PingMessage, nil); err != nil {
+					logger.Error("Failed to send ping: %v", err)
+					return
+				}
+			case <-done:
+				return
+			}
+		}
+	}()
 
 	// Listen for messages from the WebSocket client
 	for {
@@ -809,8 +848,13 @@ func (s *FusionServer) handleWebSocketMessage(conn *websocket.Conn, data []byte)
 
 // sendErrorToConnection sends an error response to a specific WebSocket connection
 func (s *FusionServer) sendErrorToConnection(conn *websocket.Conn, requestID string, code int, message, status string) {
+	var id *string
+	if requestID != "" {
+		id = &requestID
+	}
+
 	errorResponse := &api.WebSocketResponse{
-		ID:        nil, // null for server errors
+		ID:        id, // null for server errors
 		Version:   api.WSCurrentVersion,
 		Type:      api.WSMsgTypeError,
 		Code:      code,

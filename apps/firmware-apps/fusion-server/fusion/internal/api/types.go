@@ -112,12 +112,18 @@ type ConfigValue struct {
 	Value json.RawMessage `json:"value,omitempty"`
 }
 
-// DeviceUpdate represents a device state change event
-type DeviceUpdate struct {
-	DeviceID   string      `json:"device_id"`
-	UpdateType string      `json:"update_type"`
-	DeviceData interface{} `json:"device_data"`
-	Timestamp  time.Time   `json:"timestamp"`
+// DeviceInfo represents device configuration data.
+type DeviceInfo struct {
+	Address         string `json:"address"`
+	Id              string `json:"id"`
+	Location        string `json:"location"`
+	Name            string `json:"name"`
+	ModelName       string `json:"model_name"`
+	MacAddress      string `json:"mac_address"`
+	IsClaimed       bool   `json:"is_claimed"`
+	SerialNumber    string `json:"serial_number"`
+	IsPrimaryNode   bool   `json:"is_primary"`
+	FirmwareVersion string `json:"firmware_version"`
 }
 
 // ControllerInfo represents a generic hardware controller
@@ -268,7 +274,7 @@ type WebSocketResponse struct {
 	Status    string    `json:"status"`    // Status (success, error, event)
 	Message   string    `json:"message"`   // Human-readable message
 	Data      any       `json:"data"`      // Response payload (can be null)
-	Timestamp time.Time `json:"timestamp"` // ISO 8601 UTC time
+	Timestamp time.Time `json:"timestamp"` // ISO 8601 timestamp
 }
 
 // WebSocketStats represents connection and usage statistics

@@ -73,24 +73,12 @@ func (m *Monitor) Stop() {
 	m.wg.Wait()
 }
 
-// getLocalIP returns the primary IP address used for outbound communication
-func getLocalIP() (string, error) {
-	conn, err := net.Dial("udp", "8.8.8.8:80")
-	if err != nil {
-		return "", err
-	}
-	defer conn.Close()
-
-	localAddr := conn.LocalAddr().(*net.UDPAddr)
-	return localAddr.IP.String(), nil
-}
-
 // GetMacAddress returns the MAC address of the primary network interface
 func GetMacAddress() (string, error) {
 	logger := logging.GetLogger()
 
 	// Get the local IP to identify which interface is primary
-	localIP, err := getLocalIP()
+	localIP, err := utils.GetLocalIP()
 	if err != nil {
 		logger.Info("GetMacAddress: failed to get local IP: %v", err)
 		return "", err

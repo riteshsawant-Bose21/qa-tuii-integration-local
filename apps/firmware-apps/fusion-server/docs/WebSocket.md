@@ -34,7 +34,7 @@ The WebSocket implementation provides:
 
 ```json
 {
-  "id": "unique-request-id",     // Optional: null for server-initiated messages
+  "id": "unique-request-id",     // Required: non-empty string for client requests
   "version": 1,                  // Protocol version (currently 1)
   "type": "message_type",        // Message type (see supported types below)
   "data": {}                     // Optional: message-specific data
@@ -45,16 +45,18 @@ The WebSocket implementation provides:
 
 ```json
 {
-  "id": "request-id",            // Matches request ID, null for server messages
+  "id": "request-id",            // Matches request ID, null for server-initiated messages
   "version": 1,                  // Protocol version
   "type": "response_type",       // Response type (devices, device, error, etc.)
-  "code": 1000,                  // Status code (see status codes below)
+  "code": 3000,                  // Status code (see status codes below)
   "status": "success",           // Status category (success, error, event)
   "message": "OK",               // Human-readable message
   "data": {},                    // Response payload
   "timestamp": "2026-02-28T08:09:07Z"  // Response timestamp
 }
 ```
+
+**Note**: Client requests must include a non-empty string `id`. Server-initiated messages (like push notifications) have `id: null`.
 
 ## Subscription Management
 
@@ -98,8 +100,8 @@ The WebSocket API uses a **Pull-then-Push** pattern where requesting device data
        "device_id": "fusion-1",
        "id": "new-device-id",
        "name": "New Device Name",
-       "location": "Building A",
-       "xyte_cloud_id": "cloud-123",
+       "location": "Rack A",
+       "model_name": "FM6",
        "is_claimed": true
      }
    }

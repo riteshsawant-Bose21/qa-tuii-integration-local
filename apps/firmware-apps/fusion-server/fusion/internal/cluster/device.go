@@ -15,7 +15,6 @@ import (
 	"net/http"
 	"net/url"
 	"os"
-	"time"
 
 	json "github.com/goccy/go-json"
 )
@@ -82,73 +81,15 @@ func (c *Cluster) UpdateDeviceInfo(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	deviceInfos := c.fetchAllDeviceInfos()
-
-	var localInfo *persistence.DeviceInfo
-	for _, info := range deviceInfos {
-		if info.Id == deviceId {
-			localInfo = &info
-			break
-		}
-	}
-
-	if localInfo == nil {
-		http.Error(w, fmt.Sprintf("Device %s not found", deviceId), http.StatusNotFound)
-		return
-	}
-
 	var patch persistence.DevicePatch
 	if err := json.NewDecoder(r.Body).Decode(&patch); err != nil {
 		http.Error(w, fmt.Sprintf("Invalid JSON: %v", err), http.StatusBadRequest)
 		return
 	}
 
-	if err := validateNoDuplication(deviceInfos, patch, localInfo.Id); err != nil {
-		http.Error(w, fmt.Sprintf("%v", err), http.StatusConflict)
+	if err, statusCode := c.updateDeviceInfoCore(deviceId, &patch, false); err != nil {
+		http.Error(w, err.Error(), statusCode)
 		return
-
-	}
-
-	c.applyPatch(&patch, localInfo)
-
-	if c.hostIsLocal(localInfo.Address) {
-		if err := c.delegate.persistence.SetDeviceInfo(localInfo); err != nil {
-			http.Error(w, fmt.Sprintf("Failed to set device info: %v", err), http.StatusInternalServerError)
-			return
-		}
-		// Broadcast device update through Hub
-		c.broadcastDeviceUpdate(deviceId, localInfo)
-	} else {
-
-		jsonBody, err := json.Marshal(patch)
-		if err != nil {
-			http.Error(w, fmt.Sprintf("Failed to encode patch: %v", err), http.StatusInternalServerError)
-			return
-		}
-
-		localPatchAddress := net.JoinHostPort(localInfo.Address, api.AdminPort)
-		url := getLocalURL(localPatchAddress, routes.DeviceEndpoint)
-
-		req, err := http.NewRequest(http.MethodPatch, url, bytes.NewReader(jsonBody))
-		if err != nil {
-			http.Error(w, fmt.Sprintf("Failed to create PATCH request: %v", err), http.StatusInternalServerError)
-			return
-		}
-		req.Header.Set(api.ContentType, api.JsonMIMEType)
-
-		resp, err := c.httpClient.Do(req)
-		if err != nil {
-			http.Error(w, fmt.Sprintf("PATCH request failed: %v", err), http.StatusBadGateway)
-			return
-		}
-		defer resp.Body.Close()
-
-		if resp.StatusCode != http.StatusNoContent {
-			body, err := io.ReadAll(resp.Body)
-			logging.GetLogger().Error("Remote patch to %s failed with body=%s %v", url, body, err)
-			http.Error(w, fmt.Sprintf("PATCH failed: %s", string(body)), resp.StatusCode)
-			return
-		}
 	}
 
 	w.WriteHeader(http.StatusNoContent)
@@ -364,85 +305,103 @@ func (c *Cluster) GetAllDeviceInfos() []persistence.DeviceInfo {
 
 // UpdateDeviceInfoForWebSocket updates device information cluster-wide
 func (c *Cluster) UpdateDeviceInfoForWebSocket(deviceID string, patch *persistence.DevicePatch) error {
+	err, _ := c.updateDeviceInfoCore(deviceID, patch, false)
+	return err
+}
+
+// updateDeviceInfoCore contains the common logic for updating device information
+func (c *Cluster) updateDeviceInfoCore(deviceID string, patch *persistence.DevicePatch, alwaysBroadcast bool) (error, int) {
+	localInfo, err, statusCode := c.findAndValidateDevice(deviceID, patch)
+	if err != nil {
+		return err, statusCode
+	}
+
+	c.applyPatch(patch, localInfo)
+
+	if c.hostIsLocal(localInfo.Address) {
+		return c.updateLocalDevice(deviceID, localInfo)
+	}
+	return c.updateRemoteDevice(deviceID, localInfo, patch, alwaysBroadcast)
+}
+
+// findAndValidateDevice finds the device and validates the patch
+func (c *Cluster) findAndValidateDevice(deviceID string, patch *persistence.DevicePatch) (*persistence.DeviceInfo, error, int) {
 	deviceInfos := c.fetchAllDeviceInfos()
 
-	var targetDevice *persistence.DeviceInfo
+	var localInfo *persistence.DeviceInfo
 	for _, info := range deviceInfos {
 		if info.Id == deviceID {
-			targetDevice = &info
+			localInfo = &info
 			break
 		}
 	}
 
-	if targetDevice == nil {
-		return fmt.Errorf("device not found")
+	if localInfo == nil {
+		return nil, fmt.Errorf("Device %s not found", deviceID), http.StatusNotFound
 	}
 
-	// Validate no duplication
-	if err := validateNoDuplication(deviceInfos, *patch, targetDevice.Id); err != nil {
-		return fmt.Errorf("device update validation failed: %v", err)
+	if err := validateNoDuplication(deviceInfos, *patch, localInfo.Id); err != nil {
+		return nil, err, http.StatusConflict
 	}
 
-	// Apply the patch
-	c.applyPatch(patch, targetDevice)
+	return localInfo, nil, http.StatusOK
+}
 
-	// Update the device based on whether it's local or remote
-	if c.hostIsLocal(targetDevice.Address) {
-		// Local device: update directly
-		if err := c.delegate.persistence.SetDeviceInfo(targetDevice); err != nil {
-			return fmt.Errorf("failed to update local device: %v", err)
-		}
-	} else {
-		// Remote device: send PATCH request to the target node
-		jsonBody, err := json.Marshal(patch)
-		if err != nil {
-			return fmt.Errorf("failed to encode patch: %v", err)
-		}
-
-		localPatchAddress := net.JoinHostPort(targetDevice.Address, api.AdminPort)
-		url := getLocalURL(localPatchAddress, routes.DeviceEndpoint)
-
-		req, err := http.NewRequest(http.MethodPatch, url, bytes.NewReader(jsonBody))
-		if err != nil {
-			return fmt.Errorf("failed to create request: %v", err)
-		}
-		req.Header.Set("Content-Type", "application/json")
-
-		resp, err := c.httpClient.Do(req)
-		if err != nil {
-			return fmt.Errorf("failed to send patch request: %v", err)
-		}
-		defer resp.Body.Close()
-
-		if resp.StatusCode != http.StatusNoContent {
-			body, _ := io.ReadAll(resp.Body)
-			return fmt.Errorf("patch request failed: %s", string(body))
-		}
-
-		logging.GetLogger().Info("Successfully updated remote device %s at %s", deviceID, targetDevice.Address)
+// updateLocalDevice updates a device that is hosted locally
+func (c *Cluster) updateLocalDevice(deviceID string, localInfo *persistence.DeviceInfo) (error, int) {
+	if err := c.delegate.persistence.SetDeviceInfo(localInfo); err != nil {
+		return fmt.Errorf("Failed to set device info: %v", err), http.StatusInternalServerError
 	}
 
-	// Broadcast device update through Hub to all subscribers
-	c.broadcastDeviceUpdate(deviceID, targetDevice)
+	// Always broadcast for local devices
+	c.broadcastDeviceUpdate(deviceID, localInfo)
+	return nil, http.StatusOK
+}
 
-	return nil
+// updateRemoteDevice updates a device that is hosted on a remote node
+func (c *Cluster) updateRemoteDevice(deviceID string, localInfo *persistence.DeviceInfo, patch *persistence.DevicePatch, alwaysBroadcast bool) (error, int) {
+	jsonBody, err := json.Marshal(patch)
+	if err != nil {
+		return fmt.Errorf("Failed to encode patch: %v", err), http.StatusInternalServerError
+	}
+
+	localPatchAddress := net.JoinHostPort(localInfo.Address, api.AdminPort)
+	url := getLocalURL(localPatchAddress, routes.DeviceEndpoint)
+
+	req, err := http.NewRequest(http.MethodPatch, url, bytes.NewReader(jsonBody))
+	if err != nil {
+		return fmt.Errorf("Failed to create PATCH request: %v", err), http.StatusInternalServerError
+	}
+	req.Header.Set(api.ContentType, api.JsonMIMEType)
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return fmt.Errorf("PATCH request failed: %v", err), http.StatusBadGateway
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusNoContent {
+		body, _ := io.ReadAll(resp.Body)
+		logging.GetLogger().Error("Remote patch to %s failed with body=%s", url, string(body))
+		return fmt.Errorf("PATCH failed: %s", string(body)), http.StatusBadGateway
+	}
+
+	// Broadcast for WebSocket updates only
+	if alwaysBroadcast {
+		c.broadcastDeviceUpdate(deviceID, localInfo)
+	}
+
+	return nil, http.StatusOK
 }
 
 // broadcastDeviceUpdate sends device updates via gossip protocol
-func (c *Cluster) broadcastDeviceUpdate(deviceID string, deviceData interface{}) {
+func (c *Cluster) broadcastDeviceUpdate(deviceID string, deviceData *persistence.DeviceInfo) {
 	if c.delegate.hub == nil {
 		return
 	}
 
-	deviceUpdate := &api.DeviceUpdate{
-		DeviceID:   deviceID,
-		UpdateType: api.DeviceUpdateTypeInfo,
-		DeviceData: deviceData,
-		Timestamp:  time.Now(),
-	}
-
 	notifyMsg := api.NewNotifyMessage(api.NotifyOpDeviceUpdate, c.delegate.appConfig.NodeName, func(m *api.NotifyMessage) {
-		m.DeviceUpdate = deviceUpdate
+		m.DeviceInfo = deviceData
 	})
 
 	if err := c.delegate.hub.BroadcastToNodes(notifyMsg); err != nil {

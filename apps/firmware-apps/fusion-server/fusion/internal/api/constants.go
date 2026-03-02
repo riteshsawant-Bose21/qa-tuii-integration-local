@@ -42,11 +42,7 @@ const (
 
 	// WebSocket response data field keys
 	WSDataFieldDeviceID   = "device_id"
-	WSDataFieldUpdateType = "update_type"
 	WSDataFieldDeviceData = "device_data"
-
-	// Device update type values
-	DeviceUpdateTypeInfo = "info_updated"
 
 	WSCurrentVersion = 1
 

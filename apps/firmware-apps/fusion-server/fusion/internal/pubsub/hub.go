@@ -140,8 +140,8 @@ func (h *Hub) BroadcastToNodes(message *api.NotifyMessage) error {
 		}
 
 	case api.NotifyOpDeviceUpdate:
-		if message.DeviceUpdate == nil {
-			return fmt.Errorf("DeviceUpdate required for operation")
+		if message.DeviceInfo == nil {
+			return fmt.Errorf("DeviceInfo required for operation")
 		}
 
 	default:

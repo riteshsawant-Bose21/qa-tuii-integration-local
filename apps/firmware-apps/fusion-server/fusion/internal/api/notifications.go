@@ -39,7 +39,7 @@ type NotifyMessage struct {
 	AudioSync         *AudioSyncUpdate
 	ConfigUpdate      *ConfigUpdate
 	ConfigValue       *ConfigValue
-	DeviceUpdate      *DeviceUpdate
+	DeviceInfo        *DeviceInfo
 	SnapshotOperation *SnapshotOperation
 	Task              *Task
 	VersionUpdate     *VersionUpdate

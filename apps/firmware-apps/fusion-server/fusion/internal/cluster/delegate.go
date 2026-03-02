@@ -262,13 +262,13 @@ func (d *ClusterDelegate) GetBroadcasts(overhead, limit int) [][]byte {
 func (d *ClusterDelegate) handleDeviceUpdate(message *api.NotifyMessage) {
 	logger := logging.GetLogger()
 
-	if message.DeviceUpdate == nil {
+	if message.DeviceInfo == nil {
 		logger.Error("DeviceUpdate message with nil payload from %s", message.Node)
 		return
 	}
 
 	logger.Info("[DeviceUpdate] Received device update from %s for device %s",
-		message.Node, message.DeviceUpdate.DeviceID)
+		message.Node, message.DeviceInfo.Id)
 
 	d.hub.BroadcastToObservers(message)
 }

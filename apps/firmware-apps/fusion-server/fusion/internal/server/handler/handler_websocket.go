@@ -53,7 +53,7 @@ func (h *Handler) HandleWebSocketMessageWithConn(data []byte, conn *websocket.Co
 	response, err := h.routeWebSocketMessageWithConn(&request, conn, server)
 	if err != nil {
 		logger.Error("WebSocket message routing error: %v", err)
-		return createErrorResponse(&request.ID, api.WSCodeInternalError, err.Error()), nil
+		return createErrorResponse(&request.ID, api.WSCodeApplicationError, err.Error()), nil
 	}
 
 	return response, nil
@@ -114,11 +114,7 @@ func (h *Handler) handleDeviceByIDWithSubscription(request *api.WebSocketRequest
 	// Get actual device by ID from persistence
 	device, err := h.getDeviceByID(payload.DeviceID)
 	if err != nil {
-		if err.Error() == "device not found" {
-			return createErrorResponse(&request.ID, api.WSCodeDeviceNotFound, fmt.Sprintf("Device not found: %s", payload.DeviceID)), nil
-		}
-		logging.GetLogger().Error("Failed to get device %s: %v", payload.DeviceID, err)
-		return createErrorResponse(&request.ID, api.WSCodeInternalError, fmt.Sprintf("Failed to retrieve device: %v", err)), nil
+		return createErrorResponse(&request.ID, api.WSCodeDeviceNotFound, fmt.Sprintf("Device not found: %s", payload.DeviceID)), nil
 	}
 
 	return createSuccessResponse(&request.ID, api.WSMsgTypeDeviceByID, api.WSCodeOK, "OK - subscribed to device updates", device), nil
@@ -142,10 +138,6 @@ func (h *Handler) handleUpdateDeviceInfoWithNotification(request *api.WebSocketR
 	// Update device using cluster-aware device provider
 	err := h.updateDeviceInfo(payload.DeviceID, &payload.DevicePatch)
 	if err != nil {
-		if err.Error() == "device not found" {
-			return createErrorResponse(&request.ID, api.WSCodeDeviceNotFound, fmt.Sprintf("Device not found: %s", payload.DeviceID)), nil
-		}
-		logging.GetLogger().Error("Failed to update device %s: %v", payload.DeviceID, err)
 		return createErrorResponse(&request.ID, api.WSCodeUpdateFailed, fmt.Sprintf("Failed to update device: %v", err)), nil
 	}
 
@@ -243,7 +235,7 @@ func (h *Handler) getDeviceByID(deviceID string) (*persistence.DeviceInfo, error
 	}
 
 	// Device not found in any cluster node
-	return nil, fmt.Errorf("device not found: %s", deviceID)
+	return nil, fmt.Errorf("device not found")
 }
 
 // updateDeviceInfo updates device information
