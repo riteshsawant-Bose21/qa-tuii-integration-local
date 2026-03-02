@@ -87,7 +87,7 @@ func (h *Handler) handleDevicesWithSubscription(request *api.WebSocketRequest, c
 	devices, err := h.getDevicesList()
 	if err != nil {
 		logging.GetLogger().Error("Failed to get devices list: %v", err)
-		return createErrorResponse(&request.ID, api.WSCodeInternalError, fmt.Sprintf("Failed to retrieve devices: %v", err)), nil
+		return createErrorResponse(&request.ID, api.WSCodeApplicationError, fmt.Sprintf("Failed to retrieve devices: %v", err)), nil
 	}
 
 	return createSuccessResponse(&request.ID, api.WSMsgTypeDevices, api.WSCodeOK, "OK - subscribed to device updates", devices), nil

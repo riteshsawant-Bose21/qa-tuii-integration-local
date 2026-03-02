@@ -177,7 +177,7 @@ The device APIs implement a **Pull-then-Push** pattern for real-time updates:
   "id": null,                    // null for server errors, matches request ID for client errors
   "version": 1,                  // Protocol version
   "type": "error",               // Always "error" for error responses
-  "code": 2001,                  // Error code (see status codes above)
+  "code": 4000,                  // Error code (see status codes above)
   "status": "error",             // Always "error" for error responses
   "message": "Invalid JSON format",  // Human-readable error description
   "data": null,                  // Always null for errors
@@ -406,24 +406,26 @@ go test -v websocket_test.go
    ```
 
 3. **Validate Message Format**
-   ```json
-   // Minimum required fields for devices request
-   {
-     "id": "test-001",
-     "version": 1,
-     "type": "devices"
-   }
+    // Minimum required fields for devices request
+    ```json
+    {
+        "id": "test-001",
+        "version": 1,
+        "type": "devices"
+    }
+    ```
    
    // Device by ID request format
-   {
-     "id": "test-002", 
-     "version": 1,
-     "type": "device_by_id",
-     "data": {
-       "device_id": "fusion-1"
-     }
-   }
-   ```
+    ```json
+    {
+        "id": "test-002", 
+        "version": 1,
+        "type": "device_by_id",
+        "data": {
+        "device_id": "fusion-1"
+        }
+    }
+    ```
 
 
 

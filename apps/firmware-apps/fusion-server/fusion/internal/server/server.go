@@ -35,6 +35,7 @@ type FusionServer struct {
 	node          string
 	handler       *handler.Handler
 	wsClients     map[*websocket.Conn]bool
+	wsWriteMutex  map[*websocket.Conn]*sync.Mutex     // Per-connection write mutexes
 	subscriptions map[string]map[*websocket.Conn]bool // Topic-based subscriptions: topic -> connections
 	wsLock        sync.RWMutex
 	upgrader      websocket.Upgrader
@@ -51,6 +52,7 @@ func NewFusionServer(node string, handler *handler.Handler, hub *pubsub.Hub) *Fu
 		node:           node,
 		handler:        handler,
 		wsClients:      make(map[*websocket.Conn]bool),
+		wsWriteMutex:   make(map[*websocket.Conn]*sync.Mutex),
 		subscriptions:  make(map[string]map[*websocket.Conn]bool),
 		maxConnections: wsMaxConnections,
 		wsStats: &api.WebSocketStats{
@@ -72,6 +74,36 @@ func NewFusionServer(node string, handler *handler.Handler, hub *pubsub.Hub) *Fu
 	}
 	hub.Register(server)
 	return server
+}
+
+// safeWriteJSON safely writes JSON to a WebSocket connection using per-connection mutex
+func (s *FusionServer) safeWriteJSON(conn *websocket.Conn, v interface{}) error {
+	s.wsLock.RLock()
+	mutex, exists := s.wsWriteMutex[conn]
+	s.wsLock.RUnlock()
+
+	if !exists {
+		return fmt.Errorf("connection not found")
+	}
+
+	mutex.Lock()
+	defer mutex.Unlock()
+	return conn.WriteJSON(v)
+}
+
+// safeWriteControl safely writes control messages to a WebSocket connection using per-connection mutex
+func (s *FusionServer) safeWriteControl(conn *websocket.Conn, messageType int, data []byte, deadline time.Time) error {
+	s.wsLock.RLock()
+	mutex, exists := s.wsWriteMutex[conn]
+	s.wsLock.RUnlock()
+
+	if !exists {
+		return fmt.Errorf("connection not found")
+	}
+
+	mutex.Lock()
+	defer mutex.Unlock()
+	return conn.WriteControl(messageType, data, deadline)
 }
 
 // BroadcastMessage sends a notification message to all connected WebSocket clients.
@@ -106,7 +138,7 @@ func (s *FusionServer) BroadcastMessage(message *api.NotifyMessage) error {
 
 		var failedConnections []*websocket.Conn
 		for _, conn := range clients {
-			if err := conn.WriteJSON(message); err != nil {
+			if err := s.safeWriteJSON(conn, message); err != nil {
 				logging.GetLogger().Error("Error broadcasting to WebSocket client: %v", err)
 				failedConnections = append(failedConnections, conn)
 			}
@@ -117,6 +149,7 @@ func (s *FusionServer) BroadcastMessage(message *api.NotifyMessage) error {
 			s.wsLock.Lock()
 			for _, conn := range failedConnections {
 				delete(s.wsClients, conn)
+				delete(s.wsWriteMutex, conn)
 				conn.Close()
 			}
 			s.wsLock.Unlock()
@@ -154,16 +187,22 @@ func (s *FusionServer) UnsubscribeFromTopic(conn *websocket.Conn, topic string) 
 func (s *FusionServer) BroadcastToTopic(topic string, message *api.WebSocketResponse) error {
 	s.wsLock.RLock()
 	subscribers := s.subscriptions[topic]
-	s.wsLock.RUnlock()
-
 	if len(subscribers) == 0 {
+		s.wsLock.RUnlock()
 		return nil // No subscribers
 	}
 
+	// Copy subscribers to a slice under lock to avoid concurrent map access
+	connections := make([]*websocket.Conn, 0, len(subscribers))
+	for conn := range subscribers {
+		connections = append(connections, conn)
+	}
+	s.wsLock.RUnlock()
+
 	// Send to all subscribers of this topic
 	var failedConnections []*websocket.Conn
-	for conn := range subscribers {
-		if err := conn.WriteJSON(message); err != nil {
+	for _, conn := range connections {
+		if err := s.safeWriteJSON(conn, message); err != nil {
 			logging.GetLogger().Error("Error sending message to WebSocket client on topic %s: %v", topic, err)
 			failedConnections = append(failedConnections, conn)
 		}
@@ -173,7 +212,10 @@ func (s *FusionServer) BroadcastToTopic(topic string, message *api.WebSocketResp
 	if len(failedConnections) > 0 {
 		s.wsLock.Lock()
 		for _, conn := range failedConnections {
-			delete(s.subscriptions[topic], conn)
+			if s.subscriptions[topic] != nil {
+				delete(s.subscriptions[topic], conn)
+			}
+			delete(s.wsWriteMutex, conn)
 			conn.Close()
 		}
 		// Clean up empty topic maps
@@ -391,6 +433,7 @@ func (s *FusionServer) HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	s.wsClients[conn] = true
+	s.wsWriteMutex[conn] = &sync.Mutex{}
 	s.wsLock.Unlock()
 
 	// Ensure cleanup when the function returns
@@ -398,6 +441,7 @@ func (s *FusionServer) HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 		conn.Close()
 		s.wsLock.Lock()
 		delete(s.wsClients, conn)
+		delete(s.wsWriteMutex, conn)
 		// Clean up all topic subscriptions for this connection
 		for topic, subscribers := range s.subscriptions {
 			delete(subscribers, conn)
@@ -431,7 +475,7 @@ func (s *FusionServer) HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 		Timestamp: time.Now(),
 	}
 
-	if err := conn.WriteJSON(welcomeResponse); err != nil {
+	if err := s.safeWriteJSON(conn, welcomeResponse); err != nil {
 		logger.Error("Failed to send welcome message: %v", err)
 		return
 	}
@@ -449,7 +493,9 @@ func (s *FusionServer) HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 		for {
 			select {
 			case <-pingTicker.C:
-				if err := conn.WriteMessage(websocket.PingMessage, nil); err != nil {
+				// Use WriteControl for thread-safe ping messages
+				deadline := time.Now().Add(10 * time.Second)
+				if err := s.safeWriteControl(conn, websocket.PingMessage, nil, deadline); err != nil {
 					logger.Error("Failed to send ping: %v", err)
 					return
 				}
@@ -841,7 +887,7 @@ func (s *FusionServer) handleWebSocketMessage(conn *websocket.Conn, data []byte)
 		return
 	}
 
-	if err := conn.WriteJSON(response); err != nil {
+	if err := s.safeWriteJSON(conn, response); err != nil {
 		logger.Error("Error sending response: %v", err)
 	}
 }
@@ -864,7 +910,7 @@ func (s *FusionServer) sendErrorToConnection(conn *websocket.Conn, requestID str
 		Timestamp: time.Now(),
 	}
 
-	if err := conn.WriteJSON(errorResponse); err != nil {
+	if err := s.safeWriteJSON(conn, errorResponse); err != nil {
 		logging.GetLogger().Error("Failed to send error response: %v", err)
 	}
 }
