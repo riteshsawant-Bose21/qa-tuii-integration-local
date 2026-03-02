@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_launcher/core/widgets/title_text_field_switcher.dart';
-import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
+import 'package:fusion_launcher/features/configuration_page/cubit/events/events_cubit.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
 import '../../../../core/constants/assets_constants.dart';
 
 class EventItemCard extends StatefulWidget {
   final FusionEvent eventData;
-  final ProjectViewModel projectViewModel;
+  final EventsCubit cubit;
   final bool isSelected;
   final VoidCallback? onDelete;
   final VoidCallback? onTap;
@@ -23,7 +23,7 @@ class EventItemCard extends StatefulWidget {
     this.onTap,
     required this.index,
     this.onSwitchChanged,
-    required this.projectViewModel,
+    required this.cubit,
   });
 
   @override
@@ -93,8 +93,8 @@ class _EventItemCardState extends State<EventItemCard> {
                     style: Theme.of(context).textTheme.bodySmall!.copyWith(fontSize: 11),
                     save: (String value) {
                       if (value.isNotEmpty) {
-                        final FusionEvent newSnapshot = widget.eventData.copyWith(name: value);
-                        widget.projectViewModel.updateEvent(event: newSnapshot);
+                        final FusionEvent newEvent = widget.eventData.copyWith(name: value);
+                        widget.cubit.updateEvent(newEvent);
                       }
                     },
                   ),
@@ -118,17 +118,17 @@ class _EventItemCardState extends State<EventItemCard> {
                 const SizedBox(width: 12),
 
                 Tooltip(
-                  message: 'Delete Snapshot',
+                  message: 'Delete Event',
                   child: SemanticHelper.button(
-                    testId: SemanticHelper.createTestId(SemanticTypes.button, "delete_event_snapshot"),
+                    testId: SemanticHelper.createTestId(SemanticTypes.button, "delete_event"),
                     child: GestureDetector(
                       onTap: () {
                         showDialog(
                           context: context,
                           builder:
                               (_) => FusionDialog(
-                                title: 'Delete Snapshot?',
-                                description: "This will remove '${widget.eventData.name}' from the Snapshot list.",
+                                title: 'Delete Event?',
+                                description: "This will remove '${widget.eventData.name}' from the Event list.",
                                 primaryButtonLabel: 'Delete',
                                 secondaryButtonLabel: 'Cancel',
                                 onSecondaryPressed: () {

@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
+import 'package:fusion_launcher/features/configuration_page/cubit/events/events_cubit.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
 import 'event_item_card.dart';
 
 class EventList extends StatelessWidget {
   final List<FusionEvent> eventList;
-  final ProjectViewModel projectViewModel;
+  final EventsCubit cubit;
 
   final Function(String eventId) onDelete;
   final Function(String eventId)? onSelect;
@@ -23,7 +23,7 @@ class EventList extends StatelessWidget {
     this.selectedEventId,
     this.onReorder,
     this.onSwitchChanged,
-    required this.projectViewModel,
+    required this.cubit,
   });
 
   @override
@@ -59,7 +59,7 @@ class EventList extends StatelessWidget {
           margin: const EdgeInsets.only(bottom: 4),
           child: EventItemCard(
             index: index,
-            projectViewModel: projectViewModel,
+            cubit: cubit,
             eventData: eventData,
             isSelected: selectedEventId == eventData.id,
             onSwitchChanged: (String eventId) {

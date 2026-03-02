@@ -1,15 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:fusion_launcher/features/configuration_page/cubit/events/event_actions_cubit.dart';
+import 'package:fusion_launcher/features/configuration_page/cubit/events/event_actions_state.dart';
+import 'package:fusion_launcher/features/configuration_page/cubit/events/events_cubit.dart';
 import 'package:fusion_launcher/features/configuration_page/widgets/snapshots/event_value_widget.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/fusion_theme/app_theme.dart';
 
 import '../../../../core/constants/assets_constants.dart';
-import '../../../../core/service_locator.dart';
-import '../../../configuration/presentation/viewmodel/project_view_model.dart';
 import '../snapshots/action_drop_down.dart';
 
-class EventActionRowData extends StatefulWidget {
+class EventActionRowData extends StatelessWidget {
   final SceneActionModel action;
   final int index;
   final String eventId;
@@ -22,109 +23,103 @@ class EventActionRowData extends StatefulWidget {
   });
 
   @override
-  State<EventActionRowData> createState() => _EventActionRowDataState();
-}
-
-class _EventActionRowDataState extends State<EventActionRowData> {
-  ProjectViewModel get _projectViewModel => serviceLocator<ProjectViewModel>();
-
-  List<SceneItemDropdown> get _itemList =>
-      widget.action.actionType != null ? _projectViewModel.getActionItemsByType(widget.action.actionType!) : <SceneItemDropdown>[];
-
-  List<SceneParam> get _paramList {
-    final SceneActionModel action = widget.action;
-    if (action.actionType == null) return <SceneParam>[];
-
-    if (action.actionType == SceneActionType.snapshot) {
-      return _projectViewModel.getParamsByActionTypeAndItem(actionType: action.actionType!, item: SceneItem(itemId: ''), eventId: widget.eventId);
-    }
-
-    return action.item != null
-        ? _projectViewModel.getParamsByActionTypeAndItem(actionType: action.actionType!, item: action.item!, eventId: widget.eventId)
-        : <SceneParam>[];
-  }
-
-  void _updateActionType(SceneActionType? selected) {
-    if (selected != null) {
-      _projectViewModel.updateSceneActionType(actionId: widget.action.id, actionType: selected);
-    }
-  }
-
-  void _updateActionItem(SceneItemDropdown? selected) {
-    if (selected != null) {
-      _projectViewModel.updateSceneActionItem(
-        actionId: widget.action.id,
-        item: SceneItem(itemId: selected.id),
-      );
-    }
-  }
-
-  void _updateActionParam(SceneParam? selected) {
-    if (selected != null) {
-      _projectViewModel.updateSceneActionParam(actionId: widget.action.id, param: selected, eventId: widget.eventId);
-    }
-  }
-
-  /// update action value for the selected state
-  void _updateActionValue(SceneValue updatedSceneValue) {
-    _projectViewModel.updateSceneActionValue(actionId: widget.action.id, value: updatedSceneValue);
-  }
-
-  void _deleteAction() {
-    _projectViewModel.removeActionFromEvent(actionId: widget.action.id, eventId: widget.eventId);
-    FusionToast.success(context, message: "Action deleted successfully");
-  }
-
-  void _duplicateAction() {
-    _projectViewModel.duplicateActionInEvent(eventId: widget.eventId, actionId: widget.action.id);
-    FusionToast.success(context, message: "Action duplicated successfully");
-  }
-
-  @override
   Widget build(BuildContext context) {
-    return BlocBuilder<ProjectViewModel, ProjectViewModelState>(
-      builder: (BuildContext context, ProjectViewModelState state) {
-        final SceneActionModel action = widget.action;
-        final ColorScheme colorScheme = Theme.of(context).colorScheme;
-        final List<SceneItemDropdown> itemList = _itemList;
-        final List<SceneParam> paramList = _paramList;
-        final bool isItemEnabled = action.actionType == null || itemList.isNotEmpty;
-        final FusionEvent event = _projectViewModel.getEventById(widget.eventId);
+    return BlocBuilder<EventActionsCubit, EventActionsState>(
+      builder: (BuildContext context, EventActionsState state) {
+        // Get the latest action data from state
+        final SceneActionModel? currentAction = state.getActionById(action.id);
+        if (currentAction == null) {
+          return const SizedBox.shrink();
+        }
 
-        return SemanticHelper.button(
-          testId: SemanticHelper.createTestId(SemanticTypes.button, "event_action_row_data_${widget.index}"),
-          child: Container(
-            padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
-            decoration: BoxDecoration(
-              color: colorScheme.primaryBlack,
-              border: Border(bottom: BorderSide(color: colorScheme.elevation1)),
-            ),
-            child: Row(
-              spacing: context.screenWidth * 0.01,
-              children: <Widget>[
-                _buildDragHandle(context),
-                _buildActionTypeDropdown(action),
-                _buildItemDropdown(action, itemList, isItemEnabled),
-                _buildParamDropdown(action, paramList),
-                (event.condition is! ValueChangeCondition)
-                    ? _buildValueWidget(action)
-                    : const Expanded(
-                      child: Center(
-                        child: FusionAppText(text: "--"),
-                      ),
-                    ),
-                _buildActionButtons(),
-              ],
-            ),
-          ),
+        return _EventActionRowContent(
+          action: currentAction,
+          index: index,
+          eventId: eventId,
         );
       },
     );
   }
+}
+
+class _EventActionRowContent extends StatelessWidget {
+  final SceneActionModel action;
+  final int index;
+  final String eventId;
+
+  const _EventActionRowContent({
+    required this.action,
+    required this.index,
+    required this.eventId,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final EventActionsCubit cubit = context.read<EventActionsCubit>();
+    final EventsCubit eventsCubit = context.read<EventsCubit>();
+    final ColorScheme colorScheme = Theme.of(context).colorScheme;
+
+    final List<SceneItemDropdown> itemList = _getItemList(cubit);
+    final List<SceneParam> paramList = _getParamList(cubit);
+    final bool isItemEnabled = action.actionType == null || itemList.isNotEmpty;
+    final FusionEvent event = eventsCubit.getEventById(eventId);
+
+    return SemanticHelper.button(
+      testId: SemanticHelper.createTestId(SemanticTypes.button, "event_action_row_data_$index"),
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+        decoration: BoxDecoration(
+          color: colorScheme.primaryBlack,
+          border: Border(bottom: BorderSide(color: colorScheme.elevation1)),
+        ),
+        child: Row(
+          spacing: context.screenWidth * 0.01,
+          children: <Widget>[
+            _buildDragHandle(context),
+            _buildActionTypeDropdown(context, cubit),
+            _buildItemDropdown(context, cubit, itemList, isItemEnabled),
+            _buildParamDropdown(context, cubit, paramList),
+            (event.condition is! ValueChangeCondition)
+                ? _buildValueWidget(context, cubit, eventsCubit)
+                : const Expanded(
+                  child: Center(
+                    child: FusionAppText(text: "--"),
+                  ),
+                ),
+            _buildActionButtons(context, cubit),
+          ],
+        ),
+      ),
+    );
+  }
+
+  List<SceneItemDropdown> _getItemList(EventActionsCubit cubit) {
+    return action.actionType != null ? cubit.getActionItemsByType(action.actionType!) : <SceneItemDropdown>[];
+  }
+
+  List<SceneParam> _getParamList(EventActionsCubit cubit) {
+    if (action.actionType == null) return <SceneParam>[];
+
+    if (action.actionType == SceneActionType.snapshot) {
+      return cubit.getParamsByActionTypeAndItem(
+        actionType: action.actionType!,
+        item: SceneItem(itemId: ''),
+        eventId: eventId,
+      );
+    }
+
+    return action.item != null
+        ? cubit.getParamsByActionTypeAndItem(
+          actionType: action.actionType!,
+          item: action.item!,
+          eventId: eventId,
+        )
+        : <SceneParam>[];
+  }
 
   Widget _buildDragHandle(BuildContext context) {
     return ReorderableDragStartListener(
-      index: widget.index,
+      index: index,
       child: SizedBox(
         width: context.screenWidth * 0.01,
         child: Opacity(
@@ -135,30 +130,34 @@ class _EventActionRowDataState extends State<EventActionRowData> {
     );
   }
 
-  Widget _buildActionTypeDropdown(SceneActionModel action) {
+  Widget _buildActionTypeDropdown(BuildContext context, EventActionsCubit cubit) {
     return Expanded(
       child: SemanticHelper.button(
-        testId: SemanticHelper.createTestId(SemanticTypes.button, "event_action_type_${widget.index}"),
+        testId: SemanticHelper.createTestId(SemanticTypes.button, "event_action_type_$index"),
         child: FusionDropdown<SceneActionType>(
           value: action.actionType,
           hint: "Select Action Type",
-          items: _projectViewModel.getSceneActionTypes(isFromSnapshot: false, eventId: widget.eventId),
+          items: cubit.getSceneActionTypes(isFromSnapshot: false, eventId: eventId),
           display: (SceneActionType e) => e.displayName,
-          onChanged: _updateActionType,
+          onChanged: (SceneActionType? selected) {
+            if (selected != null) {
+              cubit.updateActionType(actionId: action.id, actionType: selected);
+            }
+          },
         ),
       ),
     );
   }
 
   Widget _buildItemDropdown(
-    SceneActionModel action,
+    BuildContext context,
+    EventActionsCubit cubit,
     List<SceneItemDropdown> itemList,
     bool isEnabled,
   ) {
     SceneItemDropdown? selected;
     if (action.item != null && itemList.isNotEmpty) {
       selected = itemList.where((SceneItemDropdown e) => e.id == action.item!.itemId).firstOrNull;
-      if (selected == null) action.item = null;
     }
 
     final String hint =
@@ -170,20 +169,30 @@ class _EventActionRowDataState extends State<EventActionRowData> {
 
     return Expanded(
       child: SemanticHelper.button(
-        testId: SemanticHelper.createTestId(SemanticTypes.button, "event_action_item_${widget.index}"),
+        testId: SemanticHelper.createTestId(SemanticTypes.button, "event_action_item_$index"),
         child: FusionDropdown<SceneItemDropdown>(
           value: selected,
           items: itemList,
           hint: hint,
           display: (SceneItemDropdown e) => e.name,
           isEnabled: isEnabled,
-          onChanged: isEnabled ? _updateActionItem : null,
+          onChanged:
+              isEnabled
+                  ? (SceneItemDropdown? selected) {
+                    if (selected != null) {
+                      cubit.updateActionItem(
+                        actionId: action.id,
+                        item: SceneItem(itemId: selected.id),
+                      );
+                    }
+                  }
+                  : null,
         ),
       ),
     );
   }
 
-  Widget _buildParamDropdown(SceneActionModel action, List<SceneParam> paramList) {
+  Widget _buildParamDropdown(BuildContext context, EventActionsCubit cubit, List<SceneParam> paramList) {
     SceneParam? selected;
     if (action.param != null && paramList.isNotEmpty) {
       selected =
@@ -194,26 +203,26 @@ class _EventActionRowDataState extends State<EventActionRowData> {
 
     return Expanded(
       child: SemanticHelper.button(
-        testId: SemanticHelper.createTestId(SemanticTypes.button, "event_action_param_${widget.index}"),
+        testId: SemanticHelper.createTestId(SemanticTypes.button, "event_action_param_$index"),
         child: FusionDropdown<SceneParam>(
           hint: "Select Parameter",
           value: selected,
           items: paramList,
           display: (SceneParam e) => e.label,
-          onChanged: _updateActionParam,
+          onChanged: (SceneParam? selected) {
+            if (selected != null) {
+              cubit.updateActionParam(actionId: action.id, param: selected, eventId: eventId);
+            }
+          },
         ),
       ),
     );
   }
 
-  Widget _buildValueWidget(SceneActionModel action) {
+  Widget _buildValueWidget(BuildContext context, EventActionsCubit cubit, EventsCubit eventsCubit) {
     if (action.param == null) return const Expanded(child: SizedBox.shrink());
-    final FusionEvent event = _projectViewModel.getEventById(widget.eventId);
-
-    // Check if this event has states (2-state events)
-    // final bool eventHasStates = event.states != null && event.states!.length == 2;
+    final FusionEvent event = eventsCubit.getEventById(eventId);
     final EventStateTypes stateType = event.selectedState?.stateType ?? EventStateTypes.off;
-    print("stateType: event.selectedState?.stateType == $stateType");
 
     return Expanded(
       child: EventValueWidget(
@@ -226,54 +235,44 @@ class _EventActionRowDataState extends State<EventActionRowData> {
               value: null,
               label: action.param!.label,
               valueType: action.param!.valueType,
-              // hasStates: eventHasStates,
             ),
         onChanged: (SceneValue value) {
-          // The EventValueWidget already handles state logic and provides the correct updated value
-          _updateActionValue(value);
-
-          // if (action.value != null && action.value!.hasStates) {
-          //   print("has state => ${action.value!.hasStates}");
-          //   final FusionEvent event = _projectViewModel.getEventById(widget.eventId);
-          //   final EventStateTypes stateType = event.selectedState?.stateType ?? EventStateTypes.on;
-          //   final SceneValue updatedSceneValue = value.updateStateValue(newValue: value.value ?? '', stateType: stateType);
-          //   _updateActionValue(updatedSceneValue);
-          // } else {
-          //   // final EventStateTypes stateType = event.selectedState?.stateType ?? EventStateTypes.on;
-          //   // final SceneValue updatedSceneValue = value.updateStateValue(newValue: value.value ?? '', stateType: stateType);
-          //
-          //   _updateActionValue(value);
-          // }
+          cubit.updateActionValue(actionId: action.id, value: value);
         },
       ),
     );
   }
 
-  Widget _buildActionButtons() {
+  Widget _buildActionButtons(BuildContext context, EventActionsCubit cubit) {
     return SizedBox(
       width: context.screenWidth * 0.046,
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: <Widget>[
           SemanticHelper.button(
-            testId: SemanticHelper.createTestId(SemanticTypes.button, "delete_event_action_${widget.index}"),
+            testId: SemanticHelper.createTestId(SemanticTypes.button, "delete_event_action_$index"),
             child: GestureDetector(
-              onTap: _deleteAction,
+              onTap: () {
+                cubit.deleteAction(actionId: action.id);
+                FusionToast.success(context, message: "Action deleted successfully");
+              },
               child: FusionImage.asset(
                 Assets.deleteIcon,
                 width: 20,
                 height: 20,
                 assetColor: context.colorScheme.iconWhite,
-
                 fit: BoxFit.contain,
               ),
             ),
           ),
           const SizedBox(width: 6),
           SemanticHelper.button(
-            testId: SemanticHelper.createTestId(SemanticTypes.button, "duplicate_event_action_${widget.index}"),
+            testId: SemanticHelper.createTestId(SemanticTypes.button, "duplicate_event_action_$index"),
             child: GestureDetector(
-              onTap: _duplicateAction,
+              onTap: () {
+                cubit.duplicateAction(actionId: action.id);
+                FusionToast.success(context, message: "Action duplicated successfully");
+              },
               child: FusionImage.asset(
                 Assets.duplicateIcon,
                 width: 20,

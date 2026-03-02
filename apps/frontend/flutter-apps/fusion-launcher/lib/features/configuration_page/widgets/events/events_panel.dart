@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:fusion_launcher/core/service_locator.dart';
+import 'package:fusion_launcher/features/configuration_page/cubit/events/events_cubit.dart';
+import 'package:fusion_launcher/features/configuration_page/cubit/events/events_state.dart';
 import 'package:fusion_launcher/features/configuration_page/widgets/section_header.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/fusion_theme/app_theme.dart';
@@ -11,114 +12,116 @@ import 'package:fusion_lib/fusion_widgets/others/fusion_toast.dart';
 import 'package:fusion_lib/fusion_widgets/text_views/fusion_app_text.dart';
 import 'package:fusion_lib/models/project_entities/non_processing/fusion_event.dart';
 
-import '../../../configuration/presentation/viewmodel/project_view_model.dart';
 import 'events_list.dart';
 
-class EventsPanel extends StatefulWidget {
+class EventsPanel extends StatelessWidget {
   const EventsPanel({super.key});
 
   @override
-  State<EventsPanel> createState() => _EventsPanelState();
-}
+  Widget build(BuildContext context) {
+    return BlocBuilder<EventsCubit, EventsState>(
+      builder: (BuildContext context, EventsState state) {
+        final EventsCubit cubit = context.read<EventsCubit>();
 
-class _EventsPanelState extends State<EventsPanel> {
-  ProjectViewModel get _projectViewModel => serviceLocator<ProjectViewModel>();
+        return Column(
+          children: <Widget>[
+            /// Events Section
+            SectionHeader(
+              title: 'Events',
+              trailing: GestureDetector(
+                onTap: () {
+                  cubit.addEvent();
+                  FusionToast.success(context, message: "Event created");
+                },
+                child: Icon(Icons.add_sharp, size: 16, color: context.colorScheme.iconWhite),
+              ),
+            ),
 
-  void _addNewEvents() {
-    final FusionEvent newScene = FusionEvent(
-      name: "New Event ${_projectViewModel.getAllEvents().length + 1}",
-      isEnabled: true,
+            /// Event list
+            Expanded(
+              child: Container(
+                clipBehavior: Clip.hardEdge,
+                decoration: BoxDecoration(
+                  borderRadius: const BorderRadius.only(
+                    bottomLeft: Radius.circular(12),
+                    bottomRight: Radius.circular(12),
+                  ),
+                  border: Border(
+                    bottom: BorderSide(color: context.colorScheme.elevation2, width: 1),
+                    left: BorderSide(color: context.colorScheme.elevation2, width: 1),
+                    right: BorderSide(color: context.colorScheme.elevation2, width: 1),
+                  ),
+                  color: Theme.of(context).colorScheme.elevation1,
+                ),
+                child: _buildEventsList(context, state, cubit),
+              ),
+            ),
+          ],
+        );
+      },
     );
-
-    /// Add new scene to project
-    _projectViewModel.addNewEvent(event: newScene);
-
-    /// make this snapshot selected
-    _projectViewModel.setSelectedEventId(newScene.id);
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: <Widget>[
-        /// Events Section
-        SectionHeader(
-          title: 'Events',
-          trailing: GestureDetector(
-            onTap: () {
-              _addNewEvents();
-            },
-            child: Icon(Icons.add_sharp, size: 16, color: context.colorScheme.iconWhite),
-          ),
-        ),
+  Widget _buildEventsList(BuildContext context, EventsState state, EventsCubit cubit) {
+    return switch (state) {
+      EventsInitial() => _buildEmptyState(context),
+      EventsLoading() => const Center(child: CircularProgressIndicator()),
+      EventsLoaded() => _buildLoadedState(context, state, cubit),
+      EventsError() => _buildErrorState(context, state),
+    };
+  }
 
-        /// Event list
-        Expanded(
-          child: Container(
-            clipBehavior: Clip.hardEdge,
-            decoration: BoxDecoration(
-              borderRadius: const BorderRadius.only(
-                bottomLeft: Radius.circular(12),
-                bottomRight: Radius.circular(12),
-              ),
-              border: Border(
-                bottom: BorderSide(color: context.colorScheme.elevation2, width: 1),
-                left: BorderSide(color: context.colorScheme.elevation2, width: 1),
-                right: BorderSide(color: context.colorScheme.elevation2, width: 1),
-              ),
-              color: Theme.of(context).colorScheme.elevation1,
-            ),
-            child: BlocBuilder<ProjectViewModel, ProjectViewModelState>(
-              builder: (BuildContext context, ProjectViewModelState state) {
-                final List<FusionEvent> eventList = _projectViewModel.getAllEvents();
-                if (eventList.isEmpty) {
-                  return Container(
-                    width: double.infinity,
-                    alignment: Alignment.center,
-                    child: FusionAppText(
-                      text: 'No events available',
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        fontSize: 12,
-                      ),
-                    ),
-                  );
-                }
-                return EventList(
-                  eventList: eventList,
-                  projectViewModel: _projectViewModel,
-                  onDelete: (String eventId) {
-                    _projectViewModel.removeEvent(eventId: eventId);
+  Widget _buildEmptyState(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      alignment: Alignment.center,
+      child: FusionAppText(
+        text: 'No events available',
+        style: Theme.of(context).textTheme.bodySmall?.copyWith(fontSize: 12),
+      ),
+    );
+  }
 
-                    /// clear on selected snapshot to avoid confusion after delete
-                    _projectViewModel.setSelectedEventId(null);
-                    FusionToast.success(context, message: "Event deleted successfully");
-                  },
-                  selectedEventId: _projectViewModel.selectedEventId,
-                  onSelect: (String eventId) {
-                    _projectViewModel.setSelectedEventId(eventId);
-                  },
-                  onReorder: (int oldIndex, int newIndex) {
-                    if (oldIndex < newIndex) newIndex -= 1;
-                    final String eventToMove = eventList[oldIndex].id;
-                    final String eventAtNewIndex = eventList[newIndex].id;
-                    _projectViewModel.reOrderEvents(
-                      eventIdToMove: eventToMove,
-                      eventAtNewIndex: eventAtNewIndex,
-                    );
-                    _projectViewModel.setSelectedEventId(eventToMove);
-                  },
-                  onSwitchChanged: (String eventId) {
-                    /// Fetch event, create updated copy and update
-                    final FusionEvent event = _projectViewModel.getEventById(eventId);
-                    final FusionEvent updatedEvent = event.copyWith(isEnabled: !event.isEnabled);
-                    _projectViewModel.updateEvent(event: updatedEvent);
-                  },
-                );
-              },
-            ),
+  Widget _buildErrorState(BuildContext context, EventsError state) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: <Widget>[
+          Icon(Icons.error_outline, size: 48, color: context.colorScheme.error),
+          const SizedBox(height: 16),
+          FusionAppText(
+            text: 'Error loading events',
+            style: Theme.of(context).textTheme.bodyMedium,
           ),
-        ),
-      ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLoadedState(BuildContext context, EventsLoaded state, EventsCubit cubit) {
+    final List<FusionEvent> eventList = state.events;
+
+    if (eventList.isEmpty) {
+      return _buildEmptyState(context);
+    }
+
+    return EventList(
+      eventList: eventList,
+      cubit: cubit,
+      onDelete: (String eventId) {
+        cubit.deleteEvent(eventId);
+        FusionToast.success(context, message: "Event deleted successfully");
+      },
+      selectedEventId: state.selectedEventId,
+      onSelect: (String eventId) {
+        cubit.selectEvent(eventId);
+      },
+      onReorder: (int oldIndex, int newIndex) {
+        cubit.reorderEvents(oldIndex, newIndex);
+      },
+      onSwitchChanged: (String eventId) {
+        cubit.toggleEventEnabled(eventId);
+      },
     );
   }
 }
