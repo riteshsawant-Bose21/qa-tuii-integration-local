@@ -11,6 +11,8 @@ class FusionContainer extends StatelessWidget {
     this.color,
     this.height,
     this.alignment,
+    this.padding,
+    this.margin,
   });
   final double? width;
   final double? height;
@@ -19,6 +21,9 @@ class FusionContainer extends StatelessWidget {
   final bool raised;
   final Color? color;
   final AlignmentGeometry? alignment;
+  final EdgeInsetsGeometry? padding;
+  final EdgeInsetsGeometry? margin;
+
   @override
   Widget build(BuildContext context) {
     return AnimatedContainer(
@@ -26,20 +31,21 @@ class FusionContainer extends StatelessWidget {
       width: width,
       height: height,
       alignment: alignment,
-      margin: const EdgeInsets.all(2),
+      margin: margin ?? const EdgeInsets.all(2),
+      padding: padding,
       decoration: BoxDecoration(
         // color: context.colorScheme.shadowDark,
         boxShadow: raised
             ? <BoxShadow>[
-                BoxShadow(color: context.colorScheme.shadowLight, blurRadius: 2, offset: const Offset(-2, -2)),
-                BoxShadow(color: context.colorScheme.shadowDark, blurRadius: 4, offset: const Offset(2, 2)),
+                BoxShadow(color: context.colorScheme.shadowLight, blurRadius: 6, offset: const Offset(-2, -2)),
+                BoxShadow(color: context.colorScheme.shadowDark, blurRadius: 8, offset: const Offset(2, 2)),
                 BoxShadow(color: color ?? context.colorScheme.elevation1),
               ]
             : <BoxShadow>[
-                BoxShadow(color: context.colorScheme.shadowDark, blurRadius: 1, offset: Offset(-2, -2), blurStyle: BlurStyle.inner),
+                BoxShadow(color: context.colorScheme.shadowDark, blurRadius: 2, offset: Offset(-2, -2), blurStyle: BlurStyle.inner),
                 BoxShadow(
                   color: context.colorScheme.shadowLight,
-                  blurRadius: 1,
+                  blurRadius: 2,
                   offset: Offset(2, 2),
                   blurStyle: BlurStyle.inner,
                 ),

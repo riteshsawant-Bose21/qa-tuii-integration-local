@@ -349,4 +349,8 @@ extension EventsService on ProjectService {
 
     return {for (var event in items) event.id: event};
   }
+
+  List<FusionEvent> getAllTimedEvents() {
+    return events.getAll().where((event) => event.action == EventActionType.timedEvent).toList();
+  }
 }

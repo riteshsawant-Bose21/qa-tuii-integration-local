@@ -6,26 +6,8 @@ import 'package:fusion_launcher/core/services/user_profile_manager.dart';
 import 'package:fusion_launcher/features/home/presentation/widgets/profile_tab_content.dart';
 import 'package:fusion_launcher/features/home/presentation/widgets/saved_projects_tab.dart';
 import 'package:fusion_lib/fusion_lib.dart';
-import 'package:fusion_lib/fusion_theme/app_theme.dart';
 
 import '../../../../../core/service_locator.dart';
-
-enum FusionTimeZones {
-  IST,
-  GMT,
-  UTC,
-  PST,
-  EST;
-
-  // get by string
-  static FusionTimeZones? fromString(String value) {
-    try {
-      return FusionTimeZones.values.firstWhere((FusionTimeZones element) => element.name == value);
-    } catch (e) {
-      return null;
-    }
-  }
-}
 
 class ProfileContactAndLocationTab extends StatelessWidget {
   const ProfileContactAndLocationTab({super.key});
@@ -62,14 +44,14 @@ class ProfileContactAndLocationTab extends StatelessWidget {
             ),
             const SizedBox(height: 10),
             BorderedTextfield(
-              initialValue: address.addressLine1,
+              controllerValue: address.addressLine1,
               label: "Address Line 1",
               hintText: "e.g. 123, Main Street",
               isEnabled: false,
             ),
             const SizedBox(height: 10),
             BorderedTextfield(
-              initialValue: address.addressLine2,
+              controllerValue: address.addressLine2,
               label: "Address Line 2",
               hintText: "e.g. Apartment, Suite, Unit, Building",
               isEnabled: false,
@@ -80,7 +62,7 @@ class ProfileContactAndLocationTab extends StatelessWidget {
               children: <Widget>[
                 Expanded(
                   child: BorderedTextfield(
-                    initialValue: address.state,
+                    controllerValue: address.state,
                     label: "State",
                     hintText: "e.g. California",
                     isEnabled: false,
@@ -88,7 +70,7 @@ class ProfileContactAndLocationTab extends StatelessWidget {
                 ),
                 Expanded(
                   child: BorderedTextfield(
-                    initialValue: address.zipCode,
+                    controllerValue: address.zipCode,
                     label: "Zip Code",
                     hintText: "000000",
                     isEnabled: false,
@@ -103,7 +85,7 @@ class ProfileContactAndLocationTab extends StatelessWidget {
               children: <Widget>[
                 Expanded(
                   child: BorderedTextfield(
-                    initialValue: address.country,
+                    controllerValue: address.country,
                     label: "Country",
                     hintText: "Country",
                     isEnabled: false,
@@ -111,7 +93,7 @@ class ProfileContactAndLocationTab extends StatelessWidget {
                 ),
                 Expanded(
                   child: BorderedTextfield(
-                    initialValue: address.city,
+                    controllerValue: address.city,
                     label: "City",
                     hintText: "City",
                     isEnabled: false,

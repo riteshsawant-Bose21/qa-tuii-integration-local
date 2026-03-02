@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:fusion_launcher/core/service_locator.dart';
 import 'package:fusion_launcher/core/widgets/title_text_field_switcher.dart';
 import 'package:fusion_launcher/features/projects/widget/building/side_panel_widgets/equipment_location/equipment_location_dialog.dart';
 import 'package:fusion_launcher/features/projects/widget/building/side_panel_widgets/equipment_location/right_aligned_popup_menu.dart';
@@ -76,6 +77,7 @@ class EquipmentLocationSection extends StatelessWidget {
                     title: location.name,
                     isExpanded: true,
                     location: location,
+
                     trailing: SizedBox(
                       height: 24,
                       width: 24,
@@ -119,6 +121,7 @@ class EquipmentLocationSection extends StatelessWidget {
                         final List<HardwareComponent> hardwares = BlocProvider.of<ProjectViewModel>(
                           context,
                         ).getHardwareForEquipLocation(equipLocationId: location.id);
+                        final String? selected = BlocProvider.of<ProjectViewModel>(context).currentSelectedHardwareId;
                         hardwares.sort((HardwareComponent a, HardwareComponent b) {
                           final int posA = a.equipmentLocationPosition ?? 9999;
                           final int posB = b.equipmentLocationPosition ?? 9999;
@@ -127,38 +130,48 @@ class EquipmentLocationSection extends StatelessWidget {
                         return Column(
                           children: <Widget>[
                             for (final HardwareComponent hardware in hardwares)
-                              Padding(
-                                padding: const EdgeInsets.only(left: 16.0, top: 4, bottom: 4),
-                                child: Row(
-                                  children: <Widget>[
-                                    Icon(
-                                      LucideIcons.box,
-                                      size: 12,
-                                      color: context.colorScheme.onSurface,
-                                    ),
-                                    const SizedBox(width: 8),
-                                    Expanded(
-                                      child: FusionAppText(
-                                        text: hardware.name,
-                                        maxLine: 1,
-                                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                          fontSize: 11,
+                              InkWell(
+                                onTap: () {
+                                  serviceLocator<ProjectViewModel>().setCurrentSelectedHardware(hardware.id);
+                                  serviceLocator<ProjectViewModel>().setCurrentSelectedListeningArea(null);
+                                },
+                                child: Container(
+                                  decoration: BoxDecoration(
+                                    color: selected == hardware.id ? context.colorScheme.elevation4 : Colors.transparent,
+                                    borderRadius: BorderRadius.circular(4),
+                                  ),
+                                  padding: const EdgeInsets.only(left: 16.0, top: 4, bottom: 4, right: 6),
+                                  child: Row(
+                                    children: <Widget>[
+                                      Icon(
+                                        LucideIcons.box,
+                                        size: 12,
+                                        color: context.colorScheme.onSurface,
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Expanded(
+                                        child: FusionAppText(
+                                          text: hardware.name,
+                                          maxLine: 1,
+                                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                            fontSize: 11,
+                                          ),
                                         ),
                                       ),
-                                    ),
-                                    const SizedBox(width: 8),
-                                    InkWell(
-                                      onTap: () {
-                                        BlocProvider.of<ProjectViewModel>(context).removeHardware(
-                                          hardwareId: hardware.id,
-                                        );
-                                      },
-                                      child: SemanticHelper.button(
-                                        testId: SemanticHelper.createTestId(SemanticTypes.button, "equipment_location_section_item_remove_button_$index"),
-                                        child: Icon(LucideIcons.trash200, size: 12, color: Colors.red[600]),
-                                      ),
-                                    ),
-                                  ],
+                                      const SizedBox(width: 8),
+                                      // InkWell(
+                                      //   onTap: () {
+                                      //     BlocProvider.of<ProjectViewModel>(context).removeHardware(
+                                      //       hardwareId: hardware.id,
+                                      //     );
+                                      //   },
+                                      //   child: SemanticHelper.button(
+                                      //     testId: SemanticHelper.createTestId(SemanticTypes.button, "equipment_location_section_item_remove_button_$index"),
+                                      //     child: Icon(LucideIcons.trash200, size: 12, color: Colors.red[600]),
+                                      //   ),
+                                      // ),
+                                    ],
+                                  ),
                                 ),
                               ),
                           ],
