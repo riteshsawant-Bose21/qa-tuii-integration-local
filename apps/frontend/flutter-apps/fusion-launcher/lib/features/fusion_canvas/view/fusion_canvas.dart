@@ -5,7 +5,6 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/features/fusion_canvas/state/tools/measure_tool_state.dart';
 import 'package:fusion_launcher/features/fusion_canvas/viewmodel/fusion_canvas_tool_viewmodel.dart';
 import 'package:fusion_lib/fusion_lib.dart';
-import 'package:fusion_lib/fusion_widgets/fusion_widgets.dart';
 import 'package:nested/nested.dart';
 
 import '../state/fusion_canvas_input_state.dart';
@@ -30,7 +29,7 @@ class FusionCanvas extends StatelessWidget {
   });
   final List<FusionBasePainter> elements;
   final Widget Function(BuildContext context)? builder;
-  final FusionToolbarEvents? toolbarEvents;
+  final FusionCanvasEvents? toolbarEvents;
   @override
   Widget build(BuildContext context) {
     return MultiBlocProvider(
@@ -73,35 +72,37 @@ class FusionCanvas extends StatelessWidget {
           builder: (BuildContext context, FusionCanvasState state) {
             return Stack(
               children: <Widget>[
-                CanvasControlWrapper(
-                  child: BlocBuilder<FusionCanvasInputViewModel, FusionCanvasInputState>(
-                    builder: (BuildContext context, FusionCanvasInputState inputState) {
-                      return BlocBuilder<FusionSnapViewModel, FusionSnapState>(
-                        builder: (BuildContext context, FusionSnapState snapState) {
-                          return CustomPaint(
-                            painter: FusionCanvasPainter(
-                              state: state,
-                              context: context,
-                              layers: <FusionBasePainter>[
-                                ...elements,
-                                ToolPainter(
-                                  state: context.watch<FusionCanvasToolViewModel>().state,
-                                  cursor: snapState.effectivePosition,
-                                ),
-                                SnapPainter(
-                                  snapResult: snapState.snapResult,
-                                ),
-                              ],
+                BlocBuilder<FusionCanvasInputViewModel, FusionCanvasInputState>(
+                  builder: (BuildContext context, FusionCanvasInputState inputState) {
+                    return BlocBuilder<FusionSnapViewModel, FusionSnapState>(
+                      builder: (BuildContext context, FusionSnapState snapState) {
+                        final FusionCanvasPainter fusionCanvasPainter = FusionCanvasPainter(
+                          state: state,
+                          context: context,
+                          layers: <FusionBasePainter>[
+                            ...elements,
+                            ToolPainter(
+                              state: context.watch<FusionCanvasToolViewModel>().state,
+                              cursor: snapState.effectivePosition,
                             ),
+                            SnapPainter(
+                              snapResult: snapState.snapResult,
+                            ),
+                          ],
+                        );
+                        return CanvasControlWrapper(
+                          painter: fusionCanvasPainter,
+                          child: CustomPaint(
+                            painter: fusionCanvasPainter,
                             child: const SizedBox(
                               width: double.infinity,
                               height: double.infinity,
                             ),
-                          );
-                        },
-                      );
-                    },
-                  ),
+                          ),
+                        );
+                      },
+                    );
+                  },
                 ),
 
                 if (builder != null) builder!(context),
@@ -157,20 +158,28 @@ class CanvasControlWrapper extends StatelessWidget {
     super.key,
 
     required this.child,
+    required this.painter,
   });
 
   final Widget child;
+  final FusionCanvasPainter painter;
 
   @override
   Widget build(BuildContext context) {
     final FusionCanvasStateViewModel controller = context.read<FusionCanvasStateViewModel>();
+
+    final FusionToolState toolState = context.watch<FusionCanvasToolViewModel>().state;
 
     return FusionKeyboardWrapper(
       onKeyEvent: (KeyEvent value) {
         context.read<FusionCanvasInputViewModel>().onKeyEvent(value);
       },
       child: MouseRegion(
-        // cursor: SystemMouseCursors.none,
+        cursor: switch (toolState) {
+          MeasureToolState _ => SystemMouseCursors.precise,
+          PenToolState _ => SystemMouseCursors.precise,
+          _ => SystemMouseCursors.basic,
+        },
         onExit: (PointerExitEvent event) {
           context.read<FusionCanvasInputViewModel>().updateMousePosition(null);
           context.read<FusionSnapViewModel>().updateCursorPosition(null);
@@ -211,6 +220,7 @@ class CanvasControlWrapper extends StatelessWidget {
             },
             onPointerUp: (PointerUpEvent event) {
               final Offset correctedPosition = controller.correctPosition(event.localPosition);
+
               context.read<FusionCanvasInputViewModel>().onTapUp(correctedPosition);
             },
 
@@ -252,10 +262,10 @@ class FusionCanvasCursor extends StatelessWidget {
   }
 }
 
-class FusionToolbarEvents {
+class FusionCanvasEvents {
   final FusionPenToolEvents? penToolEvents;
-
-  FusionToolbarEvents({this.penToolEvents});
+  final ValueChanged<FusionBasePainter?>? onLayerSelected;
+  FusionCanvasEvents({this.penToolEvents, this.onLayerSelected});
 }
 
 class FusionPenToolEvents {

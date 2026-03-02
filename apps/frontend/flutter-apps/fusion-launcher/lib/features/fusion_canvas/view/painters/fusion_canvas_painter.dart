@@ -3,16 +3,21 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:fusion_launcher/features/fusion_canvas/viewmodel/fusion_canvas_input_viewmodel.dart';
+import 'package:fusion_launcher/features/fusion_canvas/viewmodel/fusion_snap_viewmodel.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
 import '../../../wiring_design/view/painters/dotted_grid_painter.dart';
+import '../../state/fusion_canvas_input_state.dart';
 import '../../state/fusion_canvas_state.dart';
+import '../../state/fusion_snap_state.dart';
 import '../../viewmodel/fusion_canvas_image_viewmodel.dart';
 
 class FusionCanvasPainter extends CustomPainter {
   final FusionCanvasState state;
   final List<FusionBasePainter> layers;
   final BuildContext context;
+
   FusionCanvasPainter({
     required this.state,
     this.layers = const <FusionBasePainter>[],
@@ -54,6 +59,21 @@ class FusionCanvasPainter extends CustomPainter {
   ui.Image? getImage(String s) {
     return context.read<FusionCanvasImageViewModel>().getImage(s);
   }
+
+  FusionBasePainter? isHit(Offset position) {
+    for (final FusionBasePainter painter in layers.reversed) {
+      if (painter.isHit(position, this)) {
+        return painter;
+      }
+    }
+    return null;
+  }
+
+  FusionCanvasInputState get inputViewModel => context.read<FusionCanvasInputViewModel>().state;
+
+  Offset? get cursor => inputViewModel.mousePosition;
+
+  FusionSnapState get snapViewModel => context.read<FusionSnapViewModel>().state;
 }
 
 abstract class FusionBasePainter {
@@ -201,15 +221,15 @@ abstract class FusionBasePainter {
     }
   }
 
-  void drawClosedPath({required Canvas canvas, required List<FusionCanvasPoint> points, required Paint fillPaint, required Paint strokePaint}) {
-    if (points.length < 2) return;
+  Path? getPolygonPath(FusionCanvasPolygon polygon) {
+    final List<FusionCanvasPoint> points = polygon.points;
+    if (points.length < 2) return null;
 
     final Path path = Path()..moveTo(points[0].position.dx, points[0].position.dy);
     for (int i = 1; i < points.length; i++) {
       path.lineTo(points[i].position.dx, points[i].position.dy);
     }
     path.close();
-    canvas.drawPath(path, fillPaint);
-    canvas.drawPath(path, strokePaint);
+    return path;
   }
 }

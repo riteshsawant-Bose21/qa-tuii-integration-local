@@ -201,7 +201,7 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
                                               isSelected: serviceLocator<ProjectViewModel>().currentSelectedListeningAreaId == area.id,
                                             ),
                                         ],
-                                        toolbarEvents: FusionToolbarEvents(
+                                        toolbarEvents: FusionCanvasEvents(
                                           penToolEvents: FusionPenToolEvents(
                                             onPathClosed: (List<FusionCanvasPoint> value) {
                                               final List<Offset> areaPoints = value.map((FusionCanvasPoint e) => e.position).toList();
@@ -507,7 +507,7 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
                       return Visibility(
                         visible: currentFloor.floorPlan.imagePath.isNotEmpty || currentFloor.floorPlan.imagePath != "" ? true : false,
                         child: Align(
-                          alignment: Alignment.bottomCenter,
+                          alignment: Alignment.bottomRight,
                           child: Padding(
                             padding: const EdgeInsets.only(bottom: 12.0),
                             child: ValueListenableBuilder<bool>(

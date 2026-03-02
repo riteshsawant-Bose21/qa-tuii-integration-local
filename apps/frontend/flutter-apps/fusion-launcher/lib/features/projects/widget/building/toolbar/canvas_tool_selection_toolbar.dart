@@ -6,6 +6,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../../fusion_canvas/state/tools/measure_tool_state.dart';
 import '../../../../fusion_canvas/state/tools/pen_tool_state.dart';
+import '../../../../fusion_canvas/state/tools/select_tool_state.dart';
 import '../../../../fusion_canvas/viewmodel/fusion_canvas_tool_viewmodel.dart';
 
 class CanvasToolSelectionToolbar extends StatelessWidget {
@@ -31,6 +32,13 @@ class CanvasToolSelectionToolbar extends StatelessWidget {
             label: "Measure",
             isSelected: toolState is MeasureToolState,
             onTap: () => context.read<FusionCanvasToolViewModel>().setTool(IdleMeasureToolState()),
+          ),
+          const SizedBox(width: 8),
+          _ToolBarIcon(
+            icon: LucideIcons.pointer,
+            label: "Select",
+            isSelected: toolState is SelectToolState,
+            onTap: () => context.read<FusionCanvasToolViewModel>().setTool(IdleSelectToolState()),
           ),
         ],
       ),

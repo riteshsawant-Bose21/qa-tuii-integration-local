@@ -3,13 +3,20 @@ import 'dart:ui';
 
 import 'package:fusion_lib/fusion_lib.dart';
 
-class FusionCanvasPoint {
+import 'fusion_canvas_element.dart';
+
+class FusionCanvasPoint extends FusionCanvasElement {
   final Offset position;
 
   final Offset? handleIn;
   final Offset? handleOut;
 
-  FusionCanvasPoint({required this.position, this.handleIn, this.handleOut});
+  FusionCanvasPoint({
+    required this.position,
+    this.handleIn,
+    this.handleOut,
+    String? id,
+  }) : id = id ?? FusionUtils.generateUUID();
 
   @override
   bool operator ==(covariant FusionCanvasPoint other) {
@@ -36,4 +43,7 @@ class FusionCanvasPoint {
       handleOut: map['handle_out'] != null ? Offset((map['handle_out']['dx'] as num).toDouble(), (map['handle_out']['dy'] as num).toDouble()) : null,
     );
   }
+
+  @override
+  final String id;
 }
