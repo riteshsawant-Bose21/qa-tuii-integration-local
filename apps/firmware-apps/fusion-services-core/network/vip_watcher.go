@@ -42,7 +42,7 @@ func (w *VIPWatcher) Start(expectedVIP net.IPNet, onUpdate func(gained bool)) er
 	w.onUpdate = onUpdate
 	w.done = make(chan struct{})
 
-	w.logger.Debug("[VIP watcher] Starting VIP watcher on interface: %s for VIP: %s", w.iface, expectedVIP)
+	w.logger.Debug("[VIP watcher] Starting VIP watcher on interface: %s for VIP: %s", w.iface, expectedVIP.String())
 
 	link, err := netlink.LinkByName(w.iface)
 	if err != nil {
@@ -50,6 +50,7 @@ func (w *VIPWatcher) Start(expectedVIP net.IPNet, onUpdate func(gained bool)) er
 		return err
 	}
 	linkIndex := link.Attrs().Index
+	w.logger.Debug("[VIP watcher] Interface resolved: %s index=%d", w.iface, linkIndex)
 	w.wg.Add(1)
 	go w.watch(linkIndex)
 	w.running = true
@@ -100,6 +101,8 @@ func (w *VIPWatcher) watch(linkIndex int) {
 		return
 	}
 
+	w.logger.Debug("[VIP watcher] AddrSubscribe active (ListExisting=true)")
+
 	for {
 		select {
 		case <-w.done:
@@ -111,11 +114,13 @@ func (w *VIPWatcher) watch(linkIndex int) {
 			}
 
 			if update.LinkIndex != linkIndex {
+				w.logger.Debug("[VIP watcher] ignoring update for linkIndex=%d (expected %d)", update.LinkIndex, linkIndex)
 				continue
 			}
 
 			ip := update.LinkAddress.IP
 			if ip == nil || ip.To4() == nil {
+				w.logger.Debug("[VIP watcher] ignoring non-IPv4 update: %v", update.LinkAddress)
 				continue
 			}
 
@@ -127,6 +132,7 @@ func (w *VIPWatcher) watch(linkIndex int) {
 			w.mu.Unlock()
 
 			if !expectedVIP.Contains(ip) {
+				w.logger.Debug("[VIP watcher] ignoring IP not in expected VIP: ip=%s expected=%s", ip, expectedVIP.String())
 				continue
 			}
 

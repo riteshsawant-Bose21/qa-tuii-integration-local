@@ -186,10 +186,6 @@ func (app *App) registerPrivatePOST(route string, handler http.HandlerFunc) {
 	routes.RegisterPrivatePOST(app.privateRouter, route, handler)
 }
 
-func (app *App) registerPrivateDELETE(route string, handler http.HandlerFunc) {
-	routes.RegisterPrivateDELETE(app.privateRouter, route, handler)
-}
-
 func (app *App) setupPublicRoutes() {
 
 	// Cluster
@@ -295,8 +291,6 @@ func (app *App) setupPrivateRoutes() {
 	app.registerPrivatePATCH(routes.DeviceEndpoint, app.Cluster.UpdateDeviceInfoLocal)
 	app.registerPrivateGET(routes.DevicesVIPEndpoint, app.VIPMonitor.HandleGetVIP)
 	app.registerPrivatePOST(routes.DevicesSetVIPEndpoint, app.VIPMonitor.HandleUpdateVIPLocal)
-	app.registerPrivateDELETE(routes.DevicesDeleteVIPEndpoint, app.VIPMonitor.HandleDeleteVIP)
-	app.registerPrivatePOST(routes.DevicesDeleteVIPLocalEndpoint, app.VIPMonitor.HandleDeleteVIPLocal)
 	app.registerPrivatePOST(routes.DeviceReloadVIPEndpoint, app.VIPMonitor.HandleReloadVIPLocal)
 
 	app.registerPrivateGET(routes.DataEndpoint, app.Server.ExportData)

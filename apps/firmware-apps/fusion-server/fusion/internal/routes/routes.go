@@ -46,12 +46,10 @@ const (
 	DeviceReloadVIPEndpoint = DeviceReloadEndpoint + "/vip"
 	DeviceIDEndpoint        = DeviceEndpoint + "/{id}"
 
-	DevicesEndpoint               = "/devices"
-	DevicesIDEndpoint             = DevicesEndpoint + "/{id}"
-	DevicesVIPEndpoint            = DevicesEndpoint + "/vip"
-	DevicesSetVIPEndpoint         = DevicesVIPEndpoint + "/{vip}"
-	DevicesDeleteVIPEndpoint      = DevicesVIPEndpoint
-	DevicesDeleteVIPLocalEndpoint = DevicesVIPEndpoint + "/local"
+	DevicesEndpoint       = "/devices"
+	DevicesIDEndpoint     = DevicesEndpoint + "/{id}"
+	DevicesVIPEndpoint    = DevicesEndpoint + "/vip"
+	DevicesSetVIPEndpoint = DevicesVIPEndpoint + "/{vip}"
 
 	EndpointsEndpoint = "/endpoints"
 
@@ -121,10 +119,6 @@ func RegisterPrivatePATCH(router *mux.Router, pattern string, handler http.Handl
 
 func RegisterPrivatePOST(router *mux.Router, pattern string, handler http.HandlerFunc) {
 	RegisterPrivateEndpoint(router, "POST", pattern, handler)
-}
-
-func RegisterPrivateDELETE(router *mux.Router, pattern string, handler http.HandlerFunc) {
-	RegisterPrivateEndpoint(router, "DELETE", pattern, handler)
 }
 
 func RegisterPublicEndpoint(router *mux.Router, method string, pattern string, handler http.HandlerFunc) {

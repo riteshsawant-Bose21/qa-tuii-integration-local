@@ -262,7 +262,7 @@ func (m *VIPMonitor) Stop() {
 
 // Restart stops and restarts VIP monitoring with fresh configuration
 // This is useful when the VIP address changes and the watcher needs to monitor the new address
-func (m *VIPMonitor) Restart() error {
+func (m *VIPMonitor) restart() error {
 	logger := logging.GetLogger()
 	logger.Info("Restarting VIP monitoring")
 
@@ -327,6 +327,9 @@ func (m *VIPMonitor) handleVIPWatcherUpdate(gained bool) {
 		logger.Error("Failed to determine local IP for interface %s: %v", m.netIface, err)
 	}
 
+	logger.Debug("VIP watcher state: vip=%s holder=%s localIP=%s gained=%v",
+		currentVIP, currentHolder, localIP, gained)
+
 	if gained {
 		logger.Info("VIP gained on local interface")
 
@@ -336,6 +339,8 @@ func (m *VIPMonitor) handleVIPWatcherUpdate(gained bool) {
 		m.stateMu.Unlock()
 
 		// Notify
+		logger.Debug("VIP watcher emit: event=%s vip=%s holder=%s oldHolder=%s isLocalOwner=%v",
+			EventGainedOnLocalInterface, currentVIP, localIP, currentHolder, true)
 		callback(VIPEvent{
 			VIP:          currentVIP,
 			Holder:       localIP,
@@ -348,6 +353,8 @@ func (m *VIPMonitor) handleVIPWatcherUpdate(gained bool) {
 		logger.Info("VIP lost from local interface")
 
 		// We not sure of new holder - wait for VRRP update to tell us who has it
+		logger.Debug("VIP watcher emit: event=%s vip=%s holder= oldHolder=%s isLocalOwner=%v",
+			EventLostOnLocalInterface, currentVIP, currentHolder, false)
 		callback(VIPEvent{
 			VIP:          currentVIP,
 			Holder:       "", // Unknown until VRRP tells us
@@ -362,7 +369,7 @@ func (m *VIPMonitor) handleVIPWatcherUpdate(gained bool) {
 // handleVRRPUpdate is called when a VRRP advertisement is received
 func (m *VIPMonitor) handleVRRPUpdate(vipAddr string, srcIP string) {
 	logger := logging.GetLogger()
-	// logger.Debug("VRRP update received: vipAddr=%s srcIP=%s", vipAddr, srcIP)
+	logger.Debug("VRRP update received: vipAddr=%s srcIP=%s", vipAddr, srcIP)
 
 	// Validate input
 	if vipAddr == "" && srcIP == "" {
@@ -372,29 +379,31 @@ func (m *VIPMonitor) handleVRRPUpdate(vipAddr string, srcIP string) {
 
 	newVIP := vip.Canonicalize(vipAddr)
 
-	// Get current state
-	m.stateMu.RLock()
+	// Atomically check and update state to prevent duplicate processing
+	// Lock acquired here and held through state comparison and update
+	m.stateMu.Lock()
+
 	oldVIP := m.currentVIP
 	oldHolder := m.currentHolder
 	callback := m.onStateChange
-	m.stateMu.RUnlock()
 
 	if callback == nil {
+		m.stateMu.Unlock()
 		logger.Warn("VRRP update received but no callback registered")
 		return
 	}
 
-	// VIP removed entirely
+	// VIP removed entirely??
 	if newVIP == "" {
 		if oldVIP == "" {
+			m.stateMu.Unlock()
 			logger.Warn("Both oldVIP and newVIP are empty - no change")
 			return
 		}
 
 		logger.Debug("VIP removed: oldVIP=%s", oldVIP)
 
-		// Update state
-		m.stateMu.Lock()
+		// Update state (lock already held)
 		m.currentVIP = ""
 		m.currentHolder = ""
 		m.stateMu.Unlock()
@@ -411,12 +420,19 @@ func (m *VIPMonitor) handleVRRPUpdate(vipAddr string, srcIP string) {
 		return
 	}
 
-	// No change
+	// No change - check atomically before any goroutine updates state
 	if newVIP == oldVIP && srcIP == oldHolder {
+		m.stateMu.Unlock()
 		// logger.Debug("VRRP update with no state change")
 		return
 	}
 
+	// Update state while still holding lock
+	m.currentVIP = newVIP
+	m.currentHolder = srcIP
+	m.stateMu.Unlock()
+
+	// Now perform expensive operations outside the lock
 	var oldLocal bool
 	// Check ownership
 	if oldHolder == "" {
@@ -440,22 +456,22 @@ func (m *VIPMonitor) handleVRRPUpdate(vipAddr string, srcIP string) {
 	logger.Debug("VIP state: oldVIP=%s newVIP=%s oldHolder=%s newHolder=%s oldLocal=%v newLocal=%v",
 		oldVIP, newVIP, oldHolder, srcIP, oldLocal, newLocal)
 
-	// Update state
-	m.stateMu.Lock()
-	m.currentVIP = newVIP
-	m.currentHolder = srcIP
-	m.stateMu.Unlock()
-
 	// Determine event type and notify
 	vipChanged := (newVIP != oldVIP)
 	holderChanged := (srcIP != oldHolder)
+	logger.Debug("VRRP decision: vipChanged=%v holderChanged=%v oldLocal=%v newLocal=%v",
+		vipChanged, holderChanged, oldLocal, newLocal)
 
 	switch {
 	case vipChanged:
 		logger.Info("VIP address changed from %s to %s", oldVIP, newVIP)
-		m.UpdateVIP(newVIP)
+		if err := m.updateVIP(newVIP); err != nil {
+			logger.Error("Failed to update VIP in keepalived config: %v", err)
+		}
 
 		if newLocal {
+			logger.Debug("VRRP emit: event=%s vip=%s holder=%s oldVIP=%s oldHolder=%s isLocalOwner=%v",
+				EventAddressChanged, newVIP, srcIP, oldVIP, oldHolder, true)
 			callback(VIPEvent{
 				VIP:          newVIP,
 				Holder:       srcIP,
@@ -465,6 +481,8 @@ func (m *VIPMonitor) handleVRRPUpdate(vipAddr string, srcIP string) {
 				OldHolder:    oldHolder,
 			})
 		} else {
+			logger.Debug("VRRP emit: event=%s vip=%s holder=%s oldVIP=%s oldHolder=%s isLocalOwner=%v",
+				EventAddressChanged, newVIP, srcIP, oldVIP, oldHolder, false)
 			callback(VIPEvent{
 				VIP:          newVIP,
 				Holder:       srcIP,
@@ -477,6 +495,8 @@ func (m *VIPMonitor) handleVRRPUpdate(vipAddr string, srcIP string) {
 
 	case holderChanged:
 		if newLocal {
+			logger.Debug("VRRP emit: event=%s vip=%s holder=%s oldVIP=%s oldHolder=%s isLocalOwner=%v",
+				EventAddressChanged, newVIP, srcIP, oldVIP, oldHolder, true)
 			callback(VIPEvent{
 				VIP:          newVIP,
 				Holder:       srcIP,
@@ -486,6 +506,8 @@ func (m *VIPMonitor) handleVRRPUpdate(vipAddr string, srcIP string) {
 				OldHolder:    oldHolder,
 			})
 		} else {
+			logger.Debug("VRRP emit: event=%s vip=%s holder=%s oldVIP=%s oldHolder=%s isLocalOwner=%v",
+				EventAddressChanged, newVIP, srcIP, oldVIP, oldHolder, false)
 			callback(VIPEvent{
 				VIP:          newVIP,
 				Holder:       srcIP,
@@ -503,6 +525,8 @@ func (m *VIPMonitor) handleVRRPUpdate(vipAddr string, srcIP string) {
 	case oldLocal && !newLocal:
 		// Lost VIP locally
 		logger.Info("VIP lost: was local, now at %s", srcIP)
+		logger.Debug("VRRP emit: event=%s vip=%s holder=%s oldVIP=%s oldHolder=%s isLocalOwner=%v",
+			EventLostOnVRRPUpdate, newVIP, srcIP, oldVIP, oldHolder, false)
 		callback(VIPEvent{
 			VIP:          newVIP,
 			Holder:       srcIP,
@@ -515,6 +539,8 @@ func (m *VIPMonitor) handleVRRPUpdate(vipAddr string, srcIP string) {
 	case !oldLocal && newLocal:
 		// Gained VIP locally
 		logger.Info("VIP gained: now local at %s", srcIP)
+		logger.Debug("VRRP emit: event=%s vip=%s holder=%s oldVIP=%s oldHolder=%s isLocalOwner=%v",
+			EventGainedOnVRRPUpdate, newVIP, srcIP, oldVIP, oldHolder, true)
 		// Technically, this will never be called. As VRRP doesnt tell us who the new holder is when we gain VIP,
 		// we will only get srcIP in VRRP update when we lose VIP to remote node.
 		callback(VIPEvent{
@@ -529,6 +555,8 @@ func (m *VIPMonitor) handleVRRPUpdate(vipAddr string, srcIP string) {
 	case !oldLocal && !newLocal:
 		// VIP moved between remote nodes
 		logger.Info("VIP moved: from %s to %s", oldHolder, srcIP)
+		logger.Debug("VRRP emit: event=%s vip=%s holder=%s oldVIP=%s oldHolder=%s isLocalOwner=%v",
+			EventMovedOnVRRPUpdate, newVIP, srcIP, oldVIP, oldHolder, false)
 		callback(VIPEvent{
 			VIP:          newVIP,
 			Holder:       srcIP,
@@ -541,7 +569,7 @@ func (m *VIPMonitor) handleVRRPUpdate(vipAddr string, srcIP string) {
 }
 
 // UpdateVIP updates the VIP in the configuration file (does NOT reload keepalived)
-func (m *VIPMonitor) UpdateVIP(vipValue string) error {
+func (m *VIPMonitor) updateVIP(vipValue string) error {
 	logger := logging.GetLogger()
 
 	if err := vip.Validate(vipValue); err != nil {
@@ -558,15 +586,20 @@ func (m *VIPMonitor) UpdateVIP(vipValue string) error {
 	if err := vip.WriteToKeepalivedConfig(m.configPath, canonicalVIP); err != nil {
 		return err
 	}
-	if err := m.ReloadKeepalived(); err != nil {
+	if err := m.reloadKeepalived(); err != nil {
 		return err
 	}
+
+	if err := m.restart(); err != nil {
+		return err
+	}
+
 	logger.Debug("VIP updated successfully in config: %s", canonicalVIP)
 	return nil
 }
 
-// ReloadKeepalived reloads the keepalived service
-func (m *VIPMonitor) ReloadKeepalived() error {
+// reloadKeepalived reloads the keepalived service
+func (m *VIPMonitor) reloadKeepalived() error {
 	logger := logging.GetLogger()
 
 	if m.isLocal {
@@ -579,14 +612,34 @@ func (m *VIPMonitor) ReloadKeepalived() error {
 }
 
 // UpdateVIPAndReload updates the VIP configuration and reloads keepalived
-func (m *VIPMonitor) UpdateVIPAndReload(vipValue string) error {
-	if err := m.UpdateVIP(vipValue); err != nil {
+func (m *VIPMonitor) updateVIPAndReload(vipValue string) error {
+	if err := m.updateVIP(vipValue); err != nil {
 		return err
 	}
-	if err := m.ReloadKeepalived(); err != nil {
+	if err := m.reloadKeepalived(); err != nil {
 		return err
 	}
 	return nil
+}
+
+// getVIPInLocalConfig is for use in "local" development mode only
+func (m *VIPMonitor) getVIPInLocalConfig(w http.ResponseWriter) {
+	vipValue, err := vip.ReadFromLocalConfig(serverPrefix, vip.DefaultConfFile)
+	if err != nil {
+		if os.IsNotExist(err) || err == vip.ErrLocalConfigEmpty {
+			http.Error(w, err.Error(), http.StatusNotFound)
+			return
+		}
+		http.Error(w, fmt.Sprintf("error reading local config: %v", err),
+			http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set(api.ContentType, api.JsonMIMEType)
+	json.NewEncoder(w).Encode(map[string]string{
+		"local": vipValue,
+		"vip":   vipValue,
+	})
 }
 
 // HandleGetVIP handles GET /devices/vip
@@ -638,6 +691,42 @@ func (m *VIPMonitor) HandleGetVIP(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotFound)
 }
 
+// HandleUpdateVIPLocal handles POST /devices/vip/{vip} on admin port (local update only)
+func (m *VIPMonitor) HandleUpdateVIPLocal(w http.ResponseWriter, r *http.Request) {
+	if !utils.RequirePost(w, r) {
+		return
+	}
+	defer r.Body.Close()
+
+	vipValue, err := utils.ExtractValue(r, "vip")
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	if err := m.updateVIP(vipValue); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
+}
+
+// HandleReloadVIPLocal handles POST /device/reload/vip on admin port (local reload only)
+func (m *VIPMonitor) HandleReloadVIPLocal(w http.ResponseWriter, r *http.Request) {
+	if !utils.RequirePost(w, r) {
+		return
+	}
+	defer r.Body.Close()
+
+	if err := m.reloadKeepalived(); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
+}
+
 // HandleSetVIP handles POST /devices/vip/{vip}
 func (m *VIPMonitor) HandleSetVIP(w http.ResponseWriter, r *http.Request) {
 	if !utils.RequirePost(w, r) {
@@ -661,36 +750,15 @@ func (m *VIPMonitor) HandleSetVIP(w http.ResponseWriter, r *http.Request) {
 
 	// Update VIP on all nodes in cluster
 	localFn := func() error {
-		if err := m.UpdateVIP(vipValue); err != nil {
+		if err := m.updateVIP(vipValue); err != nil {
 			return err
 		}
-		// Restart watcher to monitor the new VIP address
-		return m.Restart()
+
+		return nil
 	}
 
 	if err := cluster.PostGenericToAdmin(m.cluster, endpoint, localFn); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	w.WriteHeader(http.StatusNoContent)
-}
-
-// HandleUpdateVIPLocal handles POST /devices/vip/{vip} on admin port (local update only)
-func (m *VIPMonitor) HandleUpdateVIPLocal(w http.ResponseWriter, r *http.Request) {
-	if !utils.RequirePost(w, r) {
-		return
-	}
-	defer r.Body.Close()
-
-	vipValue, err := utils.ExtractValue(r, "vip")
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-
-	if err := m.UpdateVIP(vipValue); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
@@ -705,115 +773,10 @@ func (m *VIPMonitor) HandleReloadVIP(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 
 	go func() {
-		if err := cluster.PostGenericToAdmin(m.cluster, routes.DeviceReloadVIPEndpoint, m.ReloadKeepalived); err != nil {
+		if err := cluster.PostGenericToAdmin(m.cluster, routes.DeviceReloadVIPEndpoint, m.reloadKeepalived); err != nil {
 			logging.GetLogger().Error("Failed to reload VIP: %v", err)
 		}
 	}()
 
 	w.WriteHeader(http.StatusNoContent)
-}
-
-// HandleReloadVIPLocal handles POST /device/reload/vip on admin port (local reload only)
-func (m *VIPMonitor) HandleReloadVIPLocal(w http.ResponseWriter, r *http.Request) {
-	if !utils.RequirePost(w, r) {
-		return
-	}
-	defer r.Body.Close()
-
-	if err := m.ReloadKeepalived(); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	w.WriteHeader(http.StatusNoContent)
-}
-
-// HandleDeleteVIP handles DELETE /devices/vip (deletes VIP on all nodes)
-func (m *VIPMonitor) HandleDeleteVIP(w http.ResponseWriter, r *http.Request) {
-	if !utils.RequireDelete(w, r) {
-		return
-	}
-	defer r.Body.Close()
-
-	// Delete VIP on all nodes in cluster
-	endpoint := routes.DevicesDeleteVIPLocalEndpoint
-	localFn := func() error {
-		return m.DeleteVIP()
-	}
-
-	if err := cluster.PostGenericToAdmin(m.cluster, endpoint, localFn); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	// Reload keepalived on all nodes (async)
-	if !m.isLocal {
-		go func() {
-			if err := cluster.PostGenericToAdmin(m.cluster, routes.DeviceReloadVIPEndpoint, m.ReloadKeepalived); err != nil {
-				logging.GetLogger().Error("Failed to reload VIP after delete: %v", err)
-			}
-		}()
-	}
-
-	w.WriteHeader(http.StatusNoContent)
-}
-
-// HandleDeleteVIPLocal handles POST /devices/vip/local on admin port (local delete only)
-func (m *VIPMonitor) HandleDeleteVIPLocal(w http.ResponseWriter, r *http.Request) {
-	if !utils.RequirePost(w, r) {
-		return
-	}
-	defer r.Body.Close()
-
-	if err := m.DeleteVIP(); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	w.WriteHeader(http.StatusNoContent)
-}
-
-// DeleteVIP removes the VIP configuration from keepalived.conf (does NOT reload keepalived)
-func (m *VIPMonitor) DeleteVIP() error {
-	logger := logging.GetLogger()
-
-	if m.isLocal {
-		logger.Debug("Skipping VIP delete in local mode")
-		return nil
-	}
-
-	logger.Debug("Deleting VIP from %s", m.configPath)
-
-	if err := vip.DeleteFromKeepalivedConfig(m.configPath); err != nil {
-		return fmt.Errorf("failed to delete VIP from config: %w", err)
-	}
-
-	// Update internal state
-	m.stateMu.Lock()
-	m.currentVIP = ""
-	m.currentHolder = ""
-	m.stateMu.Unlock()
-
-	logger.Info("VIP deleted successfully from config")
-	return nil
-}
-
-// getVIPInLocalConfig is for use in "local" development mode only
-func (m *VIPMonitor) getVIPInLocalConfig(w http.ResponseWriter) {
-	vipValue, err := vip.ReadFromLocalConfig(serverPrefix, vip.DefaultConfFile)
-	if err != nil {
-		if os.IsNotExist(err) || err == vip.ErrLocalConfigEmpty {
-			http.Error(w, err.Error(), http.StatusNotFound)
-			return
-		}
-		http.Error(w, fmt.Sprintf("error reading local config: %v", err),
-			http.StatusInternalServerError)
-		return
-	}
-
-	w.Header().Set(api.ContentType, api.JsonMIMEType)
-	json.NewEncoder(w).Encode(map[string]string{
-		"local": vipValue,
-		"vip":   vipValue,
-	})
 }

@@ -214,47 +214,6 @@ func WriteToKeepalivedConfig(path, newVIP string) error {
 	return nil
 }
 
-// DeleteFromKeepalivedConfig empties the virtual_ipaddress block in keepalived.conf.
-// This preserves the block structure but removes all VIP entries.
-func DeleteFromKeepalivedConfig(path string) error {
-	data, err := os.ReadFile(path)
-	if err != nil {
-		if os.IsNotExist(err) {
-			// Config doesn't exist - already deleted (no-op)
-			return nil
-		}
-		return fmt.Errorf("unable to read config file: %w", err)
-	}
-
-	lines := strings.Split(string(data), "\n")
-	var outLines []string
-	parser := vipDeleteParser{}
-
-	for _, line := range lines {
-		out := parser.processLine(line)
-		outLines = append(outLines, out...)
-	}
-
-	if !parser.found {
-		// No virtual_ipaddress block found - already deleted (no-op)
-		return nil
-	}
-	if parser.inBlock {
-		return fmt.Errorf("unterminated virtual_ipaddress block")
-	}
-
-	content := strings.Join(outLines, "\n") + "\n"
-	if len(strings.TrimSpace(content)) == 0 {
-		return fmt.Errorf("refusing to write empty config")
-	}
-
-	if err := atomicReplaceConfig(path, content, ".bak"); err != nil {
-		return fmt.Errorf("failed to update config file: %w", err)
-	}
-
-	return nil
-}
-
 // ReadFromLocalConfig reads the VIP from the first line of the local config file.
 func ReadFromLocalConfig(appName, confFile string) (string, error) {
 	cfgDir, err := os.UserConfigDir()
@@ -377,36 +336,4 @@ func (p *vipParser) processLine(line, newVIP string) ([]string, bool) {
 
 	// Skip old VIP lines inside the block
 	return nil, false
-}
-
-type vipDeleteParser struct {
-	inBlock bool
-	found   bool
-	indent  string
-}
-
-func (p *vipDeleteParser) processLine(line string) []string {
-	trim := strings.TrimSpace(line)
-
-	if !p.inBlock {
-		if trim == "virtual_ipaddress {" {
-			p.found, p.inBlock = true, true
-			if idx := strings.Index(line, "virtual_ipaddress"); idx >= 0 {
-				p.indent = line[:idx]
-			}
-			// Output empty block
-			return []string{
-				p.indent + "virtual_ipaddress {",
-			}
-		}
-		return []string{line}
-	}
-
-	if trim == "}" {
-		p.inBlock = false
-		return []string{p.indent + "}"}
-	}
-
-	// Skip all VIP lines inside the block (deleting them)
-	return nil
 }
