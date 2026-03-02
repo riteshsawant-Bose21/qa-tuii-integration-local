@@ -18,6 +18,8 @@ import '../../../configuration/presentation/viewmodel/project_view_model.dart';
 import '../../../fusion_canvas/view/fusion_canvas.dart';
 import '../../../fusion_canvas/view/painters/fusion_canvas_painter.dart';
 import 'toolbar/building_toolbar.dart';
+import 'toolbar/canvas_tool_selection_toolbar.dart';
+import 'toolbar/mode_selection_toolbar.dart';
 
 class BuildingCanvas extends StatefulWidget {
   final SplRangeController? splRangeController;
@@ -192,6 +194,21 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
                                             size: floor.floorPlan.size,
                                           ),
                                         ],
+
+                                        builder:
+                                            (BuildContext context) => const Stack(
+                                              children: <Widget>[
+                                                Positioned(
+                                                  bottom: 20,
+                                                  child: Row(
+                                                    children: <Widget>[
+                                                      ModeSelectionToolbar(),
+                                                      CanvasToolSelectionToolbar(),
+                                                    ],
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
                                       ),
                                       // FloorCanvas(
                                       //   gridSize: 100,

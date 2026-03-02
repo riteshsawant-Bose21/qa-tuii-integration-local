@@ -2,7 +2,6 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:fusion_launcher/core/widgets/app_button_widget.dart';
 import 'package:fusion_launcher/features/fusion_canvas/state/tools/measure_tool_state.dart';
 import 'package:fusion_launcher/features/fusion_canvas/viewmodel/fusion_canvas_tool_viewmodel.dart';
 import 'package:fusion_lib/fusion_widgets/fusion_widgets.dart';
@@ -26,8 +25,10 @@ class FusionCanvas extends StatelessWidget {
   const FusionCanvas({
     super.key,
     required this.elements,
+    required this.builder,
   });
   final List<FusionBasePainter> elements;
+  final Widget Function(BuildContext context)? builder;
   @override
   Widget build(BuildContext context) {
     return MultiBlocProvider(
@@ -53,62 +54,41 @@ class FusionCanvas extends StatelessWidget {
         },
         child: BlocBuilder<FusionCanvasStateViewModel, FusionCanvasState>(
           builder: (BuildContext context, FusionCanvasState state) {
-            return CanvasControlWrapper(
-              child: BlocBuilder<FusionCanvasInputViewModel, FusionCanvasInputState>(
-                builder: (BuildContext context, FusionCanvasInputState inputState) {
-                  return BlocBuilder<FusionSnapViewModel, FusionSnapState>(
-                    builder: (BuildContext context, FusionSnapState snapState) {
-                      return CustomPaint(
-                        painter: FusionCanvasPainter(
-                          state: state,
-                          context: context,
-                          layers: <FusionBasePainter>[
-                            ...elements,
-                            ToolPainter(
-                              state: context.watch<FusionCanvasToolViewModel>().state,
-                              cursor: snapState.effectivePosition,
-                            ),
-                            SnapPainter(
-                              snapResult: snapState.snapResult,
-                            ),
-                          ],
-                        ),
-                        child: SizedBox(
-                          width: double.infinity,
-                          height: double.infinity,
-                          child: Stack(
-                            children: <Widget>[
-                              // FusionCanvasCursor(),
-                              Positioned(
-                                top: 0,
-                                right: 0,
-                                child: Row(
-                                  children: <Widget>[
-                                    AppButton(
-                                      btnWidth: 150,
-                                      onTap: () {
-                                        context.read<FusionCanvasToolViewModel>().setTool(IdleMeasureToolState());
-                                      },
-                                      buttonLabel: "Measure Tool",
-                                    ),
-                                    AppButton(
-                                      btnWidth: 150,
-                                      onTap: () {
-                                        context.read<FusionCanvasToolViewModel>().setTool(IdlePenToolState());
-                                      },
-                                      buttonLabel: "Pen Tool",
-                                    ),
-                                  ],
+            return Stack(
+              children: <Widget>[
+                CanvasControlWrapper(
+                  child: BlocBuilder<FusionCanvasInputViewModel, FusionCanvasInputState>(
+                    builder: (BuildContext context, FusionCanvasInputState inputState) {
+                      return BlocBuilder<FusionSnapViewModel, FusionSnapState>(
+                        builder: (BuildContext context, FusionSnapState snapState) {
+                          return CustomPaint(
+                            painter: FusionCanvasPainter(
+                              state: state,
+                              context: context,
+                              layers: <FusionBasePainter>[
+                                ...elements,
+                                ToolPainter(
+                                  state: context.watch<FusionCanvasToolViewModel>().state,
+                                  cursor: snapState.effectivePosition,
                                 ),
-                              ),
-                            ],
-                          ),
-                        ),
+                                SnapPainter(
+                                  snapResult: snapState.snapResult,
+                                ),
+                              ],
+                            ),
+                            child: const SizedBox(
+                              width: double.infinity,
+                              height: double.infinity,
+                            ),
+                          );
+                        },
                       );
                     },
-                  );
-                },
-              ),
+                  ),
+                ),
+
+                if (builder != null) builder!(context),
+              ],
             );
           },
         ),
