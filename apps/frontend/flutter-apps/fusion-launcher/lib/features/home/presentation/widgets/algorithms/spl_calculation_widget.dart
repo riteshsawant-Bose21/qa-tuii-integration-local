@@ -15,12 +15,12 @@ class SplCalculationWidget extends StatefulWidget {
 
 class _SplCalculationWidgetState extends State<SplCalculationWidget> {
   // Controllers
-  final TextEditingController speakerHeightController = TextEditingController(text: '2.4');
-  final TextEditingController listenerHeightController = TextEditingController(text: '0.6');
-  final TextEditingController minSplController = TextEditingController(text: '60');
-  final TextEditingController maxSplController = TextEditingController(text: '70');
+  final TextEditingController speakerHeightController = TextEditingController(text: '5');
+  final TextEditingController listenerHeightController = TextEditingController(text: '2');
+  final TextEditingController minSplController = TextEditingController(text: '70');
+  final TextEditingController maxSplController = TextEditingController(text: '80');
   
-  String selectedEnvironment = 'outdoor';
+  String selectedEnvironment = 'indoor';
   List<String> selectedMountingTypes = <String>['surface'];
   SplMultiMountResult? splResult;
   

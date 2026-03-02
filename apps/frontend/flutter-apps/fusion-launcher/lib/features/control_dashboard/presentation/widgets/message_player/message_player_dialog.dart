@@ -115,32 +115,35 @@ class _MessagePlayerDialogState extends State<MessagePlayerDialog> {
             if (isAnythingPlaying)
               Container(
                 margin: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF222222), // Slightly darker than dialog
-                  borderRadius: BorderRadius.circular(20),
-                ),
                 child: FusionContainer(
-                  child: ListTile(
-                    contentPadding: const EdgeInsets.only(left: 20, right: 8),
-                    title: FusionAppText(
-                      text: playingTrack.title,
-                      style: context.textTheme.labelMedium!.copyWith(color: context.colorScheme.primary, fontWeight: FontWeight.bold),
-                      maxLine: 1,
-                      textOverflow: TextOverflow.ellipsis,
+                  raised: true,
+                  borderRadius: 20,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(20),
                     ),
-                    subtitle: FusionAppText(
-                      text: "Now playing",
-                      style: context.textTheme.labelMedium!.copyWith(color: context.colorScheme.textSecondary, fontSize: 12),
-                    ),
-                    trailing: Container(
-                      decoration: BoxDecoration(color: Colors.black38, borderRadius: BorderRadius.circular(30)),
-                      child: IconButton(
-                        icon: Icon(Icons.stop_rounded, color: context.colorScheme.iconWhite),
-                        onPressed: () {
-                          widget.onStopPlayback();
-                          // Rebuild dialog to remove this bottom player
-                          setState(() {});
-                        },
+                    child: ListTile(
+                      contentPadding: const EdgeInsets.only(left: 20, right: 8),
+                      title: FusionAppText(
+                        text: playingTrack.title,
+                        style: context.textTheme.labelMedium!.copyWith(color: context.colorScheme.primary, fontWeight: FontWeight.bold),
+                        maxLine: 1,
+                        textOverflow: TextOverflow.ellipsis,
+                      ),
+                      subtitle: FusionAppText(
+                        text: "Now playing",
+                        style: context.textTheme.labelMedium!.copyWith(color: context.colorScheme.textSecondary, fontSize: 12),
+                      ),
+                      trailing: Container(
+                        decoration: BoxDecoration(color: Colors.black38, borderRadius: BorderRadius.circular(30)),
+                        child: IconButton(
+                          icon: Icon(Icons.stop_rounded, color: context.colorScheme.iconWhite),
+                          onPressed: () {
+                            widget.onStopPlayback();
+                            // Rebuild dialog to remove this bottom player
+                            setState(() {});
+                          },
+                        ),
                       ),
                     ),
                   ),

@@ -14,7 +14,8 @@ class DashboardDeviceListing extends StatelessWidget {
     final List<HardwareComponent> dsp = serviceLocator<ProjectViewModel>().fusionDsps;
     final List<HardwareComponent> amplifiers = serviceLocator<ProjectViewModel>().amplifiers;
     final List<HardwareComponent> controllers = serviceLocator<ProjectViewModel>().fusionControllers;
-    return <HardwareComponent>[...dsp, ...amplifiers, ...controllers];
+    final List<HardwareComponent> endpoints = serviceLocator<ProjectViewModel>().fusionEndpoints;
+    return <HardwareComponent>[...dsp, ...amplifiers, ...controllers, ...endpoints];
   }
 
   @override

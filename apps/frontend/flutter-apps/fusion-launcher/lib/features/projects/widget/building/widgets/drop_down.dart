@@ -57,70 +57,74 @@ class _BuildingPageDronDownState<T> extends State<BuildingPageDronDown<T>> {
         borderRadius: BorderRadius.circular(8),
         border: Border.all(color: context.colorScheme.strokeLight, width: 1),
       ),
-      child: PopupMenuButton<String>(
-        color: context.colorScheme.elevation2,
-        shadowColor: Colors.transparent,
-        position: PopupMenuPosition.under,
+      child: FusionPopupMenu<T>(
+        // color: context.colorScheme.elevation2,
+        // shadowColor: Colors.transparent,
+        // position: PopupMenuPosition.under,
         tooltip: '',
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(8),
-          side: BorderSide(color: context.colorScheme.strokeLight, width: 1),
-        ),
-        offset: const Offset(0, 10),
-        padding: EdgeInsets.zero,
-        menuPadding: EdgeInsets.zero,
-        clipBehavior: Clip.none,
-        itemBuilder: (BuildContext context) {
-          return <PopupMenuEntry<String>>[
-            PopupMenuItem<String>(
-              enabled: false,
-              height: 50,
-              padding: const EdgeInsets.all(8).copyWith(right: 0),
-              child: Builder(
-                builder: (BuildContext context) {
-                  if (widget.items.isEmpty) {
-                    return Padding(
-                      padding: const EdgeInsets.all(8.0),
-                      child: FusionAppText(
-                        text: "Empty items",
-                        style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                          color: context.colorScheme.onSurface.withValues(alpha: 0.5),
-                        ),
-                      ),
-                    );
-                  }
+        // shape: RoundedRectangleBorder(
+        //   borderRadius: BorderRadius.circular(8),
+        //   side: BorderSide(color: context.colorScheme.strokeLight, width: 1),
+        // ),
+        // offset: const Offset(0, 10),
+        // padding: EdgeInsets.zero,
+        // menuPadding: EdgeInsets.zero,
+        // clipBehavior: Clip.none,
+        items: widget.items,
+        onSelected: widget.onSelect,
+        popupOffset: const Offset(0, 10),
+        itemBuilder: (BuildContext context, T option) => widget.valueBuilder != null ? widget.valueBuilder!(option) : widget.labelBuilder(option),
+        // itemBuilder: (BuildContext context) {
+        //   return <PopupMenuEntry<String>>[
+        //     PopupMenuItem<String>(
+        //       enabled: false,
+        //       height: 50,
+        //       padding: const EdgeInsets.all(8).copyWith(right: 0),
+        //       child: Builder(
+        //         builder: (BuildContext context) {
+        //           if (widget.items.isEmpty) {
+        //             return Padding(
+        //               padding: const EdgeInsets.all(8.0),
+        //               child: FusionAppText(
+        //                 text: "Empty items",
+        //                 style: Theme.of(context).textTheme.labelSmall?.copyWith(
+        //                   color: context.colorScheme.onSurface.withValues(alpha: 0.5),
+        //                 ),
+        //               ),
+        //             );
+        //           }
 
-                  return SizedBox(
-                    width: (childKey.currentContext?.findRenderObject() as RenderBox?)?.size.width, // Match trigger width
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisSize: MainAxisSize.min,
-                      children: <Widget>[
-                        ...widget.items.map(
-                          (T value) => MouseRegion(
-                            cursor: SystemMouseCursors.click,
-                            child: GestureDetector(
-                              onTap: () {
-                                widget.onSelect(value);
-                                Navigator.of(context).pop();
-                              },
-                              behavior: HitTestBehavior.translucent,
-                              child: Container(
-                                width: double.infinity,
-                                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
-                                child: widget.valueBuilder != null ? widget.valueBuilder!(value) : widget.labelBuilder(value),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  );
-                },
-              ),
-            ),
-          ];
-        },
+        //           return SizedBox(
+        //             width: (childKey.currentContext?.findRenderObject() as RenderBox?)?.size.width, // Match trigger width
+        //             child: Column(
+        //               crossAxisAlignment: CrossAxisAlignment.start,
+        //               mainAxisSize: MainAxisSize.min,
+        //               children: <Widget>[
+        //                 ...widget.items.map(
+        //                   (T value) => MouseRegion(
+        //                     cursor: SystemMouseCursors.click,
+        //                     child: GestureDetector(
+        //                       onTap: () {
+        //                         widget.onSelect(value);
+        //                         Navigator.of(context).pop();
+        //                       },
+        //                       behavior: HitTestBehavior.translucent,
+        //                       child: Container(
+        //                         width: double.infinity,
+        //                         padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+        //                         child: widget.valueBuilder != null ? widget.valueBuilder!(value) : widget.labelBuilder(value),
+        //                       ),
+        //                     ),
+        //                   ),
+        //                 ),
+        //               ],
+        //             ),
+        //           );
+        //         },
+        //       ),
+        //     ),
+        //   ];
+        // },
         child: SemanticHelper.container(
           testId: SemanticHelper.createTestId(SemanticTypes.container, "multi_section_dropdown_${widget.hintText}"),
           child: Padding(

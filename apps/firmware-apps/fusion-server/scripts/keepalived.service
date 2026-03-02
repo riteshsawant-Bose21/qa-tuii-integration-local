@@ -1,9 +1,11 @@
 # Fusion keepalived service file
+# This file is to be used only by multipass. 
+# If you edit this file, please edit the files in meta-fusion to maintain sync
+
 [Unit]
 Description=Keepalived VRRP Framework
 Wants=network-online.target
 After=network-online.target
-ConditionKernelCommandLine=service_profile=prod
 
 [Service]
 Type=notify

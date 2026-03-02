@@ -29,6 +29,7 @@ class FusionTableRow {
   final Function(String)? onDragEnter;
   final VoidCallback? onDragLeave;
   final Function(String)? onDrop;
+  final Function(String)? onWillAccept;
   final bool isDragTarget;
 
   const FusionTableRow({
@@ -36,6 +37,7 @@ class FusionTableRow {
     required this.cells,
     this.onDragEnter,
     this.onDragLeave,
+    this.onWillAccept,
     this.onDrop,
     this.isDragTarget = false,
   });
@@ -113,41 +115,40 @@ class _FusionTableState extends State<FusionTable> {
             border: Border(bottom: BorderSide(color: context.colorScheme.strokeLight)),
           ),
           child: Row(
-            children:
-                widget.columns.map((FusionTableColumn column) {
-                  // FLEX HEADER
-                  return Expanded(
-                    flex: column.flex,
-                    child: InkWell(
-                      onTap: column.sortable ? () => _onSort(column.key) : null,
-                      child: Row(
-                        children: <Widget>[
-                          Flexible(
-                            child: FusionAppText(
-                              text: column.header.toUpperCase(),
-                              maxLine: 1,
-                              textOverflow: TextOverflow.ellipsis,
-                              style: TextStyle(
-                                color: context.colorScheme.textSecondary,
-                                fontSize: 11,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
+            children: widget.columns.map((FusionTableColumn column) {
+              // FLEX HEADER
+              return Expanded(
+                flex: column.flex,
+                child: InkWell(
+                  onTap: column.sortable ? () => _onSort(column.key) : null,
+                  child: Row(
+                    children: <Widget>[
+                      Flexible(
+                        child: FusionAppText(
+                          text: column.header.toUpperCase(),
+                          maxLine: 1,
+                          textOverflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            color: context.colorScheme.textSecondary,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
                           ),
-                          if (column.sortable && _sortColumnKey == column.key)
-                            Padding(
-                              padding: const EdgeInsets.only(left: 4),
-                              child: Icon(
-                                _sortAscending ? Icons.arrow_upward_rounded : Icons.arrow_downward_rounded,
-                                size: 14,
-                                color: context.colorScheme.primaryColor,
-                              ),
-                            ),
-                        ],
+                        ),
                       ),
-                    ),
-                  );
-                }).toList(),
+                      if (column.sortable && _sortColumnKey == column.key)
+                        Padding(
+                          padding: const EdgeInsets.only(left: 4),
+                          child: Icon(
+                            _sortAscending ? Icons.arrow_upward_rounded : Icons.arrow_downward_rounded,
+                            size: 14,
+                            color: context.colorScheme.primaryColor,
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+              );
+            }).toList(),
           ),
         ),
 
@@ -167,30 +168,31 @@ class _FusionTableState extends State<FusionTable> {
 
   Widget _buildDataRow(FusionTableRow row, int index) {
     return DragTarget<String>(
-      onWillAccept: (_) => row.onDrop != null,
-      onAccept: (String id) => row.onDrop?.call(id),
+      onWillAcceptWithDetails: (DragTargetDetails<String> details) {
+        return row.onWillAccept != null ? row.onWillAccept!(details.data) : false;
+      },
+      onAcceptWithDetails: (DragTargetDetails<String> details) => row.onDrop?.call(details.data),
       onMove: (DragTargetDetails<String> d) => row.onDragEnter?.call(d.data),
       onLeave: (_) => row.onDragLeave?.call(),
       builder: (BuildContext context, List<String?> candidateData, List<dynamic> rejectedData) {
         final bool isDragOver = candidateData.isNotEmpty;
         return Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14), // The 32px padding
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8), // The 32px padding
           decoration: BoxDecoration(
             color: isDragOver ? context.colorScheme.primaryColor.withOpacity(0.1) : Colors.transparent,
             border: Border(bottom: BorderSide(color: context.colorScheme.strokeLight.withOpacity(0.5))),
           ),
           child: Row(
             // FLEX BODY ROWS - This was likely causing the overflow
-            children:
-                widget.columns.map((FusionTableColumn column) {
-                  return Expanded(
-                    flex: column.flex,
-                    child: Align(
-                      alignment: column.alignment,
-                      child: row.cells[column.key]?.child ?? const SizedBox(),
-                    ),
-                  );
-                }).toList(),
+            children: widget.columns.map((FusionTableColumn column) {
+              return Expanded(
+                flex: column.flex,
+                child: Align(
+                  alignment: column.alignment,
+                  child: row.cells[column.key]?.child ?? const SizedBox(),
+                ),
+              );
+            }).toList(),
           ),
         );
       },

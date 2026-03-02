@@ -344,6 +344,9 @@ extension EventsViewModel on ProjectViewModel {
       final List<FusionEvent> timedEvents = getAllTimedEvents();
       final List<EventItemEntity> scheduledEventItems =
           timedEvents.map((FusionEvent event) {
+            // if(event.item != null || event.item!.itemId != null) {
+            //
+            // }
             final ScheduleConfig? schedule = getScheduleById(event.item!.itemId);
             if (schedule != null) {
               return EventItemEntity(
