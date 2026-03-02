@@ -637,11 +637,6 @@ class _ProjectDetailPageState extends State<ProjectDetailPage> {
                       ),
 
                       ProjectActionsMenu(
-                        onEdit: () => ProjectActionsHandler.edit(
-                          context: context,
-                          project: p,
-                          viewModel: viewModel,
-                        ),
                         onInvite: () => ProjectActionsHandler.invite(
                           context: context,
                           project: p,

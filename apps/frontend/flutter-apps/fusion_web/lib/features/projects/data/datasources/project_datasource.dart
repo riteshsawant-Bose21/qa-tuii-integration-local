@@ -4,8 +4,7 @@ import 'package:fusion_web/core/services/api_service.dart';
 abstract class ProjectsDataSource {
   Future<List<ProjectModel>> getProjects();
   Future<ProjectModel> getProjectById(String id);
-  Future<ProjectModel> createProject(ProjectModel project);
-  Future<ProjectModel> updateProject(ProjectModel project);
+  Future<void> archiveProject(String id);
   Future<void> deleteProject(String id);
   Future<List<ProjectModel>> searchProjects(String query);
 }
@@ -21,6 +20,7 @@ class ProjectsRemoteDataSource implements ProjectsDataSource {
     try {
       print('Projects API: Calling /projects endpoint');
       final response = await _apiService.get('/projects?is_archived=false');
+      // final response = await _apiService.get('/projects');
 
       // Debug: Print the full response structure
       print('API Response keys: ${response.keys.toList()}');
@@ -80,46 +80,6 @@ class ProjectsRemoteDataSource implements ProjectsDataSource {
   }
 
   @override
-  Future<ProjectModel> createProject(ProjectModel project) async {
-    try {
-      final response = await _apiService.post('projects', project.toJson());
-
-      print('Create response: $response');
-
-      final projectData =
-          response['data'] as Map<String, dynamic>? ??
-          response['project'] as Map<String, dynamic>? ??
-          response;
-
-      return ProjectModel.fromJson(projectData);
-    } catch (e) {
-      print('CREATE PROJECT API ERROR: $e');
-      rethrow;
-    }
-  }
-
-  @override
-  Future<ProjectModel> updateProject(ProjectModel project) async {
-    try {
-      final response = await _apiService.patch(
-        'projects/${project.id}',
-        project.toJson(),
-      );
-      final projectData =
-          response['data'] as Map<String, dynamic>? ??
-          response['project'] as Map<String, dynamic>? ??
-          response;
-
-      return ProjectModel.fromJson(projectData);
-    } catch (e) {
-      // Fallback behavior - return the project as-is for demo
-      print('API Error, simulating update: $e');
-      await Future.delayed(const Duration(milliseconds: 600));
-      return project;
-    }
-  }
-
-  @override
   Future<void> deleteProject(String id) async {
     try {
       await _apiService.delete('projects/$id');
@@ -130,8 +90,18 @@ class ProjectsRemoteDataSource implements ProjectsDataSource {
     }
   }
 
-  //search implementation when backend is 
-  
+  @override
+  Future<void> archiveProject(String id) async {
+    try {
+      await _apiService.post('/projects/$id/archive', {});
+    } catch (e) {
+      print('Archive API error: $e');
+      rethrow;
+    }
+  }
+
+  //search implementation when backend is
+
   // @override
   // Future<List<ProjectModel>> searchProjects(String query) async {
   //   try {
@@ -180,7 +150,8 @@ class ProjectsRemoteDataSource implements ProjectsDataSource {
         .toList();
   }
 }
-//above is the temporary search implementation until backend is ready 
+
+//above is the temporary search implementation until backend is ready
 class ProjectsLocalDataSource implements ProjectsDataSource {
   List<ProjectModel>? _cachedProjects;
 
@@ -192,7 +163,7 @@ class ProjectsLocalDataSource implements ProjectsDataSource {
     throw Exception('No cached projects available');
   }
 
-//temporary implementation until backend is ready - getProjectByID
+  //temporary implementation until backend is ready - getProjectByID
   @override
   Future<ProjectModel> getProjectById(String id) async {
     if (_cachedProjects != null) {
@@ -215,26 +186,13 @@ class ProjectsLocalDataSource implements ProjectsDataSource {
   // }
 
   @override
-  Future<ProjectModel> createProject(ProjectModel project) async {
-    _cachedProjects ??= [];
-    _cachedProjects!.add(project);
-    return project;
-  }
-
-  @override
-  Future<ProjectModel> updateProject(ProjectModel project) async {
-    if (_cachedProjects != null) {
-      final index = _cachedProjects!.indexWhere((p) => p.id == project.id);
-      if (index != -1) {
-        _cachedProjects![index] = project;
-      }
-    }
-    return project;
-  }
-
-  @override
   Future<void> deleteProject(String id) async {
     _cachedProjects?.removeWhere((p) => p.id == id);
+  }
+
+  @override
+  Future<void> archiveProject(String id) async {
+    _cachedProjects = _cachedProjects?.where((p) => p.id != id).toList();
   }
 
   @override

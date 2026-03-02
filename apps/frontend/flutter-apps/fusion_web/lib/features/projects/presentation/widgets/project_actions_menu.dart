@@ -1,14 +1,12 @@
 import 'package:flutter/material.dart';
 
 class ProjectActionsMenu extends StatelessWidget {
-  final VoidCallback onEdit;
   final VoidCallback onInvite;
   final VoidCallback onArchive;
   final VoidCallback onDelete;
 
   const ProjectActionsMenu({
     super.key,
-    required this.onEdit,
     required this.onInvite,
     required this.onArchive,
     required this.onDelete,
@@ -21,9 +19,6 @@ class ProjectActionsMenu extends StatelessWidget {
       padding: EdgeInsets.zero,
       onSelected: (value) {
         switch (value) {
-          case 'edit':
-            onEdit();
-            break;
           case 'invite':
             onInvite();
             break;
@@ -36,16 +31,6 @@ class ProjectActionsMenu extends StatelessWidget {
         }
       },
       itemBuilder: (context) => const [
-        PopupMenuItem(
-          value: 'edit',
-          child: Row(
-            children: [
-              Icon(Icons.edit_outlined, size: 16),
-              SizedBox(width: 8),
-              Text('Edit'),
-            ],
-          ),
-        ),
         PopupMenuItem(
           value: 'invite',
           child: Row(

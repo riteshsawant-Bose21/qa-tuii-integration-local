@@ -50,60 +50,22 @@ class ProjectsRepositoryImpl implements ProjectsRepository {
   }
 
   // =========================
-  // CREATE PROJECT
-  // =========================
-  @override
-  Future<ProjectModel> createProject(ProjectModel project) async {
-    final projectModel = ProjectModel(
-      id: project.id,
-      name: project.name,
-      description: project.description,
-      clientName: project.clientName,
-      region: project.region,
-      status: project.status,
-      healthyDevices: project.healthyDevices,
-      warningDevices: project.warningDevices,
-      criticalDevices: project.criticalDevices,
-      incidents: project.incidents,
-      lastUpdated: project.lastUpdated,
-    );
-
-    final result = await remoteDataSource.createProject(projectModel);
-    await localDataSource.createProject(result);
-    return result;
-  }
-
-  // =========================
-  // UPDATE PROJECT
-  // =========================
-  @override
-  Future<ProjectModel> updateProject(ProjectModel project) async {
-    final projectModel = ProjectModel(
-      id: project.id,
-      name: project.name,
-      description: project.description,
-      clientName: project.clientName,
-      region: project.region,
-      status: project.status,
-      healthyDevices: project.healthyDevices,
-      warningDevices: project.warningDevices,
-      criticalDevices: project.criticalDevices,
-      incidents: project.incidents,
-      lastUpdated: project.lastUpdated,
-    );
-
-    final result = await remoteDataSource.updateProject(projectModel);
-    await localDataSource.updateProject(result);
-    return result;
-  }
-
-  // =========================
   // DELETE PROJECT
   // =========================
   @override
   Future<void> deleteProject(String id) async {
     await remoteDataSource.deleteProject(id);
     await localDataSource.deleteProject(id);
+  }
+
+
+  // =========================
+  // ARCHIVE PROJECT
+  // =========================
+  @override
+  Future<void> archiveProject(String id) async {
+    await remoteDataSource.archiveProject(id);
+    await localDataSource.archiveProject(id);
   }
 
   // =========================

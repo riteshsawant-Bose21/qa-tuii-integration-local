@@ -68,7 +68,7 @@ class Auth0DataSource {
       }
 
       _apiService.setBearerToken(token);
-      final response = await _apiService.get('users/authorization');
+      final response = await _apiService.get('/users/authorization');
 
       // Handle null response
       if (response.isEmpty) {

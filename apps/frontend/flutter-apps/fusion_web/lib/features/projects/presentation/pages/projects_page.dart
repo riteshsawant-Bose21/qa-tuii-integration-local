@@ -1,443 +1,3 @@
-// // WORKING VERSION - before adding action button
-// import 'package:flutter/material.dart';
-// import 'package:flutter_bloc/flutter_bloc.dart';
-// import 'package:fusion_web/core/presentation/base_viewmodel.dart';
-// import 'package:fusion_web/features/projects/presentation/handlers/project_actions_handler.dart';
-// import 'package:fusion_web/features/projects/presentation/widgets/project_actions_menu.dart';
-// import 'package:google_fonts/google_fonts.dart';
-// import 'package:fusion_web/features/projects/presentation/viewmodels/projects_viewmodel.dart';
-// import 'package:fusion_web/features/projects/data/datasources/project_datasource.dart';
-// import 'package:fusion_web/features/projects/data/repositories/projects_repository_impl.dart';
-// import 'package:fusion_web/features/projects/data/models/project_model.dart';
-// import 'package:fusion_web/core/services/service_locator.dart';
-// import 'package:fusion_web/features/projects/presentation/pages/project_detail_page.dart';
-// import 'package:fusion_web/core/constants/app_constants.dart';
-// import 'package:fusion_lib/fusion_widgets/shared_widgets/project/project_dialog.dart';
-// import 'package:fusion_lib/fusion_widgets/shared_widgets/project/animated_blur_dialog_route.dart';
-// import 'dart:ui';
-// import 'package:fusion_lib/fusion_widgets/shared_widgets/project/confirmation_dialog.dart';
-// import 'package:fusion_web/features/projects/presentation/dialogs/invite_user_dialog.dart';
-// import 'package:go_router/go_router.dart';
-
-// class ProjectsPage extends StatefulWidget {
-//   const ProjectsPage({super.key});
-
-//   @override
-//   State<ProjectsPage> createState() => _ProjectsPageState();
-// }
-
-// class _ProjectsPageState extends State<ProjectsPage> {
-//   late final ProjectsViewModel _viewModel = ServiceLocator().projectsViewModel;
-
-//   final TextEditingController _searchController = TextEditingController();
-
-//   String _searchQuery = '';
-//   String _selectedRegions = 'All';
-//   String _selectedStatus = 'All';
-//   String _selectedFilterType = 'Last Updated';
-
-//   bool _isGridView = false;
-
-//   @override
-//   void initState() {
-//     super.initState();
-//     _viewModel.loadProjects();
-//     _searchController.addListener(() {
-//       setState(() {
-//         _searchQuery = _searchController.text;
-//         _viewModel.searchProjects(_searchQuery);
-//       });
-//     });
-//   }
-
-//   @override
-//   void dispose() {
-//     _searchController.dispose();
-//     super.dispose();
-//   }
-
-  
-//   // List<ProjectModel> get _filteredProjects {
-//   //   final projects = _viewModel.projects;
-//   //   if (projects.isEmpty) return [];
-
-//   //   List<ProjectModel> filtered = List.from(projects);
-
-//   //   if (_searchQuery.isNotEmpty) {
-//   //     filtered = filtered.where((project) {
-//   //       return project.name.toLowerCase().contains(
-//   //             _searchQuery.toLowerCase(),
-//   //           ) ||
-//   //           project.description.toLowerCase().contains(
-//   //             _searchQuery.toLowerCase(),
-//   //           ) ||
-//   //           project.clientName.toLowerCase().contains(
-//   //             _searchQuery.toLowerCase(),
-//   //           );
-//   //     }).toList();
-//   //   }
-
-//   //   if (_selectedRegions != 'All') {
-//   //     filtered = filtered
-//   //         .where(
-//   //           (p) => p.region.toLowerCase() == _selectedRegions.toLowerCase(),
-//   //         )
-//   //         .toList();
-//   //   }
-
-//   //   if (_selectedStatus != 'All') {
-//   //     filtered = filtered
-//   //         .where((p) => p.status.toLowerCase() == _selectedStatus.toLowerCase())
-//   //         .toList();
-//   //   }
-
-//   //   return filtered;
-//   // }
-
-  
-
-//   @override
-//   Widget build(BuildContext context) {
-//     return BlocProvider.value(
-//       value: _viewModel,
-//       child: Scaffold(
-//         backgroundColor: Colors.grey[50],
-//         body: Padding(
-//           padding: const EdgeInsets.all(24),
-//           child: BlocBuilder<ProjectsViewModel, BaseState<List<ProjectModel>>>(
-//             builder: (context, state) {
-//               return Column(
-//                 crossAxisAlignment: CrossAxisAlignment.start,
-//                 children: [
-//                   _buildHeader(),
-//                   const SizedBox(height: 24),
-//                   _buildFiltersSection(),
-//                   const SizedBox(height: 24),
-//                   Expanded(child: _buildContent()),
-//                 ],
-//               );
-//             },
-//           ),
-//         ),
-        
-//       ),
-//     );
-//   }
-
-//   // ======================================================
-//   // HEADER
-//   // ======================================================
-
-//   Widget _buildHeader() {
-//     return Row(
-//       mainAxisAlignment: MainAxisAlignment.spaceBetween,
-//       crossAxisAlignment: CrossAxisAlignment.start,
-//       children: [
-//         // LEFT SIDE (Title + subtitle)
-//         Column(
-//           crossAxisAlignment: CrossAxisAlignment.start,
-//           children: [
-//             Text(
-//               'Projects',
-//               style: GoogleFonts.montserrat(
-//                 fontSize: 32,
-//                 fontWeight: FontWeight.w700,
-//                 color: Colors.black87,
-//               ),
-//             ),
-//             const SizedBox(height: 4),
-//             Text(
-//               'Manage and monitor all projects across your organization',
-//               style: GoogleFonts.montserrat(
-//                 fontSize: 16,
-//                 color: Colors.grey[600],
-//               ),
-//             ),
-//           ],
-//         ),
-
-//         // RIGHT SIDE (New Project Button)
-//         ElevatedButton.icon(
-//           onPressed: () => ProjectActionsHandler.create(
-//             context: context,
-//             viewModel: _viewModel,
-//           ),
-
-//           icon: const Icon(Icons.add, size: 18),
-//           label: Text(
-//             'New Project',
-//             style: GoogleFonts.montserrat(
-//               fontWeight: FontWeight.w600,
-//               fontSize: 14,
-//             ),
-//           ),
-//           style: ElevatedButton.styleFrom(
-//             backgroundColor: Colors.black87,
-//             foregroundColor: Colors.white,
-//             elevation: 0,
-//             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-//             shape: RoundedRectangleBorder(
-//               borderRadius: BorderRadius.circular(6),
-//             ),
-//           ),
-//         ),
-//       ],
-//     );
-//   }
-
-//   // ======================================================
-//   // FILTERS SECTION
-//   // ======================================================
-
-//   Widget _buildFiltersSection() {
-//     return Container(
-//       padding: const EdgeInsets.all(24),
-//       decoration: BoxDecoration(
-//         color: Colors.white,
-//         borderRadius: BorderRadius.circular(12),
-//         border: Border.all(color: Colors.grey[200]!),
-//         boxShadow: [
-//           BoxShadow(
-//             color: Colors.black.withOpacity(0.02),
-//             blurRadius: 8,
-//             offset: const Offset(0, 2),
-//           ),
-//         ],
-//       ),
-//       child: Row(
-//         children: [
-//           Flexible(
-//             flex: 2,
-//             child: TextFormField(
-//               controller: _searchController,
-//               decoration: _inputDecoration('Search projects...', Icons.search),
-//             ),
-//           ),
-//           const SizedBox(width: 16),
-//           Flexible(
-//             flex: 1,
-//             child: _dropdown(_selectedRegions, [
-//               'All',
-//               'Indoor',
-//               'Outdoor',
-//               'Hybrid',
-//             ], (v) => setState(() => _selectedRegions = v!)),
-//           ),
-//           const SizedBox(width: 16),
-//           Flexible(
-//             flex: 1,
-//             child: _dropdown(_selectedStatus, [
-//               'All',
-//               'Proposal',
-//               'Planning',
-//               'Commissioned',
-//             ], (v) => setState(() => _selectedStatus = v!)),
-//           ),
-//           const SizedBox(width: 16),
-//           Row(
-//             children: [
-//               _buildToggle(Icons.grid_view_rounded, true),
-//               const SizedBox(width: 8),
-//               _buildToggle(Icons.view_list_rounded, false),
-//             ],
-//           ),
-//         ],
-//       ),
-//     );
-//   }
-
-//   Widget _dropdown(
-//     String value,
-//     List<String> items,
-//     ValueChanged<String?> onChanged,
-//   ) {
-//     return DropdownButtonFormField<String>(
-//       value: value,
-//       decoration: _dropdownDecoration(),
-//       items: items
-//           .map(
-//             (e) => DropdownMenuItem(
-//               value: e,
-//               child: Text(e, style: GoogleFonts.montserrat()),
-//             ),
-//           )
-//           .toList(),
-//       onChanged: onChanged,
-//     );
-//   }
-
-//   Widget _buildToggle(IconData icon, bool isGrid) {
-//     final isSelected = _isGridView == isGrid;
-//     return InkWell(
-//       onTap: () => setState(() => _isGridView = isGrid),
-//       child: Container(
-//         padding: const EdgeInsets.all(10),
-//         decoration: BoxDecoration(
-//           color: isSelected ? Colors.black87 : Colors.grey[100],
-//           borderRadius: BorderRadius.circular(8),
-//         ),
-//         child: Icon(icon, color: isSelected ? Colors.white : Colors.grey[600]),
-//       ),
-//     );
-//   }
-
-//   // ======================================================
-//   // CONTENT
-//   // ======================================================
-
-//   Widget _buildContent() {
-//     return BlocBuilder<ProjectsViewModel, BaseState<List<ProjectModel>>>(
-//       builder: (context, state) {
-//         if (state is LoadingState) {
-//           return const Center(child: CircularProgressIndicator());
-//         }
-
-//         if (state is ErrorState) {
-//           return Center(
-//             child: Text(
-//               (state as ErrorState).message,
-//               style: GoogleFonts.montserrat(
-//                 fontSize: 16,
-//                 color: Colors.red[400],
-//               ),
-//             ),
-//           );
-//         }
-//         final projects = (state as LoadedState<List<ProjectModel>>).data;
-//         return Column(
-//           crossAxisAlignment: CrossAxisAlignment.start,
-//           children: [
-//             Text(
-//               //TODO: This from should come from API.
-//               'Showing ${projects.length} of ${projects.length} projects',
-//               style: GoogleFonts.montserrat(
-//                 fontSize: 14,
-//                 color: Colors.grey[500],
-//               ),
-//             ),
-//             const SizedBox(height: 16),
-//             Expanded(
-//               child: _isGridView
-//                   ? _buildGridView(projects)
-//                   : _buildListView(projects),
-//             ),
-//           ],
-//         );
-//       },
-//     );
-//   }
-
-//   // ======================================================
-//   // LIST VIEW
-//   // ======================================================
-
-    
-
-//   // ======================================================
-//   // GRID VIEW
-//   // ======================================================
-
-  
-
-//   // ======================================================
-//   // SHARED WIDGETS
-//   // ======================================================
-
-  
-
-//   // Widget _buildActionsMenu(ProjectModel project) {
-//   //   return PopupMenuButton<String>(
-//   //     icon: Icon(Icons.more_vert, size: 18, color: Colors.grey[600]),
-//   //     padding: EdgeInsets.zero,
-//   //     onSelected: (value) {
-//   //       switch (value) {
-//   //         case 'edit':
-//   //           _openEditProjectDialog(project);
-//   //           break;
-
-//   //         case 'invite':
-//   //           _showInviteUserDialog(project);
-//   //           break;
-
-//   //         case 'archive':
-//   //           _showArchiveDialog(project);
-//   //           break;
-
-//   //         case 'delete':
-//   //           _showDeleteDialog(project);
-//   //           break;
-//   //       }
-//   //     },
-
-//   //     itemBuilder: (context) => [
-//   //       PopupMenuItem(
-//   //         value: 'edit',
-//   //         child: Row(
-//   //           children: [
-//   //             Icon(Icons.edit_outlined, size: 16, color: Colors.grey[700]),
-//   //             const SizedBox(width: 8),
-//   //             const Text('Edit'),
-//   //           ],
-//   //         ),
-//   //       ),
-//   //       PopupMenuItem(
-//   //         value: 'invite',
-//   //         child: Row(
-//   //           children: [
-//   //             Icon(
-//   //               Icons.person_add_outlined,
-//   //               size: 16,
-//   //               color: Colors.grey[700],
-//   //             ),
-//   //             const SizedBox(width: 8),
-//   //             const Text('Invite User'),
-//   //           ],
-//   //         ),
-//   //       ),
-//   //       PopupMenuItem(
-//   //         value: 'archive',
-//   //         child: Row(
-//   //           children: [
-//   //             Icon(Icons.archive_outlined, size: 16, color: Colors.grey[700]),
-//   //             const SizedBox(width: 8),
-//   //             const Text('Archive'),
-//   //           ],
-//   //         ),
-//   //       ),
-//   //       PopupMenuItem(
-//   //         value: 'delete',
-//   //         child: Row(
-//   //           children: [
-//   //             const Icon(Icons.delete_outline, size: 16, color: Colors.red),
-//   //             const SizedBox(width: 8),
-//   //             const Text('Delete', style: TextStyle(color: Colors.red)),
-//   //           ],
-//   //         ),
-//   //       ),
-//   //     ],
-//   //   );
-//   // }
-
-//   InputDecoration _inputDecoration(String label, IconData icon) {
-//     return InputDecoration(
-//       labelText: label,
-//       prefixIcon: Icon(icon, color: Colors.grey[400]),
-//       filled: true,
-//       fillColor: Colors.grey[50],
-//       border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-//     );
-//   }
-
-//   InputDecoration _dropdownDecoration() {
-//     return InputDecoration(
-//       filled: true,
-//       fillColor: Colors.grey[50],
-//       border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-//     );
-//   }
-// }
-
-
 
 
 // WORKING VERSION - before adding action button
@@ -445,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_web/core/presentation/base_viewmodel.dart';
 import 'package:fusion_web/features/projects/presentation/handlers/project_actions_handler.dart';
+import 'package:fusion_web/features/projects/presentation/widgets/filter_dropdown.dart';
 import 'package:fusion_web/features/projects/presentation/widgets/project_actions_menu.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:fusion_web/features/projects/presentation/viewmodels/projects_viewmodel.dart';
@@ -580,7 +141,6 @@ class _ProjectsPageState extends State<ProjectsPage> {
             },
           ),
         ),
-        
       ),
     );
   }
@@ -615,32 +175,6 @@ class _ProjectsPageState extends State<ProjectsPage> {
               ),
             ),
           ],
-        ),
-
-        // RIGHT SIDE (New Project Button)
-        ElevatedButton.icon(
-          onPressed: () => ProjectActionsHandler.create(
-            context: context,
-            viewModel: _viewModel,
-          ),
-
-          icon: const Icon(Icons.add, size: 18),
-          label: Text(
-            'New Project',
-            style: GoogleFonts.montserrat(
-              fontWeight: FontWeight.w600,
-              fontSize: 14,
-            ),
-          ),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.black87,
-            foregroundColor: Colors.white,
-            elevation: 0,
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(6),
-            ),
-          ),
         ),
       ],
     );
@@ -677,22 +211,20 @@ class _ProjectsPageState extends State<ProjectsPage> {
           const SizedBox(width: 16),
           Flexible(
             flex: 1,
-            child: _dropdown(_selectedRegions, [
-              'All',
-              'Indoor',
-              'Outdoor',
-              'Hybrid',
-            ], (v) => setState(() => _selectedRegions = v!)),
+            child: FilterDropdown(
+              value: _selectedRegions,
+              items: ['All', 'Indoor', 'Outdoor', 'Hybrid'],
+              onChanged: (v) => setState(() => _selectedRegions = v!),
+            ),
           ),
           const SizedBox(width: 16),
           Flexible(
             flex: 1,
-            child: _dropdown(_selectedStatus, [
-              'All',
-              'Proposal',
-              'Planning',
-              'Commissioned',
-            ], (v) => setState(() => _selectedStatus = v!)),
+            child: FilterDropdown(
+              value: _selectedStatus,
+              items: ['All', 'Proposal', 'Planning', 'Commissioned'],
+              onChanged: (v) => setState(() => _selectedStatus = v!),
+            ),
           ),
           const SizedBox(width: 16),
           Row(
@@ -704,26 +236,6 @@ class _ProjectsPageState extends State<ProjectsPage> {
           ),
         ],
       ),
-    );
-  }
-
-  Widget _dropdown(
-    String value,
-    List<String> items,
-    ValueChanged<String?> onChanged,
-  ) {
-    return DropdownButtonFormField<String>(
-      value: value,
-      decoration: _dropdownDecoration(),
-      items: items
-          .map(
-            (e) => DropdownMenuItem(
-              value: e,
-              child: Text(e, style: GoogleFonts.montserrat()),
-            ),
-          )
-          .toList(),
-      onChanged: onChanged,
     );
   }
 
@@ -920,11 +432,6 @@ class _ProjectsPageState extends State<ProjectsPage> {
                       ),
                       const SizedBox(width: 8),
                       ProjectActionsMenu(
-                        onEdit: () => ProjectActionsHandler.edit(
-                          context: context,
-                          project: p,
-                          viewModel: _viewModel,
-                        ),
                         onInvite: () => ProjectActionsHandler.invite(
                           context: context,
                           project: p,
@@ -1061,11 +568,6 @@ class _ProjectsPageState extends State<ProjectsPage> {
                       ),
                     ),
                     ProjectActionsMenu(
-                      onEdit: () => ProjectActionsHandler.edit(
-                        context: context,
-                        project: p,
-                        viewModel: _viewModel,
-                      ),
                       onInvite: () => ProjectActionsHandler.invite(
                         context: context,
                         project: p,
@@ -1404,4 +906,3 @@ class _ProjectsPageState extends State<ProjectsPage> {
     );
   }
 }
-
