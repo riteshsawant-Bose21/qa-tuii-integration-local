@@ -2,8 +2,7 @@ import 'dart:math';
 import 'dart:ui';
 
 import 'package:flutter/foundation.dart';
-
-import '../../fusion_utils/fusion_utilities.dart';
+import 'package:fusion_lib/fusion_lib.dart';
 
 enum VenueType {
   indoor,
@@ -166,7 +165,7 @@ extension ListeningPreferenceExtension on ListeningPreference {
 
 class ListeningArea {
   final String id;
-  final List<Offset> vertices;
+  final List<FusionCanvasPoint> vertices;
   SplData? splData;
   final String name;
   final VenueType? venuType;
@@ -211,8 +210,8 @@ class ListeningArea {
     if (vertices.isEmpty) return <Offset>[];
 
     // 1) bounding‐box
-    final Iterable<double> xs = vertices.map((Offset v) => v.dx);
-    final Iterable<double> ys = vertices.map((Offset v) => v.dy);
+    final Iterable<double> xs = vertices.map((FusionCanvasPoint v) => v.position.dx);
+    final Iterable<double> ys = vertices.map((FusionCanvasPoint v) => v.position.dy);
     final double minX = xs.reduce(min), maxX = xs.reduce(max);
     final double minY = ys.reduce(min), maxY = ys.reduce(max);
 
@@ -243,8 +242,8 @@ class ListeningArea {
     // final double spacing = 20.0;
 
     // 1) compute axis‐aligned bounding box
-    final Iterable<double> xs = vertices.map((Offset v) => v.dx);
-    final Iterable<double> ys = vertices.map((Offset v) => v.dy);
+    final Iterable<double> xs = vertices.map((FusionCanvasPoint v) => v.position.dx);
+    final Iterable<double> ys = vertices.map((FusionCanvasPoint v) => v.position.dy);
     final double minX = xs.reduce(min), maxX = xs.reduce(max);
     final double minY = ys.reduce(min), maxY = ys.reduce(max);
 
@@ -276,9 +275,9 @@ class ListeningArea {
     double sumX = 0.0;
     double sumY = 0.0;
 
-    for (final Offset vertex in vertices) {
-      sumX += vertex.dx;
-      sumY += vertex.dy;
+    for (final FusionCanvasPoint vertex in vertices) {
+      sumX += vertex.position.dx;
+      sumY += vertex.position.dy;
     }
 
     final double centerX = sumX / vertices.length;
@@ -289,7 +288,7 @@ class ListeningArea {
 
   ListeningArea copyWith({
     String? id,
-    List<Offset>? vertices,
+    List<FusionCanvasPoint>? vertices,
     SplData? splData,
     String? name,
     List<String>? hardwareComponentIds,
@@ -340,7 +339,7 @@ class ListeningArea {
   Map<String, dynamic> toJson() => <String, dynamic>{
     'id': id,
     'name': name,
-    'vertices': vertices.map((Offset v) => <String, double>{'dx': v.dx, 'dy': v.dy}).toList(),
+    'vertices': vertices.map((FusionCanvasPoint v) => v.toMap()).toList(),
     'splData': null,
     'venuType': venuType?.name,
     'listeningHeight': listeningHeight,
@@ -358,13 +357,10 @@ class ListeningArea {
   factory ListeningArea.fromJson(Map<String, dynamic> json) {
     // 1) get the raw list
     final List<dynamic> rawVerts = json['vertices'] as List<dynamic>;
-    // 2) map each element (a Map) into an Offset
-    final List<Offset> verts = rawVerts.map((dynamic e) {
+    // 2) map each element (a Map) into a FusionCanvasPoint
+    final List<FusionCanvasPoint> verts = rawVerts.map((dynamic e) {
       final Map<String, dynamic> m = e as Map<String, dynamic>;
-      return Offset(
-        (m['dx'] as num).toDouble(),
-        (m['dy'] as num).toDouble(),
-      );
+      return FusionCanvasPoint.fromMap(m);
     }).toList();
 
     return ListeningArea(
@@ -409,8 +405,8 @@ class ListeningArea {
     if (vertices.isEmpty) return <Offset>[];
 
     // 1) bounding box
-    final Iterable<double> xs = vertices.map((Offset v) => v.dx);
-    final Iterable<double> ys = vertices.map((Offset v) => v.dy);
+    final Iterable<double> xs = vertices.map((FusionCanvasPoint v) => v.position.dx);
+    final Iterable<double> ys = vertices.map((FusionCanvasPoint v) => v.position.dy);
     final double minX = xs.reduce(min), maxX = xs.reduce(max);
     final double minY = ys.reduce(min), maxY = ys.reduce(max);
 
@@ -422,8 +418,8 @@ class ListeningArea {
     // 3) extract polygon edges (avoid Path in isolates)
     final List<_Edge> edges = <_Edge>[];
     for (int i = 0; i < vertices.length; i++) {
-      final Offset a = vertices[i];
-      final Offset b = vertices[(i + 1) % vertices.length];
+      final Offset a = vertices[i].position;
+      final Offset b = vertices[(i + 1) % vertices.length].position;
       edges.add(_Edge(a, b));
     }
 
@@ -450,14 +446,14 @@ class ListeningArea {
 
   /// Point-in-polygon using ray casting. Works in isolates without dart:ui Path.
   /// Returns true if [point] lies inside or on the boundary of the polygon [poly].
-  bool _polygonContains(List<Offset> poly, Offset point) {
+  bool _polygonContains(List<FusionCanvasPoint> poly, Offset point) {
     final int n = poly.length;
     if (n < 3) return false;
 
     bool inside = false;
     for (int i = 0, j = n - 1; i < n; j = i++) {
-      final Offset pi = poly[i];
-      final Offset pj = poly[j];
+      final Offset pi = poly[i].position;
+      final Offset pj = poly[j].position;
 
       // Check if point is exactly on the segment pj->pi
       if (_pointOnSegment(point, pj, pi)) return true;

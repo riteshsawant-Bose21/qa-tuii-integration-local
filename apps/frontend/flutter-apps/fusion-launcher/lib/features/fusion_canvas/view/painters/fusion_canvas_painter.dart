@@ -3,6 +3,7 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:fusion_lib/fusion_lib.dart';
 
 import '../../../wiring_design/view/painters/dotted_grid_painter.dart';
 import '../../state/fusion_canvas_state.dart';
@@ -58,6 +59,11 @@ class FusionCanvasPainter extends CustomPainter {
 abstract class FusionBasePainter {
   void paint(Canvas canvas, Size size, FusionCanvasPainter painter);
   bool shouldRepaint(covariant FusionBasePainter oldDelegate);
+
+  bool isHit(Offset position, FusionCanvasPainter painter) {
+    // By default, painters are not interactive. Override this method in interactive painters.
+    return false;
+  }
 
   ///
   /// Util function for number that should not scale with canvas zoom
@@ -169,7 +175,7 @@ abstract class FusionBasePainter {
     canvas.drawLine(from, arrowPoint2, paint);
   }
 
-   void drawDashedLine(Canvas canvas, Offset start, Offset end, Paint paint, FusionCanvasPainter painter) {
+  void drawDashedLine(Canvas canvas, Offset start, Offset end, Paint paint, FusionCanvasPainter painter) {
     const double dashLength = 5.0;
     const double gapLength = 3.0;
 
@@ -193,5 +199,17 @@ abstract class FusionBasePainter {
       currentDistance += actualLength;
       isDash = !isDash;
     }
+  }
+
+  void drawClosedPath({required Canvas canvas, required List<FusionCanvasPoint> points, required Paint fillPaint, required Paint strokePaint}) {
+    if (points.length < 2) return;
+
+    final Path path = Path()..moveTo(points[0].position.dx, points[0].position.dy);
+    for (int i = 1; i < points.length; i++) {
+      path.lineTo(points[i].position.dx, points[i].position.dy);
+    }
+    path.close();
+    canvas.drawPath(path, fillPaint);
+    canvas.drawPath(path, strokePaint);
   }
 }

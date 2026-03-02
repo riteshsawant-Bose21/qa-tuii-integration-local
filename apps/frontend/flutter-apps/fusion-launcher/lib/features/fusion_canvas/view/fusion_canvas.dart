@@ -4,10 +4,10 @@ import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/features/fusion_canvas/state/tools/measure_tool_state.dart';
 import 'package:fusion_launcher/features/fusion_canvas/viewmodel/fusion_canvas_tool_viewmodel.dart';
+import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/fusion_widgets/fusion_widgets.dart';
 import 'package:nested/nested.dart';
 
-import '../model/fusion_canvas_point.dart';
 import '../state/fusion_canvas_input_state.dart';
 import '../state/fusion_canvas_state.dart';
 import '../state/fusion_snap_state.dart';
@@ -26,9 +26,11 @@ class FusionCanvas extends StatelessWidget {
     super.key,
     required this.elements,
     required this.builder,
+    this.toolbarEvents,
   });
   final List<FusionBasePainter> elements;
   final Widget Function(BuildContext context)? builder;
+  final FusionToolbarEvents? toolbarEvents;
   @override
   Widget build(BuildContext context) {
     return MultiBlocProvider(
@@ -46,12 +48,27 @@ class FusionCanvas extends StatelessWidget {
         ),
       ],
 
-      child: BlocListener<FusionCanvasInputViewModel, FusionCanvasInputState>(
-        listener: (BuildContext context, FusionCanvasInputState state) {
-          // Update snap context when canvas state changes
-          context.read<FusionSnapViewModel>().updateCursorPosition(state.mousePosition);
-          _updateSnapContext(context);
-        },
+      child: MultiBlocListener(
+        listeners: <SingleChildWidget>[
+          BlocListener<FusionCanvasInputViewModel, FusionCanvasInputState>(
+            listener: (BuildContext context, FusionCanvasInputState state) {
+              // Update snap context when canvas state changes
+              context.read<FusionSnapViewModel>().updateCursorPosition(state.mousePosition);
+              _updateSnapContext(context);
+            },
+          ),
+
+          BlocListener<FusionCanvasToolViewModel, FusionToolState>(
+            listener: (BuildContext context, FusionToolState state) {
+              if (state is ClosedPenToolState) {
+                toolbarEvents?.penToolEvents?.onPathClosed?.call(state.points);
+              } else if (state is DrawingPenToolState) {
+                toolbarEvents?.penToolEvents?.onPointsChanged?.call(state.points);
+              }
+            },
+          ),
+        ],
+
         child: BlocBuilder<FusionCanvasStateViewModel, FusionCanvasState>(
           builder: (BuildContext context, FusionCanvasState state) {
             return Stack(
@@ -235,4 +252,15 @@ class FusionCanvasCursor extends StatelessWidget {
   }
 }
 
-abstract class FusionCanvasElement {}
+class FusionToolbarEvents {
+  final FusionPenToolEvents? penToolEvents;
+
+  FusionToolbarEvents({this.penToolEvents});
+}
+
+class FusionPenToolEvents {
+  final ValueChanged<List<FusionCanvasPoint>>? onPointsChanged;
+  final ValueChanged<List<FusionCanvasPoint>>? onPathClosed;
+
+  FusionPenToolEvents({this.onPointsChanged, this.onPathClosed});
+}

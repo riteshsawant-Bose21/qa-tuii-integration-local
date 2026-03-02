@@ -1,6 +1,6 @@
 import 'dart:ui';
 
-import 'package:fusion_launcher/features/fusion_canvas/model/fusion_canvas_point.dart';
+import 'package:fusion_lib/models/project_entities/canvas/fusion_canvas_point.dart';
 import 'package:fusion_launcher/features/fusion_canvas/view/painters/fusion_canvas_painter.dart';
 
 import '../../../state/tools/pen_tool_state.dart';
@@ -50,7 +50,7 @@ class PenToolPainter extends FusionBasePainter {
       }
 
       // Draw line to cursor if currently drawing
-      if (cursor != null) {
+      if (cursor != null && state is! ClosedPenToolState) {
         final Offset lastPoint = drawingState.points.last.position;
         canvas.drawLine(lastPoint, cursor!, paint);
       }

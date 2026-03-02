@@ -926,7 +926,7 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
                     if (locationName.trim().isNotEmpty && floorId.isNotEmpty) {
                       final ListeningArea newListeningArea = ListeningArea(
                         name: locationName.trim(),
-                        vertices: <Offset>[],
+                        vertices: <FusionCanvasPoint>[],
                         isDrawn: false,
                       );
 

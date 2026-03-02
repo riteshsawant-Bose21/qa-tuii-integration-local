@@ -16,6 +16,7 @@ import 'package:fusion_lib/fusion_utils/image_loader_service.dart';
 
 import '../../../configuration/presentation/viewmodel/project_view_model.dart';
 import '../../../fusion_canvas/view/fusion_canvas.dart';
+import '../../../fusion_canvas/view/painters/elements/listening_area_painter.dart';
 import '../../../fusion_canvas/view/painters/fusion_canvas_painter.dart';
 import 'toolbar/building_toolbar.dart';
 import 'toolbar/canvas_tool_selection_toolbar.dart';
@@ -193,8 +194,28 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
                                             position: floor.floorPlan.position,
                                             size: floor.floorPlan.size,
                                           ),
-                                        ],
 
+                                          for (final ListeningArea area in serviceLocator<ProjectViewModel>().getListeningAreasForFloor(floorId: floor.id))
+                                            ListeningAreaPainter(
+                                              listeningArea: area,
+                                              isSelected: serviceLocator<ProjectViewModel>().currentSelectedListeningAreaId == area.id,
+                                            ),
+                                        ],
+                                        toolbarEvents: FusionToolbarEvents(
+                                          penToolEvents: FusionPenToolEvents(
+                                            onPathClosed: (List<FusionCanvasPoint> value) {
+                                              final List<Offset> areaPoints = value.map((FusionCanvasPoint e) => e.position).toList();
+                                              final ProjectViewModel projectVM = serviceLocator<ProjectViewModel>();
+                                              projectVM.addListeningArea(
+                                                area: ListeningArea(
+                                                  vertices: value,
+                                                  name: "Listening Area ${projectVM.listeningAreas.length + 1}",
+                                                ),
+                                                floorId: floor.id,
+                                              );
+                                            },
+                                          ),
+                                        ),
                                         builder:
                                             (BuildContext context) => const Stack(
                                               children: <Widget>[

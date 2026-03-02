@@ -57,7 +57,7 @@ class _ListeningAreaDropdownWidgetState extends State<ListeningAreaDropdownWidge
       // todo: Replace with actual area creation logic (e.g., user-defined vertices)
       final ListeningArea newListeningArea = ListeningArea(
         name: _areaNameController.text.trim(),
-        vertices: <Offset>[],
+        vertices: <FusionCanvasPoint>[],
         isDrawn: false,
       );
 

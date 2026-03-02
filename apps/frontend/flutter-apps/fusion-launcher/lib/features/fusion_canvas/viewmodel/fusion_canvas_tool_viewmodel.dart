@@ -1,7 +1,7 @@
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:fusion_lib/fusion_lib.dart';
 
-import '../model/fusion_canvas_point.dart';
 import '../state/fusion_tool_state.dart';
 import '../state/tools/measure_tool_state.dart';
 import '../state/tools/pen_tool_state.dart';
@@ -40,19 +40,9 @@ class FusionCanvasToolViewModel extends Cubit<FusionToolState> {
         }
       }
     } else if (state is PenToolState) {
-      final bool isCtrCmdPressed = inputViewModel.isMetaPressed;
       final PenToolState penState = state as PenToolState;
       setTool(
-        DrawingPenToolState(
-          points: <FusionCanvasPoint>[
-            ...state is DrawingPenToolState ? (penState as DrawingPenToolState).points : <FusionCanvasPoint>[],
-            FusionCanvasPoint(
-              position: effectivePosition,
-              handleIn: isCtrCmdPressed ? effectivePosition + const Offset(50, 50) : null,
-              handleOut: isCtrCmdPressed ? effectivePosition + const Offset(-50, -50) : null,
-            ),
-          ],
-        ),
+        penState.addPoint(FusionCanvasPoint(position: effectivePosition)),
       );
     }
   }
