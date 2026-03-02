@@ -42,18 +42,27 @@ class SnapSettings {
 /// Result of snap detection
 class SnapResult {
   final Offset snappedPosition;
-  final SnapPoint? snapPoint;
+  final List<SnapPoint> snapPoints;
   final bool hasSnapped;
-  final Offset? referencePoint;
 
   const SnapResult({
     required this.snappedPosition,
-    this.snapPoint,
+    this.snapPoints = const <SnapPoint>[],
     required this.hasSnapped,
-    this.referencePoint,
   });
 
-  SnapResult.noSnap(Offset originalPosition) : snappedPosition = originalPosition, snapPoint = null, hasSnapped = false, referencePoint = null;
+  SnapResult.noSnap(Offset originalPosition) : snappedPosition = originalPosition, snapPoints = const <SnapPoint>[], hasSnapped = false;
+
+  /// Get snap point by type (for backward compatibility)
+  SnapPoint? getSnapPointByType(SnapPointType type) {
+    for (final SnapPoint sp in snapPoints) {
+      if (sp.type == type) return sp;
+    }
+    return null;
+  }
+
+  /// Check if a specific snap type is active
+  bool hasSnapType(SnapPointType type) => getSnapPointByType(type) != null;
 }
 
 /// Service for handling cursor snapping functionality
@@ -70,8 +79,6 @@ class SnapService {
     double scale = 1.0,
   }) {
     final double effectiveSnapDistance = settings.snapDistance / scale;
-    SnapPoint? closestSnapPoint;
-    double closestDistance = double.infinity;
 
     final List<SnapPoint> availableSnapPoints = _generateSnapPoints(
       cursorPosition: cursorPosition,
@@ -79,21 +86,77 @@ class SnapService {
       activeStartPoint: activeStartPoint,
     );
 
-    // Find the closest snap point within snap distance
+    // Find all snap points within snap distance, grouped by type
+    SnapPoint? closestPointSnap;
+    SnapPoint? closestOrthogonalX;
+    SnapPoint? closestOrthogonalY;
+    double closestPointDistance = double.infinity;
+    double closestOrthogonalXDistance = double.infinity;
+    double closestOrthogonalYDistance = double.infinity;
+
     for (final SnapPoint snapPoint in availableSnapPoints) {
       final double distance = (snapPoint.position - cursorPosition).distance;
-      if (distance <= effectiveSnapDistance && distance < closestDistance) {
-        closestDistance = distance;
-        closestSnapPoint = snapPoint;
+      if (distance > effectiveSnapDistance) continue;
+
+      switch (snapPoint.type) {
+        case SnapPointType.point:
+          if (distance < closestPointDistance) {
+            closestPointDistance = distance;
+            closestPointSnap = snapPoint;
+          }
+          break;
+        case SnapPointType.orthogonalX:
+          if (distance < closestOrthogonalXDistance) {
+            closestOrthogonalXDistance = distance;
+            closestOrthogonalX = snapPoint;
+          }
+          break;
+        case SnapPointType.orthogonalY:
+          if (distance < closestOrthogonalYDistance) {
+            closestOrthogonalYDistance = distance;
+            closestOrthogonalY = snapPoint;
+          }
+          break;
       }
     }
 
-    if (closestSnapPoint != null) {
+    // Collect active snap points
+    final List<SnapPoint> activeSnapPoints = <SnapPoint>[];
+
+    // Point snap takes highest priority
+    if (closestPointSnap != null) {
+      activeSnapPoints.add(closestPointSnap);
       return SnapResult(
-        snappedPosition: closestSnapPoint.position,
-        snapPoint: closestSnapPoint,
+        snappedPosition: closestPointSnap.position,
+        snapPoints: activeSnapPoints,
         hasSnapped: true,
-        referencePoint: closestSnapPoint.referencePosition,
+      );
+    }
+
+    // Combine orthogonal snaps if both are active
+    if (closestOrthogonalX != null) activeSnapPoints.add(closestOrthogonalX);
+    if (closestOrthogonalY != null) activeSnapPoints.add(closestOrthogonalY);
+
+    if (activeSnapPoints.isNotEmpty) {
+      // Calculate combined snapped position
+      Offset snappedPosition = cursorPosition;
+
+      if (closestOrthogonalX != null && closestOrthogonalY != null) {
+        // Both X and Y orthogonal - snap to intersection
+        snappedPosition = Offset(
+          closestOrthogonalX.position.dx,
+          closestOrthogonalY.position.dy,
+        );
+      } else if (closestOrthogonalX != null) {
+        snappedPosition = closestOrthogonalX.position;
+      } else if (closestOrthogonalY != null) {
+        snappedPosition = closestOrthogonalY.position;
+      }
+
+      return SnapResult(
+        snappedPosition: snappedPosition,
+        snapPoints: activeSnapPoints,
+        hasSnapped: true,
       );
     }
 

@@ -1,6 +1,8 @@
 // ignore_for_file: public_member_api_docs, sort_constructors_first
 import 'dart:ui';
 
+import 'package:flutter/foundation.dart';
+
 import '../service/snap_service.dart';
 
 class FusionSnapState {
@@ -38,9 +40,10 @@ class FusionSnapState {
 
     return other.cursorPosition == cursorPosition &&
         other.snapResult?.snappedPosition == snapResult?.snappedPosition &&
-        other.snapResult?.hasSnapped == snapResult?.hasSnapped;
+        other.snapResult?.hasSnapped == snapResult?.hasSnapped &&
+        listEquals(other.snapResult?.snapPoints, snapResult?.snapPoints);
   }
 
   @override
-  int get hashCode => cursorPosition.hashCode ^ (snapResult?.snappedPosition.hashCode ?? 0);
+  int get hashCode => cursorPosition.hashCode ^ (snapResult?.snappedPosition.hashCode ?? 0) ^ (snapResult?.snapPoints.hashCode ?? 0);
 }
