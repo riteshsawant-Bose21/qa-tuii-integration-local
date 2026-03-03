@@ -29,7 +29,7 @@ const (
 	DefaultPublishTimeout = 10 * time.Second
 
 	// Publishing intervals
-	DefaultMetricsInterval = 60 * time.Second
+	DefaultMetricsInterval = 10 * time.Second
 )
 
 // Config holds the AWS IoT Core connection configuration

@@ -11,17 +11,6 @@ import (
 	"go.uber.org/zap"
 )
 
-// mockIoTAPI defines the interface for mocking AWS IoT API calls
-type mockIoTAPI interface {
-	CreateCertificateFromCsr(ctx context.Context, params *iot.CreateCertificateFromCsrInput, optFns ...func(*iot.Options)) (*iot.CreateCertificateFromCsrOutput, error)
-	CreateThing(ctx context.Context, params *iot.CreateThingInput, optFns ...func(*iot.Options)) (*iot.CreateThingOutput, error)
-	AttachThingPrincipal(ctx context.Context, params *iot.AttachThingPrincipalInput, optFns ...func(*iot.Options)) (*iot.AttachThingPrincipalOutput, error)
-	AttachPolicy(ctx context.Context, params *iot.AttachPolicyInput, optFns ...func(*iot.Options)) (*iot.AttachPolicyOutput, error)
-	DetachThingPrincipal(ctx context.Context, params *iot.DetachThingPrincipalInput, optFns ...func(*iot.Options)) (*iot.DetachThingPrincipalOutput, error)
-	UpdateCertificate(ctx context.Context, params *iot.UpdateCertificateInput, optFns ...func(*iot.Options)) (*iot.UpdateCertificateOutput, error)
-	DetachPolicy(ctx context.Context, params *iot.DetachPolicyInput, optFns ...func(*iot.Options)) (*iot.DetachPolicyOutput, error)
-}
-
 // mockIoTClient implements mockIoTAPI for testing
 type mockIoTClient struct {
 	createCertificateFromCsrFunc func(ctx context.Context, params *iot.CreateCertificateFromCsrInput, optFns ...func(*iot.Options)) (*iot.CreateCertificateFromCsrOutput, error)

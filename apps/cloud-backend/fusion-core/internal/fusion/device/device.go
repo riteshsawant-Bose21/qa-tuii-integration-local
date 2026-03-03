@@ -124,7 +124,11 @@ func (s *Service) setupDeviceCertificate(ctx context.Context, deviceID string, c
 	if err != nil {
 		logger.Error("Failed to create certificate from CSR", zap.Error(err))
 		if thingRegistered {
-			s.iotService.DeleteThing(ctx, deviceID, logger)
+			if cleanupErr := s.iotService.DeleteThing(ctx, deviceID, logger); cleanupErr != nil {
+				logger.Warn("Failed to cleanup thing after certificate creation failure",
+					zap.String("deviceID", deviceID),
+					zap.Error(cleanupErr))
+			}
 		}
 		return nil, types.CertificateInfo{}, err
 	}
@@ -134,9 +138,17 @@ func (s *Service) setupDeviceCertificate(ctx context.Context, deviceID string, c
 	if err := s.iotService.AttachCertificateToThing(ctx, deviceID, *certArn, logger); err != nil {
 		logger.Error("Failed to attach certificate to thing", zap.Error(err))
 		// Only cert exists at this point - just mark it inactive
-		s.iotService.SetCertificateInactive(ctx, *certID, logger)
+		if err := s.iotService.SetCertificateInactive(ctx, *certID, logger); err != nil {
+			logger.Warn("Failed to set certificate inactive after attach failure",
+				zap.String("certificateID", *certID),
+				zap.Error(err))
+		}
 		if thingRegistered {
-			s.iotService.DeleteThing(ctx, deviceID, logger)
+			if err := s.iotService.DeleteThing(ctx, deviceID, logger); err != nil {
+				logger.Warn("Failed to cleanup thing after certificate attach failure",
+					zap.String("deviceID", deviceID),
+					zap.Error(err))
+			}
 		}
 		return nil, types.CertificateInfo{}, err
 	}
