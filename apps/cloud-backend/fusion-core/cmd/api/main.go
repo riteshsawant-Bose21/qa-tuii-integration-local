@@ -65,10 +65,9 @@ func main() {
 	actualEnvName := *envName
 	if envFromVar := os.Getenv("FUSION_ENVIRONMENT"); envFromVar != "" {
 		actualEnvName = envFromVar
-		fmt.Printf("Environment set via FUSION_ENVIRONMENT variable: %s\n", actualEnvName)
-	} else {
-		fmt.Printf("Environment set via command line flag: %s\n", actualEnvName)
 	}
+
+	fmt.Printf("Environment set to: %s\n", actualEnvName)
 
 	env := environment.New(environment.DefaultLoadLookuper)
 
