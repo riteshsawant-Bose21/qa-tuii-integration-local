@@ -63,6 +63,7 @@ func (a *API) registerRoutes() {
 
 	// user profile management routes (/user/profile/*)
 	userProfile := users.Group(constants.EndpointUserProfile)
+	userProfile.Use(middleware.ExtractUserFromHeaders())
 	{
 		userProfile.GET("", userHandler.GetUserProfileDetails)
 		userProfile.POST("", userHandler.CreateUserProfile)
@@ -71,6 +72,7 @@ func (a *API) registerRoutes() {
 
 	// user settings management routes (/user/settings/*)
 	userSettings := users.Group(constants.EndpointUserSettings)
+	userSettings.Use(middleware.ExtractUserFromHeaders())
 	{
 		userSettings.GET("", userHandler.GetUserSettings)
 		userSettings.POST("", userHandler.CreateUserSettings)
