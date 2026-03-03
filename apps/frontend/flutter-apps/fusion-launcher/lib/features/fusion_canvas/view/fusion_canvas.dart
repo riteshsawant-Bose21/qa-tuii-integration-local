@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/features/fusion_canvas/state/fusion_tool_state.dart';
+import 'package:fusion_launcher/features/fusion_canvas/state/tools/measure_tool_state.dart';
+import 'package:fusion_launcher/features/fusion_canvas/state/tools/pen_tool_state.dart';
 import 'package:fusion_launcher/features/fusion_canvas/view/widgets/canvas_control_wrapper.dart';
 import 'package:fusion_launcher/features/fusion_canvas/view/widgets/fusion_canvas_listeners_wrapper.dart';
 import 'package:fusion_launcher/features/fusion_canvas/viewmodel/fusion_canvas_tool_viewmodel.dart';
@@ -105,7 +107,8 @@ class FusionCanvas extends StatelessWidget {
                                 state,
                                 context.read<FusionSnapViewModel>().state,
                               );
-                              if (read.state is IdleSelectToolState && state is FusionCanvasInputTapDownState) {
+                              print("state=${read.state}, inputState=$state");
+                              if ((read.state is! MeasureToolState && read.state is! PenToolState) && state is FusionCanvasInputTapDownState) {
                                 final FusionBasePainter? item = fusionCanvasPainter.isHit(
                                   state.mousePosition ?? Offset.zero,
                                 );
@@ -115,7 +118,9 @@ class FusionCanvas extends StatelessWidget {
                               }
                               if (state is FusionCanvasInputDraggingState) {
                                 final List<FusionBasePainter> selectedLayers = elements.where((FusionBasePainter layer) => layer.isSelected).toList();
+
                                 if (selectedLayers.isNotEmpty) {
+                                  read.setTool(SelectingSelectToolState(selectedLayerIds: selectedLayers));
                                   for (final FusionBasePainter layer in selectedLayers) {
                                     toolbarEvents?.onMoveLayer?.call(
                                       layer,
