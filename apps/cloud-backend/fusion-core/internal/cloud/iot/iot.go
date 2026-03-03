@@ -14,6 +14,7 @@ type IoT interface {
 	// Methods for IoT operations can be defined here
 	CreateCertificateFromCsr(ctx context.Context, csrPem *string, logger *zap.Logger) (certificatePem *string, certificateId *string, certificateArn *string, err error)
 	RegisterThing(ctx context.Context, thingName string, logger *zap.Logger) error
+	DeleteThing(ctx context.Context, thingName string, logger *zap.Logger) error
 	AttachCertificateToThing(ctx context.Context, thingName string, certificateArn string, logger *zap.Logger) error
 	AttachPolicyToCertificate(ctx context.Context, policyName string, certificateArn string, logger *zap.Logger) error
 	DetatchCertificateFromThing(ctx context.Context, thingName string, certificateArn string, logger *zap.Logger) error
@@ -67,6 +68,21 @@ func (c IoTClient) RegisterThing(ctx context.Context, thingName string, logger *
 	_, err := c.Client.CreateThing(ctx, input)
 	if err != nil {
 		logger.Error("failed to create thing", zap.Error(err))
+		return err
+	}
+
+	return nil
+}
+
+// DeleteThing deletes a thing from AWS IoT.
+func (c IoTClient) DeleteThing(ctx context.Context, thingName string, logger *zap.Logger) error {
+	input := &iot.DeleteThingInput{
+		ThingName: &thingName,
+	}
+
+	_, err := c.Client.DeleteThing(ctx, input)
+	if err != nil {
+		logger.Error("failed to delete thing", zap.Error(err))
 		return err
 	}
 

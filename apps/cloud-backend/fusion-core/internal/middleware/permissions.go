@@ -16,9 +16,11 @@ const (
 	ProjectSync   = "project.sync"
 
 	// Device permissions
-	DeviceCreate = "device.create"
-	DeviceUpdate = "device.update"
-	DeviceDelete = "device.delete"
+	DeviceCreate     = "device.create"
+	DeviceUpdate     = "device.update"
+	DeviceDelete     = "device.delete"
+	DeviceClaim      = "device.claim"
+	DeviceRotateCert = "device.rotate_cert"
 
 	// User management permissions
 	UserRead   = "user.read"
@@ -91,12 +93,18 @@ func SetupUserSettingsPermissions(acc *AccessControlConfig) {
 }
 
 func SetupDevicePermissions(acc *AccessControlConfig) {
+	basePath := fmt.Sprintf("%s%s", constants.APIV1Path, constants.EndpointDevices)
+
 	// Device CREATE endpoint - require write permission
-	acc.RegisterPermission("POST", "/api/v1/devices", "device.create", PermissionWrite, "Create new device")
+	acc.RegisterPermission("POST", basePath, DeviceCreate, PermissionWrite, "Create new device")
 	// Device UPDATE endpoint - require write permission
-	acc.RegisterPermission("PATCH", "/api/v1/devices/:device_id", "device.update", PermissionWrite, "Update device")
+	acc.RegisterPermission("PATCH", fmt.Sprintf("%s%s", basePath, constants.EndpointDeviceByID), DeviceUpdate, PermissionWrite, "Update device")
 	// Device RESET endpoint - require write permission
-	acc.RegisterPermission("DELETE", "/api/v1/devices/:device_id/reset", "device.delete", PermissionWrite, "Reset device")
+	acc.RegisterPermission("DELETE", fmt.Sprintf("%s%s", basePath, constants.EndpointDeviceReset), DeviceDelete, PermissionWrite, "Reset device")
+	// Device CLAIM endpoint - require write permission
+	acc.RegisterPermission("POST", fmt.Sprintf("%s%s", basePath, constants.EndpointDeviceClaim), DeviceClaim, PermissionWrite, "Claim device")
+	// Device ROTATE-CERT endpoint - require write permission
+	acc.RegisterPermission("POST", fmt.Sprintf("%s%s", basePath, constants.EndpointDeviceRotateCert), DeviceRotateCert, PermissionWrite, "Rotate device certificate")
 }
 
 // SetupCommonPermissions configures common permission patterns

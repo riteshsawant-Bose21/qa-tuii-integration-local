@@ -39,13 +39,15 @@ import (
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/product"
 	productdb "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/product/db"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/project"
-	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/storage/cloudfs"
-	sql "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/storage/sql"
+	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/cloud/storage/cloudfs"
+	cloudIot "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/cloud/iot"
+
+	sql "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/cloud/storage/sql"
 
 	"go.uber.org/zap"
 
-	projectdb "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/project/db"
 	devicedb "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/device/db"
+	projectdb "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/project/db"
 
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/auth"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/user"
@@ -134,7 +136,7 @@ func main() {
 		loggers.AppLogger.Fatal("Failed to get processing config", zap.Error(err))
 	}
 
-	s3Handler, err := cloudfs.NewS3Client(ctx, cfg.S3.Region)
+	s3Handler, err := cloudfs.NewS3Client(ctx, cfg.Cloud.Region)
 	if err != nil {
 		loggers.AppLogger.Fatal("Failed to initialize S3 client", zap.Error(err))
 	}
@@ -154,7 +156,7 @@ func main() {
 	}
 
 	//Initialize Project Service
-	projectSVC := project.NewService(projectDBSvc, s3Handler.Bucket(cfg.S3.ProjectBucket))
+	projectSVC := project.NewService(projectDBSvc, s3Handler.Bucket(cfg.Cloud.ProjectS3Bucket))
 	if projectSVC == nil {
 		loggers.AppLogger.Fatal("Failed to initialize project service")
 	}
@@ -191,7 +193,7 @@ func main() {
 	authMiddleware := middleware.NewAuth0Middleware(authSVC)
 	loggers.AppLogger.Info("Initialized Auth0 middleware")
 
-	iothandler, err := cloudfs.NewIoTClient(ctx, cfg.S3.Region, loggers.AppLogger)
+	iothandler, err := cloudIot.NewIoTClient(ctx, cfg.Cloud.Region, loggers.AppLogger)
 	if err != nil {
 		loggers.AppLogger.Fatal("Failed to initialize IoT client", zap.Error(err))
 	}
@@ -203,14 +205,14 @@ func main() {
 	loggers.AppLogger.Info("Initialized Device DB Service.")
 
 	//Initialize Device Service
-	deviceSVC := device.NewService(deviceDbSvc, iothandler)
+	deviceSVC := device.NewService(deviceDbSvc, projectDBSvc, iothandler)
 
 	// Initialize API Server (with configurable host and port)
 	server, err := api.New(&api.Config{
 		Host: cfg.Server.APIHost,
 		Port: cfg.Server.APIPort,
 	}, productSVC, projectSVC, userSVC, authSVC, authMiddleware, deviceSVC, loggers)
-	
+
 	if err != nil {
 		loggers.AppLogger.Fatal(fmt.Sprintf("Error while initializing API: %v", err))
 	}
@@ -218,8 +220,8 @@ func main() {
 	loggers.AppLogger.Info("Initialized the API.",
 		zap.String("host", cfg.Server.APIHost),
 		zap.String("port", cfg.Server.APIPort))
-	
-		// Setup graceful shutdown
+
+	// Setup graceful shutdown
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 

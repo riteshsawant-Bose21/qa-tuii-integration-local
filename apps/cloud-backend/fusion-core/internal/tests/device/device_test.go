@@ -48,6 +48,24 @@ func (m *MockDeviceService) ResetDevice(ctx context.Context, deviceID string, us
 	return args.Error(0)
 }
 
+// ClaimDevice mocks device claiming.
+func (m *MockDeviceService) ClaimDevice(ctx context.Context, deviceID string, request *types.DeviceClaimRequest, user types.UserAuthorizationResponse, logger *zap.Logger) (*types.DeviceClaimResponse, error) {
+	args := m.Called(ctx, deviceID, request, user, logger)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*types.DeviceClaimResponse), args.Error(1)
+}
+
+// RotateCertificate mocks certificate rotation.
+func (m *MockDeviceService) RotateCertificate(ctx context.Context, deviceID string, request *types.DeviceRotateCertRequest, user types.UserAuthorizationResponse, logger *zap.Logger) (*types.DeviceRotateCertResponse, error) {
+	args := m.Called(ctx, deviceID, request, user, logger)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*types.DeviceRotateCertResponse), args.Error(1)
+}
+
 // DeviceIntegrationTestSuite defines the test suite for device integration tests.
 type DeviceIntegrationTestSuite struct {
 	testutils.BaseIntegrationSuite
@@ -109,6 +127,8 @@ func (suite *DeviceIntegrationTestSuite) setupRouter() {
 		devices.POST("", deviceHandler.CreateDevice)
 		devices.PATCH("/:device_id", deviceHandler.UpdateDevice)
 		devices.DELETE("/:device_id/reset", deviceHandler.ResetDevice)
+		devices.POST("/:device_id/claim", deviceHandler.ClaimDevice)
+		devices.POST("/:device_id/rotate-cert", deviceHandler.RotateCertificate)
 	}
 
 	suite.GinRouter = router
@@ -303,6 +323,160 @@ func (suite *DeviceIntegrationTestSuite) TestResetDevice() {
 			Return(errors.New(errorutil.MsgUnauthorized)).Once()
 
 		w, err := suite.MakeRequest("DELETE", "/api/v1/devices/"+deviceID+"/reset", nil)
+		require.NoError(t, err)
+
+		assert.Equal(t, http.StatusUnauthorized, w.Code)
+		suite.mockDeviceSVC.AssertExpectations(t)
+	})
+}
+
+// TestClaimDevice tests the POST /api/v1/devices/{device_id}/claim endpoint.
+func (suite *DeviceIntegrationTestSuite) TestClaimDevice() {
+	deviceID := uuid.New().String()
+
+	suite.T().Run("should claim device successfully", func(t *testing.T) {
+		req := types.DeviceClaimRequest{
+			CSR:       "-----BEGIN CERTIFICATE REQUEST-----\nMIIBkTCB+wIBADBSMQswCQYDVQQGEwJVUzELMAkGA1UECAwCTUExDzANBgNVBAcM\nBkJvc3RvbjENMAsGA1UECgwEQm9zZTEWMBQGA1UEAwwNdGVzdC1kZXZpY2UtMTBZ\nMBMGByqGSM49AgEGCCqGSM49AwEHA0IABDummykZ3hhNgOvCdPFxPCp8B9p0hpT8\nfZGhOnAzQi+hVGLHLBPKI9MpHcZKVBaAJz2s8z1Z5E7fzZ+3SzK1qL6gPDAyBgkq\nhkiG9w0BCQ4xJTAjMCEGA1UdEQQaMBiCFnRlc3QtZGV2aWNlLTEuYm9zZS5jb20w\nCgYIKoZIzj0EAwIDSAAwRQIhAJHDKYCZFxlEGJMJNa2ItXq9nHpw8qLhR0XCcOp0\ndmUAAiAmRoZ5iVLPBJGshZ2h8g0fKdE/P5sHvKIvC8qPz7z8Xw==\n-----END CERTIFICATE REQUEST-----",
+			ProjectID: suite.testProjectID,
+		}
+		expectedResponse := &types.DeviceClaimResponse{
+			Certificate: "-----BEGIN CERTIFICATE-----\nMIIB...\n-----END CERTIFICATE-----",
+		}
+
+		suite.mockDeviceSVC.On("ClaimDevice", mock.Anything, deviceID, mock.MatchedBy(func(r *types.DeviceClaimRequest) bool {
+			return r.ProjectID == req.ProjectID
+		}), mock.Anything, mock.Anything).Return(expectedResponse, nil).Once()
+
+		w, err := suite.MakeRequest("POST", "/api/v1/devices/"+deviceID+"/claim", req)
+		require.NoError(t, err)
+
+		assert.Equal(t, http.StatusCreated, w.Code)
+
+		var response types.DeviceClaimResponse
+		err = json.Unmarshal(w.Body.Bytes(), &response)
+		require.NoError(t, err)
+
+		assert.NotEmpty(t, response.Certificate)
+		suite.mockDeviceSVC.AssertExpectations(t)
+	})
+
+	suite.T().Run("should fail when device not found", func(t *testing.T) {
+		req := types.DeviceClaimRequest{
+			CSR:       "test-csr",
+			ProjectID: suite.testProjectID,
+		}
+
+		suite.mockDeviceSVC.On("ClaimDevice", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+			Return(nil, errors.New(errorutil.ErrMsgDeviceNotFound)).Once()
+
+		w, err := suite.MakeRequest("POST", "/api/v1/devices/"+uuid.New().String()+"/claim", req)
+		require.NoError(t, err)
+
+		assert.Equal(t, http.StatusNotFound, w.Code)
+		suite.mockDeviceSVC.AssertExpectations(t)
+	})
+
+	suite.T().Run("should fail when device already claimed", func(t *testing.T) {
+		req := types.DeviceClaimRequest{
+			CSR:       "test-csr",
+			ProjectID: suite.testProjectID,
+		}
+
+		suite.mockDeviceSVC.On("ClaimDevice", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+			Return(nil, errors.New(errorutil.ErrMsgDeviceAlreadyClaimed)).Once()
+
+		w, err := suite.MakeRequest("POST", "/api/v1/devices/"+deviceID+"/claim", req)
+		require.NoError(t, err)
+
+		assert.Equal(t, http.StatusBadRequest, w.Code)
+		suite.mockDeviceSVC.AssertExpectations(t)
+	})
+
+	suite.T().Run("should fail when project not found", func(t *testing.T) {
+		req := types.DeviceClaimRequest{
+			CSR:       "test-csr",
+			ProjectID: uuid.New().String(),
+		}
+
+		suite.mockDeviceSVC.On("ClaimDevice", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+			Return(nil, errors.New(errorutil.ErrMsgProjectNotFound)).Once()
+
+		w, err := suite.MakeRequest("POST", "/api/v1/devices/"+deviceID+"/claim", req)
+		require.NoError(t, err)
+
+		assert.Equal(t, http.StatusNotFound, w.Code)
+		suite.mockDeviceSVC.AssertExpectations(t)
+	})
+}
+
+// TestRotateCertificate tests the POST /api/v1/devices/{device_id}/rotate-cert endpoint.
+func (suite *DeviceIntegrationTestSuite) TestRotateCertificate() {
+	deviceID := uuid.New().String()
+
+	suite.T().Run("should rotate certificate successfully", func(t *testing.T) {
+		req := types.DeviceRotateCertRequest{
+			CSR: "-----BEGIN CERTIFICATE REQUEST-----\nMIIBkTCB+wIBADBSMQswCQYDVQQGEwJVUzELMAkGA1UECAwCTUExDzANBgNVBAcM\nBkJvc3RvbjENMAsGA1UECgwEQm9zZTEWMBQGA1UEAwwNdGVzdC1kZXZpY2UtMTBZ\nMBMGByqGSM49AgEGCCqGSM49AwEHA0IABDummykZ3hhNgOvCdPFxPCp8B9p0hpT8\nfZGhOnAzQi+hVGLHLBPKI9MpHcZKVBaAJz2s8z1Z5E7fzZ+3SzK1qL6gPDAyBgkq\nhkiG9w0BCQ4xJTAjMCEGA1UdEQQaMBiCFnRlc3QtZGV2aWNlLTEuYm9zZS5jb20w\nCgYIKoZIzj0EAwIDSAAwRQIhAJHDKYCZFxlEGJMJNa2ItXq9nHpw8qLhR0XCcOp0\ndmUAAiAmRoZ5iVLPBJGshZ2h8g0fKdE/P5sHvKIvC8qPz7z8Xw==\n-----END CERTIFICATE REQUEST-----",
+		}
+		expectedResponse := &types.DeviceRotateCertResponse{
+			Certificate: "-----BEGIN CERTIFICATE-----\nMIIB...\n-----END CERTIFICATE-----",
+		}
+
+		suite.mockDeviceSVC.On("RotateCertificate", mock.Anything, deviceID, mock.MatchedBy(func(r *types.DeviceRotateCertRequest) bool {
+			return len(r.CSR) > 0
+		}), mock.Anything, mock.Anything).Return(expectedResponse, nil).Once()
+
+		w, err := suite.MakeRequest("POST", "/api/v1/devices/"+deviceID+"/rotate-cert", req)
+		require.NoError(t, err)
+
+		assert.Equal(t, http.StatusOK, w.Code)
+
+		var response types.DeviceRotateCertResponse
+		err = json.Unmarshal(w.Body.Bytes(), &response)
+		require.NoError(t, err)
+
+		assert.NotEmpty(t, response.Certificate)
+		suite.mockDeviceSVC.AssertExpectations(t)
+	})
+
+	suite.T().Run("should fail when device not found", func(t *testing.T) {
+		req := types.DeviceRotateCertRequest{
+			CSR: "test-csr",
+		}
+
+		suite.mockDeviceSVC.On("RotateCertificate", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+			Return(nil, errors.New(errorutil.ErrMsgDeviceNotFound)).Once()
+
+		w, err := suite.MakeRequest("POST", "/api/v1/devices/"+uuid.New().String()+"/rotate-cert", req)
+		require.NoError(t, err)
+
+		assert.Equal(t, http.StatusNotFound, w.Code)
+		suite.mockDeviceSVC.AssertExpectations(t)
+	})
+
+	suite.T().Run("should fail when device not claimed", func(t *testing.T) {
+		req := types.DeviceRotateCertRequest{
+			CSR: "test-csr",
+		}
+
+		suite.mockDeviceSVC.On("RotateCertificate", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+			Return(nil, errors.New(errorutil.ErrMsgDeviceNotClaimed)).Once()
+
+		w, err := suite.MakeRequest("POST", "/api/v1/devices/"+deviceID+"/rotate-cert", req)
+		require.NoError(t, err)
+
+		assert.Equal(t, http.StatusBadRequest, w.Code)
+		suite.mockDeviceSVC.AssertExpectations(t)
+	})
+
+	suite.T().Run("should fail when unauthorized", func(t *testing.T) {
+		req := types.DeviceRotateCertRequest{
+			CSR: "test-csr",
+		}
+
+		suite.mockDeviceSVC.On("RotateCertificate", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+			Return(nil, errors.New(errorutil.MsgUnauthorized)).Once()
+
+		w, err := suite.MakeRequest("POST", "/api/v1/devices/"+deviceID+"/rotate-cert", req)
 		require.NoError(t, err)
 
 		assert.Equal(t, http.StatusUnauthorized, w.Code)

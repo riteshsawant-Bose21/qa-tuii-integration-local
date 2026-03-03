@@ -9,7 +9,6 @@ import (
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/api/types"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/model"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/model/models"
-	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/utils/errorutil"
 	"github.com/aarondl/null/v8"
 	"github.com/aarondl/sqlboiler/v4/boil"
 	"go.uber.org/zap"
@@ -49,20 +48,6 @@ func (s *Service) GetDeviceByID(ctx context.Context, deviceID string, logger *za
 		return nil, err
 	}
 	return device, nil
-}
-
-// GetProjectByID retrieves a project by its ID.
-// Returns nil, nil if the project is not found.
-func (s *Service) GetProjectByID(ctx context.Context, projectID string, logger *zap.Logger) (*models.Project, error) {
-	project, err := models.Projects(models.ProjectWhere.ID.EQ(projectID)).One(ctx, s.db)
-	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return nil, nil
-		}
-		logger.Error("Failed to get project by ID", zap.String("projectID", projectID), zap.Error(err))
-		return nil, err
-	}
-	return project, nil
 }
 
 // ---------------------------------------------------------------------------
@@ -232,24 +217,9 @@ func (s *Service) Update(ctx context.Context, device models.Device, req *types.D
 	return nil
 }
 
-// handleProjectChange validates and processes a device's project reassignment.
+// handleProjectChange processes a device's project reassignment.
+// Note: Project validation (exists & ownership) should be done by the business layer.
 func (s *Service) handleProjectChange(ctx context.Context, device *models.Device, newProjectID string, tx model.DBTxExecutor, logger *zap.Logger) error {
-	// Verify the new project exists and belongs to the device owner
-	project, err := s.GetProjectByID(ctx, newProjectID, logger)
-	if err != nil {
-		return err
-	}
-	if project == nil {
-		return errors.New(errorutil.ErrMsgProjectNotFound)
-	}
-	if project.PrimaryOwnerAccountID != device.ClaimedBy.String {
-		logger.Error("Unauthorized project change attempt",
-			zap.String("deviceID", device.DeviceID),
-			zap.String("accountID", device.ClaimedBy.String),
-			zap.String("newProjectID", newProjectID))
-		return errors.New(errorutil.MsgUnauthorized)
-	}
-
 	// Decommission current project assignment
 	if err := s.decommissionCurrentProject(ctx, device.ID, device.ProjectID.String, tx, logger); err != nil {
 		return err
@@ -302,6 +272,46 @@ func (s *Service) Reset(ctx context.Context, device models.Device, tx model.DBTx
 
 	if _, err = device.Update(ctx, tx, boil.Infer()); err != nil {
 		logger.Error("Failed to reset device", zap.String("deviceID", device.DeviceID), zap.Error(err))
+		return err
+	}
+
+	return nil
+}
+
+// Claim claims an existing unclaimed device for a new owner with the given project.
+func (s *Service) Claim(ctx context.Context, device models.Device, accountID string, cert types.CertificateInfo, projectID string, tx model.DBTxExecutor, logger *zap.Logger) error {
+	// Update device with claim details
+	device.ProjectID = null.NewString(projectID, projectID != "")
+	device.ClaimedBy = null.NewString(accountID, accountID != "")
+	device.CertificateID = null.NewString(cert.ID, cert.ID != "")
+	device.CertificateArn = null.NewString(cert.Arn, cert.Arn != "")
+	device.ClaimStatus = "CLAIMED"
+
+	if _, err := device.Update(ctx, tx, boil.Infer()); err != nil {
+		logger.Error("Failed to claim device", zap.String("deviceID", device.DeviceID), zap.Error(err))
+		return err
+	}
+
+	// Create ownership history
+	if err := s.insertOwnershipHistory(ctx, device.ID, accountID, cert.ID, cert.Arn, tx, logger); err != nil {
+		return err
+	}
+
+	// Create project history
+	if err := s.insertProjectHistory(ctx, device.ID, projectID, tx, logger); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// UpdateCertificate updates the certificate information for a device.
+func (s *Service) UpdateCertificate(ctx context.Context, device models.Device, cert types.CertificateInfo, tx model.DBTxExecutor, logger *zap.Logger) error {
+	device.CertificateID = null.NewString(cert.ID, cert.ID != "")
+	device.CertificateArn = null.NewString(cert.Arn, cert.Arn != "")
+
+	if _, err := device.Update(ctx, tx, boil.Infer()); err != nil {
+		logger.Error("Failed to update device certificate", zap.String("deviceID", device.DeviceID), zap.Error(err))
 		return err
 	}
 

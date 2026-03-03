@@ -103,12 +103,14 @@ func (a *API) registerRoutes() {
 
 	// Device routes with authentication and access control
 	deviceHandler := handler.NewDeviceHandler(a.device)
-	devices := v1.Group("/devices")
+	devices := v1.Group(constants.EndpointDevices)
 
 	{
 		devices.Use(a.authMiddleware.Middleware())
 		devices.POST("", deviceHandler.CreateDevice)
 		devices.PATCH(constants.EndpointDeviceByID, deviceHandler.UpdateDevice)
 		devices.DELETE(constants.EndpointDeviceReset, deviceHandler.ResetDevice)
+		devices.POST(constants.EndpointDeviceClaim, deviceHandler.ClaimDevice)
+		devices.POST(constants.EndpointDeviceRotateCert, deviceHandler.RotateCertificate)
 	}
 }

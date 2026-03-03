@@ -9,7 +9,6 @@ import (
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/api/types"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/model/models"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/log"
-	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/utils/errorutil"
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/aarondl/null/v8"
 	"github.com/stretchr/testify/assert"
@@ -139,64 +138,6 @@ func TestGetDeviceByID(t *testing.T) {
 		device, err := service.GetDeviceByID(ctx, testDeviceID, logger.JobSyncLog())
 		assert.Error(t, err)
 		assert.Nil(t, device)
-		assert.NoError(t, mock.ExpectationsWereMet())
-	})
-}
-
-// ---------------------------------------------------------------------------
-// GetProjectByID Tests
-// ---------------------------------------------------------------------------
-
-func TestGetProjectByID(t *testing.T) {
-	db, mock, service := setupTestDB(t)
-	defer db.Close()
-
-	ctx := context.Background()
-	logger := getTestLogger(t)
-
-	t.Run("successfully retrieves project by ID", func(t *testing.T) {
-		rows := sqlmock.NewRows([]string{
-			"id", "application", "budget_amount", "currency", "description",
-			"name", "project_phase", "venue", "environment_type",
-			"is_archived", "is_deleted", "locked_by_user_id",
-			"created_at", "updated_at", "primary_owner_account_id",
-		}).AddRow(
-			testProjectID, "Test App", 1000.0, "USD", "Test Description",
-			"Test Project", "proposal", "Test Venue", "indoor",
-			false, false, nil,
-			time.Now(), time.Now(), testAccountID,
-		)
-
-		mock.ExpectQuery(`SELECT "project"\.\* FROM "project" WHERE \("project"\."id" = \$1\) LIMIT 1`).
-			WithArgs(testProjectID).
-			WillReturnRows(rows)
-
-		project, err := service.GetProjectByID(ctx, testProjectID, logger.JobSyncLog())
-		assert.NoError(t, err)
-		assert.NotNil(t, project)
-		assert.Equal(t, testProjectID, project.ID)
-		assert.NoError(t, mock.ExpectationsWereMet())
-	})
-
-	t.Run("returns nil when project not found", func(t *testing.T) {
-		mock.ExpectQuery(`SELECT "project"\.\* FROM "project" WHERE \("project"\."id" = \$1\) LIMIT 1`).
-			WithArgs("non-existent").
-			WillReturnError(sql.ErrNoRows)
-
-		project, err := service.GetProjectByID(ctx, "non-existent", logger.JobSyncLog())
-		assert.NoError(t, err)
-		assert.Nil(t, project)
-		assert.NoError(t, mock.ExpectationsWereMet())
-	})
-
-	t.Run("returns error on database error", func(t *testing.T) {
-		mock.ExpectQuery(`SELECT "project"\.\* FROM "project" WHERE \("project"\."id" = \$1\) LIMIT 1`).
-			WithArgs(testProjectID).
-			WillReturnError(assert.AnError)
-
-		project, err := service.GetProjectByID(ctx, testProjectID, logger.JobSyncLog())
-		assert.Error(t, err)
-		assert.Nil(t, project)
 		assert.NoError(t, mock.ExpectationsWereMet())
 	})
 }
@@ -715,21 +656,7 @@ func TestUpdate(t *testing.T) {
 		tx, err := db.BeginTx(ctx, nil)
 		require.NoError(t, err)
 
-		projectRows := sqlmock.NewRows([]string{
-			"id", "application", "budget_amount", "currency", "description",
-			"name", "project_phase", "venue", "environment_type",
-			"is_archived", "is_deleted", "locked_by_user_id",
-			"created_at", "updated_at", "primary_owner_account_id",
-		}).AddRow(
-			testNewProjectID, "Test App", 1000.0, "USD", "Test Description",
-			"Test Project", "proposal", "Test Venue", "indoor",
-			false, false, nil,
-			time.Now(), time.Now(), testAccountID,
-		)
-		mock.ExpectQuery(`SELECT "project"\.\* FROM "project" WHERE \("project"\."id" = \$1\) LIMIT 1`).
-			WithArgs(testNewProjectID).
-			WillReturnRows(projectRows)
-
+		// Note: Project validation (exists & ownership) is done by the business layer, not the db layer
 		projectHistoryRows := sqlmock.NewRows([]string{
 			"id", "device_id", "project_id", "commissioned_at", "decommissioned_at", "created_at", "updated_at",
 		}).AddRow(
@@ -756,64 +683,8 @@ func TestUpdate(t *testing.T) {
 		assert.NoError(t, mock.ExpectationsWereMet())
 	})
 
-	t.Run("returns error when new project not found", func(t *testing.T) {
-		db, mock, service := setupTestDB(t)
-		defer db.Close()
-
-		logger := getTestLogger(t)
-		device := createClaimedDevice()
-		req := &types.DeviceUpdateRequest{
-			ProjectID: "non-existent-project",
-		}
-
-		mock.ExpectBegin()
-		tx, err := db.BeginTx(ctx, nil)
-		require.NoError(t, err)
-
-		mock.ExpectQuery(`SELECT "project"\.\* FROM "project" WHERE \("project"\."id" = \$1\) LIMIT 1`).
-			WithArgs("non-existent-project").
-			WillReturnError(sql.ErrNoRows)
-
-		err = service.Update(ctx, device, req, tx, logger.JobSyncLog())
-		assert.Error(t, err)
-		assert.Contains(t, err.Error(), errorutil.ErrMsgProjectNotFound)
-		assert.NoError(t, mock.ExpectationsWereMet())
-	})
-
-	t.Run("returns unauthorized error when project belongs to different account", func(t *testing.T) {
-		db, mock, service := setupTestDB(t)
-		defer db.Close()
-
-		logger := getTestLogger(t)
-		device := createClaimedDevice()
-		req := &types.DeviceUpdateRequest{
-			ProjectID: testNewProjectID,
-		}
-
-		mock.ExpectBegin()
-		tx, err := db.BeginTx(ctx, nil)
-		require.NoError(t, err)
-
-		projectRows := sqlmock.NewRows([]string{
-			"id", "application", "budget_amount", "currency", "description",
-			"name", "project_phase", "venue", "environment_type",
-			"is_archived", "is_deleted", "locked_by_user_id",
-			"created_at", "updated_at", "primary_owner_account_id",
-		}).AddRow(
-			testNewProjectID, "Test App", 1000.0, "USD", "Test Description",
-			"Test Project", "proposal", "Test Venue", "indoor",
-			false, false, nil,
-			time.Now(), time.Now(), "different-account-id",
-		)
-		mock.ExpectQuery(`SELECT "project"\.\* FROM "project" WHERE \("project"\."id" = \$1\) LIMIT 1`).
-			WithArgs(testNewProjectID).
-			WillReturnRows(projectRows)
-
-		err = service.Update(ctx, device, req, tx, logger.JobSyncLog())
-		assert.Error(t, err)
-		assert.Contains(t, err.Error(), errorutil.MsgUnauthorized)
-		assert.NoError(t, mock.ExpectationsWereMet())
-	})
+	// Note: "returns error when new project not found" and "returns unauthorized error when project belongs to different account"
+	// tests are not needed in the db layer since project validation is done by the business layer
 
 	t.Run("skips project change when same project ID", func(t *testing.T) {
 		db, mock, service := setupTestDB(t)
@@ -851,21 +722,7 @@ func TestUpdate(t *testing.T) {
 		tx, err := db.BeginTx(ctx, nil)
 		require.NoError(t, err)
 
-		projectRows := sqlmock.NewRows([]string{
-			"id", "application", "budget_amount", "currency", "description",
-			"name", "project_phase", "venue", "environment_type",
-			"is_archived", "is_deleted", "locked_by_user_id",
-			"created_at", "updated_at", "primary_owner_account_id",
-		}).AddRow(
-			testNewProjectID, "Test App", 1000.0, "USD", "Test Description",
-			"Test Project", "proposal", "Test Venue", "indoor",
-			false, false, nil,
-			time.Now(), time.Now(), testAccountID,
-		)
-		mock.ExpectQuery(`SELECT "project"\.\* FROM "project" WHERE \("project"\."id" = \$1\) LIMIT 1`).
-			WithArgs(testNewProjectID).
-			WillReturnRows(projectRows)
-
+		// Note: Project validation is done by the business layer
 		mock.ExpectQuery(`SELECT "device_project_history"\.\* FROM "device_project_history" WHERE \("device_project_history"\."device_id" = \$1\) AND \("device_project_history"\."project_id" = \$2\) LIMIT 1`).
 			WithArgs(testDeviceUUID, testProjectID).
 			WillReturnError(sql.ErrNoRows)

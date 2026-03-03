@@ -6,16 +6,16 @@ import (
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/environment"
 )
 
-// S3Config holds the configuration settings for connecting to an S3 service.
-type S3Config struct {
-	PriceBucket   string
-	ProductBucket string
-	ProjectBucket string
-	Region        string
+// CloudConfig holds the configuration settings for connecting to a cloud service.
+type CloudConfig struct {
+	PriceS3Bucket   string
+	ProductS3Bucket string
+	ProjectS3Bucket string
+	Region          string
 }
 
-// S3 retrieves the S3 configuration from the store.
-func (s *Service) S3() (*S3Config, error) {
+// Cloud retrieves the cloud configuration from the store.
+func (s *Service) Cloud() (*CloudConfig, error) {
 	projectBucket, err := s.store.ReqString(environment.S3.ProjectBucket)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get S3 project bucket: %w", err)
@@ -36,10 +36,10 @@ func (s *Service) S3() (*S3Config, error) {
 		return nil, fmt.Errorf("failed to get S3 region: %w", err)
 	}
 
-	return &S3Config{
-		PriceBucket:   priceBucket,
-		ProductBucket: productBucket,
-		ProjectBucket: projectBucket,
-		Region:        region,
+	return &CloudConfig{
+		PriceS3Bucket:   priceBucket,
+		ProductS3Bucket: productBucket,
+		ProjectS3Bucket: projectBucket,
+		Region:          region,
 	}, nil
 }

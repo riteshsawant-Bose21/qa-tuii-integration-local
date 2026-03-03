@@ -72,4 +72,8 @@ const (
 	EndpointDeviceByID = "/:device_id"
 	// EndpointDeviceReset is the endpoint for resetting a device.
 	EndpointDeviceReset = "/:device_id/reset"
+	// EndpointDeviceClaim is the endpoint for claiming an unclaimed device.
+	EndpointDeviceClaim = "/:device_id/claim"
+	// EndpointDeviceRotateCert is the endpoint for rotating a device certificate.
+	EndpointDeviceRotateCert = "/:device_id/rotate-cert"
 )

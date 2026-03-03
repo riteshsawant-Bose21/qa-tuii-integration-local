@@ -14,6 +14,9 @@ import (
 	"time"
 
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/api"
+	cloudIot "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/cloud/iot"
+	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/cloud/storage/cloudfs"
+	sqlpkg "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/cloud/storage/sql"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/config"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/device"
 	devicedb "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/device/db"
@@ -25,8 +28,6 @@ import (
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/user"
 	userdb "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/user/db"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/log"
-	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/storage/cloudfs"
-	sqlpkg "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/storage/sql"
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
@@ -227,14 +228,14 @@ func (suite *BaseIntegrationSuite) setupServices() error {
 	require.NotNil(suite.T(), suite.UserSVC, "Failed to initialize user service")
 
 	// Initialize IoT handler for device service
-	iotHandler, err := cloudfs.NewIoTClient(context.Background(), "us-east-1", loggers.AppLogger)
+	iotHandler, err := cloudIot.NewIoTClient(context.Background(), "us-east-1", loggers.AppLogger)
 	require.NoError(suite.T(), err, "Failed to initialize IoT client")
 
 	// Initialize Device services
 	deviceDBSvc := devicedb.NewService(suite.DB)
 	require.NotNil(suite.T(), deviceDBSvc, "Failed to initialize device database service")
 
-	suite.DeviceSVC = device.NewService(deviceDBSvc, iotHandler)
+	suite.DeviceSVC = device.NewService(deviceDBSvc, projectDBSvc, iotHandler)
 	require.NotNil(suite.T(), suite.DeviceSVC, "Failed to initialize device service")
 
 	// Initialize API server

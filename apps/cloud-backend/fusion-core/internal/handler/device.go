@@ -53,7 +53,7 @@ func (h *DeviceHandler) handleDeviceError(ctx *gin.Context, err error, logger *z
 		response.NotFound(ctx, errMsg)
 	case errorutil.MsgUnauthorized:
 		response.Unauthorized(ctx, errMsg)
-	case errorutil.ErrMsgDeviceAlreadyExists:
+	case errorutil.ErrMsgDeviceAlreadyExists, errorutil.ErrMsgDeviceAlreadyClaimed, errorutil.ErrMsgDeviceNotClaimed:
 		response.BadRequest(ctx, errMsg)
 	default:
 		logger.Error("Device operation failed", zap.String("operation", operation), zap.Error(err))
@@ -174,4 +174,90 @@ func (h *DeviceHandler) ResetDevice(ctx *gin.Context) {
 	}
 
 	response.NoContent(ctx)
+}
+
+// ClaimDevice claims an unclaimed device.
+// @Summary Claim a device
+// @Description Claim an unclaimed device for a user and project
+// @Tags devices
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param device_id path string true "Device ID"
+// @Param body body types.DeviceClaimRequest true "Claim details"
+// @Success 201 {object} types.DeviceClaimResponse "Successfully claimed device"
+// @Failure 400 {object} types.ErrorResponse "Bad request - Invalid payload or device already claimed"
+// @Failure 401 {object} types.ErrorResponse "Unauthorized - User not authorized"
+// @Failure 404 {object} types.ErrorResponse "Device or project not found"
+// @Failure 500 {object} types.ErrorResponse "Internal server error"
+// @Router /devices/{device_id}/claim [post]
+func (h *DeviceHandler) ClaimDevice(ctx *gin.Context) {
+	logger, user, ok := h.getLoggerAndUser(ctx)
+	if !ok {
+		return
+	}
+
+	deviceID := ctx.Param("device_id")
+	if deviceID == "" {
+		response.BadRequest(ctx, "device_id is required")
+		return
+	}
+
+	var req types.DeviceClaimRequest
+	if err := ctx.ShouldBindJSON(&req); err != nil {
+		logger.Error("Invalid request payload", zap.Error(err))
+		response.BadRequest(ctx, err.Error())
+		return
+	}
+
+	res, err := h.device.ClaimDevice(ctx, deviceID, &req, *user, logger)
+	if err != nil {
+		h.handleDeviceError(ctx, err, logger, "claim")
+		return
+	}
+
+	response.Created(ctx, res)
+}
+
+// RotateCertificate rotates the certificate for a device.
+// @Summary Rotate device certificate
+// @Description Creates a new certificate, attaches it to the device, and marks the old certificate as inactive
+// @Tags devices
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param device_id path string true "Device ID"
+// @Param body body types.DeviceRotateCertRequest true "Certificate rotation details"
+// @Success 200 {object} types.DeviceRotateCertResponse "Successfully rotated certificate"
+// @Failure 400 {object} types.ErrorResponse "Bad request - Invalid payload"
+// @Failure 401 {object} types.ErrorResponse "Unauthorized - User not authorized"
+// @Failure 404 {object} types.ErrorResponse "Device not found"
+// @Failure 500 {object} types.ErrorResponse "Internal server error"
+// @Router /devices/{device_id}/rotate-cert [post]
+func (h *DeviceHandler) RotateCertificate(ctx *gin.Context) {
+	logger, user, ok := h.getLoggerAndUser(ctx)
+	if !ok {
+		return
+	}
+
+	deviceID := ctx.Param("device_id")
+	if deviceID == "" {
+		response.BadRequest(ctx, "device_id is required")
+		return
+	}
+
+	var req types.DeviceRotateCertRequest
+	if err := ctx.ShouldBindJSON(&req); err != nil {
+		logger.Error("Invalid request payload", zap.Error(err))
+		response.BadRequest(ctx, err.Error())
+		return
+	}
+
+	res, err := h.device.RotateCertificate(ctx, deviceID, &req, *user, logger)
+	if err != nil {
+		h.handleDeviceError(ctx, err, logger, "rotate-cert")
+		return
+	}
+
+	response.OK(ctx, res)
 }

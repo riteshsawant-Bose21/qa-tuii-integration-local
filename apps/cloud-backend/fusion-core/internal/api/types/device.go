@@ -30,6 +30,27 @@ type DeviceUpdateRequest struct {
 	IsPrimary       *bool  `json:"is_primary"`
 }
 
+// DeviceClaimRequest represents the request payload for claiming an unclaimed device.
+type DeviceClaimRequest struct {
+	CSR       string `json:"csr" binding:"required"`
+	ProjectID string `json:"project_id" binding:"required"`
+}
+
+// DeviceClaimResponse represents the response payload after successfully claiming a device.
+type DeviceClaimResponse struct {
+	Certificate string `json:"certificate"`
+}
+
+// DeviceRotateCertRequest represents the request payload for rotating a device certificate.
+type DeviceRotateCertRequest struct {
+	CSR string `json:"csr" binding:"required"`
+}
+
+// DeviceRotateCertResponse represents the response payload after successfully rotating a certificate.
+type DeviceRotateCertResponse struct {
+	Certificate string `json:"certificate"`
+}
+
 // CertificateInfo contains IoT certificate details for a device.
 type CertificateInfo struct {
 	ID  string // Certificate ID from AWS IoT

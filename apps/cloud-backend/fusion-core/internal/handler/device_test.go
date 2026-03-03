@@ -66,6 +66,22 @@ func (m *MockDeviceService) ResetDevice(ctx context.Context, deviceID string, us
 	return args.Error(0)
 }
 
+func (m *MockDeviceService) ClaimDevice(ctx context.Context, deviceID string, request *types.DeviceClaimRequest, user types.UserAuthorizationResponse, logger *zap.Logger) (*types.DeviceClaimResponse, error) {
+	args := m.Called(ctx, deviceID, request, user, logger)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*types.DeviceClaimResponse), args.Error(1)
+}
+
+func (m *MockDeviceService) RotateCertificate(ctx context.Context, deviceID string, request *types.DeviceRotateCertRequest, user types.UserAuthorizationResponse, logger *zap.Logger) (*types.DeviceRotateCertResponse, error) {
+	args := m.Called(ctx, deviceID, request, user, logger)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*types.DeviceRotateCertResponse), args.Error(1)
+}
+
 // ---------------------------------------------------------------------------
 // Test Setup Helpers
 // ---------------------------------------------------------------------------
@@ -90,6 +106,8 @@ func setupDeviceTest() (*gin.Engine, *MockDeviceService) {
 	r.POST(devicesEndpoint, handler.CreateDevice)
 	r.PATCH(devicesEndpoint+"/:device_id", handler.UpdateDevice)
 	r.DELETE(devicesEndpoint+"/:device_id/reset", handler.ResetDevice)
+	r.POST(devicesEndpoint+"/:device_id/claim", handler.ClaimDevice)
+	r.POST(devicesEndpoint+"/:device_id/rotate-cert", handler.RotateCertificate)
 
 	return r, mockSvc
 }
@@ -112,6 +130,8 @@ func setupDeviceTestWithoutLogger() *gin.Engine {
 	r.POST(devicesEndpoint, handler.CreateDevice)
 	r.PATCH(devicesEndpoint+"/:device_id", handler.UpdateDevice)
 	r.DELETE(devicesEndpoint+"/:device_id/reset", handler.ResetDevice)
+	r.POST(devicesEndpoint+"/:device_id/claim", handler.ClaimDevice)
+	r.POST(devicesEndpoint+"/:device_id/rotate-cert", handler.RotateCertificate)
 
 	return r
 }
@@ -132,6 +152,8 @@ func setupDeviceTestWithoutUserAuth() *gin.Engine {
 	r.POST(devicesEndpoint, handler.CreateDevice)
 	r.PATCH(devicesEndpoint+"/:device_id", handler.UpdateDevice)
 	r.DELETE(devicesEndpoint+"/:device_id/reset", handler.ResetDevice)
+	r.POST(devicesEndpoint+"/:device_id/claim", handler.ClaimDevice)
+	r.POST(devicesEndpoint+"/:device_id/rotate-cert", handler.RotateCertificate)
 
 	return r
 }
@@ -565,6 +587,374 @@ func TestResetDevice(t *testing.T) {
 		r := setupDeviceTestWithoutUserAuth()
 
 		httpReq := httptest.NewRequest(http.MethodDelete, devicesEndpoint+"/"+testDeviceIDConst+"/reset", nil)
+		w := httptest.NewRecorder()
+
+		r.ServeHTTP(w, httpReq)
+
+		assert.Equal(t, http.StatusUnauthorized, w.Code)
+	})
+}
+
+// ---------------------------------------------------------------------------
+// ClaimDevice Tests
+// ---------------------------------------------------------------------------
+
+func TestClaimDevice(t *testing.T) {
+	t.Run("successfully claims device", func(t *testing.T) {
+		r, mockSvc := setupDeviceTest()
+
+		req := &types.DeviceClaimRequest{
+			CSR:       testCSRConst,
+			ProjectID: testProjectIDConst,
+		}
+		expectedResponse := &types.DeviceClaimResponse{
+			Certificate: testCertPemConst,
+		}
+
+		mockSvc.On("ClaimDevice", mock.Anything, testDeviceIDConst, req, mock.AnythingOfType("types.UserAuthorizationResponse"), mock.AnythingOfType("*zap.Logger")).
+			Return(expectedResponse, nil)
+
+		body, _ := json.Marshal(req)
+		httpReq := httptest.NewRequest(http.MethodPost, devicesEndpoint+"/"+testDeviceIDConst+"/claim", bytes.NewBuffer(body))
+		httpReq.Header.Set("Content-Type", "application/json")
+		w := httptest.NewRecorder()
+
+		r.ServeHTTP(w, httpReq)
+
+		assert.Equal(t, http.StatusCreated, w.Code)
+
+		var response types.DeviceClaimResponse
+		err := json.Unmarshal(w.Body.Bytes(), &response)
+		assert.NoError(t, err)
+		assert.Equal(t, testCertPemConst, response.Certificate)
+		mockSvc.AssertExpectations(t)
+	})
+
+	t.Run("returns bad request on invalid JSON", func(t *testing.T) {
+		r, _ := setupDeviceTest()
+
+		httpReq := httptest.NewRequest(http.MethodPost, devicesEndpoint+"/"+testDeviceIDConst+"/claim", bytes.NewBufferString("invalid json"))
+		httpReq.Header.Set("Content-Type", "application/json")
+		w := httptest.NewRecorder()
+
+		r.ServeHTTP(w, httpReq)
+
+		assert.Equal(t, http.StatusBadRequest, w.Code)
+	})
+
+	t.Run("returns bad request when CSR missing", func(t *testing.T) {
+		r, _ := setupDeviceTest()
+
+		req := &types.DeviceClaimRequest{
+			ProjectID: testProjectIDConst,
+			// CSR is required but missing
+		}
+
+		body, _ := json.Marshal(req)
+		httpReq := httptest.NewRequest(http.MethodPost, devicesEndpoint+"/"+testDeviceIDConst+"/claim", bytes.NewBuffer(body))
+		httpReq.Header.Set("Content-Type", "application/json")
+		w := httptest.NewRecorder()
+
+		r.ServeHTTP(w, httpReq)
+
+		assert.Equal(t, http.StatusBadRequest, w.Code)
+	})
+
+	t.Run("returns not found when device not found", func(t *testing.T) {
+		r, mockSvc := setupDeviceTest()
+
+		req := &types.DeviceClaimRequest{
+			CSR:       testCSRConst,
+			ProjectID: testProjectIDConst,
+		}
+
+		mockSvc.On("ClaimDevice", mock.Anything, testDeviceIDConst, req, mock.AnythingOfType("types.UserAuthorizationResponse"), mock.AnythingOfType("*zap.Logger")).
+			Return(nil, errors.New(errorutil.ErrMsgDeviceNotFound))
+
+		body, _ := json.Marshal(req)
+		httpReq := httptest.NewRequest(http.MethodPost, devicesEndpoint+"/"+testDeviceIDConst+"/claim", bytes.NewBuffer(body))
+		httpReq.Header.Set("Content-Type", "application/json")
+		w := httptest.NewRecorder()
+
+		r.ServeHTTP(w, httpReq)
+
+		assert.Equal(t, http.StatusNotFound, w.Code)
+		mockSvc.AssertExpectations(t)
+	})
+
+	t.Run("returns bad request when device already claimed", func(t *testing.T) {
+		r, mockSvc := setupDeviceTest()
+
+		req := &types.DeviceClaimRequest{
+			CSR:       testCSRConst,
+			ProjectID: testProjectIDConst,
+		}
+
+		mockSvc.On("ClaimDevice", mock.Anything, testDeviceIDConst, req, mock.AnythingOfType("types.UserAuthorizationResponse"), mock.AnythingOfType("*zap.Logger")).
+			Return(nil, errors.New(errorutil.ErrMsgDeviceAlreadyClaimed))
+
+		body, _ := json.Marshal(req)
+		httpReq := httptest.NewRequest(http.MethodPost, devicesEndpoint+"/"+testDeviceIDConst+"/claim", bytes.NewBuffer(body))
+		httpReq.Header.Set("Content-Type", "application/json")
+		w := httptest.NewRecorder()
+
+		r.ServeHTTP(w, httpReq)
+
+		assert.Equal(t, http.StatusBadRequest, w.Code)
+		mockSvc.AssertExpectations(t)
+	})
+
+	t.Run("returns not found when project not found", func(t *testing.T) {
+		r, mockSvc := setupDeviceTest()
+
+		req := &types.DeviceClaimRequest{
+			CSR:       testCSRConst,
+			ProjectID: testProjectIDConst,
+		}
+
+		mockSvc.On("ClaimDevice", mock.Anything, testDeviceIDConst, req, mock.AnythingOfType("types.UserAuthorizationResponse"), mock.AnythingOfType("*zap.Logger")).
+			Return(nil, errors.New(errorutil.ErrMsgProjectNotFound))
+
+		body, _ := json.Marshal(req)
+		httpReq := httptest.NewRequest(http.MethodPost, devicesEndpoint+"/"+testDeviceIDConst+"/claim", bytes.NewBuffer(body))
+		httpReq.Header.Set("Content-Type", "application/json")
+		w := httptest.NewRecorder()
+
+		r.ServeHTTP(w, httpReq)
+
+		assert.Equal(t, http.StatusNotFound, w.Code)
+		mockSvc.AssertExpectations(t)
+	})
+
+	t.Run("returns internal error on service failure", func(t *testing.T) {
+		r, mockSvc := setupDeviceTest()
+
+		req := &types.DeviceClaimRequest{
+			CSR:       testCSRConst,
+			ProjectID: testProjectIDConst,
+		}
+
+		mockSvc.On("ClaimDevice", mock.Anything, testDeviceIDConst, req, mock.AnythingOfType("types.UserAuthorizationResponse"), mock.AnythingOfType("*zap.Logger")).
+			Return(nil, errors.New("unexpected error"))
+
+		body, _ := json.Marshal(req)
+		httpReq := httptest.NewRequest(http.MethodPost, devicesEndpoint+"/"+testDeviceIDConst+"/claim", bytes.NewBuffer(body))
+		httpReq.Header.Set("Content-Type", "application/json")
+		w := httptest.NewRecorder()
+
+		r.ServeHTTP(w, httpReq)
+
+		assert.Equal(t, http.StatusInternalServerError, w.Code)
+		mockSvc.AssertExpectations(t)
+	})
+
+	t.Run("returns internal error when logger missing", func(t *testing.T) {
+		r := setupDeviceTestWithoutLogger()
+
+		req := &types.DeviceClaimRequest{
+			CSR:       testCSRConst,
+			ProjectID: testProjectIDConst,
+		}
+		body, _ := json.Marshal(req)
+		httpReq := httptest.NewRequest(http.MethodPost, devicesEndpoint+"/"+testDeviceIDConst+"/claim", bytes.NewBuffer(body))
+		httpReq.Header.Set("Content-Type", "application/json")
+		w := httptest.NewRecorder()
+
+		r.ServeHTTP(w, httpReq)
+
+		assert.Equal(t, http.StatusInternalServerError, w.Code)
+	})
+
+	t.Run("returns unauthorized when user auth missing", func(t *testing.T) {
+		r := setupDeviceTestWithoutUserAuth()
+
+		req := &types.DeviceClaimRequest{
+			CSR:       testCSRConst,
+			ProjectID: testProjectIDConst,
+		}
+		body, _ := json.Marshal(req)
+		httpReq := httptest.NewRequest(http.MethodPost, devicesEndpoint+"/"+testDeviceIDConst+"/claim", bytes.NewBuffer(body))
+		httpReq.Header.Set("Content-Type", "application/json")
+		w := httptest.NewRecorder()
+
+		r.ServeHTTP(w, httpReq)
+
+		assert.Equal(t, http.StatusUnauthorized, w.Code)
+	})
+}
+
+// ---------------------------------------------------------------------------
+// RotateCertificate Tests
+// ---------------------------------------------------------------------------
+
+func TestRotateCertificate(t *testing.T) {
+	t.Run("successfully rotates certificate", func(t *testing.T) {
+		r, mockSvc := setupDeviceTest()
+
+		req := &types.DeviceRotateCertRequest{
+			CSR: testCSRConst,
+		}
+		expectedResponse := &types.DeviceRotateCertResponse{
+			Certificate: testCertPemConst,
+		}
+
+		mockSvc.On("RotateCertificate", mock.Anything, testDeviceIDConst, req, mock.AnythingOfType("types.UserAuthorizationResponse"), mock.AnythingOfType("*zap.Logger")).
+			Return(expectedResponse, nil)
+
+		body, _ := json.Marshal(req)
+		httpReq := httptest.NewRequest(http.MethodPost, devicesEndpoint+"/"+testDeviceIDConst+"/rotate-cert", bytes.NewBuffer(body))
+		httpReq.Header.Set("Content-Type", "application/json")
+		w := httptest.NewRecorder()
+
+		r.ServeHTTP(w, httpReq)
+
+		assert.Equal(t, http.StatusOK, w.Code)
+
+		var response types.DeviceRotateCertResponse
+		err := json.Unmarshal(w.Body.Bytes(), &response)
+		assert.NoError(t, err)
+		assert.Equal(t, testCertPemConst, response.Certificate)
+		mockSvc.AssertExpectations(t)
+	})
+
+	t.Run("returns bad request on invalid JSON", func(t *testing.T) {
+		r, _ := setupDeviceTest()
+
+		httpReq := httptest.NewRequest(http.MethodPost, devicesEndpoint+"/"+testDeviceIDConst+"/rotate-cert", bytes.NewBufferString("invalid json"))
+		httpReq.Header.Set("Content-Type", "application/json")
+		w := httptest.NewRecorder()
+
+		r.ServeHTTP(w, httpReq)
+
+		assert.Equal(t, http.StatusBadRequest, w.Code)
+	})
+
+	t.Run("returns bad request when CSR missing", func(t *testing.T) {
+		r, _ := setupDeviceTest()
+
+		req := &types.DeviceRotateCertRequest{
+			// CSR is required but missing
+		}
+
+		body, _ := json.Marshal(req)
+		httpReq := httptest.NewRequest(http.MethodPost, devicesEndpoint+"/"+testDeviceIDConst+"/rotate-cert", bytes.NewBuffer(body))
+		httpReq.Header.Set("Content-Type", "application/json")
+		w := httptest.NewRecorder()
+
+		r.ServeHTTP(w, httpReq)
+
+		assert.Equal(t, http.StatusBadRequest, w.Code)
+	})
+
+	t.Run("returns not found when device not found", func(t *testing.T) {
+		r, mockSvc := setupDeviceTest()
+
+		req := &types.DeviceRotateCertRequest{
+			CSR: testCSRConst,
+		}
+
+		mockSvc.On("RotateCertificate", mock.Anything, testDeviceIDConst, req, mock.AnythingOfType("types.UserAuthorizationResponse"), mock.AnythingOfType("*zap.Logger")).
+			Return(nil, errors.New(errorutil.ErrMsgDeviceNotFound))
+
+		body, _ := json.Marshal(req)
+		httpReq := httptest.NewRequest(http.MethodPost, devicesEndpoint+"/"+testDeviceIDConst+"/rotate-cert", bytes.NewBuffer(body))
+		httpReq.Header.Set("Content-Type", "application/json")
+		w := httptest.NewRecorder()
+
+		r.ServeHTTP(w, httpReq)
+
+		assert.Equal(t, http.StatusNotFound, w.Code)
+		mockSvc.AssertExpectations(t)
+	})
+
+	t.Run("returns bad request when device not claimed", func(t *testing.T) {
+		r, mockSvc := setupDeviceTest()
+
+		req := &types.DeviceRotateCertRequest{
+			CSR: testCSRConst,
+		}
+
+		mockSvc.On("RotateCertificate", mock.Anything, testDeviceIDConst, req, mock.AnythingOfType("types.UserAuthorizationResponse"), mock.AnythingOfType("*zap.Logger")).
+			Return(nil, errors.New(errorutil.ErrMsgDeviceNotClaimed))
+
+		body, _ := json.Marshal(req)
+		httpReq := httptest.NewRequest(http.MethodPost, devicesEndpoint+"/"+testDeviceIDConst+"/rotate-cert", bytes.NewBuffer(body))
+		httpReq.Header.Set("Content-Type", "application/json")
+		w := httptest.NewRecorder()
+
+		r.ServeHTTP(w, httpReq)
+
+		assert.Equal(t, http.StatusBadRequest, w.Code)
+		mockSvc.AssertExpectations(t)
+	})
+
+	t.Run("returns unauthorized when user unauthorized", func(t *testing.T) {
+		r, mockSvc := setupDeviceTest()
+
+		req := &types.DeviceRotateCertRequest{
+			CSR: testCSRConst,
+		}
+
+		mockSvc.On("RotateCertificate", mock.Anything, testDeviceIDConst, req, mock.AnythingOfType("types.UserAuthorizationResponse"), mock.AnythingOfType("*zap.Logger")).
+			Return(nil, errors.New(errorutil.MsgUnauthorized))
+
+		body, _ := json.Marshal(req)
+		httpReq := httptest.NewRequest(http.MethodPost, devicesEndpoint+"/"+testDeviceIDConst+"/rotate-cert", bytes.NewBuffer(body))
+		httpReq.Header.Set("Content-Type", "application/json")
+		w := httptest.NewRecorder()
+
+		r.ServeHTTP(w, httpReq)
+
+		assert.Equal(t, http.StatusUnauthorized, w.Code)
+		mockSvc.AssertExpectations(t)
+	})
+
+	t.Run("returns internal error on service failure", func(t *testing.T) {
+		r, mockSvc := setupDeviceTest()
+
+		req := &types.DeviceRotateCertRequest{
+			CSR: testCSRConst,
+		}
+
+		mockSvc.On("RotateCertificate", mock.Anything, testDeviceIDConst, req, mock.AnythingOfType("types.UserAuthorizationResponse"), mock.AnythingOfType("*zap.Logger")).
+			Return(nil, errors.New("unexpected error"))
+
+		body, _ := json.Marshal(req)
+		httpReq := httptest.NewRequest(http.MethodPost, devicesEndpoint+"/"+testDeviceIDConst+"/rotate-cert", bytes.NewBuffer(body))
+		httpReq.Header.Set("Content-Type", "application/json")
+		w := httptest.NewRecorder()
+
+		r.ServeHTTP(w, httpReq)
+
+		assert.Equal(t, http.StatusInternalServerError, w.Code)
+		mockSvc.AssertExpectations(t)
+	})
+
+	t.Run("returns internal error when logger missing", func(t *testing.T) {
+		r := setupDeviceTestWithoutLogger()
+
+		req := &types.DeviceRotateCertRequest{
+			CSR: testCSRConst,
+		}
+		body, _ := json.Marshal(req)
+		httpReq := httptest.NewRequest(http.MethodPost, devicesEndpoint+"/"+testDeviceIDConst+"/rotate-cert", bytes.NewBuffer(body))
+		httpReq.Header.Set("Content-Type", "application/json")
+		w := httptest.NewRecorder()
+
+		r.ServeHTTP(w, httpReq)
+
+		assert.Equal(t, http.StatusInternalServerError, w.Code)
+	})
+
+	t.Run("returns unauthorized when user auth missing", func(t *testing.T) {
+		r := setupDeviceTestWithoutUserAuth()
+
+		req := &types.DeviceRotateCertRequest{
+			CSR: testCSRConst,
+		}
+		body, _ := json.Marshal(req)
+		httpReq := httptest.NewRequest(http.MethodPost, devicesEndpoint+"/"+testDeviceIDConst+"/rotate-cert", bytes.NewBuffer(body))
+		httpReq.Header.Set("Content-Type", "application/json")
 		w := httptest.NewRecorder()
 
 		r.ServeHTTP(w, httpReq)

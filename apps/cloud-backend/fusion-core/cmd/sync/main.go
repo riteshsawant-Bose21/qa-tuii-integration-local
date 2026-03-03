@@ -12,12 +12,12 @@ import (
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/log"
 	"go.uber.org/zap"
 
+	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/cloud/storage/cloudfs"
+	sql "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/cloud/storage/sql"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/environment"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/product"
 	productdb "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/product/db"
 	serverSync "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/server/sync"
-	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/storage/cloudfs"
-	sql "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/storage/sql"
 )
 
 // main supports Lambda, CLI, and HTTP server execution
@@ -120,7 +120,7 @@ func main() {
 	}
 
 	// Initialize S3 client
-	s3Handler, err := cloudfs.NewS3Client(context.Background(), syncCfg.S3.Region)
+	s3Handler, err := cloudfs.NewS3Client(context.Background(), syncCfg.Cloud.Region)
 	if err != nil {
 		logger.Fatal("Failed to initialize S3 client", zap.Error(err))
 	}
@@ -135,7 +135,7 @@ func main() {
 
 	syncRequestRegion := *region
 	if syncRequestRegion == "" {
-		syncRequestRegion = syncCfg.S3.Region
+		syncRequestRegion = syncCfg.Cloud.Region
 	}
 
 	syncRequest := &types.SyncRequest{
