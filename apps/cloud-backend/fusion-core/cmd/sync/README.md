@@ -57,7 +57,7 @@ Set the following as Lambda environment variables:
 POSTGRES_HOST=localhost
 POSTGRES_PORT=5432
 POSTGRES_USER=fusion_cloud
-POSTGRES_PASS=bose123
+POSTGRES_PASS=your_password
 POSTGRES_INSTANCE=fusion_cloud
 DB_SSLMODE=disable
 
