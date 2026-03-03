@@ -110,11 +110,20 @@ struct fusion_gpt
   u64 sq_err_sum;
   u32 err_count;
   int dac_target;
+
+  /* Si5351b gain control */
+  struct i2c_client *si5351b_client;
+  u32 si_gain_current;
+  u32 si_gain_target;
+  u32 si_gain_min;
+  u32 si_gain_max;
+  bool si_gain_pending;
 };
 
 
 static struct fusion_gpt *gpt_singleton;
 static DEFINE_MUTEX(gpt_singleton_lock);
+static int si5351b_write_gain(struct fusion_gpt *g, u32 gain);
 
 static inline u32 rdl(struct fusion_gpt *g, u32 off) { return readl_relaxed(g->base + off); }
 static inline void wrl(struct fusion_gpt *g, u32 v, u32 off) { writel_relaxed(v, g->base + off); }
@@ -412,23 +421,78 @@ static irqreturn_t gpt_irq(int irq, void *dev_id)
           g->error_integrator += freq_error;
 
           /* Threshold in ticks for dithering */
-          const int INTEGRATOR_LIMIT = 5; 
+          const int INTEGRATOR_LIMIT = 5;
+          const int P_THRESHOLD = 20;
+          const int P_DIV = 10;
+          const int P_MAX_STEP = 10;
+
+          /* Proportional term: only act when error exceeds threshold */
+          {
+              long abs_err = (freq_error < 0) ? -freq_error : freq_error;
+              int p_step = 0;
+
+              if (abs_err > P_THRESHOLD) {
+                  p_step = (int)(abs_err / P_DIV);
+                  if (p_step < 1)
+                      p_step = 1;
+                  if (p_step > P_MAX_STEP)
+                      p_step = P_MAX_STEP;
+
+                  if (freq_error > 0)
+                      g->dac_target -= p_step; /* too fast: slow down */
+                  else
+                      g->dac_target += p_step; /* too slow: speed up */
+              }
+          }
 
           if (g->error_integrator > INTEGRATOR_LIMIT) {
               /* Positive error (too fast): slow down */
-              g->dac_target--; 
+              g->dac_target--;
               g->error_integrator = 0;
-          } 
+          }
           else if (g->error_integrator < -INTEGRATOR_LIMIT) {
               /* Negative error (too slow): speed up */
               g->dac_target++;
               g->error_integrator = 0;
           }
-          // g->dac_request = g->dac_target; 
-          if (g->dac_target > 255)
-              g->dac_target = 255;
-          else if (g->dac_target < 0)
-              g->dac_target = 0;
+          // g->dac_request = g->dac_target;
+          {
+              const u32 SI_GAIN_STEP = 10000;
+              bool sat_high = (g->dac_target > 255);
+              bool sat_low = (g->dac_target < 0);
+
+              if (sat_high || sat_low) {
+                  if (sat_high) {
+                      g->dac_target = 255;
+                      pr_warn_ratelimited("fusion_gpt: DAC saturated high (freq_err=%ld tick, integ=%ld)\n",
+                                          freq_error, g->error_integrator);
+                  } else {
+                      g->dac_target = 0;
+                      pr_warn_ratelimited("fusion_gpt: DAC saturated low (freq_err=%ld tick, integ=%ld)\n",
+                                          freq_error, g->error_integrator);
+                  }
+
+                  if (g->si5351b_client) {
+                      if (!READ_ONCE(g->si_gain_pending)) {
+                          u32 next_gain = g->si_gain_current + SI_GAIN_STEP;
+                          if (next_gain > g->si_gain_max)
+                              next_gain = g->si_gain_max;
+
+                          if (next_gain > g->si_gain_current) {
+                              WRITE_ONCE(g->si_gain_target, next_gain);
+                              WRITE_ONCE(g->si_gain_pending, true);
+                              pr_info_ratelimited("fusion_gpt: Queued Si5351b gain increase to %u\n",
+                                                  next_gain);
+                          } else {
+                              pr_debug_ratelimited("fusion_gpt: DAC saturated at max Si5351b gain (%u)\n",
+                                                   g->si_gain_current);
+                          }
+                      }
+                  } else {
+                      pr_debug_ratelimited("fusion_gpt: Si5351b client missing, cannot adjust gain\n");
+                  }
+              }
+          }
 
           /* 48kHz offset: time from last 48k edge to current PPS */
           long if2_offset_ns = 0;
@@ -455,7 +519,7 @@ static irqreturn_t gpt_irq(int irq, void *dev_id)
           }
 
           if (__ratelimit(&_rs)) {
-              pr_alert("fusion_gpt: [PPS] diff=%llutick err=%ldtick rms=%utick | [48K] off=%ldns | DAC=%d\n",
+              pr_alert("fusion_gpt: [PPS] diff=%llu ticks err=%ld ticks rms=%u ticks | [48K] off=%ldns | DAC=%d\n",
                        diff, freq_error, rms_jitter, if2_offset_ns, g->dac_target);
               
               g->sq_err_sum = 0;
@@ -584,32 +648,65 @@ static void fusion_dac_work_handler(struct work_struct *work)
     struct fusion_gpt *g = container_of(work, struct fusion_gpt, dac_work);
     int ret;
     u8 buf[3];
-
     int target = READ_ONCE(g->dac_target);
+    bool gain_pending = READ_ONCE(g->si_gain_pending);
+    u32 gain_target = READ_ONCE(g->si_gain_target);
 
     target = clamp(target, 0, 255);
 
-    if (target == g->current_dac_value) {
-        return;
+    if (target != g->current_dac_value) {
+        buf[0] = 0x00; /* Register/Command Byte (device specific) */
+        buf[1] = 0x00; /* Often MSB or Control */
+        buf[2] = (u8)(target & 0xFF);
+
+        if (g->dac_client) {
+            ret = i2c_master_send(g->dac_client, buf, 3);
+
+            if (ret < 0) {
+                pr_err_ratelimited("fusion_gpt: I2C DAC write failed: %d\n", ret);
+            } else {
+                g->current_dac_value = target;
+
+                pr_info_ratelimited("fusion_gpt: Updated DAC to %u (Integrator Move)\n", target);
+            }
+        } else {
+            pr_info_ratelimited("fusion_gpt: DAC client missing\n");
+        }
     }
 
-    buf[0] = 0x00; /* Register/Command Byte (device specific) */
-    buf[1] = 0x00; /* Often MSB or Control */
-    buf[2] = (u8)(target & 0xFF); 
-
-    if (g->dac_client) {
-        ret = i2c_master_send(g->dac_client, buf, 3);
-        
-        if (ret < 0) {
-            pr_err_ratelimited("fusion_gpt: I2C DAC write failed: %d\n", ret);
+    if (gain_pending) {
+        gain_target = clamp(gain_target, g->si_gain_min, g->si_gain_max);
+        if (gain_target > g->si_gain_current) {
+            if (si5351b_write_gain(g, gain_target) >= 0) {
+                g->si_gain_current = gain_target;
+                WRITE_ONCE(g->si_gain_pending, false);
+                pr_info_ratelimited("fusion_gpt: Si5351b gain increased to %u\n",
+                                    g->si_gain_current);
+            }
         } else {
-            g->current_dac_value = target;
-            
-            pr_info_ratelimited("fusion_gpt: Updated DAC to %u (Integrator Move)\n", target);
+            WRITE_ONCE(g->si_gain_pending, false);
         }
-    } else {
-        pr_info_ratelimited("fusion_gpt: DAC client missing\n");
-    } 
+    }
+}
+
+static int si5351b_write_gain(struct fusion_gpt *g, u32 gain)
+{
+    int ret;
+    u8 buf[4];
+
+    if (!g->si5351b_client)
+        return -ENODEV;
+
+    buf[0] = 0xA2;
+    buf[1] = (u8)(gain & 0xFF);
+    buf[2] = (u8)((gain >> 8) & 0xFF);
+    buf[3] = (u8)((gain >> 16) & 0xFF);
+
+    ret = i2c_master_send(g->si5351b_client, buf, 4);
+    if (ret < 0)
+        pr_err_ratelimited("fusion_gpt: Si5351b gain write failed: %d\n", ret);
+
+    return ret;
 }
 
 static int gpt_start(struct fusion_gpt *g)
@@ -657,6 +754,9 @@ static int gpt_probe(struct platform_device *pdev)
   struct i2c_adapter *adapter;
   struct i2c_board_info dac_info = {
       I2C_BOARD_INFO("mcp4725", 0x62), // Use DAC's name or a dummy string
+  };
+  struct i2c_board_info si_info = {
+      I2C_BOARD_INFO("si5351b", 0x60),
   };
 
 	g = devm_kzalloc(&pdev->dev, sizeof(*g), GFP_KERNEL);
@@ -706,6 +806,11 @@ static int gpt_probe(struct platform_device *pdev)
 
   /* DAC handler */
   g->dac_target = 128;
+  g->si_gain_min = 40000;
+  g->si_gain_max = 250000;
+  g->si_gain_current = g->si_gain_min;
+  g->si_gain_target = g->si_gain_current;
+  g->si_gain_pending = false;
   adapter = i2c_get_adapter(0); /* Bus 0 */
   if (!adapter) {
     dev_dbg(&pdev->dev, "I2C bus not ready yet, deferring probe...\n");
@@ -713,15 +818,26 @@ static int gpt_probe(struct platform_device *pdev)
     goto err_disable_clks;
   }
   g->dac_client = i2c_new_client_device(adapter, &dac_info);
-  i2c_put_adapter(adapter); // Release the adapter reference once client is made
 
   if (IS_ERR(g->dac_client)) {
     dev_err(&pdev->dev, "Failed to create I2C client for DAC\n");
     ret = PTR_ERR(g->dac_client);
+    i2c_put_adapter(adapter); // Release the adapter reference once client is made
     goto err_disable_clks;
   } else {
     INIT_WORK(&g->dac_work, fusion_dac_work_handler);
   }
+
+  g->si5351b_client = i2c_new_client_device(adapter, &si_info);
+  if (IS_ERR(g->si5351b_client)) {
+    dev_err(&pdev->dev, "Failed to create I2C client for Si5351b\n");
+    g->si5351b_client = NULL;
+  } else {
+    if (si5351b_write_gain(g, g->si_gain_current) < 0)
+      dev_err(&pdev->dev, "Failed to initialize Si5351b gain\n");
+  }
+
+  i2c_put_adapter(adapter); // Release the adapter reference once client is made
 
 	ret = gpt_start(g);
 	if (ret) goto err_disable_clks;
@@ -758,8 +874,10 @@ static void gpt_remove(struct platform_device *pdev)
 	/* Gate clocks */
 	clk_disable_unprepare(g->clk_per);
 	clk_disable_unprepare(g->clk_ipg);
-  if (g->dac_client)
-    i2c_unregister_device(g->dac_client);
+	if (g->dac_client)
+		i2c_unregister_device(g->dac_client);
+	if (g->si5351b_client)
+		i2c_unregister_device(g->si5351b_client);
 }
 
 static const struct of_device_id of_match[] = {
@@ -781,4 +899,4 @@ module_platform_driver(drv);
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR("Bose Pro");
 MODULE_DESCRIPTION("GPT1 SHIM EXPORTING 1/3MS TICKS");
-MODULE_VERSION("1.0.1");
+MODULE_VERSION("1.0.3");
