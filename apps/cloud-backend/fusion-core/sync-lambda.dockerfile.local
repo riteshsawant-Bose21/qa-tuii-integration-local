@@ -1,0 +1,30 @@
+# Stage 1 Builder
+FROM golang:1.24-alpine AS builder
+
+RUN apk add --no-cache ca-certificates
+
+WORKDIR /app
+
+COPY . .
+
+RUN go mod download
+
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build \
+    -tags lambda.norpc -ldflags="-s -w" -trimpath \
+    -o bootstrap ./cmd/sync/main.go
+
+# Stage 2: Runtime
+# assumed the x86_64 image for local testing with RIE, change based on local arch
+FROM --platform=linux/amd64 public.ecr.aws/lambda/provided:al2023-x86_64
+
+COPY --from=builder /app/bootstrap /var/task/bootstrap
+COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
+
+# RIE and entry script for local testing
+COPY aws-lambda-rie /usr/local/bin/aws-lambda-rie
+RUN chmod +x /usr/local/bin/aws-lambda-rie
+COPY entry.sh /entry.sh
+RUN chmod +x /entry.sh
+
+ENTRYPOINT ["/entry.sh"]
+CMD ["bootstrap"]
