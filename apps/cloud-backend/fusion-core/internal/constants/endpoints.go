@@ -75,4 +75,5 @@ const (
 	EndpointFirmwareDownload        = "/updates/:platform/:version/download"
 	EndpointFirmwareUpdateLog       = "/updates/log"
 	EndpointFirmwareDeploy          = "/releases/:releaseID/deploy"
+	EndpointBundleDownload          = "/bundles/:bundleId/request-download-url"
 )

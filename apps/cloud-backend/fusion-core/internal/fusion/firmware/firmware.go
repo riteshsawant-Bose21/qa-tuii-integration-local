@@ -193,11 +193,11 @@ func (s *Service) CheckForUpdate(ctx context.Context, req *types.CheckForUpdateR
 
 	if compatibleBundle != nil {
 		// A compatible bundle was found. Check if the firmware requirement is met.
-		currentFirmwareSemver, err := validation.ParseSemver(req.CurrentFirmwareVersion)
+		currentFirmwareSemver, err := validation.ParseSemanticVersion(req.CurrentFirmwareVersion)
 		if err != nil {
 			return nil, fmt.Errorf("invalid current firmware version: %w", err)
 		}
-		minPrevFirmwareSemver, err := validation.ParseSemver(compatibleBundle.MinPrevVersion)
+		minPrevFirmwareSemver, err := validation.ParseSemanticVersion(compatibleBundle.MinPrevVersion)
 		if err != nil {
 			return nil, fmt.Errorf("invalid min_prev_version in bundle %s: %w", compatibleBundle.Version, err)
 		}
@@ -227,11 +227,11 @@ func (s *Service) CheckForUpdate(ctx context.Context, req *types.CheckForUpdateR
 
 	if latestCompatibleBundle != nil {
 		// A newer bundle exists that is compatible with the current firmware, but it requires a newer app version.
-		currentAppSemver, err := validation.ParseSemver(req.CurrentDesktopAppVersion)
+		currentAppSemver, err := validation.ParseSemanticVersion(req.CurrentDesktopAppVersion)
 		if err != nil {
 			return nil, fmt.Errorf("invalid current desktop app version: %w", err)
 		}
-		minAppSemver, err := validation.ParseSemver(latestCompatibleBundle.MinDesktopAppVersion)
+		minAppSemver, err := validation.ParseSemanticVersion(latestCompatibleBundle.MinDesktopAppVersion)
 		if err != nil {
 			return nil, fmt.Errorf("invalid min_desktop_app_version in bundle %s: %w", latestCompatibleBundle.Version, err)
 		}
@@ -350,6 +350,52 @@ func (s *Service) GetArtifactDownloadURL(ctx context.Context, platform, version 
 		DownloadURL: downloadURL,
 		Checksum:    release.FileChecksum,
 	}, nil
+}
+
+func (s *Service) GetBundleDownloadURL(ctx context.Context, bundleID string, logger *zap.Logger) (*types.DownloadArtifactResponse, error) {
+	// Get bundle by ID
+	bundle, err := s.dbService.GetBundleByID(ctx, bundleID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get bundle: %w", err)
+	}
+	if bundle == nil {
+		return nil, errorutil.ErrBundleNotFound
+	}
+
+	// Generate S3 object key
+	objectKey, err := s.generateBundleArtifactKey(bundle.Version)
+	if err != nil {
+		return nil, fmt.Errorf("failed to generate bundle artifact key: %w", err)
+	}
+
+	// Generate presigned GET URL with a 5-hour TTL
+	downloadURL, err := s.presigner.PresignGet(ctx, objectKey, 5*time.Hour, logger)
+	if err != nil {
+		return nil, fmt.Errorf("failed to generate download URL: %v", err)
+	}
+
+	return &types.DownloadArtifactResponse{
+		DownloadURL: downloadURL,
+		Checksum:    bundle.Checksum,
+	}, nil
+}
+
+// generateBundleArtifactKey constructs the S3 object key for a given bundle version.
+// It uses the pre-release tag (e.g., "alpha", "beta") as the channel in the S3 path.
+// If no pre-release tag is present, it defaults to the "stable" channel.
+func (s *Service) generateBundleArtifactKey(version string) (string, error) {
+	parsedVersion, err := validation.ParseSemanticVersion(version)
+	if err != nil {
+		return "", fmt.Errorf("invalid bundle version for generating key: %w", err)
+	}
+
+	channel := ChannelStable
+	if parsedVersion.PrereleaseFlag != "" {
+		channel = parsedVersion.PrereleaseFlag
+	}
+
+	fileName := fmt.Sprintf("fusion-bundle-%s.zip", version)
+	return fmt.Sprintf("bundles/%s/%s", channel, fileName), nil
 }
 
 func (s *Service) ListReleases(ctx context.Context, platform string, page, limit int, minVersion string) (*types.FirmwareReleaseListResponse, error) {

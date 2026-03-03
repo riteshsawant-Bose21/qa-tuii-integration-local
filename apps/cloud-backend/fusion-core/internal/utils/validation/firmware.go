@@ -9,34 +9,42 @@ import (
 )
 
 type ParsedVersion struct {
-	Major      int
-	Minor      int
-	Patch      int
-	Prerelease string
+	Major          int
+	Minor          int
+	Patch          int
+	PrereleaseFlag string
+	PrereleaseVer  int
 }
 
-func ParseSemver(version string) (*ParsedVersion, error) {
+func ParseSemanticVersion(version string) (*ParsedVersion, error) {
 	if err := ValidateFirmwareVersionFormat(version); err != nil {
 		return nil, err
 	}
 
-	parts := strings.SplitN(version, "-", 2)
-	versionNums := strings.Split(parts[0], ".")
+	mainParts := strings.SplitN(version, "-", 2)
+	versionNums := strings.Split(mainParts[0], ".")
 
 	major, _ := strconv.Atoi(versionNums[0])
 	minor, _ := strconv.Atoi(versionNums[1])
 	patch, _ := strconv.Atoi(versionNums[2])
 
-	prerelease := ""
-	if len(parts) > 1 {
-		prerelease = parts[1]
+	prereleaseFlag := ""
+	prereleaseVer := 0
+
+	if len(mainParts) > 1 {
+		prereleaseParts := strings.SplitN(mainParts[1], ".", 2)
+		prereleaseFlag = prereleaseParts[0]
+		if len(prereleaseParts) > 1 {
+			prereleaseVer, _ = strconv.Atoi(prereleaseParts[1])
+		}
 	}
 
 	return &ParsedVersion{
-		Major:      major,
-		Minor:      minor,
-		Patch:      patch,
-		Prerelease: prerelease,
+		Major:          major,
+		Minor:          minor,
+		Patch:          patch,
+		PrereleaseFlag: prereleaseFlag,
+		PrereleaseVer:  prereleaseVer,
 	}, nil
 }
 

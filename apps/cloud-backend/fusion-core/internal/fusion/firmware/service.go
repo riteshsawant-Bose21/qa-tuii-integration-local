@@ -39,6 +39,7 @@ type DatabaseService interface {
 	GetLatestCompatibleBundle(ctx context.Context, currentFirmwareVersion string, currentDesktopAppVersion string) (*model.Bundle, error)
 	GetLatestApprovedBundleNewerThan(ctx context.Context, currentFirmwareVersion string) (*model.Bundle, error)
 	GetLatestBundleCompatibleWithFirmware(ctx context.Context, currentFirmwareVersion string) (*model.Bundle, error)
+	GetBundleDownloadURL(ctx context.Context, bundleID string, logger *zap.Logger) (*types.DownloadArtifactResponse, error)
 }
 
 // PresignerService defines the interface for generating presigned URLs.

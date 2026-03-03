@@ -8,6 +8,7 @@ import (
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/api/types"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/utils/errorutil"
+	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/utils/validation"
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
 )
@@ -470,4 +471,43 @@ func (h *FirmwareUpdateHandler) DeployRelease(ctx *gin.Context) {
 	}
 
 	response.NoContent(ctx)
+}
+
+// GetBundleDownloadURL generates a presigned download URL for a firmware bundle
+// @Summary Get Firmware Bundle Download URL
+// @Description Generates a presigned S3 URL for downloading a specific firmware bundle artifact. The URL is valid for 5 hours and includes the file checksum for integrity verification.
+// @Tags Firmware Update - Client API
+// @Accept json
+// @Produce json
+// @Param bundleId path string true "Unique identifier of the firmware bundle"
+// @Success 200 {object} types.DownloadArtifactResponse "Presigned download URL and file checksum"
+// @Failure 400 {object} types.ErrorResponse "Missing or invalid bundleId"
+// @Failure 404 {object} types.ErrorResponse "Firmware bundle not found"
+// @Failure 500 {object} types.ErrorResponse "Internal server error"
+// @Router /firmware/bundles/{bundleId}/download [get]
+func (h *FirmwareUpdateHandler) GetBundleDownloadURL(c *gin.Context) {
+
+	bundleID := c.Param("bundleId")
+	if !validation.IsValidUUID(bundleID) {
+		response.BadRequest(c, "invalid bundleId")
+		return
+	}
+
+	logger, ok := c.MustGet("logger").(*zap.Logger)
+	if !ok {
+		response.InternalError(c)
+		return
+	}
+
+	res, err := h.firmware.GetBundleDownloadURL(c.Request.Context(), bundleID, logger)
+	if err != nil {
+		if errors.Is(err, errorutil.ErrBundleNotFound) {
+			response.NotFound(c, "bundle not found")
+			return
+		}
+		response.InternalError(c)
+		return
+	}
+
+	response.OK(c, res)
 }
