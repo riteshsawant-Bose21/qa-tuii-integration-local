@@ -1240,6 +1240,7 @@ bool FusionConnectClient::process_audio_streams_update(bool is_retry) {
             ++it;
         }
     }
+    return true;
 }
 
 void FusionConnectClient::maybe_start_manager()
@@ -1260,7 +1261,7 @@ void FusionConnectClient::maybe_start_manager()
     if (!client.send_message(FUSION_CN_CTRL_CMD_START_MANAGER, nullptr, 0, &reply)) {
         mgr_start_failures++;
         SPDLOG_ERROR("FC manager start: netlink send failed (attempt {})", mgr_start_failures);
-        return true;
+        return;
     }
 
     if (reply.err == MGR_START_OK || reply.err == -MGR_START_ERRNO_RUNNING) {
@@ -1273,7 +1274,7 @@ void FusionConnectClient::maybe_start_manager()
     }
 
     if (reply.data) free(reply.data);
-    return true;
+    return;
 }
 
 void FusionConnectClient::audio_streams_update_func() {

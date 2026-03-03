@@ -35,6 +35,9 @@ static struct kthread_worker *process_worker;
 static struct task_struct    *process_thread;
 static struct kthread_work    process_work;
 static atomic_t               process_pending;
+static int                    worker_rt_prio = 70;
+module_param(worker_rt_prio, int, 0644);
+MODULE_PARM_DESC(worker_rt_prio, "RT priority for fusion-cn kthread (0 disables)");
 
 static struct fusion_cn_manager *g_fusion_cn_mgr;
 
@@ -545,6 +548,13 @@ int fusion_cn_mgr_start(struct fusion_cn_manager *mgr)
         }
         process_thread = worker->task;
         set_cpus_allowed_ptr(process_thread, cpumask_of(3));
+        if (worker_rt_prio > 0) {
+            struct sched_param sp = { .sched_priority = worker_rt_prio };
+            int rc = sched_setscheduler_nocheck(process_thread, SCHED_FIFO, &sp);
+            if (rc)
+                pr_warn("fusion_cn: failed to set RT prio %d for worker: %d\n",
+                        worker_rt_prio, rc);
+        }
         kthread_init_work(&process_work, audio_frame_process_work);
         atomic_set(&process_pending, 0);
         /* Publish the worker only after fully initialized */
