@@ -367,7 +367,7 @@ func (app *App) handleVIPStateChange(event vipmonitor.VIPEvent) {
 		if ip := net.ParseIP(event.VIP); ip == nil {
 			logger.Error("[Discovery] Invalid VIP %s for mDNS", event.VIP)
 		} else {
-			if err := app.MDNSManager.StartWithVIP(ip); err != nil {
+			if err := app.MDNSManager.StartFusionAndOcaAdvertisment(ip); err != nil {
 				logger.Error("[Discovery] Failed to start mDNS service: %v", err)
 			} else {
 				logger.Info("[Discovery] mDNS service started with VIP %s", event.VIP)
@@ -403,7 +403,7 @@ func (app *App) handleVIPStateChange(event vipmonitor.VIPEvent) {
 		if ip := net.ParseIP(event.VIP); ip == nil {
 			logger.Error("[Discovery] Invalid VIP %s for mDNS", event.VIP)
 		} else {
-			if err := app.MDNSManager.StartWithVIP(ip); err != nil {
+			if err := app.MDNSManager.StartFusionAndOcaAdvertisment(ip); err != nil {
 				logger.Error("[Discovery] Failed to start mDNS service: %v", err)
 			} else {
 				logger.Info("[Discovery] mDNS service started with VIP %s", event.VIP)
@@ -449,7 +449,7 @@ func (app *App) handleVIPStateChange(event vipmonitor.VIPEvent) {
 		if ip := net.ParseIP(event.VIP); ip == nil {
 			logger.Error("[Discovery] Invalid VIP %s for mDNS", event.VIP)
 		} else {
-			if err := app.MDNSManager.StartWithVIP(ip); err != nil {
+			if err := app.MDNSManager.StartFusionAndOcaAdvertisment(ip); err != nil {
 				logger.Error("[Discovery] Failed to update mDNS service: %v", err)
 			} else {
 				logger.Info("[Discovery] mDNS service updated with new VIP %s", event.VIP)
@@ -676,6 +676,11 @@ func (app *App) Start(ctx context.Context) {
 	// Start the Controller Manager for TCP wall controllers
 	if err := app.ControllerManager.Start(); err != nil {
 		app.Logger.Error("Failed to start ControllerManager: %v", err)
+	}
+
+	vip := app.VIPMonitor.GetCurrentVIP()
+	if vip == "" {
+		app.MDNSManager.StartFusionAdvertismentOnly(net.ParseIP(app.config.BindAddr))
 	}
 
 	wg.Wait()

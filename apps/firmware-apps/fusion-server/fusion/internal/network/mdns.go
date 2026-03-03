@@ -14,8 +14,7 @@ import (
 )
 
 const (
-	mdnsDomain            = "local"
-	mdnsFusionServiceName = "FusionService"
+	mdnsDomain = "local"
 	// mdnsTTL               = 120
 )
 
@@ -35,7 +34,12 @@ type MDNSManager struct {
 }
 
 // Commands
-type cmdStart struct {
+type cmdStartFusionAdvertismentOnly struct {
+	ip   net.IP
+	resp chan error
+}
+
+type cmdStartFusionAndOcaAdvertisment struct {
 	vip  net.IP
 	resp chan error
 }
@@ -60,20 +64,33 @@ func NewMDNSManager() *MDNSManager {
 	return m
 }
 
-// StartWithVIP can be called concurrently.
-func (m *MDNSManager) StartWithVIP(vip net.IP) error {
+// StartFusionAdvertismentOnly starts only the Fusion mDNS service (no OCA).
+func (m *MDNSManager) StartFusionAdvertismentOnly(ip net.IP) error {
+	logger := logging.GetLogger()
+
+	if ip == nil {
+		logger.Error("[Discovery] StartFusionAdvertismentOnly called with nil IP")
+		return fmt.Errorf("[Discovery] no IP available for mDNS service")
+	}
+
+	resp := make(chan error, 1)
+	m.cmdCh <- cmdStartFusionAdvertismentOnly{ip: ip, resp: resp}
+	err := <-resp
+
+	return err
+}
+
+func (m *MDNSManager) StartFusionAndOcaAdvertisment(vip net.IP) error {
 	logger := logging.GetLogger()
 
 	if vip == nil {
-		logger.Error("[Discovery] StartWithVIP called with nil VIP")
+		logger.Error("[Discovery] StartFusionAndOcaAdvertisment called with nil VIP")
 		return fmt.Errorf("[Discovery] no VIP available for mDNS service")
 	}
 
 	resp := make(chan error, 1)
-	m.cmdCh <- cmdStart{vip: vip, resp: resp}
-	err := <-resp
-
-	return err
+	m.cmdCh <- cmdStartFusionAndOcaAdvertisment{vip: vip, resp: resp}
+	return <-resp
 }
 
 // Close can be called concurrently and is idempotent.
@@ -127,6 +144,7 @@ type loopState struct {
 
 	running bool
 	vip     net.IP
+	withOCA bool
 }
 
 func (m *MDNSManager) loop() {
@@ -134,13 +152,9 @@ func (m *MDNSManager) loop() {
 
 	st := loopState{}
 
-	// Create responder once; if dnssd requires a fresh responder per run,
-	// you can move this into start() and recreate it on every start.
 	responder, err := dnssd.NewResponder()
 	if err != nil {
-		// If responder creation fails, all commands should fail.
-		// We keep looping, returning errors to callers.
-		logger.Error("[MDNS-MGR] Failed to create responder: %v", err)
+		logger.Error("[Discovery] Failed to create responder: %v", err)
 	} else {
 		st.responder = responder
 	}
@@ -174,26 +188,27 @@ func (m *MDNSManager) loop() {
 		return nil
 	}
 
-	start := func(vip net.IP) error {
+	start := func(vip net.IP, withOCA bool) error {
 		if st.responder == nil {
 			return fmt.Errorf("mDNS responder not available")
 		}
 
 		// If already running with same VIP, treat as idempotent success.
-		if st.running && st.vip != nil && st.vip.Equal(vip) {
-			logger.Debug("[Discovery] Already running with same VIP %v, treating as idempotent success", vip)
-			return nil
-		}
+		//Commented out to see if we do unneccesory calls to do restarts. We can optimize later if needed
+		// if st.running && st.vip != nil && st.vip.Equal(vip) {
+		// 	logger.Debug("[Discovery] Already running with same VIP %v, treating as idempotent success", vip)
+		// 	return nil
+		// }
 
 		// If running with different VIP, restart.
 		if st.running {
-			logger.Debug("[Discovery] Already running with different VIP (current: %v, new: %v), stopping first", st.vip, vip)
+			logger.Debug("[Discovery] Already running (current VIP: %v, new: %v, current withOCA: %v, new: %v), stopping first", st.vip, vip, st.withOCA, withOCA)
 			if err := stop(); err != nil {
 				logger.Error("[Discovery] Failed to stop existing services before restart: %v", err)
 				return err
 			}
 
-			// Create fresh responder for VIP change to ensure clean state
+			// Create new responder
 			newResponder, err := dnssd.NewResponder()
 			if err != nil {
 				return fmt.Errorf("[Discovery] failed to create fresh responder: %w", err)
@@ -201,24 +216,27 @@ func (m *MDNSManager) loop() {
 			st.responder = newResponder
 		}
 
-		// Add services transactionally.
+		// Add Fusion service
 		fusionHandle, err := addService(st.responder, fusionConfig(vip))
 		if err != nil {
 			logger.Error("[Discovery] Failed to add Fusion service: %v", err)
 			return fmt.Errorf("add Fusion service: %w", err)
 		}
+		st.fusionHandle = fusionHandle
 
-		ocaHandle, err := addService(st.responder, ocaConfig(vip))
-		if err != nil {
-			logger.Error("[Discovery] Failed to add OCA service, rolling back Fusion service: %v", err)
-			// rollback Fusion so we never partially advertise
-			st.responder.Remove(fusionHandle)
-			logger.Debug("[Discovery] Fusion service rolled back due to OCA service failure")
-			return fmt.Errorf("add OCA service: %w", err)
+		if withOCA {
+			ocaHandle, err := addService(st.responder, ocaConfig(vip))
+			if err != nil {
+				logger.Error("[Discovery] Failed to add OCA service, rolling back Fusion service: %v", err)
+				// rollback Fusion so we never partially advertise
+				st.responder.Remove(fusionHandle)
+				logger.Debug("[Discovery] Fusion service rolled back due to OCA service failure")
+				return fmt.Errorf("add OCA service: %w", err)
+			}
+			st.ocaHandle = ocaHandle
+
 		}
 
-		st.fusionHandle = fusionHandle
-		st.ocaHandle = ocaHandle
 		st.vip = vip
 
 		// Start responder loop
@@ -236,19 +254,30 @@ func (m *MDNSManager) loop() {
 			}
 		}(st.ctx)
 
-		logger.Info("[Discovery] mDNS started: VIP=%s fusion=%s.%s.%s:%d oca=%s.%s:%d",
-			vip,
-			mdnsFusionServiceName, mdnsFusionServiceType, mdnsDomain, mdnsFusionVIPPort,
-			hostnameOrDefault(), mdnsOCAServiceType, mdnsOCAServicePort,
-		)
+		if withOCA {
+			logger.Info("[Discovery] mDNS started: VIP=%s hostname=%s fusion=%s.%s:%d oca=%s.%s:%d",
+				vip, hostnameOrDefault(),
+				hostnameOrDefault(), mdnsFusionServiceType, mdnsFusionVIPPort,
+				hostnameOrDefault(), mdnsOCAServiceType, mdnsOCAServicePort,
+			)
+		} else {
+			logger.Info("[Discovery] mDNS started (Fusion only): VIP=%s hostname=%s fusion=%s.%s:%d",
+				vip, hostnameOrDefault(),
+				hostnameOrDefault(), mdnsFusionServiceType, mdnsFusionVIPPort,
+			)
+		}
 
 		return nil
 	}
 
 	for cmd := range m.cmdCh {
 		switch c := cmd.(type) {
-		case cmdStart:
-			err := start(c.vip)
+		case cmdStartFusionAdvertismentOnly:
+			err := start(c.ip, false)
+			c.resp <- err
+
+		case cmdStartFusionAndOcaAdvertisment:
+			err := start(c.vip, true)
 			c.resp <- err
 
 		case cmdStop:
@@ -286,7 +315,7 @@ func hostnameOrDefault() string {
 func fusionConfig(vip net.IP) dnssd.Config {
 	host := hostnameOrDefault()
 	return dnssd.Config{
-		Name:   mdnsFusionServiceName,
+		Name:   host,
 		Type:   mdnsFusionServiceType,
 		Domain: mdnsDomain,
 		Host:   host + ".local",
