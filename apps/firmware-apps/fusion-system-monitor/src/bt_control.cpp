@@ -48,6 +48,7 @@ private:
     std::string last_mac;
 
     std::chrono::steady_clock::time_point last_adapter_refresh;
+    std::chrono::steady_clock::time_point last_adapter_warn;
     bool agent_registered;
 
     static constexpr const char *kAgentPath = "/com/bosepro/FusionBtAgent";
@@ -64,6 +65,7 @@ BtControl::BtControl(const bosepro::BlockConfiguration &configuration)
       agent_registered(false)
 {
     last_adapter_refresh = std::chrono::steady_clock::time_point::min();
+    last_adapter_warn = std::chrono::steady_clock::time_point::min();
 }
 
 BtControl::~BtControl()
@@ -148,82 +150,28 @@ bool BtControl::ensure_adapter()
         return false;
     }
 
-    DBusMessage *msg = dbus_message_new_method_call(
-        kBluezBus, "/org/bluez",
-        "org.freedesktop.DBus.ObjectManager", "GetManagedObjects");
-    if (msg == nullptr) {
-        return false;
-    }
-
-    DBusError err;
-    dbus_error_init(&err);
-    DBusMessage *reply = dbus_connection_send_with_reply_and_block(
-        conn, msg, 3000, &err);
-    dbus_message_unref(msg);
-
-    if (dbus_error_is_set(&err)) {
-        SPDLOG_WARN("GetManagedObjects failed: {}", err.message);
-        dbus_error_free(&err);
-        return false;
-    }
-
-    if (reply == nullptr) {
-        return false;
-    }
-
-    DBusMessageIter iter;
-    if (!dbus_message_iter_init(reply, &iter) ||
-        dbus_message_iter_get_arg_type(&iter) != DBUS_TYPE_ARRAY) {
-        dbus_message_unref(reply);
-        return false;
-    }
-
-    DBusMessageIter array_iter;
-    dbus_message_iter_recurse(&iter, &array_iter);
-
-    while (dbus_message_iter_get_arg_type(&array_iter) == DBUS_TYPE_DICT_ENTRY) {
-        DBusMessageIter dict_iter;
-        dbus_message_iter_recurse(&array_iter, &dict_iter);
-
-        const char *object_path = nullptr;
-        if (dbus_message_iter_get_arg_type(&dict_iter) == DBUS_TYPE_OBJECT_PATH) {
-            dbus_message_iter_get_basic(&dict_iter, &object_path);
-        }
-
-        if (!dbus_message_iter_next(&dict_iter)) {
-            dbus_message_iter_next(&array_iter);
-            continue;
-        }
-
-        if (dbus_message_iter_get_arg_type(&dict_iter) == DBUS_TYPE_ARRAY) {
-            DBusMessageIter iface_array;
-            dbus_message_iter_recurse(&dict_iter, &iface_array);
-            while (dbus_message_iter_get_arg_type(&iface_array) == DBUS_TYPE_DICT_ENTRY) {
-                DBusMessageIter iface_entry;
-                dbus_message_iter_recurse(&iface_array, &iface_entry);
-
-                const char *iface_name = nullptr;
-                if (dbus_message_iter_get_arg_type(&iface_entry) == DBUS_TYPE_STRING) {
-                    dbus_message_iter_get_basic(&iface_entry, &iface_name);
-                }
-
-                if (iface_name != nullptr &&
-                    std::strcmp(iface_name, "org.bluez.Adapter1") == 0 &&
-                    object_path != nullptr) {
-                    adapter_path = object_path;
-                    dbus_message_unref(reply);
-                    SPDLOG_INFO("Found Bluetooth adapter: {}", adapter_path);
-                    return true;
-                }
-
-                dbus_message_iter_next(&iface_array);
+    // Sysfs-only: read adapter from /sys/class/bluetooth (e.g. hci0).
+    try {
+        for (const auto &entry : std::filesystem::directory_iterator("/sys/class/bluetooth")) {
+            if (!entry.is_directory() && !entry.is_symlink()) {
+                continue;
+            }
+            const std::string name = entry.path().filename().string();
+            if (name.rfind("hci", 0) == 0) {
+                adapter_path = std::string("/org/bluez/") + name;
+                return true;
             }
         }
-
-        dbus_message_iter_next(&array_iter);
+    } catch (...) {
+        // ignore and fall through
     }
 
-    dbus_message_unref(reply);
+    auto now = std::chrono::steady_clock::now();
+    if (last_adapter_warn == std::chrono::steady_clock::time_point::min() ||
+        now - last_adapter_warn > std::chrono::seconds(10)) {
+        SPDLOG_WARN("Bluetooth adapter not available yet (sysfs)");
+        last_adapter_warn = now;
+    }
     return false;
 }
 
@@ -455,6 +403,7 @@ bool BtControl::set_property_bool(const char *obj_path,
         return false;
     }
 
+
     DBusMessage *msg = dbus_message_new_method_call(
         kBluezBus, obj_path,
         "org.freedesktop.DBus.Properties", "Set");
@@ -498,6 +447,7 @@ bool BtControl::set_property_uint32(const char *obj_path,
     if (conn == nullptr) {
         return false;
     }
+
 
     DBusMessage *msg = dbus_message_new_method_call(
         kBluezBus, obj_path,
