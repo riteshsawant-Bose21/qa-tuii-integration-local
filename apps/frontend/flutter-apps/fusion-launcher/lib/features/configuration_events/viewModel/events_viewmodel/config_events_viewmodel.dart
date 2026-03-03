@@ -1,14 +1,13 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
+import 'package:fusion_launcher/features/configuration_events/viewModel/events_viewmodel/config_events_state.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
-import 'events_state.dart';
-
 /// Cubit for managing Events feature state and business logic
-class EventsCubit extends Cubit<EventsState> {
+class ConfigEventsViewmodel extends Cubit<ConfigEventsState> {
   final ProjectViewModel _projectViewModel;
 
-  EventsCubit({
+  ConfigEventsViewmodel({
     required ProjectViewModel projectViewModel,
   }) : _projectViewModel = projectViewModel,
        super(const EventsInitial()) {
@@ -26,7 +25,7 @@ class EventsCubit extends Cubit<EventsState> {
   }
 
   void syncWithProjectViewModel() {
-    final EventsState currentState = state;
+    final ConfigEventsState currentState = state;
     try {
       final List<FusionEvent> events = _projectViewModel.getAllEvents();
       if (currentState is EventsLoaded) {
@@ -43,7 +42,7 @@ class EventsCubit extends Cubit<EventsState> {
 
   void selectEvent(String? eventId) {
     _projectViewModel.setSelectedEventId(eventId);
-    final EventsState currentState = state;
+    final ConfigEventsState currentState = state;
     if (currentState is EventsLoaded) {
       emit(currentState.copyWith(selectedEventId: eventId, clearSelectedEventId: eventId == null));
     }

@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:fusion_launcher/features/configuration_events/viewModel/actions_viewmodel/event_actions_cubit.dart';
-import 'package:fusion_launcher/features/configuration_events/viewModel/actions_viewmodel/event_actions_state.dart';
-import 'package:fusion_launcher/features/configuration_events/viewModel/events_viewmodel/events_cubit.dart';
+import 'package:fusion_launcher/features/configuration_events/viewModel/actions_viewmodel/config_event_actions_state.dart';
+import 'package:fusion_launcher/features/configuration_events/viewModel/actions_viewmodel/config_event_actions_viewmodel.dart';
 import 'package:fusion_launcher/features/configuration_events/widgets/actions/event_action_row_data.dart';
 import 'package:fusion_lib/fusion_theme/app_theme.dart';
 import 'package:fusion_lib/fusion_widgets/text_views/fusion_app_text.dart';
 import 'package:fusion_lib/models/project_entities/non_processing/fusion_event.dart';
 import 'package:fusion_lib/models/project_entities/non_processing/snapshot_model.dart';
 
+import '../../viewModel/events_viewmodel/config_events_viewmodel.dart';
 import 'event_action_row_header.dart';
 import '../events/event_header_widget.dart';
 import 'event_trigger_row_header.dart';
@@ -27,8 +27,8 @@ class TriggerPanel extends StatelessWidget {
       ),
       child: Column(
         children: <Widget>[
-          BlocBuilder<EventActionsCubit, EventActionsState>(
-            builder: (BuildContext context, EventActionsState state) {
+          BlocBuilder<ConfigEventActionsViewmodel, ConfigEventActionsState>(
+            builder: (BuildContext context, ConfigEventActionsState state) {
               return switch (state) {
                 EventActionsInitial() => _buildNoEventSelected(context),
                 EventActionsLoading() => _buildLoading(context),
@@ -112,11 +112,11 @@ class TriggerPanel extends StatelessWidget {
   }
 
   Widget _buildLoaded(BuildContext context, EventActionsLoaded state) {
-    final EventsCubit eventsCubit = context.read<EventsCubit>();
-    final EventActionsCubit actionsCubit = context.read<EventActionsCubit>();
+    final ConfigEventsViewmodel configEventsViewmodel = context.read<ConfigEventsViewmodel>();
+    final ConfigEventActionsViewmodel actionsCubit = context.read<ConfigEventActionsViewmodel>();
     final String selectedEventId = state.selectedEventId!;
 
-    final FusionEvent selectedEvent = eventsCubit.getEventById(selectedEventId);
+    final FusionEvent selectedEvent = configEventsViewmodel.getEventById(selectedEventId);
     final List<SceneActionModel> eventActionsList = state.actions;
 
     return Expanded(
@@ -127,7 +127,7 @@ class TriggerPanel extends StatelessWidget {
             eventName: selectedEvent.name,
             onNameChanged: (String newName) {
               final FusionEvent event = selectedEvent.copyWith(name: newName);
-              eventsCubit.updateEvent(event);
+              configEventsViewmodel.updateEvent(event);
             },
           ),
 

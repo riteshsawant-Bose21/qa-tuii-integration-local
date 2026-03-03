@@ -2,8 +2,8 @@ import 'package:equatable/equatable.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
 /// Base state class for the Event Actions feature
-sealed class EventActionsState extends Equatable {
-  const EventActionsState();
+sealed class ConfigEventActionsState extends Equatable {
+  const ConfigEventActionsState();
 
   /// Get actions list (empty for non-loaded states)
   List<SceneActionModel> get actions => <SceneActionModel>[];
@@ -25,12 +25,12 @@ sealed class EventActionsState extends Equatable {
 }
 
 /// Initial state - no event selected
-class EventActionsInitial extends EventActionsState {
+class EventActionsInitial extends ConfigEventActionsState {
   const EventActionsInitial();
 }
 
 /// Loading state - fetching actions for an event
-class EventActionsLoading extends EventActionsState {
+class EventActionsLoading extends ConfigEventActionsState {
   @override
   final String? selectedEventId;
 
@@ -41,7 +41,7 @@ class EventActionsLoading extends EventActionsState {
 }
 
 /// Loaded state - actions successfully loaded
-class EventActionsLoaded extends EventActionsState {
+class EventActionsLoaded extends ConfigEventActionsState {
   @override
   final List<SceneActionModel> actions;
 
@@ -69,7 +69,7 @@ class EventActionsLoaded extends EventActionsState {
 }
 
 /// Error state - failed to load actions
-class EventActionsError extends EventActionsState {
+class EventActionsError extends ConfigEventActionsState {
   final String message;
 
   @override

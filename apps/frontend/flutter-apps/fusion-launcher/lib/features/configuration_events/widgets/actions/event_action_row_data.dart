@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:fusion_launcher/features/configuration_events/viewModel/actions_viewmodel/event_actions_cubit.dart';
-import 'package:fusion_launcher/features/configuration_events/viewModel/actions_viewmodel/event_actions_state.dart';
-import 'package:fusion_launcher/features/configuration_events/viewModel/events_viewmodel/events_cubit.dart';
+import 'package:fusion_launcher/features/configuration_events/viewModel/actions_viewmodel/config_event_actions_state.dart';
+import 'package:fusion_launcher/features/configuration_events/viewModel/actions_viewmodel/config_event_actions_viewmodel.dart';
 import 'package:fusion_launcher/features/configuration_events/widgets/events/event_value_widget.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/fusion_theme/app_theme.dart';
 
 import '../../../../core/constants/assets_constants.dart';
 import '../../../../core/widgets/configuration_widgets/action_drop_down.dart' show FusionDropdown;
+import '../../viewModel/events_viewmodel/config_events_viewmodel.dart';
 
 class EventActionRowData extends StatelessWidget {
   final SceneActionModel action;
@@ -24,8 +24,8 @@ class EventActionRowData extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return BlocBuilder<EventActionsCubit, EventActionsState>(
-      builder: (BuildContext context, EventActionsState state) {
+    return BlocBuilder<ConfigEventActionsViewmodel, ConfigEventActionsState>(
+      builder: (BuildContext context, ConfigEventActionsState state) {
         // Get the latest action data from state
         final SceneActionModel? currentAction = state.getActionById(action.id);
         if (currentAction == null) {
@@ -55,14 +55,14 @@ class _EventActionRowContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final EventActionsCubit cubit = context.read<EventActionsCubit>();
-    final EventsCubit eventsCubit = context.read<EventsCubit>();
+    final ConfigEventActionsViewmodel cubit = context.read<ConfigEventActionsViewmodel>();
+    final ConfigEventsViewmodel configEventsViewmodel = context.read<ConfigEventsViewmodel>();
     final ColorScheme colorScheme = Theme.of(context).colorScheme;
 
     final List<SceneItemDropdown> itemList = _getItemList(cubit);
     final List<SceneParam> paramList = _getParamList(cubit);
     final bool isItemEnabled = action.actionType == null || itemList.isNotEmpty;
-    final FusionEvent event = eventsCubit.getEventById(eventId);
+    final FusionEvent event = configEventsViewmodel.getEventById(eventId);
 
     return SemanticHelper.button(
       testId: SemanticHelper.createTestId(SemanticTypes.button, "event_action_row_data_$index"),
@@ -80,7 +80,7 @@ class _EventActionRowContent extends StatelessWidget {
             _buildItemDropdown(context, cubit, itemList, isItemEnabled),
             _buildParamDropdown(context, cubit, paramList),
             (event.condition is! ValueChangeCondition)
-                ? _buildValueWidget(context, cubit, eventsCubit)
+                ? _buildValueWidget(context, cubit, configEventsViewmodel)
                 : const Expanded(
                   child: Center(
                     child: FusionAppText(text: "--"),
@@ -93,11 +93,11 @@ class _EventActionRowContent extends StatelessWidget {
     );
   }
 
-  List<SceneItemDropdown> _getItemList(EventActionsCubit cubit) {
+  List<SceneItemDropdown> _getItemList(ConfigEventActionsViewmodel cubit) {
     return action.actionType != null ? cubit.getActionItemsByType(action.actionType!) : <SceneItemDropdown>[];
   }
 
-  List<SceneParam> _getParamList(EventActionsCubit cubit) {
+  List<SceneParam> _getParamList(ConfigEventActionsViewmodel cubit) {
     if (action.actionType == null) return <SceneParam>[];
 
     if (action.actionType == SceneActionType.snapshot) {
@@ -130,7 +130,7 @@ class _EventActionRowContent extends StatelessWidget {
     );
   }
 
-  Widget _buildActionTypeDropdown(BuildContext context, EventActionsCubit cubit) {
+  Widget _buildActionTypeDropdown(BuildContext context, ConfigEventActionsViewmodel cubit) {
     return Expanded(
       child: SemanticHelper.button(
         testId: SemanticHelper.createTestId(SemanticTypes.button, "event_action_type_$index"),
@@ -151,7 +151,7 @@ class _EventActionRowContent extends StatelessWidget {
 
   Widget _buildItemDropdown(
     BuildContext context,
-    EventActionsCubit cubit,
+    ConfigEventActionsViewmodel cubit,
     List<SceneItemDropdown> itemList,
     bool isEnabled,
   ) {
@@ -192,7 +192,7 @@ class _EventActionRowContent extends StatelessWidget {
     );
   }
 
-  Widget _buildParamDropdown(BuildContext context, EventActionsCubit cubit, List<SceneParam> paramList) {
+  Widget _buildParamDropdown(BuildContext context, ConfigEventActionsViewmodel cubit, List<SceneParam> paramList) {
     SceneParam? selected;
     if (action.param != null && paramList.isNotEmpty) {
       selected =
@@ -219,9 +219,9 @@ class _EventActionRowContent extends StatelessWidget {
     );
   }
 
-  Widget _buildValueWidget(BuildContext context, EventActionsCubit cubit, EventsCubit eventsCubit) {
+  Widget _buildValueWidget(BuildContext context, ConfigEventActionsViewmodel cubit, ConfigEventsViewmodel configEventsViewmodel) {
     if (action.param == null) return const Expanded(child: SizedBox.shrink());
-    final FusionEvent event = eventsCubit.getEventById(eventId);
+    final FusionEvent event = configEventsViewmodel.getEventById(eventId);
     final EventStateTypes stateType = event.selectedState?.stateType ?? EventStateTypes.off;
 
     return Expanded(
@@ -243,7 +243,7 @@ class _EventActionRowContent extends StatelessWidget {
     );
   }
 
-  Widget _buildActionButtons(BuildContext context, EventActionsCubit cubit) {
+  Widget _buildActionButtons(BuildContext context, ConfigEventActionsViewmodel cubit) {
     return SizedBox(
       width: context.screenWidth * 0.046,
       child: Row(

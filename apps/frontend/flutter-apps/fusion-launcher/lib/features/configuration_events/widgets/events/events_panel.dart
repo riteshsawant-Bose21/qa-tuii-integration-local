@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:fusion_launcher/features/configuration_events/viewModel/events_viewmodel/events_cubit.dart';
-import 'package:fusion_launcher/features/configuration_events/viewModel/events_viewmodel/events_state.dart';
+import 'package:fusion_launcher/features/configuration_events/viewModel/events_viewmodel/config_events_state.dart';
 import 'package:fusion_launcher/features/configuration_page/widgets/section_header.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/fusion_theme/app_theme.dart';
@@ -12,6 +11,7 @@ import 'package:fusion_lib/fusion_widgets/others/fusion_toast.dart';
 import 'package:fusion_lib/fusion_widgets/text_views/fusion_app_text.dart';
 import 'package:fusion_lib/models/project_entities/non_processing/fusion_event.dart';
 
+import '../../viewModel/events_viewmodel/config_events_viewmodel.dart';
 import 'events_list.dart';
 
 class EventsPanel extends StatelessWidget {
@@ -19,9 +19,9 @@ class EventsPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return BlocBuilder<EventsCubit, EventsState>(
-      builder: (BuildContext context, EventsState state) {
-        final EventsCubit cubit = context.read<EventsCubit>();
+    return BlocBuilder<ConfigEventsViewmodel, ConfigEventsState>(
+      builder: (BuildContext context, ConfigEventsState state) {
+        final ConfigEventsViewmodel cubit = context.read<ConfigEventsViewmodel>();
 
         return Column(
           children: <Widget>[
@@ -62,7 +62,7 @@ class EventsPanel extends StatelessWidget {
     );
   }
 
-  Widget _buildEventsList(BuildContext context, EventsState state, EventsCubit cubit) {
+  Widget _buildEventsList(BuildContext context, ConfigEventsState state, ConfigEventsViewmodel cubit) {
     return switch (state) {
       EventsInitial() => _buildEmptyState(context),
       EventsLoading() => const Center(child: CircularProgressIndicator()),
@@ -98,7 +98,7 @@ class EventsPanel extends StatelessWidget {
     );
   }
 
-  Widget _buildLoadedState(BuildContext context, EventsLoaded state, EventsCubit cubit) {
+  Widget _buildLoadedState(BuildContext context, EventsLoaded state, ConfigEventsViewmodel cubit) {
     final List<FusionEvent> eventList = state.events;
 
     if (eventList.isEmpty) {

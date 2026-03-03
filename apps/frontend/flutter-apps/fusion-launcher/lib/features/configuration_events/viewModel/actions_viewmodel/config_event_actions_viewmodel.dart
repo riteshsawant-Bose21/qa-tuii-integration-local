@@ -2,13 +2,13 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
-import 'event_actions_state.dart';
+import 'config_event_actions_state.dart';
 
 /// Cubit for managing Event Actions feature state and business logic
-class EventActionsCubit extends Cubit<EventActionsState> {
+class ConfigEventActionsViewmodel extends Cubit<ConfigEventActionsState> {
   final ProjectViewModel _projectViewModel;
 
-  EventActionsCubit({required ProjectViewModel projectViewModel}) : _projectViewModel = projectViewModel, super(const EventActionsInitial());
+  ConfigEventActionsViewmodel({required ProjectViewModel projectViewModel}) : _projectViewModel = projectViewModel, super(const EventActionsInitial());
 
   /// Load actions for a specific event
   void loadActionsForEvent(String? eventId) {
@@ -27,7 +27,7 @@ class EventActionsCubit extends Cubit<EventActionsState> {
 
   /// Sync state with ProjectViewModel
   void syncWithProjectViewModel() {
-    final EventActionsState currentState = state;
+    final ConfigEventActionsState currentState = state;
     if (currentState.selectedEventId == null) return;
     try {
       final List<SceneActionModel> actions = _projectViewModel.getEventActionsForEvent(currentState.selectedEventId!);
@@ -44,7 +44,7 @@ class EventActionsCubit extends Cubit<EventActionsState> {
   SceneActionModel? getActionById(String actionId) => state.getActionById(actionId);
 
   void addAction() {
-    final EventActionsState currentState = state;
+    final ConfigEventActionsState currentState = state;
     if (currentState.selectedEventId == null) return;
     final SceneActionModel action = SceneActionModel();
     _projectViewModel.addActionToEvent(eventId: currentState.selectedEventId!, action: action);
@@ -52,14 +52,14 @@ class EventActionsCubit extends Cubit<EventActionsState> {
   }
 
   void deleteAction({required String actionId}) {
-    final EventActionsState currentState = state;
+    final ConfigEventActionsState currentState = state;
     if (currentState.selectedEventId == null) return;
     _projectViewModel.removeActionFromEvent(actionId: actionId, eventId: currentState.selectedEventId!);
     syncWithProjectViewModel();
   }
 
   void duplicateAction({required String actionId}) {
-    final EventActionsState currentState = state;
+    final ConfigEventActionsState currentState = state;
     if (currentState.selectedEventId == null) return;
     _projectViewModel.duplicateActionInEvent(eventId: currentState.selectedEventId!, actionId: actionId);
     syncWithProjectViewModel();
@@ -113,6 +113,19 @@ class EventActionsCubit extends Cubit<EventActionsState> {
 
   List<SceneValueDropdown> getSceneValueDropdownItems(String actionId) {
     return _projectViewModel.getSceneValueDropdownItems(actionId);
+  }
+
+  // ==================== Event Data Accessors ====================
+
+  /// Get event by ID - needed for checking event state in UI
+  FusionEvent getEventById(String eventId) {
+    return _projectViewModel.getEventById(eventId);
+  }
+
+  /// Update the selected state for an event (for 2-state events)
+  void updateEventSelectedState({required String eventId, required EventStates selectedState}) {
+    _projectViewModel.updateEventSelectedState(eventId: eventId, selectedState: selectedState);
+    syncWithProjectViewModel();
   }
 
   @override

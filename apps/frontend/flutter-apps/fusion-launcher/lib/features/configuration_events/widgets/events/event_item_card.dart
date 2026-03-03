@@ -1,14 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_launcher/core/widgets/title_text_field_switcher.dart';
-import 'package:fusion_launcher/features/configuration_events/viewModel/events_viewmodel/events_cubit.dart';
-import 'package:fusion_lib/fusion_lib.dart';
 
 import '../../../../core/constants/assets_constants.dart';
+import '../../viewModel/events_viewmodel/config_events_viewmodel.dart';
 
 class EventItemCard extends StatefulWidget {
   final FusionEvent eventData;
-  final EventsCubit cubit;
+  final ConfigEventsViewmodel cubit;
   final bool isSelected;
   final VoidCallback? onDelete;
   final VoidCallback? onTap;

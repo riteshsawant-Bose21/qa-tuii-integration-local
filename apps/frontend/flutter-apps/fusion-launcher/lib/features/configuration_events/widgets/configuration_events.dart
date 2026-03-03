@@ -2,12 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/core/service_locator.dart';
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
-import 'package:fusion_launcher/features/configuration_events/viewModel/actions_viewmodel/event_actions_cubit.dart';
-import 'package:fusion_launcher/features/configuration_events/viewModel/events_viewmodel/events_cubit.dart';
-import 'package:fusion_launcher/features/configuration_events/viewModel/events_viewmodel/events_state.dart';
+import 'package:fusion_launcher/features/configuration_events/viewModel/actions_viewmodel/config_event_actions_viewmodel.dart';
+import 'package:fusion_launcher/features/configuration_events/viewModel/events_viewmodel/config_events_state.dart';
 import 'package:fusion_launcher/features/configuration_events/widgets/events/events_panel.dart';
 import 'package:fusion_launcher/features/configuration_events/widgets/actions/trigger_panel.dart';
 import 'package:fusion_lib/fusion_lib.dart';
+
+import '../viewModel/events_viewmodel/config_events_viewmodel.dart';
 
 class ConfigurationEvents extends StatelessWidget {
   const ConfigurationEvents({super.key});
@@ -18,15 +19,15 @@ class ConfigurationEvents extends StatelessWidget {
 
     return MultiBlocProvider(
       providers: <BlocProvider<dynamic>>[
-        BlocProvider<EventsCubit>(
+        BlocProvider<ConfigEventsViewmodel>(
           create:
-              (BuildContext context) => EventsCubit(
+              (BuildContext context) => ConfigEventsViewmodel(
                 projectViewModel: projectViewModel,
               ),
         ),
-        BlocProvider<EventActionsCubit>(
+        BlocProvider<ConfigEventActionsViewmodel>(
           create:
-              (BuildContext context) => EventActionsCubit(
+              (BuildContext context) => ConfigEventActionsViewmodel(
                 projectViewModel: projectViewModel,
               ),
         ),
@@ -46,11 +47,11 @@ class _ConfigurationEventsBody extends StatefulWidget {
 class _ConfigurationEventsBodyState extends State<_ConfigurationEventsBody> {
   @override
   Widget build(BuildContext context) {
-    return BlocListener<EventsCubit, EventsState>(
-      listenWhen: (EventsState previous, EventsState current) => previous.selectedEventId != current.selectedEventId,
-      listener: (BuildContext context, EventsState state) {
+    return BlocListener<ConfigEventsViewmodel, ConfigEventsState>(
+      listenWhen: (ConfigEventsState previous, ConfigEventsState current) => previous.selectedEventId != current.selectedEventId,
+      listener: (BuildContext context, ConfigEventsState state) {
         // When selected event changes, load actions for the new event
-        context.read<EventActionsCubit>().loadActionsForEvent(state.selectedEventId);
+        context.read<ConfigEventActionsViewmodel>().loadActionsForEvent(state.selectedEventId);
       },
       child: Scaffold(
         backgroundColor: context.colorScheme.primaryBlack,

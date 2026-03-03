@@ -11,7 +11,7 @@ import 'package:fusion_launcher/core/assets/asset_icons.dart';
 import 'package:fusion_launcher/core/assets/asset_svg.dart';
 import 'package:fusion_launcher/core/spl_calculation/isolate_mace_calculation_manager.dart';
 import 'package:fusion_launcher/core/utils/fusion_utils.dart';
-import 'package:fusion_launcher/features/configuration_events/views/configuration_events.dart';
+import 'package:fusion_launcher/features/configuration_events/widgets/configuration_events.dart';
 import 'package:fusion_launcher/features/create_new_project/views/create_new_project_dialog.dart';
 import 'package:fusion_launcher/features/media_files/view/configuration_media_files_pages.dart';
 import 'package:fusion_launcher/features/media_files/viewModel/media_files_view_model.dart';

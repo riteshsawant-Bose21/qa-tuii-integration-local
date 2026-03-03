@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/core/widgets/configuration_widgets/action_drop_down.dart';
-import 'package:fusion_launcher/features/configuration_events/viewModel/events_viewmodel/events_cubit.dart';
 import 'package:fusion_lib/fusion_theme/app_theme.dart';
 import 'package:fusion_lib/fusion_widgets/semantics/semantic_helper.dart';
 import 'package:fusion_lib/fusion_widgets/semantics/semantic_type.dart';
 import 'package:fusion_lib/fusion_widgets/text_views/fusion_app_text.dart';
 import 'package:fusion_lib/models/project_entities/non_processing/fusion_event.dart';
+
+import '../../viewModel/events_viewmodel/config_events_viewmodel.dart';
 
 /// Event Trigger Row Header Widget
 /// This widget displays the header row for event triggers, including dropdowns for selecting trigger type, item, action, condition, and value.
@@ -26,7 +27,7 @@ class EventTriggerRowHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final EventsCubit cubit = context.read<EventsCubit>();
+    final ConfigEventsViewmodel cubit = context.read<ConfigEventsViewmodel>();
 
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
@@ -38,7 +39,7 @@ class EventTriggerRowHeader extends StatelessWidget {
           const SizedBox(width: 16),
 
           /// Trigger Item Dropdown
-          _TriggerItemDropdown(eventId: eventId, cubit: cubit),
+          _TriggerItemDropdown(eventId: eventId, configEventsViewmodel: cubit),
           const SizedBox(width: 16),
 
           /// Trigger Action Dropdown
@@ -59,7 +60,7 @@ class EventTriggerRowHeader extends StatelessWidget {
 
 class _TriggerTypeDropdown extends StatelessWidget {
   final String eventId;
-  final EventsCubit cubit;
+  final ConfigEventsViewmodel cubit;
   const _TriggerTypeDropdown({required this.eventId, required this.cubit});
 
   @override
@@ -102,15 +103,17 @@ class _TriggerTypeDropdown extends StatelessWidget {
 /// Item Dropdown
 class _TriggerItemDropdown extends StatelessWidget {
   final String eventId;
-  final EventsCubit cubit;
+  final ConfigEventsViewmodel configEventsViewmodel;
 
-  const _TriggerItemDropdown({required this.eventId, required this.cubit});
+  const _TriggerItemDropdown({required this.eventId, required this.configEventsViewmodel});
 
   @override
   Widget build(BuildContext context) {
-    final FusionEvent selectedEvent = cubit.getEventById(eventId);
+    final FusionEvent selectedEvent = configEventsViewmodel.getEventById(eventId);
     final List<EventTriggerItemDropdown> availableItems =
-        selectedEvent.triggerType != null ? cubit.getEventTriggerDropdownItems(triggerType: selectedEvent.triggerType!) : <EventTriggerItemDropdown>[];
+        selectedEvent.triggerType != null
+            ? configEventsViewmodel.getEventTriggerDropdownItems(triggerType: selectedEvent.triggerType!)
+            : <EventTriggerItemDropdown>[];
 
     // Find the current value, ensuring it exists in available items
     EventTriggerItemDropdown? currentValue;
@@ -144,7 +147,7 @@ class _TriggerItemDropdown extends StatelessWidget {
               display: (EventTriggerItemDropdown e) => e.name,
               onChanged: (EventTriggerItemDropdown? item) {
                 if (item != null) {
-                  cubit.updateEventTriggerItem(
+                  configEventsViewmodel.updateEventTriggerItem(
                     eventId: eventId,
                     newItem: EventTriggerItem(itemId: item.id),
                   );
@@ -160,7 +163,7 @@ class _TriggerItemDropdown extends StatelessWidget {
 
 class _ActionTypeDropdown extends StatelessWidget {
   final String eventId;
-  final EventsCubit cubit;
+  final ConfigEventsViewmodel cubit;
   const _ActionTypeDropdown({required this.eventId, required this.cubit});
 
   @override
@@ -210,7 +213,7 @@ class _ActionTypeDropdown extends StatelessWidget {
 
 class _ConditionDropdown extends StatelessWidget {
   final String eventId;
-  final EventsCubit cubit;
+  final ConfigEventsViewmodel cubit;
   const _ConditionDropdown({required this.eventId, required this.cubit});
 
   @override
@@ -256,7 +259,7 @@ class _ConditionDropdown extends StatelessWidget {
 
 class _ValueColumn extends StatelessWidget {
   final String eventId;
-  final EventsCubit cubit;
+  final ConfigEventsViewmodel cubit;
 
   const _ValueColumn({
     required this.eventId,

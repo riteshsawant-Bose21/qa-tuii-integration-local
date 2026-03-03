@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:fusion_launcher/features/configuration_events/viewModel/events_viewmodel/events_cubit.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
+import '../../viewModel/events_viewmodel/config_events_viewmodel.dart';
 import 'event_item_card.dart';
 
 class EventList extends StatelessWidget {
   final List<FusionEvent> eventList;
-  final EventsCubit cubit;
+  final ConfigEventsViewmodel cubit;
 
   final Function(String eventId) onDelete;
   final Function(String eventId)? onSelect;

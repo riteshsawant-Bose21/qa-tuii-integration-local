@@ -2,8 +2,8 @@ import 'package:equatable/equatable.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
 /// Base state class for the Events feature
-sealed class EventsState extends Equatable {
-  const EventsState();
+sealed class ConfigEventsState extends Equatable {
+  const ConfigEventsState();
 
   /// Get events list (empty for non-loaded states)
   List<FusionEvent> get events => <FusionEvent>[];
@@ -16,17 +16,17 @@ sealed class EventsState extends Equatable {
 }
 
 /// Initial state - no data loaded yet
-class EventsInitial extends EventsState {
+class EventsInitial extends ConfigEventsState {
   const EventsInitial();
 }
 
 /// Loading state - fetching events
-class EventsLoading extends EventsState {
+class EventsLoading extends ConfigEventsState {
   const EventsLoading();
 }
 
 /// Loaded state - events successfully loaded
-class EventsLoaded extends EventsState {
+class EventsLoaded extends ConfigEventsState {
   @override
   final List<FusionEvent> events;
 
@@ -55,7 +55,7 @@ class EventsLoaded extends EventsState {
 }
 
 /// Error state - failed to load events
-class EventsError extends EventsState {
+class EventsError extends ConfigEventsState {
   final String message;
 
   const EventsError({required this.message});
