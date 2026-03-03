@@ -7,22 +7,19 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion"
-	userdb "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/user/db"
 
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/api/types"
 )
 
 // RoleManagementHandler handles role and permission management endpoints
 type RoleManagementHandler struct {
-	userService           fusion.User
-	roleManagementService *userdb.RoleManagementService
+	userService fusion.User
 }
 
 // NewRoleManagementHandler creates a new role management handler
-func NewRoleManagementHandler(userService fusion.User, roleManagementService *userdb.RoleManagementService) *RoleManagementHandler {
+func NewRoleManagementHandler(userService fusion.User) *RoleManagementHandler {
 	return &RoleManagementHandler{
-		userService:           userService,
-		roleManagementService: roleManagementService,
+		userService: userService,
 	}
 }
 
@@ -69,7 +66,7 @@ func (h *RoleManagementHandler) GetOrganizationRoleManagement(ctx *gin.Context) 
 	}
 
 	// Check if user has admin permissions for role management
-	hasAdminPermission, err := h.roleManagementService.CheckAdminPermission(ctx, emailStr, userAuth.Account.ID)
+	hasAdminPermission, err := h.userService.CheckAdminPermission(ctx, emailStr, userAuth.Account.ID)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{
 			"error":   "Internal Server Error",
@@ -87,7 +84,7 @@ func (h *RoleManagementHandler) GetOrganizationRoleManagement(ctx *gin.Context) 
 	}
 
 	// Get role management data for the organization
-	roleManagementData, err := h.roleManagementService.GetOrganizationRoleManagement(ctx, userAuth.Account.ID)
+	roleManagementData, err := h.userService.GetOrganizationRoleManagement(ctx, userAuth.Account.ID)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{
 			"error":   "Internal Server Error",
@@ -144,7 +141,7 @@ func (h *RoleManagementHandler) CreateRole(ctx *gin.Context) {
 	}
 
 	// Check admin permissions
-	hasAdminPermission, err := h.roleManagementService.CheckAdminPermission(ctx, emailStr, userAuth.Account.ID)
+	hasAdminPermission, err := h.userService.CheckAdminPermission(ctx, emailStr, userAuth.Account.ID)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{
 			"error":   "Internal Server Error",
@@ -172,7 +169,7 @@ func (h *RoleManagementHandler) CreateRole(ctx *gin.Context) {
 	}
 
 	// Create the role
-	role, err := h.roleManagementService.CreateRole(ctx, userAuth.Account.ID, &req)
+	role, err := h.userService.CreateRole(ctx, userAuth.Account.ID, &req)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{
 			"error":   "Internal Server Error",
@@ -230,7 +227,7 @@ func (h *RoleManagementHandler) UpdateUserRole(ctx *gin.Context) {
 	}
 
 	// Check admin permissions
-	hasAdminPermission, err := h.roleManagementService.CheckAdminPermission(ctx, emailStr, userAuth.Account.ID)
+	hasAdminPermission, err := h.userService.CheckAdminPermission(ctx, emailStr, userAuth.Account.ID)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{
 			"error":   "Internal Server Error",
@@ -268,7 +265,7 @@ func (h *RoleManagementHandler) UpdateUserRole(ctx *gin.Context) {
 	}
 
 	// Update user role
-	err = h.roleManagementService.UpdateUserRole(ctx, userID, userAuth.Account.ID, req.RoleID)
+	err = h.userService.UpdateUserRole(ctx, userID, userAuth.Account.ID, req.RoleID)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{
 			"error":   "Internal Server Error",
@@ -326,7 +323,7 @@ func (h *RoleManagementHandler) UpdateRolePermissions(ctx *gin.Context) {
 	}
 
 	// Check admin permissions
-	hasAdminPermission, err := h.roleManagementService.CheckAdminPermission(ctx, emailStr, userAuth.Account.ID)
+	hasAdminPermission, err := h.userService.CheckAdminPermission(ctx, emailStr, userAuth.Account.ID)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{
 			"error":   "Internal Server Error",
@@ -373,7 +370,7 @@ func (h *RoleManagementHandler) UpdateRolePermissions(ctx *gin.Context) {
 	}
 
 	// Update role permissions
-	err = h.roleManagementService.UpdateRolePermissions(ctx, roleID, userAuth.Account.ID, permissions)
+	err = h.userService.UpdateRolePermissions(ctx, roleID, userAuth.Account.ID, permissions)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{
 			"error":   "Internal Server Error",
@@ -428,7 +425,7 @@ func (h *RoleManagementHandler) GetOrganizationUsers(ctx *gin.Context) {
 	}
 
 	// Check admin permissions
-	hasAdminPermission, err := h.roleManagementService.CheckAdminPermission(ctx, emailStr, userAuth.Account.ID)
+	hasAdminPermission, err := h.userService.CheckAdminPermission(ctx, emailStr, userAuth.Account.ID)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{
 			"error":   "Internal Server Error",
@@ -446,7 +443,7 @@ func (h *RoleManagementHandler) GetOrganizationUsers(ctx *gin.Context) {
 	}
 
 	// Get organization users via role management data
-	roleManagementData, err := h.roleManagementService.GetOrganizationRoleManagement(ctx, userAuth.Account.ID)
+	roleManagementData, err := h.userService.GetOrganizationRoleManagement(ctx, userAuth.Account.ID)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{
 			"error":   "Internal Server Error",

@@ -97,7 +97,7 @@ func (a *API) registerRoutes() {
 	}
 
 	// Role Management routes for organization admins
-	roleManagementHandler := handler.NewRoleManagementHandler(a.user, a.roleManagementService)
+	roleManagementHandler := handler.NewRoleManagementHandler(a.user)
 	organization := v1.Group(constants.EndpointOrganization)
 
 	// Apply auth middleware to protected organization routes

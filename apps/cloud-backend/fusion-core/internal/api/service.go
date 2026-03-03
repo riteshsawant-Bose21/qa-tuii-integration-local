@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion"
-	userdb "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/user/db"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/log"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/middleware"
 	"go.uber.org/zap"
@@ -18,15 +17,14 @@ import (
 
 // API is a service for the main API.
 type API struct {
-	engine                *gin.Engine
-	server                *http.Server
-	product               fusion.Product
-	project               fusion.Project
-	user                  fusion.User
-	auth                  fusion.Auth
-	roleManagementService *userdb.RoleManagementService
-	authMiddleware        middleware.AuthMiddleware
-	appLog                *zap.Logger
+	engine         *gin.Engine
+	server         *http.Server
+	product        fusion.Product
+	project        fusion.Project
+	user           fusion.User
+	auth           fusion.Auth
+	authMiddleware middleware.AuthMiddleware
+	appLog         *zap.Logger
 }
 
 // Config holds the API server configuration settings.
