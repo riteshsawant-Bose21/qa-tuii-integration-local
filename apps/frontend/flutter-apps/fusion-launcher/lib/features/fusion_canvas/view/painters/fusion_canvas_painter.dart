@@ -79,7 +79,7 @@ class FusionCanvasPainter extends CustomPainter {
 abstract class FusionBasePainter {
   void paint(Canvas canvas, Size size, FusionCanvasPainter painter);
   bool shouldRepaint(covariant FusionBasePainter oldDelegate);
-
+  bool get isSelected => false;
   bool isHit(Offset position, FusionCanvasPainter painter) {
     // By default, painters are not interactive. Override this method in interactive painters.
     return false;

@@ -6,6 +6,7 @@ import 'fusion_rect_painter.dart';
 
 class ListeningAreaPainter extends FusionPolygonPainter {
   final ListeningArea listeningArea;
+  @override
   final bool isSelected;
   ListeningAreaPainter({required this.listeningArea, required this.isSelected})
     : super(

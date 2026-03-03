@@ -10,6 +10,7 @@ import 'package:nested/nested.dart';
 import '../state/fusion_canvas_input_state.dart';
 import '../state/fusion_canvas_state.dart';
 import '../state/fusion_snap_state.dart';
+import '../state/tools/select_tool_state.dart';
 import '../viewmodel/fusion_canvas_image_viewmodel.dart';
 import '../viewmodel/fusion_canvas_input_viewmodel.dart';
 import '../viewmodel/fusion_canvas_state_viewmodel.dart';
@@ -98,27 +99,34 @@ class FusionCanvas extends StatelessWidget {
                               // if (state is IdleFusionCanvasState) {
                               //   return;
                               // }
-                              final FusionBasePainter? item = fusionCanvasPainter.isHit(
-                                state.mousePosition ?? Offset.zero,
-                              );
-                              final bool isHandled = context.read<FusionCanvasToolViewModel>().onInputStateChanged(
+
+                              final FusionCanvasToolViewModel read = context.read<FusionCanvasToolViewModel>();
+                              read.onInputStateChanged(
                                 state,
                                 context.read<FusionSnapViewModel>().state,
                               );
-
-                              if (!isHandled) {
-                                // print('Input state not handled by tool: $state');
-                                if (state is FusionCanvasInputDraggingState) {
+                              if (read.state is IdleSelectToolState && state is FusionCanvasInputTapDownState) {
+                                final FusionBasePainter? item = fusionCanvasPainter.isHit(
+                                  state.mousePosition ?? Offset.zero,
+                                );
+                                toolbarEvents?.onLayerSelected?.call(
+                                  item,
+                                );
+                              }
+                              if (state is FusionCanvasInputDraggingState) {
+                                final List<FusionBasePainter> selectedLayers = elements.where((FusionBasePainter layer) => layer.isSelected).toList();
+                                if (selectedLayers.isNotEmpty) {
+                                  for (final FusionBasePainter layer in selectedLayers) {
+                                    toolbarEvents?.onMoveLayer?.call(
+                                      layer,
+                                      state.delta,
+                                    );
+                                  }
+                                } else {
                                   context.read<FusionCanvasStateViewModel>().onPanUpdate(
                                     state.delta,
                                   );
                                 }
-                              }
-
-                              if (state is FusionCanvasInputTapUpState) {
-                                toolbarEvents?.onLayerSelected?.call(
-                                  item,
-                                );
                               }
                             },
 
@@ -152,7 +160,8 @@ class FusionCanvas extends StatelessWidget {
 class FusionCanvasEvents {
   final FusionPenToolEvents? penToolEvents;
   final ValueChanged<FusionBasePainter?>? onLayerSelected;
-  FusionCanvasEvents({this.penToolEvents, this.onLayerSelected});
+  final void Function(FusionBasePainter painter, Offset offset)? onMoveLayer;
+  FusionCanvasEvents({this.penToolEvents, this.onLayerSelected, this.onMoveLayer});
 }
 
 class FusionPenToolEvents {

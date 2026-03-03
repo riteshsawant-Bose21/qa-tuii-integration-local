@@ -1,5 +1,6 @@
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:fusion_launcher/features/fusion_canvas/state/tools/select_tool_state.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
 import '../state/fusion_canvas_input_state.dart';
@@ -10,7 +11,10 @@ import '../state/tools/pen_tool_state.dart';
 
 class FusionCanvasToolViewModel extends Cubit<FusionToolState> {
   FusionCanvasToolViewModel() : super(FusionCanvasIdleToolState());
-  bool onInputStateChanged(FusionCanvasInputState inputState, FusionSnapState snapResult, ) {
+  bool onInputStateChanged(
+    FusionCanvasInputState inputState,
+    FusionSnapState snapResult,
+  ) {
     switch (inputState) {
       case FusionCanvasInputTapUpState(:final Offset tapPosition, :final FusionMouseButton button, :final FusionGestureOrigin gestureOrigin):
         if (button == FusionMouseButton.left && gestureOrigin == FusionGestureOrigin.click) {
@@ -56,6 +60,8 @@ class FusionCanvasToolViewModel extends Cubit<FusionToolState> {
         penState.addPoint(FusionCanvasPoint(position: effectivePosition)),
       );
       return true; // Indicate that the event was handled
+    } else {
+      setTool(IdleSelectToolState());
     }
     return false;
   }

@@ -46,4 +46,18 @@ class FusionCanvasPoint extends FusionCanvasElement {
 
   @override
   final String id;
+
+  FusionCanvasPoint copyWith({
+    Offset? position,
+    Offset? handleIn,
+    Offset? handleOut,
+    String? id,
+  }) {
+    return FusionCanvasPoint(
+      position: position ?? this.position,
+      handleIn: handleIn ?? this.handleIn,
+      handleOut: handleOut ?? this.handleOut,
+      id: id ?? this.id,
+    );
+  }
 }

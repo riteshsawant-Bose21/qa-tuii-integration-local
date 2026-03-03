@@ -44,7 +44,6 @@ class CanvasControlWrapper extends StatelessWidget {
           final Offset correctedPosition = controller.correctPosition(
             event.localPosition,
           );
-          print("onHover: correctedPosition=$correctedPosition, localPosition=${event.localPosition}, delta=${event.delta}");
 
           // event.delta
           context.read<FusionCanvasInputViewModel>().updateMousePosition(
@@ -101,17 +100,11 @@ class CanvasControlWrapper extends StatelessWidget {
               final Offset correctedPosition = controller.correctPosition(
                 event.localPosition,
               );
-              print("onPointerMove: correctedPosition=$correctedPosition, localPosition=${event.localPosition}, delta=${event.delta}");
               // Update mouse position for snapping before handling pan
               context.read<FusionCanvasInputViewModel>().updateMousePosition(
                 correctedPosition,
                 event.delta * (1 / controller.state.scale), // Scale delta for consistent panning speed
               );
-
-              // // Handle panning only if not snapping or in specific tool states
-              // controller.onPanUpdate(
-              //   event.delta / controller.state.scale,
-              // );
             },
             onPointerUp: (PointerUpEvent event) {
               final Offset correctedPosition = controller.correctPosition(

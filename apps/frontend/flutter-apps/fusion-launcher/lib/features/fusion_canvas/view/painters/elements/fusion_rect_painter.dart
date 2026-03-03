@@ -33,6 +33,7 @@ abstract class FusionPolygonPainter extends FusionBasePainter {
     if (oldDelegate is! FusionPolygonPainter) return true;
     return oldDelegate.polygon != polygon;
   }
+  
 
   @override
   bool isHit(Offset position, FusionCanvasPainter painter) {

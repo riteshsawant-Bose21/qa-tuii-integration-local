@@ -211,6 +211,17 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
                                               serviceLocator<ProjectViewModel>().setCurrentSelectedHardware(null);
                                             }
                                           },
+                                          onMoveLayer: (FusionBasePainter painter, Offset offset) {
+                                            if (painter is ListeningAreaPainter) {
+                                              final ListeningArea area = painter.listeningArea;
+
+                                              serviceLocator<ProjectViewModel>().updateListeningArea(
+                                                area: area.copyWith(
+                                                  vertices: area.vertices.map((FusionCanvasPoint v) => v.copyWith(position: v.position + offset)).toList(),
+                                                ),
+                                              );
+                                            }
+                                          },
                                           penToolEvents: FusionPenToolEvents(
                                             onPathClosed: (List<FusionCanvasPoint> value) {
                                               final ProjectViewModel projectVM = serviceLocator<ProjectViewModel>();
