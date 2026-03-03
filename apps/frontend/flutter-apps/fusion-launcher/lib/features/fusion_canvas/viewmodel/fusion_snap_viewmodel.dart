@@ -9,12 +9,15 @@ import '../state/fusion_snap_state.dart';
 class FusionSnapViewModel extends Cubit<FusionSnapState> {
   FusionSnapViewModel() : super(const FusionSnapState.initial());
 
-  SnapService _snapService = SnapService();
+  final SnapService _snapService = SnapService();
 
   // Properties for snap context
-  List<Offset> _existingPoints = <Offset>[];
-  Offset? _activeStartPoint;
-  double _currentScale = 1.0;
+  List<Offset> _polygonPoints = <Offset>[];
+  final List<Offset> _toolPoints = <Offset>[];
+  final double _currentScale = 1.0;
+
+  /// Get current polygon points for comparison
+  List<Offset> get polygonPoints => _polygonPoints;
 
   /// Update cursor position and calculate snap
   void updateCursorPosition(Offset? position) {
@@ -25,8 +28,10 @@ class FusionSnapViewModel extends Cubit<FusionSnapState> {
 
     final SnapResult snapResult = _snapService.findSnapPoint(
       cursorPosition: position,
-      existingPoints: _existingPoints,
-      activeStartPoint: _activeStartPoint,
+      existingPoints: <Offset>[
+        ..._toolPoints,
+        ..._polygonPoints,
+      ],
       scale: _currentScale,
     );
 
@@ -38,50 +43,28 @@ class FusionSnapViewModel extends Cubit<FusionSnapState> {
     );
   }
 
-  /// Update snap context for better snap point calculation
-  void updateSnapContext({
-    List<Offset>? existingPoints,
-    Offset? activeStartPoint,
-    double? scale,
-    bool clearActiveStartPoint = false,
-  }) {
-    if (existingPoints != null) _existingPoints = existingPoints;
-    if (clearActiveStartPoint) {
-      _activeStartPoint = null;
-    } else if (activeStartPoint != null) {
-      _activeStartPoint = activeStartPoint;
-    }
-    if (scale != null) _currentScale = scale;
+  void addPolygonPoints(List<Offset> points) {
+    // Only update if points have changed
+    if (_arePointsEqual(_polygonPoints, points)) return;
 
-    // Refresh snapping with current cursor position
+    _polygonPoints = points.toList();
     if (state.cursorPosition != null) {
       updateCursorPosition(state.cursorPosition);
     }
   }
 
-  /// Get snap service for external configuration
-  SnapService get snapService => _snapService;
-
-  /// Update snap service with new settings
-  void updateSnapService(SnapService newSnapService) {
-    _snapService = newSnapService;
-    // Refresh snapping with current cursor position
-    if (state.cursorPosition != null) {
-      updateCursorPosition(state.cursorPosition);
+  bool _arePointsEqual(List<Offset> a, List<Offset> b) {
+    if (a.length != b.length) return false;
+    for (int i = 0; i < a.length; i++) {
+      if (a[i] != b[i]) return false;
     }
+    return true;
   }
 
-  /// Clear active start point
-  void clearActiveStartPoint() {
-    _activeStartPoint = null;
-    if (state.cursorPosition != null) {
-      updateCursorPosition(state.cursorPosition);
-    }
-  }
-
-  /// Set active start point for orthogonal snapping
-  void setActiveStartPoint(Offset point) {
-    _activeStartPoint = point;
+  void setToolPoints(List<Offset> points) {
+    _toolPoints
+      ..clear()
+      ..addAll(points);
     if (state.cursorPosition != null) {
       updateCursorPosition(state.cursorPosition);
     }

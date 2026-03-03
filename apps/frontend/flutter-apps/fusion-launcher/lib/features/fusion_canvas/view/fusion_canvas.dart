@@ -16,6 +16,7 @@ import '../viewmodel/fusion_canvas_image_viewmodel.dart';
 import '../viewmodel/fusion_canvas_input_viewmodel.dart';
 import '../viewmodel/fusion_canvas_state_viewmodel.dart';
 import '../viewmodel/fusion_snap_viewmodel.dart';
+import 'painters/elements/fusion_rect_painter.dart';
 import 'painters/fusion_canvas_painter.dart';
 import 'painters/snap_painter.dart';
 import 'painters/tool_painter.dart';
@@ -30,126 +31,170 @@ class FusionCanvas extends StatelessWidget {
   final List<FusionBasePainter> elements;
   final Widget Function(BuildContext context)? builder;
   final FusionCanvasEvents? toolbarEvents;
+
   @override
   Widget build(BuildContext context) {
     return MultiBlocProvider(
       providers: <SingleChildWidget>[
-        BlocProvider<FusionCanvasStateViewModel>(create: (BuildContext context) => FusionCanvasStateViewModel()),
-        BlocProvider<FusionCanvasInputViewModel>(create: (BuildContext context) => FusionCanvasInputViewModel()),
-        BlocProvider<FusionSnapViewModel>(create: (BuildContext context) => FusionSnapViewModel()),
-        BlocProvider<FusionCanvasImageViewModel>(create: (BuildContext context) => FusionCanvasImageViewModel()),
+        BlocProvider<FusionCanvasStateViewModel>(
+          create: (BuildContext context) => FusionCanvasStateViewModel(),
+        ),
+        BlocProvider<FusionCanvasInputViewModel>(
+          create: (BuildContext context) => FusionCanvasInputViewModel(),
+        ),
+        BlocProvider<FusionSnapViewModel>(
+          create: (BuildContext context) => FusionSnapViewModel(),
+        ),
+        BlocProvider<FusionCanvasImageViewModel>(
+          create: (BuildContext context) => FusionCanvasImageViewModel(),
+        ),
         BlocProvider<FusionCanvasToolViewModel>(
-          create:
-              (BuildContext context) => FusionCanvasToolViewModel(
-                inputViewModel: context.read<FusionCanvasInputViewModel>(),
-                snapViewModel: context.read<FusionSnapViewModel>(),
-              ),
+          create: (BuildContext context) => FusionCanvasToolViewModel(),
         ),
       ],
 
-      child: MultiBlocListener(
-        listeners: <SingleChildWidget>[
-          BlocListener<FusionCanvasInputViewModel, FusionCanvasInputState>(
-            listener: (BuildContext context, FusionCanvasInputState state) {
-              // Update snap context when canvas state changes
-              context.read<FusionSnapViewModel>().updateCursorPosition(state.mousePosition);
-              _updateSnapContext(context);
+      child: _PolygonPointsSync(
+        elements: elements,
+        child: MultiBlocListener(
+          listeners: <SingleChildWidget>[
+            ///
+            /// Listners for napping logic and cursor updates.
+            ///
+            BlocListener<FusionCanvasInputViewModel, FusionCanvasInputState>(
+              listenWhen: (
+                FusionCanvasInputState previous,
+                FusionCanvasInputState current,
+              ) {
+                return previous.mousePosition != current.mousePosition;
+              },
+              listener: (BuildContext context, FusionCanvasInputState state) {
+                context.read<FusionSnapViewModel>().updateCursorPosition(
+                  state.mousePosition,
+                );
+              },
+            ),
+            BlocListener<FusionCanvasToolViewModel, FusionToolState>(
+              listener: (BuildContext context, FusionToolState state) {
+                final List<FusionCanvasPoint> points = switch (state) {
+                  DrawingPenToolState(
+                    points: final List<FusionCanvasPoint> points,
+                  ) =>
+                    points,
+                  DrawingMeasureToolState(
+                    start: final Offset start,
+                    end: final Offset? end,
+                  ) =>
+                    <FusionCanvasPoint>[
+                      FusionCanvasPoint(position: start),
+                      if (end != null) FusionCanvasPoint(position: end),
+                    ],
+                  _ => <FusionCanvasPoint>[],
+                };
+                context.read<FusionSnapViewModel>().setToolPoints(
+                  points.map((FusionCanvasPoint p) => p.position).toList(),
+                );
+              },
+            ),
+
+            BlocListener<FusionCanvasInputViewModel, FusionCanvasInputState>(
+              listener: (BuildContext context, FusionCanvasInputState state) {
+                context.read<FusionCanvasToolViewModel>().onInputStateChanged(
+                  state,
+                  context.read<FusionSnapViewModel>().state,
+                );
+              },
+            ),
+
+            ///
+            /// Listener for Triggering Events via callback.
+            ///
+            BlocListener<FusionCanvasToolViewModel, FusionToolState>(
+              listener: (BuildContext context, FusionToolState state) {
+                if (state is ClosedPenToolState) {
+                  toolbarEvents?.penToolEvents?.onPathClosed?.call(
+                    state.points,
+                  );
+                } else if (state is DrawingPenToolState) {
+                  toolbarEvents?.penToolEvents?.onPointsChanged?.call(
+                    state.points,
+                  );
+                }
+              },
+            ),
+          ],
+
+          child: BlocBuilder<FusionCanvasStateViewModel, FusionCanvasState>(
+            builder: (BuildContext context, FusionCanvasState state) {
+              return Stack(
+                children: <Widget>[
+                  BlocBuilder<FusionCanvasInputViewModel, FusionCanvasInputState>(
+                    builder: (
+                      BuildContext context,
+                      FusionCanvasInputState inputState,
+                    ) {
+                      return BlocBuilder<FusionSnapViewModel, FusionSnapState>(
+                        builder: (
+                          BuildContext context,
+                          FusionSnapState snapState,
+                        ) {
+                          final FusionCanvasPainter fusionCanvasPainter = FusionCanvasPainter(
+                            state: state,
+                            context: context,
+                            layers: <FusionBasePainter>[
+                              ...elements,
+                              ToolPainter(
+                                state: context.watch<FusionCanvasToolViewModel>().state,
+                                cursor: snapState.effectivePosition,
+                              ),
+                              SnapPainter(
+                                snapResult: snapState.snapResult,
+                              ),
+                            ],
+                          );
+                          return BlocListener<FusionCanvasInputViewModel, FusionCanvasInputState>(
+                            listenWhen: (
+                              FusionCanvasInputState previous,
+                              FusionCanvasInputState current,
+                            ) {
+                              return previous.runtimeType != current.runtimeType;
+                            },
+                            listener: (
+                              BuildContext context,
+                              FusionCanvasInputState state,
+                            ) {
+                              if (state is FusionCanvasInputTapUpState) {
+                                toolbarEvents?.onLayerSelected?.call(
+                                  fusionCanvasPainter.isHit(
+                                    state.tapPosition,
+                                  ),
+                                );
+                              }
+                            },
+
+                            child: CanvasControlWrapper(
+                              painter: fusionCanvasPainter,
+                              child: CustomPaint(
+                                painter: fusionCanvasPainter,
+                                child: const SizedBox(
+                                  width: double.infinity,
+                                  height: double.infinity,
+                                ),
+                              ),
+                            ),
+                          );
+                        },
+                      );
+                    },
+                  ),
+
+                  if (builder != null) builder!(context),
+                ],
+              );
             },
           ),
-
-          BlocListener<FusionCanvasToolViewModel, FusionToolState>(
-            listener: (BuildContext context, FusionToolState state) {
-              if (state is ClosedPenToolState) {
-                toolbarEvents?.penToolEvents?.onPathClosed?.call(state.points);
-              } else if (state is DrawingPenToolState) {
-                toolbarEvents?.penToolEvents?.onPointsChanged?.call(state.points);
-              }
-            },
-          ),
-        ],
-
-        child: BlocBuilder<FusionCanvasStateViewModel, FusionCanvasState>(
-          builder: (BuildContext context, FusionCanvasState state) {
-            return Stack(
-              children: <Widget>[
-                BlocBuilder<FusionCanvasInputViewModel, FusionCanvasInputState>(
-                  builder: (BuildContext context, FusionCanvasInputState inputState) {
-                    return BlocBuilder<FusionSnapViewModel, FusionSnapState>(
-                      builder: (BuildContext context, FusionSnapState snapState) {
-                        final FusionCanvasPainter fusionCanvasPainter = FusionCanvasPainter(
-                          state: state,
-                          context: context,
-                          layers: <FusionBasePainter>[
-                            ...elements,
-                            ToolPainter(
-                              state: context.watch<FusionCanvasToolViewModel>().state,
-                              cursor: snapState.effectivePosition,
-                            ),
-                            SnapPainter(
-                              snapResult: snapState.snapResult,
-                            ),
-                          ],
-                        );
-                        return CanvasControlWrapper(
-                          painter: fusionCanvasPainter,
-                          child: CustomPaint(
-                            painter: fusionCanvasPainter,
-                            child: const SizedBox(
-                              width: double.infinity,
-                              height: double.infinity,
-                            ),
-                          ),
-                        );
-                      },
-                    );
-                  },
-                ),
-
-                if (builder != null) builder!(context),
-              ],
-            );
-          },
         ),
       ),
     );
-  }
-
-  void _updateSnapContext(BuildContext context) {
-    final FusionSnapViewModel snapViewModel = context.read<FusionSnapViewModel>();
-    final FusionCanvasStateViewModel stateViewModel = context.read<FusionCanvasStateViewModel>();
-    final FusionCanvasToolViewModel toolViewModel = context.read<FusionCanvasToolViewModel>();
-
-    // Collect existing points from elements (you may need to adapt this based on your elements structure)
-    final List<Offset> existingPoints = _collectExistingPoints(toolViewModel);
-
-    // Get active start point based on current tool state
-    final Offset? activeStartPoint = existingPoints.isNotEmpty ? existingPoints.last : null;
-
-    snapViewModel.updateSnapContext(
-      existingPoints: existingPoints,
-      activeStartPoint: activeStartPoint,
-      scale: stateViewModel.state.scale,
-    );
-  }
-
-  List<Offset> _collectExistingPoints(FusionCanvasToolViewModel toolViewModel) {
-    final List<Offset> points = <Offset>[];
-
-    // Collect points from completed measurements
-    final FusionToolState state = toolViewModel.state;
-    if (state is DrawingMeasureToolState) {
-      final DrawingMeasureToolState measureState = state;
-      points.add(measureState.start);
-      if (measureState.end != null) {
-        points.add(measureState.end!);
-      }
-    }
-    if (state is DrawingPenToolState) {
-      final DrawingPenToolState penState = state;
-      points.addAll(penState.points.map((FusionCanvasPoint p) => p.position));
-    }
-
-    return points;
   }
 }
 
@@ -182,12 +227,14 @@ class CanvasControlWrapper extends StatelessWidget {
         },
         onExit: (PointerExitEvent event) {
           context.read<FusionCanvasInputViewModel>().updateMousePosition(null);
-          context.read<FusionSnapViewModel>().updateCursorPosition(null);
         },
         onHover: (PointerHoverEvent event) {
-          final Offset correctedPosition = controller.correctPosition(event.localPosition);
-          context.read<FusionCanvasInputViewModel>().updateMousePosition(correctedPosition);
-          context.read<FusionSnapViewModel>().updateCursorPosition(correctedPosition);
+          final Offset correctedPosition = controller.correctPosition(
+            event.localPosition,
+          );
+          context.read<FusionCanvasInputViewModel>().updateMousePosition(
+            correctedPosition,
+          );
         },
         child: GestureDetector(
           onScaleStart: (ScaleStartDetails details) {
@@ -199,7 +246,32 @@ class CanvasControlWrapper extends StatelessWidget {
           onScaleEnd: (ScaleEndDetails details) {
             controller.onScaleEnd(details);
           },
+          onDoubleTapDown: (TapDownDetails details) {
+            final Offset correctedPosition = controller.correctPosition(
+              details.localPosition,
+            );
+            context.read<FusionCanvasInputViewModel>().onDoubleTap(
+              correctedPosition,
+            );
+          },
+          onLongPressStart: (LongPressStartDetails details) {
+            final Offset correctedPosition = controller.correctPosition(
+              details.localPosition,
+            );
+            context.read<FusionCanvasInputViewModel>().onLongPress(
+              correctedPosition,
+            );
+          },
+          onSecondaryTapUp: (TapUpDetails details) {
+            final Offset correctedPosition = controller.correctPosition(
+              details.localPosition,
+            );
+            context.read<FusionCanvasInputViewModel>().onSecondaryTap(
+              correctedPosition,
+            );
+          },
           child: Listener(
+            // Handle scroll for zoom (not sent to input viewmodel)
             onPointerSignal: (PointerSignalEvent event) {
               if (event is PointerScrollEvent) {
                 controller.onScaleUpdate(
@@ -209,19 +281,38 @@ class CanvasControlWrapper extends StatelessWidget {
               }
             },
             onPointerMove: (PointerMoveEvent event) {
-              final Offset correctedPosition = controller.correctPosition(event.localPosition);
-              // Update mouse position for snapping before handling pan
-              context.read<FusionCanvasInputViewModel>().updateMousePosition(correctedPosition);
-
-              // Handle panning only if not snapping or in specific tool states
-              controller.onPanUpdate(
-                event.delta / controller.state.scale,
+              final Offset correctedPosition = controller.correctPosition(
+                event.localPosition,
               );
+              // Update mouse position for snapping before handling pan
+              context.read<FusionCanvasInputViewModel>().updateMousePosition(
+                correctedPosition,
+              );
+
+              // // Handle panning only if not snapping or in specific tool states
+              // controller.onPanUpdate(
+              //   event.delta / controller.state.scale,
+              // );
             },
             onPointerUp: (PointerUpEvent event) {
-              final Offset correctedPosition = controller.correctPosition(event.localPosition);
+              final Offset correctedPosition = controller.correctPosition(
+                event.localPosition,
+              );
 
-              context.read<FusionCanvasInputViewModel>().onTapUp(correctedPosition);
+              context.read<FusionCanvasInputViewModel>().onTapUp(
+                correctedPosition,
+                buttons: event.buttons == 0 ? 0x01 : event.buttons,
+              );
+            },
+            onPointerDown: (PointerDownEvent event) {
+              final Offset correctedPosition = controller.correctPosition(
+                event.localPosition,
+              );
+
+              context.read<FusionCanvasInputViewModel>().onTapDown(
+                correctedPosition,
+                buttons: event.buttons,
+              );
             },
 
             child: ClipRect(
@@ -273,4 +364,52 @@ class FusionPenToolEvents {
   final ValueChanged<List<FusionCanvasPoint>>? onPathClosed;
 
   FusionPenToolEvents({this.onPointsChanged, this.onPathClosed});
+}
+
+/// A widget that syncs polygon points from elements to FusionSnapViewModel.
+/// The ViewModel handles change detection internally.
+class _PolygonPointsSync extends StatefulWidget {
+  const _PolygonPointsSync({
+    required this.elements,
+    required this.child,
+  });
+
+  final List<FusionBasePainter> elements;
+  final Widget child;
+
+  @override
+  State<_PolygonPointsSync> createState() => _PolygonPointsSyncState();
+}
+
+class _PolygonPointsSyncState extends State<_PolygonPointsSync> {
+  void _syncPolygonPoints() {
+    final List<Offset> points = <Offset>[];
+    for (final FusionBasePainter element in widget.elements) {
+      if (element is FusionPolygonPainter) {
+        points.addAll(
+          element.polygon.points.map((FusionCanvasPoint p) => p.position),
+        );
+      }
+    }
+    context.read<FusionSnapViewModel>().addPolygonPoints(points);
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _syncPolygonPoints();
+    });
+  }
+
+  @override
+  void didUpdateWidget(covariant _PolygonPointsSync oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.elements != widget.elements) {
+      _syncPolygonPoints();
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) => widget.child;
 }

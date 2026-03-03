@@ -2,28 +2,35 @@ import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
+import '../state/fusion_canvas_input_state.dart';
+import '../state/fusion_snap_state.dart';
 import '../state/fusion_tool_state.dart';
 import '../state/tools/measure_tool_state.dart';
 import '../state/tools/pen_tool_state.dart';
-import 'fusion_canvas_input_viewmodel.dart';
-import 'fusion_snap_viewmodel.dart';
 
 class FusionCanvasToolViewModel extends Cubit<FusionToolState> {
-  final FusionCanvasInputViewModel inputViewModel;
-  final FusionSnapViewModel snapViewModel;
-  FusionCanvasToolViewModel({required this.inputViewModel, required this.snapViewModel}) : super(FusionCanvasIdleToolState()) {
-    inputViewModel.addListener(
-      _listener,
-    );
+  FusionCanvasToolViewModel() : super(FusionCanvasIdleToolState());
+  void onInputStateChanged(FusionCanvasInputState inputState, FusionSnapState snapResult) {
+    switch (inputState) {
+      case FusionCanvasInputTapUpState(:final Offset tapPosition, :final FusionMouseButton button, :final FusionGestureOrigin gestureOrigin):
+        if (button == FusionMouseButton.left && gestureOrigin == FusionGestureOrigin.click) {
+          _onTapUp(snapResult.effectivePosition ?? tapPosition);
+        }
+      case FusionCanvasInputDoubleTapState(:final Offset tapPosition):
+        _onDoubleTap(tapPosition);
+      case FusionCanvasInputLongPressState(:final Offset pressPosition):
+        _onLongPress(pressPosition);
+      case FusionCanvasInputSecondaryTapState(:final Offset tapPosition):
+        _onSecondaryTap(tapPosition);
+      case _:
+        // No action needed for idle state
+        break;
+    }
   }
 
-  late final FusionInputEventsListener _listener = FusionInputEventsListener(
-    onTapUp: onTapUp,
-  );
-
-  void onTapUp(Offset position) {
+  void _onTapUp(Offset position) {
     // Use effective position (snapped if available) instead of raw position
-    final Offset effectivePosition = snapViewModel.state.effectivePosition ?? position;
+    final Offset effectivePosition = position;
 
     if (state is MeasureToolState) {
       if (state is IdleMeasureToolState) {
@@ -47,15 +54,28 @@ class FusionCanvasToolViewModel extends Cubit<FusionToolState> {
     }
   }
 
-  void setTool(FusionToolState toolState) {
-    emit(toolState);
+  void _onDoubleTap(Offset position) {
+    // Handle double tap events - can be extended based on tool requirements
+    // Example: Close pen tool path on double tap
+    if (state is DrawingPenToolState) {
+      final DrawingPenToolState penState = state as DrawingPenToolState;
+      if (penState.points.length >= 3) {
+        setTool(ClosedPenToolState(points: penState.points));
+      }
+    }
   }
 
-  @override
-  Future<void> close() {
-    inputViewModel.removeListener(
-      _listener,
-    );
-    return super.close();
+  void _onLongPress(Offset position) {
+    // Handle long press events - can be extended based on tool requirements
+  }
+
+  void _onSecondaryTap(Offset position) {
+    if (state is DrawingMeasureToolState || state is DrawingPenToolState) {
+      setTool(FusionCanvasIdleToolState());
+    }
+  }
+
+  void setTool(FusionToolState toolState) {
+    emit(toolState);
   }
 }

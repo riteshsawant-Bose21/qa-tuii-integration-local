@@ -202,9 +202,17 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
                                             ),
                                         ],
                                         toolbarEvents: FusionCanvasEvents(
+                                          onLayerSelected: (FusionBasePainter? value) {
+                                            if (value is ListeningAreaPainter) {
+                                              serviceLocator<ProjectViewModel>().setCurrentSelectedListeningArea(value.listeningArea.id);
+                                              serviceLocator<ProjectViewModel>().setCurrentSelectedHardware(null);
+                                            } else {
+                                              serviceLocator<ProjectViewModel>().setCurrentSelectedListeningArea(null);
+                                              serviceLocator<ProjectViewModel>().setCurrentSelectedHardware(null);
+                                            }
+                                          },
                                           penToolEvents: FusionPenToolEvents(
                                             onPathClosed: (List<FusionCanvasPoint> value) {
-                                              final List<Offset> areaPoints = value.map((FusionCanvasPoint e) => e.position).toList();
                                               final ProjectViewModel projectVM = serviceLocator<ProjectViewModel>();
                                               projectVM.addListeningArea(
                                                 area: ListeningArea(

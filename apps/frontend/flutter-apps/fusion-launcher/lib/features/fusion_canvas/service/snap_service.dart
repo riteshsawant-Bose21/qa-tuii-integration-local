@@ -75,7 +75,7 @@ class SnapService {
   SnapResult findSnapPoint({
     required Offset cursorPosition,
     List<Offset> existingPoints = const <Offset>[],
-    Offset? activeStartPoint,
+
     double scale = 1.0,
   }) {
     final double effectiveSnapDistance = settings.snapDistance / scale;
@@ -83,7 +83,6 @@ class SnapService {
     final List<SnapPoint> availableSnapPoints = _generateSnapPoints(
       cursorPosition: cursorPosition,
       existingPoints: existingPoints,
-      activeStartPoint: activeStartPoint,
     );
 
     // Find all snap points within snap distance, grouped by type
@@ -167,7 +166,6 @@ class SnapService {
   List<SnapPoint> _generateSnapPoints({
     required Offset cursorPosition,
     required List<Offset> existingPoints,
-    Offset? activeStartPoint,
   }) {
     final List<SnapPoint> snapPoints = <SnapPoint>[];
 
