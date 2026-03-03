@@ -9,6 +9,7 @@ import (
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/api/types"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/utils/errorutil"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/utils/validation"
+	"github.com/aarondl/null/v8"
 	"go.uber.org/zap"
 )
 
@@ -181,6 +182,74 @@ func (s *Service) ApproveBundle(ctx context.Context, bundleID string, approvedBy
 	}
 
 	return nil
+}
+
+func (s *Service) CheckForUpdate(ctx context.Context, req *types.CheckForUpdateRequest, logger *zap.Logger) (*types.CheckForUpdateResponse, error) {
+	// 1. Find the latest approved bundle compatible with the current desktop app version
+	compatibleBundle, err := s.dbService.GetLatestCompatibleBundle(ctx, req.CurrentFirmwareVersion, req.CurrentDesktopAppVersion)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get latest compatible bundle: %w", err)
+	}
+
+	if compatibleBundle != nil {
+		// A compatible bundle was found. Check if the firmware requirement is met.
+		currentFirmwareSemver, err := validation.ParseSemver(req.CurrentFirmwareVersion)
+		if err != nil {
+			return nil, fmt.Errorf("invalid current firmware version: %w", err)
+		}
+		minPrevFirmwareSemver, err := validation.ParseSemver(compatibleBundle.MinPrevVersion)
+		if err != nil {
+			return nil, fmt.Errorf("invalid min_prev_version in bundle %s: %w", compatibleBundle.Version, err)
+		}
+
+		if validation.IsVersionGreaterOrEqual(currentFirmwareSemver, minPrevFirmwareSemver) {
+			// Firmware version is sufficient. Update is available.
+			return &types.CheckForUpdateResponse{
+				UpdateAvailable:      true,
+				AppUpdateRequired:    false,
+				BundleID:             null.StringFrom(compatibleBundle.ID),
+				Version:              null.StringFrom(compatibleBundle.Version),
+				ReleaseNotes:         compatibleBundle.ReleaseNotes,
+				MinPrevVersion:       null.StringFrom(compatibleBundle.MinPrevVersion),
+				MinDesktopAppVersion: compatibleBundle.MinDesktopAppVersion,
+				ManifestData:         compatibleBundle.ManifestData,
+				CreatedAt:            null.TimeFrom(compatibleBundle.CreatedAt),
+			}, nil
+		}
+	}
+
+	// 2. If no directly compatible bundle is found, or if firmware is too old,
+	// check for the latest bundle that is compatible with the current firmware to see if an app update is required.
+	latestCompatibleBundle, err := s.dbService.GetLatestBundleCompatibleWithFirmware(ctx, req.CurrentFirmwareVersion)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get latest bundle compatible with firmware: %w", err)
+	}
+
+	if latestCompatibleBundle != nil {
+		// A newer bundle exists that is compatible with the current firmware, but it requires a newer app version.
+		currentAppSemver, err := validation.ParseSemver(req.CurrentDesktopAppVersion)
+		if err != nil {
+			return nil, fmt.Errorf("invalid current desktop app version: %w", err)
+		}
+		minAppSemver, err := validation.ParseSemver(latestCompatibleBundle.MinDesktopAppVersion)
+		if err != nil {
+			return nil, fmt.Errorf("invalid min_desktop_app_version in bundle %s: %w", latestCompatibleBundle.Version, err)
+		}
+
+		if !validation.IsVersionGreaterOrEqual(currentAppSemver, minAppSemver) {
+			return &types.CheckForUpdateResponse{
+				UpdateAvailable:      true,
+				AppUpdateRequired:    true,
+				MinDesktopAppVersion: latestCompatibleBundle.MinDesktopAppVersion,
+			}, nil
+		}
+	}
+
+	// 3. If we reach here, no update is available.
+	return &types.CheckForUpdateResponse{
+		UpdateAvailable:   false,
+		AppUpdateRequired: false,
+	}, nil
 }
 
 func (s *Service) MakeReleaseAvailable(ctx context.Context, releaseID string, logger *zap.Logger) error {

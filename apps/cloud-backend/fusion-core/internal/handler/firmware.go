@@ -296,6 +296,42 @@ func (h *FirmwareUpdateHandler) CheckUpdates(ctx *gin.Context) {
 	response.OK(ctx, resp)
 }
 
+// CheckForUpdate checks for available firmware updates for a device
+// @Summary Check for Firmware Updates
+// @Description Checks for the latest available and approved firmware bundle compatible with the client's current firmware and desktop application versions.
+// @Tags Firmware Update - Client API
+// @Accept json
+// @Produce json
+// @Param request body types.CheckForUpdateRequest true "Current firmware and desktop app versions"
+// @Success 200 {object} types.CheckForUpdateResponse "Update availability and details"
+// @Failure 400 {object} types.ErrorResponse "Invalid request payload"
+// @Failure 500 {object} types.ErrorResponse "Internal server error"
+// @Router /firmware/updates/check [post]
+func (h *FirmwareUpdateHandler) CheckForUpdate(ctx *gin.Context) {
+	var payload types.CheckForUpdateRequest
+	loggerFromContext, exists := ctx.Get("logger")
+	if !exists {
+		response.InternalError(ctx)
+		return
+	}
+	logger := loggerFromContext.(*zap.Logger)
+
+	if err := ctx.ShouldBindJSON(&payload); err != nil {
+		logger.Error("Failed to bind CheckForUpdate payload", zap.Error(err))
+		response.BadRequest(ctx, "Invalid request payload: "+err.Error())
+		return
+	}
+
+	updateResp, err := h.firmware.CheckForUpdate(ctx, &payload, logger)
+	if err != nil {
+		logger.Error("Failed to check for update", zap.Error(err))
+		response.InternalError(ctx)
+		return
+	}
+
+	response.OK(ctx, updateResp)
+}
+
 // DownloadArtifact generates a presigned download URL for a firmware artifact
 // @Summary Get Firmware Download URL
 // @Description Generates a presigned S3 URL for downloading a specific firmware release artifact. The URL is valid for 15 minutes and includes the file checksum for integrity verification.

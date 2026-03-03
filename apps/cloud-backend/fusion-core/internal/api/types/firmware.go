@@ -1,6 +1,10 @@
 package types
 
-import "time"
+import (
+	"time"
+
+	"github.com/aarondl/null/v8"
+)
 
 // LogFirmwareUpdateRequest represents a firmware update log entry from a device
 type LogFirmwareUpdateRequest struct {
@@ -109,4 +113,36 @@ type DownloadArtifactResponse struct {
 
 type DeployReleasePayload struct {
 	Channel string `json:"channel" binding:"required"`
+}
+
+type CheckForUpdateRequest struct {
+	CurrentFirmwareVersion   string `json:"current_firmware_version" validate:"required,semver"`
+	CurrentDesktopAppVersion string `json:"current_desktop_app_version" validate:"required,semver"`
+}
+
+type CheckForUpdateResponse struct {
+	UpdateAvailable      bool        `json:"update_available"`
+	AppUpdateRequired    bool        `json:"app_update_required"`
+	BundleID             null.String `json:"bundle_id,omitempty"`
+	Version              null.String `json:"version,omitempty"`
+	ReleaseNotes         null.String `json:"release_notes,omitempty"`
+	MinPrevVersion       null.String `json:"min_required_prev_version,omitempty"`
+	MinDesktopAppVersion string      `json:"min_desktop_app_version,omitempty"`
+	ManifestData         null.JSON   `json:"manifest_data,omitempty"`
+	CreatedAt            null.Time   `json:"created_at,omitempty"`
+}
+
+// FirmwareRelease represents a firmware release with its associated artifacts.
+// Deprecated: use Bundle instead
+type FirmwareRelease struct {
+	ReleaseID            string `json:"release_id"`
+	Platform             string `json:"platform"`
+	FirmwareVersion      string `json:"firmware_version"`
+	Status               string `json:"status"`
+	ReleaseNotes         string `json:"release_notes"`
+	MinDesktopAppVersion string `json:"min_desktop_app_version"`
+	HwCompatibility      string `json:"hw_compatibility"`
+	ApiVersion           string `json:"api_version"`
+	Created              time.Time
+	Updated              time.Time
 }

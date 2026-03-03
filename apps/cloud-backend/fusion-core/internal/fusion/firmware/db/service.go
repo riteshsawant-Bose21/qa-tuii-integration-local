@@ -277,6 +277,59 @@ func (s *Service) ListBundles(ctx context.Context, isApproved *bool, limit, offs
 	return bundles, total, nil
 }
 
+func (s *Service) GetLatestCompatibleBundle(ctx context.Context, currentFirmwareVersion string, currentDesktopAppVersion string) (*model.Bundle, error) {
+	bundle, err := model.Bundles(
+		model.BundleWhere.IsApproved.EQ(true),
+		qm.Where("version_parts > string_to_array(?, '.')::int[]", currentFirmwareVersion),
+		qm.Where("min_desktop_app_version_parts <= string_to_array(?, '.')::int[]", currentDesktopAppVersion),
+		qm.OrderBy("version_parts DESC"),
+	).One(ctx, s.db)
+
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, nil // No compatible bundle found
+		}
+		return nil, fmt.Errorf("failed to get latest compatible bundle: %w", err)
+	}
+
+	return bundle, nil
+}
+
+func (s *Service) GetLatestBundleCompatibleWithFirmware(ctx context.Context, currentFirmwareVersion string) (*model.Bundle, error) {
+	bundle, err := model.Bundles(
+		model.BundleWhere.IsApproved.EQ(true),
+		qm.Where("version_parts > string_to_array(?, '.')::int[]", currentFirmwareVersion),
+		qm.Where("min_prev_version_parts <= string_to_array(?, '.')::int[]", currentFirmwareVersion),
+		qm.OrderBy("version_parts DESC"),
+	).One(ctx, s.db)
+
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, nil // No compatible bundle found
+		}
+		return nil, fmt.Errorf("failed to get latest bundle compatible with firmware: %w", err)
+	}
+
+	return bundle, nil
+}
+
+func (s *Service) GetLatestApprovedBundleNewerThan(ctx context.Context, currentFirmwareVersion string) (*model.Bundle, error) {
+	bundle, err := model.Bundles(
+		model.BundleWhere.IsApproved.EQ(true),
+		qm.Where("version_parts > string_to_array(?, '.')::int[]", currentFirmwareVersion),
+		qm.OrderBy("version_parts DESC"),
+	).One(ctx, s.db)
+
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, nil // No bundle found
+		}
+		return nil, fmt.Errorf("failed to get latest bundle: %w", err)
+	}
+
+	return bundle, nil
+}
+
 func (s *Service) InsertBundle(ctx context.Context, payload types.NotifyBundleUploadPayload, logger *zap.Logger) (string, error) {
 
 	// Convert manifest data to proper JSON for sqlboiler type
