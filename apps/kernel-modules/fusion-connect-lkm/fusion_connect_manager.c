@@ -9,6 +9,7 @@
 #include <linux/kthread.h>
 #include <linux/sched.h>
 #include <linux/sched/types.h>
+#include <linux/sched/types.h>
 #include <linux/cpumask.h>
 #include <linux/smp.h>
 #include <linux/math64.h>
@@ -549,10 +550,10 @@ int fusion_cn_mgr_start(struct fusion_cn_manager *mgr)
         process_thread = worker->task;
         set_cpus_allowed_ptr(process_thread, cpumask_of(3));
         if (worker_rt_prio > 0) {
-            struct sched_attr attr = {
-                .sched_policy   = SCHED_FIFO,
-                .sched_priority = worker_rt_prio,
-            };
+            struct sched_attr attr = {};
+            attr.size = sizeof(attr);
+            attr.sched_policy = SCHED_FIFO;
+            attr.sched_priority = worker_rt_prio;
             int rc = sched_setattr_nocheck(process_thread, &attr);
             if (rc)
                 pr_warn("fusion_cn: failed to set RT prio %d for worker: %d\n",
