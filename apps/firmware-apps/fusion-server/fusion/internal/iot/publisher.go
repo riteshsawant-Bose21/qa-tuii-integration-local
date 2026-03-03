@@ -63,6 +63,7 @@ type Publisher struct {
 	stopCh  chan struct{}
 	wg      sync.WaitGroup
 	mu      sync.RWMutex
+	cluster *cluster.Cluster
 }
 
 // MetricsPayload represents the structure of metrics sent to IoT
@@ -81,7 +82,7 @@ type MetricsPayload struct {
 }
 
 // NewPublisher creates a new IoT publisher
-func NewPublisher(config *Config, metrics *cluster.MetricsCollector) (*Publisher, error) {
+func NewPublisher(config *Config, metrics *cluster.MetricsCollector, cluster *cluster.Cluster) (*Publisher, error) {
 	if config == nil {
 		return nil, fmt.Errorf("config cannot be nil")
 	}
@@ -108,6 +109,7 @@ func NewPublisher(config *Config, metrics *cluster.MetricsCollector) (*Publisher
 		metrics: metrics,
 		logger:  logging.GetLogger(),
 		stopCh:  make(chan struct{}),
+		cluster: cluster,
 	}, nil
 }
 
@@ -255,8 +257,10 @@ func (p *Publisher) publishMetrics() {
 	}
 
 	topic := p.getMetricsTopic()
+	if !p.cluster.IsLocalNodePrimary() {
+		return // Only primary node should publish metrics
+	}
 	token := client.Publish(topic, byte(DefaultPublishQoS), false, data)
-
 	if !token.WaitTimeout(DefaultPublishTimeout) {
 		p.logger.Error("Publish timeout for topic %s", topic)
 		return
