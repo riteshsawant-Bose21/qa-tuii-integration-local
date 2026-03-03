@@ -511,3 +511,37 @@ func (h *FirmwareUpdateHandler) GetBundleDownloadURL(c *gin.Context) {
 
 	response.OK(c, res)
 }
+
+// LogBundleUpdateStatus records the status of a firmware bundle update
+// @Summary Log Bundle Update Status
+// @Description Records the success or failure of a firmware bundle update installation.
+// @Tags Firmware Update - Client API
+// @Accept json
+// @Produce json
+// @Param request body types.LogBundleUpdateStatusPayload true "Bundle update status details"
+// @Success 202 "Update status logged successfully"
+// @Failure 400 {object} types.ErrorResponse "Invalid request payload"
+// @Failure 500 {object} types.ErrorResponse "Internal server error"
+// @Router /firmware/bundles/updates/status [post]
+func (h *FirmwareUpdateHandler) LogBundleUpdateStatus(c *gin.Context) {
+	var payload types.LogBundleUpdateStatusPayload
+	if err := c.ShouldBindJSON(&payload); err != nil {
+		response.BadRequest(c, "Invalid request payload: "+err.Error())
+		return
+	}
+
+	logger, ok := c.MustGet("logger").(*zap.Logger)
+	if !ok {
+		response.InternalError(c)
+		return
+	}
+
+	err := h.firmware.LogBundleUpdateStatus(c.Request.Context(), &payload, logger)
+	if err != nil {
+		logger.Error("Failed to log bundle update status", zap.Error(err))
+		response.InternalError(c)
+		return
+	}
+
+	response.Accepted(c)
+}

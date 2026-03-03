@@ -469,3 +469,7 @@ func (s *Service) DeployRelease(ctx context.Context, releaseID string, channel s
 
 	return nil
 }
+
+func (s *Service) LogBundleUpdateStatus(ctx context.Context, payload *types.LogBundleUpdateStatusPayload, logger *zap.Logger) error {
+	return s.dbService.LogBundleUpdateStatus(ctx, payload)
+}

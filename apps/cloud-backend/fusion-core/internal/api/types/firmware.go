@@ -146,3 +146,14 @@ type FirmwareRelease struct {
 	Created              time.Time
 	Updated              time.Time
 }
+
+// CheckForUpdateResponseStatusAppUpdateRequired CheckForUpdateResponseStatus = "APP_UPDATE_REQUIRED"
+type LogBundleUpdateStatusPayload struct {
+	UpdateID        string    `json:"update_id" binding:"required,uuid"`
+	ProjectID       string    `json:"project_id" binding:"required,uuid"`
+	BundleVersion   string    `json:"bundle_version" binding:"required"`
+	PreviousVersion string    `json:"previous_version"`
+	Status          string    `json:"status" binding:"required,oneof=INSTALL_SUCCESS INSTALL_FAIL"`
+	LauncherVersion string    `json:"launcher_version"`
+	InstalledAt     time.Time `json:"installed_at" binding:"required"`
+}

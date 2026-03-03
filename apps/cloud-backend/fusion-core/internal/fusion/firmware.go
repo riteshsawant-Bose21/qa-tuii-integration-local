@@ -22,4 +22,5 @@ type Firmware interface {
 	ApproveBundle(ctx context.Context, bundleID string, approvedBy string, logger *zap.Logger) error
 	CheckForUpdate(ctx context.Context, request *types.CheckForUpdateRequest, logger *zap.Logger) (*types.CheckForUpdateResponse, error)
 	GetBundleDownloadURL(ctx context.Context, bundleID string, logger *zap.Logger) (*types.DownloadArtifactResponse, error)
+	LogBundleUpdateStatus(ctx context.Context, payload *types.LogBundleUpdateStatusPayload, logger *zap.Logger) error
 }

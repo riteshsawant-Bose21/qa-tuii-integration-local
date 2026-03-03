@@ -8,12 +8,11 @@ import (
 	"fmt"
 	"time"
 
-	types "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/api/types"
-	customModel "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/model"
-	model "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/model/models"
-
 	"github.com/aarondl/null/v8"
+	"github.com/google/uuid"
 
+	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/api/types"
+	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/firmware/model"
 	"github.com/aarondl/sqlboiler/v4/boil"
 	"github.com/aarondl/sqlboiler/v4/queries/qm"
 	"go.uber.org/zap"
@@ -295,24 +294,6 @@ func (s *Service) GetLatestCompatibleBundle(ctx context.Context, currentFirmware
 	return bundle, nil
 }
 
-func (s *Service) GetLatestBundleCompatibleWithFirmware(ctx context.Context, currentFirmwareVersion string) (*model.Bundle, error) {
-	bundle, err := model.Bundles(
-		model.BundleWhere.IsApproved.EQ(true),
-		qm.Where("version_parts > string_to_array(?, '.')::int[]", currentFirmwareVersion),
-		qm.Where("min_prev_version_parts <= string_to_array(?, '.')::int[]", currentFirmwareVersion),
-		qm.OrderBy("version_parts DESC"),
-	).One(ctx, s.db)
-
-	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return nil, nil // No compatible bundle found
-		}
-		return nil, fmt.Errorf("failed to get latest bundle compatible with firmware: %w", err)
-	}
-
-	return bundle, nil
-}
-
 func (s *Service) GetLatestApprovedBundleNewerThan(ctx context.Context, currentFirmwareVersion string) (*model.Bundle, error) {
 	bundle, err := model.Bundles(
 		model.BundleWhere.IsApproved.EQ(true),
@@ -398,4 +379,41 @@ func (s *Service) GetBundleByID(ctx context.Context, bundleID string) (*model.Bu
 	}
 
 	return bundle, nil
+}
+
+func (s *Service) GetLatestBundleCompatibleWithFirmware(ctx context.Context, currentVersion []int) (*model.FirmwareBundle, error) {
+	mods := []qm.QueryMod{
+		qm.Where("version_parts > string_to_array(?, '.')::int[]", currentVersion),
+		qm.Where("min_prev_version_parts <= string_to_array(?, '.')::int[]", currentVersion),
+		qm.OrderBy("version_parts DESC"),
+	}
+
+	release, err := model.FirmwareBundles(mods...).One(ctx, s.db)
+
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, nil // No compatible bundle found
+		}
+		return nil, fmt.Errorf("failed to get latest bundle compatible with firmware: %w", err)
+	}
+
+	return release, nil
+}
+
+func (s *Service) LogBundleUpdateStatus(ctx context.Context, payload *types.LogBundleUpdateStatusPayload) error {
+	updateID, _ := uuid.Parse(payload.UpdateID)
+	projectID, _ := uuid.Parse(payload.ProjectID)
+
+	status := &model.BundleUpdateStatus{
+		ID:              uuid.New(),
+		UpdateID:        updateID,
+		ProjectID:       projectID,
+		BundleVersion:   payload.BundleVersion,
+		PreviousVersion: payload.PreviousVersion,
+		Status:          payload.Status,
+		LauncherVersion: payload.LauncherVersion,
+		InstalledAt:     payload.InstalledAt,
+	}
+
+	return status.Insert(ctx, s.db, boil.Infer())
 }
