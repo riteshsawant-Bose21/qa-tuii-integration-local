@@ -4,9 +4,9 @@ import (
 	"context"
 
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/api/types"
+	cloudIot "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/cloud/iot"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/model"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/model/models"
-	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/storage/cloudfs"
 	"go.uber.org/zap"
 )
 
@@ -14,7 +14,7 @@ import (
 type Service struct {
 	dbService      DatabaseService
 	projectService ProjectService
-	iotService     cloudfs.IoT
+	iotService     cloudIot.IoT
 }
 
 // ProjectService defines the contract for project query operations.
@@ -40,7 +40,7 @@ type DatabaseService interface {
 }
 
 // NewService creates a new device service instance.
-func NewService(dbService DatabaseService, projectService ProjectService, iotService cloudfs.IoT) *Service {
+func NewService(dbService DatabaseService, projectService ProjectService, iotService cloudIot.IoT) *Service {
 	return &Service{
 		dbService:      dbService,
 		projectService: projectService,
