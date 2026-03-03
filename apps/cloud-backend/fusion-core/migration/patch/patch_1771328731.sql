@@ -1,54 +1,38 @@
-CREATE TYPE firmware_release_status AS ENUM (
-    'PENDING_UPLOAD',
-    'AVAILABLE',
-    'ARCHIVED'
-);
 
-CREATE TABLE firmware_releases (
+CREATE TABLE bundle (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    platform TEXT NOT NULL,                 
-    version TEXT NOT NULL,                  
-    version_parts int[] GENERATED ALWAYS AS (
-        string_to_array(version, '.')::int[]
-    ) stored , 
-
-    status firmware_release_status NOT NULL DEFAULT 'PENDING_UPLOAD',
+    version TEXT NOT NULL UNIQUE,
+             
+    release_notes TEXT,
     
-    release_notes TEXT NOT NULL,                    
-    s3_key TEXT NOT NULL UNIQUE,          
-    file_checksum TEXT NOT NULL,           
+    min_prev_version TEXT NOT NULL,
+    min_desktop_app_version TEXT NOT NULL,
     
-    min_desktop_app_version TEXT NOT NULL,                
-    hw_compatibility TEXT NOT NULL,                  
-    api_level TEXT NOT NULL,
+    manifest_data JSONB NOT NULL,
 
+    is_approved bool NOT NULL DEFAULT false,
     
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-   	updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-    
-    UNIQUE(platform, version)
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
-CREATE TYPE firmware_update_status AS ENUM (
+
+CREATE TYPE bundle_update_status_enum AS ENUM (
     'INSTALL_SUCCESS',
     'INSTALL_FAIL'
 );
 
-CREATE TABLE firmware_deployments (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    release_id UUID NOT NULL REFERENCES firmware_releases(id),
-    channel TEXT NOT NULL,                 
-    
-    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
-);
+CREATE TABLE bundle_update_status (
+    id UUID PRIMARY KEY,         
+    update_id UUID NOT null,
 
-CREATE TABLE firmware_update_logs (
-    id BIGSERIAL PRIMARY KEY, 
-    device_id TEXT NOT NULL, 
-    status firmware_update_status NOT NULL,     
-    release_version TEXT NOT NULL,
+    project_id UUID NOT NULL references project(id),
+    bundle_version TEXT NOT NULL,      
+    previous_version TEXT,
+    status bundle_update_status_enum NOT NULL,             
+    launcher_version TEXT,    
     
-    event_time TIMESTAMPTZ NOT NULL DEFAULT now(),
-    
+    installed_at TIMESTAMPTZ NOT null,
+   
     created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
