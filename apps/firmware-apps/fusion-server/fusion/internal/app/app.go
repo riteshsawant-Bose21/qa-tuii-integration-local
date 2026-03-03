@@ -87,7 +87,7 @@ func NewApp(config *api.AppConfig) *App {
 	sapServer := initSAPServer(config, api.SAPPort, connectionHandler, hub)
 	udpServer := initUDPServer(api.UDPPort, connectionHandler, hub)
 	fusionServer := server.NewFusionServer(config.NodeName, connectionHandler, hub)
-	iotPublisher := initIoTPublisher(config, clusterInstance.Metrics)
+	iotPublisher := initIoTPublisher(config, clusterInstance.Metrics, clusterInstance)
 
 	// Setup the public routes
 	publicRouter := mux.NewRouter()
@@ -558,7 +558,7 @@ func initMDNSManager() *network.MDNSManager {
 }
 
 // initIoTPublisher initializes the AWS IoT Core publisher
-func initIoTPublisher(config *api.AppConfig, metrics *cluster.MetricsCollector) *iot.Publisher {
+func initIoTPublisher(config *api.AppConfig, metrics *cluster.MetricsCollector, cluster *cluster.Cluster) *iot.Publisher {
 	logger := logging.GetLogger()
 
 	if !config.IoTEnabled {
@@ -583,7 +583,7 @@ func initIoTPublisher(config *api.AppConfig, metrics *cluster.MetricsCollector) 
 		Enabled:     config.IoTEnabled,
 	}
 
-	publisher, err := iot.NewPublisher(iotConfig, metrics)
+	publisher, err := iot.NewPublisher(iotConfig, metrics, cluster)
 	if err != nil {
 		logger.Error("Failed to create IoT publisher: %v", err)
 		return nil

@@ -621,12 +621,12 @@ func (c *Cluster) getLocalDeviceInfo() persistence.DeviceInfo {
 	if err != nil {
 		return persistence.DeviceInfo{}
 	}
-	info.IsPrimaryNode = c.isLocalNodePrimary()
+	info.IsPrimaryNode = c.IsLocalNodePrimary()
 
 	return *info
 }
 
-func (c *Cluster) isLocalNodePrimary() bool {
+func (c *Cluster) IsLocalNodePrimary() bool {
 
 	vipValue, multiple, err := vip.ReadFromKeepalivedConfig(c.configPath)
 	if err != nil {
