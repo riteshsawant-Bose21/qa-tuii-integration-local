@@ -101,6 +101,21 @@ definitions:
     - email
     - full_name
     type: object
+  types.DeviceClaimRequest:
+    properties:
+      csr:
+        type: string
+      project_id:
+        type: string
+    required:
+    - csr
+    - project_id
+    type: object
+  types.DeviceClaimResponse:
+    properties:
+      certificate:
+        type: string
+    type: object
   types.DeviceCreateRequest:
     properties:
       csr:
@@ -138,6 +153,18 @@ definitions:
     - serial_number
     type: object
   types.DeviceCreateResponse:
+    properties:
+      certificate:
+        type: string
+    type: object
+  types.DeviceRotateCertRequest:
+    properties:
+      csr:
+        type: string
+    required:
+    - csr
+    type: object
+  types.DeviceRotateCertResponse:
     properties:
       certificate:
         type: string
@@ -885,8 +912,6 @@ paths:
           description: Internal server error
           schema:
             $ref: '#/definitions/types.ErrorResponse'
-      security:
-      - BearerAuth: []
       summary: Create a new device
       tags:
       - devices
@@ -933,6 +958,51 @@ paths:
       summary: Update a device
       tags:
       - devices
+  /devices/{device_id}/claim:
+    post:
+      consumes:
+      - application/json
+      description: Claim an unclaimed device for a user and project
+      parameters:
+      - description: Device ID
+        in: path
+        name: device_id
+        required: true
+        type: string
+      - description: Claim details
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/types.DeviceClaimRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Successfully claimed device
+          schema:
+            $ref: '#/definitions/types.DeviceClaimResponse'
+        "400":
+          description: Bad request - Invalid payload or device already claimed
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+        "401":
+          description: Unauthorized - User not authorized
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+        "404":
+          description: Device or project not found
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Claim a device
+      tags:
+      - devices
   /devices/{device_id}/reset:
     delete:
       consumes:
@@ -964,6 +1034,52 @@ paths:
       security:
       - BearerAuth: []
       summary: Reset a device
+      tags:
+      - devices
+  /devices/{device_id}/rotate-cert:
+    post:
+      consumes:
+      - application/json
+      description: Creates a new certificate, attaches it to the device, and marks
+        the old certificate as inactive
+      parameters:
+      - description: Device ID
+        in: path
+        name: device_id
+        required: true
+        type: string
+      - description: Certificate rotation details
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/types.DeviceRotateCertRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Successfully rotated certificate
+          schema:
+            $ref: '#/definitions/types.DeviceRotateCertResponse'
+        "400":
+          description: Bad request - Invalid payload
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+        "401":
+          description: Unauthorized - User not authorized
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+        "404":
+          description: Device not found
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Rotate device certificate
       tags:
       - devices
   /organization/role-management:

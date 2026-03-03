@@ -76,11 +76,6 @@ const docTemplate = `{
         },
         "/devices": {
             "post": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
                 "description": "Create a new device in the system",
                 "consumes": [
                     "application/json"
@@ -204,6 +199,76 @@ const docTemplate = `{
                 }
             }
         },
+        "/devices/{device_id}/claim": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Claim an unclaimed device for a user and project",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "devices"
+                ],
+                "summary": "Claim a device",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Device ID",
+                        "name": "device_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Claim details",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/types.DeviceClaimRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Successfully claimed device",
+                        "schema": {
+                            "$ref": "#/definitions/types.DeviceClaimResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad request - Invalid payload or device already claimed",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized - User not authorized",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Device or project not found",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/devices/{device_id}/reset": {
             "delete": {
                 "security": [
@@ -237,6 +302,76 @@ const docTemplate = `{
                     },
                     "401": {
                         "description": "Unauthorized - User not authorized to reset this device",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Device not found",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/devices/{device_id}/rotate-cert": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Creates a new certificate, attaches it to the device, and marks the old certificate as inactive",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "devices"
+                ],
+                "summary": "Rotate device certificate",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Device ID",
+                        "name": "device_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Certificate rotation details",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/types.DeviceRotateCertRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successfully rotated certificate",
+                        "schema": {
+                            "$ref": "#/definitions/types.DeviceRotateCertResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad request - Invalid payload",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized - User not authorized",
                         "schema": {
                             "$ref": "#/definitions/types.ErrorResponse"
                         }
@@ -1940,6 +2075,29 @@ const docTemplate = `{
                 }
             }
         },
+        "types.DeviceClaimRequest": {
+            "type": "object",
+            "required": [
+                "csr",
+                "project_id"
+            ],
+            "properties": {
+                "csr": {
+                    "type": "string"
+                },
+                "project_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "types.DeviceClaimResponse": {
+            "type": "object",
+            "properties": {
+                "certificate": {
+                    "type": "string"
+                }
+            }
+        },
         "types.DeviceCreateRequest": {
             "type": "object",
             "required": [
@@ -1991,6 +2149,25 @@ const docTemplate = `{
             }
         },
         "types.DeviceCreateResponse": {
+            "type": "object",
+            "properties": {
+                "certificate": {
+                    "type": "string"
+                }
+            }
+        },
+        "types.DeviceRotateCertRequest": {
+            "type": "object",
+            "required": [
+                "csr"
+            ],
+            "properties": {
+                "csr": {
+                    "type": "string"
+                }
+            }
+        },
+        "types.DeviceRotateCertResponse": {
             "type": "object",
             "properties": {
                 "certificate": {
