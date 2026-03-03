@@ -20,7 +20,7 @@ class FusionCanvasInputViewModel extends Cubit<FusionCanvasInputState> {
   }
 
   /// Updates the mouse position. Handles state transitions based on current state.
-  void updateMousePosition(Offset? position) {
+  void updateMousePosition(Offset? position, Offset? delta) {
     final FusionCanvasInputState currentState = state;
     if (position == null) {
       // If position is null, reset to idle but keep pressed keys
@@ -58,7 +58,7 @@ class FusionCanvasInputViewModel extends Cubit<FusionCanvasInputState> {
       emit(
         currentState.copyWith(
           currentPosition: position,
-          delta: position - currentState.currentPosition,
+          delta: delta ?? position - currentState.currentPosition,
           mousePosition: position,
         ),
       );

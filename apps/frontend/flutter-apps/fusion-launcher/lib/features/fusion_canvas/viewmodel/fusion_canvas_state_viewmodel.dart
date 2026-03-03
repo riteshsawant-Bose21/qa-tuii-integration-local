@@ -5,11 +5,8 @@ import 'package:fusion_launcher/features/fusion_canvas/state/fusion_canvas_state
 class FusionCanvasStateViewModel extends Cubit<FusionCanvasState> {
   FusionCanvasStateViewModel() : super(IdleFusionCanvasState(offset: Offset.zero, scale: 1.0));
 
-  double get minScale => 0.25;
+  double get minScale => 0.1;
   double get maxScale => 2.0;
-
-
-  
 
   Size? canvasSize;
   bool isWithinViewport(Offset position) {
@@ -88,6 +85,4 @@ class FusionCanvasStateViewModel extends Cubit<FusionCanvasState> {
     final double scale = state.scale;
     return (position * scale) + offset;
   }
-
-  
 }

@@ -227,6 +227,11 @@ class FusionCanvasInputDraggingState extends FusionCanvasInputState {
 
   @override
   int get hashCode => super.hashCode ^ startPosition.hashCode ^ currentPosition.hashCode ^ delta.hashCode ^ button.hashCode;
+
+  @override
+  toString() {
+    return 'DraggingState(start: $startPosition, current: $currentPosition, delta: $delta, button: $button, mousePosition: $mousePosition, pressedKeys: $pressedKeys)';
+  }
 }
 
 /// Double tap event state.

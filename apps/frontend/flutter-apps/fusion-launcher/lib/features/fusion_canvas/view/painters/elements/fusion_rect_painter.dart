@@ -13,14 +13,16 @@ abstract class FusionPolygonPainter extends FusionBasePainter {
   @override
   void paint(Canvas canvas, Size size, FusionCanvasPainter painter) {
     path = getPolygonPath(polygon);
-    canvas.drawPath(
-      path!,
-      getFillPaint(painter, isHit(painter.cursor ?? Offset.zero, painter)),
-    );
-    canvas.drawPath(
-      path!,
-      getStrokePaint(painter, isHit(painter.cursor ?? Offset.zero, painter)),
-    );
+    if (path != null) {
+      canvas.drawPath(
+        path!,
+        getFillPaint(painter, isHit(painter.cursor ?? Offset.zero, painter)),
+      );
+      canvas.drawPath(
+        path!,
+        getStrokePaint(painter, isHit(painter.cursor ?? Offset.zero, painter)),
+      );
+    }
   }
 
   Paint getFillPaint(FusionCanvasPainter painter, bool isHovered);
