@@ -126,6 +126,45 @@ func (s *Service) NotifyBundleUpload(ctx context.Context, payload *types.NotifyB
 	}, nil
 }
 
+func (s *Service) ListBundles(ctx context.Context, isApproved *bool, page, limit int) (*types.BundleListResponse, error) {
+	if page < 1 {
+		page = 1
+	}
+	if limit < 1 {
+		limit = 10
+	} else if limit > 100 {
+		limit = 100
+	}
+
+	offset := (page - 1) * limit
+
+	bundles, total, err := s.dbService.ListBundles(ctx, isApproved, limit, offset)
+	if err != nil {
+		return nil, fmt.Errorf("failed to list bundles: %w", err)
+	}
+
+	bundleDetailsList := make([]types.BundleDetails, 0, len(bundles))
+	for _, b := range bundles {
+		bundleDetailsList = append(bundleDetailsList, types.BundleDetails{
+			ID:                   b.ID,
+			Version:              b.Version,
+			ReleaseNotes:         b.ReleaseNotes.String,
+			MinPrevVersion:       b.MinPrevVersion,
+			MinDesktopAppVersion: b.MinDesktopAppVersion,
+			IsApproved:           b.IsApproved,
+			CreatedAt:            b.CreatedAt,
+			UpdatedAt:            b.UpdatedAt,
+		})
+	}
+
+	return &types.BundleListResponse{
+		Bundles: bundleDetailsList,
+		Total:   total,
+		Page:    page,
+		Limit:   limit,
+	}, nil
+}
+
 func (s *Service) MakeReleaseAvailable(ctx context.Context, releaseID string, logger *zap.Logger) error {
 	// Check if release exists
 	release, err := s.dbService.GetReleaseByID(ctx, releaseID)

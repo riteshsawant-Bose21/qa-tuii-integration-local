@@ -75,6 +75,14 @@ func (m *MockFirmwareService) NotifyBundleUpload(ctx context.Context, payload *t
 	return args.Get(0).(*types.BundleResponse), args.Error(1)
 }
 
+func (m *MockFirmwareService) ListBundles(ctx context.Context, isApproved *bool, page, limit int) (*types.BundleListResponse, error) {
+	args := m.Called(ctx, isApproved, page, limit)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*types.BundleListResponse), args.Error(1)
+}
+
 // --- Helper ---
 
 func setupTestContext(method, url string, body interface{}) (*httptest.ResponseRecorder, *gin.Context) {

@@ -105,6 +105,42 @@ func (h *FirmwareUpdateHandler) NotifyBundleUpload(ctx *gin.Context) {
 	response.OK(ctx, bundleResp)
 }
 
+// ListBundles retrieves firmware bundles with pagination and filtering
+// @Summary List Firmware Bundles
+// @Description Returns a paginated list of firmware bundles with optional filtering by approval status. Results are ordered by creation date in descending order.
+// @Tags Firmware Update - Management API
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param page query int false "Page number (default: 1)" default(1)
+// @Param limit query int false "Items per page (default: 10, max: 100)" default(10)
+// @Param is_approved query bool false "Filter by approval status (true or false)"
+// @Success 200 {object} types.BundleListResponse "List of firmware bundles with pagination metadata"
+// @Failure 400 {object} types.ErrorResponse "Invalid query parameters"
+// @Failure 500 {object} types.ErrorResponse "Internal server error"
+// @Router /firmware/bundles [get]
+func (h *FirmwareUpdateHandler) ListBundles(ctx *gin.Context) {
+	page, _ := strconv.Atoi(ctx.DefaultQuery("page", "1"))
+	limit, _ := strconv.Atoi(ctx.DefaultQuery("limit", "10"))
+
+	var isApproved *bool
+	isApprovedQuery, exists := ctx.GetQuery("is_approved")
+	if exists {
+		parsed, err := strconv.ParseBool(isApprovedQuery)
+		if err == nil {
+			isApproved = &parsed
+		}
+	}
+
+	resp, err := h.firmware.ListBundles(ctx, isApproved, page, limit)
+	if err != nil {
+		response.InternalError(ctx)
+		return
+	}
+
+	response.OK(ctx, resp)
+}
+
 // MakeReleaseAvailable publishes a firmware release to a deployment channel
 // @Summary Make Release Available
 // @Description Updates the release status to 'AVAILABLE' and creates a deployment entry for the specified channel, making the firmware available for devices to download

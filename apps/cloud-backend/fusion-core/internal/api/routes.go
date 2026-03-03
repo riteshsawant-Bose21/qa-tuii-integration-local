@@ -124,6 +124,7 @@ func (a *API) registerRoutes() {
 	firmwareUpdate.Use(a.authMiddleware.Middleware())
 	{
 		firmwareUpdate.GET(constants.EndpointFirmwareList, firmwareHandler.ListReleases)
+		firmwareUpdate.GET(constants.EndpointFirmwareBundles, firmwareHandler.ListBundles)
 		firmwareUpdate.POST(constants.EndpointFirmwareDeploy, firmwareHandler.DeployRelease)
 		firmwareUpdate.POST(constants.EndpointFirmwareUpdateCheck, firmwareHandler.CheckUpdates)
 		firmwareUpdate.GET(constants.EndpointFirmwareDownload, firmwareHandler.DownloadArtifact)

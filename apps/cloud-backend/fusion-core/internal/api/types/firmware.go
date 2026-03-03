@@ -42,6 +42,24 @@ type BundleResponse struct {
 	ID string `json:"id"`
 }
 
+type BundleDetails struct {
+	ID                   string    `json:"id"`
+	Version              string    `json:"version"`
+	ReleaseNotes         string    `json:"release_notes,omitempty"`
+	MinPrevVersion       string    `json:"min_prev_version"`
+	MinDesktopAppVersion string    `json:"min_desktop_app_version"`
+	IsApproved           bool      `json:"is_approved"`
+	CreatedAt            time.Time `json:"created_at"`
+	UpdatedAt            time.Time `json:"updated_at"`
+}
+
+type BundleListResponse struct {
+	Bundles []BundleDetails `json:"bundles"`
+	Total   int64           `json:"total"`
+	Page    int             `json:"page"`
+	Limit   int             `json:"limit"`
+}
+
 type FirmwareReleaseDetails struct {
 	ID                   string    `json:"id"`
 	Platform             string    `json:"platform"`

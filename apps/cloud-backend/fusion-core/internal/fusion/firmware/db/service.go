@@ -251,6 +251,32 @@ func (s *Service) GetBundleByVersion(ctx context.Context, version string) (*mode
 	return bundle, nil
 }
 
+func (s *Service) ListBundles(ctx context.Context, isApproved *bool, limit, offset int) ([]*model.Bundle, int64, error) {
+	var mods []qm.QueryMod
+
+	if isApproved != nil {
+		mods = append(mods, model.BundleWhere.IsApproved.EQ(*isApproved))
+	}
+
+	total, err := model.Bundles(mods...).Count(ctx, s.db)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	mods = append(mods,
+		qm.Limit(limit),
+		qm.Offset(offset),
+		qm.OrderBy(model.BundleColumns.CreatedAt+" DESC"),
+	)
+
+	bundles, err := model.Bundles(mods...).All(ctx, s.db)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	return bundles, total, nil
+}
+
 func (s *Service) InsertBundle(ctx context.Context, payload types.NotifyBundleUploadPayload, tx customModel.DBContextExecutor, logger *zap.Logger) (string, error) {
 
 	// Convert manifest data to proper JSON for sqlboiler type
