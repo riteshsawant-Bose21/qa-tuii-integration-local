@@ -7,8 +7,6 @@ import (
 	"fusion-services-core/logging"
 	"fusion-services-core/vip"
 	"fusion/internal/api"
-	"fusion-services-core/logging"
-	"fusion/internal/persistence"
 	"fusion/internal/routes"
 	"fusion/internal/utils"
 	"io"
@@ -378,7 +376,6 @@ func (c *Cluster) reloadVIP() error {
 	return nil
 }
 
-
 func (c *Cluster) rebootSystem() error {
 	if err := c.restartSystem(); err != nil {
 		return err
@@ -387,7 +384,7 @@ func (c *Cluster) rebootSystem() error {
 	return nil
 }
 
-func (c *Cluster) fetchAllDeviceInfos() []persistence.DeviceInfo {
+func (c *Cluster) fetchAllDeviceInfos() []api.DeviceInfo {
 	return fetchFromAdmin(
 		c,
 		c.getLocalDeviceInfo,
