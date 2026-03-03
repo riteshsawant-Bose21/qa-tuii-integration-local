@@ -130,7 +130,7 @@ class _MessagePlayerWidgetState extends State<MessagePlayerWidget> {
               itemCount: players.length,
               separatorBuilder:
                   (BuildContext context, int index) => Divider(
-                    height: 1,
+                    thickness: 1,
                     color: context.colorScheme.strokeLight,
                   ),
               itemBuilder: (BuildContext context, int index) {

@@ -40,28 +40,20 @@ class _DashboardDeviceCardState extends State<DashboardDeviceCard> {
 
   String get location {
     if (widget.device.locationEntity.listeningAreaId != null) {
-      final Zone? zone = serviceLocator<ProjectViewModel>()
-          .getZonesForListeningArea(
-            areaId: widget.device.locationEntity.listeningAreaId!,
-          );
+      final Zone? zone = serviceLocator<ProjectViewModel>().getZonesForListeningArea(areaId: widget.device.locationEntity.listeningAreaId!);
       if (zone != null) {
         return zone.name;
       }
-      final SubZone? subZone = serviceLocator<ProjectViewModel>()
-          .getSubZoneForListeningArea(
-            areaId: widget.device.locationEntity.listeningAreaId!,
-          );
+      final SubZone? subZone = serviceLocator<ProjectViewModel>().getSubZoneForListeningArea(areaId: widget.device.locationEntity.listeningAreaId!);
       if (subZone != null) {
-        final Zone? parentZone = serviceLocator<ProjectViewModel>()
-            .getZoneForSubZone(subZoneId: subZone.id);
+        final Zone? parentZone = serviceLocator<ProjectViewModel>().getZoneForSubZone(subZoneId: subZone.id);
         if (parentZone != null) {
           return "${parentZone.name} > ${subZone.name}";
         }
         return subZone.name;
       }
     }
-    final EquipLocation? location = serviceLocator<ProjectViewModel>()
-        .getEquipLocationForHardware(hardwareId: widget.device.id);
+    final EquipLocation? location = serviceLocator<ProjectViewModel>().getEquipLocationForHardware(hardwareId: widget.device.id);
     if (location != null) {
       return location.name;
     }
@@ -97,11 +89,13 @@ class _DashboardDeviceCardState extends State<DashboardDeviceCard> {
     return InkWell(
       onTap: () {
         if (!_isPlayingAnimation) {
-          Navigator.pushNamed(
-            context,
-            Routes.deviceDetails,
-            arguments: widget.device.id,
-          );
+          if (widget.device is! Amplifier || !widget.device.hardwareName.toLowerCase().startsWith("pp")) {
+            Navigator.pushNamed(
+              context,
+              Routes.deviceDetails,
+              arguments: widget.device.id,
+            );
+          }
         }
       },
       child: Container(
@@ -127,10 +121,7 @@ class _DashboardDeviceCardState extends State<DashboardDeviceCard> {
                 children: <Widget>[
                   Padding(
                     // PADDING: 12.0 horizontal (Matches Header's effective padding)
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12.0,
-                      vertical: 12.0,
-                    ),
+                    padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 12.0),
                     child: Row(
                       children: <Widget>[
                         // 1. Device Info (FLEX 5 - MATCHES HEADER)
@@ -161,10 +152,7 @@ class _DashboardDeviceCardState extends State<DashboardDeviceCard> {
                                         width: 6,
                                         height: 6,
                                         decoration: BoxDecoration(
-                                          color:
-                                              isOnline
-                                                  ? context.colorScheme.green
-                                                  : context.colorScheme.error,
+                                          color: isOnline ? context.colorScheme.green : context.colorScheme.error,
                                           shape: BoxShape.circle,
                                         ),
                                       ),
@@ -189,14 +177,7 @@ class _DashboardDeviceCardState extends State<DashboardDeviceCard> {
                                         Flexible(
                                           child: FusionAppText(
                                             text: widget.device.hardwareName,
-                                            style: context.textTheme.labelSmall!
-                                                .copyWith(
-                                                  color:
-                                                      context
-                                                          .colorScheme
-                                                          .textPrimary,
-                                                  fontSize: 11,
-                                                ),
+                                            style: context.textTheme.labelSmall!.copyWith(color: context.colorScheme.textPrimary, fontSize: 11),
                                             textOverflow: TextOverflow.ellipsis,
                                             maxLine: 1,
                                           ),
@@ -205,28 +186,16 @@ class _DashboardDeviceCardState extends State<DashboardDeviceCard> {
                                         Container(
                                           width: 4,
                                           height: 4,
-                                          margin: const EdgeInsets.symmetric(
-                                            horizontal: 6,
-                                          ),
+                                          margin: const EdgeInsets.symmetric(horizontal: 6),
                                           decoration: BoxDecoration(
-                                            color:
-                                                context
-                                                    .colorScheme
-                                                    .textSecondary,
+                                            color: context.colorScheme.textSecondary,
                                             shape: BoxShape.circle,
                                           ),
                                         ),
                                         Expanded(
                                           child: FusionAppText(
                                             text: location,
-                                            style: context.textTheme.labelSmall!
-                                                .copyWith(
-                                                  color:
-                                                      context
-                                                          .colorScheme
-                                                          .textPrimary,
-                                                  fontSize: 11,
-                                                ),
+                                            style: context.textTheme.labelSmall!.copyWith(color: context.colorScheme.textPrimary, fontSize: 11),
                                             textOverflow: TextOverflow.ellipsis,
                                             maxLine: 1,
                                           ),
@@ -247,26 +216,20 @@ class _DashboardDeviceCardState extends State<DashboardDeviceCard> {
                               children: <Widget>[
                                 Expanded(
                                   child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
+                                    crossAxisAlignment: CrossAxisAlignment.start,
                                     children: <Widget>[
                                       FusionAppText(
                                         text: _loadingTitle,
-                                        style: context.textTheme.labelMedium
-                                            ?.copyWith(
-                                              fontWeight: FontWeight.bold,
-                                            ),
+                                        style: context.textTheme.labelMedium?.copyWith(
+                                          fontWeight: FontWeight.bold,
+                                        ),
                                       ),
                                       const SizedBox(height: 4),
                                       FusionAppText(
                                         text: _loadingMessage,
-                                        style: context.textTheme.labelSmall
-                                            ?.copyWith(
-                                              color:
-                                                  context
-                                                      .colorScheme
-                                                      .textSecondary,
-                                            ),
+                                        style: context.textTheme.labelSmall?.copyWith(
+                                          color: context.colorScheme.textSecondary,
+                                        ),
                                       ),
                                     ],
                                   ),
@@ -277,9 +240,7 @@ class _DashboardDeviceCardState extends State<DashboardDeviceCard> {
                                   height: 20,
                                   child: CircularProgressIndicator(
                                     strokeWidth: 2,
-                                    valueColor: AlwaysStoppedAnimation<Color>(
-                                      Colors.white,
-                                    ),
+                                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                                   ),
                                 ),
                                 const SizedBox(width: 24),
@@ -291,7 +252,7 @@ class _DashboardDeviceCardState extends State<DashboardDeviceCard> {
                           Expanded(
                             flex: 2,
                             child:
-                                isOnline
+                                (isOnline && (widget.device is! Amplifier || !widget.device.hardwareName.toLowerCase().startsWith("pp")))
                                     ? Align(
                                       alignment: Alignment.centerLeft,
                                       child: CompactThermostatWidget(
@@ -305,7 +266,7 @@ class _DashboardDeviceCardState extends State<DashboardDeviceCard> {
                           Expanded(
                             flex: 2,
                             child:
-                                isOnline
+                                (isOnline && (widget.device is! Amplifier || !widget.device.hardwareName.toLowerCase().startsWith("pp")))
                                     ? Row(
                                       children: <Widget>[
                                         GaugeWidget(
@@ -325,7 +286,7 @@ class _DashboardDeviceCardState extends State<DashboardDeviceCard> {
                           Expanded(
                             flex: 2,
                             child:
-                                isOnline
+                                (isOnline && (widget.device is FusionDsp || (widget.device is Amplifier && widget.device.hardwareName.startsWith("PSM"))))
                                     ? Row(
                                       children: <Widget>[
                                         DiskUsageWidget(
@@ -348,10 +309,9 @@ class _DashboardDeviceCardState extends State<DashboardDeviceCard> {
                             child: Row(
                               mainAxisAlignment: MainAxisAlignment.end,
                               children: <Widget>[
-                                if (widget.device is! FusionDsp) ...<Widget>[
+                                if (widget.device is! FusionDsp &&
+                                    (widget.device is! Amplifier || !widget.device.hardwareName.toLowerCase().startsWith("pp"))) ...<Widget>[
                                   FusionNeumorphicButton(
-                                    semanticId:
-                                        'dashboard_device_card_standby_icon',
                                     width: 26,
                                     height: 26,
                                     borderRadius: 6,
@@ -369,23 +329,22 @@ class _DashboardDeviceCardState extends State<DashboardDeviceCard> {
                                   const SizedBox(width: 10),
                                 ],
 
-                                FusionNeumorphicButton(
-                                  semanticId:
-                                      'dashboard_device_card_restart_icon',
-                                  width: 26,
-                                  height: 26,
-                                  borderRadius: 6,
-                                  color: context.colorScheme.elevation2,
-                                  onTap: () {
-                                    _showRestartConfirmation(context);
-                                  },
-                                  child: FusionImage.asset(
-                                    AssetIcons.rebootIcon,
-                                    height: 12,
-                                    width: 12,
-                                    assetColor: context.colorScheme.iconWhite,
+                                if (widget.device is! Amplifier || !widget.device.hardwareName.toLowerCase().startsWith("pp"))
+                                  FusionNeumorphicButton(
+                                    width: 26,
+                                    height: 26,
+                                    borderRadius: 6,
+                                    color: context.colorScheme.elevation2,
+                                    onTap: () {
+                                      _showRestartConfirmation(context);
+                                    },
+                                    child: FusionImage.asset(
+                                      AssetIcons.rebootIcon,
+                                      height: 12,
+                                      width: 12,
+                                      assetColor: context.colorScheme.iconWhite,
+                                    ),
                                   ),
-                                ),
                               ],
                             ),
                           ),
@@ -400,30 +359,16 @@ class _DashboardDeviceCardState extends State<DashboardDeviceCard> {
             if (alertMsg != null && !_isPlayingAnimation)
               Container(
                 width: double.infinity,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 6,
-                ),
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                 decoration: BoxDecoration(
-                  color:
-                      isCritical
-                          ? context.colorScheme.errorFill
-                          : context.colorScheme.warningFill,
-                  borderRadius: const BorderRadius.only(
-                    bottomLeft: Radius.circular(6),
-                    bottomRight: Radius.circular(6),
-                  ),
+                  color: isCritical ? context.colorScheme.errorFill : context.colorScheme.warningFill,
+                  borderRadius: const BorderRadius.only(bottomLeft: Radius.circular(6), bottomRight: Radius.circular(6)),
                 ),
                 child: Row(
                   children: <Widget>[
                     Icon(
-                      isCritical
-                          ? Icons.error_outline
-                          : Icons.warning_amber_rounded,
-                      color:
-                          isCritical
-                              ? context.colorScheme.errorText
-                              : context.colorScheme.warningText,
+                      isCritical ? Icons.error_outline : Icons.warning_amber_rounded,
+                      color: isCritical ? context.colorScheme.errorText : context.colorScheme.warningText,
                       size: 14,
                     ),
                     const SizedBox(width: 8),
@@ -431,10 +376,7 @@ class _DashboardDeviceCardState extends State<DashboardDeviceCard> {
                       child: FusionAppText(
                         text: alertMsg!,
                         style: context.textTheme.labelSmall!.copyWith(
-                          color:
-                              isCritical
-                                  ? context.colorScheme.errorText
-                                  : context.colorScheme.warningText,
+                          color: isCritical ? context.colorScheme.errorText : context.colorScheme.warningText,
                         ),
                         textOverflow: TextOverflow.ellipsis,
                         maxLine: 1,
@@ -455,8 +397,7 @@ class _DashboardDeviceCardState extends State<DashboardDeviceCard> {
       builder:
           (BuildContext context) => FusionConfirmationPopup(
             title: 'STANDBY',
-            description:
-                'Do you want to set ${widget.device.name} device to standby ?',
+            description: 'Do you want to set ${widget.device.name} device to standby ?',
             onConfirm: () {
               // TODO: Implement actual standby logic
               _startLoadingState('Please wait...', 'Device going standby');

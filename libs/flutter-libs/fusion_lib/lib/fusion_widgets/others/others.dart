@@ -24,3 +24,5 @@ export 'fusion_vertical_slider.dart';
 export 'fusion_vertical_range_selection_slider.dart';
 export 'fusion_simple_vertical_meter.dart';
 export 'fusion_vertical_meter.dart';
+export 'fusion_flat_container.dart';
+export 'fusion_comma_seperated_tag_textfield.dart';

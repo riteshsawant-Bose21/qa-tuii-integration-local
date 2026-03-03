@@ -29,7 +29,7 @@ class _Aes70SettingsPageState extends State<Aes70SettingsPage> {
     return Align(
       alignment: Alignment.topLeft,
       child: Padding(
-        padding: const EdgeInsets.all(40.0),
+        padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 32),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,

@@ -214,23 +214,26 @@ class DeviceLeftSideBar extends StatelessWidget {
                         ),
                         const SizedBox(height: 8),
                         // CPU / Disk Row
-                        const Row(
+                        Row(
                           children: <Widget>[
-                            Expanded(
+                            const Expanded(
                               child: DeviceInfoCard(
                                 label: "CPU Usage",
                                 value: "63%",
                                 assetPath: AssetIcons.levelIndicator,
                               ),
                             ),
-                            SizedBox(width: 8),
-                            Expanded(
-                              child: DeviceInfoCard(
-                                label: "Disk Usage",
-                                value: "63%",
-                                assetPath: AssetIcons.diskUsage,
+
+                            if (device is FusionDsp) ...<Widget>[
+                              const SizedBox(width: 8),
+                              const Expanded(
+                                child: DeviceInfoCard(
+                                  label: "Disk Usage",
+                                  value: "63%",
+                                  assetPath: AssetIcons.diskUsage,
+                                ),
                               ),
-                            ),
+                            ],
                           ],
                         ),
                       ],
@@ -245,7 +248,9 @@ class DeviceLeftSideBar extends StatelessWidget {
                     child: FusionNeumorphicButton(
                       semanticId: 'left_side_bar_reboot_button',
                       text: "Reboot Device",
-                      onTap: () {},
+                      onTap: () {
+                        _showRebootConfirmation(context, device);
+                      },
                       padding: const EdgeInsets.symmetric(vertical: 12),
                       borderRadius: 8,
                       color: context.colorScheme.elevation1,
@@ -312,5 +317,49 @@ class DeviceLeftSideBar extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  void _showStandbyConfirmation(BuildContext context, HardwareComponent device) async {
+    final bool? result = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder:
+          (BuildContext context) => FusionActionPopup(
+            title: 'STANDBY',
+            description: 'Do you want to set ${device.name} device to standby ?',
+            loadingMessage: 'Device going standby',
+            onConfirm: () {
+              // TODO: Implement actual standby logic if needed before loading
+            },
+          ),
+    );
+
+    if (result == true && context.mounted) {
+      FusionToast.success(
+        context,
+        message: "${device.name} set to standby successful.",
+      );
+    }
+  }
+
+  _showRebootConfirmation(BuildContext context, HardwareComponent device) async {
+    final bool? result = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder:
+          (BuildContext context) => FusionActionPopup(
+            title: 'REBOOT',
+            description: 'Do you want to reboot ${device.name} device ?',
+            loadingMessage: 'Device rebooting',
+            onConfirm: () {},
+          ),
+    );
+
+    if (result == true && context.mounted) {
+      FusionToast.success(
+        context,
+        message: "${device.name} reboot successful.",
+      );
+    }
   }
 }

@@ -5,6 +5,7 @@ import 'package:fusion_launcher/features/control_dashboard/presentation/widgets/
 import 'package:fusion_launcher/features/devices/presentation/widgets/details/left_side_bar.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/models/project_entities/controller.dart';
+import 'package:fusion_lib/models/project_entities/endpoints.dart';
 
 import '../widgets/details/audio_control_tab.dart';
 import '../widgets/details/device_details_tab.dart';
@@ -43,6 +44,8 @@ class _DeviceDetailsPageState extends State<DeviceDetailsPage> with SingleTicker
 
   bool get isController => device is FusionController;
 
+  bool get isEndpoint => device is FusionEndpoints;
+
   bool get isDsp => device is FusionDsp;
 
   @override
@@ -50,7 +53,7 @@ class _DeviceDetailsPageState extends State<DeviceDetailsPage> with SingleTicker
     return Scaffold(
       body: Container(
         color: context.colorScheme.primaryBlack,
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(4),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
@@ -62,7 +65,7 @@ class _DeviceDetailsPageState extends State<DeviceDetailsPage> with SingleTicker
               ),
             ),
 
-            const SizedBox(width: 10),
+            const SizedBox(width: 4),
 
             // --- RIGHT CONTENT (Tabs) ---
             Expanded(
@@ -83,7 +86,7 @@ class _DeviceDetailsPageState extends State<DeviceDetailsPage> with SingleTicker
                     // Custom Tab Bar Row
                     Row(
                       children: <Widget>[
-                        if (!isController) ...<Widget>[
+                        if (!isController && !isEndpoint) ...<Widget>[
                           DeviceDetailsTab(
                             label: "Audio/Control",
                             index: 0,
@@ -110,7 +113,7 @@ class _DeviceDetailsPageState extends State<DeviceDetailsPage> with SingleTicker
                         controller: _tabController,
                         physics: const NeverScrollableScrollPhysics(), // Disable swipe
                         children: <Widget>[
-                          if (!isController)
+                          if (!isController && !isEndpoint)
                             AudioControlTab(
                               hardwareComponent: device,
                             ),
@@ -124,7 +127,7 @@ class _DeviceDetailsPageState extends State<DeviceDetailsPage> with SingleTicker
                 ),
               ),
             ),
-            const SizedBox(width: 10),
+            const SizedBox(width: 4),
 
             const SizedBox(
               width: 280, // Fixed width for sidebar

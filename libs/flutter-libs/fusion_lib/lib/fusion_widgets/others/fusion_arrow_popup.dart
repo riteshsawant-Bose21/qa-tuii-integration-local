@@ -79,6 +79,7 @@ class _FusionArrowPopupState extends State<FusionArrowPopup> {
         childWidget: widget.child,
         maxHeight: widget.maxHeight,
         maxWidth: widget.maxWidth,
+        semanticsId: widget.semanticsId,
       ),
     );
   }
@@ -260,10 +261,7 @@ class _BubblePainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant _BubblePainter old) =>
-      old.arrowX != arrowX ||
-      old.arrowDirection != arrowDirection ||
-      old.showArrow != showArrow;
+  bool shouldRepaint(covariant _BubblePainter old) => old.arrowX != arrowX || old.arrowDirection != arrowDirection || old.showArrow != showArrow;
 }
 
 class _PopupRoute extends PopupRoute<void> {
@@ -278,6 +276,7 @@ class _PopupRoute extends PopupRoute<void> {
   final double blurAmount;
   final double? maxHeight;
   final double? maxWidth;
+  final String? semanticsId;
 
   _PopupRoute({
     required this.targetRect,
@@ -291,6 +290,7 @@ class _PopupRoute extends PopupRoute<void> {
     required this.blurAmount,
     this.maxHeight,
     this.maxWidth,
+    this.semanticsId,
   });
 
   @override
@@ -307,10 +307,7 @@ class _PopupRoute extends PopupRoute<void> {
     return AnimatedBuilder(
       animation: animation!,
       builder: (context, child) {
-        final blur = Tween<double>(
-          begin: 0,
-          end: blurAmount,
-        ).evaluate(animation!);
+        final blur = Tween<double>(begin: 0, end: blurAmount).evaluate(animation!);
 
         return Stack(
           children: [
@@ -326,17 +323,11 @@ class _PopupRoute extends PopupRoute<void> {
                     return BackdropFilter(
                       filter: ImageFilter.blur(sigmaX: blur, sigmaY: blur),
                       child: Container(
-                        color:
-                            barriersColor ??
-                            Colors.black12.withValues(
-                              alpha: animation!.value * 0.2,
-                            ),
+                        color: barriersColor ?? Colors.black12.withValues(alpha: animation!.value * 0.2),
                       ),
                     );
                   } else {
-                    return Container(
-                      color: (barriersColor ?? Colors.transparent),
-                    );
+                    return Container(color: (barriersColor ?? Colors.transparent));
                   }
                 },
               ),
@@ -376,6 +367,7 @@ class _PopupRoute extends PopupRoute<void> {
       content: content,
       maxHeight: maxHeight,
       maxWidth: maxWidth,
+      semanticsId: semanticsId,
     );
   }
 
@@ -391,7 +383,7 @@ class _PopupPositioner extends StatefulWidget {
   final Animation<double> animation;
   final double? maxHeight;
   final double? maxWidth;
-
+  final String? semanticsId;
   const _PopupPositioner({
     required this.targetRect,
     required this.content,
@@ -400,6 +392,7 @@ class _PopupPositioner extends StatefulWidget {
     required this.animation,
     this.maxHeight,
     this.maxWidth,
+    required this.semanticsId,
   });
 
   @override
@@ -435,8 +428,7 @@ class _PopupPositionerState extends State<_PopupPositioner> {
     ).size;
 
     // Get the actual popup size after layout
-    final RenderBox? popupBox =
-        _popupKey.currentContext?.findRenderObject() as RenderBox?;
+    final RenderBox? popupBox = _popupKey.currentContext?.findRenderObject() as RenderBox?;
 
     if (popupBox == null) {
       // Retry on next frame if not ready
@@ -484,9 +476,7 @@ class _PopupPositionerState extends State<_PopupPositioner> {
     setState(() {
       _popupLeft = left;
       _arrowX = arrowX;
-      _arrowDirection = showBelow
-          ? _ArrowDirection.top
-          : _ArrowDirection.bottom;
+      _arrowDirection = showBelow ? _ArrowDirection.top : _ArrowDirection.bottom;
       _top = showBelow ? widget.targetRect.bottom : null;
       _bottom = showBelow ? null : screen.height - widget.targetRect.top;
       _maxContentHeight = maxContentHeight;
@@ -516,26 +506,23 @@ class _PopupPositionerState extends State<_PopupPositioner> {
                     parent: widget.animation,
                     curve: Curves.easeOutBack,
                   ),
-                  alignment: _arrowDirection == _ArrowDirection.top
-                      ? Alignment.topCenter
-                      : Alignment.bottomCenter,
+                  alignment: _arrowDirection == _ArrowDirection.top ? Alignment.topCenter : Alignment.bottomCenter,
                   child: ConstrainedBox(
                     constraints: BoxConstraints(
                       maxWidth: maxWidth,
                     ),
-                    child: _PopupContent(
-                      key: _popupKey,
-                      arrowDirection: _arrowDirection,
-                      arrowX: _arrowX,
-                      backgroundColor:
-                          widget.backgroundColor ??
-                          Theme.of(context).colorScheme.surface,
-                      borderColor: Theme.of(
-                        context,
-                      ).colorScheme.primaryBlack.withOpacity(0.3),
-                      showArrow: widget.showArrow,
-                      content: widget.content,
-                      maxHeight: _maxContentHeight,
+                    child: SemanticHelper.container(
+                      testId: SemanticHelper.createTestId(SemanticTypes.container, widget.semanticsId ?? 'popup'),
+                      child: _PopupContent(
+                        key: _popupKey,
+                        arrowDirection: _arrowDirection,
+                        arrowX: _arrowX,
+                        backgroundColor: widget.backgroundColor ?? Theme.of(context).colorScheme.surface,
+                        borderColor: Theme.of(context).colorScheme.primaryBlack.withOpacity(0.3),
+                        showArrow: widget.showArrow,
+                        content: widget.content,
+                        maxHeight: _maxContentHeight,
+                      ),
                     ),
                   ),
                 ),

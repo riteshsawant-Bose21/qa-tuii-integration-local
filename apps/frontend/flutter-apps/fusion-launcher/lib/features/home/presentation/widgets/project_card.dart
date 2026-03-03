@@ -730,18 +730,23 @@ class ProjectDetailsDialog extends StatelessWidget {
 }
 
 class AnimatedBlurDialogRoute<T> extends PageRoute<T> {
-  AnimatedBlurDialogRoute({required this.builder, this.barrierLabel});
+  AnimatedBlurDialogRoute({
+    required this.builder,
+    this.barrierLabel,
+    this.isDismissible = true,
+  });
 
   final WidgetBuilder builder;
+  final bool isDismissible;
 
   @override
   bool get opaque => false;
 
   @override
-  bool get barrierDismissible => true;
+  Color get barrierColor => Colors.transparent;
 
   @override
-  Color get barrierColor => Colors.transparent;
+  bool get barrierDismissible => isDismissible;
 
   @override
   String? barrierLabel;
@@ -768,7 +773,7 @@ class AnimatedBlurDialogRoute<T> extends PageRoute<T> {
           children: <Widget>[
             // Animated blur background
             GestureDetector(
-              onTap: () => Navigator.of(context).pop(),
+              onTap: barrierDismissible ? () => Navigator.of(context).pop() : null,
               child: BackdropFilter(
                 filter: ImageFilter.blur(sigmaX: blur, sigmaY: blur),
                 child: Container(

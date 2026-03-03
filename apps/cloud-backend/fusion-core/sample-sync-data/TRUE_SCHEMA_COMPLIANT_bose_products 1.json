@@ -1,0 +1,7264 @@
+{
+  "speakers": [
+    {
+      "id": 815011,
+      "model_family": "DesignMax",
+      "type": "FreeSpace",
+      "model_name": "DesignMax DM2C-LP loudspeakers (1 pair)",
+      "bsf_file_url": "https://assets.boseprofessional.com/bsf/815011.bsf",
+      "skus": [
+        815011
+      ],
+      "power_handling": {
+        "unit": "Watts",
+        "long_term_rms": 100,
+        "peak": 200
+      },
+      "sensitivity": {
+        "unit": "dB SPL",
+        "at": [
+          {
+            "key": "1W at 1m",
+            "value": 84.0
+          }
+        ]
+      },
+      "max_spl": {
+        "unit": "dB SPL",
+        "at": [
+          {
+            "key": "continuous at 1m",
+            "value": 110
+          }
+        ]
+      },
+      "frequency_range": {
+        "unit": "Hz",
+        "low": 60,
+        "high": 20000
+      },
+      "nominal_impedance": {
+        "unit": "ohms",
+        "value": 8
+      },
+      "coverage": [
+        {
+          "frequency_range": {
+            "low": {
+              "unit": "Hz",
+              "value": 125
+            },
+            "high": {
+              "unit": "Hz",
+              "value": 4000
+            }
+          },
+          "type": "rectangular",
+          "horizontal_deg": 150.0
+        }
+      ],
+      "description": "",
+      "environment": "Indoor",
+      "mount_type": "Wall",
+      "impedance": {
+        "unit": "ohms",
+        "low": 4,
+        "high": 8
+      },
+      "available_taps": {
+        "70v": [
+          2.5,
+          5,
+          10,
+          20
+        ],
+        "100v": [
+          2.5,
+          5,
+          10,
+          20,
+          40
+        ]
+      },
+      "images": [
+        {
+          "black": [
+            "https://assets.boseprofessional.com/m/180f4382a3819c6f/original/i_DesignMax_DM2C-LP_Right-Facing_Grille_On_Black_1200x1020-png.png",
+            "https://assets.boseprofessional.com/m/28ba55448a3a46a/original/i_DesignMax_DM2C-LP_Front_Standing_Grille_On_1200x1020-png.png",
+            "https://assets.boseprofessional.com/m/59dc7b35022108c6/original/i_DesignMax_DM2C-LP_Straight_On_Grille_Off_1200x1020-png.png"
+          ],
+          "white": [
+            "https://assets.boseprofessional.com/m/679c9eefa3b22e5e/original/i_DesignMax_DM2C-LP_Right-Facing_Rear_1200x1020-png.png",
+            "https://assets.boseprofessional.com/m/28733a8d0dace3d8/original/i_DesignMax_DM2C-LP_Flush_Group_1200x1022-png.png"
+          ]
+        }
+      ],
+      "is_subwoofer": false,
+      "is_weather_rated": false,
+      "is_high_impedance_rated": true,
+      "high_impedance_taps": [
+        2.5,
+        5,
+        10,
+        20,
+        40
+      ],
+      "updated_at": "1763630676"
+    },
+    {
+      "id": 829708,
+      "model_family": "DesignMax",
+      "type": "FreeSpace",
+      "model_name": "DesignMax DM3C loudspeakers (1 pair)",
+      "bsf_file_url": "https://assets.boseprofessional.com/bsf/829708.bsf",
+      "skus": [
+        829708
+      ],
+      "power_handling": {
+        "unit": "Watts",
+        "long_term_rms": 100,
+        "peak": 200
+      },
+      "sensitivity": {
+        "unit": "dB SPL",
+        "at": [
+          {
+            "key": "1W at 1m",
+            "value": 83.0
+          }
+        ]
+      },
+      "max_spl": {
+        "unit": "dB SPL",
+        "at": [
+          {
+            "key": "continuous at 1m",
+            "value": 110
+          }
+        ]
+      },
+      "frequency_range": {
+        "unit": "Hz",
+        "low": 60,
+        "high": 20000
+      },
+      "nominal_impedance": {
+        "unit": "ohms",
+        "value": 8
+      },
+      "coverage": [
+        {
+          "frequency_range": {
+            "low": {
+              "unit": "Hz",
+              "value": 125
+            },
+            "high": {
+              "unit": "Hz",
+              "value": 4000
+            }
+          },
+          "type": "rectangular",
+          "horizontal_deg": 135.0,
+          "vertical_deg": 135.0
+        }
+      ],
+      "description": "",
+      "environment": "Indoor",
+      "mount_type": "Wall",
+      "impedance": {
+        "unit": "ohms",
+        "low": 4,
+        "high": 8
+      },
+      "available_taps": {
+        "70v": [
+          2.5,
+          5,
+          10,
+          20
+        ],
+        "100v": [
+          2.5,
+          5,
+          10,
+          20,
+          40
+        ]
+      },
+      "images": [
+        {
+          "black": [
+            "https://assets.boseprofessional.com/m/60a6762b8189d8c2/original/Jefferson_i_FreeSpace_DesignMax_DM3_Flush_Right-Facing_Grille_On_1200x1022-jpeg.jpeg",
+            "https://assets.boseprofessional.com/m/5b36f9814c6c310d/original/Jefferson_i_FreeSpace_DesignMax_DM3_Flush_Group_1200x1022-jpeg.jpeg",
+            "https://assets.boseprofessional.com/m/47be62aa684eb2e2/original/dm3c_grill_off_straight_on_1200x1022-jpeg.jpeg"
+          ],
+          "white": [
+            "https://assets.boseprofessional.com/m/6d695d28d677821e/original/dm3c_left_facing_grill_off_1200x1022-jpeg.jpeg",
+            "https://assets.boseprofessional.com/m/1ac0e169cc5a4a40/original/dm_flush_right_facing_rear_1200x1022-jpeg.jpeg",
+            "https://assets.boseprofessional.com/m/2fd36ca426ecf66d/original/designmax_dm3c_face_down_1200x1022-jpeg.jpeg"
+          ]
+        }
+      ],
+      "is_subwoofer": false,
+      "is_weather_rated": false,
+      "is_high_impedance_rated": true,
+      "high_impedance_taps": [
+        2.5,
+        5,
+        10,
+        20,
+        40
+      ],
+      "updated_at": "1763630676"
+    },
+    {
+      "id": 841165,
+      "model_family": "DesignMax",
+      "type": "FreeSpace",
+      "model_name": "DesignMax DM3P loudspeakers (1 pair)",
+      "bsf_file_url": "https://assets.boseprofessional.com/bsf/841165.bsf",
+      "skus": [
+        841165
+      ],
+      "power_handling": {
+        "unit": "Watts",
+        "long_term_rms": 100,
+        "peak": 200
+      },
+      "sensitivity": {
+        "unit": "dB SPL",
+        "at": [
+          {
+            "key": "1W at 1m",
+            "value": 84.0
+          }
+        ]
+      },
+      "max_spl": {
+        "unit": "dB SPL",
+        "at": [
+          {
+            "key": "continuous at 1m",
+            "value": 110
+          }
+        ]
+      },
+      "frequency_range": {
+        "unit": "Hz",
+        "low": 60,
+        "high": 20000
+      },
+      "nominal_impedance": {
+        "unit": "ohms",
+        "value": 8
+      },
+      "coverage": [
+        {
+          "frequency_range": {
+            "low": {
+              "unit": "Hz",
+              "value": 125
+            },
+            "high": {
+              "unit": "Hz",
+              "value": 4000
+            }
+          },
+          "type": "rectangular",
+          "horizontal_deg": 130.0,
+          "vertical_deg": 130.0
+        }
+      ],
+      "description": "",
+      "environment": "Indoor",
+      "mount_type": "Wall",
+      "impedance": {
+        "unit": "ohms",
+        "low": 4,
+        "high": 8
+      },
+      "available_taps": {
+        "70v": [
+          2.5,
+          5,
+          10,
+          20
+        ],
+        "100v": [
+          2.5,
+          5,
+          10,
+          20,
+          40
+        ]
+      },
+      "images": [
+        {
+          "black": [
+            "https://assets.boseprofessional.com/m/46049a03eb3a1ad/original/DM3P__I-STUDIO_Black_Diagonal_1200x1022-png.png",
+            "https://assets.boseprofessional.com/m/4c8ce3fe108d3682/original/DM3P__I-STUDIO_White_Diagonal_1200x1022-png.png",
+            "https://assets.boseprofessional.com/m/26c04f1178fc8cb8/original/DM3P_I-STUDIO_black_and_white_1200x1022-png.png"
+          ],
+          "white": [
+            "https://assets.boseprofessional.com/m/1e21926f4ecf4cec/original/DM3P_I-STUDIO_TopDown_1200x1022-png.png",
+            "https://assets.boseprofessional.com/m/748d6880fd12c5c2/original/dm3p_blk_covered_silo-png.png",
+            "https://assets.boseprofessional.com/m/339b9147df586ad4/original/dm3p_blk_grille_off_silo-png.png"
+          ]
+        }
+      ],
+      "is_subwoofer": false,
+      "is_weather_rated": false,
+      "is_high_impedance_rated": true,
+      "high_impedance_taps": [
+        2.5,
+        5,
+        10,
+        20,
+        40
+      ],
+      "updated_at": "1763630676"
+    },
+    {
+      "id": 829712,
+      "model_family": "DesignMax",
+      "type": "FreeSpace",
+      "model_name": "DesignMax DM3SE loudspeakers (1 pair)",
+      "bsf_file_url": "https://assets.boseprofessional.com/bsf/829712.bsf",
+      "skus": [
+        829712
+      ],
+      "power_handling": {
+        "unit": "Watts",
+        "long_term_rms": 100,
+        "peak": 200
+      },
+      "sensitivity": {
+        "unit": "dB SPL",
+        "at": [
+          {
+            "key": "1W at 1m",
+            "value": 86.0
+          }
+        ]
+      },
+      "max_spl": {
+        "unit": "dB SPL",
+        "at": [
+          {
+            "key": "continuous at 1m",
+            "value": 110
+          }
+        ]
+      },
+      "frequency_range": {
+        "unit": "Hz",
+        "low": 60,
+        "high": 20000
+      },
+      "nominal_impedance": {
+        "unit": "ohms",
+        "value": 8
+      },
+      "coverage": [
+        {
+          "frequency_range": {
+            "low": {
+              "unit": "Hz",
+              "value": 125
+            },
+            "high": {
+              "unit": "Hz",
+              "value": 4000
+            }
+          },
+          "type": "rectangular",
+          "horizontal_deg": 140.0,
+          "vertical_deg": 140.0
+        }
+      ],
+      "description": "",
+      "environment": "Indoor",
+      "mount_type": "Wall",
+      "impedance": {
+        "unit": "ohms",
+        "low": 4,
+        "high": 8
+      },
+      "available_taps": {
+        "70v": [
+          2.5,
+          5,
+          10,
+          20
+        ],
+        "100v": [
+          2.5,
+          5,
+          10,
+          20,
+          40
+        ]
+      },
+      "images": [
+        {
+          "black": [
+            "https://assets.boseprofessional.com/m/77826f35127a36b9/original/Jefferson_i_FreeSpace_DesignMax_DM3_Surface_Right-Facing_Grille_On_Horizontal_1200x1022-jpeg.jpeg",
+            "https://assets.boseprofessional.com/m/412c700bc56a3f6b/original/Jefferson_i_FreeSpace_DesignMax_DM3_Surface_Left-Facing_Grille_On_Vertical_1200x1022-jpeg.jpeg",
+            "https://assets.boseprofessional.com/m/76b213a02487ec0e/original/DM3SE-Right-Facing-Grill-Off-1200x1022-jpeg.jpeg"
+          ],
+          "white": [
+            "https://assets.boseprofessional.com/m/b1868a6f860e017/original/DM3SE-Left-Facing-Grill-Off-1200x1022-jpeg.jpeg",
+            "https://assets.boseprofessional.com/m/5aa6e9d564f05c1e/original/Jefferson_i_FreeSpace_DesignMax_DM3_Surface_Group_1200x1022-jpeg.jpeg"
+          ]
+        }
+      ],
+      "is_subwoofer": false,
+      "is_weather_rated": false,
+      "is_high_impedance_rated": true,
+      "high_impedance_taps": [
+        2.5,
+        5,
+        10,
+        20,
+        40
+      ],
+      "updated_at": "1763630676"
+    },
+    {
+      "id": 829683,
+      "model_family": "DesignMax",
+      "type": "FreeSpace",
+      "model_name": "DesignMax DM5C loudspeakers (1 pair)",
+      "bsf_file_url": "https://assets.boseprofessional.com/bsf/829683.bsf",
+      "skus": [
+        829683
+      ],
+      "power_handling": {
+        "unit": "Watts",
+        "long_term_rms": 100,
+        "peak": 200
+      },
+      "sensitivity": {
+        "unit": "dB SPL",
+        "at": [
+          {
+            "key": "1W at 1m",
+            "value": 87.0
+          }
+        ]
+      },
+      "max_spl": {
+        "unit": "dB SPL",
+        "at": [
+          {
+            "key": "continuous at 1m",
+            "value": 110
+          }
+        ]
+      },
+      "frequency_range": {
+        "unit": "Hz",
+        "low": 60,
+        "high": 20000
+      },
+      "nominal_impedance": {
+        "unit": "ohms",
+        "value": 8
+      },
+      "coverage": [
+        {
+          "frequency_range": {
+            "low": {
+              "unit": "Hz",
+              "value": 125
+            },
+            "high": {
+              "unit": "Hz",
+              "value": 4000
+            }
+          },
+          "type": "rectangular",
+          "horizontal_deg": 130.0,
+          "vertical_deg": 130.0
+        }
+      ],
+      "description": "",
+      "environment": "Indoor",
+      "mount_type": "Wall",
+      "impedance": {
+        "unit": "ohms",
+        "low": 4,
+        "high": 8
+      },
+      "available_taps": {
+        "70v": [
+          2.5,
+          5,
+          10,
+          20
+        ],
+        "100v": [
+          2.5,
+          5,
+          10,
+          20,
+          40
+        ]
+      },
+      "images": [
+        {
+          "black": [
+            "https://assets.boseprofessional.com/m/4bdf84d08aadf65f/original/Lincoln_i_FreeSpace_DesignMax_DM5_Flush_Right-Facing_Grille_On_1200x1022-jpeg.jpeg",
+            "https://assets.boseprofessional.com/transform/bc2a3fb2-efe3-4e01-9f79-76305d5924e0/Lincoln_i_FreeSpace_DesignMax_DM5_Flush_Group_1200x1022-jpeg"
+          ],
+          "white": []
+        }
+      ],
+      "is_subwoofer": false,
+      "is_weather_rated": false,
+      "is_high_impedance_rated": true,
+      "high_impedance_taps": [
+        2.5,
+        5,
+        10,
+        20,
+        40
+      ],
+      "updated_at": "1763630676"
+    },
+    {
+      "id": 841166,
+      "model_family": "DesignMax",
+      "type": "FreeSpace",
+      "model_name": "DesignMax DM5P loudspeakers (1 pair)",
+      "bsf_file_url": "https://assets.boseprofessional.com/bsf/841166.bsf",
+      "skus": [
+        841166
+      ],
+      "power_handling": {
+        "unit": "Watts",
+        "long_term_rms": 100,
+        "peak": 200
+      },
+      "sensitivity": {
+        "unit": "dB SPL",
+        "at": [
+          {
+            "key": "1W at 1m",
+            "value": 87.0
+          }
+        ]
+      },
+      "max_spl": {
+        "unit": "dB SPL",
+        "at": [
+          {
+            "key": "continuous at 1m",
+            "value": 110
+          }
+        ]
+      },
+      "frequency_range": {
+        "unit": "Hz",
+        "low": 60,
+        "high": 20000
+      },
+      "nominal_impedance": {
+        "unit": "ohms",
+        "value": 8
+      },
+      "coverage": [
+        {
+          "frequency_range": {
+            "low": {
+              "unit": "Hz",
+              "value": 125
+            },
+            "high": {
+              "unit": "Hz",
+              "value": 4000
+            }
+          },
+          "type": "rectangular",
+          "horizontal_deg": 120.0,
+          "vertical_deg": 120.0
+        }
+      ],
+      "description": "",
+      "environment": "Indoor",
+      "mount_type": "Wall",
+      "impedance": {
+        "unit": "ohms",
+        "low": 4,
+        "high": 8
+      },
+      "available_taps": {
+        "70v": [
+          2.5,
+          5,
+          10,
+          20
+        ],
+        "100v": [
+          2.5,
+          5,
+          10,
+          20,
+          40
+        ]
+      },
+      "images": [
+        {
+          "black": [
+            "https://assets.boseprofessional.com/m/72e14fb1f0eb948b/original/designmax_dm5p_black_diagonal_silo-png.png",
+            "https://assets.boseprofessional.com/m/23f631a538854409/original/designmax_dm5p_white_diagonal_silo-png.png",
+            "https://assets.boseprofessional.com/m/4eb82c67c7ef6395/original/designmax_dm5p_black_and_white_silo-png.png"
+          ],
+          "white": [
+            "https://assets.boseprofessional.com/m/75e6779957fd7003/original/designmax_dm5p_black_topdown_silo-png.png",
+            "https://assets.boseprofessional.com/m/78c9a8f80b02083a/original/dm5p_blk_covered_silo-png.png",
+            "https://assets.boseprofessional.com/m/9cfa5743a821f15/original/dm5p_blk_grille_off_silo-png.png"
+          ]
+        }
+      ],
+      "is_subwoofer": false,
+      "is_weather_rated": false,
+      "is_high_impedance_rated": true,
+      "high_impedance_taps": [
+        2.5,
+        5,
+        10,
+        20,
+        40
+      ],
+      "updated_at": "1763630676"
+    },
+    {
+      "id": 829705,
+      "model_family": "DesignMax",
+      "type": "FreeSpace",
+      "model_name": "DesignMax DM5SE loudspeakers (1 pair)",
+      "bsf_file_url": "https://assets.boseprofessional.com/bsf/829705.bsf",
+      "skus": [
+        829705
+      ],
+      "power_handling": {
+        "unit": "Watts",
+        "long_term_rms": 100,
+        "peak": 200
+      },
+      "sensitivity": {
+        "unit": "dB SPL",
+        "at": [
+          {
+            "key": "1W at 1m",
+            "value": 89.0
+          }
+        ]
+      },
+      "max_spl": {
+        "unit": "dB SPL",
+        "at": [
+          {
+            "key": "continuous at 1m",
+            "value": 110
+          }
+        ]
+      },
+      "frequency_range": {
+        "unit": "Hz",
+        "low": 60,
+        "high": 20000
+      },
+      "nominal_impedance": {
+        "unit": "ohms",
+        "value": 8
+      },
+      "coverage": [
+        {
+          "frequency_range": {
+            "low": {
+              "unit": "Hz",
+              "value": 125
+            },
+            "high": {
+              "unit": "Hz",
+              "value": 4000
+            }
+          },
+          "type": "rectangular",
+          "horizontal_deg": 135.0,
+          "vertical_deg": 135.0
+        }
+      ],
+      "description": "",
+      "environment": "Indoor",
+      "mount_type": "Wall",
+      "impedance": {
+        "unit": "ohms",
+        "low": 4,
+        "high": 8
+      },
+      "available_taps": {
+        "70v": [
+          2.5,
+          5,
+          10,
+          20
+        ],
+        "100v": [
+          2.5,
+          5,
+          10,
+          20,
+          40
+        ]
+      },
+      "images": [
+        {
+          "black": [
+            "https://assets.boseprofessional.com/m/158183a24910f5fb/original/Lincoln_i_FreeSpace_DesignMax_DM5_Surface_Right-Facing_Grille_On_Horizontal_1200x1022-jpeg.jpeg",
+            "https://assets.boseprofessional.com/m/439bee485d0bad70/original/Lincoln_i_FreeSpace_DesignMax_DM5_Surface_Left-Facing_Grille_On_Vertical_1200x1022-jpeg.jpeg",
+            "https://assets.boseprofessional.com/m/3e9a5fbf349f7faf/original/Lincoln_i_FreeSpace_DesignMax_DM5_Surface_Group_1200x1022-jpeg.jpeg"
+          ],
+          "white": []
+        }
+      ],
+      "is_subwoofer": false,
+      "is_weather_rated": false,
+      "is_high_impedance_rated": true,
+      "high_impedance_taps": [
+        2.5,
+        5,
+        10,
+        20,
+        40
+      ],
+      "updated_at": "1763630676"
+    },
+    {
+      "id": 829679,
+      "model_family": "DesignMax",
+      "type": "FreeSpace",
+      "model_name": "DesignMax DM6C loudspeakers (1 pair)",
+      "bsf_file_url": "https://assets.boseprofessional.com/bsf/829679.bsf",
+      "skus": [
+        829679
+      ],
+      "power_handling": {
+        "unit": "Watts",
+        "long_term_rms": 100,
+        "peak": 200
+      },
+      "sensitivity": {
+        "unit": "dB SPL",
+        "at": [
+          {
+            "key": "1W at 1m",
+            "value": 88.0
+          }
+        ]
+      },
+      "max_spl": {
+        "unit": "dB SPL",
+        "at": [
+          {
+            "key": "continuous at 1m",
+            "value": 110
+          }
+        ]
+      },
+      "frequency_range": {
+        "unit": "Hz",
+        "low": 60,
+        "high": 20000
+      },
+      "nominal_impedance": {
+        "unit": "ohms",
+        "value": 8
+      },
+      "coverage": [
+        {
+          "frequency_range": {
+            "low": {
+              "unit": "Hz",
+              "value": 125
+            },
+            "high": {
+              "unit": "Hz",
+              "value": 4000
+            }
+          },
+          "type": "rectangular",
+          "horizontal_deg": 120.0,
+          "vertical_deg": 120.0
+        }
+      ],
+      "description": "",
+      "environment": "Indoor",
+      "mount_type": "Wall",
+      "impedance": {
+        "unit": "ohms",
+        "low": 4,
+        "high": 8
+      },
+      "available_taps": {
+        "70v": [
+          2.5,
+          5,
+          10,
+          20
+        ],
+        "100v": [
+          2.5,
+          5,
+          10,
+          20,
+          40
+        ]
+      },
+      "images": [
+        {
+          "black": [
+            "https://assets.boseprofessional.com/m/293e73bfe01b8563/original/Hamilton_i_FreeSpace_DesignMax_DM6_Flush_Right-Facing_Grille_On_1200x1022-jpeg.jpeg",
+            "https://assets.boseprofessional.com/m/45b422ad255e8142/original/Hamilton_i_FreeSpace_DesignMax_DM6_Flush_Group_1200x1022-jpeg.jpeg"
+          ],
+          "white": []
+        }
+      ],
+      "is_subwoofer": false,
+      "is_weather_rated": false,
+      "is_high_impedance_rated": true,
+      "high_impedance_taps": [
+        2.5,
+        5,
+        10,
+        20,
+        40
+      ],
+      "updated_at": "1763630676"
+    },
+    {
+      "id": 841168,
+      "model_family": "DesignMax",
+      "type": "FreeSpace",
+      "model_name": "DesignMax DM6PE loudspeakers (1 pair)",
+      "bsf_file_url": "https://assets.boseprofessional.com/bsf/841168.bsf",
+      "skus": [
+        841168
+      ],
+      "power_handling": {
+        "unit": "Watts",
+        "long_term_rms": 100,
+        "peak": 200
+      },
+      "sensitivity": {
+        "unit": "dB SPL",
+        "at": [
+          {
+            "key": "1W at 1m",
+            "value": 89.0
+          }
+        ]
+      },
+      "max_spl": {
+        "unit": "dB SPL",
+        "at": [
+          {
+            "key": "continuous at 1m",
+            "value": 110
+          }
+        ]
+      },
+      "frequency_range": {
+        "unit": "Hz",
+        "low": 60,
+        "high": 20000
+      },
+      "nominal_impedance": {
+        "unit": "ohms",
+        "value": 8
+      },
+      "coverage": [
+        {
+          "frequency_range": {
+            "low": {
+              "unit": "Hz",
+              "value": 125
+            },
+            "high": {
+              "unit": "Hz",
+              "value": 4000
+            }
+          },
+          "type": "rectangular",
+          "horizontal_deg": 115.0,
+          "vertical_deg": 115.0
+        }
+      ],
+      "description": "",
+      "environment": "Indoor",
+      "mount_type": "Wall",
+      "impedance": {
+        "unit": "ohms",
+        "low": 4,
+        "high": 8
+      },
+      "available_taps": {
+        "70v": [
+          2.5,
+          5,
+          10,
+          20
+        ],
+        "100v": [
+          2.5,
+          5,
+          10,
+          20,
+          40
+        ]
+      },
+      "images": [
+        {
+          "black": [
+            "https://assets.boseprofessional.com/m/44c006e94f15c8f7/original/designmax_dm6pe_black_diagonal_silo-png.png",
+            "https://assets.boseprofessional.com/m/31604415510c66c9/original/DM6PE_I-STUDIO_black-white_1200x1022-png.png",
+            "https://assets.boseprofessional.com/m/d672d24c2a003fd/original/designmax_dm6pe_black_topdown_silo-png.png"
+          ],
+          "white": [
+            "https://assets.boseprofessional.com/m/4363617b3f7c785d/original/dm6pe_blk_covered_silo-png.png"
+          ]
+        }
+      ],
+      "is_subwoofer": false,
+      "is_weather_rated": false,
+      "is_high_impedance_rated": true,
+      "high_impedance_taps": [
+        2.5,
+        5,
+        10,
+        20,
+        40
+      ],
+      "updated_at": "1763630676"
+    },
+    {
+      "id": 829682,
+      "model_family": "DesignMax",
+      "type": "FreeSpace",
+      "model_name": "DesignMax DM6SE loudspeakers (1 pair)",
+      "bsf_file_url": "https://assets.boseprofessional.com/bsf/829682.bsf",
+      "skus": [
+        829682
+      ],
+      "power_handling": {
+        "unit": "Watts",
+        "long_term_rms": 100,
+        "peak": 200
+      },
+      "sensitivity": {
+        "unit": "dB SPL",
+        "at": [
+          {
+            "key": "1W at 1m",
+            "value": 90.0
+          }
+        ]
+      },
+      "max_spl": {
+        "unit": "dB SPL",
+        "at": [
+          {
+            "key": "continuous at 1m",
+            "value": 110
+          }
+        ]
+      },
+      "frequency_range": {
+        "unit": "Hz",
+        "low": 60,
+        "high": 20000
+      },
+      "nominal_impedance": {
+        "unit": "ohms",
+        "value": 8
+      },
+      "coverage": [
+        {
+          "frequency_range": {
+            "low": {
+              "unit": "Hz",
+              "value": 125
+            },
+            "high": {
+              "unit": "Hz",
+              "value": 4000
+            }
+          },
+          "type": "rectangular",
+          "horizontal_deg": 125.0,
+          "vertical_deg": 125.0
+        }
+      ],
+      "description": "",
+      "environment": "Indoor",
+      "mount_type": "Wall",
+      "impedance": {
+        "unit": "ohms",
+        "low": 4,
+        "high": 8
+      },
+      "available_taps": {
+        "70v": [
+          2.5,
+          5,
+          10,
+          20
+        ],
+        "100v": [
+          2.5,
+          5,
+          10,
+          20,
+          40
+        ]
+      },
+      "images": [
+        {
+          "black": [
+            "https://assets.boseprofessional.com/m/872b09f3ad8684c/original/Hamilton_i_FreeSpace_DesignMax_DM6_Surface_Right-Facing_Grille_On_Horizontal_1200x1022-jpeg.jpeg",
+            "https://assets.boseprofessional.com/m/1091bfa47a3689b7/original/Hamilton_i_FreeSpace_DesignMax_DM6_Surface_Left-Facing_Grille_On_Vertical_1200x1022-jpeg.jpeg",
+            "https://assets.boseprofessional.com/m/75d72bcb79f3b126/original/Hamilton_i_FreeSpace_DesignMax_DM6_Surface_Group_1200x1022-jpeg.jpeg"
+          ],
+          "white": []
+        }
+      ],
+      "is_subwoofer": false,
+      "is_weather_rated": false,
+      "is_high_impedance_rated": true,
+      "high_impedance_taps": [
+        2.5,
+        5,
+        10,
+        20,
+        40
+      ],
+      "updated_at": "1763630676"
+    },
+    {
+      "id": 802080,
+      "model_family": "DesignMax",
+      "type": "FreeSpace",
+      "model_name": "DesignMax DM8C loudspeaker",
+      "bsf_file_url": "https://assets.boseprofessional.com/bsf/802080.bsf",
+      "skus": [
+        802080
+      ],
+      "power_handling": {
+        "unit": "Watts",
+        "long_term_rms": 100,
+        "peak": 200
+      },
+      "sensitivity": {
+        "unit": "dB SPL",
+        "at": [
+          {
+            "key": "1W at 1m",
+            "value": 91.0
+          }
+        ]
+      },
+      "max_spl": {
+        "unit": "dB SPL",
+        "at": [
+          {
+            "key": "continuous at 1m",
+            "value": 110
+          }
+        ]
+      },
+      "frequency_range": {
+        "unit": "Hz",
+        "low": 60,
+        "high": 20000
+      },
+      "nominal_impedance": {
+        "unit": "ohms",
+        "value": 8
+      },
+      "coverage": [
+        {
+          "frequency_range": {
+            "low": {
+              "unit": "Hz",
+              "value": 125
+            },
+            "high": {
+              "unit": "Hz",
+              "value": 4000
+            }
+          },
+          "type": "rectangular",
+          "horizontal_deg": 135.0,
+          "vertical_deg": 135.0
+        }
+      ],
+      "description": "",
+      "environment": "Indoor",
+      "mount_type": "Wall",
+      "impedance": {
+        "unit": "ohms",
+        "low": 4,
+        "high": 8
+      },
+      "available_taps": {
+        "70v": [
+          2.5,
+          5,
+          10,
+          20
+        ],
+        "100v": [
+          2.5,
+          5,
+          10,
+          20,
+          40
+        ]
+      },
+      "images": [
+        {
+          "black": [
+            "https://assets.boseprofessional.com/m/3d062b6482a7f560/original/Jackson_i_DesignMax_DM8C_Flush_Group_1200x1022-jpeg.jpeg"
+          ],
+          "white": []
+        }
+      ],
+      "is_subwoofer": false,
+      "is_weather_rated": false,
+      "is_high_impedance_rated": true,
+      "high_impedance_taps": [
+        2.5,
+        5,
+        10,
+        20,
+        40
+      ],
+      "updated_at": "1763630676"
+    },
+    {
+      "id": 801332,
+      "model_family": "DesignMax",
+      "type": "FreeSpace",
+      "model_name": "DesignMax DM8S loudspeaker",
+      "bsf_file_url": "https://assets.boseprofessional.com/bsf/801332.bsf",
+      "skus": [
+        801332
+      ],
+      "power_handling": {
+        "unit": "Watts",
+        "long_term_rms": 100,
+        "peak": 200
+      },
+      "sensitivity": {
+        "unit": "dB SPL",
+        "at": [
+          {
+            "key": "1W at 1m",
+            "value": 93.0
+          }
+        ]
+      },
+      "max_spl": {
+        "unit": "dB SPL",
+        "at": [
+          {
+            "key": "continuous at 1m",
+            "value": 110
+          }
+        ]
+      },
+      "frequency_range": {
+        "unit": "Hz",
+        "low": 60,
+        "high": 20000
+      },
+      "nominal_impedance": {
+        "unit": "ohms",
+        "value": 8
+      },
+      "coverage": [
+        {
+          "frequency_range": {
+            "low": {
+              "unit": "Hz",
+              "value": 125
+            },
+            "high": {
+              "unit": "Hz",
+              "value": 4000
+            }
+          },
+          "type": "rectangular",
+          "horizontal_deg": 130.0,
+          "vertical_deg": 130.0
+        }
+      ],
+      "description": "",
+      "environment": "Indoor",
+      "mount_type": "Wall",
+      "impedance": {
+        "unit": "ohms",
+        "low": 4,
+        "high": 8
+      },
+      "available_taps": {
+        "70v": [
+          2.5,
+          5,
+          10,
+          20
+        ],
+        "100v": [
+          2.5,
+          5,
+          10,
+          20,
+          40
+        ]
+      },
+      "images": [
+        {
+          "black": [
+            "https://assets.boseprofessional.com/m/4f32a7c7fea04d23/original/Jackson_i_DesignMax_DM8S_Right-Facing_Grille_On_Horizontal_1200x1022-jpeg.jpeg",
+            "https://assets.boseprofessional.com/m/5d6d100492664b06/original/Jackson_i_DesignMax_DM8S_Left-Facing_Grille_On_Vertical_1200x1022-jpeg.jpeg",
+            "https://assets.boseprofessional.com/m/3257aba05f20adc3/original/Jackson_i_DesignMax_DM8S_Group_1200x1022-jpeg.jpeg"
+          ],
+          "white": []
+        }
+      ],
+      "is_subwoofer": false,
+      "is_weather_rated": false,
+      "is_high_impedance_rated": true,
+      "high_impedance_taps": [
+        2.5,
+        5,
+        10,
+        20,
+        40
+      ],
+      "updated_at": "1763630676"
+    },
+    {
+      "id": 829380,
+      "model_family": "DesignMax",
+      "type": "FreeSpace",
+      "model_name": "DesignMax DM8C-SUB subwoofer",
+      "bsf_file_url": "https://assets.boseprofessional.com/bsf/829380.bsf",
+      "skus": [
+        829380
+      ],
+      "power_handling": {
+        "unit": "Watts",
+        "long_term_rms": 100,
+        "peak": 200
+      },
+      "sensitivity": {
+        "unit": "dB SPL",
+        "at": [
+          {
+            "key": "1W at 1m",
+            "value": 89.0
+          }
+        ]
+      },
+      "max_spl": {
+        "unit": "dB SPL",
+        "at": [
+          {
+            "key": "continuous at 1m",
+            "value": 110
+          }
+        ]
+      },
+      "frequency_range": {
+        "unit": "Hz",
+        "low": 38.0,
+        "high": 115.0
+      },
+      "nominal_impedance": {
+        "unit": "ohms",
+        "value": 8
+      },
+      "coverage": [
+        {
+          "frequency_range": {
+            "low": {
+              "unit": "Hz",
+              "value": 125
+            },
+            "high": {
+              "unit": "Hz",
+              "value": 4000
+            }
+          },
+          "type": "rectangular",
+          "horizontal_deg": 200.0,
+          "vertical_deg": 200.0
+        }
+      ],
+      "description": "",
+      "environment": "Indoor",
+      "mount_type": "Wall",
+      "impedance": {
+        "unit": "ohms",
+        "low": 4,
+        "high": 8
+      },
+      "available_taps": {
+        "70v": [
+          2.5,
+          5,
+          10,
+          20
+        ],
+        "100v": [
+          2.5,
+          5,
+          10,
+          20,
+          40
+        ]
+      },
+      "images": [
+        {
+          "black": [
+            "https://assets.boseprofessional.com/m/514b3e7a605c6013/original/i_DesignMax_DM8C_1200x1022_SUB-png.png"
+          ],
+          "white": []
+        }
+      ],
+      "is_subwoofer": true,
+      "is_weather_rated": false,
+      "is_high_impedance_rated": true,
+      "high_impedance_taps": [
+        2.5,
+        5,
+        10,
+        20,
+        40
+      ],
+      "updated_at": "1763630676"
+    },
+    {
+      "id": 835265,
+      "model_family": "DesignMax",
+      "type": "FreeSpace",
+      "model_name": "DesignMax DM10P-SUB subwoofer",
+      "bsf_file_url": "https://assets.boseprofessional.com/bsf/835265.bsf",
+      "skus": [
+        835265
+      ],
+      "power_handling": {
+        "unit": "Watts",
+        "long_term_rms": 100,
+        "peak": 200
+      },
+      "sensitivity": {
+        "unit": "dB SPL",
+        "at": [
+          {
+            "key": "1W at 1m",
+            "value": 85.0
+          }
+        ]
+      },
+      "max_spl": {
+        "unit": "dB SPL",
+        "at": [
+          {
+            "key": "continuous at 1m",
+            "value": 110
+          }
+        ]
+      },
+      "frequency_range": {
+        "unit": "Hz",
+        "low": 40.0,
+        "high": 125.0
+      },
+      "nominal_impedance": {
+        "unit": "ohms",
+        "value": 8
+      },
+      "coverage": [
+        {
+          "frequency_range": {
+            "low": {
+              "unit": "Hz",
+              "value": 125
+            },
+            "high": {
+              "unit": "Hz",
+              "value": 4000
+            }
+          },
+          "type": "rectangular",
+          "horizontal_deg": 200.0,
+          "vertical_deg": 200.0
+        }
+      ],
+      "description": "",
+      "environment": "Indoor",
+      "mount_type": "Wall",
+      "impedance": {
+        "unit": "ohms",
+        "low": 4,
+        "high": 8
+      },
+      "available_taps": {
+        "70v": [
+          2.5,
+          5,
+          10,
+          20
+        ],
+        "100v": [
+          2.5,
+          5,
+          10,
+          20,
+          40
+        ]
+      },
+      "images": [
+        {
+          "black": [
+            "https://assets.boseprofessional.com/m/3f457d4900505da7/original/dm10p-sub_black_diagonal_silo-png.png",
+            "https://assets.boseprofessional.com/m/46d9c7625e3471b5/original/DM10P-SUB_I-STUDIO_black-white_1200x1022-png.png",
+            "https://assets.boseprofessional.com/m/3ea4dec0844865c0/original/dm10p-sub_black_kitchen_silo-png.png"
+          ],
+          "white": [
+            "https://assets.boseprofessional.com/m/6237555e522d6863/original/dm10p-sub_white_kitchen_silo-png.png",
+            "https://assets.boseprofessional.com/m/31243f58c764818b/original/dm10p_sub_blk_covered_silo-png.png",
+            "https://assets.boseprofessional.com/m/2940c0d91c95179/original/dm10p_sub_blk_grille_off_silo-png.png"
+          ]
+        }
+      ],
+      "is_subwoofer": true,
+      "is_weather_rated": false,
+      "is_high_impedance_rated": true,
+      "high_impedance_taps": [
+        2.5,
+        5,
+        10,
+        20,
+        40
+      ],
+      "updated_at": "1763630676"
+    },
+    {
+      "id": 831856,
+      "model_family": "DesignMax",
+      "type": "FreeSpace",
+      "model_name": "DesignMax DM10S-SUB subwoofer",
+      "bsf_file_url": "https://assets.boseprofessional.com/bsf/831856.bsf",
+      "skus": [
+        831856
+      ],
+      "power_handling": {
+        "unit": "Watts",
+        "long_term_rms": 100,
+        "peak": 200
+      },
+      "sensitivity": {
+        "unit": "dB SPL",
+        "at": [
+          {
+            "key": "1W at 1m",
+            "value": 90.0
+          }
+        ]
+      },
+      "max_spl": {
+        "unit": "dB SPL",
+        "at": [
+          {
+            "key": "continuous at 1m",
+            "value": 110
+          }
+        ]
+      },
+      "frequency_range": {
+        "unit": "Hz",
+        "low": 35.0,
+        "high": 125.0
+      },
+      "nominal_impedance": {
+        "unit": "ohms",
+        "value": 8
+      },
+      "coverage": [
+        {
+          "frequency_range": {
+            "low": {
+              "unit": "Hz",
+              "value": 125
+            },
+            "high": {
+              "unit": "Hz",
+              "value": 4000
+            }
+          },
+          "type": "rectangular",
+          "horizontal_deg": 200.0,
+          "vertical_deg": 200.0
+        }
+      ],
+      "description": "",
+      "environment": "Indoor",
+      "mount_type": "Wall",
+      "impedance": {
+        "unit": "ohms",
+        "low": 4,
+        "high": 8
+      },
+      "available_taps": {
+        "70v": [
+          2.5,
+          5,
+          10,
+          20
+        ],
+        "100v": [
+          2.5,
+          5,
+          10,
+          20,
+          40
+        ]
+      },
+      "images": [
+        {
+          "black": [
+            "https://assets.boseprofessional.com/m/72ef72003c472f2b/original/Grant_i_FreeSpace_DesignMax_DMsub_Surface_Right-Facing_Grille_On_Horizontal_1200x1022-jpeg.jpeg",
+            "https://assets.boseprofessional.com/transform/cbf6f070-e475-49cd-b9c6-b69afd4da7fc/Grant_i_FreeSpace_DesignMax_DMsub_Surface_Left-Facing_Grille_On_Vertical_1200x1022-jpeg",
+            "https://assets.boseprofessional.com/m/524fff8f3b07cd64/original/Grant_i_FreeSpace_DesignMax_DMsub_Surface_Group_1200x1022-jpeg.jpeg"
+          ],
+          "white": []
+        }
+      ],
+      "is_subwoofer": true,
+      "is_weather_rated": false,
+      "is_high_impedance_rated": true,
+      "high_impedance_taps": [
+        2.5,
+        5,
+        10,
+        20,
+        40
+      ],
+      "updated_at": "1763630676"
+    },
+    {
+      "id": 778844,
+      "model_family": "EdgeMax",
+      "type": "FreeSpace",
+      "model_name": "EdgeMax EM90 loudspeaker",
+      "bsf_file_url": "https://assets.boseprofessional.com/bsf/778844.bsf",
+      "skus": [
+        778844
+      ],
+      "power_handling": {
+        "unit": "Watts",
+        "long_term_rms": 100,
+        "peak": 200
+      },
+      "sensitivity": {
+        "unit": "dB SPL",
+        "at": [
+          {
+            "key": "1W at 1m",
+            "value": 96.0
+          }
+        ]
+      },
+      "max_spl": {
+        "unit": "dB SPL",
+        "at": [
+          {
+            "key": "continuous at 1m",
+            "value": 117.0
+          }
+        ]
+      },
+      "frequency_range": {
+        "unit": "Hz",
+        "low": 60,
+        "high": 20000
+      },
+      "nominal_impedance": {
+        "unit": "ohms",
+        "value": 8
+      },
+      "coverage": [
+        {
+          "frequency_range": {
+            "low": {
+              "unit": "Hz",
+              "value": 125
+            },
+            "high": {
+              "unit": "Hz",
+              "value": 4000
+            }
+          },
+          "type": "rectangular",
+          "horizontal_deg": 90.0,
+          "vertical_deg": 75.0
+        }
+      ],
+      "description": "",
+      "environment": "Indoor",
+      "mount_type": "Wall",
+      "impedance": {
+        "unit": "ohms",
+        "low": 4,
+        "high": 8
+      },
+      "available_taps": {
+        "70v": [
+          2.5,
+          5,
+          10,
+          20
+        ],
+        "100v": [
+          2.5,
+          5,
+          10,
+          20,
+          40
+        ]
+      },
+      "images": [
+        {
+          "black": [
+            "https://assets.boseprofessional.com/transform/c764f479-2b39-4eef-a9bf-8d5a64255902/INSTL_EM90_I-STUDIO_Iso_Right_GrilleOff",
+            "https://assets.boseprofessional.com/transform/c19b91d6-20ab-428b-bc23-fe36382996ec/INSTL_EM90_I-STUDIO_Front_GrilleOff",
+            "https://assets.boseprofessional.com/transform/4c60a27b-8a49-40d8-99d2-d8add5444486/INSTL_EM90_I-STUDIO_Iso_Left_GrilleOff"
+          ],
+          "white": [
+            "https://assets.boseprofessional.com/transform/336c3a7b-cd66-4306-81a3-74cba834e9d2/INSTL_EM90_I-STUDIO_Iso_RearLeft",
+            "https://assets.boseprofessional.com/transform/3b58c98c-0efa-4d2d-b33e-f966c516364b/INSTL_EM90_I-STUDIO_Side",
+            "https://assets.boseprofessional.com/transform/3e8caf0c-77ab-41b9-a36b-71f9a31cc6ab/INSTL_EM90_I-STUDIO_Iso_FaceDown"
+          ]
+        }
+      ],
+      "is_subwoofer": false,
+      "is_weather_rated": false,
+      "is_high_impedance_rated": true,
+      "high_impedance_taps": [
+        2.5,
+        5,
+        10,
+        20,
+        40
+      ],
+      "updated_at": "1763630676"
+    },
+    {
+      "id": 777189,
+      "model_family": "EdgeMax",
+      "type": "FreeSpace",
+      "model_name": "EdgeMax EM90-LP loudspeaker",
+      "bsf_file_url": "https://assets.boseprofessional.com/bsf/777189.bsf",
+      "skus": [
+        777189
+      ],
+      "power_handling": {
+        "unit": "Watts",
+        "long_term_rms": 100,
+        "peak": 200
+      },
+      "sensitivity": {
+        "unit": "dB SPL",
+        "at": [
+          {
+            "key": "1W at 1m",
+            "value": 91.0
+          }
+        ]
+      },
+      "max_spl": {
+        "unit": "dB SPL",
+        "at": [
+          {
+            "key": "continuous at 1m",
+            "value": 110.0
+          }
+        ]
+      },
+      "frequency_range": {
+        "unit": "Hz",
+        "low": 60,
+        "high": 20000
+      },
+      "nominal_impedance": {
+        "unit": "ohms",
+        "value": 8
+      },
+      "coverage": [
+        {
+          "frequency_range": {
+            "low": {
+              "unit": "Hz",
+              "value": 125
+            },
+            "high": {
+              "unit": "Hz",
+              "value": 4000
+            }
+          },
+          "type": "rectangular",
+          "horizontal_deg": 90.0,
+          "vertical_deg": 80.0
+        }
+      ],
+      "description": "",
+      "environment": "Indoor",
+      "mount_type": "Wall",
+      "impedance": {
+        "unit": "ohms",
+        "low": 4,
+        "high": 8
+      },
+      "available_taps": {
+        "70v": [
+          2.5,
+          5,
+          10,
+          20
+        ],
+        "100v": [
+          2.5,
+          5,
+          10,
+          20,
+          40
+        ]
+      },
+      "images": [
+        {
+          "black": [
+            "https://assets.boseprofessional.com/transform/c2083efa-7cac-4725-a2e8-1d195d6835d5/INSTL_EM90-LP_I-STUDIO_Iso_Right_GrilleOff",
+            "https://assets.boseprofessional.com/transform/461e742c-2306-4046-8577-e233b23756aa/INSTL_EM90-LP_I-STUDIO_Front_GrilleOff",
+            "https://assets.boseprofessional.com/transform/e42708b2-5e7d-4c35-ba6e-de4ed22d20ef/INSTL_EM90-LP_I-STUDIO_Iso_Left_GrilleOff"
+          ],
+          "white": [
+            "https://assets.boseprofessional.com/transform/ef01afef-a21c-4022-b1af-621cff4494f8/INSTL_EM90-LP_I-STUDIO_Iso_RearLeft",
+            "https://assets.boseprofessional.com/transform/234a03b5-5f93-4dd9-831e-a6bbf4c518a9/INSTL_EM90-LP_I-STUDIO_Side_FaceDown",
+            "https://assets.boseprofessional.com/transform/c8feb16a-2b67-4d11-9fce-fb14f3b1576e/INSTL_EM90-LP_I-STUDIO_Iso_FaceDown"
+          ]
+        }
+      ],
+      "is_subwoofer": false,
+      "is_weather_rated": false,
+      "is_high_impedance_rated": true,
+      "high_impedance_taps": [
+        2.5,
+        5,
+        10,
+        20,
+        40
+      ],
+      "updated_at": "1763630676"
+    },
+    {
+      "id": 841154,
+      "model_family": "FreeSpace",
+      "type": "FreeSpace",
+      "model_name": "FreeSpace FS2C in-ceiling loudspeakers (1 pair)",
+      "bsf_file_url": "https://assets.boseprofessional.com/bsf/841154.bsf",
+      "skus": [
+        841154
+      ],
+      "power_handling": {
+        "unit": "Watts",
+        "long_term_rms": 100,
+        "peak": 200
+      },
+      "sensitivity": {
+        "unit": "dB SPL",
+        "at": [
+          {
+            "key": "1W at 1m",
+            "value": 86.0
+          }
+        ]
+      },
+      "max_spl": {
+        "unit": "dB SPL",
+        "at": [
+          {
+            "key": "continuous at 1m",
+            "value": 110
+          }
+        ]
+      },
+      "frequency_range": {
+        "unit": "Hz",
+        "low": 60,
+        "high": 20000
+      },
+      "nominal_impedance": {
+        "unit": "ohms",
+        "value": 8
+      },
+      "coverage": [
+        {
+          "frequency_range": {
+            "low": {
+              "unit": "Hz",
+              "value": 125
+            },
+            "high": {
+              "unit": "Hz",
+              "value": 4000
+            }
+          },
+          "type": "rectangular",
+          "horizontal_deg": 150.0,
+          "vertical_deg": 150.0
+        }
+      ],
+      "description": "",
+      "environment": "Indoor",
+      "mount_type": "Wall",
+      "impedance": {
+        "unit": "ohms",
+        "low": 4,
+        "high": 8
+      },
+      "available_taps": {
+        "70v": [
+          2.5,
+          5,
+          10,
+          20
+        ],
+        "100v": [
+          2.5,
+          5,
+          10,
+          20,
+          40
+        ]
+      },
+      "images": [
+        {
+          "black": [
+            "https://assets.boseprofessional.com/m/161e3c2417359a89/original/FS2C_Group_1200x1022-png.png"
+          ],
+          "white": []
+        }
+      ],
+      "is_subwoofer": false,
+      "is_weather_rated": false,
+      "is_high_impedance_rated": true,
+      "high_impedance_taps": [
+        2.5,
+        5,
+        10,
+        20,
+        40
+      ],
+      "updated_at": "1763630676"
+    },
+    {
+      "id": 841156,
+      "model_family": "FreeSpace",
+      "type": "FreeSpace",
+      "model_name": "FreeSpace FS4CE in-ceiling loudspeakers (1 pair)",
+      "bsf_file_url": "https://assets.boseprofessional.com/bsf/841156.bsf",
+      "skus": [
+        841156
+      ],
+      "power_handling": {
+        "unit": "Watts",
+        "long_term_rms": 100,
+        "peak": 200
+      },
+      "sensitivity": {
+        "unit": "dB SPL",
+        "at": [
+          {
+            "key": "1W at 1m",
+            "value": 88.0
+          }
+        ]
+      },
+      "max_spl": {
+        "unit": "dB SPL",
+        "at": [
+          {
+            "key": "continuous at 1m",
+            "value": 110
+          }
+        ]
+      },
+      "frequency_range": {
+        "unit": "Hz",
+        "low": 60,
+        "high": 20000
+      },
+      "nominal_impedance": {
+        "unit": "ohms",
+        "value": 8
+      },
+      "coverage": [
+        {
+          "frequency_range": {
+            "low": {
+              "unit": "Hz",
+              "value": 125
+            },
+            "high": {
+              "unit": "Hz",
+              "value": 4000
+            }
+          },
+          "type": "rectangular",
+          "horizontal_deg": 145.0,
+          "vertical_deg": 145.0
+        }
+      ],
+      "description": "",
+      "environment": "Indoor",
+      "mount_type": "Wall",
+      "impedance": {
+        "unit": "ohms",
+        "low": 4,
+        "high": 8
+      },
+      "available_taps": {
+        "70v": [
+          2.5,
+          5,
+          10,
+          20
+        ],
+        "100v": [
+          2.5,
+          5,
+          10,
+          20,
+          40
+        ]
+      },
+      "images": [
+        {
+          "black": [
+            "https://assets.boseprofessional.com/m/322dfa6adc2d31c6/original/FS4CE_Group_1200x1022-png.png"
+          ],
+          "white": []
+        }
+      ],
+      "is_subwoofer": false,
+      "is_weather_rated": false,
+      "is_high_impedance_rated": true,
+      "high_impedance_taps": [
+        2.5,
+        5,
+        10,
+        20,
+        40
+      ],
+      "updated_at": "1763630676"
+    },
+    {
+      "id": 40146,
+      "model_family": "FreeSpace",
+      "type": "FreeSpace",
+      "model_name": "FreeSpace 3 Module",
+      "bsf_file_url": "https://assets.boseprofessional.com/bsf/40146.bsf",
+      "skus": [
+        40146
+      ],
+      "power_handling": {
+        "unit": "Watts",
+        "long_term_rms": 100,
+        "peak": 200
+      },
+      "sensitivity": {
+        "unit": "dB SPL",
+        "at": [
+          {
+            "key": "1W at 1m",
+            "value": 76.0
+          }
+        ]
+      },
+      "max_spl": {
+        "unit": "dB SPL",
+        "at": [
+          {
+            "key": "continuous at 1m",
+            "value": 96.0
+          }
+        ]
+      },
+      "frequency_range": {
+        "unit": "Hz",
+        "low": 40.0,
+        "high": 315.0
+      },
+      "nominal_impedance": {
+        "unit": "ohms",
+        "value": 8
+      },
+      "coverage": [
+        {
+          "frequency_range": {
+            "low": {
+              "unit": "Hz",
+              "value": 125
+            },
+            "high": {
+              "unit": "Hz",
+              "value": 4000
+            }
+          },
+          "type": "rectangular",
+          "horizontal_deg": 200.0,
+          "vertical_deg": 200.0
+        }
+      ],
+      "description": "",
+      "environment": "Indoor",
+      "mount_type": "Wall",
+      "impedance": {
+        "unit": "ohms",
+        "low": 4,
+        "high": 8
+      },
+      "available_taps": {
+        "70v": [
+          2.5,
+          5,
+          10,
+          20
+        ],
+        "100v": [
+          2.5,
+          5,
+          10,
+          20,
+          40
+        ]
+      },
+      "images": [
+        {
+          "black": [
+            "https://assets.boseprofessional.com/m/8a1cc32a5b190b3/original/FS_3_black_EC_01-png.png",
+            "https://assets.boseprofessional.com/m/78d85335f47b6f59/original/FS_3_white_EC_01-jpeg.jpeg",
+            "https://assets.boseprofessional.com/m/4a00a925e1b423f/original/FreeSpace_3_EC_00-png.png"
+          ],
+          "white": []
+        }
+      ],
+      "is_subwoofer": true,
+      "is_weather_rated": false,
+      "is_high_impedance_rated": true,
+      "high_impedance_taps": [
+        2.5,
+        5,
+        10,
+        20,
+        40
+      ],
+      "updated_at": "1763630676"
+    },
+    {
+      "id": 40148,
+      "model_family": "FreeSpace",
+      "type": "FreeSpace",
+      "model_name": "FreeSpace 3 Series II bass module",
+      "bsf_file_url": "https://assets.boseprofessional.com/bsf/40148.bsf",
+      "skus": [
+        40148
+      ],
+      "power_handling": {
+        "unit": "Watts",
+        "long_term_rms": 100,
+        "peak": 200
+      },
+      "sensitivity": {
+        "unit": "dB SPL",
+        "at": [
+          {
+            "key": "1W at 1m",
+            "value": 76.0
+          }
+        ]
+      },
+      "max_spl": {
+        "unit": "dB SPL",
+        "at": [
+          {
+            "key": "continuous at 1m",
+            "value": 96.0
+          }
+        ]
+      },
+      "frequency_range": {
+        "unit": "Hz",
+        "low": 40.0,
+        "high": 315.0
+      },
+      "nominal_impedance": {
+        "unit": "ohms",
+        "value": 8
+      },
+      "coverage": [
+        {
+          "frequency_range": {
+            "low": {
+              "unit": "Hz",
+              "value": 125
+            },
+            "high": {
+              "unit": "Hz",
+              "value": 4000
+            }
+          },
+          "type": "rectangular",
+          "horizontal_deg": 200.0,
+          "vertical_deg": 200.0
+        }
+      ],
+      "description": "",
+      "environment": "Indoor",
+      "mount_type": "Wall",
+      "impedance": {
+        "unit": "ohms",
+        "low": 4,
+        "high": 8
+      },
+      "available_taps": {
+        "70v": [
+          2.5,
+          5,
+          10,
+          20
+        ],
+        "100v": [
+          2.5,
+          5,
+          10,
+          20,
+          40
+        ]
+      },
+      "images": [
+        {
+          "black": [
+            "https://assets.boseprofessional.com/m/6a1dbbc1691e4ac1/original/freespace_3_series_ii_acousimass_white_EC_00-png.png",
+            "https://assets.boseprofessional.com/m/f928d72753e7168/original/freespace_3_series_ii_acousimass_black_EC_00-png.png"
+          ],
+          "white": []
+        }
+      ],
+      "is_subwoofer": true,
+      "is_weather_rated": false,
+      "is_high_impedance_rated": true,
+      "high_impedance_taps": [
+        2.5,
+        5,
+        10,
+        20,
+        40
+      ],
+      "updated_at": "1763630676"
+    },
+    {
+      "id": 40144,
+      "model_family": "FreeSpace",
+      "type": "FreeSpace",
+      "model_name": "FreeSpace 3 satellites (1 pair)",
+      "bsf_file_url": "https://assets.boseprofessional.com/bsf/40144.bsf",
+      "skus": [
+        40144
+      ],
+      "power_handling": {
+        "unit": "Watts",
+        "long_term_rms": 100,
+        "peak": 200
+      },
+      "sensitivity": {
+        "unit": "dB SPL",
+        "at": [
+          {
+            "key": "1W at 1m",
+            "value": 84.0
+          }
+        ]
+      },
+      "max_spl": {
+        "unit": "dB SPL",
+        "at": [
+          {
+            "key": "continuous at 1m",
+            "value": 110
+          }
+        ]
+      },
+      "frequency_range": {
+        "unit": "Hz",
+        "low": 60,
+        "high": 20000
+      },
+      "nominal_impedance": {
+        "unit": "ohms",
+        "value": 8
+      },
+      "coverage": [
+        {
+          "frequency_range": {
+            "low": {
+              "unit": "Hz",
+              "value": 125
+            },
+            "high": {
+              "unit": "Hz",
+              "value": 4000
+            }
+          },
+          "type": "rectangular",
+          "vertical_deg": 170.0
+        }
+      ],
+      "description": "",
+      "environment": "Indoor",
+      "mount_type": "Wall",
+      "impedance": {
+        "unit": "ohms",
+        "low": 4,
+        "high": 8
+      },
+      "available_taps": {
+        "70v": [
+          2.5,
+          5,
+          10,
+          20
+        ],
+        "100v": [
+          2.5,
+          5,
+          10,
+          20,
+          40
+        ]
+      },
+      "images": [
+        {
+          "black": [
+            "https://assets.boseprofessional.com/m/3d12eb1f3acc37c9/original/FS3_surfacesattelites_EC_black-png.png",
+            "https://assets.boseprofessional.com/m/2b9bd42b86d9d921/original/FS3_surfacesattelites_EC_white-png.png"
+          ],
+          "white": []
+        }
+      ],
+      "is_subwoofer": false,
+      "is_weather_rated": false,
+      "is_high_impedance_rated": true,
+      "high_impedance_taps": [
+        2.5,
+        5,
+        10,
+        20,
+        40
+      ],
+      "updated_at": "1763630676"
+    },
+    {
+      "id": 40151,
+      "model_family": "FreeSpace",
+      "type": "FreeSpace",
+      "model_name": "FreeSpace 360P Series II",
+      "bsf_file_url": "https://assets.boseprofessional.com/bsf/40151.bsf",
+      "skus": [
+        40151
+      ],
+      "power_handling": {
+        "unit": "Watts",
+        "long_term_rms": 100,
+        "peak": 200
+      },
+      "sensitivity": {
+        "unit": "dB SPL",
+        "at": [
+          {
+            "key": "1W at 1m",
+            "value": 87.0
+          }
+        ]
+      },
+      "max_spl": {
+        "unit": "dB SPL",
+        "at": [
+          {
+            "key": "continuous at 1m",
+            "value": 110
+          }
+        ]
+      },
+      "frequency_range": {
+        "unit": "Hz",
+        "low": 60,
+        "high": 20000
+      },
+      "nominal_impedance": {
+        "unit": "ohms",
+        "value": 8
+      },
+      "coverage": [
+        {
+          "frequency_range": {
+            "low": {
+              "unit": "Hz",
+              "value": 125
+            },
+            "high": {
+              "unit": "Hz",
+              "value": 4000
+            }
+          },
+          "type": "rectangular",
+          "horizontal_deg": 360.0,
+          "vertical_deg": 50.0
+        }
+      ],
+      "description": "",
+      "environment": "Indoor",
+      "mount_type": "Wall",
+      "impedance": {
+        "unit": "ohms",
+        "low": 4,
+        "high": 8
+      },
+      "available_taps": {
+        "70v": [
+          2.5,
+          5,
+          10,
+          20
+        ],
+        "100v": [
+          2.5,
+          5,
+          10,
+          20,
+          40
+        ]
+      },
+      "images": [
+        {
+          "black": [
+            "https://assets.boseprofessional.com/m/6c8efbd5c63697f8/original/360P_EC-png.png",
+            "https://assets.boseprofessional.com/m/72effa70af9300d2/original/360P_EC_01-jpeg.jpeg"
+          ],
+          "white": []
+        }
+      ],
+      "is_subwoofer": false,
+      "is_weather_rated": false,
+      "is_high_impedance_rated": true,
+      "high_impedance_taps": [
+        2.5,
+        5,
+        10,
+        20,
+        40
+      ],
+      "updated_at": "1763630676"
+    },
+    {
+      "id": 811433,
+      "model_family": "ArenaMatch",
+      "type": "FreeSpace",
+      "model_name": "ArenaMatch AMU105 compact high-performance loudspeaker",
+      "bsf_file_url": "https://assets.boseprofessional.com/bsf/811433.bsf",
+      "skus": [
+        811433
+      ],
+      "power_handling": {
+        "unit": "Watts",
+        "long_term_rms": 100,
+        "peak": 200
+      },
+      "sensitivity": {
+        "unit": "dB SPL",
+        "at": [
+          {
+            "key": "1W at 1m",
+            "value": 90.0
+          }
+        ]
+      },
+      "max_spl": {
+        "unit": "dB SPL",
+        "at": [
+          {
+            "key": "continuous at 1m",
+            "value": 110
+          }
+        ]
+      },
+      "frequency_range": {
+        "unit": "Hz",
+        "low": 60,
+        "high": 20000
+      },
+      "nominal_impedance": {
+        "unit": "ohms",
+        "value": 8
+      },
+      "coverage": [
+        {
+          "frequency_range": {
+            "low": {
+              "unit": "Hz",
+              "value": 125
+            },
+            "high": {
+              "unit": "Hz",
+              "value": 4000
+            }
+          },
+          "type": "rectangular",
+          "horizontal_deg": 100.0,
+          "vertical_deg": 100.0
+        }
+      ],
+      "description": "",
+      "environment": "Indoor",
+      "mount_type": "Wall",
+      "impedance": {
+        "unit": "ohms",
+        "low": 4,
+        "high": 8
+      },
+      "available_taps": {
+        "70v": [
+          2.5,
+          5,
+          10,
+          20
+        ],
+        "100v": [
+          2.5,
+          5,
+          10,
+          20,
+          40
+        ]
+      },
+      "images": [
+        {
+          "black": [
+            "https://assets.boseprofessional.com/transform/69168ba7-7ce2-4a4b-a467-a29b8801e038/AMU105-Black_i_IsoRightFacing-GrilleOn-Vertical",
+            "https://assets.boseprofessional.com/transform/e9fe9767-9829-43e5-afbe-c9ca4bc63b8b/AMU105-Black_i_IsoRightFacing-GrilleOff-Vertical",
+            "https://assets.boseprofessional.com/transform/0d8d45cf-4ba3-4701-9676-cbb179f3c2fe/AMU105-Black_i_IsoRightFacing-GrilleOn"
+          ],
+          "white": [
+            "https://assets.boseprofessional.com/transform/16506624-e94f-4342-a7dc-055bd798d452/AMU105-Black_i_IsoRightFacing-GrilleOff",
+            "https://assets.boseprofessional.com/transform/2e568087-dbd4-410e-82c3-a7de9a5b0e89/AMU105-Black_i_Rear",
+            "https://assets.boseprofessional.com/transform/47fe112b-6a1b-4a6d-9277-6b01f0255ee5/AMU105-Black_i_Rear-Vertical"
+          ]
+        }
+      ],
+      "is_subwoofer": false,
+      "is_weather_rated": false,
+      "is_high_impedance_rated": true,
+      "high_impedance_taps": [
+        2.5,
+        5,
+        10,
+        20,
+        40
+      ],
+      "updated_at": "1763630676"
+    },
+    {
+      "id": 811434,
+      "model_family": "ArenaMatch",
+      "type": "FreeSpace",
+      "model_name": "ArenaMatch AMU108 compact high-performance loudspeaker",
+      "bsf_file_url": "https://assets.boseprofessional.com/bsf/811434.bsf",
+      "skus": [
+        811434
+      ],
+      "power_handling": {
+        "unit": "Watts",
+        "long_term_rms": 100,
+        "peak": 200
+      },
+      "sensitivity": {
+        "unit": "dB SPL",
+        "at": [
+          {
+            "key": "1W at 1m",
+            "value": 91.0
+          }
+        ]
+      },
+      "max_spl": {
+        "unit": "dB SPL",
+        "at": [
+          {
+            "key": "continuous at 1m",
+            "value": 110
+          }
+        ]
+      },
+      "frequency_range": {
+        "unit": "Hz",
+        "low": 60,
+        "high": 20000
+      },
+      "nominal_impedance": {
+        "unit": "ohms",
+        "value": 8
+      },
+      "coverage": [
+        {
+          "frequency_range": {
+            "low": {
+              "unit": "Hz",
+              "value": 125
+            },
+            "high": {
+              "unit": "Hz",
+              "value": 4000
+            }
+          },
+          "type": "rectangular",
+          "horizontal_deg": 60.0,
+          "vertical_deg": 90.0
+        }
+      ],
+      "description": "",
+      "environment": "Indoor",
+      "mount_type": "Wall",
+      "impedance": {
+        "unit": "ohms",
+        "low": 4,
+        "high": 8
+      },
+      "available_taps": {
+        "70v": [
+          2.5,
+          5,
+          10,
+          20
+        ],
+        "100v": [
+          2.5,
+          5,
+          10,
+          20,
+          40
+        ]
+      },
+      "images": [
+        {
+          "black": [
+            "https://assets.boseprofessional.com/transform/f3bcc44f-a9cd-4bba-809b-220b9ca482a0/AMU108-Black_i_IsoRightFacing-GrilleOn-Vertical",
+            "https://assets.boseprofessional.com/transform/35725624-3f06-466a-a2f6-bff6a012302a/AMU108-Black_i_IsoRightFacing-GrilleOff-Vertical",
+            "https://assets.boseprofessional.com/transform/c967d239-ed09-4404-9a93-86b932280af6/AMU108-Black_i_IsoRightFacing-GrilleOn"
+          ],
+          "white": [
+            "https://assets.boseprofessional.com/transform/77995e75-ab5a-47b5-bd89-9fe2dbdc4a35/AMU108-Black_i_IsoRightFacing-GrilleOff",
+            "https://assets.boseprofessional.com/transform/24b60980-8019-4271-845f-829159d9802f/PNG-Version-AMU108-Black_i_Rear-PanTilt",
+            "https://assets.boseprofessional.com/transform/08b8c657-188e-4d6a-9fef-40aae524282f/AMU108-Black_i_Rear-Vertical"
+          ]
+        }
+      ],
+      "is_subwoofer": false,
+      "is_weather_rated": false,
+      "is_high_impedance_rated": true,
+      "high_impedance_taps": [
+        2.5,
+        5,
+        10,
+        20,
+        40
+      ],
+      "updated_at": "1763630676"
+    },
+    {
+      "id": 811435,
+      "model_family": "ArenaMatch",
+      "type": "FreeSpace",
+      "model_name": "ArenaMatch AMU206 compact high-performance loudspeaker",
+      "bsf_file_url": "https://assets.boseprofessional.com/bsf/811435.bsf",
+      "skus": [
+        811435
+      ],
+      "power_handling": {
+        "unit": "Watts",
+        "long_term_rms": 100,
+        "peak": 200
+      },
+      "sensitivity": {
+        "unit": "dB SPL",
+        "at": [
+          {
+            "key": "1W at 1m",
+            "value": 91.0
+          }
+        ]
+      },
+      "max_spl": {
+        "unit": "dB SPL",
+        "at": [
+          {
+            "key": "continuous at 1m",
+            "value": 110
+          }
+        ]
+      },
+      "frequency_range": {
+        "unit": "Hz",
+        "low": 60,
+        "high": 20000
+      },
+      "nominal_impedance": {
+        "unit": "ohms",
+        "value": 8
+      },
+      "coverage": [
+        {
+          "frequency_range": {
+            "low": {
+              "unit": "Hz",
+              "value": 125
+            },
+            "high": {
+              "unit": "Hz",
+              "value": 4000
+            }
+          },
+          "type": "rectangular",
+          "horizontal_deg": 60.0,
+          "vertical_deg": 120.0
+        }
+      ],
+      "description": "",
+      "environment": "Indoor",
+      "mount_type": "Wall",
+      "impedance": {
+        "unit": "ohms",
+        "low": 4,
+        "high": 8
+      },
+      "available_taps": {
+        "70v": [
+          2.5,
+          5,
+          10,
+          20
+        ],
+        "100v": [
+          2.5,
+          5,
+          10,
+          20,
+          40
+        ]
+      },
+      "images": [
+        {
+          "black": [
+            "https://assets.boseprofessional.com/transform/764a78cd-bd06-4e2f-8f41-319eeef60562/AMU206-Black_i_IsoRightFacing-GrilleOn-Vertical",
+            "https://assets.boseprofessional.com/transform/f2884063-1eef-4a3d-982a-660b37ac2e41/AMU206-Black_i_IsoRightFacing-GrilleOff-Vertical",
+            "https://assets.boseprofessional.com/transform/455fc956-44d1-44a0-a0bd-d811dbdb43a4/AMU206-Black_i_IsoRightFacing-GrilleOn"
+          ],
+          "white": [
+            "https://assets.boseprofessional.com/transform/07f920e9-90a7-46ef-bee7-7ac6819056f7/AMU206-Black_i_IsoRightFacing-GrilleOff",
+            "https://assets.boseprofessional.com/transform/d9323685-0dc5-4b6a-8e08-f3d4d2076aed/AMU206-Black_i_Rear",
+            "https://assets.boseprofessional.com/transform/6736e1f0-6508-4d00-bb7c-96aebca4cefe/AMU206-Black_i_Rear_Vertical"
+          ]
+        }
+      ],
+      "is_subwoofer": false,
+      "is_weather_rated": false,
+      "is_high_impedance_rated": true,
+      "high_impedance_taps": [
+        2.5,
+        5,
+        10,
+        20,
+        40
+      ],
+      "updated_at": "1763630676"
+    },
+    {
+      "id": 811436,
+      "model_family": "ArenaMatch",
+      "type": "FreeSpace",
+      "model_name": "ArenaMatch AMU208 compact high-performance loudspeaker",
+      "bsf_file_url": "https://assets.boseprofessional.com/bsf/811436.bsf",
+      "skus": [
+        811436
+      ],
+      "power_handling": {
+        "unit": "Watts",
+        "long_term_rms": 100,
+        "peak": 200
+      },
+      "sensitivity": {
+        "unit": "dB SPL",
+        "at": [
+          {
+            "key": "1W at 1m",
+            "value": 95.0
+          }
+        ]
+      },
+      "max_spl": {
+        "unit": "dB SPL",
+        "at": [
+          {
+            "key": "continuous at 1m",
+            "value": 110
+          }
+        ]
+      },
+      "frequency_range": {
+        "unit": "Hz",
+        "low": 60,
+        "high": 20000
+      },
+      "nominal_impedance": {
+        "unit": "ohms",
+        "value": 8
+      },
+      "coverage": [
+        {
+          "frequency_range": {
+            "low": {
+              "unit": "Hz",
+              "value": 125
+            },
+            "high": {
+              "unit": "Hz",
+              "value": 4000
+            }
+          },
+          "type": "rectangular",
+          "horizontal_deg": 60.0,
+          "vertical_deg": 90.0
+        }
+      ],
+      "description": "",
+      "environment": "Indoor",
+      "mount_type": "Wall",
+      "impedance": {
+        "unit": "ohms",
+        "low": 4,
+        "high": 8
+      },
+      "available_taps": {
+        "70v": [
+          2.5,
+          5,
+          10,
+          20
+        ],
+        "100v": [
+          2.5,
+          5,
+          10,
+          20,
+          40
+        ]
+      },
+      "images": [
+        {
+          "black": [
+            "https://assets.boseprofessional.com/transform/d51351f5-8b03-48fd-adf6-430129649af5/AMU208-Black_i_IsoRightFacing-GrilleOn-Vertical",
+            "https://assets.boseprofessional.com/transform/2ba4023f-fbfd-4617-8f53-8587a4bcdff9/AMU208-Black_i_IsoRightFacing-GrilleOff-Vertical",
+            "https://assets.boseprofessional.com/transform/0dab7e62-2e9b-4612-a019-ca1a32f82d23/AMU208-Black_i_IsoRightFacing-GrilleOn"
+          ],
+          "white": [
+            "https://assets.boseprofessional.com/transform/2309b9ce-bec5-45c6-a347-c739f7d35628/AMU208-Black_i_IsoRightFacing-GrilleOff",
+            "https://assets.boseprofessional.com/transform/e1241f6f-2d2f-418c-9605-ac98acefcaaa/AMU208-Black_i_Rear-PanTilt",
+            "https://assets.boseprofessional.com/transform/b1262462-2d6c-45e4-82b0-003f5bfee5a4/AMU208-Black_i_Rear_Vertical"
+          ]
+        }
+      ],
+      "is_subwoofer": false,
+      "is_weather_rated": false,
+      "is_high_impedance_rated": true,
+      "high_impedance_taps": [
+        2.5,
+        5,
+        10,
+        20,
+        40
+      ],
+      "updated_at": "1763630676"
+    },
+    {
+      "id": 734302,
+      "model_family": "ShowMatch",
+      "type": "FreeSpace",
+      "model_name": "ShowMatch SMS118 subwoofer",
+      "bsf_file_url": "https://assets.boseprofessional.com/bsf/734302.bsf",
+      "skus": [
+        734302
+      ],
+      "power_handling": {
+        "unit": "Watts",
+        "long_term_rms": 100,
+        "peak": 200
+      },
+      "sensitivity": {
+        "unit": "dB SPL",
+        "at": [
+          {
+            "key": "1W at 1m",
+            "value": 92.0
+          }
+        ]
+      },
+      "max_spl": {
+        "unit": "dB SPL",
+        "at": [
+          {
+            "key": "continuous at 1m",
+            "value": 121.0
+          }
+        ]
+      },
+      "frequency_range": {
+        "unit": "Hz",
+        "low": 29.0,
+        "high": 300.0
+      },
+      "nominal_impedance": {
+        "unit": "ohms",
+        "value": 8
+      },
+      "coverage": [],
+      "description": "",
+      "environment": "Indoor",
+      "mount_type": "Wall",
+      "impedance": {
+        "unit": "ohms",
+        "low": 4,
+        "high": 8
+      },
+      "available_taps": {
+        "70v": [
+          2.5,
+          5,
+          10,
+          20
+        ],
+        "100v": [
+          2.5,
+          5,
+          10,
+          20,
+          40
+        ]
+      },
+      "images": [
+        {
+          "black": [
+            "https://assets.boseprofessional.com/m/6b45e47b82f22206/original/i_showmatch_sms118_right_facing_grilleON_1200-png.png",
+            "https://assets.boseprofessional.com/m/2204f08d36effc67/original/i_showmatch_sms118_right_facing_rear_1200-jpeg.jpeg",
+            "https://assets.boseprofessional.com/m/3cc7d661c811c007/original/i_showmatch_sms118_right_facing_grilleOFF_1200-jpeg.jpeg"
+          ],
+          "white": [
+            "https://assets.boseprofessional.com/m/6181d6c4583edfbc/original/i_showmatch_sms118_right_facing_grilleON_1200-jpeg.jpeg",
+            "https://assets.boseprofessional.com/m/4e552c8f4ab51db9/original/i_showmatch_sms118_right_facing_rear_1200-png.png",
+            "https://assets.boseprofessional.com/m/75b134a7b1d0793/original/i_showmatch_sms118_right_facing_grilleOFF_1200-png.png"
+          ]
+        }
+      ],
+      "is_subwoofer": true,
+      "is_weather_rated": false,
+      "is_high_impedance_rated": true,
+      "high_impedance_taps": [
+        2.5,
+        5,
+        10,
+        20,
+        40
+      ],
+      "updated_at": "1763630676"
+    },
+    {
+      "id": 843160,
+      "model_family": "AMM108",
+      "type": "FreeSpace",
+      "model_name": "AMM108 multipurpose loudspeaker",
+      "bsf_file_url": "https://assets.boseprofessional.com/bsf/843160.bsf",
+      "skus": [
+        843160
+      ],
+      "power_handling": {
+        "unit": "Watts",
+        "long_term_rms": 100,
+        "peak": 200
+      },
+      "sensitivity": {
+        "unit": "dB SPL",
+        "at": [
+          {
+            "key": "1W at 1m",
+            "value": 94.0
+          }
+        ]
+      },
+      "max_spl": {
+        "unit": "dB SPL",
+        "at": [
+          {
+            "key": "continuous at 1m",
+            "value": 116.0
+          }
+        ]
+      },
+      "frequency_range": {
+        "unit": "Hz",
+        "low": 60,
+        "high": 20000
+      },
+      "nominal_impedance": {
+        "unit": "ohms",
+        "value": 8
+      },
+      "coverage": [
+        {
+          "frequency_range": {
+            "low": {
+              "unit": "Hz",
+              "value": 125
+            },
+            "high": {
+              "unit": "Hz",
+              "value": 4000
+            }
+          },
+          "type": "rectangular",
+          "horizontal_deg": 110.0,
+          "vertical_deg": 60.0
+        }
+      ],
+      "description": "",
+      "environment": "Indoor",
+      "mount_type": "Wall",
+      "impedance": {
+        "unit": "ohms",
+        "low": 4,
+        "high": 8
+      },
+      "available_taps": {
+        "70v": [
+          2.5,
+          5,
+          10,
+          20
+        ],
+        "100v": [
+          2.5,
+          5,
+          10,
+          20,
+          40
+        ]
+      },
+      "images": [
+        {
+          "black": [
+            "https://assets.boseprofessional.com/m/6d303377b0a08068/original/AMM108_I-STUDIO_Right_Fill-big-jpeg.jpeg",
+            "https://assets.boseprofessional.com/m/2fd3f01c8d9b9900/original/AMM108_I-STUDIO_Right_Fill-jpeg.jpeg",
+            "https://assets.boseprofessional.com/m/54a35dfe076bedab/original/AMM108_I-STUDIO_Left_Fill-jpeg.jpeg"
+          ],
+          "white": [
+            "https://assets.boseprofessional.com/m/4600d4e0f3f06d42/original/AMM108_I-STUDIO_Left_FOH-jpeg.jpeg",
+            "https://assets.boseprofessional.com/m/39948e9cece94bfa/original/AMM108_I-STUDIO_Left-Monitor-jpeg.jpeg",
+            "https://assets.boseprofessional.com/m/1bc1fb6c6c651562/original/AMM108_I-STUDIO_Right_FOH-jpeg.jpeg"
+          ]
+        }
+      ],
+      "is_subwoofer": false,
+      "is_weather_rated": false,
+      "is_high_impedance_rated": true,
+      "high_impedance_taps": [
+        2.5,
+        5,
+        10,
+        20,
+        40
+      ],
+      "updated_at": "1763630676"
+    },
+    {
+      "id": 843161,
+      "model_family": "AMM112",
+      "type": "FreeSpace",
+      "model_name": "AMM112 multipurpose loudspeaker",
+      "bsf_file_url": "https://assets.boseprofessional.com/bsf/843161.bsf",
+      "skus": [
+        843161
+      ],
+      "power_handling": {
+        "unit": "Watts",
+        "long_term_rms": 100,
+        "peak": 200
+      },
+      "sensitivity": {
+        "unit": "dB SPL",
+        "at": [
+          {
+            "key": "1W at 1m",
+            "value": 96.0
+          }
+        ]
+      },
+      "max_spl": {
+        "unit": "dB SPL",
+        "at": [
+          {
+            "key": "continuous at 1m",
+            "value": 121.0
+          }
+        ]
+      },
+      "frequency_range": {
+        "unit": "Hz",
+        "low": 60,
+        "high": 20000
+      },
+      "nominal_impedance": {
+        "unit": "ohms",
+        "value": 8
+      },
+      "coverage": [
+        {
+          "frequency_range": {
+            "low": {
+              "unit": "Hz",
+              "value": 125
+            },
+            "high": {
+              "unit": "Hz",
+              "value": 4000
+            }
+          },
+          "type": "rectangular",
+          "horizontal_deg": 110.0,
+          "vertical_deg": 60.0
+        }
+      ],
+      "description": "",
+      "environment": "Indoor",
+      "mount_type": "Wall",
+      "impedance": {
+        "unit": "ohms",
+        "low": 4,
+        "high": 8
+      },
+      "available_taps": {
+        "70v": [
+          2.5,
+          5,
+          10,
+          20
+        ],
+        "100v": [
+          2.5,
+          5,
+          10,
+          20,
+          40
+        ]
+      },
+      "images": [
+        {
+          "black": [
+            "https://assets.boseprofessional.com/m/5f6797e18054eb96/original/AMM112_I-STUDIO_Right_Fill_big-jpeg.jpeg",
+            "https://assets.boseprofessional.com/m/69883d17c1cb6f10/original/AMM112_I-STUDIO_Left_Fill-jpeg.jpeg",
+            "https://assets.boseprofessional.com/m/33b88be84a5980ad/original/AMM112_I-STUDIO_Left_FOH-jpeg.jpeg"
+          ],
+          "white": [
+            "https://assets.boseprofessional.com/m/c1ec2f05f895664/original/AMM112_I-STUDIO_Left_Monitor_1200-1022-jpeg.jpeg",
+            "https://assets.boseprofessional.com/m/47680ea418eaa2fe/original/AMM112_I-STUDIO_Right_Fill-jpeg.jpeg",
+            "https://assets.boseprofessional.com/m/30f1dd30a6ed5f27/original/AMM112_I-STUDIO_Right_FOH-jpeg.jpeg"
+          ]
+        }
+      ],
+      "is_subwoofer": false,
+      "is_weather_rated": false,
+      "is_high_impedance_rated": true,
+      "high_impedance_taps": [
+        2.5,
+        5,
+        10,
+        20,
+        40
+      ],
+      "updated_at": "1763630676"
+    },
+    {
+      "id": 843163,
+      "model_family": "AMS115",
+      "type": "FreeSpace",
+      "model_name": "AMS115 compact subwoofer",
+      "bsf_file_url": "https://assets.boseprofessional.com/bsf/843163.bsf",
+      "skus": [
+        843163
+      ],
+      "power_handling": {
+        "unit": "Watts",
+        "long_term_rms": 100,
+        "peak": 200
+      },
+      "sensitivity": {
+        "unit": "dB SPL",
+        "at": [
+          {
+            "key": "1W at 1m",
+            "value": 90.0
+          }
+        ]
+      },
+      "max_spl": {
+        "unit": "dB SPL",
+        "at": [
+          {
+            "key": "continuous at 1m",
+            "value": 117.0
+          }
+        ]
+      },
+      "frequency_range": {
+        "unit": "Hz",
+        "low": 35.0,
+        "high": 130.0
+      },
+      "nominal_impedance": {
+        "unit": "ohms",
+        "value": 8
+      },
+      "coverage": [],
+      "description": "",
+      "environment": "Indoor",
+      "mount_type": "Wall",
+      "impedance": {
+        "unit": "ohms",
+        "low": 4,
+        "high": 8
+      },
+      "available_taps": {
+        "70v": [
+          2.5,
+          5,
+          10,
+          20
+        ],
+        "100v": [
+          2.5,
+          5,
+          10,
+          20,
+          40
+        ]
+      },
+      "images": [
+        {
+          "black": [
+            "https://assets.boseprofessional.com/m/4f73e89f575c5722/original/AMS115_I-STUDIO_Left-jpeg.jpeg",
+            "https://assets.boseprofessional.com/m/3cd7cf770354c4b7/original/AMS115_I-STUDIO_Straight-On-jpeg.jpeg",
+            "https://assets.boseprofessional.com/m/5be9f2ab7982f56d/original/AMS115_I-STUDIO_1200x1022_LeftFacing-jpeg.jpeg"
+          ],
+          "white": [
+            "https://assets.boseprofessional.com/m/18eda11cbff97434/original/AMS115_I-STUDIO_FRONT_1200x1022_grillOFF-jpeg.jpeg"
+          ]
+        }
+      ],
+      "is_subwoofer": true,
+      "is_weather_rated": false,
+      "is_high_impedance_rated": true,
+      "high_impedance_taps": [
+        2.5,
+        5,
+        10,
+        20,
+        40
+      ],
+      "updated_at": "1763630676"
+    },
+    {
+      "id": 40189,
+      "model_family": "MA12",
+      "type": "FreeSpace",
+      "model_name": "MA12 modular column array loudspeaker",
+      "bsf_file_url": "https://assets.boseprofessional.com/bsf/40189.bsf",
+      "skus": [
+        40189
+      ],
+      "power_handling": {
+        "unit": "Watts",
+        "long_term_rms": 100,
+        "peak": 200
+      },
+      "sensitivity": {
+        "unit": "dB SPL",
+        "at": [
+          {
+            "key": "1W at 1m",
+            "value": 88.0
+          }
+        ]
+      },
+      "max_spl": {
+        "unit": "dB SPL",
+        "at": [
+          {
+            "key": "continuous at 1m",
+            "value": 113.0
+          }
+        ]
+      },
+      "frequency_range": {
+        "unit": "Hz",
+        "low": 60,
+        "high": 20000
+      },
+      "nominal_impedance": {
+        "unit": "ohms",
+        "value": 8
+      },
+      "coverage": [
+        {
+          "frequency_range": {
+            "low": {
+              "unit": "Hz",
+              "value": 125
+            },
+            "high": {
+              "unit": "Hz",
+              "value": 4000
+            }
+          },
+          "type": "rectangular",
+          "horizontal_deg": 145.0,
+          "vertical_deg": 20.0
+        }
+      ],
+      "description": "",
+      "environment": "Indoor",
+      "mount_type": "Wall",
+      "impedance": {
+        "unit": "ohms",
+        "low": 4,
+        "high": 8
+      },
+      "available_taps": {
+        "70v": [
+          2.5,
+          5,
+          10,
+          20
+        ],
+        "100v": [
+          2.5,
+          5,
+          10,
+          20,
+          40
+        ]
+      },
+      "images": [
+        {
+          "black": [
+            "https://assets.boseprofessional.com/m/7b3665c38f96d050/original/MA12_black_EC-png.png",
+            "https://assets.boseprofessional.com/m/2e9e59687ccdfbc1/original/MA12_white_EC-jpeg.jpeg"
+          ],
+          "white": []
+        }
+      ],
+      "is_subwoofer": false,
+      "is_weather_rated": false,
+      "is_high_impedance_rated": true,
+      "high_impedance_taps": [
+        2.5,
+        5,
+        10,
+        20,
+        40
+      ],
+      "updated_at": "1763630676"
+    },
+    {
+      "id": 317302,
+      "model_family": "MA12EX",
+      "type": "FreeSpace",
+      "model_name": "MA12EX modular column array loudspeaker",
+      "bsf_file_url": "https://assets.boseprofessional.com/bsf/317302.bsf",
+      "skus": [
+        317302
+      ],
+      "power_handling": {
+        "unit": "Watts",
+        "long_term_rms": 100,
+        "peak": 200
+      },
+      "sensitivity": {
+        "unit": "dB SPL",
+        "at": [
+          {
+            "key": "1W at 1m",
+            "value": 87.0
+          }
+        ]
+      },
+      "max_spl": {
+        "unit": "dB SPL",
+        "at": [
+          {
+            "key": "continuous at 1m",
+            "value": 112.0
+          }
+        ]
+      },
+      "frequency_range": {
+        "unit": "Hz",
+        "low": 60,
+        "high": 20000
+      },
+      "nominal_impedance": {
+        "unit": "ohms",
+        "value": 8
+      },
+      "coverage": [
+        {
+          "frequency_range": {
+            "low": {
+              "unit": "Hz",
+              "value": 125
+            },
+            "high": {
+              "unit": "Hz",
+              "value": 4000
+            }
+          },
+          "type": "rectangular",
+          "horizontal_deg": 160.0,
+          "vertical_deg": 20.0
+        }
+      ],
+      "description": "",
+      "environment": "Indoor",
+      "mount_type": "Wall",
+      "impedance": {
+        "unit": "ohms",
+        "low": 4,
+        "high": 8
+      },
+      "available_taps": {
+        "70v": [
+          2.5,
+          5,
+          10,
+          20
+        ],
+        "100v": [
+          2.5,
+          5,
+          10,
+          20,
+          40
+        ]
+      },
+      "images": [
+        {
+          "black": [
+            "https://assets.boseprofessional.com/m/6501c439fab111f3/original/MA12EX_black_EC-png.png",
+            "https://assets.boseprofessional.com/m/2834c750308403b/original/MA12EX_black_EC_01-jpeg.jpeg",
+            "https://assets.boseprofessional.com/m/39446298ecede28e/original/MA12EX_white_EC-jpeg.jpeg"
+          ],
+          "white": [
+            "https://assets.boseprofessional.com/m/62b4e85976726fac/original/MA12EX_white_EC_01-jpeg.jpeg"
+          ]
+        }
+      ],
+      "is_subwoofer": false,
+      "is_weather_rated": false,
+      "is_high_impedance_rated": true,
+      "high_impedance_taps": [
+        2.5,
+        5,
+        10,
+        20,
+        40
+      ],
+      "updated_at": "1763630676"
+    },
+    {
+      "id": 787856,
+      "model_family": "MSA12X",
+      "type": "FreeSpace",
+      "model_name": "MSA12X powered beam-steering array loudspeaker",
+      "bsf_file_url": "https://assets.boseprofessional.com/bsf/787856.bsf",
+      "skus": [
+        787856
+      ],
+      "power_handling": {
+        "unit": "Watts",
+        "long_term_rms": 100,
+        "peak": 200
+      },
+      "sensitivity": {
+        "unit": "dB SPL",
+        "at": [
+          {
+            "key": "1W at 1m",
+            "value": 90
+          }
+        ]
+      },
+      "max_spl": {
+        "unit": "dB SPL",
+        "at": [
+          {
+            "key": "continuous at 1m",
+            "value": 110
+          }
+        ]
+      },
+      "frequency_range": {
+        "unit": "Hz",
+        "low": 58.0,
+        "high": 18000.0
+      },
+      "nominal_impedance": {
+        "unit": "ohms",
+        "value": 8
+      },
+      "coverage": [
+        {
+          "frequency_range": {
+            "low": {
+              "unit": "Hz",
+              "value": 125
+            },
+            "high": {
+              "unit": "Hz",
+              "value": 4000
+            }
+          },
+          "type": "rectangular",
+          "horizontal_deg": 160.0,
+          "vertical_deg": 30.0
+        }
+      ],
+      "description": "",
+      "environment": "Indoor",
+      "mount_type": "Wall",
+      "impedance": {
+        "unit": "ohms",
+        "low": 4,
+        "high": 8
+      },
+      "available_taps": {
+        "70v": [
+          2.5,
+          5,
+          10,
+          20
+        ],
+        "100v": [
+          2.5,
+          5,
+          10,
+          20,
+          40
+        ]
+      },
+      "images": [
+        {
+          "black": [
+            "https://assets.boseprofessional.com/m/277587e8c417e49d/original/Panaray_MSA12X_Right_Facing_Front_Black_Grille_On-png.png",
+            "https://assets.boseprofessional.com/m/333d9761054430f7/original/Panaray_MSA12X_Right_Facing_Front_Black_Grille_Off-png.png",
+            "https://assets.boseprofessional.com/m/42798000c8dcbc9c/original/Panaray_MSA12X_Right_Facing_Front_White_Grille_On-png.png"
+          ],
+          "white": [
+            "https://assets.boseprofessional.com/m/4f70c34aabc58cc9/original/Panaray_MSA12X_Right_Facing_Front_White_Grille_Off-png.png"
+          ]
+        }
+      ],
+      "is_subwoofer": false,
+      "is_weather_rated": false,
+      "is_high_impedance_rated": true,
+      "high_impedance_taps": [
+        2.5,
+        5,
+        10,
+        20,
+        40
+      ],
+      "updated_at": "1763630676"
+    },
+    {
+      "id": 840919,
+      "model_family": "L1",
+      "type": "FreeSpace",
+      "model_name": "L1 Pro8 portable line array system",
+      "bsf_file_url": "https://assets.boseprofessional.com/bsf/840919.bsf",
+      "skus": [
+        840919
+      ],
+      "power_handling": {
+        "unit": "Watts",
+        "long_term_rms": 100,
+        "peak": 200
+      },
+      "sensitivity": {
+        "unit": "dB SPL",
+        "at": [
+          {
+            "key": "1W at 1m",
+            "value": 90
+          }
+        ]
+      },
+      "max_spl": {
+        "unit": "dB SPL",
+        "at": [
+          {
+            "key": "continuous at 1m",
+            "value": 110
+          }
+        ]
+      },
+      "frequency_range": {
+        "unit": "Hz",
+        "low": 33.0,
+        "high": 18000.0
+      },
+      "nominal_impedance": {
+        "unit": "ohms",
+        "value": 8
+      },
+      "coverage": [
+        {
+          "frequency_range": {
+            "low": {
+              "unit": "Hz",
+              "value": 125
+            },
+            "high": {
+              "unit": "Hz",
+              "value": 4000
+            }
+          },
+          "type": "rectangular",
+          "horizontal_deg": 180.0,
+          "vertical_deg": 40.0
+        }
+      ],
+      "description": "",
+      "environment": "Indoor",
+      "mount_type": "Wall",
+      "impedance": {
+        "unit": "ohms",
+        "low": 4,
+        "high": 8
+      },
+      "available_taps": {
+        "70v": [
+          2.5,
+          5,
+          10,
+          20
+        ],
+        "100v": [
+          2.5,
+          5,
+          10,
+          20,
+          40
+        ]
+      },
+      "images": [
+        {
+          "black": [
+            "https://assets.boseprofessional.com/m/682c6b5d9c094da7/original/L1_Pro8_Front_1200x1022-png.png",
+            "https://assets.boseprofessional.com/m/771cdc1d1a3be5dc/original/L1_Pro8_Right-Facing_1200x1022-png.png",
+            "https://assets.boseprofessional.com/m/4579d43b9e17db7e/original/L1_Pro8_Left-Facing_1200x1022-png.png"
+          ],
+          "white": [
+            "https://assets.boseprofessional.com/m/2704b8f122538b8a/original/L1_Pro8_Right-Facing_System_Components_1200x1022-png.png",
+            "https://assets.boseprofessional.com/m/2a7d9ae51abd3ae2/original/L1_Pro8_Rear_1200x1022-png.png",
+            "https://assets.boseprofessional.com/m/3339545341f2cf33/original/L1_Pro_Family_Sub1_1200x1022-png.png"
+          ]
+        }
+      ],
+      "is_subwoofer": false,
+      "is_weather_rated": false,
+      "is_high_impedance_rated": true,
+      "high_impedance_taps": [
+        2.5,
+        5,
+        10,
+        20,
+        40
+      ],
+      "updated_at": "1763630676"
+    },
+    {
+      "id": 840920,
+      "model_family": "L1",
+      "type": "FreeSpace",
+      "model_name": "L1 Pro16 portable line array system",
+      "bsf_file_url": "https://assets.boseprofessional.com/bsf/840920.bsf",
+      "skus": [
+        840920
+      ],
+      "power_handling": {
+        "unit": "Watts",
+        "long_term_rms": 100,
+        "peak": 200
+      },
+      "sensitivity": {
+        "unit": "dB SPL",
+        "at": [
+          {
+            "key": "1W at 1m",
+            "value": 90
+          }
+        ]
+      },
+      "max_spl": {
+        "unit": "dB SPL",
+        "at": [
+          {
+            "key": "continuous at 1m",
+            "value": 110
+          }
+        ]
+      },
+      "frequency_range": {
+        "unit": "Hz",
+        "low": 31.0,
+        "high": 18000.0
+      },
+      "nominal_impedance": {
+        "unit": "ohms",
+        "value": 8
+      },
+      "coverage": [
+        {
+          "frequency_range": {
+            "low": {
+              "unit": "Hz",
+              "value": 125
+            },
+            "high": {
+              "unit": "Hz",
+              "value": 4000
+            }
+          },
+          "type": "rectangular",
+          "horizontal_deg": 180.0,
+          "vertical_deg": 0.0
+        }
+      ],
+      "description": "",
+      "environment": "Indoor",
+      "mount_type": "Wall",
+      "impedance": {
+        "unit": "ohms",
+        "low": 4,
+        "high": 8
+      },
+      "available_taps": {
+        "70v": [
+          2.5,
+          5,
+          10,
+          20
+        ],
+        "100v": [
+          2.5,
+          5,
+          10,
+          20,
+          40
+        ]
+      },
+      "images": [
+        {
+          "black": [
+            "https://assets.boseprofessional.com/m/2a87fea0f5a7c9e0/original/L1_Pro16_Front_1200x1022-png.png",
+            "https://assets.boseprofessional.com/m/5719a2673a8193d5/original/L1_Pro16_Left-Facing_1200x1022-png.png",
+            "https://assets.boseprofessional.com/m/59c15b991f2429d2/original/L1_Pro16_Right-Facing_1200x1022-png.png"
+          ],
+          "white": [
+            "https://assets.boseprofessional.com/m/494489d7b84afc80/original/L1_Pro16_Right-Facing_System_Components_1200x1022-png.png",
+            "https://assets.boseprofessional.com/m/7c2fdcac80fd3ad3/original/L1_Pro16_Rear_1200x1022-png.png",
+            "https://assets.boseprofessional.com/m/3339545341f2cf33/original/L1_Pro_Family_Sub1_1200x1022-png.png"
+          ]
+        }
+      ],
+      "is_subwoofer": false,
+      "is_weather_rated": false,
+      "is_high_impedance_rated": true,
+      "high_impedance_taps": [
+        2.5,
+        5,
+        10,
+        20,
+        40
+      ],
+      "updated_at": "1763630676"
+    },
+    {
+      "id": 840921,
+      "model_family": "L1",
+      "type": "FreeSpace",
+      "model_name": "L1 Pro32 portable line array system",
+      "bsf_file_url": "https://assets.boseprofessional.com/bsf/840921.bsf",
+      "skus": [
+        840921
+      ],
+      "power_handling": {
+        "unit": "Watts",
+        "long_term_rms": 100,
+        "peak": 200
+      },
+      "sensitivity": {
+        "unit": "dB SPL",
+        "at": [
+          {
+            "key": "1W at 1m",
+            "value": 90
+          }
+        ]
+      },
+      "max_spl": {
+        "unit": "dB SPL",
+        "at": [
+          {
+            "key": "continuous at 1m",
+            "value": 110
+          }
+        ]
+      },
+      "frequency_range": {
+        "unit": "Hz",
+        "low": 30.0,
+        "high": 18000.0
+      },
+      "nominal_impedance": {
+        "unit": "ohms",
+        "value": 8
+      },
+      "coverage": [
+        {
+          "frequency_range": {
+            "low": {
+              "unit": "Hz",
+              "value": 125
+            },
+            "high": {
+              "unit": "Hz",
+              "value": 4000
+            }
+          },
+          "type": "rectangular",
+          "horizontal_deg": 180.0,
+          "vertical_deg": 0.0
+        }
+      ],
+      "description": "",
+      "environment": "Indoor",
+      "mount_type": "Wall",
+      "impedance": {
+        "unit": "ohms",
+        "low": 4,
+        "high": 8
+      },
+      "available_taps": {
+        "70v": [
+          2.5,
+          5,
+          10,
+          20
+        ],
+        "100v": [
+          2.5,
+          5,
+          10,
+          20,
+          40
+        ]
+      },
+      "images": [
+        {
+          "black": [
+            "https://assets.boseprofessional.com/m/20aae2a1a6ed3959/original/L1_Pro32_Front_Sub1_1200x1022-png.png",
+            "https://assets.boseprofessional.com/m/12e9fb572234cd2f/original/L1_Pro32_Right-Facing_Sub1_1200x1022-png.png",
+            "https://assets.boseprofessional.com/m/d22d589eb58428e/original/L1_Pro32_Left-Facing_Sub1_1200x1022-png.png"
+          ],
+          "white": [
+            "https://assets.boseprofessional.com/m/4066d3892f58e1d5/original/L1_Pro32_Left-Facing_Sub1x2_1200x1022-png.png",
+            "https://assets.boseprofessional.com/m/33640cc348823ad6/original/L1_Pro32_Right-Facing_System_Components_Sub1_1200x1022-png.png",
+            "https://assets.boseprofessional.com/m/68f9169a875977df/original/L1_Pro32_Top_IO_1200x1022-png.png"
+          ]
+        }
+      ],
+      "is_subwoofer": false,
+      "is_weather_rated": false,
+      "is_high_impedance_rated": true,
+      "high_impedance_taps": [
+        2.5,
+        5,
+        10,
+        20,
+        40
+      ],
+      "updated_at": "1763630676"
+    },
+    {
+      "id": 840918,
+      "model_family": "Sub1",
+      "type": "FreeSpace",
+      "model_name": "Sub1 powered bass module",
+      "bsf_file_url": "https://assets.boseprofessional.com/bsf/840918.bsf",
+      "skus": [
+        840918
+      ],
+      "power_handling": {
+        "unit": "Watts",
+        "long_term_rms": 100,
+        "peak": 200
+      },
+      "sensitivity": {
+        "unit": "dB SPL",
+        "at": [
+          {
+            "key": "1W at 1m",
+            "value": 90
+          }
+        ]
+      },
+      "max_spl": {
+        "unit": "dB SPL",
+        "at": [
+          {
+            "key": "continuous at 1m",
+            "value": 110
+          }
+        ]
+      },
+      "frequency_range": {
+        "unit": "Hz",
+        "low": 32.0,
+        "high": 250.0
+      },
+      "nominal_impedance": {
+        "unit": "ohms",
+        "value": 8
+      },
+      "coverage": [
+        {
+          "frequency_range": {
+            "low": {
+              "unit": "Hz",
+              "value": 125
+            },
+            "high": {
+              "unit": "Hz",
+              "value": 4000
+            }
+          },
+          "type": "rectangular",
+          "horizontal_deg": 0.0,
+          "vertical_deg": 10.0
+        }
+      ],
+      "description": "",
+      "environment": "Indoor",
+      "mount_type": "Wall",
+      "impedance": {
+        "unit": "ohms",
+        "low": 4,
+        "high": 8
+      },
+      "available_taps": {
+        "70v": [
+          2.5,
+          5,
+          10,
+          20
+        ],
+        "100v": [
+          2.5,
+          5,
+          10,
+          20,
+          40
+        ]
+      },
+      "images": [
+        {
+          "black": [
+            "https://assets.boseprofessional.com/m/26cf857101e33287/original/Sub1_Bass_Module_Front_1200x1022-png.png",
+            "https://assets.boseprofessional.com/m/3339545341f2cf33/original/L1_Pro_Family_Sub1_1200x1022-png.png",
+            "https://assets.boseprofessional.com/m/173f5f8fe5e9ee9b/original/L1_Pro_Family_Right-Facing_Sub1_1200x1022-png.png"
+          ],
+          "white": [
+            "https://assets.boseprofessional.com/m/104ca88249f8c38/original/Sub1_Bass_Module_Cardioid_Right-Facing_1200x1022-png.png",
+            "https://assets.boseprofessional.com/m/559a367105f7c3d/original/L1_Pro32_Rear_SubMatch_Sub2_1200x1022-png.png",
+            "https://assets.boseprofessional.com/m/2549c0debade0144/original/L1_Sub1_Rear_IO_1200x1022-png.png"
+          ]
+        }
+      ],
+      "is_subwoofer": true,
+      "is_weather_rated": false,
+      "is_high_impedance_rated": true,
+      "high_impedance_taps": [
+        2.5,
+        5,
+        10,
+        20,
+        40
+      ],
+      "updated_at": "1763630676"
+    },
+    {
+      "id": 840917,
+      "model_family": "Sub2",
+      "type": "FreeSpace",
+      "model_name": "Sub2 powered bass module",
+      "bsf_file_url": "https://assets.boseprofessional.com/bsf/840917.bsf",
+      "skus": [
+        840917
+      ],
+      "power_handling": {
+        "unit": "Watts",
+        "long_term_rms": 100,
+        "peak": 200
+      },
+      "sensitivity": {
+        "unit": "dB SPL",
+        "at": [
+          {
+            "key": "1W at 1m",
+            "value": 90
+          }
+        ]
+      },
+      "max_spl": {
+        "unit": "dB SPL",
+        "at": [
+          {
+            "key": "continuous at 1m",
+            "value": 110
+          }
+        ]
+      },
+      "frequency_range": {
+        "unit": "Hz",
+        "low": 29.0,
+        "high": 260.0
+      },
+      "nominal_impedance": {
+        "unit": "ohms",
+        "value": 8
+      },
+      "coverage": [
+        {
+          "frequency_range": {
+            "low": {
+              "unit": "Hz",
+              "value": 125
+            },
+            "high": {
+              "unit": "Hz",
+              "value": 4000
+            }
+          },
+          "type": "rectangular",
+          "vertical_deg": 10.0
+        }
+      ],
+      "description": "",
+      "environment": "Indoor",
+      "mount_type": "Wall",
+      "impedance": {
+        "unit": "ohms",
+        "low": 4,
+        "high": 8
+      },
+      "available_taps": {
+        "70v": [
+          2.5,
+          5,
+          10,
+          20
+        ],
+        "100v": [
+          2.5,
+          5,
+          10,
+          20,
+          40
+        ]
+      },
+      "images": [
+        {
+          "black": [
+            "https://assets.boseprofessional.com/m/3c309f448991b60c/original/Sub2_Bass_Module_Front_1200x1022-png.png",
+            "https://assets.boseprofessional.com/m/73805f634119fb33/original/L1_Pro_Family_Sub2_1200x1022-png.png",
+            "https://assets.boseprofessional.com/m/147ca96539e405e3/original/L1_Pro_Family_Right-Facing_Sub2_1200x1022-png.png"
+          ],
+          "white": [
+            "https://assets.boseprofessional.com/m/5d51e5760396ac3f/original/L1_Pro_Family_Left-Facing_Sub2_1200x1022-png.png",
+            "https://assets.boseprofessional.com/m/108762b4ba53ac44/original/L1_Sub2_Cardioid_Left-Facing_1200x1022-png.png",
+            "https://assets.boseprofessional.com/m/559a367105f7c3d/original/L1_Pro32_Rear_SubMatch_Sub2_1200x1022-png.png"
+          ]
+        }
+      ],
+      "is_subwoofer": true,
+      "is_weather_rated": false,
+      "is_high_impedance_rated": true,
+      "high_impedance_taps": [
+        2.5,
+        5,
+        10,
+        20,
+        40
+      ],
+      "updated_at": "1763630676"
+    },
+    {
+      "id": 869583,
+      "model_family": "S1",
+      "type": "FreeSpace",
+      "model_name": "S1 Pro+ portable Bluetooth speaker system",
+      "bsf_file_url": "https://assets.boseprofessional.com/bsf/869583.bsf",
+      "skus": [
+        869583
+      ],
+      "power_handling": {
+        "unit": "Watts",
+        "long_term_rms": 100,
+        "peak": 200
+      },
+      "sensitivity": {
+        "unit": "dB SPL",
+        "at": [
+          {
+            "key": "1W at 1m",
+            "value": 90
+          }
+        ]
+      },
+      "max_spl": {
+        "unit": "dB SPL",
+        "at": [
+          {
+            "key": "continuous at 1m",
+            "value": 110
+          }
+        ]
+      },
+      "frequency_range": {
+        "unit": "Hz",
+        "low": 60,
+        "high": 20000
+      },
+      "nominal_impedance": {
+        "unit": "ohms",
+        "value": 8
+      },
+      "coverage": [
+        {
+          "frequency_range": {
+            "low": {
+              "unit": "Hz",
+              "value": 125
+            },
+            "high": {
+              "unit": "Hz",
+              "value": 4000
+            }
+          },
+          "type": "rectangular",
+          "horizontal_deg": 120.0,
+          "vertical_deg": 50.0
+        }
+      ],
+      "description": "",
+      "environment": "Indoor",
+      "mount_type": "Wall",
+      "impedance": {
+        "unit": "ohms",
+        "low": 4,
+        "high": 8
+      },
+      "available_taps": {
+        "70v": [
+          2.5,
+          5,
+          10,
+          20
+        ],
+        "100v": [
+          2.5,
+          5,
+          10,
+          20,
+          40
+        ]
+      },
+      "images": [
+        {
+          "black": [
+            "https://assets.boseprofessional.com/m/43dd8dd36aead077/original/s1_pro_plus_0_gallery_01-png.png",
+            "https://assets.boseprofessional.com/m/3e306993a7e42de9/original/s1_pro_plus_0_gallery_02-jpeg.jpeg",
+            "https://assets.boseprofessional.com/m/3c378dfb7e8bb9ff/original/s1_pro_plus_0_gallery_03-jpeg.jpeg"
+          ],
+          "white": [
+            "https://assets.boseprofessional.com/m/3904a2c9cf03c5b4/original/s1_pro_plus_0_gallery_04-jpeg.jpeg"
+          ]
+        }
+      ],
+      "is_subwoofer": false,
+      "is_weather_rated": false,
+      "is_high_impedance_rated": true,
+      "high_impedance_taps": [
+        2.5,
+        5,
+        10,
+        20,
+        40
+      ],
+      "updated_at": "1763630676"
+    },
+    {
+      "id": 731419,
+      "model_family": "F1",
+      "type": "FreeSpace",
+      "model_name": "F1 Model 812 Flexible Array loudspeaker",
+      "bsf_file_url": "https://assets.boseprofessional.com/bsf/731419.bsf",
+      "skus": [
+        731419
+      ],
+      "power_handling": {
+        "unit": "Watts",
+        "long_term_rms": 100,
+        "peak": 200
+      },
+      "sensitivity": {
+        "unit": "dB SPL",
+        "at": [
+          {
+            "key": "1W at 1m",
+            "value": 90
+          }
+        ]
+      },
+      "max_spl": {
+        "unit": "dB SPL",
+        "at": [
+          {
+            "key": "continuous at 1m",
+            "value": 110
+          }
+        ]
+      },
+      "frequency_range": {
+        "unit": "Hz",
+        "low": 43.0,
+        "high": 20000.0
+      },
+      "nominal_impedance": {
+        "unit": "ohms",
+        "value": 8
+      },
+      "coverage": [
+        {
+          "frequency_range": {
+            "low": {
+              "unit": "Hz",
+              "value": 125
+            },
+            "high": {
+              "unit": "Hz",
+              "value": 4000
+            }
+          },
+          "type": "rectangular",
+          "horizontal_deg": 100.0,
+          "vertical_deg": 40.0
+        }
+      ],
+      "description": "",
+      "environment": "Indoor",
+      "mount_type": "Wall",
+      "impedance": {
+        "unit": "ohms",
+        "low": 4,
+        "high": 8
+      },
+      "available_taps": {
+        "70v": [
+          2.5,
+          5,
+          10,
+          20
+        ],
+        "100v": [
+          2.5,
+          5,
+          10,
+          20,
+          40
+        ]
+      },
+      "images": [
+        {
+          "black": [
+            "https://assets.boseprofessional.com/m/79e51e5c1bb8be9d/original/f1_812_EC-png.png",
+            "https://assets.boseprofessional.com/m/4127b9e8f6bca2de/original/f1_812_EC_01-png.png",
+            "https://assets.boseprofessional.com/m/4cb67ec5c9b157a8/original/f1_812_EC_02-png.png"
+          ],
+          "white": [
+            "https://assets.boseprofessional.com/m/68ef4385f036ad7a/original/f1_812_EC_03-jpeg.jpeg",
+            "https://assets.boseprofessional.com/m/13e10a7c9c70296c/original/F1_Model812_Stand-png.png",
+            "https://assets.boseprofessional.com/m/1aa09741ee76e896/original/f1_812_EC_woofer-jpeg.jpeg"
+          ]
+        }
+      ],
+      "is_subwoofer": false,
+      "is_weather_rated": false,
+      "is_high_impedance_rated": true,
+      "high_impedance_taps": [
+        2.5,
+        5,
+        10,
+        20,
+        40
+      ],
+      "updated_at": "1763630676"
+    },
+    {
+      "id": 731444,
+      "model_family": "F1",
+      "type": "FreeSpace",
+      "model_name": "F1 Subwoofer",
+      "bsf_file_url": "https://assets.boseprofessional.com/bsf/731444.bsf",
+      "skus": [
+        731444
+      ],
+      "power_handling": {
+        "unit": "Watts",
+        "long_term_rms": 100,
+        "peak": 200
+      },
+      "sensitivity": {
+        "unit": "dB SPL",
+        "at": [
+          {
+            "key": "1W at 1m",
+            "value": 90
+          }
+        ]
+      },
+      "max_spl": {
+        "unit": "dB SPL",
+        "at": [
+          {
+            "key": "continuous at 1m",
+            "value": 110
+          }
+        ]
+      },
+      "frequency_range": {
+        "unit": "Hz",
+        "low": 38.0,
+        "high": 250.0
+      },
+      "nominal_impedance": {
+        "unit": "ohms",
+        "value": 8
+      },
+      "coverage": [],
+      "description": "",
+      "environment": "Indoor",
+      "mount_type": "Wall",
+      "impedance": {
+        "unit": "ohms",
+        "low": 4,
+        "high": 8
+      },
+      "available_taps": {
+        "70v": [
+          2.5,
+          5,
+          10,
+          20
+        ],
+        "100v": [
+          2.5,
+          5,
+          10,
+          20,
+          40
+        ]
+      },
+      "images": [
+        {
+          "black": [
+            "https://assets.boseprofessional.com/m/702a94256748deb5/original/single_F1_01-jpeg.jpeg",
+            "https://assets.boseprofessional.com/m/2d7bb69de653bdc0/original/f1_subwoofer_EC_01-png.png",
+            "https://assets.boseprofessional.com/m/5f775f264a3cc69a/original/f1_subwoofer_EC_02-jpeg.jpeg"
+          ],
+          "white": [
+            "https://assets.boseprofessional.com/m/2b04bcf3cbe78f72/original/f1_subwoofer_EC_03-jpeg.jpeg"
+          ]
+        }
+      ],
+      "is_subwoofer": true,
+      "is_weather_rated": false,
+      "is_high_impedance_rated": true,
+      "high_impedance_taps": [
+        2.5,
+        5,
+        10,
+        20,
+        40
+      ],
+      "updated_at": "1763630676"
+    },
+    {
+      "id": 794042,
+      "model_family": "ArenaMatch",
+      "type": "FreeSpace",
+      "model_name": "ArenaMatch AM40 DeltaQ array loudspeaker",
+      "bsf_file_url": "https://assets.boseprofessional.com/bsf/794042.bsf",
+      "skus": [
+        794042
+      ],
+      "power_handling": {
+        "unit": "Watts",
+        "long_term_rms": 100,
+        "peak": 200
+      },
+      "sensitivity": {
+        "unit": "dB SPL",
+        "at": [
+          {
+            "key": "1W at 1m",
+            "value": 94.0
+          }
+        ]
+      },
+      "max_spl": {
+        "unit": "dB SPL",
+        "at": [
+          {
+            "key": "continuous at 1m",
+            "value": 110
+          }
+        ]
+      },
+      "frequency_range": {
+        "unit": "Hz",
+        "low": 60,
+        "high": 20000
+      },
+      "nominal_impedance": {
+        "unit": "ohms",
+        "value": 8
+      },
+      "coverage": [
+        {
+          "frequency_range": {
+            "low": {
+              "unit": "Hz",
+              "value": 125
+            },
+            "high": {
+              "unit": "Hz",
+              "value": 4000
+            }
+          },
+          "type": "rectangular",
+          "horizontal_deg": 60.0,
+          "vertical_deg": 40.0
+        }
+      ],
+      "description": "",
+      "environment": "Indoor",
+      "mount_type": "Wall",
+      "impedance": {
+        "unit": "ohms",
+        "low": 4,
+        "high": 8
+      },
+      "available_taps": {
+        "70v": [
+          2.5,
+          5,
+          10,
+          20
+        ],
+        "100v": [
+          2.5,
+          5,
+          10,
+          20,
+          40
+        ]
+      },
+      "images": [
+        {
+          "black": [
+            "https://assets.boseprofessional.com/m/74cb54ca1540b8f4/original/ArenaMatch_AM40_Right-Facing_Grille_On-png.png",
+            "https://assets.boseprofessional.com/m/60010faa59f366af/original/ArenaMatch_AM40_Front-Facing_Grille_Off-png.png",
+            "https://assets.boseprofessional.com/m/5e7a4c8189253d93/original/ArenaMatch_AM40_Front-Facing_Grille_On-png.png"
+          ],
+          "white": [
+            "https://assets.boseprofessional.com/m/540054169deb0387/original/ArenaMatch_AM40_Ortho_Right-png.png",
+            "https://assets.boseprofessional.com/m/3274bf00557767e4/original/ArenaMatch_AM40_Right-Facing_Grille_Off-png.png"
+          ]
+        }
+      ],
+      "is_subwoofer": false,
+      "is_weather_rated": false,
+      "is_high_impedance_rated": true,
+      "high_impedance_taps": [
+        2.5,
+        5,
+        10,
+        20,
+        40
+      ],
+      "updated_at": "1763630676"
+    },
+    {
+      "id": 794042,
+      "model_family": "ArenaMatch",
+      "type": "FreeSpace",
+      "model_name": "ArenaMatch AM40 DeltaQ array loudspeaker",
+      "bsf_file_url": "https://assets.boseprofessional.com/bsf/794042.bsf",
+      "skus": [
+        794042
+      ],
+      "power_handling": {
+        "unit": "Watts",
+        "long_term_rms": 100,
+        "peak": 200
+      },
+      "sensitivity": {
+        "unit": "dB SPL",
+        "at": [
+          {
+            "key": "1W at 1m",
+            "value": 94.0
+          }
+        ]
+      },
+      "max_spl": {
+        "unit": "dB SPL",
+        "at": [
+          {
+            "key": "continuous at 1m",
+            "value": 110
+          }
+        ]
+      },
+      "frequency_range": {
+        "unit": "Hz",
+        "low": 60,
+        "high": 20000
+      },
+      "nominal_impedance": {
+        "unit": "ohms",
+        "value": 8
+      },
+      "coverage": [
+        {
+          "frequency_range": {
+            "low": {
+              "unit": "Hz",
+              "value": 125
+            },
+            "high": {
+              "unit": "Hz",
+              "value": 4000
+            }
+          },
+          "type": "rectangular",
+          "horizontal_deg": 60.0,
+          "vertical_deg": 40.0
+        }
+      ],
+      "description": "",
+      "environment": "Indoor",
+      "mount_type": "Wall",
+      "impedance": {
+        "unit": "ohms",
+        "low": 4,
+        "high": 8
+      },
+      "available_taps": {
+        "70v": [
+          2.5,
+          5,
+          10,
+          20
+        ],
+        "100v": [
+          2.5,
+          5,
+          10,
+          20,
+          40
+        ]
+      },
+      "images": [
+        {
+          "black": [
+            "https://assets.boseprofessional.com/m/74cb54ca1540b8f4/original/ArenaMatch_AM40_Right-Facing_Grille_On-png.png",
+            "https://assets.boseprofessional.com/m/60010faa59f366af/original/ArenaMatch_AM40_Front-Facing_Grille_Off-png.png",
+            "https://assets.boseprofessional.com/m/5e7a4c8189253d93/original/ArenaMatch_AM40_Front-Facing_Grille_On-png.png"
+          ],
+          "white": [
+            "https://assets.boseprofessional.com/m/540054169deb0387/original/ArenaMatch_AM40_Ortho_Right-png.png",
+            "https://assets.boseprofessional.com/m/3274bf00557767e4/original/ArenaMatch_AM40_Right-Facing_Grille_Off-png.png"
+          ]
+        }
+      ],
+      "is_subwoofer": false,
+      "is_weather_rated": false,
+      "is_high_impedance_rated": true,
+      "high_impedance_taps": [
+        2.5,
+        5,
+        10,
+        20,
+        40
+      ],
+      "updated_at": "1763630676"
+    },
+    {
+      "id": 794042,
+      "model_family": "ArenaMatch",
+      "type": "FreeSpace",
+      "model_name": "ArenaMatch AM40 DeltaQ array loudspeaker",
+      "bsf_file_url": "https://assets.boseprofessional.com/bsf/794042.bsf",
+      "skus": [
+        794042
+      ],
+      "power_handling": {
+        "unit": "Watts",
+        "long_term_rms": 100,
+        "peak": 200
+      },
+      "sensitivity": {
+        "unit": "dB SPL",
+        "at": [
+          {
+            "key": "1W at 1m",
+            "value": 94.0
+          }
+        ]
+      },
+      "max_spl": {
+        "unit": "dB SPL",
+        "at": [
+          {
+            "key": "continuous at 1m",
+            "value": 110
+          }
+        ]
+      },
+      "frequency_range": {
+        "unit": "Hz",
+        "low": 60,
+        "high": 20000
+      },
+      "nominal_impedance": {
+        "unit": "ohms",
+        "value": 8
+      },
+      "coverage": [
+        {
+          "frequency_range": {
+            "low": {
+              "unit": "Hz",
+              "value": 125
+            },
+            "high": {
+              "unit": "Hz",
+              "value": 4000
+            }
+          },
+          "type": "rectangular",
+          "horizontal_deg": 60.0,
+          "vertical_deg": 40.0
+        }
+      ],
+      "description": "",
+      "environment": "Indoor",
+      "mount_type": "Wall",
+      "impedance": {
+        "unit": "ohms",
+        "low": 4,
+        "high": 8
+      },
+      "available_taps": {
+        "70v": [
+          2.5,
+          5,
+          10,
+          20
+        ],
+        "100v": [
+          2.5,
+          5,
+          10,
+          20,
+          40
+        ]
+      },
+      "images": [
+        {
+          "black": [
+            "https://assets.boseprofessional.com/m/74cb54ca1540b8f4/original/ArenaMatch_AM40_Right-Facing_Grille_On-png.png",
+            "https://assets.boseprofessional.com/m/60010faa59f366af/original/ArenaMatch_AM40_Front-Facing_Grille_Off-png.png",
+            "https://assets.boseprofessional.com/m/5e7a4c8189253d93/original/ArenaMatch_AM40_Front-Facing_Grille_On-png.png"
+          ],
+          "white": [
+            "https://assets.boseprofessional.com/m/540054169deb0387/original/ArenaMatch_AM40_Ortho_Right-png.png",
+            "https://assets.boseprofessional.com/m/3274bf00557767e4/original/ArenaMatch_AM40_Right-Facing_Grille_Off-png.png"
+          ]
+        }
+      ],
+      "is_subwoofer": false,
+      "is_weather_rated": false,
+      "is_high_impedance_rated": true,
+      "high_impedance_taps": [
+        2.5,
+        5,
+        10,
+        20,
+        40
+      ],
+      "updated_at": "1763630676"
+    },
+    {
+      "id": 730999,
+      "model_family": "ShowMatch",
+      "type": "FreeSpace",
+      "model_name": "ShowMatch SM20 DeltaQ array loudspeaker",
+      "bsf_file_url": "https://assets.boseprofessional.com/bsf/730999.bsf",
+      "skus": [
+        730999
+      ],
+      "power_handling": {
+        "unit": "Watts",
+        "long_term_rms": 100,
+        "peak": 200
+      },
+      "sensitivity": {
+        "unit": "dB SPL",
+        "at": [
+          {
+            "key": "1W at 1m",
+            "value": 94.0
+          }
+        ]
+      },
+      "max_spl": {
+        "unit": "dB SPL",
+        "at": [
+          {
+            "key": "continuous at 1m",
+            "value": 121.0
+          }
+        ]
+      },
+      "frequency_range": {
+        "unit": "Hz",
+        "low": 60,
+        "high": 20000
+      },
+      "nominal_impedance": {
+        "unit": "ohms",
+        "value": 8
+      },
+      "coverage": [
+        {
+          "frequency_range": {
+            "low": {
+              "unit": "Hz",
+              "value": 125
+            },
+            "high": {
+              "unit": "Hz",
+              "value": 4000
+            }
+          },
+          "type": "rectangular",
+          "horizontal_deg": 100.0,
+          "vertical_deg": 20.0
+        }
+      ],
+      "description": "",
+      "environment": "Indoor",
+      "mount_type": "Wall",
+      "impedance": {
+        "unit": "ohms",
+        "low": 4,
+        "high": 8
+      },
+      "available_taps": {
+        "70v": [
+          2.5,
+          5,
+          10,
+          20
+        ],
+        "100v": [
+          2.5,
+          5,
+          10,
+          20,
+          40
+        ]
+      },
+      "images": [
+        {
+          "black": [
+            "https://assets.boseprofessional.com/m/208706d0b7aaa922/original/i_showmatch_sm20_right_facing_grilleON_1200-jpeg.jpeg",
+            "https://assets.boseprofessional.com/m/5fb32033039ee4f4/original/i_showmatch_sm20_right_facing_rear_1200-jpeg.jpeg",
+            "https://assets.boseprofessional.com/m/511c0ae1cb3b2669/original/i_showmatch_sm20_right_facing_grilleOFF_1200-jpeg.jpeg"
+          ],
+          "white": []
+        }
+      ],
+      "is_subwoofer": false,
+      "is_weather_rated": false,
+      "is_high_impedance_rated": true,
+      "high_impedance_taps": [
+        2.5,
+        5,
+        10,
+        20,
+        40
+      ],
+      "updated_at": "1763630676"
+    },
+    {
+      "id": 730999,
+      "model_family": "ShowMatch",
+      "type": "FreeSpace",
+      "model_name": "ShowMatch SM20 DeltaQ array loudspeaker",
+      "bsf_file_url": "https://assets.boseprofessional.com/bsf/730999.bsf",
+      "skus": [
+        730999
+      ],
+      "power_handling": {
+        "unit": "Watts",
+        "long_term_rms": 100,
+        "peak": 200
+      },
+      "sensitivity": {
+        "unit": "dB SPL",
+        "at": [
+          {
+            "key": "1W at 1m",
+            "value": 94.0
+          }
+        ]
+      },
+      "max_spl": {
+        "unit": "dB SPL",
+        "at": [
+          {
+            "key": "continuous at 1m",
+            "value": 121.0
+          }
+        ]
+      },
+      "frequency_range": {
+        "unit": "Hz",
+        "low": 60,
+        "high": 20000
+      },
+      "nominal_impedance": {
+        "unit": "ohms",
+        "value": 8
+      },
+      "coverage": [
+        {
+          "frequency_range": {
+            "low": {
+              "unit": "Hz",
+              "value": 125
+            },
+            "high": {
+              "unit": "Hz",
+              "value": 4000
+            }
+          },
+          "type": "rectangular",
+          "horizontal_deg": 100.0,
+          "vertical_deg": 20.0
+        }
+      ],
+      "description": "",
+      "environment": "Indoor",
+      "mount_type": "Wall",
+      "impedance": {
+        "unit": "ohms",
+        "low": 4,
+        "high": 8
+      },
+      "available_taps": {
+        "70v": [
+          2.5,
+          5,
+          10,
+          20
+        ],
+        "100v": [
+          2.5,
+          5,
+          10,
+          20,
+          40
+        ]
+      },
+      "images": [
+        {
+          "black": [
+            "https://assets.boseprofessional.com/m/208706d0b7aaa922/original/i_showmatch_sm20_right_facing_grilleON_1200-jpeg.jpeg",
+            "https://assets.boseprofessional.com/m/5fb32033039ee4f4/original/i_showmatch_sm20_right_facing_rear_1200-jpeg.jpeg",
+            "https://assets.boseprofessional.com/m/511c0ae1cb3b2669/original/i_showmatch_sm20_right_facing_grilleOFF_1200-jpeg.jpeg"
+          ],
+          "white": []
+        }
+      ],
+      "is_subwoofer": false,
+      "is_weather_rated": false,
+      "is_high_impedance_rated": true,
+      "high_impedance_taps": [
+        2.5,
+        5,
+        10,
+        20,
+        40
+      ],
+      "updated_at": "1763630676"
+    },
+    {
+      "id": 730999,
+      "model_family": "ShowMatch",
+      "type": "FreeSpace",
+      "model_name": "ShowMatch SM20 DeltaQ array loudspeaker",
+      "bsf_file_url": "https://assets.boseprofessional.com/bsf/730999.bsf",
+      "skus": [
+        730999
+      ],
+      "power_handling": {
+        "unit": "Watts",
+        "long_term_rms": 100,
+        "peak": 200
+      },
+      "sensitivity": {
+        "unit": "dB SPL",
+        "at": [
+          {
+            "key": "1W at 1m",
+            "value": 94.0
+          }
+        ]
+      },
+      "max_spl": {
+        "unit": "dB SPL",
+        "at": [
+          {
+            "key": "continuous at 1m",
+            "value": 121.0
+          }
+        ]
+      },
+      "frequency_range": {
+        "unit": "Hz",
+        "low": 60,
+        "high": 20000
+      },
+      "nominal_impedance": {
+        "unit": "ohms",
+        "value": 8
+      },
+      "coverage": [
+        {
+          "frequency_range": {
+            "low": {
+              "unit": "Hz",
+              "value": 125
+            },
+            "high": {
+              "unit": "Hz",
+              "value": 4000
+            }
+          },
+          "type": "rectangular",
+          "horizontal_deg": 100.0,
+          "vertical_deg": 20.0
+        }
+      ],
+      "description": "",
+      "environment": "Indoor",
+      "mount_type": "Wall",
+      "impedance": {
+        "unit": "ohms",
+        "low": 4,
+        "high": 8
+      },
+      "available_taps": {
+        "70v": [
+          2.5,
+          5,
+          10,
+          20
+        ],
+        "100v": [
+          2.5,
+          5,
+          10,
+          20,
+          40
+        ]
+      },
+      "images": [
+        {
+          "black": [
+            "https://assets.boseprofessional.com/m/208706d0b7aaa922/original/i_showmatch_sm20_right_facing_grilleON_1200-jpeg.jpeg",
+            "https://assets.boseprofessional.com/m/5fb32033039ee4f4/original/i_showmatch_sm20_right_facing_rear_1200-jpeg.jpeg",
+            "https://assets.boseprofessional.com/m/511c0ae1cb3b2669/original/i_showmatch_sm20_right_facing_grilleOFF_1200-jpeg.jpeg"
+          ],
+          "white": []
+        }
+      ],
+      "is_subwoofer": false,
+      "is_weather_rated": false,
+      "is_high_impedance_rated": true,
+      "high_impedance_taps": [
+        2.5,
+        5,
+        10,
+        20,
+        40
+      ],
+      "updated_at": "1763630676"
+    },
+    {
+      "id": 811432,
+      "model_family": "MB210-WR",
+      "type": "FreeSpace",
+      "model_name": "MB210-WR outdoor subwoofer",
+      "bsf_file_url": "https://assets.boseprofessional.com/bsf/811432.bsf",
+      "skus": [
+        811432
+      ],
+      "power_handling": {
+        "unit": "Watts",
+        "long_term_rms": 100,
+        "peak": 200
+      },
+      "sensitivity": {
+        "unit": "dB SPL",
+        "at": [
+          {
+            "key": "1W at 1m",
+            "value": 90.0
+          }
+        ]
+      },
+      "max_spl": {
+        "unit": "dB SPL",
+        "at": [
+          {
+            "key": "continuous at 1m",
+            "value": 117.0
+          }
+        ]
+      },
+      "frequency_range": {
+        "unit": "Hz",
+        "low": 37.0,
+        "high": 180.0
+      },
+      "nominal_impedance": {
+        "unit": "ohms",
+        "value": 8
+      },
+      "coverage": [
+        {
+          "frequency_range": {
+            "low": {
+              "unit": "Hz",
+              "value": 125
+            },
+            "high": {
+              "unit": "Hz",
+              "value": 4000
+            }
+          },
+          "type": "rectangular",
+          "horizontal_deg": 200.0,
+          "vertical_deg": 200.0
+        }
+      ],
+      "description": "",
+      "environment": "Indoor",
+      "mount_type": "Wall",
+      "impedance": {
+        "unit": "ohms",
+        "low": 4,
+        "high": 8
+      },
+      "available_taps": {
+        "70v": [
+          2.5,
+          5,
+          10,
+          20
+        ],
+        "100v": [
+          2.5,
+          5,
+          10,
+          20,
+          40
+        ]
+      },
+      "images": [
+        {
+          "black": [
+            "https://assets.boseprofessional.com/m/30ce4e36a765ec48/original/i_ArenaMatch_Utility_MB210-WR_Right-Facing_Black_Grille_On-png.png",
+            "https://assets.boseprofessional.com/m/4a87f5bb6ae0342/original/i_ArenaMatch_Utility_MB210-WR_Rear_Black-png.png",
+            "https://assets.boseprofessional.com/m/303e7e8628f95dd3/original/i_ArenaMatch_Utility_MB210-WR_Right-Facing_White_Grille_On-png.png"
+          ],
+          "white": []
+        }
+      ],
+      "is_subwoofer": true,
+      "is_weather_rated": false,
+      "is_high_impedance_rated": true,
+      "high_impedance_taps": [
+        2.5,
+        5,
+        10,
+        20,
+        40
+      ],
+      "updated_at": "1763630676"
+    },
+    {
+      "id": 777189,
+      "model_family": "EdgeMax",
+      "type": "FreeSpace",
+      "model_name": "EdgeMax EM90-LP loudspeaker",
+      "bsf_file_url": "https://assets.boseprofessional.com/bsf/777189.bsf",
+      "skus": [
+        777189
+      ],
+      "power_handling": {
+        "unit": "Watts",
+        "long_term_rms": 100,
+        "peak": 200
+      },
+      "sensitivity": {
+        "unit": "dB SPL",
+        "at": [
+          {
+            "key": "1W at 1m",
+            "value": 91.0
+          }
+        ]
+      },
+      "max_spl": {
+        "unit": "dB SPL",
+        "at": [
+          {
+            "key": "continuous at 1m",
+            "value": 110.0
+          }
+        ]
+      },
+      "frequency_range": {
+        "unit": "Hz",
+        "low": 60,
+        "high": 20000
+      },
+      "nominal_impedance": {
+        "unit": "ohms",
+        "value": 8
+      },
+      "coverage": [
+        {
+          "frequency_range": {
+            "low": {
+              "unit": "Hz",
+              "value": 125
+            },
+            "high": {
+              "unit": "Hz",
+              "value": 4000
+            }
+          },
+          "type": "rectangular",
+          "horizontal_deg": 90.0,
+          "vertical_deg": 80.0
+        }
+      ],
+      "description": "",
+      "environment": "Indoor",
+      "mount_type": "Wall",
+      "impedance": {
+        "unit": "ohms",
+        "low": 4,
+        "high": 8
+      },
+      "available_taps": {
+        "70v": [
+          2.5,
+          5,
+          10,
+          20
+        ],
+        "100v": [
+          2.5,
+          5,
+          10,
+          20,
+          40
+        ]
+      },
+      "images": [
+        {
+          "black": [
+            "https://assets.boseprofessional.com/transform/c2083efa-7cac-4725-a2e8-1d195d6835d5/INSTL_EM90-LP_I-STUDIO_Iso_Right_GrilleOff",
+            "https://assets.boseprofessional.com/transform/461e742c-2306-4046-8577-e233b23756aa/INSTL_EM90-LP_I-STUDIO_Front_GrilleOff",
+            "https://assets.boseprofessional.com/transform/e42708b2-5e7d-4c35-ba6e-de4ed22d20ef/INSTL_EM90-LP_I-STUDIO_Iso_Left_GrilleOff"
+          ],
+          "white": [
+            "https://assets.boseprofessional.com/transform/ef01afef-a21c-4022-b1af-621cff4494f8/INSTL_EM90-LP_I-STUDIO_Iso_RearLeft",
+            "https://assets.boseprofessional.com/transform/234a03b5-5f93-4dd9-831e-a6bbf4c518a9/INSTL_EM90-LP_I-STUDIO_Side_FaceDown",
+            "https://assets.boseprofessional.com/transform/c8feb16a-2b67-4d11-9fce-fb14f3b1576e/INSTL_EM90-LP_I-STUDIO_Iso_FaceDown"
+          ]
+        }
+      ],
+      "is_subwoofer": false,
+      "is_weather_rated": false,
+      "is_high_impedance_rated": true,
+      "high_impedance_taps": [
+        2.5,
+        5,
+        10,
+        20,
+        40
+      ],
+      "updated_at": "1763630676"
+    },
+    {
+      "id": 777189,
+      "model_family": "EdgeMax",
+      "type": "FreeSpace",
+      "model_name": "EdgeMax EM90-LP loudspeaker",
+      "bsf_file_url": "https://assets.boseprofessional.com/bsf/777189.bsf",
+      "skus": [
+        777189
+      ],
+      "power_handling": {
+        "unit": "Watts",
+        "long_term_rms": 100,
+        "peak": 200
+      },
+      "sensitivity": {
+        "unit": "dB SPL",
+        "at": [
+          {
+            "key": "1W at 1m",
+            "value": 91.0
+          }
+        ]
+      },
+      "max_spl": {
+        "unit": "dB SPL",
+        "at": [
+          {
+            "key": "continuous at 1m",
+            "value": 110.0
+          }
+        ]
+      },
+      "frequency_range": {
+        "unit": "Hz",
+        "low": 60,
+        "high": 20000
+      },
+      "nominal_impedance": {
+        "unit": "ohms",
+        "value": 8
+      },
+      "coverage": [
+        {
+          "frequency_range": {
+            "low": {
+              "unit": "Hz",
+              "value": 125
+            },
+            "high": {
+              "unit": "Hz",
+              "value": 4000
+            }
+          },
+          "type": "rectangular",
+          "horizontal_deg": 90.0,
+          "vertical_deg": 80.0
+        }
+      ],
+      "description": "",
+      "environment": "Indoor",
+      "mount_type": "Wall",
+      "impedance": {
+        "unit": "ohms",
+        "low": 4,
+        "high": 8
+      },
+      "available_taps": {
+        "70v": [
+          2.5,
+          5,
+          10,
+          20
+        ],
+        "100v": [
+          2.5,
+          5,
+          10,
+          20,
+          40
+        ]
+      },
+      "images": [
+        {
+          "black": [
+            "https://assets.boseprofessional.com/transform/c2083efa-7cac-4725-a2e8-1d195d6835d5/INSTL_EM90-LP_I-STUDIO_Iso_Right_GrilleOff",
+            "https://assets.boseprofessional.com/transform/461e742c-2306-4046-8577-e233b23756aa/INSTL_EM90-LP_I-STUDIO_Front_GrilleOff",
+            "https://assets.boseprofessional.com/transform/e42708b2-5e7d-4c35-ba6e-de4ed22d20ef/INSTL_EM90-LP_I-STUDIO_Iso_Left_GrilleOff"
+          ],
+          "white": [
+            "https://assets.boseprofessional.com/transform/ef01afef-a21c-4022-b1af-621cff4494f8/INSTL_EM90-LP_I-STUDIO_Iso_RearLeft",
+            "https://assets.boseprofessional.com/transform/234a03b5-5f93-4dd9-831e-a6bbf4c518a9/INSTL_EM90-LP_I-STUDIO_Side_FaceDown",
+            "https://assets.boseprofessional.com/transform/c8feb16a-2b67-4d11-9fce-fb14f3b1576e/INSTL_EM90-LP_I-STUDIO_Iso_FaceDown"
+          ]
+        }
+      ],
+      "is_subwoofer": false,
+      "is_weather_rated": false,
+      "is_high_impedance_rated": true,
+      "high_impedance_taps": [
+        2.5,
+        5,
+        10,
+        20,
+        40
+      ],
+      "updated_at": "1763630676"
+    }
+  ],
+  "amplifiers": [
+    {
+      "id": 810965,
+      "model_family": "PowerSpace",
+      "model_name": "PowerSpace P4150+ versatile power amplifier",
+      "skus": [
+        810965
+      ],
+      "power_output": {
+        "symmetrical": {
+          "rated_per_channel": {
+            "at": [
+              {
+                "impedance": {
+                  "unit": "ohms",
+                  "value": 4
+                },
+                "power": {
+                  "unit": "Watts",
+                  "value": 150
+                }
+              }
+            ]
+          }
+        }
+      },
+      "number_of_inputs_and_outputs": {
+        "analog": {
+          "inputs": 4,
+          "outputs": 4
+        }
+      },
+      "number_of_loudspeaker_inputs": 4,
+      "front_panel_image": "https://assets.boseprofessional.com/images/810965_front.png",
+      "rear_panel_image": "https://assets.boseprofessional.com/images/810965_rear.png",
+      "images": [
+        "https://assets.boseprofessional.com/transform/56abb5b7-8d5e-42da-aa3a-80c3b28028c6/PowerSpace_P4150-_withMixing_Front_halfREs",
+        "https://assets.boseprofessional.com/m/655ce62a084cf2e9/original/PowerSpace_P4150_plus_Front-png.png",
+        "https://assets.boseprofessional.com/transform/1d3f8f65-acd9-4105-9689-c411ac99a8f6/PowerSpace_P4150-_Rear_halfREs",
+        "https://assets.boseprofessional.com/m/ff2a71171df3411/original/PowerSpace_P4150_plus_Right-Facing-png.png"
+      ],
+      "updated_at": "1763630676"
+    },
+    {
+      "id": 803289,
+      "model_family": "PowerSpace",
+      "model_name": "PowerSpace P4300+ versatile power amplifier",
+      "skus": [
+        803289
+      ],
+      "power_output": {
+        "symmetrical": {
+          "rated_per_channel": {
+            "at": [
+              {
+                "impedance": {
+                  "unit": "ohms",
+                  "value": 4
+                },
+                "power": {
+                  "unit": "Watts",
+                  "value": 150
+                }
+              }
+            ]
+          }
+        }
+      },
+      "number_of_inputs_and_outputs": {
+        "analog": {
+          "inputs": 4,
+          "outputs": 4
+        }
+      },
+      "number_of_loudspeaker_inputs": 4,
+      "front_panel_image": "https://assets.boseprofessional.com/images/803289_front.png",
+      "rear_panel_image": "https://assets.boseprofessional.com/images/803289_rear.png",
+      "images": [
+        "https://assets.boseprofessional.com/transform/8ea4c3c3-b1f5-4e81-8354-b7432710659f/PowerSpace_P4300-_withMixing_Front_halfREs",
+        "https://assets.boseprofessional.com/m/5efff65ed6e10ebf/original/PowerSpace_P4300plus_Front_1200x1022-png.png",
+        "https://assets.boseprofessional.com/m/4fe30e75d025349a/original/PowerSpace_P4300plus_Right-Facing_1200x1022-png.png",
+        "https://assets.boseprofessional.com/transform/198d8252-2e79-4dc7-b196-181632db57fc/PowerSpace_P4300A_Rear_halfREs"
+      ],
+      "updated_at": "1763630676"
+    },
+    {
+      "id": 803288,
+      "model_family": "PowerSpace",
+      "model_name": "PowerSpace P4300A versatile power amplifier",
+      "skus": [
+        803288
+      ],
+      "power_output": {
+        "symmetrical": {
+          "rated_per_channel": {
+            "at": [
+              {
+                "impedance": {
+                  "unit": "ohms",
+                  "value": 4
+                },
+                "power": {
+                  "unit": "Watts",
+                  "value": 150
+                }
+              }
+            ]
+          }
+        }
+      },
+      "number_of_inputs_and_outputs": {
+        "analog": {
+          "inputs": 4,
+          "outputs": 4
+        }
+      },
+      "number_of_loudspeaker_inputs": 4,
+      "front_panel_image": "https://assets.boseprofessional.com/images/803288_front.png",
+      "rear_panel_image": "https://assets.boseprofessional.com/images/803288_rear.png",
+      "images": [
+        "https://assets.boseprofessional.com/m/22fd6c0d8ea2f166/original/PowerSpace_P4300A_Right-Facing_1200x1022-png.png",
+        "https://assets.boseprofessional.com/m/40956fe66ac33d3b/original/PowerSpace_P4300A_Front_1200x1022-png.png",
+        "https://assets.boseprofessional.com/m/25263674e713e858/original/PowerSpace_P4300A_Rear_1200x1022-png.png"
+      ],
+      "updated_at": "1763630676"
+    },
+    {
+      "id": 803286,
+      "model_family": "PowerSpace",
+      "model_name": "PowerSpace P2600A versatile power amplifier",
+      "skus": [
+        803286
+      ],
+      "power_output": {
+        "symmetrical": {
+          "rated_per_channel": {
+            "at": [
+              {
+                "impedance": {
+                  "unit": "ohms",
+                  "value": 4
+                },
+                "power": {
+                  "unit": "Watts",
+                  "value": 150
+                }
+              }
+            ]
+          }
+        }
+      },
+      "number_of_inputs_and_outputs": {
+        "analog": {
+          "inputs": 4,
+          "outputs": 2
+        }
+      },
+      "number_of_loudspeaker_inputs": 2,
+      "front_panel_image": "https://assets.boseprofessional.com/images/803286_front.png",
+      "rear_panel_image": "https://assets.boseprofessional.com/images/803286_rear.png",
+      "images": [
+        "https://assets.boseprofessional.com/transform/e2ea86e1-77a9-49e0-8ef3-48ab67868ff8/PowerSpace_P2600A_Right-Facing_1200x1022-png?io=transform:fill\\",
+        "width:600&format=webp&quality=85",
+        "https://assets.boseprofessional.com/m/e88237b512280ea/original/PowerSpace_P2600A_Front_1200x1022-png.png",
+        "https://assets.boseprofessional.com/m/2ae891ce2d348c40/original/PowerSpace_P2600A_Rear_1200x1022-png.png",
+        "https://assets.boseprofessional.com/m/64f4e544e2e0336/original/PowerSpace_Family_1200x1022-png.png"
+      ],
+      "updated_at": "1763630676"
+    },
+    {
+      "id": 803287,
+      "model_family": "PowerSpace",
+      "model_name": "PowerSpace P21000A versatile power amplifier",
+      "skus": [
+        803287
+      ],
+      "power_output": {
+        "symmetrical": {
+          "rated_per_channel": {
+            "at": [
+              {
+                "impedance": {
+                  "unit": "ohms",
+                  "value": 4
+                },
+                "power": {
+                  "unit": "Watts",
+                  "value": 150
+                }
+              }
+            ]
+          }
+        }
+      },
+      "number_of_inputs_and_outputs": {
+        "analog": {
+          "inputs": 4,
+          "outputs": 2
+        }
+      },
+      "number_of_loudspeaker_inputs": 2,
+      "front_panel_image": "https://assets.boseprofessional.com/images/803287_front.png",
+      "rear_panel_image": "https://assets.boseprofessional.com/images/803287_rear.png",
+      "images": [
+        "https://assets.boseprofessional.com/m/7b410ebc1c2ed714/original/PowerSpace_P21000A_Right-Facing_1200x1022-png.png",
+        "https://assets.boseprofessional.com/m/2ab7a1a204a6d0b1/original/PowerSpace_P21000A_Front_1200x1022-png.png"
+      ],
+      "updated_at": "1763630676"
+    },
+    {
+      "id": 361813,
+      "model_family": "PowerMatch",
+      "model_name": "PowerMatch PM4500N configurable power amplifier",
+      "skus": [
+        361813
+      ],
+      "power_output": {
+        "symmetrical": {
+          "rated_per_channel": {
+            "at": [
+              {
+                "impedance": {
+                  "unit": "ohms",
+                  "value": 4
+                },
+                "power": {
+                  "unit": "Watts",
+                  "value": 150
+                }
+              }
+            ]
+          }
+        }
+      },
+      "number_of_inputs_and_outputs": {
+        "analog": {
+          "inputs": 4,
+          "outputs": 4
+        }
+      },
+      "number_of_loudspeaker_inputs": 4,
+      "front_panel_image": "https://assets.boseprofessional.com/images/361813_front.png",
+      "rear_panel_image": "https://assets.boseprofessional.com/images/361813_rear.png",
+      "images": [
+        "https://assets.boseprofessional.com/m/3fcc39f703bddf5a/original/PM4500_EC-png.png",
+        "https://assets.boseprofessional.com/m/7f94fe32b6d2956c/original/PM4500_EC_01-png.png",
+        "https://assets.boseprofessional.com/m/1420f4947e8e1998/original/PM4500_EC_02-png.png",
+        "https://assets.boseprofessional.com/m/27fbf8fa08d40029/original/PM4500_EC_03-png.png",
+        "https://assets.boseprofessional.com/m/3bb90d2dfa7f7020/original/PM4500_EC_04-png.png"
+      ],
+      "updated_at": "1763630676"
+    },
+    {
+      "id": 361810,
+      "model_family": "PowerMatch",
+      "model_name": "PowerMatch PM8250N configurable power amplifier",
+      "skus": [
+        361810
+      ],
+      "power_output": {
+        "symmetrical": {
+          "rated_per_channel": {
+            "at": [
+              {
+                "impedance": {
+                  "unit": "ohms",
+                  "value": 4
+                },
+                "power": {
+                  "unit": "Watts",
+                  "value": 150
+                }
+              }
+            ]
+          }
+        }
+      },
+      "number_of_inputs_and_outputs": {
+        "analog": {
+          "inputs": 4,
+          "outputs": 8
+        }
+      },
+      "number_of_loudspeaker_inputs": 8,
+      "front_panel_image": "https://assets.boseprofessional.com/images/361810_front.png",
+      "rear_panel_image": "https://assets.boseprofessional.com/images/361810_rear.png",
+      "images": [
+        "https://assets.boseprofessional.com/m/24eb794c6aadbf98/original/Powermatch_8250_EC_00-png.png",
+        "https://assets.boseprofessional.com/m/18a88a5f029bc6fe/original/Powermatch_8250_EC_01-png.png",
+        "https://assets.boseprofessional.com/m/6bfeb3ab70c19700/original/Powermatch_8250_EC_02-png.png",
+        "https://assets.boseprofessional.com/m/2c7d84017bec588f/original/Powermatch_8250_EC_03-png.png"
+      ],
+      "updated_at": "1763630676"
+    },
+    {
+      "id": 343546,
+      "model_family": "PowerMatch",
+      "model_name": "PowerMatch PM8500N configurable power amplifier",
+      "skus": [
+        343546
+      ],
+      "power_output": {
+        "symmetrical": {
+          "rated_per_channel": {
+            "at": [
+              {
+                "impedance": {
+                  "unit": "ohms",
+                  "value": 4
+                },
+                "power": {
+                  "unit": "Watts",
+                  "value": 150
+                }
+              }
+            ]
+          }
+        }
+      },
+      "number_of_inputs_and_outputs": {
+        "analog": {
+          "inputs": 4,
+          "outputs": 8
+        }
+      },
+      "number_of_loudspeaker_inputs": 8,
+      "front_panel_image": "https://assets.boseprofessional.com/images/343546_front.png",
+      "rear_panel_image": "https://assets.boseprofessional.com/images/343546_rear.png",
+      "images": [
+        "https://assets.boseprofessional.com/m/323822a4273d0617/original/Powermatch_8500_EC_00-png.png",
+        "https://assets.boseprofessional.com/m/45cb8bd8248fca97/original/Powermatch_8500_EC_04-png.png"
+      ],
+      "updated_at": "1763630676"
+    },
+    {
+      "id": 813375,
+      "model_family": "PowerShare",
+      "model_name": "PowerShare PS404D adaptable power amplifier",
+      "skus": [
+        813375
+      ],
+      "power_output": {
+        "symmetrical": {
+          "rated_per_channel": {
+            "at": [
+              {
+                "impedance": {
+                  "unit": "ohms",
+                  "value": 4
+                },
+                "power": {
+                  "unit": "Watts",
+                  "value": 150
+                }
+              }
+            ]
+          }
+        }
+      },
+      "number_of_inputs_and_outputs": {
+        "analog": {
+          "inputs": 4,
+          "outputs": 4
+        }
+      },
+      "number_of_loudspeaker_inputs": 4,
+      "front_panel_image": "https://assets.boseprofessional.com/images/813375_front.png",
+      "rear_panel_image": "https://assets.boseprofessional.com/images/813375_rear.png",
+      "images": [
+        "https://assets.boseprofessional.com/m/264df996f95e2378/original/i_PowerShare_Dante_PS404D_Right_Facing_1200-png.png",
+        "https://assets.boseprofessional.com/m/31e56a06fec61ce2/original/i_PowerShare_Dante_PS404D_Rear_12000-png.png"
+      ],
+      "updated_at": "1763630676"
+    },
+    {
+      "id": 813403,
+      "model_family": "PowerShare",
+      "model_name": "PowerShare PS604D adaptable power amplifier",
+      "skus": [
+        813403
+      ],
+      "power_output": {
+        "symmetrical": {
+          "rated_per_channel": {
+            "at": [
+              {
+                "impedance": {
+                  "unit": "ohms",
+                  "value": 4
+                },
+                "power": {
+                  "unit": "Watts",
+                  "value": 150
+                }
+              }
+            ]
+          }
+        }
+      },
+      "number_of_inputs_and_outputs": {
+        "analog": {
+          "inputs": 4,
+          "outputs": 4
+        }
+      },
+      "number_of_loudspeaker_inputs": 4,
+      "front_panel_image": "https://assets.boseprofessional.com/images/813403_front.png",
+      "rear_panel_image": "https://assets.boseprofessional.com/images/813403_rear.png",
+      "images": [
+        "https://assets.boseprofessional.com/m/55b85237b0be58e7/original/i_PowerShareDante_PS604D_Right_Facing_1200-png.png",
+        "https://assets.boseprofessional.com/m/70768a0da92486ff/original/i_PowerShareDante_PS604D_Rear_1200-png.png"
+      ],
+      "updated_at": "1763630676"
+    },
+    {
+      "id": 876599,
+      "model_family": "PowerShareX",
+      "model_name": "PowerShareX PSX4804D adaptable power amplifier",
+      "skus": [
+        876599
+      ],
+      "power_output": {
+        "symmetrical": {
+          "rated_per_channel": {
+            "at": [
+              {
+                "impedance": {
+                  "unit": "ohms",
+                  "value": 4
+                },
+                "power": {
+                  "unit": "Watts",
+                  "value": 150
+                }
+              }
+            ]
+          }
+        }
+      },
+      "number_of_inputs_and_outputs": {
+        "analog": {
+          "inputs": 4,
+          "outputs": 4
+        }
+      },
+      "number_of_loudspeaker_inputs": 4,
+      "front_panel_image": "https://assets.boseprofessional.com/images/876599_front.png",
+      "rear_panel_image": "https://assets.boseprofessional.com/images/876599_rear.png",
+      "images": [
+        "https://assets.boseprofessional.com/m/24be4dcf2f3ed28d/original/PSX_4804D_I-Studio_FrontRightFacing-png.png",
+        "https://assets.boseprofessional.com/m/3210ba381b0029ff/original/PSX_4804D_I-Studio_FrontElevation-png.png",
+        "https://assets.boseprofessional.com/m/48fec09a7c1b6a91/original/PSX_4804D_I-Studio_FrontLeftFacing-png.png",
+        "https://assets.boseprofessional.com/m/291b1420467cd6ac/original/PSX_4804D_I-Studio_FrontStraightOn-png.png",
+        "https://assets.boseprofessional.com/m/7918bd3402e64066/original/PSX_I-Studio_1200x1022_RearPanel-png.png"
+      ],
+      "updated_at": "1763630676"
+    },
+    {
+      "id": 876599,
+      "model_family": "PowerShareX",
+      "model_name": "PowerShareX PSX4804D adaptable power amplifier",
+      "skus": [
+        876599
+      ],
+      "power_output": {
+        "symmetrical": {
+          "rated_per_channel": {
+            "at": [
+              {
+                "impedance": {
+                  "unit": "ohms",
+                  "value": 4
+                },
+                "power": {
+                  "unit": "Watts",
+                  "value": 150
+                }
+              }
+            ]
+          }
+        }
+      },
+      "number_of_inputs_and_outputs": {
+        "analog": {
+          "inputs": 4,
+          "outputs": 4
+        }
+      },
+      "number_of_loudspeaker_inputs": 4,
+      "front_panel_image": "https://assets.boseprofessional.com/images/876599_front.png",
+      "rear_panel_image": "https://assets.boseprofessional.com/images/876599_rear.png",
+      "images": [
+        "https://assets.boseprofessional.com/m/24be4dcf2f3ed28d/original/PSX_4804D_I-Studio_FrontRightFacing-png.png",
+        "https://assets.boseprofessional.com/m/3210ba381b0029ff/original/PSX_4804D_I-Studio_FrontElevation-png.png",
+        "https://assets.boseprofessional.com/m/48fec09a7c1b6a91/original/PSX_4804D_I-Studio_FrontLeftFacing-png.png",
+        "https://assets.boseprofessional.com/m/291b1420467cd6ac/original/PSX_4804D_I-Studio_FrontStraightOn-png.png",
+        "https://assets.boseprofessional.com/m/7918bd3402e64066/original/PSX_I-Studio_1200x1022_RearPanel-png.png"
+      ],
+      "updated_at": "1763630676"
+    },
+    {
+      "id": 876599,
+      "model_family": "PowerShareX",
+      "model_name": "PowerShareX PSX4804D adaptable power amplifier",
+      "skus": [
+        876599
+      ],
+      "power_output": {
+        "symmetrical": {
+          "rated_per_channel": {
+            "at": [
+              {
+                "impedance": {
+                  "unit": "ohms",
+                  "value": 4
+                },
+                "power": {
+                  "unit": "Watts",
+                  "value": 150
+                }
+              }
+            ]
+          }
+        }
+      },
+      "number_of_inputs_and_outputs": {
+        "analog": {
+          "inputs": 4,
+          "outputs": 4
+        }
+      },
+      "number_of_loudspeaker_inputs": 4,
+      "front_panel_image": "https://assets.boseprofessional.com/images/876599_front.png",
+      "rear_panel_image": "https://assets.boseprofessional.com/images/876599_rear.png",
+      "images": [
+        "https://assets.boseprofessional.com/m/24be4dcf2f3ed28d/original/PSX_4804D_I-Studio_FrontRightFacing-png.png",
+        "https://assets.boseprofessional.com/m/3210ba381b0029ff/original/PSX_4804D_I-Studio_FrontElevation-png.png",
+        "https://assets.boseprofessional.com/m/48fec09a7c1b6a91/original/PSX_4804D_I-Studio_FrontLeftFacing-png.png",
+        "https://assets.boseprofessional.com/m/291b1420467cd6ac/original/PSX_4804D_I-Studio_FrontStraightOn-png.png",
+        "https://assets.boseprofessional.com/m/7918bd3402e64066/original/PSX_I-Studio_1200x1022_RearPanel-png.png"
+      ],
+      "updated_at": "1763630676"
+    },
+    {
+      "id": 344871,
+      "model_family": "FreeSpace",
+      "model_name": "FreeSpace IZA 190-HZ integrated zone amplifier",
+      "skus": [
+        344871
+      ],
+      "power_output": {
+        "symmetrical": {
+          "rated_per_channel": {
+            "at": [
+              {
+                "impedance": {
+                  "unit": "ohms",
+                  "value": 4
+                },
+                "power": {
+                  "unit": "Watts",
+                  "value": 150
+                }
+              }
+            ]
+          }
+        }
+      },
+      "number_of_inputs_and_outputs": {
+        "analog": {
+          "inputs": 4,
+          "outputs": 2
+        }
+      },
+      "number_of_loudspeaker_inputs": 2,
+      "front_panel_image": "https://assets.boseprofessional.com/images/344871_front.png",
+      "rear_panel_image": "https://assets.boseprofessional.com/images/344871_rear.png",
+      "images": [
+        "https://assets.boseprofessional.com/m/528dc3776b6c308e/original/IZA190-HZ_EC_00-png.png",
+        "https://assets.boseprofessional.com/m/6c1d861ef22de937/original/IZA190-HZ_EC_01-png.png",
+        "https://assets.boseprofessional.com/m/5a01a8daf6247ad7/original/IZA190-HZ_EC_02-png.png",
+        "https://assets.boseprofessional.com/m/2e4caba43a16c761/original/IZA190-HZ_EC_03-png.png"
+      ],
+      "updated_at": "1763630676"
+    },
+    {
+      "id": 719782,
+      "model_family": "FreeSpace",
+      "model_name": "FreeSpace IZA 2120-LZ integrated zone amplifier",
+      "skus": [
+        719782
+      ],
+      "power_output": {
+        "symmetrical": {
+          "rated_per_channel": {
+            "at": [
+              {
+                "impedance": {
+                  "unit": "ohms",
+                  "value": 4
+                },
+                "power": {
+                  "unit": "Watts",
+                  "value": 150
+                }
+              }
+            ]
+          }
+        }
+      },
+      "number_of_inputs_and_outputs": {
+        "analog": {
+          "inputs": 4,
+          "outputs": 2
+        }
+      },
+      "number_of_loudspeaker_inputs": 2,
+      "front_panel_image": "https://assets.boseprofessional.com/images/719782_front.png",
+      "rear_panel_image": "https://assets.boseprofessional.com/images/719782_rear.png",
+      "images": [
+        "https://assets.boseprofessional.com/m/3cd85dec221fc18d/original/IZA2120_LZ_EC_00-png.png",
+        "https://assets.boseprofessional.com/m/5b610ee110586073/original/IZA2120_LZ_EC_01-png.png",
+        "https://assets.boseprofessional.com/m/6fa6e60cec3d8296/original/IZA2120_LZ_EC_02-png.png",
+        "https://assets.boseprofessional.com/m/7eb10161e4c12a6c/original/IZA2120_LZ_EC_03-png.png"
+      ],
+      "updated_at": "1763630676"
+    },
+    {
+      "id": 344871,
+      "model_family": "FreeSpace",
+      "model_name": "FreeSpace IZA 190-HZ integrated zone amplifier",
+      "skus": [
+        344871
+      ],
+      "power_output": {
+        "symmetrical": {
+          "rated_per_channel": {
+            "at": [
+              {
+                "impedance": {
+                  "unit": "ohms",
+                  "value": 4
+                },
+                "power": {
+                  "unit": "Watts",
+                  "value": 150
+                }
+              }
+            ]
+          }
+        }
+      },
+      "number_of_inputs_and_outputs": {
+        "analog": {
+          "inputs": 4,
+          "outputs": 2
+        }
+      },
+      "number_of_loudspeaker_inputs": 2,
+      "front_panel_image": "https://assets.boseprofessional.com/images/344871_front.png",
+      "rear_panel_image": "https://assets.boseprofessional.com/images/344871_rear.png",
+      "images": [
+        "https://assets.boseprofessional.com/m/528dc3776b6c308e/original/IZA190-HZ_EC_00-png.png",
+        "https://assets.boseprofessional.com/m/6c1d861ef22de937/original/IZA190-HZ_EC_01-png.png",
+        "https://assets.boseprofessional.com/m/5a01a8daf6247ad7/original/IZA190-HZ_EC_02-png.png",
+        "https://assets.boseprofessional.com/m/2e4caba43a16c761/original/IZA190-HZ_EC_03-png.png"
+      ],
+      "updated_at": "1763630676"
+    },
+    {
+      "id": 719782,
+      "model_family": "FreeSpace",
+      "model_name": "FreeSpace IZA 2120-LZ integrated zone amplifier",
+      "skus": [
+        719782
+      ],
+      "power_output": {
+        "symmetrical": {
+          "rated_per_channel": {
+            "at": [
+              {
+                "impedance": {
+                  "unit": "ohms",
+                  "value": 4
+                },
+                "power": {
+                  "unit": "Watts",
+                  "value": 150
+                }
+              }
+            ]
+          }
+        }
+      },
+      "number_of_inputs_and_outputs": {
+        "analog": {
+          "inputs": 4,
+          "outputs": 2
+        }
+      },
+      "number_of_loudspeaker_inputs": 2,
+      "front_panel_image": "https://assets.boseprofessional.com/images/719782_front.png",
+      "rear_panel_image": "https://assets.boseprofessional.com/images/719782_rear.png",
+      "images": [
+        "https://assets.boseprofessional.com/m/3cd85dec221fc18d/original/IZA2120_LZ_EC_00-png.png",
+        "https://assets.boseprofessional.com/m/5b610ee110586073/original/IZA2120_LZ_EC_01-png.png",
+        "https://assets.boseprofessional.com/m/6fa6e60cec3d8296/original/IZA2120_LZ_EC_02-png.png",
+        "https://assets.boseprofessional.com/m/7eb10161e4c12a6c/original/IZA2120_LZ_EC_03-png.png"
+      ],
+      "updated_at": "1763630676"
+    }
+  ],
+  "digital_signal_processors": [
+    {
+      "id": 834315,
+      "model_family": "ControlSpace",
+      "model_name": "ControlSpace EX-440C conferencing sound processor",
+      "skus": [
+        834315
+      ],
+      "number_of_inputs_and_outputs": {
+        "analog": {
+          "inputs": 8,
+          "outputs": 8
+        },
+        "dante": {
+          "max_inputs": 64,
+          "max_outputs": 64
+        }
+      },
+      "max_number_of_digital_control": 32,
+      "max_number_of_analog_control": 16,
+      "gpio_ports": {
+        "inputs": 8,
+        "outputs": 8
+      },
+      "updated_at": "1763630676"
+    },
+    {
+      "id": 772234,
+      "model_family": "ControlSpace",
+      "model_name": "ControlSpace EX-1280C conferencing sound processor",
+      "skus": [
+        772234
+      ],
+      "number_of_inputs_and_outputs": {
+        "analog": {
+          "inputs": 8,
+          "outputs": 8
+        },
+        "dante": {
+          "max_inputs": 64,
+          "max_outputs": 64
+        }
+      },
+      "max_number_of_digital_control": 32,
+      "max_number_of_analog_control": 16,
+      "gpio_ports": {
+        "inputs": 8,
+        "outputs": 8
+      },
+      "updated_at": "1763630676"
+    },
+    {
+      "id": 834317,
+      "model_family": "ControlSpace",
+      "model_name": "ControlSpace EX-1280 digital signal processor",
+      "skus": [
+        834317
+      ],
+      "number_of_inputs_and_outputs": {
+        "analog": {
+          "inputs": 8,
+          "outputs": 8
+        },
+        "dante": {
+          "max_inputs": 64,
+          "max_outputs": 64
+        }
+      },
+      "max_number_of_digital_control": 32,
+      "max_number_of_analog_control": 16,
+      "gpio_ports": {
+        "inputs": 8,
+        "outputs": 8
+      },
+      "updated_at": "1763630676"
+    },
+    {
+      "id": 834316,
+      "model_family": "ControlSpace",
+      "model_name": "ControlSpace EX-12AEC conferencing signal processor",
+      "skus": [
+        834316
+      ],
+      "number_of_inputs_and_outputs": {
+        "analog": {
+          "inputs": 8,
+          "outputs": 8
+        },
+        "dante": {
+          "max_inputs": 64,
+          "max_outputs": 64
+        }
+      },
+      "max_number_of_digital_control": 32,
+      "max_number_of_analog_control": 16,
+      "gpio_ports": {
+        "inputs": 8,
+        "outputs": 8
+      },
+      "updated_at": "1763630676"
+    },
+    {
+      "id": 812862,
+      "model_family": "ControlSpace",
+      "model_name": "ControlSpace ESP-880A engineered sound processor",
+      "skus": [
+        812862
+      ],
+      "number_of_inputs_and_outputs": {
+        "analog": {
+          "inputs": 8,
+          "outputs": 8
+        },
+        "dante": {
+          "max_inputs": 64,
+          "max_outputs": 64
+        }
+      },
+      "max_number_of_digital_control": 32,
+      "max_number_of_analog_control": 16,
+      "gpio_ports": {
+        "inputs": 8,
+        "outputs": 8
+      },
+      "updated_at": "1763630676"
+    },
+    {
+      "id": 808453,
+      "model_family": "CSP-428",
+      "model_name": "CSP-428 commercial sound processor",
+      "skus": [
+        808453
+      ],
+      "number_of_inputs_and_outputs": {
+        "analog": {
+          "inputs": 8,
+          "outputs": 8
+        },
+        "dante": {
+          "max_inputs": 64,
+          "max_outputs": 64
+        }
+      },
+      "max_number_of_digital_control": 32,
+      "max_number_of_analog_control": 16,
+      "gpio_ports": {
+        "inputs": 8,
+        "outputs": 8
+      },
+      "updated_at": "1763630676"
+    },
+    {
+      "id": 808456,
+      "model_family": "CSP-1248",
+      "model_name": "CSP-1248 Commercial Sound Processor",
+      "skus": [
+        808456
+      ],
+      "number_of_inputs_and_outputs": {
+        "analog": {
+          "inputs": 8,
+          "outputs": 8
+        },
+        "dante": {
+          "max_inputs": 64,
+          "max_outputs": 64
+        }
+      },
+      "max_number_of_digital_control": 32,
+      "max_number_of_analog_control": 16,
+      "gpio_ports": {
+        "inputs": 8,
+        "outputs": 8
+      },
+      "updated_at": "1763630676"
+    },
+    {
+      "id": 41760,
+      "model_family": "ControlSpace",
+      "model_name": "ControlSpace CC-64 control center",
+      "skus": [
+        41760
+      ],
+      "number_of_inputs_and_outputs": {
+        "analog": {
+          "inputs": 8,
+          "outputs": 8
+        },
+        "dante": {
+          "max_inputs": 64,
+          "max_outputs": 64
+        }
+      },
+      "max_number_of_digital_control": 32,
+      "max_number_of_analog_control": 16,
+      "gpio_ports": {
+        "inputs": 8,
+        "outputs": 8
+      },
+      "updated_at": "1763630676"
+    },
+    {
+      "id": 371407,
+      "model_family": "ControlSpace",
+      "model_name": "ControlSpace CC-PS1 universal power supply",
+      "skus": [
+        371407
+      ],
+      "number_of_inputs_and_outputs": {
+        "analog": {
+          "inputs": 8,
+          "outputs": 8
+        },
+        "dante": {
+          "max_inputs": 64,
+          "max_outputs": 64
+        }
+      },
+      "max_number_of_digital_control": 32,
+      "max_number_of_analog_control": 16,
+      "gpio_ports": {
+        "inputs": 8,
+        "outputs": 8
+      },
+      "updated_at": "1763630676"
+    },
+    {
+      "id": 771783,
+      "model_family": "ControlSpace",
+      "model_name": "ControlSpace EX-4ML microphone/GPIO Dante endpoint",
+      "skus": [
+        771783
+      ],
+      "number_of_inputs_and_outputs": {
+        "analog": {
+          "inputs": 8,
+          "outputs": 8
+        },
+        "dante": {
+          "max_inputs": 64,
+          "max_outputs": 64
+        }
+      },
+      "max_number_of_digital_control": 32,
+      "max_number_of_analog_control": 16,
+      "gpio_ports": {
+        "inputs": 8,
+        "outputs": 8
+      },
+      "updated_at": "1763630676"
+    },
+    {
+      "id": 772045,
+      "model_family": "ControlSpace",
+      "model_name": "ControlSpace EX-8ML microphone/GPIO Dante endpoint",
+      "skus": [
+        772045
+      ],
+      "number_of_inputs_and_outputs": {
+        "analog": {
+          "inputs": 8,
+          "outputs": 8
+        },
+        "dante": {
+          "max_inputs": 64,
+          "max_outputs": 64
+        }
+      },
+      "max_number_of_digital_control": 32,
+      "max_number_of_analog_control": 16,
+      "gpio_ports": {
+        "inputs": 8,
+        "outputs": 8
+      },
+      "updated_at": "1763630676"
+    },
+    {
+      "id": 771784,
+      "model_family": "ControlSpace",
+      "model_name": "ControlSpace EX-UH USB/headset Dante endpoint",
+      "skus": [
+        771784
+      ],
+      "number_of_inputs_and_outputs": {
+        "analog": {
+          "inputs": 8,
+          "outputs": 8
+        },
+        "dante": {
+          "max_inputs": 64,
+          "max_outputs": 64
+        }
+      },
+      "max_number_of_digital_control": 32,
+      "max_number_of_analog_control": 16,
+      "gpio_ports": {
+        "inputs": 8,
+        "outputs": 8
+      },
+      "updated_at": "1763630676"
+    }
+  ],
+  "controllers": [
+    {
+      "id": 808461,
+      "model_family": "ControlCenter",
+      "model_name": "ControlCenter CC-1D/CC-2D/CC-3D digital zone controllers",
+      "zone_control_count": "Multiple",
+      "control_type": "Touchscreen",
+      "additional_sensors": [
+        "proximity"
+      ],
+      "images": [
+        {
+          "black": [
+            "https://assets.boseprofessional.com/m/5f51142091509fb1/original/CC-1D_2D_3D-png.png"
+          ],
+          "white": []
+        }
+      ],
+      "updated_at": "1763630676"
+    },
+    {
+      "id": 768932,
+      "model_family": "ControlCenter",
+      "model_name": "ControlCenter CC-1 zone controller",
+      "zone_control_count": "Multiple",
+      "control_type": "Touchscreen",
+      "additional_sensors": [
+        "proximity"
+      ],
+      "images": [
+        {
+          "black": [
+            "https://assets.boseprofessional.com/m/3b56a48832ff7d92/original/i_ControlCenter_CC-1_EU_Black_Right-png.png",
+            "https://assets.boseprofessional.com/m/1841ad34dbcbf7c2/original/i_ControlCenter_CC-1_Family_Left-png.png",
+            "https://assets.boseprofessional.com/m/10158dad0a8df83f/original/i_ControlCenter_CC-1_EU_White_Left-png.png"
+          ],
+          "white": [
+            "https://assets.boseprofessional.com/m/5bb5542aa96895ea/original/i_ControlCenter_CC-1_EU_White_Right-png.png",
+            "https://assets.boseprofessional.com/m/669d734682205d5b/original/i_ControlCenter_CC-1_US_White_Left-png.png",
+            "https://assets.boseprofessional.com/m/65408996b411187d/original/i_ControlCenter_CC-1_US_White_Right-png.png"
+          ]
+        }
+      ],
+      "updated_at": "1763630676"
+    },
+    {
+      "id": 768938,
+      "model_family": "ControlCenter",
+      "model_name": "ControlCenter CC-2 zone controller",
+      "zone_control_count": "Multiple",
+      "control_type": "Touchscreen",
+      "additional_sensors": [
+        "proximity"
+      ],
+      "images": [
+        {
+          "black": [
+            "https://assets.boseprofessional.com/m/9b9415106718cc4/original/i_ControlCenter_CC-2_EU_Black_Right-png.png",
+            "https://assets.boseprofessional.com/m/3206ca0b4a598726/original/i_ControlCenter_CC-2_Family_Left-png.png",
+            "https://assets.boseprofessional.com/m/c7a5f108b418393/original/i_ControlCenter_CC-2_EU_White_Left-png.png"
+          ],
+          "white": [
+            "https://assets.boseprofessional.com/m/1690209e0e8b23e6/original/i_ControlCenter_CC-2_EU_White_Right-png.png",
+            "https://assets.boseprofessional.com/m/15607bdfcfcfeedb/original/i_ControlCenter_CC-2_US_White_Left-png.png",
+            "https://assets.boseprofessional.com/m/31d5a305c00a978e/original/i_ControlCenter_CC-2_US_White_Right-png.png"
+          ]
+        }
+      ],
+      "updated_at": "1763630676"
+    },
+    {
+      "id": 768941,
+      "model_family": "ControlCenter",
+      "model_name": "ControlCenter CC-3 zone controller",
+      "zone_control_count": "Multiple",
+      "control_type": "Touchscreen",
+      "additional_sensors": [
+        "proximity"
+      ],
+      "images": [
+        {
+          "black": [
+            "https://assets.boseprofessional.com/m/3db4a8750285507/original/i_ControlSpace_CC-3_Family_Left-png.png",
+            "https://assets.boseprofessional.com/m/6a060b4db7ff207/original/i_ControlSpace_CC-3_EU_White_Left-png.png",
+            "https://assets.boseprofessional.com/m/5a66432acc0e186e/original/i_ControlSpace_CC-3_EU_White_Right-png.png"
+          ],
+          "white": [
+            "https://assets.boseprofessional.com/m/4b9a4f0ff73962ad/original/i_ControlSpace_CC-3_US_White_Left-png.png",
+            "https://assets.boseprofessional.com/m/4784b3e28e128441/original/i_ControlSpace_CC-3_US_White_Right-png.png",
+            "https://assets.boseprofessional.com/m/3698d3d0c60ca773/original/i_ControlSpace_CC-3_JPN_White_Left-png.png"
+          ]
+        }
+      ],
+      "updated_at": "1763630676"
+    },
+    {
+      "id": 41761,
+      "model_family": "ControlCenter",
+      "model_name": "ControlCenter CC-16 zone controller",
+      "zone_control_count": "Multiple",
+      "control_type": "Touchscreen",
+      "additional_sensors": [
+        "proximity"
+      ],
+      "images": [
+        {
+          "black": [
+            "https://assets.boseprofessional.com/m/459a5393ff48e199/original/cc16_angleright-jpeg.jpeg",
+            "https://assets.boseprofessional.com/m/7b67c3ba2c3125eb/original/cc16_angleright-png.png"
+          ],
+          "white": []
+        }
+      ],
+      "updated_at": "1763630676"
+    },
+    {
+      "id": 768928,
+      "model_family": "ControlCenter",
+      "model_name": "ControlCenter CV41 4-to-1 converter",
+      "zone_control_count": "Multiple",
+      "control_type": "Touchscreen",
+      "additional_sensors": [
+        "proximity"
+      ],
+      "images": [
+        {
+          "black": [
+            "https://assets.boseprofessional.com/m/7249480c9f325af4/original/i_ControlSpace_CV41_Right-jpeg.jpeg"
+          ],
+          "white": []
+        }
+      ],
+      "updated_at": "1763630676"
+    }
+  ],
+  "i_o_endpoints": [
+    {
+      "id": 785403,
+      "model_family": "T4S",
+      "model_name": "T4S ToneMatch mixer",
+      "inputs": {
+        "quantity": 4,
+        "type": "XLR"
+      },
+      "outputs": {
+        "quantity": 2,
+        "type": "TRS"
+      },
+      "network": true,
+      "images": {
+        "black": [
+          "https://assets.boseprofessional.com/m/25578f49bf5f79d7/original/t4-silo1-1200x1022-17-BOSE-064-121417-png.png",
+          "https://assets.boseprofessional.com/m/1f465a07ee62db70/original/t4-silo2-1200x1022-17-BOSE-064-121417-png.png",
+          "https://assets.boseprofessional.com/m/25578f49bf5f79d7/original/t4-silo1-1200x1022-17-BOSE-064-121417-png.png"
+        ],
+        "white": []
+      },
+      "updated_at": "1763630676"
+    },
+    {
+      "id": 785491,
+      "model_family": "T8S",
+      "model_name": "T8S ToneMatch mixer",
+      "inputs": {
+        "quantity": 4,
+        "type": "XLR"
+      },
+      "outputs": {
+        "quantity": 2,
+        "type": "TRS"
+      },
+      "network": true,
+      "images": {
+        "black": [
+          "https://assets.boseprofessional.com/m/51c4870af79e4483/original/t8-silo1-1200x1022-17-BOSE-064-121417-png.png",
+          "https://assets.boseprofessional.com/m/226f0bea978eff96/original/t8-silo2-1200x1022-17-BOSE-064-121417-png.png",
+          "https://assets.boseprofessional.com/m/4614bc4b6d4d4aa9/original/t8-silo3-1200x1022-17-BOSE-064-121417-png.png"
+        ],
+        "white": [
+          "https://assets.boseprofessional.com/m/241e2448c77c3104/original/t8-silo4-1200x1022-17-BOSE-064-121417-png.png"
+        ]
+      },
+      "updated_at": "1763630676"
+    }
+  ],
+  "additional_accessories": [
+    {
+      "id": 359844,
+      "name": "PowerMatch Dante network card",
+      "type": "optional",
+      "quantity": 1,
+      "sku": "359844",
+      "updated_at": "1763630676"
+    },
+    {
+      "id": 772238,
+      "name": "PowerMatch AmpLink 24-channel input card",
+      "type": "optional",
+      "quantity": 1,
+      "sku": "772238",
+      "updated_at": "1763630676"
+    },
+    {
+      "id": 841153,
+      "name": "FreeSpace FS2P pendant-mount loudspeakers (1 pair)",
+      "type": "optional",
+      "quantity": 1,
+      "sku": "841153",
+      "updated_at": "1763630676"
+    },
+    {
+      "id": 841151,
+      "name": "FreeSpace FS2SE surface-mount loudspeakers (1 pair)",
+      "type": "optional",
+      "quantity": 1,
+      "sku": "841151",
+      "updated_at": "1763630676"
+    },
+    {
+      "id": 841155,
+      "name": "FreeSpace FS4SE surface-mount loudspeakers (1 pair)",
+      "type": "optional",
+      "quantity": 1,
+      "sku": "841155",
+      "updated_at": "1763630676"
+    },
+    {
+      "id": 40150,
+      "name": "FreeSpace 3 flush-mount satellites (1 pair)",
+      "type": "optional",
+      "quantity": 1,
+      "sku": "40150",
+      "updated_at": "1763630676"
+    },
+    {
+      "id": 738453,
+      "name": "Pan-and-tilt bracket for RMU",
+      "type": "optional",
+      "quantity": 1,
+      "sku": "738453",
+      "updated_at": "1763630676"
+    },
+    {
+      "id": 852581,
+      "name": "CMB S2 ceiling mount bracket",
+      "type": "optional",
+      "quantity": 1,
+      "sku": "852581",
+      "updated_at": "1763630676"
+    },
+    {
+      "id": 799376,
+      "name": "DesignMax pan-and-tilt small bracket",
+      "type": "optional",
+      "quantity": 1,
+      "sku": "799376",
+      "updated_at": "1763630676"
+    },
+    {
+      "id": 815009,
+      "name": "DesignMax DM2C rough-in kit (6-pack)",
+      "type": "optional",
+      "quantity": 1,
+      "sku": "815009",
+      "updated_at": "1763630676"
+    },
+    {
+      "id": 829719,
+      "name": "DesignMax DM3C rough-in kit (6-pack)",
+      "type": "optional",
+      "quantity": 1,
+      "sku": "829719",
+      "updated_at": "1763630676"
+    },
+    {
+      "id": 829724,
+      "name": "DesignMax DM5C rough-in kit (6-pack)",
+      "type": "optional",
+      "quantity": 1,
+      "sku": "829724",
+      "updated_at": "1763630676"
+    },
+    {
+      "id": 829726,
+      "name": "DesignMax DM6C rough-in kit (6-pack)",
+      "type": "optional",
+      "quantity": 1,
+      "sku": "829726",
+      "updated_at": "1763630676"
+    },
+    {
+      "id": 810613,
+      "name": "DesignMax DM8C rough-in kit (6-pack)",
+      "type": "optional",
+      "quantity": 1,
+      "sku": "810613",
+      "updated_at": "1763630676"
+    },
+    {
+      "id": 850571,
+      "name": "DesignMax pendant threaded rod adapter",
+      "type": "optional",
+      "quantity": 1,
+      "sku": "850571",
+      "updated_at": "1763630676"
+    },
+    {
+      "id": 854381,
+      "name": "DesignMax pendant loudspeaker conduit adapter",
+      "type": "optional",
+      "quantity": 1,
+      "sku": "854381",
+      "updated_at": "1763630676"
+    },
+    {
+      "id": 843297,
+      "name": "EdgeMax Tile",
+      "type": "optional",
+      "quantity": 1,
+      "sku": "843297",
+      "updated_at": "1763630676"
+    },
+    {
+      "id": 790054,
+      "name": "Rough-in pan for EdgeMax EM90/EM180 loudspeakers (1 pair)",
+      "type": "optional",
+      "quantity": 1,
+      "sku": "790054",
+      "updated_at": "1763630676"
+    },
+    {
+      "id": 788330,
+      "name": "Black grille for EdgeMax EM90/EM180 loudspeakers",
+      "type": "optional",
+      "quantity": 1,
+      "sku": "788330",
+      "updated_at": "1763630676"
+    },
+    {
+      "id": 841162,
+      "name": "FreeSpace FS2C tile bridge (6-pack)",
+      "type": "optional",
+      "quantity": 1,
+      "sku": "841162",
+      "updated_at": "1763630676"
+    },
+    {
+      "id": 842864,
+      "name": "FreeSpace FS2C retrofit kit",
+      "type": "optional",
+      "quantity": 1,
+      "sku": "842864",
+      "updated_at": "1763630676"
+    },
+    {
+      "id": 852552,
+      "name": "FreeSpace ceramic terminal with fuse kit",
+      "type": "optional",
+      "quantity": 1,
+      "sku": "852552",
+      "updated_at": "1763630676"
+    },
+    {
+      "id": 852582,
+      "name": "Pendant Suspension Cable",
+      "type": "optional",
+      "quantity": 1,
+      "sku": "852582",
+      "updated_at": "1763630676"
+    },
+    {
+      "id": 766713,
+      "name": "ShowMatch SM20WG12 waveguide for SM20",
+      "type": "optional",
+      "quantity": 1,
+      "sku": "766713",
+      "updated_at": "1763630676"
+    },
+    {
+      "id": 766712,
+      "name": "ShowMatch SM5WG55 waveguide for SM5",
+      "type": "optional",
+      "quantity": 1,
+      "sku": "766712",
+      "updated_at": "1763630676"
+    },
+    {
+      "id": 770300,
+      "name": "ShowMatch SMAF array frame",
+      "type": "optional",
+      "quantity": 1,
+      "sku": "770300",
+      "updated_at": "1763630676"
+    },
+    {
+      "id": 770299,
+      "name": "ShowMatch SMAFT T-bar array frame",
+      "type": "optional",
+      "quantity": 1,
+      "sku": "770299",
+      "updated_at": "1763630676"
+    },
+    {
+      "id": 845332,
+      "name": "ShowMatch SMAFMP array frame multipoint bracket",
+      "type": "optional",
+      "quantity": 1,
+      "sku": "845332",
+      "updated_at": "1763630676"
+    },
+    {
+      "id": 770302,
+      "name": "ShowMatch SMPULL array pullback bracket",
+      "type": "optional",
+      "quantity": 1,
+      "sku": "770302",
+      "updated_at": "1763630676"
+    },
+    {
+      "id": 770304,
+      "name": "ShowMatch SMQPS quick pin kit",
+      "type": "optional",
+      "quantity": 1,
+      "sku": "770304",
+      "updated_at": "1763630676"
+    },
+    {
+      "id": 863314,
+      "name": "ShowMatch SMS118 speaker pole mount adapter (M20 threaded)",
+      "type": "optional",
+      "quantity": 1,
+      "sku": "863314",
+      "updated_at": "1763630676"
+    },
+    {
+      "id": 776255,
+      "name": "ShowMatch SMSTK sub-module transition kit",
+      "type": "optional",
+      "quantity": 1,
+      "sku": "776255",
+      "updated_at": "1763630676"
+    },
+    {
+      "id": 318338,
+      "name": "Bi-pivot bracket for MA12/MA12EX",
+      "type": "optional",
+      "quantity": 1,
+      "sku": "318338",
+      "updated_at": "1763630676"
+    },
+    {
+      "id": 28337,
+      "name": "CB-MA12 coupling bracket for MA12",
+      "type": "optional",
+      "quantity": 1,
+      "sku": "28337",
+      "updated_at": "1763630676"
+    },
+    {
+      "id": 317088,
+      "name": "CB-MA12EX coupling bracket for MA12EX",
+      "type": "optional",
+      "quantity": 1,
+      "sku": "317088",
+      "updated_at": "1763630676"
+    },
+    {
+      "id": 40190,
+      "name": "CVT-MA12 transformer for MA12",
+      "type": "optional",
+      "quantity": 1,
+      "sku": "40190",
+      "updated_at": "1763630676"
+    },
+    {
+      "id": 315338,
+      "name": "CVT-MA12EX transformer for MA12EX",
+      "type": "optional",
+      "quantity": 1,
+      "sku": "315338",
+      "updated_at": "1763630676"
+    },
+    {
+      "id": 318418,
+      "name": "WB-MA12/MA12EX pitch only bracket",
+      "type": "optional",
+      "quantity": 1,
+      "sku": "318418",
+      "updated_at": "1763630676"
+    },
+    {
+      "id": 318337,
+      "name": "WMB2-MA12/MA12EX pitch lock upper bracket",
+      "type": "optional",
+      "quantity": 1,
+      "sku": "318337",
+      "updated_at": "1763630676"
+    },
+    {
+      "id": 808304,
+      "name": "ArenaMatch AMAPLONG array plates long kit",
+      "type": "optional",
+      "quantity": 1,
+      "sku": "808304",
+      "updated_at": "1763630676"
+    },
+    {
+      "id": 807141,
+      "name": "ArenaMatch AMAPSHRT array plates short kit",
+      "type": "optional",
+      "quantity": 1,
+      "sku": "807141",
+      "updated_at": "1763630676"
+    },
+    {
+      "id": 810460,
+      "name": "ArenaMatch AMAPSPRD array spreader bar",
+      "type": "optional",
+      "quantity": 1,
+      "sku": "810460",
+      "updated_at": "1763630676"
+    },
+    {
+      "id": 807140,
+      "name": "ArenaMatch AMMCPLAT module connect plate",
+      "type": "optional",
+      "quantity": 1,
+      "sku": "807140",
+      "updated_at": "1763630676"
+    },
+    {
+      "id": 807142,
+      "name": "ArenaMatch AMPULL array pullback bracket",
+      "type": "optional",
+      "quantity": 1,
+      "sku": "807142",
+      "updated_at": "1763630676"
+    },
+    {
+      "id": 806720,
+      "name": "ArenaMatch AMUBRKT U-bracket",
+      "type": "optional",
+      "quantity": 1,
+      "sku": "806720",
+      "updated_at": "1763630676"
+    },
+    {
+      "id": 843344,
+      "name": "AMM suspension bracket",
+      "type": "optional",
+      "quantity": 1,
+      "sku": "843344",
+      "updated_at": "1763630676"
+    },
+    {
+      "id": 843367,
+      "name": "AMM108 U-bracket",
+      "type": "optional",
+      "quantity": 1,
+      "sku": "843367",
+      "updated_at": "1763630676"
+    },
+    {
+      "id": 843364,
+      "name": "FC108 U-Bracket",
+      "type": "optional",
+      "quantity": 1,
+      "sku": "843364",
+      "updated_at": "1763630676"
+    },
+    {
+      "id": 841158,
+      "name": "FreeSpace FS2SE aluminum grille (1 pair)",
+      "type": "optional",
+      "quantity": 1,
+      "sku": "841158",
+      "updated_at": "1763630676"
+    },
+    {
+      "id": 841159,
+      "name": "FreeSpace FS4SE aluminum grille (1 pair)",
+      "type": "optional",
+      "quantity": 1,
+      "sku": "841159",
+      "updated_at": "1763630676"
+    },
+    {
+      "id": 841160,
+      "name": "FreeSpace FS4CE aluminum grille (1 pair)",
+      "type": "optional",
+      "quantity": 1,
+      "sku": "841160",
+      "updated_at": "1763630676"
+    },
+    {
+      "id": 789175,
+      "name": "S1 Pro System Battery Pack",
+      "type": "optional",
+      "quantity": 1,
+      "sku": "789175",
+      "updated_at": "1763630676"
+    },
+    {
+      "id": 809781,
+      "name": "S1 Backpack",
+      "type": "optional",
+      "quantity": 1,
+      "sku": "809781",
+      "updated_at": "1763630676"
+    },
+    {
+      "id": 825339,
+      "name": "S1 Slip Cover",
+      "type": "optional",
+      "quantity": 1,
+      "sku": "825339",
+      "updated_at": "1763630676"
+    },
+    {
+      "id": 812896,
+      "name": "S1 Play-Through Cover",
+      "type": "optional",
+      "quantity": 1,
+      "sku": "812896",
+      "updated_at": "1763630676"
+    },
+    {
+      "id": 869723,
+      "name": "S1 Pro+ System Battery Pack",
+      "type": "optional",
+      "quantity": 1,
+      "sku": "869723",
+      "updated_at": "1763630676"
+    },
+    {
+      "id": 869722,
+      "name": "S1 Pro+ 1/4\" Wireless Instrument Transmitter",
+      "type": "optional",
+      "quantity": 1,
+      "sku": "869722",
+      "updated_at": "1763630676"
+    },
+    {
+      "id": 869721,
+      "name": "S1 Pro+ Wireless Mic/Line Transmitter – XLR",
+      "type": "optional",
+      "quantity": 1,
+      "sku": "869721",
+      "updated_at": "1763630676"
+    },
+    {
+      "id": 856990,
+      "name": "L1 Pro8 Slip Cover",
+      "type": "optional",
+      "quantity": 1,
+      "sku": "856990",
+      "updated_at": "1763630676"
+    },
+    {
+      "id": 856992,
+      "name": "L1 Pro16 System Roller Bag",
+      "type": "optional",
+      "quantity": 1,
+      "sku": "856992",
+      "updated_at": "1763630676"
+    },
+    {
+      "id": 856993,
+      "name": "L1 Pro16 Slip Cover",
+      "type": "optional",
+      "quantity": 1,
+      "sku": "856993",
+      "updated_at": "1763630676"
+    },
+    {
+      "id": 857172,
+      "name": "SubMatch Cable",
+      "type": "optional",
+      "quantity": 1,
+      "sku": "857172",
+      "updated_at": "1763630676"
+    },
+    {
+      "id": 856989,
+      "name": "L1 Pro8 System Bag",
+      "type": "optional",
+      "quantity": 1,
+      "sku": "856989",
+      "updated_at": "1763630676"
+    },
+    {
+      "id": 856985,
+      "name": "Sub1 Roller Bag",
+      "type": "optional",
+      "quantity": 1,
+      "sku": "856985",
+      "updated_at": "1763630676"
+    },
+    {
+      "id": 856996,
+      "name": "L1 Pro32 Array & Power Stand Bag",
+      "type": "optional",
+      "quantity": 1,
+      "sku": "856996",
+      "updated_at": "1763630676"
+    },
+    {
+      "id": 856986,
+      "name": "Sub2 Roller Bag",
+      "type": "optional",
+      "quantity": 1,
+      "sku": "856986",
+      "updated_at": "1763630676"
+    },
+    {
+      "id": 857000,
+      "name": "Sub1/Sub2 Adjustable Speaker Pole",
+      "type": "optional",
+      "quantity": 1,
+      "sku": "857000",
+      "updated_at": "1763630676"
+    },
+    {
+      "id": 751864,
+      "name": "F1 Subwoofer travel bag",
+      "type": "optional",
+      "quantity": 1,
+      "sku": "751864",
+      "updated_at": "1763630676"
+    },
+    {
+      "id": 809510,
+      "name": "T1 ToneMatch audio engine power supply",
+      "type": "optional",
+      "quantity": 1,
+      "sku": "809510",
+      "updated_at": "1763630676"
+    },
+    {
+      "id": 800615,
+      "name": "ToneMatch Carry Case",
+      "type": "optional",
+      "quantity": 1,
+      "sku": "800615",
+      "updated_at": "1763630676"
+    },
+    {
+      "id": 353689,
+      "name": "Veritas rack mount kit",
+      "type": "optional",
+      "quantity": 1,
+      "sku": "353689",
+      "updated_at": "1763630676"
+    },
+    {
+      "id": 808932,
+      "name": "AVM-1 sense microphone",
+      "type": "optional",
+      "quantity": 1,
+      "sku": "808932",
+      "updated_at": "1763630676"
+    },
+    {
+      "id": 790081,
+      "name": "ControlSpace EX endpoint microphone extension cable",
+      "type": "optional",
+      "quantity": 1,
+      "sku": "790081",
+      "updated_at": "1763630676"
+    },
+    {
+      "id": 790080,
+      "name": "ControlSpace EX endpoint mounting bracket",
+      "type": "optional",
+      "quantity": 1,
+      "sku": "790080",
+      "updated_at": "1763630676"
+    },
+    {
+      "id": 842415,
+      "name": "Videobar VB1",
+      "type": "optional",
+      "quantity": 1,
+      "sku": "842415",
+      "updated_at": "1763630676"
+    },
+    {
+      "id": 868751,
+      "name": "Videobar VB-S",
+      "type": "optional",
+      "quantity": 1,
+      "sku": "868751",
+      "updated_at": "1763630676"
+    },
+    {
+      "id": 869196,
+      "name": "Videobar display mounting kit",
+      "type": "optional",
+      "quantity": 1,
+      "sku": "869196",
+      "updated_at": "1763630676"
+    },
+    {
+      "id": 861846,
+      "name": "Videobar mud ring",
+      "type": "optional",
+      "quantity": 1,
+      "sku": "861846",
+      "updated_at": "1763630676"
+    },
+    {
+      "id": 843944,
+      "name": "Videobar right-angle USB 3.1 cable",
+      "type": "optional",
+      "quantity": 1,
+      "sku": "843944",
+      "updated_at": "1763630676"
+    },
+    {
+      "id": 842866,
+      "name": "FreeSpace FS4CE retrofit kit",
+      "type": "optional",
+      "quantity": 1,
+      "sku": "842866",
+      "updated_at": "1763630676"
+    },
+    {
+      "id": 29853,
+      "name": "FreeSpace 3 flush-mount satellite loudspeaker rough-in pan (6-pack)",
+      "type": "optional",
+      "quantity": 1,
+      "sku": "29853",
+      "updated_at": "1763630676"
+    },
+    {
+      "id": 29832,
+      "name": "FreeSpace 3 flush-mount satellite loudspeaker tile bridge (6-pack)",
+      "type": "optional",
+      "quantity": 1,
+      "sku": "29832",
+      "updated_at": "1763630676"
+    },
+    {
+      "id": 29855,
+      "name": "FreeSpace 3 Series II bass module rough-in pan (6-pack)",
+      "type": "optional",
+      "quantity": 1,
+      "sku": "29855",
+      "updated_at": "1763630676"
+    },
+    {
+      "id": 29854,
+      "name": "FreeSpace 3 Series II bass module tile bridge (6-pack))",
+      "type": "optional",
+      "quantity": 1,
+      "sku": "29854",
+      "updated_at": "1763630676"
+    },
+    {
+      "id": 41864,
+      "name": "FreeSpace DS 40F/DS 100F tile bridge (6-pack)",
+      "type": "optional",
+      "quantity": 1,
+      "sku": "41864",
+      "updated_at": "1763630676"
+    },
+    {
+      "id": 716018,
+      "name": "FreeSpace DS 40F/DS 100F retrofit kit",
+      "type": "optional",
+      "quantity": 1,
+      "sku": "716018",
+      "updated_at": "1763630676"
+    },
+    {
+      "id": 11,
+      "name": "ES1 Ceiling Audio Solution",
+      "type": "optional",
+      "quantity": 1,
+      "sku": "11",
+      "updated_at": "1763630676"
+    },
+    {
+      "id": 12,
+      "name": "DS4 Ceiling Audio Solution",
+      "type": "optional",
+      "quantity": 1,
+      "sku": "12",
+      "updated_at": "1763630676"
+    },
+    {
+      "id": 841161,
+      "name": "FreeSpace FS4CE tile bridge (6-pack)",
+      "type": "optional",
+      "quantity": 1,
+      "sku": "841161",
+      "updated_at": "1763630676"
+    },
+    {
+      "id": 788330,
+      "name": "Black grille for EdgeMax EM90/EM180 loudspeakers",
+      "type": "optional",
+      "quantity": 1,
+      "sku": "788330",
+      "updated_at": "1763630676"
+    },
+    {
+      "id": 889687,
+      "name": "Surface-Mount Pan and Tilt Bracket for AMU, DesignMax and FreeSpace",
+      "type": "optional",
+      "quantity": 1,
+      "sku": "889687",
+      "updated_at": "1763630676"
+    },
+    {
+      "id": 29854,
+      "name": "FreeSpace 3 Series II bass module tile bridge (6-pack))",
+      "type": "optional",
+      "quantity": 1,
+      "sku": "29854",
+      "updated_at": "1763630676"
+    },
+    {
+      "id": 843364,
+      "name": "FC108 U-Bracket",
+      "type": "optional",
+      "quantity": 1,
+      "sku": "843364",
+      "updated_at": "1763630676"
+    },
+    {
+      "id": 843364,
+      "name": "FC108 U-Bracket",
+      "type": "optional",
+      "quantity": 1,
+      "sku": "843364",
+      "updated_at": "1763630676"
+    },
+    {
+      "id": 353689,
+      "name": "Veritas rack mount kit",
+      "type": "optional",
+      "quantity": 1,
+      "sku": "353689",
+      "updated_at": "1763630676"
+    }
+  ]
+}

@@ -10,10 +10,12 @@ class ReorderableRow<T> extends StatelessWidget {
     required this.itemBuilder,
     this.extractId,
     this.semanticId,
+    this.childPadding,
   });
   final String? semanticId;
   final List<T> items;
   final String Function(T item)? extractId;
+  final EdgeInsetsGeometry? childPadding;
 
   final void Function(int oldIndex, int newIndex) onReorder;
   final Widget Function(BuildContext context, T item) itemBuilder;
@@ -30,6 +32,8 @@ class ReorderableRow<T> extends StatelessWidget {
         onReorder: onReorder,
         itemBuilder: itemBuilder,
         extractId: extractId,
+        childPadding: childPadding ?? EdgeInsets.symmetric(horizontal: 5, vertical: 0),
+
       ),
     );
   }
@@ -43,6 +47,7 @@ class ReorderableColumn<T> extends StatelessWidget {
     required this.onReorder,
     required this.itemBuilder,
     this.extractId,
+    this.childPadding,
   });
   final String? semanticId;
 
@@ -51,6 +56,8 @@ class ReorderableColumn<T> extends StatelessWidget {
 
   final void Function(int oldIndex, int newIndex) onReorder;
   final Widget Function(BuildContext context, T item) itemBuilder;
+  final EdgeInsetsGeometry? childPadding;
+
   @override
   Widget build(BuildContext context) {
     return SemanticHelper.container(
@@ -64,6 +71,8 @@ class ReorderableColumn<T> extends StatelessWidget {
         onReorder: onReorder,
         itemBuilder: itemBuilder,
         extractId: extractId,
+        childPadding: childPadding ?? const EdgeInsets.symmetric(horizontal: 5, vertical: 5),
+
       ),
     );
   }
@@ -78,6 +87,7 @@ class ReorderableFlex<T> extends StatefulWidget {
     required this.itemBuilder,
     required this.direction,
     this.extractId,
+    this.childPadding = const EdgeInsets.symmetric(horizontal: 5, vertical: 5),
   });
   final List<T> items;
   final String? semanticId;
@@ -86,6 +96,7 @@ class ReorderableFlex<T> extends StatefulWidget {
   final Widget Function(BuildContext context, T item) itemBuilder;
   final String Function(T item)? extractId;
   final Axis direction;
+  final EdgeInsetsGeometry childPadding;
   @override
   State<ReorderableFlex<T>> createState() => _ReorderableFlexState<T>();
 }
@@ -129,7 +140,7 @@ class _ReorderableFlexState<T> extends State<ReorderableFlex<T>> {
                   ? widget.extractId!(widget.items[index])
                   : index,
             ),
-            padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 5),
+            padding: widget.childPadding,
             child: ReorderableDragStartListener(
               index: index,
               child: widget.itemBuilder(context, widget.items[index]),

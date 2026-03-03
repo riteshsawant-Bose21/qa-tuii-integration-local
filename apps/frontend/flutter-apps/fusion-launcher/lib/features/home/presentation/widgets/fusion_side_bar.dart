@@ -4,12 +4,12 @@ import 'package:fusion_launcher/core/utils/bug_report_popup.dart';
 import 'package:fusion_launcher/features/authentication/launcher_sign_in_page.dart';
 import 'package:fusion_launcher/features/authentication/viewmodel/auth_view_model.dart';
 import 'package:fusion_launcher/features/home/presentation/pages/launcher_home_page.dart';
-import 'package:fusion_launcher/features/home/presentation/widgets/saved_projects_tab.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 
 import '../../../../core/services/user_session_manager.dart';
+import '../../../create_new_project/views/create_new_project_dialog.dart';
 
 class FusionSidebar extends StatefulWidget {
   final ValueNotifier<bool> showAllProjects;
@@ -266,6 +266,13 @@ class _FusionSidebarState extends State<FusionSidebar> {
                                           () => widget.onTabChanged?.call(
                                             DashboardTabs.settings,
                                           ),
+                                    ),
+                                    _HoverNavItem(
+                                      icon: Icons.account_circle,
+                                      title: DashboardTabs.testLibrady.name,
+                                      semanticsId: 'test_library_tab',
+                                      isSelected: widget.selectedTab == DashboardTabs.testLibrady,
+                                      onTap: () => widget.onTabChanged?.call(DashboardTabs.testLibrady),
                                     ),
                                   ],
                                 ),

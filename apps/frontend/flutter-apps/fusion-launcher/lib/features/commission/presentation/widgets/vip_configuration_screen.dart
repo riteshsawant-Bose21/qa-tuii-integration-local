@@ -46,38 +46,77 @@ class _VIPConfigurationScreenState extends State<VIPConfigurationScreen> {
       child: Column(
         children: <Widget>[
           Expanded(
-            child:
-                _isAutoSelect
-                    ? Center(
-                      child: ConstrainedBox(
-                        constraints: const BoxConstraints(
-                          maxWidth: 500,
-                        ),
-                        child: _buildFormSection(),
-                      ),
-                    )
-                    : Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+            child: LayoutBuilder(
+              builder: (BuildContext context, BoxConstraints constraints) {
+                final double maxWidth = constraints.maxWidth;
+                final double formCenterWidth = maxWidth < 500 ? maxWidth : 500.0;
+                // 56 is the total width of the middle gap: 20 + 16(VerticalDivider) + 20
+                final double splitSideWidth = ((maxWidth - 56) / 2).clamp(0.0, double.infinity);
+
+                return TweenAnimationBuilder<double>(
+                  tween: Tween<double>(
+                    begin: _isAutoSelect ? 0.0 : 1.0,
+                    end: _isAutoSelect ? 0.0 : 1.0,
+                  ),
+                  duration: const Duration(milliseconds: 600),
+                  curve: Curves.fastLinearToSlowEaseIn,
+                  builder: (BuildContext context, double value, Widget? formChild) {
+                    final double currentLeftX = (maxWidth > 500 ? (maxWidth - formCenterWidth) / 2 : 0.0) * (1 - value);
+                    final double currentLeftWidth = formCenterWidth + (splitSideWidth - formCenterWidth) * value;
+
+                    return Stack(
                       children: <Widget>[
-                        // Left side - Form
-                        Expanded(
-                          flex: 1,
-                          child: _buildFormSection(),
+                        // Left Form
+                        Positioned(
+                          left: currentLeftX,
+                          top: 0,
+                          bottom: 0,
+                          width: currentLeftWidth,
+                          child: Align(
+                            alignment: Alignment(0, -value), // Animate from center vertically to top
+                            child: SizedBox(
+                              width: double.infinity,
+                              child: formChild!,
+                            ),
+                          ),
                         ),
-                        const SizedBox(width: 20),
                         // Divider
-                        VerticalDivider(
-                          thickness: 1,
-                          color: context.colorScheme.strokeLight,
-                        ),
-                        const SizedBox(width: 20),
-                        // Right side - Devices
-                        Expanded(
-                          flex: 1,
-                          child: _buildDeviceListSection(),
-                        ),
+                        if (value > 0.01)
+                          Positioned(
+                            left: currentLeftX + currentLeftWidth + 20,
+                            top: 0,
+                            bottom: 0,
+                            width: 16,
+                            child: Opacity(
+                              opacity: value,
+                              child: VerticalDivider(
+                                thickness: 1,
+                                color: context.colorScheme.strokeLight,
+                              ),
+                            ),
+                          ),
+                        // Right Devices
+                        if (value > 0.01)
+                          Positioned(
+                            left: currentLeftX + currentLeftWidth + 56,
+                            top: 0,
+                            bottom: 0,
+                            width: splitSideWidth,
+                            child: Opacity(
+                              opacity: value,
+                              child: FractionalTranslation(
+                                translation: Offset(0.05 * (1 - value), 0),
+                                child: _buildDeviceListSection(),
+                              ),
+                            ),
+                          ),
                       ],
-                    ),
+                    );
+                  },
+                  child: _buildFormSection(),
+                );
+              },
+            ),
           ),
           const SizedBox(height: 32),
           // Bottom Button
@@ -126,7 +165,7 @@ class _VIPConfigurationScreenState extends State<VIPConfigurationScreen> {
             ),
             const SizedBox(width: 8),
             Text(
-              'Select hardware automatically',
+              'Select device automatically',
               style: TextStyle(
                 color: context.colorScheme.textBody,
                 fontSize: 13,

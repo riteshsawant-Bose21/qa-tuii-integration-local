@@ -29,6 +29,7 @@ class FusionTableRow {
   final Function(String)? onDragEnter;
   final VoidCallback? onDragLeave;
   final Function(String)? onDrop;
+  final Function(String)? onWillAccept;
   final bool isDragTarget;
 
   const FusionTableRow({
@@ -36,6 +37,7 @@ class FusionTableRow {
     required this.cells,
     this.onDragEnter,
     this.onDragLeave,
+    this.onWillAccept,
     this.onDrop,
     this.isDragTarget = false,
   });
@@ -96,10 +98,8 @@ class _FusionTableState extends State<FusionTable> {
     }
     _sortedRows = List<FusionTableRow>.from(widget.rows);
     _sortedRows.sort((FusionTableRow a, FusionTableRow b) {
-      final String aVal =
-          a.cells[_sortColumnKey]?.value?.toString().toLowerCase() ?? '';
-      final String bVal =
-          b.cells[_sortColumnKey]?.value?.toString().toLowerCase() ?? '';
+      final String aVal = a.cells[_sortColumnKey]?.value?.toString().toLowerCase() ?? '';
+      final String bVal = b.cells[_sortColumnKey]?.value?.toString().toLowerCase() ?? '';
       if (aVal == '--' || aVal == 'unassigned') return 1;
       if (bVal == '--' || bVal == 'unassigned') return -1;
       return _sortAscending ? aVal.compareTo(bVal) : -aVal.compareTo(bVal);
@@ -164,18 +164,17 @@ class _FusionTableState extends State<FusionTable> {
             ),
           ),
 
-          // BODY
-          Expanded(
-            child: ListView.builder(
-              controller: _verticalController,
-              itemCount: _sortedRows.length,
-              itemBuilder: (BuildContext context, int index) {
-                return _buildDataRow(_sortedRows[index], index);
-              },
-            ),
+        // BODY
+        Expanded(
+          child: ListView.builder(
+            controller: _verticalController,
+            itemCount: _sortedRows.length,
+            itemBuilder: (BuildContext context, int index) {
+              return _buildDataRow(_sortedRows[index], index);
+            },
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 
@@ -185,42 +184,28 @@ class _FusionTableState extends State<FusionTable> {
       onAccept: (String id) => row.onDrop?.call(id),
       onMove: (DragTargetDetails<String> d) => row.onDragEnter?.call(d.data),
       onLeave: (_) => row.onDragLeave?.call(),
-      builder:
-          (
-            BuildContext context,
-            List<String?> candidateData,
-            List<dynamic> rejectedData,
-          ) {
-            final bool isDragOver = candidateData.isNotEmpty;
-            return Container(
-              padding: const EdgeInsets.symmetric(
-                horizontal: 16,
-                vertical: 14,
-              ), // The 32px padding
-              decoration: BoxDecoration(
-                color: isDragOver
-                    ? context.colorScheme.primaryColor.withOpacity(0.1)
-                    : Colors.transparent,
-                border: Border(
-                  bottom: BorderSide(
-                    color: context.colorScheme.strokeLight.withOpacity(0.5),
-                  ),
+      builder: (BuildContext context, List<String?> candidateData, List<dynamic> rejectedData) {
+        final bool isDragOver = candidateData.isNotEmpty;
+        return Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8), // The 32px padding
+          decoration: BoxDecoration(
+            color: isDragOver ? context.colorScheme.primaryColor.withOpacity(0.1) : Colors.transparent,
+            border: Border(bottom: BorderSide(color: context.colorScheme.strokeLight.withOpacity(0.5))),
+          ),
+          child: Row(
+            // FLEX BODY ROWS - This was likely causing the overflow
+            children: widget.columns.map((FusionTableColumn column) {
+              return Expanded(
+                flex: column.flex,
+                child: Align(
+                  alignment: column.alignment,
+                  child: row.cells[column.key]?.child ?? const SizedBox(),
                 ),
-              ),
-              child: Row(
-                // FLEX BODY ROWS - This was likely causing the overflow
-                children: widget.columns.map((FusionTableColumn column) {
-                  return Expanded(
-                    flex: column.flex,
-                    child: Align(
-                      alignment: column.alignment,
-                      child: row.cells[column.key]?.child ?? const SizedBox(),
-                    ),
-                  );
-                }).toList(),
-              ),
-            );
-          },
+              );
+            }).toList(),
+          ),
+        );
+      },
     );
   }
 }

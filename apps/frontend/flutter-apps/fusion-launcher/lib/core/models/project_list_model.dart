@@ -7,7 +7,7 @@ import 'package:uuid/uuid.dart';
 class ProjectListModel {
   final String id;
   final String name;
-  final ProjectMetadataModel metaData;
+  final ProjectMetaData metaData;
   final List<Color> colors;
   final DateTime createdAt;
   final DateTime updatedAt;
@@ -39,7 +39,7 @@ class ProjectListModel {
     return ProjectListModel(
       id: json['id'] as String?,
       name: json['name'] as String,
-      metaData: ProjectMetadataModel.fromJson(decodedMetaData),
+      metaData: ProjectMetaData.fromJson(decodedMetaData),
       colors:
           (json['colors'] as List<dynamic>?)
               ?.map(
@@ -55,7 +55,7 @@ class ProjectListModel {
   ProjectListModel copyWith({
     String? id,
     String? name,
-    ProjectMetadataModel? metaData,
+    ProjectMetaData? metaData,
     List<Color>? colors,
     DateTime? createdAt,
     DateTime? updatedAt,

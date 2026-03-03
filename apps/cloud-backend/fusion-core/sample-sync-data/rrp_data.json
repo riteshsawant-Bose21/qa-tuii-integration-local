@@ -1,0 +1,244 @@
+{
+  "version": "1.0",
+    "rrp_data": [
+      {
+        "sku": 28337,
+        "variants": [
+          {
+            "variant": null,
+            "currency": "JPY",
+            "price": 11000,
+            "created_at": "2025-10-31T05:29:51Z",
+            "updated_at": "2025-10-31T05:29:51Z"
+          },
+          {
+            "variant": null,
+            "currency": "CNY",
+            "price": 760,
+            "created_at": "2025-10-31T05:29:51Z",
+            "updated_at": "2025-10-31T05:29:51Z"
+          },
+          {
+            "variant": null,
+            "currency": "EUR",
+            "price": 70,
+            "created_at": "2025-10-31T05:29:51Z",
+            "updated_at": "2025-10-31T05:29:51Z"
+          },
+          {
+            "variant": null,
+            "currency": "CAD",
+            "price": 108,
+            "created_at": "2025-10-31T05:29:51Z",
+            "updated_at": "2025-10-31T05:29:51Z"
+          },
+          {
+            "variant": null,
+            "currency": "GBP",
+            "price": 60,
+            "created_at": "2025-10-31T05:29:51Z",
+            "updated_at": "2025-10-31T05:29:51Z"
+          },
+          {
+            "variant": null,
+            "currency": "USD",
+            "price": 92,
+            "created_at": "2025-10-31T05:29:51Z",
+            "updated_at": "2025-10-31T05:29:51Z"
+          },
+          {
+            "variant": null,
+            "currency": "PLN",
+            "price": 300,
+            "created_at": "2025-10-31T05:29:51Z",
+            "updated_at": "2025-10-31T05:29:51Z"
+          },
+          {
+            "variant": null,
+            "currency": "NOK",
+            "price": 750,
+            "created_at": "2025-10-31T05:29:51Z",
+            "updated_at": "2025-10-31T05:29:51Z"
+          },
+          {
+            "variant": null,
+            "currency": "SEK",
+            "price": 700,
+            "created_at": "2025-10-31T05:29:51Z",
+            "updated_at": "2025-10-31T05:29:51Z"
+          },
+          {
+            "variant": null,
+            "currency": "AUD",
+            "price": 105,
+            "created_at": "2025-10-31T05:29:51Z",
+            "updated_at": "2025-10-31T05:29:51Z"
+          },
+          {
+            "variant": null,
+            "currency": "MXN",
+            "price": 1500,
+            "created_at": "2025-10-31T05:29:51Z",
+            "updated_at": "2025-10-31T05:29:51Z"
+          },
+          {
+            "variant": null,
+            "currency": "AED",
+            "price": 203,
+            "created_at": "2025-10-31T05:29:51Z",
+            "updated_at": "2025-10-31T05:29:51Z"
+          },
+          {
+            "variant": null,
+            "currency": "DKK",
+            "price": 520,
+            "created_at": "2025-10-31T05:29:51Z",
+            "updated_at": "2025-10-31T05:29:51Z"
+          },
+          {
+            "variant": null,
+            "currency": "NZD",
+            "price": 125,
+            "created_at": "2025-10-31T05:29:51Z",
+            "updated_at": "2025-10-31T05:29:51Z"
+          }
+        ]
+      },
+      {
+        "sku": 29832,
+        "variants": [
+          {
+            "variant": null,
+            "currency": "MXN",
+            "price": 1600,
+            "created_at": "2025-10-31T05:29:51Z",
+            "updated_at": "2025-10-31T05:29:51Z"
+          },
+          {
+            "variant": null,
+            "currency": "AED",
+            "price": 299,
+            "created_at": "2025-10-31T05:29:51Z",
+            "updated_at": "2025-10-31T05:29:51Z"
+          },
+          {
+            "variant": null,
+            "currency": "JPY",
+            "price": 10000,
+            "created_at": "2025-10-31T05:29:51Z",
+            "updated_at": "2025-10-31T05:29:51Z"
+          },
+          {
+            "variant": null,
+            "currency": "CNY",
+            "price": 1020,
+            "created_at": "2025-10-31T05:29:51Z",
+            "updated_at": "2025-10-31T05:29:51Z"
+          },
+          {
+            "variant": null,
+            "currency": "CAD",
+            "price": 102,
+            "created_at": "2025-10-31T05:29:51Z",
+            "updated_at": "2025-10-31T05:29:51Z"
+          },
+          {
+            "variant": null,
+            "currency": "USD",
+            "price": 88,
+            "created_at": "2025-10-31T05:29:51Z",
+            "updated_at": "2025-10-31T05:29:51Z"
+          }
+        ]
+      },
+      {
+        "sku": 29853,
+        "variants": [
+          {
+            "variant": null,
+            "currency": "USD",
+            "price": 74,
+            "created_at": "2025-10-31T05:29:51Z",
+            "updated_at": "2025-10-31T05:29:51Z"
+          },
+          {
+            "variant": null,
+            "currency": "GBP",
+            "price": 45,
+            "created_at": "2025-10-31T05:29:51Z",
+            "updated_at": "2025-10-31T05:29:51Z"
+          },
+          {
+            "variant": null,
+            "currency": "CAD",
+            "price": 88,
+            "created_at": "2025-10-31T05:29:51Z",
+            "updated_at": "2025-10-31T05:29:51Z"
+          },
+          {
+            "variant": null,
+            "currency": "PLN",
+            "price": 220,
+            "created_at": "2025-10-31T05:29:51Z",
+            "updated_at": "2025-10-31T05:29:51Z"
+          },
+          {
+            "variant": null,
+            "currency": "DKK",
+            "price": 370,
+            "created_at": "2025-10-31T05:29:51Z",
+            "updated_at": "2025-10-31T05:29:51Z"
+          },
+          {
+            "variant": null,
+            "currency": "EUR",
+            "price": 50,
+            "created_at": "2025-10-31T05:29:51Z",
+            "updated_at": "2025-10-31T05:29:51Z"
+          },
+          {
+            "variant": null,
+            "currency": "SEK",
+            "price": 500,
+            "created_at": "2025-10-31T05:29:51Z",
+            "updated_at": "2025-10-31T05:29:51Z"
+          },
+          {
+            "variant": null,
+            "currency": "MXN",
+            "price": 1100,
+            "created_at": "2025-10-31T05:29:51Z",
+            "updated_at": "2025-10-31T05:29:51Z"
+          },
+          {
+            "variant": null,
+            "currency": "AED",
+            "price": 247,
+            "created_at": "2025-10-31T05:29:51Z",
+            "updated_at": "2025-10-31T05:29:51Z"
+          },
+          {
+            "variant": null,
+            "currency": "JPY",
+            "price": 10000,
+            "created_at": "2025-10-31T05:29:51Z",
+            "updated_at": "2025-10-31T05:29:51Z"
+          },
+          {
+            "variant": null,
+            "currency": "CNY",
+            "price": 600,
+            "created_at": "2025-10-31T05:29:51Z",
+            "updated_at": "2025-10-31T05:29:51Z"
+          },
+          {
+            "variant": null,
+            "currency": "NOK",
+            "price": 500,
+            "created_at": "2025-10-31T05:29:51Z",
+            "updated_at": "2025-10-31T05:29:51Z"
+          }
+        ]
+      }
+    ]
+}

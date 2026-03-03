@@ -39,13 +39,20 @@ struct fusion_cn_substream *fusion_cn_find_substream(const char *stream_name)
     struct fusion_cn_chip *chip = platform_get_drvdata(g_pdev);
     struct fusion_cn_substream *stream;
     unsigned int bucket = hash_name(stream_name);
+    unsigned long flags;
 
+    if (!chip)
+        return NULL;
+
+    read_lock_irqsave(&chip->lock, flags);
     hlist_for_each_entry(stream, &chip->streams[bucket], hnode) {
         if (strcmp(stream->stream_name, stream_name) == 0) {
             kref_get(&stream->ref);
+            read_unlock_irqrestore(&chip->lock, flags);
             return stream;
         }
     }
+    read_unlock_irqrestore(&chip->lock, flags);
     return NULL;
 }
 
@@ -267,22 +274,22 @@ static int fusion_cn_pcm_open(struct snd_pcm_substream *substream)
 
     strscpy(stream_name, substream->pcm->name, sizeof(stream_name));
 
-    read_lock_irqsave(&chip->lock, flags);
     stream = fusion_cn_find_substream(stream_name);
     if (!stream) {
-        read_unlock_irqrestore(&chip->lock, flags);
         printk(KERN_WARNING "fusion_cn_alsa: pcm_open: Stream %s not found\n", stream_name);
         return -ENOENT;
     }
 
+    spin_lock_irqsave(&stream->lock, flags);
     if (stream->substream) {
-        read_unlock_irqrestore(&chip->lock, flags);
+        spin_unlock_irqrestore(&stream->lock, flags);
         printk(KERN_WARNING "fusion_cn_alsa: pcm_open: Stream %s already open\n", stream_name);
         kref_put(&stream->ref, fusion_cn_alsa_substream_release);
         return -EBUSY;
     }
 
     stream->substream = substream;
+    spin_unlock_irqrestore(&stream->lock, flags);
 
     hw.info = SNDRV_PCM_INFO_INTERLEAVED |
               SNDRV_PCM_INFO_BLOCK_TRANSFER;
@@ -298,7 +305,6 @@ static int fusion_cn_pcm_open(struct snd_pcm_substream *substream)
         break;
     default:
         stream->substream = NULL;
-        read_unlock_irqrestore(&chip->lock, flags);
         kref_put(&stream->ref, fusion_cn_alsa_substream_release);
         printk(KERN_ERR "fusion_cn_alsa: pcm_open: Invalid format %d for stream %s\n", stream->format, stream_name);
         return -EINVAL;
@@ -312,7 +318,6 @@ static int fusion_cn_pcm_open(struct snd_pcm_substream *substream)
         break;
     default:
         stream->substream = NULL;
-        read_unlock_irqrestore(&chip->lock, flags);
         kref_put(&stream->ref, fusion_cn_alsa_substream_release);
         printk(KERN_ERR "fusion_cn_alsa: pcm_open: Invalid rate %u for stream %s\n", stream->rate, stream_name);
         return -EINVAL;
@@ -333,7 +338,6 @@ static int fusion_cn_pcm_open(struct snd_pcm_substream *substream)
     err = snd_pcm_hw_constraint_list(runtime, 0, SNDRV_PCM_HW_PARAM_RATE, &constraints_rates);
     if (err < 0) {
         stream->substream = NULL;
-        read_unlock_irqrestore(&chip->lock, flags);
         kref_put(&stream->ref, fusion_cn_alsa_substream_release);
         return err;
     }
@@ -341,7 +345,6 @@ static int fusion_cn_pcm_open(struct snd_pcm_substream *substream)
     err = snd_pcm_hw_constraint_list(runtime, 0, SNDRV_PCM_HW_PARAM_PERIOD_SIZE, &constraints_period_sizes);
     if (err < 0) {
         stream->substream = NULL;
-        read_unlock_irqrestore(&chip->lock, flags);
         kref_put(&stream->ref, fusion_cn_alsa_substream_release);
         return err;
     }
@@ -350,7 +353,6 @@ static int fusion_cn_pcm_open(struct snd_pcm_substream *substream)
     err = snd_pcm_hw_constraint_list(runtime, 0, SNDRV_PCM_HW_PARAM_PERIODS, &constraints_periods);
     if (err < 0) {
         stream->substream = NULL;
-        read_unlock_irqrestore(&chip->lock, flags);
         kref_put(&stream->ref, fusion_cn_alsa_substream_release);
         return err;
     }
@@ -359,12 +361,9 @@ static int fusion_cn_pcm_open(struct snd_pcm_substream *substream)
                                        stream->rtp_frame_size * 2, stream->rtp_frame_size * 256);
     if (err < 0) {
         stream->substream = NULL;
-        read_unlock_irqrestore(&chip->lock, flags);
         kref_put(&stream->ref, fusion_cn_alsa_substream_release);
         return err;
     }
-
-    read_unlock_irqrestore(&chip->lock, flags);
 
     if (substream->dma_buffer.dev.type == SNDRV_DMA_TYPE_UNKNOWN) {
         err = snd_pcm_set_managed_buffer(substream,
@@ -519,10 +518,23 @@ static struct snd_pcm_ops fusion_cn_pcm_ops = {
 
 inline u32 fusion_cn_alsa_get_buffer_depth(struct fusion_cn_substream *stream)
 {
-    struct snd_pcm_substream *ss = stream->substream;
-    struct snd_pcm_runtime *rt = ss->runtime;
+    struct snd_pcm_substream *ss;
+    struct snd_pcm_runtime *rt;
     snd_pcm_uframes_t size, app, hw;
+    unsigned long flags;
+    u32 depth = 0;
 
+    if (fusion_cn_alsa_stream_disconnected(stream))
+        return 0;
+
+    spin_lock_irqsave(&stream->lock, flags);
+    ss = stream->substream;
+    if (!ss) {
+        spin_unlock_irqrestore(&stream->lock, flags);
+        return 0;
+    }
+    rt = ss->runtime;
+    snd_pcm_stream_lock_irq(ss);
     size = rt->buffer_size;
 
     /* appl_ptr / hw_ptr are monotonic; reduce to ring domain */
@@ -533,12 +545,15 @@ inline u32 fusion_cn_alsa_get_buffer_depth(struct fusion_cn_substream *stream)
         /* queued-to-DAC = buffer_size - playback_avail
            playback_avail = (size + hw - app) % size */
         snd_pcm_uframes_t avail = (size + hw - app) % size;
-        return (u32)(size - avail);
+        depth = (u32)(size - avail);
     } else {
         /* capture_avail = (size + app - hw) % size
            That's also “queued for consumer” in your capture-as-sink model */
-        return (u32)((size + app - hw) % size);
+        depth = (u32)((size + app - hw) % size);
     }
+    snd_pcm_stream_unlock_irq(ss);
+    spin_unlock_irqrestore(&stream->lock, flags);
+    return depth;
 }
 
 int fusion_cn_alsa_open_substream(struct fusion_cn_chip *alsa_chip, u64 stream_handle, const char *stream_name,
@@ -657,14 +672,11 @@ int fusion_cn_alsa_open_substream(struct fusion_cn_chip *alsa_chip, u64 stream_h
         goto stream_free;
     }
 
-    read_lock_irqsave(&chip->lock, flags);
     if (fusion_cn_find_substream(stream_name)) {
-        read_unlock_irqrestore(&chip->lock, flags);
         printk(KERN_WARNING "fusion_cn_alsa: open_substream: Stream %s already exists\n", stream_name);
         err = -EEXIST;
         goto stream_free;
     }
-    read_unlock_irqrestore(&chip->lock, flags);
 
     write_lock_irqsave(&chip->lock, flags);
     bucket = hash_name(stream_name);

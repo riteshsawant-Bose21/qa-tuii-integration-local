@@ -74,9 +74,40 @@ class SemanticHelper {
     return Semantics(
       container: true,
       identifier: testId,
-      toggled: value,
+      checked: value,
       label: label,
       excludeSemantics: excludeChildSemantics,
+      child: child,
+    );
+  }
+
+  // Radio controls
+  static Widget radio({
+    required String testId,
+    required bool value,
+    required Widget child,
+    String? label,
+    bool excludeChildSemantics = true,
+  }) {
+    return Semantics(
+      container: true,
+      identifier: testId,
+      selected: value,
+      label: label,
+      excludeSemantics: excludeChildSemantics,
+      child: child,
+    );
+  }
+
+  static Widget radioGroup({
+    required String testId,
+    required Widget child,
+    String? label,
+  }) {
+    return Semantics(
+      container: true,
+      identifier: testId,
+      label: label,
       child: child,
     );
   }
@@ -118,11 +149,13 @@ class SemanticHelper {
     required String testId,
     required Widget child,
     String? label,
+    String? value,
   }) {
     return Semantics(
       container: true,
       identifier: testId,
       label: label,
+      value: value,
       readOnly: true,
       child: child,
     );
