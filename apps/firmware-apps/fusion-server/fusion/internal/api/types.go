@@ -23,7 +23,6 @@ type AppConfig struct {
 	// IoT Core settings
 	IoTEnabled     bool
 	IoTEndpoint    string
-	IoTClientID    string
 	IoTTopicPrefix string
 }
 

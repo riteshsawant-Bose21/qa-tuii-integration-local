@@ -42,7 +42,6 @@ func parseFlags() *api.AppConfig {
 	// IoT Core flags
 	iotEnabled := flag.Bool("iot-enabled", false, "Enable AWS IoT Core metrics publishing")
 	iotEndpoint := flag.String("iot-endpoint", "", "AWS IoT Core endpoint (e.g., xxx-ats.iot.us-east-2.amazonaws.com)")
-	iotClientID := flag.String("iot-client-id", "", "AWS IoT Core client ID")
 	iotTopicPrefix := flag.String("iot-topic-prefix", "logs/", "Topic prefix for IoT messages")
 	flag.Parse()
 
@@ -74,9 +73,7 @@ func parseFlags() *api.AppConfig {
 	if envVal := os.Getenv("FUSION_IOT_ENDPOINT"); envVal != "" {
 		*iotEndpoint = envVal
 	}
-	if envVal := os.Getenv("FUSION_IOT_CLIENT_ID"); envVal != "" {
-		*iotClientID = envVal
-	}
+
 	if envVal := os.Getenv("FUSION_IOT_TOPIC_PREFIX"); envVal != "" {
 		*iotTopicPrefix = envVal
 	}
@@ -97,7 +94,6 @@ func parseFlags() *api.AppConfig {
 		Profile:        *profile,
 		IoTEnabled:     *iotEnabled,
 		IoTEndpoint:    *iotEndpoint,
-		IoTClientID:    *iotClientID,
 		IoTTopicPrefix: *iotTopicPrefix,
 	}
 }

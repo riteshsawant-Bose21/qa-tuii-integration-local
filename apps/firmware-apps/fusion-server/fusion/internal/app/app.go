@@ -571,10 +571,7 @@ func initIoTPublisher(config *api.AppConfig, metrics *cluster.MetricsCollector, 
 		return nil
 	}
 
-	clientID := config.IoTClientID
-	if clientID == "" {
-		clientID = config.NodeName
-	}
+	clientID := config.NodeName
 
 	iotConfig := &iot.Config{
 		Endpoint:    config.IoTEndpoint,

@@ -14,7 +14,6 @@ Type=simple
 Environment=FUSION_NET_IFACE=enp0s1
 Environment=FUSION_IOT_ENABLED=true
 Environment=FUSION_IOT_ENDPOINT=<iot endpoint>
-Environment=FUSION_IOT_CLIENT_ID=<vip device ip>
 Environment=FUSION_IOT_TOPIC_PREFIX=logs/
 ExecStart=/usr/local/bin/fusion-server
 Restart=always

@@ -158,10 +158,12 @@ func (p *Publisher) connect() error {
 	opts.AddBroker(broker)
 	opts.SetClientID(p.config.ClientID)
 	opts.SetTLSConfig(tlsConfig)
-	opts.SetKeepAlive(DefaultKeepAlive)
+	opts.SetKeepAlive(30 * time.Second)   // Reduced from 60s for more reliable keepalive
+	opts.SetPingTimeout(10 * time.Second) // Timeout for ping responses
 	opts.SetConnectTimeout(DefaultConnectTimeout)
 	opts.SetAutoReconnect(true)
 	opts.SetMaxReconnectInterval(30 * time.Second)
+	opts.SetConnectRetry(true) // Retry initial connection
 	opts.SetCleanSession(true)
 
 	opts.SetConnectionLostHandler(func(client mqtt.Client, err error) {
