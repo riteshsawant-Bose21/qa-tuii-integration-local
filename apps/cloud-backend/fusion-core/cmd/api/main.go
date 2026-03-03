@@ -76,7 +76,6 @@ func main() {
 			fmt.Printf("Error loading environment file %s: %v\n", *envFile, err)
 			os.Exit(1)
 		}
-		fmt.Println("Environment variables loaded from file successfully")
 	}
 
 	// Initialize configuration service
