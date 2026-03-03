@@ -5,8 +5,8 @@ import 'package:fusion_lib/fusion_lib.dart';
 enum DragSection { snapshots, scenes }
 
 /// Base state class for the Snapshots feature
-sealed class SnapshotsState extends Equatable {
-  const SnapshotsState();
+sealed class ConfigSnapshotsState extends Equatable {
+  const ConfigSnapshotsState();
 
   /// Get snapshots list (empty for non-loaded states)
   List<SnapshotsModel> get snapshots => <SnapshotsModel>[];
@@ -47,17 +47,17 @@ sealed class SnapshotsState extends Equatable {
 }
 
 /// Initial state - no data loaded yet
-class SnapshotsInitial extends SnapshotsState {
+class SnapshotsInitial extends ConfigSnapshotsState {
   const SnapshotsInitial();
 }
 
 /// Loading state - fetching snapshots
-class SnapshotsLoading extends SnapshotsState {
+class SnapshotsLoading extends ConfigSnapshotsState {
   const SnapshotsLoading();
 }
 
 /// Loaded state - snapshots successfully loaded
-class SnapshotsLoaded extends SnapshotsState {
+class SnapshotsLoaded extends ConfigSnapshotsState {
   @override
   final List<SnapshotsModel> snapshots;
 
@@ -112,7 +112,7 @@ class SnapshotsLoaded extends SnapshotsState {
 }
 
 /// Error state - failed to load snapshots
-class SnapshotsError extends SnapshotsState {
+class SnapshotsError extends ConfigSnapshotsState {
   final String message;
 
   const SnapshotsError({required this.message});

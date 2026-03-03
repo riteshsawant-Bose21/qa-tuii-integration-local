@@ -1,10 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/core/widgets/title_text_field_switcher.dart';
-import 'package:fusion_launcher/features/configuration_snapshot/viewModel/scenes_viewmodel/scene_sets_cubit.dart';
-import 'package:fusion_launcher/features/configuration_snapshot/viewModel/snapshot_viewmodel/snapshots_cubit.dart';
+import 'package:fusion_launcher/features/configuration_snapshot/viewModel/snapshot_viewmodel/config_snapshots_viewmodel.dart';
 import 'package:fusion_launcher/features/configuration_snapshot/widgets/snapshots/snapshot_list.dart';
-import 'package:fusion_launcher/features/configuration_snapshot/viewModel/snapshot_viewmodel/snapshots_state.dart';
 import 'package:fusion_lib/fusion_theme/app_theme.dart';
 import 'package:fusion_lib/fusion_widgets/others/fusion_dialog.dart';
 import 'package:fusion_lib/fusion_widgets/others/fusion_image.dart';
@@ -15,6 +13,8 @@ import 'package:fusion_lib/models/project_entities/non_processing/scene_set_mode
 import 'package:fusion_lib/models/project_entities/non_processing/snapshot_model.dart';
 
 import '../../../../core/constants/assets_constants.dart';
+import '../../viewModel/scenes_viewmodel/config_scene_sets_viewmodel.dart';
+import '../../viewModel/snapshot_viewmodel/config_snapshots_state.dart';
 
 class ScenesExpandableCard extends StatefulWidget {
   final SceneSetModel sceneSetData;
@@ -54,8 +54,8 @@ class ScenesExpandableCard extends StatefulWidget {
 
 class _ScenesExpandableCardState extends State<ScenesExpandableCard> {
   late ValueNotifier<bool> _isScenesExpanded;
-  SnapshotsCubit get _snapshotsCubit => context.read<SnapshotsCubit>();
-  SceneSetsCubit get _sceneSetsCubit => context.read<SceneSetsCubit>();
+  ConfigSnapshotsViewmodel get _configSnapshotsViewmodel => context.read<ConfigSnapshotsViewmodel>();
+  ConfigSceneSetsViewmodel get _configSceneSetsViewmodel => context.read<ConfigSceneSetsViewmodel>();
   final TextEditingController _snapshotsNameController = TextEditingController();
 
   bool _isHovered = false;
@@ -74,7 +74,7 @@ class _ScenesExpandableCardState extends State<ScenesExpandableCard> {
   }
 
   void _addNewSceneToSceneSet() {
-    _sceneSetsCubit.addSnapshotToSceneSet(widget.sceneSetData.id);
+    _configSceneSetsViewmodel.addSnapshotToSceneSet(widget.sceneSetData.id);
 
     /// expand the scene set to show the new item
     _isScenesExpanded.value = true;
@@ -116,12 +116,12 @@ class _ScenesExpandableCardState extends State<ScenesExpandableCard> {
               _isScenesExpanded.value = true;
 
               /// Delegate drop handling to cubit
-              _sceneSetsCubit.handleDropOnSceneSet(
+              _configSceneSetsViewmodel.handleDropOnSceneSet(
                 sceneSetId: widget.sceneSetData.id,
                 snapshot: details.data,
                 isDraggingFromScenes: widget.draggingFromSection == 'scenes',
               );
-              _snapshotsCubit.endDrag();
+              _configSnapshotsViewmodel.endDrag();
             },
             builder: (BuildContext context, List<SnapshotsModel?> candidateData, List<dynamic> rejectedData) {
               final bool isHovered =
@@ -175,7 +175,7 @@ class _ScenesExpandableCardState extends State<ScenesExpandableCard> {
                                 save: (String value) {
                                   if (value.isNotEmpty) {
                                     final SceneSetModel newScenesSet = widget.sceneSetData.copyWith(name: value);
-                                    _sceneSetsCubit.updateSceneSet(newScenesSet);
+                                    _configSceneSetsViewmodel.updateSceneSet(newScenesSet);
                                   }
                                 },
                               ),
@@ -274,8 +274,8 @@ class _ScenesExpandableCardState extends State<ScenesExpandableCard> {
                                   ),
                                 ),
                               )
-                              : BlocBuilder<SnapshotsCubit, SnapshotsState>(
-                                builder: (BuildContext context, SnapshotsState state) {
+                              : BlocBuilder<ConfigSnapshotsViewmodel, ConfigSnapshotsState>(
+                                builder: (BuildContext context, ConfigSnapshotsState state) {
                                   return SnapshotList(
                                     snapShotList: widget.snapShotList,
                                     selectedSnapshotId: state.selectedSnapshotId,
@@ -289,7 +289,7 @@ class _ScenesExpandableCardState extends State<ScenesExpandableCard> {
                                       }
                                     },
                                     onReorder: (int oldIndex, int newIndex) {
-                                      _sceneSetsCubit.reorderSnapshotsInSceneSet(
+                                      _configSceneSetsViewmodel.reorderSnapshotsInSceneSet(
                                         sceneSetId: widget.sceneSetData.id,
                                         oldIndex: oldIndex,
                                         newIndex: newIndex,
@@ -300,7 +300,7 @@ class _ScenesExpandableCardState extends State<ScenesExpandableCard> {
                                     onDragEnd: widget.onDragEnd,
                                     draggingSnapshotId: widget.draggingSnapshotId,
                                     onRenameSave: (String value, SnapshotsModel newSnapshot) {
-                                      _snapshotsCubit.updateSnapshot(newSnapshot);
+                                      _configSnapshotsViewmodel.updateSnapshot(newSnapshot);
                                     },
                                   );
                                 },

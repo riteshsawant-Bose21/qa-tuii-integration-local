@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:fusion_launcher/features/configuration_snapshot/viewModel/actions_viewmodel/snapshot_actions_cubit.dart';
+import 'package:fusion_launcher/features/configuration_snapshot/viewModel/actions_viewmodel/config_snapshot_actions_state.dart';
+import 'package:fusion_launcher/features/configuration_snapshot/viewModel/actions_viewmodel/config_snapshot_actions_viewmodel.dart';
 import 'package:fusion_launcher/features/configuration_snapshot/widgets/snapshots/snapshot_value_widget.dart';
-import 'package:fusion_launcher/features/configuration_snapshot/viewModel/actions_viewmodel/snapshot_actions_state.dart';
 import 'package:fusion_lib/fusion_theme/app_theme.dart';
 import 'package:fusion_lib/fusion_widgets/others/fusion_image.dart';
 import 'package:fusion_lib/fusion_widgets/others/fusion_toast.dart';
@@ -25,8 +25,8 @@ class SnapshotActionRowData extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return BlocBuilder<SnapshotActionsCubit, SnapshotActionsState>(
-      builder: (BuildContext context, SnapshotActionsState state) {
+    return BlocBuilder<ConfigSnapshotActionsViewModel, ConfigSnapshotActionsState>(
+      builder: (BuildContext context, ConfigSnapshotActionsState state) {
         // Get the latest action data from state
         final SceneActionModel? currentAction = state.getActionById(action.id);
         if (currentAction == null) {
@@ -53,7 +53,7 @@ class _SnapshotActionRowContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final SnapshotActionsCubit cubit = context.read<SnapshotActionsCubit>();
+    final ConfigSnapshotActionsViewModel cubit = context.read<ConfigSnapshotActionsViewModel>();
     final ColorScheme colorScheme = Theme.of(context).colorScheme;
 
     final List<SceneItemDropdown> itemList = _getItemList(cubit);
@@ -80,11 +80,11 @@ class _SnapshotActionRowContent extends StatelessWidget {
     );
   }
 
-  List<SceneItemDropdown> _getItemList(SnapshotActionsCubit cubit) {
+  List<SceneItemDropdown> _getItemList(ConfigSnapshotActionsViewModel cubit) {
     return action.actionType != null ? cubit.getActionItemsByType(action.actionType!) : <SceneItemDropdown>[];
   }
 
-  List<SceneParam> _getParamList(SnapshotActionsCubit cubit) {
+  List<SceneParam> _getParamList(ConfigSnapshotActionsViewModel cubit) {
     if (action.actionType == null) return <SceneParam>[];
 
     if (action.actionType == SceneActionType.snapshot) {
@@ -115,7 +115,7 @@ class _SnapshotActionRowContent extends StatelessWidget {
     );
   }
 
-  Widget _buildActionTypeDropdown(BuildContext context, SnapshotActionsCubit cubit) {
+  Widget _buildActionTypeDropdown(BuildContext context, ConfigSnapshotActionsViewModel cubit) {
     return Expanded(
       child: SemanticHelper.button(
         testId: SemanticHelper.createTestId(SemanticTypes.button, "snapshot_action_type_$index"),
@@ -136,7 +136,7 @@ class _SnapshotActionRowContent extends StatelessWidget {
 
   Widget _buildItemDropdown(
     BuildContext context,
-    SnapshotActionsCubit cubit,
+    ConfigSnapshotActionsViewModel cubit,
     List<SceneItemDropdown> itemList,
     bool isEnabled,
   ) {
@@ -177,7 +177,7 @@ class _SnapshotActionRowContent extends StatelessWidget {
     );
   }
 
-  Widget _buildParamDropdown(BuildContext context, SnapshotActionsCubit cubit, List<SceneParam> paramList) {
+  Widget _buildParamDropdown(BuildContext context, ConfigSnapshotActionsViewModel cubit, List<SceneParam> paramList) {
     SceneParam? selected;
     if (action.param != null && paramList.isNotEmpty) {
       selected =
@@ -204,7 +204,7 @@ class _SnapshotActionRowContent extends StatelessWidget {
     );
   }
 
-  Widget _buildValueWidget(BuildContext context, SnapshotActionsCubit cubit) {
+  Widget _buildValueWidget(BuildContext context, ConfigSnapshotActionsViewModel cubit) {
     if (action.param == null) return const Expanded(child: SizedBox.shrink());
 
     return Expanded(
@@ -227,7 +227,7 @@ class _SnapshotActionRowContent extends StatelessWidget {
     );
   }
 
-  Widget _buildActionButtons(BuildContext context, SnapshotActionsCubit cubit) {
+  Widget _buildActionButtons(BuildContext context, ConfigSnapshotActionsViewModel cubit) {
     return SizedBox(
       width: 46,
       child: Row(

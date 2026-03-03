@@ -2,13 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/core/service_locator.dart';
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
-import 'package:fusion_launcher/features/configuration_snapshot/viewModel/scenes_viewmodel/scene_sets_cubit.dart';
-import 'package:fusion_launcher/features/configuration_snapshot/viewModel/actions_viewmodel/snapshot_actions_cubit.dart';
-import 'package:fusion_launcher/features/configuration_snapshot/viewModel/snapshot_viewmodel/snapshots_cubit.dart';
+import 'package:fusion_launcher/features/configuration_snapshot/viewModel/snapshot_viewmodel/config_snapshots_viewmodel.dart';
 import 'package:fusion_launcher/features/configuration_snapshot/widgets/snapshots/snapshots_and_scenes_panel.dart';
-import 'package:fusion_launcher/features/configuration_snapshot/viewModel/snapshot_viewmodel/snapshots_state.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
+import '../viewModel/actions_viewmodel/config_snapshot_actions_viewmodel.dart';
+import '../viewModel/scenes_viewmodel/config_scene_sets_viewmodel.dart';
+import '../viewModel/snapshot_viewmodel/config_snapshots_state.dart';
 import 'actions/action_list.dart';
 
 class ConfigurationSnapshots extends StatelessWidget {
@@ -20,21 +20,21 @@ class ConfigurationSnapshots extends StatelessWidget {
 
     return MultiBlocProvider(
       providers: <BlocProvider<dynamic>>[
-        BlocProvider<SnapshotsCubit>(
+        BlocProvider<ConfigSnapshotsViewmodel>(
           create:
-              (BuildContext context) => SnapshotsCubit(
+              (BuildContext context) => ConfigSnapshotsViewmodel(
                 projectViewModel: projectViewModel,
               ),
         ),
-        BlocProvider<SceneSetsCubit>(
+        BlocProvider<ConfigSceneSetsViewmodel>(
           create:
-              (BuildContext context) => SceneSetsCubit(
+              (BuildContext context) => ConfigSceneSetsViewmodel(
                 projectViewModel: projectViewModel,
               ),
         ),
-        BlocProvider<SnapshotActionsCubit>(
+        BlocProvider<ConfigSnapshotActionsViewModel>(
           create:
-              (BuildContext context) => SnapshotActionsCubit(
+              (BuildContext context) => ConfigSnapshotActionsViewModel(
                 projectViewModel: projectViewModel,
               ),
         ),
@@ -54,11 +54,11 @@ class _ConfigurationSnapshotsBody extends StatefulWidget {
 class _ConfigurationSnapshotsBodyState extends State<_ConfigurationSnapshotsBody> {
   @override
   Widget build(BuildContext context) {
-    return BlocListener<SnapshotsCubit, SnapshotsState>(
-      listenWhen: (SnapshotsState previous, SnapshotsState current) => previous.selectedSnapshotId != current.selectedSnapshotId,
-      listener: (BuildContext context, SnapshotsState state) {
+    return BlocListener<ConfigSnapshotsViewmodel, ConfigSnapshotsState>(
+      listenWhen: (ConfigSnapshotsState previous, ConfigSnapshotsState current) => previous.selectedSnapshotId != current.selectedSnapshotId,
+      listener: (BuildContext context, ConfigSnapshotsState state) {
         // When selected snapshot changes, load actions for the new snapshot
-        context.read<SnapshotActionsCubit>().loadActionsForSnapshot(state.selectedSnapshotId);
+        context.read<ConfigSnapshotActionsViewModel>().loadActionsForSnapshot(state.selectedSnapshotId);
       },
       child: Scaffold(
         backgroundColor: context.colorScheme.primaryBlack,

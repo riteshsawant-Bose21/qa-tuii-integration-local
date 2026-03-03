@@ -2,8 +2,8 @@ import 'package:equatable/equatable.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
 /// Base state class for the Scene Sets feature
-sealed class SceneSetsState extends Equatable {
-  const SceneSetsState();
+sealed class ConfigSceneSetsState extends Equatable {
+  const ConfigSceneSetsState();
 
   /// Get scene sets list (empty for non-loaded states)
   List<SceneSetModel> get sceneSets => <SceneSetModel>[];
@@ -13,17 +13,17 @@ sealed class SceneSetsState extends Equatable {
 }
 
 /// Initial state - no data loaded yet
-class SceneSetsInitial extends SceneSetsState {
+class SceneSetsInitial extends ConfigSceneSetsState {
   const SceneSetsInitial();
 }
 
 /// Loading state - fetching scene sets
-class SceneSetsLoading extends SceneSetsState {
+class SceneSetsLoading extends ConfigSceneSetsState {
   const SceneSetsLoading();
 }
 
 /// Loaded state - scene sets successfully loaded
-class SceneSetsLoaded extends SceneSetsState {
+class SceneSetsLoaded extends ConfigSceneSetsState {
   @override
   final List<SceneSetModel> sceneSets;
 
@@ -45,7 +45,7 @@ class SceneSetsLoaded extends SceneSetsState {
 }
 
 /// Error state - failed to load scene sets
-class SceneSetsError extends SceneSetsState {
+class SceneSetsError extends ConfigSceneSetsState {
   final String message;
 
   const SceneSetsError({required this.message});

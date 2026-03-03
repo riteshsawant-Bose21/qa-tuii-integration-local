@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:fusion_launcher/features/configuration_snapshot/viewModel/actions_viewmodel/snapshot_actions_cubit.dart';
-import 'package:fusion_launcher/features/configuration_snapshot/viewModel/actions_viewmodel/snapshot_actions_state.dart';
-import 'package:fusion_launcher/features/configuration_snapshot/viewModel/snapshot_viewmodel/snapshots_cubit.dart';
+import 'package:fusion_launcher/features/configuration_snapshot/viewModel/actions_viewmodel/config_snapshot_actions_state.dart';
+import 'package:fusion_launcher/features/configuration_snapshot/viewModel/actions_viewmodel/config_snapshot_actions_viewmodel.dart';
+import 'package:fusion_launcher/features/configuration_snapshot/viewModel/snapshot_viewmodel/config_snapshots_viewmodel.dart';
 import 'package:fusion_launcher/features/configuration_snapshot/widgets/actions/snapshot_action_row_data.dart';
 import 'package:fusion_launcher/features/configuration_snapshot/widgets/actions/snapshot_action_row_header.dart';
 import 'package:fusion_launcher/features/configuration_snapshot/widgets/actions/snapshot_header_widget.dart';
@@ -26,8 +26,8 @@ class ActionList extends StatelessWidget {
       child: Column(
         children: <Widget>[
           /// Action List
-          BlocBuilder<SnapshotActionsCubit, SnapshotActionsState>(
-            builder: (BuildContext context, SnapshotActionsState state) {
+          BlocBuilder<ConfigSnapshotActionsViewModel, ConfigSnapshotActionsState>(
+            builder: (BuildContext context, ConfigSnapshotActionsState state) {
               return switch (state) {
                 SnapshotActionsInitial() => _buildNoSnapshotSelected(context),
                 SnapshotActionsLoading() => _buildLoading(context),
@@ -112,12 +112,12 @@ class ActionList extends StatelessWidget {
 
   /// Build loaded widget with actions list
   Widget _buildLoaded(BuildContext context, SnapshotActionsLoaded state) {
-    final SnapshotActionsCubit actionsCubit = context.read<SnapshotActionsCubit>();
-    final SnapshotsCubit snapshotsCubit = context.read<SnapshotsCubit>();
+    final ConfigSnapshotActionsViewModel actionsCubit = context.read<ConfigSnapshotActionsViewModel>();
+    final ConfigSnapshotsViewmodel configSnapshotsViewmodel = context.read<ConfigSnapshotsViewmodel>();
 
     final List<SceneActionModel> actionsList = state.actions;
-    final SnapshotsModel? selectedScene = snapshotsCubit.getSelectedSnapshotModel();
-    final SceneSetModel? sceneSet = snapshotsCubit.getSceneSetForSelectedSnapshot();
+    final SnapshotsModel? selectedScene = configSnapshotsViewmodel.getSelectedSnapshotModel();
+    final SceneSetModel? sceneSet = configSnapshotsViewmodel.getSceneSetForSelectedSnapshot();
 
     return Expanded(
       child: Column(
@@ -128,7 +128,7 @@ class ActionList extends StatelessWidget {
             onNameChanged: (String newName) {
               if (selectedScene != null) {
                 final SnapshotsModel scene = selectedScene.copyWith(name: newName);
-                snapshotsCubit.updateSnapshot(scene);
+                configSnapshotsViewmodel.updateSnapshot(scene);
               }
             },
             onAdd: () {

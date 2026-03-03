@@ -2,8 +2,8 @@ import 'package:equatable/equatable.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
 /// Base state class for the Snapshot Actions feature
-sealed class SnapshotActionsState extends Equatable {
-  const SnapshotActionsState();
+sealed class ConfigSnapshotActionsState extends Equatable {
+  const ConfigSnapshotActionsState();
 
   /// Get actions list (empty for non-loaded states)
   List<SceneActionModel> get actions => <SceneActionModel>[];
@@ -25,12 +25,12 @@ sealed class SnapshotActionsState extends Equatable {
 }
 
 /// Initial state - no snapshot selected
-class SnapshotActionsInitial extends SnapshotActionsState {
+class SnapshotActionsInitial extends ConfigSnapshotActionsState {
   const SnapshotActionsInitial();
 }
 
 /// Loading state - fetching actions for a snapshot
-class SnapshotActionsLoading extends SnapshotActionsState {
+class SnapshotActionsLoading extends ConfigSnapshotActionsState {
   @override
   final String? selectedSnapshotId;
 
@@ -41,7 +41,7 @@ class SnapshotActionsLoading extends SnapshotActionsState {
 }
 
 /// Loaded state - actions successfully loaded
-class SnapshotActionsLoaded extends SnapshotActionsState {
+class SnapshotActionsLoaded extends ConfigSnapshotActionsState {
   @override
   final List<SceneActionModel> actions;
 
@@ -69,7 +69,7 @@ class SnapshotActionsLoaded extends SnapshotActionsState {
 }
 
 /// Error state - failed to load actions
-class SnapshotActionsError extends SnapshotActionsState {
+class SnapshotActionsError extends ConfigSnapshotActionsState {
   final String message;
 
   @override

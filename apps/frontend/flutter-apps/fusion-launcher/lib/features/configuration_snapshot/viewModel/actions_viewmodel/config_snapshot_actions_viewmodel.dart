@@ -1,13 +1,13 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
-import 'package:fusion_launcher/features/configuration_snapshot/viewModel/actions_viewmodel/snapshot_actions_state.dart';
+import 'package:fusion_launcher/features/configuration_snapshot/viewModel/actions_viewmodel/config_snapshot_actions_state.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
 /// Cubit for managing Snapshot Actions feature state and business logic
-class SnapshotActionsCubit extends Cubit<SnapshotActionsState> {
+class ConfigSnapshotActionsViewModel extends Cubit<ConfigSnapshotActionsState> {
   final ProjectViewModel _projectViewModel;
 
-  SnapshotActionsCubit({
+  ConfigSnapshotActionsViewModel({
     required ProjectViewModel projectViewModel,
   }) : _projectViewModel = projectViewModel,
        super(const SnapshotActionsInitial());
@@ -42,7 +42,7 @@ class SnapshotActionsCubit extends Cubit<SnapshotActionsState> {
 
   /// Sync state with ProjectViewModel (refresh current actions)
   void syncWithProjectViewModel() {
-    final SnapshotActionsState currentState = state;
+    final ConfigSnapshotActionsState currentState = state;
     if (currentState.selectedSnapshotId == null) return;
 
     try {
@@ -78,7 +78,7 @@ class SnapshotActionsCubit extends Cubit<SnapshotActionsState> {
 
   /// Add action to selected snapshot
   void addAction() {
-    final SnapshotActionsState currentState = state;
+    final ConfigSnapshotActionsState currentState = state;
     if (currentState.selectedSnapshotId == null) return;
 
     final SceneActionModel action = SceneActionModel();
@@ -103,7 +103,7 @@ class SnapshotActionsCubit extends Cubit<SnapshotActionsState> {
 
   /// Reorder actions in the selected snapshot
   void reorderActions(int oldIndex, int newIndex) {
-    final SnapshotActionsState currentState = state;
+    final ConfigSnapshotActionsState currentState = state;
     if (currentState.selectedSnapshotId == null) return;
 
     int adjustedNewIndex = newIndex;

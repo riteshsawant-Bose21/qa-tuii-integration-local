@@ -1,13 +1,13 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
-import 'package:fusion_launcher/features/configuration_snapshot/viewModel/snapshot_viewmodel/snapshots_state.dart';
+import 'package:fusion_launcher/features/configuration_snapshot/viewModel/snapshot_viewmodel/config_snapshots_state.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
 /// Cubit for managing Snapshots feature state and business logic
-class SnapshotsCubit extends Cubit<SnapshotsState> {
+class ConfigSnapshotsViewmodel extends Cubit<ConfigSnapshotsState> {
   final ProjectViewModel _projectViewModel;
 
-  SnapshotsCubit({
+  ConfigSnapshotsViewmodel({
     required ProjectViewModel projectViewModel,
   }) : _projectViewModel = projectViewModel,
        super(const SnapshotsInitial()) {
@@ -34,7 +34,7 @@ class SnapshotsCubit extends Cubit<SnapshotsState> {
 
   /// Sync state with ProjectViewModel
   void syncWithProjectViewModel() {
-    final SnapshotsState currentState = state;
+    final ConfigSnapshotsState currentState = state;
 
     try {
       final List<SnapshotsModel> snapshots = _projectViewModel.getAllSnapshots();
@@ -67,7 +67,7 @@ class SnapshotsCubit extends Cubit<SnapshotsState> {
   void selectSnapshot(String? snapshotId) {
     _projectViewModel.setSelectedSnapshotId(snapshotId);
 
-    final SnapshotsState currentState = state;
+    final ConfigSnapshotsState currentState = state;
     if (currentState is SnapshotsLoaded) {
       emit(
         currentState.copyWith(
@@ -149,7 +149,7 @@ class SnapshotsCubit extends Cubit<SnapshotsState> {
 
   /// Start dragging a snapshot
   void startDrag(String snapshotId, DragSection fromSection) {
-    final SnapshotsState currentState = state;
+    final ConfigSnapshotsState currentState = state;
     if (currentState is SnapshotsLoaded) {
       emit(
         currentState.copyWith(
@@ -162,7 +162,7 @@ class SnapshotsCubit extends Cubit<SnapshotsState> {
 
   /// End dragging
   void endDrag() {
-    final SnapshotsState currentState = state;
+    final ConfigSnapshotsState currentState = state;
     if (currentState is SnapshotsLoaded) {
       emit(
         currentState.copyWith(
@@ -205,7 +205,7 @@ class SnapshotsCubit extends Cubit<SnapshotsState> {
 
   /// Update the height of the sources panel
   void updateSourcesHeight(double delta, double screenHeight) {
-    final SnapshotsState currentState = state;
+    final ConfigSnapshotsState currentState = state;
     if (currentState is SnapshotsLoaded) {
       final double minHeight = screenHeight * 0.15;
       final double maxHeight = screenHeight * 0.5;
@@ -216,7 +216,7 @@ class SnapshotsCubit extends Cubit<SnapshotsState> {
 
   /// Initialize sources height based on screen size
   void initializeSourcesHeight(double screenHeight) {
-    final SnapshotsState currentState = state;
+    final ConfigSnapshotsState currentState = state;
     if (currentState is SnapshotsLoaded) {
       final double totalHeight = screenHeight;
       final double initialHeight = (totalHeight - 100) * 0.4;
