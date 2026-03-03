@@ -29,6 +29,10 @@ type DatabaseService interface {
 	GetLatestReleaseNewerThan(ctx context.Context, platformName, channelName, currentVersion string) (*model.FirmwareRelease, error)
 	GetReleaseByPlatformAndVersion(ctx context.Context, platform string, version string) (*model.FirmwareRelease, error)
 	LogFirmwareUpdate(ctx context.Context, deviceID, releaseVersion, status string, eventTime time.Time) error
+
+	// Bundle operations
+	GetBundleByVersion(ctx context.Context, version string) (*model.Bundle, error)
+	InsertBundle(ctx context.Context, payload types.NotifyBundleUploadPayload, tx customModel.DBContextExecutor, logger *zap.Logger) (string, error)
 }
 
 // PresignerService defines the interface for generating presigned URLs.

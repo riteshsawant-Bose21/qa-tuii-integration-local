@@ -71,6 +71,57 @@
                 }
             }
         },
+        "/firmware/bundles": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Creates a new firmware bundle entry containing the manifest details. This is intended to be called by CI/CD pipelines after successfully uploading a bundle to S3.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Firmware Update - CI/CD API"
+                ],
+                "summary": "Notify Firmware Bundle Upload",
+                "parameters": [
+                    {
+                        "description": "Firmware bundle metadata including version, checksum, and manifest",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/types.NotifyBundleUploadPayload"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Returns the created bundle details",
+                        "schema": {
+                            "$ref": "#/definitions/types.BundleResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid request payload or version already exists",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/firmware/releases": {
             "get": {
                 "security": [
@@ -2083,6 +2134,14 @@
                 }
             }
         },
+        "types.BundleResponse": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "string"
+                }
+            }
+        },
         "types.CheckUpdateRequest": {
             "type": "object",
             "required": [
@@ -2441,6 +2500,34 @@
                         "INSTALL_SUCCESS",
                         "INSTALL_FAILED"
                     ]
+                }
+            }
+        },
+        "types.NotifyBundleUploadPayload": {
+            "type": "object",
+            "required": [
+                "checksum",
+                "manifest_data",
+                "min_desktop_app_version",
+                "min_prev_version",
+                "version"
+            ],
+            "properties": {
+                "checksum": {
+                    "type": "string"
+                },
+                "manifest_data": {},
+                "min_desktop_app_version": {
+                    "type": "string"
+                },
+                "min_prev_version": {
+                    "type": "string"
+                },
+                "release_notes": {
+                    "type": "string"
+                },
+                "version": {
+                    "type": "string"
                 }
             }
         },

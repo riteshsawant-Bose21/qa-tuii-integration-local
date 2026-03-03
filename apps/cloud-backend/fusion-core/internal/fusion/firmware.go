@@ -15,4 +15,7 @@ type Firmware interface {
 	ListReleases(ctx context.Context, platform string, page, limit int, minVersion string) (*types.FirmwareReleaseListResponse, error)
 	LogFirmwareUpdate(ctx context.Context, req *types.LogFirmwareUpdateRequest) error
 	DeployRelease(ctx context.Context, releaseID string, channel string, logger *zap.Logger) error
+
+	// Bundle Operations
+	NotifyBundleUpload(ctx context.Context, payload *types.NotifyBundleUploadPayload, logger *zap.Logger) (*types.BundleResponse, error)
 }

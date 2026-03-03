@@ -3,6 +3,7 @@ package db
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"time"
@@ -10,6 +11,8 @@ import (
 	types "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/api/types"
 	customModel "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/model"
 	model "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/model/models"
+
+	"github.com/aarondl/null/v8"
 
 	"github.com/aarondl/sqlboiler/v4/boil"
 	"github.com/aarondl/sqlboiler/v4/queries/qm"
@@ -227,4 +230,55 @@ func (s *Service) GetReleaseByPlatformVersion(ctx context.Context, platform stri
 	}
 
 	return release, nil
+}
+
+func (s *Service) GetBundleByVersion(ctx context.Context, version string) (*model.Bundle, error) {
+	if version == "" {
+		return nil, errors.New("version cannot be empty")
+	}
+
+	bundle, err := model.Bundles(
+		model.BundleWhere.Version.EQ(version),
+	).One(ctx, s.db)
+
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("failed to get bundle: %w", err)
+	}
+
+	return bundle, nil
+}
+
+func (s *Service) InsertBundle(ctx context.Context, payload types.NotifyBundleUploadPayload, tx customModel.DBContextExecutor, logger *zap.Logger) (string, error) {
+
+	// Convert manifest data to proper JSON for sqlboiler type
+	manifestBytes, err := json.Marshal(payload.ManifestData)
+	if err != nil {
+		logger.Error("Failed to marshal manifest data", zap.Error(err))
+		return "", fmt.Errorf("failed to marshal manifest: %w", err)
+	}
+
+	bundleRecord := &model.Bundle{
+		Version:              payload.Version,
+		Checksum:             payload.Checksum,
+		MinPrevVersion:       payload.MinPrevVersion,
+		MinDesktopAppVersion: payload.MinDesktopAppVersion,
+		ManifestData:         manifestBytes,
+		IsApproved:           false,
+	}
+
+	if payload.ReleaseNotes != "" {
+		bundleRecord.ReleaseNotes = null.StringFrom(payload.ReleaseNotes)
+	}
+
+	if err := bundleRecord.Insert(ctx, tx, boil.Infer()); err != nil {
+		logger.Error("Error inserting firmware bundle",
+			zap.Error(err),
+			zap.String("version", payload.Version))
+		return "", err
+	}
+
+	return bundleRecord.ID, nil
 }

@@ -64,6 +64,47 @@ func (h *FirmwareUpdateHandler) InitiateRelease(ctx *gin.Context) {
 	response.OK(ctx, types.FormwareReleaseInitiateResposne{ReleaseID: ID, PresignedURL: presignURL})
 }
 
+// NotifyBundleUpload registers a new firmware bundle that has been uploaded to S3
+// @Summary Notify Firmware Bundle Upload
+// @Description Creates a new firmware bundle entry containing the manifest details. This is intended to be called by CI/CD pipelines after successfully uploading a bundle to S3.
+// @Tags Firmware Update - CI/CD API
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param request body types.NotifyBundleUploadPayload true "Firmware bundle metadata including version, checksum, and manifest"
+// @Success 200 {object} types.BundleResponse "Returns the created bundle details"
+// @Failure 400 {object} types.ErrorResponse "Invalid request payload or version already exists"
+// @Failure 500 {object} types.ErrorResponse "Internal server error"
+// @Router /firmware/bundles [post]
+func (h *FirmwareUpdateHandler) NotifyBundleUpload(ctx *gin.Context) {
+	var payload types.NotifyBundleUploadPayload
+	loggerFromContext, exists := ctx.Get("logger")
+	if !exists {
+		response.InternalError(ctx)
+		return
+	}
+	logger := loggerFromContext.(*zap.Logger)
+
+	if err := ctx.ShouldBindJSON(&payload); err != nil {
+		logger.Error("Failed to bind NotifyBundleUpload payload", zap.Error(err))
+		response.BadRequest(ctx, "Invalid request payload: "+err.Error())
+		return
+	}
+
+	bundleResp, err := h.firmware.NotifyBundleUpload(ctx, &payload, logger)
+	if err != nil {
+		logger.Error("Failed to notify bundle upload", zap.Error(err))
+		if errors.Is(err, errorutil.ErrVersionExists) {
+			response.BadRequest(ctx, err.Error())
+			return
+		}
+		response.InternalError(ctx)
+		return
+	}
+
+	response.OK(ctx, bundleResp)
+}
+
 // MakeReleaseAvailable publishes a firmware release to a deployment channel
 // @Summary Make Release Available
 // @Description Updates the release status to 'AVAILABLE' and creates a deployment entry for the specified channel, making the firmware available for devices to download

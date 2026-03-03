@@ -67,6 +67,7 @@ const (
 	EndpointOrganizationUsers = "/users"
 
 	EndpointFirmware                = "/firmware"
+	EndpointFirmwareBundles         = "/bundles"
 	EndpointFirmwareList            = "/releases"
 	EndpointFirmwareInitiateRelease = "/releases"
 	EndpointFirmwareMakeAvailable   = "/releases/:releaseID/mark-available"

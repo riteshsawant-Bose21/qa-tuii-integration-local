@@ -29,6 +29,19 @@ type FormwareReleaseInitiateResposne struct {
 	PresignedURL string `json:"presignedUrl"`
 }
 
+type NotifyBundleUploadPayload struct {
+	Version              string      `json:"version" binding:"required"`
+	Checksum             string      `json:"checksum" binding:"required"`
+	ReleaseNotes         string      `json:"release_notes"`
+	MinPrevVersion       string      `json:"min_prev_version" binding:"required"`
+	MinDesktopAppVersion string      `json:"min_desktop_app_version" binding:"required"`
+	ManifestData         interface{} `json:"manifest_data" binding:"required"`
+}
+
+type BundleResponse struct {
+	ID string `json:"id"`
+}
+
 type FirmwareReleaseDetails struct {
 	ID                   string    `json:"id"`
 	Platform             string    `json:"platform"`

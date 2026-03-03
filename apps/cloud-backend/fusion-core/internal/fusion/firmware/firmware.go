@@ -51,7 +51,7 @@ func (s *Service) InitiateRelease(ctx context.Context, releaseDetails *types.Ini
 		return "", "", nil
 	}
 
-	// Validate version format MAJOR.MINOR.PATCH
+	// Validate version format MAJOR.MINOR.PATCH+prerelease_tag.prerelease_version
 	err = validation.ValidateFirmwareVersionFormat(releaseDetails.MetaData.FirmwareVersion)
 	if err != nil {
 		return "", "", fmt.Errorf("failed to validate firmware version format: %v", err)
@@ -96,6 +96,34 @@ func (s *Service) InitiateRelease(ctx context.Context, releaseDetails *types.Ini
 	}
 
 	return ID, presignURL, nil
+}
+
+func (s *Service) NotifyBundleUpload(ctx context.Context, payload *types.NotifyBundleUploadPayload, logger *zap.Logger) (*types.BundleResponse, error) {
+	// Validate version format MAJOR.MINOR.PATCH+prerelease_tag.prerelease_version
+	err := validation.ValidateFirmwareVersionFormat(payload.Version)
+	if err != nil {
+		return nil, fmt.Errorf("failed to validate bundle version format: %v", err)
+	}
+
+	// Check if the specific bundle version already exists
+	existingBundle, err := s.dbService.GetBundleByVersion(ctx, payload.Version)
+	if err != nil {
+		return nil, fmt.Errorf("failed to check existing bundle version: %w", err)
+	}
+
+	if existingBundle != nil {
+		return nil, errorutil.ErrVersionExists
+	}
+
+	// Insert into bundle table
+	ID, err := s.dbService.InsertBundle(ctx, *payload, s.dbService.GetDB(ctx), logger)
+	if err != nil {
+		return nil, fmt.Errorf("failed to insert firmware bundle: %v", err)
+	}
+
+	return &types.BundleResponse{
+		ID: ID,
+	}, nil
 }
 
 func (s *Service) MakeReleaseAvailable(ctx context.Context, releaseID string, logger *zap.Logger) error {

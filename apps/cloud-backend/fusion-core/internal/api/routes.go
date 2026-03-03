@@ -116,6 +116,7 @@ func (a *API) registerRoutes() {
 
 	{
 		// Internal APIs - TODO: Add Authentication
+		firmwareUpdate.POST(constants.EndpointFirmwareBundles, firmwareHandler.NotifyBundleUpload)
 		firmwareUpdate.POST(constants.EndpointFirmwareInitiateRelease, firmwareHandler.InitiateRelease)
 		firmwareUpdate.POST(constants.EndpointFirmwareMakeAvailable, firmwareHandler.MakeReleaseAvailable)
 	}

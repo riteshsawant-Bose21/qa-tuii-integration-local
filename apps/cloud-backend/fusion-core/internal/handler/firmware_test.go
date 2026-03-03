@@ -67,6 +67,14 @@ func (m *MockFirmwareService) DeployRelease(ctx context.Context, releaseID strin
 	return args.Error(0)
 }
 
+func (m *MockFirmwareService) NotifyBundleUpload(ctx context.Context, payload *types.NotifyBundleUploadPayload, logger *zap.Logger) (*types.BundleResponse, error) {
+	args := m.Called(ctx, payload, logger)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*types.BundleResponse), args.Error(1)
+}
+
 // --- Helper ---
 
 func setupTestContext(method, url string, body interface{}) (*httptest.ResponseRecorder, *gin.Context) {
@@ -214,6 +222,122 @@ func TestInitiateRelease(t *testing.T) {
 			}
 
 			h.InitiateRelease(c)
+
+			assert.Equal(t, tt.expectedStatus, w.Code)
+
+			if tt.expectedBody != nil {
+				var response map[string]interface{}
+				err := json.Unmarshal(w.Body.Bytes(), &response)
+				assert.NoError(t, err)
+				for key, expectedValue := range tt.expectedBody {
+					assert.Equal(t, expectedValue, response[key])
+				}
+			}
+
+			mockFirmware.AssertExpectations(t)
+		})
+	}
+}
+
+// ==================== NotifyBundleUpload Tests ====================
+
+func TestNotifyBundleUpload(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	validPayload := types.NotifyBundleUploadPayload{
+		Version:              "2.0.0",
+		Checksum:             "abc123checksum",
+		ReleaseNotes:         "Bug fixes and improvements",
+		MinPrevVersion:       "1.0.0",
+		MinDesktopAppVersion: "1.0.0",
+		ManifestData: map[string]interface{}{
+			"devices": []string{"amp-8x300", "amp-4x150"},
+		},
+	}
+
+	tests := []struct {
+		name           string
+		requestBody    interface{}
+		setupLogger    bool
+		mockSetup      func(m *MockFirmwareService)
+		expectedStatus int
+		expectedBody   map[string]interface{}
+	}{
+		{
+			name:        "success - new bundle uploaded",
+			requestBody: validPayload,
+			setupLogger: true,
+			mockSetup: func(m *MockFirmwareService) {
+				m.On("NotifyBundleUpload", mock.Anything, mock.AnythingOfType("*types.NotifyBundleUploadPayload"), mock.AnythingOfType("*zap.Logger")).
+					Return(&types.BundleResponse{ID: "bundle-uuid-123"}, nil)
+			},
+			expectedStatus: http.StatusOK,
+			expectedBody: map[string]interface{}{
+				"id": "bundle-uuid-123",
+			},
+		},
+		{
+			name:           "bad request - invalid JSON payload",
+			requestBody:    "invalid json{",
+			setupLogger:    true,
+			mockSetup:      func(m *MockFirmwareService) {},
+			expectedStatus: http.StatusBadRequest,
+		},
+		{
+			name: "bad request - missing required fields",
+			requestBody: map[string]interface{}{
+				"checksum": "abc123",
+			},
+			setupLogger:    true,
+			mockSetup:      func(m *MockFirmwareService) {},
+			expectedStatus: http.StatusBadRequest,
+		},
+		{
+			name:        "bad request - version already exists",
+			requestBody: validPayload,
+			setupLogger: true,
+			mockSetup: func(m *MockFirmwareService) {
+				m.On("NotifyBundleUpload", mock.Anything, mock.AnythingOfType("*types.NotifyBundleUploadPayload"), mock.AnythingOfType("*zap.Logger")).
+					Return(nil, errorutil.ErrVersionExists)
+			},
+			expectedStatus: http.StatusBadRequest,
+		},
+		{
+			name:        "internal server error - DB failure",
+			requestBody: validPayload,
+			setupLogger: true,
+			mockSetup: func(m *MockFirmwareService) {
+				m.On("NotifyBundleUpload", mock.Anything, mock.AnythingOfType("*types.NotifyBundleUploadPayload"), mock.AnythingOfType("*zap.Logger")).
+					Return(nil, errors.New("db connection failed"))
+			},
+			expectedStatus: http.StatusInternalServerError,
+			expectedBody: map[string]interface{}{
+				"error": "Internal Server Error",
+			},
+		},
+		{
+			name:           "internal server error - logger not in context",
+			requestBody:    validPayload,
+			setupLogger:    false,
+			mockSetup:      func(m *MockFirmwareService) {},
+			expectedStatus: http.StatusInternalServerError,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mockFirmware := new(MockFirmwareService)
+			tt.mockSetup(mockFirmware)
+
+			h := NewFirmwareUpdateHandler(mockFirmware)
+
+			w, c := setupTestContext(http.MethodPost, "/firmware/bundles", tt.requestBody)
+			if !tt.setupLogger {
+				c.Set("logger", nil)
+				c.Keys = map[string]interface{}{}
+			}
+
+			h.NotifyBundleUpload(c)
 
 			assert.Equal(t, tt.expectedStatus, w.Code)
 
