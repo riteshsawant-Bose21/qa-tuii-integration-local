@@ -549,16 +549,7 @@ int fusion_cn_mgr_start(struct fusion_cn_manager *mgr)
         }
         process_thread = worker->task;
         set_cpus_allowed_ptr(process_thread, cpumask_of(3));
-        if (worker_rt_prio > 0) {
-            struct sched_attr attr = {};
-            attr.size = sizeof(attr);
-            attr.sched_policy = SCHED_FIFO;
-            attr.sched_priority = worker_rt_prio;
-            int rc = sched_setattr_nocheck(process_thread, &attr);
-            if (rc)
-                pr_warn("fusion_cn: failed to set RT prio %d for worker: %d\n",
-                        worker_rt_prio, rc);
-        }
+        /* RT prio set from userspace (irq-affinity.sh) */
         kthread_init_work(&process_work, audio_frame_process_work);
         atomic_set(&process_pending, 0);
         /* Publish the worker only after fully initialized */
