@@ -1,26 +1,27 @@
-
-
-// WORKING VERSION - before adding action button
 import 'package:flutter/material.dart';
+// import 'dart:ui';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_web/core/presentation/base_viewmodel.dart';
-import 'package:fusion_web/features/projects/presentation/handlers/project_actions_handler.dart';
-import 'package:fusion_web/features/projects/presentation/widgets/filter_dropdown.dart';
-import 'package:fusion_web/features/projects/presentation/widgets/project_actions_menu.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:fusion_web/features/projects/presentation/viewmodels/projects_viewmodel.dart';
-import 'package:fusion_web/features/projects/data/datasources/project_datasource.dart';
-import 'package:fusion_web/features/projects/data/repositories/projects_repository_impl.dart';
 import 'package:fusion_web/features/projects/data/models/project_model.dart';
 import 'package:fusion_web/core/services/service_locator.dart';
-import 'package:fusion_web/features/projects/presentation/pages/project_detail_page.dart';
 import 'package:fusion_web/core/constants/app_constants.dart';
-import 'package:fusion_lib/fusion_widgets/shared_widgets/project/project_dialog.dart';
-import 'package:fusion_lib/fusion_widgets/shared_widgets/project/animated_blur_dialog_route.dart';
-import 'dart:ui';
-import 'package:fusion_lib/fusion_widgets/shared_widgets/project/confirmation_dialog.dart';
-import 'package:fusion_web/features/projects/presentation/dialogs/invite_user_dialog.dart';
+//Routes
 import 'package:go_router/go_router.dart';
+//Handlers
+import 'package:fusion_web/features/projects/presentation/handlers/project_actions_handler.dart';
+//Widgets
+import 'package:fusion_web/features/projects/presentation/widgets/view_toggle_button.dart';
+import 'package:fusion_web/features/projects/presentation/widgets/filter_dropdown.dart';
+import 'package:fusion_web/features/projects/presentation/widgets/project_actions_menu.dart';
+import 'package:fusion_web/features/projects/presentation/widgets/status_badge.dart';
+import 'package:fusion_web/features/projects/presentation/widgets/health_stat.dart';
+import 'package:fusion_web/features/projects/presentation/widgets/incidents_badge.dart';
+import 'package:fusion_web/features/projects/presentation/widgets/grid_info_row.dart';
+import 'package:fusion_web/features/projects/presentation/widgets/type_pill.dart';
+import 'package:fusion_web/features/projects/presentation/widgets/device_health_box.dart';
+import 'package:fusion_web/features/projects/presentation/widgets/open_incidents_warning.dart';
 
 class ProjectsPage extends StatefulWidget {
   const ProjectsPage({super.key});
@@ -37,7 +38,7 @@ class _ProjectsPageState extends State<ProjectsPage> {
   String _searchQuery = '';
   String _selectedRegions = 'All';
   String _selectedStatus = 'All';
-  String _selectedFilterType = 'Last Updated';
+  final String _selectedFilterType = 'Last Updated';
 
   bool _isGridView = false;
 
@@ -76,43 +77,6 @@ class _ProjectsPageState extends State<ProjectsPage> {
     ];
     return '${months[date.month - 1]} ${date.day}, ${date.year}';
   }
-
-  // List<ProjectModel> get _filteredProjects {
-  //   final projects = _viewModel.projects;
-  //   if (projects.isEmpty) return [];
-
-  //   List<ProjectModel> filtered = List.from(projects);
-
-  //   if (_searchQuery.isNotEmpty) {
-  //     filtered = filtered.where((project) {
-  //       return project.name.toLowerCase().contains(
-  //             _searchQuery.toLowerCase(),
-  //           ) ||
-  //           project.description.toLowerCase().contains(
-  //             _searchQuery.toLowerCase(),
-  //           ) ||
-  //           project.clientName.toLowerCase().contains(
-  //             _searchQuery.toLowerCase(),
-  //           );
-  //     }).toList();
-  //   }
-
-  //   if (_selectedRegions != 'All') {
-  //     filtered = filtered
-  //         .where(
-  //           (p) => p.region.toLowerCase() == _selectedRegions.toLowerCase(),
-  //         )
-  //         .toList();
-  //   }
-
-  //   if (_selectedStatus != 'All') {
-  //     filtered = filtered
-  //         .where((p) => p.status.toLowerCase() == _selectedStatus.toLowerCase())
-  //         .toList();
-  //   }
-
-  //   return filtered;
-  // }
 
   void _navigateToDetail(ProjectModel project) {
     context.go('${AppConstants.projectsRoute}/${project.id}');
@@ -229,9 +193,17 @@ class _ProjectsPageState extends State<ProjectsPage> {
           const SizedBox(width: 16),
           Row(
             children: [
-              _buildToggle(Icons.grid_view_rounded, true),
+              ViewToggleButton(
+                icon: Icons.grid_view_rounded,
+                isSelected: _isGridView,
+                onTap: () => setState(() => _isGridView = true),
+              ),
               const SizedBox(width: 8),
-              _buildToggle(Icons.view_list_rounded, false),
+              ViewToggleButton(
+                icon: Icons.view_list_rounded,
+                isSelected: !_isGridView,
+                onTap: () => setState(() => _isGridView = false),
+              ),
             ],
           ),
         ],
@@ -239,20 +211,20 @@ class _ProjectsPageState extends State<ProjectsPage> {
     );
   }
 
-  Widget _buildToggle(IconData icon, bool isGrid) {
-    final isSelected = _isGridView == isGrid;
-    return InkWell(
-      onTap: () => setState(() => _isGridView = isGrid),
-      child: Container(
-        padding: const EdgeInsets.all(10),
-        decoration: BoxDecoration(
-          color: isSelected ? Colors.black87 : Colors.grey[100],
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: Icon(icon, color: isSelected ? Colors.white : Colors.grey[600]),
-      ),
-    );
-  }
+  // Widget _buildToggle(IconData icon, bool isGrid) {
+  //   final isSelected = _isGridView == isGrid;
+  //   return InkWell(
+  //     onTap: () => setState(() => _isGridView = isGrid),
+  //     child: Container(
+  //       padding: const EdgeInsets.all(10),
+  //       decoration: BoxDecoration(
+  //         color: isSelected ? Colors.black87 : Colors.grey[100],
+  //         borderRadius: BorderRadius.circular(8),
+  //       ),
+  //       child: Icon(icon, color: isSelected ? Colors.white : Colors.grey[600]),
+  //     ),
+  //   );
+  // }
 
   // ======================================================
   // CONTENT
@@ -378,7 +350,7 @@ class _ProjectsPageState extends State<ProjectsPage> {
                   flex: 2,
                   child: Align(
                     alignment: Alignment.centerLeft,
-                    child: _statusBadge(p.status),
+                    child: StatusBadge(status: p.status),
                   ),
                 ),
 
@@ -387,22 +359,22 @@ class _ProjectsPageState extends State<ProjectsPage> {
                   flex: 2,
                   child: Row(
                     children: [
-                      _healthStat(
-                        Icons.check_circle_outline_rounded,
-                        const Color(0xFF22C55E),
-                        p.healthyDevices,
+                      HealthStat(
+                        icon: Icons.check_circle_outline_rounded,
+                        color: const Color(0xFF22C55E),
+                        count: p.healthyDevices,
                       ),
                       const SizedBox(width: 12),
-                      _healthStat(
-                        Icons.warning_amber_rounded,
-                        const Color(0xFFF59E0B),
-                        p.warningDevices,
+                      HealthStat(
+                        icon: Icons.warning_amber_rounded,
+                        color: const Color(0xFFF59E0B),
+                        count: p.warningDevices,
                       ),
                       const SizedBox(width: 12),
-                      _healthStat(
-                        Icons.cancel_outlined,
-                        const Color(0xFFEF4444),
-                        p.criticalDevices,
+                      HealthStat(
+                        icon: Icons.cancel_outlined,
+                        color: const Color(0xFFEF4444),
+                        count: p.criticalDevices,
                       ),
                     ],
                   ),
@@ -413,7 +385,7 @@ class _ProjectsPageState extends State<ProjectsPage> {
                   flex: 2,
                   child: Align(
                     alignment: Alignment.centerLeft,
-                    child: _incidentsBadge(p.incidents),
+                    child: IncidentsBadge(count: p.incidents),
                   ),
                 ),
 
@@ -435,6 +407,7 @@ class _ProjectsPageState extends State<ProjectsPage> {
                         onInvite: () => ProjectActionsHandler.invite(
                           context: context,
                           project: p,
+                          viewModel: _viewModel,
                         ),
                         onArchive: () => ProjectActionsHandler.archive(
                           context: context,
@@ -513,7 +486,7 @@ class _ProjectsPageState extends State<ProjectsPage> {
                       ),
                     ),
                     const SizedBox(width: 8),
-                    _statusBadge(p.status),
+                    StatusBadge(status: p.status),
                   ],
                 ),
 
@@ -531,25 +504,41 @@ class _ProjectsPageState extends State<ProjectsPage> {
                 const SizedBox(height: 16),
 
                 // Region row
-                _gridInfoRow('Region:', p.region),
+                GridInfoRow(label: 'Region:', value: p.region),
 
                 const SizedBox(height: 8),
 
                 // Type row — derived from status/context as placeholder
                 // (no type field in entity yet — show region-based label)
-                _gridInfoRowWidget('Type:', _typePill('installation')),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'Type:',
+                      style: GoogleFonts.montserrat(
+                        fontSize: 13,
+                        color: Colors.grey[500],
+                      ),
+                    ),
+                    TypePill(type: 'installation'),
+                  ],
+                ),
 
                 const SizedBox(height: 14),
 
                 // Device Health box — only if devices exist
                 if (totalDevices >= 0) ...[
-                  _deviceHealthBox(p),
+                  DeviceHealthBox(
+                    healthy: p.healthyDevices,
+                    warning: p.warningDevices,
+                    critical: p.criticalDevices,
+                  ),
                   const SizedBox(height: 12),
                 ],
 
                 // Open incidents warning — only if > 0
                 if (p.incidents >= 0) ...[
-                  _openIncidentsWarning(p.incidents),
+                  OpenIncidentsWarning(count: p.incidents),
                   const SizedBox(height: 12),
                 ],
 
@@ -570,7 +559,7 @@ class _ProjectsPageState extends State<ProjectsPage> {
                     ProjectActionsMenu(
                       onInvite: () => ProjectActionsHandler.invite(
                         context: context,
-                        project: p,
+                        project: p, viewModel: _viewModel,
                       ),
                       onArchive: () => ProjectActionsHandler.archive(
                         context: context,
@@ -592,301 +581,6 @@ class _ProjectsPageState extends State<ProjectsPage> {
       },
     );
   }
-
-  // ======================================================
-  // SHARED WIDGETS
-  // ======================================================
-
-  Widget _statusBadge(String status) {
-    final lower = status.toLowerCase();
-    Color bg;
-    Color fg;
-
-    if (lower == 'planning') {
-      bg = const Color(0xFFDCFCE7);
-      fg = const Color(0xFF16A34A);
-    } else if (lower == 'proposal') {
-      bg = Colors.grey[200]!;
-      fg = Colors.grey[600]!;
-    } else {
-      bg = Colors.blue[100]!;
-      fg = Colors.blue[700]!;
-    }
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-      decoration: BoxDecoration(
-        color: bg,
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Text(
-        lower,
-        style: GoogleFonts.montserrat(
-          fontSize: 12,
-          fontWeight: FontWeight.w500,
-          color: fg,
-        ),
-      ),
-    );
-  }
-
-  Widget _healthStat(IconData icon, Color color, int count) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(icon, color: color, size: 17),
-        const SizedBox(width: 4),
-        Text(
-          '$count',
-          style: GoogleFonts.montserrat(
-            fontSize: 13,
-            fontWeight: FontWeight.w500,
-            color: Colors.grey[700],
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _incidentsBadge(int count) {
-    final label = count == 1 ? '1 incident' : '$count incidents';
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-      decoration: BoxDecoration(
-        color: const Color(0xFFFFF7ED),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: const Color(0xFFFED7AA)),
-      ),
-      child: Text(
-        label,
-        style: GoogleFonts.montserrat(
-          fontSize: 12,
-          fontWeight: FontWeight.w500,
-          color: const Color(0xFFEA580C),
-        ),
-      ),
-    );
-  }
-
-  Widget _gridInfoRow(String label, String value) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Text(
-          label,
-          style: GoogleFonts.montserrat(fontSize: 13, color: Colors.grey[500]),
-        ),
-        Text(
-          value,
-          style: GoogleFonts.montserrat(
-            fontSize: 13,
-            fontWeight: FontWeight.w500,
-            color: Colors.grey[800],
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _gridInfoRowWidget(String label, Widget valueWidget) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Text(
-          label,
-          style: GoogleFonts.montserrat(fontSize: 13, color: Colors.grey[500]),
-        ),
-        valueWidget,
-      ],
-    );
-  }
-
-  Widget _typePill(String type) {
-    Color bg;
-    Color fg;
-    switch (type.toLowerCase()) {
-      case 'installation':
-        bg = const Color(0xFFF3E8FF);
-        fg = const Color(0xFF7C3AED);
-        break;
-      case 'opportunity':
-        bg = const Color(0xFFFFF7ED);
-        fg = const Color(0xFFEA580C);
-        break;
-      case 'poc':
-        bg = const Color(0xFFFCE7F3);
-        fg = const Color(0xFFBE185D);
-        break;
-      default:
-        bg = Colors.grey[100]!;
-        fg = Colors.grey[600]!;
-    }
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
-      decoration: BoxDecoration(
-        color: bg,
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Text(
-        type.toLowerCase(),
-        style: GoogleFonts.montserrat(
-          fontSize: 12,
-          fontWeight: FontWeight.w500,
-          color: fg,
-        ),
-      ),
-    );
-  }
-
-  Widget _deviceHealthBox(ProjectModel p) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.grey[50],
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.grey[200]!),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Device Health',
-            style: GoogleFonts.montserrat(
-              fontSize: 12,
-              color: Colors.grey[500],
-            ),
-          ),
-          const SizedBox(height: 8),
-          Row(
-            children: [
-              _healthStat(
-                Icons.check_circle_outline_rounded,
-                const Color(0xFF22C55E),
-                p.healthyDevices,
-              ),
-              const SizedBox(width: 16),
-              _healthStat(
-                Icons.warning_amber_rounded,
-                const Color(0xFFF59E0B),
-                p.warningDevices,
-              ),
-              const SizedBox(width: 16),
-              _healthStat(
-                Icons.cancel_outlined,
-                const Color(0xFFEF4444),
-                p.criticalDevices,
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _openIncidentsWarning(int count) {
-    final label = count == 1 ? '1 open incident' : '$count open incidents';
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-      decoration: BoxDecoration(
-        color: const Color(0xFFFFF7ED),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: const Color(0xFFFED7AA)),
-      ),
-      child: Row(
-        children: [
-          const Icon(
-            Icons.warning_amber_rounded,
-            color: Color(0xFFEA580C),
-            size: 16,
-          ),
-          const SizedBox(width: 6),
-          Text(
-            label,
-            style: GoogleFonts.montserrat(
-              fontSize: 13,
-              fontWeight: FontWeight.w500,
-              color: const Color(0xFFEA580C),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // Widget _buildActionsMenu(ProjectModel project) {
-  //   return PopupMenuButton<String>(
-  //     icon: Icon(Icons.more_vert, size: 18, color: Colors.grey[600]),
-  //     padding: EdgeInsets.zero,
-  //     onSelected: (value) {
-  //       switch (value) {
-  //         case 'edit':
-  //           _openEditProjectDialog(project);
-  //           break;
-
-  //         case 'invite':
-  //           _showInviteUserDialog(project);
-  //           break;
-
-  //         case 'archive':
-  //           _showArchiveDialog(project);
-  //           break;
-
-  //         case 'delete':
-  //           _showDeleteDialog(project);
-  //           break;
-  //       }
-  //     },
-
-  //     itemBuilder: (context) => [
-  //       PopupMenuItem(
-  //         value: 'edit',
-  //         child: Row(
-  //           children: [
-  //             Icon(Icons.edit_outlined, size: 16, color: Colors.grey[700]),
-  //             const SizedBox(width: 8),
-  //             const Text('Edit'),
-  //           ],
-  //         ),
-  //       ),
-  //       PopupMenuItem(
-  //         value: 'invite',
-  //         child: Row(
-  //           children: [
-  //             Icon(
-  //               Icons.person_add_outlined,
-  //               size: 16,
-  //               color: Colors.grey[700],
-  //             ),
-  //             const SizedBox(width: 8),
-  //             const Text('Invite User'),
-  //           ],
-  //         ),
-  //       ),
-  //       PopupMenuItem(
-  //         value: 'archive',
-  //         child: Row(
-  //           children: [
-  //             Icon(Icons.archive_outlined, size: 16, color: Colors.grey[700]),
-  //             const SizedBox(width: 8),
-  //             const Text('Archive'),
-  //           ],
-  //         ),
-  //       ),
-  //       PopupMenuItem(
-  //         value: 'delete',
-  //         child: Row(
-  //           children: [
-  //             const Icon(Icons.delete_outline, size: 16, color: Colors.red),
-  //             const SizedBox(width: 8),
-  //             const Text('Delete', style: TextStyle(color: Colors.red)),
-  //           ],
-  //         ),
-  //       ),
-  //     ],
-  //   );
-  // }
 
   InputDecoration _inputDecoration(String label, IconData icon) {
     return InputDecoration(

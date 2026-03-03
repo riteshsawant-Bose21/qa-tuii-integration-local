@@ -66,9 +66,7 @@ class ServiceLocator {
 
   // ================= AUTH REPOSITORY =================
   AuthRepositoryImpl get authRepository {
-    if (_authRepository == null) {
-      _authRepository = AuthRepositoryImpl(dataSource: Auth0DataSource());
-    }
+    _authRepository ??= AuthRepositoryImpl(dataSource: Auth0DataSource());
     return _authRepository!;
   }
 

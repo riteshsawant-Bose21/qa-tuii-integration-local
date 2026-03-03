@@ -1,4 +1,5 @@
 import 'package:fusion_web/features/projects/data/models/project_model.dart';
+import 'package:fusion_web/features/users/data/models/user_model.dart';
 
 // Repository interface - Domain layer doesn't know about implementation
 abstract class ProjectsRepository {
@@ -7,4 +8,10 @@ abstract class ProjectsRepository {
   Future<void> deleteProject(String id);
   Future<void> archiveProject(String id);
   Future<List<ProjectModel>> searchProjects(String query);
+  //fetchign all users and adding user to project
+  Future<List<UserModel>> getOrganisationUsers();
+  Future<void> addUserToProject({
+    required String projectId,
+    required String userId,
+  });
 }

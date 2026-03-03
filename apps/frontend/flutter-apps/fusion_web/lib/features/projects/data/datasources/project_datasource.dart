@@ -1,5 +1,6 @@
 import 'package:fusion_web/features/projects/data/models/project_model.dart';
 import 'package:fusion_web/core/services/api_service.dart';
+import 'package:fusion_web/features/users/data/models/user_model.dart';
 
 abstract class ProjectsDataSource {
   Future<List<ProjectModel>> getProjects();
@@ -7,6 +8,13 @@ abstract class ProjectsDataSource {
   Future<void> archiveProject(String id);
   Future<void> deleteProject(String id);
   Future<List<ProjectModel>> searchProjects(String query);
+
+  Future<List<UserModel>> getOrganisationUsers();
+
+  Future<void> addUserToProject({
+    required String projectId,
+    required String userId,
+  });
 }
 
 class ProjectsRemoteDataSource implements ProjectsDataSource {
@@ -144,10 +152,50 @@ class ProjectsRemoteDataSource implements ProjectsDataSource {
           (p) =>
               p.name.toLowerCase().contains(query.toLowerCase()) ||
               p.description.toLowerCase().contains(query.toLowerCase()) ||
-              (p.clientName?.toLowerCase().contains(query.toLowerCase()) ??
+              (p.clientName.toLowerCase().contains(query.toLowerCase()) ??
                   false),
         )
         .toList();
+  }
+
+  // =========================
+  // GET ORGANISATION USERS
+  // =========================
+  @override
+  Future<List<UserModel>> getOrganisationUsers() async {
+    try {
+      final response = await _apiService.get('/organization/users');
+
+      final usersJson =
+          response['data'] as List<dynamic>? ??
+          response['users'] as List<dynamic>? ??
+          [];
+
+      return usersJson
+          .map((json) => UserModel.fromJson(json as Map<String, dynamic>))
+          .toList();
+    } catch (e) {
+      print('Get organisation users error: $e');
+      rethrow;
+    }
+  }
+
+  // =========================
+  // ADD USER TO PROJECT
+  // =========================
+  @override
+  Future<void> addUserToProject({
+    required String projectId,
+    required String userId,
+  }) async {
+    try {
+      await _apiService.post('projects/$projectId/users/$userId', {
+        "user_id": userId,
+      });
+    } catch (e) {
+      print('Add user to project error: $e');
+      rethrow;
+    }
   }
 }
 
@@ -203,7 +251,7 @@ class ProjectsLocalDataSource implements ProjectsDataSource {
             (p) =>
                 p.name.toLowerCase().contains(query.toLowerCase()) ||
                 p.description.toLowerCase().contains(query.toLowerCase()) ||
-                (p.clientName?.toLowerCase().contains(query.toLowerCase()) ??
+                (p.clientName.toLowerCase().contains(query.toLowerCase()) ??
                     false),
           )
           .toList();
@@ -213,5 +261,18 @@ class ProjectsLocalDataSource implements ProjectsDataSource {
 
   void cacheProjects(List<ProjectModel> projects) {
     _cachedProjects = projects;
+  }
+
+  @override
+  Future<List<UserModel>> getOrganisationUsers() async {
+    throw Exception('Not supported in local data source');
+  }
+
+  @override
+  Future<void> addUserToProject({
+    required String projectId,
+    required String userId,
+  }) async {
+    throw Exception('Not supported in local data source');
   }
 }

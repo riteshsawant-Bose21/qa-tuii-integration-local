@@ -1,20 +1,29 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_web/features/projects/data/models/project_model.dart';
 import 'package:fusion_web/features/projects/presentation/viewmodels/projects_viewmodel.dart';
 import 'package:fusion_lib/fusion_widgets/shared_widgets/project/confirmation_dialog.dart';
 import 'package:fusion_web/features/projects/presentation/dialogs/invite_user_dialog.dart';
+import 'package:fusion_web/features/projects/presentation/viewmodels/invite_user_viewmodel.dart';
 
 class ProjectActionsHandler {
-  // ================= INVITE =================
   static void invite({
-    required BuildContext context,
-    required ProjectModel project,
-  }) {
-    showDialog(
-      context: context,
-      builder: (_) => InviteUserDialog(project: project),
-    );
-  }
+  required BuildContext context,
+  required ProjectModel project,
+  required ProjectsViewModel viewModel,
+}) {
+  showDialog(
+    context: context,
+    builder: (_) {
+      return BlocProvider(
+        create: (_) => InviteUserCubit(
+          repository: viewModel.repository,
+        ),
+        child: InviteUserDialog(project: project),
+      );
+    },
+  );
+}
 
   //  ================= DELETE =================
   static Future<void> delete({

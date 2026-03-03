@@ -37,7 +37,6 @@
 //   bool get isInitial => _state is InitialState;
 // }
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 // Base state classes for ViewModels
@@ -56,6 +55,8 @@ class ErrorState<T> extends BaseState<T> {
   final String message;
   ErrorState(this.message);
 }
+
+class SuccessState<T> extends BaseState<T> {}
 
 // Base ViewModel class with common functionality
 abstract class BaseViewModel<T> extends Cubit<BaseState<T>> {

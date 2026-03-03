@@ -148,7 +148,7 @@ class _InviteUserDialogState extends State<InviteUserDialog> {
 
                       // Role Selection Dropdown
                       DropdownButtonFormField<String>(
-                        value: _selectedRole,
+                        initialValue: _selectedRole,
                         decoration: InputDecoration(
                           labelText: 'Role *',
                           labelStyle: GoogleFonts.montserrat(),

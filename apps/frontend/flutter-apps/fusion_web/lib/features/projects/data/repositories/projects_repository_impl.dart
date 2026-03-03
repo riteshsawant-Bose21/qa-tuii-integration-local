@@ -1,6 +1,7 @@
 import 'package:fusion_web/features/projects/data/datasources/project_datasource.dart';
 import 'package:fusion_web/features/projects/data/models/project_model.dart';
 import 'package:fusion_web/features/projects/data/repositories/projects_repository.dart';
+import 'package:fusion_web/features/users/data/models/user_model.dart';
 
 class ProjectsRepositoryImpl implements ProjectsRepository {
   final ProjectsRemoteDataSource remoteDataSource;
@@ -58,7 +59,6 @@ class ProjectsRepositoryImpl implements ProjectsRepository {
     await localDataSource.deleteProject(id);
   }
 
-
   // =========================
   // ARCHIVE PROJECT
   // =========================
@@ -74,5 +74,27 @@ class ProjectsRepositoryImpl implements ProjectsRepository {
   @override
   Future<List<ProjectModel>> searchProjects(String query) async {
     return await remoteDataSource.searchProjects(query);
+  }
+
+  // =========================
+  // GET ORGANISATION USERS
+  // =========================
+  @override
+  Future<List<UserModel>> getOrganisationUsers() async {
+    return await remoteDataSource.getOrganisationUsers();
+  }
+
+  // =========================
+  // ADD USER TO PROJECT
+  // =========================
+  @override
+  Future<void> addUserToProject({
+    required String projectId,
+    required String userId,
+  }) async {
+    await remoteDataSource.addUserToProject(
+      projectId: projectId,
+      userId: userId,
+    );
   }
 }

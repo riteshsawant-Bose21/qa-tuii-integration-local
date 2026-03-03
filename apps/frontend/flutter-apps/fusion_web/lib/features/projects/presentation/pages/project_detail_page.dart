@@ -484,7 +484,6 @@ import 'package:fusion_web/features/projects/data/models/project_model.dart';
 import 'package:fusion_web/features/projects/presentation/widgets/empty_state_widget.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:fusion_web/features/projects/presentation/handlers/project_actions_handler.dart';
-import 'package:fusion_web/features/projects/presentation/viewmodels/projects_viewmodel.dart';
 import 'package:fusion_web/features/projects/presentation/widgets/project_actions_menu.dart';
 import 'package:go_router/go_router.dart';
 
@@ -639,7 +638,7 @@ class _ProjectDetailPageState extends State<ProjectDetailPage> {
                       ProjectActionsMenu(
                         onInvite: () => ProjectActionsHandler.invite(
                           context: context,
-                          project: p,
+                          project: p, viewModel: viewModel,
                         ),
                         onArchive: () => ProjectActionsHandler.archive(
                           context: context,
