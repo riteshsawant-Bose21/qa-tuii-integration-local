@@ -42,7 +42,8 @@ class InitialScreen extends StatelessWidget {
                   ),
                   const SizedBox(height: 12),
                   FusionAppText(
-                    text: 'Allow your project to sync with actual hardware installations\nto monitor and control the complete audio system',
+                    text:
+                        'Allow your project to sync with actual hardware installations\nto monitor and control the complete audio system',
                     style: context.textTheme.bodyMedium?.copyWith(
                       color: context.colorScheme.textSecondary,
                     ),

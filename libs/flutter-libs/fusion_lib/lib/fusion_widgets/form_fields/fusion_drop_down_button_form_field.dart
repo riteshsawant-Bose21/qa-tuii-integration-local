@@ -98,7 +98,10 @@ class FusionDropdownButtonFormField extends StatelessWidget {
 
         const SizedBox(height: 4),
         SemanticHelper.button(
-          testId: SemanticHelper.createTestId(SemanticTypes.dropdown, semanticKey),
+          testId: SemanticHelper.createTestId(
+            SemanticTypes.dropdown,
+            semanticKey,
+          ),
           child: FusionContainer(
             child: DropdownButtonFormField<String>(
               key: key,
@@ -111,8 +114,13 @@ class FusionDropdownButtonFormField extends StatelessWidget {
                   return DropdownMenuItem<String>(
                     value: option,
                     child: FusionAppText(
-                      text: displayString != null ? displayString!(option) : option,
-                      semanticId: SemanticHelper.createTestId(SemanticTypes.dropdownItem, '${semanticKey}_item_$index'),
+                      text: displayString != null
+                          ? displayString!(option)
+                          : option,
+                      semanticId: SemanticHelper.createTestId(
+                        SemanticTypes.dropdownItem,
+                        '${semanticKey}_item_$index',
+                      ),
                       // overflow: TextOverflow.ellipsis, // Handle text overflow
                     ),
                   );
@@ -128,13 +136,17 @@ class FusionDropdownButtonFormField extends StatelessWidget {
               onTap: onTap,
               validator: validator,
               onSaved: onSaved,
-              autovalidateMode: autovalidateMode ? AutovalidateMode.always : AutovalidateMode.disabled,
+              autovalidateMode: autovalidateMode
+                  ? AutovalidateMode.always
+                  : AutovalidateMode.disabled,
               decoration:
                   decoration ??
                   InputDecoration(
                     filled: false,
 
-                    contentPadding: padding ?? const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    contentPadding:
+                        padding ??
+                        const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                     border: InputBorder.none,
                     enabledBorder: InputBorder.none,
                     focusedBorder: InputBorder.none,

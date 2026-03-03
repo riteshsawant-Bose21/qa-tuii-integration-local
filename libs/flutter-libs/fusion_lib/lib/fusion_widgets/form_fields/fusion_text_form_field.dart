@@ -143,8 +143,12 @@ class _FusionTextFormFieldState extends State<FusionTextFormField> {
         if (widget.title.isNotEmpty)
           Row(
             children: [
-              Text(widget.title, style: Theme.of(context).textTheme.labelMedium),
-              if (widget.isRequired) Text(' *', style: TextStyle(color: Colors.red.shade600)),
+              Text(
+                widget.title,
+                style: Theme.of(context).textTheme.labelMedium,
+              ),
+              if (widget.isRequired)
+                Text(' *', style: TextStyle(color: Colors.red.shade600)),
             ],
           ),
         if (widget.title.isNotEmpty) const SizedBox(height: 8),
@@ -176,7 +180,13 @@ class _FusionTextFormFieldState extends State<FusionTextFormField> {
                   widget.suffixIcon ??
                   (widget.isPassword
                       ? IconButton(
-                          icon: Icon(_obscureText ? Icons.visibility_off : Icons.visibility, size: 18, color: Colors.grey.shade600),
+                          icon: Icon(
+                            _obscureText
+                                ? Icons.visibility_off
+                                : Icons.visibility,
+                            size: 18,
+                            color: Colors.grey.shade600,
+                          ),
                           onPressed: () {
                             setState(() {
                               _obscureText = !_obscureText;

@@ -15,7 +15,10 @@ import '../../../authentication/viewmodel/session_view_model.dart';
 import '../../../create_new_project/views/create_new_project_dialog.dart';
 import 'import_project_dialog.dart';
 
-Border _getBorder(BuildContext context) => Border.all(color: context.colorScheme.onSurface.withValues(alpha: 0.3), width: 0.3);
+Border _getBorder(BuildContext context) => Border.all(
+  color: context.colorScheme.onSurface.withValues(alpha: 0.3),
+  width: 0.3,
+);
 
 enum _SavedProjectsSortOption {
   name("Name");
@@ -60,11 +63,13 @@ class SavedProjectsTabContent extends StatelessWidget {
                         ),
                       ),
                       FusionNeumorphicButton(
-                        semanticId: 'saved_project_import_button',
+                        semanticId: 'create_new_project_button',
                         onTap: () {
                           showDialog(
                             context: context,
-                            builder: (BuildContext context) => const ZipImportDialog(),
+                            builder:
+                                (BuildContext context) =>
+                                    const ZipImportDialog(),
                           );
                         },
                         height: 50,
@@ -206,19 +211,31 @@ class _SavedProjectListState extends State<_SavedProjectList> {
 
   void _listenToSearchChanges() {
     final String query = _searchController.text.trim();
-    setState(() => _isSearching = query.isNotEmpty && query.length >= MIN_SEARCH_LENGTH);
+    setState(
+      () =>
+          _isSearching = query.isNotEmpty && query.length >= MIN_SEARCH_LENGTH,
+    );
   }
 
   List<ProjectData> get getProjects {
     late List<ProjectData> projects;
 
-    final List<ProjectData> allProjects = serviceLocator<ProjectViewModel>().allProjects;
+    final List<ProjectData> allProjects =
+        serviceLocator<ProjectViewModel>().allProjects;
 
     // ================ SEARCH PROJECTS IF QUERY IS NOT EMPTY ==========================
     final String searchQuery = _searchController.text.trim().toLowerCase();
     if (searchQuery.isNotEmpty && searchQuery.length >= MIN_SEARCH_LENGTH) {
-      final List<ProjectData> allProjects = serviceLocator<ProjectViewModel>().allProjects;
-      projects = allProjects.where((ProjectData project) => project.name.toLowerCase().contains(searchQuery.toLowerCase())).toList();
+      final List<ProjectData> allProjects =
+          serviceLocator<ProjectViewModel>().allProjects;
+      projects =
+          allProjects
+              .where(
+                (ProjectData project) => project.name.toLowerCase().contains(
+                  searchQuery.toLowerCase(),
+                ),
+              )
+              .toList();
     } else {
       // ======= SHOW ALL PROJECTS IF QUERY IS EMPTY ==========
       projects = allProjects;
@@ -226,7 +243,10 @@ class _SavedProjectListState extends State<_SavedProjectList> {
 
     // ======= SORT LOGIN AT THE END =======
     if (selectedSortOption == _SavedProjectsSortOption.name) {
-      projects.sort((ProjectData a, ProjectData b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+      projects.sort(
+        (ProjectData a, ProjectData b) =>
+            a.name.toLowerCase().compareTo(b.name.toLowerCase()),
+      );
     }
 
     return projects;
@@ -258,7 +278,10 @@ class _SavedProjectListState extends State<_SavedProjectList> {
             return LayoutBuilder(
               builder: (BuildContext context, BoxConstraints constraints) {
                 return SemanticHelper.container(
-                  testId: SemanticHelper.createTestId(SemanticTypes.container, "saved_projects_section"),
+                  testId: SemanticHelper.createTestId(
+                    SemanticTypes.container,
+                    "saved_projects_section",
+                  ),
                   child: Container(
                     width: double.infinity,
                     decoration: BoxDecoration(
@@ -281,40 +304,59 @@ class _SavedProjectListState extends State<_SavedProjectList> {
                                   children: <Widget>[
                                     FusionAppText(
                                       text: 'Projects',
-                                      style: context.textTheme.titleMedium?.copyWith(
-                                        fontWeight: FontWeight.w600,
-                                      ),
+                                      style: context.textTheme.titleMedium
+                                          ?.copyWith(
+                                            fontWeight: FontWeight.w600,
+                                          ),
                                     ),
                                     const Spacer(),
                                     //cloud sync icon button
                                     if (hasCloudAccess)
                                       SemanticHelper.button(
-                                        testId: SemanticHelper.createTestId(SemanticTypes.button, "saved_projects_section_item_upload"),
+                                        testId: SemanticHelper.createTestId(
+                                          SemanticTypes.button,
+                                          "saved_projects_section_item_upload",
+                                        ),
                                         child: IconButton(
                                           onPressed: () {
-                                            serviceLocator<ProjectSyncViewModel>().uploadAllProjects();
+                                            serviceLocator<
+                                                  ProjectSyncViewModel
+                                                >()
+                                                .uploadAllProjects();
                                           },
-                                          tooltip: "Upload All Projects to Cloud",
+                                          tooltip:
+                                              "Upload All Projects to Cloud",
                                           icon: Icon(
                                             LucideIcons.cloudUpload,
                                             size: 18,
-                                            color: context.colorScheme.onSurface.withValues(alpha: 0.6),
+                                            color: context.colorScheme.onSurface
+                                                .withValues(alpha: 0.6),
                                           ),
                                         ),
                                       ),
                                     //cloud download icon button
                                     if (hasCloudAccess)
                                       SemanticHelper.button(
-                                        testId: SemanticHelper.createTestId(SemanticTypes.button, "saved_projects_section_item_download"),
+                                        testId: SemanticHelper.createTestId(
+                                          SemanticTypes.button,
+                                          "saved_projects_section_item_download",
+                                        ),
                                         child: IconButton(
                                           onPressed: () {
-                                            serviceLocator<ProjectSyncViewModel>().getAllProjects(forceFetch: true);
+                                            serviceLocator<
+                                                  ProjectSyncViewModel
+                                                >()
+                                                .getAllProjects(
+                                                  forceFetch: true,
+                                                );
                                           },
-                                          tooltip: "Download All Projects from Cloud",
+                                          tooltip:
+                                              "Download All Projects from Cloud",
                                           icon: Icon(
                                             LucideIcons.cloudDownload,
                                             size: 18,
-                                            color: context.colorScheme.onSurface.withValues(alpha: 0.6),
+                                            color: context.colorScheme.onSurface
+                                                .withValues(alpha: 0.6),
                                           ),
                                         ),
                                       ),
@@ -324,27 +366,44 @@ class _SavedProjectListState extends State<_SavedProjectList> {
 
                               ValueListenableBuilder<bool>(
                                 valueListenable: showSearchBarNotifier,
-                                builder: (BuildContext context, bool showSearchBar, Widget? child) {
+                                builder: (
+                                  BuildContext context,
+                                  bool showSearchBar,
+                                  Widget? child,
+                                ) {
                                   return AnimatedContainer(
                                     duration: const Duration(milliseconds: 200),
                                     height: 32,
-                                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 8,
+                                    ),
                                     decoration: BoxDecoration(
-                                      color: showSearchBar ? context.colorScheme.onSurface.withValues(alpha: 0.1) : Colors.transparent,
+                                      color:
+                                          showSearchBar
+                                              ? context.colorScheme.onSurface
+                                                  .withValues(alpha: 0.1)
+                                              : Colors.transparent,
                                       borderRadius: BorderRadius.circular(60),
                                     ),
                                     child: Row(
                                       children: <Widget>[
                                         AnimatedContainer(
-                                          duration: const Duration(milliseconds: 200),
+                                          duration: const Duration(
+                                            milliseconds: 200,
+                                          ),
                                           width: showSearchBar ? 250 : 0,
                                           child: SemanticHelper.formControl(
-                                            testId: SemanticHelper.createTestId(SemanticTypes.textInput, "saved_projects_section_search_input"),
+                                            testId: SemanticHelper.createTestId(
+                                              SemanticTypes.textInput,
+                                              "saved_projects_section_search_input",
+                                            ),
                                             child: TextFormField(
                                               focusNode: _searchFocusNode,
                                               controller: _searchController,
-                                              style: context.textTheme.labelLarge,
-                                              cursorColor: context.colorScheme.onSurface,
+                                              style:
+                                                  context.textTheme.labelLarge,
+                                              cursorColor:
+                                                  context.colorScheme.onSurface,
                                               cursorWidth: 1,
                                               cursorHeight: 15,
                                               decoration: InputDecoration(
@@ -357,33 +416,56 @@ class _SavedProjectListState extends State<_SavedProjectList> {
                                                 hintText: "Search projects",
                                                 hoverColor: Colors.transparent,
                                                 contentPadding: EdgeInsets.zero,
-                                                hintStyle: context.textTheme.labelMedium?.copyWith(color: Colors.grey),
+                                                hintStyle: context
+                                                    .textTheme
+                                                    .labelMedium
+                                                    ?.copyWith(
+                                                      color: Colors.grey,
+                                                    ),
                                               ),
                                             ),
                                           ),
                                         ),
                                         InkWell(
                                           onTap: () {
-                                            showSearchBarNotifier.value = !showSearchBarNotifier.value;
+                                            showSearchBarNotifier.value =
+                                                !showSearchBarNotifier.value;
 
-                                            WidgetsBinding.instance.addPostFrameCallback((_) {
-                                              showSearchBar ? _searchFocusNode.unfocus() : _searchFocusNode.requestFocus();
-                                              _searchController.clear();
-                                            });
+                                            WidgetsBinding.instance
+                                                .addPostFrameCallback((_) {
+                                                  showSearchBar
+                                                      ? _searchFocusNode
+                                                          .unfocus()
+                                                      : _searchFocusNode
+                                                          .requestFocus();
+                                                  _searchController.clear();
+                                                });
                                           },
                                           child: AnimatedSwitcher(
-                                            duration: const Duration(milliseconds: 200),
-                                            transitionBuilder: (Widget child, Animation<double> animation) {
+                                            duration: const Duration(
+                                              milliseconds: 200,
+                                            ),
+                                            transitionBuilder: (
+                                              Widget child,
+                                              Animation<double> animation,
+                                            ) {
                                               return FadeTransition(
                                                 opacity: animation,
                                                 child: child,
                                               );
                                             },
                                             child: SemanticHelper.button(
-                                              testId: SemanticHelper.createTestId(SemanticTypes.button, "saved_projects_section_search_button"),
+                                              testId: SemanticHelper.createTestId(
+                                                SemanticTypes.button,
+                                                "saved_projects_section_search_button",
+                                              ),
                                               child: Icon(
-                                                key: ValueKey<bool>(showSearchBar),
-                                                showSearchBar ? LucideIcons.x : LucideIcons.search,
+                                                key: ValueKey<bool>(
+                                                  showSearchBar,
+                                                ),
+                                                showSearchBar
+                                                    ? LucideIcons.x
+                                                    : LucideIcons.search,
                                                 size: 18,
                                               ),
                                             ),
@@ -402,7 +484,10 @@ class _SavedProjectListState extends State<_SavedProjectList> {
                                 selectedSortOption: selectedSortOption,
                                 onSelect: (_SavedProjectsSortOption value) {
                                   setState(() {
-                                    selectedSortOption = value == selectedSortOption ? null : value;
+                                    selectedSortOption =
+                                        value == selectedSortOption
+                                            ? null
+                                            : value;
                                   });
                                 },
                               ),
@@ -435,51 +520,76 @@ class _SavedProjectListState extends State<_SavedProjectList> {
                               if (_isSearching && projects.isEmpty) {
                                 return Center(
                                   child: FusionAppText(
-                                    text: "No Projects Found for \"${_searchController.text}\"",
-                                    style: context.textTheme.labelLarge?.copyWith(
-                                      fontSize: 16,
-                                      color: context.colorScheme.onSurface.withValues(alpha: 0.4),
-                                    ),
+                                    text:
+                                        "No Projects Found for \"${_searchController.text}\"",
+                                    style: context.textTheme.labelLarge
+                                        ?.copyWith(
+                                          fontSize: 16,
+                                          color: context.colorScheme.onSurface
+                                              .withValues(alpha: 0.4),
+                                        ),
                                   ),
                                 );
-                              } else if (state is! ProjectLoading && !serviceLocator<ProjectViewModel>().hasProjects) {
+                              } else if (state is! ProjectLoading &&
+                                  !serviceLocator<ProjectViewModel>()
+                                      .hasProjects) {
                                 return Center(
                                   child: FusionAppText(
                                     text: "No Projects Saved Yet",
-                                    style: context.textTheme.labelLarge?.copyWith(
-                                      fontSize: 16,
-                                      color: context.colorScheme.onSurface.withValues(alpha: 0.4),
-                                    ),
+                                    style: context.textTheme.labelLarge
+                                        ?.copyWith(
+                                          fontSize: 16,
+                                          color: context.colorScheme.onSurface
+                                              .withValues(alpha: 0.4),
+                                        ),
                                   ),
                                 );
                               } else {
-                                int crossAxisCount = constraints.maxWidth > 900 ? 4 : 3;
-                                if (constraints.maxWidth > 1200) crossAxisCount = 5;
+                                int crossAxisCount =
+                                    constraints.maxWidth > 900 ? 4 : 3;
+                                if (constraints.maxWidth > 1200)
+                                  crossAxisCount = 5;
 
                                 return GridView.builder(
                                   itemCount: projects.length,
                                   padding: const EdgeInsets.all(16),
-                                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                                    crossAxisCount: crossAxisCount,
-                                    childAspectRatio: 16 / 12,
-                                    crossAxisSpacing: 16,
-                                    mainAxisSpacing: 16,
-                                  ),
-                                  itemBuilder: (BuildContext context, int index) {
+                                  gridDelegate:
+                                      SliverGridDelegateWithFixedCrossAxisCount(
+                                        crossAxisCount: crossAxisCount,
+                                        childAspectRatio: 16 / 12,
+                                        crossAxisSpacing: 16,
+                                        mainAxisSpacing: 16,
+                                      ),
+                                  itemBuilder: (
+                                    BuildContext context,
+                                    int index,
+                                  ) {
                                     final ProjectData project = projects[index];
 
                                     return GestureDetector(
-                                      onTap: () => ProjectDetailsDialog.show(context, project: project),
+                                      onTap:
+                                          () => ProjectDetailsDialog.show(
+                                            context,
+                                            project: project,
+                                          ),
                                       child: Container(
                                         decoration: BoxDecoration(
                                           color: context.colorScheme.surface,
-                                          borderRadius: BorderRadius.circular(12),
+                                          borderRadius: BorderRadius.circular(
+                                            12,
+                                          ),
                                           border: _getBorder(context),
                                         ),
                                         child: ProjectCard(
                                           index: index,
                                           projectData: project,
-                                          onDelete: () => serviceLocator<ProjectSyncViewModel>().deleteProject(projectId: project.id),
+                                          onDelete:
+                                              () => serviceLocator<
+                                                    ProjectSyncViewModel
+                                                  >()
+                                                  .deleteProject(
+                                                    projectId: project.id,
+                                                  ),
                                         ),
                                       ),
                                     );
@@ -506,7 +616,10 @@ class _SortByWidget extends StatelessWidget {
   final _SavedProjectsSortOption? selectedSortOption;
   final ValueChanged<_SavedProjectsSortOption>? onSelect;
 
-  const _SortByWidget({required this.selectedSortOption, required this.onSelect});
+  const _SortByWidget({
+    required this.selectedSortOption,
+    required this.onSelect,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -550,7 +663,10 @@ class _SortByWidget extends StatelessWidget {
                       ..._SavedProjectsSortOption.values.map(
                         (_SavedProjectsSortOption sortBy) {
                           return SemanticHelper.button(
-                            testId: SemanticHelper.createTestId(SemanticTypes.button, "saved_projects_section_sort_button_$sortBy"),
+                            testId: SemanticHelper.createTestId(
+                              SemanticTypes.button,
+                              "saved_projects_section_sort_button_$sortBy",
+                            ),
                             child: InkWell(
                               onTap: () {
                                 onSelect?.call(sortBy);
@@ -561,7 +677,10 @@ class _SortByWidget extends StatelessWidget {
                                 children: <Widget>[
                                   Expanded(
                                     child: Padding(
-                                      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 4,
+                                        vertical: 8,
+                                      ),
                                       child: FusionAppText(
                                         text: sortBy.title,
                                         style: context.textTheme.labelMedium,
@@ -589,7 +708,10 @@ class _SortByWidget extends StatelessWidget {
           ];
         },
         child: SemanticHelper.button(
-          testId: SemanticHelper.createTestId(SemanticTypes.button, "saved_projects_section_sort_button"),
+          testId: SemanticHelper.createTestId(
+            SemanticTypes.button,
+            "saved_projects_section_sort_button",
+          ),
           child: Container(
             height: 32,
             padding: const EdgeInsets.symmetric(horizontal: 10),
@@ -672,7 +794,10 @@ class _FilterByWidget extends StatelessWidget {
                             child: Row(
                               children: <Widget>[
                                 Padding(
-                                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 4,
+                                    vertical: 8,
+                                  ),
                                   child: FusionAppText(
                                     text: sortBy.title,
                                     style: context.textTheme.labelMedium,
@@ -691,7 +816,10 @@ class _FilterByWidget extends StatelessWidget {
           ];
         },
         child: SemanticHelper.button(
-          testId: SemanticHelper.createTestId(SemanticTypes.button, "saved_projects_section_item_upload"),
+          testId: SemanticHelper.createTestId(
+            SemanticTypes.button,
+            "saved_projects_section_item_upload",
+          ),
           child: Container(
             height: 32,
             padding: const EdgeInsets.symmetric(horizontal: 10),
@@ -804,38 +932,39 @@ class _BorderedTextfieldState extends State<BorderedTextfield> {
       child: Icon(
         isObscured ? LucideIcons.eyeOff : LucideIcons.eye,
         size: 18,
-        color: context.colorScheme.onSurface.withValues(alpha: 0.6),
+        color: context.colorScheme.textPrimary.withValues(alpha: 0.6),
       ),
     );
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 18),
-          child: FusionAppText(
-            text: widget.label,
-            style: context.textTheme.bodySmall?.copyWith(
-              fontWeight: FontWeight.w600,
-              color: context.colorScheme.onSurface.withValues(alpha: 0.6),
-            ),
+        FusionAppText(
+          text: widget.label,
+          style: context.textTheme.bodySmall?.copyWith(
+            fontWeight: FontWeight.w600,
+            color: context.colorScheme.textPrimary.withValues(alpha: 0.6),
           ),
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 8),
         SemanticHelper.formControl(
-          testId: SemanticHelper.createTestId(SemanticTypes.textInput, widget.sementicFieldId ?? "${widget.label}_input"),
+          testId: SemanticHelper.createTestId(
+            SemanticTypes.textInput,
+            widget.sementicFieldId ?? "${widget.label}_input",
+          ),
           child: TextFormField(
             focusNode: _focusNode,
             autofocus: widget.autofocus,
-            controller: widget.controller,
-            initialValue: widget.initialValue,
+            controller: _controller,
             minLines: widget.minLines,
             maxLines: widget.maxLines,
             enabled: widget.isEnabled,
             obscureText: isObscured,
+            inputFormatters: widget.inputFormatters,
             style: context.textTheme.labelLarge?.copyWith(
-              color: context.colorScheme.onSurface,
+              color: context.colorScheme.textPrimary,
             ),
+            onChanged: widget.onChanged,
             validator: widget.validator,
             mouseCursor: widget.isEnabled ? null : SystemMouseCursors.forbidden,
             cursorColor: context.colorScheme.textPrimary,
@@ -843,7 +972,10 @@ class _BorderedTextfieldState extends State<BorderedTextfield> {
             decoration: InputDecoration(
               hintText: widget.hintText,
               hintStyle: context.textTheme.labelLarge?.copyWith(
-                color: context.colorScheme.onSurface.withValues(alpha: 0.4),
+                color: context.colorScheme.textPrimary.withValues(alpha: 0.4),
+              ),
+              errorStyle: context.textTheme.labelLarge?.copyWith(
+                color: context.colorScheme.errorText,
               ),
               isDense: true,
               filled: true,
@@ -856,15 +988,15 @@ class _BorderedTextfieldState extends State<BorderedTextfield> {
               ),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(borderRadius),
-                borderSide: BorderSide(color: context.colorScheme.elevation4),
+                borderSide: BorderSide(color: context.colorScheme.strokeLight),
               ),
               disabledBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(borderRadius),
-                borderSide: BorderSide(color: context.colorScheme.elevation4),
+                borderSide: BorderSide(color: context.colorScheme.strokeLight),
               ),
               enabledBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(borderRadius),
-                borderSide: BorderSide(color: context.colorScheme.elevation4),
+                borderSide: BorderSide(color: context.colorScheme.strokeLight),
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(borderRadius),
@@ -878,7 +1010,7 @@ class _BorderedTextfieldState extends State<BorderedTextfield> {
   }
 }
 
-class FusionDarkDropdown<T> extends StatelessWidget {
+class FusionDarkDropdown<T> extends StatefulWidget {
   final String? title;
   final T? selectedValue;
   final List<T> items;
@@ -912,25 +1044,23 @@ class _FusionDarkDropdownState<T> extends State<FusionDarkDropdown<T>> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
-        if (title != null) ...<Widget>[
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 18),
-            child: FusionAppText(
-              text: title!,
-              style: context.textTheme.bodySmall?.copyWith(
-                fontWeight: FontWeight.w600,
-                color: context.colorScheme.onSurface.withValues(alpha: 0.6),
-              ),
+        if (widget.title != null) ...<Widget>[
+          FusionAppText(
+            text: widget.title!,
+            style: context.textTheme.bodySmall?.copyWith(
+              fontWeight: FontWeight.w600,
+              color: context.colorScheme.onSurface.withValues(alpha: 0.6),
             ),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 8),
         ],
         SizedBox(
           key: childKey,
           child: GestureDetector(
             behavior: HitTestBehavior.opaque,
             onTap: () async {
-              final RenderBox box = childKey.currentContext!.findRenderObject() as RenderBox;
+              final RenderBox box =
+                  childKey.currentContext!.findRenderObject() as RenderBox;
 
               final Offset pos = box.localToGlobal(Offset.zero);
               final double width = box.size.width;
@@ -961,7 +1091,10 @@ class _FusionDarkDropdownState<T> extends State<FusionDarkDropdown<T>> {
                         value: item,
                         padding: EdgeInsets.zero,
                         child: Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 10,
+                          ),
                           child: Row(
                             children: <Widget>[
                               Expanded(
@@ -993,14 +1126,20 @@ class _FusionDarkDropdownState<T> extends State<FusionDarkDropdown<T>> {
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(borderRadius),
                   border: Border.all(
-                    color: isMenuOpen ? context.colorScheme.primaryWhite : context.colorScheme.strokeLight,
+                    color:
+                        isMenuOpen
+                            ? context.colorScheme.primaryWhite
+                            : context.colorScheme.strokeLight,
                   ),
                 ),
                 child: Row(
                   children: <Widget>[
                     Expanded(
                       child: FusionAppText(
-                        text: widget.selectedValue != null ? widget.labelBuilder(widget.selectedValue as T) : widget.placeholder,
+                        text:
+                            widget.selectedValue != null
+                                ? widget.labelBuilder(widget.selectedValue as T)
+                                : widget.placeholder,
                         style: context.textTheme.labelLarge?.copyWith(
                           color: context.colorScheme.textPrimary.withValues(
                             alpha: widget.selectedValue != null ? 1.0 : 0.4,

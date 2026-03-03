@@ -10,18 +10,32 @@ class SurfaceSpeakerLayoutWidget extends StatefulWidget {
   const SurfaceSpeakerLayoutWidget({super.key});
 
   @override
-  State<SurfaceSpeakerLayoutWidget> createState() => _SurfaceSpeakerLayoutWidgetState();
+  State<SurfaceSpeakerLayoutWidget> createState() =>
+      _SurfaceSpeakerLayoutWidgetState();
 }
 
-class _SurfaceSpeakerLayoutWidgetState extends State<SurfaceSpeakerLayoutWidget> {
+class _SurfaceSpeakerLayoutWidgetState
+    extends State<SurfaceSpeakerLayoutWidget> {
   // Form controllers
-  final TextEditingController _lengthController = TextEditingController(text: '30.5');
-  final TextEditingController _widthController = TextEditingController(text: '20.1');
-  final TextEditingController _heightController = TextEditingController(text: '7');
-  final TextEditingController _listenerHeightController = TextEditingController(text: '1.7');
+  final TextEditingController _lengthController = TextEditingController(
+    text: '30.5',
+  );
+  final TextEditingController _widthController = TextEditingController(
+    text: '20.1',
+  );
+  final TextEditingController _heightController = TextEditingController(
+    text: '7',
+  );
+  final TextEditingController _listenerHeightController = TextEditingController(
+    text: '1.7',
+  );
   // Speaker height removed - now hardcoded to 3 feet (0.914m) in the algorithm
-  final TextEditingController _coverageAngleController = TextEditingController(text: '90.0');
-  final TextEditingController _speakerTypeController = TextEditingController(text: 'Surface Mount Speaker');
+  final TextEditingController _coverageAngleController = TextEditingController(
+    text: '90.0',
+  );
+  final TextEditingController _speakerTypeController = TextEditingController(
+    text: 'Surface Mount Speaker',
+  );
 
   // Configuration
   CoveragePreference _coveragePreference = CoveragePreference.minimumOverlap;
@@ -51,7 +65,8 @@ class _SurfaceSpeakerLayoutWidgetState extends State<SurfaceSpeakerLayoutWidget>
   }
 
   void _calculatePlacement() {
-    if (_formKey.currentState == null || !_formKey.currentState!.validate()) return;
+    if (_formKey.currentState == null || !_formKey.currentState!.validate())
+      return;
 
     setState(() {
       _errorMessage = null;
@@ -77,11 +92,12 @@ class _SurfaceSpeakerLayoutWidgetState extends State<SurfaceSpeakerLayoutWidget>
         enableDebugOutput: false,
       );
 
-      final SurfacePlacementResult result = SurfaceSpeakerPlacer.calculatePlacement(
-        room: room,
-        speaker: speaker,
-        config: config,
-      );
+      final SurfacePlacementResult result =
+          SurfaceSpeakerPlacer.calculatePlacement(
+            room: room,
+            speaker: speaker,
+            config: config,
+          );
 
       // Additional validation checks
 
@@ -152,21 +168,51 @@ class _SurfaceSpeakerLayoutWidgetState extends State<SurfaceSpeakerLayoutWidget>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          Text('Room Parameters', style: Theme.of(context).textTheme.headlineSmall),
+          Text(
+            'Room Parameters',
+            style: Theme.of(context).textTheme.headlineSmall,
+          ),
           const SizedBox(height: 16),
           Row(
             children: <Widget>[
-              Expanded(child: _buildNumberField(_lengthController, 'Length (m)', Icons.straighten)),
+              Expanded(
+                child: _buildNumberField(
+                  _lengthController,
+                  'Length (m)',
+                  Icons.straighten,
+                ),
+              ),
               const SizedBox(width: 16),
-              Expanded(child: _buildNumberField(_widthController, 'Width (m)', Icons.width_normal)),
+              Expanded(
+                child: _buildNumberField(
+                  _widthController,
+                  'Width (m)',
+                  Icons.width_normal,
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 16),
           Row(
             children: <Widget>[
-              Expanded(child: _buildNumberField(_heightController, 'Ceiling Height (m)', Icons.height, max: 8.0)),
+              Expanded(
+                child: _buildNumberField(
+                  _heightController,
+                  'Ceiling Height (m)',
+                  Icons.height,
+                  max: 8.0,
+                ),
+              ),
               const SizedBox(width: 16),
-              Expanded(child: _buildNumberField(_listenerHeightController, 'Listener Height (m)', Icons.person, min: 0.1, max: 2.4)),
+              Expanded(
+                child: _buildNumberField(
+                  _listenerHeightController,
+                  'Listener Height (m)',
+                  Icons.person,
+                  min: 0.1,
+                  max: 2.4,
+                ),
+              ),
             ],
           ),
         ],
@@ -180,9 +226,13 @@ class _SurfaceSpeakerLayoutWidgetState extends State<SurfaceSpeakerLayoutWidget>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          Text('Speaker Parameters', style: Theme.of(context).textTheme.headlineSmall),
+          Text(
+            'Speaker Parameters',
+            style: Theme.of(context).textTheme.headlineSmall,
+          ),
           const SizedBox(height: 16),
           FusionTextFormField(
+            semanticId: 'speakerType',
             title: "Speaker Type",
             hintText: "Enter speaker type",
             isRequired: true,
@@ -193,10 +243,18 @@ class _SurfaceSpeakerLayoutWidgetState extends State<SurfaceSpeakerLayoutWidget>
             //   prefixIcon: Icon(Icons.speaker),
             //   border: OutlineInputBorder(),
             // ),
-            validator: (String? value) => value?.isEmpty == true ? 'Please enter speaker type' : null,
+            validator:
+                (String? value) =>
+                    value?.isEmpty == true ? 'Please enter speaker type' : null,
           ),
           const SizedBox(height: 16),
-          _buildNumberField(_coverageAngleController, 'Coverage Angle (°)', Icons.radio_button_unchecked, min: 30, max: 180),
+          _buildNumberField(
+            _coverageAngleController,
+            'Coverage Angle (°)',
+            Icons.radio_button_unchecked,
+            min: 30,
+            max: 180,
+          ),
           const SizedBox(height: 8),
           Text(
             'Mounting: 6 inches below ceiling (practical installation)',
@@ -216,18 +274,29 @@ class _SurfaceSpeakerLayoutWidgetState extends State<SurfaceSpeakerLayoutWidget>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          Text('Coverage Configuration', style: Theme.of(context).textTheme.headlineSmall),
+          Text(
+            'Coverage Configuration',
+            style: Theme.of(context).textTheme.headlineSmall,
+          ),
           const SizedBox(height: 8),
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.surfaceContainerHighest.withOpacity(0.3),
+              color: Theme.of(
+                context,
+              ).colorScheme.surfaceContainerHighest.withOpacity(0.3),
               borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: Theme.of(context).colorScheme.outline.withOpacity(0.5)),
+              border: Border.all(
+                color: Theme.of(context).colorScheme.outline.withOpacity(0.5),
+              ),
             ),
             child: Row(
               children: <Widget>[
-                Icon(Icons.info_outline, size: 16, color: Theme.of(context).colorScheme.primary),
+                Icon(
+                  Icons.info_outline,
+                  size: 16,
+                  color: Theme.of(context).colorScheme.primary,
+                ),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
@@ -274,7 +343,11 @@ class _SurfaceSpeakerLayoutWidgetState extends State<SurfaceSpeakerLayoutWidget>
           const SizedBox(height: 12),
           Row(
             children: <Widget>[
-              Icon(Icons.info_outline, size: 16, color: Theme.of(context).colorScheme.onSurfaceVariant),
+              Icon(
+                Icons.info_outline,
+                size: 16,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
@@ -294,9 +367,15 @@ class _SurfaceSpeakerLayoutWidgetState extends State<SurfaceSpeakerLayoutWidget>
   String _formatPreferenceName(String name) {
     // Convert camelCase to Title Case
     return name
-        .replaceAllMapped(RegExp(r'([A-Z])'), (Match match) => ' ${match.group(1)}')
+        .replaceAllMapped(
+          RegExp(r'([A-Z])'),
+          (Match match) => ' ${match.group(1)}',
+        )
         .split(' ')
-        .map((String word) => word.isEmpty ? '' : word[0].toUpperCase() + word.substring(1))
+        .map(
+          (String word) =>
+              word.isEmpty ? '' : word[0].toUpperCase() + word.substring(1),
+        )
         .join(' ')
         .trim();
   }
@@ -309,9 +388,17 @@ class _SurfaceSpeakerLayoutWidgetState extends State<SurfaceSpeakerLayoutWidget>
         children: <Widget>[
           Row(
             children: <Widget>[
-              Icon(Icons.table_chart, color: Theme.of(context).colorScheme.secondary),
+              Icon(
+                Icons.table_chart,
+                color: Theme.of(context).colorScheme.secondary,
+              ),
               const SizedBox(width: 8),
-              Text('Down Angle Reference Table', style: Theme.of(context).textTheme.headlineSmall?.copyWith(color: Theme.of(context).colorScheme.secondary)),
+              Text(
+                'Down Angle Reference Table',
+                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                  color: Theme.of(context).colorScheme.secondary,
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 16),
@@ -337,7 +424,9 @@ class _SurfaceSpeakerLayoutWidgetState extends State<SurfaceSpeakerLayoutWidget>
                       Expanded(
                         child: Text(
                           'Mounting Height (m)',
-                          style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                          style: Theme.of(
+                            context,
+                          ).textTheme.titleSmall?.copyWith(
                             fontWeight: FontWeight.bold,
                           ),
                           textAlign: TextAlign.center,
@@ -351,7 +440,9 @@ class _SurfaceSpeakerLayoutWidgetState extends State<SurfaceSpeakerLayoutWidget>
                       Expanded(
                         child: Text(
                           'Down-angle (deg)',
-                          style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                          style: Theme.of(
+                            context,
+                          ).textTheme.titleSmall?.copyWith(
                             fontWeight: FontWeight.bold,
                           ),
                           textAlign: TextAlign.center,
@@ -361,17 +452,43 @@ class _SurfaceSpeakerLayoutWidgetState extends State<SurfaceSpeakerLayoutWidget>
                   ),
                 ),
                 // Table rows
-                _buildTableRow('Less than 2.4', '-5', _result?.mountingHeight != null && _result!.mountingHeight < 2.4),
-                _buildTableRow('2.4 - 4.6', '-15', _result?.mountingHeight != null && _result!.mountingHeight >= 2.4 && _result!.mountingHeight <= 4.6),
-                _buildTableRow('4.6 - 5.5', '-30', _result?.mountingHeight != null && _result!.mountingHeight >= 4.6 && _result!.mountingHeight <= 5.5),
-                _buildTableRow('5.5 and above', '-45', _result?.mountingHeight != null && _result!.mountingHeight >= 5.5),
+                _buildTableRow(
+                  'Less than 2.4',
+                  '-5',
+                  _result?.mountingHeight != null &&
+                      _result!.mountingHeight < 2.4,
+                ),
+                _buildTableRow(
+                  '2.4 - 4.6',
+                  '-15',
+                  _result?.mountingHeight != null &&
+                      _result!.mountingHeight >= 2.4 &&
+                      _result!.mountingHeight <= 4.6,
+                ),
+                _buildTableRow(
+                  '4.6 - 5.5',
+                  '-30',
+                  _result?.mountingHeight != null &&
+                      _result!.mountingHeight >= 4.6 &&
+                      _result!.mountingHeight <= 5.5,
+                ),
+                _buildTableRow(
+                  '5.5 and above',
+                  '-45',
+                  _result?.mountingHeight != null &&
+                      _result!.mountingHeight >= 5.5,
+                ),
               ],
             ),
           ),
           const SizedBox(height: 12),
           Row(
             children: <Widget>[
-              Icon(Icons.info_outline, size: 16, color: Theme.of(context).colorScheme.primary),
+              Icon(
+                Icons.info_outline,
+                size: 16,
+                color: Theme.of(context).colorScheme.primary,
+              ),
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
@@ -393,7 +510,12 @@ class _SurfaceSpeakerLayoutWidgetState extends State<SurfaceSpeakerLayoutWidget>
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: isHighlighted ? Theme.of(context).colorScheme.primaryContainer.withOpacity(0.5) : null,
+        color:
+            isHighlighted
+                ? Theme.of(
+                  context,
+                ).colorScheme.primaryContainer.withOpacity(0.5)
+                : null,
         border: Border(
           bottom: BorderSide(
             color: Theme.of(context).colorScheme.outline.withOpacity(0.3),
@@ -409,7 +531,10 @@ class _SurfaceSpeakerLayoutWidgetState extends State<SurfaceSpeakerLayoutWidget>
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontWeight: isHighlighted ? FontWeight.bold : FontWeight.normal,
-                color: isHighlighted ? Theme.of(context).colorScheme.primary : null,
+                color:
+                    isHighlighted
+                        ? Theme.of(context).colorScheme.primary
+                        : null,
               ),
             ),
           ),
@@ -424,7 +549,10 @@ class _SurfaceSpeakerLayoutWidgetState extends State<SurfaceSpeakerLayoutWidget>
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontWeight: isHighlighted ? FontWeight.bold : FontWeight.normal,
-                color: isHighlighted ? Theme.of(context).colorScheme.primary : null,
+                color:
+                    isHighlighted
+                        ? Theme.of(context).colorScheme.primary
+                        : null,
               ),
             ),
           ),
@@ -441,6 +569,7 @@ class _SurfaceSpeakerLayoutWidgetState extends State<SurfaceSpeakerLayoutWidget>
     double max = 1000,
   }) {
     return FusionTextFormField(
+      semanticId: label,
       title: label,
       isRequired: true,
       hintText: "",
@@ -458,7 +587,8 @@ class _SurfaceSpeakerLayoutWidgetState extends State<SurfaceSpeakerLayoutWidget>
         if (value?.isEmpty == true) return 'Please enter $label';
         final double? number = double.tryParse(value!);
         if (number == null) return 'Please enter a valid number';
-        if (number < min || number > max) return 'Value must be between $min and $max';
+        if (number < min || number > max)
+          return 'Value must be between $min and $max';
         return null;
       },
       onChanged: (_) => _calculatePlacement(),
@@ -497,9 +627,18 @@ class _SurfaceSpeakerLayoutWidgetState extends State<SurfaceSpeakerLayoutWidget>
 
   Widget _buildErrorCard() {
     final bool isWarning = _errorMessage!.startsWith('Warning:');
-    final Color backgroundColor = isWarning ? Colors.orange.shade100 : Theme.of(context).colorScheme.errorContainer;
-    final Color iconColor = isWarning ? Colors.orange.shade700 : Theme.of(context).colorScheme.error;
-    final Color textColor = isWarning ? Colors.orange.shade700 : Theme.of(context).colorScheme.onErrorContainer;
+    final Color backgroundColor =
+        isWarning
+            ? Colors.orange.shade100
+            : Theme.of(context).colorScheme.errorContainer;
+    final Color iconColor =
+        isWarning
+            ? Colors.orange.shade700
+            : Theme.of(context).colorScheme.error;
+    final Color textColor =
+        isWarning
+            ? Colors.orange.shade700
+            : Theme.of(context).colorScheme.onErrorContainer;
     final IconData icon = isWarning ? Icons.warning : Icons.error;
 
     return Card(
@@ -537,18 +676,40 @@ class _SurfaceSpeakerLayoutWidgetState extends State<SurfaceSpeakerLayoutWidget>
               children: <Widget>[
                 Row(
                   children: <Widget>[
-                    Icon(Icons.summarize, color: Theme.of(context).colorScheme.primary),
+                    Icon(
+                      Icons.summarize,
+                      color: Theme.of(context).colorScheme.primary,
+                    ),
                     const SizedBox(width: 8),
-                    Text('Speaker Layout Summary', style: Theme.of(context).textTheme.headlineSmall?.copyWith(color: Theme.of(context).colorScheme.primary)),
+                    Text(
+                      'Speaker Layout Summary',
+                      style: Theme.of(
+                        context,
+                      ).textTheme.headlineSmall?.copyWith(
+                        color: Theme.of(context).colorScheme.primary,
+                      ),
+                    ),
                   ],
                 ),
                 const SizedBox(height: 16),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: <Widget>[
-                    _buildSummaryMetric('Total Speakers', '${_result!.totalSpeakers}', Icons.speaker_group),
-                    _buildSummaryMetric('Front/Back Walls', '${_result!.speakersOnLength} each', Icons.linear_scale),
-                    _buildSummaryMetric('Left/Right Walls', '${_result!.speakersOnWidth} each', Icons.linear_scale_outlined),
+                    _buildSummaryMetric(
+                      'Total Speakers',
+                      '${_result!.totalSpeakers}',
+                      Icons.speaker_group,
+                    ),
+                    _buildSummaryMetric(
+                      'Front/Back Walls',
+                      '${_result!.speakersOnLength} each',
+                      Icons.linear_scale,
+                    ),
+                    _buildSummaryMetric(
+                      'Left/Right Walls',
+                      '${_result!.speakersOnWidth} each',
+                      Icons.linear_scale_outlined,
+                    ),
                   ],
                 ),
               ],
@@ -588,9 +749,17 @@ class _SurfaceSpeakerLayoutWidgetState extends State<SurfaceSpeakerLayoutWidget>
         children: <Widget>[
           Row(
             children: <Widget>[
-              Icon(Icons.calculate, color: Theme.of(context).colorScheme.secondary),
+              Icon(
+                Icons.calculate,
+                color: Theme.of(context).colorScheme.secondary,
+              ),
               const SizedBox(width: 8),
-              Text('Calculation Steps', style: Theme.of(context).textTheme.headlineSmall?.copyWith(color: Theme.of(context).colorScheme.secondary)),
+              Text(
+                'Calculation Steps',
+                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                  color: Theme.of(context).colorScheme.secondary,
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 16),
@@ -600,13 +769,16 @@ class _SurfaceSpeakerLayoutWidgetState extends State<SurfaceSpeakerLayoutWidget>
             stepNumber: 1,
             title: 'Find Distance from Loudspeaker to Listener Plane',
             icon: Icons.straighten,
-            formula: 'd_horiz = (mounting_height - listener_height) / tan(down_angle)',
+            formula:
+                'd_horiz = (mounting_height - listener_height) / tan(down_angle)',
             calculation:
                 'd_horiz = (${_result!.mountingHeight.toStringAsFixed(1)} - ${double.parse(_listenerHeightController.text)}) / tan(${_result!.downAngle.abs().toStringAsFixed(0)}°)\n'
                 'd_horiz = ${(_result!.mountingHeight - double.parse(_listenerHeightController.text)).toStringAsFixed(1)} / ${(tan(_result!.downAngle.abs() * pi / 180)).toStringAsFixed(3)}\n'
                 'd_horiz = ${_result!.distanceToListenerPlane.toStringAsFixed(2)} m',
-            result: 'd_horiz = ${_result!.distanceToListenerPlane.toStringAsFixed(2)} m',
-            explanation: 'Horizontal distance from loudspeaker to the listener plane using the down-angle',
+            result:
+                'd_horiz = ${_result!.distanceToListenerPlane.toStringAsFixed(2)} m',
+            explanation:
+                'Horizontal distance from loudspeaker to the listener plane using the down-angle',
           ),
 
           // Step 2: Determine horizontal coverage
@@ -621,7 +793,8 @@ class _SurfaceSpeakerLayoutWidgetState extends State<SurfaceSpeakerLayoutWidget>
                 'Horizontal_coverage = 2 × ${(tan((double.parse(_coverageAngleController.text) / 2) * pi / 180)).toStringAsFixed(3)} × ${_result!.distanceToListenerPlane.toStringAsFixed(2)}\n'
                 'Horizontal_coverage = ${_result!.coverageWidth.toStringAsFixed(2)} m',
             result: '${_result!.coverageWidth.toStringAsFixed(2)} m',
-            explanation: 'Horizontal coverage slice the loudspeaker provides at the initial mounting height',
+            explanation:
+                'Horizontal coverage slice the loudspeaker provides at the initial mounting height',
           ),
 
           // Step 3: Place speakers around perimeter with overlap
@@ -629,14 +802,16 @@ class _SurfaceSpeakerLayoutWidgetState extends State<SurfaceSpeakerLayoutWidget>
             stepNumber: 3,
             title: 'Place Horizontal Loudspeakers Around Perimeter',
             icon: Icons.grid_view,
-            formula: 'Speakers per Wall = ceil(Wall Length / Effective Coverage)',
+            formula:
+                'Speakers per Wall = ceil(Wall Length / Effective Coverage)',
             calculation:
                 'Effective Coverage = ${_result!.coverageWidth.toStringAsFixed(2)} × ${_coveragePreference.overlapMultiplier} (${_coveragePreference.name}) = ${_result!.effectiveCoverage.toStringAsFixed(2)} m\n\n'
                 'Length Walls (${double.parse(_lengthController.text)} m): ceil(${double.parse(_lengthController.text)} / ${_result!.effectiveCoverage.toStringAsFixed(2)}) = ${_result!.speakersOnLength} each\n'
                 'Width Walls (${double.parse(_widthController.text)} m): ceil(${double.parse(_widthController.text)} / ${_result!.effectiveCoverage.toStringAsFixed(2)}) = ${_result!.speakersOnWidth} each\n\n'
                 'Total: (${_result!.speakersOnLength} × 2) + (${_result!.speakersOnWidth} × 2) = ${_result!.totalSpeakers} speakers',
             result: 'Total: ${_result!.totalSpeakers} speakers',
-            explanation: 'Place horizontal loudspeakers around perimeter such that desired overlap is fulfilled',
+            explanation:
+                'Place horizontal loudspeakers around perimeter such that desired overlap is fulfilled',
           ),
         ],
       ),
@@ -656,7 +831,9 @@ class _SurfaceSpeakerLayoutWidgetState extends State<SurfaceSpeakerLayoutWidget>
       margin: const EdgeInsets.only(bottom: 16),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        border: Border.all(color: Theme.of(context).colorScheme.outline.withOpacity(0.3)),
+        border: Border.all(
+          color: Theme.of(context).colorScheme.outline.withOpacity(0.3),
+        ),
         borderRadius: BorderRadius.circular(8),
         color: Theme.of(context).colorScheme.surface,
       ),
@@ -711,12 +888,18 @@ class _SurfaceSpeakerLayoutWidgetState extends State<SurfaceSpeakerLayoutWidget>
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.secondaryContainer.withOpacity(0.3),
+              color: Theme.of(
+                context,
+              ).colorScheme.secondaryContainer.withOpacity(0.3),
               borderRadius: BorderRadius.circular(4),
             ),
             child: Row(
               children: <Widget>[
-                Icon(Icons.functions, size: 16, color: Theme.of(context).colorScheme.secondary),
+                Icon(
+                  Icons.functions,
+                  size: 16,
+                  color: Theme.of(context).colorScheme.secondary,
+                ),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
@@ -754,7 +937,11 @@ class _SurfaceSpeakerLayoutWidgetState extends State<SurfaceSpeakerLayoutWidget>
           // Explanation
           Row(
             children: <Widget>[
-              Icon(Icons.info_outline, size: 16, color: Theme.of(context).colorScheme.primary),
+              Icon(
+                Icons.info_outline,
+                size: 16,
+                color: Theme.of(context).colorScheme.primary,
+              ),
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
@@ -783,11 +970,16 @@ class _SurfaceSpeakerLayoutWidgetState extends State<SurfaceSpeakerLayoutWidget>
         children: <Widget>[
           Row(
             children: <Widget>[
-              Icon(Icons.view_in_ar, color: Theme.of(context).colorScheme.tertiary),
+              Icon(
+                Icons.view_in_ar,
+                color: Theme.of(context).colorScheme.tertiary,
+              ),
               const SizedBox(width: 8),
               Text(
                 'Speaker Placement Visualization',
-                style: Theme.of(context).textTheme.headlineSmall?.copyWith(color: Theme.of(context).colorScheme.tertiary),
+                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                  color: Theme.of(context).colorScheme.tertiary,
+                ),
               ),
             ],
           ),
@@ -797,15 +989,29 @@ class _SurfaceSpeakerLayoutWidgetState extends State<SurfaceSpeakerLayoutWidget>
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.tertiaryContainer.withOpacity(0.3),
+              color: Theme.of(
+                context,
+              ).colorScheme.tertiaryContainer.withOpacity(0.3),
               borderRadius: BorderRadius.circular(8),
             ),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: <Widget>[
-                _buildDimensionInfo('Length', '${double.parse(_lengthController.text)} m', Icons.straighten),
-                _buildDimensionInfo('Width', '${double.parse(_widthController.text)} m', Icons.width_normal),
-                _buildDimensionInfo('Height', '${double.parse(_heightController.text)} m', Icons.height),
+                _buildDimensionInfo(
+                  'Length',
+                  '${double.parse(_lengthController.text)} m',
+                  Icons.straighten,
+                ),
+                _buildDimensionInfo(
+                  'Width',
+                  '${double.parse(_widthController.text)} m',
+                  Icons.width_normal,
+                ),
+                _buildDimensionInfo(
+                  'Height',
+                  '${double.parse(_heightController.text)} m',
+                  Icons.height,
+                ),
               ],
             ),
           ),
@@ -837,7 +1043,9 @@ class _SurfaceSpeakerLayoutWidgetState extends State<SurfaceSpeakerLayoutWidget>
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.surfaceContainerHighest.withOpacity(0.3),
+              color: Theme.of(
+                context,
+              ).colorScheme.surfaceContainerHighest.withOpacity(0.3),
               borderRadius: BorderRadius.circular(8),
             ),
             child: Column(
@@ -852,9 +1060,21 @@ class _SurfaceSpeakerLayoutWidgetState extends State<SurfaceSpeakerLayoutWidget>
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: <Widget>[
-                    _buildLegendItem(Colors.blue.shade700, 'Room Walls', Icons.crop_square),
-                    _buildLegendItem(Colors.red.shade600, 'Surface Speakers', Icons.crop_square),
-                    _buildLegendItem(Colors.orange.withOpacity(0.3), 'Directional Coverage', Icons.play_arrow),
+                    _buildLegendItem(
+                      Colors.blue.shade700,
+                      'Room Walls',
+                      Icons.crop_square,
+                    ),
+                    _buildLegendItem(
+                      Colors.red.shade600,
+                      'Surface Speakers',
+                      Icons.crop_square,
+                    ),
+                    _buildLegendItem(
+                      Colors.orange.withOpacity(0.3),
+                      'Directional Coverage',
+                      Icons.play_arrow,
+                    ),
                   ],
                 ),
                 const SizedBox(height: 8),
@@ -976,21 +1196,32 @@ class _SurfaceSpeakerLayoutWidgetState extends State<SurfaceSpeakerLayoutWidget>
     );
   }
 
-  Widget _buildDetailItem(String label, String value, IconData icon, String description) {
+  Widget _buildDetailItem(
+    String label,
+    String value,
+    IconData icon,
+    String description,
+  ) {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 4),
       padding: const EdgeInsets.all(8),
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(4),
-        border: Border.all(color: Theme.of(context).colorScheme.outline.withOpacity(0.2)),
+        border: Border.all(
+          color: Theme.of(context).colorScheme.outline.withOpacity(0.2),
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
           Row(
             children: <Widget>[
-              Icon(icon, size: 16, color: Theme.of(context).colorScheme.primary),
+              Icon(
+                icon,
+                size: 16,
+                color: Theme.of(context).colorScheme.primary,
+              ),
               const SizedBox(width: 4),
               Expanded(
                 child: Text(
@@ -1050,14 +1281,19 @@ class _SurfaceSpeakerLayoutWidgetState extends State<SurfaceSpeakerLayoutWidget>
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.primaryContainer.withOpacity(0.1),
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Theme.of(context).colorScheme.outline.withOpacity(0.3)),
+        border: Border.all(
+          color: Theme.of(context).colorScheme.outline.withOpacity(0.3),
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
           Row(
             children: <Widget>[
-              Icon(Icons.list_alt, color: Theme.of(context).colorScheme.primary),
+              Icon(
+                Icons.list_alt,
+                color: Theme.of(context).colorScheme.primary,
+              ),
               const SizedBox(width: 8),
               Text(
                 'Speaker Positions (${_result!.totalSpeakers} total)',
@@ -1071,13 +1307,35 @@ class _SurfaceSpeakerLayoutWidgetState extends State<SurfaceSpeakerLayoutWidget>
           const SizedBox(height: 12),
 
           // Group speakers by wall
-          _buildWallSpeakers('Front Wall (Length)', _result!.positions.where((SpeakerPosition p) => p.y == 0).toList()),
+          _buildWallSpeakers(
+            'Front Wall (Length)',
+            _result!.positions.where((SpeakerPosition p) => p.y == 0).toList(),
+          ),
           const SizedBox(height: 8),
-          _buildWallSpeakers('Back Wall (Length)', _result!.positions.where((SpeakerPosition p) => p.y == double.parse(_widthController.text)).toList()),
+          _buildWallSpeakers(
+            'Back Wall (Length)',
+            _result!.positions
+                .where(
+                  (SpeakerPosition p) =>
+                      p.y == double.parse(_widthController.text),
+                )
+                .toList(),
+          ),
           const SizedBox(height: 8),
-          _buildWallSpeakers('Left Wall (Width)', _result!.positions.where((SpeakerPosition p) => p.x == 0).toList()),
+          _buildWallSpeakers(
+            'Left Wall (Width)',
+            _result!.positions.where((SpeakerPosition p) => p.x == 0).toList(),
+          ),
           const SizedBox(height: 8),
-          _buildWallSpeakers('Right Wall (Width)', _result!.positions.where((SpeakerPosition p) => p.x == double.parse(_lengthController.text)).toList()),
+          _buildWallSpeakers(
+            'Right Wall (Width)',
+            _result!.positions
+                .where(
+                  (SpeakerPosition p) =>
+                      p.x == double.parse(_lengthController.text),
+                )
+                .toList(),
+          ),
         ],
       ),
     );
@@ -1091,14 +1349,20 @@ class _SurfaceSpeakerLayoutWidgetState extends State<SurfaceSpeakerLayoutWidget>
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(6),
-        border: Border.all(color: Theme.of(context).colorScheme.outline.withOpacity(0.2)),
+        border: Border.all(
+          color: Theme.of(context).colorScheme.outline.withOpacity(0.2),
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
           Row(
             children: <Widget>[
-              Icon(Icons.border_all, size: 16, color: Theme.of(context).colorScheme.secondary),
+              Icon(
+                Icons.border_all,
+                size: 16,
+                color: Theme.of(context).colorScheme.secondary,
+              ),
               const SizedBox(width: 8),
               Text(
                 '$wallName (${speakers.length} speakers)',
@@ -1114,13 +1378,20 @@ class _SurfaceSpeakerLayoutWidgetState extends State<SurfaceSpeakerLayoutWidget>
             spacing: 8,
             runSpacing: 4,
             children:
-                speakers.asMap().entries.map((MapEntry<int, SpeakerPosition> entry) {
+                speakers.asMap().entries.map((
+                  MapEntry<int, SpeakerPosition> entry,
+                ) {
                   final int index = entry.key;
                   final SpeakerPosition speaker = entry.value;
                   return Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
                     decoration: BoxDecoration(
-                      color: Theme.of(context).colorScheme.tertiaryContainer.withOpacity(0.3),
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.tertiaryContainer.withOpacity(0.3),
                       borderRadius: BorderRadius.circular(4),
                     ),
                     child: Text(
@@ -1162,12 +1433,27 @@ class RoomLayoutPainter extends CustomPainter {
     final double offsetY = (size.height - roomWidth * scale) / 2;
 
     _drawRoom(canvas, size, offsetX, offsetY, roomLength, roomWidth, scale);
-    _drawDirectionalCoverage(canvas, offsetX, offsetY, roomLength, roomWidth, scale);
+    _drawDirectionalCoverage(
+      canvas,
+      offsetX,
+      offsetY,
+      roomLength,
+      roomWidth,
+      scale,
+    );
     _drawSpeakers(canvas, offsetX, offsetY, scale);
     _drawRoomLabels(canvas, offsetX, offsetY, roomLength, roomWidth, scale);
   }
 
-  void _drawRoom(Canvas canvas, Size size, double offsetX, double offsetY, double roomLength, double roomWidth, double scale) {
+  void _drawRoom(
+    Canvas canvas,
+    Size size,
+    double offsetX,
+    double offsetY,
+    double roomLength,
+    double roomWidth,
+    double scale,
+  ) {
     // Paint styles
     final Paint roomFillPaint =
         Paint()
@@ -1216,7 +1502,14 @@ class RoomLayoutPainter extends CustomPainter {
     canvas.drawRect(roomRect, roomBorderPaint);
   }
 
-  void _drawDirectionalCoverage(Canvas canvas, double offsetX, double offsetY, double roomLength, double roomWidth, double scale) {
+  void _drawDirectionalCoverage(
+    Canvas canvas,
+    double offsetX,
+    double offsetY,
+    double roomLength,
+    double roomWidth,
+    double scale,
+  ) {
     final Paint coveragePaint =
         Paint()
           ..color = Colors.orange.withOpacity(0.15)
@@ -1257,12 +1550,16 @@ class RoomLayoutPainter extends CustomPainter {
       if (onFrontWall || onBackWall) {
         maxCoverageDistance = roomWidth; // Front/back walls cover across width
       } else {
-        maxCoverageDistance = roomLength; // Left/right walls cover across length
+        maxCoverageDistance =
+            roomLength; // Left/right walls cover across length
       }
 
       // Use the smaller of calculated distance or room dimension for visualization
       final double actualDistance = result.distanceToListenerPlane;
-      final double visualDistance = (actualDistance < maxCoverageDistance) ? actualDistance : maxCoverageDistance;
+      final double visualDistance =
+          (actualDistance < maxCoverageDistance)
+              ? actualDistance
+              : maxCoverageDistance;
       final double coverageDistance = visualDistance * scale;
       final double coverageWidth = result.coverageWidth * scale;
 
@@ -1342,7 +1639,8 @@ class RoomLayoutPainter extends CustomPainter {
     final double directionRadians = directionDegrees * 3.14159 / 180;
 
     // Use actual horizontal coverage angle from speaker specification
-    final double halfAngleRadians = (result.horizontalCoverageAngle * 3.14159 / 180) / 2;
+    final double halfAngleRadians =
+        (result.horizontalCoverageAngle * 3.14159 / 180) / 2;
 
     // Calculate the sector endpoints
     final double leftAngle = directionRadians - halfAngleRadians;
@@ -1359,7 +1657,11 @@ class RoomLayoutPainter extends CustomPainter {
 
     // Add arc between the endpoints
     path.arcTo(
-      Rect.fromCenter(center: Offset(centerX, centerY), width: distance * 2, height: distance * 2),
+      Rect.fromCenter(
+        center: Offset(centerX, centerY),
+        width: distance * 2,
+        height: distance * 2,
+      ),
       leftAngle,
       rightAngle - leftAngle,
       false,
@@ -1373,7 +1675,12 @@ class RoomLayoutPainter extends CustomPainter {
     canvas.drawPath(path, strokePaint);
   }
 
-  void _drawSpeakers(Canvas canvas, double offsetX, double offsetY, double scale) {
+  void _drawSpeakers(
+    Canvas canvas,
+    double offsetX,
+    double offsetY,
+    double scale,
+  ) {
     final Paint speakerPaint =
         Paint()
           ..color = Colors.red.shade600
@@ -1398,8 +1705,14 @@ class RoomLayoutPainter extends CustomPainter {
         height: 12,
       );
 
-      canvas.drawRRect(RRect.fromRectAndRadius(speakerRect, const Radius.circular(2)), speakerPaint);
-      canvas.drawRRect(RRect.fromRectAndRadius(speakerRect, const Radius.circular(2)), speakerBorderPaint);
+      canvas.drawRRect(
+        RRect.fromRectAndRadius(speakerRect, const Radius.circular(2)),
+        speakerPaint,
+      );
+      canvas.drawRRect(
+        RRect.fromRectAndRadius(speakerRect, const Radius.circular(2)),
+        speakerBorderPaint,
+      );
 
       // Draw speaker number
       final TextPainter textPainter = TextPainter(
@@ -1425,7 +1738,14 @@ class RoomLayoutPainter extends CustomPainter {
     }
   }
 
-  void _drawRoomLabels(Canvas canvas, double offsetX, double offsetY, double roomLength, double roomWidth, double scale) {
+  void _drawRoomLabels(
+    Canvas canvas,
+    double offsetX,
+    double offsetY,
+    double roomLength,
+    double roomWidth,
+    double scale,
+  ) {
     final TextPainter labelPainter = TextPainter(
       textAlign: TextAlign.center,
       textDirection: TextDirection.ltr,
@@ -1443,7 +1763,10 @@ class RoomLayoutPainter extends CustomPainter {
     labelPainter.layout();
     labelPainter.paint(
       canvas,
-      Offset(offsetX + roomLength * scale / 2 - labelPainter.width / 2, offsetY - 35),
+      Offset(
+        offsetX + roomLength * scale / 2 - labelPainter.width / 2,
+        offsetY - 35,
+      ),
     );
 
     // Length dimension
@@ -1454,7 +1777,10 @@ class RoomLayoutPainter extends CustomPainter {
     labelPainter.layout();
     labelPainter.paint(
       canvas,
-      Offset(offsetX + roomLength * scale / 2 - labelPainter.width / 2, offsetY - 20),
+      Offset(
+        offsetX + roomLength * scale / 2 - labelPainter.width / 2,
+        offsetY - 20,
+      ),
     );
 
     // Back wall label
@@ -1469,7 +1795,10 @@ class RoomLayoutPainter extends CustomPainter {
     labelPainter.layout();
     labelPainter.paint(
       canvas,
-      Offset(offsetX + roomLength * scale / 2 - labelPainter.width / 2, offsetY + roomWidth * scale + 15),
+      Offset(
+        offsetX + roomLength * scale / 2 - labelPainter.width / 2,
+        offsetY + roomWidth * scale + 15,
+      ),
     );
 
     // Width dimension
@@ -1480,7 +1809,10 @@ class RoomLayoutPainter extends CustomPainter {
     labelPainter.layout();
     labelPainter.paint(
       canvas,
-      Offset(offsetX + roomLength * scale / 2 - labelPainter.width / 2, offsetY + roomWidth * scale + 30),
+      Offset(
+        offsetX + roomLength * scale / 2 - labelPainter.width / 2,
+        offsetY + roomWidth * scale + 30,
+      ),
     );
 
     // Left wall label (rotated)
@@ -1501,7 +1833,10 @@ class RoomLayoutPainter extends CustomPainter {
 
     // Right wall label (rotated)
     canvas.save();
-    canvas.translate(offsetX + roomLength * scale + 25, offsetY + roomWidth * scale / 2);
+    canvas.translate(
+      offsetX + roomLength * scale + 25,
+      offsetY + roomWidth * scale / 2,
+    );
     canvas.rotate(3.14159 / 2); // Rotate 90 degrees clockwise
     labelPainter.text = const TextSpan(
       text: 'RIGHT WALL',

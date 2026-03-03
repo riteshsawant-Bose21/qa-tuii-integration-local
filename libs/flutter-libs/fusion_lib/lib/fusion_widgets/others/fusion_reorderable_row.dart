@@ -32,8 +32,8 @@ class ReorderableRow<T> extends StatelessWidget {
         onReorder: onReorder,
         itemBuilder: itemBuilder,
         extractId: extractId,
-        childPadding: childPadding ?? EdgeInsets.symmetric(horizontal: 5, vertical: 0),
-
+        childPadding:
+            childPadding ?? EdgeInsets.symmetric(horizontal: 5, vertical: 0),
       ),
     );
   }
@@ -71,8 +71,9 @@ class ReorderableColumn<T> extends StatelessWidget {
         onReorder: onReorder,
         itemBuilder: itemBuilder,
         extractId: extractId,
-        childPadding: childPadding ?? const EdgeInsets.symmetric(horizontal: 5, vertical: 5),
-
+        childPadding:
+            childPadding ??
+            const EdgeInsets.symmetric(horizontal: 5, vertical: 5),
       ),
     );
   }

@@ -353,7 +353,8 @@ class CustomPopupMenuButton<T> extends StatefulWidget {
   final bool? requestFocus;
 
   @override
-  _CustomPopupMenuButtonState<T> createState() => _CustomPopupMenuButtonState<T>();
+  _CustomPopupMenuButtonState<T> createState() =>
+      _CustomPopupMenuButtonState<T>();
 }
 
 /// The [State] for a [CustomPopupMenuButton].

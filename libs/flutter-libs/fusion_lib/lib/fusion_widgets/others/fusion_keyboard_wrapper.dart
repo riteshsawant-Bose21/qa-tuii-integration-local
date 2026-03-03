@@ -55,8 +55,9 @@ class _FusionKeyboardWrapperState extends State<FusionKeyboardWrapper> {
       return;
       // print("Key event: ${event.logicalKey.debugName}, isMeta: ${HardwareKeyboard.instance.isMetaPressed}, isControl: ${HardwareKeyboard.instance.isControlPressed}, isShift: ${HardwareKeyboard.instance.isShiftPressed}");
     }
-    final bool isMeta = HardwareKeyboard.instance.isMetaPressed || HardwareKeyboard.instance.isControlPressed;
-
+    final bool isMeta =
+        HardwareKeyboard.instance.isMetaPressed ||
+        HardwareKeyboard.instance.isControlPressed;
 
     final LogicalKeyboardKey logicalKey = event.logicalKey;
     if (logicalKey == LogicalKeyboardKey.shiftLeft ||

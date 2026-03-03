@@ -12,7 +12,8 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../../core/models/products_data.dart';
 import '../../../../core/service_locator.dart';
-import '../../../add_source_popup/view/add_source_popup.dart' show AddSourcePopup;
+import '../../../add_source_popup/view/add_source_popup.dart'
+    show AddSourcePopup;
 import '../../../configuration/presentation/viewmodel/project_view_model.dart';
 import '../../../create_zone_popup/view/create_zone_popup.dart';
 import '../../../product_query/presentation/pages/product_query.dart';
@@ -52,7 +53,10 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
     return LayoutBuilder(
       builder: (BuildContext context, BoxConstraints constraints) {
         return SemanticHelper.container(
-          testId: SemanticHelper.createTestId(SemanticTypes.container, "schematic_listing_view_area"),
+          testId: SemanticHelper.createTestId(
+            SemanticTypes.container,
+            "schematic_listing_view_area",
+          ),
           child: Container(
             color: context.colorScheme.primaryBlack,
             padding: const EdgeInsets.symmetric(horizontal: 4),
@@ -70,7 +74,10 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
                   child: SchematicListingSection(
                     sectionTitle: "Sources & Endpoints",
                     sections: <Widget>[
-                      SchematicHardwareListing<Source, SchematicSourcesViewModel>(
+                      SchematicHardwareListing<
+                        Source,
+                        SchematicSourcesViewModel
+                      >(
                         create: (BuildContext context) {
                           return SchematicSourcesViewModel();
                         },
@@ -87,12 +94,16 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
 
                       const SizedBox(height: 12),
 
-                      SchematicHardwareListing<FusionEndpoints, SchematicEndpointsViewModel>(
+                      SchematicHardwareListing<
+                        FusionEndpoints,
+                        SchematicEndpointsViewModel
+                      >(
                         create: (BuildContext context) {
                           return SchematicEndpointsViewModel();
                         },
                         title: "Endpoints",
                         addAction: FusionArrowPopup(
+                          semanticId: "add_endpoint_popup",
                           content: const EquipmentLocationDialog(
                             currentFilter: EQLDeviceType.endpoint,
                           ),
@@ -118,12 +129,16 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
                   child: SchematicListingSection(
                     sectionTitle: "Processors & Amplifiers",
                     sections: <Widget>[
-                      SchematicHardwareListing<FusionDsp, SchematicFusionDeviceViewModel>(
+                      SchematicHardwareListing<
+                        FusionDsp,
+                        SchematicFusionDeviceViewModel
+                      >(
                         create: (BuildContext context) {
                           return SchematicFusionDeviceViewModel();
                         },
                         title: "Fusion Devices",
                         addAction: FusionArrowPopup(
+                          semanticId: 'add_fusion_device_popup',
                           content: const EquipmentLocationDialog(
                             currentFilter: EQLDeviceType.processor,
                           ),
@@ -137,12 +152,16 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
 
                       const SizedBox(height: 12),
 
-                      SchematicHardwareListing<Amplifier, SchematicAmplifiersViewModel>(
+                      SchematicHardwareListing<
+                        Amplifier,
+                        SchematicAmplifiersViewModel
+                      >(
                         create: (BuildContext context) {
                           return SchematicAmplifiersViewModel();
                         },
                         title: "Amplifiers",
                         addAction: FusionArrowPopup(
+                          semanticId: 'add_amplifier_popup',
                           content: const EquipmentLocationDialog(
                             currentFilter: EQLDeviceType.amplifier,
                           ),
@@ -170,7 +189,10 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
                     action: CreateZonePopup(
                       isFromBuildingPage: false,
                       child: SemanticHelper.button(
-                        testId: SemanticHelper.createTestId(SemanticTypes.button, "add_zone_button_speakers"),
+                        testId: SemanticHelper.createTestId(
+                          SemanticTypes.button,
+                          "add_zone_button_speakers",
+                        ),
                         child: Row(
                           children: <Widget>[
                             Icon(
@@ -181,9 +203,12 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
                             const SizedBox(width: 6),
                             FusionAppText(
                               text: "Add Zone",
-                              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              style: Theme.of(
+                                context,
+                              ).textTheme.bodySmall?.copyWith(
                                 fontSize: 8,
-                                color: Theme.of(context).colorScheme.textPrimary,
+                                color:
+                                    Theme.of(context).colorScheme.textPrimary,
                               ),
                             ),
                             const SizedBox(width: 6),
@@ -196,16 +221,28 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
                         create: (BuildContext context) {
                           return SchematicZoneViewModel();
                         },
-                        builder: (BuildContext context, DeviceListingState<Zone> state) {
-                          final SearchResultsViewModel read = context.read<SearchResultsViewModel>();
-                          read.updateResults(state.devices.map((Zone e) => e.id).toList());
+                        builder: (
+                          BuildContext context,
+                          DeviceListingState<Zone> state,
+                        ) {
+                          final SearchResultsViewModel read =
+                              context.read<SearchResultsViewModel>();
+                          read.updateResults(
+                            state.devices.map((Zone e) => e.id).toList(),
+                          );
                           final List<Zone> devices = state.devices;
                           if (devices.isEmpty) {
                             return Container(
-                              padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
+                              padding: const EdgeInsets.symmetric(
+                                vertical: 16,
+                                horizontal: 8,
+                              ),
                               child: Center(
                                 child: FusionAppText(
-                                  text: state is DeviceSearchingState ? "No matching zones found" : "No zones added",
+                                  text:
+                                      state is DeviceSearchingState
+                                          ? "No matching zones found"
+                                          : "No zones added",
                                   textAlign: TextAlign.center,
                                   style: context.textTheme.bodySmall?.copyWith(
                                     fontSize: FusionSizes.fontSize12,
@@ -218,7 +255,10 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
                           return ReorderableColumn<Zone>(
                             items: devices,
                             onReorder: (int oldIndex, int newIndex) {
-                              _projectViewModel.reorderZones(zoneIdToMove: devices[oldIndex].id, zoneIdAtNewIndex: devices[newIndex].id);
+                              _projectViewModel.reorderZones(
+                                zoneIdToMove: devices[oldIndex].id,
+                                zoneIdAtNewIndex: devices[newIndex].id,
+                              );
                             },
                             itemBuilder: (BuildContext context, Zone zone) {
                               return ExpandableZoneWidget(
@@ -227,11 +267,19 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
                                 zoneId: zone.id,
                                 bgColor: zone.color,
                                 initiallyExpanded: true,
-                                zoneCircuits: _projectViewModel.getCircuitsInZone(zone.id),
-                                subZones: _projectViewModel.getSubZonesForZone(parentZoneId: zone.id),
+                                zoneCircuits: _projectViewModel
+                                    .getCircuitsInZone(zone.id),
+                                subZones: _projectViewModel.getSubZonesForZone(
+                                  parentZoneId: zone.id,
+                                ),
                                 onDelete: (String id) {
-                                  serviceLocator<ProjectViewModel>().removeZone(zoneId: zone.id);
-                                  FusionToast.error(context, message: 'Zone "${zone.name}" deleted');
+                                  serviceLocator<ProjectViewModel>().removeZone(
+                                    zoneId: zone.id,
+                                  );
+                                  FusionToast.error(
+                                    context,
+                                    message: 'Zone "${zone.name}" deleted',
+                                  );
                                 },
                               );
                             },
@@ -252,21 +300,27 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
                   child: SchematicListingSection(
                     sectionTitle: "Controllers",
                     action: FusionArrowPopup(
-                      semanticsId: "add_controller_popup",
+                      semanticId: "add_controller_popup",
                       content: SchematicAddDeviceForm<ProductQueryModel>(
                         semanticsId: "controllers",
                         products: ProductAPI.getControllers(),
                         itemLabel: (ProductQueryModel value) => value.name,
                         itemImage: (ProductQueryModel value) => value.image,
-                        onSubmit: (String areaId, String floorId, ProductQueryModel device) {
-                          final HardwareComponent hardware = serviceLocator<ProjectViewModel>().fromProductQueryModel(
-                            device,
-                            locationEntity: LocationModel(
-                              listeningAreaId: areaId,
-                              floorId: floorId,
-                            ),
-                            isFromBuildingPage: false,
-                          );
+                        onSubmit: (
+                          String areaId,
+                          String floorId,
+                          ProductQueryModel device,
+                        ) {
+                          final HardwareComponent hardware =
+                              serviceLocator<ProjectViewModel>()
+                                  .fromProductQueryModel(
+                                    device,
+                                    locationEntity: LocationModel(
+                                      listeningAreaId: areaId,
+                                      floorId: floorId,
+                                    ),
+                                    isFromBuildingPage: false,
+                                  );
 
                           serviceLocator<ProjectViewModel>().addHardware(
                             hardware: hardware,
@@ -280,7 +334,10 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
                         },
                       ),
                       child: SemanticHelper.button(
-                        testId: SemanticHelper.createTestId(SemanticTypes.button, "add_controller"),
+                        testId: SemanticHelper.createTestId(
+                          SemanticTypes.button,
+                          "add_controller",
+                        ),
                         child: Icon(
                           LucideIcons.plus200,
                           size: FusionSizes.iconSize16,
@@ -289,7 +346,10 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
                       ),
                     ),
                     sections: <Widget>[
-                      SchematicHardwareListing<FusionController, SchematicFusionControllerViewModel>(
+                      SchematicHardwareListing<
+                        FusionController,
+                        SchematicFusionControllerViewModel
+                      >(
                         create: (BuildContext context) {
                           return SchematicFusionControllerViewModel();
                         },
@@ -313,7 +373,11 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
                     action: AddDeviceExpandablePopupMenuWidget(
                       sectionTitle: "Accessories",
                       listeningAreas: _projectViewModel.listeningAreas,
-                      onTapAddDevice: (dynamic item, String areaId, String floorId) {
+                      onTapAddDevice: (
+                        dynamic item,
+                        String areaId,
+                        String floorId,
+                      ) {
                         if (item is RackData) {
                           final HardwareRack hardwareRack = HardwareRack(
                             locationEntity: LocationModel(
@@ -356,7 +420,10 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
                       },
                     ),
                     sections: <Widget>[
-                      SchematicHardwareListing<HardwareRack, SchematicHardwareRacksViewModel>(
+                      SchematicHardwareListing<
+                        HardwareRack,
+                        SchematicHardwareRacksViewModel
+                      >(
                         create: (BuildContext context) {
                           return SchematicHardwareRacksViewModel();
                         },
@@ -364,7 +431,10 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
                       ),
 
                       const SizedBox(height: 12),
-                      SchematicHardwareListing<NetworkSwitch, SchematicNetworkSwitchesViewModel>(
+                      SchematicHardwareListing<
+                        NetworkSwitch,
+                        SchematicNetworkSwitchesViewModel
+                      >(
                         create: (BuildContext context) {
                           return SchematicNetworkSwitchesViewModel();
                         },
