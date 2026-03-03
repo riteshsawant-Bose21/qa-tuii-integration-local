@@ -67,8 +67,6 @@ func main() {
 		actualEnvName = envFromVar
 	}
 
-	fmt.Printf("Environment set to: %s\n", actualEnvName)
-
 	env := environment.New(environment.DefaultLoadLookuper)
 
 	if actualEnvName == "local" {
