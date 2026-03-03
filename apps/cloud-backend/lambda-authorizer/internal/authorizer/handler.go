@@ -4,6 +4,8 @@ import (
 	"database/sql"
 	"fmt"
 	"os"
+	// Import postgres driver to ensure it's registered before sql.Open is called
+	_ "github.com/lib/pq"
 
 	"github.com/BoseProfessional/lambda-authorizer/internal/auth"
 	"github.com/BoseProfessional/lambda-authorizer/internal/config"

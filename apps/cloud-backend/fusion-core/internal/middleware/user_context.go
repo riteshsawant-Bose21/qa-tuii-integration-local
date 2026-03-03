@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strconv"
 
+	commonresponse "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/api/response"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/api/types"
 	"github.com/gin-gonic/gin"
 )
@@ -21,8 +22,8 @@ func ExtractUserFromHeaders() gin.HandlerFunc {
 		roleID := ctx.GetHeader("X-Role-ID")
 
 		// Validate required headers
-		if userID == "" || accountID == "" || userEmail == "" {
-			ctx.JSON(401, gin.H{"error": "Missing user identity headers"})
+		if userID == "" || accountID == "" || userEmail == "" || roleID == "" {
+			commonresponse.Unauthorized(ctx, "Missing user identity headers")
 			ctx.Abort()
 			return
 		}
@@ -30,7 +31,7 @@ func ExtractUserFromHeaders() gin.HandlerFunc {
 		// Parse role ID
 		intRoleID, err := strconv.Atoi(roleID)
 		if err != nil {
-			ctx.JSON(400, gin.H{"error": "Invalid role ID format"})
+			commonresponse.BadRequest(ctx, "Invalid role ID format")
 			ctx.Abort()
 			return
 		}

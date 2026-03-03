@@ -30,16 +30,71 @@ type UserContext struct {
 
 // CheckEndpointPermissionWithContext checks permission and returns user context for Lambda response
 func (s *SQLPermissionChecker) CheckEndpointPermissionWithContext(ctx context.Context, userEmail, method, resource string) (bool, *UserContext, error) {
-	// Check permission as before
-	allowed, err := s.CheckEndpointPermission(ctx, userEmail, method, resource)
-	if err != nil || !allowed {
-		return allowed, nil, err
+	// Find matching endpoint permission
+	permission := s.findEndpointPermission(method, resource)
+
+	// Get user permissions from database once - we'll reuse this for both auth check and context
+	userPerms, err := s.GetUserPermissions(ctx, userEmail)
+	if err != nil {
+		return false, nil, fmt.Errorf("failed to get user permissions: %w", err)
 	}
+
+	// Check authorization if permission is registered
+	if permission != nil {
+		// Check if user has the required permission
+		userLevel, exists := userPerms[permission.Feature]
+		if !exists {
+			// Check for pattern-based permissions (e.g., "project.*" grants access to all project features)
+			hasPatternPermission := false
+			for permKey, level := range userPerms {
+				if strings.HasSuffix(permKey, "*") {
+					prefix := strings.TrimSuffix(permKey, "*")
+					if strings.HasPrefix(permission.Feature, prefix) {
+						if isPermissionSufficient(level, permission.RequiredLevel) {
+							hasPatternPermission = true
+							break
+						}
+					}
+				}
+			}
+
+			if !hasPatternPermission {
+				// Check for admin privileges (users with admin roles should have access to most features)
+				if adminLevel, exists := userPerms["admin"]; exists {
+					if !isPermissionSufficient(adminLevel, permission.RequiredLevel) {
+						// Check for full access permissions
+						if fullLevel, exists := userPerms["*"]; exists {
+							if !isPermissionSufficient(fullLevel, permission.RequiredLevel) {
+								return false, nil, nil
+							}
+						} else {
+							return false, nil, nil
+						}
+					}
+				} else {
+					// Check for full access permissions
+					if fullLevel, exists := userPerms["*"]; exists {
+						if !isPermissionSufficient(fullLevel, permission.RequiredLevel) {
+							return false, nil, nil
+						}
+					} else {
+						return false, nil, nil
+					}
+				}
+			}
+		} else {
+			// User has direct permission, check if level is sufficient
+			if !isPermissionSufficient(userLevel, permission.RequiredLevel) {
+				return false, nil, nil
+			}
+		}
+	}
+	// If no permission registered or permission check passed, proceed to get user context
 
 	// Fetch user info for context
 	var userID, role, accountID, accountName, accountType, roleID string
 
-	query := `SELECT u.id, r.name, u.account_id, a.name, at.name, r.id
+	query := `SELECT u.id::text, r.name, u.account_id::text, a.name, at.name, r.id::text
 		 FROM app_user u
 		 JOIN account_type_role atr ON u.account_type_role_id = atr.id
 		 JOIN role r ON atr.role_id = r.id
@@ -53,16 +108,9 @@ func (s *SQLPermissionChecker) CheckEndpointPermissionWithContext(ctx context.Co
 		return false, nil, fmt.Errorf("failed to get user context: %w", err)
 	}
 
-	// Get permissions as comma-separated string
-	perms, err := s.GetUserPermissions(ctx, userEmail)
-
-	if err != nil {
-		return false, nil, fmt.Errorf("failed to get user permissions: %w", err)
-	}
-
+	// Build permissions string from already-fetched permissions
 	var permsList []string
-
-	for k, v := range perms {
+	for k, v := range userPerms {
 		permsList = append(permsList, fmt.Sprintf("%s:%s", k, v))
 	}
 
@@ -119,7 +167,7 @@ func (s *SQLPermissionChecker) setupPermissions() {
 	// Product permissions
 	s.registerPermission(constants.MethodGet, "/api/v1/products", constants.ProductRead, constants.PermissionRead, "View all products")
 	s.registerPermission(constants.MethodGet, "/api/v1/products/:id", constants.ProductRead, constants.PermissionRead, "View a product details")
-	s.registerPermission(constants.MethodPost, "/api/v1/products/price", constants.ProductRead, constants.PermissionRead, "View product price")
+	s.registerPermission(constants.MethodGet, "/api/v1/products/price", constants.ProductRead, constants.PermissionRead, "View product price")
 
 	// User Profile permissions
 	s.registerPermission(constants.MethodGet, "/api/v1/users/profile", constants.UserProfileRead, constants.PermissionRead, "View user profile")
@@ -237,6 +285,14 @@ func (s *SQLPermissionChecker) CheckEndpointPermission(ctx context.Context, user
 				}
 			}
 		}
+
+		// Check for admin privileges (users with admin roles should have access to most features)
+		if adminLevel, exists := userPerms["admin"]; exists {
+			if isPermissionSufficient(adminLevel, permission.RequiredLevel) {
+				return true, nil
+			}
+		}
+
 		return false, nil
 	}
 
