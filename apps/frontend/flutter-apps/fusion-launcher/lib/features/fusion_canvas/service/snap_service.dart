@@ -45,13 +45,17 @@ class SnapResult {
   final List<SnapPoint> snapPoints;
   final bool hasSnapped;
 
+  /// Index of the cursor position that was used for snapping (for multi-point snapping)
+  final int? cursorIndex;
+
   const SnapResult({
     required this.snappedPosition,
     this.snapPoints = const <SnapPoint>[],
     required this.hasSnapped,
+    this.cursorIndex,
   });
 
-  SnapResult.noSnap(Offset originalPosition) : snappedPosition = originalPosition, snapPoints = const <SnapPoint>[], hasSnapped = false;
+  SnapResult.noSnap(Offset originalPosition) : snappedPosition = originalPosition, snapPoints = const <SnapPoint>[], hasSnapped = false, cursorIndex = null;
 
   /// Get snap point by type (for backward compatibility)
   SnapPoint? getSnapPointByType(SnapPointType type) {
@@ -70,6 +74,52 @@ class SnapService {
   final SnapSettings settings;
 
   SnapService({this.settings = const SnapSettings()});
+
+  /// Find the best snap point from multiple cursor positions (for polygon dragging)
+  /// Returns the snap result with the shortest snap distance among all cursor positions
+  SnapResult findBestSnapPoint({
+    required List<Offset> cursorPositions,
+    List<Offset> existingPoints = const <Offset>[],
+    double scale = 1.0,
+  }) {
+    if (cursorPositions.isEmpty) {
+      return SnapResult.noSnap(Offset.zero);
+    }
+
+    SnapResult? bestResult;
+    double bestDistance = double.infinity;
+    int bestIndex = 0;
+
+    for (int i = 0; i < cursorPositions.length; i++) {
+      final Offset cursorPosition = cursorPositions[i];
+      final SnapResult result = findSnapPoint(
+        cursorPosition: cursorPosition,
+        existingPoints: existingPoints,
+        scale: scale,
+      );
+
+      if (result.hasSnapped) {
+        final double distance = (result.snappedPosition - cursorPosition).distance;
+        if (distance < bestDistance) {
+          bestDistance = distance;
+          bestResult = result;
+          bestIndex = i;
+        }
+      }
+    }
+
+    // Return the best snap result if found, otherwise return no-snap for first position
+    if (bestResult != null) {
+      return SnapResult(
+        snappedPosition: bestResult.snappedPosition,
+        snapPoints: bestResult.snapPoints,
+        hasSnapped: true,
+        cursorIndex: bestIndex,
+      );
+    }
+
+    return SnapResult.noSnap(cursorPositions.first);
+  }
 
   /// Find snap points based on cursor position and available snap targets
   SnapResult findSnapPoint({

@@ -57,6 +57,7 @@ class FusionCanvas extends StatelessWidget {
       child: _PolygonPointsSync(
         elements: elements,
         child: FusionCanvasListenersWrapper(
+          painters: elements,
           toolbarEvents: toolbarEvents,
           child: BlocBuilder<FusionCanvasStateViewModel, FusionCanvasState>(
             builder: (BuildContext context, FusionCanvasState state) {
@@ -107,7 +108,6 @@ class FusionCanvas extends StatelessWidget {
                                 state,
                                 context.read<FusionSnapViewModel>().state,
                               );
-                              print("state=${read.state}, inputState=$state");
                               if ((read.state is! MeasureToolState && read.state is! PenToolState) && state is FusionCanvasInputTapDownState) {
                                 final FusionBasePainter? item = fusionCanvasPainter.isHit(
                                   state.mousePosition ?? Offset.zero,
@@ -196,9 +196,11 @@ class _PolygonPointsSyncState extends State<_PolygonPointsSync> {
     final List<Offset> points = <Offset>[];
     for (final FusionBasePainter element in widget.elements) {
       if (element is FusionPolygonPainter) {
-        points.addAll(
-          element.polygon.points.map((FusionCanvasPoint p) => p.position),
-        );
+        if (!element.isSelected) {
+          points.addAll(
+            element.polygon.points.map((FusionCanvasPoint p) => p.position),
+          );
+        }
       }
     }
     context.read<FusionSnapViewModel>().addPolygonPoints(points);

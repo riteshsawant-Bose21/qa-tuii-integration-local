@@ -7,14 +7,18 @@ import '../service/snap_service.dart';
 
 class FusionSnapState {
   final Offset? cursorPosition;
+
+  /// List of cursor positions for multi-point snapping (e.g., polygon dragging)
+  final List<Offset>? cursorPositions;
   final SnapResult? snapResult;
 
   const FusionSnapState({
     this.cursorPosition,
+    this.cursorPositions,
     this.snapResult,
   });
 
-  const FusionSnapState.initial() : cursorPosition = null, snapResult = null;
+  const FusionSnapState.initial() : cursorPosition = null, cursorPositions = null, snapResult = null;
 
   /// Get the effective cursor position (snapped if applicable)
   Offset? get effectivePosition => snapResult?.snappedPosition ?? cursorPosition;
@@ -24,12 +28,15 @@ class FusionSnapState {
 
   FusionSnapState copyWith({
     Offset? cursorPosition,
+    List<Offset>? cursorPositions,
     SnapResult? snapResult,
     bool clearCursorPosition = false,
+    bool clearCursorPositions = false,
     bool clearSnapResult = false,
   }) {
     return FusionSnapState(
       cursorPosition: clearCursorPosition ? null : cursorPosition ?? this.cursorPosition,
+      cursorPositions: clearCursorPositions ? null : cursorPositions ?? this.cursorPositions,
       snapResult: clearSnapResult ? null : snapResult ?? this.snapResult,
     );
   }
@@ -39,11 +46,14 @@ class FusionSnapState {
     if (identical(this, other)) return true;
 
     return other.cursorPosition == cursorPosition &&
+        listEquals(other.cursorPositions, cursorPositions) &&
         other.snapResult?.snappedPosition == snapResult?.snappedPosition &&
         other.snapResult?.hasSnapped == snapResult?.hasSnapped &&
+        other.snapResult?.cursorIndex == snapResult?.cursorIndex &&
         listEquals(other.snapResult?.snapPoints, snapResult?.snapPoints);
   }
 
   @override
-  int get hashCode => cursorPosition.hashCode ^ (snapResult?.snappedPosition.hashCode ?? 0) ^ (snapResult?.snapPoints.hashCode ?? 0);
+  int get hashCode =>
+      cursorPosition.hashCode ^ (cursorPositions?.hashCode ?? 0) ^ (snapResult?.snappedPosition.hashCode ?? 0) ^ (snapResult?.snapPoints.hashCode ?? 0);
 }

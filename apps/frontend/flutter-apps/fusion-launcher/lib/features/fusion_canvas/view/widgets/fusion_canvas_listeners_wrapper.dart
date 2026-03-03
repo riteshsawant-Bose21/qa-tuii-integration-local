@@ -11,10 +11,15 @@ import 'package:fusion_launcher/features/fusion_canvas/viewmodel/fusion_snap_vie
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:nested/nested.dart';
 
+import '../../state/tools/select_tool_state.dart';
+import '../painters/elements/fusion_rect_painter.dart';
+import '../painters/fusion_canvas_painter.dart';
+
 class FusionCanvasListenersWrapper extends StatelessWidget {
-  const FusionCanvasListenersWrapper({super.key, required this.child, this.toolbarEvents});
+  const FusionCanvasListenersWrapper({super.key, required this.child, this.toolbarEvents, required this.painters});
   final Widget child;
   final FusionCanvasEvents? toolbarEvents;
+  final List<FusionBasePainter> painters;
 
   @override
   Widget build(BuildContext context) {
@@ -31,9 +36,20 @@ class FusionCanvasListenersWrapper extends StatelessWidget {
             return previous.mousePosition != current.mousePosition;
           },
           listener: (BuildContext context, FusionCanvasInputState state) {
-            context.read<FusionSnapViewModel>().updateCursorPosition(
-              state.mousePosition,
-            );
+            final FusionToolState fusionToolState = context.read<FusionCanvasToolViewModel>().state;
+            if (fusionToolState is SelectingSelectToolState) {
+              context.read<FusionSnapViewModel>().updateCursorPositions(
+                <Offset>[
+                  for (final FusionBasePainter painter in painters) ...<Offset>[
+                    if (painter.isSelected && painter is FusionPolygonPainter) ...painter.polygon.points.map((FusionCanvasPoint e) => e.position),
+                  ],
+                ],
+              );
+            } else {
+              context.read<FusionSnapViewModel>().updateCursorPosition(
+                state.mousePosition,
+              );
+            }
           },
         ),
         BlocListener<FusionCanvasToolViewModel, FusionToolState>(
@@ -58,8 +74,6 @@ class FusionCanvasListenersWrapper extends StatelessWidget {
             );
           },
         ),
-
-       
 
         ///
         /// Listener for Triggering Events via callback.

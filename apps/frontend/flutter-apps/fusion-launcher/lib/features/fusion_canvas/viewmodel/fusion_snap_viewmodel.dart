@@ -43,6 +43,30 @@ class FusionSnapViewModel extends Cubit<FusionSnapState> {
     );
   }
 
+  /// Update multiple cursor positions and find the best snap (for polygon dragging)
+  void updateCursorPositions(List<Offset>? positions) {
+    if (positions == null || positions.isEmpty) {
+      emit(const FusionSnapState.initial());
+      return;
+    }
+
+    final SnapResult snapResult = _snapService.findBestSnapPoint(
+      cursorPositions: positions,
+      existingPoints: <Offset>[
+        ..._toolPoints,
+        ..._polygonPoints,
+      ],
+      scale: _currentScale,
+    );
+
+    emit(
+      FusionSnapState(
+        cursorPositions: positions,
+        snapResult: snapResult,
+      ),
+    );
+  }
+
   void addPolygonPoints(List<Offset> points) {
     // Only update if points have changed
     if (_arePointsEqual(_polygonPoints, points)) return;
