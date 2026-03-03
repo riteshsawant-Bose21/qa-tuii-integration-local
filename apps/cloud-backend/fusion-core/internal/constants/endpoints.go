@@ -70,7 +70,7 @@ const (
 	EndpointFirmwareBundles         = "/bundles"
 	EndpointFirmwareList            = "/releases"
 	EndpointFirmwareInitiateRelease = "/releases"
-	EndpointFirmwareMakeAvailable   = "/releases/:releaseID/mark-available"
+	EndpointApproveBundle           = "/bundles/:bundleID/approve"
 	EndpointFirmwareUpdateCheck     = "/updates/check"
 	EndpointFirmwareDownload        = "/updates/:platform/:version/download"
 	EndpointFirmwareUpdateLog       = "/updates/log"

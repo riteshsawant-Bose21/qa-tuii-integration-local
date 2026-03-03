@@ -116,7 +116,7 @@ func (s *Service) NotifyBundleUpload(ctx context.Context, payload *types.NotifyB
 	}
 
 	// Insert into bundle table
-	ID, err := s.dbService.InsertBundle(ctx, *payload, s.dbService.GetDB(ctx), logger)
+	ID, err := s.dbService.InsertBundle(ctx, *payload, logger)
 	if err != nil {
 		return nil, fmt.Errorf("failed to insert firmware bundle: %v", err)
 	}
@@ -163,6 +163,24 @@ func (s *Service) ListBundles(ctx context.Context, isApproved *bool, page, limit
 		Page:    page,
 		Limit:   limit,
 	}, nil
+}
+
+func (s *Service) ApproveBundle(ctx context.Context, bundleID string, approvedBy string, logger *zap.Logger) error {
+	// Check if bundle exists
+	bundle, err := s.dbService.GetBundleByID(ctx, bundleID)
+	if err != nil {
+		return fmt.Errorf("failed to get bundle: %v", err)
+	}
+	if bundle == nil {
+		return errorutil.ErrBundleNotFound
+	}
+
+	err = s.dbService.ApproveBundle(ctx, bundleID, approvedBy)
+	if err != nil {
+		return fmt.Errorf("failed to approve bundle: %v", err)
+	}
+
+	return nil
 }
 
 func (s *Service) MakeReleaseAvailable(ctx context.Context, releaseID string, logger *zap.Logger) error {
@@ -250,7 +268,7 @@ func (s *Service) GetArtifactDownloadURL(ctx context.Context, platform, version 
 		return nil, fmt.Errorf("failed to get release: %w", err)
 	}
 	if release == nil {
-		return nil, errorutil.ErrReleaseNotFound
+		return nil, errorutil.ErrBundleNotFound
 	}
 
 	// Generate presigned GET URL
@@ -320,7 +338,7 @@ func (s *Service) DeployRelease(ctx context.Context, releaseID string, channel s
 		return fmt.Errorf("failed to get release: %v", err)
 	}
 	if release == nil {
-		return errorutil.ErrReleaseNotFound
+		return errorutil.ErrBundleNotFound
 	}
 
 	// Only AVAILABLE releases can be deployed

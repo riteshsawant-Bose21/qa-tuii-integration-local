@@ -19,4 +19,5 @@ type Firmware interface {
 	// Bundle Operations
 	NotifyBundleUpload(ctx context.Context, payload *types.NotifyBundleUploadPayload, logger *zap.Logger) (*types.BundleResponse, error)
 	ListBundles(ctx context.Context, isApproved *bool, page, limit int) (*types.BundleListResponse, error)
+	ApproveBundle(ctx context.Context, bundleID string, approvedBy string, logger *zap.Logger) error
 }

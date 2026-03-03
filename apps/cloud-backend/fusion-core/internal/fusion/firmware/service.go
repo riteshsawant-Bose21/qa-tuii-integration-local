@@ -32,8 +32,10 @@ type DatabaseService interface {
 
 	// Bundle operations
 	GetBundleByVersion(ctx context.Context, version string) (*model.Bundle, error)
-	InsertBundle(ctx context.Context, payload types.NotifyBundleUploadPayload, tx customModel.DBContextExecutor, logger *zap.Logger) (string, error)
+	InsertBundle(ctx context.Context, payload types.NotifyBundleUploadPayload, logger *zap.Logger) (string, error)
 	ListBundles(ctx context.Context, isApproved *bool, limit, offset int) ([]*model.Bundle, int64, error)
+	ApproveBundle(ctx context.Context, bundleID string, approvedBy string) error
+	GetBundleByID(ctx context.Context, bundleID string) (*model.Bundle, error)
 }
 
 // PresignerService defines the interface for generating presigned URLs.

@@ -277,7 +277,7 @@ func (s *Service) ListBundles(ctx context.Context, isApproved *bool, limit, offs
 	return bundles, total, nil
 }
 
-func (s *Service) InsertBundle(ctx context.Context, payload types.NotifyBundleUploadPayload, tx customModel.DBContextExecutor, logger *zap.Logger) (string, error) {
+func (s *Service) InsertBundle(ctx context.Context, payload types.NotifyBundleUploadPayload, logger *zap.Logger) (string, error) {
 
 	// Convert manifest data to proper JSON for sqlboiler type
 	manifestBytes, err := json.Marshal(payload.ManifestData)
@@ -299,7 +299,7 @@ func (s *Service) InsertBundle(ctx context.Context, payload types.NotifyBundleUp
 		bundleRecord.ReleaseNotes = null.StringFrom(payload.ReleaseNotes)
 	}
 
-	if err := bundleRecord.Insert(ctx, tx, boil.Infer()); err != nil {
+	if err := bundleRecord.Insert(ctx, s.db, boil.Infer()); err != nil {
 		logger.Error("Error inserting firmware bundle",
 			zap.Error(err),
 			zap.String("version", payload.Version))
@@ -307,4 +307,42 @@ func (s *Service) InsertBundle(ctx context.Context, payload types.NotifyBundleUp
 	}
 
 	return bundleRecord.ID, nil
+}
+
+func (s *Service) ApproveBundle(ctx context.Context, bundleID string, approvedBy string) error {
+	if bundleID == "" {
+		return errors.New("bundleID cannot be empty")
+	}
+	if approvedBy == "" {
+		return errors.New("approvedBy cannot be empty")
+	}
+
+	bundle := &model.Bundle{
+		ID:         bundleID,
+		IsApproved: true,
+		ApprovedBy: null.StringFrom(approvedBy),
+		ApprovedAt: null.TimeFrom(time.Now()),
+	}
+
+	_, err := bundle.Update(ctx, s.db, boil.Whitelist(model.BundleColumns.IsApproved, model.BundleColumns.ApprovedBy, model.BundleColumns.ApprovedAt))
+	return err
+}
+
+func (s *Service) GetBundleByID(ctx context.Context, bundleID string) (*model.Bundle, error) {
+	if bundleID == "" {
+		return nil, errors.New("bundleID cannot be empty")
+	}
+
+	bundle, err := model.Bundles(
+		model.BundleWhere.ID.EQ(bundleID),
+	).One(ctx, s.db)
+
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("failed to get bundle: %w", err)
+	}
+
+	return bundle, nil
 }

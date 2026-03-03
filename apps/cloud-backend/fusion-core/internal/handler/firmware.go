@@ -141,6 +141,55 @@ func (h *FirmwareUpdateHandler) ListBundles(ctx *gin.Context) {
 	response.OK(ctx, resp)
 }
 
+// ApproveBundle approves a firmware bundle
+// @Summary Approve Firmware Bundle
+// @Description Approves a firmware bundle, making it available for deployment
+// @Tags Firmware Update - Management API
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param bundleID path string true "Unique identifier of the firmware bundle"
+// @Success 204 "Bundle successfully approved"
+// @Failure 400 {object} types.ErrorResponse "Invalid bundleID or request payload"
+// @Failure 404 {object} types.ErrorResponse "Bundle not found"
+// @Failure 500 {object} types.ErrorResponse "Internal server error"
+// @Router /firmware/bundles/{bundleID}/approve [post]
+func (h *FirmwareUpdateHandler) ApproveBundle(ctx *gin.Context) {
+	bundleID := ctx.Param("bundleID")
+	if bundleID == "" {
+		response.BadRequest(ctx, "bundleID is required")
+		return
+	}
+
+	loggerFromContext, exists := ctx.Get("logger")
+	if !exists {
+		response.InternalError(ctx)
+		return
+	}
+	logger := loggerFromContext.(*zap.Logger)
+
+	userAuth, exists := ctx.Get("user_auth")
+	if !exists {
+		response.Unauthorized(ctx, errorutil.MsgUnauthorized)
+		return
+	}
+	user := userAuth.(*types.UserAuthorizationResponse)
+	approvedBy := user.User.ID
+
+	err := h.firmware.ApproveBundle(ctx, bundleID, approvedBy, logger)
+	if err != nil {
+		logger.Error("Failed to approve bundle", zap.String("bundleID", bundleID), zap.Error(err))
+		if errors.Is(err, errorutil.ErrBundleNotFound) {
+			response.NotFound(ctx, "Bundle not found")
+			return
+		}
+		response.InternalError(ctx)
+		return
+	}
+
+	response.NoContent(ctx)
+}
+
 // MakeReleaseAvailable publishes a firmware release to a deployment channel
 // @Summary Make Release Available
 // @Description Updates the release status to 'AVAILABLE' and creates a deployment entry for the specified channel, making the firmware available for devices to download
@@ -171,7 +220,7 @@ func (h *FirmwareUpdateHandler) MakeReleaseAvailable(ctx *gin.Context) {
 	err := h.firmware.MakeReleaseAvailable(ctx, releaseID, logger)
 	if err != nil {
 		logger.Error("Failed to make release available", zap.String("releaseID", releaseID), zap.Error(err))
-		if errors.Is(err, errorutil.ErrReleaseNotFound) {
+		if errors.Is(err, errorutil.ErrBundleNotFound) {
 			response.NotFound(ctx, "Release not found")
 			return
 		}
@@ -279,7 +328,7 @@ func (h *FirmwareUpdateHandler) DownloadArtifact(ctx *gin.Context) {
 	resp, err := h.firmware.GetArtifactDownloadURL(ctx, platform, version, logger)
 	if err != nil {
 		logger.Error("Failed to generate download URL", zap.String("platform", platform), zap.String("version", version), zap.Error(err))
-		if errors.Is(err, errorutil.ErrReleaseNotFound) {
+		if errors.Is(err, errorutil.ErrBundleNotFound) {
 			response.NotFound(ctx, "Firmware release not found for the specified platform and version")
 			return
 		}
@@ -368,7 +417,7 @@ func (h *FirmwareUpdateHandler) DeployRelease(ctx *gin.Context) {
 	err := h.firmware.DeployRelease(ctx, releaseID, payload.Channel, logger)
 	if err != nil {
 		logger.Error("Failed to deploy release", zap.String("releaseID", releaseID), zap.String("channel", payload.Channel), zap.Error(err))
-		if errors.Is(err, errorutil.ErrReleaseNotFound) {
+		if errors.Is(err, errorutil.ErrBundleNotFound) {
 			response.NotFound(ctx, "Release not found")
 			return
 		}

@@ -402,7 +402,7 @@ func TestMakeReleaseAvailable(t *testing.T) {
 			setupLogger: true,
 			mockSetup: func(m *MockFirmwareService) {
 				m.On("MakeReleaseAvailable", mock.Anything, "non-existent-uuid", mock.Anything).
-					Return(errorutil.ErrReleaseNotFound)
+					Return(errorutil.ErrBundleNotFound)
 			},
 			expectedStatus: http.StatusNotFound,
 			expectedBody: map[string]interface{}{
@@ -858,7 +858,7 @@ func TestDownloadArtifact(t *testing.T) {
 			setupLogger: true,
 			mockSetup: func(m *MockFirmwareService) {
 				m.On("GetArtifactDownloadURL", mock.Anything, "amp-8x300", "99.0.0", mock.AnythingOfType("*zap.Logger")).
-					Return(nil, errorutil.ErrReleaseNotFound)
+					Return(nil, errorutil.ErrBundleNotFound)
 			},
 			expectedStatus: http.StatusNotFound,
 			expectedBody: map[string]interface{}{
@@ -1166,7 +1166,7 @@ func TestDeployRelease(t *testing.T) {
 			setupLogger: true,
 			mockSetup: func(m *MockFirmwareService) {
 				m.On("DeployRelease", mock.Anything, "non-existent-uuid", "testing", mock.Anything).
-					Return(errorutil.ErrReleaseNotFound)
+					Return(errorutil.ErrBundleNotFound)
 			},
 			expectedStatus: http.StatusNotFound,
 			expectedBody: map[string]interface{}{

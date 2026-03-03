@@ -117,13 +117,13 @@ func (a *API) registerRoutes() {
 	{
 		// Internal APIs - TODO: Add Authentication
 		firmwareUpdate.POST(constants.EndpointFirmwareBundles, firmwareHandler.NotifyBundleUpload)
-		firmwareUpdate.POST(constants.EndpointFirmwareInitiateRelease, firmwareHandler.InitiateRelease)
-		firmwareUpdate.POST(constants.EndpointFirmwareMakeAvailable, firmwareHandler.MakeReleaseAvailable)
 	}
 
 	firmwareUpdate.Use(a.authMiddleware.Middleware())
 	{
 		firmwareUpdate.GET(constants.EndpointFirmwareList, firmwareHandler.ListReleases)
+		firmwareUpdate.POST(constants.EndpointApproveBundle, firmwareHandler.ApproveBundle)
+
 		firmwareUpdate.GET(constants.EndpointFirmwareBundles, firmwareHandler.ListBundles)
 		firmwareUpdate.POST(constants.EndpointFirmwareDeploy, firmwareHandler.DeployRelease)
 		firmwareUpdate.POST(constants.EndpointFirmwareUpdateCheck, firmwareHandler.CheckUpdates)
