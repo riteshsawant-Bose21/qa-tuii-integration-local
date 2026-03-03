@@ -80,15 +80,6 @@ class _ScenesExpandableCardState extends State<ScenesExpandableCard> {
     _isScenesExpanded.value = true;
   }
 
-  /// Clear source set dialog inputs
-  void _clearSourceSetDialog({bool pop = false, BuildContext? popContext, bool isScene = false}) {
-    _snapshotsNameController.clear();
-
-    if (pop && popContext != null && Navigator.of(popContext).canPop()) {
-      Navigator.of(popContext).pop();
-    }
-  }
-
   /// Add method to expand source set externally
   void expandSourceSet() {
     if (!_isScenesExpanded.value) {

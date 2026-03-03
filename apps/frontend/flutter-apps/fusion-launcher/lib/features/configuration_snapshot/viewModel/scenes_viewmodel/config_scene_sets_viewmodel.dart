@@ -20,14 +20,25 @@ class ConfigSceneSetsViewmodel extends Cubit<ConfigSceneSetsState> {
 
     try {
       final List<SceneSetModel> sceneSets = _projectViewModel.getAllSceneSets();
+      final Map<String, List<SnapshotsModel>> snapshotsMap = _buildSnapshotsMap(sceneSets);
       emit(
         SceneSetsLoaded(
           sceneSets: sceneSets,
+          snapshotsInSceneSets: snapshotsMap,
         ),
       );
     } catch (e) {
       emit(SceneSetsError(message: e.toString()));
     }
+  }
+
+  /// Build snapshots map for all scene sets
+  Map<String, List<SnapshotsModel>> _buildSnapshotsMap(List<SceneSetModel> sceneSets) {
+    final Map<String, List<SnapshotsModel>> snapshotsMap = <String, List<SnapshotsModel>>{};
+    for (final SceneSetModel sceneSet in sceneSets) {
+      snapshotsMap[sceneSet.id] = _projectViewModel.getSnapshotInSceneSet(sceneSetId: sceneSet.id);
+    }
+    return snapshotsMap;
   }
 
   /// Sync state with ProjectViewModel
@@ -36,11 +47,22 @@ class ConfigSceneSetsViewmodel extends Cubit<ConfigSceneSetsState> {
 
     try {
       final List<SceneSetModel> sceneSets = _projectViewModel.getAllSceneSets();
+      final Map<String, List<SnapshotsModel>> snapshotsMap = _buildSnapshotsMap(sceneSets);
 
       if (currentState is SceneSetsLoaded) {
-        emit(currentState.copyWith(sceneSets: sceneSets));
+        emit(
+          currentState.copyWith(
+            sceneSets: sceneSets,
+            snapshotsInSceneSets: snapshotsMap,
+          ),
+        );
       } else {
-        emit(SceneSetsLoaded(sceneSets: sceneSets));
+        emit(
+          SceneSetsLoaded(
+            sceneSets: sceneSets,
+            snapshotsInSceneSets: snapshotsMap,
+          ),
+        );
       }
     } catch (e) {
       emit(SceneSetsError(message: e.toString()));

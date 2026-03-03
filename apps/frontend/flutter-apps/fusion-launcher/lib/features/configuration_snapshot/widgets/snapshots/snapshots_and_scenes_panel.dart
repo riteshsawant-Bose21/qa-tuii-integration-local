@@ -48,7 +48,7 @@ class _SnapshotsAndScenesPanelState extends State<SnapshotsAndScenesPanel> {
   @override
   Widget build(BuildContext context) {
     return BlocBuilder<ConfigSnapshotsViewmodel, ConfigSnapshotsState>(
-      builder: (BuildContext context, ConfigSnapshotsState ConfigSnapshotsState) {
+      builder: (BuildContext context, ConfigSnapshotsState configSnapshotsState) {
         return BlocBuilder<ConfigSceneSetsViewmodel, ConfigSceneSetsState>(
           builder: (BuildContext context, ConfigSceneSetsState configSceneSetsState) {
             return Container(
@@ -85,7 +85,7 @@ class _SnapshotsAndScenesPanelState extends State<SnapshotsAndScenesPanel> {
                       _configSceneSetsViewmodel.syncWithProjectViewModel();
                     },
                     builder: (BuildContext context, List<SnapshotsModel?> candidateData, List<dynamic> rejectedData) {
-                      final bool isHovered = candidateData.isNotEmpty && ConfigSnapshotsState.isDraggingFromScenes;
+                      final bool isHovered = candidateData.isNotEmpty && configSnapshotsState.isDraggingFromScenes;
                       return Container(
                         padding: const EdgeInsets.all(10),
                         decoration: BoxDecoration(
@@ -100,9 +100,9 @@ class _SnapshotsAndScenesPanelState extends State<SnapshotsAndScenesPanel> {
                                     vertical: BorderSide(color: context.colorScheme.elevation2, width: 1),
                                   ),
                         ),
-                        height: ConfigSnapshotsState.sourcesHeight,
+                        height: configSnapshotsState.sourcesHeight,
                         child: SingleChildScrollView(
-                          child: _buildSnapshotsList(context, ConfigSnapshotsState),
+                          child: _buildSnapshotsList(context, configSnapshotsState),
                         ),
                       );
                     },
@@ -137,7 +137,7 @@ class _SnapshotsAndScenesPanelState extends State<SnapshotsAndScenesPanel> {
                           vertical: BorderSide(color: context.colorScheme.elevation2, width: 1),
                         ),
                       ),
-                      child: _buildSceneSetsList(context, ConfigSnapshotsState, configSceneSetsState),
+                      child: _buildSceneSetsList(context, configSnapshotsState, configSceneSetsState),
                     ),
                   ),
                 ],
@@ -213,7 +213,7 @@ class _SnapshotsAndScenesPanelState extends State<SnapshotsAndScenesPanel> {
       physics: const ClampingScrollPhysics(),
       itemBuilder: (BuildContext context, int index) {
         final SceneSetModel sceneSetData = scenesSetList[index];
-        final List<SnapshotsModel> associatedScenes = _configSceneSetsViewmodel.getSnapshotsInSceneSet(sceneSetData.id);
+        final List<SnapshotsModel> associatedScenes = configSceneSetsState.snapshotsInSceneSets[sceneSetData.id] ?? <SnapshotsModel>[];
         return ScenesExpandableCard(
           sceneSetData: sceneSetData,
           isDragHovered: false,

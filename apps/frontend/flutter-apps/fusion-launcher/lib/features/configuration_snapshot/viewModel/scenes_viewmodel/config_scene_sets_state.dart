@@ -8,6 +8,9 @@ sealed class ConfigSceneSetsState extends Equatable {
   /// Get scene sets list (empty for non-loaded states)
   List<SceneSetModel> get sceneSets => <SceneSetModel>[];
 
+  /// Get snapshots map (empty for non-loaded states)
+  Map<String, List<SnapshotsModel>> get snapshotsInSceneSets => <String, List<SnapshotsModel>>{};
+
   @override
   List<Object?> get props => <Object?>[];
 }
@@ -27,21 +30,27 @@ class SceneSetsLoaded extends ConfigSceneSetsState {
   @override
   final List<SceneSetModel> sceneSets;
 
+  @override
+  final Map<String, List<SnapshotsModel>> snapshotsInSceneSets;
+
   const SceneSetsLoaded({
     required this.sceneSets,
+    this.snapshotsInSceneSets = const <String, List<SnapshotsModel>>{},
   });
 
   /// Create a copy with updated values
   SceneSetsLoaded copyWith({
     List<SceneSetModel>? sceneSets,
+    Map<String, List<SnapshotsModel>>? snapshotsInSceneSets,
   }) {
     return SceneSetsLoaded(
       sceneSets: sceneSets ?? this.sceneSets,
+      snapshotsInSceneSets: snapshotsInSceneSets ?? this.snapshotsInSceneSets,
     );
   }
 
   @override
-  List<Object?> get props => <Object?>[sceneSets];
+  List<Object?> get props => <Object?>[sceneSets, snapshotsInSceneSets];
 }
 
 /// Error state - failed to load scene sets
