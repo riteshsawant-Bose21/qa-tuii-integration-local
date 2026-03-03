@@ -61,13 +61,26 @@ func main() {
 	envName := flag.String("e", "local", "application environment (e.g. local, dev, staging, prod)")
 	flag.Parse()
 
+	// Check for environment variable first, then fallback to command line flag
+	actualEnvName := *envName
+	if envFromVar := os.Getenv("FUSION_ENVIRONMENT"); envFromVar != "" {
+		actualEnvName = envFromVar
+		fmt.Printf("Environment set via FUSION_ENVIRONMENT variable: %s\n", actualEnvName)
+	} else {
+		fmt.Printf("Environment set via command line flag: %s\n", actualEnvName)
+	}
+
 	env := environment.New(environment.DefaultLoadLookuper)
 
-	fmt.Println("Loading environment file", *envFile)
-	if *envName == "local" {
+	if actualEnvName == "local" {
+		fmt.Println("Loading environment from file:", *envFile)
 		if err := env.Load(*envFile); err != nil {
-			fmt.Println("error loading environment vars", zap.String("file", *envName), zap.Error(err))
+			fmt.Printf("Error loading environment file %s: %v\n", *envFile, err)
+			os.Exit(1)
 		}
+		fmt.Println("Environment loaded from file successfully")
+	} else {
+		fmt.Printf("Running in %s environment, loading from environment variables\n", actualEnvName)
 	}
 
 	// Initialize configuration service
