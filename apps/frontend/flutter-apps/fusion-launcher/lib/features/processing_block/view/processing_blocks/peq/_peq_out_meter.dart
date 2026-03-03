@@ -5,14 +5,8 @@ class _PeqOutMeter extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: context.colorScheme.elevation2,
-        borderRadius: BorderRadius.horizontal(
-          right: Radius.circular(context.mediumRadius),
-        ),
-      ),
-      padding: const EdgeInsets.all(8),
+    return PBSection(
+      type: PBSectionType.right,
       child: Column(
         spacing: 10,
         children: <Widget>[

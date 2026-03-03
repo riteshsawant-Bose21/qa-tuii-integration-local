@@ -6,7 +6,7 @@ import (
 	json "github.com/goccy/go-json"
 
 	"fusion/internal/api"
-	"fusion/internal/logging"
+	"fusion-services-core/logging"
 )
 
 // HandleUDPMessage handles and decodes UDP messages

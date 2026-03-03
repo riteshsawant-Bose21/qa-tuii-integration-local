@@ -37,6 +37,9 @@ const (
 	ClusterNTPSkewEndpoint                     = ClusterEndpoint + "/ntp-skew"
 	ClusterStatusEndpoint                      = ClusterEndpoint + "/status"
 
+	ClusterRebootEndpoint      = ClusterEndpoint + "/reboot"
+	ClusterRebootLocalEndpoint = ClusterRebootEndpoint
+
 	ControllersEndpoint       = "/controllers"
 	ControllersIDEndpoint     = ControllersEndpoint + "/{id}"
 	ControllersIDWinkEndpoint = ControllersEndpoint + "/wink" + "/{id}"
@@ -151,6 +154,10 @@ func RegisterEndpoint(router *mux.Router, method string, pattern string, handler
 		Endpoints = append(Endpoints, fmt.Sprintf("%s %s", method, pattern))
 	}
 	router.HandleFunc(pattern, handler).Methods(method)
+	// Register OPTIONS method for CORS preflight requests
+	router.HandleFunc(pattern, func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}).Methods("OPTIONS")
 }
 
 func ListRegisteredEndpoints(w http.ResponseWriter, r *http.Request) {

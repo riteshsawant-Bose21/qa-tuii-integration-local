@@ -14,6 +14,8 @@
 
 struct fusion_codec_priv {
     u32 rxtx_pins;
+    u32 rx_pins;
+    u32 tx_pins;
     u32 tdm_slots;
     struct snd_soc_dai_driver dai_drv;
 };
@@ -22,9 +24,6 @@ static int fusion_codec_hw_params(struct snd_pcm_substream *substream,
                                       struct snd_pcm_hw_params *params,
                                       struct snd_soc_dai *dai)
 {
-    pr_info("%s: hw_params - rate=%d, width=%d, channels=%d\n",
-             CODEC_DRIVER_NAME, params_rate(params), 
-             params_width(params), params_channels(params));
     return 0;
 }
 
@@ -49,6 +48,9 @@ static const struct snd_soc_component_driver soc_component_dev_fusion_codec = {
 static int fusion_codec_probe(struct platform_device *pdev)
 {
     struct fusion_codec_priv *priv;
+    u32 rxtx_pins = 0;
+    u32 rx_pins = 0;
+    u32 tx_pins = 0;
     int ret;
 
     priv = devm_kzalloc(&pdev->dev, sizeof(*priv), GFP_KERNEL);
@@ -62,32 +64,49 @@ static int fusion_codec_probe(struct platform_device *pdev)
         return ret;
     }
 
-    /* Read 'rxtx_pins' property from device tree */
-    ret = of_property_read_u32(pdev->dev.of_node, "rxtx_pins", &priv->rxtx_pins);
-    if (ret) {
-        dev_err(&pdev->dev, "Failed to read 'rxtx_pins' property\n");
-        return ret;
+    /* Read pins configuration. rxtx_pins overrides rx_pins/tx_pins. */
+    if (!of_property_read_u32(pdev->dev.of_node, "rxtx_pins", &rxtx_pins)) {
+        priv->rxtx_pins = rxtx_pins;
+        priv->rx_pins = rxtx_pins;
+        priv->tx_pins = rxtx_pins;
+    } else {
+        if (!of_property_read_u32(pdev->dev.of_node, "rx_pins", &rx_pins))
+            priv->rx_pins = rx_pins;
+        if (!of_property_read_u32(pdev->dev.of_node, "tx_pins", &tx_pins))
+            priv->tx_pins = tx_pins;
+
+        if (!priv->rx_pins && !priv->tx_pins) {
+            dev_err(&pdev->dev,
+                    "Must specify 'rxtx_pins' or at least one of 'rx_pins'/'tx_pins'\n");
+            return -EINVAL;
+        }
     }
 
     /* Initialize the DAI driver structure */
     priv->dai_drv = (struct snd_soc_dai_driver) {
         .name = "fusion-codec",
-        .playback = {
-            .stream_name = "Fusion Playback",
-            .channels_min = priv->tdm_slots * priv->rxtx_pins,
-            .channels_max = priv->tdm_slots * priv->rxtx_pins,
-            .rates = SNDRV_PCM_RATE_48000,
-            .formats = SNDRV_PCM_FMTBIT_S24_LE
-        },
-        .capture = {
-            .stream_name = "Fusion Capture",
-            .channels_min = priv->tdm_slots * priv->rxtx_pins,
-            .channels_max = priv->tdm_slots * priv->rxtx_pins,
-            .rates = SNDRV_PCM_RATE_48000,
-            .formats = SNDRV_PCM_FMTBIT_S24_LE
-        },
         .ops = &fusion_codec_dai_ops,
     };
+
+    if (priv->tx_pins) {
+        priv->dai_drv.playback = (struct snd_soc_pcm_stream) {
+            .stream_name = "Fusion Playback",
+            .channels_min = priv->tdm_slots * priv->tx_pins,
+            .channels_max = priv->tdm_slots * priv->tx_pins,
+            .rates = SNDRV_PCM_RATE_48000,
+            .formats = SNDRV_PCM_FMTBIT_S24_LE
+        };
+    }
+
+    if (priv->rx_pins) {
+        priv->dai_drv.capture = (struct snd_soc_pcm_stream) {
+            .stream_name = "Fusion Capture",
+            .channels_min = priv->tdm_slots * priv->rx_pins,
+            .channels_max = priv->tdm_slots * priv->rx_pins,
+            .rates = SNDRV_PCM_RATE_48000,
+            .formats = SNDRV_PCM_FMTBIT_S24_LE
+        };
+    }
 
     /* Store the private data in the device's driver data */
     dev_set_drvdata(&pdev->dev, priv);
@@ -98,15 +117,10 @@ static int fusion_codec_probe(struct platform_device *pdev)
     if (ret) {
         dev_err(&pdev->dev, "%s: Failed to register codec component: %d\n",
                 CODEC_DRIVER_NAME, ret);
-    } else {
-        dev_info(&pdev->dev, "%s: Codec registered successfully\n",
-                 CODEC_DRIVER_NAME);
     }
 
     return ret;
 }
-
-
 
 static const struct of_device_id fusion_codec_of_match[] = {
     { .compatible = "bosepro,fusion-codec", },

@@ -100,6 +100,7 @@ class _FilterOptions extends StatelessWidget {
           child: FusionPopupMenu<String>(
             // value: value,
             // hintText: "Select $label",
+            semanticsId: SemanticHelper.createTestId(SemanticTypes.formControl, "equipment_location_dialog_filter_option_${label.snakeCase}"),
             items: options,
             onSelected: (String newValue) {
               final int selectedIndex = options.indexOf(newValue);
