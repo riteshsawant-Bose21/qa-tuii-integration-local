@@ -69,15 +69,14 @@ func main() {
 
 	env := environment.New(environment.DefaultLoadLookuper)
 
+	fmt.Printf("Running in %s environment\n", actualEnvName)
+
 	if actualEnvName == "local" {
-		fmt.Println("Loading environment from file:", *envFile)
 		if err := env.Load(*envFile); err != nil {
 			fmt.Printf("Error loading environment file %s: %v\n", *envFile, err)
 			os.Exit(1)
 		}
-		fmt.Println("Environment loaded from file successfully")
-	} else {
-		fmt.Printf("Running in %s environment, loading from environment variables\n", actualEnvName)
+		fmt.Println("Environment variables loaded from file successfully")
 	}
 
 	// Initialize configuration service
