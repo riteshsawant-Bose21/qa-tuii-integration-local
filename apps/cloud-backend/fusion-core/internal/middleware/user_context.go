@@ -20,10 +20,11 @@ func ExtractUserFromHeaders() gin.HandlerFunc {
 		accountName := ctx.GetHeader("X-Account-Name")
 		accountType := ctx.GetHeader("X-Account-Type")
 		roleID := ctx.GetHeader("X-Role-ID")
+		requestId := ctx.GetHeader("X-Request-ID")
 
 		// Validate required headers
-		if userID == "" || accountID == "" || userEmail == "" || roleID == "" {
-			commonresponse.Unauthorized(ctx, "Missing user identity headers")
+		if userID == "" || accountID == "" || userEmail == "" || roleID == "" || requestId == "" {
+			commonresponse.Unauthorized(ctx, "Missing user identity / requestId headers")
 			ctx.Abort()
 			return
 		}

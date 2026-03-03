@@ -338,7 +338,8 @@ Before you begin, ensure you have the following installed:
   -H "X-User-ID: adduserid123" \
   -H "X-Account-ID: addAccountId123" \
   -H "X-User-Email: user@boseprofessional.com" \
-  -H "X-Role-ID: 9"
+  -H "X-Role-ID: 9" \
+  -H "X-Request-ID: 10000001"
    
    # View API documentation
    open http://localhost:8080/docs/index.html

@@ -6,14 +6,15 @@ import (
 	"time"
 
 	"github.com/BoseProfessional/lambda-authorizer/internal/logger"
+	"github.com/google/uuid"
 )
 
 // HandleRequestAuthorizer supports API Gateway REQUEST authorizer events
 func HandleRequestAuthorizer(ctx context.Context, event map[string]interface{}) (map[string]interface{}, error) {
 	startTime := time.Now()
 	
-	// Extract request ID from context for structured logging
-	requestID := extractRequestID(event)
+	// Generate a new request ID for this request
+	requestID := uuid.New().String()
 	log := logger.NewLogger(requestID)
 
 	log.Info("Processing authorization request")
@@ -83,6 +84,7 @@ func HandleRequestAuthorizer(ctx context.Context, event map[string]interface{}) 
 	}
 
 	contextMap := map[string]interface{}{
+		"requestId":       requestID,
 		"userId":          userCtx.UserID,
 		"userEmail":       userCtx.Email,
 		"userRole":        userCtx.Role,
