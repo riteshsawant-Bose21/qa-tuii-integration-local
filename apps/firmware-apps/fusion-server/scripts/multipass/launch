@@ -307,7 +307,7 @@ setup_instance() {
         mkdir -p /var/lib/device-identity
         cd /var/lib/device-identity
         openssl genrsa -out device_private.key 2048
-        openssl req -new -key device_private.key -out device.csr -subj '/CN=$device_id/O=BoseProfessional'
+        openssl req -new -key device.key -out device.csr -subj '/CN=$device_id/O=BoseProfessional'
         chmod 600 device_private.key
         curl -s https://www.amazontrust.com/repository/AmazonRootCA1.pem -o AmazonRootCA1.pem
     "; then
