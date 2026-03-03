@@ -34,6 +34,7 @@ type Bundle struct {
 	IsApproved           bool        `boil:"is_approved" json:"is_approved" toml:"is_approved" yaml:"is_approved"`
 	CreatedAt            time.Time   `boil:"created_at" json:"created_at" toml:"created_at" yaml:"created_at"`
 	UpdatedAt            time.Time   `boil:"updated_at" json:"updated_at" toml:"updated_at" yaml:"updated_at"`
+	Checksum             string      `boil:"checksum" json:"checksum" toml:"checksum" yaml:"checksum"`
 
 	R *bundleR `boil:"-" json:"-" toml:"-" yaml:"-"`
 	L bundleL  `boil:"-" json:"-" toml:"-" yaml:"-"`
@@ -49,6 +50,7 @@ var BundleColumns = struct {
 	IsApproved           string
 	CreatedAt            string
 	UpdatedAt            string
+	Checksum             string
 }{
 	ID:                   "id",
 	Version:              "version",
@@ -59,6 +61,7 @@ var BundleColumns = struct {
 	IsApproved:           "is_approved",
 	CreatedAt:            "created_at",
 	UpdatedAt:            "updated_at",
+	Checksum:             "checksum",
 }
 
 var BundleTableColumns = struct {
@@ -71,6 +74,7 @@ var BundleTableColumns = struct {
 	IsApproved           string
 	CreatedAt            string
 	UpdatedAt            string
+	Checksum             string
 }{
 	ID:                   "bundle.id",
 	Version:              "bundle.version",
@@ -81,6 +85,7 @@ var BundleTableColumns = struct {
 	IsApproved:           "bundle.is_approved",
 	CreatedAt:            "bundle.created_at",
 	UpdatedAt:            "bundle.updated_at",
+	Checksum:             "bundle.checksum",
 }
 
 // Generated where
@@ -146,6 +151,7 @@ var BundleWhere = struct {
 	IsApproved           whereHelperbool
 	CreatedAt            whereHelpertime_Time
 	UpdatedAt            whereHelpertime_Time
+	Checksum             whereHelperstring
 }{
 	ID:                   whereHelperstring{field: "\"bundle\".\"id\""},
 	Version:              whereHelperstring{field: "\"bundle\".\"version\""},
@@ -156,6 +162,7 @@ var BundleWhere = struct {
 	IsApproved:           whereHelperbool{field: "\"bundle\".\"is_approved\""},
 	CreatedAt:            whereHelpertime_Time{field: "\"bundle\".\"created_at\""},
 	UpdatedAt:            whereHelpertime_Time{field: "\"bundle\".\"updated_at\""},
+	Checksum:             whereHelperstring{field: "\"bundle\".\"checksum\""},
 }
 
 // BundleRels is where relationship names are stored.
@@ -175,8 +182,8 @@ func (*bundleR) NewStruct() *bundleR {
 type bundleL struct{}
 
 var (
-	bundleAllColumns            = []string{"id", "version", "release_notes", "min_prev_version", "min_desktop_app_version", "manifest_data", "is_approved", "created_at", "updated_at"}
-	bundleColumnsWithoutDefault = []string{"version", "min_prev_version", "min_desktop_app_version", "manifest_data"}
+	bundleAllColumns            = []string{"id", "version", "release_notes", "min_prev_version", "min_desktop_app_version", "manifest_data", "is_approved", "created_at", "updated_at", "checksum"}
+	bundleColumnsWithoutDefault = []string{"version", "min_prev_version", "min_desktop_app_version", "manifest_data", "checksum"}
 	bundleColumnsWithDefault    = []string{"id", "release_notes", "is_approved", "created_at", "updated_at"}
 	bundlePrimaryKeyColumns     = []string{"id"}
 	bundleGeneratedColumns      = []string{}
