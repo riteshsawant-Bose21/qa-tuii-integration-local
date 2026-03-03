@@ -50,6 +50,7 @@ class GraphicEqBlock extends StatelessWidget {
                 children: <Widget>[
                   const SizedBox(height: 10),
                   FusionNeumorphicButton(
+                    semanticId: 'graphic_eq_flatten_all',
                     text: "Flatten all",
                     width: 100,
                     height: 34,

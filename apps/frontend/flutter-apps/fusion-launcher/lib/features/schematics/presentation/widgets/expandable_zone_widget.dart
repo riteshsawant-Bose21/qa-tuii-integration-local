@@ -68,11 +68,17 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
       builder: (BuildContext context, bool zoneExpanded, Widget? child) {
         return BlocBuilder<ProjectViewModel, ProjectViewModelState>(
           builder: (BuildContext context, ProjectViewModelState state) {
-            final SelectedItem? selectedDevice = _projectViewModel.selectedDevice;
-            final bool isSelected = selectedDevice?.id == widget.zoneId && selectedDevice?.type == SelectedItemType.zone;
+            final SelectedItem? selectedDevice =
+                _projectViewModel.selectedDevice;
+            final bool isSelected =
+                selectedDevice?.id == widget.zoneId &&
+                selectedDevice?.type == SelectedItemType.zone;
 
             return SemanticHelper.container(
-              testId: SemanticHelper.createTestId(SemanticTypes.container, "zone_item_${widget.index}"),
+              testId: SemanticHelper.createTestId(
+                SemanticTypes.container,
+                "zone_item_${widget.index}",
+              ),
               child: Column(
                 children: <Widget>[
                   MouseRegion(
@@ -107,15 +113,26 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
     required int index,
   }) {
     return SemanticHelper.container(
-      testId: SemanticHelper.createTestId(SemanticTypes.container, "zone_header_container_$index"),
+      testId: SemanticHelper.createTestId(
+        SemanticTypes.container,
+        "zone_header_container_$index",
+      ),
       child: Container(
         height: 36,
         width: double.infinity,
         padding: const EdgeInsets.only(left: 8),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(FusionSizes.borderRadius8),
-          color: isHovered ? widget.bgColor.withAlpha(80) : widget.bgColor.withAlpha(100),
-          border: Border.all(color: isSelected ? context.colorScheme.elevation5 : Colors.transparent),
+          color:
+              isHovered
+                  ? widget.bgColor.withAlpha(80)
+                  : widget.bgColor.withAlpha(100),
+          border: Border.all(
+            color:
+                isSelected
+                    ? context.colorScheme.elevation5
+                    : Colors.transparent,
+          ),
         ),
         child: Row(
           children: <Widget>[
@@ -130,7 +147,10 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
             GestureDetector(
               onTap: () => _isZoneExpanded.value = !_isZoneExpanded.value,
               child: SemanticHelper.container(
-                testId: SemanticHelper.createTestId(SemanticTypes.container, "zone_expand_collapse_icon_container_$index"),
+                testId: SemanticHelper.createTestId(
+                  SemanticTypes.container,
+                  "zone_expand_collapse_icon_container_$index",
+                ),
                 child: _buildExpandIcon(context, expanded),
               ),
             ),
@@ -141,7 +161,10 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
               child: GestureDetector(
                 onTap: () {
                   /// Select zone on tap
-                  _projectViewModel.setSelectedDevice(widget.zoneId, SelectedItemType.zone);
+                  _projectViewModel.setSelectedDevice(
+                    widget.zoneId,
+                    SelectedItemType.zone,
+                  );
                 },
                 // onTap: () => _isZoneExpanded.value = !_isZoneExpanded.value,
                 child: _buildZoneName(
@@ -155,9 +178,16 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
             /// Add device button
             if (widget.subZones.isEmpty)
               SemanticHelper.container(
-                testId: SemanticHelper.createTestId(SemanticTypes.container, "add_speakers_menu_container_$index"),
+                testId: SemanticHelper.createTestId(
+                  SemanticTypes.container,
+                  "add_speakers_menu_container_$index",
+                ),
                 child: FusionArrowPopup(
-                  content: SpeakerQueryPopup(isFromBuildingPage: false, zoneId: widget.zoneId),
+                  semanticId: 'add_speakers_menu_container_$index',
+                  content: SpeakerQueryPopup(
+                    isFromBuildingPage: false,
+                    zoneId: widget.zoneId,
+                  ),
                   child: Row(
                     children: <Widget>[
                       Icon(
@@ -182,7 +212,10 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
 
             /// Kebab menu for zone actions
             SemanticHelper.container(
-              testId: SemanticHelper.createTestId(SemanticTypes.container, "zone_kebab_menu_container_$index"),
+              testId: SemanticHelper.createTestId(
+                SemanticTypes.container,
+                "zone_kebab_menu_container_$index",
+              ),
               child: _buildKebabMenu(context: context, zoneId: widget.zoneId),
             ),
             const SizedBox(width: 8),
@@ -215,7 +248,10 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
     }
 
     return SemanticHelper.container(
-      testId: SemanticHelper.createTestId(SemanticTypes.container, "zones_content"),
+      testId: SemanticHelper.createTestId(
+        SemanticTypes.container,
+        "zones_content",
+      ),
       child: Container(
         margin: const EdgeInsets.symmetric(horizontal: 4),
         padding: const EdgeInsets.all(12),
@@ -241,15 +277,35 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
                       if (oldIndex < newIndex) {
                         newIndex -= 1;
                       }
-                      _projectViewModel.reOrderCircuitInZone(parentId: widget.zoneId, oldIndex: oldIndex, newIndex: newIndex);
-                      _projectViewModel.setSelectedDevice(widget.zoneCircuits[oldIndex].id, SelectedItemType.circuit);
+                      _projectViewModel.reOrderCircuitInZone(
+                        parentId: widget.zoneId,
+                        oldIndex: oldIndex,
+                        newIndex: newIndex,
+                      );
+                      _projectViewModel.setSelectedDevice(
+                        widget.zoneCircuits[oldIndex].id,
+                        SelectedItemType.circuit,
+                      );
                     },
-                    proxyDecorator: (Widget child, int index, Animation<double> animation) => child,
+                    proxyDecorator:
+                        (
+                          Widget child,
+                          int index,
+                          Animation<double> animation,
+                        ) => child,
                     itemBuilder: (BuildContext context, int index) {
-                      final CircuitModel circuitData = widget.zoneCircuits[index];
-                      final List<Speaker> speakers = _projectViewModel.getHardwareForCircuit(circuitId: circuitData.id).whereType<Speaker>().toList();
+                      final CircuitModel circuitData =
+                          widget.zoneCircuits[index];
+                      final List<Speaker> speakers =
+                          _projectViewModel
+                              .getHardwareForCircuit(circuitId: circuitData.id)
+                              .whereType<Speaker>()
+                              .toList();
                       final String deviceId = circuitData.id;
-                      final List<ListeningArea> location = _projectViewModel.getListeningAreasForCircuit(circuitId: circuitData.id);
+                      final List<ListeningArea> location = _projectViewModel
+                          .getListeningAreasForCircuit(
+                            circuitId: circuitData.id,
+                          );
 
                       return DragTarget<CircuitModel>(
                         key: ValueKey<String>(deviceId),
@@ -260,15 +316,28 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
                           if (incoming == null) return false;
                           // return incoming != null && incoming.name == circuitData.name && incoming.id != circuitData.id;
                           // _projectViewModel.setSelectedDevice(circuitData.id, SelectedItemType.circuit);
-                          if (circuitData.addedInBuildingPage || incoming.addedInBuildingPage) {
+                          if (circuitData.addedInBuildingPage ||
+                              incoming.addedInBuildingPage) {
                             return false;
                           }
-                          final List<Speaker> incomingSpeakers = _projectViewModel.getHardwareForCircuit(circuitId: incoming.id).whereType<Speaker>().toList();
-                          final List<Speaker> currentData = _projectViewModel.getHardwareForCircuit(circuitId: circuitData.id).whereType<Speaker>().toList();
+                          final List<Speaker> incomingSpeakers =
+                              _projectViewModel
+                                  .getHardwareForCircuit(circuitId: incoming.id)
+                                  .whereType<Speaker>()
+                                  .toList();
+                          final List<Speaker> currentData =
+                              _projectViewModel
+                                  .getHardwareForCircuit(
+                                    circuitId: circuitData.id,
+                                  )
+                                  .whereType<Speaker>()
+                                  .toList();
 
-                          final Zone? incomingZone = _projectViewModel.getZoneForCircuit(circuitId: incoming.id);
+                          final Zone? incomingZone = _projectViewModel
+                              .getZoneForCircuit(circuitId: incoming.id);
 
-                          return incomingSpeakers.first.speakerSKU == currentData.first.speakerSKU &&
+                          return incomingSpeakers.first.speakerSKU ==
+                                  currentData.first.speakerSKU &&
                               incoming.id != circuitData.id &&
                               incomingZone != null &&
                               incomingZone.id == widget.zoneId;
@@ -276,22 +345,39 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
                         // ignore: deprecated_member_use
                         onAccept: (CircuitModel incoming) {
                           /// Add speaker to target circuit
-                          final List<Speaker> incomingSpeakers = _projectViewModel.getHardwareForCircuit(circuitId: incoming.id).whereType<Speaker>().toList();
+                          final List<Speaker> incomingSpeakers =
+                              _projectViewModel
+                                  .getHardwareForCircuit(circuitId: incoming.id)
+                                  .whereType<Speaker>()
+                                  .toList();
 
                           if (incomingSpeakers.isNotEmpty) {
                             for (final Speaker speaker in incomingSpeakers) {
                               // serviceLocator<ProjectViewModel>().addHardware(hardware: speaker, autoSave: false);
                               // serviceLocator<ProjectViewModel>().removeHardwareFromCircuit(hwId: speaker.id, circuitId: incoming.id);
-                              serviceLocator<ProjectViewModel>().addHardwareToCircuit(hwId: speaker.id, circuitId: circuitData.id);
+                              serviceLocator<ProjectViewModel>()
+                                  .addHardwareToCircuit(
+                                    hwId: speaker.id,
+                                    circuitId: circuitData.id,
+                                  );
                             }
-                            _projectViewModel.setSelectedDevice(circuitData.id, SelectedItemType.circuit);
+                            _projectViewModel.setSelectedDevice(
+                              circuitData.id,
+                              SelectedItemType.circuit,
+                            );
                           }
 
                           /// Remove the dragged circuit from the zone
-                          _projectViewModel.removeCircuit(circuitId: incoming.id);
+                          _projectViewModel.removeCircuit(
+                            circuitId: incoming.id,
+                          );
                           setState(() {});
                         },
-                        builder: (BuildContext context, List<CircuitModel?> candidateData, List<dynamic> rejectedData) {
+                        builder: (
+                          BuildContext context,
+                          List<CircuitModel?> candidateData,
+                          List<dynamic> rejectedData,
+                        ) {
                           return Draggable<CircuitModel>(
                             data: circuitData,
                             feedback: SizedBox(
@@ -309,10 +395,22 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
                                     circuitModel: circuitData,
                                     circuitDeviceName: circuitData.name,
                                     assetImagePath:
-                                        serviceLocator<ProjectViewModel>().getHardwareImage(
-                                          productId: speakers.isNotEmpty ? speakers.first.productId ?? 0 : 0,
-                                          currentImagePath: speakers.isNotEmpty ? speakers.first.assetImagePath : '',
-                                        ) ??
+                                        serviceLocator<ProjectViewModel>()
+                                            .getHardwareImage(
+                                              productId:
+                                                  speakers.isNotEmpty
+                                                      ? speakers
+                                                              .first
+                                                              .productId ??
+                                                          0
+                                                      : 0,
+                                              currentImagePath:
+                                                  speakers.isNotEmpty
+                                                      ? speakers
+                                                          .first
+                                                          .assetImagePath
+                                                      : '',
+                                            ) ??
                                         "",
                                     location: location,
                                     speakers: speakers,
@@ -343,10 +441,22 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
                                       circuitModel: circuitData,
                                       circuitDeviceName: circuitData.name,
                                       assetImagePath:
-                                          serviceLocator<ProjectViewModel>().getHardwareImage(
-                                            productId: speakers.isNotEmpty ? speakers.first.productId ?? 0 : 0,
-                                            currentImagePath: speakers.isNotEmpty ? speakers.first.assetImagePath : '',
-                                          ) ??
+                                          serviceLocator<ProjectViewModel>()
+                                              .getHardwareImage(
+                                                productId:
+                                                    speakers.isNotEmpty
+                                                        ? speakers
+                                                                .first
+                                                                .productId ??
+                                                            0
+                                                        : 0,
+                                                currentImagePath:
+                                                    speakers.isNotEmpty
+                                                        ? speakers
+                                                            .first
+                                                            .assetImagePath
+                                                        : '',
+                                              ) ??
                                           "",
                                       location: location,
                                       speakers: speakers,
@@ -369,10 +479,17 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
                               circuitModel: circuitData,
                               circuitDeviceName: circuitData.name,
                               assetImagePath:
-                                  serviceLocator<ProjectViewModel>().getHardwareImage(
-                                    productId: speakers.isNotEmpty ? speakers.first.productId ?? 0 : 0,
-                                    currentImagePath: speakers.isNotEmpty ? speakers.first.assetImagePath : '',
-                                  ) ??
+                                  serviceLocator<ProjectViewModel>()
+                                      .getHardwareImage(
+                                        productId:
+                                            speakers.isNotEmpty
+                                                ? speakers.first.productId ?? 0
+                                                : 0,
+                                        currentImagePath:
+                                            speakers.isNotEmpty
+                                                ? speakers.first.assetImagePath
+                                                : '',
+                                      ) ??
                                   "",
                               location: location,
                               speakers: speakers,
@@ -380,20 +497,32 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
                               onDecrementHardwareInCircuit: () {
                                 if (speakers.isNotEmpty) {
                                   final Speaker speaker = speakers.last;
-                                  serviceLocator<ProjectViewModel>().removeHardware(hardwareId: speaker.id);
+                                  serviceLocator<ProjectViewModel>()
+                                      .removeHardware(hardwareId: speaker.id);
                                 }
                               },
                               onIncrementHardwareInCircuit: () {
                                 if (speakers.isNotEmpty) {
-                                  final Speaker speaker = speakers.first.getClone();
-                                  serviceLocator<ProjectViewModel>().addHardware(hardware: speaker, autoSave: false);
-                                  serviceLocator<ProjectViewModel>().addHardwareToCircuit(hwId: speaker.id, circuitId: circuitData.id);
+                                  final Speaker speaker =
+                                      speakers.first.getClone();
+                                  serviceLocator<ProjectViewModel>()
+                                      .addHardware(
+                                        hardware: speaker,
+                                        autoSave: false,
+                                      );
+                                  serviceLocator<ProjectViewModel>()
+                                      .addHardwareToCircuit(
+                                        hwId: speaker.id,
+                                        circuitId: circuitData.id,
+                                      );
                                 }
                               },
                               onRename: () {},
                               onDuplicate: () {},
                               onDelete: () {
-                                _projectViewModel.removeCircuit(circuitId: circuitData.id);
+                                _projectViewModel.removeCircuit(
+                                  circuitId: circuitData.id,
+                                );
                               },
                               circuitDeviceCount: speakers.length,
                             ),
@@ -418,8 +547,15 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
                 if (oldIndex < newIndex) {
                   newIndex -= 1;
                 }
-                _projectViewModel.reOrderSubZoneInZone(parentId: widget.zoneId, oldIndex: oldIndex, newIndex: newIndex);
-                _projectViewModel.setSelectedDevice(widget.subZones[oldIndex].id, SelectedItemType.subzone);
+                _projectViewModel.reOrderSubZoneInZone(
+                  parentId: widget.zoneId,
+                  oldIndex: oldIndex,
+                  newIndex: newIndex,
+                );
+                _projectViewModel.setSelectedDevice(
+                  widget.subZones[oldIndex].id,
+                  SelectedItemType.subzone,
+                );
               },
               itemBuilder: (BuildContext context, int index) {
                 final SubZone subZone = widget.subZones[index];
@@ -434,7 +570,10 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
                     decoration: BoxDecoration(
                       border: Border(
                         bottom: BorderSide(
-                          color: isLast ? Colors.transparent : context.colorScheme.elevation2,
+                          color:
+                              isLast
+                                  ? Colors.transparent
+                                  : context.colorScheme.elevation2,
                           width: 1,
                         ),
                       ),
@@ -444,9 +583,14 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
                       subZoneId: subZone.id,
                       zoneId: widget.zoneId,
                       index: index,
-                      subZoneCircuit: _projectViewModel.getCircuitsInSubZone(subZoneId: subZone.id),
+                      subZoneCircuit: _projectViewModel.getCircuitsInSubZone(
+                        subZoneId: subZone.id,
+                      ),
                       onDelete: (String subZoneId) {
-                        _projectViewModel.removeSubZoneFromZone(subZoneId: subZoneId, parentZoneId: widget.zoneId);
+                        _projectViewModel.removeSubZoneFromZone(
+                          subZoneId: subZoneId,
+                          parentZoneId: widget.zoneId,
+                        );
                       },
                     ),
                   ),
@@ -479,7 +623,10 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
     );
   }
 
-  Widget _buildKebabMenu({required BuildContext context, required String zoneId}) {
+  Widget _buildKebabMenu({
+    required BuildContext context,
+    required String zoneId,
+  }) {
     return PopupMenuButton<ZoneMenuAction>(
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(FusionSizes.borderRadius12),
@@ -519,7 +666,10 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
         ];
       },
       child: SemanticHelper.button(
-        testId: SemanticHelper.createTestId(SemanticTypes.button, "zone_item_kebab_menu"),
+        testId: SemanticHelper.createTestId(
+          SemanticTypes.button,
+          "zone_item_kebab_menu",
+        ),
         child: Icon(
           Icons.more_vert,
           size: FusionSizes.fontSize16,
@@ -555,7 +705,10 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
         ];
       },
       child: SemanticHelper.button(
-        testId: SemanticHelper.createTestId(SemanticTypes.button, "add_subzone_menu"),
+        testId: SemanticHelper.createTestId(
+          SemanticTypes.button,
+          "add_subzone_menu",
+        ),
         child: Container(
           height: 34,
           padding: const EdgeInsets.symmetric(horizontal: 10),
@@ -625,7 +778,10 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
                       setState(() => showSubzonePopup = false);
                     },
                     child: SemanticHelper.button(
-                      testId: SemanticHelper.createTestId(SemanticTypes.button, "add_subzone_close_button"),
+                      testId: SemanticHelper.createTestId(
+                        SemanticTypes.button,
+                        "add_subzone_close_button",
+                      ),
                       child: Icon(
                         Icons.close,
                         size: 16,
@@ -636,7 +792,10 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
                 ],
               ),
               const SizedBox(height: 8),
-              Divider(color: Theme.of(context).colorScheme.elevation2, thickness: 1),
+              Divider(
+                color: Theme.of(context).colorScheme.elevation2,
+                thickness: 1,
+              ),
               const SizedBox(height: 8),
 
               /// SubZone Name Input
@@ -649,7 +808,10 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
               ),
               const SizedBox(height: 4),
               SemanticHelper.formControl(
-                testId: SemanticHelper.createTestId(SemanticTypes.textInput, "add_subzone_name_field"),
+                testId: SemanticHelper.createTestId(
+                  SemanticTypes.textInput,
+                  "add_subzone_name_field",
+                ),
                 child: PropertyTextField(
                   controller: _zoneNameController,
                   hintText: "Enter subzone name",
@@ -681,8 +843,10 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
                     child: FusionOutlinedButton(
                       width: double.infinity,
                       label: "Cancel",
-                      semanticsId: "add_subzone_cancel_button",
-                      textStyle: Theme.of(context).textTheme.labelLarge?.copyWith(fontSize: 10),
+                      accessLabel: "add_subzone_cancel_button",
+                      textStyle: Theme.of(
+                        context,
+                      ).textTheme.labelLarge?.copyWith(fontSize: 10),
                       onTap: () {
                         // Close only the subzone popup
                         Navigator.of(context).pop();
@@ -697,16 +861,24 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
                   const SizedBox(width: 8),
                   Flexible(
                     child: SemanticHelper.button(
-                      testId: SemanticHelper.createTestId(SemanticTypes.button, "add_subzone_save_button"),
+                      testId: SemanticHelper.createTestId(
+                        SemanticTypes.button,
+                        "add_subzone_save_button",
+                      ),
                       child: FusionButton(
+                        accessLabel: 'add_subzone_save_button',
                         width: double.infinity,
                         activeBackgroundColor: context.colorScheme.primaryColor,
-                        textStyle: Theme.of(context).textTheme.labelLarge?.copyWith(
+                        textStyle: Theme.of(
+                          context,
+                        ).textTheme.labelLarge?.copyWith(
                           fontSize: 10,
                           color: Colors.white,
                         ),
                         label: "Save",
-                        isActive: _zoneNameController.text.trim().isNotEmpty && _selectedListeningAreaIds.isNotEmpty,
+                        isActive:
+                            _zoneNameController.text.trim().isNotEmpty &&
+                            _selectedListeningAreaIds.isNotEmpty,
                         onTap: () => _saveSubZone(context, zoneId),
                       ),
                     ),
@@ -721,9 +893,16 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
   }
 
   /// Location selector dropdown
-  Widget _buildLocationSelector(BuildContext context, String zoneId, VoidCallback onStateUpdate) {
+  Widget _buildLocationSelector(
+    BuildContext context,
+    String zoneId,
+    VoidCallback onStateUpdate,
+  ) {
     return SemanticHelper.container(
-      testId: SemanticHelper.createTestId(SemanticTypes.container, "location_selector_container"),
+      testId: SemanticHelper.createTestId(
+        SemanticTypes.container,
+        "location_selector_container",
+      ),
       child: Container(
         height: 28,
         decoration: BoxDecoration(
@@ -749,7 +928,10 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
             ];
           },
           child: SemanticHelper.button(
-            testId: SemanticHelper.createTestId(SemanticTypes.button, "location_selector_button"),
+            testId: SemanticHelper.createTestId(
+              SemanticTypes.button,
+              "location_selector_button",
+            ),
             child: Container(
               height: 29,
               padding: const EdgeInsets.symmetric(horizontal: 8),
@@ -762,7 +944,10 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
                               ? "Select Location"
                               : "${_selectedListeningAreaIds.length} location${_selectedListeningAreaIds.length > 1 ? '(s)' : ''} selected",
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: _selectedListeningAreaIds.isEmpty ? context.colorScheme.elevation5 : Theme.of(context).textTheme.bodySmall?.color,
+                        color:
+                            _selectedListeningAreaIds.isEmpty
+                                ? context.colorScheme.elevation5
+                                : Theme.of(context).textTheme.bodySmall?.color,
                       ),
                     ),
                   ),
@@ -784,7 +969,11 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
   }
 
   /// Location list within the dropdown
-  Widget _buildLocationList(BuildContext context, String zoneId, VoidCallback onStateUpdate) {
+  Widget _buildLocationList(
+    BuildContext context,
+    String zoneId,
+    VoidCallback onStateUpdate,
+  ) {
     bool isCreateAreaExpanded = false;
     final String selectedFloor = '';
     final String selectedFloorId = '';
@@ -794,16 +983,27 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
       builder: (BuildContext context, StateSetter setPopupState) {
         /// Always recompute availableAreas and allAreas inside the builder so they update with state
         final List<ListeningArea> availableAreas = <ListeningArea>[
-          ..._projectViewModel.getAvailableListeningAreasForSubZone(parentZoneId: zoneId),
-          ...newlyCreatedAreas.map((Map<String, dynamic> e) => e['area'] as ListeningArea),
+          ..._projectViewModel.getAvailableListeningAreasForSubZone(
+            parentZoneId: zoneId,
+          ),
+          ...newlyCreatedAreas.map(
+            (Map<String, dynamic> e) => e['area'] as ListeningArea,
+          ),
         ];
-        final List<String> selectedListeningAreaIds = List<String>.from(_selectedListeningAreaIds);
+        final List<String> selectedListeningAreaIds = List<String>.from(
+          _selectedListeningAreaIds,
+        );
 
         /// Combine assigned areas and available areas to show all
         final List<ListeningArea> allAreas = <ListeningArea>[
-          ...serviceLocator<ProjectViewModel>().getListeningAreasForZone(zoneId: zoneId),
+          ...serviceLocator<ProjectViewModel>().getListeningAreasForZone(
+            zoneId: zoneId,
+          ),
           ...availableAreas.where(
-            (ListeningArea a) => !serviceLocator<ProjectViewModel>().getListeningAreasForZone(zoneId: zoneId).any((ListeningArea b) => b.id == a.id),
+            (ListeningArea a) =>
+                !serviceLocator<ProjectViewModel>()
+                    .getListeningAreasForZone(zoneId: zoneId)
+                    .any((ListeningArea b) => b.id == a.id),
           ),
         ];
 
@@ -815,27 +1015,37 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
         /// Helper to get floor name for area
         String getFloorNameForArea(ListeningArea area) {
           final Map<String, dynamic> newArea = newlyCreatedAreas.firstWhere(
-            (Map<String, dynamic> e) => (e['area'] as ListeningArea).id == area.id,
+            (Map<String, dynamic> e) =>
+                (e['area'] as ListeningArea).id == area.id,
             orElse: () => <String, dynamic>{},
           );
           if (newArea.isNotEmpty) {
             return newArea['floorName'] as String? ?? '';
           }
-          final FloorModel? floorData = _projectViewModel.getFloorForListeningArea(areaId: area.id);
+          final FloorModel? floorData = _projectViewModel
+              .getFloorForListeningArea(areaId: area.id);
           return floorData?.name ?? '';
         }
 
         return SemanticHelper.container(
-          testId: SemanticHelper.createTestId(SemanticTypes.container, "location_list_container"),
+          testId: SemanticHelper.createTestId(
+            SemanticTypes.container,
+            "location_list_container",
+          ),
           child: SizedBox(
             width: 280,
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: <Widget>[
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 8,
+                  ),
                   decoration: BoxDecoration(
-                    border: Border(bottom: BorderSide(color: context.colorScheme.elevation2)),
+                    border: Border(
+                      bottom: BorderSide(color: context.colorScheme.elevation2),
+                    ),
                   ),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -851,7 +1061,10 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
                       InkWell(
                         onTap: () => Navigator.of(context).pop(),
                         child: SemanticHelper.button(
-                          testId: SemanticHelper.createTestId(SemanticTypes.button, "location_list_close_button"),
+                          testId: SemanticHelper.createTestId(
+                            SemanticTypes.button,
+                            "location_list_close_button",
+                          ),
                           child: Icon(
                             Icons.close,
                             size: 16,
@@ -882,21 +1095,31 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
                               allAreas.map((ListeningArea area) {
                                 final int index = allAreas.indexOf(area);
 
-                                final String floorName = getFloorNameForArea(area);
-                                final Zone? zoneData = _projectViewModel.getZonesForListeningArea(areaId: area.id);
-                                final bool isAvailable = availableAreas.any((ListeningArea a) => a.id == area.id);
+                                final String floorName = getFloorNameForArea(
+                                  area,
+                                );
+                                final Zone? zoneData = _projectViewModel
+                                    .getZonesForListeningArea(areaId: area.id);
+                                final bool isAvailable = availableAreas.any(
+                                  (ListeningArea a) => a.id == area.id,
+                                );
                                 return _buildLocationItem(
                                   index: index,
                                   context: context,
                                   area: area,
                                   zoneId: zoneId,
                                   onStateUpdate: () {
-                                    if (selectedListeningAreaIds.contains(area.id)) {
+                                    if (selectedListeningAreaIds.contains(
+                                      area.id,
+                                    )) {
                                       selectedListeningAreaIds.remove(area.id);
                                     } else {
                                       selectedListeningAreaIds.add(area.id);
                                     }
-                                    _selectedListeningAreaIds = List<String>.from(selectedListeningAreaIds);
+                                    _selectedListeningAreaIds =
+                                        List<String>.from(
+                                          selectedListeningAreaIds,
+                                        );
                                     updateStates();
                                   },
                                   availableAreas: availableAreas,
@@ -917,7 +1140,11 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
                   setDropdownState: setPopupState,
                   selectedFloor: selectedFloor,
                   selectedFloorId: selectedFloorId,
-                  onCreateNewArea: ({required String floorId, required String floorName, required String locationName}) {
+                  onCreateNewArea: ({
+                    required String floorId,
+                    required String floorName,
+                    required String locationName,
+                  }) {
                     if (locationName.trim().isNotEmpty && floorId.isNotEmpty) {
                       final ListeningArea newListeningArea = ListeningArea(
                         name: locationName.trim(),
@@ -932,7 +1159,13 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
                           'floorName': floorName,
                         });
                         // Select all newly created locations
-                        final List<String> allNewIds = newlyCreatedAreas.map((Map<String, dynamic> e) => (e['area'] as ListeningArea).id).toList();
+                        final List<String> allNewIds =
+                            newlyCreatedAreas
+                                .map(
+                                  (Map<String, dynamic> e) =>
+                                      (e['area'] as ListeningArea).id,
+                                )
+                                .toList();
                         _selectedListeningAreaIds = allNewIds;
                         setPopupState(() {});
                         areaNameController.clear();
@@ -940,7 +1173,8 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
 
                         FusionToast.success(
                           context,
-                          message: "Listening area '$locationName' created successfully on floor '$floorName'",
+                          message:
+                              "Listening area '$locationName' created successfully on floor '$floorName'",
                         );
                         onStateUpdate(); // Force parent rebuild so location count updates
                       } catch (e) {
@@ -952,7 +1186,8 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
                     } else {
                       FusionToast.error(
                         context,
-                        message: "Please enter location name and select a floor",
+                        message:
+                            "Please enter location name and select a floor",
                       );
                     }
                   },
@@ -990,8 +1225,12 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
     return InkWell(
       onTap: isAvailable ? toggleSelection : null,
       child: SemanticHelper.toggle(
-        testId: SemanticHelper.createTestId(SemanticTypes.toggle, "location_item_checkbox_${index}_container"),
-        value: isAvailable ? !_selectedListeningAreaIds.contains(area.id) : true,
+        testId: SemanticHelper.createTestId(
+          SemanticTypes.toggle,
+          "location_item_checkbox_${index}_container",
+        ),
+        value:
+            isAvailable ? !_selectedListeningAreaIds.contains(area.id) : true,
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
           child: Row(
@@ -1000,14 +1239,26 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
                 width: 14,
                 height: 14,
                 child: SemanticHelper.toggle(
-                  testId: SemanticHelper.createTestId(SemanticTypes.toggle, "location_item_checkbox_$index"),
-                  value: isAvailable ? !_selectedListeningAreaIds.contains(area.id) : true,
+                  testId: SemanticHelper.createTestId(
+                    SemanticTypes.toggle,
+                    "location_item_checkbox_$index",
+                  ),
+                  value:
+                      isAvailable
+                          ? !_selectedListeningAreaIds.contains(area.id)
+                          : true,
                   child: Transform.scale(
                     scale: 0.8,
                     child: Checkbox(
-                      value: !isAvailable ? true : _selectedListeningAreaIds.contains(area.id),
+                      value:
+                          !isAvailable
+                              ? true
+                              : _selectedListeningAreaIds.contains(area.id),
                       activeColor: context.colorScheme.primaryWhite,
-                      onChanged: isAvailable ? (bool? checked) => toggleSelection() : null,
+                      onChanged:
+                          isAvailable
+                              ? (bool? checked) => toggleSelection()
+                              : null,
                       materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                       visualDensity: VisualDensity.compact,
                       shape: const RoundedRectangleBorder(
@@ -1023,11 +1274,17 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
               /// Location name and zone
               Expanded(
                 child: FusionAppText(
-                  text: area.name.isNotEmpty ? "${floorName ?? floorData?.name ?? ''}/${area.name}" : 'Unnamed Area',
+                  text:
+                      area.name.isNotEmpty
+                          ? "${floorName ?? floorData?.name ?? ''}/${area.name}"
+                          : 'Unnamed Area',
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     fontWeight: FontWeight.w500,
                     fontSize: 10,
-                    color: isAvailable ? context.colorScheme.primaryWhite : context.colorScheme.elevation5,
+                    color:
+                        isAvailable
+                            ? context.colorScheme.primaryWhite
+                            : context.colorScheme.elevation5,
                   ),
                 ),
               ),

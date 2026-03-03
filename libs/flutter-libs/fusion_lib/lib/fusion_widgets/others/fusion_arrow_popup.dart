@@ -21,11 +21,11 @@ class FusionArrowPopup extends StatefulWidget {
   final double blurAmount;
   final double? maxHeight; // New: Optional max height
   final double? maxWidth; // New: Optional max width
-  final String? semanticId;
+  final String semanticId;
   const FusionArrowPopup({
     super.key,
     required this.content,
-    this.semanticId,
+    required this.semanticId,
     required this.child,
     this.anchorKey,
     this.backgroundColor,

@@ -14,11 +14,13 @@ class MediaPlayerCard extends StatefulWidget {
   final double? height;
 
   final VoidCallback? onEdit;
+  final String semanticId;
 
   const MediaPlayerCard({
     super.key,
     required this.label,
     required this.currentstate,
+    required this.semanticId,
     this.width,
     this.height,
     this.onEdit,
@@ -73,7 +75,7 @@ class _MediaPlayerCardState extends State<MediaPlayerCard>
     setState(() {
       _heights = List.generate(
         4,
-            (_) => 10 + _random.nextInt(18).toDouble(),
+        (_) => 10 + _random.nextInt(18).toDouble(),
       );
     });
   }
@@ -86,65 +88,73 @@ class _MediaPlayerCardState extends State<MediaPlayerCard>
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: widget.width,
-      height: widget.height,
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: FusionDarkColorPallette.dark80,
-        borderRadius: BorderRadius.circular(16),
+    return SemanticHelper.container(
+      testId: SemanticHelper.createTestId(
+        SemanticTypes.card,
+        'fusion_media_player_card${widget.semanticId}',
       ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              _bar(height: _heights[0]),
-              _bar(height: _heights[1]),
-              _bar(height: _heights[2]),
-              _bar(height: _heights[3]),
-            ],
-          ),
-
-          const SizedBox(width: 15),
-
-          Expanded(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.start,
+      child: Container(
+        width: widget.width,
+        height: widget.height,
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: FusionDarkColorPallette.dark80,
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.end,
               children: [
-                Text(
-                  widget.label,
-                  style: TextStyle(
-                    color: context.colorScheme.canvasBG,
-                    fontSize: 13,
-                  ),
-                ),
-                const SizedBox(height: 1),
-                Text(
-                  widget.currentstate ? "Now Playing" : "Not Playing",
-                  style: TextStyle(
-                    color: context.colorScheme.textGrey,
-                    fontSize: 11,
-                  ),
-                ),
+                _bar(height: _heights[0]),
+                _bar(height: _heights[1]),
+                _bar(height: _heights[2]),
+                _bar(height: _heights[3]),
               ],
             ),
-          ),
 
-          if (widget.onEdit != null)
-            FusionNeumorphicButton(
-              onTap: () => widget.onEdit!.call(),
-              borderRadius: 6,
-              width: 28,
-              height: 28,
-              child: const Icon(Icons.tune, size: 18),
+            const SizedBox(width: 15),
+
+            Expanded(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    widget.label,
+                    style: TextStyle(
+                      color: context.colorScheme.canvasBG,
+                      fontSize: 13,
+                    ),
+                  ),
+                  const SizedBox(height: 1),
+                  Text(
+                    widget.currentstate ? "Now Playing" : "Not Playing",
+                    style: TextStyle(
+                      color: context.colorScheme.textGrey,
+                      fontSize: 11,
+                    ),
+                  ),
+                ],
+              ),
             ),
-        ],
+
+            if (widget.onEdit != null)
+              FusionNeumorphicButton(
+                semanticId: 'fusion_event_card_tune_button',
+                onTap: () => widget.onEdit!.call(),
+                borderRadius: 6,
+                width: 28,
+                height: 28,
+                child: const Icon(Icons.tune, size: 18),
+              ),
+          ],
+        ),
       ),
     );
   }
+
   Widget _bar({required double height}) {
     return AnimatedContainer(
       duration: const Duration(milliseconds: 400),

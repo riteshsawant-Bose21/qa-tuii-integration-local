@@ -391,6 +391,7 @@ class _ListeningAreaDropdownWidgetState extends State<ListeningAreaDropdownWidge
                                         child: SemanticHelper.button(
                                           testId: SemanticHelper.createTestId(SemanticTypes.button, "create_new_location_add_button"),
                                           child: FusionButton(
+                                            accessLabel: 'create_new_location_add_button',
                                             height: 32,
                                             label: "Add",
                                             activeBackgroundColor: context.colorScheme.primaryColor,

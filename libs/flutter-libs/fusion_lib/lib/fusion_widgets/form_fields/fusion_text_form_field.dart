@@ -85,10 +85,13 @@ class FusionTextFormField extends StatefulWidget {
   /// Submit callback.
   final ValueChanged<String>? onSubmitted;
 
+  final String semanticId;
+
   /// Creates a [FusionTextFormField].
   const FusionTextFormField({
     super.key,
     required this.title,
+    required this.semanticId,
     required this.hintText,
     this.isRequired = false,
     this.isPassword = false,
@@ -131,8 +134,12 @@ class _FusionTextFormFieldState extends State<FusionTextFormField> {
         if (widget.title.isNotEmpty)
           Row(
             children: [
-              Text(widget.title, style: Theme.of(context).textTheme.labelMedium),
-              if (widget.isRequired) Text(' *', style: TextStyle(color: Colors.red.shade600)),
+              Text(
+                widget.title,
+                style: Theme.of(context).textTheme.labelMedium,
+              ),
+              if (widget.isRequired)
+                Text(' *', style: TextStyle(color: Colors.red.shade600)),
             ],
           ),
         if (widget.title.isNotEmpty) const SizedBox(height: 8),
@@ -147,14 +154,22 @@ class _FusionTextFormFieldState extends State<FusionTextFormField> {
           maxLines: widget.maxLines,
           maxLength: widget.maxLength,
           obscureText: widget.isPassword ? _obscureText : false,
-          style: TextStyle(color: widget.isActive ? Colors.black : Colors.black.withOpacity(0.4)),
+          style: TextStyle(
+            color: widget.isActive
+                ? Colors.black
+                : Colors.black.withOpacity(0.4),
+          ),
           decoration: InputDecoration(
             hintText: widget.hintText,
             prefixText: widget.prefixText,
             prefixStyle: widget.prefixTextStyle,
             suffixIcon: widget.isPassword
                 ? IconButton(
-                    icon: Icon(_obscureText ? Icons.visibility_off : Icons.visibility, size: 18, color: Colors.grey.shade600),
+                    icon: Icon(
+                      _obscureText ? Icons.visibility_off : Icons.visibility,
+                      size: 18,
+                      color: Colors.grey.shade600,
+                    ),
                     onPressed: () {
                       setState(() {
                         _obscureText = !_obscureText;

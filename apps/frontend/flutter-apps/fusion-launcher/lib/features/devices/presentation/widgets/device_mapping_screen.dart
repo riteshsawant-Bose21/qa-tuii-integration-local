@@ -41,16 +41,26 @@ class _DeviceMappingScreenState extends State<DeviceMappingScreen> {
 
   String _getDeviceLocation(HardwareComponent device) {
     if (device.locationEntity.listeningAreaId != null) {
-      final Zone? zone = serviceLocator<ProjectViewModel>().getZonesForListeningArea(areaId: device.locationEntity.listeningAreaId!);
+      final Zone? zone = serviceLocator<ProjectViewModel>()
+          .getZonesForListeningArea(
+            areaId: device.locationEntity.listeningAreaId!,
+          );
       if (zone != null) return zone.name;
 
-      final SubZone? subZone = serviceLocator<ProjectViewModel>().getSubZoneForListeningArea(areaId: device.locationEntity.listeningAreaId!);
+      final SubZone? subZone = serviceLocator<ProjectViewModel>()
+          .getSubZoneForListeningArea(
+            areaId: device.locationEntity.listeningAreaId!,
+          );
       if (subZone != null) {
-        final Zone? parentZone = serviceLocator<ProjectViewModel>().getZoneForSubZone(subZoneId: subZone.id);
-        return parentZone != null ? "${parentZone.name} > ${subZone.name}" : subZone.name;
+        final Zone? parentZone = serviceLocator<ProjectViewModel>()
+            .getZoneForSubZone(subZoneId: subZone.id);
+        return parentZone != null
+            ? "${parentZone.name} > ${subZone.name}"
+            : subZone.name;
       }
     }
-    final EquipLocation? location = serviceLocator<ProjectViewModel>().getEquipLocationForHardware(hardwareId: device.id);
+    final EquipLocation? location = serviceLocator<ProjectViewModel>()
+        .getEquipLocationForHardware(hardwareId: device.id);
     return location?.name ?? "--";
   }
 
@@ -111,7 +121,10 @@ class _DeviceMappingScreenState extends State<DeviceMappingScreen> {
         FusionTableColumn(key: 'firmware', header: 'VER', flex: 2),
         FusionTableColumn(key: 'assignedTo', header: 'ASSIGNED TO', flex: 4),
       ],
-      rows: widget.devices.map((HardwareComponent device) => _buildDeviceRow(device)).toList(),
+      rows:
+          widget.devices
+              .map((HardwareComponent device) => _buildDeviceRow(device))
+              .toList(),
     );
   }
 
@@ -157,11 +170,19 @@ class _DeviceMappingScreenState extends State<DeviceMappingScreen> {
         ),
         'ipAddress': FusionTableCell(
           value: isAssigned ? assignedHardware.ipAddress : '--',
-          child: Text(isAssigned ? assignedHardware.ipAddress : '--', style: cellStyle, maxLines: 1),
+          child: Text(
+            isAssigned ? assignedHardware.ipAddress : '--',
+            style: cellStyle,
+            maxLines: 1,
+          ),
         ),
         'firmware': FusionTableCell(
           value: isAssigned ? assignedHardware.firmware : '--',
-          child: Text(isAssigned ? assignedHardware.firmware : '--', style: cellStyle, maxLines: 1),
+          child: Text(
+            isAssigned ? assignedHardware.firmware : '--',
+            style: cellStyle,
+            maxLines: 1,
+          ),
         ),
         'assignedTo': FusionTableCell(
           value: isAssigned ? assignedHardware.modelName : 'unassigned',
@@ -191,7 +212,10 @@ class _DeviceMappingScreenState extends State<DeviceMappingScreen> {
       height: 10,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        color: isConnected ? const Color(0xFF4CAF50) : context.colorScheme.iconDefault,
+        color:
+            isConnected
+                ? const Color(0xFF4CAF50)
+                : context.colorScheme.iconDefault,
       ),
     );
   }
@@ -217,17 +241,26 @@ class _DeviceMappingScreenState extends State<DeviceMappingScreen> {
         child: DropdownButton<String?>(
           value: dropdownValue,
           isExpanded: true,
-          icon: Icon(Icons.keyboard_arrow_down, size: 16, color: context.colorScheme.iconDefault),
+          icon: Icon(
+            Icons.keyboard_arrow_down,
+            size: 16,
+            color: context.colorScheme.iconDefault,
+          ),
           dropdownColor: context.colorScheme.elevation2,
           style: TextStyle(
-            color: isAssigned ? context.colorScheme.textPrimary : context.colorScheme.primaryColor,
+            color:
+                isAssigned
+                    ? context.colorScheme.textPrimary
+                    : context.colorScheme.primaryColor,
             fontSize: 13,
             fontWeight: isAssigned ? FontWeight.w400 : FontWeight.w500,
           ),
           // Helper to generate list based on new logic
           items: _getDropdownItems(device, assignedHardware),
           selectedItemBuilder: (BuildContext context) {
-            return _getDropdownItems(device, assignedHardware).map<Widget>((DropdownMenuItem<String?> item) {
+            return _getDropdownItems(device, assignedHardware).map<Widget>((
+              DropdownMenuItem<String?> item,
+            ) {
               String text = '';
               String ipAddress = '';
               // Handle visual text for selected item
@@ -235,10 +268,12 @@ class _DeviceMappingScreenState extends State<DeviceMappingScreen> {
                 text = isAssigned ? "Unassign Hardware" : "Assign Hardware";
               } else {
                 // Find name for ID
-                final NetworkHardware? hw = widget.networkHardware.cast<NetworkHardware?>().firstWhere(
-                  (NetworkHardware? h) => h?.id == item.value,
-                  orElse: () => null,
-                );
+                final NetworkHardware? hw = widget.networkHardware
+                    .cast<NetworkHardware?>()
+                    .firstWhere(
+                      (NetworkHardware? h) => h?.id == item.value,
+                      orElse: () => null,
+                    );
                 text = hw?.modelName ?? "Unknown";
                 ipAddress = hw?.ipAddress ?? '';
               }
@@ -274,7 +309,9 @@ class _DeviceMappingScreenState extends State<DeviceMappingScreen> {
               widget.onAssignHardware(device, null);
             } else {
               // Assign action
-              final NetworkHardware hw = widget.networkHardware.firstWhere((NetworkHardware h) => h.id == hardwareId);
+              final NetworkHardware hw = widget.networkHardware.firstWhere(
+                (NetworkHardware h) => h.id == hardwareId,
+              );
               widget.onAssignHardware(device, hw);
             }
           },
@@ -283,7 +320,10 @@ class _DeviceMappingScreenState extends State<DeviceMappingScreen> {
     );
   }
 
-  List<DropdownMenuItem<String?>> _getDropdownItems(HardwareComponent device, NetworkHardware? currentAssigned) {
+  List<DropdownMenuItem<String?>> _getDropdownItems(
+    HardwareComponent device,
+    NetworkHardware? currentAssigned,
+  ) {
     final List<DropdownMenuItem<String?>> items = <DropdownMenuItem<String?>>[];
 
     // 1. Unassign Option (Only if currently assigned)
@@ -310,9 +350,13 @@ class _DeviceMappingScreenState extends State<DeviceMappingScreen> {
       _ => null,
     };
 
-    final Iterable<NetworkHardware> availableHardware = widget.networkHardware.where(
-      (NetworkHardware hw) => (hw.assignedToDeviceId == null || hw.assignedToDeviceId == device.id) && (requiredType == null || hw.type == requiredType),
-    );
+    final Iterable<NetworkHardware> availableHardware = widget.networkHardware
+        .where(
+          (NetworkHardware hw) =>
+              (hw.assignedToDeviceId == null ||
+                  hw.assignedToDeviceId == device.id) &&
+              (requiredType == null || hw.type == requiredType),
+        );
 
     for (NetworkHardware hw in availableHardware) {
       items.add(
@@ -379,7 +423,11 @@ class _DeviceMappingScreenState extends State<DeviceMappingScreen> {
       children: <Widget>[
         Row(
           children: <Widget>[
-            Icon(Icons.info_outline, size: 16, color: context.colorScheme.iconDefault),
+            Icon(
+              Icons.info_outline,
+              size: 16,
+              color: context.colorScheme.iconDefault,
+            ),
             const SizedBox(width: 8),
             Expanded(
               child: FusionAppText(
@@ -413,7 +461,8 @@ class _DeviceMappingScreenState extends State<DeviceMappingScreen> {
                 padding: const EdgeInsets.only(bottom: 12),
                 child: HardwareCard(
                   hardware: hw,
-                  onDragStarted: () => setState(() => _draggedHardwareId = hw.id),
+                  onDragStarted:
+                      () => setState(() => _draggedHardwareId = hw.id),
                   onDragEnd: () => setState(() => _draggedHardwareId = null),
                 ),
               );
@@ -422,6 +471,7 @@ class _DeviceMappingScreenState extends State<DeviceMappingScreen> {
         ),
         const SizedBox(height: 16),
         FusionNeumorphicButton(
+          semanticId: 'add_wireless_device_button',
           text: "Add a Wireless Device",
           height: 35,
           onTap: () {

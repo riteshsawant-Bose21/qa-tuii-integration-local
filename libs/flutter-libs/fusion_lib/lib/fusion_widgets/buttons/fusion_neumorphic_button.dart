@@ -86,6 +86,7 @@ class FusionNeumorphicButton extends StatefulWidget {
   final EdgeInsetsGeometry? padding;
   final EdgeInsetsGeometry? margin;
   final bool enabled;
+  final String semanticId;
 
   const FusionNeumorphicButton({
     super.key,
@@ -100,6 +101,7 @@ class FusionNeumorphicButton extends StatefulWidget {
     this.padding,
     this.margin,
     this.enabled = true,
+    required this.semanticId,
   });
 
   @override
@@ -117,7 +119,7 @@ class _FusionNeumorphicButtonState extends State<FusionNeumorphicButton> {
       isActive: widget.enabled,
       testId: SemanticHelper.createTestId(
         SemanticTypes.button,
-        "neumorphic_button_${widget.text}",
+        "neumorphic_button_${widget.semanticId}",
       ),
       child: GestureDetector(
         onTapDown: (_) {

@@ -65,11 +65,11 @@ class CustomTextField extends StatefulWidget {
   final FusionFieldState? fieldState;
   final FusionFieldVariant variant;
   final bool showRupee;
-  final String? semanticId;
+  final String semanticId;
 
   const CustomTextField({
     super.key,
-    this.semanticId,
+    required this.semanticId,
     this.showRupee = false,
     this.label,
     required this.hint,
@@ -965,6 +965,7 @@ class _CustomTextFieldState extends State<CustomTextField> {
                   if (widget.button)
                     NeumorphicButton(
                       height: 32,
+                      semanticId: 'textfield_button',
                       borderRadius: 8,
                       onTap: widget.buttonTap ?? () {},
                       text: widget.buttonText,

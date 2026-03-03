@@ -48,7 +48,11 @@ class _EventsPanelState extends State<EventsPanel> {
             onTap: () {
               _addNewEvents();
             },
-            child: Icon(Icons.add_sharp, size: 16, color: context.colorScheme.iconWhite),
+            child: Icon(
+              Icons.add_sharp,
+              size: 16,
+              color: context.colorScheme.iconWhite,
+            ),
           ),
         ),
 
@@ -62,15 +66,25 @@ class _EventsPanelState extends State<EventsPanel> {
                 bottomRight: Radius.circular(12),
               ),
               border: Border(
-                bottom: BorderSide(color: context.colorScheme.elevation2, width: 1),
-                left: BorderSide(color: context.colorScheme.elevation2, width: 1),
-                right: BorderSide(color: context.colorScheme.elevation2, width: 1),
+                bottom: BorderSide(
+                  color: context.colorScheme.elevation2,
+                  width: 1,
+                ),
+                left: BorderSide(
+                  color: context.colorScheme.elevation2,
+                  width: 1,
+                ),
+                right: BorderSide(
+                  color: context.colorScheme.elevation2,
+                  width: 1,
+                ),
               ),
               color: Theme.of(context).colorScheme.elevation1,
             ),
             child: BlocBuilder<ProjectViewModel, ProjectViewModelState>(
               builder: (BuildContext context, ProjectViewModelState state) {
-                final List<FusionEvent> eventList = _projectViewModel.getAllEvents();
+                final List<FusionEvent> eventList =
+                    _projectViewModel.getAllEvents();
                 if (eventList.isEmpty) {
                   return Container(
                     width: double.infinity,
@@ -91,7 +105,10 @@ class _EventsPanelState extends State<EventsPanel> {
 
                     /// clear on selected snapshot to avoid confusion after delete
                     _projectViewModel.setSelectedEventId(null);
-                    FusionToast.success(context, message: "Event deleted successfully");
+                    FusionToast.success(
+                      context,
+                      message: "Event deleted successfully",
+                    );
                   },
                   selectedEventId: _projectViewModel.selectedEventId,
                   onSelect: (String eventId) {
@@ -109,8 +126,12 @@ class _EventsPanelState extends State<EventsPanel> {
                   },
                   onSwitchChanged: (String eventId) {
                     /// Fetch event, create updated copy and update
-                    final FusionEvent event = _projectViewModel.getEventById(eventId);
-                    final FusionEvent updatedEvent = event.copyWith(isEnabled: !event.isEnabled);
+                    final FusionEvent event = _projectViewModel.getEventById(
+                      eventId,
+                    );
+                    final FusionEvent updatedEvent = event.copyWith(
+                      isEnabled: !event.isEnabled,
+                    );
                     _projectViewModel.updateEvent(event: updatedEvent);
                   },
                 );
@@ -141,10 +162,12 @@ class CreateSnapshotsOrScenesWidget extends StatefulWidget {
   });
 
   @override
-  State<CreateSnapshotsOrScenesWidget> createState() => CreateSnapshotsOrScenesWidgetState();
+  State<CreateSnapshotsOrScenesWidget> createState() =>
+      CreateSnapshotsOrScenesWidgetState();
 }
 
-class CreateSnapshotsOrScenesWidgetState extends State<CreateSnapshotsOrScenesWidget> {
+class CreateSnapshotsOrScenesWidgetState
+    extends State<CreateSnapshotsOrScenesWidget> {
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -175,6 +198,7 @@ class CreateSnapshotsOrScenesWidgetState extends State<CreateSnapshotsOrScenesWi
 
           /// Enter Name
           FusionTextField(
+            semanticFieldId: 'event_panel_name_field',
             controller: widget.nameController,
             hintText: "Enter ${widget.headerText} name",
             decoration: FusionInputDecoration.fusionDense(
@@ -192,9 +216,12 @@ class CreateSnapshotsOrScenesWidgetState extends State<CreateSnapshotsOrScenesWi
             children: <Widget>[
               Flexible(
                 child: FusionOutlinedButton(
+                  accessLabel: 'event_panel_cancel_button',
                   width: double.infinity,
                   label: "Cancel",
-                  textStyle: Theme.of(context).textTheme.labelLarge?.copyWith(fontSize: 10),
+                  textStyle: Theme.of(
+                    context,
+                  ).textTheme.labelLarge?.copyWith(fontSize: 10),
                   onTap: () {
                     widget.onCancel.call();
                   },
@@ -203,8 +230,12 @@ class CreateSnapshotsOrScenesWidgetState extends State<CreateSnapshotsOrScenesWi
               const SizedBox(width: 8),
               Flexible(
                 child: FusionButton(
+                  accessLabel: 'event_panel_create_button',
                   width: double.infinity,
-                  textStyle: Theme.of(context).textTheme.labelLarge?.copyWith(fontSize: 10, color: context.colorScheme.primaryBlack),
+                  textStyle: Theme.of(context).textTheme.labelLarge?.copyWith(
+                    fontSize: 10,
+                    color: context.colorScheme.primaryBlack,
+                  ),
 
                   label: "Create",
                   isActive: widget.nameController.text.trim().isNotEmpty,

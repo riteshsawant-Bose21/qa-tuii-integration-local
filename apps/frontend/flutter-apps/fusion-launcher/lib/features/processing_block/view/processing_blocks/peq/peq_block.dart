@@ -50,6 +50,7 @@ class PeqBlock extends StatelessWidget {
               onBypassChanged: context.read<PEQController>().bypassGlobally,
               actions: <Widget>[
                 FusionNeumorphicButton(
+                  semanticId: 'peq_sort',
                   text: "SORT",
                   width: 100,
                   height: 40,

@@ -35,9 +35,13 @@ class _NetworkSettingsPageState extends State<NetworkSettingsPage> {
                 const ReadonlyTextView(value: "192.168.50.100"),
                 const SizedBox(width: 16),
                 FusionNeumorphicButton(
+                  semanticId: 'network_settings_configure_vip_button',
                   borderRadius: 6,
                   height: 35,
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 4,
+                  ),
                   margin: EdgeInsets.zero,
                   text: "Configure VIP",
                   onTap: () {},

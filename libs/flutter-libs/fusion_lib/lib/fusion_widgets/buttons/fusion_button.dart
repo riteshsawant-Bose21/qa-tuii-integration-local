@@ -89,7 +89,7 @@ class FusionButton extends StatelessWidget {
   final String? accessIdentifier;
 
   /// Semantic label for screen readers.
-  final String? accessLabel;
+  final String accessLabel;
 
   /// Gradient to use when the button is active.
   final Gradient? gradient;
@@ -119,7 +119,7 @@ class FusionButton extends StatelessWidget {
     this.showSuffixIcon = false,
     this.suffixIcon,
     this.accessIdentifier,
-    this.accessLabel,
+    required this.accessLabel,
   });
 
   @override

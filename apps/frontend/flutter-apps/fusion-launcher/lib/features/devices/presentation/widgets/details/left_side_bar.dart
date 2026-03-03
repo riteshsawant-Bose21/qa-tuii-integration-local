@@ -17,20 +17,28 @@ class DeviceLeftSideBar extends StatelessWidget {
 
   String _getDeviceLocation(HardwareComponent device) {
     if (device.locationEntity.listeningAreaId != null) {
-      final Zone? zone = serviceLocator<ProjectViewModel>().getZonesForListeningArea(areaId: device.locationEntity.listeningAreaId!);
+      final Zone? zone = serviceLocator<ProjectViewModel>()
+          .getZonesForListeningArea(
+            areaId: device.locationEntity.listeningAreaId!,
+          );
       if (zone != null) {
         return zone.name;
       }
-      final SubZone? subZone = serviceLocator<ProjectViewModel>().getSubZoneForListeningArea(areaId: device.locationEntity.listeningAreaId!);
+      final SubZone? subZone = serviceLocator<ProjectViewModel>()
+          .getSubZoneForListeningArea(
+            areaId: device.locationEntity.listeningAreaId!,
+          );
       if (subZone != null) {
-        final Zone? parentZone = serviceLocator<ProjectViewModel>().getZoneForSubZone(subZoneId: subZone.id);
+        final Zone? parentZone = serviceLocator<ProjectViewModel>()
+            .getZoneForSubZone(subZoneId: subZone.id);
         if (parentZone != null) {
           return "${parentZone.name} > ${subZone.name}";
         }
         return subZone.name;
       }
     }
-    final EquipLocation? location = serviceLocator<ProjectViewModel>().getEquipLocationForHardware(hardwareId: device.id);
+    final EquipLocation? location = serviceLocator<ProjectViewModel>()
+        .getEquipLocationForHardware(hardwareId: device.id);
     if (location != null) {
       return location.name;
     }
@@ -53,7 +61,14 @@ class DeviceLeftSideBar extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 10),
             child: Row(
               children: <Widget>[
-                InkWell(onTap: () => Navigator.of(context).pop(), child: Icon(Icons.arrow_back_ios, size: 14, color: context.colorScheme.textSecondary)),
+                InkWell(
+                  onTap: () => Navigator.of(context).pop(),
+                  child: Icon(
+                    Icons.arrow_back_ios,
+                    size: 14,
+                    color: context.colorScheme.textSecondary,
+                  ),
+                ),
                 const SizedBox(width: 8),
                 FusionAppText(
                   text: "DEVICE DETAILS",
@@ -88,12 +103,16 @@ class DeviceLeftSideBar extends StatelessWidget {
                           children: <Widget>[
                             FusionAppText(
                               text: device.name,
-                              style: context.textTheme.labelLarge!.copyWith(fontWeight: FontWeight.bold),
+                              style: context.textTheme.labelLarge!.copyWith(
+                                fontWeight: FontWeight.bold,
+                              ),
                             ),
                             const SizedBox(height: 4),
                             FusionAppText(
                               text: device.hardwareName,
-                              style: context.textTheme.labelSmall!.copyWith(color: context.colorScheme.textSecondary),
+                              style: context.textTheme.labelSmall!.copyWith(
+                                color: context.colorScheme.textSecondary,
+                              ),
                             ),
                           ],
                         ),
@@ -115,6 +134,7 @@ class DeviceLeftSideBar extends StatelessWidget {
                     child: Row(
                       children: <Widget>[
                         FusionNeumorphicButton(
+                          semanticId: 'left_side_bar_bluetooth_button',
                           borderRadius: 4,
                           onTap: () {},
                           child: Container(
@@ -123,11 +143,16 @@ class DeviceLeftSideBar extends StatelessWidget {
                               color: context.colorScheme.elevation1,
                               borderRadius: BorderRadius.circular(4),
                             ),
-                            child: Icon(Icons.bluetooth, size: 14, color: context.colorScheme.green),
+                            child: Icon(
+                              Icons.bluetooth,
+                              size: 14,
+                              color: context.colorScheme.green,
+                            ),
                           ),
                         ),
                         const SizedBox(width: 8),
                         FusionNeumorphicButton(
+                          semanticId: 'left_side_bar_wifi_button',
                           borderRadius: 4,
                           onTap: () {},
                           child: Container(
@@ -136,7 +161,11 @@ class DeviceLeftSideBar extends StatelessWidget {
                               color: context.colorScheme.elevation1,
                               borderRadius: BorderRadius.circular(4),
                             ),
-                            child: Icon(Icons.wifi, size: 14, color: context.colorScheme.green),
+                            child: Icon(
+                              Icons.wifi,
+                              size: 14,
+                              color: context.colorScheme.green,
+                            ),
                           ),
                         ),
                       ],
@@ -146,7 +175,10 @@ class DeviceLeftSideBar extends StatelessWidget {
                   // 4. Device Image
                   Container(
                     height: 80,
-                    margin: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
+                    margin: const EdgeInsets.symmetric(
+                      vertical: 16,
+                      horizontal: 16,
+                    ),
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
                       color: context.colorScheme.primaryWhite,
@@ -211,6 +243,7 @@ class DeviceLeftSideBar extends StatelessWidget {
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 16.0),
                     child: FusionNeumorphicButton(
+                      semanticId: 'left_side_bar_reboot_button',
                       text: "Reboot Device",
                       onTap: () {},
                       padding: const EdgeInsets.symmetric(vertical: 12),

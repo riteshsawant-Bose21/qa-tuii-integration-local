@@ -14,10 +14,12 @@ class CommonDevicesSectionWidget extends StatefulWidget {
   final String title;
   final Widget sectionContent;
   final Color backgroundColor;
-  final void Function(dynamic item, String areaId, String floorId)? onTapAddDevice;
+  final void Function(dynamic item, String areaId, String floorId)?
+  onTapAddDevice;
   final List<ListeningArea> listeningAreas;
   final String? selectedDeviceId;
-  final Function(String deviceId, List<String> listeningAreaIds)? onAddDeviceToAreas;
+  final Function(String deviceId, List<String> listeningAreaIds)?
+  onAddDeviceToAreas;
   final List<ExpandableSection>? expandableSections;
   final bool enableExpandable;
   final ValueChanged<String>? onSearchChanged;
@@ -45,10 +47,12 @@ class CommonDevicesSectionWidget extends StatefulWidget {
   });
 
   @override
-  State<CommonDevicesSectionWidget> createState() => _CommonDevicesSectionWidgetState();
+  State<CommonDevicesSectionWidget> createState() =>
+      _CommonDevicesSectionWidgetState();
 }
 
-class _CommonDevicesSectionWidgetState extends State<CommonDevicesSectionWidget> with TickerProviderStateMixin {
+class _CommonDevicesSectionWidgetState extends State<CommonDevicesSectionWidget>
+    with TickerProviderStateMixin {
   final TextEditingController searchController = TextEditingController();
   final FocusNode _searchFocusNode = FocusNode();
   bool isSearchVisible = false;
@@ -137,14 +141,19 @@ class _CommonDevicesSectionWidgetState extends State<CommonDevicesSectionWidget>
       _iconAnimationController.forward();
 
       /// when search opens, keep current active section (last tapped) or first expanded
-      if (_activeExpandableSectionTitle == null && widget.expandableSections != null && widget.expandableSections!.isNotEmpty) {
-        final ExpandableSection firstExpanded = widget.expandableSections!.firstWhere(
-          (ExpandableSection s) => _sectionExpansionState[s.title] == true,
-          orElse: () => widget.expandableSections!.first,
-        );
+      if (_activeExpandableSectionTitle == null &&
+          widget.expandableSections != null &&
+          widget.expandableSections!.isNotEmpty) {
+        final ExpandableSection firstExpanded = widget.expandableSections!
+            .firstWhere(
+              (ExpandableSection s) => _sectionExpansionState[s.title] == true,
+              orElse: () => widget.expandableSections!.first,
+            );
         _activeExpandableSectionTitle = firstExpanded.title;
       }
-      widget.onActiveExpandableSectionChanged?.call(_activeExpandableSectionTitle);
+      widget.onActiveExpandableSectionChanged?.call(
+        _activeExpandableSectionTitle,
+      );
 
       /// request focus after frame
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -169,7 +178,11 @@ class _CommonDevicesSectionWidgetState extends State<CommonDevicesSectionWidget>
   }
 
   /// Helper method to build expandable section headers
-  Widget _buildExpandableHeader({required String title, required bool isExpanded, required VoidCallback onTap}) {
+  Widget _buildExpandableHeader({
+    required String title,
+    required bool isExpanded,
+    required VoidCallback onTap,
+  }) {
     return GestureDetector(
       onTap: () {
         onTap();
@@ -177,11 +190,16 @@ class _CommonDevicesSectionWidgetState extends State<CommonDevicesSectionWidget>
         /// set active section when header tapped (only matters while searching)
         _activeExpandableSectionTitle = title;
         if (isSearchVisible) {
-          widget.onActiveExpandableSectionChanged?.call(_activeExpandableSectionTitle);
+          widget.onActiveExpandableSectionChanged?.call(
+            _activeExpandableSectionTitle,
+          );
         }
       },
       child: SemanticHelper.toggle(
-        testId: SemanticHelper.createTestId(SemanticTypes.toggle, "expandable_header_$title"),
+        testId: SemanticHelper.createTestId(
+          SemanticTypes.toggle,
+          "expandable_header_$title",
+        ),
         value: isExpanded,
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 12),
@@ -219,8 +237,11 @@ class _CommonDevicesSectionWidgetState extends State<CommonDevicesSectionWidget>
                       ),
                     );
                   } else {
-                    if (title == "Endpoints" || title == "Fusion Devices" || title == "Amplifiers") {
+                    if (title == "Endpoints" ||
+                        title == "Fusion Devices" ||
+                        title == "Amplifiers") {
                       return FusionArrowPopup(
+                        semanticId: 'common_device_section$title',
                         content: EquipmentLocationDialog(
                           currentFilter:
                               title == "Amplifiers"
@@ -251,9 +272,16 @@ class _CommonDevicesSectionWidgetState extends State<CommonDevicesSectionWidget>
   }
 
   /// Helper method to build animated collapsible content
-  Widget _buildAnimatedContent(bool isExpanded, String sectionTitle, Widget content) {
+  Widget _buildAnimatedContent(
+    bool isExpanded,
+    String sectionTitle,
+    Widget content,
+  ) {
     return SemanticHelper.container(
-      testId: SemanticHelper.createTestId(SemanticTypes.container, "expandable_content_$sectionTitle"),
+      testId: SemanticHelper.createTestId(
+        SemanticTypes.container,
+        "expandable_content_$sectionTitle",
+      ),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 300),
         curve: Curves.easeInOut,
@@ -277,20 +305,28 @@ class _CommonDevicesSectionWidgetState extends State<CommonDevicesSectionWidget>
 
   /// Build expandable content sections
   Widget _buildExpandableContent() {
-    if (!widget.enableExpandable || widget.expandableSections == null) return widget.sectionContent;
+    if (!widget.enableExpandable || widget.expandableSections == null)
+      return widget.sectionContent;
 
     return SemanticHelper.button(
-      testId: SemanticHelper.createTestId(SemanticTypes.button, "expandable_sections_container"),
+      testId: SemanticHelper.createTestId(
+        SemanticTypes.button,
+        "expandable_sections_container",
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children:
             widget.expandableSections!.map((ExpandableSection section) {
-              final bool isExpanded = _sectionExpansionState[section.title] ?? true;
+              final bool isExpanded =
+                  _sectionExpansionState[section.title] ?? true;
 
               final int index = widget.expandableSections!.indexOf(section);
 
               return SemanticHelper.button(
-                testId: SemanticHelper.createTestId(SemanticTypes.button, "expandable_section_${section.title}_index_$index"),
+                testId: SemanticHelper.createTestId(
+                  SemanticTypes.button,
+                  "expandable_section_${section.title}_index_$index",
+                ),
                 child: Column(
                   children: <Widget>[
                     _buildExpandableHeader(
@@ -302,8 +338,13 @@ class _CommonDevicesSectionWidgetState extends State<CommonDevicesSectionWidget>
                         });
                       },
                     ),
-                    _buildAnimatedContent(isExpanded, section.title, section.content),
-                    if (section != widget.expandableSections!.last) const SizedBox(height: 16),
+                    _buildAnimatedContent(
+                      isExpanded,
+                      section.title,
+                      section.content,
+                    ),
+                    if (section != widget.expandableSections!.last)
+                      const SizedBox(height: 16),
                   ],
                 ),
               );
@@ -315,7 +356,10 @@ class _CommonDevicesSectionWidgetState extends State<CommonDevicesSectionWidget>
   @override
   Widget build(BuildContext context) {
     return SemanticHelper.container(
-      testId: SemanticHelper.createTestId(SemanticTypes.container, "expandable_section_container_${widget.title.toLowerCase()}"),
+      testId: SemanticHelper.createTestId(
+        SemanticTypes.container,
+        "expandable_section_container_${widget.title.toLowerCase()}",
+      ),
       child: Container(
         // padding: const EdgeInsets.symmetric(horizontal: 16),
         decoration: BoxDecoration(
@@ -328,10 +372,16 @@ class _CommonDevicesSectionWidgetState extends State<CommonDevicesSectionWidget>
           children: <Widget>[
             /// section Header
             SemanticHelper.container(
-              testId: SemanticHelper.createTestId(SemanticTypes.container, "expandable_section_header_container_${widget.title.toLowerCase()}"),
+              testId: SemanticHelper.createTestId(
+                SemanticTypes.container,
+                "expandable_section_header_container_${widget.title.toLowerCase()}",
+              ),
               child: Container(
                 width: double.infinity,
-                padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 16),
+                padding: const EdgeInsets.symmetric(
+                  vertical: 10,
+                  horizontal: 16,
+                ),
                 alignment: Alignment.centerLeft,
                 height: 44,
                 decoration: BoxDecoration(
@@ -362,11 +412,16 @@ class _CommonDevicesSectionWidgetState extends State<CommonDevicesSectionWidget>
                                         child: FusionAppText(
                                           text: widget.title.toUpperCase(),
                                           maxLine: 1,
-                                          style: context.textTheme.bodySmall?.copyWith(
-                                            fontWeight: FontWeight.w500,
-                                            fontSize: FusionSizes.fontSize12,
-                                            color: context.colorScheme.textBody,
-                                          ),
+                                          style: context.textTheme.bodySmall
+                                              ?.copyWith(
+                                                fontWeight: FontWeight.w500,
+                                                fontSize:
+                                                    FusionSizes.fontSize12,
+                                                color:
+                                                    context
+                                                        .colorScheme
+                                                        .textBody,
+                                              ),
                                         ),
                                       ),
                                       const SizedBox(width: 4),
@@ -388,22 +443,42 @@ class _CommonDevicesSectionWidgetState extends State<CommonDevicesSectionWidget>
                                 Opacity(
                                   opacity: _searchAnimation.value,
                                   child: Transform.translate(
-                                    offset: Offset((1.0 - _searchAnimation.value) * 50, 0),
+                                    offset: Offset(
+                                      (1.0 - _searchAnimation.value) * 50,
+                                      0,
+                                    ),
                                     child: Row(
                                       children: <Widget>[
                                         Expanded(
                                           child: SemanticHelper.formControl(
-                                            testId: SemanticHelper.createTestId(SemanticTypes.textInput, "section_search_${widget.title.toLowerCase()}"),
+                                            testId: SemanticHelper.createTestId(
+                                              SemanticTypes.textInput,
+                                              "section_search_${widget.title.toLowerCase()}",
+                                            ),
                                             child: FusionTextField(
-                                              color: context.colorScheme.elevation2,
+                                              semanticFieldId:
+                                                  "section_search_${widget.title.toLowerCase()}",
+                                              color:
+                                                  context
+                                                      .colorScheme
+                                                      .elevation2,
                                               controller: searchController,
-                                              hintText: widget.title == 'Speakers' ? 'Search zones' : 'Search devices',
+                                              hintText:
+                                                  widget.title == 'Speakers'
+                                                      ? 'Search zones'
+                                                      : 'Search devices',
                                               focusNode: _searchFocusNode,
                                               onChanged: (String value) {
                                                 setState(() {});
-                                                widget.onSearchChanged?.call(value.trim());
+                                                widget.onSearchChanged?.call(
+                                                  value.trim(),
+                                                );
                                                 if (isSearchVisible) {
-                                                  widget.onActiveExpandableSectionChanged?.call(_activeExpandableSectionTitle);
+                                                  widget
+                                                      .onActiveExpandableSectionChanged
+                                                      ?.call(
+                                                        _activeExpandableSectionTitle,
+                                                      );
                                                 }
                                               },
                                             ),
@@ -421,7 +496,10 @@ class _CommonDevicesSectionWidgetState extends State<CommonDevicesSectionWidget>
 
                         /// Animated search button
                         AnimatedBuilder(
-                          animation: Listenable.merge(<Listenable?>[_iconScaleAnimation, _iconRotationAnimation]),
+                          animation: Listenable.merge(<Listenable?>[
+                            _iconScaleAnimation,
+                            _iconRotationAnimation,
+                          ]),
                           builder: (BuildContext context, Widget? child) {
                             return Transform.scale(
                               scale: _iconScaleAnimation.value,
@@ -435,10 +513,14 @@ class _CommonDevicesSectionWidgetState extends State<CommonDevicesSectionWidget>
                                     child: SemanticHelper.button(
                                       testId: SemanticHelper.createTestId(
                                         SemanticTypes.button,
-                                        isSearchVisible ? "${widget.title.toLowerCase()}_search_close_icon" : "${widget.title.toLowerCase()}_search_icon",
+                                        isSearchVisible
+                                            ? "${widget.title.toLowerCase()}_search_close_icon"
+                                            : "${widget.title.toLowerCase()}_search_icon",
                                       ),
                                       child: Icon(
-                                        isSearchVisible ? Icons.close_sharp : Icons.search_sharp,
+                                        isSearchVisible
+                                            ? Icons.close_sharp
+                                            : Icons.search_sharp,
                                         color: context.colorScheme.primaryWhite,
                                         size: 17,
                                       ),
@@ -461,7 +543,10 @@ class _CommonDevicesSectionWidgetState extends State<CommonDevicesSectionWidget>
             /// Content with expandable support
             Flexible(
               child: SemanticHelper.container(
-                testId: SemanticHelper.createTestId(SemanticTypes.container, "expandable_section_content_container_${widget.title.toLowerCase()}"),
+                testId: SemanticHelper.createTestId(
+                  SemanticTypes.container,
+                  "expandable_section_content_container_${widget.title.toLowerCase()}",
+                ),
                 child: SingleChildScrollView(
                   child: SizedBox(
                     width: widget.width,
@@ -471,31 +556,52 @@ class _CommonDevicesSectionWidgetState extends State<CommonDevicesSectionWidget>
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: <Widget>[
                           /// Search results message (only when active & query not empty)
-                          if (isSearchVisible && (widget.searchQuery != null && widget.searchQuery!.isNotEmpty)) ...<Widget>[
+                          if (isSearchVisible &&
+                              (widget.searchQuery != null &&
+                                  widget.searchQuery!.isNotEmpty)) ...<Widget>[
                             SemanticHelper.container(
-                              testId: SemanticHelper.createTestId(SemanticTypes.container, "search_results_message_container"),
+                              testId: SemanticHelper.createTestId(
+                                SemanticTypes.container,
+                                "search_results_message_container",
+                              ),
                               child: Padding(
-                                padding: const EdgeInsets.only(left: 16.0, bottom: 6.0, right: 16.0),
+                                padding: const EdgeInsets.only(
+                                  left: 16.0,
+                                  bottom: 6.0,
+                                  right: 16.0,
+                                ),
                                 child: RichText(
                                   text: TextSpan(
-                                    style: Theme.of(context).textTheme.bodySmall?.copyWith(fontSize: 11, color: Colors.black87),
+                                    style: Theme.of(
+                                      context,
+                                    ).textTheme.bodySmall?.copyWith(
+                                      fontSize: 11,
+                                      color: Colors.black87,
+                                    ),
                                     children: <InlineSpan>[
                                       TextSpan(
-                                        text: '${widget.searchResultCount ?? 0} results found for ',
-                                        style: context.textTheme.bodySmall?.copyWith(
-                                          fontSize: 11,
-                                          fontWeight: FontWeight.w600,
-                                          color: context.colorScheme.primaryWhite,
-                                        ),
+                                        text:
+                                            '${widget.searchResultCount ?? 0} results found for ',
+                                        style: context.textTheme.bodySmall
+                                            ?.copyWith(
+                                              fontSize: 11,
+                                              fontWeight: FontWeight.w600,
+                                              color:
+                                                  context
+                                                      .colorScheme
+                                                      .primaryWhite,
+                                            ),
                                       ),
                                       TextSpan(
                                         text: '"${widget.searchQuery}"',
-                                        style: context.textTheme.bodySmall?.copyWith(
-                                          fontSize: 11,
-                                          fontWeight: FontWeight.w600,
-                                          backgroundColor: Colors.orange[200],
-                                          color: Colors.black,
-                                        ),
+                                        style: context.textTheme.bodySmall
+                                            ?.copyWith(
+                                              fontSize: 11,
+                                              fontWeight: FontWeight.w600,
+                                              backgroundColor:
+                                                  Colors.orange[200],
+                                              color: Colors.black,
+                                            ),
                                       ),
                                     ],
                                   ),

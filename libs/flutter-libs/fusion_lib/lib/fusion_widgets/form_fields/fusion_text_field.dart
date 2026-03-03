@@ -74,7 +74,7 @@ class FusionTextField extends StatelessWidget {
   final bool autofocus;
 
   final Color? color;
-  final String? semanticFieldId;
+  final String semanticFieldId;
 
   final EdgeInsetsGeometry? contentPadding;
   final double? height;
@@ -100,7 +100,7 @@ class FusionTextField extends StatelessWidget {
     this.inputFormatters,
     this.autofocus = false,
     this.color,
-    this.semanticFieldId,
+    required this.semanticFieldId,
     this.contentPadding,
     this.height,
     this.width,
@@ -126,11 +126,16 @@ class FusionTextField extends StatelessWidget {
       enabledBorder: border ?? InputBorder.none,
       focusedBorder: border ?? InputBorder.none,
       isDense: true,
-      contentPadding: contentPadding ?? const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
+      contentPadding:
+          contentPadding ??
+          const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
     );
 
     return SemanticHelper.formControl(
-      testId: SemanticHelper.createTestId(SemanticTypes.textInput, semanticFieldId ?? "fusion_text_field"),
+      testId: SemanticHelper.createTestId(
+        SemanticTypes.textInput,
+        semanticFieldId ?? "fusion_text_field",
+      ),
       child: SizedBox(
         height: height,
         width: width,

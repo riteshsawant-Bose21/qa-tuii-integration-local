@@ -216,6 +216,7 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
                                     });
                                   },
                                   child: GuideShowcaseWrapper(
+                                    semanticId: 'building_canvas_floor_plan',
                                     step:
                                         GuideShowCaseSteps
                                             .showListeningAreaSelectionArea,
@@ -808,6 +809,8 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
                                         ),
                                         const SizedBox(width: 12),
                                         GuideShowcaseWrapper(
+                                          semanticId:
+                                              'building_canvas_listening_area_selection_button',
                                           step:
                                               GuideShowCaseSteps
                                                   .confirmSelectListeningArea,
@@ -1130,10 +1133,12 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
 
           /// Upload Button
           GuideShowcaseWrapper(
+            semanticId: 'building_canvas_upload_floor_plan',
             step: GuideShowCaseSteps.uploadFloorPlan,
             onHighlightedSpotTap:
                 (TapDownDetails details) => _showFloorPlanPicker(),
             child: FusionOutlinedButton(
+              accessLabel: 'upload_floor_plan',
               height: 32,
               width: 160,
               semanticsId: FusionTestKeys.uploadFloorPlan,
@@ -1342,6 +1347,7 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
                 ),
                 const SizedBox(height: 16),
                 FusionOutlinedButton(
+                  accessLabel: 'building_canvas_browse_files',
                   height: 36,
                   width: 140,
                   label: 'Browse Files',

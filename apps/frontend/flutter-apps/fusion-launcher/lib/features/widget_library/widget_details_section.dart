@@ -2102,6 +2102,7 @@ FusionFlatContainer(
           preview: ElevatedButton(
             onPressed: () {
               DialogBox.showSuccess(
+                semanticId: 'widget_details',
                 context,
                 type: DialogType.success,
                 title: "Modal Title Text",
@@ -2138,6 +2139,7 @@ FusionFlatContainer(
             onPressed: () {
               DialogBox.showSuccess(
                 context,
+                semanticId: 'widget_details',
                 type: DialogType.success,
                 title: "Modal Title Text",
                 description:
@@ -2171,6 +2173,7 @@ FusionFlatContainer(
         _buildWithCopy(
           context: context,
           preview: DialogBox(
+            semanticId: 'widget_details',
             type: DialogType.success,
             title: "Modal Title Text",
             description:
@@ -2202,6 +2205,7 @@ FusionFlatContainer(
         _buildWithCopy(
           context: context,
           preview: DialogBox(
+            semanticId: 'widget_details',
             type: DialogType.success,
             devicetype: DeviceType.mobile,
             title: "Modal Title Text",
@@ -2237,6 +2241,7 @@ FusionFlatContainer(
         _buildWithCopy(
           context: context,
           preview: DialogBox(
+            semanticId: 'widget_details',
             type: DialogType.failure,
             title: "Modal Title Text",
             description:
@@ -2271,6 +2276,7 @@ FusionFlatContainer(
         _buildWithCopy(
           context: context,
           preview: DialogBox(
+            semanticId: 'widget_details',
             type: DialogType.confirmation,
             title: "Modal Title Text",
             description:
@@ -2309,6 +2315,7 @@ FusionFlatContainer(
           context: context,
           preview: DialogBox(
             type: DialogType.warning,
+            semanticId: 'widget_details',
             title: "Modal Title Text",
             description:
                 "This is a brief overview of the modal, usually consisting of 2 to 3 lines that provide essential information.",

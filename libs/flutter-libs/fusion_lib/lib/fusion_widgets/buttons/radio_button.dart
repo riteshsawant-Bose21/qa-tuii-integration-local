@@ -95,11 +95,11 @@ class RadioButton extends StatefulWidget {
   final double width;
   final double height;
   final bool iconPrifix;
-  final String? semanticId;
+  final String semanticId;
 
   RadioButton({
     super.key,
-    this.semanticId,
+    required this.semanticId,
     this.width = 16,
     this.height = 16,
     this.iconPrifix = false,

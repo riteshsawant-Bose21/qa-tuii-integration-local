@@ -86,6 +86,7 @@ class NeumorphicButton extends StatefulWidget {
 
   // NEW: Disabled support
   final bool isActive;
+  final String semanticId;
 
   const NeumorphicButton({
     super.key,
@@ -97,7 +98,9 @@ class NeumorphicButton extends StatefulWidget {
     this.textStyle,
     this.child,
     this.color,
-    this.isActive = true, // default enabled
+    this.isActive = true,
+    required this.semanticId,
+    // default enabled
   });
 
   @override

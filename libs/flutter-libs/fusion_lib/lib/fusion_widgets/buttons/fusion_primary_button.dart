@@ -111,7 +111,7 @@ class FusionPrimaryButton extends StatefulWidget {
   final IconData? suffixIcon;
 
   final String? accessIdentifier;
-  final String? accessLabel;
+  final String accessLabel;
   final Color? backgroundColor;
   final Widget? child;
 
@@ -136,7 +136,7 @@ class FusionPrimaryButton extends StatefulWidget {
     this.showSuffixIcon = false,
     this.suffixIcon,
     this.accessIdentifier,
-    this.accessLabel,
+    required this.accessLabel,
   });
 
   @override

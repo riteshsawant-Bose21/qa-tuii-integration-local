@@ -97,10 +97,10 @@ class FusionAppButton extends StatefulWidget {
 
   final VoidCallback? onPressed;
   final Widget? child;
-  final String? semanticId;
+  final String semanticId;
   const FusionAppButton({
     super.key,
-    this.semanticId,
+    required this.semanticId,
     this.child,
     this.showPrefixIcon = false,
     this.prefixIcon,

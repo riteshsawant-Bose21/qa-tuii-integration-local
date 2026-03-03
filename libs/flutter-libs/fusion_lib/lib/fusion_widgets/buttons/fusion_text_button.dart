@@ -81,7 +81,7 @@ class FusionTextButton extends StatelessWidget {
   final String? accessIdentifier;
 
   /// Semantic label for screen readers.
-  final String? accessLabel;
+  final String accessLabel;
 
   /// Creates a [FusionTextButton].
   ///
@@ -104,7 +104,7 @@ class FusionTextButton extends StatelessWidget {
     this.showSuffixIcon = false,
     this.suffixIcon,
     this.accessIdentifier,
-    this.accessLabel,
+    required this.accessLabel,
   });
 
   @override

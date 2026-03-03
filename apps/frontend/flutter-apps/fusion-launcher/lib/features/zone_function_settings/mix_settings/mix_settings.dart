@@ -468,6 +468,8 @@ class __SourcesSettingState extends State<_SourcesSetting> {
                                               ),
                                             ),
                                             FusionCheckbox(
+                                              semanticId:
+                                                  'mix_settings_allow_mute',
                                               value: sourceRange.allowMute,
                                               onChanged: () {
                                                 widget.vm.updateSource(
@@ -541,6 +543,7 @@ class _MixSceneSetting extends StatelessWidget {
                 ),
               ),
               FusionCheckbox(
+                semanticId: 'mix_setting_assign_controller',
                 value: allowController,
                 onChanged: onAllowControllerChanged,
               ),

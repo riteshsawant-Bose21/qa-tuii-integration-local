@@ -18,6 +18,7 @@ class _PeqGraphSection extends StatelessWidget {
             ),
           ),
           FusionNeumorphicButton(
+            semanticId: 'peq_add_band',
             text: "Add Band",
             width: 100,
             padding: const EdgeInsets.symmetric(vertical: 10),

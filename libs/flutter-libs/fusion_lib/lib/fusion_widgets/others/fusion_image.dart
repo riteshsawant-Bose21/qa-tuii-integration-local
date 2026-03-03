@@ -171,7 +171,7 @@ class FusionImage extends StatelessWidget {
               SemanticHelper.container(
                 testId: SemanticHelper.createTestId(
                   SemanticTypes.container,
-                  "fusion_image${semanticId ?? ""}",
+                  "fusion_image${semanticId}",
                 ),
                 child: SizedBox(
                   width: 24,

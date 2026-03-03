@@ -167,6 +167,7 @@ class _PropertiesPanel extends StatelessWidget {
                   height: 20,
                 ),
                 FusionButton(
+                  accessLabel: 'properties_panel_view_layout_json',
                   onTap: () {
                     showDialog(
                       context: context,
@@ -210,6 +211,7 @@ class _PropertiesPanel extends StatelessWidget {
                                     ),
                                   ),
                                   FusionButton(
+                                    accessLabel: 'properties_panel_save_configuration',
                                     label: "Save this Configuration",
                                     width: 250,
                                     onTap: () {
@@ -239,6 +241,7 @@ class _PropertiesPanel extends StatelessWidget {
                                     },
                                   ),
                                   FusionButton(
+                                    accessLabel: 'properties_panel_save_in_app',
                                     label: "Save In App",
                                     width: 250,
                                     onTap: () async {

@@ -101,7 +101,7 @@ class SecondaryButton extends StatelessWidget {
   final IconData? suffixIcon;
 
   final String? accessIdentifier;
-  final String? accessLabel;
+  final String accessLabel;
 
   const SecondaryButton({
     super.key,
@@ -122,7 +122,7 @@ class SecondaryButton extends StatelessWidget {
     this.showSuffixIcon = false,
     this.suffixIcon,
     this.accessIdentifier,
-    this.accessLabel,
+    required this.accessLabel,
   });
 
   @override

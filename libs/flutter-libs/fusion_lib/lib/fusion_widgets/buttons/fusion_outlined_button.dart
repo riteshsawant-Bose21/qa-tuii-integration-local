@@ -92,7 +92,7 @@ class FusionOutlinedButton extends StatelessWidget {
   final String? semanticsId;
 
   /// Semantic label for screen readers.
-  final String? accessLabel;
+  final String accessLabel;
 
   /// Creates a [FusionOutlinedButton].
   ///
@@ -118,7 +118,7 @@ class FusionOutlinedButton extends StatelessWidget {
     this.showSuffixIcon = false,
     this.suffixIcon,
     this.semanticsId,
-    this.accessLabel,
+    required this.accessLabel,
   });
 
   @override

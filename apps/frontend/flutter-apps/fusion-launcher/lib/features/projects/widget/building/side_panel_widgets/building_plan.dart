@@ -611,6 +611,7 @@ class _BuildingPlanState extends State<BuildingPlan> {
           ),
           actions: <Widget>[
             FusionOutlinedButton(
+              accessLabel: 'building_plan_cancel_floor_button',
               height: 32,
               width: 80,
               label: "Cancel",
@@ -623,6 +624,7 @@ class _BuildingPlanState extends State<BuildingPlan> {
             ),
             const SizedBox(width: 8),
             FusionButton(
+              accessLabel: 'building_plan_delete_floor_button',
               height: 32,
               width: 80,
               label: "Delete",
@@ -669,6 +671,7 @@ class _BuildingPlanState extends State<BuildingPlan> {
           ),
           actions: <Widget>[
             FusionOutlinedButton(
+              accessLabel: 'building_plan_reset_cancel',
               height: 32,
               width: 80,
               label: "Cancel",
@@ -681,6 +684,7 @@ class _BuildingPlanState extends State<BuildingPlan> {
             ),
             const SizedBox(width: 8),
             FusionButton(
+              accessLabel: 'building_plan_delete_floor_button',
               height: 32,
               width: 80,
               label: "Delete",
@@ -797,6 +801,7 @@ class _BuildingPlanState extends State<BuildingPlan> {
                       mainAxisAlignment: MainAxisAlignment.end,
                       children: <Widget>[
                         FusionOutlinedButton(
+                          accessLabel: 'building_plan_cancel_floor_button',
                           height: 28,
                           width: 64,
                           label: "Cancel",
@@ -811,6 +816,7 @@ class _BuildingPlanState extends State<BuildingPlan> {
 
                         const SizedBox(width: 8),
                         FusionButton(
+                          accessLabel: 'building_plan_add_floor_button',
                           height: 28,
                           width: 80,
                           textStyle: Theme.of(

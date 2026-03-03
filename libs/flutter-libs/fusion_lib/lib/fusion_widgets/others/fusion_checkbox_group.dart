@@ -26,11 +26,11 @@ class FusionCheckboxGroup<T> extends StatelessWidget {
   /// Interaction
   final bool enabled;
 
-  final String? semanticId;
+  final String semanticId;
 
   const FusionCheckboxGroup({
     super.key,
-    this.semanticId,
+    required this.semanticId,
     required this.options,
     required this.selected,
     required this.labelBuilder,

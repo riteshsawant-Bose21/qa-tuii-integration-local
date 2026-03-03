@@ -12,7 +12,10 @@ import '../../../../core/utils/fusion_utils.dart';
 import '../../../authentication/viewmodel/session_view_model.dart';
 import 'import_project_dialog.dart';
 
-Border _getBorder(BuildContext context) => Border.all(color: context.colorScheme.onSurface.withValues(alpha: 0.3), width: 0.3);
+Border _getBorder(BuildContext context) => Border.all(
+  color: context.colorScheme.onSurface.withValues(alpha: 0.3),
+  width: 0.3,
+);
 
 enum _SavedProjectsSortOption {
   name("Name");
@@ -57,10 +60,13 @@ class SavedProjectsTabContent extends StatelessWidget {
                         ),
                       ),
                       FusionNeumorphicButton(
+                        semanticId: 'saved_project_import_button',
                         onTap: () {
                           showDialog(
                             context: context,
-                            builder: (BuildContext context) => const ZipImportDialog(),
+                            builder:
+                                (BuildContext context) =>
+                                    const ZipImportDialog(),
                           );
                         },
                         height: 50,
@@ -73,8 +79,12 @@ class SavedProjectsTabContent extends StatelessWidget {
                       MouseRegion(
                         cursor: SystemMouseCursors.click,
                         child: SemanticHelper.button(
-                          testId: SemanticHelper.createTestId(SemanticTypes.button, "create_new_project_button"),
+                          testId: SemanticHelper.createTestId(
+                            SemanticTypes.button,
+                            "create_new_project_button",
+                          ),
                           child: FusionNeumorphicButton(
+                            semanticId: 'create_new_project_button',
                             onTap: () {
                               CreateNewProjectDialog.show(context);
                             },
@@ -198,19 +208,31 @@ class _SavedProjectListState extends State<_SavedProjectList> {
 
   void _listenToSearchChanges() {
     final String query = _searchController.text.trim();
-    setState(() => _isSearching = query.isNotEmpty && query.length >= MIN_SEARCH_LENGTH);
+    setState(
+      () =>
+          _isSearching = query.isNotEmpty && query.length >= MIN_SEARCH_LENGTH,
+    );
   }
 
   List<ProjectData> get getProjects {
     late List<ProjectData> projects;
 
-    final List<ProjectData> allProjects = serviceLocator<ProjectViewModel>().allProjects;
+    final List<ProjectData> allProjects =
+        serviceLocator<ProjectViewModel>().allProjects;
 
     // ================ SEARCH PROJECTS IF QUERY IS NOT EMPTY ==========================
     final String searchQuery = _searchController.text.trim().toLowerCase();
     if (searchQuery.isNotEmpty && searchQuery.length >= MIN_SEARCH_LENGTH) {
-      final List<ProjectData> allProjects = serviceLocator<ProjectViewModel>().allProjects;
-      projects = allProjects.where((ProjectData project) => project.name.toLowerCase().contains(searchQuery.toLowerCase())).toList();
+      final List<ProjectData> allProjects =
+          serviceLocator<ProjectViewModel>().allProjects;
+      projects =
+          allProjects
+              .where(
+                (ProjectData project) => project.name.toLowerCase().contains(
+                  searchQuery.toLowerCase(),
+                ),
+              )
+              .toList();
     } else {
       // ======= SHOW ALL PROJECTS IF QUERY IS EMPTY ==========
       projects = allProjects;
@@ -218,7 +240,10 @@ class _SavedProjectListState extends State<_SavedProjectList> {
 
     // ======= SORT LOGIN AT THE END =======
     if (selectedSortOption == _SavedProjectsSortOption.name) {
-      projects.sort((ProjectData a, ProjectData b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+      projects.sort(
+        (ProjectData a, ProjectData b) =>
+            a.name.toLowerCase().compareTo(b.name.toLowerCase()),
+      );
     }
 
     return projects;
@@ -250,7 +275,10 @@ class _SavedProjectListState extends State<_SavedProjectList> {
             return LayoutBuilder(
               builder: (BuildContext context, BoxConstraints constraints) {
                 return SemanticHelper.container(
-                  testId: SemanticHelper.createTestId(SemanticTypes.container, "saved_projects_section"),
+                  testId: SemanticHelper.createTestId(
+                    SemanticTypes.container,
+                    "saved_projects_section",
+                  ),
                   child: Container(
                     width: double.infinity,
                     decoration: BoxDecoration(
@@ -273,40 +301,59 @@ class _SavedProjectListState extends State<_SavedProjectList> {
                                   children: <Widget>[
                                     FusionAppText(
                                       text: 'Projects',
-                                      style: context.textTheme.titleMedium?.copyWith(
-                                        fontWeight: FontWeight.w600,
-                                      ),
+                                      style: context.textTheme.titleMedium
+                                          ?.copyWith(
+                                            fontWeight: FontWeight.w600,
+                                          ),
                                     ),
                                     const Spacer(),
                                     //cloud sync icon button
                                     if (hasCloudAccess)
                                       SemanticHelper.button(
-                                        testId: SemanticHelper.createTestId(SemanticTypes.button, "saved_projects_section_item_upload"),
+                                        testId: SemanticHelper.createTestId(
+                                          SemanticTypes.button,
+                                          "saved_projects_section_item_upload",
+                                        ),
                                         child: IconButton(
                                           onPressed: () {
-                                            serviceLocator<ProjectSyncViewModel>().uploadAllProjects();
+                                            serviceLocator<
+                                                  ProjectSyncViewModel
+                                                >()
+                                                .uploadAllProjects();
                                           },
-                                          tooltip: "Upload All Projects to Cloud",
+                                          tooltip:
+                                              "Upload All Projects to Cloud",
                                           icon: Icon(
                                             LucideIcons.cloudUpload,
                                             size: 18,
-                                            color: context.colorScheme.onSurface.withValues(alpha: 0.6),
+                                            color: context.colorScheme.onSurface
+                                                .withValues(alpha: 0.6),
                                           ),
                                         ),
                                       ),
                                     //cloud download icon button
                                     if (hasCloudAccess)
                                       SemanticHelper.button(
-                                        testId: SemanticHelper.createTestId(SemanticTypes.button, "saved_projects_section_item_download"),
+                                        testId: SemanticHelper.createTestId(
+                                          SemanticTypes.button,
+                                          "saved_projects_section_item_download",
+                                        ),
                                         child: IconButton(
                                           onPressed: () {
-                                            serviceLocator<ProjectSyncViewModel>().getAllProjects(forceFetch: true);
+                                            serviceLocator<
+                                                  ProjectSyncViewModel
+                                                >()
+                                                .getAllProjects(
+                                                  forceFetch: true,
+                                                );
                                           },
-                                          tooltip: "Download All Projects from Cloud",
+                                          tooltip:
+                                              "Download All Projects from Cloud",
                                           icon: Icon(
                                             LucideIcons.cloudDownload,
                                             size: 18,
-                                            color: context.colorScheme.onSurface.withValues(alpha: 0.6),
+                                            color: context.colorScheme.onSurface
+                                                .withValues(alpha: 0.6),
                                           ),
                                         ),
                                       ),
@@ -316,27 +363,44 @@ class _SavedProjectListState extends State<_SavedProjectList> {
 
                               ValueListenableBuilder<bool>(
                                 valueListenable: showSearchBarNotifier,
-                                builder: (BuildContext context, bool showSearchBar, Widget? child) {
+                                builder: (
+                                  BuildContext context,
+                                  bool showSearchBar,
+                                  Widget? child,
+                                ) {
                                   return AnimatedContainer(
                                     duration: const Duration(milliseconds: 200),
                                     height: 32,
-                                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 8,
+                                    ),
                                     decoration: BoxDecoration(
-                                      color: showSearchBar ? context.colorScheme.onSurface.withValues(alpha: 0.1) : Colors.transparent,
+                                      color:
+                                          showSearchBar
+                                              ? context.colorScheme.onSurface
+                                                  .withValues(alpha: 0.1)
+                                              : Colors.transparent,
                                       borderRadius: BorderRadius.circular(60),
                                     ),
                                     child: Row(
                                       children: <Widget>[
                                         AnimatedContainer(
-                                          duration: const Duration(milliseconds: 200),
+                                          duration: const Duration(
+                                            milliseconds: 200,
+                                          ),
                                           width: showSearchBar ? 250 : 0,
                                           child: SemanticHelper.formControl(
-                                            testId: SemanticHelper.createTestId(SemanticTypes.textInput, "saved_projects_section_search_input"),
+                                            testId: SemanticHelper.createTestId(
+                                              SemanticTypes.textInput,
+                                              "saved_projects_section_search_input",
+                                            ),
                                             child: TextFormField(
                                               focusNode: _searchFocusNode,
                                               controller: _searchController,
-                                              style: context.textTheme.labelLarge,
-                                              cursorColor: context.colorScheme.onSurface,
+                                              style:
+                                                  context.textTheme.labelLarge,
+                                              cursorColor:
+                                                  context.colorScheme.onSurface,
                                               cursorWidth: 1,
                                               cursorHeight: 15,
                                               decoration: InputDecoration(
@@ -349,33 +413,56 @@ class _SavedProjectListState extends State<_SavedProjectList> {
                                                 hintText: "Search projects",
                                                 hoverColor: Colors.transparent,
                                                 contentPadding: EdgeInsets.zero,
-                                                hintStyle: context.textTheme.labelMedium?.copyWith(color: Colors.grey),
+                                                hintStyle: context
+                                                    .textTheme
+                                                    .labelMedium
+                                                    ?.copyWith(
+                                                      color: Colors.grey,
+                                                    ),
                                               ),
                                             ),
                                           ),
                                         ),
                                         InkWell(
                                           onTap: () {
-                                            showSearchBarNotifier.value = !showSearchBarNotifier.value;
+                                            showSearchBarNotifier.value =
+                                                !showSearchBarNotifier.value;
 
-                                            WidgetsBinding.instance.addPostFrameCallback((_) {
-                                              showSearchBar ? _searchFocusNode.unfocus() : _searchFocusNode.requestFocus();
-                                              _searchController.clear();
-                                            });
+                                            WidgetsBinding.instance
+                                                .addPostFrameCallback((_) {
+                                                  showSearchBar
+                                                      ? _searchFocusNode
+                                                          .unfocus()
+                                                      : _searchFocusNode
+                                                          .requestFocus();
+                                                  _searchController.clear();
+                                                });
                                           },
                                           child: AnimatedSwitcher(
-                                            duration: const Duration(milliseconds: 200),
-                                            transitionBuilder: (Widget child, Animation<double> animation) {
+                                            duration: const Duration(
+                                              milliseconds: 200,
+                                            ),
+                                            transitionBuilder: (
+                                              Widget child,
+                                              Animation<double> animation,
+                                            ) {
                                               return FadeTransition(
                                                 opacity: animation,
                                                 child: child,
                                               );
                                             },
                                             child: SemanticHelper.button(
-                                              testId: SemanticHelper.createTestId(SemanticTypes.button, "saved_projects_section_search_button"),
+                                              testId: SemanticHelper.createTestId(
+                                                SemanticTypes.button,
+                                                "saved_projects_section_search_button",
+                                              ),
                                               child: Icon(
-                                                key: ValueKey<bool>(showSearchBar),
-                                                showSearchBar ? LucideIcons.x : LucideIcons.search,
+                                                key: ValueKey<bool>(
+                                                  showSearchBar,
+                                                ),
+                                                showSearchBar
+                                                    ? LucideIcons.x
+                                                    : LucideIcons.search,
                                                 size: 18,
                                               ),
                                             ),
@@ -394,7 +481,10 @@ class _SavedProjectListState extends State<_SavedProjectList> {
                                 selectedSortOption: selectedSortOption,
                                 onSelect: (_SavedProjectsSortOption value) {
                                   setState(() {
-                                    selectedSortOption = value == selectedSortOption ? null : value;
+                                    selectedSortOption =
+                                        value == selectedSortOption
+                                            ? null
+                                            : value;
                                   });
                                 },
                               ),
@@ -427,51 +517,76 @@ class _SavedProjectListState extends State<_SavedProjectList> {
                               if (_isSearching && projects.isEmpty) {
                                 return Center(
                                   child: FusionAppText(
-                                    text: "No Projects Found for \"${_searchController.text}\"",
-                                    style: context.textTheme.labelLarge?.copyWith(
-                                      fontSize: 16,
-                                      color: context.colorScheme.onSurface.withValues(alpha: 0.4),
-                                    ),
+                                    text:
+                                        "No Projects Found for \"${_searchController.text}\"",
+                                    style: context.textTheme.labelLarge
+                                        ?.copyWith(
+                                          fontSize: 16,
+                                          color: context.colorScheme.onSurface
+                                              .withValues(alpha: 0.4),
+                                        ),
                                   ),
                                 );
-                              } else if (state is! ProjectLoading && !serviceLocator<ProjectViewModel>().hasProjects) {
+                              } else if (state is! ProjectLoading &&
+                                  !serviceLocator<ProjectViewModel>()
+                                      .hasProjects) {
                                 return Center(
                                   child: FusionAppText(
                                     text: "No Projects Saved Yet",
-                                    style: context.textTheme.labelLarge?.copyWith(
-                                      fontSize: 16,
-                                      color: context.colorScheme.onSurface.withValues(alpha: 0.4),
-                                    ),
+                                    style: context.textTheme.labelLarge
+                                        ?.copyWith(
+                                          fontSize: 16,
+                                          color: context.colorScheme.onSurface
+                                              .withValues(alpha: 0.4),
+                                        ),
                                   ),
                                 );
                               } else {
-                                int crossAxisCount = constraints.maxWidth > 900 ? 4 : 3;
-                                if (constraints.maxWidth > 1200) crossAxisCount = 5;
+                                int crossAxisCount =
+                                    constraints.maxWidth > 900 ? 4 : 3;
+                                if (constraints.maxWidth > 1200)
+                                  crossAxisCount = 5;
 
                                 return GridView.builder(
                                   itemCount: projects.length,
                                   padding: const EdgeInsets.all(16),
-                                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                                    crossAxisCount: crossAxisCount,
-                                    childAspectRatio: 16 / 12,
-                                    crossAxisSpacing: 16,
-                                    mainAxisSpacing: 16,
-                                  ),
-                                  itemBuilder: (BuildContext context, int index) {
+                                  gridDelegate:
+                                      SliverGridDelegateWithFixedCrossAxisCount(
+                                        crossAxisCount: crossAxisCount,
+                                        childAspectRatio: 16 / 12,
+                                        crossAxisSpacing: 16,
+                                        mainAxisSpacing: 16,
+                                      ),
+                                  itemBuilder: (
+                                    BuildContext context,
+                                    int index,
+                                  ) {
                                     final ProjectData project = projects[index];
 
                                     return GestureDetector(
-                                      onTap: () => ProjectDetailsDialog.show(context, project: project),
+                                      onTap:
+                                          () => ProjectDetailsDialog.show(
+                                            context,
+                                            project: project,
+                                          ),
                                       child: Container(
                                         decoration: BoxDecoration(
                                           color: context.colorScheme.surface,
-                                          borderRadius: BorderRadius.circular(12),
+                                          borderRadius: BorderRadius.circular(
+                                            12,
+                                          ),
                                           border: _getBorder(context),
                                         ),
                                         child: ProjectCard(
                                           index: index,
                                           projectData: project,
-                                          onDelete: () => serviceLocator<ProjectSyncViewModel>().deleteProject(projectId: project.id),
+                                          onDelete:
+                                              () => serviceLocator<
+                                                    ProjectSyncViewModel
+                                                  >()
+                                                  .deleteProject(
+                                                    projectId: project.id,
+                                                  ),
                                         ),
                                       ),
                                     );
@@ -498,7 +613,10 @@ class _SortByWidget extends StatelessWidget {
   final _SavedProjectsSortOption? selectedSortOption;
   final ValueChanged<_SavedProjectsSortOption>? onSelect;
 
-  const _SortByWidget({required this.selectedSortOption, required this.onSelect});
+  const _SortByWidget({
+    required this.selectedSortOption,
+    required this.onSelect,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -542,7 +660,10 @@ class _SortByWidget extends StatelessWidget {
                       ..._SavedProjectsSortOption.values.map(
                         (_SavedProjectsSortOption sortBy) {
                           return SemanticHelper.button(
-                            testId: SemanticHelper.createTestId(SemanticTypes.button, "saved_projects_section_sort_button_$sortBy"),
+                            testId: SemanticHelper.createTestId(
+                              SemanticTypes.button,
+                              "saved_projects_section_sort_button_$sortBy",
+                            ),
                             child: InkWell(
                               onTap: () {
                                 onSelect?.call(sortBy);
@@ -553,7 +674,10 @@ class _SortByWidget extends StatelessWidget {
                                 children: <Widget>[
                                   Expanded(
                                     child: Padding(
-                                      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 4,
+                                        vertical: 8,
+                                      ),
                                       child: FusionAppText(
                                         text: sortBy.title,
                                         style: context.textTheme.labelMedium,
@@ -581,7 +705,10 @@ class _SortByWidget extends StatelessWidget {
           ];
         },
         child: SemanticHelper.button(
-          testId: SemanticHelper.createTestId(SemanticTypes.button, "saved_projects_section_sort_button"),
+          testId: SemanticHelper.createTestId(
+            SemanticTypes.button,
+            "saved_projects_section_sort_button",
+          ),
           child: Container(
             height: 32,
             padding: const EdgeInsets.symmetric(horizontal: 10),
@@ -664,7 +791,10 @@ class _FilterByWidget extends StatelessWidget {
                             child: Row(
                               children: <Widget>[
                                 Padding(
-                                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 4,
+                                    vertical: 8,
+                                  ),
                                   child: FusionAppText(
                                     text: sortBy.title,
                                     style: context.textTheme.labelMedium,
@@ -683,7 +813,10 @@ class _FilterByWidget extends StatelessWidget {
           ];
         },
         child: SemanticHelper.button(
-          testId: SemanticHelper.createTestId(SemanticTypes.button, "saved_projects_section_item_upload"),
+          testId: SemanticHelper.createTestId(
+            SemanticTypes.button,
+            "saved_projects_section_item_upload",
+          ),
           child: Container(
             height: 32,
             padding: const EdgeInsets.symmetric(horizontal: 10),
@@ -736,7 +869,9 @@ class CreateNewProjectDialog extends StatefulWidget {
 class _CreateNewProjectDialogState extends State<CreateNewProjectDialog> {
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
 
-  ValueNotifier<bool> shouldShowMoreDetailsNotifier = ValueNotifier<bool>(false);
+  ValueNotifier<bool> shouldShowMoreDetailsNotifier = ValueNotifier<bool>(
+    false,
+  );
   final TextEditingController projectNameController = TextEditingController();
 
   @override
@@ -752,7 +887,8 @@ class _CreateNewProjectDialogState extends State<CreateNewProjectDialog> {
 
     return LayoutBuilder(
       builder: (BuildContext context, BoxConstraints constraints) {
-        final double cardWidth = constraints.maxWidth * 0.5 > 660 ? 660 : constraints.maxWidth * 0.5;
+        final double cardWidth =
+            constraints.maxWidth * 0.5 > 660 ? 660 : constraints.maxWidth * 0.5;
 
         return Container(
           constraints: BoxConstraints(maxWidth: cardWidth),
@@ -776,12 +912,16 @@ class _CreateNewProjectDialogState extends State<CreateNewProjectDialog> {
                 ),
                 Flexible(
                   child: Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 12).copyWith(bottom: 0),
+                    padding: const EdgeInsets.symmetric(
+                      vertical: 12,
+                    ).copyWith(bottom: 0),
                     child: Container(
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(borderRadius),
                         color: context.colorScheme.elevation1,
-                        border: Border.all(color: context.colorScheme.elevation2),
+                        border: Border.all(
+                          color: context.colorScheme.elevation2,
+                        ),
                       ),
                       child: ClipRRect(
                         borderRadius: BorderRadius.circular(borderRadius),
@@ -814,7 +954,8 @@ class _CreateNewProjectDialogState extends State<CreateNewProjectDialog> {
                                         label: "Project File Name",
                                         hintText: "Project Name",
                                         validator: (String? value) {
-                                          if (value?.isEmpty ?? true) return "Project name cannot be empty";
+                                          if (value?.isEmpty ?? true)
+                                            return "Project name cannot be empty";
                                           return null;
                                         },
                                       ),
@@ -830,7 +971,8 @@ class _CreateNewProjectDialogState extends State<CreateNewProjectDialog> {
                                 const SizedBox(height: 5),
                                 const BorderedTextfield(
                                   label: "Project Tags or Categories",
-                                  hintText: "Add tags or categories (separated by commas)",
+                                  hintText:
+                                      "Add tags or categories (separated by commas)",
                                 ),
                                 const SizedBox(height: 5),
                                 const Row(
@@ -855,32 +997,54 @@ class _CreateNewProjectDialogState extends State<CreateNewProjectDialog> {
                                 //  Add More Details Section
                                 // =============================================
                                 ValueListenableBuilder<bool>(
-                                  valueListenable: shouldShowMoreDetailsNotifier,
-                                  builder: (BuildContext context, bool value, Widget? child) {
+                                  valueListenable:
+                                      shouldShowMoreDetailsNotifier,
+                                  builder: (
+                                    BuildContext context,
+                                    bool value,
+                                    Widget? child,
+                                  ) {
                                     return AnimatedCrossFade(
-                                      duration: const Duration(milliseconds: 250),
-                                      crossFadeState: shouldShowMoreDetailsNotifier.value ? CrossFadeState.showSecond : CrossFadeState.showFirst,
+                                      duration: const Duration(
+                                        milliseconds: 250,
+                                      ),
+                                      crossFadeState:
+                                          shouldShowMoreDetailsNotifier.value
+                                              ? CrossFadeState.showSecond
+                                              : CrossFadeState.showFirst,
                                       firstChild: Padding(
-                                        padding: const EdgeInsets.symmetric(horizontal: 18).copyWith(top: 12),
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 18,
+                                        ).copyWith(top: 12),
                                         child: InkWell(
                                           onTap: () {
-                                            shouldShowMoreDetailsNotifier.value = !shouldShowMoreDetailsNotifier.value;
+                                            shouldShowMoreDetailsNotifier
+                                                    .value =
+                                                !shouldShowMoreDetailsNotifier
+                                                    .value;
                                           },
                                           splashColor: Colors.transparent,
                                           child: FusionAppText(
                                             text: "Add More Details",
-                                            style: context.textTheme.bodySmall?.copyWith(
-                                              fontWeight: FontWeight.w600,
-                                              color: context.colorScheme.onSurface.withValues(alpha: 0.6),
-                                            ),
+                                            style: context.textTheme.bodySmall
+                                                ?.copyWith(
+                                                  fontWeight: FontWeight.w600,
+                                                  color: context
+                                                      .colorScheme
+                                                      .onSurface
+                                                      .withValues(alpha: 0.6),
+                                                ),
                                           ),
                                         ),
                                       ),
                                       secondChild: Padding(
-                                        padding: const EdgeInsets.symmetric(vertical: 12).copyWith(bottom: 0),
+                                        padding: const EdgeInsets.symmetric(
+                                          vertical: 12,
+                                        ).copyWith(bottom: 0),
                                         child: Column(
                                           spacing: 10,
-                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
                                           children: <Widget>[
                                             // ===============================
                                             //  ORGANIZATION DETAILS SECTION
@@ -888,10 +1052,14 @@ class _CreateNewProjectDialogState extends State<CreateNewProjectDialog> {
                                             FusionAppText(
                                               text: "ORGANIZATION DETAILS",
                                               maxLine: 2,
-                                              style: context.textTheme.bodySmall?.copyWith(
-                                                fontWeight: FontWeight.bold,
-                                                color: context.colorScheme.onSurface,
-                                              ),
+                                              style: context.textTheme.bodySmall
+                                                  ?.copyWith(
+                                                    fontWeight: FontWeight.bold,
+                                                    color:
+                                                        context
+                                                            .colorScheme
+                                                            .onSurface,
+                                                  ),
                                             ),
                                             const SizedBox(height: 5),
                                             const BorderedTextfield(
@@ -938,10 +1106,14 @@ class _CreateNewProjectDialogState extends State<CreateNewProjectDialog> {
                                             FusionAppText(
                                               text: "BUDGET & OBJECTIVES",
                                               maxLine: 2,
-                                              style: context.textTheme.bodySmall?.copyWith(
-                                                fontWeight: FontWeight.bold,
-                                                color: context.colorScheme.onSurface,
-                                              ),
+                                              style: context.textTheme.bodySmall
+                                                  ?.copyWith(
+                                                    fontWeight: FontWeight.bold,
+                                                    color:
+                                                        context
+                                                            .colorScheme
+                                                            .onSurface,
+                                                  ),
                                             ),
                                             const SizedBox(height: 5),
                                             Row(
@@ -955,11 +1127,17 @@ class _CreateNewProjectDialogState extends State<CreateNewProjectDialog> {
                                                 ),
 
                                                 Expanded(
-                                                  child: FusionDarkDropdown<CurrencyType>(
+                                                  child: FusionDarkDropdown<
+                                                    CurrencyType
+                                                  >(
                                                     title: "Currency",
-                                                    placeholder: "Select Currency",
+                                                    placeholder:
+                                                        "Select Currency",
                                                     items: CurrencyType.values,
-                                                    labelBuilder: (CurrencyType value) => value.name.toUpperCase(),
+                                                    labelBuilder:
+                                                        (CurrencyType value) =>
+                                                            value.name
+                                                                .toUpperCase(),
                                                   ),
                                                 ),
                                               ],
@@ -969,7 +1147,8 @@ class _CreateNewProjectDialogState extends State<CreateNewProjectDialog> {
                                             const SizedBox(height: 5),
                                             const BorderedTextfield(
                                               label: "Project Goals",
-                                              hintText: "Add project goals or objectives",
+                                              hintText:
+                                                  "Add project goals or objectives",
                                             ),
 
                                             // Primary Building Name
@@ -987,29 +1166,46 @@ class _CreateNewProjectDialogState extends State<CreateNewProjectDialog> {
                                             FusionAppText(
                                               text: "UNITS & GLOBAL SETTINGS",
                                               maxLine: 2,
-                                              style: context.textTheme.bodySmall?.copyWith(
-                                                fontWeight: FontWeight.bold,
-                                                color: context.colorScheme.onSurface,
-                                              ),
+                                              style: context.textTheme.bodySmall
+                                                  ?.copyWith(
+                                                    fontWeight: FontWeight.bold,
+                                                    color:
+                                                        context
+                                                            .colorScheme
+                                                            .onSurface,
+                                                  ),
                                             ),
                                             const SizedBox(height: 5),
                                             Row(
                                               spacing: 10,
                                               children: <Widget>[
                                                 Expanded(
-                                                  child: FusionDarkDropdown<MeasurementUnit>(
+                                                  child: FusionDarkDropdown<
+                                                    MeasurementUnit
+                                                  >(
                                                     title: "Measurement Units",
                                                     placeholder: "Select",
-                                                    items: MeasurementUnit.values,
-                                                    labelBuilder: (MeasurementUnit value) => "${value.displayName} (${value.symbol})",
+                                                    items:
+                                                        MeasurementUnit.values,
+                                                    labelBuilder:
+                                                        (
+                                                          MeasurementUnit value,
+                                                        ) =>
+                                                            "${value.displayName} (${value.symbol})",
                                                   ),
                                                 ),
                                                 Expanded(
-                                                  child: FusionDarkDropdown<String>(
+                                                  child: FusionDarkDropdown<
+                                                    String
+                                                  >(
                                                     title: "Temperature",
                                                     placeholder: "Select",
-                                                    items: <String>['Celsius', 'Fahrenheit'],
-                                                    labelBuilder: (String value) => value,
+                                                    items: <String>[
+                                                      'Celsius',
+                                                      'Fahrenheit',
+                                                    ],
+                                                    labelBuilder:
+                                                        (String value) => value,
                                                   ),
                                                 ),
                                               ],
@@ -1019,7 +1215,8 @@ class _CreateNewProjectDialogState extends State<CreateNewProjectDialog> {
                                             const SizedBox(height: 5),
                                             const BorderedTextfield(
                                               label: "Regional Based Defaults",
-                                              hintText: "Add regional based default settings",
+                                              hintText:
+                                                  "Add regional based default settings",
                                             ),
 
                                             //  ================================
@@ -1027,18 +1224,33 @@ class _CreateNewProjectDialogState extends State<CreateNewProjectDialog> {
                                             // ===============================
                                             const SizedBox(height: 5),
                                             Padding(
-                                              padding: const EdgeInsets.symmetric(horizontal: 18),
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                    horizontal: 18,
+                                                  ),
                                               child: InkWell(
                                                 onTap: () {
-                                                  shouldShowMoreDetailsNotifier.value = !shouldShowMoreDetailsNotifier.value;
+                                                  shouldShowMoreDetailsNotifier
+                                                          .value =
+                                                      !shouldShowMoreDetailsNotifier
+                                                          .value;
                                                 },
                                                 splashColor: Colors.transparent,
                                                 child: FusionAppText(
                                                   text: "Show Less Details",
-                                                  style: context.textTheme.bodySmall?.copyWith(
-                                                    fontWeight: FontWeight.w600,
-                                                    color: context.colorScheme.onSurface.withValues(alpha: 0.6),
-                                                  ),
+                                                  style: context
+                                                      .textTheme
+                                                      .bodySmall
+                                                      ?.copyWith(
+                                                        fontWeight:
+                                                            FontWeight.w600,
+                                                        color: context
+                                                            .colorScheme
+                                                            .onSurface
+                                                            .withValues(
+                                                              alpha: 0.6,
+                                                            ),
+                                                      ),
                                                 ),
                                               ),
                                             ),
@@ -1061,24 +1273,48 @@ class _CreateNewProjectDialogState extends State<CreateNewProjectDialog> {
                                 Align(
                                   alignment: Alignment.centerRight,
                                   child: SemanticHelper.button(
-                                    testId: SemanticHelper.createTestId(SemanticTypes.button, "create_new_project_button"),
+                                    testId: SemanticHelper.createTestId(
+                                      SemanticTypes.button,
+                                      "create_new_project_button",
+                                    ),
                                     child: FusionNeumorphicButton(
+                                      semanticId: 'create_new_project_button',
                                       onTap: () async {
-                                        final bool isFormFilled = _formKey.currentState?.validate() ?? false;
+                                        final bool isFormFilled =
+                                            _formKey.currentState?.validate() ??
+                                            false;
                                         if (!isFormFilled) return;
 
-                                        final ProjectViewModel projectViewModel = serviceLocator<ProjectViewModel>();
+                                        final ProjectViewModel
+                                        projectViewModel =
+                                            serviceLocator<ProjectViewModel>();
 
-                                        final String projectName = projectNameController.text.trim();
+                                        final String projectName =
+                                            projectNameController.text.trim();
 
                                         FusionUiUtils.showLoader(context);
-                                        final NewProjectDetails newProject = NewProjectDetails(name: projectName);
-                                        final ProjectData? projectData = await projectViewModel.createAndSaveNewProject(newProject);
-                                        if (context.mounted) FusionUiUtils.hideLoader(context);
-                                        projectViewModel.openProject(projectData!.id);
+                                        final NewProjectDetails newProject =
+                                            NewProjectDetails(
+                                              name: projectName,
+                                            );
+                                        final ProjectData? projectData =
+                                            await projectViewModel
+                                                .createAndSaveNewProject(
+                                                  newProject,
+                                                );
+                                        if (context.mounted)
+                                          FusionUiUtils.hideLoader(context);
+                                        projectViewModel.openProject(
+                                          projectData!.id,
+                                        );
 
                                         if (context.mounted) {
-                                          serviceLocator<GuideShowCaseController>().completeStep(GuideShowCaseSteps.myProjects);
+                                          serviceLocator<
+                                                GuideShowCaseController
+                                              >()
+                                              .completeStep(
+                                                GuideShowCaseSteps.myProjects,
+                                              );
                                           Navigator.of(context).pop();
                                           // Navigator.pushNamed(context, Routes.projectPage);
                                         }
@@ -1086,15 +1322,21 @@ class _CreateNewProjectDialogState extends State<CreateNewProjectDialog> {
                                       width: 160,
                                       height: 40,
                                       child: Padding(
-                                        padding: const EdgeInsets.symmetric(horizontal: 8),
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 8,
+                                        ),
                                         child: Row(
                                           children: <Widget>[
                                             Expanded(
                                               child: FusionAppText(
                                                 text: 'Continue',
-                                                style: context.textTheme.titleSmall?.copyWith(
-                                                  fontWeight: FontWeight.w600,
-                                                ),
+                                                style: context
+                                                    .textTheme
+                                                    .titleSmall
+                                                    ?.copyWith(
+                                                      fontWeight:
+                                                          FontWeight.w600,
+                                                    ),
                                               ),
                                             ),
                                             MouseRegion(
@@ -1103,8 +1345,11 @@ class _CreateNewProjectDialogState extends State<CreateNewProjectDialog> {
                                                 height: 28,
                                                 width: 47,
                                                 decoration: BoxDecoration(
-                                                  color: FusionDarkColorPallette.green20,
-                                                  borderRadius: BorderRadius.circular(6),
+                                                  color:
+                                                      FusionDarkColorPallette
+                                                          .green20,
+                                                  borderRadius:
+                                                      BorderRadius.circular(6),
                                                 ),
                                                 child: const Icon(
                                                   LucideIcons.arrowRight,
@@ -1203,7 +1448,10 @@ class _BorderedTextfieldState extends State<BorderedTextfield> {
         ),
         const SizedBox(height: 12),
         SemanticHelper.formControl(
-          testId: SemanticHelper.createTestId(SemanticTypes.textInput, widget.sementicFieldId ?? "${widget.label}_input"),
+          testId: SemanticHelper.createTestId(
+            SemanticTypes.textInput,
+            widget.sementicFieldId ?? "${widget.label}_input",
+          ),
           child: TextFormField(
             autofocus: widget.autofocus,
             controller: widget.controller,
@@ -1241,7 +1489,10 @@ class _BorderedTextfieldState extends State<BorderedTextfield> {
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(borderRadius),
-                borderSide: BorderSide(color: context.colorScheme.primary, width: 2),
+                borderSide: BorderSide(
+                  color: context.colorScheme.primary,
+                  width: 2,
+                ),
               ),
             ),
           ),
@@ -1312,7 +1563,9 @@ class FusionDarkDropdown<T> extends StatelessWidget {
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(9),
                     side: BorderSide(
-                      color: context.colorScheme.onSurface.withValues(alpha: 0.3),
+                      color: context.colorScheme.onSurface.withValues(
+                        alpha: 0.3,
+                      ),
                     ),
                   ),
                   offset: const Offset(0, 10),
@@ -1341,10 +1594,14 @@ class FusionDarkDropdown<T> extends StatelessWidget {
                                     children: <Widget>[
                                       Expanded(
                                         child: Padding(
-                                          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 4,
+                                            vertical: 8,
+                                          ),
                                           child: Text(
                                             labelBuilder(item),
-                                            style: context.textTheme.labelMedium,
+                                            style:
+                                                context.textTheme.labelMedium,
                                           ),
                                         ),
                                       ),
@@ -1366,19 +1623,29 @@ class FusionDarkDropdown<T> extends StatelessWidget {
                     ];
                   },
                   child: SemanticHelper.button(
-                    testId: SemanticHelper.createTestId(SemanticTypes.button, "${title ?? 'dropdown'}_dropdown_button"),
+                    testId: SemanticHelper.createTestId(
+                      SemanticTypes.button,
+                      "${title ?? 'dropdown'}_dropdown_button",
+                    ),
                     child: Container(
                       padding: const EdgeInsets.all(10),
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(borderRadius),
-                        border: Border.all(color: context.colorScheme.onSurface.withValues(alpha: 0.3)),
+                        border: Border.all(
+                          color: context.colorScheme.onSurface.withValues(
+                            alpha: 0.3,
+                          ),
+                        ),
                       ),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: <Widget>[
                           Expanded(
                             child: FusionAppText(
-                              text: selectedValue != null ? labelBuilder(selectedValue as T) : placeholder,
+                              text:
+                                  selectedValue != null
+                                      ? labelBuilder(selectedValue as T)
+                                      : placeholder,
                               style: context.textTheme.labelLarge?.copyWith(
                                 color: context.colorScheme.onSurface.withValues(
                                   alpha: selectedValue != null ? 1.0 : 0.4,

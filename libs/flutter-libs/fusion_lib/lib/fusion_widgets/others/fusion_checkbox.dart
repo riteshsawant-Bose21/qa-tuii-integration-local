@@ -7,12 +7,12 @@ class FusionCheckbox extends StatelessWidget {
   final VoidCallback onChanged;
   final double iconSize;
   final bool enabled;
-  final String? semanticId;
+  final String semanticId;
 
   const FusionCheckbox({
     super.key,
     this.value,
-    this.semanticId,
+    required this.semanticId,
     required this.onChanged,
     this.iconSize = 16,
     this.enabled = true,

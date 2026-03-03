@@ -22,6 +22,7 @@ class DialogBox extends StatelessWidget {
   final bool vertical;
   final FusionAppButtonStyle primaryButtonStyle;
   final FusionAppButtonStyle secondaryButtonStyle;
+  final String semanticId;
   const DialogBox({
     Key? key,
     this.devicetype = DeviceType.mobile,
@@ -39,6 +40,7 @@ class DialogBox extends StatelessWidget {
     this.vertical = false,
     this.secondaryButtonStyle = FusionAppButtonStyle.secondary,
     this.primaryButtonStyle = FusionAppButtonStyle.primary,
+    required this.semanticId,
   }) : super(key: key);
 
   @override
@@ -46,7 +48,7 @@ class DialogBox extends StatelessWidget {
     return SemanticHelper.container(
       testId: SemanticHelper.createTestId(
         SemanticTypes.section,
-        "dialog_box_${type}",
+        "dialog_box_${semanticId}_${type}",
       ),
       child: devicetype == DeviceType.desktop
           ? Dialog(
@@ -495,10 +497,12 @@ class DialogBox extends StatelessWidget {
     bool vertical = false,
     FusionAppButtonStyle primaryButtonStyle = FusionAppButtonStyle.primary,
     FusionAppButtonStyle secondaryButtonStyle = FusionAppButtonStyle.secondary,
+    required String semanticId,
   }) {
     return showDialog(
       context: context,
       builder: (context) => DialogBox(
+        semanticId: semanticId,
         type: DialogType.success,
         title: title,
         description: description,
@@ -528,10 +532,12 @@ class DialogBox extends StatelessWidget {
     VoidCallback? onPrimaryPressed,
     VoidCallback? onSecondaryPressed,
     bool showCopyButton = false,
+    required String semanticId,
   }) {
     return showDialog(
       context: context,
       builder: (context) => DialogBox(
+        semanticId: semanticId,
         type: DialogType.failure,
         title: title,
         description: description,
@@ -555,12 +561,14 @@ class DialogBox extends StatelessWidget {
     String primaryButtonText = 'Continue',
     String? secondaryButtonText = 'Cancel',
     VoidCallback? onPrimaryPressed,
+    required String semanticId,
     VoidCallback? onSecondaryPressed,
     bool showCopyButton = false,
   }) {
     return showDialog(
       context: context,
       builder: (context) => DialogBox(
+        semanticId: semanticId,
         type: DialogType.warning,
         title: title,
         description: description,
@@ -586,10 +594,12 @@ class DialogBox extends StatelessWidget {
     VoidCallback? onPrimaryPressed,
     VoidCallback? onSecondaryPressed,
     bool showCopyButton = false,
+    required String semanticId,
   }) {
     return showDialog(
       context: context,
       builder: (context) => DialogBox(
+        semanticId: semanticId,
         type: DialogType.confirmation,
         title: title,
         description: description,

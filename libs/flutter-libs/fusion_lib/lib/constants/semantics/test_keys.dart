@@ -1,11 +1,14 @@
-sealed class FusionTestKeys {
+class FusionTestKeys {
+  static final FusionTestKeys instance = FusionTestKeys._();
+  FusionTestKeys._();
   static const String addNewProjectNavItem = 'add_new_project_nav_item';
   static const String projectName = 'project_name';
   static const String projectNameInput = 'project_name_input';
   static const String venueNameInput = 'venue_name_input';
   static const String budgetInput = 'budget_input';
   static const String createProjectButton = 'create_project_button';
-  static const String cancelCreateProjectButton = 'cancel_create_project_button';
+  static const String cancelCreateProjectButton =
+      'cancel_create_project_button';
   static const String backToProjects = 'back_to_projects';
   static const String undo = 'undo';
   static const String redo = 'redo';

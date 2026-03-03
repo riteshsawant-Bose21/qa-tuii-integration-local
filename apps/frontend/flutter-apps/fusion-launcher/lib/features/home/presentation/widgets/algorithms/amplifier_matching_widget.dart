@@ -385,6 +385,7 @@ class _AmplifierMatchingWidgetState extends State<AmplifierMatchingWidget> {
             children: <Widget>[
               Expanded(
                 child: FusionGradientButton(
+                  accessLabel: 'amplifier_matching_calculate',
                   label: isLoading ? 'Calculating...' : _getCalculateButtonText(_selectedStrategy),
                   onTap: isLoading ? () {} : _calculateAmplifierMatching,
                   gradient: const LinearGradient(colors: <Color>[Colors.blue, Colors.purple]),

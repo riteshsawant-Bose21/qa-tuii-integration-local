@@ -1002,6 +1002,7 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea>
                               child: SizedBox(
                                 height: 35,
                                 child: FusionNeumorphicButton(
+                                  semanticId: 'project_work_sync',
                                   onTap: () {},
                                   height: 20,
                                   borderRadius: 6,
@@ -1550,6 +1551,7 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea>
                       mainAxisAlignment: MainAxisAlignment.end,
                       children: <Widget>[
                         FusionOutlinedButton(
+                          accessLabel: 'project_work_area_cancel',
                           height: 28,
                           width: 64,
                           label: "Cancel",
@@ -1562,6 +1564,7 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea>
                         ),
                         const SizedBox(width: 8),
                         FusionButton(
+                          accessLabel: 'Edit_Project_Name',
                           height: 28,
                           width: 84,
                           textStyle: Theme.of(

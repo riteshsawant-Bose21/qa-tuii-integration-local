@@ -465,6 +465,7 @@ class ProjectDetailsDialog extends StatelessWidget {
                           ),
                           const SizedBox(height: 16),
                           FusionNeumorphicButton(
+                            semanticId: 'project_card_device_list',
                             onTap: () {},
                             height: 32,
                             width: 112,
@@ -492,6 +493,7 @@ class ProjectDetailsDialog extends StatelessWidget {
                             children: <Widget>[
                               Flexible(
                                 child: FusionNeumorphicButton(
+                                  semanticId: 'project_card_collaborators',
                                   onTap: () {},
                                   height: 32,
                                   width: 168,
@@ -546,6 +548,8 @@ class ProjectDetailsDialog extends StatelessWidget {
                                                   is ProjectDownloadInProgress &&
                                               state.projectId == project.id) {
                                             return FusionNeumorphicButton(
+                                              semanticId:
+                                                  'project_card_downloading',
                                               onTap: () {},
                                               height: 32,
                                               width: 168,
@@ -596,6 +600,8 @@ class ProjectDetailsDialog extends StatelessWidget {
                                               );
                                             }
                                             return FusionNeumorphicButton(
+                                              semanticId:
+                                                  'project_card_download',
                                               onTap: () async {
                                                 // FusionUiUtils.showLoader(context);
                                                 final ResponseCallback<
@@ -666,6 +672,7 @@ class ProjectDetailsDialog extends StatelessWidget {
                                           }
                                         } else {
                                           return FusionNeumorphicButton(
+                                            semanticId: 'project_card_open',
                                             onTap: () async {
                                               Navigator.of(context).pop();
                                               FusionUiUtils.showLoader(context);

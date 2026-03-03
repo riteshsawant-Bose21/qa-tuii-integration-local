@@ -427,6 +427,7 @@ class PrioritySettingsWidgetState extends State<PrioritySettingsWidget> {
                                                   ),
                                                   const SizedBox(height: 10),
                                                   FusionNeumorphicButton(
+                                                    semanticId: 'priority_setting_active',
                                                     height: 34,
                                                     width: double.infinity,
                                                     text: "Active",

@@ -230,6 +230,7 @@ class ProcessingChainView extends StatelessWidget {
                                               child: AbsorbPointer(
                                                 absorbing: true,
                                                 child: FusionButton(
+                                                  accessLabel: 'Add_Processing_Block',
                                                   onTap: () {},
                                                   label: "+ Add",
                                                 ),

@@ -42,13 +42,15 @@ class InitialScreen extends StatelessWidget {
                   ),
                   const SizedBox(height: 16),
                   FusionAppText(
-                    text: 'Allow your project to sync with actual hardware installations\nto monitor and control the complete audio system',
+                    text:
+                        'Allow your project to sync with actual hardware installations\nto monitor and control the complete audio system',
                     style: context.textTheme.titleSmall,
                   ),
                   const SizedBox(height: 32),
 
                   // 3. The "Start" Button
                   FusionNeumorphicButton(
+                    semanticId: 'configure_network_button',
                     onTap: onConfigureNetwork,
                     text: "Configure Network",
                     width: 200,

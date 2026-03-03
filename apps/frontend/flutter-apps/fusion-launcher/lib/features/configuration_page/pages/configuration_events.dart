@@ -25,29 +25,38 @@ class _ConfigurationEventsState extends State<ConfigurationEvents> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: context.colorScheme.primaryBlack,
-      body: LayoutBuilder(
-        builder: (BuildContext context, BoxConstraints constraints) {
-          final bool isWideScreen = constraints.maxWidth > 600;
+    return SemanticHelper.container(
+      testId: SemanticHelper.createTestId(
+        SemanticTypes.section,
+        'configuration_events',
+      ),
+      child: Scaffold(
+        backgroundColor: context.colorScheme.primaryBlack,
+        body: LayoutBuilder(
+          builder: (BuildContext context, BoxConstraints constraints) {
+            final bool isWideScreen = constraints.maxWidth > 600;
 
-          if (isWideScreen) {
-            return Row(
-              children: <Widget>[
-                SizedBox(width: constraints.maxWidth * 0.2, child: const EventsPanel()),
-                const SizedBox(width: 4),
-                const Expanded(child: TriggerPanel()),
-              ],
-            );
-          } else {
-            return const Column(
-              children: <Widget>[
-                Expanded(flex: 1, child: EventsPanel()),
-                Expanded(flex: 2, child: TriggerPanel()),
-              ],
-            );
-          }
-        },
+            if (isWideScreen) {
+              return Row(
+                children: <Widget>[
+                  SizedBox(
+                    width: constraints.maxWidth * 0.2,
+                    child: const EventsPanel(),
+                  ),
+                  const SizedBox(width: 4),
+                  const Expanded(child: TriggerPanel()),
+                ],
+              );
+            } else {
+              return const Column(
+                children: <Widget>[
+                  Expanded(flex: 1, child: EventsPanel()),
+                  Expanded(flex: 2, child: TriggerPanel()),
+                ],
+              );
+            }
+          },
+        ),
       ),
     );
   }

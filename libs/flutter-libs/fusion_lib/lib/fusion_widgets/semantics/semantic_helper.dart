@@ -36,8 +36,10 @@ class SemanticHelper {
     required Widget child,
     bool explicitChildNodes = false,
     String? label,
+    String? value,
   }) {
     return Semantics(
+      value: value,
       identifier: testId,
       container: true,
       explicitChildNodes: explicitChildNodes,

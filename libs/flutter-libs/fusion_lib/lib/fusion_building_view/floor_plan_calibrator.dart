@@ -545,6 +545,7 @@ class _FloorPlanCalibratorState extends State<FloorPlanCalibrator> {
             ),
             const SizedBox(height: 16),
             FusionOutlinedButton(
+              accessLabel: 'floor_plan_calibration_cancel',
               label: 'Close',
               onTap: () => widget.onCancel?.call(),
             ),
@@ -767,6 +768,7 @@ class _FloorPlanCalibratorState extends State<FloorPlanCalibrator> {
                   }
                 },
                 child: GuideShowcaseWrapper(
+                  semanticId: 'floor_plan_calibrator',
                   step: GuideShowCaseSteps.showFloorPickCalibration,
                   onHighlightedSpotTap: (TapDownDetails details) {
                     if (_mode == _ToolMode.measure) {
@@ -850,6 +852,7 @@ class _FloorPlanCalibratorState extends State<FloorPlanCalibrator> {
               // Optional quick actions on the left
               if (_startPointNormalized != null || _endPointNormalized != null)
                 FusionTextButton(
+                  accessLabel: 'floor_plan_calibration_clear',
                   label: 'Clear Line',
                   width: 120,
                   onTap: () {
@@ -858,6 +861,7 @@ class _FloorPlanCalibratorState extends State<FloorPlanCalibrator> {
                 ),
               const Spacer(),
               FusionOutlinedButton(
+                accessLabel: 'floor_plan_calibration_cancel',
                 width: 120,
                 height: 36,
                 label: FusionStrings.cancelButton,
@@ -867,6 +871,7 @@ class _FloorPlanCalibratorState extends State<FloorPlanCalibrator> {
               ),
               const SizedBox(width: 8),
               GuideShowcaseWrapper(
+                semanticId: 'floor_plan_calibrator_confirm',
                 step: GuideShowCaseSteps.confirmFloorCalibrated,
                 onHighlightedSpotTap: (TapDownDetails details) {
                   if (_startPointNormalized != null &&
@@ -876,6 +881,7 @@ class _FloorPlanCalibratorState extends State<FloorPlanCalibrator> {
                   }
                 },
                 child: FusionButton(
+                  accessLabel: 'floor_plan_calibration_complete',
                   label: FusionStrings.confirmButton,
                   width: 120,
                   height: 36,

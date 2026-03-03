@@ -19,4 +19,5 @@ class SemanticTypes {
   static const String formControl = 'form';
   static const String dropdown = 'dd';
   static const String dropdownItem = 'dd_item';
+  static const String icon = 'icon';
 }

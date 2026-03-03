@@ -58,8 +58,10 @@ class FusionSecondaryButton extends StatelessWidget {
   final VoidCallback? onPressed;
   final double? width;
   final double? height;
+  final String? semanticId;
 
   const FusionSecondaryButton({
+    required this.semanticId,
     super.key,
     required this.text,
     required this.onPressed,

@@ -17,8 +17,12 @@ class TimezoneSettingsPage extends StatefulWidget {
 class _TimezoneSettingsPageState extends State<TimezoneSettingsPage> {
   // State variables
   final bool _isDaylightSaving = true;
-  final TextEditingController _serverController = TextEditingController(text: "com.server.time.org");
-  final TextEditingController _dateAndTimeController = TextEditingController(text: "");
+  final TextEditingController _serverController = TextEditingController(
+    text: "com.server.time.org",
+  );
+  final TextEditingController _dateAndTimeController = TextEditingController(
+    text: "",
+  );
 
   @override
   void dispose() {
@@ -66,13 +70,20 @@ class _TimezoneSettingsPageState extends State<TimezoneSettingsPage> {
                     hintText: 'http://com.server.time.org',
                     controller: _serverController,
                     borderRadius: 8,
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 8,
+                    ),
                   ),
                 ),
                 const SizedBox(width: 16),
                 FusionNeumorphicButton(
+                  semanticId: 'time_zone_settings_test_button',
                   borderRadius: 6,
-                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 5),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 24,
+                    vertical: 5,
+                  ),
                   margin: EdgeInsets.zero,
                   text: "Test",
                   onTap: () {},
@@ -141,7 +152,9 @@ class _TimezoneSettingsPageState extends State<TimezoneSettingsPage> {
                           );
 
                           //format the dat to the format "Feb 9, 2026; 7:20PM"
-                          _dateAndTimeController.text = DateFormat('MMM d, yyyy; h:mm a').format(finalDateTime);
+                          _dateAndTimeController.text = DateFormat(
+                            'MMM d, yyyy; h:mm a',
+                          ).format(finalDateTime);
                         }
                       }
                     },
@@ -150,14 +163,21 @@ class _TimezoneSettingsPageState extends State<TimezoneSettingsPage> {
                       controller: _dateAndTimeController,
                       enabled: false,
                       borderRadius: 8,
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 8,
+                      ),
                     ),
                   ),
                 ),
                 const SizedBox(width: 16),
                 FusionNeumorphicButton(
+                  semanticId: 'time_zone_settings_set_button',
                   borderRadius: 6,
-                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 5),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 24,
+                    vertical: 5,
+                  ),
                   margin: EdgeInsets.zero,
                   text: "Set",
                   onTap: () {},

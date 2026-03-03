@@ -133,6 +133,7 @@ class _FusionExpandableTileWidgetState extends State<FusionExpandableTileWidget>
             title: Draggable<DockItem>(
               data: widget.item,
               feedback: FloatingWidget(
+                semanticId: 'fusion_expandable_tile_widget_feedback',
                 item: widget.item,
                 config: widget.config,
                 resizing: false,

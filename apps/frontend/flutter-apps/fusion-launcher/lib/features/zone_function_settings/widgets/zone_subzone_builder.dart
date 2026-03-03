@@ -177,6 +177,7 @@ class _ZoneSubZoneSettingBuilderState extends State<ZoneSubZoneBuilderWidget> {
                                     ),
                                   ),
                                   FusionCheckbox(
+                                    semanticId: 'zone_subzone_allow_mute',
                                     value: isAllowMute,
                                     onChanged:
                                         () => widget.onAllowMuteChanged(
