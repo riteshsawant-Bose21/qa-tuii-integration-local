@@ -1,4 +1,4 @@
-package iot
+package fusioniot
 
 import (
 	"crypto/tls"
@@ -13,14 +13,10 @@ import (
 
 	"fusion-services-core/logging"
 	"fusion/internal/cluster"
+	"fusion/internal/utils"
 )
 
 const (
-	// Default paths for device identity certificates
-	DefaultCAFile   = "/var/lib/device-identity/AmazonRootCA1.pem"
-	DefaultCertFile = "/var/lib/device-identity/device.x509.cert"
-	DefaultKeyFile  = "/var/lib/device-identity/device.key"
-
 	// MQTT settings
 	DefaultPort           = 8883
 	DefaultPublishQoS     = 1
@@ -92,13 +88,13 @@ func NewPublisher(config *Config, metrics *cluster.MetricsCollector, cluster *cl
 		config.Port = DefaultPort
 	}
 	if config.CAFile == "" {
-		config.CAFile = DefaultCAFile
+		config.CAFile = fmt.Sprintf("%s%s", utils.DefaultIdentityFilePath, utils.DefaultCAFileName)
 	}
 	if config.CertFile == "" {
-		config.CertFile = DefaultCertFile
+		config.CertFile = fmt.Sprintf("%s%s", utils.DefaultIdentityFilePath, utils.DefaultCertFileName)
 	}
 	if config.KeyFile == "" {
-		config.KeyFile = DefaultKeyFile
+		config.KeyFile = fmt.Sprintf("%s%s", utils.DefaultIdentityFilePath, utils.DefaultKeyFileName)
 	}
 	if config.MetricsInterval == 0 {
 		config.MetricsInterval = DefaultMetricsInterval

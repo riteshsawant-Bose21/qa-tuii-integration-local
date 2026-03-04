@@ -9,7 +9,7 @@ import (
 	"fusion/internal/cluster"
 	clustertransport "fusion/internal/cluster/transport"
 	"fusion/internal/controllers"
-	"fusion/internal/iot"
+	fusioniot "fusion/internal/iot"
 	"fusion/internal/network"
 	"fusion/internal/persistence"
 	"fusion/internal/pubsub"
@@ -55,7 +55,7 @@ type App struct {
 	SAPServer         *network.SAPServer
 	UDPServer         *network.UDPServer
 	ControllerManager *controllers.ControllerManager
-	IoTPublisher      *iot.Publisher
+	IoTPublisher      *fusioniot.Publisher
 	memberlist        *memberlist.Memberlist
 	monitor           *network.Monitor
 	config            *api.AppConfig
@@ -65,7 +65,7 @@ type App struct {
 }
 
 // NewApp is a factory function to set up the application
-func NewApp(config *api.AppConfig) *App {
+func NewApp(config *api.AppConfig, iotConfig *fusioniot.Config) *App {
 
 	logger := initLogging(config)
 
@@ -87,7 +87,7 @@ func NewApp(config *api.AppConfig) *App {
 	sapServer := initSAPServer(config, api.SAPPort, connectionHandler, hub)
 	udpServer := initUDPServer(api.UDPPort, connectionHandler, hub)
 	fusionServer := server.NewFusionServer(config.NodeName, connectionHandler, hub)
-	iotPublisher := initIoTPublisher(config, clusterInstance.Metrics, clusterInstance)
+	iotPublisher := initIoTPublisher(iotConfig, clusterInstance.Metrics, clusterInstance)
 
 	// Setup the public routes
 	publicRouter := mux.NewRouter()
@@ -558,35 +558,26 @@ func initMDNSManager() *network.MDNSManager {
 }
 
 // initIoTPublisher initializes the AWS IoT Core publisher
-func initIoTPublisher(config *api.AppConfig, metrics *cluster.MetricsCollector, cluster *cluster.Cluster) *iot.Publisher {
+func initIoTPublisher(iotConfig *fusioniot.Config, metrics *cluster.MetricsCollector, cluster *cluster.Cluster) *fusioniot.Publisher {
 	logger := logging.GetLogger()
 
-	if !config.IoTEnabled {
+	if !iotConfig.Enabled {
 		logger.Info("IoT publisher disabled")
 		return nil
 	}
 
-	if config.IoTEndpoint == "" {
+	if iotConfig.Endpoint == "" {
 		logger.Warn("IoT endpoint not configured, disabling IoT publisher")
 		return nil
 	}
 
-	clientID := config.NodeName
-
-	iotConfig := &iot.Config{
-		Endpoint:    config.IoTEndpoint,
-		ClientID:    clientID,
-		TopicPrefix: config.IoTTopicPrefix,
-		Enabled:     config.IoTEnabled,
-	}
-
-	publisher, err := iot.NewPublisher(iotConfig, metrics, cluster)
+	publisher, err := fusioniot.NewPublisher(iotConfig, metrics, cluster)
 	if err != nil {
 		logger.Error("Failed to create IoT publisher: %v", err)
 		return nil
 	}
 
-	logger.Info("IoT publisher initialized for endpoint: %s", config.IoTEndpoint)
+	logger.Info("IoT publisher initialized for endpoint: %s", iotConfig.Endpoint)
 	return publisher
 }
 

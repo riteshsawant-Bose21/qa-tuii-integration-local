@@ -326,7 +326,7 @@ func (c *Cluster) GetCSR(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	csrContent, err := os.ReadFile("/var/lib/device-identity/device.csr")
+	csrContent, err := os.ReadFile(fmt.Sprintf("%s%s", utils.DefaultIdentityFilePath, utils.DefaultCSRFileName))
 	if err != nil {
 		if os.IsNotExist(err) {
 			http.Error(w, "CSR file not found", http.StatusNotFound)
@@ -346,7 +346,7 @@ func (c *Cluster) resetLocalDevice() error {
 	if err != nil {
 		return fmt.Errorf("error loading device info: %v", err)
 	}
-	err = os.Remove("/var/lib/device-identity/device.x509.cert")
+	err = os.Remove(fmt.Sprintf("%s%s", utils.DefaultIdentityFilePath, utils.DefaultCertFileName))
 	if err != nil && !os.IsNotExist(err) {
 		return fmt.Errorf("error removing certificate file: %v", err)
 	}
@@ -396,7 +396,7 @@ func (c *Cluster) SetDeviceCertificate(w http.ResponseWriter, r *http.Request) {
 	if c.hostIsLocal(targetDevice.Address) {
 
 		// Check if we should replace the certificate
-		shouldReplace, err := c.shouldReplaceCertificate("/var/lib/device-identity/device.x509.cert", certContent)
+		shouldReplace, err := c.shouldReplaceCertificate(fmt.Sprintf("%s%s", utils.DefaultIdentityFilePath, utils.DefaultCertFileName), certContent)
 		if err != nil {
 			logging.GetLogger().Error("Error checking certificate replacement: %v", err)
 			http.Error(w, fmt.Sprintf("Error checking certificate: %v", err), http.StatusInternalServerError)
@@ -416,7 +416,7 @@ func (c *Cluster) SetDeviceCertificate(w http.ResponseWriter, r *http.Request) {
 		}
 
 		// If this is the local device, write certificate locally
-		if err := os.WriteFile("/var/lib/device-identity/device.x509.cert", certContent, 0644); err != nil {
+		if err := os.WriteFile(fmt.Sprintf("%s%s", utils.DefaultIdentityFilePath, utils.DefaultCertFileName), certContent, 0644); err != nil {
 			logging.GetLogger().Error("Error writing certificate file: %v", err)
 			http.Error(w, fmt.Sprintf("Error writing certificate file: %v", err), http.StatusInternalServerError)
 			return

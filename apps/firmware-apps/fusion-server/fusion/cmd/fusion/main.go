@@ -19,6 +19,7 @@ import (
 	"fusion-services-core/logging"
 	"fusion/internal/api"
 	"fusion/internal/app"
+	fusioniot "fusion/internal/iot"
 	"fusion/internal/utils"
 	"fusion/internal/version"
 )
@@ -29,7 +30,7 @@ const (
 )
 
 // parseFlags parses and validates command-line flags.
-func parseFlags() *api.AppConfig {
+func parseFlags() (*api.AppConfig, *fusioniot.Config) {
 	versionFlag := flag.Bool("version", false, "Show version information")
 	//On the hardware, we no longer pass in the IP address, instead we pass in the interface name
 	bindAddr := flag.String("bind-addr", "0.0.0.0", "Bind address for cluster communication")
@@ -64,38 +65,28 @@ func parseFlags() *api.AppConfig {
 		}
 	}
 
-	// IoT environment overrides
-	if envVal := os.Getenv("FUSION_IOT_ENABLED"); envVal != "" {
-		if envVal == "1" || strings.EqualFold(envVal, "true") {
-			*iotEnabled = true
-		}
-	}
-	if envVal := os.Getenv("FUSION_IOT_ENDPOINT"); envVal != "" {
-		*iotEndpoint = envVal
-	}
-
-	if envVal := os.Getenv("FUSION_IOT_TOPIC_PREFIX"); envVal != "" {
-		*iotTopicPrefix = envVal
-	}
-
 	if *versionFlag {
 		// This must be a log.Printf. The server logger is not running yet.
 		log.Printf("Version: %s\nCommit: %s\nBuild Time: %s\n", version.Version, version.Commit, version.BuildTime)
 		os.Exit(0)
 	}
 
+	nodeName := createUniqueNodeName(baseName)
+
 	return &api.AppConfig{
-		NodeName:       createUniqueNodeName(baseName),
-		BindAddr:       *bindAddr,
-		BindPort:       *bindPort,
-		NetIface:       *netIface,
-		Local:          *local,
-		Verbose:        *verbose,
-		Profile:        *profile,
-		IoTEnabled:     *iotEnabled,
-		IoTEndpoint:    *iotEndpoint,
-		IoTTopicPrefix: *iotTopicPrefix,
-	}
+			NodeName: nodeName,
+			BindAddr: *bindAddr,
+			BindPort: *bindPort,
+			NetIface: *netIface,
+			Local:    *local,
+			Verbose:  *verbose,
+			Profile:  *profile,
+		}, &fusioniot.Config{
+			Enabled:     *iotEnabled,
+			Endpoint:    *iotEndpoint,
+			ClientID:    nodeName,
+			TopicPrefix: *iotTopicPrefix,
+		}
 }
 
 // createUniqueNodeName creates a unique name using current time and a random number
@@ -113,9 +104,9 @@ func main() {
 		}
 	}()
 
-	config := parseFlags()
+	appConfig, iotConfig := parseFlags()
 
-	if config.Profile {
+	if appConfig.Profile {
 		// Create profile dump
 		timestamp := time.Now().Format("20060102_150405")
 		profilePath := filepath.Join("/tmp", fmt.Sprintf("fusion_server_cpu_%s.prof", timestamp))
@@ -136,7 +127,7 @@ func main() {
 		defer pprof.StopCPUProfile()
 	}
 
-	app := app.NewApp(config)
+	app := app.NewApp(appConfig, iotConfig)
 	defer app.Close()
 
 	ctx, cancel := context.WithCancel(context.Background())
