@@ -257,3 +257,8 @@ Run a subset:
 ./scripts/multipass/run-tests --snapshot
 ```
 
+Run UDP chaos mesh test:
+
+```bash
+./scripts/multipass/run-tests --udp-chaos
+```
