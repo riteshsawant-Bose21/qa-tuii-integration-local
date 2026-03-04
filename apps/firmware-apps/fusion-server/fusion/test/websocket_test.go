@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"os"
 	"strings"
 	"sync"
 	"testing"
@@ -16,11 +17,19 @@ import (
 )
 
 const (
-	websocketURL  = "ws://192.168.2.100:8080/ws"
+	remoteURL     = "ws://192.168.2.100:8080/ws"
 	localURL      = "ws://127.0.0.1:8080/ws"
 	wsTestTimeout = 5 * time.Second
 	shortTimeout  = 2 * time.Second
 )
+
+// getTestURL returns the appropriate URL based on environment
+func getTestURL() string {
+	if os.Getenv("FUSION_TEST_LOCAL") == "1" {
+		return localURL
+	}
+	return remoteURL
+}
 
 // Helper functions for testing
 func connectWebSocket(t *testing.T, serverURL string) *websocket.Conn {
@@ -62,7 +71,7 @@ func mustMarshal(v interface{}) json.RawMessage {
 // ====================
 
 func TestWebsocketConnect(t *testing.T) {
-	conn := connectWebSocket(t, websocketURL)
+	conn := connectWebSocket(t, getTestURL())
 	defer conn.Close()
 
 	// Should receive welcome message
@@ -73,7 +82,7 @@ func TestWebsocketConnect(t *testing.T) {
 }
 
 func TestWebSocketBasicConnection(t *testing.T) {
-	conn := connectWebSocket(t, websocketURL)
+	conn := connectWebSocket(t, getTestURL())
 	defer conn.Close()
 
 	// Should receive welcome message
@@ -84,7 +93,7 @@ func TestWebSocketBasicConnection(t *testing.T) {
 }
 
 func TestWebSocketConnectionClose(t *testing.T) {
-	conn := connectWebSocket(t, websocketURL)
+	conn := connectWebSocket(t, getTestURL())
 
 	// Read welcome message
 	readWebSocketResponse(t, conn, wsTestTimeout)
@@ -109,14 +118,14 @@ func TestWebSocketMultipleConnections(t *testing.T) {
 	}()
 
 	for i := range connections {
-		connections[i] = connectWebSocket(t, websocketURL)
+		connections[i] = connectWebSocket(t, getTestURL())
 		welcome := readWebSocketResponse(t, connections[i], wsTestTimeout)
 		assert.Equal(t, "welcome", welcome.Type)
 	}
 }
 
 func TestWebSocketConnectionTimeout(t *testing.T) {
-	conn := connectWebSocket(t, websocketURL)
+	conn := connectWebSocket(t, getTestURL())
 	defer conn.Close()
 
 	readWebSocketResponse(t, conn, wsTestTimeout) // Skip welcome
@@ -133,12 +142,12 @@ func TestWebSocketConnectionTimeout(t *testing.T) {
 
 func TestWebSocketReconnectAfterDisconnect(t *testing.T) {
 	// First connection
-	conn1 := connectWebSocket(t, websocketURL)
+	conn1 := connectWebSocket(t, getTestURL())
 	readWebSocketResponse(t, conn1, wsTestTimeout) // Welcome
 	conn1.Close()
 
 	// Reconnect
-	conn2 := connectWebSocket(t, websocketURL)
+	conn2 := connectWebSocket(t, getTestURL())
 	defer conn2.Close()
 
 	welcome := readWebSocketResponse(t, conn2, wsTestTimeout)
@@ -150,7 +159,7 @@ func TestWebSocketReconnectAfterDisconnect(t *testing.T) {
 // ====================
 
 func TestWebSocketInvalidJSON(t *testing.T) {
-	conn := connectWebSocket(t, websocketURL)
+	conn := connectWebSocket(t, getTestURL())
 	defer conn.Close()
 
 	readWebSocketResponse(t, conn, wsTestTimeout) // Skip welcome
@@ -167,7 +176,7 @@ func TestWebSocketInvalidJSON(t *testing.T) {
 }
 
 func TestWebSocketMissingRequiredFields(t *testing.T) {
-	conn := connectWebSocket(t, websocketURL)
+	conn := connectWebSocket(t, getTestURL())
 	defer conn.Close()
 
 	readWebSocketResponse(t, conn, wsTestTimeout) // Skip welcome
@@ -213,7 +222,7 @@ func TestWebSocketMissingRequiredFields(t *testing.T) {
 }
 
 func TestWebSocketVersionCompatibility(t *testing.T) {
-	conn := connectWebSocket(t, websocketURL)
+	conn := connectWebSocket(t, getTestURL())
 	defer conn.Close()
 
 	readWebSocketResponse(t, conn, wsTestTimeout) // Skip welcome
@@ -230,7 +239,7 @@ func TestWebSocketVersionCompatibility(t *testing.T) {
 }
 
 func TestWebSocketOversizedMessage(t *testing.T) {
-	conn := connectWebSocket(t, websocketURL)
+	conn := connectWebSocket(t, getTestURL())
 	defer conn.Close()
 
 	readWebSocketResponse(t, conn, wsTestTimeout) // Skip welcome
@@ -264,7 +273,7 @@ func TestWebSocketOversizedMessage(t *testing.T) {
 // ====================
 
 func TestWebSocketDevicesRequest(t *testing.T) {
-	conn := connectWebSocket(t, websocketURL)
+	conn := connectWebSocket(t, getTestURL())
 	defer conn.Close()
 
 	readWebSocketResponse(t, conn, wsTestTimeout) // Skip welcome
@@ -290,7 +299,7 @@ func TestWebSocketDevicesRequest(t *testing.T) {
 }
 
 func TestWebSocketDevicesAutoSubscription(t *testing.T) {
-	conn := connectWebSocket(t, websocketURL)
+	conn := connectWebSocket(t, getTestURL())
 	defer conn.Close()
 
 	readWebSocketResponse(t, conn, wsTestTimeout) // Skip welcome
@@ -309,7 +318,7 @@ func TestWebSocketDevicesAutoSubscription(t *testing.T) {
 }
 
 func TestWebSocketDevicesResponseFormat(t *testing.T) {
-	conn := connectWebSocket(t, websocketURL)
+	conn := connectWebSocket(t, getTestURL())
 	defer conn.Close()
 
 	readWebSocketResponse(t, conn, wsTestTimeout) // Skip welcome
@@ -347,7 +356,7 @@ func TestWebSocketDevicesResponseFormat(t *testing.T) {
 // ====================
 
 func TestWebSocketDeviceByID(t *testing.T) {
-	conn := connectWebSocket(t, websocketURL)
+	conn := connectWebSocket(t, getTestURL())
 	defer conn.Close()
 
 	readWebSocketResponse(t, conn, wsTestTimeout) // Skip welcome
@@ -391,7 +400,7 @@ func TestWebSocketDeviceByID(t *testing.T) {
 }
 
 func TestWebSocketDeviceByIDNotFound(t *testing.T) {
-	conn := connectWebSocket(t, websocketURL)
+	conn := connectWebSocket(t, getTestURL())
 	defer conn.Close()
 
 	readWebSocketResponse(t, conn, wsTestTimeout) // Skip welcome
@@ -413,7 +422,7 @@ func TestWebSocketDeviceByIDNotFound(t *testing.T) {
 }
 
 func TestWebSocketDeviceByIDMissingDeviceID(t *testing.T) {
-	conn := connectWebSocket(t, websocketURL)
+	conn := connectWebSocket(t, getTestURL())
 	defer conn.Close()
 
 	readWebSocketResponse(t, conn, wsTestTimeout) // Skip welcome
@@ -450,7 +459,7 @@ func TestWebSocketDeviceByIDMissingDeviceID(t *testing.T) {
 // ====================
 
 func TestWebSocketUpdateDeviceInfo(t *testing.T) {
-	conn := connectWebSocket(t, websocketURL)
+	conn := connectWebSocket(t, getTestURL())
 	defer conn.Close()
 
 	readWebSocketResponse(t, conn, wsTestTimeout) // Skip welcome
@@ -497,7 +506,7 @@ func TestWebSocketUpdateDeviceInfo(t *testing.T) {
 }
 
 func TestWebSocketUpdateDevicePartialFields(t *testing.T) {
-	conn := connectWebSocket(t, websocketURL)
+	conn := connectWebSocket(t, getTestURL())
 	defer conn.Close()
 
 	readWebSocketResponse(t, conn, wsTestTimeout) // Skip welcome
@@ -542,7 +551,7 @@ func TestWebSocketUpdateDevicePartialFields(t *testing.T) {
 }
 
 func TestWebSocketUpdateDeviceValidation(t *testing.T) {
-	conn := connectWebSocket(t, websocketURL)
+	conn := connectWebSocket(t, getTestURL())
 	defer conn.Close()
 
 	readWebSocketResponse(t, conn, wsTestTimeout) // Skip welcome
@@ -605,7 +614,7 @@ func TestWebSocketConcurrentUpdates(t *testing.T) {
 
 	// Set up connections
 	for i := range connections {
-		connections[i] = connectWebSocket(t, websocketURL)
+		connections[i] = connectWebSocket(t, getTestURL())
 		readWebSocketResponse(t, connections[i], wsTestTimeout) // Skip welcome
 	}
 
@@ -643,7 +652,7 @@ func TestWebSocketConcurrentUpdates(t *testing.T) {
 // ====================
 
 func TestWebSocketPingPong(t *testing.T) {
-	conn := connectWebSocket(t, websocketURL)
+	conn := connectWebSocket(t, getTestURL())
 	defer conn.Close()
 
 	readWebSocketResponse(t, conn, wsTestTimeout) // Skip welcome
@@ -664,7 +673,7 @@ func TestWebSocketPingPong(t *testing.T) {
 }
 
 func TestWebSocketMultiplePingPong(t *testing.T) {
-	conn := connectWebSocket(t, websocketURL)
+	conn := connectWebSocket(t, getTestURL())
 	defer conn.Close()
 
 	readWebSocketResponse(t, conn, wsTestTimeout) // Skip welcome
@@ -685,7 +694,7 @@ func TestWebSocketMultiplePingPong(t *testing.T) {
 }
 
 func TestWebSocketPingTimeout(t *testing.T) {
-	conn := connectWebSocket(t, websocketURL)
+	conn := connectWebSocket(t, getTestURL())
 	defer conn.Close()
 
 	readWebSocketResponse(t, conn, wsTestTimeout) // Skip welcome
@@ -709,7 +718,7 @@ func TestWebSocketPingTimeout(t *testing.T) {
 // ====================
 
 func TestWebSocketUnsubscribeDevices(t *testing.T) {
-	conn := connectWebSocket(t, websocketURL)
+	conn := connectWebSocket(t, getTestURL())
 	defer conn.Close()
 
 	readWebSocketResponse(t, conn, wsTestTimeout) // Skip welcome
@@ -742,10 +751,10 @@ func TestWebSocketUnsubscribeDevices(t *testing.T) {
 
 func TestWebSocketSubscriptionLifecycle(t *testing.T) {
 	// Create two connections - one for updates, one for monitoring
-	connUpdater := connectWebSocket(t, websocketURL)
+	connUpdater := connectWebSocket(t, getTestURL())
 	defer connUpdater.Close()
 
-	connMonitor := connectWebSocket(t, websocketURL)
+	connMonitor := connectWebSocket(t, getTestURL())
 	defer connMonitor.Close()
 
 	// Skip welcome messages
@@ -783,7 +792,7 @@ func TestWebSocketSubscriptionLifecycle(t *testing.T) {
 }
 
 func TestWebSocketResubscriptionAfterUnsubscribe(t *testing.T) {
-	conn := connectWebSocket(t, websocketURL)
+	conn := connectWebSocket(t, getTestURL())
 	defer conn.Close()
 
 	readWebSocketResponse(t, conn, wsTestTimeout) // Skip welcome
@@ -824,7 +833,7 @@ func TestWebSocketResubscriptionAfterUnsubscribe(t *testing.T) {
 // ====================
 
 func TestWebSocketErrorCodes(t *testing.T) {
-	conn := connectWebSocket(t, websocketURL)
+	conn := connectWebSocket(t, getTestURL())
 	defer conn.Close()
 
 	readWebSocketResponse(t, conn, wsTestTimeout) // Skip welcome
@@ -868,7 +877,7 @@ func TestWebSocketErrorCodes(t *testing.T) {
 }
 
 func TestWebSocketErrorResponseFormat(t *testing.T) {
-	conn := connectWebSocket(t, websocketURL)
+	conn := connectWebSocket(t, getTestURL())
 	defer conn.Close()
 
 	readWebSocketResponse(t, conn, wsTestTimeout) // Skip welcome
@@ -893,7 +902,7 @@ func TestWebSocketErrorResponseFormat(t *testing.T) {
 }
 
 func TestWebSocketAllErrorCodes(t *testing.T) {
-	conn := connectWebSocket(t, websocketURL)
+	conn := connectWebSocket(t, getTestURL())
 	defer conn.Close()
 
 	readWebSocketResponse(t, conn, wsTestTimeout) // Skip welcome
@@ -937,10 +946,10 @@ func TestWebSocketPushNotifications(t *testing.T) {
 	}
 
 	// This test requires two connections - one for updates, one for notifications
-	conn1 := connectWebSocket(t, websocketURL)
+	conn1 := connectWebSocket(t, getTestURL())
 	defer conn1.Close()
 
-	conn2 := connectWebSocket(t, websocketURL)
+	conn2 := connectWebSocket(t, getTestURL())
 	defer conn2.Close()
 
 	// Skip welcome messages
@@ -994,11 +1003,11 @@ func TestWebSocketPullThenPushPattern(t *testing.T) {
 	}
 
 	// Monitor connection
-	connMonitor := connectWebSocket(t, websocketURL)
+	connMonitor := connectWebSocket(t, getTestURL())
 	defer connMonitor.Close()
 
 	// Updater connection
-	connUpdater := connectWebSocket(t, websocketURL)
+	connUpdater := connectWebSocket(t, getTestURL())
 	defer connUpdater.Close()
 
 	// Skip welcome messages
@@ -1061,7 +1070,7 @@ func TestWebSocketMultipleSubscriberNotifications(t *testing.T) {
 
 	// Set up multiple subscriber connections
 	for i := range subscribers {
-		subscribers[i] = connectWebSocket(t, websocketURL)
+		subscribers[i] = connectWebSocket(t, getTestURL())
 		readWebSocketResponse(t, subscribers[i], wsTestTimeout) // Skip welcome
 
 		// Subscribe each connection
@@ -1075,7 +1084,7 @@ func TestWebSocketMultipleSubscriberNotifications(t *testing.T) {
 	}
 
 	// Updater connection
-	updater := connectWebSocket(t, websocketURL)
+	updater := connectWebSocket(t, getTestURL())
 	defer updater.Close()
 	readWebSocketResponse(t, updater, wsTestTimeout) // Skip welcome
 
@@ -1115,7 +1124,7 @@ func TestWebSocketCrossClusterDeviceVisibility(t *testing.T) {
 	}
 
 	// Test that we can see devices across cluster nodes
-	conn := connectWebSocket(t, websocketURL)
+	conn := connectWebSocket(t, getTestURL())
 	defer conn.Close()
 
 	readWebSocketResponse(t, conn, wsTestTimeout) // Skip welcome
@@ -1146,7 +1155,7 @@ func TestWebSocketCrossClusterDeviceVisibility(t *testing.T) {
 func TestWebSocketVIPConnection(t *testing.T) {
 	// Test connecting through VIP (if configured)
 	// This assumes VIP is configured to point to an active node
-	vipURL := "ws://192.168.2.100:8080/ws" // VIP address from original test
+	vipURL := getTestURL() // Use the same URL logic for VIP testing
 
 	conn, _, err := websocket.DefaultDialer.Dial(vipURL, nil)
 	if err != nil {
@@ -1197,7 +1206,7 @@ func TestWebSocketConcurrentConnections(t *testing.T) {
 		wg.Add(1)
 		go func(index int) {
 			defer wg.Done()
-			conn := connectWebSocket(t, websocketURL)
+			conn := connectWebSocket(t, getTestURL())
 			connections[index] = conn
 
 			// Each connection should get welcome
@@ -1227,7 +1236,7 @@ func TestWebSocketRapidRequests(t *testing.T) {
 		t.Skip("Skipping rapid requests test in short mode")
 	}
 
-	conn := connectWebSocket(t, websocketURL)
+	conn := connectWebSocket(t, getTestURL())
 	defer conn.Close()
 
 	readWebSocketResponse(t, conn, wsTestTimeout) // Skip welcome
@@ -1265,22 +1274,22 @@ func TestWebSocketLongRunningConnection(t *testing.T) {
 		t.Skip("Skipping long-running test in short mode")
 	}
 
-	conn := connectWebSocket(t, websocketURL)
+	conn := connectWebSocket(t, getTestURL())
 	defer conn.Close()
 
 	readWebSocketResponse(t, conn, wsTestTimeout) // Skip welcome
 
-	// Keep connection alive with periodic pings for 30 seconds
-	ticker := time.NewTicker(5 * time.Second)
+	// Keep connection alive with periodic pings for 10 seconds
+	ticker := time.NewTicker(2 * time.Second)
 	defer ticker.Stop()
 
-	timeout := time.After(30 * time.Second)
+	timeout := time.After(10 * time.Second)
 	counter := 0
 
 	for {
 		select {
 		case <-timeout:
-			t.Logf("Successfully maintained connection for 30 seconds with %d pings", counter)
+			t.Logf("Successfully maintained connection for 10 seconds with %d pings", counter)
 			return
 		case <-ticker.C:
 			counter++

@@ -286,15 +286,10 @@ When devices are updated anywhere in the cluster, all subscribed WebSocket clien
   "status": "event",
   "message": "Device fusion-1 info_updated",
   "data": {
-    "device_id": "fusion-1",
-    "update_type": "info_updated",
-    "device_data": {
       "address": "192.168.2.100",
       "id": "fusion-1",
       "name": "Updated Device Name",
       "location": "Building A - Lobby",
-      "last_updated": "2026-02-28T08:20:57Z"
-    }
   },
   "timestamp": "2026-02-28T08:20:57Z"
 }
@@ -315,9 +310,17 @@ The WebSocket server uses basic configuration:
 ## Testing
 
 ### Unit Tests
+
+Multipass
 ```bash
 cd fusion/test
 go test -v websocket_test.go
+```
+
+Local 
+```bash
+cd fusion/test
+FUSION_TEST_LOCAL=1 go test -v ./test/websocket_test.go -timeout 60s
 ```
 
 ### Test Coverage
