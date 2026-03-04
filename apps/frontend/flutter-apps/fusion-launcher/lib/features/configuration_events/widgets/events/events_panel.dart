@@ -21,7 +21,8 @@ class EventsPanel extends StatelessWidget {
   Widget build(BuildContext context) {
     return BlocBuilder<ConfigEventsViewmodel, ConfigEventsState>(
       builder: (BuildContext context, ConfigEventsState state) {
-        final ConfigEventsViewmodel cubit = context.read<ConfigEventsViewmodel>();
+        final ConfigEventsViewmodel cubit =
+            context.read<ConfigEventsViewmodel>();
 
         return Column(
           children: <Widget>[
@@ -33,7 +34,11 @@ class EventsPanel extends StatelessWidget {
                   cubit.addEvent();
                   FusionToast.success(context, message: "Event created");
                 },
-                child: Icon(Icons.add_sharp, size: 16, color: context.colorScheme.iconWhite),
+                child: Icon(
+                  Icons.add_sharp,
+                  size: 16,
+                  color: context.colorScheme.iconWhite,
+                ),
               ),
             ),
 
@@ -47,9 +52,18 @@ class EventsPanel extends StatelessWidget {
                     bottomRight: Radius.circular(12),
                   ),
                   border: Border(
-                    bottom: BorderSide(color: context.colorScheme.elevation2, width: 1),
-                    left: BorderSide(color: context.colorScheme.elevation2, width: 1),
-                    right: BorderSide(color: context.colorScheme.elevation2, width: 1),
+                    bottom: BorderSide(
+                      color: context.colorScheme.elevation2,
+                      width: 1,
+                    ),
+                    left: BorderSide(
+                      color: context.colorScheme.elevation2,
+                      width: 1,
+                    ),
+                    right: BorderSide(
+                      color: context.colorScheme.elevation2,
+                      width: 1,
+                    ),
                   ),
                   color: Theme.of(context).colorScheme.elevation1,
                 ),
@@ -62,7 +76,11 @@ class EventsPanel extends StatelessWidget {
     );
   }
 
-  Widget _buildEventsList(BuildContext context, ConfigEventsState state, ConfigEventsViewmodel cubit) {
+  Widget _buildEventsList(
+    BuildContext context,
+    ConfigEventsState state,
+    ConfigEventsViewmodel cubit,
+  ) {
     return switch (state) {
       EventsInitial() => _buildEmptyState(context),
       EventsLoading() => const Center(child: CircularProgressIndicator()),
@@ -98,7 +116,11 @@ class EventsPanel extends StatelessWidget {
     );
   }
 
-  Widget _buildLoadedState(BuildContext context, EventsLoaded state, ConfigEventsViewmodel cubit) {
+  Widget _buildLoadedState(
+    BuildContext context,
+    EventsLoaded state,
+    ConfigEventsViewmodel cubit,
+  ) {
     final List<FusionEvent> eventList = state.events;
 
     if (eventList.isEmpty) {
@@ -144,10 +166,12 @@ class CreateSnapshotsOrScenesWidget extends StatefulWidget {
   });
 
   @override
-  State<CreateSnapshotsOrScenesWidget> createState() => CreateSnapshotsOrScenesWidgetState();
+  State<CreateSnapshotsOrScenesWidget> createState() =>
+      CreateSnapshotsOrScenesWidgetState();
 }
 
-class CreateSnapshotsOrScenesWidgetState extends State<CreateSnapshotsOrScenesWidget> {
+class CreateSnapshotsOrScenesWidgetState
+    extends State<CreateSnapshotsOrScenesWidget> {
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -178,6 +202,7 @@ class CreateSnapshotsOrScenesWidgetState extends State<CreateSnapshotsOrScenesWi
 
           /// Enter Name
           FusionTextField(
+            semanticFieldId: '${widget.headerText}name',
             controller: widget.nameController,
             hintText: "Enter ${widget.headerText} name",
             decoration: FusionInputDecoration.fusionDense(
@@ -195,9 +220,12 @@ class CreateSnapshotsOrScenesWidgetState extends State<CreateSnapshotsOrScenesWi
             children: <Widget>[
               Flexible(
                 child: FusionOutlinedButton(
+                  accessLabel: 'event_panel_cancel',
                   width: double.infinity,
                   label: "Cancel",
-                  textStyle: Theme.of(context).textTheme.labelLarge?.copyWith(fontSize: 10),
+                  textStyle: Theme.of(
+                    context,
+                  ).textTheme.labelLarge?.copyWith(fontSize: 10),
                   onTap: () {
                     widget.onCancel.call();
                   },
@@ -206,8 +234,12 @@ class CreateSnapshotsOrScenesWidgetState extends State<CreateSnapshotsOrScenesWi
               const SizedBox(width: 8),
               Flexible(
                 child: FusionButton(
+                  accessLabel: 'event_panel_create',
                   width: double.infinity,
-                  textStyle: Theme.of(context).textTheme.labelLarge?.copyWith(fontSize: 10, color: context.colorScheme.primaryBlack),
+                  textStyle: Theme.of(context).textTheme.labelLarge?.copyWith(
+                    fontSize: 10,
+                    color: context.colorScheme.primaryBlack,
+                  ),
 
                   label: "Create",
                   isActive: widget.nameController.text.trim().isNotEmpty,

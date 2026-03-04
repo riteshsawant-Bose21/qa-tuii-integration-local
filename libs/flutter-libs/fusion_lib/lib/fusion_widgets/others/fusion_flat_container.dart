@@ -39,16 +39,13 @@ class FusionFlatContainer extends StatelessWidget {
         padding: padding ?? EdgeInsets.all(16),
         decoration: BoxDecoration(
           color: color ?? context.colorScheme.elevation1,
-
           borderRadius: BorderRadius.circular(borderRadius),
           border: Border.all(
-            color: borderColor ?? context.colorScheme.textGrey,
+            color: borderColor ?? context.colorScheme.strokeLight,
             width: 1,
           ),
         ),
-        child: Center(
-          child: child,
-        ),
+        child: child,
       ),
     );
   }

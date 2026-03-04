@@ -999,19 +999,14 @@ class _ZoneCardState extends State<ZoneCard> {
           mainAxisSize: MainAxisSize.min,
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: <Widget>[
-            SemanticHelper.container(
-              testId: SemanticHelper.createTestId(
-                SemanticTypes.container,
-                FusionTestKeys.instance.functionselecttext,
-              ),
-              child: Expanded(
-                child: FusionAppText(
-                  text: selectedFunction?.displayName ?? '',
-                  maxLine: 1,
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w400,
-                  ),
+            Expanded(
+              child: FusionAppText(
+                semanticId: FusionTestKeys.instance.functionselecttext,
+                text: selectedFunction?.displayName ?? '',
+                maxLine: 1,
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w400,
                 ),
               ),
             ),

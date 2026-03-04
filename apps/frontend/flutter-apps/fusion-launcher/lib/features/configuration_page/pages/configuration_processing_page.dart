@@ -1076,19 +1076,15 @@ class _SourceSetCreationWidgetState extends State<_SourceSetCreationWidget> {
             const SizedBox(height: 12),
 
             /// Source Selection Label
-            SemanticHelper.container(
-              testId: SemanticHelper.createTestId(
-                SemanticTypes.container,
-                FusionTestKeys.instance.srcselectionlabel,
-              ),
-              child: FusionAppText(
-                text: 'Select sources',
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w500,
-                ),
+            FusionAppText(
+              semanticId: 'srcselectionlabel',
+              text: 'Select sources',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
               ),
             ),
+
             const SizedBox(height: 8),
 
             /// Source Selection Dropdown
@@ -1150,21 +1146,17 @@ class _SourceSetCreationWidgetState extends State<_SourceSetCreationWidget> {
                                       mainAxisAlignment:
                                           MainAxisAlignment.spaceBetween,
                                       children: <Widget>[
-                                        SemanticHelper.container(
-                                          testId: SemanticHelper.createTestId(
-                                            SemanticTypes.dropdown,
-                                            FusionTestKeys
-                                                .instance
-                                                .srccreationdropdownitemheader,
-                                          ),
-                                          child: FusionAppText(
-                                            text: "Select source",
-                                            style: Theme.of(
-                                              context,
-                                            ).textTheme.bodySmall?.copyWith(
-                                              fontSize: 12,
-                                              fontWeight: FontWeight.w600,
-                                            ),
+                                        FusionAppText(
+                                          semanticId:
+                                              FusionTestKeys
+                                                  .instance
+                                                  .srccreationdropdownitemheader,
+                                          text: "Select source",
+                                          style: Theme.of(
+                                            context,
+                                          ).textTheme.bodySmall?.copyWith(
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.w600,
                                           ),
                                         ),
                                         SemanticHelper.button(
@@ -1424,26 +1416,21 @@ class _SourceSetCreationWidgetState extends State<_SourceSetCreationWidget> {
                     child: Row(
                       children: <Widget>[
                         Expanded(
-                          child: SemanticHelper.container(
-                            testId: SemanticHelper.createTestId(
-                              SemanticTypes.container,
-                              FusionTestKeys.instance.srcdropdowntxt,
-                            ),
-                            child: FusionAppText(
-                              text:
+                          child: FusionAppText(
+                            semanticId: FusionTestKeys.instance.srcdropdowntxt,
+                            text:
+                                widget.selectedSources.isEmpty
+                                    ? "Select Sources"
+                                    : "${widget.selectedSources.length} source${widget.selectedSources.length > 1 ? 's' : ''} selected",
+                            style: Theme.of(
+                              context,
+                            ).textTheme.bodySmall?.copyWith(
+                              color:
                                   widget.selectedSources.isEmpty
-                                      ? "Select Sources"
-                                      : "${widget.selectedSources.length} source${widget.selectedSources.length > 1 ? 's' : ''} selected",
-                              style: Theme.of(
-                                context,
-                              ).textTheme.bodySmall?.copyWith(
-                                color:
-                                    widget.selectedSources.isEmpty
-                                        ? context.colorScheme.textSecondary
-                                        : Theme.of(
-                                          context,
-                                        ).textTheme.bodySmall?.color,
-                              ),
+                                      ? context.colorScheme.textSecondary
+                                      : Theme.of(
+                                        context,
+                                      ).textTheme.bodySmall?.color,
                             ),
                           ),
                         ),
