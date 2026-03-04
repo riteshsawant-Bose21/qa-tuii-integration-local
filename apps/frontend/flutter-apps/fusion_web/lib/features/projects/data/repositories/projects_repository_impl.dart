@@ -90,11 +90,11 @@ class ProjectsRepositoryImpl implements ProjectsRepository {
   @override
   Future<void> addUserToProject({
     required String projectId,
-    required String userId,
+    required String userEmail,
   }) async {
     await remoteDataSource.addUserToProject(
       projectId: projectId,
-      userId: userId,
+      userEmail: userEmail,
     );
   }
 }

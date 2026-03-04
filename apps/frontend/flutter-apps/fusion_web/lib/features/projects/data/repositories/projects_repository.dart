@@ -12,6 +12,6 @@ abstract class ProjectsRepository {
   Future<List<UserModel>> getOrganisationUsers();
   Future<void> addUserToProject({
     required String projectId,
-    required String userId,
+    required String userEmail,
   });
 }

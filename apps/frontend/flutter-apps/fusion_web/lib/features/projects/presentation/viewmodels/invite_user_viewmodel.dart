@@ -23,9 +23,9 @@ class InviteUserCubit extends BaseViewModel<List<UserModel>> {
   /// Invite selected users
   Future<void> inviteUsers({
     required String projectId,
-    required List<String> userIds,
+    required List<String> userEmails,
   }) async {
-    if (userIds.isEmpty) {
+    if (userEmails.isEmpty) {
       setError('Please select at least one user');
       return;
     }
@@ -33,10 +33,10 @@ class InviteUserCubit extends BaseViewModel<List<UserModel>> {
     try {
       setLoading();
 
-      for (final userId in userIds) {
+      for (final userEmail in userEmails) {
         await repository.addUserToProject(
           projectId: projectId,
-          userId: userId,
+          userEmail: userEmail,
         );
       }
 

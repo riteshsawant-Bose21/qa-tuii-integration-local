@@ -13,7 +13,7 @@ abstract class ProjectsDataSource {
 
   Future<void> addUserToProject({
     required String projectId,
-    required String userId,
+    required String userEmail,
   });
 }
 
@@ -186,11 +186,11 @@ class ProjectsRemoteDataSource implements ProjectsDataSource {
   @override
   Future<void> addUserToProject({
     required String projectId,
-    required String userId,
+    required String userEmail,
   }) async {
     try {
-      await _apiService.post('projects/$projectId/users/$userId', {
-        "user_id": userId,
+      await _apiService.put('projects/$projectId/users/$userEmail', {
+        "user_email": userEmail,
       });
     } catch (e) {
       print('Add user to project error: $e');
@@ -271,7 +271,7 @@ class ProjectsLocalDataSource implements ProjectsDataSource {
   @override
   Future<void> addUserToProject({
     required String projectId,
-    required String userId,
+    required String userEmail,
   }) async {
     throw Exception('Not supported in local data source');
   }

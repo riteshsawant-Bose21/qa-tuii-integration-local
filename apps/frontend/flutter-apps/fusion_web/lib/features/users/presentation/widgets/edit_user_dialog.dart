@@ -197,7 +197,7 @@ class _EditUserDialogState extends State<EditUserDialog> {
                         children: [
                           Expanded(
                             child: DropdownButtonFormField<String>(
-                              value: _selectedRole,
+                              initialValue: _selectedRole,
                               decoration: InputDecoration(
                                 labelText: 'Role *',
                                 labelStyle: GoogleFonts.montserrat(),
@@ -233,7 +233,7 @@ class _EditUserDialogState extends State<EditUserDialog> {
                           const SizedBox(width: 16),
                           Expanded(
                             child: DropdownButtonFormField<UserStatus>(
-                              value: _selectedStatus,
+                              initialValue: _selectedStatus,
                               decoration: InputDecoration(
                                 labelText: 'Status *',
                                 labelStyle: GoogleFonts.montserrat(),
