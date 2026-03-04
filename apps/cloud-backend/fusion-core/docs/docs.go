@@ -210,7 +210,7 @@ const docTemplate = `{
                     }
                 ],
                 "responses": {
-                    "202": {
+                    "204": {
                         "description": "Update status logged successfully"
                     },
                     "400": {
@@ -280,9 +280,9 @@ const docTemplate = `{
                 }
             }
         },
-        "/firmware/bundles/{bundleId}/download": {
+        "/firmware/bundles/{bundleID}/download": {
             "get": {
-                "description": "Generates a presigned S3 URL for downloading a specific firmware bundle artifact. The URL is valid for 5 hours and includes the file checksum for integrity verification.",
+                "description": "Generates a presigned S3 URL for downloading a specific firmware bundle artifact. The URL is valid for 5 hours and includes the file checksum for integrity verification. Only approved bundles can be downloaded.",
                 "consumes": [
                     "application/json"
                 ],
@@ -296,8 +296,8 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "Unique identifier of the firmware bundle",
-                        "name": "bundleId",
+                        "description": "Unique identifier of the firmware bundle (UUID format)",
+                        "name": "bundleID",
                         "in": "path",
                         "required": true
                     }
@@ -310,7 +310,13 @@ const docTemplate = `{
                         }
                     },
                     "400": {
-                        "description": "Missing or invalid bundleId",
+                        "description": "Missing or invalid bundleID",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Bundle not approved for download",
                         "schema": {
                             "$ref": "#/definitions/types.ErrorResponse"
                         }

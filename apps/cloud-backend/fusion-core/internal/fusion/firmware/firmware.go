@@ -192,6 +192,11 @@ func (s *Service) GetBundleDownloadURL(ctx context.Context, bundleID string, log
 		return nil, errorutil.ErrBundleNotFound
 	}
 
+	// Only approved bundles can be downloaded
+	if !bundle.IsApproved {
+		return nil, errorutil.ErrBundleNotApproved
+	}
+
 	// Generate S3 object key
 	objectKey, err := s.generateBundleArtifactKey(bundle.Version)
 	if err != nil {

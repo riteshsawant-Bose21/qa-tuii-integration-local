@@ -17,7 +17,7 @@ type FirmwareUpdateHandler struct {
 	firmware fusion.Firmware
 }
 
-// NewUserHandler creates a new user handler with the provided user service.
+// NewFirmwareUpdateHandler creates a new firmware update handler with the provided firmware service.
 func NewFirmwareUpdateHandler(firmware fusion.Firmware) *FirmwareUpdateHandler {
 	return &FirmwareUpdateHandler{
 		firmware: firmware,
@@ -36,33 +36,42 @@ func NewFirmwareUpdateHandler(firmware fusion.Firmware) *FirmwareUpdateHandler {
 // @Failure 400 {object} types.ErrorResponse "Invalid request payload or version already exists"
 // @Failure 500 {object} types.ErrorResponse "Internal server error"
 // @Router /firmware/bundles [post]
-func (h *FirmwareUpdateHandler) NotifyBundleUpload(ctx *gin.Context) {
+func (h *FirmwareUpdateHandler) NotifyBundleUpload(c *gin.Context) {
 	var payload types.NotifyBundleUploadPayload
-	loggerFromContext, exists := ctx.Get("logger")
+	loggerVal, exists := c.Get("logger")
 	if !exists {
-		response.InternalError(ctx)
+		response.InternalError(c)
 		return
 	}
-	logger := loggerFromContext.(*zap.Logger)
+	logger := loggerVal.(*zap.Logger)
 
-	if err := ctx.ShouldBindJSON(&payload); err != nil {
+	if err := c.ShouldBindJSON(&payload); err != nil {
 		logger.Error("Failed to bind NotifyBundleUpload payload", zap.Error(err))
-		response.BadRequest(ctx, "Invalid request payload: "+err.Error())
+		response.BadRequest(c, "Invalid request payload: "+err.Error())
 		return
 	}
 
-	bundleResp, err := h.firmware.NotifyBundleUpload(ctx, &payload, logger)
+	if err := validation.ValidateMainVersionFormat(payload.MinPrevVersion); err != nil {
+		response.BadRequest(c, "invalid min_required_prev_version: "+err.Error())
+		return
+	}
+	if err := validation.ValidateMainVersionFormat(payload.MinDesktopAppVersion); err != nil {
+		response.BadRequest(c, "invalid min_desktop_app_version: "+err.Error())
+		return
+	}
+
+	bundleResp, err := h.firmware.NotifyBundleUpload(c, &payload, logger)
 	if err != nil {
 		logger.Error("Failed to notify bundle upload", zap.Error(err))
 		if errors.Is(err, errorutil.ErrVersionExists) {
-			response.BadRequest(ctx, err.Error())
+			response.BadRequest(c, err.Error())
 			return
 		}
-		response.InternalError(ctx)
+		response.InternalError(c)
 		return
 	}
 
-	response.OK(ctx, bundleResp)
+	response.OK(c, bundleResp)
 }
 
 // ListBundles retrieves firmware bundles with pagination and filtering
@@ -79,26 +88,40 @@ func (h *FirmwareUpdateHandler) NotifyBundleUpload(ctx *gin.Context) {
 // @Failure 400 {object} types.ErrorResponse "Invalid query parameters"
 // @Failure 500 {object} types.ErrorResponse "Internal server error"
 // @Router /firmware/bundles [get]
-func (h *FirmwareUpdateHandler) ListBundles(ctx *gin.Context) {
-	page, _ := strconv.Atoi(ctx.DefaultQuery("page", "1"))
-	limit, _ := strconv.Atoi(ctx.DefaultQuery("limit", "10"))
+func (h *FirmwareUpdateHandler) ListBundles(c *gin.Context) {
+	pageStr := c.DefaultQuery("page", "1")
+	limitStr := c.DefaultQuery("limit", "10")
 
-	var isApproved *bool
-	isApprovedQuery, exists := ctx.GetQuery("is_approved")
-	if exists {
-		parsed, err := strconv.ParseBool(isApprovedQuery)
-		if err == nil {
-			isApproved = &parsed
-		}
-	}
-
-	resp, err := h.firmware.ListBundles(ctx, isApproved, page, limit)
-	if err != nil {
-		response.InternalError(ctx)
+	page, err := strconv.Atoi(pageStr)
+	if err != nil || page < 1 {
+		response.BadRequest(c, "invalid page parameter")
 		return
 	}
 
-	response.OK(ctx, resp)
+	limit, err := strconv.Atoi(limitStr)
+	if err != nil || limit < 1 || limit > 100 {
+		response.BadRequest(c, "invalid limit parameter (must be 1-100)")
+		return
+	}
+
+	var isApproved *bool
+	isApprovedQuery, exists := c.GetQuery("is_approved")
+	if exists {
+		parsed, err := strconv.ParseBool(isApprovedQuery)
+		if err != nil {
+			response.BadRequest(c, "invalid is_approved parameter (must be true or false)")
+			return
+		}
+		isApproved = &parsed
+	}
+
+	resp, err := h.firmware.ListBundles(c, isApproved, page, limit)
+	if err != nil {
+		response.InternalError(c)
+		return
+	}
+
+	response.OK(c, resp)
 }
 
 // ApproveBundle approves a firmware bundle
@@ -114,40 +137,40 @@ func (h *FirmwareUpdateHandler) ListBundles(ctx *gin.Context) {
 // @Failure 404 {object} types.ErrorResponse "Bundle not found"
 // @Failure 500 {object} types.ErrorResponse "Internal server error"
 // @Router /firmware/bundles/{bundleID}/approve [post]
-func (h *FirmwareUpdateHandler) ApproveBundle(ctx *gin.Context) {
-	bundleID := ctx.Param("bundleID")
-	if bundleID == "" {
-		response.BadRequest(ctx, "bundleID is required")
+func (h *FirmwareUpdateHandler) ApproveBundle(c *gin.Context) {
+	bundleID := c.Param("bundleID")
+	if !validation.IsValidUUID(bundleID) {
+		response.BadRequest(c, "invalid bundleID")
 		return
 	}
 
-	loggerFromContext, exists := ctx.Get("logger")
+	loggerVal, exists := c.Get("logger")
 	if !exists {
-		response.InternalError(ctx)
+		response.InternalError(c)
 		return
 	}
-	logger := loggerFromContext.(*zap.Logger)
+	logger := loggerVal.(*zap.Logger)
 
-	userAuth, exists := ctx.Get("user_auth")
+	userAuth, exists := c.Get("user_auth")
 	if !exists {
-		response.Unauthorized(ctx, errorutil.MsgUnauthorized)
+		response.Unauthorized(c, errorutil.MsgUnauthorized)
 		return
 	}
 	user := userAuth.(*types.UserAuthorizationResponse)
 	approvedBy := user.User.ID
 
-	err := h.firmware.ApproveBundle(ctx, bundleID, approvedBy, logger)
+	err := h.firmware.ApproveBundle(c, bundleID, approvedBy, logger)
 	if err != nil {
 		logger.Error("Failed to approve bundle", zap.String("bundleID", bundleID), zap.Error(err))
 		if errors.Is(err, errorutil.ErrBundleNotFound) {
-			response.NotFound(ctx, "Bundle not found")
+			response.NotFound(c, "Bundle not found")
 			return
 		}
-		response.InternalError(ctx)
+		response.InternalError(c)
 		return
 	}
 
-	response.NoContent(ctx)
+	response.NoContent(c)
 }
 
 // CheckForUpdate checks for available firmware updates for a device
@@ -184,61 +207,77 @@ func (h *FirmwareUpdateHandler) ApproveBundle(ctx *gin.Context) {
 // @Failure 400 {object} types.ErrorResponse "Invalid request payload"
 // @Failure 500 {object} types.ErrorResponse "Internal server error"
 // @Router /firmware/updates/check [get]
-func (h *FirmwareUpdateHandler) CheckForUpdate(ctx *gin.Context) {
+func (h *FirmwareUpdateHandler) CheckForUpdate(c *gin.Context) {
 	var payload types.CheckForUpdateRequest
-	loggerFromContext, exists := ctx.Get("logger")
+	loggerVal, exists := c.Get("logger")
 	if !exists {
-		response.InternalError(ctx)
+		response.InternalError(c)
 		return
 	}
-	logger := loggerFromContext.(*zap.Logger)
+	logger := loggerVal.(*zap.Logger)
 
-	if err := ctx.ShouldBindQuery(&payload); err != nil {
+	if err := c.ShouldBindQuery(&payload); err != nil {
 		logger.Error("Failed to bind CheckForUpdate query params", zap.Error(err))
-		response.BadRequest(ctx, "Invalid request parameters: "+err.Error())
+		response.BadRequest(c, "Invalid request parameters: "+err.Error())
 		return
 	}
 
-	updateResp, err := h.firmware.CheckForUpdate(ctx, &payload, logger)
+	// Validate version formats
+	if err := validation.ValidateFirmwareVersionFormat(payload.CurrentFirmwareVersion); err != nil {
+		response.BadRequest(c, "invalid current_firmware_version format: "+err.Error())
+		return
+	}
+	if err := validation.ValidateFirmwareVersionFormat(payload.CurrentDesktopAppVersion); err != nil {
+		response.BadRequest(c, "invalid current_desktop_app_version format: "+err.Error())
+		return
+	}
+
+	updateResp, err := h.firmware.CheckForUpdate(c, &payload, logger)
 	if err != nil {
 		logger.Error("Failed to check for update", zap.Error(err))
-		response.InternalError(ctx)
+		response.InternalError(c)
 		return
 	}
 
-	response.OK(ctx, updateResp)
+	response.OK(c, updateResp)
 }
 
 // GetBundleDownloadURL generates a presigned download URL for a firmware bundle
 // @Summary Get Firmware Bundle Download URL
-// @Description Generates a presigned S3 URL for downloading a specific firmware bundle artifact. The URL is valid for 5 hours and includes the file checksum for integrity verification.
+// @Description Generates a presigned S3 URL for downloading a specific firmware bundle artifact. The URL is valid for 5 hours and includes the file checksum for integrity verification. Only approved bundles can be downloaded.
 // @Tags Firmware Update - Client API
 // @Accept json
 // @Produce json
-// @Param bundleId path string true "Unique identifier of the firmware bundle"
+// @Param bundleID path string true "Unique identifier of the firmware bundle (UUID format)"
 // @Success 200 {object} types.DownloadArtifactResponse "Presigned download URL and file checksum"
-// @Failure 400 {object} types.ErrorResponse "Missing or invalid bundleId"
+// @Failure 400 {object} types.ErrorResponse "Missing or invalid bundleID"
+// @Failure 403 {object} types.ErrorResponse "Bundle not approved for download"
 // @Failure 404 {object} types.ErrorResponse "Firmware bundle not found"
 // @Failure 500 {object} types.ErrorResponse "Internal server error"
-// @Router /firmware/bundles/{bundleId}/download [get]
+// @Router /firmware/bundles/{bundleID}/download [get]
 func (h *FirmwareUpdateHandler) GetBundleDownloadURL(c *gin.Context) {
 
-	bundleID := c.Param("bundleId")
+	bundleID := c.Param("bundleID")
 	if !validation.IsValidUUID(bundleID) {
-		response.BadRequest(c, "invalid bundleId")
+		response.BadRequest(c, "invalid bundleID")
 		return
 	}
 
-	logger, ok := c.MustGet("logger").(*zap.Logger)
-	if !ok {
+	loggerVal, exists := c.Get("logger")
+	if !exists {
 		response.InternalError(c)
 		return
 	}
+	logger := loggerVal.(*zap.Logger)
 
 	res, err := h.firmware.GetBundleDownloadURL(c.Request.Context(), bundleID, logger)
 	if err != nil {
 		if errors.Is(err, errorutil.ErrBundleNotFound) {
 			response.NotFound(c, "bundle not found")
+			return
+		}
+		if errors.Is(err, errorutil.ErrBundleNotApproved) {
+			response.Forbidden(c, "bundle not approved for download")
 			return
 		}
 		response.InternalError(c)
@@ -266,11 +305,12 @@ func (h *FirmwareUpdateHandler) LogBundleUpdateStatus(c *gin.Context) {
 		return
 	}
 
-	logger, ok := c.MustGet("logger").(*zap.Logger)
-	if !ok {
+	loggerVal, exists := c.Get("logger")
+	if !exists {
 		response.InternalError(c)
 		return
 	}
+	logger := loggerVal.(*zap.Logger)
 
 	err := h.firmware.LogBundleUpdateStatus(c.Request.Context(), &payload, logger)
 	if err != nil {

@@ -66,11 +66,11 @@ const (
 	// EndpointOrganizationUsers is the endpoint for organization user operations.
 	EndpointOrganizationUsers = "/users"
 
+	// Device Update endpoints
 	EndpointFirmware              = "/firmware"
 	EndpointFirmwareBundles       = "/bundles"
-	EndpointFirmwareList          = "/bundles"
 	EndpointApproveBundle         = "/bundles/:bundleID/approve"
 	EndpointFirmwareUpdateCheck   = "/updates/check"
-	EndpointBundleDownload        = "/bundles/:bundleId/download"
+	EndpointBundleDownload        = "/bundles/:bundleID/download"
 	EndpointLogBundleUpdateStatus = "/bundles/updates/status"
 )

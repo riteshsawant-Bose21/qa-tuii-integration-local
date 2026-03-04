@@ -233,36 +233,36 @@ CREATE TABLE user_settings (
 CREATE TABLE bundle (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     version TEXT NOT NULL UNIQUE,
-             
+    version_array INT[] GENERATED ALWAYS AS ( string_to_array( split_part(version, '-', 1), '.' )::INT[] ) stored,
+    prerelease TEXT,      -- alpha, beta or null (for stable)
+    prerelease_num INT, 
     release_notes TEXT,
-    
     min_prev_version TEXT NOT NULL,
+    min_prev_version_array INT[] GENERATED ALWAYS AS ( string_to_array( split_part(min_prev_version, '-', 1), '.' )::INT[] ) STORED,
     min_desktop_app_version TEXT NOT NULL,
-    
-    manifest_data JSONB NOT NULL,
-
+    min_desktop_app_version_array INT[] GENERATED ALWAYS AS ( string_to_array( split_part(min_prev_version, '-', 1), '.' )::INT[] ) STORED,
+    manifest_data JSONB,
+    checksum VARCHAR(64) NOT NULL,
     is_approved bool NOT NULL DEFAULT false,
-    
+    approved_by UUID references app_user(id),
+    approved_at TIMESTAMPTZ,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+
 
 CREATE TYPE bundle_update_status_enum AS ENUM (
     'INSTALL_SUCCESS',
     'INSTALL_FAIL'
 );
-
 CREATE TABLE bundle_update_status (
     id UUID PRIMARY KEY,         
-    update_id UUID NOT null,
-
+    update_id UUID NOT null UNIQUE,
     project_id UUID NOT NULL references project(id),
     bundle_version TEXT NOT NULL,      
     previous_version TEXT,
     status bundle_update_status_enum NOT NULL,             
     launcher_version TEXT,    
-    
     installed_at TIMESTAMPTZ NOT null,
-   
     created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );

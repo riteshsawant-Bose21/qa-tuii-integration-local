@@ -99,7 +99,7 @@ func SetupFirmwarePermissions(acc *AccessControlConfig) {
 	basePath := fmt.Sprintf("%s%s", constants.APIV1Path, constants.EndpointFirmware)
 
 	// List bundles - require read permission
-	acc.RegisterPermission("GET", fmt.Sprintf("%s%s", basePath, constants.EndpointFirmwareList), FirmwareBundleRead, PermissionRead, "View firmware bundles")
+	acc.RegisterPermission("GET", fmt.Sprintf("%s%s", basePath, constants.EndpointFirmwareBundles), FirmwareBundleRead, PermissionRead, "View firmware bundles")
 
 	// Approve bundle - require admin/approve permission
 	acc.RegisterPermission("POST", fmt.Sprintf("%s%s", basePath, constants.EndpointApproveBundle), FirmwareBundleApprove, PermissionWrite, "Approve firmware bundle")

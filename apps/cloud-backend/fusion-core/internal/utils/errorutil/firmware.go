@@ -18,4 +18,7 @@ var (
 
 	// ErrInvalidReleaseStatus indicates that the release status is not suitable for the operation
 	ErrInvalidReleaseStatus = errors.New("invalid release status for this operation")
+
+	// ErrBundleNotApproved indicates that the bundle exists but has not been approved for download
+	ErrBundleNotApproved = errors.New("bundle not approved for download")
 )

@@ -1021,17 +1021,17 @@ paths:
       summary: Approve Firmware Bundle
       tags:
       - Firmware Update - Management API
-  /firmware/bundles/{bundleId}/download:
+  /firmware/bundles/{bundleID}/download:
     get:
       consumes:
       - application/json
       description: Generates a presigned S3 URL for downloading a specific firmware
         bundle artifact. The URL is valid for 5 hours and includes the file checksum
-        for integrity verification.
+        for integrity verification. Only approved bundles can be downloaded.
       parameters:
-      - description: Unique identifier of the firmware bundle
+      - description: Unique identifier of the firmware bundle (UUID format)
         in: path
-        name: bundleId
+        name: bundleID
         required: true
         type: string
       produces:
@@ -1042,7 +1042,11 @@ paths:
           schema:
             $ref: '#/definitions/types.DownloadArtifactResponse'
         "400":
-          description: Missing or invalid bundleId
+          description: Missing or invalid bundleID
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+        "403":
+          description: Bundle not approved for download
           schema:
             $ref: '#/definitions/types.ErrorResponse'
         "404":
@@ -1071,7 +1075,7 @@ paths:
       produces:
       - application/json
       responses:
-        "202":
+        "204":
           description: Update status logged successfully
         "400":
           description: Invalid request payload

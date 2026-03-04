@@ -141,7 +141,7 @@ func (s *Service) GetLatestBundleCompatibleWithFirmware(ctx context.Context, cur
 	queryMods := []qm.QueryMod{
 		models.BundleWhere.IsApproved.EQ(true),
 		qm.Where("version_array > string_to_array(?, '.')::int[]", currentFirmwareVersion),
-		qm.Where("min_prev_version_array <= string_to_array(?, '.')::int[]", currentFirmwareVersion),
+		qm.Where("(min_prev_version IS NULL OR min_prev_version = '' OR min_prev_version_array <= string_to_array(?, '.')::int[])", currentFirmwareVersion),
 		qm.OrderBy("version_array DESC"),
 	}
 
@@ -168,8 +168,8 @@ func (s *Service) GetLatestCompatibleBundle(ctx context.Context, currentFirmware
 	queryMods := []qm.QueryMod{
 		models.BundleWhere.IsApproved.EQ(true),
 		qm.Where("version_array > string_to_array(?, '.')::int[]", currentFirmwareVersion),
-		qm.Where("min_prev_version_array <= string_to_array(?, '.')::int[]", currentFirmwareVersion),
-		qm.Where("min_desktop_app_version_array <= string_to_array(?, '.')::int[]", currentDesktopAppVersion),
+		qm.Where("(min_prev_version IS NULL OR min_prev_version = '' OR min_prev_version_array <= string_to_array(?, '.')::int[])", currentFirmwareVersion),
+		qm.Where("(min_desktop_app_version IS NULL OR min_desktop_app_version = '' OR min_desktop_app_version_array <= string_to_array(?, '.')::int[])", currentDesktopAppVersion),
 		qm.OrderBy("version_array DESC"),
 	}
 
