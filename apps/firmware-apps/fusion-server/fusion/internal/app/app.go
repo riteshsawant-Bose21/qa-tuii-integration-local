@@ -322,7 +322,7 @@ func (app *App) handleVIPStateChange(event vipmonitor.VIPEvent) {
 	logger.Debug("[VIP] State change: type=%s vip=%s holder=%s isLocal=%v",
 		event.EventType, event.VIP, event.Holder, event.IsLocalOwner)
 
-	// Handle explicit VIP removal (empty VIP)
+	// Handle explicit VIP removal ??
 	if event.VIP == "" {
 		logger.Warn("VIP event has VIP empty")
 
@@ -455,6 +455,10 @@ func (app *App) handleVIPStateChange(event vipmonitor.VIPEvent) {
 				logger.Info("[Discovery] mDNS service updated with new VIP %s", event.VIP)
 			}
 		}
+	case vipmonitor.EventVIPHolderChanged:
+		// VIP holder changed but same VIP (detected via VRRP update)
+		logger.Info("VIP %s holder changed from %s to %s", event.VIP, event.OldHolder, event.Holder)
+
 	}
 }
 
