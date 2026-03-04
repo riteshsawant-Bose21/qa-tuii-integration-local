@@ -683,7 +683,7 @@ func TestLogBundleUpdateStatus(t *testing.T) {
 
 			h := NewFirmwareUpdateHandler(mockFirmware)
 
-			w, c := setupTestContext(http.MethodPost, "/firmware/bundles/updates/status", tt.requestBody)
+			w, c := setupTestContext(http.MethodPost, "/firmware/updates/status", tt.requestBody)
 			if !tt.setupLogger {
 				c.Keys = map[string]interface{}{}
 			}

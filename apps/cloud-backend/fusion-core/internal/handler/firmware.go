@@ -297,7 +297,7 @@ func (h *FirmwareUpdateHandler) GetBundleDownloadURL(c *gin.Context) {
 // @Success 204 "Update status logged successfully"
 // @Failure 400 {object} types.ErrorResponse "Invalid request payload"
 // @Failure 500 {object} types.ErrorResponse "Internal server error"
-// @Router /firmware/bundles/updates/status [post]
+// @Router /firmware/updates/status [post]
 func (h *FirmwareUpdateHandler) LogBundleUpdateStatus(c *gin.Context) {
 	var payload types.LogBundleUpdateStatusPayload
 	if err := c.ShouldBindJSON(&payload); err != nil {
