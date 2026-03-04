@@ -97,4 +97,26 @@ class ProjectsRepositoryImpl implements ProjectsRepository {
       userEmail: userEmail,
     );
   }
+
+  // =========================
+  // FILTER PROJECTS  
+  // =========================
+  @override
+Future<List<ProjectModel>> filterProjects({
+  String? region,
+  String? status,
+}) async {
+  try {
+    return await remoteDataSource.filterProjects(
+      region: region,
+      status: status,
+    );
+  } catch (e) {
+    return await localDataSource.filterProjects(
+      region: region,
+      status: status,
+    );
+  }
+}
+  
 }

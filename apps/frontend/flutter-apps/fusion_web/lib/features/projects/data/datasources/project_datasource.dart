@@ -15,6 +15,8 @@ abstract class ProjectsDataSource {
     required String projectId,
     required String userEmail,
   });
+
+  Future<List<ProjectModel>> filterProjects({String? region, String? status});
 }
 
 class ProjectsRemoteDataSource implements ProjectsDataSource {
@@ -101,11 +103,8 @@ class ProjectsRemoteDataSource implements ProjectsDataSource {
   @override
   Future<void> archiveProject(String id) async {
     try {
-      await _apiService.post('projects/$id/archive', {
-        "is_archived": true,
-      });
-            print('Archive is working');
-
+      await _apiService.post('projects/$id/archive', {"is_archived": true});
+      print('Archive is working');
     } catch (e) {
       print('Archive API error: $e');
       rethrow;
@@ -201,6 +200,27 @@ class ProjectsRemoteDataSource implements ProjectsDataSource {
       rethrow;
     }
   }
+
+  // =========================
+  // FILTER PROJECTS (TEMPORARY UNTIL BACKEND READY)
+  // =========================
+  @override
+  Future<List<ProjectModel>> filterProjects({
+    String? region,
+    String? status,
+  }) async {
+    final allProjects = await getProjects();
+
+    return allProjects.where((p) {
+      final regionMatch =
+          region == null || region == 'All' || p.region == region;
+
+      final statusMatch =
+          status == null || status == 'All' || p.status == status;
+
+      return regionMatch && statusMatch;
+    }).toList();
+  }
 }
 
 //above is the temporary search implementation until backend is ready
@@ -255,7 +275,7 @@ class ProjectsLocalDataSource implements ProjectsDataSource {
             (p) =>
                 p.name.toLowerCase().contains(query.toLowerCase()) ||
                 p.description.toLowerCase().contains(query.toLowerCase()) ||
-                (p.clientName.toLowerCase().contains(query.toLowerCase()) ??
+                (p.clientName?.toLowerCase().contains(query.toLowerCase()) ??
                     false),
           )
           .toList();
@@ -278,5 +298,25 @@ class ProjectsLocalDataSource implements ProjectsDataSource {
     required String userEmail,
   }) async {
     throw Exception('Not supported in local data source');
+  }
+
+  @override
+  Future<List<ProjectModel>> filterProjects({
+    String? region,
+    String? status,
+  }) async {
+    if (_cachedProjects == null) {
+      throw Exception('No cached projects available');
+    }
+
+    return _cachedProjects!.where((p) {
+      final regionMatch =
+          region == null || region == 'All' || p.region == region;
+
+      final statusMatch =
+          status == null || status == 'All' || p.status == status;
+
+      return regionMatch && statusMatch;
+    }).toList();
   }
 }

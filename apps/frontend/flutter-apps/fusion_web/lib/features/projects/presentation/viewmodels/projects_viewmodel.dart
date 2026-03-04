@@ -106,7 +106,6 @@
 //   }
 // }
 
-
 import 'package:fusion_web/core/presentation/base_viewmodel.dart';
 import 'package:fusion_web/features/projects/data/models/project_model.dart';
 import 'package:fusion_web/features/projects/data/repositories/projects_repository.dart';
@@ -116,6 +115,10 @@ class ProjectsViewModel extends BaseViewModel<List<ProjectModel>> {
 
   ProjectsViewModel({required this.repository});
 
+  List<ProjectModel> _allProjects = [];
+  String _searchQuery = '';
+  String _region = 'All';
+  String _status = 'All';
   // List<ProjectModel> _projects = [];
   // List<ProjectModel> _filteredProjects = [];
   // ProjectModel? _selectedProject;
@@ -131,21 +134,31 @@ class ProjectsViewModel extends BaseViewModel<List<ProjectModel>> {
   // ProjectModel? get selectedProject => _selectedProject;
   // String get searchQuery => _searchQuery;
 
-  Future<void> loadProjects({String? searchQuery}) async {
+  Future<void> loadProjects() async {
     try {
       setLoading();
-      final projects = searchQuery != null && searchQuery.isNotEmpty
-          ? await repository.searchProjects(searchQuery)
-          : await repository.getProjects();
+
+      final projects = await repository.getProjects();
+
+      _allProjects = projects;
 
       setLoaded(projects);
     } catch (e) {
-      setError('Failed to load projects: ${e.toString()}');
+      setError('Failed to load projects');
     }
   }
 
   Future<void> searchProjects(String query) async {
-    loadProjects(searchQuery: query);
+    _searchQuery = query;
+
+    _applyFilters();
+  }
+
+  Future<void> filterProjects({String? region, String? status}) async {
+    if (region != null) _region = region;
+    if (status != null) _status = status;
+
+    _applyFilters();
   }
 
   Future<void> getProject(String id) async {
@@ -174,8 +187,8 @@ class ProjectsViewModel extends BaseViewModel<List<ProjectModel>> {
     setLoading();
     try {
       await repository.archiveProject(id);
-      loadProjects(); 
-    } catch (e) { 
+      loadProjects();
+    } catch (e) {
       setError(e.toString());
     }
   }
@@ -195,4 +208,23 @@ class ProjectsViewModel extends BaseViewModel<List<ProjectModel>> {
     // _filteredProjects = [];
     // notifyListeners();
   }
+
+  void _applyFilters() {
+  final filtered = _allProjects.where((p) {
+    final searchMatch =
+        _searchQuery.isEmpty ||
+        p.name.toLowerCase().contains(_searchQuery.toLowerCase());
+
+    final regionMatch =
+        _region == 'All' || p.region == _region;
+
+    final statusMatch =
+        _status == 'All' || p.status == _status;
+
+    return searchMatch && regionMatch && statusMatch;
+  }).toList();
+
+  setLoaded(filtered);
 }
+}
+

@@ -8,6 +8,7 @@ abstract class ProjectsRepository {
   Future<void> deleteProject(String id);
   Future<void> archiveProject(String id);
   Future<List<ProjectModel>> searchProjects(String query);
+  Future<List<ProjectModel>> filterProjects({String? region, String? status});
   //fetchign all users and adding user to project
   Future<List<UserModel>> getOrganisationUsers();
   Future<void> addUserToProject({

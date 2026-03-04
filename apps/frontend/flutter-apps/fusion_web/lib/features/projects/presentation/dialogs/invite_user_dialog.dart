@@ -354,6 +354,10 @@ class _InviteUserDialogState extends State<InviteUserDialog> {
                                 child: DropdownButtonFormField<UserModel>(
                                   isExpanded: true,
                                   value: row.selectedUser,
+                                  hint: const Text(
+                                    "Select user email",
+                                    style: TextStyle(color: Colors.black45),
+                                  ),
                                   icon: const Icon(Icons.keyboard_arrow_down),
                                   decoration: InputDecoration(
                                     filled: true,

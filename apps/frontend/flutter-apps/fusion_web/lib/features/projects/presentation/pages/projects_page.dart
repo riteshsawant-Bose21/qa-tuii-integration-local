@@ -45,12 +45,12 @@ class _ProjectsPageState extends State<ProjectsPage> {
   @override
   void initState() {
     super.initState();
-    _viewModel.loadProjects();
+
+    _viewModel.initialize();
+
     _searchController.addListener(() {
-      setState(() {
-        _searchQuery = _searchController.text;
-        _viewModel.searchProjects(_searchQuery);
-      });
+      final query = _searchController.text;
+      _viewModel.searchProjects(query);
     });
   }
 
@@ -177,8 +177,15 @@ class _ProjectsPageState extends State<ProjectsPage> {
             flex: 1,
             child: FilterDropdown(
               value: _selectedRegions,
-              items: ['All', 'Indoor', 'Outdoor', 'Hybrid'],
-              onChanged: (v) => setState(() => _selectedRegions = v!),
+              items: ['All', 'indoor', 'outdoor', 'hybrid'],
+              onChanged: (v) {
+                setState(() => _selectedRegions = v!);
+
+                _viewModel.filterProjects(
+                  region: _selectedRegions,
+                  status: _selectedStatus,
+                );
+              },
             ),
           ),
           const SizedBox(width: 16),
@@ -186,8 +193,15 @@ class _ProjectsPageState extends State<ProjectsPage> {
             flex: 1,
             child: FilterDropdown(
               value: _selectedStatus,
-              items: ['All', 'Proposal', 'Planning', 'Commissioned'],
-              onChanged: (v) => setState(() => _selectedStatus = v!),
+              items: ['All', 'Proposal', 'Development', 'Commissioned'],
+              onChanged: (v) {
+                setState(() => _selectedStatus = v!);
+
+                _viewModel.filterProjects(
+                  region: _selectedRegions,
+                  status: _selectedStatus,
+                );
+              },
             ),
           ),
           const SizedBox(width: 16),
@@ -559,7 +573,8 @@ class _ProjectsPageState extends State<ProjectsPage> {
                     ProjectActionsMenu(
                       onInvite: () => ProjectActionsHandler.invite(
                         context: context,
-                        project: p, viewModel: _viewModel,
+                        project: p,
+                        viewModel: _viewModel,
                       ),
                       onArchive: () => ProjectActionsHandler.archive(
                         context: context,
