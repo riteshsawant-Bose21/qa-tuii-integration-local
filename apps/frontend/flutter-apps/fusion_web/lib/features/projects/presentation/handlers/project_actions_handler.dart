@@ -8,22 +8,20 @@ import 'package:fusion_web/features/projects/presentation/viewmodels/invite_user
 
 class ProjectActionsHandler {
   static void invite({
-  required BuildContext context,
-  required ProjectModel project,
-  required ProjectsViewModel viewModel,
-}) {
-  showDialog(
-    context: context,
-    builder: (_) {
-      return BlocProvider(
-        create: (_) => InviteUserCubit(
-          repository: viewModel.repository,
-        ),
-        child: InviteUserDialog(project: project),
-      );
-    },
-  );
-}
+    required BuildContext context,
+    required ProjectModel project,
+    required ProjectsViewModel viewModel,
+  }) {
+    showDialog(
+      context: context,
+      builder: (_) {
+        return BlocProvider(
+          create: (_) => InviteUserCubit(repository: viewModel.repository),
+          child: InviteUserDialog(project: project),
+        );
+      },
+    );
+  }
 
   //  ================= DELETE =================
   static Future<void> delete({
@@ -53,22 +51,28 @@ class ProjectActionsHandler {
   }
 
   // ================= ARCHIVE =================
-  static void archive({
+  static Future<void> archive({
     required BuildContext context,
     required ProjectModel project,
     required ProjectsViewModel viewModel,
   }) {
-    showDialog(
+    return showDialog(
       context: context,
-      builder: (_) => ConfirmationDialog(
-        title: "Archive Project?",
-        description:
-            "The project will be removed from active projects but can be restored later.",
-        confirmText: "Archive",
-        onConfirm: () {
-          viewModel.archiveProject(project.id);
-        },
-      ),
+      builder: (dialogContext) {
+        return ConfirmationDialog(
+          title: "Archive Project?",
+          description:
+              "The project will be removed from active projects but can be restored later.",
+          confirmText: "Archive",
+          onConfirm: () async {
+            await viewModel.archiveProject(project.id);
+
+            if (dialogContext.mounted) {
+              Navigator.of(dialogContext).pop();
+            }
+          },
+        );
+      },
     );
   }
 }

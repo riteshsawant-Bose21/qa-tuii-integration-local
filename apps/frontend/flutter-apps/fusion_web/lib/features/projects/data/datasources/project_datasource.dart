@@ -101,7 +101,11 @@ class ProjectsRemoteDataSource implements ProjectsDataSource {
   @override
   Future<void> archiveProject(String id) async {
     try {
-      await _apiService.post('/projects/$id/archive', {});
+      await _apiService.post('projects/$id/archive', {
+        "is_archived": true,
+      });
+            print('Archive is working');
+
     } catch (e) {
       print('Archive API error: $e');
       rethrow;
@@ -152,7 +156,7 @@ class ProjectsRemoteDataSource implements ProjectsDataSource {
           (p) =>
               p.name.toLowerCase().contains(query.toLowerCase()) ||
               p.description.toLowerCase().contains(query.toLowerCase()) ||
-              (p.clientName.toLowerCase().contains(query.toLowerCase()) ??
+              (p.clientName?.toLowerCase().contains(query.toLowerCase()) ??
                   false),
         )
         .toList();
