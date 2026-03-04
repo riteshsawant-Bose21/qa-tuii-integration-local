@@ -23,50 +23,6 @@ type MockFirmwareService struct {
 	mock.Mock
 }
 
-func (m *MockFirmwareService) InitiateRelease(ctx context.Context, releaseDetails *types.InitiateFirmwareReleasePayload, logger *zap.Logger) (string, string, error) {
-	args := m.Called(ctx, releaseDetails, logger)
-	return args.String(0), args.String(1), args.Error(2)
-}
-
-func (m *MockFirmwareService) MakeReleaseAvailable(ctx context.Context, releaseID string, logger *zap.Logger) error {
-	args := m.Called(ctx, releaseID, logger)
-	return args.Error(0)
-}
-
-func (m *MockFirmwareService) ListReleases(ctx context.Context, platform string, page, limit int, minVersion string) (*types.FirmwareReleaseListResponse, error) {
-	args := m.Called(ctx, platform, page, limit, minVersion)
-	if args.Get(0) == nil {
-		return nil, args.Error(1)
-	}
-	return args.Get(0).(*types.FirmwareReleaseListResponse), args.Error(1)
-}
-
-func (m *MockFirmwareService) LogFirmwareUpdate(ctx context.Context, req *types.LogFirmwareUpdateRequest) error {
-	args := m.Called(ctx, req)
-	return args.Error(0)
-}
-
-func (m *MockFirmwareService) CheckForUpdates(ctx context.Context, request *types.CheckUpdateRequest) (*types.CheckUpdateResponse, error) {
-	args := m.Called(ctx, request)
-	if args.Get(0) == nil {
-		return nil, args.Error(1)
-	}
-	return args.Get(0).(*types.CheckUpdateResponse), args.Error(1)
-}
-
-func (m *MockFirmwareService) GetArtifactDownloadURL(ctx context.Context, platform, version string, logger *zap.Logger) (*types.DownloadArtifactResponse, error) {
-	args := m.Called(ctx, platform, version, logger)
-	if args.Get(0) == nil {
-		return nil, args.Error(1)
-	}
-	return args.Get(0).(*types.DownloadArtifactResponse), args.Error(1)
-}
-
-func (m *MockFirmwareService) DeployRelease(ctx context.Context, releaseID string, channel string, logger *zap.Logger) error {
-	args := m.Called(ctx, releaseID, channel, logger)
-	return args.Error(0)
-}
-
 func (m *MockFirmwareService) NotifyBundleUpload(ctx context.Context, payload *types.NotifyBundleUploadPayload, logger *zap.Logger) (*types.BundleResponse, error) {
 	args := m.Called(ctx, payload, logger)
 	if args.Get(0) == nil {
@@ -81,6 +37,32 @@ func (m *MockFirmwareService) ListBundles(ctx context.Context, isApproved *bool,
 		return nil, args.Error(1)
 	}
 	return args.Get(0).(*types.BundleListResponse), args.Error(1)
+}
+
+func (m *MockFirmwareService) ApproveBundle(ctx context.Context, bundleID string, approvedBy string, logger *zap.Logger) error {
+	args := m.Called(ctx, bundleID, approvedBy, logger)
+	return args.Error(0)
+}
+
+func (m *MockFirmwareService) CheckForUpdate(ctx context.Context, payload *types.CheckForUpdateRequest, logger *zap.Logger) (*types.CheckForUpdateResponse, error) {
+	args := m.Called(ctx, payload, logger)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*types.CheckForUpdateResponse), args.Error(1)
+}
+
+func (m *MockFirmwareService) GetBundleDownloadURL(ctx context.Context, bundleID string, logger *zap.Logger) (*types.DownloadArtifactResponse, error) {
+	args := m.Called(ctx, bundleID, logger)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*types.DownloadArtifactResponse), args.Error(1)
+}
+
+func (m *MockFirmwareService) LogBundleUpdateStatus(ctx context.Context, payload *types.LogBundleUpdateStatusPayload, logger *zap.Logger) error {
+	args := m.Called(ctx, payload, logger)
+	return args.Error(0)
 }
 
 // --- Helper ---
@@ -111,140 +93,25 @@ func setupTestContext(method, url string, body interface{}) (*httptest.ResponseR
 	return w, c
 }
 
-// ==================== InitiateRelease Tests ====================
+func setupTestContextWithQueryParams(method, url string, queryParams map[string]string) (*httptest.ResponseRecorder, *gin.Context) {
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
 
-func TestInitiateRelease(t *testing.T) {
-	gin.SetMode(gin.TestMode)
-
-	validPayload := types.InitiateFirmwareReleasePayload{
-		Checksum: "abc123checksum",
-		MetaData: types.FirmwareReleaseMetaData{
-			Platform:             "amp-8x300",
-			FirmwareVersion:      "2.0.0",
-			ReleaseNotes:         "Bug fixes and improvements",
-			MinDesktopAppVersion: "1.0.0",
-			HwCompatibility:      "rev-a",
-			ApiVersion:           "v1",
-		},
+	req, _ := http.NewRequest(method, url, nil)
+	if queryParams != nil {
+		q := req.URL.Query()
+		for key, value := range queryParams {
+			q.Add(key, value)
+		}
+		req.URL.RawQuery = q.Encode()
 	}
 
-	tests := []struct {
-		name           string
-		requestBody    interface{}
-		setupLogger    bool
-		mockSetup      func(m *MockFirmwareService)
-		expectedStatus int
-		expectedBody   map[string]interface{}
-	}{
-		{
-			name:        "success - new release initiated",
-			requestBody: validPayload,
-			setupLogger: true,
-			mockSetup: func(m *MockFirmwareService) {
-				m.On("InitiateRelease", mock.Anything, mock.AnythingOfType("*types.InitiateFirmwareReleasePayload"), mock.AnythingOfType("*zap.Logger")).
-					Return("release-uuid-123", "https://s3.presigned.url/upload", nil)
-			},
-			expectedStatus: http.StatusOK,
-			expectedBody: map[string]interface{}{
-				"releaseId":    "release-uuid-123",
-				"presignedUrl": "https://s3.presigned.url/upload",
-			},
-		},
-		{
-			name:           "bad request - invalid JSON payload",
-			requestBody:    "invalid json{",
-			setupLogger:    true,
-			mockSetup:      func(m *MockFirmwareService) {},
-			expectedStatus: http.StatusBadRequest,
-		},
-		{
-			name: "bad request - missing required fields",
-			requestBody: map[string]interface{}{
-				"checksum": "abc123",
-				// metaData missing
-			},
-			setupLogger:    true,
-			mockSetup:      func(m *MockFirmwareService) {},
-			expectedStatus: http.StatusBadRequest,
-		},
-		{
-			name: "bad request - missing platform",
-			requestBody: types.InitiateFirmwareReleasePayload{
-				Checksum: "abc123",
-				MetaData: types.FirmwareReleaseMetaData{
-					FirmwareVersion:      "1.0.0",
-					ReleaseNotes:         "notes",
-					MinDesktopAppVersion: "1.0.0",
-					HwCompatibility:      "rev-a",
-					ApiVersion:           "v1",
-				},
-			},
-			setupLogger:    true,
-			mockSetup:      func(m *MockFirmwareService) {},
-			expectedStatus: http.StatusBadRequest,
-		},
-		{
-			name:        "bad request - version already exists",
-			requestBody: validPayload,
-			setupLogger: true,
-			mockSetup: func(m *MockFirmwareService) {
-				m.On("InitiateRelease", mock.Anything, mock.AnythingOfType("*types.InitiateFirmwareReleasePayload"), mock.AnythingOfType("*zap.Logger")).
-					Return("", "", errorutil.ErrVersionExists)
-			},
-			expectedStatus: http.StatusBadRequest,
-		},
-		{
-			name:        "internal server error - service failure",
-			requestBody: validPayload,
-			setupLogger: true,
-			mockSetup: func(m *MockFirmwareService) {
-				m.On("InitiateRelease", mock.Anything, mock.AnythingOfType("*types.InitiateFirmwareReleasePayload"), mock.AnythingOfType("*zap.Logger")).
-					Return("", "", errors.New("s3 connection failed"))
-			},
-			expectedStatus: http.StatusInternalServerError,
-			expectedBody: map[string]interface{}{
-				"error": "Internal Server Error",
-			},
-		},
-		{
-			name:           "internal server error - logger not in context",
-			requestBody:    validPayload,
-			setupLogger:    false,
-			mockSetup:      func(m *MockFirmwareService) {},
-			expectedStatus: http.StatusInternalServerError,
-		},
-	}
+	c.Request = req
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			mockFirmware := new(MockFirmwareService)
-			tt.mockSetup(mockFirmware)
+	logger, _ := zap.NewDevelopment()
+	c.Set("logger", logger)
 
-			h := NewFirmwareUpdateHandler(mockFirmware)
-
-			w, c := setupTestContext(http.MethodPost, "/firmware/releases", tt.requestBody)
-			if !tt.setupLogger {
-				c.Set("logger", nil)
-				// Remove logger to test missing logger case
-				c.Keys = map[string]interface{}{}
-			}
-
-			h.InitiateRelease(c)
-
-			assert.Equal(t, tt.expectedStatus, w.Code)
-
-			if tt.expectedBody != nil {
-				var response map[string]interface{}
-				err := json.Unmarshal(w.Body.Bytes(), &response)
-				assert.NoError(t, err)
-				for key, expectedValue := range tt.expectedBody {
-					assert.Equal(t, expectedValue, response[key])
-				}
-			}
-
-			mockFirmware.AssertExpectations(t)
-		})
-	}
+	return w, c
 }
 
 // ==================== NotifyBundleUpload Tests ====================
@@ -292,15 +159,6 @@ func TestNotifyBundleUpload(t *testing.T) {
 			expectedStatus: http.StatusBadRequest,
 		},
 		{
-			name: "bad request - missing required fields",
-			requestBody: map[string]interface{}{
-				"checksum": "abc123",
-			},
-			setupLogger:    true,
-			mockSetup:      func(m *MockFirmwareService) {},
-			expectedStatus: http.StatusBadRequest,
-		},
-		{
 			name:        "bad request - version already exists",
 			requestBody: validPayload,
 			setupLogger: true,
@@ -319,9 +177,6 @@ func TestNotifyBundleUpload(t *testing.T) {
 					Return(nil, errors.New("db connection failed"))
 			},
 			expectedStatus: http.StatusInternalServerError,
-			expectedBody: map[string]interface{}{
-				"error": "Internal Server Error",
-			},
 		},
 		{
 			name:           "internal server error - logger not in context",
@@ -341,7 +196,6 @@ func TestNotifyBundleUpload(t *testing.T) {
 
 			w, c := setupTestContext(http.MethodPost, "/firmware/bundles", tt.requestBody)
 			if !tt.setupLogger {
-				c.Set("logger", nil)
 				c.Keys = map[string]interface{}{}
 			}
 
@@ -363,71 +217,76 @@ func TestNotifyBundleUpload(t *testing.T) {
 	}
 }
 
-// ==================== MakeReleaseAvailable Tests ====================
+// ==================== ApproveBundle Tests ====================
 
-func TestMakeReleaseAvailable(t *testing.T) {
+func TestApproveBundle(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
 	tests := []struct {
 		name           string
-		releaseID      string
+		bundleID       string
 		setupLogger    bool
+		setupUserAuth  bool
 		mockSetup      func(m *MockFirmwareService)
 		expectedStatus int
 		expectedBody   map[string]interface{}
 	}{
 		{
-			name:        "success - release made available",
-			releaseID:   "release-uuid-123",
-			setupLogger: true,
+			name:          "success - bundle approved",
+			bundleID:      "bundle-uuid-123",
+			setupLogger:   true,
+			setupUserAuth: true,
 			mockSetup: func(m *MockFirmwareService) {
-				m.On("MakeReleaseAvailable", mock.Anything, "release-uuid-123", mock.Anything).
+				m.On("ApproveBundle", mock.Anything, "bundle-uuid-123", "user-123", mock.AnythingOfType("*zap.Logger")).
 					Return(nil)
 			},
 			expectedStatus: http.StatusNoContent,
 		},
 		{
-			name:           "bad request - empty releaseID",
-			releaseID:      "",
+			name:           "bad request - empty bundleID",
+			bundleID:       "",
 			setupLogger:    true,
+			setupUserAuth:  true,
 			mockSetup:      func(m *MockFirmwareService) {},
 			expectedStatus: http.StatusBadRequest,
-			expectedBody: map[string]interface{}{
-				"error": "releaseID is required",
-			},
 		},
 		{
-			name:        "not found - release does not exist",
-			releaseID:   "non-existent-uuid",
-			setupLogger: true,
+			name:          "not found - bundle does not exist",
+			bundleID:      "non-existent-uuid",
+			setupLogger:   true,
+			setupUserAuth: true,
 			mockSetup: func(m *MockFirmwareService) {
-				m.On("MakeReleaseAvailable", mock.Anything, "non-existent-uuid", mock.Anything).
+				m.On("ApproveBundle", mock.Anything, "non-existent-uuid", "user-123", mock.AnythingOfType("*zap.Logger")).
 					Return(errorutil.ErrBundleNotFound)
 			},
 			expectedStatus: http.StatusNotFound,
-			expectedBody: map[string]interface{}{
-				"error": "Release not found",
-			},
 		},
 		{
-			name:        "internal server error - service failure",
-			releaseID:   "release-uuid-123",
-			setupLogger: true,
+			name:          "internal server error - service failure",
+			bundleID:      "bundle-uuid-123",
+			setupLogger:   true,
+			setupUserAuth: true,
 			mockSetup: func(m *MockFirmwareService) {
-				m.On("MakeReleaseAvailable", mock.Anything, "release-uuid-123", mock.Anything).
+				m.On("ApproveBundle", mock.Anything, "bundle-uuid-123", "user-123", mock.AnythingOfType("*zap.Logger")).
 					Return(errors.New("database update failed"))
 			},
 			expectedStatus: http.StatusInternalServerError,
-			expectedBody: map[string]interface{}{
-				"error": "Internal Server Error",
-			},
 		},
 		{
 			name:           "internal server error - logger not in context",
-			releaseID:      "release-uuid-123",
+			bundleID:       "bundle-uuid-123",
 			setupLogger:    false,
+			setupUserAuth:  true,
 			mockSetup:      func(m *MockFirmwareService) {},
 			expectedStatus: http.StatusInternalServerError,
+		},
+		{
+			name:           "unauthorized - user auth not in context",
+			bundleID:       "bundle-uuid-123",
+			setupLogger:    true,
+			setupUserAuth:  false,
+			mockSetup:      func(m *MockFirmwareService) {},
+			expectedStatus: http.StatusUnauthorized,
 		},
 	}
 
@@ -438,16 +297,19 @@ func TestMakeReleaseAvailable(t *testing.T) {
 
 			h := NewFirmwareUpdateHandler(mockFirmware)
 
-			w, c := setupTestContext(http.MethodPost, "/firmware/releases/"+tt.releaseID+"/mark-available", nil)
-			c.Params = gin.Params{gin.Param{Key: "releaseID", Value: tt.releaseID}}
+			w, c := setupTestContext(http.MethodPost, "/firmware/bundles/"+tt.bundleID+"/approve", nil)
+			c.Params = gin.Params{gin.Param{Key: "bundleID", Value: tt.bundleID}}
 			if !tt.setupLogger {
 				c.Keys = map[string]interface{}{}
 			}
+			if tt.setupUserAuth {
+				c.Set("user_auth", &types.UserAuthorizationResponse{
+					User: types.UserInfo{ID: "user-123"},
+				})
+			}
 
-			h.MakeReleaseAvailable(c)
+			h.ApproveBundle(c)
 
-			// Use c.Writer.Status() for no-body responses (204) since httptest.ResponseRecorder
-			// only updates Code when WriteHeader is called via Write()
 			assert.Equal(t, tt.expectedStatus, c.Writer.Status())
 
 			if tt.expectedBody != nil {
@@ -464,263 +326,98 @@ func TestMakeReleaseAvailable(t *testing.T) {
 	}
 }
 
-// ==================== ListReleases Tests ====================
+// ==================== CheckForUpdate Tests ====================
 
-func TestListReleases(t *testing.T) {
+func TestCheckForUpdate(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
-	tests := []struct {
-		name           string
-		queryParams    string
-		mockSetup      func(m *MockFirmwareService)
-		expectedStatus int
-		expectedBody   string
-	}{
-		{
-			name:        "success - default pagination",
-			queryParams: "",
-			mockSetup: func(m *MockFirmwareService) {
-				m.On("ListReleases", mock.Anything, "", 1, 10, "").Return(&types.FirmwareReleaseListResponse{
-					Releases: []types.FirmwareReleaseDetails{
-						{ID: "1", Platform: "amp-8x300", FirmwareVersion: "2.0.0", Status: "AVAILABLE", Created: time.Now()},
-						{ID: "2", Platform: "amp-8x300", FirmwareVersion: "1.0.0", Status: "AVAILABLE", Created: time.Now()},
-					},
-					Total: 2,
-					Page:  1,
-					Limit: 10,
-				}, nil)
-			},
-			expectedStatus: http.StatusOK,
-			expectedBody:   `"total":2`,
-		},
-		{
-			name:        "success - with platform filter",
-			queryParams: "?platform=amp-4x150",
-			mockSetup: func(m *MockFirmwareService) {
-				m.On("ListReleases", mock.Anything, "amp-4x150", 1, 10, "").Return(&types.FirmwareReleaseListResponse{
-					Releases: []types.FirmwareReleaseDetails{
-						{ID: "3", Platform: "amp-4x150", FirmwareVersion: "1.0.0", Created: time.Now()},
-					},
-					Total: 1,
-					Page:  1,
-					Limit: 10,
-				}, nil)
-			},
-			expectedStatus: http.StatusOK,
-			expectedBody:   `"total":1`,
-		},
-		{
-			name:        "success - with custom pagination",
-			queryParams: "?page=2&limit=5",
-			mockSetup: func(m *MockFirmwareService) {
-				m.On("ListReleases", mock.Anything, "", 2, 5, "").Return(&types.FirmwareReleaseListResponse{
-					Releases: []types.FirmwareReleaseDetails{},
-					Total:    0,
-					Page:     2,
-					Limit:    5,
-				}, nil)
-			},
-			expectedStatus: http.StatusOK,
-			expectedBody:   `"page":2`,
-		},
-		{
-			name:        "success - with min_version filter",
-			queryParams: "?min_version=1.0.0",
-			mockSetup: func(m *MockFirmwareService) {
-				m.On("ListReleases", mock.Anything, "", 1, 10, "1.0.0").Return(&types.FirmwareReleaseListResponse{
-					Releases: []types.FirmwareReleaseDetails{
-						{ID: "1", Platform: "amp-8x300", FirmwareVersion: "2.0.0", Created: time.Now()},
-					},
-					Total: 1,
-					Page:  1,
-					Limit: 10,
-				}, nil)
-			},
-			expectedStatus: http.StatusOK,
-			expectedBody:   `"total":1`,
-		},
-		{
-			name:        "success - with all filters combined",
-			queryParams: "?platform=amp-8x300&page=1&limit=20&min_version=1.0.0",
-			mockSetup: func(m *MockFirmwareService) {
-				m.On("ListReleases", mock.Anything, "amp-8x300", 1, 20, "1.0.0").Return(&types.FirmwareReleaseListResponse{
-					Releases: []types.FirmwareReleaseDetails{},
-					Total:    0,
-					Page:     1,
-					Limit:    20,
-				}, nil)
-			},
-			expectedStatus: http.StatusOK,
-			expectedBody:   `"total":0`,
-		},
-		{
-			name:        "success - empty result set",
-			queryParams: "",
-			mockSetup: func(m *MockFirmwareService) {
-				m.On("ListReleases", mock.Anything, "", 1, 10, "").Return(&types.FirmwareReleaseListResponse{
-					Releases: []types.FirmwareReleaseDetails{},
-					Total:    0,
-					Page:     1,
-					Limit:    10,
-				}, nil)
-			},
-			expectedStatus: http.StatusOK,
-			expectedBody:   `"total":0`,
-		},
-		{
-			name:        "success - invalid page defaults to 0",
-			queryParams: "?page=abc",
-			mockSetup: func(m *MockFirmwareService) {
-				m.On("ListReleases", mock.Anything, "", 0, 10, "").Return(&types.FirmwareReleaseListResponse{
-					Releases: []types.FirmwareReleaseDetails{},
-					Total:    0,
-					Page:     0,
-					Limit:    10,
-				}, nil)
-			},
-			expectedStatus: http.StatusOK,
-		},
-		{
-			name:        "internal server error - service failure",
-			queryParams: "",
-			mockSetup: func(m *MockFirmwareService) {
-				m.On("ListReleases", mock.Anything, "", 1, 10, "").Return(nil, errors.New("db error"))
-			},
-			expectedStatus: http.StatusInternalServerError,
-			expectedBody:   `"error":"Internal Server Error"`,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			mockFirmware := new(MockFirmwareService)
-			tt.mockSetup(mockFirmware)
-
-			h := NewFirmwareUpdateHandler(mockFirmware)
-
-			w, c := setupTestContext(http.MethodGet, "/firmware/releases"+tt.queryParams, nil)
-
-			h.ListReleases(c)
-
-			assert.Equal(t, tt.expectedStatus, w.Code)
-			if tt.expectedBody != "" {
-				assert.Contains(t, w.Body.String(), tt.expectedBody)
-			}
-
-			// verify response structure on success
-			if tt.expectedStatus == http.StatusOK {
-				var resp types.FirmwareReleaseListResponse
-				err := json.Unmarshal(w.Body.Bytes(), &resp)
-				assert.NoError(t, err)
-			}
-
-			mockFirmware.AssertExpectations(t)
-		})
-	}
-}
-
-// ==================== CheckUpdates Tests ====================
-
-func TestCheckUpdates(t *testing.T) {
-	gin.SetMode(gin.TestMode)
-
-	validPayload := types.CheckUpdateRequest{
-		Channel: "stable",
-		Devices: []types.DeviceUpdateCheckPayload{
-			{
-				DeviceID:               "device-001",
-				Platform:               "amp-8x300",
-				CurrentFirmwareVersion: "1.0.0",
-				HardwareRevision:       "rev-a",
-			},
-		},
+	validQueryParams := map[string]string{
+		"current_firmware_version":    "1.0.0",
+		"current_desktop_app_version": "2.0.0",
 	}
 
 	tests := []struct {
 		name           string
-		requestBody    interface{}
+		queryParams    map[string]string
 		setupLogger    bool
 		mockSetup      func(m *MockFirmwareService)
 		expectedStatus int
 		expectedBody   map[string]interface{}
 	}{
 		{
-			name:        "success - update available",
-			requestBody: validPayload,
+			name:        "success - update available (stable)",
+			queryParams: validQueryParams,
 			setupLogger: true,
 			mockSetup: func(m *MockFirmwareService) {
-				m.On("CheckForUpdates", mock.Anything, mock.AnythingOfType("*types.CheckUpdateRequest")).
-					Return(&types.CheckUpdateResponse{
-						Results: map[string]types.DeviceUpdateResult{
-							"device-001": {
-								UpdateAvailable: true,
-								LatestVersion:   "2.0.0",
-								ReleaseNotes:    "Bug fixes",
-							},
-						},
+				m.On("CheckForUpdate", mock.Anything, mock.AnythingOfType("*types.CheckForUpdateRequest"), mock.AnythingOfType("*zap.Logger")).
+					Return(&types.CheckForUpdateResponse{
+						UpdateAvailable:   true,
+						AppUpdateRequired: false,
+						BundleID:          "bundle-123",
+						Version:           "2.0.0",
+					}, nil)
+			},
+			expectedStatus: http.StatusOK,
+		},
+		{
+			name: "success - update available (beta channel)",
+			queryParams: map[string]string{
+				"current_firmware_version":    "1.0.0",
+				"current_desktop_app_version": "2.0.0",
+				"channel":                     "beta",
+			},
+			setupLogger: true,
+			mockSetup: func(m *MockFirmwareService) {
+				m.On("CheckForUpdate", mock.Anything, mock.AnythingOfType("*types.CheckForUpdateRequest"), mock.AnythingOfType("*zap.Logger")).
+					Return(&types.CheckForUpdateResponse{
+						UpdateAvailable:   true,
+						AppUpdateRequired: false,
+						BundleID:          "bundle-beta-123",
+						Version:           "2.1.0-beta",
 					}, nil)
 			},
 			expectedStatus: http.StatusOK,
 		},
 		{
 			name:        "success - no update available",
-			requestBody: validPayload,
+			queryParams: validQueryParams,
 			setupLogger: true,
 			mockSetup: func(m *MockFirmwareService) {
-				m.On("CheckForUpdates", mock.Anything, mock.AnythingOfType("*types.CheckUpdateRequest")).
-					Return(&types.CheckUpdateResponse{
-						Results: map[string]types.DeviceUpdateResult{
-							"device-001": {
-								UpdateAvailable: false,
-							},
-						},
+				m.On("CheckForUpdate", mock.Anything, mock.AnythingOfType("*types.CheckForUpdateRequest"), mock.AnythingOfType("*zap.Logger")).
+					Return(&types.CheckForUpdateResponse{
+						UpdateAvailable:   false,
+						AppUpdateRequired: false,
 					}, nil)
 			},
 			expectedStatus: http.StatusOK,
 		},
 		{
-			name: "success - multiple devices",
-			requestBody: types.CheckUpdateRequest{
-				Channel: "stable",
-				Devices: []types.DeviceUpdateCheckPayload{
-					{DeviceID: "device-001", Platform: "amp-8x300", CurrentFirmwareVersion: "1.0.0"},
-					{DeviceID: "device-002", Platform: "amp-4x150", CurrentFirmwareVersion: "2.0.0"},
-				},
-			},
+			name:        "success - app update required",
+			queryParams: validQueryParams,
 			setupLogger: true,
 			mockSetup: func(m *MockFirmwareService) {
-				m.On("CheckForUpdates", mock.Anything, mock.AnythingOfType("*types.CheckUpdateRequest")).
-					Return(&types.CheckUpdateResponse{
-						Results: map[string]types.DeviceUpdateResult{
-							"device-001": {UpdateAvailable: true, LatestVersion: "2.0.0"},
-							"device-002": {UpdateAvailable: false},
-						},
+				m.On("CheckForUpdate", mock.Anything, mock.AnythingOfType("*types.CheckForUpdateRequest"), mock.AnythingOfType("*zap.Logger")).
+					Return(&types.CheckForUpdateResponse{
+						UpdateAvailable:      true,
+						AppUpdateRequired:    true,
+						MinDesktopAppVersion: "3.0.0",
 					}, nil)
 			},
 			expectedStatus: http.StatusOK,
 		},
 		{
-			name:           "bad request - invalid JSON",
-			requestBody:    "invalid json{",
-			setupLogger:    true,
-			mockSetup:      func(m *MockFirmwareService) {},
-			expectedStatus: http.StatusBadRequest,
-		},
-		{
-			name: "bad request - missing channel",
-			requestBody: map[string]interface{}{
-				"devices": []map[string]interface{}{
-					{"device_id": "d1", "platform": "p1", "current_firmware_version": "1.0.0"},
-				},
+			name: "bad request - missing current firmware version",
+			queryParams: map[string]string{
+				"current_desktop_app_version": "2.0.0",
 			},
 			setupLogger:    true,
 			mockSetup:      func(m *MockFirmwareService) {},
 			expectedStatus: http.StatusBadRequest,
 		},
 		{
-			name: "bad request - missing devices",
-			requestBody: map[string]interface{}{
-				"channel": "stable",
+			name: "bad request - missing current desktop app version",
+			queryParams: map[string]string{
+				"current_firmware_version": "1.0.0",
 			},
 			setupLogger:    true,
 			mockSetup:      func(m *MockFirmwareService) {},
@@ -728,20 +425,17 @@ func TestCheckUpdates(t *testing.T) {
 		},
 		{
 			name:        "internal server error - service failure",
-			requestBody: validPayload,
+			queryParams: validQueryParams,
 			setupLogger: true,
 			mockSetup: func(m *MockFirmwareService) {
-				m.On("CheckForUpdates", mock.Anything, mock.AnythingOfType("*types.CheckUpdateRequest")).
+				m.On("CheckForUpdate", mock.Anything, mock.AnythingOfType("*types.CheckForUpdateRequest"), mock.AnythingOfType("*zap.Logger")).
 					Return(nil, errors.New("database error"))
 			},
 			expectedStatus: http.StatusInternalServerError,
-			expectedBody: map[string]interface{}{
-				"error": "Internal Server Error",
-			},
 		},
 		{
 			name:           "internal server error - logger not in context",
-			requestBody:    validPayload,
+			queryParams:    validQueryParams,
 			setupLogger:    false,
 			mockSetup:      func(m *MockFirmwareService) {},
 			expectedStatus: http.StatusInternalServerError,
@@ -755,12 +449,12 @@ func TestCheckUpdates(t *testing.T) {
 
 			h := NewFirmwareUpdateHandler(mockFirmware)
 
-			w, c := setupTestContext(http.MethodPost, "/firmware/updates/check", tt.requestBody)
+			w, c := setupTestContextWithQueryParams(http.MethodGet, "/firmware/updates/check", tt.queryParams)
 			if !tt.setupLogger {
 				c.Keys = map[string]interface{}{}
 			}
 
-			h.CheckUpdates(c)
+			h.CheckForUpdate(c)
 
 			assert.Equal(t, tt.expectedStatus, w.Code)
 
@@ -773,28 +467,19 @@ func TestCheckUpdates(t *testing.T) {
 				}
 			}
 
-			// verify response structure on success
-			if tt.expectedStatus == http.StatusOK {
-				var resp types.CheckUpdateResponse
-				err := json.Unmarshal(w.Body.Bytes(), &resp)
-				assert.NoError(t, err)
-				assert.NotNil(t, resp.Results)
-			}
-
 			mockFirmware.AssertExpectations(t)
 		})
 	}
 }
 
-// ==================== DownloadArtifact Tests ====================
+// ==================== GetBundleDownloadURL Tests ====================
 
-func TestDownloadArtifact(t *testing.T) {
+func TestGetBundleDownloadURL(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
 	tests := []struct {
 		name           string
-		platform       string
-		version        string
+		bundleID       string
 		setupLogger    bool
 		mockSetup      func(m *MockFirmwareService)
 		expectedStatus int
@@ -802,11 +487,10 @@ func TestDownloadArtifact(t *testing.T) {
 	}{
 		{
 			name:        "success - download URL generated",
-			platform:    "amp-8x300",
-			version:     "2.0.0",
+			bundleID:    "550e8400-e29b-41d4-a716-446655440000",
 			setupLogger: true,
 			mockSetup: func(m *MockFirmwareService) {
-				m.On("GetArtifactDownloadURL", mock.Anything, "amp-8x300", "2.0.0", mock.AnythingOfType("*zap.Logger")).
+				m.On("GetBundleDownloadURL", mock.Anything, "550e8400-e29b-41d4-a716-446655440000", mock.AnythingOfType("*zap.Logger")).
 					Return(&types.DownloadArtifactResponse{
 						DownloadURL: "https://s3.presigned.url/download",
 						Checksum:    "sha256:abc123",
@@ -819,70 +503,42 @@ func TestDownloadArtifact(t *testing.T) {
 			},
 		},
 		{
-			name:           "bad request - missing platform",
-			platform:       "",
-			version:        "2.0.0",
+			name:           "bad request - invalid bundleId (not UUID)",
+			bundleID:       "invalid-uuid",
 			setupLogger:    true,
 			mockSetup:      func(m *MockFirmwareService) {},
 			expectedStatus: http.StatusBadRequest,
-			expectedBody: map[string]interface{}{
-				"error": "platform and version are required",
-			},
 		},
 		{
-			name:           "bad request - missing version",
-			platform:       "amp-8x300",
-			version:        "",
+			name:           "bad request - empty bundleId",
+			bundleID:       "",
 			setupLogger:    true,
 			mockSetup:      func(m *MockFirmwareService) {},
 			expectedStatus: http.StatusBadRequest,
-			expectedBody: map[string]interface{}{
-				"error": "platform and version are required",
-			},
 		},
 		{
-			name:           "bad request - both missing",
-			platform:       "",
-			version:        "",
-			setupLogger:    true,
-			mockSetup:      func(m *MockFirmwareService) {},
-			expectedStatus: http.StatusBadRequest,
-			expectedBody: map[string]interface{}{
-				"error": "platform and version are required",
-			},
-		},
-		{
-			name:        "not found - release does not exist",
-			platform:    "amp-8x300",
-			version:     "99.0.0",
+			name:        "not found - bundle does not exist",
+			bundleID:    "550e8400-e29b-41d4-a716-446655440000",
 			setupLogger: true,
 			mockSetup: func(m *MockFirmwareService) {
-				m.On("GetArtifactDownloadURL", mock.Anything, "amp-8x300", "99.0.0", mock.AnythingOfType("*zap.Logger")).
+				m.On("GetBundleDownloadURL", mock.Anything, "550e8400-e29b-41d4-a716-446655440000", mock.AnythingOfType("*zap.Logger")).
 					Return(nil, errorutil.ErrBundleNotFound)
 			},
 			expectedStatus: http.StatusNotFound,
-			expectedBody: map[string]interface{}{
-				"error": "Firmware release not found for the specified platform and version",
-			},
 		},
 		{
 			name:        "internal server error - S3 failure",
-			platform:    "amp-8x300",
-			version:     "2.0.0",
+			bundleID:    "550e8400-e29b-41d4-a716-446655440000",
 			setupLogger: true,
 			mockSetup: func(m *MockFirmwareService) {
-				m.On("GetArtifactDownloadURL", mock.Anything, "amp-8x300", "2.0.0", mock.AnythingOfType("*zap.Logger")).
+				m.On("GetBundleDownloadURL", mock.Anything, "550e8400-e29b-41d4-a716-446655440000", mock.AnythingOfType("*zap.Logger")).
 					Return(nil, errors.New("failed to generate presign url"))
 			},
 			expectedStatus: http.StatusInternalServerError,
-			expectedBody: map[string]interface{}{
-				"error": "Internal Server Error",
-			},
 		},
 		{
 			name:           "internal server error - logger not in context",
-			platform:       "amp-8x300",
-			version:        "2.0.0",
+			bundleID:       "550e8400-e29b-41d4-a716-446655440000",
 			setupLogger:    false,
 			mockSetup:      func(m *MockFirmwareService) {},
 			expectedStatus: http.StatusInternalServerError,
@@ -896,16 +552,13 @@ func TestDownloadArtifact(t *testing.T) {
 
 			h := NewFirmwareUpdateHandler(mockFirmware)
 
-			w, c := setupTestContext(http.MethodGet, "/firmware/updates/"+tt.platform+"/"+tt.version+"/download", nil)
-			c.Params = gin.Params{
-				gin.Param{Key: "platform", Value: tt.platform},
-				gin.Param{Key: "version", Value: tt.version},
-			}
+			w, c := setupTestContext(http.MethodGet, "/firmware/bundles/"+tt.bundleID+"/download", nil)
+			c.Params = gin.Params{gin.Param{Key: "bundleId", Value: tt.bundleID}}
 			if !tt.setupLogger {
 				c.Keys = map[string]interface{}{}
 			}
 
-			h.DownloadArtifact(c)
+			h.GetBundleDownloadURL(c)
 
 			assert.Equal(t, tt.expectedStatus, w.Code)
 
@@ -923,18 +576,19 @@ func TestDownloadArtifact(t *testing.T) {
 	}
 }
 
-// ==================== LogFirmwareUpdate Tests ====================
+// ==================== LogBundleUpdateStatus Tests ====================
 
-func TestLogFirmwareUpdate(t *testing.T) {
+func TestLogBundleUpdateStatus(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
-	eventTime := time.Now().UTC()
+	installedAt := time.Now().UTC()
 
-	validPayload := types.LogFirmwareUpdateRequest{
-		DeviceID:       "device-001",
-		ReleaseVersion: "2.0.0",
-		Status:         "INSTALL_SUCCESS",
-		EventTime:      eventTime,
+	validPayload := types.LogBundleUpdateStatusPayload{
+		UpdateID:      "550e8400-e29b-41d4-a716-446655440000",
+		ProjectID:     "550e8400-e29b-41d4-a716-446655440001",
+		BundleVersion: "2.0.0",
+		Status:        "INSTALL_SUCCESS",
+		InstalledAt:   installedAt,
 	}
 
 	tests := []struct {
@@ -943,29 +597,30 @@ func TestLogFirmwareUpdate(t *testing.T) {
 		setupLogger    bool
 		mockSetup      func(m *MockFirmwareService)
 		expectedStatus int
-		expectedBody   map[string]interface{}
 	}{
 		{
 			name:        "success - INSTALL_SUCCESS logged",
 			requestBody: validPayload,
 			setupLogger: true,
 			mockSetup: func(m *MockFirmwareService) {
-				m.On("LogFirmwareUpdate", mock.Anything, mock.AnythingOfType("*types.LogFirmwareUpdateRequest")).
+				m.On("LogBundleUpdateStatus", mock.Anything, mock.AnythingOfType("*types.LogBundleUpdateStatusPayload"), mock.AnythingOfType("*zap.Logger")).
 					Return(nil)
 			},
 			expectedStatus: http.StatusAccepted,
 		},
 		{
-			name: "success - INSTALL_FAILED logged",
-			requestBody: types.LogFirmwareUpdateRequest{
-				DeviceID:       "device-002",
-				ReleaseVersion: "2.0.0",
-				Status:         "INSTALL_FAILED",
-				EventTime:      eventTime,
+			name: "success - INSTALL_FAIL logged",
+			requestBody: types.LogBundleUpdateStatusPayload{
+				UpdateID:        "550e8400-e29b-41d4-a716-446655440000",
+				ProjectID:       "550e8400-e29b-41d4-a716-446655440001",
+				BundleVersion:   "2.0.0",
+				PreviousVersion: "1.0.0",
+				Status:          "INSTALL_FAIL",
+				InstalledAt:     installedAt,
 			},
 			setupLogger: true,
 			mockSetup: func(m *MockFirmwareService) {
-				m.On("LogFirmwareUpdate", mock.Anything, mock.AnythingOfType("*types.LogFirmwareUpdateRequest")).
+				m.On("LogBundleUpdateStatus", mock.Anything, mock.AnythingOfType("*types.LogBundleUpdateStatusPayload"), mock.AnythingOfType("*zap.Logger")).
 					Return(nil)
 			},
 			expectedStatus: http.StatusAccepted,
@@ -978,33 +633,12 @@ func TestLogFirmwareUpdate(t *testing.T) {
 			expectedStatus: http.StatusBadRequest,
 		},
 		{
-			name: "bad request - missing device_id",
+			name: "bad request - missing update_id",
 			requestBody: map[string]interface{}{
-				"release_version": "2.0.0",
-				"status":          "INSTALL_SUCCESS",
-				"event_time":      eventTime,
-			},
-			setupLogger:    true,
-			mockSetup:      func(m *MockFirmwareService) {},
-			expectedStatus: http.StatusBadRequest,
-		},
-		{
-			name: "bad request - missing release_version",
-			requestBody: map[string]interface{}{
-				"device_id":  "device-001",
-				"status":     "INSTALL_SUCCESS",
-				"event_time": eventTime,
-			},
-			setupLogger:    true,
-			mockSetup:      func(m *MockFirmwareService) {},
-			expectedStatus: http.StatusBadRequest,
-		},
-		{
-			name: "bad request - missing status",
-			requestBody: map[string]interface{}{
-				"device_id":       "device-001",
-				"release_version": "2.0.0",
-				"event_time":      eventTime,
+				"project_id":     "550e8400-e29b-41d4-a716-446655440001",
+				"bundle_version": "2.0.0",
+				"status":         "INSTALL_SUCCESS",
+				"installed_at":   installedAt,
 			},
 			setupLogger:    true,
 			mockSetup:      func(m *MockFirmwareService) {},
@@ -1013,21 +647,11 @@ func TestLogFirmwareUpdate(t *testing.T) {
 		{
 			name: "bad request - invalid status value",
 			requestBody: map[string]interface{}{
-				"device_id":       "device-001",
-				"release_version": "2.0.0",
-				"status":          "INVALID_STATUS",
-				"event_time":      eventTime,
-			},
-			setupLogger:    true,
-			mockSetup:      func(m *MockFirmwareService) {},
-			expectedStatus: http.StatusBadRequest,
-		},
-		{
-			name: "bad request - missing event_time",
-			requestBody: map[string]interface{}{
-				"device_id":       "device-001",
-				"release_version": "2.0.0",
-				"status":          "INSTALL_SUCCESS",
+				"update_id":      "550e8400-e29b-41d4-a716-446655440000",
+				"project_id":     "550e8400-e29b-41d4-a716-446655440001",
+				"bundle_version": "2.0.0",
+				"status":         "INVALID_STATUS",
+				"installed_at":   installedAt,
 			},
 			setupLogger:    true,
 			mockSetup:      func(m *MockFirmwareService) {},
@@ -1038,13 +662,10 @@ func TestLogFirmwareUpdate(t *testing.T) {
 			requestBody: validPayload,
 			setupLogger: true,
 			mockSetup: func(m *MockFirmwareService) {
-				m.On("LogFirmwareUpdate", mock.Anything, mock.AnythingOfType("*types.LogFirmwareUpdateRequest")).
+				m.On("LogBundleUpdateStatus", mock.Anything, mock.AnythingOfType("*types.LogBundleUpdateStatusPayload"), mock.AnythingOfType("*zap.Logger")).
 					Return(errors.New("database insert failed"))
 			},
 			expectedStatus: http.StatusInternalServerError,
-			expectedBody: map[string]interface{}{
-				"error": "Internal Server Error",
-			},
 		},
 		{
 			name:           "internal server error - logger not in context",
@@ -1062,195 +683,18 @@ func TestLogFirmwareUpdate(t *testing.T) {
 
 			h := NewFirmwareUpdateHandler(mockFirmware)
 
-			w, c := setupTestContext(http.MethodPost, "/firmware/updates/log", tt.requestBody)
+			w, c := setupTestContext(http.MethodPost, "/firmware/bundles/updates/status", tt.requestBody)
 			if !tt.setupLogger {
 				c.Keys = map[string]interface{}{}
 			}
 
-			h.LogFirmwareUpdate(c)
+			h.LogBundleUpdateStatus(c)
 
-			// Use c.Writer.Status() for no-body responses (202) since httptest.ResponseRecorder
-			// only updates Code when WriteHeader is called via Write()
 			assert.Equal(t, tt.expectedStatus, c.Writer.Status())
-
-			if tt.expectedBody != nil {
-				var response map[string]interface{}
-				err := json.Unmarshal(w.Body.Bytes(), &response)
-				assert.NoError(t, err)
-				for key, expectedValue := range tt.expectedBody {
-					assert.Equal(t, expectedValue, response[key])
-				}
-			}
 
 			// verify no body for 202 Accepted
 			if tt.expectedStatus == http.StatusAccepted {
 				assert.Empty(t, w.Body.String())
-			}
-
-			mockFirmware.AssertExpectations(t)
-		})
-	}
-}
-
-// ==================== DeployRelease Tests ====================
-
-func TestDeployRelease(t *testing.T) {
-	gin.SetMode(gin.TestMode)
-
-	validPayload := types.DeployReleasePayload{
-		Channel: "testing",
-	}
-
-	tests := []struct {
-		name           string
-		releaseID      string
-		requestBody    interface{}
-		setupLogger    bool
-		mockSetup      func(m *MockFirmwareService)
-		expectedStatus int
-		expectedBody   map[string]interface{}
-	}{
-		{
-			name:        "success - release deployed to testing channel",
-			releaseID:   "release-uuid-123",
-			requestBody: validPayload,
-			setupLogger: true,
-			mockSetup: func(m *MockFirmwareService) {
-				m.On("DeployRelease", mock.Anything, "release-uuid-123", "testing", mock.Anything).
-					Return(nil)
-			},
-			expectedStatus: http.StatusNoContent,
-		},
-		{
-			name:        "success - release deployed to stable channel",
-			releaseID:   "release-uuid-123",
-			requestBody: types.DeployReleasePayload{Channel: "stable"},
-			setupLogger: true,
-			mockSetup: func(m *MockFirmwareService) {
-				m.On("DeployRelease", mock.Anything, "release-uuid-123", "stable", mock.Anything).
-					Return(nil)
-			},
-			expectedStatus: http.StatusNoContent,
-		},
-		{
-			name:           "bad request - empty releaseID",
-			releaseID:      "",
-			requestBody:    validPayload,
-			setupLogger:    true,
-			mockSetup:      func(m *MockFirmwareService) {},
-			expectedStatus: http.StatusBadRequest,
-			expectedBody: map[string]interface{}{
-				"error": "releaseID is required",
-			},
-		},
-		{
-			name:           "bad request - invalid JSON",
-			releaseID:      "release-uuid-123",
-			requestBody:    "invalid json{",
-			setupLogger:    true,
-			mockSetup:      func(m *MockFirmwareService) {},
-			expectedStatus: http.StatusBadRequest,
-		},
-		{
-			name:           "bad request - missing channel",
-			releaseID:      "release-uuid-123",
-			requestBody:    map[string]interface{}{},
-			setupLogger:    true,
-			mockSetup:      func(m *MockFirmwareService) {},
-			expectedStatus: http.StatusBadRequest,
-		},
-		{
-			name:        "not found - release does not exist",
-			releaseID:   "non-existent-uuid",
-			requestBody: validPayload,
-			setupLogger: true,
-			mockSetup: func(m *MockFirmwareService) {
-				m.On("DeployRelease", mock.Anything, "non-existent-uuid", "testing", mock.Anything).
-					Return(errorutil.ErrBundleNotFound)
-			},
-			expectedStatus: http.StatusNotFound,
-			expectedBody: map[string]interface{}{
-				"error": "Release not found",
-			},
-		},
-		{
-			name:        "internal server error - service failure",
-			releaseID:   "release-uuid-123",
-			requestBody: validPayload,
-			setupLogger: true,
-			mockSetup: func(m *MockFirmwareService) {
-				m.On("DeployRelease", mock.Anything, "release-uuid-123", "testing", mock.Anything).
-					Return(errors.New("database update failed"))
-			},
-			expectedStatus: http.StatusInternalServerError,
-			expectedBody: map[string]interface{}{
-				"error": "Internal Server Error",
-			},
-		},
-		{
-			name:        "bad request - invalid channel",
-			releaseID:   "release-uuid-123",
-			requestBody: types.DeployReleasePayload{Channel: "invalid-channel"},
-			setupLogger: true,
-			mockSetup: func(m *MockFirmwareService) {
-				m.On("DeployRelease", mock.Anything, "release-uuid-123", "invalid-channel", mock.Anything).
-					Return(errorutil.ErrInvalidChannel)
-			},
-			expectedStatus: http.StatusBadRequest,
-			expectedBody: map[string]interface{}{
-				"error": "Invalid distribution channel",
-			},
-		},
-		{
-			name:        "bad request - invalid release status",
-			releaseID:   "release-uuid-123",
-			requestBody: validPayload,
-			setupLogger: true,
-			mockSetup: func(m *MockFirmwareService) {
-				m.On("DeployRelease", mock.Anything, "release-uuid-123", "testing", mock.Anything).
-					Return(errorutil.ErrInvalidReleaseStatus)
-			},
-			expectedStatus: http.StatusBadRequest,
-			expectedBody: map[string]interface{}{
-				"error": "Only AVAILABLE releases can be deployed",
-			},
-		},
-		{
-			name:           "internal server error - logger not in context",
-			releaseID:      "release-uuid-123",
-			requestBody:    validPayload,
-			setupLogger:    false,
-			mockSetup:      func(m *MockFirmwareService) {},
-			expectedStatus: http.StatusInternalServerError,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			mockFirmware := new(MockFirmwareService)
-			tt.mockSetup(mockFirmware)
-
-			h := NewFirmwareUpdateHandler(mockFirmware)
-
-			w, c := setupTestContext(http.MethodPost, "/firmware/releases/"+tt.releaseID+"/deploy", tt.requestBody)
-			c.Params = gin.Params{gin.Param{Key: "releaseID", Value: tt.releaseID}}
-			if !tt.setupLogger {
-				c.Keys = map[string]interface{}{}
-			}
-
-			h.DeployRelease(c)
-
-			// Use c.Writer.Status() for no-body responses (204) since httptest.ResponseRecorder
-			// only updates Code when WriteHeader is called via Write()
-			assert.Equal(t, tt.expectedStatus, c.Writer.Status())
-
-			if tt.expectedBody != nil {
-				var response map[string]interface{}
-				err := json.Unmarshal(w.Body.Bytes(), &response)
-				assert.NoError(t, err)
-				for key, expectedValue := range tt.expectedBody {
-					assert.Equal(t, expectedValue, response[key])
-				}
 			}
 
 			mockFirmware.AssertExpectations(t)

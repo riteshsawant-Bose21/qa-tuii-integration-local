@@ -75,6 +75,66 @@ const docTemplate = `{
             }
         },
         "/firmware/bundles": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Returns a paginated list of firmware bundles with optional filtering by approval status. Results are ordered by creation date in descending order.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Firmware Update - Management API"
+                ],
+                "summary": "List Firmware Bundles",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "default": 1,
+                        "description": "Page number (default: 1)",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 10,
+                        "description": "Items per page (default: 10, max: 100)",
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "boolean",
+                        "description": "Filter by approval status (true or false)",
+                        "name": "is_approved",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "List of firmware bundles with pagination metadata",
+                        "schema": {
+                            "$ref": "#/definitions/types.BundleListResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid query parameters",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    }
+                }
+            },
             "post": {
                 "security": [
                     {
@@ -125,80 +185,9 @@ const docTemplate = `{
                 }
             }
         },
-        "/firmware/releases": {
-            "get": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Returns a paginated list of firmware releases with optional filtering by platform and minimum version. Results are ordered by version in descending order.",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Firmware Update"
-                ],
-                "summary": "List Firmware Releases",
-                "parameters": [
-                    {
-                        "type": "integer",
-                        "default": 1,
-                        "description": "Page number (default: 1)",
-                        "name": "page",
-                        "in": "query"
-                    },
-                    {
-                        "type": "integer",
-                        "default": 10,
-                        "description": "Items per page (default: 10, max: 100)",
-                        "name": "limit",
-                        "in": "query"
-                    },
-                    {
-                        "type": "string",
-                        "description": "Filter by platform (e.g., 'amp-8x300', 'amp-4x150')",
-                        "name": "platform",
-                        "in": "query"
-                    },
-                    {
-                        "type": "string",
-                        "description": "Minimum version filter - returns only versions newer than this (e.g., '1.0.1')",
-                        "name": "min_version",
-                        "in": "query"
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "List of firmware releases with pagination metadata",
-                        "schema": {
-                            "$ref": "#/definitions/types.FirmwareReleaseListResponse"
-                        }
-                    },
-                    "400": {
-                        "description": "Invalid query parameters",
-                        "schema": {
-                            "$ref": "#/definitions/types.ErrorResponse"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal server error",
-                        "schema": {
-                            "$ref": "#/definitions/types.ErrorResponse"
-                        }
-                    }
-                }
-            },
+        "/firmware/bundles/updates/status": {
             "post": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Creates a new firmware release entry in draft status and returns a presigned S3 URL for uploading the firmware artifact. The upload URL is valid for 15 minutes.",
+                "description": "Records the success or failure of a firmware bundle update installation.",
                 "consumes": [
                     "application/json"
                 ],
@@ -206,185 +195,23 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "Firmware Update - Internal API"
+                    "Firmware Update - Client API"
                 ],
-                "summary": "Initiate Firmware Release",
+                "summary": "Log Bundle Update Status",
                 "parameters": [
                     {
-                        "description": "Firmware release metadata including version, platform, release notes, etc.",
+                        "description": "Bundle update status details",
                         "name": "request",
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/types.InitiateFirmwareReleasePayload"
+                            "$ref": "#/definitions/types.LogBundleUpdateStatusPayload"
                         }
                     }
                 ],
                 "responses": {
-                    "200": {
-                        "description": "Returns releaseId and presignedUrl for artifact upload",
-                        "schema": {
-                            "$ref": "#/definitions/types.FormwareReleaseInitiateResposne"
-                        }
-                    },
-                    "400": {
-                        "description": "Invalid request payload or version already exists",
-                        "schema": {
-                            "$ref": "#/definitions/types.ErrorResponse"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal server error",
-                        "schema": {
-                            "$ref": "#/definitions/types.ErrorResponse"
-                        }
-                    }
-                }
-            }
-        },
-        "/firmware/releases/{releaseID}/deploy": {
-            "post": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Deploys an 'AVAILABLE' firmware release to a specific distribution channel (dev, testing, stable).",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Firmware Update"
-                ],
-                "summary": "Deploy Firmware Release",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Unique identifier of the firmware release",
-                        "name": "releaseID",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "description": "Deployment target channel",
-                        "name": "request",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/types.DeployReleasePayload"
-                        }
-                    }
-                ],
-                "responses": {
-                    "204": {
-                        "description": "Release successfully deployed to channel"
-                    },
-                    "400": {
-                        "description": "Invalid channel or releaseID",
-                        "schema": {
-                            "$ref": "#/definitions/types.ErrorResponse"
-                        }
-                    },
-                    "404": {
-                        "description": "Release not found",
-                        "schema": {
-                            "$ref": "#/definitions/types.ErrorResponse"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal server error",
-                        "schema": {
-                            "$ref": "#/definitions/types.ErrorResponse"
-                        }
-                    }
-                }
-            }
-        },
-        "/firmware/releases/{releaseID}/mark-available": {
-            "post": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Updates the release status to 'AVAILABLE' and creates a deployment entry for the specified channel, making the firmware available for devices to download",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Firmware Update - Internal API"
-                ],
-                "summary": "Make Release Available",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Unique identifier of the firmware release",
-                        "name": "releaseID",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "204": {
-                        "description": "Release successfully made available"
-                    },
-                    "400": {
-                        "description": "Invalid releaseID or request payload",
-                        "schema": {
-                            "$ref": "#/definitions/types.ErrorResponse"
-                        }
-                    },
-                    "404": {
-                        "description": "Release not found",
-                        "schema": {
-                            "$ref": "#/definitions/types.ErrorResponse"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal server error",
-                        "schema": {
-                            "$ref": "#/definitions/types.ErrorResponse"
-                        }
-                    }
-                }
-            }
-        },
-        "/firmware/updates/check": {
-            "post": {
-                "description": "Checks if newer firmware versions are available for a batch of devices based on their current versions, platform, and deployment channel. Returns update availability status and latest version information for each device.",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Firmware Update"
-                ],
-                "summary": "Check for Firmware Updates",
-                "parameters": [
-                    {
-                        "description": "List of devices with their current firmware versions and platform information",
-                        "name": "request",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/types.CheckUpdateRequest"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Update availability results for each device",
-                        "schema": {
-                            "$ref": "#/definitions/types.CheckUpdateResponse"
-                        }
+                    "202": {
+                        "description": "Update status logged successfully"
                     },
                     "400": {
                         "description": "Invalid request payload",
@@ -401,9 +228,14 @@ const docTemplate = `{
                 }
             }
         },
-        "/firmware/updates/log": {
+        "/firmware/bundles/{bundleID}/approve": {
             "post": {
-                "description": "Records the success or failure of a firmware update installation on a device. This endpoint is called by devices after attempting a firmware update.",
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Approves a firmware bundle, making it available for deployment",
                 "consumes": [
                     "application/json"
                 ],
@@ -411,26 +243,30 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "Firmware Update"
+                    "Firmware Update - Management API"
                 ],
-                "summary": "Log Firmware Update Event",
+                "summary": "Approve Firmware Bundle",
                 "parameters": [
                     {
-                        "description": "Firmware update log details including device ID, version, and status",
-                        "name": "request",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/types.LogFirmwareUpdateRequest"
-                        }
+                        "type": "string",
+                        "description": "Unique identifier of the firmware bundle",
+                        "name": "bundleID",
+                        "in": "path",
+                        "required": true
                     }
                 ],
                 "responses": {
-                    "202": {
-                        "description": "Update event logged successfully"
+                    "204": {
+                        "description": "Bundle successfully approved"
                     },
                     "400": {
-                        "description": "Invalid request payload or status value",
+                        "description": "Invalid bundleID or request payload",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Bundle not found",
                         "schema": {
                             "$ref": "#/definitions/types.ErrorResponse"
                         }
@@ -444,9 +280,9 @@ const docTemplate = `{
                 }
             }
         },
-        "/firmware/updates/{platform}/{version}/download": {
+        "/firmware/bundles/{bundleId}/download": {
             "get": {
-                "description": "Generates a presigned S3 URL for downloading a specific firmware release artifact. The URL is valid for 15 minutes and includes the file checksum for integrity verification.",
+                "description": "Generates a presigned S3 URL for downloading a specific firmware bundle artifact. The URL is valid for 5 hours and includes the file checksum for integrity verification.",
                 "consumes": [
                     "application/json"
                 ],
@@ -454,21 +290,14 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "Firmware Update"
+                    "Firmware Update - Client API"
                 ],
-                "summary": "Get Firmware Download URL",
+                "summary": "Get Firmware Bundle Download URL",
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "Platform identifier (e.g., 'amp-8x300')",
-                        "name": "platform",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "type": "string",
-                        "description": "Firmware version (e.g., '1.2.0')",
-                        "name": "version",
+                        "description": "Unique identifier of the firmware bundle",
+                        "name": "bundleId",
                         "in": "path",
                         "required": true
                     }
@@ -481,13 +310,67 @@ const docTemplate = `{
                         }
                     },
                     "400": {
-                        "description": "Missing or invalid parameters",
+                        "description": "Missing or invalid bundleId",
                         "schema": {
                             "$ref": "#/definitions/types.ErrorResponse"
                         }
                     },
                     "404": {
-                        "description": "Firmware release not found for the specified platform and version",
+                        "description": "Firmware bundle not found",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/firmware/updates/check": {
+            "get": {
+                "description": "Checks for the latest available firmware bundle. Steps performed:\n1. Query for latest approved bundle where: bundle.version \u003e current_firmware_version AND bundle.min_prev_version \u003c= current_firmware_version AND bundle.min_desktop_app_version \u003c= current_desktop_app_version AND (channel matches prerelease OR prerelease IS NULL for stable)\n2. If found and current_firmware_version \u003e= bundle.min_prev_version: return update_available=true with bundle details\n3. If not found or firmware too old: query for latest bundle where bundle is compatible with current firmware (ignoring desktop app version)\n4. If found and current_desktop_app_version \u003c bundle.min_desktop_app_version: return update_available=true, app_update_required=true\n5. Otherwise: return update_available=false\n\n**Response Scenarios:**\n\n**Scenario 1 - Update Available:**\n` + "`" + `` + "`" + `` + "`" + `json\n{\"update_available\": true, \"app_update_required\": false, \"bundle_id\": \"uuid\", \"version\": \"2.5.6\", \"release_notes\": \"...\", \"min_required_prev_version\": \"2.0.0\", \"min_desktop_app_version\": \"1.4.0\", \"manifest_data\": {}, \"created_at\": \"...\"}\n` + "`" + `` + "`" + `` + "`" + `\n\n**Scenario 2 - App Update Required:**\n` + "`" + `` + "`" + `` + "`" + `json\n{\"update_available\": true, \"app_update_required\": true, \"min_desktop_app_version\": \"2.0.0\"}\n` + "`" + `` + "`" + `` + "`" + `\n\n**Scenario 3 - No Update Available:**\n` + "`" + `` + "`" + `` + "`" + `json\n{\"update_available\": false, \"app_update_required\": false}\n` + "`" + `` + "`" + `` + "`" + `",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Firmware Update - Client API"
+                ],
+                "summary": "Check for Firmware Updates",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Current firmware version (semver format)",
+                        "name": "current_firmware_version",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Current desktop application version (semver format)",
+                        "name": "current_desktop_app_version",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Release channel: 'beta', 'alpha', etc. Omit for stable releases (prerelease IS NULL)",
+                        "name": "channel",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Response varies by scenario - see description above and Models: CheckForUpdateResponse, CheckForUpdateAppUpdateRequired, CheckForUpdateNoUpdate",
+                        "schema": {
+                            "$ref": "#/definitions/types.CheckForUpdateResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid request payload",
                         "schema": {
                             "$ref": "#/definitions/types.ErrorResponse"
                         }
@@ -2137,6 +2020,55 @@ const docTemplate = `{
                 }
             }
         },
+        "types.BundleDetails": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "is_approved": {
+                    "type": "boolean"
+                },
+                "min_desktop_app_version": {
+                    "type": "string"
+                },
+                "min_prev_version": {
+                    "type": "string"
+                },
+                "release_notes": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                },
+                "version": {
+                    "type": "string"
+                }
+            }
+        },
+        "types.BundleListResponse": {
+            "type": "object",
+            "properties": {
+                "bundles": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/types.BundleDetails"
+                    }
+                },
+                "limit": {
+                    "type": "integer"
+                },
+                "page": {
+                    "type": "integer"
+                },
+                "total": {
+                    "type": "integer"
+                }
+            }
+        },
         "types.BundleResponse": {
             "type": "object",
             "properties": {
@@ -2145,32 +2077,44 @@ const docTemplate = `{
                 }
             }
         },
-        "types.CheckUpdateRequest": {
+        "types.CheckForUpdateResponse": {
+            "description": "Full response when update is available with bundle details",
             "type": "object",
-            "required": [
-                "channel",
-                "devices"
-            ],
             "properties": {
-                "channel": {
+                "app_update_required": {
+                    "type": "boolean",
+                    "example": false
+                },
+                "bundle_id": {
+                    "type": "string",
+                    "example": "72e1e23e-eb51-42c1-9ecb-bd7cf7304b60"
+                },
+                "created_at": {
                     "type": "string"
                 },
-                "devices": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/types.DeviceUpdateCheckPayload"
-                    }
-                }
-            }
-        },
-        "types.CheckUpdateResponse": {
-            "type": "object",
-            "properties": {
-                "results": {
+                "manifest_data": {
                     "type": "object",
-                    "additionalProperties": {
-                        "$ref": "#/definitions/types.DeviceUpdateResult"
-                    }
+                    "additionalProperties": true
+                },
+                "min_desktop_app_version": {
+                    "type": "string",
+                    "example": "1.4.0"
+                },
+                "min_required_prev_version": {
+                    "type": "string",
+                    "example": "2.0.0"
+                },
+                "release_notes": {
+                    "type": "string",
+                    "example": "Bug fixes and performance improvements"
+                },
+                "update_available": {
+                    "type": "boolean",
+                    "example": true
+                },
+                "version": {
+                    "type": "string",
+                    "example": "2.5.6"
                 }
             }
         },
@@ -2219,53 +2163,6 @@ const docTemplate = `{
                 "full_name": {
                     "type": "string",
                     "example": "Jane Smith"
-                }
-            }
-        },
-        "types.DeployReleasePayload": {
-            "type": "object",
-            "required": [
-                "channel"
-            ],
-            "properties": {
-                "channel": {
-                    "type": "string"
-                }
-            }
-        },
-        "types.DeviceUpdateCheckPayload": {
-            "type": "object",
-            "required": [
-                "current_firmware_version",
-                "device_id",
-                "platform"
-            ],
-            "properties": {
-                "current_firmware_version": {
-                    "type": "string"
-                },
-                "device_id": {
-                    "type": "string"
-                },
-                "hardware_revision": {
-                    "type": "string"
-                },
-                "platform": {
-                    "type": "string"
-                }
-            }
-        },
-        "types.DeviceUpdateResult": {
-            "type": "object",
-            "properties": {
-                "latest_version": {
-                    "type": "string"
-                },
-                "release_notes": {
-                    "type": "string"
-                },
-                "update_available": {
-                    "type": "boolean"
                 }
             }
         },
@@ -2344,103 +2241,6 @@ const docTemplate = `{
                 }
             }
         },
-        "types.FirmwareReleaseDetails": {
-            "type": "object",
-            "properties": {
-                "api_version": {
-                    "type": "string"
-                },
-                "created": {
-                    "type": "string"
-                },
-                "firmware_version": {
-                    "type": "string"
-                },
-                "hw_compatibility": {
-                    "type": "string"
-                },
-                "id": {
-                    "type": "string"
-                },
-                "min_desktop_app_version": {
-                    "type": "string"
-                },
-                "platform": {
-                    "type": "string"
-                },
-                "release_notes": {
-                    "type": "string"
-                },
-                "status": {
-                    "type": "string"
-                },
-                "updated": {
-                    "type": "string"
-                }
-            }
-        },
-        "types.FirmwareReleaseListResponse": {
-            "type": "object",
-            "properties": {
-                "limit": {
-                    "type": "integer"
-                },
-                "page": {
-                    "type": "integer"
-                },
-                "releases": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/types.FirmwareReleaseDetails"
-                    }
-                },
-                "total": {
-                    "type": "integer"
-                }
-            }
-        },
-        "types.FirmwareReleaseMetaData": {
-            "type": "object",
-            "required": [
-                "apiVersion",
-                "firmwareVersion",
-                "hwCompatibility",
-                "minDesktopAppVersion",
-                "platform",
-                "releaseNotes"
-            ],
-            "properties": {
-                "apiVersion": {
-                    "type": "string"
-                },
-                "firmwareVersion": {
-                    "type": "string"
-                },
-                "hwCompatibility": {
-                    "type": "string"
-                },
-                "minDesktopAppVersion": {
-                    "type": "string"
-                },
-                "platform": {
-                    "type": "string"
-                },
-                "releaseNotes": {
-                    "type": "string"
-                }
-            }
-        },
-        "types.FormwareReleaseInitiateResposne": {
-            "type": "object",
-            "properties": {
-                "presignedUrl": {
-                    "type": "string"
-                },
-                "releaseId": {
-                    "type": "string"
-                }
-            }
-        },
         "types.GetAllProjectsResponse": {
             "type": "object",
             "properties": {
@@ -2464,45 +2264,40 @@ const docTemplate = `{
                 }
             }
         },
-        "types.InitiateFirmwareReleasePayload": {
+        "types.LogBundleUpdateStatusPayload": {
             "type": "object",
             "required": [
-                "checksum",
-                "metaData"
+                "bundle_version",
+                "installed_at",
+                "project_id",
+                "status",
+                "update_id"
             ],
             "properties": {
-                "checksum": {
+                "bundle_version": {
                     "type": "string"
                 },
-                "metaData": {
-                    "$ref": "#/definitions/types.FirmwareReleaseMetaData"
-                }
-            }
-        },
-        "types.LogFirmwareUpdateRequest": {
-            "type": "object",
-            "required": [
-                "device_id",
-                "event_time",
-                "release_version",
-                "status"
-            ],
-            "properties": {
-                "device_id": {
+                "installed_at": {
                     "type": "string"
                 },
-                "event_time": {
+                "launcher_version": {
                     "type": "string"
                 },
-                "release_version": {
+                "previous_version": {
+                    "type": "string"
+                },
+                "project_id": {
                     "type": "string"
                 },
                 "status": {
                     "type": "string",
                     "enum": [
                         "INSTALL_SUCCESS",
-                        "INSTALL_FAILED"
+                        "INSTALL_FAIL"
                     ]
+                },
+                "update_id": {
+                    "type": "string"
                 }
             }
         },

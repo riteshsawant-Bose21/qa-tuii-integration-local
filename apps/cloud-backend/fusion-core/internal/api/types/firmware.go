@@ -2,36 +2,7 @@ package types
 
 import (
 	"time"
-
-	"github.com/aarondl/null/v8"
 )
-
-// LogFirmwareUpdateRequest represents a firmware update log entry from a device
-type LogFirmwareUpdateRequest struct {
-	DeviceID       string    `json:"device_id" binding:"required"`
-	ReleaseVersion string    `json:"release_version" binding:"required"`
-	Status         string    `json:"status" binding:"required,oneof=INSTALL_SUCCESS INSTALL_FAILED"`
-	EventTime      time.Time `json:"event_time" binding:"required"`
-}
-
-type InitiateFirmwareReleasePayload struct {
-	Checksum string                  `json:"checksum" binding:"required"`
-	MetaData FirmwareReleaseMetaData `json:"metaData" binding:"required"`
-}
-
-type FirmwareReleaseMetaData struct {
-	Platform             string `json:"platform" binding:"required"`
-	FirmwareVersion      string `json:"firmwareVersion" binding:"required"`
-	ReleaseNotes         string `json:"releaseNotes" binding:"required"`
-	MinDesktopAppVersion string `json:"minDesktopAppVersion" binding:"required"`
-	HwCompatibility      string `json:"hwCompatibility" binding:"required"`
-	ApiVersion           string `json:"apiVersion" binding:"required"`
-}
-
-type FormwareReleaseInitiateResposne struct {
-	ReleaseID    string `json:"releaseId"`
-	PresignedURL string `json:"presignedUrl"`
-}
 
 type NotifyBundleUploadPayload struct {
 	Version              string      `json:"version" binding:"required"`
@@ -59,7 +30,7 @@ type BundleDetails struct {
 
 type BundleListResponse struct {
 	Bundles []BundleDetails `json:"bundles"`
-	Total   int64           `json:"total"`
+	Total   int             `json:"total"`
 	Page    int             `json:"page"`
 	Limit   int             `json:"limit"`
 }
@@ -116,20 +87,49 @@ type DeployReleasePayload struct {
 }
 
 type CheckForUpdateRequest struct {
-	CurrentFirmwareVersion   string `json:"current_firmware_version" validate:"required,semver"`
-	CurrentDesktopAppVersion string `json:"current_desktop_app_version" validate:"required,semver"`
+	CurrentFirmwareVersion   string `form:"current_firmware_version" binding:"required"`
+	CurrentDesktopAppVersion string `form:"current_desktop_app_version" binding:"required"`
+	Channel                  string `form:"channel"` // Optional: "beta", "alpha", etc. Empty or omitted = stable (prerelease is null)
 }
 
+// CheckForUpdateResponse represents a response when a firmware update is available
+// @Description Full response when update is available with bundle details
 type CheckForUpdateResponse struct {
-	UpdateAvailable      bool        `json:"update_available"`
-	AppUpdateRequired    bool        `json:"app_update_required"`
-	BundleID             null.String `json:"bundle_id,omitempty"`
-	Version              null.String `json:"version,omitempty"`
-	ReleaseNotes         null.String `json:"release_notes,omitempty"`
-	MinPrevVersion       null.String `json:"min_required_prev_version,omitempty"`
-	MinDesktopAppVersion string      `json:"min_desktop_app_version,omitempty"`
-	ManifestData         null.JSON   `json:"manifest_data,omitempty"`
-	CreatedAt            null.Time   `json:"created_at,omitempty"`
+	UpdateAvailable      bool                   `json:"update_available" example:"true"`
+	AppUpdateRequired    bool                   `json:"app_update_required" example:"false"`
+	BundleID             string                 `json:"bundle_id,omitempty" example:"72e1e23e-eb51-42c1-9ecb-bd7cf7304b60"`
+	Version              string                 `json:"version,omitempty" example:"2.5.6"`
+	ReleaseNotes         string                 `json:"release_notes,omitempty" example:"Bug fixes and performance improvements"`
+	MinPrevVersion       string                 `json:"min_required_prev_version,omitempty" example:"2.0.0"`
+	MinDesktopAppVersion string                 `json:"min_desktop_app_version,omitempty" example:"1.4.0"`
+	ManifestData         map[string]interface{} `json:"manifest_data,omitempty"`
+	CreatedAt            *time.Time             `json:"created_at,omitempty"`
+}
+
+// CheckForUpdateAppUpdateRequired represents a response when desktop app update is required before firmware update
+// @Description Response when firmware update exists but desktop app needs to be updated first
+type CheckForUpdateAppUpdateRequired struct {
+	UpdateAvailable      bool   `json:"update_available" example:"true"`
+	AppUpdateRequired    bool   `json:"app_update_required" example:"true"`
+	MinDesktopAppVersion string `json:"min_desktop_app_version" example:"2.0.0"`
+}
+
+// CheckForUpdateNoUpdate represents a response when no update is available
+// @Description Response when the system is up to date
+type CheckForUpdateNoUpdate struct {
+	UpdateAvailable   bool `json:"update_available" example:"false"`
+	AppUpdateRequired bool `json:"app_update_required" example:"false"`
+}
+
+// CheckForUpdateResponses is a container to ensure all response types appear in Swagger Models
+// @Description This type exists only for Swagger documentation. See individual response types below.
+type CheckForUpdateResponses struct {
+	// Scenario1UpdateAvailable is returned when a firmware update is available and compatible
+	Scenario1UpdateAvailable CheckForUpdateResponse `json:"scenario_1_update_available"`
+	// Scenario2AppUpdateRequired is returned when firmware update exists but desktop app needs upgrade first
+	Scenario2AppUpdateRequired CheckForUpdateAppUpdateRequired `json:"scenario_2_app_update_required"`
+	// Scenario3NoUpdate is returned when no update is available
+	Scenario3NoUpdate CheckForUpdateNoUpdate `json:"scenario_3_no_update"`
 }
 
 // FirmwareRelease represents a firmware release with its associated artifacts.

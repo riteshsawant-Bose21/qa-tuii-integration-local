@@ -65,29 +65,72 @@ definitions:
     required:
     - currency
     type: object
+  types.BundleDetails:
+    properties:
+      created_at:
+        type: string
+      id:
+        type: string
+      is_approved:
+        type: boolean
+      min_desktop_app_version:
+        type: string
+      min_prev_version:
+        type: string
+      release_notes:
+        type: string
+      updated_at:
+        type: string
+      version:
+        type: string
+    type: object
+  types.BundleListResponse:
+    properties:
+      bundles:
+        items:
+          $ref: '#/definitions/types.BundleDetails'
+        type: array
+      limit:
+        type: integer
+      page:
+        type: integer
+      total:
+        type: integer
+    type: object
   types.BundleResponse:
     properties:
       id:
         type: string
     type: object
-  types.CheckUpdateRequest:
+  types.CheckForUpdateResponse:
+    description: Full response when update is available with bundle details
     properties:
-      channel:
+      app_update_required:
+        example: false
+        type: boolean
+      bundle_id:
+        example: 72e1e23e-eb51-42c1-9ecb-bd7cf7304b60
         type: string
-      devices:
-        items:
-          $ref: '#/definitions/types.DeviceUpdateCheckPayload'
-        type: array
-    required:
-    - channel
-    - devices
-    type: object
-  types.CheckUpdateResponse:
-    properties:
-      results:
-        additionalProperties:
-          $ref: '#/definitions/types.DeviceUpdateResult'
+      created_at:
+        type: string
+      manifest_data:
+        additionalProperties: true
         type: object
+      min_desktop_app_version:
+        example: 1.4.0
+        type: string
+      min_required_prev_version:
+        example: 2.0.0
+        type: string
+      release_notes:
+        example: Bug fixes and performance improvements
+        type: string
+      update_available:
+        example: true
+        type: boolean
+      version:
+        example: 2.5.6
+        type: string
     type: object
   types.CreateRoleRequest:
     properties:
@@ -124,37 +167,6 @@ definitions:
     - account_type_role_id
     - email
     - full_name
-    type: object
-  types.DeployReleasePayload:
-    properties:
-      channel:
-        type: string
-    required:
-    - channel
-    type: object
-  types.DeviceUpdateCheckPayload:
-    properties:
-      current_firmware_version:
-        type: string
-      device_id:
-        type: string
-      hardware_revision:
-        type: string
-      platform:
-        type: string
-    required:
-    - current_firmware_version
-    - device_id
-    - platform
-    type: object
-  types.DeviceUpdateResult:
-    properties:
-      latest_version:
-        type: string
-      release_notes:
-        type: string
-      update_available:
-        type: boolean
     type: object
   types.DownloadArtifactResponse:
     properties:
@@ -209,71 +221,6 @@ definitions:
         example: launcher.project.create
         type: string
     type: object
-  types.FirmwareReleaseDetails:
-    properties:
-      api_version:
-        type: string
-      created:
-        type: string
-      firmware_version:
-        type: string
-      hw_compatibility:
-        type: string
-      id:
-        type: string
-      min_desktop_app_version:
-        type: string
-      platform:
-        type: string
-      release_notes:
-        type: string
-      status:
-        type: string
-      updated:
-        type: string
-    type: object
-  types.FirmwareReleaseListResponse:
-    properties:
-      limit:
-        type: integer
-      page:
-        type: integer
-      releases:
-        items:
-          $ref: '#/definitions/types.FirmwareReleaseDetails'
-        type: array
-      total:
-        type: integer
-    type: object
-  types.FirmwareReleaseMetaData:
-    properties:
-      apiVersion:
-        type: string
-      firmwareVersion:
-        type: string
-      hwCompatibility:
-        type: string
-      minDesktopAppVersion:
-        type: string
-      platform:
-        type: string
-      releaseNotes:
-        type: string
-    required:
-    - apiVersion
-    - firmwareVersion
-    - hwCompatibility
-    - minDesktopAppVersion
-    - platform
-    - releaseNotes
-    type: object
-  types.FormwareReleaseInitiateResposne:
-    properties:
-      presignedUrl:
-        type: string
-      releaseId:
-        type: string
-    type: object
   types.GetAllProjectsResponse:
     properties:
       data:
@@ -290,34 +237,31 @@ definitions:
         example: 3
         type: integer
     type: object
-  types.InitiateFirmwareReleasePayload:
+  types.LogBundleUpdateStatusPayload:
     properties:
-      checksum:
+      bundle_version:
         type: string
-      metaData:
-        $ref: '#/definitions/types.FirmwareReleaseMetaData'
-    required:
-    - checksum
-    - metaData
-    type: object
-  types.LogFirmwareUpdateRequest:
-    properties:
-      device_id:
+      installed_at:
         type: string
-      event_time:
+      launcher_version:
         type: string
-      release_version:
+      previous_version:
+        type: string
+      project_id:
         type: string
       status:
         enum:
         - INSTALL_SUCCESS
-        - INSTALL_FAILED
+        - INSTALL_FAIL
+        type: string
+      update_id:
         type: string
     required:
-    - device_id
-    - event_time
-    - release_version
+    - bundle_version
+    - installed_at
+    - project_id
     - status
+    - update_id
     type: object
   types.NotifyBundleUploadPayload:
     properties:
@@ -971,6 +915,46 @@ paths:
       tags:
       - auth
   /firmware/bundles:
+    get:
+      consumes:
+      - application/json
+      description: Returns a paginated list of firmware bundles with optional filtering
+        by approval status. Results are ordered by creation date in descending order.
+      parameters:
+      - default: 1
+        description: 'Page number (default: 1)'
+        in: query
+        name: page
+        type: integer
+      - default: 10
+        description: 'Items per page (default: 10, max: 100)'
+        in: query
+        name: limit
+        type: integer
+      - description: Filter by approval status (true or false)
+        in: query
+        name: is_approved
+        type: boolean
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of firmware bundles with pagination metadata
+          schema:
+            $ref: '#/definitions/types.BundleListResponse'
+        "400":
+          description: Invalid query parameters
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: List Firmware Bundles
+      tags:
+      - Firmware Update - Management API
     post:
       consumes:
       - application/json
@@ -1004,151 +988,28 @@ paths:
       summary: Notify Firmware Bundle Upload
       tags:
       - Firmware Update - CI/CD API
-  /firmware/releases:
-    get:
-      consumes:
-      - application/json
-      description: Returns a paginated list of firmware releases with optional filtering
-        by platform and minimum version. Results are ordered by version in descending
-        order.
-      parameters:
-      - default: 1
-        description: 'Page number (default: 1)'
-        in: query
-        name: page
-        type: integer
-      - default: 10
-        description: 'Items per page (default: 10, max: 100)'
-        in: query
-        name: limit
-        type: integer
-      - description: Filter by platform (e.g., 'amp-8x300', 'amp-4x150')
-        in: query
-        name: platform
-        type: string
-      - description: Minimum version filter - returns only versions newer than this
-          (e.g., '1.0.1')
-        in: query
-        name: min_version
-        type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: List of firmware releases with pagination metadata
-          schema:
-            $ref: '#/definitions/types.FirmwareReleaseListResponse'
-        "400":
-          description: Invalid query parameters
-          schema:
-            $ref: '#/definitions/types.ErrorResponse'
-        "500":
-          description: Internal server error
-          schema:
-            $ref: '#/definitions/types.ErrorResponse'
-      security:
-      - BearerAuth: []
-      summary: List Firmware Releases
-      tags:
-      - Firmware Update
+  /firmware/bundles/{bundleID}/approve:
     post:
       consumes:
       - application/json
-      description: Creates a new firmware release entry in draft status and returns
-        a presigned S3 URL for uploading the firmware artifact. The upload URL is
-        valid for 15 minutes.
+      description: Approves a firmware bundle, making it available for deployment
       parameters:
-      - description: Firmware release metadata including version, platform, release
-          notes, etc.
-        in: body
-        name: request
-        required: true
-        schema:
-          $ref: '#/definitions/types.InitiateFirmwareReleasePayload'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: Returns releaseId and presignedUrl for artifact upload
-          schema:
-            $ref: '#/definitions/types.FormwareReleaseInitiateResposne'
-        "400":
-          description: Invalid request payload or version already exists
-          schema:
-            $ref: '#/definitions/types.ErrorResponse'
-        "500":
-          description: Internal server error
-          schema:
-            $ref: '#/definitions/types.ErrorResponse'
-      security:
-      - BearerAuth: []
-      summary: Initiate Firmware Release
-      tags:
-      - Firmware Update - Internal API
-  /firmware/releases/{releaseID}/deploy:
-    post:
-      consumes:
-      - application/json
-      description: Deploys an 'AVAILABLE' firmware release to a specific distribution
-        channel (dev, testing, stable).
-      parameters:
-      - description: Unique identifier of the firmware release
+      - description: Unique identifier of the firmware bundle
         in: path
-        name: releaseID
-        required: true
-        type: string
-      - description: Deployment target channel
-        in: body
-        name: request
-        required: true
-        schema:
-          $ref: '#/definitions/types.DeployReleasePayload'
-      produces:
-      - application/json
-      responses:
-        "204":
-          description: Release successfully deployed to channel
-        "400":
-          description: Invalid channel or releaseID
-          schema:
-            $ref: '#/definitions/types.ErrorResponse'
-        "404":
-          description: Release not found
-          schema:
-            $ref: '#/definitions/types.ErrorResponse'
-        "500":
-          description: Internal server error
-          schema:
-            $ref: '#/definitions/types.ErrorResponse'
-      security:
-      - BearerAuth: []
-      summary: Deploy Firmware Release
-      tags:
-      - Firmware Update
-  /firmware/releases/{releaseID}/mark-available:
-    post:
-      consumes:
-      - application/json
-      description: Updates the release status to 'AVAILABLE' and creates a deployment
-        entry for the specified channel, making the firmware available for devices
-        to download
-      parameters:
-      - description: Unique identifier of the firmware release
-        in: path
-        name: releaseID
+        name: bundleID
         required: true
         type: string
       produces:
       - application/json
       responses:
         "204":
-          description: Release successfully made available
+          description: Bundle successfully approved
         "400":
-          description: Invalid releaseID or request payload
+          description: Invalid bundleID or request payload
           schema:
             $ref: '#/definitions/types.ErrorResponse'
         "404":
-          description: Release not found
+          description: Bundle not found
           schema:
             $ref: '#/definitions/types.ErrorResponse'
         "500":
@@ -1157,25 +1018,20 @@ paths:
             $ref: '#/definitions/types.ErrorResponse'
       security:
       - BearerAuth: []
-      summary: Make Release Available
+      summary: Approve Firmware Bundle
       tags:
-      - Firmware Update - Internal API
-  /firmware/updates/{platform}/{version}/download:
+      - Firmware Update - Management API
+  /firmware/bundles/{bundleId}/download:
     get:
       consumes:
       - application/json
       description: Generates a presigned S3 URL for downloading a specific firmware
-        release artifact. The URL is valid for 15 minutes and includes the file checksum
+        bundle artifact. The URL is valid for 5 hours and includes the file checksum
         for integrity verification.
       parameters:
-      - description: Platform identifier (e.g., 'amp-8x300')
+      - description: Unique identifier of the firmware bundle
         in: path
-        name: platform
-        required: true
-        type: string
-      - description: Firmware version (e.g., '1.2.0')
-        in: path
-        name: version
+        name: bundleId
         required: true
         type: string
       produces:
@@ -1186,43 +1042,98 @@ paths:
           schema:
             $ref: '#/definitions/types.DownloadArtifactResponse'
         "400":
-          description: Missing or invalid parameters
+          description: Missing or invalid bundleId
           schema:
             $ref: '#/definitions/types.ErrorResponse'
         "404":
-          description: Firmware release not found for the specified platform and version
+          description: Firmware bundle not found
           schema:
             $ref: '#/definitions/types.ErrorResponse'
         "500":
           description: Internal server error
           schema:
             $ref: '#/definitions/types.ErrorResponse'
-      summary: Get Firmware Download URL
+      summary: Get Firmware Bundle Download URL
       tags:
-      - Firmware Update
-  /firmware/updates/check:
+      - Firmware Update - Client API
+  /firmware/bundles/updates/status:
     post:
       consumes:
       - application/json
-      description: Checks if newer firmware versions are available for a batch of
-        devices based on their current versions, platform, and deployment channel.
-        Returns update availability status and latest version information for each
-        device.
+      description: Records the success or failure of a firmware bundle update installation.
       parameters:
-      - description: List of devices with their current firmware versions and platform
-          information
+      - description: Bundle update status details
         in: body
         name: request
         required: true
         schema:
-          $ref: '#/definitions/types.CheckUpdateRequest'
+          $ref: '#/definitions/types.LogBundleUpdateStatusPayload'
+      produces:
+      - application/json
+      responses:
+        "202":
+          description: Update status logged successfully
+        "400":
+          description: Invalid request payload
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+      summary: Log Bundle Update Status
+      tags:
+      - Firmware Update - Client API
+  /firmware/updates/check:
+    get:
+      description: |-
+        Checks for the latest available firmware bundle. Steps performed:
+        1. Query for latest approved bundle where: bundle.version > current_firmware_version AND bundle.min_prev_version <= current_firmware_version AND bundle.min_desktop_app_version <= current_desktop_app_version AND (channel matches prerelease OR prerelease IS NULL for stable)
+        2. If found and current_firmware_version >= bundle.min_prev_version: return update_available=true with bundle details
+        3. If not found or firmware too old: query for latest bundle where bundle is compatible with current firmware (ignoring desktop app version)
+        4. If found and current_desktop_app_version < bundle.min_desktop_app_version: return update_available=true, app_update_required=true
+        5. Otherwise: return update_available=false
+
+        **Response Scenarios:**
+
+        **Scenario 1 - Update Available:**
+        ```json
+        {"update_available": true, "app_update_required": false, "bundle_id": "uuid", "version": "2.5.6", "release_notes": "...", "min_required_prev_version": "2.0.0", "min_desktop_app_version": "1.4.0", "manifest_data": {}, "created_at": "..."}
+        ```
+
+        **Scenario 2 - App Update Required:**
+        ```json
+        {"update_available": true, "app_update_required": true, "min_desktop_app_version": "2.0.0"}
+        ```
+
+        **Scenario 3 - No Update Available:**
+        ```json
+        {"update_available": false, "app_update_required": false}
+        ```
+      parameters:
+      - description: Current firmware version (semver format)
+        in: query
+        name: current_firmware_version
+        required: true
+        type: string
+      - description: Current desktop application version (semver format)
+        in: query
+        name: current_desktop_app_version
+        required: true
+        type: string
+      - description: 'Release channel: ''beta'', ''alpha'', etc. Omit for stable releases
+          (prerelease IS NULL)'
+        in: query
+        name: channel
+        type: string
       produces:
       - application/json
       responses:
         "200":
-          description: Update availability results for each device
+          description: 'Response varies by scenario - see description above and Models:
+            CheckForUpdateResponse, CheckForUpdateAppUpdateRequired, CheckForUpdateNoUpdate'
           schema:
-            $ref: '#/definitions/types.CheckUpdateResponse'
+            $ref: '#/definitions/types.CheckForUpdateResponse'
         "400":
           description: Invalid request payload
           schema:
@@ -1233,38 +1144,7 @@ paths:
             $ref: '#/definitions/types.ErrorResponse'
       summary: Check for Firmware Updates
       tags:
-      - Firmware Update
-  /firmware/updates/log:
-    post:
-      consumes:
-      - application/json
-      description: Records the success or failure of a firmware update installation
-        on a device. This endpoint is called by devices after attempting a firmware
-        update.
-      parameters:
-      - description: Firmware update log details including device ID, version, and
-          status
-        in: body
-        name: request
-        required: true
-        schema:
-          $ref: '#/definitions/types.LogFirmwareUpdateRequest'
-      produces:
-      - application/json
-      responses:
-        "202":
-          description: Update event logged successfully
-        "400":
-          description: Invalid request payload or status value
-          schema:
-            $ref: '#/definitions/types.ErrorResponse'
-        "500":
-          description: Internal server error
-          schema:
-            $ref: '#/definitions/types.ErrorResponse'
-      summary: Log Firmware Update Event
-      tags:
-      - Firmware Update
+      - Firmware Update - Client API
   /organization/role-management:
     get:
       consumes:
