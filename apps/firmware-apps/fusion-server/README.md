@@ -281,3 +281,8 @@ ssh connection failed: 'Failed to connect: No route to host'
 ```
 
 **Fix**: Enable "Local Network" permissions under Privacy & Security settings for both Multipass and VS Code in macOS System Preferences.
+Run UDP chaos mesh test:
+
+```bash
+./scripts/multipass/run-tests --udp-chaos
+```
