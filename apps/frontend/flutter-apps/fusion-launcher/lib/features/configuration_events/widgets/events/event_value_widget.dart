@@ -4,7 +4,7 @@ import 'package:fusion_lib/fusion_theme/app_theme.dart';
 
 import '../../../../core/service_locator.dart';
 import '../../../configuration/presentation/viewmodel/project_view_model.dart';
-import 'action_drop_down.dart';
+import '../../../../core/widgets/configuration_widgets/action_drop_down.dart';
 
 class EventValueWidget extends StatefulWidget {
   final String actionId;

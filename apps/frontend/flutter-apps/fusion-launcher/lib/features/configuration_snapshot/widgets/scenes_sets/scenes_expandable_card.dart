@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/core/widgets/title_text_field_switcher.dart';
-import 'package:fusion_launcher/features/configuration_page/widgets/snapshots/snapshot_list.dart';
+import 'package:fusion_launcher/features/configuration_snapshot/viewModel/snapshot_viewmodel/config_snapshots_viewmodel.dart';
+import 'package:fusion_launcher/features/configuration_snapshot/widgets/snapshots/snapshot_list.dart';
 import 'package:fusion_lib/fusion_theme/app_theme.dart';
 import 'package:fusion_lib/fusion_widgets/others/fusion_dialog.dart';
 import 'package:fusion_lib/fusion_widgets/others/fusion_image.dart';
@@ -11,8 +13,8 @@ import 'package:fusion_lib/models/project_entities/non_processing/scene_set_mode
 import 'package:fusion_lib/models/project_entities/non_processing/snapshot_model.dart';
 
 import '../../../../core/constants/assets_constants.dart';
-import '../../../../core/service_locator.dart';
-import '../../../configuration/presentation/viewmodel/project_view_model.dart';
+import '../../viewModel/scenes_viewmodel/config_scene_sets_viewmodel.dart';
+import '../../viewModel/snapshot_viewmodel/config_snapshots_state.dart';
 
 class ScenesExpandableCard extends StatefulWidget {
   final SceneSetModel sceneSetData;
@@ -52,7 +54,8 @@ class ScenesExpandableCard extends StatefulWidget {
 
 class _ScenesExpandableCardState extends State<ScenesExpandableCard> {
   late ValueNotifier<bool> _isScenesExpanded;
-  ProjectViewModel get _projectViewModel => serviceLocator<ProjectViewModel>();
+  ConfigSnapshotsViewmodel get _configSnapshotsViewmodel => context.read<ConfigSnapshotsViewmodel>();
+  ConfigSceneSetsViewmodel get _configSceneSetsViewmodel => context.read<ConfigSceneSetsViewmodel>();
   final TextEditingController _snapshotsNameController = TextEditingController();
 
   bool _isHovered = false;
@@ -66,36 +69,15 @@ class _ScenesExpandableCardState extends State<ScenesExpandableCard> {
   @override
   void dispose() {
     _isScenesExpanded.dispose();
+    _snapshotsNameController.dispose();
     super.dispose();
   }
 
   void _addNewSceneToSceneSet() {
-    final SnapshotsModel newScene = SnapshotsModel(
-      name: "New Snapshot ${widget.snapShotList.length + 1}",
-    );
-    _projectViewModel.addNewSnapshotToSceneSet(sceneSetId: widget.sceneSetData.id, scene: newScene);
+    _configSceneSetsViewmodel.addSnapshotToSceneSet(widget.sceneSetData.id);
 
     /// expand the scene set to show the new item
     _isScenesExpanded.value = true;
-
-    final SceneActionModel action = SceneActionModel();
-
-    _projectViewModel.addSceneActionToSnapshot(sceneId: newScene.id, action: action);
-
-    /// make this snapshot selected
-    _projectViewModel.setSelectedSnapshotId(newScene.id);
-
-    /// Clear dialog and close popup
-  }
-
-  /// Clear source set dialog inputs
-  void _clearSourceSetDialog({bool pop = false, BuildContext? popContext, bool isScene = false}) {
-    _snapshotsNameController.clear();
-
-    if (pop && popContext != null && Navigator.of(popContext).canPop()) {
-      Navigator.of(popContext).pop();
-    }
-    setState(() {});
   }
 
   /// Add method to expand source set externally
@@ -121,47 +103,16 @@ class _ScenesExpandableCardState extends State<ScenesExpandableCard> {
             },
             onLeave: (SnapshotsModel? data) {},
             onAcceptWithDetails: (DragTargetDetails<SnapshotsModel> details) {
-              if (widget.draggingFromSection == 'snapshots') {
-                /// Move from snapshots to this scene set
-                /// First check if it's already in this scene set
-                final bool alreadyInSet = widget.snapShotList.any((SnapshotsModel scene) => scene.id == details.data.id);
+              /// Expand the scene set to show the new item
+              _isScenesExpanded.value = true;
 
-                if (!alreadyInSet) {
-                  /// Expand the scene set to show the new item
-                  _isScenesExpanded.value = true;
-
-                  // Try using the exact same scene object
-                  _projectViewModel.addNewSnapshotToSceneSet(sceneSetId: widget.sceneSetData.id, scene: details.data);
-                  _projectViewModel.setSelectedSnapshotId(details.data.id);
-                }
-              } else if (widget.draggingFromSection == 'scenes') {
-                /// Move from another scene set to this one
-                final bool alreadyInSet = widget.snapShotList.any((SnapshotsModel scene) => scene.id == details.data.id);
-
-                if (!alreadyInSet) {
-                  /// Expand the scene set to show the new item
-                  _isScenesExpanded.value = true;
-
-                  /// Add to this scene set first
-                  _projectViewModel.addNewSnapshotToSceneSet(sceneSetId: widget.sceneSetData.id, scene: details.data);
-                  _projectViewModel.setSelectedSnapshotId(details.data.id);
-
-                  /// Remove from all other scene sets
-                  final List<SceneSetModel> allSceneSets = _projectViewModel.getAllSceneSets();
-                  for (SceneSetModel sceneSet in allSceneSets) {
-                    if (sceneSet.id != widget.sceneSetData.id) {
-                      final List<SnapshotsModel> scenesInSet = _projectViewModel.getSnapshotInSceneSet(sceneSetId: sceneSet.id);
-                      if (scenesInSet.any((SnapshotsModel scene) => scene.id == details.data.id)) {
-                        _projectViewModel.removeSnapshotFromSceneSet(sceneSetId: sceneSet.id, sceneId: details.data.id);
-                      }
-                    }
-                  }
-                }
-              }
-
-              if (widget.onDragEnd != null) {
-                widget.onDragEnd!();
-              }
+              /// Delegate drop handling to cubit
+              _configSceneSetsViewmodel.handleDropOnSceneSet(
+                sceneSetId: widget.sceneSetData.id,
+                snapshot: details.data,
+                isDraggingFromScenes: widget.draggingFromSection == 'scenes',
+              );
+              _configSnapshotsViewmodel.endDrag();
             },
             builder: (BuildContext context, List<SnapshotsModel?> candidateData, List<dynamic> rejectedData) {
               final bool isHovered =
@@ -215,7 +166,7 @@ class _ScenesExpandableCardState extends State<ScenesExpandableCard> {
                                 save: (String value) {
                                   if (value.isNotEmpty) {
                                     final SceneSetModel newScenesSet = widget.sceneSetData.copyWith(name: value);
-                                    _projectViewModel.updateSceneSet(sceneSet: newScenesSet);
+                                    _configSceneSetsViewmodel.updateSceneSet(newScenesSet);
                                   }
                                 },
                               ),
@@ -302,7 +253,7 @@ class _ScenesExpandableCardState extends State<ScenesExpandableCard> {
                       width: double.infinity,
                       padding: const EdgeInsets.only(top: 12, bottom: 12),
                       margin: const EdgeInsets.only(left: 12, right: 12),
-                      color: isHovered ? Theme.of(context).colorScheme.primary.withOpacity(0.05) : context.colorScheme.elevation2.withAlpha(100),
+                      color: isHovered ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.05) : context.colorScheme.elevation2.withAlpha(100),
                       child:
                           widget.snapShotList.isEmpty
                               ? Padding(
@@ -314,34 +265,35 @@ class _ScenesExpandableCardState extends State<ScenesExpandableCard> {
                                   ),
                                 ),
                               )
-                              : SnapshotList(
-                                snapShotList: widget.snapShotList,
-                                selectedSnapshotId: _projectViewModel.selectedSnapshotId,
-                                onSelect: widget.onSelect,
-                                onDelete: (String sceneId) {
-                                  widget.onScenesSnapshotDelete(sceneId);
-                                },
-                                onDuplicate: (String sceneId) {
-                                  if (widget.onScenesSnapshotDuplicate != null) {
-                                    widget.onScenesSnapshotDuplicate!(sceneId);
-                                  }
-                                },
-                                onReorder: (int oldIndex, int newIndex) {
-                                  // if (widget.onReorderScenes != null) {
-                                  //   widget.onReorderScenes!(widget.sceneSetData.id, oldIndex, newIndex);
-                                  // }
-                                  _projectViewModel.reOrderSnapshotInSceneSet(
-                                    sceneSetId: widget.sceneSetData.id,
-                                    oldIndex: oldIndex,
-                                    newIndex: newIndex,
+                              : BlocBuilder<ConfigSnapshotsViewmodel, ConfigSnapshotsState>(
+                                builder: (BuildContext context, ConfigSnapshotsState state) {
+                                  return SnapshotList(
+                                    snapShotList: widget.snapShotList,
+                                    selectedSnapshotId: state.selectedSnapshotId,
+                                    onSelect: widget.onSelect,
+                                    onDelete: (String sceneId) {
+                                      widget.onScenesSnapshotDelete(sceneId);
+                                    },
+                                    onDuplicate: (String sceneId) {
+                                      if (widget.onScenesSnapshotDuplicate != null) {
+                                        widget.onScenesSnapshotDuplicate!(sceneId);
+                                      }
+                                    },
+                                    onReorder: (int oldIndex, int newIndex) {
+                                      _configSceneSetsViewmodel.reorderSnapshotsInSceneSet(
+                                        sceneSetId: widget.sceneSetData.id,
+                                        oldIndex: oldIndex,
+                                        newIndex: newIndex,
+                                        draggingSnapshotId: state.draggingSnapshotId,
+                                      );
+                                    },
+                                    onDragStarted: widget.onDragStarted,
+                                    onDragEnd: widget.onDragEnd,
+                                    draggingSnapshotId: widget.draggingSnapshotId,
+                                    onRenameSave: (String value, SnapshotsModel newSnapshot) {
+                                      _configSnapshotsViewmodel.updateSnapshot(newSnapshot);
+                                    },
                                   );
-                                  _projectViewModel.setSelectedSnapshotId(widget.snapShotList[oldIndex].id);
-                                },
-                                onDragStarted: widget.onDragStarted,
-                                onDragEnd: widget.onDragEnd,
-                                draggingSnapshotId: widget.draggingSnapshotId,
-                                onRenameSave: (String value, SnapshotsModel newSnapshot) {
-                                  _projectViewModel.updateSnapshots(scene: newSnapshot);
                                 },
                               ),
                     ),

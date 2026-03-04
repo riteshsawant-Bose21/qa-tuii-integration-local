@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:fusion_launcher/core/widgets/configuration_widgets/action_drop_down.dart';
 import 'package:fusion_lib/fusion_theme/app_theme.dart';
 import 'package:fusion_lib/fusion_widgets/semantics/semantic_helper.dart';
 import 'package:fusion_lib/fusion_widgets/semantics/semantic_type.dart';
 import 'package:fusion_lib/fusion_widgets/text_views/fusion_app_text.dart';
 import 'package:fusion_lib/models/project_entities/non_processing/fusion_event.dart';
 
-import '../../../../core/service_locator.dart';
-import '../../../configuration/presentation/viewmodel/project_view_model.dart';
-import '../snapshots/action_drop_down.dart';
+import '../../viewModel/events_viewmodel/config_events_viewmodel.dart';
 
 /// Event Trigger Row Header Widget
 /// This widget displays the header row for event triggers, including dropdowns for selecting trigger type, item, action, condition, and value.
@@ -20,48 +20,38 @@ import '../snapshots/action_drop_down.dart';
 /// Returns:
 /// - A [Widget] representing the event trigger row header
 
-class EventTriggerRowHeader extends StatefulWidget {
+class EventTriggerRowHeader extends StatelessWidget {
   final String eventId;
 
   const EventTriggerRowHeader({super.key, required this.eventId});
 
   @override
-  State<EventTriggerRowHeader> createState() => _EventTriggerRowHeaderState();
-}
-
-class _EventTriggerRowHeaderState extends State<EventTriggerRowHeader> {
-  ProjectViewModel get _projectViewModel => serviceLocator<ProjectViewModel>();
-
-  @override
   Widget build(BuildContext context) {
+    final ConfigEventsViewmodel cubit = context.read<ConfigEventsViewmodel>();
+
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
       color: context.colorScheme.elevation2.withAlpha(120),
       child: Row(
         children: <Widget>[
-          // const SizedBox(width: 30),
-
           /// Trigger Type Dropdown
-          _TriggerTypeDropdown(eventId: widget.eventId, projectViewModel: _projectViewModel),
+          _TriggerTypeDropdown(eventId: eventId, cubit: cubit),
           const SizedBox(width: 16),
 
           /// Trigger Item Dropdown
-          _TriggerItemDropdown(
-            eventId: widget.eventId,
-            projectViewModel: _projectViewModel,
-          ),
+          _TriggerItemDropdown(eventId: eventId, configEventsViewmodel: cubit),
           const SizedBox(width: 16),
 
           /// Trigger Action Dropdown
-          _ActionTypeDropdown(eventId: widget.eventId, projectViewModel: _projectViewModel),
+          _ActionTypeDropdown(eventId: eventId, cubit: cubit),
           const SizedBox(width: 16),
 
           /// Trigger Condition Dropdown
-          _ConditionDropdown(eventId: widget.eventId, projectViewModel: _projectViewModel),
+          _ConditionDropdown(eventId: eventId, cubit: cubit),
           const SizedBox(width: 16),
 
           /// Value Column
-          _ValueColumn(eventId: widget.eventId, projectViewModel: _projectViewModel),
+          _ValueColumn(eventId: eventId, cubit: cubit),
         ],
       ),
     );
@@ -70,12 +60,12 @@ class _EventTriggerRowHeaderState extends State<EventTriggerRowHeader> {
 
 class _TriggerTypeDropdown extends StatelessWidget {
   final String eventId;
-  final ProjectViewModel projectViewModel;
-  const _TriggerTypeDropdown({required this.eventId, required this.projectViewModel});
+  final ConfigEventsViewmodel cubit;
+  const _TriggerTypeDropdown({required this.eventId, required this.cubit});
 
   @override
   Widget build(BuildContext context) {
-    final FusionEvent selectedEvent = projectViewModel.getEventById(eventId);
+    final FusionEvent selectedEvent = cubit.getEventById(eventId);
 
     return Expanded(
       child: Column(
@@ -95,13 +85,11 @@ class _TriggerTypeDropdown extends StatelessWidget {
             child: FusionDropdown<EventTriggerType>(
               value: selectedEvent.triggerType,
               hint: "Select Trigger Type",
-              items: projectViewModel.getEventTriggers(),
+              items: cubit.getEventTriggers(),
               display: (EventTriggerType e) => e.displayName,
               onChanged: (EventTriggerType? triggerType) {
                 if (triggerType != null) {
-                  // Clear all dependent values when trigger type changes
-                  // projectViewModel.clearEventDependentValues(eventId: eventId);
-                  projectViewModel.updateEventTrigger(eventId: eventId, newTrigger: triggerType);
+                  cubit.updateEventTrigger(eventId: eventId, newTrigger: triggerType);
                 }
               },
             ),
@@ -115,16 +103,16 @@ class _TriggerTypeDropdown extends StatelessWidget {
 /// Item Dropdown
 class _TriggerItemDropdown extends StatelessWidget {
   final String eventId;
-  final ProjectViewModel projectViewModel;
+  final ConfigEventsViewmodel configEventsViewmodel;
 
-  const _TriggerItemDropdown({required this.eventId, required this.projectViewModel});
+  const _TriggerItemDropdown({required this.eventId, required this.configEventsViewmodel});
 
   @override
   Widget build(BuildContext context) {
-    final FusionEvent selectedEvent = projectViewModel.getEventById(eventId);
+    final FusionEvent selectedEvent = configEventsViewmodel.getEventById(eventId);
     final List<EventTriggerItemDropdown> availableItems =
         selectedEvent.triggerType != null
-            ? projectViewModel.getEventTriggerDropdownItems(triggerType: selectedEvent.triggerType!)
+            ? configEventsViewmodel.getEventTriggerDropdownItems(triggerType: selectedEvent.triggerType!)
             : <EventTriggerItemDropdown>[];
 
     // Find the current value, ensuring it exists in available items
@@ -159,11 +147,9 @@ class _TriggerItemDropdown extends StatelessWidget {
               display: (EventTriggerItemDropdown e) => e.name,
               onChanged: (EventTriggerItemDropdown? item) {
                 if (item != null) {
-                  projectViewModel.updateEventTriggerItem(
+                  configEventsViewmodel.updateEventTriggerItem(
                     eventId: eventId,
-                    newItem: EventTriggerItem(
-                      itemId: item.id,
-                    ),
+                    newItem: EventTriggerItem(itemId: item.id),
                   );
                 }
               },
@@ -177,13 +163,13 @@ class _TriggerItemDropdown extends StatelessWidget {
 
 class _ActionTypeDropdown extends StatelessWidget {
   final String eventId;
-  final ProjectViewModel projectViewModel;
-  const _ActionTypeDropdown({required this.eventId, required this.projectViewModel});
+  final ConfigEventsViewmodel cubit;
+  const _ActionTypeDropdown({required this.eventId, required this.cubit});
 
   @override
   Widget build(BuildContext context) {
-    final FusionEvent selectedEvent = projectViewModel.getEventById(eventId);
-    final List<EventActionType> availableActions = projectViewModel.getEventActions(eventId: eventId);
+    final FusionEvent selectedEvent = cubit.getEventById(eventId);
+    final List<EventActionType> availableActions = cubit.getEventActions(eventId: eventId);
 
     return Expanded(
       child: Column(
@@ -209,12 +195,12 @@ class _ActionTypeDropdown extends StatelessWidget {
                 if (actionType != null) {
                   /// Clear item selection when action type changes to schedule
                   if (actionType.displayName.toLowerCase() == 'schedule') {
-                    projectViewModel.updateEventTriggerItem(
+                    cubit.updateEventTriggerItem(
                       eventId: eventId,
                       newItem: EventTriggerItem(itemId: ''),
                     );
                   }
-                  projectViewModel.updateEventAction(eventId: eventId, newAction: actionType);
+                  cubit.updateEventAction(eventId: eventId, newAction: actionType);
                 }
               },
             ),
@@ -227,13 +213,13 @@ class _ActionTypeDropdown extends StatelessWidget {
 
 class _ConditionDropdown extends StatelessWidget {
   final String eventId;
-  final ProjectViewModel projectViewModel;
-  const _ConditionDropdown({required this.eventId, required this.projectViewModel});
+  final ConfigEventsViewmodel cubit;
+  const _ConditionDropdown({required this.eventId, required this.cubit});
 
   @override
   Widget build(BuildContext context) {
-    final FusionEvent selectedEvent = projectViewModel.getEventById(eventId);
-    final List<EventConditionType> availableConditions = projectViewModel.getEventConditionTypes(eventId: eventId);
+    final FusionEvent selectedEvent = cubit.getEventById(eventId);
+    final List<EventConditionType> availableConditions = cubit.getEventConditionTypes(eventId: eventId);
 
     return Expanded(
       child: Column(
@@ -260,7 +246,7 @@ class _ConditionDropdown extends StatelessWidget {
               display: (EventConditionType e) => e.displayName,
               onChanged: (EventConditionType? conditionType) {
                 if (conditionType != null) {
-                  projectViewModel.updateEventConditionType(eventId: eventId, newConditionType: conditionType);
+                  cubit.updateEventConditionType(eventId: eventId, newConditionType: conditionType);
                 }
               },
             ),
@@ -273,16 +259,16 @@ class _ConditionDropdown extends StatelessWidget {
 
 class _ValueColumn extends StatelessWidget {
   final String eventId;
-  final ProjectViewModel projectViewModel;
+  final ConfigEventsViewmodel cubit;
 
   const _ValueColumn({
     required this.eventId,
-    required this.projectViewModel,
+    required this.cubit,
   });
 
   @override
   Widget build(BuildContext context) {
-    final FusionEvent selectedEvent = projectViewModel.getEventById(eventId);
+    final FusionEvent selectedEvent = cubit.getEventById(eventId);
     final EventCondition? condition = selectedEvent.condition;
 
     return Expanded(
@@ -352,7 +338,7 @@ class _ValueColumn extends StatelessWidget {
             max: values.end,
           );
 
-          projectViewModel.updateEventCondition(
+          cubit.updateEventCondition(
             eventId: eventId,
             newCondition: updatedCondition,
           );
@@ -392,7 +378,7 @@ class _ValueColumn extends StatelessWidget {
                   threshold: value,
                 );
 
-                projectViewModel.updateEventCondition(
+                cubit.updateEventCondition(
                   eventId: eventId,
                   newCondition: updatedCondition,
                 );

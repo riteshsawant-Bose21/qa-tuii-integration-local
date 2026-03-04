@@ -7,7 +7,7 @@ import 'package:fusion_lib/constants/semantics/features/configuration/config_zon
 import 'package:fusion_lib/fusion_lib.dart';
 import '../../../core/service_locator.dart';
 import '../../configuration/presentation/viewmodel/project_view_model.dart';
-import '../widgets/drag_divider.dart';
+import '../../../core/widgets/configuration_widgets/drag_divider.dart';
 import '../widgets/source_item.dart';
 import '../widgets/source_set_item.dart';
 import '../widgets/zone_card.dart';
