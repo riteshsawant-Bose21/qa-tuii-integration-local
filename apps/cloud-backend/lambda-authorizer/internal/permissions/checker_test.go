@@ -562,7 +562,7 @@ func TestAllRegisteredEndpoints_WithCorrectPermissions(t *testing.T) {
 		},
 		{
 			name:   "Get product price",
-			method: "POST",
+			method: "GET",
 			path:   "/api/v1/products/price",
 			requiredPerms: map[string]string{
 				"product.read": "read",
@@ -690,7 +690,7 @@ func TestAllRegisteredEndpoints_WithoutPermissions(t *testing.T) {
 		{"Lock project", "POST", "/api/v1/projects/abc-123/lock", "User with no permissions cannot lock projects"},
 		{"Get all products", "GET", "/api/v1/products", "User with no permissions cannot list products"},
 		{"Get product details", "GET", "/api/v1/products/product-123", "User with no permissions cannot view products"},
-		{"Get product price", "POST", "/api/v1/products/price", "User with no permissions cannot get prices"},
+		{"Get product price", "GET", "/api/v1/products/price", "User with no permissions cannot get prices"},
 		{"Get user profile", "GET", "/api/v1/users/profile", "User with no permissions cannot view profile"},
 		{"Create user profile", "POST", "/api/v1/users/profile", "User with no permissions cannot create profile"},
 		{"Update user profile", "PUT", "/api/v1/users/profile/profile-123", "User with no permissions cannot update profile"},
