@@ -233,11 +233,11 @@ func TestApproveBundle(t *testing.T) {
 	}{
 		{
 			name:          "success - bundle approved",
-			bundleID:      "bundle-uuid-123",
+			bundleID:      "550e8400-e29b-41d4-a716-446655440000",
 			setupLogger:   true,
 			setupUserAuth: true,
 			mockSetup: func(m *MockFirmwareService) {
-				m.On("ApproveBundle", mock.Anything, "bundle-uuid-123", "user-123", mock.AnythingOfType("*zap.Logger")).
+				m.On("ApproveBundle", mock.Anything, "550e8400-e29b-41d4-a716-446655440000", "user-123", mock.AnythingOfType("*zap.Logger")).
 					Return(nil)
 			},
 			expectedStatus: http.StatusNoContent,
@@ -252,29 +252,29 @@ func TestApproveBundle(t *testing.T) {
 		},
 		{
 			name:          "not found - bundle does not exist",
-			bundleID:      "non-existent-uuid",
+			bundleID:      "f47ac10b-58cc-4372-a567-0e02b2c3d479", // Valid UUID
 			setupLogger:   true,
 			setupUserAuth: true,
 			mockSetup: func(m *MockFirmwareService) {
-				m.On("ApproveBundle", mock.Anything, "non-existent-uuid", "user-123", mock.AnythingOfType("*zap.Logger")).
+				m.On("ApproveBundle", mock.Anything, "f47ac10b-58cc-4372-a567-0e02b2c3d479", mock.AnythingOfType("string"), mock.AnythingOfType("*zap.Logger")).
 					Return(errorutil.ErrBundleNotFound)
 			},
 			expectedStatus: http.StatusNotFound,
 		},
 		{
 			name:          "internal server error - service failure",
-			bundleID:      "bundle-uuid-123",
+			bundleID:      "550e8400-e29b-41d4-a716-446655440001",
 			setupLogger:   true,
 			setupUserAuth: true,
 			mockSetup: func(m *MockFirmwareService) {
-				m.On("ApproveBundle", mock.Anything, "bundle-uuid-123", "user-123", mock.AnythingOfType("*zap.Logger")).
+				m.On("ApproveBundle", mock.Anything, "550e8400-e29b-41d4-a716-446655440001", "user-123", mock.AnythingOfType("*zap.Logger")).
 					Return(errors.New("database update failed"))
 			},
 			expectedStatus: http.StatusInternalServerError,
 		},
 		{
 			name:           "internal server error - logger not in context",
-			bundleID:       "bundle-uuid-123",
+			bundleID:       "550e8400-e29b-41d4-a716-446655440002",
 			setupLogger:    false,
 			setupUserAuth:  true,
 			mockSetup:      func(m *MockFirmwareService) {},
@@ -282,7 +282,7 @@ func TestApproveBundle(t *testing.T) {
 		},
 		{
 			name:           "unauthorized - user auth not in context",
-			bundleID:       "bundle-uuid-123",
+			bundleID:       "550e8400-e29b-41d4-a716-446655440003",
 			setupLogger:    true,
 			setupUserAuth:  false,
 			mockSetup:      func(m *MockFirmwareService) {},
@@ -553,7 +553,7 @@ func TestGetBundleDownloadURL(t *testing.T) {
 			h := NewFirmwareUpdateHandler(mockFirmware)
 
 			w, c := setupTestContext(http.MethodGet, "/firmware/bundles/"+tt.bundleID+"/download", nil)
-			c.Params = gin.Params{gin.Param{Key: "bundleId", Value: tt.bundleID}}
+			c.Params = gin.Params{gin.Param{Key: "bundleID", Value: tt.bundleID}}
 			if !tt.setupLogger {
 				c.Keys = map[string]interface{}{}
 			}
@@ -606,7 +606,7 @@ func TestLogBundleUpdateStatus(t *testing.T) {
 				m.On("LogBundleUpdateStatus", mock.Anything, mock.AnythingOfType("*types.LogBundleUpdateStatusPayload"), mock.AnythingOfType("*zap.Logger")).
 					Return(nil)
 			},
-			expectedStatus: http.StatusAccepted,
+			expectedStatus: http.StatusNoContent,
 		},
 		{
 			name: "success - INSTALL_FAIL logged",
@@ -623,7 +623,7 @@ func TestLogBundleUpdateStatus(t *testing.T) {
 				m.On("LogBundleUpdateStatus", mock.Anything, mock.AnythingOfType("*types.LogBundleUpdateStatusPayload"), mock.AnythingOfType("*zap.Logger")).
 					Return(nil)
 			},
-			expectedStatus: http.StatusAccepted,
+			expectedStatus: http.StatusNoContent,
 		},
 		{
 			name:           "bad request - invalid JSON",
@@ -692,8 +692,8 @@ func TestLogBundleUpdateStatus(t *testing.T) {
 
 			assert.Equal(t, tt.expectedStatus, c.Writer.Status())
 
-			// verify no body for 202 Accepted
-			if tt.expectedStatus == http.StatusAccepted {
+			// verify no body for 204 No Content
+			if tt.expectedStatus == http.StatusNoContent {
 				assert.Empty(t, w.Body.String())
 			}
 
