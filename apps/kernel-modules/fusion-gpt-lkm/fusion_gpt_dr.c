@@ -17,7 +17,7 @@
 #include <linux/rcupdate.h>
 #include "fusion_gpt_client.h"
 
-// VCXO Disiplining
+/* VCXO disciplining */
 #include <linux/workqueue.h>
 #include <linux/i2c.h>
 #include <linux/delay.h>
@@ -57,6 +57,10 @@
 #define PERIOD_TICKS_BASE 3333U
 /* 10 MHz -> 10,000,000 ticks per second for 1PPS capture cadence */
 #define PPS_TICKS 10000000ULL
+
+#define DEFAULT_DAC_I2C_BUS      0
+#define DEFAULT_DAC_I2C_ADDR     0x62
+#define DEFAULT_SI5351B_I2C_ADDR 0x60
 
 struct fusion_gpt
 {
@@ -433,10 +437,7 @@ static irqreturn_t gpt_irq(int irq, void *dev_id)
 
               if (abs_err > P_THRESHOLD) {
                   p_step = (int)(abs_err / P_DIV);
-                  if (p_step < 1)
-                      p_step = 1;
-                  if (p_step > P_MAX_STEP)
-                      p_step = P_MAX_STEP;
+                  p_step = clamp(p_step, 1, P_MAX_STEP);
 
                   if (freq_error > 0)
                       g->dac_target -= p_step; /* too fast: slow down */
@@ -455,7 +456,6 @@ static irqreturn_t gpt_irq(int irq, void *dev_id)
               g->dac_target++;
               g->error_integrator = 0;
           }
-          // g->dac_request = g->dac_target;
           {
               const u32 SI_GAIN_STEP = 10000;
               bool sat_high = (g->dac_target > 255);
@@ -475,6 +475,7 @@ static irqreturn_t gpt_irq(int irq, void *dev_id)
                   if (g->si5351b_client) {
                       if (!READ_ONCE(g->si_gain_pending)) {
                           u32 next_gain = g->si_gain_current + SI_GAIN_STEP;
+
                           if (next_gain > g->si_gain_max)
                               next_gain = g->si_gain_max;
 
@@ -519,7 +520,7 @@ static irqreturn_t gpt_irq(int irq, void *dev_id)
           }
 
           if (__ratelimit(&_rs)) {
-              pr_alert("fusion_gpt: [PPS] diff=%llu ticks err=%ld ticks rms=%u ticks | [48K] off=%ldns | DAC=%d\n",
+              pr_alert("fusion_gpt: [PPS] diff=%llu ticks, err=%ld ticks, rms=%u ticks | [48K] off=%ldns | DAC=%d\n",
                        diff, freq_error, rms_jitter, if2_offset_ns, g->dac_target);
               
               g->sq_err_sum = 0;
@@ -566,7 +567,9 @@ static irqreturn_t gpt_irq(int irq, void *dev_id)
 				phc_ns = epoch_ns + (cap64 - epoch_cnt64) * 100ULL;
 		}
 
-    schedule_work(&g->dac_work);
+		if (READ_ONCE(g->dac_target) != READ_ONCE(g->current_dac_value) ||
+		    READ_ONCE(g->si_gain_pending))
+			schedule_work(&g->dac_work);
 		clr |= SR_IF1;
 
 	}
@@ -751,13 +754,13 @@ static int gpt_probe(struct platform_device *pdev)
 	struct fusion_gpt *g;
 	struct resource *res;
 	int irq, ret;
-  struct i2c_adapter *adapter;
-  struct i2c_board_info dac_info = {
-      I2C_BOARD_INFO("mcp4725", 0x62), // Use DAC's name or a dummy string
-  };
-  struct i2c_board_info si_info = {
-      I2C_BOARD_INFO("si5351b", 0x60),
-  };
+	struct i2c_adapter *adapter;
+	struct i2c_board_info dac_info = {
+		I2C_BOARD_INFO("mcp4725", DEFAULT_DAC_I2C_ADDR),
+	};
+	struct i2c_board_info si_info = {
+		I2C_BOARD_INFO("si5351b", DEFAULT_SI5351B_I2C_ADDR),
+	};
 
 	g = devm_kzalloc(&pdev->dev, sizeof(*g), GFP_KERNEL);
 	if (!g)
@@ -804,43 +807,50 @@ static int gpt_probe(struct platform_device *pdev)
 			       dev_name(&pdev->dev), g);
 	if (ret) goto err_disable_clks;
 
-  /* DAC handler */
-  g->dac_target = 128;
-  g->si_gain_min = 40000;
-  g->si_gain_max = 250000;
-  g->si_gain_current = g->si_gain_min;
-  g->si_gain_target = g->si_gain_current;
-  g->si_gain_pending = false;
-  adapter = i2c_get_adapter(0); /* Bus 0 */
-  if (!adapter) {
-    dev_dbg(&pdev->dev, "I2C bus not ready yet, deferring probe...\n");
-    ret = -EPROBE_DEFER;
-    goto err_disable_clks;
-  }
-  g->dac_client = i2c_new_client_device(adapter, &dac_info);
+	/* DAC + VCXO disciplining setup */
+	g->dac_target = 128;
+	g->current_dac_value = 0xFFFF; /* force first write */
+	g->si_gain_min = 40000;
+	g->si_gain_max = 250000;
+	g->si_gain_current = g->si_gain_min;
+	g->si_gain_target = g->si_gain_current;
+	g->si_gain_pending = false;
+	INIT_WORK(&g->dac_work, fusion_dac_work_handler);
 
-  if (IS_ERR(g->dac_client)) {
-    dev_err(&pdev->dev, "Failed to create I2C client for DAC\n");
-    ret = PTR_ERR(g->dac_client);
-    i2c_put_adapter(adapter); // Release the adapter reference once client is made
-    goto err_disable_clks;
-  } else {
-    INIT_WORK(&g->dac_work, fusion_dac_work_handler);
-  }
+	/* Get the discipline I2C adapter (defer if not ready). */
+	adapter = i2c_get_adapter(DEFAULT_DAC_I2C_BUS);
+	if (!adapter) {
+		dev_dbg(&pdev->dev, "I2C bus %u not ready, deferring probe\n",
+			DEFAULT_DAC_I2C_BUS);
+		ret = -EPROBE_DEFER;
+		goto err_disable_clks;
+	}
 
-  g->si5351b_client = i2c_new_client_device(adapter, &si_info);
-  if (IS_ERR(g->si5351b_client)) {
-    dev_err(&pdev->dev, "Failed to create I2C client for Si5351b\n");
-    g->si5351b_client = NULL;
-  } else {
-    if (si5351b_write_gain(g, g->si_gain_current) < 0)
-      dev_err(&pdev->dev, "Failed to initialize Si5351b gain\n");
-  }
+	/* Create DAC client. */
+	g->dac_client = i2c_new_client_device(adapter, &dac_info);
+	if (IS_ERR(g->dac_client)) {
+		ret = PTR_ERR(g->dac_client);
+		g->dac_client = NULL;
+		i2c_put_adapter(adapter);
+		dev_err_probe(&pdev->dev, ret, "failed to create I2C client for DAC\n");
+		goto err_disable_clks;
+	}
 
-  i2c_put_adapter(adapter); // Release the adapter reference once client is made
+	/* Create Si5351b client. */
+	g->si5351b_client = i2c_new_client_device(adapter, &si_info);
+	if (IS_ERR(g->si5351b_client)) {
+		dev_warn(&pdev->dev, "failed to create I2C client for Si5351b: %ld\n",
+			 PTR_ERR(g->si5351b_client));
+		g->si5351b_client = NULL;
+	} else if (si5351b_write_gain(g, g->si_gain_current) < 0) {
+		dev_warn(&pdev->dev, "failed to initialize Si5351b gain\n");
+	}
+
+	i2c_put_adapter(adapter);
 
 	ret = gpt_start(g);
-	if (ret) goto err_disable_clks;
+	if (ret)
+		goto err_cleanup_i2c;
 
 	/* publish after start */
 	mutex_lock(&gpt_singleton_lock);
@@ -849,8 +859,14 @@ static int gpt_probe(struct platform_device *pdev)
 
 	dev_info(&pdev->dev,
 		 "GPT1 shim running (EXT 10MHz, 1/3ms compares)\n");
-  return 0;
+	return 0;
 
+err_cleanup_i2c:
+	cancel_work_sync(&g->dac_work);
+	if (g->dac_client)
+		i2c_unregister_device(g->dac_client);
+	if (g->si5351b_client)
+		i2c_unregister_device(g->si5351b_client);
 err_disable_clks:
 	clk_disable_unprepare(g->clk_per);
 	clk_disable_unprepare(g->clk_ipg);
@@ -870,6 +886,8 @@ static void gpt_remove(struct platform_device *pdev)
 	wrl(g, 0, GPT_IR);                               /* mask all */
 	wrl(g, SR_OF1 | SR_IF1 | SR_IF2, GPT_SR);        /* W1C clear any latched */
 	wrl(g, cr & ~CR_EN, GPT_CR);                     /* stop */
+
+	cancel_work_sync(&g->dac_work);
 
 	/* Gate clocks */
 	clk_disable_unprepare(g->clk_per);
@@ -899,4 +917,4 @@ module_platform_driver(drv);
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR("Bose Pro");
 MODULE_DESCRIPTION("GPT1 SHIM EXPORTING 1/3MS TICKS");
-MODULE_VERSION("1.0.3");
+MODULE_VERSION("1.0.5");
