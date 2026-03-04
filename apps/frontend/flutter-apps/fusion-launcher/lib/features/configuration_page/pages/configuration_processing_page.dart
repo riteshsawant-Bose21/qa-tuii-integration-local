@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/features/configuration_page/widgets/search_bar_sources.dart';
 import 'package:fusion_launcher/features/configuration_page/widgets/section_header.dart';
+import 'package:fusion_lib/constants/semantics/features/configuration/config_sources.dart';
+import 'package:fusion_lib/constants/semantics/features/configuration/config_zones_keys.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import '../../../core/service_locator.dart';
 import '../../configuration/presentation/viewmodel/project_view_model.dart';
@@ -21,12 +23,15 @@ class ConfigurationProcessingPage extends StatefulWidget {
   const ConfigurationProcessingPage({super.key});
 
   @override
-  State<ConfigurationProcessingPage> createState() => _ConfigurationProcessingPageState();
+  State<ConfigurationProcessingPage> createState() =>
+      _ConfigurationProcessingPageState();
 }
 
-class _ConfigurationProcessingPageState extends State<ConfigurationProcessingPage> {
+class _ConfigurationProcessingPageState
+    extends State<ConfigurationProcessingPage> {
   final TextEditingController searchController = TextEditingController();
-  final TextEditingController _sourceSetNameController = TextEditingController();
+  final TextEditingController _sourceSetNameController =
+      TextEditingController();
   final List<SelectedSource> _selectedSources = <SelectedSource>[];
   final GlobalKey _popupButtonKey = GlobalKey();
   final ScrollController _zonesScrollController = ScrollController();
@@ -39,10 +44,12 @@ class _ConfigurationProcessingPageState extends State<ConfigurationProcessingPag
   String? _draggingSourceId;
 
   /// Map to store GlobalKeys for each SourceSetItem
-  final Map<String, GlobalKey> _sourceSetKeys = <String, GlobalKey<State<StatefulWidget>>>{};
+  final Map<String, GlobalKey> _sourceSetKeys =
+      <String, GlobalKey<State<StatefulWidget>>>{};
 
   /// Map to store GlobalKeys for each ZoneCard
-  final Map<String, GlobalKey> _zoneKeys = <String, GlobalKey<State<StatefulWidget>>>{};
+  final Map<String, GlobalKey> _zoneKeys =
+      <String, GlobalKey<State<StatefulWidget>>>{};
 
   /// Filtered sources list for search functionality
   List<Source> _filteredSources = <Source>[];
@@ -56,8 +63,10 @@ class _ConfigurationProcessingPageState extends State<ConfigurationProcessingPag
 
   void _updateSourcesHeight(double delta) {
     final double screenHeight = MediaQuery.of(context).size.height;
-    final double minHeight = screenHeight * 0.15; // 15% of screen height as minimum
-    final double maxHeight = screenHeight * 0.5; // 50% of screen height as maximum
+    final double minHeight =
+        screenHeight * 0.15; // 15% of screen height as minimum
+    final double maxHeight =
+        screenHeight * 0.5; // 50% of screen height as maximum
 
     setState(() {
       _sourcesHeight = (_sourcesHeight + delta).clamp(minHeight, maxHeight);
@@ -81,26 +90,39 @@ class _ConfigurationProcessingPageState extends State<ConfigurationProcessingPag
       return;
     }
 
-    final RenderObject? renderObject = zoneKey!.currentContext!.findRenderObject();
+    final RenderObject? renderObject =
+        zoneKey!.currentContext!.findRenderObject();
     if (renderObject is! RenderBox) return;
 
     // Get the position of the zone relative to the scroll view
-    final RenderObject? scrollViewRenderObject = _zonesScrollController.position.context.storageContext.findRenderObject();
+    final RenderObject? scrollViewRenderObject =
+        _zonesScrollController.position.context.storageContext
+            .findRenderObject();
     if (scrollViewRenderObject is! RenderBox) return;
 
     try {
       // Get zone position relative to the scrollable area
-      final Offset zonePosition = renderObject.localToGlobal(Offset.zero, ancestor: scrollViewRenderObject);
+      final Offset zonePosition = renderObject.localToGlobal(
+        Offset.zero,
+        ancestor: scrollViewRenderObject,
+      );
       final double zoneTop = zonePosition.dy + _zonesScrollController.offset;
 
       // Get viewport dimensions
-      final double viewportHeight = _zonesScrollController.position.viewportDimension;
+      final double viewportHeight =
+          _zonesScrollController.position.viewportDimension;
       final double currentScrollOffset = _zonesScrollController.offset;
 
       // Calculate the expanded content height (estimated)
-      final List<SubZone> subZones = _projectViewModel.getSubZonesForZone(parentZoneId: zoneId);
-      final double expandedContentHeight = (subZones.length * 100.0).clamp(200.0, 400.0);
-      final double totalZoneHeight = 32.0 + expandedContentHeight; // header + content
+      final List<SubZone> subZones = _projectViewModel.getSubZonesForZone(
+        parentZoneId: zoneId,
+      );
+      final double expandedContentHeight = (subZones.length * 100.0).clamp(
+        200.0,
+        400.0,
+      );
+      final double totalZoneHeight =
+          32.0 + expandedContentHeight; // header + content
 
       // Check if zone fits in current viewport
       final double zoneBottom = zoneTop + totalZoneHeight;
@@ -117,7 +139,8 @@ class _ConfigurationProcessingPageState extends State<ConfigurationProcessingPag
         // Zone extends below viewport, scroll down to fit the zone
         if (totalZoneHeight <= viewportHeight) {
           // Zone fits in viewport, position it optimally
-          targetScrollPosition = zoneBottom - viewportHeight + 20; // 20px padding from bottom
+          targetScrollPosition =
+              zoneBottom - viewportHeight + 20; // 20px padding from bottom
         } else {
           // Zone is larger than viewport, just ensure the header is visible at top
           targetScrollPosition = zoneTop - 20;
@@ -125,7 +148,10 @@ class _ConfigurationProcessingPageState extends State<ConfigurationProcessingPag
       }
 
       // Clamp to valid scroll range
-      targetScrollPosition = targetScrollPosition.clamp(0.0, _zonesScrollController.position.maxScrollExtent);
+      targetScrollPosition = targetScrollPosition.clamp(
+        0.0,
+        _zonesScrollController.position.maxScrollExtent,
+      );
 
       // Animate to target position if it's different from current
       if ((targetScrollPosition - currentScrollOffset).abs() > 5) {
@@ -137,7 +163,9 @@ class _ConfigurationProcessingPageState extends State<ConfigurationProcessingPag
       }
     } catch (e) {
       // Fallback to index-based scrolling if GlobalKey method fails
-      final int zoneIndex = _projectViewModel.zones.indexWhere((Zone zone) => zone.id == zoneId);
+      final int zoneIndex = _projectViewModel.zones.indexWhere(
+        (Zone zone) => zone.id == zoneId,
+      );
       if (zoneIndex != -1) {
         _scrollToZone(zoneIndex);
       }
@@ -153,7 +181,10 @@ class _ConfigurationProcessingPageState extends State<ConfigurationProcessingPag
 
       // Add some padding and scroll to the estimated position
       _zonesScrollController.animateTo(
-        (estimatedPosition - 50.0).clamp(0.0, _zonesScrollController.position.maxScrollExtent),
+        (estimatedPosition - 50.0).clamp(
+          0.0,
+          _zonesScrollController.position.maxScrollExtent,
+        ),
         duration: const Duration(milliseconds: 400),
         curve: Curves.easeInOut,
       );
@@ -162,12 +193,19 @@ class _ConfigurationProcessingPageState extends State<ConfigurationProcessingPag
 
   /// Filter sources based on search query
   void _filterSources(String query) {
-    final List<Source> allSources = _projectViewModel.getSourcesWithoutSourceSet();
+    final List<Source> allSources =
+        _projectViewModel.getSourcesWithoutSourceSet();
 
     if (query.isEmpty) {
       _filteredSources = allSources;
     } else {
-      _filteredSources = allSources.where((Source source) => source.name.toLowerCase().contains(query.toLowerCase())).toList();
+      _filteredSources =
+          allSources
+              .where(
+                (Source source) =>
+                    source.name.toLowerCase().contains(query.toLowerCase()),
+              )
+              .toList();
     }
   }
 
@@ -175,28 +213,53 @@ class _ConfigurationProcessingPageState extends State<ConfigurationProcessingPag
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.primaryBlack,
-      body: LayoutBuilder(
-        builder: (BuildContext context, BoxConstraints constraints) {
-          final bool isWideScreen = constraints.maxWidth > 600;
+      body: SemanticHelper.container(
+        testId: SemanticHelper.createTestId(
+          SemanticTypes.section,
+          FusionTestKeys.instance.sourcesec,
+        ),
+        child: LayoutBuilder(
+          builder: (BuildContext context, BoxConstraints constraints) {
+            final bool isWideScreen = constraints.maxWidth > 600;
 
-          if (isWideScreen) {
-            return Row(
-              children: <Widget>[
-                SizedBox(width: constraints.maxWidth * 0.3, child: _buildInputPanel(context)),
-                const SizedBox(width: 4),
+            if (isWideScreen) {
+              return Row(
+                children: <Widget>[
+                  SizedBox(
+                    width: constraints.maxWidth * 0.3,
+                    child: SemanticHelper.container(
+                      testId: SemanticHelper.createTestId(
+                        SemanticTypes.container,
+                        "sources_sources_set_panel",
+                      ),
+                      child: _buildInputPanel(context),
+                    ),
+                  ),
+                  const SizedBox(width: 4),
 
-                Expanded(child: _buildOutputPanel()),
-              ],
-            );
-          } else {
-            return Column(
-              children: <Widget>[
-                Expanded(flex: 1, child: _buildInputPanel(context)),
-                Expanded(flex: 2, child: _buildOutputPanel()),
-              ],
-            );
-          }
-        },
+                  Expanded(
+                    child: SemanticHelper.container(
+                      testId: SemanticHelper.createTestId(
+                        SemanticTypes.container,
+                        "zones_panel",
+                      ),
+                      child: Container(
+                        child: _buildOutputPanel(),
+                      ),
+                    ),
+                  ),
+                ],
+              );
+            } else {
+              return Column(
+                children: <Widget>[
+                  Expanded(flex: 1, child: _buildInputPanel(context)),
+                  Expanded(flex: 2, child: _buildOutputPanel()),
+                ],
+              );
+            }
+          },
+        ),
       ),
     );
   }
@@ -210,116 +273,189 @@ class _ConfigurationProcessingPageState extends State<ConfigurationProcessingPag
       ),
       child: Column(
         children: <Widget>[
-          const SectionHeader(
-            title: 'Sources',
-            assetPath: 'assets/images/source_icon.png',
+          SemanticHelper.staticText(
+            testId: SemanticHelper.createTestId(
+              SemanticTypes.text,
+              FusionTestKeys.instance.sourcehead,
+            ),
+            child: const SectionHeader(
+              title: 'Sources',
+              assetPath: 'assets/images/source_icon.png',
+            ),
           ),
 
           /// Search bar with filters and sorting
-          SearchBarSources(
-            searchController: searchController,
-            hasActiveFilters: () => false,
-            onClearSearch: () {
-              searchController.clear();
-              _filterSources('');
-              setState(() {});
-            },
-            onSearchChanged: (String value) {
-              _filterSources(value);
-              setState(() {});
-            },
+          SemanticHelper.textInput(
+            testId: SemanticHelper.createTestId(
+              SemanticTypes.textInput,
+              FusionTestKeys.instance.sourcesearch,
+            ),
+            child: SearchBarSources(
+              searchController: searchController,
+              hasActiveFilters: () => false,
+              onClearSearch: () {
+                searchController.clear();
+                _filterSources('');
+                setState(() {});
+              },
+              onSearchChanged: (String value) {
+                _filterSources(value);
+                setState(() {});
+              },
+            ),
           ),
 
           /// Sources list with controlled height
-          DragTarget<Source>(
-            onWillAcceptWithDetails: (DragTargetDetails<Source> details) {
-              /// Accept only if this source currently lives inside any source set.
-              /// This prevents dropping a source back onto the same sources list when dragging from itself.
-              return _isSourceInAnySourceSet(details.data.id);
-            },
-            onLeave: (Source? data) {},
-            onAcceptWithDetails: (DragTargetDetails<Source> details) {
-              final SourceSet? sourceSet = _projectViewModel.getSourceSetForSource(sourceId: details.data.id);
-              if (sourceSet != null) {
-                _projectViewModel.removeSourceFromSourceSet(sourceId: details.data.id, sourceSetId: sourceSet.id);
-              }
-              setState(() {
-                _draggingSourceId = null;
-              });
-            },
-            builder: (BuildContext context, List<Source?> candidateData, List<dynamic> rejectedData) {
-              final bool isHovered = candidateData.isNotEmpty;
-              return Container(
-                padding: const EdgeInsets.all(10),
-                height: _sourcesHeight,
-                decoration: BoxDecoration(
-                  color: isHovered ? Theme.of(context).colorScheme.primary.withOpacity(0.1) : Colors.transparent,
-                  border:
-                      isHovered
-                          ? Border.all(
-                            color: Theme.of(context).colorScheme.primary.withOpacity(0.3),
-                            width: 2,
-                          )
-                          : Border.symmetric(
-                            vertical: BorderSide(color: context.colorScheme.elevation2, width: 1),
-                            // color: Theme.of(context).colorScheme.elevation2,
-                            // width: 1,
-                          ),
-                ),
-                child: BlocBuilder<ProjectViewModel, ProjectViewModelState>(
-                  builder: (BuildContext context, ProjectViewModelState state) {
-                    final List<Source> sourcesWithoutSourceSet = _projectViewModel.getSourcesWithoutSourceSet();
+          SemanticHelper.container(
+            testId: SemanticHelper.createTestId(
+              SemanticTypes.container,
+              FusionTestKeys.instance.sourcelist,
+            ),
+            child: DragTarget<Source>(
+              onWillAcceptWithDetails: (DragTargetDetails<Source> details) {
+                /// Accept only if this source currently lives inside any source set.
+                /// This prevents dropping a source back onto the same sources list when dragging from itself.
+                return _isSourceInAnySourceSet(details.data.id);
+              },
+              onLeave: (Source? data) {},
+              onAcceptWithDetails: (DragTargetDetails<Source> details) {
+                final SourceSet? sourceSet = _projectViewModel
+                    .getSourceSetForSource(sourceId: details.data.id);
+                if (sourceSet != null) {
+                  _projectViewModel.removeSourceFromSourceSet(
+                    sourceId: details.data.id,
+                    sourceSetId: sourceSet.id,
+                  );
+                }
+                setState(() {
+                  _draggingSourceId = null;
+                });
+              },
+              builder: (
+                BuildContext context,
+                List<Source?> candidateData,
+                List<dynamic> rejectedData,
+              ) {
+                final bool isHovered = candidateData.isNotEmpty;
+                return Container(
+                  padding: const EdgeInsets.all(10),
+                  height: _sourcesHeight,
+                  decoration: BoxDecoration(
+                    color:
+                        isHovered
+                            ? Theme.of(
+                              context,
+                            ).colorScheme.primary.withOpacity(0.1)
+                            : Colors.transparent,
+                    border:
+                        isHovered
+                            ? Border.all(
+                              color: Theme.of(
+                                context,
+                              ).colorScheme.primary.withOpacity(0.3),
+                              width: 2,
+                            )
+                            : Border.symmetric(
+                              vertical: BorderSide(
+                                color: context.colorScheme.elevation2,
+                                width: 1,
+                              ),
+                              // color: Theme.of(context).colorScheme.elevation2,
+                              // width: 1,
+                            ),
+                  ),
+                  child: BlocBuilder<ProjectViewModel, ProjectViewModelState>(
+                    builder: (
+                      BuildContext context,
+                      ProjectViewModelState state,
+                    ) {
+                      final List<Source> sourcesWithoutSourceSet =
+                          _projectViewModel.getSourcesWithoutSourceSet();
 
-                    if (searchController.text.isEmpty) {
-                      _filteredSources = sourcesWithoutSourceSet;
-                    } else {
-                      _filterSources(searchController.text);
-                    }
+                      if (searchController.text.isEmpty) {
+                        _filteredSources = sourcesWithoutSourceSet;
+                      } else {
+                        _filterSources(searchController.text);
+                      }
 
-                    if (_filteredSources.isEmpty) {
-                      return Center(
-                        child: FusionAppText(
-                          text: searchController.text.isNotEmpty ? 'No search data for "${searchController.text}"' : 'No sources added yet',
-                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w500,
+                      if (_filteredSources.isEmpty) {
+                        return SemanticHelper.staticText(
+                          testId: SemanticHelper.createTestId(
+                            SemanticTypes.text,
+                            FusionTestKeys.instance.sourceempty,
                           ),
-                        ),
-                      );
-                    }
-                    return ListView.separated(
-                      itemCount: _filteredSources.length,
-                      separatorBuilder: (BuildContext context, int index) => const SizedBox(height: 4),
-                      itemBuilder: (BuildContext context, int index) {
-                        final Source source = _filteredSources[index];
-                        return Draggable<Source>(
-                          data: source,
-                          dragAnchorStrategy: pointerDragAnchorStrategy,
-                          onDragStarted: () {
-                            setState(() {
-                              _draggingSourceId = source.id;
-                            });
-                          },
-                          onDraggableCanceled: (_, __) {
-                            setState(() {
-                              _draggingSourceId = null;
-                            });
-                          },
-                          onDragEnd: (_) {
-                            setState(() {
-                              _draggingSourceId = null;
-                            });
-                          },
-                          feedback: Material(
-                            color: Colors.transparent,
-                            child: Opacity(
-                              opacity: 0.8,
-                              child: Container(
-                                width: 220,
-                                decoration: BoxDecoration(
-                                  color: context.colorScheme.primary.withAlpha(150),
-                                  borderRadius: BorderRadius.circular(8),
+                          child: Center(
+                            child: FusionAppText(
+                              text:
+                                  searchController.text.isNotEmpty
+                                      ? 'No search data for "${searchController.text}"'
+                                      : 'No sources added yet',
+                              style: Theme.of(
+                                context,
+                              ).textTheme.bodyMedium?.copyWith(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ),
+                        );
+                      }
+                      return ListView.separated(
+                        itemCount: _filteredSources.length,
+                        separatorBuilder:
+                            (BuildContext context, int index) =>
+                                const SizedBox(height: 4),
+                        itemBuilder: (BuildContext context, int index) {
+                          final Source source = _filteredSources[index];
+                          return Draggable<Source>(
+                            data: source,
+                            dragAnchorStrategy: pointerDragAnchorStrategy,
+                            onDragStarted: () {
+                              setState(() {
+                                _draggingSourceId = source.id;
+                              });
+                            },
+                            onDraggableCanceled: (_, __) {
+                              setState(() {
+                                _draggingSourceId = null;
+                              });
+                            },
+                            onDragEnd: (_) {
+                              setState(() {
+                                _draggingSourceId = null;
+                              });
+                            },
+                            feedback: Material(
+                              color: Colors.transparent,
+                              child: Opacity(
+                                opacity: 0.8,
+                                child: Container(
+                                  width: 220,
+                                  decoration: BoxDecoration(
+                                    color: context.colorScheme.primary
+                                        .withAlpha(
+                                          150,
+                                        ),
+                                    borderRadius: BorderRadius.circular(
+                                      8,
+                                    ),
+                                  ),
+                                  child: SourceItem(
+                                    index: index,
+                                    source: source,
+                                    isDragging: true,
+                                  ),
                                 ),
+                              ),
+                            ),
+                            childWhenDragging: SemanticHelper.container(
+                              testId: SemanticHelper.createTestId(
+                                SemanticTypes.container,
+                                FusionTestKeys.instance.sourcechildWhenDragging,
+                              ),
+
+                              child: Opacity(
+                                opacity: 0.5,
                                 child: SourceItem(
                                   index: index,
                                   source: source,
@@ -327,98 +463,132 @@ class _ConfigurationProcessingPageState extends State<ConfigurationProcessingPag
                                 ),
                               ),
                             ),
-                          ),
-                          childWhenDragging: Opacity(
-                            opacity: 0.5,
-                            child: SourceItem(index: index, source: source, isDragging: true),
-                          ),
-                          child: SourceItem(
-                            index: index,
-                            source: source,
-                            isDragging: _draggingSourceId == source.id,
-                          ),
-                        );
-                      },
-                    );
-                  },
-                ),
-              );
-            },
+
+                            child: SemanticHelper.container(
+                              testId: SemanticHelper.createTestId(
+                                SemanticTypes.container,
+                                FusionTestKeys.instance.sourcelistitems,
+                              ),
+                              child: SourceItem(
+                                index: index,
+                                source: source,
+                                isDragging: _draggingSourceId == source.id,
+                              ),
+                            ),
+                          );
+                        },
+                      );
+                    },
+                  ),
+                );
+              },
+            ),
           ),
 
           /// Draggable divider
           DragDivider(onDragUpdate: _updateSourcesHeight),
 
-          SectionHeader(
-            title: 'Source Sets',
-            isRounded: false,
-            assetPath: 'assets/images/source_set_icon.png',
-            trailing: PopupMenuButton<dynamic>(
-              onCanceled: () {
-                _clearSourceSetDialog();
-                setState(() {});
-              },
-              tooltip: "Add Source Set",
-              padding: EdgeInsets.zero,
-              constraints: const BoxConstraints(
-                maxHeight: 500,
-                maxWidth: 250,
-              ),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
-              ),
-              color: context.colorScheme.elevation1,
-              menuPadding: EdgeInsets.zero,
+          SemanticHelper.staticText(
+            testId: SemanticHelper.createTestId(
+              SemanticTypes.text,
+              FusionTestKeys.instance.sourcesethead,
+            ),
+            child: SectionHeader(
+              title: 'Source Sets',
+              isRounded: false,
+              assetPath: 'assets/images/source_set_icon.png',
+              trailing: PopupMenuButton<dynamic>(
+                onCanceled: () {
+                  _clearSourceSetDialog();
+                  setState(() {});
+                },
+                tooltip: "Add Source Set",
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(
+                  maxHeight: 500,
+                  maxWidth: 250,
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                color: context.colorScheme.elevation1,
+                menuPadding: EdgeInsets.zero,
 
-              itemBuilder: (BuildContext context) {
-                return <PopupMenuItem<dynamic>>[
-                  PopupMenuItem<dynamic>(
-                    enabled: false,
-                    padding: EdgeInsets.zero,
-                    child: SizedBox(
-                      width: 250,
-                      child: StatefulBuilder(
-                        builder: (BuildContext context, StateSetter setMenuState) {
-                          final List<Source> sourcesWithoutSourceSet = _projectViewModel.getSourcesWithoutSourceSet();
+                itemBuilder: (BuildContext context) {
+                  return <PopupMenuItem<dynamic>>[
+                    PopupMenuItem<dynamic>(
+                      enabled: false,
+                      padding: EdgeInsets.zero,
+                      child: SizedBox(
+                        width: 250,
+                        child: StatefulBuilder(
+                          builder: (
+                            BuildContext context,
+                            StateSetter setMenuState,
+                          ) {
+                            final List<Source> sourcesWithoutSourceSet =
+                                _projectViewModel.getSourcesWithoutSourceSet();
 
-                          return SingleChildScrollView(
-                            child: _SourceSetCreationWidget(
-                              sourceSetNameController: _sourceSetNameController,
-                              availableSources: sourcesWithoutSourceSet,
-                              selectedSources: _selectedSources,
-                              onAddSourceSet: () {
-                                /// Pass popup context so only the menu closes.
-                                _addSourceSet(context);
-                              },
-                              onCancel: () {
-                                /// Cancel inside popup: close only popup.
-                                _clearSourceSetDialog(pop: true, popContext: context);
-                              },
-                              onSourceChanged: (Source source, bool isSelected) {
-                                setState(() {
-                                  if (isSelected) {
-                                    _selectedSources.add(SelectedSource(id: source.id, name: source.name));
-                                  } else {
-                                    _selectedSources.removeWhere((SelectedSource s) => s.id == source.id);
-                                  }
-                                });
-                                setMenuState(() {});
-                              },
-                            ),
-                          );
-                        },
+                            return SingleChildScrollView(
+                              child: _SourceSetCreationWidget(
+                                sourceSetNameController:
+                                    _sourceSetNameController,
+                                availableSources: sourcesWithoutSourceSet,
+                                selectedSources: _selectedSources,
+                                onAddSourceSet: () {
+                                  /// Pass popup context so only the menu closes.
+                                  _addSourceSet(context);
+                                },
+                                onCancel: () {
+                                  /// Cancel inside popup: close only popup.
+                                  _clearSourceSetDialog(
+                                    pop: true,
+                                    popContext: context,
+                                  );
+                                },
+                                onSourceChanged: (
+                                  Source source,
+                                  bool isSelected,
+                                ) {
+                                  setState(() {
+                                    if (isSelected) {
+                                      _selectedSources.add(
+                                        SelectedSource(
+                                          id: source.id,
+                                          name: source.name,
+                                        ),
+                                      );
+                                    } else {
+                                      _selectedSources.removeWhere(
+                                        (SelectedSource s) => s.id == source.id,
+                                      );
+                                    }
+                                  });
+                                  setMenuState(() {});
+                                },
+                              ),
+                            );
+                          },
+                        ),
                       ),
                     ),
+                  ];
+                },
+                child: SemanticHelper.button(
+                  testId: SemanticHelper.createTestId(
+                    SemanticTypes.button,
+                    FusionTestKeys.instance.sourcesetheadicon,
                   ),
-                ];
-              },
-              child: SemanticHelper.button(
-                testId: SemanticHelper.createTestId(SemanticTypes.button, "add_source_button"),
-                child: IconButton(
-                  icon: Icon(Icons.add_sharp, size: 16, color: context.colorScheme.primaryWhite),
-                  onPressed: null,
-                  padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(),
+                  child: IconButton(
+                    icon: Icon(
+                      Icons.add_sharp,
+                      size: 16,
+                      color: context.colorScheme.primaryWhite,
+                    ),
+                    onPressed: null,
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
+                  ),
                 ),
               ),
             ),
@@ -426,133 +596,206 @@ class _ConfigurationProcessingPageState extends State<ConfigurationProcessingPag
 
           /// Source sets section takes remaining space
           Expanded(
-            child: Container(
-              decoration: BoxDecoration(
-                borderRadius: const BorderRadius.only(
-                  bottomLeft: Radius.circular(12),
-                  bottomRight: Radius.circular(12),
-                ),
-                border: Border(
-                  bottom: BorderSide(
-                    color: context.colorScheme.elevation2,
-                  ),
-                  left: BorderSide(
-                    color: context.colorScheme.elevation2,
-                  ),
-                  right: BorderSide(
-                    color: context.colorScheme.elevation2,
-                  ),
-                ),
+            child: SemanticHelper.container(
+              testId: SemanticHelper.createTestId(
+                SemanticTypes.container,
+                FusionTestKeys.instance.sourcesedata,
               ),
-              child: BlocBuilder<ProjectViewModel, ProjectViewModelState>(
-                builder: (BuildContext context, ProjectViewModelState state) {
-                  if (_projectViewModel.sourceSets.isEmpty) {
-                    /// Show informational text when no source sets exist
-                    return SingleChildScrollView(
-                      child: Padding(
-                        padding: const EdgeInsets.all(16),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: <Widget>[
-                            FusionAppText(
-                              text: 'Create Source Sets',
-                              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w500,
+              child: Container(
+                decoration: BoxDecoration(
+                  borderRadius: const BorderRadius.only(
+                    bottomLeft: Radius.circular(12),
+                    bottomRight: Radius.circular(12),
+                  ),
+                  border: Border(
+                    bottom: BorderSide(
+                      color: context.colorScheme.elevation2,
+                    ),
+                    left: BorderSide(
+                      color: context.colorScheme.elevation2,
+                    ),
+                    right: BorderSide(
+                      color: context.colorScheme.elevation2,
+                    ),
+                  ),
+                ),
+                child: BlocBuilder<ProjectViewModel, ProjectViewModelState>(
+                  builder: (
+                    BuildContext context,
+                    ProjectViewModelState state,
+                  ) {
+                    if (_projectViewModel.sourceSets.isEmpty) {
+                      /// Show informational text when no source sets exist
+                      return SingleChildScrollView(
+                        child: Padding(
+                          padding: const EdgeInsets.all(16),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: <Widget>[
+                              SemanticHelper.staticText(
+                                testId: SemanticHelper.createTestId(
+                                  SemanticTypes.text,
+                                  FusionTestKeys.instance.emtysourcesethead,
+                                ),
+                                child: FusionAppText(
+                                  text: 'Create Source Sets',
+                                  style: Theme.of(
+                                    context,
+                                  ).textTheme.bodyMedium?.copyWith(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
                               ),
-                            ),
-                            const SizedBox(height: 8),
-                            FusionAppText(
-                              text: 'Combine multiple audio sources into a single source set for simplified routing and control.',
+                              const SizedBox(height: 8),
+                              SemanticHelper.container(
+                                testId: SemanticHelper.createTestId(
+                                  SemanticTypes.container,
+                                  FusionTestKeys.instance.emtysourcesetdesc1,
+                                ),
+                                child: FusionAppText(
+                                  text:
+                                      'Combine multiple audio sources into a single source set for simplified routing and control.',
 
-                              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                fontSize: 10,
-                                fontWeight: FontWeight.w400,
+                                  style: Theme.of(
+                                    context,
+                                  ).textTheme.bodyMedium?.copyWith(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w400,
+                                  ),
+                                ),
                               ),
-                            ),
 
-                            const SizedBox(height: 8),
-                            FusionAppText(
-                              text:
-                                  'Select from available sources, group them as needed, and assign a clear name to the set. Source sets help streamline system configuration and enable flexible audio distribution.',
-                              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                fontSize: 10,
-                                fontWeight: FontWeight.w400,
+                              const SizedBox(height: 8),
+                              SemanticHelper.container(
+                                testId: SemanticHelper.createTestId(
+                                  SemanticTypes.container,
+                                  FusionTestKeys.instance.emtysourcesetdesc2,
+                                ),
+                                child: FusionAppText(
+                                  text:
+                                      'Select from available sources, group them as needed, and assign a clear name to the set. Source sets help streamline system configuration and enable flexible audio distribution.',
+                                  style: Theme.of(
+                                    context,
+                                  ).textTheme.bodyMedium?.copyWith(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w400,
+                                  ),
+                                ),
                               ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    );
-                  }
-                  return Container(
-                    clipBehavior: Clip.none,
-                    child: ReorderableListView.builder(
-                      shrinkWrap: true,
-                      proxyDecorator: (Widget child, int index, Animation<double> animation) {
-                        return Material(
-                          color: context.colorScheme.elevation1,
-                          child: SizedBox(
-                            width: 220,
-                            child: child,
+                            ],
                           ),
-                        );
-                      },
-                      physics: const ClampingScrollPhysics(),
-                      buildDefaultDragHandles: false,
-                      itemCount: _projectViewModel.sourceSets.length,
-                      onReorder: (int oldIndex, int newIndex) {
-                        if (oldIndex < newIndex) {
-                          newIndex -= 1;
-                        }
-                        final String sourceSetToMove = _projectViewModel.sourceSets[oldIndex].id;
-                        final String sourceSetAtNewIndex = _projectViewModel.sourceSets[newIndex].id;
-                        _projectViewModel.reOrderSourceSet(sourceSetIdToMove: sourceSetToMove, sourceSetAtNewIndex: sourceSetAtNewIndex);
-                      },
-                      itemBuilder: (BuildContext context, int index) {
-                        final SourceSet sourceSet = _projectViewModel.sourceSets[index];
-
-                        /// Create or get the GlobalKey for this source set
-                        _sourceSetKeys.putIfAbsent(sourceSet.id, () => GlobalKey());
-                        final GlobalKey<State<StatefulWidget>> sourceSetKey = _sourceSetKeys[sourceSet.id]!;
-
-                        return DragTarget<Source>(
-                          key: ValueKey<String>(sourceSet.id),
-                          onWillAccept: (Source? data) {
-                            if (data == null) return false;
-
-                            /// Check if source is not already in this source set
-                            final List<Source> sourcesInSet = _projectViewModel.getSourcesInSourceSet(sourceSetId: sourceSet.id);
-                            return !sourcesInSet.any((Source source) => source.id == data.id);
-                          },
-                          onLeave: (Source? data) {},
-                          onAccept: (Source data) {
-                            _projectViewModel.addSourceToSourceSet(sourceId: data.id, sourceSetId: sourceSet.id);
-
-                            /// Expand the source set after dropping
-                            final dynamic sourceSetState = sourceSetKey.currentState as dynamic;
-                            sourceSetState?.expandSourceSet();
-
-                            setState(() {
-                              _draggingSourceId = null;
-                            });
-                          },
-                          builder: (BuildContext context, List<Source?> candidateData, List<dynamic> rejectedData) {
-                            final bool isHovered = candidateData.isNotEmpty;
-                            return ReorderableDragStartListener(
-                              index: index,
-                              child: SourceSetItem(
-                                key: sourceSetKey,
-                                sourceSet: sourceSet,
-                                isDragHovered: isHovered,
+                        ),
+                      );
+                    }
+                    return SemanticHelper.container(
+                      testId: SemanticHelper.createTestId(
+                        SemanticTypes.container,
+                        FusionTestKeys.instance.srcsetlist,
+                      ),
+                      child: Container(
+                        clipBehavior: Clip.none,
+                        child: ReorderableListView.builder(
+                          shrinkWrap: true,
+                          proxyDecorator: (
+                            Widget child,
+                            int index,
+                            Animation<double> animation,
+                          ) {
+                            return Material(
+                              color: context.colorScheme.elevation1,
+                              child: SizedBox(
+                                width: 220,
+                                child: child,
                               ),
                             );
                           },
-                        );
-                      },
-                    ),
-                  );
-                },
+                          physics: const ClampingScrollPhysics(),
+                          buildDefaultDragHandles: false,
+                          itemCount: _projectViewModel.sourceSets.length,
+                          onReorder: (int oldIndex, int newIndex) {
+                            if (oldIndex < newIndex) {
+                              newIndex -= 1;
+                            }
+                            final String sourceSetToMove =
+                                _projectViewModel.sourceSets[oldIndex].id;
+                            final String sourceSetAtNewIndex =
+                                _projectViewModel.sourceSets[newIndex].id;
+                            _projectViewModel.reOrderSourceSet(
+                              sourceSetIdToMove: sourceSetToMove,
+                              sourceSetAtNewIndex: sourceSetAtNewIndex,
+                            );
+                          },
+                          itemBuilder: (BuildContext context, int index) {
+                            final SourceSet sourceSet =
+                                _projectViewModel.sourceSets[index];
+
+                            /// Create or get the GlobalKey for this source set
+                            _sourceSetKeys.putIfAbsent(
+                              sourceSet.id,
+                              () => GlobalKey(),
+                            );
+                            final GlobalKey<State<StatefulWidget>>
+                            sourceSetKey = _sourceSetKeys[sourceSet.id]!;
+
+                            return DragTarget<Source>(
+                              key: ValueKey<String>(sourceSet.id),
+                              onWillAccept: (Source? data) {
+                                if (data == null) return false;
+
+                                /// Check if source is not already in this source set
+                                final List<Source> sourcesInSet =
+                                    _projectViewModel.getSourcesInSourceSet(
+                                      sourceSetId: sourceSet.id,
+                                    );
+                                return !sourcesInSet.any(
+                                  (Source source) => source.id == data.id,
+                                );
+                              },
+                              onLeave: (Source? data) {},
+                              onAccept: (Source data) {
+                                _projectViewModel.addSourceToSourceSet(
+                                  sourceId: data.id,
+                                  sourceSetId: sourceSet.id,
+                                );
+
+                                /// Expand the source set after dropping
+                                final dynamic sourceSetState =
+                                    sourceSetKey.currentState as dynamic;
+                                sourceSetState?.expandSourceSet();
+
+                                setState(() {
+                                  _draggingSourceId = null;
+                                });
+                              },
+                              builder: (
+                                BuildContext context,
+                                List<Source?> candidateData,
+                                List<dynamic> rejectedData,
+                              ) {
+                                final bool isHovered = candidateData.isNotEmpty;
+                                return SemanticHelper.container(
+                                  testId: SemanticHelper.createTestId(
+                                    SemanticTypes.container,
+                                    FusionTestKeys.instance.srcsetlistitem,
+                                  ),
+                                  child: ReorderableDragStartListener(
+                                    index: index,
+                                    child: SourceSetItem(
+                                      key: sourceSetKey,
+                                      sourceSet: sourceSet,
+                                      isDragHovered: isHovered,
+                                    ),
+                                  ),
+                                );
+                              },
+                            );
+                          },
+                        ),
+                      ),
+                    );
+                  },
+                ),
               ),
             ),
           ),
@@ -602,83 +845,118 @@ class _ConfigurationProcessingPageState extends State<ConfigurationProcessingPag
           bottom: BorderSide(color: context.colorScheme.elevation2, width: 1),
         ),
       ),
-      child: Column(
-        children: <Widget>[
-          /// Zones Section
-          const SectionHeader(
-            title: 'Zones',
-            assetPath: 'assets/images/zone_icon.png',
-          ),
-
-          /// Zones List
-          Expanded(
-            child: BlocBuilder<ProjectViewModel, ProjectViewModelState>(
-              builder: (BuildContext context, ProjectViewModelState state) {
-                return _projectViewModel.zones.isEmpty
-                    ? Padding(
-                      padding: EdgeInsets.only(top: MediaQuery.of(context).size.height * 0.3),
-                      child: FusionAppText(
-                        text: 'No zones added yet',
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    )
-                    : SingleChildScrollView(
-                      physics: const ClampingScrollPhysics(),
-                      controller: _zonesScrollController,
-                      child: ReorderableListView.builder(
-                        shrinkWrap: true,
-                        physics: const NeverScrollableScrollPhysics(),
-                        buildDefaultDragHandles: false,
-                        itemCount: _projectViewModel.zones.length,
-                        onReorder: (int oldIndex, int newIndex) {
-                          if (oldIndex < newIndex) newIndex -= 1;
-                          final String zoneToMove = _projectViewModel.zones[oldIndex].id;
-                          final String zoneAtNewIndex = _projectViewModel.zones[newIndex].id;
-                          _projectViewModel.reorderZones(
-                            zoneIdToMove: zoneToMove,
-                            zoneIdAtNewIndex: zoneAtNewIndex,
-                          );
-                          _projectViewModel.setSelectedDevice(
-                            zoneToMove,
-                            SelectedItemType.zone,
-                          );
-                        },
-                        itemBuilder: (BuildContext context, int index) {
-                          final Zone zoneData = _projectViewModel.zones[index];
-
-                          // Ensure we have a GlobalKey for each zone
-                          _zoneKeys[zoneData.id] ??= GlobalKey();
-                          final GlobalKey zoneKey = _zoneKeys[zoneData.id]!;
-
-                          return ReorderableDragStartListener(
-                            key: ValueKey<String>(zoneData.id),
-                            index: index,
-                            child: ZoneCard(
-                              key: zoneKey,
-                              zoneId: zoneData.id,
-                              zoneName: zoneData.name,
-                              bgColor: zoneData.color,
-                              zoneData: zoneData,
-                              onExpansionChanged: (bool isExpanded) {
-                                if (isExpanded) {
-                                  // Small delay to allow the widget to expand first
-                                  Future<void>.delayed(const Duration(milliseconds: 100), () {
-                                    _scrollZoneIntoView(zoneData.id);
-                                  });
-                                }
-                              },
-                            ),
-                          );
-                        },
-                      ),
-                    );
-              },
+      child: SemanticHelper.container(
+        testId: SemanticHelper.createTestId(
+          SemanticTypes.container,
+          FusionTestKeys.instance.zonesec,
+        ),
+        child: Column(
+          children: <Widget>[
+            /// Zones Section
+            SemanticHelper.container(
+              testId: SemanticHelper.createTestId(
+                SemanticTypes.container,
+                FusionTestKeys.instance.zonehead,
+              ),
+              child: const SectionHeader(
+                title: 'Zones',
+                assetPath: 'assets/images/zone_icon.png',
+              ),
             ),
-          ),
-        ],
+
+            /// Zones List
+            Expanded(
+              child: BlocBuilder<ProjectViewModel, ProjectViewModelState>(
+                builder: (BuildContext context, ProjectViewModelState state) {
+                  return _projectViewModel.zones.isEmpty
+                      ? SemanticHelper.container(
+                        testId: SemanticHelper.createTestId(
+                          SemanticTypes.container,
+                          FusionTestKeys.instance.zoneempty,
+                        ),
+                        child: Padding(
+                          padding: EdgeInsets.only(
+                            top: MediaQuery.of(context).size.height * 0.3,
+                          ),
+                          child: FusionAppText(
+                            text: 'No zones added yet',
+                            style: Theme.of(
+                              context,
+                            ).textTheme.bodyMedium?.copyWith(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ),
+                      )
+                      : SingleChildScrollView(
+                        physics: const ClampingScrollPhysics(),
+                        controller: _zonesScrollController,
+
+                        child: ReorderableListView.builder(
+                          shrinkWrap: true,
+                          physics: const NeverScrollableScrollPhysics(),
+                          buildDefaultDragHandles: false,
+                          itemCount: _projectViewModel.zones.length,
+                          onReorder: (int oldIndex, int newIndex) {
+                            if (oldIndex < newIndex) newIndex -= 1;
+                            final String zoneToMove =
+                                _projectViewModel.zones[oldIndex].id;
+                            final String zoneAtNewIndex =
+                                _projectViewModel.zones[newIndex].id;
+                            _projectViewModel.reorderZones(
+                              zoneIdToMove: zoneToMove,
+                              zoneIdAtNewIndex: zoneAtNewIndex,
+                            );
+                            _projectViewModel.setSelectedDevice(
+                              zoneToMove,
+                              SelectedItemType.zone,
+                            );
+                          },
+                          itemBuilder: (BuildContext context, int index) {
+                            final Zone zoneData =
+                                _projectViewModel.zones[index];
+
+                            // Ensure we have a GlobalKey for each zone
+                            _zoneKeys[zoneData.id] ??= GlobalKey();
+                            final GlobalKey zoneKey = _zoneKeys[zoneData.id]!;
+
+                            return ReorderableDragStartListener(
+                              key: ValueKey<String>(zoneData.id),
+                              index: index,
+                              child: SemanticHelper.container(
+                                testId: SemanticHelper.createTestId(
+                                  SemanticTypes.container,
+                                  '${FusionTestKeys.instance.zonelist}_$index',
+                                ),
+                                child: ZoneCard(
+                                  key: zoneKey,
+                                  zoneId: zoneData.id,
+                                  zoneName: zoneData.name,
+                                  bgColor: zoneData.color,
+                                  zoneData: zoneData,
+                                  onExpansionChanged: (bool isExpanded) {
+                                    if (isExpanded) {
+                                      // Small delay to allow the widget to expand first
+                                      Future<void>.delayed(
+                                        const Duration(milliseconds: 100),
+                                        () {
+                                          _scrollZoneIntoView(zoneData.id);
+                                        },
+                                      );
+                                    }
+                                  },
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                      );
+                },
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -686,7 +964,9 @@ class _ConfigurationProcessingPageState extends State<ConfigurationProcessingPag
   /// Helper: check if a source is part of any source set
   bool _isSourceInAnySourceSet(String sourceId) {
     for (final SourceSet sourceSet in _projectViewModel.sourceSets) {
-      final List<Source> sourcesInSet = _projectViewModel.getSourcesInSourceSet(sourceSetId: sourceSet.id);
+      final List<Source> sourcesInSet = _projectViewModel.getSourcesInSourceSet(
+        sourceSetId: sourceSet.id,
+      );
       if (sourcesInSet.any((Source s) => s.id == sourceId)) return true;
     }
     return false;
@@ -712,14 +992,18 @@ class _SourceSetCreationWidget extends StatefulWidget {
   });
 
   @override
-  State<_SourceSetCreationWidget> createState() => _SourceSetCreationWidgetState();
+  State<_SourceSetCreationWidget> createState() =>
+      _SourceSetCreationWidgetState();
 }
 
 class _SourceSetCreationWidgetState extends State<_SourceSetCreationWidget> {
   @override
   Widget build(BuildContext context) {
     return SemanticHelper.container(
-      testId: SemanticHelper.createTestId(SemanticTypes.container, "source_set_creation_widget"),
+      testId: SemanticHelper.createTestId(
+        SemanticTypes.container,
+        FusionTestKeys.instance.srccreation,
+      ),
       child: Container(
         color: context.colorScheme.elevation1,
         width: 250,
@@ -728,20 +1012,32 @@ class _SourceSetCreationWidgetState extends State<_SourceSetCreationWidget> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
-            FusionAppText(
-              text: "Create source set",
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
+            SemanticHelper.container(
+              testId: SemanticHelper.createTestId(
+                SemanticTypes.container,
+                FusionTestKeys.instance.srccreationhead,
+              ),
+              child: FusionAppText(
+                text: "Create source set",
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
             ),
             const SizedBox(height: 12),
 
-            FusionAppText(
-              text: "Source Set Name",
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                fontSize: 12,
-                fontWeight: FontWeight.w500,
+            SemanticHelper.staticText(
+              testId: SemanticHelper.createTestId(
+                SemanticTypes.text,
+                FusionTestKeys.instance.srcnamelabel,
+              ),
+              child: FusionAppText(
+                text: "Source Set Name",
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500,
+                ),
               ),
             ),
             const SizedBox(height: 8),
@@ -758,11 +1054,20 @@ class _SourceSetCreationWidgetState extends State<_SourceSetCreationWidget> {
                 counterText: '',
                 fillColor: context.colorScheme.elevation2,
                 filled: true,
-                border: const OutlineInputBorder(borderSide: BorderSide(color: Colors.transparent)),
-                enabledBorder: const OutlineInputBorder(borderSide: BorderSide(color: Colors.transparent)),
-                focusedBorder: const OutlineInputBorder(borderSide: BorderSide(color: Colors.transparent)),
+                border: const OutlineInputBorder(
+                  borderSide: BorderSide(color: Colors.transparent),
+                ),
+                enabledBorder: const OutlineInputBorder(
+                  borderSide: BorderSide(color: Colors.transparent),
+                ),
+                focusedBorder: const OutlineInputBorder(
+                  borderSide: BorderSide(color: Colors.transparent),
+                ),
                 isDense: true,
-                contentPadding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+                contentPadding: const EdgeInsets.symmetric(
+                  vertical: 8,
+                  horizontal: 12,
+                ),
               ),
               onChanged: (String value) {
                 setState(() {});
@@ -772,12 +1077,14 @@ class _SourceSetCreationWidgetState extends State<_SourceSetCreationWidget> {
 
             /// Source Selection Label
             FusionAppText(
+              semanticId: 'srcselectionlabel',
               text: 'Select sources',
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                 fontSize: 12,
                 fontWeight: FontWeight.w500,
               ),
             ),
+
             const SizedBox(height: 8),
 
             /// Source Selection Dropdown
@@ -807,9 +1114,15 @@ class _SourceSetCreationWidgetState extends State<_SourceSetCreationWidget> {
                       enabled: false,
                       padding: EdgeInsets.zero,
                       child: StatefulBuilder(
-                        builder: (BuildContext context, StateSetter setPopupState) {
+                        builder: (
+                          BuildContext context,
+                          StateSetter setPopupState,
+                        ) {
                           return SemanticHelper.container(
-                            testId: SemanticHelper.createTestId(SemanticTypes.container, "source_set_creation_widget"),
+                            testId: SemanticHelper.createTestId(
+                              SemanticTypes.container,
+                              FusionTestKeys.instance.srccreationdropdown,
+                            ),
                             child: Container(
                               width: 240,
                               constraints: const BoxConstraints(maxHeight: 460),
@@ -818,7 +1131,10 @@ class _SourceSetCreationWidgetState extends State<_SourceSetCreationWidget> {
                                 children: <Widget>[
                                   /// Header with close button
                                   Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 12,
+                                      vertical: 8,
+                                    ),
                                     decoration: BoxDecoration(
                                       border: Border(
                                         bottom: BorderSide(
@@ -827,17 +1143,29 @@ class _SourceSetCreationWidgetState extends State<_SourceSetCreationWidget> {
                                       ),
                                     ),
                                     child: Row(
-                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.spaceBetween,
                                       children: <Widget>[
                                         FusionAppText(
+                                          semanticId:
+                                              FusionTestKeys
+                                                  .instance
+                                                  .srccreationdropdownitemheader,
                                           text: "Select source",
-                                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                          style: Theme.of(
+                                            context,
+                                          ).textTheme.bodySmall?.copyWith(
                                             fontSize: 12,
                                             fontWeight: FontWeight.w600,
                                           ),
                                         ),
                                         SemanticHelper.button(
-                                          testId: SemanticHelper.createTestId(SemanticTypes.button, "select_source_close"),
+                                          testId: SemanticHelper.createTestId(
+                                            SemanticTypes.button,
+                                            FusionTestKeys
+                                                .instance
+                                                .srccreationdropdownheaderitemicon,
+                                          ),
                                           child: InkWell(
                                             onTap: () {
                                               Navigator.of(context).pop();
@@ -845,7 +1173,10 @@ class _SourceSetCreationWidgetState extends State<_SourceSetCreationWidget> {
                                             child: Icon(
                                               Icons.close,
                                               size: 16,
-                                              color: Theme.of(context).colorScheme.iconWhite,
+                                              color:
+                                                  Theme.of(
+                                                    context,
+                                                  ).colorScheme.iconWhite,
                                             ),
                                           ),
                                         ),
@@ -858,84 +1189,179 @@ class _SourceSetCreationWidgetState extends State<_SourceSetCreationWidget> {
                                     child:
                                         widget.availableSources.isNotEmpty
                                             ? SingleChildScrollView(
-                                              physics: const ClampingScrollPhysics(),
+                                              physics:
+                                                  const ClampingScrollPhysics(),
                                               child: Column(
                                                 children:
-                                                    widget.availableSources.map<Widget>((Source source) {
-                                                      final bool isSelected = widget.selectedSources.any(
-                                                        (SelectedSource selectedSource) => selectedSource.id == source.id,
-                                                      );
+                                                    widget.availableSources.map<
+                                                      Widget
+                                                    >((Source source) {
+                                                      final bool
+                                                      isSelected = widget
+                                                          .selectedSources
+                                                          .any(
+                                                            (
+                                                              SelectedSource
+                                                              selectedSource,
+                                                            ) =>
+                                                                selectedSource
+                                                                    .id ==
+                                                                source.id,
+                                                          );
 
-                                                      final int index = widget.selectedSources.indexWhere(
-                                                        (SelectedSource selectedSource) => selectedSource.id == source.id,
-                                                      );
+                                                      final int index = widget
+                                                          .selectedSources
+                                                          .indexWhere(
+                                                            (
+                                                              SelectedSource
+                                                              selectedSource,
+                                                            ) =>
+                                                                selectedSource
+                                                                    .id ==
+                                                                source.id,
+                                                          );
 
                                                       return SemanticHelper.button(
-                                                        testId: SemanticHelper.createTestId(SemanticTypes.button, "source_selection_checkbox_$index"),
+                                                        testId: SemanticHelper.createTestId(
+                                                          SemanticTypes.button,
+                                                          "${FusionTestKeys.instance.srccreationdropdownitem}_$index",
+                                                        ),
                                                         child: InkWell(
                                                           onTap: () {
-                                                            widget.onSourceChanged(source, !isSelected);
-                                                            setPopupState(() {});
+                                                            widget
+                                                                .onSourceChanged(
+                                                                  source,
+                                                                  !isSelected,
+                                                                );
+                                                            setPopupState(
+                                                              () {},
+                                                            );
                                                             setState(() {});
                                                           },
                                                           child: Container(
-                                                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
-                                                            color: Colors.transparent,
+                                                            padding:
+                                                                const EdgeInsets.symmetric(
+                                                                  horizontal:
+                                                                      10,
+                                                                  vertical: 10,
+                                                                ),
+                                                            color:
+                                                                Colors
+                                                                    .transparent,
                                                             child: Row(
-                                                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                                              children: <Widget>[
+                                                              mainAxisAlignment:
+                                                                  MainAxisAlignment
+                                                                      .spaceBetween,
+                                                              children: <
+                                                                Widget
+                                                              >[
                                                                 /// Checkbox for selection
                                                                 SizedBox(
                                                                   width: 14,
                                                                   height: 14,
                                                                   child: SemanticHelper.button(
                                                                     testId: SemanticHelper.createTestId(
-                                                                      SemanticTypes.button,
-                                                                      "sementic_source_selection_checkbox_$index",
+                                                                      SemanticTypes
+                                                                          .button,
+                                                                      "${FusionTestKeys.instance.srccreationdropdownchkbox}_$index",
                                                                     ),
                                                                     child: Checkbox(
-                                                                      value: isSelected,
-                                                                      onChanged: (bool? value) {
-                                                                        widget.onSourceChanged(source, value ?? false);
-                                                                        setPopupState(() {}); // Update popup state
-                                                                        setState(() {}); // Update main widget state
+                                                                      value:
+                                                                          isSelected,
+                                                                      onChanged: (
+                                                                        bool?
+                                                                        value,
+                                                                      ) {
+                                                                        widget.onSourceChanged(
+                                                                          source,
+                                                                          value ??
+                                                                              false,
+                                                                        );
+                                                                        setPopupState(
+                                                                          () {},
+                                                                        ); // Update popup state
+                                                                        setState(
+                                                                          () {},
+                                                                        ); // Update main widget state
                                                                       },
 
-                                                                      activeColor: context.colorScheme.elevation4,
-                                                                      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                                                                      visualDensity: VisualDensity.compact,
+                                                                      activeColor:
+                                                                          context
+                                                                              .colorScheme
+                                                                              .elevation4,
+                                                                      materialTapTargetSize:
+                                                                          MaterialTapTargetSize
+                                                                              .shrinkWrap,
+                                                                      visualDensity:
+                                                                          VisualDensity
+                                                                              .compact,
                                                                       shape: const RoundedRectangleBorder(
-                                                                        borderRadius: BorderRadius.zero,
-                                                                        side: BorderSide(width: 0.5),
+                                                                        borderRadius:
+                                                                            BorderRadius.zero,
+                                                                        side: BorderSide(
+                                                                          width:
+                                                                              0.5,
+                                                                        ),
                                                                       ),
 
                                                                       side: MaterialStateBorderSide.resolveWith(
-                                                                        (Set<WidgetState> states) {
-                                                                          if (states.contains(MaterialState.selected)) {
+                                                                        (
+                                                                          Set<
+                                                                            WidgetState
+                                                                          >
+                                                                          states,
+                                                                        ) {
+                                                                          if (states.contains(
+                                                                            MaterialState.selected,
+                                                                          )) {
                                                                             return BorderSide(
-                                                                              color: context.colorScheme.primaryWhite,
-                                                                              width: 1,
+                                                                              color:
+                                                                                  context.colorScheme.primaryWhite,
+                                                                              width:
+                                                                                  1,
                                                                             );
                                                                           }
                                                                           return BorderSide(
-                                                                            color: context.colorScheme.primaryWhite,
-                                                                            width: 1,
+                                                                            color:
+                                                                                context.colorScheme.primaryWhite,
+                                                                            width:
+                                                                                1,
                                                                           );
                                                                         },
                                                                       ),
                                                                     ),
                                                                   ),
                                                                 ),
-                                                                const SizedBox(width: 12),
+                                                                const SizedBox(
+                                                                  width: 12,
+                                                                ),
 
                                                                 /// Source name
                                                                 Expanded(
-                                                                  child: FusionAppText(
-                                                                    text: source.name,
-                                                                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                                                      fontWeight: FontWeight.w500,
-                                                                      fontSize: 10,
-                                                                      color: Theme.of(context).textTheme.bodySmall?.color,
+                                                                  child: SemanticHelper.container(
+                                                                    testId: SemanticHelper.createTestId(
+                                                                      SemanticTypes
+                                                                          .container,
+                                                                      FusionTestKeys
+                                                                          .instance
+                                                                          .srccreationdropdownitemname,
+                                                                    ),
+                                                                    child: FusionAppText(
+                                                                      text:
+                                                                          source
+                                                                              .name,
+                                                                      style: Theme.of(
+                                                                        context,
+                                                                      ).textTheme.bodySmall?.copyWith(
+                                                                        fontWeight:
+                                                                            FontWeight.w500,
+                                                                        fontSize:
+                                                                            10,
+                                                                        color:
+                                                                            Theme.of(
+                                                                              context,
+                                                                            ).textTheme.bodySmall?.color,
+                                                                      ),
                                                                     ),
                                                                   ),
                                                                 ),
@@ -948,11 +1374,24 @@ class _SourceSetCreationWidgetState extends State<_SourceSetCreationWidget> {
                                               ),
                                             )
                                             : Padding(
-                                              padding: const EdgeInsets.all(12.0),
-                                              child: FusionAppText(
-                                                text: "No Source Available",
-                                                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                                  fontSize: 10,
+                                              padding: const EdgeInsets.all(
+                                                12.0,
+                                              ),
+                                              child: SemanticHelper.container(
+                                                testId: SemanticHelper.createTestId(
+                                                  SemanticTypes.container,
+                                                  FusionTestKeys
+                                                      .instance
+                                                      .emtysrccreationdropdownitemtxt,
+                                                ),
+                                                child: FusionAppText(
+                                                  text: "No Source Available",
+                                                  style: Theme.of(
+                                                        context,
+                                                      ).textTheme.bodySmall
+                                                      ?.copyWith(
+                                                        fontSize: 10,
+                                                      ),
                                                 ),
                                               ),
                                             ),
@@ -967,7 +1406,10 @@ class _SourceSetCreationWidgetState extends State<_SourceSetCreationWidget> {
                   ];
                 },
                 child: SemanticHelper.button(
-                  testId: SemanticHelper.createTestId(SemanticTypes.button, "source_set_creation_widget"),
+                  testId: SemanticHelper.createTestId(
+                    SemanticTypes.button,
+                    FusionTestKeys.instance.srcdropdown,
+                  ),
                   child: Container(
                     height: 29,
                     padding: const EdgeInsets.symmetric(horizontal: 8),
@@ -975,19 +1417,33 @@ class _SourceSetCreationWidgetState extends State<_SourceSetCreationWidget> {
                       children: <Widget>[
                         Expanded(
                           child: FusionAppText(
+                            semanticId: FusionTestKeys.instance.srcdropdowntxt,
                             text:
                                 widget.selectedSources.isEmpty
                                     ? "Select Sources"
                                     : "${widget.selectedSources.length} source${widget.selectedSources.length > 1 ? 's' : ''} selected",
-                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: widget.selectedSources.isEmpty ? context.colorScheme.textSecondary : Theme.of(context).textTheme.bodySmall?.color,
+                            style: Theme.of(
+                              context,
+                            ).textTheme.bodySmall?.copyWith(
+                              color:
+                                  widget.selectedSources.isEmpty
+                                      ? context.colorScheme.textSecondary
+                                      : Theme.of(
+                                        context,
+                                      ).textTheme.bodySmall?.color,
                             ),
                           ),
                         ),
-                        Icon(
-                          Icons.keyboard_arrow_down,
-                          size: 20,
-                          color: context.colorScheme.iconWhite,
+                        SemanticHelper.image(
+                          testId: SemanticHelper.createTestId(
+                            SemanticTypes.icon,
+                            FusionTestKeys.instance.srcdropdownicon,
+                          ),
+                          child: Icon(
+                            Icons.keyboard_arrow_down,
+                            size: 20,
+                            color: context.colorScheme.iconWhite,
+                          ),
                         ),
                       ],
                     ),
@@ -1003,9 +1459,12 @@ class _SourceSetCreationWidgetState extends State<_SourceSetCreationWidget> {
               children: <Widget>[
                 Flexible(
                   child: FusionOutlinedButton(
+                    accessLabel: FusionTestKeys.instance.srccreationheadcancel,
                     width: double.infinity,
                     label: "Cancel",
-                    textStyle: Theme.of(context).textTheme.labelLarge?.copyWith(fontSize: 10),
+                    textStyle: Theme.of(
+                      context,
+                    ).textTheme.labelLarge?.copyWith(fontSize: 10),
                     onTap: () {
                       widget.onCancel.call();
                     },
@@ -1015,12 +1474,15 @@ class _SourceSetCreationWidgetState extends State<_SourceSetCreationWidget> {
                 Flexible(
                   child: FusionButton(
                     width: double.infinity,
+                    accessLabel: FusionTestKeys.instance.srccreationheadcreate,
                     textStyle: Theme.of(context).textTheme.labelLarge?.copyWith(
                       fontSize: 10,
                     ),
 
                     label: "Create",
-                    isActive: widget.sourceSetNameController.text.trim().isNotEmpty && widget.selectedSources.length >= 2,
+                    isActive:
+                        widget.sourceSetNameController.text.trim().isNotEmpty &&
+                        widget.selectedSources.length >= 2,
                     onTap: () {
                       widget.onAddSourceSet.call();
                     },

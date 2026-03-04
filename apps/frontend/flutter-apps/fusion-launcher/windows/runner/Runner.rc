@@ -89,13 +89,13 @@ BEGIN
     BEGIN
         BLOCK "040904e4"
         BEGIN
-            VALUE "CompanyName", "com.example" "\0"
-            VALUE "FileDescription", "fusion_design_tool_prototype" "\0"
+            VALUE "CompanyName", "com.boseprofessional" "\0"
+            VALUE "FileDescription", "fusion_launcher" "\0"
             VALUE "FileVersion", VERSION_AS_STRING "\0"
-            VALUE "InternalName", "com.bosepro.fusion" "\0"
-            VALUE "LegalCopyright", "Copyright (C) 2025 com.example. All rights reserved." "\0"
-            VALUE "OriginalFilename", "fusion_design_tool_prototype.exe" "\0"
-            VALUE "ProductName", "fusion_design_tool_prototype" "\0"
+            VALUE "InternalName", "fusion_launcher" "\0"
+            VALUE "LegalCopyright", "Copyright (C) 2026 com.boseprofessional. All rights reserved." "\0"
+            VALUE "OriginalFilename", "fusion_launcher.exe" "\0"
+            VALUE "ProductName", "fusion_launcher" "\0"
             VALUE "ProductVersion", VERSION_AS_STRING "\0"
         END
     END

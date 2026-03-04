@@ -18,9 +18,11 @@ class FusionSwitch extends StatefulWidget {
   /// [radiusFactor] Value should be between 0.0 and 1 where 0.0 means no rounding and 1 means fully rounded corners.
   ///
   final double radiusFactor;
+  final String? semanticId;
 
   const FusionSwitch({
     super.key,
+    this.semanticId,
     required this.value,
     required this.onChanged,
     this.height = 50,
@@ -36,7 +38,8 @@ class FusionSwitch extends StatefulWidget {
   State<FusionSwitch> createState() => _FusionSwitchState();
 }
 
-class _FusionSwitchState extends State<FusionSwitch> with SingleTickerProviderStateMixin {
+class _FusionSwitchState extends State<FusionSwitch>
+    with SingleTickerProviderStateMixin {
   late AnimationController _animationController;
   late Animation<double> _positionAnimation;
   late Animation<Color?> _trackColorAnimation;
@@ -87,7 +90,9 @@ class _FusionSwitchState extends State<FusionSwitch> with SingleTickerProviderSt
 
     _thumbColorAnimation = ColorTween(
       begin: widget.inactiveThumbColor ?? context.colorScheme.elevation3,
-      end: widget.activeThumbColor ?? Colors.grey.shade200, //context.colorScheme.primaryWhite,
+      end:
+          widget.activeThumbColor ??
+          Colors.grey.shade200, //context.colorScheme.primaryWhite,
     ).animate(_animationController);
   }
 
@@ -127,9 +132,15 @@ class _FusionSwitchState extends State<FusionSwitch> with SingleTickerProviderSt
 
     final thumbWidth = widget.height * 0.7;
     final trackWidth = widget.width;
-    final dragDistance = trackWidth - thumbWidth - padding; // Available drag distance (4px padding on each side)
+    final dragDistance =
+        trackWidth -
+        thumbWidth -
+        padding; // Available drag distance (4px padding on each side)
 
-    final newValue = (_dragStartValue! + (details.localPosition.dx - thumbWidth / 2 - 4) / dragDistance).clamp(0.0, 1.0);
+    final newValue =
+        (_dragStartValue! +
+                (details.localPosition.dx - thumbWidth / 2 - 4) / dragDistance)
+            .clamp(0.0, 1.0);
 
     _animationController.value = newValue;
   }
@@ -182,59 +193,71 @@ class _FusionSwitchState extends State<FusionSwitch> with SingleTickerProviderSt
 
     final radius = min(thumbHeight, thumbWidth) * widget.radiusFactor;
 
-    return GestureDetector(
-      onTap: _onTap,
-      onPanStart: _onPanStart,
-      onPanUpdate: _onPanUpdate,
-      onPanEnd: _onPanEnd,
-      child: SizedBox(
-        height: widget.height,
-        width: widget.width,
-        child: AnimatedBuilder(
-          animation: _animationController,
-          builder: (context, child) {
-            final thumbPosition = _positionAnimation.value * (trackWidth - thumbWidth - (padding)); // 8 for padding (4px on each side)
+    return SemanticHelper.button(
+      testId: SemanticHelper.createTestId(
+        SemanticTypes.button,
+        "fusion_switch_${widget.semanticId ?? ""}",
+      ),
+      state: widget.value,
+      child: GestureDetector(
+        onTap: _onTap,
+        onPanStart: _onPanStart,
+        onPanUpdate: _onPanUpdate,
+        onPanEnd: _onPanEnd,
+        child: SizedBox(
+          height: widget.height,
+          width: widget.width,
+          child: AnimatedBuilder(
+            animation: _animationController,
+            builder: (context, child) {
+              final thumbPosition =
+                  _positionAnimation.value *
+                  (trackWidth -
+                      thumbWidth -
+                      (padding)); // 8 for padding (4px on each side)
 
-            return Stack(
-              children: [
-                // Track
-                FusionContainer(
-                  width: trackWidth,
-                  borderRadius: radius,
-                  // height: trackHeight,
-                  // decoration: BoxDecoration(
-                  color: _trackColorAnimation.value,
-                  child: SizedBox(
+              return Stack(
+                children: [
+                  // Track
+                  FusionContainer(
                     width: trackWidth,
-                    height: trackHeight,
+                    borderRadius: radius,
+                    // height: trackHeight,
+                    // decoration: BoxDecoration(
+                    color: _trackColorAnimation.value,
+                    child: SizedBox(
+                      width: trackWidth,
+                      height: trackHeight,
+                    ),
+                    // borderRadius: BorderRadius.circular(2),
+                    // ),
                   ),
-                  // borderRadius: BorderRadius.circular(2),
-                  // ),
-                ),
-                // Thumb
-                Positioned(
-                  left: (padding / 2) + thumbPosition, // 4px padding from left
-                  top: padding / 2, // 4px padding from top
-                  child: AnimatedSize(
-                    duration: const Duration(milliseconds: 100),
-                    curve: Curves.elasticInOut,
-                    child: Container(
-                      // raised: true,
-                      // borderRadius: min(thumbHeight, thumbWidth) / 4,
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(radius),
-                        color: _thumbColorAnimation.value,
-                      ),
-                      child: SizedBox(
-                        width: thumbWidth,
-                        height: thumbHeight,
+                  // Thumb
+                  Positioned(
+                    left:
+                        (padding / 2) + thumbPosition, // 4px padding from left
+                    top: padding / 2, // 4px padding from top
+                    child: AnimatedSize(
+                      duration: const Duration(milliseconds: 100),
+                      curve: Curves.elasticInOut,
+                      child: Container(
+                        // raised: true,
+                        // borderRadius: min(thumbHeight, thumbWidth) / 4,
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(radius),
+                          color: _thumbColorAnimation.value,
+                        ),
+                        child: SizedBox(
+                          width: thumbWidth,
+                          height: thumbHeight,
+                        ),
                       ),
                     ),
                   ),
-                ),
-              ],
-            );
-          },
+                ],
+              );
+            },
+          ),
         ),
       ),
     );

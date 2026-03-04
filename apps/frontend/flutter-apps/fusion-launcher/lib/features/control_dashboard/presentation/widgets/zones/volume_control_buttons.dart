@@ -30,6 +30,7 @@ class VolumeControlButtons extends StatelessWidget {
             borderRadius: BorderRadius.circular(12),
             child: FusionContainer(
               child: FusionTextField(
+                semanticFieldId: 'volume_control',
                 hintText: '5.0',
                 controller: volumeController,
                 keyboardType: TextInputType.number,
@@ -60,6 +61,7 @@ class VolumeControlButtons extends StatelessWidget {
           Align(
             alignment: Alignment.centerLeft,
             child: FusionNeumorphicButton(
+              semanticId: 'volume_control_decrement_button',
               onTap: onDecrement,
               borderRadius: 4,
               height: 30,
@@ -79,6 +81,7 @@ class VolumeControlButtons extends StatelessWidget {
           Align(
             alignment: Alignment.centerRight,
             child: FusionNeumorphicButton(
+              semanticId: 'volume_control_increment_button',
               onTap: onIncrement,
               borderRadius: 4,
               height: 30,

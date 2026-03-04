@@ -3,8 +3,8 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/core/router/routes.dart';
 import 'package:fusion_launcher/core/services/user_profile_manager.dart';
 import 'package:fusion_launcher/core/utils/fusion_utils.dart';
-import 'package:fusion_launcher/core/widgets/test_library_screen.dart';
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
+import 'package:fusion_launcher/features/widget_library/widget_library.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
 import '../../../../core/service_locator.dart';
@@ -34,11 +34,14 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  final ValueNotifier<DashboardTabs> _currentTabNotifier = ValueNotifier<DashboardTabs>(DashboardTabs.home);
+  final ValueNotifier<DashboardTabs> _currentTabNotifier =
+      ValueNotifier<DashboardTabs>(DashboardTabs.home);
 
   final ValueNotifier<bool> _showAllProjects = ValueNotifier<bool>(false);
-  final UserProfileManager userProfileManager = serviceLocator<UserProfileManager>();
-  final SharedPreferencesHandler prefs = serviceLocator<SharedPreferencesHandler>();
+  final UserProfileManager userProfileManager =
+      serviceLocator<UserProfileManager>();
+  final SharedPreferencesHandler prefs =
+      serviceLocator<SharedPreferencesHandler>();
 
   @override
   void initState() {
@@ -68,7 +71,11 @@ class _HomePageState extends State<HomePage> {
                 if (isWide) ...<Widget>[
                   ValueListenableBuilder<DashboardTabs>(
                     valueListenable: _currentTabNotifier,
-                    builder: (BuildContext context, DashboardTabs selectedTab, Widget? child) {
+                    builder: (
+                      BuildContext context,
+                      DashboardTabs selectedTab,
+                      Widget? child,
+                    ) {
                       return FusionSidebar(
                         showAllProjects: _showAllProjects,
                         selectedTab: selectedTab, // now reactive
@@ -85,13 +92,19 @@ class _HomePageState extends State<HomePage> {
                 // ==================================
                 Expanded(
                   child: BlocConsumer<ProjectViewModel, ProjectViewModelState>(
-                    listener: (BuildContext context, ProjectViewModelState state) {
+                    listener: (
+                      BuildContext context,
+                      ProjectViewModelState state,
+                    ) {
                       if (state is ProjectLoaded && context.mounted) {
                         if (state.currentProject != null) {
                           FusionUiUtils.hideLoader(context);
-                          Navigator.pushNamed(context, Routes.projectPage).then((_) async {
-                            await serviceLocator<ProjectViewModel>().loadAllLocalProjects();
-                          });
+                          Navigator.pushNamed(context, Routes.projectPage).then(
+                            (_) async {
+                              await serviceLocator<ProjectViewModel>()
+                                  .loadAllLocalProjects();
+                            },
+                          );
                         }
                       }
                       if (state is OpenProjectError && context.mounted) {
@@ -99,10 +112,17 @@ class _HomePageState extends State<HomePage> {
                         FusionToast.show(context, message: state.message);
                       }
                     },
-                    builder: (BuildContext context, ProjectViewModelState state) {
+                    builder: (
+                      BuildContext context,
+                      ProjectViewModelState state,
+                    ) {
                       return ValueListenableBuilder<DashboardTabs>(
                         valueListenable: _currentTabNotifier,
-                        builder: (BuildContext context, DashboardTabs currentTab, Widget? child) {
+                        builder: (
+                          BuildContext context,
+                          DashboardTabs currentTab,
+                          Widget? child,
+                        ) {
                           switch (currentTab) {
                             case DashboardTabs.home:
                               return const HomeTabContent();
@@ -115,7 +135,7 @@ class _HomePageState extends State<HomePage> {
                             case DashboardTabs.savedProjects:
                               return const SavedProjectsTabContent();
                             case DashboardTabs.testLibrady:
-                              return TestLibraryScreen();
+                              return const WidgetLibrary();
                           }
                         },
                       );

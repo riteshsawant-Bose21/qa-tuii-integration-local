@@ -328,7 +328,7 @@ class GpioPage extends StatelessWidget {
                                       ),
                                     )
                                   else
-                                    FusionButton(label: "Test", onTap: () {}),
+                                    FusionButton(label: "Test",accessLabel: 'gpio_page_test_button', onTap: () {}),
 
                                   if (gpio.direction == GpioDirection.input)
                                     SemanticHelper.button(
