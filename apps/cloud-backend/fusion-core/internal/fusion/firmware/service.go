@@ -35,7 +35,7 @@ type PresignerService interface {
 	PresignPut(ctx context.Context, objectKey string, ttl time.Duration, logger *zap.Logger) (string, error)
 }
 
-// NewService creates a new project service.
+// NewService creates a new firmware service.
 func NewService(dbService DatabaseService, presigner PresignerService) *Service {
 	if dbService == nil {
 		panic("dbService cannot be nil")
