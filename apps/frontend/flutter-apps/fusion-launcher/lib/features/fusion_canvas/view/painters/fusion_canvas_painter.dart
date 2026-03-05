@@ -3,6 +3,8 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:fusion_launcher/features/fusion_canvas/state/fusion_action_state.dart';
+import 'package:fusion_launcher/features/fusion_canvas/state/fusion_hover_state.dart';
 import 'package:fusion_launcher/features/fusion_canvas/viewmodel/fusion_canvas_input_viewmodel.dart';
 import 'package:fusion_launcher/features/fusion_canvas/viewmodel/fusion_snap_viewmodel.dart';
 import 'package:fusion_lib/fusion_lib.dart';
@@ -11,6 +13,8 @@ import '../../../wiring_design/view/painters/dotted_grid_painter.dart';
 import '../../state/fusion_canvas_input_state.dart';
 import '../../state/fusion_canvas_state.dart';
 import '../../state/fusion_snap_state.dart';
+import '../../viewmodel/fusion_canvas_action_viewmodel.dart';
+import '../../viewmodel/fusion_canvas_hover_viewmodel.dart';
 import '../../viewmodel/fusion_canvas_image_viewmodel.dart';
 
 class FusionCanvasPainter extends CustomPainter {
@@ -46,14 +50,15 @@ class FusionCanvasPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant CustomPainter oldDelegate) {
-    return oldDelegate is! FusionCanvasPainter ||
-        oldDelegate.state != state ||
-        oldDelegate.layers != layers ||
-        layers.any(
-          (FusionBasePainter p) =>
-              !oldDelegate.layers.contains(p) ||
-              p.shouldRepaint(oldDelegate.layers.firstWhere((FusionBasePainter op) => op.runtimeType == p.runtimeType, orElse: () => p)),
-        );
+    return true;
+    // oldDelegate is! FusionCanvasPainter ||
+    //     oldDelegate.state != state ||
+    //     oldDelegate.layers != layers ||
+    //     layers.any(
+    //       (FusionBasePainter p) =>
+    //           !oldDelegate.layers.contains(p) ||
+    //           p.shouldRepaint(oldDelegate.layers.firstWhere((FusionBasePainter op) => op.runtimeType == p.runtimeType, orElse: () => p)),
+    //     );
   }
 
   ui.Image? getImage(String s) {
@@ -62,7 +67,7 @@ class FusionCanvasPainter extends CustomPainter {
 
   FusionBasePainter? isHit(Offset position) {
     for (final FusionBasePainter painter in layers.reversed) {
-      if (painter.isHit(position, this)) {
+      if (painter.isHit(position, this) != null) {
         return painter;
       }
     }
@@ -74,16 +79,24 @@ class FusionCanvasPainter extends CustomPainter {
   Offset? get cursor => inputViewModel.mousePosition;
 
   FusionSnapState get snapViewModel => context.read<FusionSnapViewModel>().state;
+
+  FusionHoverState get hoverViewModel => context.read<FusionCanvasHoverViewModel>().state;
+
+  FusionActionState get actionState => context.read<FusionCanvasActionViewModel>().state;
 }
 
 abstract class FusionBasePainter {
   void paint(Canvas canvas, Size size, FusionCanvasPainter painter);
   bool shouldRepaint(covariant FusionBasePainter oldDelegate);
   bool get isSelected => false;
-  bool isHit(Offset position, FusionCanvasPainter painter) {
+
+  String? get id => null;
+  FusionCanvasElement? isHit(Offset position, FusionCanvasPainter painter) {
     // By default, painters are not interactive. Override this method in interactive painters.
-    return false;
+    return null;
   }
+
+  List<FusionCanvasPoint> get points => <FusionCanvasPoint>[];
 
   ///
   /// Util function for number that should not scale with canvas zoom
@@ -221,15 +234,43 @@ abstract class FusionBasePainter {
     }
   }
 
-  Path? getPolygonPath(FusionCanvasPolygon polygon) {
+  Path? getPolygonPath(FusionCanvasPolygon polygon, FusionCanvasPainter painter) {
     final List<FusionCanvasPoint> points = polygon.points;
     if (points.length < 2) return null;
 
-    final Path path = Path()..moveTo(points[0].position.dx, points[0].position.dy);
+    final ui.Offset firstPos = getEffectivePosition(points[0], painter, polygon.id);
+    final Path path = Path()..moveTo(firstPos.dx, firstPos.dy);
     for (int i = 1; i < points.length; i++) {
-      path.lineTo(points[i].position.dx, points[i].position.dy);
+      final ui.Offset pos = getEffectivePosition(points[i], painter, polygon.id);
+      path.lineTo(pos.dx, pos.dy);
     }
     path.close();
     return path;
+  }
+
+  ui.Offset getEffectivePosition(FusionCanvasPoint point, FusionCanvasPainter painter, String? layerId) {
+    if (painter.actionState is FusionPointsDraggingState) {
+      final FusionPointsDraggingState draggingState = painter.actionState as FusionPointsDraggingState;
+      if (draggingState.pointId.contains(point.id)) {
+        return point.position + draggingState.delta;
+      }
+    }
+    if (painter.actionState is FusionLayerDraggingState) {
+      final FusionLayerDraggingState draggingState = painter.actionState as FusionLayerDraggingState;
+      if (draggingState.layerId == layerId) {
+        return point.position + draggingState.delta;
+      }
+    }
+    return point.position;
+  }
+
+  ui.Offset transformOffsetForLayer(Offset offset, FusionCanvasPainter painter, String? layerId) {
+    if (painter.actionState is FusionLayerDraggingState) {
+      final FusionLayerDraggingState draggingState = painter.actionState as FusionLayerDraggingState;
+      if (draggingState.layerId == layerId) {
+        return offset + draggingState.delta;
+      }
+    }
+    return offset;
   }
 }

@@ -15,16 +15,3 @@ class FusionCanvasPolygon extends FusionCanvasElement {
   final String id;
 }
 
-class FusionCanvasLine extends FusionCanvasElement {
-  final FusionCanvasPoint start;
-  final FusionCanvasPoint end;
-
-  FusionCanvasLine({
-    required this.start,
-    required this.end,
-    String? id,
-  }) : id = id ?? FusionUtils.generateUUID();
-
-  @override
-  final String id;
-}

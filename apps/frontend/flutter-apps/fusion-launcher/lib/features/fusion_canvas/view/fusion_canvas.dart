@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:fusion_launcher/features/fusion_canvas/state/fusion_action_state.dart';
+import 'package:fusion_launcher/features/fusion_canvas/state/fusion_hover_state.dart';
 import 'package:fusion_launcher/features/fusion_canvas/state/fusion_tool_state.dart';
 import 'package:fusion_launcher/features/fusion_canvas/state/tools/measure_tool_state.dart';
 import 'package:fusion_launcher/features/fusion_canvas/state/tools/pen_tool_state.dart';
@@ -12,7 +14,8 @@ import 'package:nested/nested.dart';
 import '../state/fusion_canvas_input_state.dart';
 import '../state/fusion_canvas_state.dart';
 import '../state/fusion_snap_state.dart';
-import '../state/tools/select_tool_state.dart';
+import '../viewmodel/fusion_canvas_action_viewmodel.dart';
+import '../viewmodel/fusion_canvas_hover_viewmodel.dart';
 import '../viewmodel/fusion_canvas_image_viewmodel.dart';
 import '../viewmodel/fusion_canvas_input_viewmodel.dart';
 import '../viewmodel/fusion_canvas_state_viewmodel.dart';
@@ -52,6 +55,12 @@ class FusionCanvas extends StatelessWidget {
         BlocProvider<FusionCanvasToolViewModel>(
           create: (BuildContext context) => FusionCanvasToolViewModel(),
         ),
+        BlocProvider<FusionCanvasHoverViewModel>(
+          create: (BuildContext context) => FusionCanvasHoverViewModel(),
+        ),
+        BlocProvider<FusionCanvasActionViewModel>(
+          create: (BuildContext context) => FusionCanvasActionViewModel(),
+        ),
       ],
 
       child: _PolygonPointsSync(
@@ -89,61 +98,79 @@ class FusionCanvas extends StatelessWidget {
                             ],
                           );
                           return BlocListener<FusionCanvasInputViewModel, FusionCanvasInputState>(
-                            listenWhen: (
-                              FusionCanvasInputState previous,
-                              FusionCanvasInputState current,
-                            ) {
-                              return previous != current;
-                            },
                             listener: (
                               BuildContext context,
                               FusionCanvasInputState state,
                             ) {
-                              // if (state is IdleFusionCanvasState) {
-                              //   return;
-                              // }
+                              context.read<FusionCanvasHoverViewModel>().updateHoverPosition(state.mousePosition, fusionCanvasPainter);
 
-                              final FusionCanvasToolViewModel read = context.read<FusionCanvasToolViewModel>();
-                              read.onInputStateChanged(
+                              final FusionCanvasToolViewModel toolVm = context.read<FusionCanvasToolViewModel>();
+                              toolVm.onInputStateChanged(
                                 state,
                                 context.read<FusionSnapViewModel>().state,
                               );
-                              if ((read.state is! MeasureToolState && read.state is! PenToolState) && state is FusionCanvasInputTapDownState) {
-                                final FusionBasePainter? item = fusionCanvasPainter.isHit(
-                                  state.mousePosition ?? Offset.zero,
-                                );
-                                toolbarEvents?.onLayerSelected?.call(
-                                  item,
-                                );
-                              }
-                              if (state is FusionCanvasInputDraggingState) {
-                                final List<FusionBasePainter> selectedLayers = elements.where((FusionBasePainter layer) => layer.isSelected).toList();
 
-                                if (selectedLayers.isNotEmpty) {
-                                  read.setTool(SelectingSelectToolState(selectedLayerIds: selectedLayers));
-                                  for (final FusionBasePainter layer in selectedLayers) {
-                                    toolbarEvents?.onMoveLayer?.call(
-                                      layer,
-                                      state.delta,
+                              final FusionCanvasActionViewModel actionVm = context.read<FusionCanvasActionViewModel>();
+                              if ((toolVm.state is MeasureToolState || toolVm.state is PenToolState)) {
+                                actionVm.setToolActive();
+                              }
+                              if ((toolVm.state is! MeasureToolState && toolVm.state is! PenToolState) && state is FusionCanvasInputTapDownState) {
+                                final FusionHoverState item = context.read<FusionCanvasHoverViewModel>().state;
+
+                                if (item.hoveredPainterId != null) {
+                                  final FusionCanvasElement? hitElement = item.hoveredElement;
+                                  final List<String> pointIds = switch (hitElement) {
+                                    FusionCanvasPoint() => <String>[hitElement.id],
+                                    FusionCanvasLine(:final FusionCanvasPoint start, :final FusionCanvasPoint end) => <String>[start.id, end.id],
+                                    FusionCanvasPolygon(:final List<FusionCanvasPoint> points) => points.map((FusionCanvasPoint p) => p.id).toList(),
+                                    _ => <String>[],
+                                  };
+                                  if (pointIds.isNotEmpty) {
+                                    actionVm.startPointsDrag(
+                                      item.hoveredPainterId ?? '',
+                                      pointIds,
                                     );
+                                  } else {
+                                    actionVm.startLayerDrag(item.hoveredPainterId ?? '');
                                   }
                                 } else {
-                                  context.read<FusionCanvasStateViewModel>().onPanUpdate(
-                                    state.delta,
-                                  );
+                                  actionVm.setCanvasPanning(Offset.zero);
+                                }
+                              }
+
+                              if (state is FusionCanvasInputDraggingState) {
+                                actionVm.updateDragDelta(
+                                  state.delta,
+                                );
+                              }
+
+                              if (state is FusionCanvasInputTapUpState) {
+                                if (state.gestureOrigin == FusionGestureOrigin.click) {
+                                  final FusionBasePainter? hit = fusionCanvasPainter.isHit(state.mousePosition ?? Offset.zero);
+                                  toolbarEvents?.onLayerSelected?.call(hit);
+                                }
+                                if (state.gestureOrigin == FusionGestureOrigin.drag) {
+                                  actionVm.onDragEnd();
                                 }
                               }
                             },
 
-                            child: CanvasControlWrapper(
-                              painter: fusionCanvasPainter,
-                              child: CustomPaint(
-                                painter: fusionCanvasPainter,
-                                child: const SizedBox(
-                                  width: double.infinity,
-                                  height: double.infinity,
-                                ),
-                              ),
+                            child: BlocBuilder<FusionCanvasActionViewModel, FusionActionState>(
+                              builder: (
+                                BuildContext context,
+                                FusionActionState actionState,
+                              ) {
+                                return CanvasControlWrapper(
+                                  painter: fusionCanvasPainter,
+                                  child: CustomPaint(
+                                    painter: fusionCanvasPainter,
+                                    child: const SizedBox(
+                                      width: double.infinity,
+                                      height: double.infinity,
+                                    ),
+                                  ),
+                                );
+                              },
                             ),
                           );
                         },
@@ -166,7 +193,10 @@ class FusionCanvasEvents {
   final FusionPenToolEvents? penToolEvents;
   final ValueChanged<FusionBasePainter?>? onLayerSelected;
   final void Function(FusionBasePainter painter, Offset offset)? onMoveLayer;
-  FusionCanvasEvents({this.penToolEvents, this.onLayerSelected, this.onMoveLayer});
+
+  final void Function(FusionBasePainter painter, List<FusionCanvasPoint> points, Offset delta)? onMovePoints;
+
+  FusionCanvasEvents({this.penToolEvents, this.onLayerSelected, this.onMoveLayer, this.onMovePoints});
 }
 
 class FusionPenToolEvents {
@@ -176,8 +206,6 @@ class FusionPenToolEvents {
   FusionPenToolEvents({this.onPointsChanged, this.onPathClosed});
 }
 
-/// A widget that syncs polygon points from elements to FusionSnapViewModel.
-/// The ViewModel handles change detection internally.
 class _PolygonPointsSync extends StatefulWidget {
   const _PolygonPointsSync({
     required this.elements,

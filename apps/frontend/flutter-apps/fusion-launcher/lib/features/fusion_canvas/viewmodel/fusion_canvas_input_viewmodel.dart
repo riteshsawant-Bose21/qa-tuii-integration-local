@@ -204,29 +204,4 @@ class FusionCanvasInputViewModel extends Cubit<FusionCanvasInputState> {
       ),
     );
   }
-
-  // /// Returns the current mouse button from state (if applicable).
-  // FusionMouseButton get currentButton {
-  //   final FusionCanvasInputState currentState = state;
-  //   return switch (currentState) {
-  //     FusionCanvasInputTapDownState() => currentState.button,
-  //     FusionCanvasInputTapUpState() => currentState.button,
-  //     FusionCanvasInputDraggingState() => currentState.button,
-  //     FusionCanvasInputSecondaryTapState() => currentState.button,
-  //     _ => FusionMouseButton.unknown,
-  //   };
-  // }
-
-  // /// Returns the current gesture origin from state (if applicable).
-  // FusionGestureOrigin get currentGestureOrigin {
-  //   final FusionCanvasInputState currentState = state;
-  //   return switch (currentState) {
-  //     FusionCanvasInputTapUpState() => currentState.gestureOrigin,
-  //     FusionCanvasInputDraggingState() => FusionGestureOrigin.drag,
-  //     FusionCanvasInputDoubleTapState() => FusionGestureOrigin.doubleTap,
-  //     FusionCanvasInputLongPressState() => FusionGestureOrigin.longPress,
-  //     FusionCanvasInputTapDownState() => FusionGestureOrigin.click,
-  //     _ => FusionGestureOrigin.unknown,
-  //   };
-  // }
 }

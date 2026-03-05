@@ -19,10 +19,13 @@ class FusionCanvasPoint extends FusionCanvasElement {
   }) : id = id ?? FusionUtils.generateUUID();
 
   @override
-  bool operator ==(covariant FusionCanvasPoint other) {
+  bool operator ==(covariant FusionCanvasElement other) {
     if (identical(this, other)) return true;
 
-    return other.position == position && other.handleIn == handleIn && other.handleOut == handleOut;
+    return other is FusionCanvasPoint &&
+        other.position == position &&
+        other.handleIn == handleIn &&
+        other.handleOut == handleOut;
   }
 
   @override

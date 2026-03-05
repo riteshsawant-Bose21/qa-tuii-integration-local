@@ -11,7 +11,10 @@ import 'package:fusion_launcher/features/fusion_canvas/viewmodel/fusion_snap_vie
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:nested/nested.dart';
 
+import '../../state/fusion_action_state.dart';
 import '../../state/tools/select_tool_state.dart';
+import '../../viewmodel/fusion_canvas_action_viewmodel.dart';
+import '../../viewmodel/fusion_canvas_state_viewmodel.dart';
 import '../painters/elements/fusion_rect_painter.dart';
 import '../painters/fusion_canvas_painter.dart';
 
@@ -87,6 +90,54 @@ class FusionCanvasListenersWrapper extends StatelessWidget {
             } else if (state is DrawingPenToolState) {
               toolbarEvents?.penToolEvents?.onPointsChanged?.call(
                 state.points,
+              );
+            }
+          },
+        ),
+
+        BlocListener<FusionCanvasActionViewModel, FusionActionState>(
+          listener: (BuildContext context, FusionActionState state) {
+            if (state is FusionLayerDragEndState) {
+              toolbarEvents?.onMoveLayer?.call(
+                painters.firstWhere(
+                  (FusionBasePainter p) => p.id == state.layerId,
+                  orElse: () => throw Exception('Painter with id ${state.layerId} not found'),
+                ),
+                state.delta,
+              );
+            } else if (state is FusionPointsDragEndState) {
+              final FusionBasePainter basePainter = painters.firstWhere(
+                (FusionBasePainter p) => p.id == state.layerId,
+                orElse: () => throw Exception('Painter with id ${state.layerId} not found'),
+              );
+              toolbarEvents?.onMovePoints?.call(
+                basePainter,
+                basePainter is FusionPolygonPainter
+                    ? basePainter.polygon.points.where((FusionCanvasPoint p) => state.pointId.contains(p.id)).toList()
+                    : <FusionCanvasPoint>[],
+                state.delta,
+              );
+            }
+            if (state is FusionLayerDragStartState) {
+              toolbarEvents?.onLayerSelected?.call(
+                painters.firstWhere(
+                  (FusionBasePainter p) => p.id == state.layerId,
+                  orElse: () => throw Exception('Painter with id ${state.layerId} not found'),
+                ),
+              );
+            }
+            if (state is FusionPointsDragStartState) {
+              toolbarEvents?.onLayerSelected?.call(
+                painters.firstWhere(
+                  (FusionBasePainter p) => p.id == state.layerId,
+                  orElse: () => throw Exception('Painter with id ${state.layerId} not found'),
+                ),
+              );
+            }
+
+            if (state is FusionCanvasPanningState) {
+              context.read<FusionCanvasStateViewModel>().onPanUpdate(
+                state.delta,
               );
             }
           },
