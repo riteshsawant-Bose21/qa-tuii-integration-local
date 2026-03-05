@@ -131,6 +131,10 @@ func (s *FusionServer) SetValue(w http.ResponseWriter, r *http.Request) {
 // UpdateValue handles HTTP PATCH requests to update a configuration value.
 // It supports partial updates based on the provided key query parameter or the entire JSON body.
 func (s *FusionServer) UpdateValue(w http.ResponseWriter, r *http.Request) {
+	type patchResponse struct {
+		Status  string         `json:"status"`
+		Updates map[string]any `json:"updates"`
+	}
 
 	if !utils.RequirePatch(w, r) {
 		return
@@ -173,13 +177,13 @@ func (s *FusionServer) UpdateValue(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Build response
-	resp := map[string]any{}
+	resp := patchResponse{}
 	if diff == nil {
-		resp["status"] = "noop"
-		resp["updates"] = nil
+		resp.Status = "noop"
+		resp.Updates = nil
 	} else {
-		resp["status"] = "success"
-		resp["updates"] = diff
+		resp.Status = "success"
+		resp.Updates = diff
 	}
 
 	// Send
@@ -271,6 +275,10 @@ func (s *FusionServer) UploadAudio(w http.ResponseWriter, r *http.Request) {
 
 // GetDatabaseMetadata handles HTTP GET requests to retrieve fusion database metadata.
 func (s *FusionServer) GetDatabaseMetadata(w http.ResponseWriter, r *http.Request) {
+	type databaseMetadataResponse struct {
+		Metadata *api.DatabaseMetadata `json:"metadata"`
+	}
+
 	if !utils.RequireGet(w, r) {
 		return
 	}
@@ -284,7 +292,7 @@ func (s *FusionServer) GetDatabaseMetadata(w http.ResponseWriter, r *http.Reques
 
 	// Write the JSON response with metadata.
 	w.Header().Set(api.ContentType, api.JsonMIMEType)
-	json.NewEncoder(w).Encode(map[string]any{"metadata": metadata})
+	json.NewEncoder(w).Encode(databaseMetadataResponse{Metadata: metadata})
 }
 
 // ExportData handles HTTP GET requests to export all data.
@@ -439,13 +447,17 @@ func (s *FusionServer) CancelAlarms(w http.ResponseWriter, r *http.Request) {
 
 // GetSessions handles HTTP GET requests to get SAP sessions
 func (s *FusionServer) GetSessions(w http.ResponseWriter, r *http.Request) {
+	type sessionsResponse struct {
+		Sessions map[string]*handler.SAPSession `json:"sessions"`
+	}
+
 	if !utils.RequireGet(w, r) {
 		return
 	}
 
 	sessions := s.handler.HandleListSessions()
 
-	err := json.NewEncoder(w).Encode(map[string]any{"sessions": sessions})
+	err := json.NewEncoder(w).Encode(sessionsResponse{Sessions: sessions})
 	if err != nil {
 		logging.GetLogger().Error("Failed to encode JSON: %v", err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -526,6 +538,12 @@ func (s *FusionServer) GetControllerByID(w http.ResponseWriter, r *http.Request)
 	}
 }
 func (s *FusionServer) TriggerWinkById(w http.ResponseWriter, r *http.Request) {
+	type winkResponse struct {
+		Status       string `json:"status"`
+		Message      string `json:"message"`
+		ControllerID string `json:"controller_id"`
+	}
+
 	if !utils.RequireGet(w, r) {
 		return
 	}
@@ -550,10 +568,10 @@ func (s *FusionServer) TriggerWinkById(w http.ResponseWriter, r *http.Request) {
 	// Return success response for wink command
 	w.Header().Set(api.ContentType, api.JsonMIMEType)
 	w.WriteHeader(http.StatusOK)
-	response := map[string]any{
-		"status":        "success",
-		"message":       "Wink command sent successfully",
-		"controller_id": id,
+	response := winkResponse{
+		Status:       "success",
+		Message:      "Wink command sent successfully",
+		ControllerID: id,
 	}
 	if err := json.NewEncoder(w).Encode(response); err != nil {
 		http.Error(w, fmt.Sprintf("Failed to encode response: %v", err), http.StatusInternalServerError)

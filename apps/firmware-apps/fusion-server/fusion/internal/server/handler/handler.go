@@ -36,6 +36,16 @@ type Handler struct {
 	controllerManager controllers.ControllerManagerInterface
 }
 
+type serverInfoResponse struct {
+	Name        string   `json:"name"`
+	Version     string   `json:"version"`
+	Commit      string   `json:"commit"`
+	BuildTime   string   `json:"build_time"`
+	NodeID      string   `json:"node_id"`
+	Endpoints   []string `json:"endpoints"`
+	ClusterSize int      `json:"cluster_size"`
+}
+
 func NewHandler(
 	appConfig *api.AppConfig,
 	memberlist *memberlist.Memberlist,
@@ -69,17 +79,23 @@ func (h *Handler) GetInitialState() (map[string]any, error) {
 }
 
 func (h *Handler) HandleHTTPGet(key string) (any, error) {
+	type keyLookupResponse struct {
+		Exists bool `json:"exists"`
+		Value  any  `json:"value,omitempty"`
+		Error  any  `json:"error,omitempty"`
+	}
+
 	if key != "" {
 		value, exists := h.StateManager.Get(key)
 		if !exists {
-			return map[string]any{
-				"exists": false,
-				"error":  "key not found",
+			return keyLookupResponse{
+				Exists: false,
+				Error:  "key not found",
 			}, nil
 		}
-		return map[string]any{
-			"exists": true,
-			"value":  value,
+		return keyLookupResponse{
+			Exists: true,
+			Value:  value,
 		}, nil
 	}
 
@@ -89,18 +105,28 @@ func (h *Handler) HandleHTTPGet(key string) (any, error) {
 
 // HandleHTTPSet replaces the entire configuration state with the new data.
 func (h *Handler) HandleHTTPSet(update map[string]any) (any, error) {
+	type setResponse struct {
+		Status  string         `json:"status"`
+		Updates map[string]any `json:"updates"`
+	}
 
 	existing := h.StateManager.GetStateMap()
 
 	if reflect.DeepEqual(existing, update) {
-		return map[string]any{"status": "noop", "updates": nil}, nil
+		return setResponse{
+			Status:  "noop",
+			Updates: nil,
+		}, nil
 	}
 
 	if err := h.handleConfigUpdate(update, true); err != nil {
 		return nil, err
 	}
 
-	return map[string]any{"status": "success", "updates": update}, nil
+	return setResponse{
+		Status:  "success",
+		Updates: update,
+	}, nil
 }
 
 // HandleHTTPPatch updates only the specified fields.
@@ -144,14 +170,15 @@ func (h *Handler) GetMembers() []*memberlist.Node {
 	return h.memberlist.Members()
 }
 
-func (h *Handler) GetServerInfo() (map[string]any, error) {
-	info := map[string]any{
-		"name":       "Fusion Server",
-		"version":    version.Version,
-		"commit":     version.Commit,
-		"build_time": version.BuildTime, "node_id": h.memberlist.LocalNode().Name,
-		"endpoints":    h.endpoints,
-		"cluster_size": len(h.memberlist.Members()),
+func (h *Handler) GetServerInfo() (any, error) {
+	info := serverInfoResponse{
+		Name:        "Fusion Server",
+		Version:     version.Version,
+		Commit:      version.Commit,
+		BuildTime:   version.BuildTime,
+		NodeID:      h.memberlist.LocalNode().Name,
+		Endpoints:   h.endpoints,
+		ClusterSize: len(h.memberlist.Members()),
 	}
 
 	return info, nil
