@@ -21,13 +21,13 @@ class EventsPanel extends StatelessWidget {
   Widget build(BuildContext context) {
     return BlocBuilder<ConfigEventsViewmodel, ConfigEventsState>(
       builder: (BuildContext context, ConfigEventsState state) {
-        final ConfigEventsViewmodel cubit =
-            context.read<ConfigEventsViewmodel>();
+        final ConfigEventsViewmodel cubit = context.read<ConfigEventsViewmodel>();
 
         return Column(
           children: <Widget>[
             /// Events Section
             SectionHeader(
+              semanticLabel: 'event_panel',
               title: 'Events',
               trailing: GestureDetector(
                 onTap: () {
@@ -166,12 +166,10 @@ class CreateSnapshotsOrScenesWidget extends StatefulWidget {
   });
 
   @override
-  State<CreateSnapshotsOrScenesWidget> createState() =>
-      CreateSnapshotsOrScenesWidgetState();
+  State<CreateSnapshotsOrScenesWidget> createState() => CreateSnapshotsOrScenesWidgetState();
 }
 
-class CreateSnapshotsOrScenesWidgetState
-    extends State<CreateSnapshotsOrScenesWidget> {
+class CreateSnapshotsOrScenesWidgetState extends State<CreateSnapshotsOrScenesWidget> {
   @override
   Widget build(BuildContext context) {
     return Container(

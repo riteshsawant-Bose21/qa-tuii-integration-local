@@ -38,6 +38,7 @@ class _SnapshotItemCardState extends State<SnapshotItemCard> {
   Widget build(BuildContext context) {
     return SemanticHelper.button(
       testId: SemanticHelper.createTestId(SemanticTypes.button, "snapshot_item_${widget.index}"),
+      selected: widget.isSelected,
       child: GestureDetector(
         onTap: widget.onTap,
         child: MouseRegion(
@@ -73,7 +74,7 @@ class _SnapshotItemCardState extends State<SnapshotItemCard> {
                 /// snapshot item draggable icon
                 ReorderableDragStartListener(
                   index: widget.index,
-                  child: Icon(
+                  child: Fusion(
                     Icons.drag_indicator,
                     size: 16,
                     color: context.colorScheme.textPlaceholder,

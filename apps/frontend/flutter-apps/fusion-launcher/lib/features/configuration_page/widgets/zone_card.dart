@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/features/configuration_page/widgets/sub_zone_card.dart';
 import 'package:fusion_launcher/features/zone_functions/source_select.dart';
-import 'package:fusion_lib/constants/semantics/features/configuration/config_zones_keys.dart';
+import 'package:fusion_lib/constants/semantics/features/configuration/processing/config_zones_keys.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
 import '../../../core/constants/assets_constants.dart';
@@ -131,15 +131,9 @@ class _ZoneCardState extends State<ZoneCard> {
         padding: const EdgeInsets.only(left: 14, right: 14),
         height: 32,
         decoration: BoxDecoration(
-          color:
-              isHovered
-                  ? widget.bgColor.withAlpha(80)
-                  : widget.bgColor.withAlpha(100),
+          color: isHovered ? widget.bgColor.withAlpha(80) : widget.bgColor.withAlpha(100),
           border: Border.all(
-            color:
-                isSelected
-                    ? context.colorScheme.strokeLight
-                    : Colors.transparent,
+            color: isSelected ? context.colorScheme.strokeLight : Colors.transparent,
           ),
           borderRadius: BorderRadius.circular(6),
         ),
@@ -152,9 +146,7 @@ class _ZoneCardState extends State<ZoneCard> {
                 FusionTestKeys.instance.zonelisticon,
               ),
               child: Icon(
-                expanded
-                    ? Icons.arrow_drop_up_rounded
-                    : Icons.arrow_drop_down_rounded,
+                expanded ? Icons.arrow_drop_up_rounded : Icons.arrow_drop_down_rounded,
                 color: Theme.of(context).colorScheme.primaryWhite,
               ),
             ),
@@ -207,8 +199,7 @@ class _ZoneCardState extends State<ZoneCard> {
       builder: (BuildContext context, BoxConstraints constraints) {
         return BlocBuilder<ProjectViewModel, ProjectViewModelState>(
           builder: (BuildContext context, ProjectViewModelState state) {
-            final List<SubZone> subZonesForZone = _projectViewModel
-                .getSubZonesForZone(parentZoneId: widget.zoneId);
+            final List<SubZone> subZonesForZone = _projectViewModel.getSubZonesForZone(parentZoneId: widget.zoneId);
             final int subZoneCount = subZonesForZone.length;
             final double calculatedHeight = subZoneCount * 100.0;
             final double constrainedHeight = calculatedHeight.clamp(
@@ -278,8 +269,7 @@ class _ZoneCardState extends State<ZoneCard> {
   /// Zone functions panel
   Widget _buildZoneFunctionsPanel() {
     /// Sync with model if underlying zone function changed externally
-    final ZoneFunctions? existingFunction = _projectViewModel
-        .getZoneFunctionForZone(zoneId: widget.zoneId);
+    final ZoneFunctions? existingFunction = _projectViewModel.getZoneFunctionForZone(zoneId: widget.zoneId);
     if (existingFunction != null && selectedFunction != existingFunction.type) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) {
@@ -332,8 +322,7 @@ class _ZoneCardState extends State<ZoneCard> {
 
   /// Build reorderable priority function widgets
   Widget _buildReorderablePriorityWidgets() {
-    final ZoneFunctions? existingFunction = _projectViewModel
-        .getZoneFunctionForZone(zoneId: widget.zoneId);
+    final ZoneFunctions? existingFunction = _projectViewModel.getZoneFunctionForZone(zoneId: widget.zoneId);
 
     if (!(existingFunction?.hasPriority ?? false)) {
       return const SizedBox.shrink();
@@ -355,12 +344,9 @@ class _ZoneCardState extends State<ZoneCard> {
             /// Handle the reordering logic - swap sources using reOrderPrioritySourcesInZone
             if (oldIndex != newIndex) {
               /// Get current source IDs directly from view model
-              final List<String> prioritySources = _projectViewModel
-                  .getPrioritySourcesInZone(zoneId: widget.zoneId);
-              final String? source1 =
-                  prioritySources.isNotEmpty ? prioritySources[0] : null;
-              final String? source2 =
-                  prioritySources.length > 1 ? prioritySources[1] : null;
+              final List<String> prioritySources = _projectViewModel.getPrioritySourcesInZone(zoneId: widget.zoneId);
+              final String? source1 = prioritySources.isNotEmpty ? prioritySources[0] : null;
+              final String? source2 = prioritySources.length > 1 ? prioritySources[1] : null;
 
               /// Create new order list with swapped sources
               final List<String> newOrder = <String>[];
@@ -406,10 +392,7 @@ class _ZoneCardState extends State<ZoneCard> {
         SemanticTypes.container,
         FusionTestKeys.instance.functionselect,
       ),
-      child:
-          _hasSelectedFunction
-              ? buildSelectedFunctionButton()
-              : buildAddFunctionButton(),
+      child: _hasSelectedFunction ? buildSelectedFunctionButton() : buildAddFunctionButton(),
     );
   }
 
@@ -417,8 +400,7 @@ class _ZoneCardState extends State<ZoneCard> {
   Widget buildPriorityFunctionWidget({required int priorityIndex}) {
     String? selectedSourceId;
     String? selectedSource;
-    final List<String> prioritySources = _projectViewModel
-        .getPrioritySourcesInZone(zoneId: widget.zoneId);
+    final List<String> prioritySources = _projectViewModel.getPrioritySourcesInZone(zoneId: widget.zoneId);
 
     /// priority 1
     if (priorityIndex == 1) {
@@ -444,8 +426,7 @@ class _ZoneCardState extends State<ZoneCard> {
       }
     }
 
-    final ZoneFunctions? existingFunction = _projectViewModel
-        .getZoneFunctionForZone(zoneId: widget.zoneId);
+    final ZoneFunctions? existingFunction = _projectViewModel.getZoneFunctionForZone(zoneId: widget.zoneId);
 
     return Visibility(
       visible: existingFunction?.hasPriority ?? false,
@@ -457,10 +438,8 @@ class _ZoneCardState extends State<ZoneCard> {
               final String incomingId = details.data.id;
 
               /// Reject if already selected for this slot
-              if (priorityIndex == 1 && incomingId == selectedSourceId)
-                return false;
-              if (priorityIndex == 2 && incomingId == selectedSourceId)
-                return false;
+              if (priorityIndex == 1 && incomingId == selectedSourceId) return false;
+              if (priorityIndex == 2 && incomingId == selectedSourceId) return false;
 
               /// incomingId should not be in both the priority slots
               if (prioritySources.contains(incomingId)) return false;
@@ -526,8 +505,7 @@ class _ZoneCardState extends State<ZoneCard> {
 
                   padding: EdgeInsets.zero,
                   itemBuilder: (BuildContext context) {
-                    final List<PopupMenuEntry<String>> entries =
-                        <PopupMenuEntry<String>>[];
+                    final List<PopupMenuEntry<String>> entries = <PopupMenuEntry<String>>[];
 
                     /// Header: Sources
                     entries.add(
@@ -549,8 +527,7 @@ class _ZoneCardState extends State<ZoneCard> {
                     );
 
                     /// Individual sources
-                    final List<Source> availableSources =
-                        _projectViewModel.getSourcesWithoutSourceSet();
+                    final List<Source> availableSources = _projectViewModel.getSourcesWithoutSourceSet();
                     if (availableSources.isEmpty) {
                       entries.add(
                         PopupMenuItem<String>(
@@ -572,50 +549,34 @@ class _ZoneCardState extends State<ZoneCard> {
                       for (final Source src in availableSources) {
                         final String value = src.id;
                         final String assetPath = src.assetImagePath;
-                        final bool isAlreadyInPriority = prioritySources
-                            .contains(value);
-                        final bool isCurrentSelection =
-                            selectedSourceId == value;
+                        final bool isAlreadyInPriority = prioritySources.contains(value);
+                        final bool isCurrentSelection = selectedSourceId == value;
 
                         entries.add(
                           PopupMenuItem<String>(
-                            value:
-                                isAlreadyInPriority && !isCurrentSelection
-                                    ? null
-                                    : value,
+                            value: isAlreadyInPriority && !isCurrentSelection ? null : value,
                             enabled: !isAlreadyInPriority || isCurrentSelection,
                             height: 20,
                             child: Opacity(
-                              opacity:
-                                  isAlreadyInPriority && !isCurrentSelection
-                                      ? 0.9
-                                      : 1.0,
+                              opacity: isAlreadyInPriority && !isCurrentSelection ? 0.9 : 1.0,
                               child: Row(
                                 children: <Widget>[
                                   Transform.scale(
                                     scale: 0.7,
                                     child: Radio<String>(
                                       value: value,
-                                      groupValue:
-                                          isAlreadyInPriority &&
-                                                  !isCurrentSelection
-                                              ? value
-                                              : selectedSourceId,
-                                      materialTapTargetSize:
-                                          MaterialTapTargetSize.shrinkWrap,
+                                      groupValue: isAlreadyInPriority && !isCurrentSelection ? value : selectedSourceId,
+                                      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                                       visualDensity: const VisualDensity(
                                         horizontal: -4,
                                         vertical: -4,
                                       ),
-                                      activeColor:
-                                          context.colorScheme.primaryWhite,
+                                      activeColor: context.colorScheme.primaryWhite,
                                       onChanged:
-                                          isAlreadyInPriority &&
-                                                  !isCurrentSelection
+                                          isAlreadyInPriority && !isCurrentSelection
                                               ? null
                                               : (String? v) {
-                                                if (v != null)
-                                                  Navigator.pop(context, v);
+                                                if (v != null) Navigator.pop(context, v);
                                               },
                                     ),
                                   ),
@@ -629,24 +590,14 @@ class _ZoneCardState extends State<ZoneCard> {
                                   const SizedBox(width: 4),
                                   Expanded(
                                     child: FusionAppText(
-                                      text:
-                                          isAlreadyInPriority &&
-                                                  !isCurrentSelection
-                                              ? '${src.name} (already selected)'
-                                              : src.name,
+                                      text: isAlreadyInPriority && !isCurrentSelection ? '${src.name} (already selected)' : src.name,
                                       capitalize: true,
                                       maxLine: 1,
                                       style: Theme.of(
                                         context,
                                       ).textTheme.bodyMedium?.copyWith(
                                         fontSize: 10,
-                                        color:
-                                            isAlreadyInPriority &&
-                                                    !isCurrentSelection
-                                                ? context.colorScheme.elevation5
-                                                : context
-                                                    .colorScheme
-                                                    .primaryWhite,
+                                        color: isAlreadyInPriority && !isCurrentSelection ? context.colorScheme.elevation5 : context.colorScheme.primaryWhite,
                                       ),
                                     ),
                                   ),
@@ -803,11 +754,7 @@ class _ZoneCardState extends State<ZoneCard> {
                               context,
                             ).textTheme.bodyMedium?.copyWith(
                               fontSize: 11,
-                              color:
-                                  selectedSource == null
-                                      ? context.colorScheme.primaryWhite
-                                          .withAlpha(150)
-                                      : context.colorScheme.primaryWhite,
+                              color: selectedSource == null ? context.colorScheme.primaryWhite.withAlpha(150) : context.colorScheme.primaryWhite,
                             ),
                           ),
                         ),
@@ -818,11 +765,7 @@ class _ZoneCardState extends State<ZoneCard> {
 
                           alignment: Alignment.center,
                           decoration: BoxDecoration(
-                            color:
-                                selectedSource == null
-                                    ? context.colorScheme.primaryWhite
-                                        .withAlpha(150)
-                                    : context.colorScheme.primaryWhite,
+                            color: selectedSource == null ? context.colorScheme.primaryWhite.withAlpha(150) : context.colorScheme.primaryWhite,
                             borderRadius: BorderRadius.circular(3),
                           ),
                           child: FusionAppText(
@@ -965,20 +908,17 @@ class _ZoneCardState extends State<ZoneCard> {
   Widget buildSelectedFunctionButton() {
     return GestureDetector(
       onTap: () {
-        if (selectedFunction == ZoneFunctionsType.sourceSelect ||
-            selectedFunction == ZoneFunctionsType.sourceSelectWithPriority) {
+        if (selectedFunction == ZoneFunctionsType.sourceSelect || selectedFunction == ZoneFunctionsType.sourceSelectWithPriority) {
           SourceSelectZoneControlPanel.showDialog(
             context,
             zoneID: widget.zoneId,
           );
-        } else if (selectedFunction == ZoneFunctionsType.sourceMix ||
-            selectedFunction == ZoneFunctionsType.sourceMixWithPriority) {
+        } else if (selectedFunction == ZoneFunctionsType.sourceMix || selectedFunction == ZoneFunctionsType.sourceMixWithPriority) {
           SourceMixZoneControlPanel.showDialog(
             context,
             zoneID: widget.zoneId,
           );
-        } else if (selectedFunction == ZoneFunctionsType.sourceMatrix ||
-            selectedFunction == ZoneFunctionsType.sourceMatrixWithPriority) {
+        } else if (selectedFunction == ZoneFunctionsType.sourceMatrix || selectedFunction == ZoneFunctionsType.sourceMatrixWithPriority) {
           SourceMatrixZoneControlPanel.showDialog(
             context,
             zoneID: widget.zoneId,
@@ -1036,14 +976,11 @@ class _ZoneCardState extends State<ZoneCard> {
     final List<Source> currentZoneSources = _projectViewModel.getSourcesInZone(
       zoneId: widget.zoneId,
     );
-    final List<SourceSet> currentZoneSourceSets = _projectViewModel
-        .getSourceSetsInZone(zoneId: widget.zoneId);
+    final List<SourceSet> currentZoneSourceSets = _projectViewModel.getSourceSetsInZone(zoneId: widget.zoneId);
 
-    final bool hasSelection =
-        currentZoneSources.isNotEmpty || currentZoneSourceSets.isNotEmpty;
+    final bool hasSelection = currentZoneSources.isNotEmpty || currentZoneSourceSets.isNotEmpty;
 
-    final List<Source> availableSources =
-        _projectViewModel.getSourcesWithoutSourceSet();
+    final List<Source> availableSources = _projectViewModel.getSourcesWithoutSourceSet();
     final List<SourceSet> sourceSetList = _projectViewModel.getAllSourceSets();
 
     return Theme(
@@ -1075,18 +1012,14 @@ class _ZoneCardState extends State<ZoneCard> {
           color: context.colorScheme.elevation1,
           itemBuilder: (BuildContext context) {
             /// Temporary selections mirror existing selections
-            final List<String> tempSelectedSources =
-                currentZoneSources.map((Source e) => e.id).toList();
+            final List<String> tempSelectedSources = currentZoneSources.map((Source e) => e.id).toList();
 
-            final List<String> tempSelectedSourceSets =
-                currentZoneSourceSets.map((SourceSet e) => e.id).toList();
+            final List<String> tempSelectedSourceSets = currentZoneSourceSets.map((SourceSet e) => e.id).toList();
 
             /// Get priority sources to disable them in source list
-            final List<String> prioritySources = _projectViewModel
-                .getPrioritySourcesInZone(zoneId: widget.zoneId);
+            final List<String> prioritySources = _projectViewModel.getPrioritySourcesInZone(zoneId: widget.zoneId);
 
-            final List<PopupMenuEntry<String>> entries =
-                <PopupMenuEntry<String>>[];
+            final List<PopupMenuEntry<String>> entries = <PopupMenuEntry<String>>[];
 
             // ----------------------------------------------------------
             // SOURCES HEADER
@@ -1156,10 +1089,7 @@ class _ZoneCardState extends State<ZoneCard> {
                                 scale: 0.7,
                                 child: Checkbox(
                                   value: tempSelectedSources.contains(id),
-                                  activeColor:
-                                      isPrioritySource
-                                          ? context.colorScheme.elevation5
-                                          : context.colorScheme.primaryBlack,
+                                  activeColor: isPrioritySource ? context.colorScheme.elevation5 : context.colorScheme.primaryBlack,
                                   onChanged:
                                       isPrioritySource
                                           ? null
@@ -1173,8 +1103,7 @@ class _ZoneCardState extends State<ZoneCard> {
                                             }
                                             setPopupState(() {});
                                           },
-                                  materialTapTargetSize:
-                                      MaterialTapTargetSize.shrinkWrap,
+                                  materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                                   visualDensity: const VisualDensity(
                                     horizontal: -4,
                                     vertical: -4,
@@ -1182,10 +1111,7 @@ class _ZoneCardState extends State<ZoneCard> {
                                   checkColor: context.colorScheme.primaryWhite,
                                   side: BorderSide(
                                     width: 1,
-                                    color:
-                                        isPrioritySource
-                                            ? context.colorScheme.elevation5
-                                            : context.colorScheme.primaryWhite,
+                                    color: isPrioritySource ? context.colorScheme.elevation5 : context.colorScheme.primaryWhite,
                                   ),
                                 ),
                               ),
@@ -1202,17 +1128,11 @@ class _ZoneCardState extends State<ZoneCard> {
                                           context,
                                         ).textTheme.bodyMedium?.copyWith(
                                           fontSize: 10,
-                                          color:
-                                              isPrioritySource
-                                                  ? context
-                                                      .colorScheme
-                                                      .elevation5
-                                                  : null,
+                                          color: isPrioritySource ? context.colorScheme.elevation5 : null,
                                         ),
                                       ),
                                     ),
-                                    if (isPrioritySource)
-                                      const SizedBox(width: 4),
+                                    if (isPrioritySource) const SizedBox(width: 4),
                                     if (isPrioritySource)
                                       FusionAppText(
                                         text: '(Priority source)',
@@ -1280,8 +1200,7 @@ class _ZoneCardState extends State<ZoneCard> {
             } else {
               for (final SourceSet s in sourceSetList) {
                 final String id = s.id;
-                final List<Source> sourcesInSet = _projectViewModel
-                    .getSourcesInSourceSet(sourceSetId: s.id);
+                final List<Source> sourcesInSet = _projectViewModel.getSourcesInSourceSet(sourceSetId: s.id);
 
                 entries.add(
                   PopupMenuItem<String>(
@@ -1313,8 +1232,7 @@ class _ZoneCardState extends State<ZoneCard> {
                                     }
                                     setPopupState(() {});
                                   },
-                                  materialTapTargetSize:
-                                      MaterialTapTargetSize.shrinkWrap,
+                                  materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                                   visualDensity: const VisualDensity(
                                     horizontal: -4,
                                     vertical: -4,
@@ -1329,8 +1247,7 @@ class _ZoneCardState extends State<ZoneCard> {
                               const SizedBox(width: 4),
                               Expanded(
                                 child: FusionAppText(
-                                  text:
-                                      '${s.name} (${sourcesInSet.length} sources)',
+                                  text: '${s.name} (${sourcesInSet.length} sources)',
                                   maxLine: 1,
                                   capitalize: true,
                                   style: Theme.of(
@@ -1402,10 +1319,7 @@ class _ZoneCardState extends State<ZoneCard> {
             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
             decoration: BoxDecoration(
               border: Border.all(
-                color:
-                    hasSelection
-                        ? context.colorScheme.elevation5
-                        : context.colorScheme.elevation5.withAlpha(150),
+                color: hasSelection ? context.colorScheme.elevation5 : context.colorScheme.elevation5.withAlpha(150),
               ),
               borderRadius: BorderRadius.circular(3),
             ),
@@ -1418,8 +1332,7 @@ class _ZoneCardState extends State<ZoneCard> {
                       FusionTestKeys.instance.selectsrctxt,
                     ),
                     child: FusionAppText(
-                      text:
-                          hasSelection ? 'Sources selected' : 'Select sources',
+                      text: hasSelection ? 'Sources selected' : 'Select sources',
                       maxLine: 1,
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                         fontSize: 11,
@@ -1444,10 +1357,7 @@ class _ZoneCardState extends State<ZoneCard> {
                           borderRadius: BorderRadius.circular(3),
                         ),
                         child: FusionAppText(
-                          text:
-                              _projectViewModel
-                                  .getSourceCountInZone(zoneId: widget.zoneId)
-                                  .toString(),
+                          text: _projectViewModel.getSourceCountInZone(zoneId: widget.zoneId).toString(),
                           style: Theme.of(
                             context,
                           ).textTheme.bodySmall?.copyWith(

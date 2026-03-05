@@ -26,7 +26,7 @@ class SemanticHelper {
       enabled: isActive,
       label: label,
       child: child,
-      checked: selected,
+      selected: selected,
     );
   }
 

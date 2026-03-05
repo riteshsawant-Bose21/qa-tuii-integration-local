@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:fusion_launcher/features/processing_block/view/processing_chain_view.dart';
-import 'package:fusion_lib/constants/semantics/features/configuration/config_sources.dart';
+import 'package:fusion_lib/constants/semantics/features/configuration/processing/config_sources.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
 import '../../../core/constants/assets_constants.dart';
@@ -41,16 +41,10 @@ class _SourceItemState extends State<SourceItem> {
       },
       child: Container(
         decoration: BoxDecoration(
-          color:
-              widget.isDragging
-                  ? context.colorScheme.primary.withAlpha(150)
-                  : (_isHovered ? context.colorScheme.elevation2 : null),
+          color: widget.isDragging ? context.colorScheme.primary.withAlpha(150) : (_isHovered ? context.colorScheme.elevation2 : null),
           borderRadius: BorderRadius.circular(8),
           border: Border.all(
-            color:
-                widget.isDragging
-                    ? context.colorScheme.primary
-                    : Colors.transparent,
+            color: widget.isDragging ? context.colorScheme.primary : Colors.transparent,
             width: 1.0,
           ),
         ),

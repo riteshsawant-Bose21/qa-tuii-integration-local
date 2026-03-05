@@ -3,7 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/features/configuration_page/widgets/source_item.dart';
 import 'package:fusion_launcher/features/processing_block/view/processing_chain_view.dart';
 import 'package:fusion_lib/constants/fusion_constants.dart';
-import 'package:fusion_lib/constants/semantics/features/configuration/config_sources.dart';
+import 'package:fusion_lib/constants/semantics/features/configuration/processing/config_sources.dart';
 import 'package:fusion_lib/fusion_theme/app_theme.dart';
 import 'package:fusion_lib/fusion_widgets/buttons/fusion_button.dart';
 import 'package:fusion_lib/fusion_widgets/buttons/fusion_outlined_button.dart';
@@ -48,8 +48,7 @@ class _SourceSetItemState extends State<SourceSetItem> {
   late ValueNotifier<bool> _isSourcesSetExpanded;
 
   ProjectViewModel get _projectViewModel => serviceLocator<ProjectViewModel>();
-  final TextEditingController _sourceSetNameController =
-      TextEditingController();
+  final TextEditingController _sourceSetNameController = TextEditingController();
   final List<SelectedSource> _selectedSources = <SelectedSource>[];
   bool _isHovered = false;
 
@@ -132,8 +131,7 @@ class _SourceSetItemState extends State<SourceSetItem> {
                     child: GestureDetector(
                       onTap: () {
                         /// Toggle expand/collapse
-                        _isSourcesSetExpanded.value =
-                            !_isSourcesSetExpanded.value;
+                        _isSourcesSetExpanded.value = !_isSourcesSetExpanded.value;
                       },
                       child: Container(
                         margin: const EdgeInsets.only(
@@ -145,10 +143,7 @@ class _SourceSetItemState extends State<SourceSetItem> {
                         height: 36,
                         decoration: BoxDecoration(
                           border: Border.all(
-                            color:
-                                widget.isDragHovered
-                                    ? Theme.of(context).colorScheme.primary
-                                    : Colors.transparent,
+                            color: widget.isDragHovered ? Theme.of(context).colorScheme.primary : Colors.transparent,
                             width: 1.0,
                           ),
                           borderRadius: BorderRadius.circular(6),
@@ -157,9 +152,7 @@ class _SourceSetItemState extends State<SourceSetItem> {
                                   ? Theme.of(
                                     context,
                                   ).colorScheme.primary.withAlpha(50)
-                                  : (_isHovered
-                                      ? context.colorScheme.elevation3
-                                      : context.colorScheme.elevation2),
+                                  : (_isHovered ? context.colorScheme.elevation3 : context.colorScheme.elevation2),
                         ),
                         child: SemanticHelper.container(
                           testId: SemanticHelper.createTestId(
@@ -175,11 +168,8 @@ class _SourceSetItemState extends State<SourceSetItem> {
                                   FusionTestKeys.instance.sourcesetheadericon,
                                 ),
                                 child: Icon(
-                                  _isSourcesSetExpanded.value
-                                      ? Icons.arrow_drop_up_rounded
-                                      : Icons.arrow_drop_down_rounded,
-                                  color:
-                                      Theme.of(context).colorScheme.iconWhite,
+                                  _isSourcesSetExpanded.value ? Icons.arrow_drop_up_rounded : Icons.arrow_drop_down_rounded,
+                                  color: Theme.of(context).colorScheme.iconWhite,
                                 ),
                               ),
                               const SizedBox(width: 4),
@@ -208,19 +198,13 @@ class _SourceSetItemState extends State<SourceSetItem> {
                                 visible: _projectViewModel.canLinkSourceSet(
                                   sourceSetId: widget.sourceSet.id,
                                 ),
-                                child: BlocBuilder<
-                                  ProjectViewModel,
-                                  ProjectViewModelState
-                                >(
+                                child: BlocBuilder<ProjectViewModel, ProjectViewModelState>(
                                   builder: (
                                     BuildContext context,
                                     ProjectViewModelState state,
                                   ) {
                                     return Tooltip(
-                                      message:
-                                          widget.sourceSet.isLinked
-                                              ? 'Unlink Source Set'
-                                              : 'Link Source Set',
+                                      message: widget.sourceSet.isLinked ? 'Unlink Source Set' : 'Link Source Set',
                                       child: GestureDetector(
                                         onTap: () {
                                           showDialog(
@@ -228,44 +212,27 @@ class _SourceSetItemState extends State<SourceSetItem> {
 
                                             builder:
                                                 (_) => FusionDialog(
-                                                  title:
-                                                      "Confirm ${widget.sourceSet.isLinked ? "Unlink" : 'Link'}",
+                                                  title: "Confirm ${widget.sourceSet.isLinked ? "Unlink" : 'Link'}",
                                                   description:
                                                       'Are you sure you want to ${widget.sourceSet.isLinked ? 'unlink' : 'link'} this source set? All associated processing blocks will be affected.',
-                                                  primaryButtonLabel:
-                                                      widget.sourceSet.isLinked
-                                                          ? "Unlink"
-                                                          : 'Link',
-                                                  secondaryButtonLabel:
-                                                      'Cancel',
+                                                  primaryButtonLabel: widget.sourceSet.isLinked ? "Unlink" : 'Link',
+                                                  secondaryButtonLabel: 'Cancel',
                                                   onPrimaryPressed: () {
-                                                    if (widget
-                                                        .sourceSet
-                                                        .isLinked) {
-                                                      _projectViewModel
-                                                          .unlinkSourceSet(
-                                                            sourceSetId:
-                                                                widget
-                                                                    .sourceSet
-                                                                    .id,
-                                                          );
+                                                    if (widget.sourceSet.isLinked) {
+                                                      _projectViewModel.unlinkSourceSet(
+                                                        sourceSetId: widget.sourceSet.id,
+                                                      );
                                                       FusionToast.success(
                                                         context,
-                                                        message:
-                                                            "Source set unlinked successfully",
+                                                        message: "Source set unlinked successfully",
                                                       );
                                                     } else {
-                                                      _projectViewModel
-                                                          .linkSourceSet(
-                                                            sourceSetId:
-                                                                widget
-                                                                    .sourceSet
-                                                                    .id,
-                                                          );
+                                                      _projectViewModel.linkSourceSet(
+                                                        sourceSetId: widget.sourceSet.id,
+                                                      );
                                                       FusionToast.success(
                                                         context,
-                                                        message:
-                                                            "Source set linked successfully",
+                                                        message: "Source set linked successfully",
                                                       );
                                                     }
                                                     Navigator.pop(context);
@@ -278,13 +245,10 @@ class _SourceSetItemState extends State<SourceSetItem> {
                                           );
                                         },
                                         child: FusionImage.asset(
-                                          widget.sourceSet.isLinked
-                                              ? Assets.unLinkIcon
-                                              : Assets.linkIcon,
+                                          widget.sourceSet.isLinked ? Assets.unLinkIcon : Assets.linkIcon,
                                           width: 22,
                                           height: 22,
-                                          assetColor:
-                                              context.colorScheme.primaryWhite,
+                                          assetColor: context.colorScheme.primaryWhite,
                                           fit: BoxFit.contain,
                                         ),
                                       ),
@@ -306,16 +270,13 @@ class _SourceSetItemState extends State<SourceSetItem> {
                                   child: SemanticHelper.container(
                                     testId: SemanticHelper.createTestId(
                                       SemanticTypes.container,
-                                      FusionTestKeys
-                                          .instance
-                                          .sourcesetheaderprocessingblock,
+                                      FusionTestKeys.instance.sourcesetheaderprocessingblock,
                                     ),
                                     child: FusionImage.asset(
                                       Assets.processingBlocksIcon,
                                       width: 18,
                                       height: 12,
-                                      assetColor:
-                                          context.colorScheme.primaryWhite,
+                                      assetColor: context.colorScheme.primaryWhite,
                                       fit: BoxFit.contain,
                                     ),
                                   ),
@@ -330,16 +291,13 @@ class _SourceSetItemState extends State<SourceSetItem> {
                                   child: SemanticHelper.container(
                                     testId: SemanticHelper.createTestId(
                                       SemanticTypes.container,
-                                      FusionTestKeys
-                                          .instance
-                                          .sourcesetheadereditsource,
+                                      FusionTestKeys.instance.sourcesetheadereditsource,
                                     ),
                                     child: FusionImage.asset(
                                       Assets.addSourceIcon,
                                       width: 22,
                                       height: 22,
-                                      assetColor:
-                                          context.colorScheme.primaryWhite,
+                                      assetColor: context.colorScheme.primaryWhite,
                                       fit: BoxFit.contain,
                                     ),
                                   ),
@@ -354,16 +312,13 @@ class _SourceSetItemState extends State<SourceSetItem> {
                                   child: SemanticHelper.container(
                                     testId: SemanticHelper.createTestId(
                                       SemanticTypes.container,
-                                      FusionTestKeys
-                                          .instance
-                                          .sourcesetheaderdeletesource,
+                                      FusionTestKeys.instance.sourcesetheaderdeletesource,
                                     ),
                                     child: FusionImage.asset(
                                       Assets.deleteIcon,
                                       width: 17,
                                       height: 17,
-                                      assetColor:
-                                          context.colorScheme.primaryWhite,
+                                      assetColor: context.colorScheme.primaryWhite,
                                       fit: BoxFit.contain,
                                     ),
                                   ),
@@ -393,8 +348,7 @@ class _SourceSetItemState extends State<SourceSetItem> {
     }
 
     /// Pre-select sources already in this source set
-    final List<Source> currentSourcesInSet = _projectViewModel
-        .getSourcesInSourceSet(sourceSetId: widget.sourceSet.id);
+    final List<Source> currentSourcesInSet = _projectViewModel.getSourcesInSourceSet(sourceSetId: widget.sourceSet.id);
     for (final Source s in currentSourcesInSet) {
       final bool alreadyAdded = _selectedSources.any(
         (SelectedSource sel) => sel.id == s.id,
@@ -404,10 +358,8 @@ class _SourceSetItemState extends State<SourceSetItem> {
       }
     }
 
-    final RenderBox button =
-        _addSourceIconKey.currentContext!.findRenderObject() as RenderBox;
-    final RenderBox overlay =
-        Overlay.of(context).context.findRenderObject() as RenderBox;
+    final RenderBox button = _addSourceIconKey.currentContext!.findRenderObject() as RenderBox;
+    final RenderBox overlay = Overlay.of(context).context.findRenderObject() as RenderBox;
     final Offset offset = button.localToGlobal(Offset.zero, ancestor: overlay);
     final RelativeRect position = RelativeRect.fromLTRB(
       offset.dx,
@@ -576,8 +528,7 @@ class _SourceSetItemState extends State<SourceSetItem> {
                   ),
                   const SizedBox(height: 12),
                   FusionAppText(
-                    text:
-                        "This will remove '${widget.sourceSet.name}' from the source set. Sources will be moved to sources section.",
+                    text: "This will remove '${widget.sourceSet.name}' from the source set. Sources will be moved to sources section.",
                     style: Theme.of(
                       ctx,
                     ).textTheme.bodySmall?.copyWith(fontSize: 11),
@@ -649,8 +600,7 @@ class _SourceSetCreationWidget extends StatefulWidget {
   });
 
   @override
-  State<_SourceSetCreationWidget> createState() =>
-      _SourceSetCreationWidgetState();
+  State<_SourceSetCreationWidget> createState() => _SourceSetCreationWidgetState();
 }
 
 class _SourceSetCreationWidgetState extends State<_SourceSetCreationWidget> {
@@ -779,8 +729,7 @@ class _SourceSetCreationWidgetState extends State<_SourceSetCreationWidget> {
                                   ),
                                 ),
                                 child: Row(
-                                  mainAxisAlignment:
-                                      MainAxisAlignment.spaceBetween,
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                   children: <Widget>[
                                     FusionAppText(
                                       text: "Select source",
@@ -819,37 +768,25 @@ class _SourceSetCreationWidgetState extends State<_SourceSetCreationWidget> {
                                 child:
                                     widget.availableSources.isNotEmpty
                                         ? SingleChildScrollView(
-                                          physics:
-                                              const ClampingScrollPhysics(),
+                                          physics: const ClampingScrollPhysics(),
                                           child: Column(
                                             children: <Widget>[
                                               /// Selected sources at the top (if any)
-                                              if (widget
-                                                  .selectedSources
-                                                  .isNotEmpty) ...<Widget>[
+                                              if (widget.selectedSources.isNotEmpty) ...<Widget>[
                                                 Container(
                                                   width: double.infinity,
-                                                  padding:
-                                                      const EdgeInsets.symmetric(
-                                                        horizontal: 12,
-                                                        vertical: 6,
-                                                      ),
+                                                  padding: const EdgeInsets.symmetric(
+                                                    horizontal: 12,
+                                                    vertical: 6,
+                                                  ),
                                                   // color: context.colorScheme.primaryBlack.withAlpha(40),
                                                   child: FusionAppText(
-                                                    text:
-                                                        "Selected (${widget.selectedSources.length})",
-                                                    style: Theme.of(context)
-                                                        .textTheme
-                                                        .bodySmall
-                                                        ?.copyWith(
-                                                          fontSize: 10,
-                                                          fontWeight:
-                                                              FontWeight.w600,
-                                                          color:
-                                                              Theme.of(context)
-                                                                  .colorScheme
-                                                                  .textPrimary,
-                                                        ),
+                                                    text: "Selected (${widget.selectedSources.length})",
+                                                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                                      fontSize: 10,
+                                                      fontWeight: FontWeight.w600,
+                                                      color: Theme.of(context).colorScheme.textPrimary,
+                                                    ),
                                                   ),
                                                 ),
 
@@ -857,13 +794,10 @@ class _SourceSetCreationWidgetState extends State<_SourceSetCreationWidget> {
                                                 ...widget.selectedSources.map((
                                                   SelectedSource sel,
                                                 ) {
-                                                  final Source source = widget
-                                                      .availableSources
-                                                      .firstWhere(
-                                                        (Source s) =>
-                                                            s.id == sel.id,
-                                                        // orElse: () => Source(id: sel.id, name: sel.name),
-                                                      );
+                                                  final Source source = widget.availableSources.firstWhere(
+                                                    (Source s) => s.id == sel.id,
+                                                    // orElse: () => Source(id: sel.id, name: sel.name),
+                                                  );
                                                   return InkWell(
                                                     onTap: () {
                                                       widget.onSourceChanged(
@@ -874,11 +808,10 @@ class _SourceSetCreationWidgetState extends State<_SourceSetCreationWidget> {
                                                       setState(() {});
                                                     },
                                                     child: Container(
-                                                      padding:
-                                                          const EdgeInsets.symmetric(
-                                                            horizontal: 10,
-                                                            vertical: 10,
-                                                          ),
+                                                      padding: const EdgeInsets.symmetric(
+                                                        horizontal: 10,
+                                                        vertical: 10,
+                                                      ),
                                                       child: Row(
                                                         children: <Widget>[
                                                           SizedBox(
@@ -889,61 +822,39 @@ class _SourceSetCreationWidgetState extends State<_SourceSetCreationWidget> {
                                                               onChanged: (
                                                                 bool? value,
                                                               ) {
-                                                                widget
-                                                                    .onSourceChanged(
-                                                                      source,
-                                                                      false,
-                                                                    );
+                                                                widget.onSourceChanged(
+                                                                  source,
+                                                                  false,
+                                                                );
                                                                 setPopupState(
                                                                   () {},
                                                                 );
                                                                 setState(() {});
                                                               },
-                                                              activeColor:
-                                                                  context
-                                                                      .colorScheme
-                                                                      .elevation4,
-                                                              materialTapTargetSize:
-                                                                  MaterialTapTargetSize
-                                                                      .shrinkWrap,
-                                                              visualDensity:
-                                                                  VisualDensity
-                                                                      .compact,
+                                                              activeColor: context.colorScheme.elevation4,
+                                                              materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                                              visualDensity: VisualDensity.compact,
                                                               shape: const RoundedRectangleBorder(
-                                                                borderRadius:
-                                                                    BorderRadius
-                                                                        .zero,
-                                                                side:
-                                                                    BorderSide(
-                                                                      width:
-                                                                          0.5,
-                                                                    ),
+                                                                borderRadius: BorderRadius.zero,
+                                                                side: BorderSide(
+                                                                  width: 0.5,
+                                                                ),
                                                               ),
 
                                                               side: MaterialStateBorderSide.resolveWith(
                                                                 (
-                                                                  Set<
-                                                                    WidgetState
-                                                                  >
-                                                                  states,
+                                                                  Set<WidgetState> states,
                                                                 ) {
                                                                   if (states.contains(
-                                                                    MaterialState
-                                                                        .selected,
+                                                                    MaterialState.selected,
                                                                   )) {
                                                                     return BorderSide(
-                                                                      color:
-                                                                          context
-                                                                              .colorScheme
-                                                                              .primaryWhite,
+                                                                      color: context.colorScheme.primaryWhite,
                                                                       width: 1,
                                                                     );
                                                                   }
                                                                   return BorderSide(
-                                                                    color:
-                                                                        context
-                                                                            .colorScheme
-                                                                            .primaryWhite,
+                                                                    color: context.colorScheme.primaryWhite,
                                                                     width: 1,
                                                                   );
                                                                 },
@@ -955,21 +866,13 @@ class _SourceSetCreationWidgetState extends State<_SourceSetCreationWidget> {
                                                           ),
                                                           Expanded(
                                                             child: FusionAppText(
-                                                              text:
-                                                                  source.name ??
-                                                                  sel.name,
+                                                              text: source.name ?? sel.name,
                                                               style: Theme.of(
-                                                                    context,
-                                                                  )
-                                                                  .textTheme
-                                                                  .bodySmall
-                                                                  ?.copyWith(
-                                                                    fontWeight:
-                                                                        FontWeight
-                                                                            .w500,
-                                                                    fontSize:
-                                                                        10,
-                                                                  ),
+                                                                context,
+                                                              ).textTheme.bodySmall?.copyWith(
+                                                                fontWeight: FontWeight.w500,
+                                                                fontSize: 10,
+                                                              ),
                                                             ),
                                                           ),
                                                         ],
@@ -989,27 +892,19 @@ class _SourceSetCreationWidgetState extends State<_SourceSetCreationWidget> {
                                                     widget.availableSources
                                                         .where(
                                                           (Source s) =>
-                                                              !widget
-                                                                  .selectedSources
-                                                                  .any(
-                                                                    (
-                                                                      SelectedSource
-                                                                      sel,
-                                                                    ) =>
-                                                                        sel.id ==
-                                                                        s.id,
-                                                                  ),
+                                                              !widget.selectedSources.any(
+                                                                (
+                                                                  SelectedSource sel,
+                                                                ) => sel.id == s.id,
+                                                              ),
                                                         )
                                                         .toList();
                                                 return remaining.map<Widget>((
                                                   Source source,
                                                 ) {
-                                                  final bool isSelected = widget
-                                                      .selectedSources
-                                                      .any(
-                                                        (SelectedSource sel) =>
-                                                            sel.id == source.id,
-                                                      );
+                                                  final bool isSelected = widget.selectedSources.any(
+                                                    (SelectedSource sel) => sel.id == source.id,
+                                                  );
                                                   return InkWell(
                                                     onTap: () {
                                                       widget.onSourceChanged(
@@ -1020,16 +915,13 @@ class _SourceSetCreationWidgetState extends State<_SourceSetCreationWidget> {
                                                       setState(() {});
                                                     },
                                                     child: Container(
-                                                      padding:
-                                                          const EdgeInsets.symmetric(
-                                                            horizontal: 10,
-                                                            vertical: 10,
-                                                          ),
+                                                      padding: const EdgeInsets.symmetric(
+                                                        horizontal: 10,
+                                                        vertical: 10,
+                                                      ),
                                                       color: Colors.transparent,
                                                       child: Row(
-                                                        mainAxisAlignment:
-                                                            MainAxisAlignment
-                                                                .spaceBetween,
+                                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                                         children: <Widget>[
                                                           SizedBox(
                                                             width: 14,
@@ -1039,31 +931,20 @@ class _SourceSetCreationWidgetState extends State<_SourceSetCreationWidget> {
                                                               onChanged: (
                                                                 bool? value,
                                                               ) {
-                                                                widget
-                                                                    .onSourceChanged(
-                                                                      source,
-                                                                      value ??
-                                                                          false,
-                                                                    );
+                                                                widget.onSourceChanged(
+                                                                  source,
+                                                                  value ?? false,
+                                                                );
                                                                 setPopupState(
                                                                   () {},
                                                                 );
                                                                 setState(() {});
                                                               },
-                                                              activeColor:
-                                                                  context
-                                                                      .colorScheme
-                                                                      .primaryBlack,
-                                                              materialTapTargetSize:
-                                                                  MaterialTapTargetSize
-                                                                      .shrinkWrap,
-                                                              visualDensity:
-                                                                  VisualDensity
-                                                                      .compact,
+                                                              activeColor: context.colorScheme.primaryBlack,
+                                                              materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                                              visualDensity: VisualDensity.compact,
                                                               shape: const RoundedRectangleBorder(
-                                                                borderRadius:
-                                                                    BorderRadius
-                                                                        .zero,
+                                                                borderRadius: BorderRadius.zero,
                                                               ),
                                                             ),
                                                           ),
@@ -1074,17 +955,11 @@ class _SourceSetCreationWidgetState extends State<_SourceSetCreationWidget> {
                                                             child: FusionAppText(
                                                               text: source.name,
                                                               style: Theme.of(
-                                                                    context,
-                                                                  )
-                                                                  .textTheme
-                                                                  .bodySmall
-                                                                  ?.copyWith(
-                                                                    fontWeight:
-                                                                        FontWeight
-                                                                            .w500,
-                                                                    fontSize:
-                                                                        10,
-                                                                  ),
+                                                                context,
+                                                              ).textTheme.bodySmall?.copyWith(
+                                                                fontWeight: FontWeight.w500,
+                                                                fontSize: 10,
+                                                              ),
                                                             ),
                                                           ),
                                                         ],
@@ -1184,9 +1059,7 @@ class _SourceSetCreationWidgetState extends State<_SourceSetCreationWidget> {
                   ),
 
                   label: "Edit",
-                  isActive:
-                      widget.sourceSetNameController.text.trim().isNotEmpty &&
-                      widget.selectedSources.length >= 2,
+                  isActive: widget.sourceSetNameController.text.trim().isNotEmpty && widget.selectedSources.length >= 2,
                   onTap: () {
                     widget.onAddSourceSet.call();
                   },

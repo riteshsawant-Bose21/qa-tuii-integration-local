@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:fusion_lib/constants/semantics/features/configuration/config_zones_keys.dart';
+import 'package:fusion_lib/constants/semantics/features/configuration/processing/config_zones_keys.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/fusion_theme/app_theme.dart';
 
@@ -55,11 +55,8 @@ class _SubZoneCardState extends State<SubZoneCard> {
         builder: (BuildContext context, bool subZoneExpanded, Widget? child) {
           return BlocBuilder<ProjectViewModel, ProjectViewModelState>(
             builder: (BuildContext context, ProjectViewModelState state) {
-              final SelectedItem? selectedDevice =
-                  _projectViewModel.selectedDevice;
-              final bool isSelected =
-                  selectedDevice?.id == widget.subZoneId &&
-                  selectedDevice?.type == SelectedItemType.subzone;
+              final SelectedItem? selectedDevice = _projectViewModel.selectedDevice;
+              final bool isSelected = selectedDevice?.id == widget.subZoneId && selectedDevice?.type == SelectedItemType.subzone;
 
               return Column(
                 children: <Widget>[
@@ -113,10 +110,7 @@ class _SubZoneCardState extends State<SubZoneCard> {
           padding: const EdgeInsets.only(left: 12, right: 13),
           height: 32,
           decoration: BoxDecoration(
-            color:
-                isHovered
-                    ? context.colorScheme.elevation3
-                    : context.colorScheme.elevation2,
+            color: isHovered ? context.colorScheme.elevation3 : context.colorScheme.elevation2,
             borderRadius: const BorderRadius.only(
               bottomLeft: Radius.circular(8),
               bottomRight: Radius.circular(8),
@@ -133,9 +127,7 @@ class _SubZoneCardState extends State<SubZoneCard> {
                   FusionTestKeys.instance.zoneheadericon,
                 ),
                 child: Icon(
-                  expanded
-                      ? Icons.arrow_drop_up_rounded
-                      : Icons.arrow_drop_down_rounded,
+                  expanded ? Icons.arrow_drop_up_rounded : Icons.arrow_drop_down_rounded,
                   color: Theme.of(context).colorScheme.primaryWhite,
                 ),
               ),
@@ -216,8 +208,7 @@ class _SubZoneCardState extends State<SubZoneCard> {
   Widget _buildSubZoneContent() {
     return BlocBuilder<ProjectViewModel, ProjectViewModelState>(
       builder: (BuildContext context, ProjectViewModelState state) {
-        final List<CircuitModel> circuitList = _projectViewModel
-            .getCircuitsInSubZone(subZoneId: widget.subZoneId);
+        final List<CircuitModel> circuitList = _projectViewModel.getCircuitsInSubZone(subZoneId: widget.subZoneId);
         return Container(
           constraints: const BoxConstraints(minHeight: 60, maxHeight: 400),
           padding: const EdgeInsets.only(top: 12, bottom: 12),
@@ -234,16 +225,10 @@ class _SubZoneCardState extends State<SubZoneCard> {
                     itemCount: circuitList.length,
                     itemBuilder: (BuildContext context, int index) {
                       final CircuitModel circuitData = circuitList[index];
-                      final List<Speaker> speakersList =
-                          _projectViewModel
-                              .getHardwareForCircuit(circuitId: circuitData.id)
-                              .whereType<Speaker>()
-                              .toList();
+                      final List<Speaker> speakersList = _projectViewModel.getHardwareForCircuit(circuitId: circuitData.id).whereType<Speaker>().toList();
                       return MouseRegion(
-                        onEnter:
-                            (_) => setState(() => _hoveredCircuitIndex = index),
-                        onExit:
-                            (_) => setState(() => _hoveredCircuitIndex = null),
+                        onEnter: (_) => setState(() => _hoveredCircuitIndex = index),
+                        onExit: (_) => setState(() => _hoveredCircuitIndex = null),
                         child: _buildCircuitCard(
                           index: index,
                           circuitData: circuitData,
@@ -284,9 +269,7 @@ class _SubZoneCardState extends State<SubZoneCard> {
                 FusionTestKeys.instance.circuitimg,
               ),
               child: FusionImage.asset(
-                speakersList.isNotEmpty
-                    ? speakersList.first.assetImagePath
-                    : "",
+                speakersList.isNotEmpty ? speakersList.first.assetImagePath : "",
                 width: 24,
                 height: 24,
                 fit: BoxFit.contain,

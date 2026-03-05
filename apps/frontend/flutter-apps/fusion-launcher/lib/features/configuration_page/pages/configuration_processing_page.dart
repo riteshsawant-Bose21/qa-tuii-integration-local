@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/features/configuration_page/widgets/search_bar_sources.dart';
 import 'package:fusion_launcher/features/configuration_page/widgets/section_header.dart';
-import 'package:fusion_lib/constants/semantics/features/configuration/config_sources.dart';
-import 'package:fusion_lib/constants/semantics/features/configuration/config_zones_keys.dart';
+import 'package:fusion_lib/constants/semantics/features/configuration/processing/config_sources.dart';
+import 'package:fusion_lib/constants/semantics/features/configuration/processing/config_zones_keys.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import '../../../core/service_locator.dart';
 import '../../configuration/presentation/viewmodel/project_view_model.dart';
@@ -23,15 +23,12 @@ class ConfigurationProcessingPage extends StatefulWidget {
   const ConfigurationProcessingPage({super.key});
 
   @override
-  State<ConfigurationProcessingPage> createState() =>
-      _ConfigurationProcessingPageState();
+  State<ConfigurationProcessingPage> createState() => _ConfigurationProcessingPageState();
 }
 
-class _ConfigurationProcessingPageState
-    extends State<ConfigurationProcessingPage> {
+class _ConfigurationProcessingPageState extends State<ConfigurationProcessingPage> {
   final TextEditingController searchController = TextEditingController();
-  final TextEditingController _sourceSetNameController =
-      TextEditingController();
+  final TextEditingController _sourceSetNameController = TextEditingController();
   final List<SelectedSource> _selectedSources = <SelectedSource>[];
   final GlobalKey _popupButtonKey = GlobalKey();
   final ScrollController _zonesScrollController = ScrollController();
@@ -44,12 +41,10 @@ class _ConfigurationProcessingPageState
   String? _draggingSourceId;
 
   /// Map to store GlobalKeys for each SourceSetItem
-  final Map<String, GlobalKey> _sourceSetKeys =
-      <String, GlobalKey<State<StatefulWidget>>>{};
+  final Map<String, GlobalKey> _sourceSetKeys = <String, GlobalKey<State<StatefulWidget>>>{};
 
   /// Map to store GlobalKeys for each ZoneCard
-  final Map<String, GlobalKey> _zoneKeys =
-      <String, GlobalKey<State<StatefulWidget>>>{};
+  final Map<String, GlobalKey> _zoneKeys = <String, GlobalKey<State<StatefulWidget>>>{};
 
   /// Filtered sources list for search functionality
   List<Source> _filteredSources = <Source>[];
@@ -63,10 +58,8 @@ class _ConfigurationProcessingPageState
 
   void _updateSourcesHeight(double delta) {
     final double screenHeight = MediaQuery.of(context).size.height;
-    final double minHeight =
-        screenHeight * 0.15; // 15% of screen height as minimum
-    final double maxHeight =
-        screenHeight * 0.5; // 50% of screen height as maximum
+    final double minHeight = screenHeight * 0.15; // 15% of screen height as minimum
+    final double maxHeight = screenHeight * 0.5; // 50% of screen height as maximum
 
     setState(() {
       _sourcesHeight = (_sourcesHeight + delta).clamp(minHeight, maxHeight);
@@ -90,14 +83,11 @@ class _ConfigurationProcessingPageState
       return;
     }
 
-    final RenderObject? renderObject =
-        zoneKey!.currentContext!.findRenderObject();
+    final RenderObject? renderObject = zoneKey!.currentContext!.findRenderObject();
     if (renderObject is! RenderBox) return;
 
     // Get the position of the zone relative to the scroll view
-    final RenderObject? scrollViewRenderObject =
-        _zonesScrollController.position.context.storageContext
-            .findRenderObject();
+    final RenderObject? scrollViewRenderObject = _zonesScrollController.position.context.storageContext.findRenderObject();
     if (scrollViewRenderObject is! RenderBox) return;
 
     try {
@@ -109,8 +99,7 @@ class _ConfigurationProcessingPageState
       final double zoneTop = zonePosition.dy + _zonesScrollController.offset;
 
       // Get viewport dimensions
-      final double viewportHeight =
-          _zonesScrollController.position.viewportDimension;
+      final double viewportHeight = _zonesScrollController.position.viewportDimension;
       final double currentScrollOffset = _zonesScrollController.offset;
 
       // Calculate the expanded content height (estimated)
@@ -121,8 +110,7 @@ class _ConfigurationProcessingPageState
         200.0,
         400.0,
       );
-      final double totalZoneHeight =
-          32.0 + expandedContentHeight; // header + content
+      final double totalZoneHeight = 32.0 + expandedContentHeight; // header + content
 
       // Check if zone fits in current viewport
       final double zoneBottom = zoneTop + totalZoneHeight;
@@ -139,8 +127,7 @@ class _ConfigurationProcessingPageState
         // Zone extends below viewport, scroll down to fit the zone
         if (totalZoneHeight <= viewportHeight) {
           // Zone fits in viewport, position it optimally
-          targetScrollPosition =
-              zoneBottom - viewportHeight + 20; // 20px padding from bottom
+          targetScrollPosition = zoneBottom - viewportHeight + 20; // 20px padding from bottom
         } else {
           // Zone is larger than viewport, just ensure the header is visible at top
           targetScrollPosition = zoneTop - 20;
@@ -193,8 +180,7 @@ class _ConfigurationProcessingPageState
 
   /// Filter sources based on search query
   void _filterSources(String query) {
-    final List<Source> allSources =
-        _projectViewModel.getSourcesWithoutSourceSet();
+    final List<Source> allSources = _projectViewModel.getSourcesWithoutSourceSet();
 
     if (query.isEmpty) {
       _filteredSources = allSources;
@@ -202,8 +188,7 @@ class _ConfigurationProcessingPageState
       _filteredSources =
           allSources
               .where(
-                (Source source) =>
-                    source.name.toLowerCase().contains(query.toLowerCase()),
+                (Source source) => source.name.toLowerCase().contains(query.toLowerCase()),
               )
               .toList();
     }
@@ -279,6 +264,8 @@ class _ConfigurationProcessingPageState
               FusionTestKeys.instance.sourcehead,
             ),
             child: const SectionHeader(
+              semanticLabel: 'Sources',
+              isRounded: false,
               title: 'Sources',
               assetPath: 'assets/images/source_icon.png',
             ),
@@ -319,8 +306,7 @@ class _ConfigurationProcessingPageState
               },
               onLeave: (Source? data) {},
               onAcceptWithDetails: (DragTargetDetails<Source> details) {
-                final SourceSet? sourceSet = _projectViewModel
-                    .getSourceSetForSource(sourceId: details.data.id);
+                final SourceSet? sourceSet = _projectViewModel.getSourceSetForSource(sourceId: details.data.id);
                 if (sourceSet != null) {
                   _projectViewModel.removeSourceFromSourceSet(
                     sourceId: details.data.id,
@@ -369,8 +355,7 @@ class _ConfigurationProcessingPageState
                       BuildContext context,
                       ProjectViewModelState state,
                     ) {
-                      final List<Source> sourcesWithoutSourceSet =
-                          _projectViewModel.getSourcesWithoutSourceSet();
+                      final List<Source> sourcesWithoutSourceSet = _projectViewModel.getSourcesWithoutSourceSet();
 
                       if (searchController.text.isEmpty) {
                         _filteredSources = sourcesWithoutSourceSet;
@@ -386,10 +371,7 @@ class _ConfigurationProcessingPageState
                           ),
                           child: Center(
                             child: FusionAppText(
-                              text:
-                                  searchController.text.isNotEmpty
-                                      ? 'No search data for "${searchController.text}"'
-                                      : 'No sources added yet',
+                              text: searchController.text.isNotEmpty ? 'No search data for "${searchController.text}"' : 'No sources added yet',
                               style: Theme.of(
                                 context,
                               ).textTheme.bodyMedium?.copyWith(
@@ -402,9 +384,7 @@ class _ConfigurationProcessingPageState
                       }
                       return ListView.separated(
                         itemCount: _filteredSources.length,
-                        separatorBuilder:
-                            (BuildContext context, int index) =>
-                                const SizedBox(height: 4),
+                        separatorBuilder: (BuildContext context, int index) => const SizedBox(height: 4),
                         itemBuilder: (BuildContext context, int index) {
                           final Source source = _filteredSources[index];
                           return Draggable<Source>(
@@ -432,10 +412,9 @@ class _ConfigurationProcessingPageState
                                 child: Container(
                                   width: 220,
                                   decoration: BoxDecoration(
-                                    color: context.colorScheme.primary
-                                        .withAlpha(
-                                          150,
-                                        ),
+                                    color: context.colorScheme.primary.withAlpha(
+                                      150,
+                                    ),
                                     borderRadius: BorderRadius.circular(
                                       8,
                                     ),
@@ -494,6 +473,7 @@ class _ConfigurationProcessingPageState
               FusionTestKeys.instance.sourcesethead,
             ),
             child: SectionHeader(
+              semanticLabel: 'Source Sets',
               title: 'Source Sets',
               isRounded: false,
               assetPath: 'assets/images/source_set_icon.png',
@@ -526,13 +506,11 @@ class _ConfigurationProcessingPageState
                             BuildContext context,
                             StateSetter setMenuState,
                           ) {
-                            final List<Source> sourcesWithoutSourceSet =
-                                _projectViewModel.getSourcesWithoutSourceSet();
+                            final List<Source> sourcesWithoutSourceSet = _projectViewModel.getSourcesWithoutSourceSet();
 
                             return SingleChildScrollView(
                               child: _SourceSetCreationWidget(
-                                sourceSetNameController:
-                                    _sourceSetNameController,
+                                sourceSetNameController: _sourceSetNameController,
                                 availableSources: sourcesWithoutSourceSet,
                                 selectedSources: _selectedSources,
                                 onAddSourceSet: () {
@@ -654,8 +632,7 @@ class _ConfigurationProcessingPageState
                                   FusionTestKeys.instance.emtysourcesetdesc1,
                                 ),
                                 child: FusionAppText(
-                                  text:
-                                      'Combine multiple audio sources into a single source set for simplified routing and control.',
+                                  text: 'Combine multiple audio sources into a single source set for simplified routing and control.',
 
                                   style: Theme.of(
                                     context,
@@ -717,26 +694,22 @@ class _ConfigurationProcessingPageState
                             if (oldIndex < newIndex) {
                               newIndex -= 1;
                             }
-                            final String sourceSetToMove =
-                                _projectViewModel.sourceSets[oldIndex].id;
-                            final String sourceSetAtNewIndex =
-                                _projectViewModel.sourceSets[newIndex].id;
+                            final String sourceSetToMove = _projectViewModel.sourceSets[oldIndex].id;
+                            final String sourceSetAtNewIndex = _projectViewModel.sourceSets[newIndex].id;
                             _projectViewModel.reOrderSourceSet(
                               sourceSetIdToMove: sourceSetToMove,
                               sourceSetAtNewIndex: sourceSetAtNewIndex,
                             );
                           },
                           itemBuilder: (BuildContext context, int index) {
-                            final SourceSet sourceSet =
-                                _projectViewModel.sourceSets[index];
+                            final SourceSet sourceSet = _projectViewModel.sourceSets[index];
 
                             /// Create or get the GlobalKey for this source set
                             _sourceSetKeys.putIfAbsent(
                               sourceSet.id,
                               () => GlobalKey(),
                             );
-                            final GlobalKey<State<StatefulWidget>>
-                            sourceSetKey = _sourceSetKeys[sourceSet.id]!;
+                            final GlobalKey<State<StatefulWidget>> sourceSetKey = _sourceSetKeys[sourceSet.id]!;
 
                             return DragTarget<Source>(
                               key: ValueKey<String>(sourceSet.id),
@@ -744,10 +717,9 @@ class _ConfigurationProcessingPageState
                                 if (data == null) return false;
 
                                 /// Check if source is not already in this source set
-                                final List<Source> sourcesInSet =
-                                    _projectViewModel.getSourcesInSourceSet(
-                                      sourceSetId: sourceSet.id,
-                                    );
+                                final List<Source> sourcesInSet = _projectViewModel.getSourcesInSourceSet(
+                                  sourceSetId: sourceSet.id,
+                                );
                                 return !sourcesInSet.any(
                                   (Source source) => source.id == data.id,
                                 );
@@ -760,8 +732,7 @@ class _ConfigurationProcessingPageState
                                 );
 
                                 /// Expand the source set after dropping
-                                final dynamic sourceSetState =
-                                    sourceSetKey.currentState as dynamic;
+                                final dynamic sourceSetState = sourceSetKey.currentState as dynamic;
                                 sourceSetState?.expandSourceSet();
 
                                 setState(() {
@@ -860,6 +831,7 @@ class _ConfigurationProcessingPageState
               ),
               child: const SectionHeader(
                 title: 'Zones',
+                semanticLabel: 'Zones',
                 assetPath: 'assets/images/zone_icon.png',
               ),
             ),
@@ -900,10 +872,8 @@ class _ConfigurationProcessingPageState
                           itemCount: _projectViewModel.zones.length,
                           onReorder: (int oldIndex, int newIndex) {
                             if (oldIndex < newIndex) newIndex -= 1;
-                            final String zoneToMove =
-                                _projectViewModel.zones[oldIndex].id;
-                            final String zoneAtNewIndex =
-                                _projectViewModel.zones[newIndex].id;
+                            final String zoneToMove = _projectViewModel.zones[oldIndex].id;
+                            final String zoneAtNewIndex = _projectViewModel.zones[newIndex].id;
                             _projectViewModel.reorderZones(
                               zoneIdToMove: zoneToMove,
                               zoneIdAtNewIndex: zoneAtNewIndex,
@@ -914,8 +884,7 @@ class _ConfigurationProcessingPageState
                             );
                           },
                           itemBuilder: (BuildContext context, int index) {
-                            final Zone zoneData =
-                                _projectViewModel.zones[index];
+                            final Zone zoneData = _projectViewModel.zones[index];
 
                             // Ensure we have a GlobalKey for each zone
                             _zoneKeys[zoneData.id] ??= GlobalKey();
@@ -992,8 +961,7 @@ class _SourceSetCreationWidget extends StatefulWidget {
   });
 
   @override
-  State<_SourceSetCreationWidget> createState() =>
-      _SourceSetCreationWidgetState();
+  State<_SourceSetCreationWidget> createState() => _SourceSetCreationWidgetState();
 }
 
 class _SourceSetCreationWidgetState extends State<_SourceSetCreationWidget> {
@@ -1143,14 +1111,10 @@ class _SourceSetCreationWidgetState extends State<_SourceSetCreationWidget> {
                                       ),
                                     ),
                                     child: Row(
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.spaceBetween,
+                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                       children: <Widget>[
                                         FusionAppText(
-                                          semanticId:
-                                              FusionTestKeys
-                                                  .instance
-                                                  .srccreationdropdownitemheader,
+                                          semanticId: FusionTestKeys.instance.srccreationdropdownitemheader,
                                           text: "Select source",
                                           style: Theme.of(
                                             context,
@@ -1162,9 +1126,7 @@ class _SourceSetCreationWidgetState extends State<_SourceSetCreationWidget> {
                                         SemanticHelper.button(
                                           testId: SemanticHelper.createTestId(
                                             SemanticTypes.button,
-                                            FusionTestKeys
-                                                .instance
-                                                .srccreationdropdownheaderitemicon,
+                                            FusionTestKeys.instance.srccreationdropdownheaderitemicon,
                                           ),
                                           child: InkWell(
                                             onTap: () {
@@ -1189,37 +1151,21 @@ class _SourceSetCreationWidgetState extends State<_SourceSetCreationWidget> {
                                     child:
                                         widget.availableSources.isNotEmpty
                                             ? SingleChildScrollView(
-                                              physics:
-                                                  const ClampingScrollPhysics(),
+                                              physics: const ClampingScrollPhysics(),
                                               child: Column(
                                                 children:
-                                                    widget.availableSources.map<
-                                                      Widget
-                                                    >((Source source) {
-                                                      final bool
-                                                      isSelected = widget
-                                                          .selectedSources
-                                                          .any(
-                                                            (
-                                                              SelectedSource
-                                                              selectedSource,
-                                                            ) =>
-                                                                selectedSource
-                                                                    .id ==
-                                                                source.id,
-                                                          );
+                                                    widget.availableSources.map<Widget>((Source source) {
+                                                      final bool isSelected = widget.selectedSources.any(
+                                                        (
+                                                          SelectedSource selectedSource,
+                                                        ) => selectedSource.id == source.id,
+                                                      );
 
-                                                      final int index = widget
-                                                          .selectedSources
-                                                          .indexWhere(
-                                                            (
-                                                              SelectedSource
-                                                              selectedSource,
-                                                            ) =>
-                                                                selectedSource
-                                                                    .id ==
-                                                                source.id,
-                                                          );
+                                                      final int index = widget.selectedSources.indexWhere(
+                                                        (
+                                                          SelectedSource selectedSource,
+                                                        ) => selectedSource.id == source.id,
+                                                      );
 
                                                       return SemanticHelper.button(
                                                         testId: SemanticHelper.createTestId(
@@ -1228,54 +1174,41 @@ class _SourceSetCreationWidgetState extends State<_SourceSetCreationWidget> {
                                                         ),
                                                         child: InkWell(
                                                           onTap: () {
-                                                            widget
-                                                                .onSourceChanged(
-                                                                  source,
-                                                                  !isSelected,
-                                                                );
+                                                            widget.onSourceChanged(
+                                                              source,
+                                                              !isSelected,
+                                                            );
                                                             setPopupState(
                                                               () {},
                                                             );
                                                             setState(() {});
                                                           },
                                                           child: Container(
-                                                            padding:
-                                                                const EdgeInsets.symmetric(
-                                                                  horizontal:
-                                                                      10,
-                                                                  vertical: 10,
-                                                                ),
-                                                            color:
-                                                                Colors
-                                                                    .transparent,
+                                                            padding: const EdgeInsets.symmetric(
+                                                              horizontal: 10,
+                                                              vertical: 10,
+                                                            ),
+                                                            color: Colors.transparent,
                                                             child: Row(
-                                                              mainAxisAlignment:
-                                                                  MainAxisAlignment
-                                                                      .spaceBetween,
-                                                              children: <
-                                                                Widget
-                                                              >[
+                                                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                                              children: <Widget>[
                                                                 /// Checkbox for selection
                                                                 SizedBox(
                                                                   width: 14,
                                                                   height: 14,
                                                                   child: SemanticHelper.button(
                                                                     testId: SemanticHelper.createTestId(
-                                                                      SemanticTypes
-                                                                          .button,
+                                                                      SemanticTypes.button,
                                                                       "${FusionTestKeys.instance.srccreationdropdownchkbox}_$index",
                                                                     ),
                                                                     child: Checkbox(
-                                                                      value:
-                                                                          isSelected,
+                                                                      value: isSelected,
                                                                       onChanged: (
-                                                                        bool?
-                                                                        value,
+                                                                        bool? value,
                                                                       ) {
                                                                         widget.onSourceChanged(
                                                                           source,
-                                                                          value ??
-                                                                              false,
+                                                                          value ?? false,
                                                                         );
                                                                         setPopupState(
                                                                           () {},
@@ -1285,47 +1218,31 @@ class _SourceSetCreationWidgetState extends State<_SourceSetCreationWidget> {
                                                                         ); // Update main widget state
                                                                       },
 
-                                                                      activeColor:
-                                                                          context
-                                                                              .colorScheme
-                                                                              .elevation4,
-                                                                      materialTapTargetSize:
-                                                                          MaterialTapTargetSize
-                                                                              .shrinkWrap,
-                                                                      visualDensity:
-                                                                          VisualDensity
-                                                                              .compact,
+                                                                      activeColor: context.colorScheme.elevation4,
+                                                                      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                                                      visualDensity: VisualDensity.compact,
                                                                       shape: const RoundedRectangleBorder(
-                                                                        borderRadius:
-                                                                            BorderRadius.zero,
+                                                                        borderRadius: BorderRadius.zero,
                                                                         side: BorderSide(
-                                                                          width:
-                                                                              0.5,
+                                                                          width: 0.5,
                                                                         ),
                                                                       ),
 
                                                                       side: MaterialStateBorderSide.resolveWith(
                                                                         (
-                                                                          Set<
-                                                                            WidgetState
-                                                                          >
-                                                                          states,
+                                                                          Set<WidgetState> states,
                                                                         ) {
                                                                           if (states.contains(
                                                                             MaterialState.selected,
                                                                           )) {
                                                                             return BorderSide(
-                                                                              color:
-                                                                                  context.colorScheme.primaryWhite,
-                                                                              width:
-                                                                                  1,
+                                                                              color: context.colorScheme.primaryWhite,
+                                                                              width: 1,
                                                                             );
                                                                           }
                                                                           return BorderSide(
-                                                                            color:
-                                                                                context.colorScheme.primaryWhite,
-                                                                            width:
-                                                                                1,
+                                                                            color: context.colorScheme.primaryWhite,
+                                                                            width: 1,
                                                                           );
                                                                         },
                                                                       ),
@@ -1340,23 +1257,16 @@ class _SourceSetCreationWidgetState extends State<_SourceSetCreationWidget> {
                                                                 Expanded(
                                                                   child: SemanticHelper.container(
                                                                     testId: SemanticHelper.createTestId(
-                                                                      SemanticTypes
-                                                                          .container,
-                                                                      FusionTestKeys
-                                                                          .instance
-                                                                          .srccreationdropdownitemname,
+                                                                      SemanticTypes.container,
+                                                                      FusionTestKeys.instance.srccreationdropdownitemname,
                                                                     ),
                                                                     child: FusionAppText(
-                                                                      text:
-                                                                          source
-                                                                              .name,
+                                                                      text: source.name,
                                                                       style: Theme.of(
                                                                         context,
                                                                       ).textTheme.bodySmall?.copyWith(
-                                                                        fontWeight:
-                                                                            FontWeight.w500,
-                                                                        fontSize:
-                                                                            10,
+                                                                        fontWeight: FontWeight.w500,
+                                                                        fontSize: 10,
                                                                         color:
                                                                             Theme.of(
                                                                               context,
@@ -1380,18 +1290,15 @@ class _SourceSetCreationWidgetState extends State<_SourceSetCreationWidget> {
                                               child: SemanticHelper.container(
                                                 testId: SemanticHelper.createTestId(
                                                   SemanticTypes.container,
-                                                  FusionTestKeys
-                                                      .instance
-                                                      .emtysrccreationdropdownitemtxt,
+                                                  FusionTestKeys.instance.emtysrccreationdropdownitemtxt,
                                                 ),
                                                 child: FusionAppText(
                                                   text: "No Source Available",
                                                   style: Theme.of(
-                                                        context,
-                                                      ).textTheme.bodySmall
-                                                      ?.copyWith(
-                                                        fontSize: 10,
-                                                      ),
+                                                    context,
+                                                  ).textTheme.bodySmall?.copyWith(
+                                                    fontSize: 10,
+                                                  ),
                                                 ),
                                               ),
                                             ),
@@ -1480,9 +1387,7 @@ class _SourceSetCreationWidgetState extends State<_SourceSetCreationWidget> {
                     ),
 
                     label: "Create",
-                    isActive:
-                        widget.sourceSetNameController.text.trim().isNotEmpty &&
-                        widget.selectedSources.length >= 2,
+                    isActive: widget.sourceSetNameController.text.trim().isNotEmpty && widget.selectedSources.length >= 2,
                     onTap: () {
                       widget.onAddSourceSet.call();
                     },
