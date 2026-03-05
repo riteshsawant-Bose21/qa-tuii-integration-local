@@ -118,7 +118,7 @@ func (a *API) registerRoutes() {
 	commands := v1.Group(constants.EndpointCommands)
 	{
 		commands.Use(middleware.ExtractUserFromHeaders())
-		commands.POST(constants.EndpointCommandByProjectID, deviceHandler.Command)
 		commands.GET(constants.EndpointCommandStatus, deviceHandler.GetCommandStatus)
+		commands.POST(constants.EndpointDeviceCommand, deviceHandler.Command)
 	}
 }

@@ -129,7 +129,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/commands/{project_id}": {
+        "/commands/{project_id}/command": {
             "post": {
                 "security": [
                     {

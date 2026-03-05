@@ -275,7 +275,7 @@ func (h *DeviceHandler) RotateCertificate(ctx *gin.Context) {
 // @Failure 401 {object} types.ErrorResponse "Unauthorized - User not authorized"
 // @Failure 404 {object} types.ErrorResponse "Project not found"
 // @Failure 500 {object} types.ErrorResponse "Internal server error"
-// @Router /commands/{project_id} [post]
+// @Router /commands/{project_id}/command [post]
 func (h *DeviceHandler) Command(ctx *gin.Context) {
 	logger, user, ok := h.getLoggerAndUser(ctx)
 	if !ok {

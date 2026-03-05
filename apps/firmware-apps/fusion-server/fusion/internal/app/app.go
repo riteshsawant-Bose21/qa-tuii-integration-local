@@ -55,6 +55,7 @@ type App struct {
 	SAPServer         *network.SAPServer
 	UDPServer         *network.UDPServer
 	ControllerManager *controllers.ControllerManager
+	IoTClient         *fusioniot.Client
 	IoTPublisher      *fusioniot.Publisher
 	IoTSubscriber     *fusioniot.Subscriber
 	memberlist        *memberlist.Memberlist
@@ -88,8 +89,16 @@ func NewApp(config *api.AppConfig, iotConfig *fusioniot.Config) *App {
 	sapServer := initSAPServer(config, api.SAPPort, connectionHandler, hub)
 	udpServer := initUDPServer(api.UDPPort, connectionHandler, hub)
 	fusionServer := server.NewFusionServer(config.NodeName, connectionHandler, hub)
-	iotPublisher := initIoTPublisher(iotConfig, clusterInstance.Metrics, clusterInstance)
-	iotSubscriber := initIoTSubscriber(iotConfig, clusterInstance)
+
+	// Initialize shared IoT client, then publisher and subscriber
+	iotClient := initIoTClient(iotConfig)
+	iotPublisher := initIoTPublisher(iotClient, clusterInstance.Metrics, clusterInstance)
+	iotSubscriber := initIoTSubscriber(iotClient, clusterInstance, persistence)
+
+	// Wire up publisher to subscriber for command responses
+	if iotSubscriber != nil && iotPublisher != nil {
+		iotSubscriber.SetPublisher(iotPublisher)
+	}
 
 	// Setup the public routes
 	publicRouter := mux.NewRouter()
@@ -116,6 +125,7 @@ func NewApp(config *api.AppConfig, iotConfig *fusioniot.Config) *App {
 		SAPServer:         sapServer,
 		UDPServer:         udpServer,
 		ControllerManager: controllerManager,
+		IoTClient:         iotClient,
 		IoTPublisher:      iotPublisher,
 		IoTSubscriber:     iotSubscriber,
 		memberlist:        memberlist,
@@ -142,6 +152,10 @@ func (app *App) Close() {
 	}
 	if app.IoTSubscriber != nil {
 		app.IoTSubscriber.Stop()
+	}
+	// Stop the shared IoT client last (after publisher and subscriber)
+	if app.IoTClient != nil {
+		app.IoTClient.Stop()
 	}
 	if app.MDNSManager != nil {
 		if err := app.MDNSManager.Close(); err != nil {
@@ -418,6 +432,13 @@ func (app *App) Start(ctx context.Context) {
 		app.Logger.Error("Failed to start ControllerManager: %v", err)
 	}
 
+	// Start the shared IoT client first (handles connection to AWS IoT Core)
+	if app.IoTClient != nil {
+		if err := app.IoTClient.Start(); err != nil {
+			app.Logger.Error("Failed to start IoT client: %v", err)
+		}
+	}
+
 	// Start the IoT publisher for AWS IoT Core metrics
 	if app.IoTPublisher != nil {
 		if err := app.IoTPublisher.Start(); err != nil {
@@ -572,56 +593,71 @@ func initMDNSManager() *network.MDNSManager {
 	return manager
 }
 
-// initIoTPublisher initializes the AWS IoT Core publisher
-func initIoTPublisher(iotConfig *fusioniot.Config, metrics *cluster.MetricsCollector, cluster *cluster.Cluster) *fusioniot.Publisher {
+// initIoTClient initializes the shared AWS IoT Core client
+func initIoTClient(iotConfig *fusioniot.Config) *fusioniot.Client {
 	logger := logging.GetLogger()
 
 	if !iotConfig.Enabled {
-		logger.Info("IoT publisher disabled")
+		logger.Info("IoT disabled")
 		return nil
 	}
 
 	if iotConfig.Endpoint == "" {
-		logger.Warn("IoT endpoint not configured, disabling IoT publisher")
+		logger.Warn("IoT endpoint not configured, disabling IoT")
 		return nil
 	}
 
-	publisher, err := fusioniot.NewPublisher(iotConfig, metrics, cluster)
+	client, err := fusioniot.NewClient(iotConfig)
+	if err != nil {
+		logger.Error("Failed to create IoT client: %v", err)
+		return nil
+	}
+
+	logger.Info("IoT client initialized for endpoint: %s", iotConfig.Endpoint)
+	return client
+}
+
+// initIoTPublisher initializes the AWS IoT Core publisher
+func initIoTPublisher(client *fusioniot.Client, metrics *cluster.MetricsCollector, cluster *cluster.Cluster) *fusioniot.Publisher {
+	logger := logging.GetLogger()
+
+	if client == nil {
+		logger.Info("IoT client not available, skipping publisher initialization")
+		return nil
+	}
+
+	publisher, err := fusioniot.NewPublisher(client, metrics, cluster)
 	if err != nil {
 		logger.Error("Failed to create IoT publisher: %v", err)
 		return nil
 	}
 
-	logger.Info("IoT publisher initialized for endpoint: %s", iotConfig.Endpoint)
+	logger.Info("IoT publisher initialized")
 	return publisher
 }
 
 // initIoTSubscriber initializes the AWS IoT Core subscriber for cloud commands
-func initIoTSubscriber(iotConfig *fusioniot.Config, cluster *cluster.Cluster) *fusioniot.Subscriber {
+func initIoTSubscriber(client *fusioniot.Client, cluster *cluster.Cluster, persistence *persistence.Persistence) *fusioniot.Subscriber {
 	logger := logging.GetLogger()
 
-	if !iotConfig.Enabled {
-		logger.Info("IoT subscriber disabled")
+	if client == nil {
+		logger.Info("IoT client not available, skipping subscriber initialization")
 		return nil
 	}
 
-	if iotConfig.Endpoint == "" {
-		logger.Warn("IoT endpoint not configured, disabling IoT subscriber")
-		return nil
-	}
-
-	if iotConfig.ProjectID == "" {
+	config := client.GetConfig()
+	if config.ProjectID == "" {
 		logger.Warn("Project ID not configured, IoT subscriber will not be able to subscribe to commands")
 		return nil
 	}
 
-	subscriber, err := fusioniot.NewSubscriber(iotConfig, cluster)
+	subscriber, err := fusioniot.NewSubscriber(client, cluster, persistence)
 	if err != nil {
 		logger.Error("Failed to create IoT subscriber: %v", err)
 		return nil
 	}
 
-	logger.Info("IoT subscriber initialized for endpoint: %s, project: %s", iotConfig.Endpoint, iotConfig.ProjectID)
+	logger.Info("IoT subscriber initialized for project: %s", config.ProjectID)
 	return subscriber
 }
 

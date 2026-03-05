@@ -85,7 +85,7 @@ func parseFlags() (*api.AppConfig, *fusioniot.Config) {
 		}, &fusioniot.Config{
 			Enabled:     *iotEnabled,
 			Endpoint:    *iotEndpoint,
-			ClientID:    nodeName,
+			ClientID:    fmt.Sprintf("%s_instance", nodeName),
 			TopicPrefix: *iotTopicPrefix,
 			ProjectID:   *projectID,
 		}

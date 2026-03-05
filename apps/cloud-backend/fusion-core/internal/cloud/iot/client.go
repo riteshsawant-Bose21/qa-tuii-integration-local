@@ -2,6 +2,7 @@ package iot
 
 import (
 	"context"
+	"strings"
 
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/iot"
@@ -41,6 +42,11 @@ func NewIoTClient(ctx context.Context, region string, iotEndpoint string, logger
 
 	// Create an AWS IoT client (control plane)
 	client := iot.NewFromConfig(cfg)
+
+	// Ensure the IoT endpoint has the https:// prefix
+	if !strings.HasPrefix(iotEndpoint, "https://") && !strings.HasPrefix(iotEndpoint, "http://") {
+		iotEndpoint = "https://" + iotEndpoint
+	}
 
 	// Create an AWS IoT Data Plane client (for MQTT publish)
 	dataClient := iotdataplane.NewFromConfig(cfg, func(o *iotdataplane.Options) {

@@ -54,9 +54,9 @@ func init() {
 		logger.Fatal("Failed to load sync config", zap.Error(err))
 	}
 
-	productBucket = syncCfg.S3.ProductBucket
-	priceBucket = syncCfg.S3.PriceBucket
-	s3Region := syncCfg.S3.Region
+	productBucket = syncCfg.Cloud.ProductS3Bucket
+	priceBucket = syncCfg.Cloud.PriceS3Bucket
+	s3Region := syncCfg.Cloud.Region
 
 	if productBucket == "" || priceBucket == "" {
 		logger.Fatal("S3_PRODUCT_BUCKET and S3_PRICE_BUCKET environment variables must be set")
@@ -113,10 +113,11 @@ func init() {
 		logger.Fatal("Failed to initialize product service")
 	}
 
-	syncRequestRegion := *region
+	syncRequestRegion := s3Region
 	if syncRequestRegion == "" {
 		syncRequestRegion = syncCfg.Cloud.Region
 	}
+}
 
 // inferSyncType determines the sync type from the S3 object key path.
 // Prefix convention:

@@ -33,7 +33,9 @@ func (c *Cluster) GetDevicesInfo(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set(api.ContentType, api.JsonMIMEType)
-	json.NewEncoder(w).Encode(c.fetchAllDeviceInfos())
+	if err := json.NewEncoder(w).Encode(c.fetchAllDeviceInfos()); err != nil {
+		logging.GetLogger().Error("Error encoding devices info: %v", err)
+	}
 }
 
 func (c *Cluster) GetDeviceInfo(w http.ResponseWriter, r *http.Request) {
@@ -217,10 +219,12 @@ func (c *Cluster) GetVIP(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		json.NewEncoder(w).Encode(map[string]string{
+		if err := json.NewEncoder(w).Encode(map[string]string{
 			"local": local.String(),
 			"vip":   vipAddr.String(),
-		})
+		}); err != nil {
+			logging.GetLogger().Error("Error encoding VIP response: %v", err)
+		}
 		return
 	}
 
@@ -407,11 +411,13 @@ func (c *Cluster) SetDeviceCertificate(w http.ResponseWriter, r *http.Request) {
 			logging.GetLogger().Info("Certificate is still valid and not near expiry, skipping replacement")
 			w.Header().Set(api.ContentType, api.JsonMIMEType)
 			w.WriteHeader(http.StatusOK)
-			json.NewEncoder(w).Encode(map[string]string{
+			if err := json.NewEncoder(w).Encode(map[string]string{
 				"message": "Certificate not updated - existing certificate is still valid",
 				"action":  "skipped",
 				"reason":  "certificate_still_valid",
-			})
+			}); err != nil {
+				logging.GetLogger().Error("Error encoding certificate response: %v", err)
+			}
 			return
 		}
 
@@ -592,7 +598,6 @@ func (c *Cluster) ResetDevice(w http.ResponseWriter, r *http.Request) {
 
 }
 
-
 func (c *Cluster) RebootSystem(w http.ResponseWriter, r *http.Request) {
 	if !utils.RequirePost(w, r) {
 		return
@@ -658,6 +663,11 @@ func (c *Cluster) rebootSystem() error {
 	}
 
 	return nil
+}
+
+// TriggerReboot initiates a system reboot
+func (c *Cluster) TriggerReboot() error {
+	return c.rebootSystem()
 }
 
 func (c *Cluster) fetchAllDeviceInfos() []persistence.DeviceInfo {
@@ -790,10 +800,12 @@ func (c *Cluster) getVIPInLocalConfig(w http.ResponseWriter) {
 	}
 
 	w.Header().Set(api.ContentType, api.JsonMIMEType)
-	json.NewEncoder(w).Encode(map[string]string{
+	if err := json.NewEncoder(w).Encode(map[string]string{
 		"local": vipValue,
 		"vip":   vipValue,
-	})
+	}); err != nil {
+		logging.GetLogger().Error("Error encoding local VIP response: %v", err)
+	}
 }
 
 // shouldReplaceCertificate determines if a certificate should be replaced

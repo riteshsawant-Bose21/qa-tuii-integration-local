@@ -947,7 +947,7 @@ paths:
       summary: Get command status
       tags:
       - devices
-  /commands/{project_id}:
+  /commands/{project_id}/command:
     post:
       consumes:
       - application/json
