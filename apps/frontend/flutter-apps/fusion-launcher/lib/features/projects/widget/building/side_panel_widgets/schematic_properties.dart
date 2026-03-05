@@ -926,8 +926,8 @@ class _ZonesListeningAreaSelectionWidget extends StatelessWidget {
           const SizedBox(width: 4),
           RotatedBox(
             quarterTurns: 2,
-            child: FusionSvgIcon(
-              icon: AssetSvg.expandUp,
+            child: FusionIcon.svg(
+              AssetSvg.expandUp,
               size: FusionSizes.iconSize12,
               color: context.colorScheme.iconWhite,
             ),

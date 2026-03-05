@@ -9,4 +9,5 @@ extension Snapshotskeys on FusionTestKeys {
   String get snpsectiondata => "snapshot_section_data";
   String get snpsectiondataemty => "snapshot_section_data_empty";
   String get snplistitm => "snapshot_list_item";
+  String get snplistitmdragindicator => "snapshot_list_item_drag_indicator";
 }

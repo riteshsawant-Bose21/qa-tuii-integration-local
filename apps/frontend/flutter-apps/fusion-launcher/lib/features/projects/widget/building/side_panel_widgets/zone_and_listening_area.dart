@@ -22,12 +22,10 @@ class ZoneAndListeningAreaPanel extends StatefulWidget {
   });
 
   @override
-  ZoneAndListeningAreaPanelState createState() =>
-      ZoneAndListeningAreaPanelState();
+  ZoneAndListeningAreaPanelState createState() => ZoneAndListeningAreaPanelState();
 }
 
-class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel>
-    with TickerProviderStateMixin {
+class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> with TickerProviderStateMixin {
   final Set<String> _expandedZones = <String>{};
   final Set<String> _expandedListeningAreas = <String>{};
   final Set<String> _expandedSubZones = <String>{};
@@ -47,8 +45,7 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel>
       _expandedZones.add(zone.id);
 
       // Expand all subzones within each zone by default
-      final List<SubZone> subZones = serviceLocator<ProjectViewModel>()
-          .getSubZonesForZone(parentZoneId: zone.id);
+      final List<SubZone> subZones = serviceLocator<ProjectViewModel>().getSubZonesForZone(parentZoneId: zone.id);
       for (final SubZone subZone in subZones) {
         _expandedSubZones.add(subZone.id);
       }
@@ -234,20 +231,17 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel>
   }
 
   Widget _buildZoneCard(Zone zone, int index) {
-    final List<ListeningArea> allListeningAreas =
-        serviceLocator<ProjectViewModel>().getListeningAreasForZone(
-          zoneId: zone.id,
-        );
-    final List<SubZone> subZones = serviceLocator<ProjectViewModel>()
-        .getSubZonesForZone(parentZoneId: zone.id);
+    final List<ListeningArea> allListeningAreas = serviceLocator<ProjectViewModel>().getListeningAreasForZone(
+      zoneId: zone.id,
+    );
+    final List<SubZone> subZones = serviceLocator<ProjectViewModel>().getSubZonesForZone(parentZoneId: zone.id);
 
     // Get all listening areas that are in subzones
     final Set<String> listeningAreasInSubZones = <String>{};
     for (final SubZone subZone in subZones) {
-      final List<ListeningArea> subZoneAreas =
-          serviceLocator<ProjectViewModel>().getListeningAreasInSubZone(
-            subZoneId: subZone.id,
-          );
+      final List<ListeningArea> subZoneAreas = serviceLocator<ProjectViewModel>().getListeningAreasInSubZone(
+        subZoneId: subZone.id,
+      );
       listeningAreasInSubZones.addAll(
         subZoneAreas.map((ListeningArea area) => area.id),
       );
@@ -256,9 +250,7 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel>
     // Filter out listening areas that are in subzones (unused now that we only show circuits)
     // final List<ListeningArea> listeningAreas = allListeningAreas.where((ListeningArea area) => !listeningAreasInSubZones.contains(area.id)).toList();
 
-    final bool isSelected =
-        serviceLocator<ProjectViewModel>().isInZoneSelectionMode &&
-        serviceLocator<ProjectViewModel>().currentSelectedZoneId == zone.id;
+    final bool isSelected = serviceLocator<ProjectViewModel>().isInZoneSelectionMode && serviceLocator<ProjectViewModel>().currentSelectedZoneId == zone.id;
     final bool isCollapsed = !_expandedZones.contains(zone.id);
 
     return DragTarget<ListeningArea>(
@@ -274,14 +266,10 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel>
         List<ListeningArea?> candidateItems,
         List<dynamic> rejectedItems,
       ) {
-        final bool hasIncomingData =
-            candidateItems.isNotEmpty && candidateItems.first != null;
+        final bool hasIncomingData = candidateItems.isNotEmpty && candidateItems.first != null;
 
         return Container(
-          decoration:
-              hasIncomingData
-                  ? BoxDecoration(color: Colors.blue.withValues(alpha: 0.3))
-                  : null,
+          decoration: hasIncomingData ? BoxDecoration(color: Colors.blue.withValues(alpha: 0.3)) : null,
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: <Widget>[
@@ -291,10 +279,7 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel>
               // Expandable Zone Content Section
               AnimatedCrossFade(
                 duration: const Duration(milliseconds: 250),
-                crossFadeState:
-                    isCollapsed
-                        ? CrossFadeState.showSecond
-                        : CrossFadeState.showFirst,
+                crossFadeState: isCollapsed ? CrossFadeState.showSecond : CrossFadeState.showFirst,
                 firstChild: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: <Widget>[
@@ -324,8 +309,7 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel>
     int index,
   ) {
     // Check if zone has subzones - if it does, don't accept drops on the zone header
-    final List<SubZone> subZones = serviceLocator<ProjectViewModel>()
-        .getSubZonesForZone(parentZoneId: zone.id);
+    final List<SubZone> subZones = serviceLocator<ProjectViewModel>().getSubZonesForZone(parentZoneId: zone.id);
     final bool canAcceptDrops = subZones.isEmpty;
 
     return DragTarget<Speaker>(
@@ -357,8 +341,7 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel>
         List<Speaker?> candidateItems,
         List<dynamic> rejectedItems,
       ) {
-        final bool hasIncomingData =
-            candidateItems.isNotEmpty && candidateItems.first != null;
+        final bool hasIncomingData = candidateItems.isNotEmpty && candidateItems.first != null;
 
         bool canAcceptDrop = false;
         if (canAcceptDrops && hasIncomingData && candidateItems.first != null) {
@@ -374,9 +357,7 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel>
           decoration: BoxDecoration(
             color:
                 hasIncomingData && canAcceptDrops
-                    ? (canAcceptDrop
-                        ? Colors.blue.withValues(alpha: 0.3)
-                        : Colors.red.withValues(alpha: 0.3))
+                    ? (canAcceptDrop ? Colors.blue.withValues(alpha: 0.3) : Colors.red.withValues(alpha: 0.3))
                     : (isSelected ? Colors.grey[200] : Colors.transparent),
           ),
           child: Container(
@@ -399,8 +380,8 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel>
                               "zone_expand_collapse_$index",
                             ),
                             value: isCollapsed,
-                            child: FusionSvgIcon(
-                              icon: AssetSvg.expandUp,
+                            child: FusionIcon.svg(
+                              AssetSvg.expandUp,
                               color: context.colorScheme.elevation5,
                             ),
                           ),
@@ -412,9 +393,7 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel>
                       Expanded(
                         child: _buildZoneTitle(zone, isSelected),
                       ),
-                      serviceLocator<ProjectViewModel>()
-                                  .currentSelectedZoneId !=
-                              null
+                      serviceLocator<ProjectViewModel>().currentSelectedZoneId != null
                           ? const SizedBox(
                             height: 24,
                           )
@@ -454,8 +433,7 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel>
                                     _addSubZoneToZone(zone.id);
                                     break;
                                   case 'add_listening_area':
-                                    serviceLocator<ProjectViewModel>()
-                                        .enterZoneSelectionMode(zone);
+                                    serviceLocator<ProjectViewModel>().enterZoneSelectionMode(zone);
                                     break;
                                   case 'delete':
                                     _showDeleteConfirmation(zone);
@@ -463,50 +441,38 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel>
                                 }
                               },
                               itemBuilder: (BuildContext context) {
-                                final List<PopupMenuEntry<String>> items =
-                                    <PopupMenuEntry<String>>[
-                                      PopupMenuItem<String>(
-                                        value: 'add_subzone',
-                                        child: SemanticHelper.container(
-                                          testId: SemanticHelper.createTestId(
-                                            SemanticTypes.container,
-                                            "add_subzone_menu_item_$index",
-                                          ),
-                                          child: Row(
-                                            mainAxisSize: MainAxisSize.min,
-                                            children: <Widget>[
-                                              Icon(
-                                                Icons.crop_free_sharp,
-                                                size: 16,
-                                                color:
-                                                    context
-                                                        .colorScheme
-                                                        .textPrimary,
-                                              ),
-                                              const SizedBox(width: 8),
-                                              FusionAppText(
-                                                text: 'Add Subzone',
-                                                style: context
-                                                    .textTheme
-                                                    .bodySmall
-                                                    ?.copyWith(
-                                                      color:
-                                                          context
-                                                              .colorScheme
-                                                              .textPrimary,
-                                                    ),
-                                              ),
-                                            ],
-                                          ),
-                                        ),
+                                final List<PopupMenuEntry<String>> items = <PopupMenuEntry<String>>[
+                                  PopupMenuItem<String>(
+                                    value: 'add_subzone',
+                                    child: SemanticHelper.container(
+                                      testId: SemanticHelper.createTestId(
+                                        SemanticTypes.container,
+                                        "add_subzone_menu_item_$index",
                                       ),
-                                    ];
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: <Widget>[
+                                          Icon(
+                                            Icons.crop_free_sharp,
+                                            size: 16,
+                                            color: context.colorScheme.textPrimary,
+                                          ),
+                                          const SizedBox(width: 8),
+                                          FusionAppText(
+                                            text: 'Add Subzone',
+                                            style: context.textTheme.bodySmall?.copyWith(
+                                              color: context.colorScheme.textPrimary,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                ];
 
-                                final List<SubZone> subZones =
-                                    serviceLocator<ProjectViewModel>()
-                                        .getSubZonesForZone(
-                                          parentZoneId: zone.id,
-                                        );
+                                final List<SubZone> subZones = serviceLocator<ProjectViewModel>().getSubZonesForZone(
+                                  parentZoneId: zone.id,
+                                );
                                 if (subZones.isEmpty) {
                                   items.add(
                                     PopupMenuItem<String>(
@@ -522,19 +488,14 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel>
                                             Icon(
                                               Icons.add,
                                               size: 16,
-                                              color:
-                                                  context.colorScheme.iconWhite,
+                                              color: context.colorScheme.iconWhite,
                                             ),
                                             const SizedBox(width: 8),
                                             FusionAppText(
                                               text: 'Select Listening Areas',
-                                              style: context.textTheme.bodySmall
-                                                  ?.copyWith(
-                                                    color:
-                                                        context
-                                                            .colorScheme
-                                                            .textPrimary,
-                                                  ),
+                                              style: context.textTheme.bodySmall?.copyWith(
+                                                color: context.colorScheme.textPrimary,
+                                              ),
                                             ),
                                           ],
                                         ),
@@ -562,8 +523,7 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel>
                                           const SizedBox(width: 8),
                                           FusionAppText(
                                             text: 'Delete Zone',
-                                            style: context.textTheme.bodySmall
-                                                ?.copyWith(color: Colors.red),
+                                            style: context.textTheme.bodySmall?.copyWith(color: Colors.red),
                                           ),
                                         ],
                                       ),
@@ -592,11 +552,9 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel>
         "zone_color_selector",
       ),
       child: ColorSelector(
-        enabled:
-            serviceLocator<ProjectViewModel>().currentSelectedZoneId == null,
+        enabled: serviceLocator<ProjectViewModel>().currentSelectedZoneId == null,
         selectedColor: hexToColor(zone.zoneColor),
-        availableColors:
-            Zone.zoneColors.map((String color) => hexToColor(color)).toList(),
+        availableColors: Zone.zoneColors.map((String color) => hexToColor(color)).toList(),
         onColorChanged: (Color color) {
           serviceLocator<ProjectViewModel>().updateZone(
             zone: zone.copyWith(zoneColor: colorToHex(color)),
@@ -669,8 +627,7 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel>
         child: PropertyTextField(
           controller: controller,
           maxLength: 24,
-          enabled:
-              serviceLocator<ProjectViewModel>().currentSelectedZoneId == null,
+          enabled: serviceLocator<ProjectViewModel>().currentSelectedZoneId == null,
           hintText: 'Zone Name',
           maxLines: 1,
           onTapOutside: (PointerDownEvent event) {
@@ -722,8 +679,7 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel>
         child: PropertyTextField(
           controller: controller,
           maxLength: 24,
-          enabled:
-              serviceLocator<ProjectViewModel>().currentSelectedZoneId == null,
+          enabled: serviceLocator<ProjectViewModel>().currentSelectedZoneId == null,
           hintText: 'SubZone Name',
           maxLines: 1,
           onTapOutside: (PointerDownEvent event) {
@@ -769,10 +725,7 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel>
 
     for (ListeningArea area in listeningAreas) {
       final List<HardwareComponent> hardwareForArea =
-          serviceLocator<ProjectViewModel>()
-              .getHardwareForListeningArea(listeningAreaId: area.id)
-              .where((HardwareComponent hw) => hw is! Speaker)
-              .toList();
+          serviceLocator<ProjectViewModel>().getHardwareForListeningArea(listeningAreaId: area.id).where((HardwareComponent hw) => hw is! Speaker).toList();
       allHardware.addAll(hardwareForArea);
     }
 
@@ -805,17 +758,12 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel>
   Widget _buildHardwareItem(HardwareComponent hardware) {
     return BlocBuilder<ProjectViewModel, ProjectViewModelState>(
       builder: (BuildContext context, ProjectViewModelState state) {
-        final bool isSelected =
-            serviceLocator<ProjectViewModel>().currentSelectedHardwareId ==
-            hardware.id;
+        final bool isSelected = serviceLocator<ProjectViewModel>().currentSelectedHardwareId == hardware.id;
 
         return Container(
           margin: const EdgeInsets.only(left: 24, top: 2),
           decoration: BoxDecoration(
-            color:
-                isSelected
-                    ? context.colorScheme.elevation4
-                    : Colors.transparent,
+            color: isSelected ? context.colorScheme.elevation4 : Colors.transparent,
             borderRadius: BorderRadius.circular(4),
           ),
           child: InkWell(
@@ -823,8 +771,7 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel>
               serviceLocator<ProjectViewModel>().setCurrentSelectedHardware(
                 hardware.id,
               );
-              serviceLocator<ProjectViewModel>()
-                  .setCurrentSelectedListeningArea(null);
+              serviceLocator<ProjectViewModel>().setCurrentSelectedListeningArea(null);
             },
             borderRadius: BorderRadius.circular(4),
             child: Container(
@@ -845,14 +792,12 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel>
                       save: (String value) {
                         if (value.isNotEmpty) {
                           if (hardware is Source) {
-                            final HardwareComponent updatedHw = hardware
-                                .copyWith(name: value);
+                            final HardwareComponent updatedHw = hardware.copyWith(name: value);
                             projectViewModel.updateHardware(
                               hardware: updatedHw,
                             );
                           } else if (hardware is FusionController) {
-                            final HardwareComponent updatedHw = hardware
-                                .copyWith(name: value);
+                            final HardwareComponent updatedHw = hardware.copyWith(name: value);
                             projectViewModel.updateHardware(
                               hardware: updatedHw,
                             );
@@ -874,8 +819,7 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel>
   /// Build individual circuits for a zone as expandable items
   List<Widget> _buildZoneCircuits(Zone zone) {
     final List<CircuitModel> circuits = _getZoneCircuits(zone.id);
-    final List<SubZone> subZones = serviceLocator<ProjectViewModel>()
-        .getSubZonesForZone(parentZoneId: zone.id);
+    final List<SubZone> subZones = serviceLocator<ProjectViewModel>().getSubZonesForZone(parentZoneId: zone.id);
 
     // Don't show zone circuits if zone has subzones
     if (subZones.isNotEmpty) return <Widget>[];
@@ -884,23 +828,20 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel>
     // Just return the individual circuit items
     return circuits
         .map(
-          (CircuitModel circuit) =>
-              _buildExpandableCircuit(circuit, zone: zone),
+          (CircuitModel circuit) => _buildExpandableCircuit(circuit, zone: zone),
         )
         .toList();
   }
 
   /// Build individual circuits for a subzone as expandable items
   List<Widget> _buildSubZoneCircuits(SubZone subZone) {
-    final List<CircuitModel> circuits = serviceLocator<ProjectViewModel>()
-        .getCircuitsInSubZone(subZoneId: subZone.id);
+    final List<CircuitModel> circuits = serviceLocator<ProjectViewModel>().getCircuitsInSubZone(subZoneId: subZone.id);
 
     // Subzone header now handles drag target for creating new circuits
     // Just return the individual circuit items
     return circuits
         .map(
-          (CircuitModel circuit) =>
-              _buildExpandableCircuit(circuit, subZone: subZone),
+          (CircuitModel circuit) => _buildExpandableCircuit(circuit, subZone: subZone),
         )
         .toList();
   }
@@ -911,12 +852,10 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel>
     Zone? zone,
     SubZone? subZone,
   }) {
-    final List<HardwareComponent> circuitHardware =
-        serviceLocator<ProjectViewModel>().getHardwareForCircuit(
-          circuitId: circuit.id,
-        );
-    final List<Speaker> circuitSpeakers =
-        circuitHardware.whereType<Speaker>().toList();
+    final List<HardwareComponent> circuitHardware = serviceLocator<ProjectViewModel>().getHardwareForCircuit(
+      circuitId: circuit.id,
+    );
+    final List<Speaker> circuitSpeakers = circuitHardware.whereType<Speaker>().toList();
     final bool isSubZone = subZone != null;
     final double leftPadding = isSubZone ? 40.0 : 24.0;
 
@@ -926,8 +865,7 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel>
     return DragTarget<Speaker>(
       onWillAcceptWithDetails: (DragTargetDetails<Speaker> details) {
         // Check if speaker is already in this circuit
-        if (circuitSpeakers.any((Speaker s) => s.id == details.data.id))
-          return false;
+        if (circuitSpeakers.any((Speaker s) => s.id == details.data.id)) return false;
 
         // Check zone/subzone restrictions
         if (!_canSpeakerBeAddedToCircuit(details.data, circuit)) return false;
@@ -949,8 +887,7 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel>
         }
 
         // Check speaker model compatibility
-        if (circuitSpeakers.isNotEmpty &&
-            circuitSpeakers.first.speakerSKU != details.data.speakerSKU) {
+        if (circuitSpeakers.isNotEmpty && circuitSpeakers.first.speakerSKU != details.data.speakerSKU) {
           _showSpeakerModelValidationError(details.data, circuitSpeakers.first);
           return;
         }
@@ -975,8 +912,7 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel>
         List<Speaker?> candidateItems,
         List<dynamic> rejectedItems,
       ) {
-        final bool hasIncomingData =
-            candidateItems.isNotEmpty && candidateItems.first != null;
+        final bool hasIncomingData = candidateItems.isNotEmpty && candidateItems.first != null;
 
         bool canAccept = false;
         if (hasIncomingData && candidateItems.first != null) {
@@ -986,9 +922,7 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel>
                 (Speaker s) => s.id == candidateSpeaker.id,
               ) &&
               _canSpeakerBeAddedToCircuit(candidateSpeaker, circuit) &&
-              (circuitSpeakers.isEmpty ||
-                  circuitSpeakers.first.speakerSKU ==
-                      candidateSpeaker.speakerSKU);
+              (circuitSpeakers.isEmpty || circuitSpeakers.first.speakerSKU == candidateSpeaker.speakerSKU);
         }
 
         return Container(
@@ -999,12 +933,7 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel>
             bottom: 1,
           ),
           decoration: BoxDecoration(
-            color:
-                hasIncomingData
-                    ? (canAccept
-                        ? Colors.green.withValues(alpha: 0.3)
-                        : Colors.red.withValues(alpha: 0.3))
-                    : Colors.transparent,
+            color: hasIncomingData ? (canAccept ? Colors.green.withValues(alpha: 0.3) : Colors.red.withValues(alpha: 0.3)) : Colors.transparent,
             borderRadius: BorderRadius.circular(4),
           ),
           child: Column(
@@ -1022,12 +951,9 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel>
                         onTap: () => _toggleCircuitSectionExpansion(circuit.id),
                         child: AnimatedRotation(
                           duration: const Duration(milliseconds: 200),
-                          turns:
-                              _expandedCircuitSections.contains(circuit.id)
-                                  ? 0.5
-                                  : 0.25,
-                          child: FusionSvgIcon(
-                            icon: AssetSvg.expandUp,
+                          turns: _expandedCircuitSections.contains(circuit.id) ? 0.5 : 0.25,
+                          child: FusionIcon.svg(
+                            AssetSvg.expandUp,
                             color: context.colorScheme.elevation5,
                           ),
                         ),
@@ -1038,8 +964,7 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel>
                         FusionImage.asset(
                           serviceLocator<ProjectViewModel>().getHardwareImage(
                             productId: circuitSpeakers.first.productId ?? 0,
-                            currentImagePath:
-                                circuitSpeakers.first.assetImagePath,
+                            currentImagePath: circuitSpeakers.first.assetImagePath,
                           ),
                           width: 16,
                           height: 16,
@@ -1053,23 +978,14 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel>
                       const SizedBox(width: 8),
                       Expanded(
                         child: FusionAppText(
-                          text:
-                              circuitSpeakers.isNotEmpty
-                                  ? '${circuitSpeakers.first.name} (${circuitSpeakers.length}x)'
-                                  : 'Empty circuit',
+                          text: circuitSpeakers.isNotEmpty ? '${circuitSpeakers.first.name} (${circuitSpeakers.length}x)' : 'Empty circuit',
                           style: Theme.of(
                             context,
                           ).textTheme.bodySmall?.copyWith(
                             fontSize: 11,
                             fontWeight: FontWeight.w500,
-                            color:
-                                circuitSpeakers.isNotEmpty
-                                    ? context.colorScheme.textPrimary
-                                    : context.colorScheme.elevation5,
-                            fontStyle:
-                                circuitSpeakers.isEmpty
-                                    ? FontStyle.italic
-                                    : null,
+                            color: circuitSpeakers.isNotEmpty ? context.colorScheme.textPrimary : context.colorScheme.elevation5,
+                            fontStyle: circuitSpeakers.isEmpty ? FontStyle.italic : null,
                           ),
                         ),
                       ),
@@ -1125,13 +1041,9 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel>
                                       const SizedBox(width: 6),
                                       FusionAppText(
                                         text: 'Rename',
-                                        style: context.textTheme.bodySmall
-                                            ?.copyWith(
-                                              color:
-                                                  context
-                                                      .colorScheme
-                                                      .textPrimary,
-                                            ),
+                                        style: context.textTheme.bodySmall?.copyWith(
+                                          color: context.colorScheme.textPrimary,
+                                        ),
                                       ),
                                     ],
                                   ),
@@ -1150,8 +1062,7 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel>
                                       const SizedBox(width: 6),
                                       FusionAppText(
                                         text: 'Delete',
-                                        style: context.textTheme.bodySmall
-                                            ?.copyWith(color: Colors.red),
+                                        style: context.textTheme.bodySmall?.copyWith(color: Colors.red),
                                       ),
                                     ],
                                   ),
@@ -1167,17 +1078,13 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel>
               // Expandable Speakers Section
               AnimatedCrossFade(
                 duration: const Duration(milliseconds: 250),
-                crossFadeState:
-                    isExpanded
-                        ? CrossFadeState.showFirst
-                        : CrossFadeState.showSecond,
+                crossFadeState: isExpanded ? CrossFadeState.showFirst : CrossFadeState.showSecond,
                 firstChild: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: <Widget>[
                     if (circuitSpeakers.isNotEmpty)
                       ...circuitSpeakers.map(
-                        (Speaker speaker) =>
-                            _buildCircuitSpeakerItem(speaker, circuit),
+                        (Speaker speaker) => _buildCircuitSpeakerItem(speaker, circuit),
                       )
                     else
                       _buildEmptyCircuitMessage(),
@@ -1196,9 +1103,7 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel>
   Widget _buildCircuitSpeakerItem(Speaker speaker, CircuitModel circuit) {
     return BlocBuilder<ProjectViewModel, ProjectViewModelState>(
       builder: (BuildContext context, ProjectViewModelState state) {
-        final bool isSelected =
-            serviceLocator<ProjectViewModel>().currentSelectedHardwareId ==
-            speaker.id;
+        final bool isSelected = serviceLocator<ProjectViewModel>().currentSelectedHardwareId == speaker.id;
 
         return Draggable<Speaker>(
           data: speaker,
@@ -1244,10 +1149,7 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel>
               bottom: 1,
             ),
             decoration: BoxDecoration(
-              color:
-                  isSelected
-                      ? context.colorScheme.elevation4
-                      : Colors.transparent,
+              color: isSelected ? context.colorScheme.elevation4 : Colors.transparent,
               borderRadius: BorderRadius.circular(4),
             ),
             child: InkWell(
@@ -1255,8 +1157,7 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel>
                 serviceLocator<ProjectViewModel>().setCurrentSelectedHardware(
                   speaker.id,
                 );
-                serviceLocator<ProjectViewModel>()
-                    .setCurrentSelectedListeningArea(null);
+                serviceLocator<ProjectViewModel>().setCurrentSelectedListeningArea(null);
               },
               borderRadius: BorderRadius.circular(4),
               child: Container(
@@ -1288,8 +1189,7 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel>
                         hintText: "Speaker Name",
                         style: Theme.of(context).textTheme.bodySmall!.copyWith(
                           fontSize: 10,
-                          fontWeight:
-                              isSelected ? FontWeight.w500 : FontWeight.w400,
+                          fontWeight: isSelected ? FontWeight.w500 : FontWeight.w400,
                           color: context.colorScheme.textPrimary,
                         ),
                         save: (String value) {
@@ -1347,8 +1247,7 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel>
                                     const SizedBox(width: 6),
                                     FusionAppText(
                                       text: 'Remove from Circuit',
-                                      style: context.textTheme.bodySmall
-                                          ?.copyWith(color: Colors.red),
+                                      style: context.textTheme.bodySmall?.copyWith(color: Colors.red),
                                     ),
                                   ],
                                 ),
@@ -1469,8 +1368,7 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel>
         // Expandable Speaker Items
         AnimatedCrossFade(
           duration: const Duration(milliseconds: 250),
-          crossFadeState:
-              isExpanded ? CrossFadeState.showFirst : CrossFadeState.showSecond,
+          crossFadeState: isExpanded ? CrossFadeState.showFirst : CrossFadeState.showSecond,
           firstChild: Column(
             mainAxisSize: MainAxisSize.min,
             children: <Widget>[
@@ -1488,23 +1386,18 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel>
 
   /// Get all speakers that are not assigned to any circuit
   List<Speaker> _getUnassignedSpeakers() {
-    final List<HardwareComponent> allHardware =
-        serviceLocator<ProjectViewModel>().getAllHardware();
+    final List<HardwareComponent> allHardware = serviceLocator<ProjectViewModel>().getAllHardware();
     final List<Speaker> allSpeakers = allHardware.whereType<Speaker>().toList();
 
     // Filter out speakers that are already in circuits
-    return allSpeakers
-        .where((Speaker speaker) => !_isSpeakerInAnyCircuit(speaker))
-        .toList();
+    return allSpeakers.where((Speaker speaker) => !_isSpeakerInAnyCircuit(speaker)).toList();
   }
 
   /// Build unassigned speaker item
   Widget _buildUnassignedSpeakerItem(Speaker speaker) {
     return BlocBuilder<ProjectViewModel, ProjectViewModelState>(
       builder: (BuildContext context, ProjectViewModelState state) {
-        final bool isSelected =
-            serviceLocator<ProjectViewModel>().currentSelectedHardwareId ==
-            speaker.id;
+        final bool isSelected = serviceLocator<ProjectViewModel>().currentSelectedHardwareId == speaker.id;
 
         return Draggable<Speaker>(
           data: speaker,
@@ -1553,8 +1446,7 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel>
                 serviceLocator<ProjectViewModel>().setCurrentSelectedHardware(
                   speaker.id,
                 );
-                serviceLocator<ProjectViewModel>()
-                    .setCurrentSelectedListeningArea(null);
+                serviceLocator<ProjectViewModel>().setCurrentSelectedListeningArea(null);
               },
               borderRadius: BorderRadius.circular(4),
               child: Container(
@@ -1575,8 +1467,7 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel>
                         text: speaker.name,
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
                           fontSize: 11,
-                          fontWeight:
-                              isSelected ? FontWeight.w500 : FontWeight.w400,
+                          fontWeight: isSelected ? FontWeight.w500 : FontWeight.w400,
                           color: Colors.black38,
                         ),
                       ),
@@ -1641,11 +1532,9 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel>
 
   /// Find the parent zone ID for a given subzone
   String? _getParentZoneIdForSubZone(String subZoneId) {
-    final List<Zone> allZones =
-        serviceLocator<ProjectViewModel>().getAllZones();
+    final List<Zone> allZones = serviceLocator<ProjectViewModel>().getAllZones();
     for (final Zone zone in allZones) {
-      final List<SubZone> subZones = serviceLocator<ProjectViewModel>()
-          .getSubZonesForZone(parentZoneId: zone.id);
+      final List<SubZone> subZones = serviceLocator<ProjectViewModel>().getSubZonesForZone(parentZoneId: zone.id);
       if (subZones.any((SubZone s) => s.id == subZoneId)) {
         return zone.id;
       }
@@ -1655,8 +1544,7 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel>
 
   /// Build subzones section
   Widget _buildSubZonesSection(Zone zone) {
-    final List<SubZone> subZones = serviceLocator<ProjectViewModel>()
-        .getSubZonesForZone(parentZoneId: zone.id);
+    final List<SubZone> subZones = serviceLocator<ProjectViewModel>().getSubZonesForZone(parentZoneId: zone.id);
 
     if (subZones.isEmpty) {
       return const SizedBox.shrink();
@@ -1690,8 +1578,7 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel>
         List<ListeningArea?> candidateItems,
         List<dynamic> rejectedItems,
       ) {
-        final bool hasIncomingData =
-            candidateItems.isNotEmpty && candidateItems.first != null;
+        final bool hasIncomingData = candidateItems.isNotEmpty && candidateItems.first != null;
 
         return Container(
           decoration:
@@ -1741,9 +1628,7 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel>
                   List<Speaker?> candidateSpeakers,
                   List<dynamic> rejectedSpeakers,
                 ) {
-                  final bool hasIncomingSpeaker =
-                      candidateSpeakers.isNotEmpty &&
-                      candidateSpeakers.first != null;
+                  final bool hasIncomingSpeaker = candidateSpeakers.isNotEmpty && candidateSpeakers.first != null;
 
                   bool canAcceptSpeaker = false;
                   if (hasIncomingSpeaker && candidateSpeakers.first != null) {
@@ -1757,11 +1642,7 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel>
                   return Container(
                     decoration: BoxDecoration(
                       color:
-                          hasIncomingSpeaker
-                              ? (canAcceptSpeaker
-                                  ? Colors.blue.withValues(alpha: 0.3)
-                                  : Colors.red.withValues(alpha: 0.3))
-                              : Colors.transparent,
+                          hasIncomingSpeaker ? (canAcceptSpeaker ? Colors.blue.withValues(alpha: 0.3) : Colors.red.withValues(alpha: 0.3)) : Colors.transparent,
                     ),
                     child: Container(
                       padding: const EdgeInsets.fromLTRB(20, 4, 12, 4),
@@ -1826,8 +1707,7 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel>
                                 onSelected: (String value) {
                                   switch (value) {
                                     case 'select_listening_areas_subzone':
-                                      serviceLocator<ProjectViewModel>()
-                                          .enterSubZoneSelectionMode(subZone);
+                                      serviceLocator<ProjectViewModel>().enterSubZoneSelectionMode(subZone);
                                       break;
                                     case 'delete':
                                       _showDeleteSubZoneConfirmation(subZone);
@@ -1846,21 +1726,14 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel>
                                             Icon(
                                               Icons.add,
                                               size: 16,
-                                              color:
-                                                  context
-                                                      .colorScheme
-                                                      .textPrimary,
+                                              color: context.colorScheme.textPrimary,
                                             ),
                                             const SizedBox(width: 8),
                                             FusionAppText(
                                               text: 'Select Listening Areas',
-                                              style: context.textTheme.bodySmall
-                                                  ?.copyWith(
-                                                    color:
-                                                        context
-                                                            .colorScheme
-                                                            .textPrimary,
-                                                  ),
+                                              style: context.textTheme.bodySmall?.copyWith(
+                                                color: context.colorScheme.textPrimary,
+                                              ),
                                             ),
                                           ],
                                         ),
@@ -1879,8 +1752,7 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel>
                                             const SizedBox(width: 8),
                                             FusionAppText(
                                               text: 'Delete Subzone',
-                                              style: context.textTheme.bodySmall
-                                                  ?.copyWith(color: Colors.red),
+                                              style: context.textTheme.bodySmall?.copyWith(color: Colors.red),
                                             ),
                                           ],
                                         ),
@@ -1899,10 +1771,7 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel>
               // Expandable Content Section
               AnimatedCrossFade(
                 duration: const Duration(milliseconds: 250),
-                crossFadeState:
-                    isExpanded
-                        ? CrossFadeState.showFirst
-                        : CrossFadeState.showSecond,
+                crossFadeState: isExpanded ? CrossFadeState.showFirst : CrossFadeState.showSecond,
                 firstChild: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: <Widget>[
@@ -2048,8 +1917,7 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel>
   }
 
   void _addSubZoneToZone(String zoneId) {
-    final List<SubZone> existingSubZones = serviceLocator<ProjectViewModel>()
-        .getSubZonesForZone(parentZoneId: zoneId);
+    final List<SubZone> existingSubZones = serviceLocator<ProjectViewModel>().getSubZonesForZone(parentZoneId: zoneId);
     final SubZone newSubZone = SubZone(
       name: 'Subzone ${existingSubZones.length + 1}',
     );
@@ -2060,10 +1928,9 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel>
     );
 
     // Get existing listening areas in the zone
-    final List<ListeningArea> existingListeningAreas =
-        serviceLocator<ProjectViewModel>().getListeningAreasForZone(
-          zoneId: zoneId,
-        );
+    final List<ListeningArea> existingListeningAreas = serviceLocator<ProjectViewModel>().getListeningAreasForZone(
+      zoneId: zoneId,
+    );
 
     // Move all listening areas from the zone to the newly created subzone
     // The service layer should automatically handle circuit reassignment when areas are moved
@@ -2116,13 +1983,11 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel>
 
   /// Helper methods for speaker circuit management
   bool _isSpeakerInAnyCircuit(Speaker speaker) {
-    final List<CircuitModel> allCircuits =
-        serviceLocator<ProjectViewModel>().getAllCircuits();
+    final List<CircuitModel> allCircuits = serviceLocator<ProjectViewModel>().getAllCircuits();
     for (final CircuitModel circuit in allCircuits) {
-      final List<HardwareComponent> hardware =
-          serviceLocator<ProjectViewModel>().getHardwareForCircuit(
-            circuitId: circuit.id,
-          );
+      final List<HardwareComponent> hardware = serviceLocator<ProjectViewModel>().getHardwareForCircuit(
+        circuitId: circuit.id,
+      );
       if (hardware.any((HardwareComponent hw) => hw.id == speaker.id)) {
         return true;
       }
@@ -2131,13 +1996,11 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel>
   }
 
   CircuitModel? _findCircuitForSpeaker(Speaker speaker) {
-    final List<CircuitModel> allCircuits =
-        serviceLocator<ProjectViewModel>().getAllCircuits();
+    final List<CircuitModel> allCircuits = serviceLocator<ProjectViewModel>().getAllCircuits();
     for (final CircuitModel circuit in allCircuits) {
-      final List<HardwareComponent> hardware =
-          serviceLocator<ProjectViewModel>().getHardwareForCircuit(
-            circuitId: circuit.id,
-          );
+      final List<HardwareComponent> hardware = serviceLocator<ProjectViewModel>().getHardwareForCircuit(
+        circuitId: circuit.id,
+      );
       if (hardware.any((HardwareComponent hw) => hw.id == speaker.id)) {
         return circuit;
       }
@@ -2148,29 +2011,24 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel>
   /// Helper methods for zone/subzone validation
   String? _getZoneIdForSpeaker(Speaker speaker) {
     // Find the listening area that contains this speaker
-    final List<HardwareComponent> allHardware =
-        serviceLocator<ProjectViewModel>().getAllHardware();
+    final List<HardwareComponent> allHardware = serviceLocator<ProjectViewModel>().getAllHardware();
     if (!allHardware.any((HardwareComponent hw) => hw.id == speaker.id)) {
       return null;
     }
 
     // Get the listening area for this speaker
-    final List<ListeningArea> allListeningAreas =
-        serviceLocator<ProjectViewModel>().getAllListeningAreas();
+    final List<ListeningArea> allListeningAreas = serviceLocator<ProjectViewModel>().getAllListeningAreas();
     for (final ListeningArea area in allListeningAreas) {
-      final List<HardwareComponent> areaHardware =
-          serviceLocator<ProjectViewModel>().getHardwareForListeningArea(
-            listeningAreaId: area.id,
-          );
+      final List<HardwareComponent> areaHardware = serviceLocator<ProjectViewModel>().getHardwareForListeningArea(
+        listeningAreaId: area.id,
+      );
       if (areaHardware.any((HardwareComponent hw) => hw.id == speaker.id)) {
         // Find which zone this listening area belongs to
-        final List<Zone> allZones =
-            serviceLocator<ProjectViewModel>().getAllZones();
+        final List<Zone> allZones = serviceLocator<ProjectViewModel>().getAllZones();
         for (final Zone zone in allZones) {
-          final List<ListeningArea> zoneAreas =
-              serviceLocator<ProjectViewModel>().getListeningAreasForZone(
-                zoneId: zone.id,
-              );
+          final List<ListeningArea> zoneAreas = serviceLocator<ProjectViewModel>().getListeningAreasForZone(
+            zoneId: zone.id,
+          );
           if (zoneAreas.any((ListeningArea la) => la.id == area.id)) {
             return zone.id;
           }
@@ -2183,29 +2041,24 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel>
 
   String? _getSubZoneIdForSpeaker(Speaker speaker) {
     // Find the listening area that contains this speaker
-    final List<HardwareComponent> allHardware =
-        serviceLocator<ProjectViewModel>().getAllHardware();
+    final List<HardwareComponent> allHardware = serviceLocator<ProjectViewModel>().getAllHardware();
     if (!allHardware.any((HardwareComponent hw) => hw.id == speaker.id)) {
       return null;
     }
 
     // Get the listening area for this speaker
-    final List<ListeningArea> allListeningAreas =
-        serviceLocator<ProjectViewModel>().getAllListeningAreas();
+    final List<ListeningArea> allListeningAreas = serviceLocator<ProjectViewModel>().getAllListeningAreas();
     for (final ListeningArea area in allListeningAreas) {
-      final List<HardwareComponent> areaHardware =
-          serviceLocator<ProjectViewModel>().getHardwareForListeningArea(
-            listeningAreaId: area.id,
-          );
+      final List<HardwareComponent> areaHardware = serviceLocator<ProjectViewModel>().getHardwareForListeningArea(
+        listeningAreaId: area.id,
+      );
       if (areaHardware.any((HardwareComponent hw) => hw.id == speaker.id)) {
         // Find which subzone this listening area belongs to
-        final List<SubZone> allSubZones =
-            serviceLocator<ProjectViewModel>().getAllSubZones();
+        final List<SubZone> allSubZones = serviceLocator<ProjectViewModel>().getAllSubZones();
         for (final SubZone subZone in allSubZones) {
-          final List<ListeningArea> subZoneAreas =
-              serviceLocator<ProjectViewModel>().getListeningAreasInSubZone(
-                subZoneId: subZone.id,
-              );
+          final List<ListeningArea> subZoneAreas = serviceLocator<ProjectViewModel>().getListeningAreasInSubZone(
+            subZoneId: subZone.id,
+          );
           if (subZoneAreas.any((ListeningArea la) => la.id == area.id)) {
             return subZone.id;
           }
@@ -2217,11 +2070,9 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel>
   }
 
   String? _getZoneIdForCircuit(CircuitModel circuit) {
-    final List<Zone> allZones =
-        serviceLocator<ProjectViewModel>().getAllZones();
+    final List<Zone> allZones = serviceLocator<ProjectViewModel>().getAllZones();
     for (final Zone zone in allZones) {
-      final List<CircuitModel> zoneCircuits = serviceLocator<ProjectViewModel>()
-          .getCircuitsInZone(zone.id);
+      final List<CircuitModel> zoneCircuits = serviceLocator<ProjectViewModel>().getCircuitsInZone(zone.id);
       if (zoneCircuits.any((CircuitModel c) => c.id == circuit.id)) {
         return zone.id;
       }
@@ -2230,13 +2081,11 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel>
   }
 
   String? _getSubZoneIdForCircuit(CircuitModel circuit) {
-    final List<SubZone> allSubZones =
-        serviceLocator<ProjectViewModel>().getAllSubZones();
+    final List<SubZone> allSubZones = serviceLocator<ProjectViewModel>().getAllSubZones();
     for (final SubZone subZone in allSubZones) {
-      final List<CircuitModel> subZoneCircuits =
-          serviceLocator<ProjectViewModel>().getCircuitsInSubZone(
-            subZoneId: subZone.id,
-          );
+      final List<CircuitModel> subZoneCircuits = serviceLocator<ProjectViewModel>().getCircuitsInSubZone(
+        subZoneId: subZone.id,
+      );
       if (subZoneCircuits.any((CircuitModel c) => c.id == circuit.id)) {
         return subZone.id;
       }
@@ -2317,20 +2166,16 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel>
     final String? speakerZoneId = _getZoneIdForSpeaker(speaker);
     final String? speakerSubZoneId = _getSubZoneIdForSpeaker(speaker);
 
-    String errorMessage =
-        'Speaker can only be added to circuits in its own zone or subzone';
+    String errorMessage = 'Speaker can only be added to circuits in its own zone or subzone';
 
     if (speakerSubZoneId != null) {
-      final SubZone? speakerSubZone = serviceLocator<ProjectViewModel>()
-          .getSubZone(subZoneId: speakerSubZoneId);
-      errorMessage =
-          'Speaker is in subzone "${speakerSubZone?.name ?? 'Unknown'}" and can only be added to circuits in the same subzone';
+      final SubZone? speakerSubZone = serviceLocator<ProjectViewModel>().getSubZone(subZoneId: speakerSubZoneId);
+      errorMessage = 'Speaker is in subzone "${speakerSubZone?.name ?? 'Unknown'}" and can only be added to circuits in the same subzone';
     } else if (speakerZoneId != null) {
       final Zone? speakerZone = serviceLocator<ProjectViewModel>().getZone(
         zoneId: speakerZoneId,
       );
-      errorMessage =
-          'Speaker is in zone "${speakerZone?.name ?? 'Unknown'}" and can only be added to circuits in the same zone (not in subzones)';
+      errorMessage = 'Speaker is in zone "${speakerZone?.name ?? 'Unknown'}" and can only be added to circuits in the same zone (not in subzones)';
     }
 
     ScaffoldMessenger.of(context).showSnackBar(

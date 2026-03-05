@@ -166,8 +166,8 @@ class ListeningAreasPanelState extends State<ListeningAreasPanel> with TickerPro
                             child: SemanticHelper.toggle(
                               testId: SemanticHelper.createTestId(SemanticTypes.toggle, "listening_area_expand_collapse_$index"),
                               value: isExpanded,
-                              child: FusionSvgIcon(
-                                icon: AssetSvg.expandUp,
+                              child: FusionIcon.svg(
+                                AssetSvg.expandUp,
                                 color: context.colorScheme.elevation5,
                               ),
                             ),

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:fusion_lib/constants/semantics/features/configuration/snapshots/SnapshotsKeys.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_launcher/core/widgets/title_text_field_switcher.dart';
 import 'package:fusion_lib/fusion_lib.dart';
@@ -74,7 +75,8 @@ class _SnapshotItemCardState extends State<SnapshotItemCard> {
                 /// snapshot item draggable icon
                 ReorderableDragStartListener(
                   index: widget.index,
-                  child: Fusion(
+                  child: FusionIcon.icon(
+                    semanticId: FusionTestKeys.instance.snplistitmdragindicator,
                     Icons.drag_indicator,
                     size: 16,
                     color: context.colorScheme.textPlaceholder,

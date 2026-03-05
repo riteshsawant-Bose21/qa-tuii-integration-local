@@ -63,8 +63,7 @@ class ProjectWorkArea extends StatefulWidget {
   State<ProjectWorkArea> createState() => _ProjectWorkAreaState();
 }
 
-class _ProjectWorkAreaState extends State<ProjectWorkArea>
-    with TickerProviderStateMixin, AutomaticKeepAliveClientMixin {
+class _ProjectWorkAreaState extends State<ProjectWorkArea> with TickerProviderStateMixin, AutomaticKeepAliveClientMixin {
   late TabController _tabController;
   StreamSubscription<int>? subscription;
   late TextEditingController _projectNameController;
@@ -78,12 +77,10 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea>
   MaceEngine? _engine;
   bool useIsolateEngine = true;
 
-  bool get isListingViewMode =>
-      _projectViewModel.currentProjectMode == ProjectMode.systemListingMode;
+  bool get isListingViewMode => _projectViewModel.currentProjectMode == ProjectMode.systemListingMode;
   String _appVersion = '1.0.0';
 
-  bool get isInDesignMode =>
-      !serviceLocator<ProjectViewModel>().isInControlMode;
+  bool get isInDesignMode => !serviceLocator<ProjectViewModel>().isInControlMode;
 
   final List<Widget> _designTabs = const <Widget>[
     Tab(text: 'Building'),
@@ -106,8 +103,7 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea>
 
   List<Widget> get _currentTabs => isInDesignMode ? _designTabs : _controlTabs;
 
-  List<Widget> get _currentWidgets =>
-      isInDesignMode ? _designWidgets : _controlWidgets;
+  List<Widget> get _currentWidgets => isInDesignMode ? _designWidgets : _controlWidgets;
 
   @override
   void initState() {
@@ -125,8 +121,7 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea>
 
     /// Todo: Need to handle this in a better way
     serviceLocator<ProjectViewModel>().changeDeviceTypeIndex(-1);
-    serviceLocator<ProjectViewModel>().currentToolbarMode =
-        ToolbarMode.acoustics;
+    serviceLocator<ProjectViewModel>().currentToolbarMode = ToolbarMode.acoustics;
 
     subscription = projectTabBroadcastController.stream.listen((int index) {
       if (index >= 0 && index < _tabController.length) {
@@ -150,8 +145,7 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea>
       length: length,
       vsync: this,
       animationDuration: Duration.zero,
-      initialIndex:
-          0, // Always reset to 0 when switching modes to avoid index out of bounds
+      initialIndex: 0, // Always reset to 0 when switching modes to avoid index out of bounds
     );
 
     // Since you are using IndexedStack, we need to rebuild when tab changes
@@ -232,8 +226,7 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea>
       final Bandwidth maceBandwidth = _mapToMaceBandwidth(
         currentPanelData.bandwidth,
       );
-      final double frequency =
-          currentPanelData.frequency.frequencyValue.toDouble();
+      final double frequency = currentPanelData.frequency.frequencyValue.toDouble();
       final Weighting weighting = _mapToMaceWeighting(
         currentPanelData.weighting,
       );
@@ -283,30 +276,24 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea>
       return;
     }
 
-    final int currentFloorIndex =
-        serviceLocator<ProjectViewModel>().currentFloorIndex;
+    final int currentFloorIndex = serviceLocator<ProjectViewModel>().currentFloorIndex;
     if (currentFloorIndex == -1) return;
 
-    final FloorModel currentFloor =
-        serviceLocator<ProjectViewModel>().floors[currentFloorIndex];
+    final FloorModel currentFloor = serviceLocator<ProjectViewModel>().floors[currentFloorIndex];
 
-    final List<ListeningArea> floorListeningAreas =
-        serviceLocator<ProjectViewModel>().getListeningAreasForFloor(
-          floorId: currentFloor.id,
-        );
+    final List<ListeningArea> floorListeningAreas = serviceLocator<ProjectViewModel>().getListeningAreasForFloor(
+      floorId: currentFloor.id,
+    );
     if (floorListeningAreas.isEmpty) return;
     // for (ListeningArea e in floorListeningAreas) {
     //   e.clearSplData();
     // }
     final List<Speaker> speakers = List<Speaker>.from(
-      serviceLocator<ProjectViewModel>()
-          .getHardwareInFloorWithPosition(floorId: currentFloor.id)
-          .whereType<Speaker>(),
+      serviceLocator<ProjectViewModel>().getHardwareInFloorWithPosition(floorId: currentFloor.id).whereType<Speaker>(),
     );
-    final List<ListeningArea> surfaces = serviceLocator<ProjectViewModel>()
-        .getAllDrawnListeningAreasForFloor(
-          floorId: currentFloor.id,
-        );
+    final List<ListeningArea> surfaces = serviceLocator<ProjectViewModel>().getAllDrawnListeningAreasForFloor(
+      floorId: currentFloor.id,
+    );
     if (!useIsolateEngine) {
       await SPLCalculationManager.calculateSpl(
         _engine!,
@@ -327,8 +314,7 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea>
       currentPanelData.bandwidth,
     );
     final Weighting weighting = _mapToMaceWeighting(currentPanelData.weighting);
-    final double frequency =
-        currentPanelData.frequency.frequencyValue.toDouble();
+    final double frequency = currentPanelData.frequency.frequencyValue.toDouble();
     await updateSpl(
       maceBandwidth,
       frequency,
@@ -346,25 +332,19 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea>
     // if (_engine == null) return;
     if (!_floorCanvasController.isShowingSpl.value) return;
 
-    final int currentFloorIndex =
-        serviceLocator<ProjectViewModel>().currentFloorIndex;
+    final int currentFloorIndex = serviceLocator<ProjectViewModel>().currentFloorIndex;
     if (currentFloorIndex == -1) return;
 
-    final FloorModel currentFloor =
-        serviceLocator<ProjectViewModel>().floors[currentFloorIndex];
-    final List<ListeningArea> floorListeningAreas =
-        serviceLocator<ProjectViewModel>().getListeningAreasForFloor(
-          floorId: currentFloor.id,
-        );
+    final FloorModel currentFloor = serviceLocator<ProjectViewModel>().floors[currentFloorIndex];
+    final List<ListeningArea> floorListeningAreas = serviceLocator<ProjectViewModel>().getListeningAreasForFloor(
+      floorId: currentFloor.id,
+    );
     if (floorListeningAreas.isEmpty) return;
 
     final List<SPLCalculation> toApply = <SPLCalculation>[];
 
     final Iterable<SPLCalculation> currentCalcs =
-        useIsolateEngine
-            ? await IsolatedMaceCalculationManager.instance
-                .currentCalculations()
-            : SPLCalculationManager.currentCalculations();
+        useIsolateEngine ? await IsolatedMaceCalculationManager.instance.currentCalculations() : SPLCalculationManager.currentCalculations();
 
     for (final SPLCalculation sc in currentCalcs) {
       if (!floorListeningAreas.any(
@@ -376,23 +356,16 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea>
               ? await IsolatedMaceCalculationManager.instance.getSplAt(
                 fph: sc.fphHandle,
                 bandwidth: bw,
-                freqHz:
-                    (bw == Bandwidth.oneThirdOctave ||
-                            bw == Bandwidth.oneOctave)
-                        ? frequency
-                        : 2000,
+                freqHz: (bw == Bandwidth.oneThirdOctave || bw == Bandwidth.oneOctave) ? frequency : 2000,
                 weighting: weighting,
                 relative: relative,
-                resolutionSpacing:
-                    _lastPanelData?.getResolutionSpacing() ?? 20.0,
+                resolutionSpacing: _lastPanelData?.getResolutionSpacing() ?? 20.0,
               )
               : SPLCalculationManager.getSplAt(
                 _engine!,
                 sc.fphHandle,
                 bw,
-                (bw == Bandwidth.oneThirdOctave || bw == Bandwidth.oneOctave)
-                    ? frequency
-                    : 2000,
+                (bw == Bandwidth.oneThirdOctave || bw == Bandwidth.oneOctave) ? frequency : 2000,
                 weighting,
                 relative,
                 _lastPanelData?.getResolutionSpacing() ?? 20.0,
@@ -408,9 +381,7 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea>
       final List<ui.Offset> pts = calc.surface.getFieldPoints(
         _lastPanelData?.getResolutionSpacing() ?? 20.0,
       );
-      floorListeningAreas
-          .firstWhere((ListeningArea area) => area.id == calc.surface.id)
-          .setSplData(pts, calc.spl);
+      floorListeningAreas.firstWhere((ListeningArea area) => area.id == calc.surface.id).setSplData(pts, calc.spl);
       // calc.surface.setSplData(pts, calc.spl);
     }
     setState(() {});
@@ -488,8 +459,7 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea>
           racks:
               serviceLocator<ProjectViewModel>().genericHardwareComponents
                   .where(
-                    (GenericHardwareComponent component) =>
-                        component.type == GenericHardwareComponentType.rack,
+                    (GenericHardwareComponent component) => component.type == GenericHardwareComponentType.rack,
                   )
                   .toList(),
           amplifiers: <Amplifier>[],
@@ -497,17 +467,14 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea>
           others:
               serviceLocator<ProjectViewModel>().genericHardwareComponents
                   .where(
-                    (HardwareComponent component) =>
-                        component is GenericHardwareComponent &&
-                        component.type == GenericHardwareComponentType.other,
+                    (HardwareComponent component) => component is GenericHardwareComponent && component.type == GenericHardwareComponentType.other,
                   )
                   .toList(),
         ),
       ),
       DockItemConfig(
         id: "7",
-        title:
-            toolbarMode == ToolbarMode.acoustics ? "LISTENING AREAS" : "ZONES",
+        title: toolbarMode == ToolbarMode.acoustics ? "LISTENING AREAS" : "ZONES",
         side: "left",
         controller: zoneAreaController,
         allowUndock: false,
@@ -559,60 +526,56 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea>
         side: "left",
         allowUndock: false,
         isCollapsibleSection: false,
-        dockItemWidget:
-            toolbarMode == ToolbarMode.system
-                ? const EquipmentLocationSection()
-                : const SizedBox(),
+        dockItemWidget: toolbarMode == ToolbarMode.system ? const EquipmentLocationSection() : const SizedBox(),
       ),
     ];
   }
 
   void _createTabWidgets() {
     /// Building tab
-    final Widget buildingPage =
-        BlocBuilder<ProjectViewModel, ProjectViewModelState>(
-          builder: (BuildContext context, ProjectViewModelState state) {
-            return FusionDockableArea(
-              tabKey: "building_tab",
-              showLeft: true,
-              showRight: true,
-              mainArea: BlocBuilder<ProjectViewModel, ProjectViewModelState>(
-                builder: (BuildContext context, ProjectViewModelState state) {
-                  return SemanticHelper.container(
-                    testId: SemanticHelper.createTestId(
-                      SemanticTypes.container,
-                      FusionTestKeys.buildingCanvas,
-                    ),
-                    child: BuildingCanvas(
-                      splRangeController: _splRangeController,
-                      onSplStateChanged: (bool value) {
-                        if (value) {
-                          productsController.collapse();
-                          splController.expand();
-                        } else {
-                          splController.collapse();
-                        }
-                      },
-                      floorCanvasController: _floorCanvasController,
-                      onCalculateSpl: calculateSPL,
-                      splPanelData: _lastPanelData!,
-                      onProductSelected: () {
-                        productsController.expand();
-                      },
-                      onProductDeselected: () {
-                        productsController.collapse();
-                      },
-                    ),
-                  );
-                },
-              ),
-              dockItemList: _createBuildingDockItems(
-                serviceLocator<ProjectViewModel>().currentToolbarMode,
-                _floorCanvasController,
-              ),
-            );
-          },
+    final Widget buildingPage = BlocBuilder<ProjectViewModel, ProjectViewModelState>(
+      builder: (BuildContext context, ProjectViewModelState state) {
+        return FusionDockableArea(
+          tabKey: "building_tab",
+          showLeft: true,
+          showRight: true,
+          mainArea: BlocBuilder<ProjectViewModel, ProjectViewModelState>(
+            builder: (BuildContext context, ProjectViewModelState state) {
+              return SemanticHelper.container(
+                testId: SemanticHelper.createTestId(
+                  SemanticTypes.container,
+                  FusionTestKeys.buildingCanvas,
+                ),
+                child: BuildingCanvas(
+                  splRangeController: _splRangeController,
+                  onSplStateChanged: (bool value) {
+                    if (value) {
+                      productsController.collapse();
+                      splController.expand();
+                    } else {
+                      splController.collapse();
+                    }
+                  },
+                  floorCanvasController: _floorCanvasController,
+                  onCalculateSpl: calculateSPL,
+                  splPanelData: _lastPanelData!,
+                  onProductSelected: () {
+                    productsController.expand();
+                  },
+                  onProductDeselected: () {
+                    productsController.collapse();
+                  },
+                ),
+              );
+            },
+          ),
+          dockItemList: _createBuildingDockItems(
+            serviceLocator<ProjectViewModel>().currentToolbarMode,
+            _floorCanvasController,
+          ),
         );
+      },
+    );
 
     /// Config tab without docking area
     final Widget configurationPage = FusionDockableArea(
@@ -622,18 +585,16 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea>
       mainArea: BlocBuilder<ProjectViewModel, ProjectViewModelState>(
         builder: (BuildContext context, ProjectViewModelState state) {
           return switch (_projectViewModel.currentConfigurationMenuMode) {
-            ConfigurationMenuMode.processing =>
-              const ConfigurationProcessingPage(),
+            ConfigurationMenuMode.processing => const ConfigurationProcessingPage(),
             ConfigurationMenuMode.snapshots => const ConfigurationSnapshots(),
             // add all othere
             ConfigurationMenuMode.events => const ConfigurationEvents(),
             ConfigurationMenuMode.gpio => const GpioPage(),
             ConfigurationMenuMode.scheduling => const SchedulingPage(),
-            ConfigurationMenuMode.mediaFiles =>
-              BlocProvider<MediaFilesViewModel>(
-                create: (_) => MediaFilesViewModel(),
-                child: const ConfigurationMediaFilesPage(),
-              ),
+            ConfigurationMenuMode.mediaFiles => BlocProvider<MediaFilesViewModel>(
+              create: (_) => MediaFilesViewModel(),
+              child: const ConfigurationMediaFilesPage(),
+            ),
           };
         },
       ),
@@ -699,13 +660,11 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea>
                             height: 40,
                             decoration: BoxDecoration(
                               borderRadius: BorderRadius.circular(2),
-                              color:
-                                  isListingViewMode
-                                      ? context.colorScheme.elevation3
-                                      : Colors.transparent,
+                              color: isListingViewMode ? context.colorScheme.elevation3 : Colors.transparent,
                             ),
-                            child: FusionSvgIcon(
-                              icon: AssetSvg.listingViewIcon,
+                            child: FusionIcon.svg(
+                              semanticId: 'project_work_area_listingViewIcon',
+                              AssetSvg.listingViewIcon,
                               size: 40,
                               color: context.colorScheme.primaryWhite,
                             ),
@@ -729,13 +688,11 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea>
                             height: 40,
                             decoration: BoxDecoration(
                               borderRadius: BorderRadius.circular(2),
-                              color:
-                                  isListingViewMode
-                                      ? Colors.transparent
-                                      : context.colorScheme.elevation3,
+                              color: isListingViewMode ? Colors.transparent : context.colorScheme.elevation3,
                             ),
-                            child: FusionSvgIcon(
-                              icon: AssetSvg.wiringViewIcon,
+                            child: FusionIcon.svg(
+                              semanticId: 'project_work_area_wiringViewIcon',
+                              AssetSvg.wiringViewIcon,
                               size: 40,
                               color: context.colorScheme.primaryWhite,
                             ),
@@ -762,27 +719,19 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea>
                 dockItemWidget: CostCalculatorScreen(
                   speakers: serviceLocator<ProjectViewModel>().speakers,
                   sources: serviceLocator<ProjectViewModel>().sources,
-                  controllers:
-                      serviceLocator<ProjectViewModel>().fusionControllers,
+                  controllers: serviceLocator<ProjectViewModel>().fusionControllers,
                   racks:
-                      serviceLocator<ProjectViewModel>()
-                          .genericHardwareComponents
+                      serviceLocator<ProjectViewModel>().genericHardwareComponents
                           .where(
-                            (GenericHardwareComponent component) =>
-                                component.type ==
-                                GenericHardwareComponentType.rack,
+                            (GenericHardwareComponent component) => component.type == GenericHardwareComponentType.rack,
                           )
                           .toList(),
                   amplifiers: <Amplifier>[],
                   fusionDevices: <FusionDsp>[],
                   others:
-                      serviceLocator<ProjectViewModel>()
-                          .genericHardwareComponents
+                      serviceLocator<ProjectViewModel>().genericHardwareComponents
                           .where(
-                            (HardwareComponent component) =>
-                                component is GenericHardwareComponent &&
-                                component.type ==
-                                    GenericHardwareComponentType.other,
+                            (HardwareComponent component) => component is GenericHardwareComponent && component.type == GenericHardwareComponentType.other,
                           )
                           .toList(),
                 ),
@@ -809,18 +758,10 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea>
     ];
 
     _controlWidgets = <Widget>[
-      serviceLocator<ProjectViewModel>().virtualIP == null
-          ? const NetworkConfigTrigger()
-          : const FusionControlDashboardPage(),
-      serviceLocator<ProjectViewModel>().virtualIP == null
-          ? const NetworkConfigTrigger()
-          : const FusionDevicesPage(),
-      serviceLocator<ProjectViewModel>().virtualIP == null
-          ? const NetworkConfigTrigger()
-          : buildingPage,
-      serviceLocator<ProjectViewModel>().virtualIP == null
-          ? const NetworkConfigTrigger()
-          : configurationPage,
+      serviceLocator<ProjectViewModel>().virtualIP == null ? const NetworkConfigTrigger() : const FusionControlDashboardPage(),
+      serviceLocator<ProjectViewModel>().virtualIP == null ? const NetworkConfigTrigger() : const FusionDevicesPage(),
+      serviceLocator<ProjectViewModel>().virtualIP == null ? const NetworkConfigTrigger() : buildingPage,
+      serviceLocator<ProjectViewModel>().virtualIP == null ? const NetworkConfigTrigger() : configurationPage,
     ];
   }
 
@@ -881,8 +822,7 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea>
                           ),
                           child: TabBar(
                             labelColor: context.colorScheme.primaryWhite,
-                            unselectedLabelColor:
-                                context.colorScheme.elevation5,
+                            unselectedLabelColor: context.colorScheme.elevation5,
                             dividerColor: Colors.transparent,
                             controller: _tabController,
                             isScrollable: true,
@@ -980,9 +920,7 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea>
                       // ),
                       Row(
                         children: <Widget>[
-                          if (!isInDesignMode &&
-                              serviceLocator<ProjectViewModel>().virtualIP !=
-                                  null)
+                          if (!isInDesignMode && serviceLocator<ProjectViewModel>().virtualIP != null)
                             Container(
                               width: 160,
                               decoration: BoxDecoration(
@@ -1017,9 +955,7 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea>
                               ),
                             ),
 
-                          if (!isInDesignMode &&
-                              serviceLocator<ProjectViewModel>().virtualIP !=
-                                  null)
+                          if (!isInDesignMode && serviceLocator<ProjectViewModel>().virtualIP != null)
                             SemanticHelper.button(
                               testId: SemanticHelper.createTestId(
                                 SemanticTypes.button,
@@ -1085,8 +1021,7 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea>
                                 ),
                               ),
                               child: ValueListenableBuilder<ThemeMode>(
-                                valueListenable:
-                                    FusionThemeController.themeModeNotifier,
+                                valueListenable: FusionThemeController.themeModeNotifier,
                                 builder: (
                                   BuildContext context,
                                   ThemeMode themeMode,
@@ -1094,29 +1029,18 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea>
                                 ) {
                                   return IconButton(
                                     icon: Icon(
-                                      themeMode == ThemeMode.dark
-                                          ? Icons.light_mode
-                                          : Icons.dark_mode,
+                                      themeMode == ThemeMode.dark ? Icons.light_mode : Icons.dark_mode,
                                       size: 24,
                                       color:
                                           Theme.of(
                                             context,
                                           ).colorScheme.primaryWhite,
                                     ),
-                                    tooltip:
-                                        themeMode == ThemeMode.dark
-                                            ? 'Switch to Light Mode'
-                                            : 'Switch to Dark Mode',
+                                    tooltip: themeMode == ThemeMode.dark ? 'Switch to Light Mode' : 'Switch to Dark Mode',
                                     onPressed: () {
-                                      final bool isLight =
-                                          FusionThemeController
-                                              .themeModeNotifier
-                                              .value ==
-                                          ThemeMode.light;
+                                      final bool isLight = FusionThemeController.themeModeNotifier.value == ThemeMode.light;
                                       FusionThemeController.setThemeMode(
-                                        isLight
-                                            ? ThemeMode.dark
-                                            : ThemeMode.light,
+                                        isLight ? ThemeMode.dark : ThemeMode.light,
                                       );
                                     },
                                   );
@@ -1156,12 +1080,8 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea>
                                       ).colorScheme.primaryWhite,
                                 ),
                                 tooltip: 'Save project',
-                                onPressed:
-                                    () => _showProjectJsonDialog(context),
-                                onLongPress:
-                                    () =>
-                                        serviceLocator<ProjectViewModel>()
-                                            .deleteCurrentProjectFromLocal(),
+                                onPressed: () => _showProjectJsonDialog(context),
+                                onLongPress: () => serviceLocator<ProjectViewModel>().deleteCurrentProjectFromLocal(),
                               ),
                             ),
                           ),
@@ -1197,12 +1117,9 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea>
                                 onPressed: () async {
                                   FusionUiUtils.showLoader(context);
 
-                                  await serviceLocator<ProjectSyncViewModel>()
-                                      .uploadProject(
-                                        projectData:
-                                            serviceLocator<ProjectViewModel>()
-                                                .getCurrentProjectData()!,
-                                      );
+                                  await serviceLocator<ProjectSyncViewModel>().uploadProject(
+                                    projectData: serviceLocator<ProjectViewModel>().getCurrentProjectData()!,
+                                  );
                                   if (context.mounted) {
                                     FusionUiUtils.hideLoader(context);
                                   }
@@ -1410,9 +1327,7 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea>
                             ProjectViewModelState state,
                           ) {
                             return FusionAppText(
-                              text:
-                                  serviceLocator<ProjectViewModel>()
-                                      .projectName,
+                              text: serviceLocator<ProjectViewModel>().projectName,
                               semanticId: FusionTestKeys.projectName,
                               textOverflow: TextOverflow.ellipsis,
                               maxLine: 1,
@@ -1452,8 +1367,7 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea>
     serviceLocator<ProjectViewModel>().saveProject();
 
     const JsonEncoder encoder = JsonEncoder.withIndent('  ');
-    final Map<String, dynamic> jsonMap =
-        serviceLocator<ProjectViewModel>().getProjectJson();
+    final Map<String, dynamic> jsonMap = serviceLocator<ProjectViewModel>().getProjectJson();
     final String prettyJson = encoder.convert(jsonMap);
 
     showDialog(

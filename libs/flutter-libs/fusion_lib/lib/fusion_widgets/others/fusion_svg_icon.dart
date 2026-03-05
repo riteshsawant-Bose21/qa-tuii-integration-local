@@ -59,7 +59,7 @@ class FusionIcon extends StatelessWidget {
   final BoxFit fit;
 
   /// Semantic id for testing/accessibility
-  final String semanticId;
+  final String? semanticId;
 
   /// Private main constructor
   const FusionIcon._({
@@ -69,7 +69,7 @@ class FusionIcon extends StatelessWidget {
     this.color,
     this.size,
     this.fit = BoxFit.contain,
-    required this.semanticId,
+    this.semanticId,
   });
 
   /// Material icon
@@ -78,7 +78,7 @@ class FusionIcon extends StatelessWidget {
     Key? key,
     Color? color,
     double? size,
-    required String semanticId,
+    String? semanticId,
   }) {
     return FusionIcon._(
       key: key,
@@ -96,7 +96,7 @@ class FusionIcon extends StatelessWidget {
     Color? color,
     double? size,
     BoxFit fit = BoxFit.contain,
-    required String semanticId,
+    String? semanticId,
   }) {
     return FusionIcon._(
       key: key,
@@ -110,7 +110,7 @@ class FusionIcon extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final String semanticsLabel = "fusion_icon_${semanticId}";
+    final String semanticsLabel = "fusion_icon_${semanticId ?? ''}";
 
     Widget iconWidget;
 

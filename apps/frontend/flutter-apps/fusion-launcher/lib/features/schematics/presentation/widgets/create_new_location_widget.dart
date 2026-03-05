@@ -72,8 +72,8 @@ class _CreateNewLocationWidgetState extends State<CreateNewLocationWidget> {
                     ),
                     RotatedBox(
                       quarterTurns: _isExpanded ? 0 : 2,
-                      child: FusionSvgIcon(
-                        icon: AssetSvg.expandUp,
+                      child: FusionIcon.svg(
+                        AssetSvg.expandUp,
                         size: FusionSizes.iconSize12,
                         color: context.colorScheme.primaryWhite,
                       ),
