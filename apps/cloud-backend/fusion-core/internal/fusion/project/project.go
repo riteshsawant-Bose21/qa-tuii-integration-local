@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/api/types"
+	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/model"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/model/models"
 	errorutils "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/utils/errorutil"
 	"go.uber.org/zap"
@@ -211,6 +212,49 @@ func (s *Service) GetAllProjects(ctx context.Context, queryParams *types.GetAllP
 		TotalCount: len(projects),
 		Page:       1,
 		TotalPages: 1,
+	}, nil
+}
+
+// GetProjectById retrieves a project by its ID with metadata.
+func (s *Service) GetProjectById(ctx context.Context, projectID string, userAuth types.UserAuthorizationResponse, logger *zap.Logger) (*model.GetProjectModel, error) {
+	// Get the base project from DB
+	projectRow, err := s.dbService.GetProjectByID(ctx, projectID, logger)
+	if err != nil {
+		return nil, err
+	}
+
+	// Check if user is assigned to the project
+	isAssigned, err := s.dbService.IsUserAssigned(ctx, projectID, userAuth.User.ID, logger)
+	if err != nil {
+		return nil, err
+	}
+	if !isAssigned {
+		return nil, errors.New(errorutils.ErrMsgUserNotAssignedToProject)
+	}
+
+	// Get lock information
+	_, lockedByUserID, err := s.dbService.GetProjectLockUserID(ctx, projectID)
+	if err != nil && err.Error() != errorutils.ErrMsgProjectNotFound {
+		return nil, err
+	}
+
+	lockedByEmail := ""
+	if lockedByUserID != "" {
+		lockedByEmail, err = s.dbService.GetUserEmailByID(ctx, lockedByUserID)
+		if err != nil {
+			// Log but don't fail - just leave email empty
+			logger.Warn("Failed to get locked user email", zap.Error(err), zap.String("user_id", lockedByUserID))
+		}
+	}
+
+	// Get starred status - query from project_user table
+	// TODO: Add a DB method to get starred status
+	isStarred := false
+
+	return &model.GetProjectModel{
+		Project:           *projectRow,
+		IsStarred:         isStarred,
+		LockedByUserEmail: lockedByEmail,
 	}, nil
 }
 

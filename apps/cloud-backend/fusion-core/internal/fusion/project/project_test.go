@@ -128,6 +128,14 @@ func (m *mockDBService) GetProjectByID(ctx context.Context, projectID string, lo
 	return args.Get(0).(*models.Project), args.Error(1)
 }
 
+func (m *mockDBService) SelectByID(ctx context.Context, projectID string, userID string, logger *zap.Logger) (*types.Project, error) {
+	args := m.Called(ctx, projectID, userID, logger)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*types.Project), args.Error(1)
+}
+
 func (m *mockDBService) StarProject(ctx context.Context, projectID, userID string, logger *zap.Logger) error {
 	args := m.Called(ctx, projectID, userID, logger)
 	return args.Error(0)

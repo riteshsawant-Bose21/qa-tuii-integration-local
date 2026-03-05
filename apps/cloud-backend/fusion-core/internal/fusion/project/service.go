@@ -23,6 +23,7 @@ type DatabaseService interface {
 	Insert(ctx context.Context, project *types.ProjectCreateRequest, accountID string, tx model.DBTxExecutor, logger *zap.Logger) (string, error)
 	InsertProjectUser(ctx context.Context, projectID, userID string, tx model.DBTxExecutor, logger *zap.Logger) error
 	SelectAll(ctx context.Context, queryParams *types.GetAllProjectsParams, userAuth types.UserAuthorizationResponse, logger *zap.Logger) ([]types.Project, error)
+	SelectByID(ctx context.Context, projectID string, userId string, logger *zap.Logger) (*types.Project, error)
 	Update(ctx context.Context, projectRow *models.Project, project *types.ProjectUpdateRequest, logger *zap.Logger) error
 	Delete(ctx context.Context, projectRow *models.Project, logger *zap.Logger) error
 	AssignUser(ctx context.Context, projectID, userID string, logger *zap.Logger) error

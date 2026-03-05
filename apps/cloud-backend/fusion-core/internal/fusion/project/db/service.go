@@ -243,8 +243,8 @@ func (s *Service) SelectAll(ctx context.Context, queryParams *types.GetAllProjec
 	return projectsArray, nil
 }
 
-// SelectById retrieves a single project by ID with user-specific metadata.
-func (s *Service) SelectById(ctx context.Context, projectID string, userID string, logger *zap.Logger) (*types.Project, error) {
+// SelectByID retrieves a single project by ID with user-specific metadata.
+func (s *Service) SelectByID(ctx context.Context, projectID string, userID string, logger *zap.Logger) (*types.Project, error) {
 	query := `
 		SELECT p.id, p.name, p.description, p.venue, 
 		       p.environment_type, p.project_phase, p.application, p.budget_amount, 
