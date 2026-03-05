@@ -13,7 +13,10 @@ import (
 )
 
 const (
-	firmwareArtifactPathFormat = "%s/%s/%s.zip"
+	firmwareBundleFileNameFormat = "bundle-%s.zip"
+	firmwareBundlePathFormat     = "bundles/%s/%s"
+
+	firmwareBundleDownloadUrlTTL = 2 * time.Hour
 
 	ChannelStable = "stable"
 )
@@ -191,8 +194,8 @@ func (s *Service) GetBundleDownloadURL(ctx context.Context, bundleID string, log
 		return nil, fmt.Errorf("failed to generate bundle artifact key: %w", err)
 	}
 
-	// Generate presigned GET URL with a 5-hour TTL
-	downloadURL, err := s.presigner.PresignGet(ctx, objectKey, 5*time.Hour, logger)
+	// Generate presigned GET URL with a n-hour TTL
+	downloadURL, err := s.presigner.PresignGet(ctx, objectKey, firmwareBundleDownloadUrlTTL, logger)
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate download URL: %v", err)
 	}
@@ -221,6 +224,6 @@ func (s *Service) generateBundleArtifactKey(version string) (string, error) {
 		channel = parsedVersion.PrereleaseFlag
 	}
 
-	fileName := fmt.Sprintf("fusion-bundle-%s.zip", version)
-	return fmt.Sprintf("bundles/%s/%s", channel, fileName), nil
+	fileName := fmt.Sprintf(firmwareBundleFileNameFormat, version)
+	return fmt.Sprintf(firmwareBundlePathFormat, channel, fileName), nil
 }
