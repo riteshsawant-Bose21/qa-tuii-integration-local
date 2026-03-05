@@ -28,7 +28,15 @@
                         { "name": "usb_storage" },
                         { "name": "usb_connected" }
                     ]
-                },
+                }
+            ]
+        },
+        {
+            "name": "bt_control",
+            "property_settings": [
+                { "name": "period_ms", "value": 500 }
+            ],
+            "blocks": [
                 {
                     "name": "bt_control",
                     "module": "bt_control"

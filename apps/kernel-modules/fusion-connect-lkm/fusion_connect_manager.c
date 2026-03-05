@@ -8,8 +8,6 @@
 #include <linux/ktime.h>
 #include <linux/kthread.h>
 #include <linux/sched.h>
-#include <linux/sched/types.h>
-#include <linux/sched/types.h>
 #include <linux/cpumask.h>
 #include <linux/smp.h>
 #include <linux/math64.h>
@@ -36,9 +34,6 @@ static struct kthread_worker *process_worker;
 static struct task_struct    *process_thread;
 static struct kthread_work    process_work;
 static atomic_t               process_pending;
-static int                    worker_rt_prio = 70;
-module_param(worker_rt_prio, int, 0644);
-MODULE_PARM_DESC(worker_rt_prio, "RT priority for fusion-cn kthread (0 disables)");
 
 static struct fusion_cn_manager *g_fusion_cn_mgr;
 

@@ -59,8 +59,6 @@ struct fusion_gpt
 	u32 next_ocr1;
 	u8  frac;
 
-	/* direct tick callback from IRQ context */
-
 	u32 last32;
 	u64 hi;
 	seqlock_t ticks_sl;
@@ -181,9 +179,6 @@ void fusion_gpt_unregister_client(void)
 	/* Make readers see NULL first */
 	WRITE_ONCE(g->ops, NULL);
 	smp_mb(); /* publish NULL before we flush */
-
-	/* Ensure any queued work that might have captured a non-NULL ops is done */
-	/* no irq_work */
 
 	if (g->ops_owner)
 		module_put(g->ops_owner);
@@ -549,7 +544,7 @@ static int gpt_probe(struct platform_device *pdev)
 	}
 
 	platform_set_drvdata(pdev, g);
-	/* no irq_work */
+	
 	mutex_init(&g->ops_lock);
 
 	ret = devm_request_irq(&pdev->dev, g->irq, gpt_irq, IRQF_NO_THREAD,
