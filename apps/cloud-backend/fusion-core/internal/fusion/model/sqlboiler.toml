@@ -1,9 +1,9 @@
 # sqlboiler.toml
 [psql]
-  dbname = "postgres"
-  host = "localhost"
+  dbname = ""
+  host = ""
   port = 5432
-  user = "postgres"
-  pass = "admin123"
+  user = ""
+  pass = ""
   sslmode = "disable"
   schema = "public"

@@ -96,7 +96,6 @@ var AppUserWhere = struct {
 var AppUserRels = struct {
 	Account              string
 	AccountTypeRole      string
-	UserUserProfile      string
 	UserUserSetting      string
 	ApprovedByBundles    string
 	LockedByUserProjects string
@@ -104,7 +103,6 @@ var AppUserRels = struct {
 }{
 	Account:              "Account",
 	AccountTypeRole:      "AccountTypeRole",
-	UserUserProfile:      "UserUserProfile",
 	UserUserSetting:      "UserUserSetting",
 	ApprovedByBundles:    "ApprovedByBundles",
 	LockedByUserProjects: "LockedByUserProjects",
@@ -115,7 +113,6 @@ var AppUserRels = struct {
 type appUserR struct {
 	Account              *Account         `boil:"Account" json:"Account" toml:"Account" yaml:"Account"`
 	AccountTypeRole      *AccountTypeRole `boil:"AccountTypeRole" json:"AccountTypeRole" toml:"AccountTypeRole" yaml:"AccountTypeRole"`
-	UserUserProfile      *UserProfile     `boil:"UserUserProfile" json:"UserUserProfile" toml:"UserUserProfile" yaml:"UserUserProfile"`
 	UserUserSetting      *UserSetting     `boil:"UserUserSetting" json:"UserUserSetting" toml:"UserUserSetting" yaml:"UserUserSetting"`
 	ApprovedByBundles    BundleSlice      `boil:"ApprovedByBundles" json:"ApprovedByBundles" toml:"ApprovedByBundles" yaml:"ApprovedByBundles"`
 	LockedByUserProjects ProjectSlice     `boil:"LockedByUserProjects" json:"LockedByUserProjects" toml:"LockedByUserProjects" yaml:"LockedByUserProjects"`
@@ -157,22 +154,6 @@ func (r *appUserR) GetAccountTypeRole() *AccountTypeRole {
 	}
 
 	return r.AccountTypeRole
-}
-
-func (o *AppUser) GetUserUserProfile() *UserProfile {
-	if o == nil {
-		return nil
-	}
-
-	return o.R.GetUserUserProfile()
-}
-
-func (r *appUserR) GetUserUserProfile() *UserProfile {
-	if r == nil {
-		return nil
-	}
-
-	return r.UserUserProfile
 }
 
 func (o *AppUser) GetUserUserSetting() *UserSetting {
@@ -577,17 +558,6 @@ func (o *AppUser) AccountTypeRole(mods ...qm.QueryMod) accountTypeRoleQuery {
 	return AccountTypeRoles(queryMods...)
 }
 
-// UserUserProfile pointed to by the foreign key.
-func (o *AppUser) UserUserProfile(mods ...qm.QueryMod) userProfileQuery {
-	queryMods := []qm.QueryMod{
-		qm.Where("\"user_id\" = ?", o.ID),
-	}
-
-	queryMods = append(queryMods, mods...)
-
-	return UserProfiles(queryMods...)
-}
-
 // UserUserSetting pointed to by the foreign key.
 func (o *AppUser) UserUserSetting(mods ...qm.QueryMod) userSettingQuery {
 	queryMods := []qm.QueryMod{
@@ -873,123 +843,6 @@ func (appUserL) LoadAccountTypeRole(ctx context.Context, e boil.ContextExecutor,
 					foreign.R = &accountTypeRoleR{}
 				}
 				foreign.R.AppUsers = append(foreign.R.AppUsers, local)
-				break
-			}
-		}
-	}
-
-	return nil
-}
-
-// LoadUserUserProfile allows an eager lookup of values, cached into the
-// loaded structs of the objects. This is for a 1-1 relationship.
-func (appUserL) LoadUserUserProfile(ctx context.Context, e boil.ContextExecutor, singular bool, maybeAppUser interface{}, mods queries.Applicator) error {
-	var slice []*AppUser
-	var object *AppUser
-
-	if singular {
-		var ok bool
-		object, ok = maybeAppUser.(*AppUser)
-		if !ok {
-			object = new(AppUser)
-			ok = queries.SetFromEmbeddedStruct(&object, &maybeAppUser)
-			if !ok {
-				return errors.New(fmt.Sprintf("failed to set %T from embedded struct %T", object, maybeAppUser))
-			}
-		}
-	} else {
-		s, ok := maybeAppUser.(*[]*AppUser)
-		if ok {
-			slice = *s
-		} else {
-			ok = queries.SetFromEmbeddedStruct(&slice, maybeAppUser)
-			if !ok {
-				return errors.New(fmt.Sprintf("failed to set %T from embedded struct %T", slice, maybeAppUser))
-			}
-		}
-	}
-
-	args := make(map[interface{}]struct{})
-	if singular {
-		if object.R == nil {
-			object.R = &appUserR{}
-		}
-		args[object.ID] = struct{}{}
-	} else {
-		for _, obj := range slice {
-			if obj.R == nil {
-				obj.R = &appUserR{}
-			}
-
-			args[obj.ID] = struct{}{}
-		}
-	}
-
-	if len(args) == 0 {
-		return nil
-	}
-
-	argsSlice := make([]interface{}, len(args))
-	i := 0
-	for arg := range args {
-		argsSlice[i] = arg
-		i++
-	}
-
-	query := NewQuery(
-		qm.From(`user_profile`),
-		qm.WhereIn(`user_profile.user_id in ?`, argsSlice...),
-	)
-	if mods != nil {
-		mods.Apply(query)
-	}
-
-	results, err := query.QueryContext(ctx, e)
-	if err != nil {
-		return errors.Wrap(err, "failed to eager load UserProfile")
-	}
-
-	var resultSlice []*UserProfile
-	if err = queries.Bind(results, &resultSlice); err != nil {
-		return errors.Wrap(err, "failed to bind eager loaded slice UserProfile")
-	}
-
-	if err = results.Close(); err != nil {
-		return errors.Wrap(err, "failed to close results of eager load for user_profile")
-	}
-	if err = results.Err(); err != nil {
-		return errors.Wrap(err, "error occurred during iteration of eager loaded relations for user_profile")
-	}
-
-	if len(userProfileAfterSelectHooks) != 0 {
-		for _, obj := range resultSlice {
-			if err := obj.doAfterSelectHooks(ctx, e); err != nil {
-				return err
-			}
-		}
-	}
-
-	if len(resultSlice) == 0 {
-		return nil
-	}
-
-	if singular {
-		foreign := resultSlice[0]
-		object.R.UserUserProfile = foreign
-		if foreign.R == nil {
-			foreign.R = &userProfileR{}
-		}
-		foreign.R.User = object
-	}
-
-	for _, local := range slice {
-		for _, foreign := range resultSlice {
-			if local.ID == foreign.UserID {
-				local.R.UserUserProfile = foreign
-				if foreign.R == nil {
-					foreign.R = &userProfileR{}
-				}
-				foreign.R.User = local
 				break
 			}
 		}
@@ -1545,56 +1398,6 @@ func (o *AppUser) SetAccountTypeRole(ctx context.Context, exec boil.ContextExecu
 		related.R.AppUsers = append(related.R.AppUsers, o)
 	}
 
-	return nil
-}
-
-// SetUserUserProfile of the appUser to the related item.
-// Sets o.R.UserUserProfile to related.
-// Adds o to related.R.User.
-func (o *AppUser) SetUserUserProfile(ctx context.Context, exec boil.ContextExecutor, insert bool, related *UserProfile) error {
-	var err error
-
-	if insert {
-		related.UserID = o.ID
-
-		if err = related.Insert(ctx, exec, boil.Infer()); err != nil {
-			return errors.Wrap(err, "failed to insert into foreign table")
-		}
-	} else {
-		updateQuery := fmt.Sprintf(
-			"UPDATE \"user_profile\" SET %s WHERE %s",
-			strmangle.SetParamNames("\"", "\"", 1, []string{"user_id"}),
-			strmangle.WhereClause("\"", "\"", 2, userProfilePrimaryKeyColumns),
-		)
-		values := []interface{}{o.ID, related.ID}
-
-		if boil.IsDebug(ctx) {
-			writer := boil.DebugWriterFrom(ctx)
-			fmt.Fprintln(writer, updateQuery)
-			fmt.Fprintln(writer, values)
-		}
-		if _, err = exec.ExecContext(ctx, updateQuery, values...); err != nil {
-			return errors.Wrap(err, "failed to update foreign table")
-		}
-
-		related.UserID = o.ID
-	}
-
-	if o.R == nil {
-		o.R = &appUserR{
-			UserUserProfile: related,
-		}
-	} else {
-		o.R.UserUserProfile = related
-	}
-
-	if related.R == nil {
-		related.R = &userProfileR{
-			User: o,
-		}
-	} else {
-		related.R.User = o
-	}
 	return nil
 }
 

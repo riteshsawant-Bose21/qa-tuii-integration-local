@@ -72,7 +72,6 @@ const (
 	ProductTypeEnumController string = "controller"
 	ProductTypeEnumIoEndpoint string = "io_endpoint"
 	ProductTypeEnumAccessory  string = "accessory"
-	ProductTypeEnumUnknown    string = "unknown"
 )
 
 func AllProductTypeEnum() []string {
@@ -83,7 +82,6 @@ func AllProductTypeEnum() []string {
 		ProductTypeEnumController,
 		ProductTypeEnumIoEndpoint,
 		ProductTypeEnumAccessory,
-		ProductTypeEnumUnknown,
 	}
 }
 
