@@ -182,13 +182,6 @@ func (h *ProjectHandler) GetProjectByID(ctx *gin.Context) {
 		return
 	}
 
-
-	// Validate query parameters
-	// if err := validation.ValidateGetAllProjectsParams(&params); err != nil {
-	// 	response.BadRequest(ctx, err.Error())
-	// 	return
-	// }
-
 	res, err := h.project.GetProjectById(ctx, projectID, *user, logger)
 	if err != nil {
 		response.InternalError(ctx)
