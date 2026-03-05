@@ -297,7 +297,7 @@ func TestApproveBundle(t *testing.T) {
 
 			h := NewFirmwareUpdateHandler(mockFirmware)
 
-			w, c := setupTestContext(http.MethodPost, "/firmware/bundles/"+tt.bundleID+"/approve", nil)
+			w, c := setupTestContext(http.MethodPut, "/firmware/bundles/"+tt.bundleID+"/approve", nil)
 			c.Params = gin.Params{gin.Param{Key: "bundleID", Value: tt.bundleID}}
 			if !tt.setupLogger {
 				c.Keys = map[string]interface{}{}

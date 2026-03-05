@@ -123,7 +123,7 @@ func (a *API) registerRoutes() {
 	firmwareUpdate.Use(accessControl.GlobalAccessControlMiddleware())
 	{
 		firmwareUpdate.GET(constants.EndpointFirmwareBundles, firmwareHandler.ListBundles)
-		firmwareUpdate.POST(constants.EndpointApproveBundle, firmwareHandler.ApproveBundle)
+		firmwareUpdate.PUT(constants.EndpointApproveBundle, firmwareHandler.ApproveBundle)
 		firmwareUpdate.GET(constants.EndpointFirmwareUpdateCheck, firmwareHandler.CheckForUpdate)
 		firmwareUpdate.GET(constants.EndpointBundleDownload, firmwareHandler.GetBundleDownloadURL)
 		firmwareUpdate.POST(constants.EndpointLogBundleUpdateStatus, firmwareHandler.LogBundleUpdateStatus)

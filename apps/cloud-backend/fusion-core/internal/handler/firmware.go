@@ -136,7 +136,7 @@ func (h *FirmwareUpdateHandler) ListBundles(c *gin.Context) {
 // @Failure 400 {object} types.ErrorResponse "Invalid bundleID or request payload"
 // @Failure 404 {object} types.ErrorResponse "Bundle not found"
 // @Failure 500 {object} types.ErrorResponse "Internal server error"
-// @Router /firmware/bundles/{bundleID}/approve [post]
+// @Router /firmware/bundles/{bundleID}/approve [put]
 func (h *FirmwareUpdateHandler) ApproveBundle(c *gin.Context) {
 	bundleID := c.Param("bundleID")
 	if !validation.IsValidUUID(bundleID) {
