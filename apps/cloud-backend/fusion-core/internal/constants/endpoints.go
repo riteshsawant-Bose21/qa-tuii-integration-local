@@ -71,6 +71,6 @@ const (
 	EndpointFirmwareBundles       = "/bundles"
 	EndpointApproveBundle         = "/bundles/:bundleID/approve"
 	EndpointFirmwareUpdateCheck   = "/updates/check"
-	EndpointBundleDownload        = "/bundles/:bundleID/download"
+	EndpointBundleDownload        = "/bundles/:bundleID/request-download-url"
 	EndpointLogBundleUpdateStatus = "/updates/status"
 )

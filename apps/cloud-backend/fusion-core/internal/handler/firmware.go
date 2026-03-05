@@ -254,7 +254,7 @@ func (h *FirmwareUpdateHandler) CheckForUpdate(c *gin.Context) {
 // @Failure 403 {object} types.ErrorResponse "Bundle not approved for download"
 // @Failure 404 {object} types.ErrorResponse "Firmware bundle not found"
 // @Failure 500 {object} types.ErrorResponse "Internal server error"
-// @Router /firmware/bundles/{bundleID}/download [get]
+// @Router /firmware/bundles/{bundleID}/request-download-url [get]
 func (h *FirmwareUpdateHandler) GetBundleDownloadURL(c *gin.Context) {
 
 	bundleID := c.Param("bundleID")
