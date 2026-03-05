@@ -111,41 +111,29 @@ func (s *Service) CheckForUpdate(ctx context.Context, req *types.CheckForUpdateR
 	}
 
 	if compatibleBundle != nil {
-		// A compatible bundle was found. Check if the firmware requirement is met.
-		currentFirmwareSemver, err := validation.ParseSemanticVersion(req.CurrentFirmwareVersion)
-		if err != nil {
-			return nil, fmt.Errorf("invalid current firmware version: %w", err)
-		}
-		minPrevFirmwareSemver, err := validation.ParseSemanticVersion(compatibleBundle.MinPrevVersion)
-		if err != nil {
-			return nil, fmt.Errorf("invalid min_prev_version in bundle %s: %w", compatibleBundle.Version, err)
+		// Compatible bundle found - database query already verified all compatibility constraints
+		response := &types.CheckForUpdateResponse{
+			UpdateAvailable:      true,
+			AppUpdateRequired:    false,
+			BundleID:             compatibleBundle.ID,
+			Version:              compatibleBundle.Version,
+			MinPrevVersion:       compatibleBundle.MinPrevVersion,
+			MinDesktopAppVersion: compatibleBundle.MinDesktopAppVersion,
+			CreatedAt:            &compatibleBundle.CreatedAt,
 		}
 
-		if validation.IsVersionGreaterOrEqual(currentFirmwareSemver, minPrevFirmwareSemver) {
-			// Firmware version is sufficient. Update is available.
-			response := &types.CheckForUpdateResponse{
-				UpdateAvailable:      true,
-				AppUpdateRequired:    false,
-				BundleID:             compatibleBundle.ID,
-				Version:              compatibleBundle.Version,
-				MinPrevVersion:       compatibleBundle.MinPrevVersion,
-				MinDesktopAppVersion: compatibleBundle.MinDesktopAppVersion,
-				CreatedAt:            &compatibleBundle.CreatedAt,
-			}
-
-			// Handle nullable fields
-			if compatibleBundle.ReleaseNotes.Valid {
-				response.ReleaseNotes = compatibleBundle.ReleaseNotes.String
-			}
-			if compatibleBundle.ManifestData.Valid {
-				var manifestData map[string]interface{}
-				if err := json.Unmarshal(compatibleBundle.ManifestData.JSON, &manifestData); err == nil {
-					response.ManifestData = manifestData
-				}
-			}
-
-			return response, nil
+		// Handle nullable fields
+		if compatibleBundle.ReleaseNotes.Valid {
+			response.ReleaseNotes = compatibleBundle.ReleaseNotes.String
 		}
+		if compatibleBundle.ManifestData.Valid {
+			var manifestData map[string]interface{}
+			if err := json.Unmarshal(compatibleBundle.ManifestData.JSON, &manifestData); err == nil {
+				response.ManifestData = manifestData
+			}
+		}
+
+		return response, nil
 	}
 
 	// 2. If no directly compatible bundle is found, or if firmware is too old,
