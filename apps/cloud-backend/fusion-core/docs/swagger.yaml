@@ -1060,34 +1060,6 @@ paths:
       summary: Get Firmware Bundle Download URL
       tags:
       - Firmware Update - Client API
-  /firmware/bundles/updates/status:
-    post:
-      consumes:
-      - application/json
-      description: Records the success or failure of a firmware bundle update installation.
-      parameters:
-      - description: Bundle update status details
-        in: body
-        name: request
-        required: true
-        schema:
-          $ref: '#/definitions/types.LogBundleUpdateStatusPayload'
-      produces:
-      - application/json
-      responses:
-        "204":
-          description: Update status logged successfully
-        "400":
-          description: Invalid request payload
-          schema:
-            $ref: '#/definitions/types.ErrorResponse'
-        "500":
-          description: Internal server error
-          schema:
-            $ref: '#/definitions/types.ErrorResponse'
-      summary: Log Bundle Update Status
-      tags:
-      - Firmware Update - Client API
   /firmware/updates/check:
     get:
       description: |-
@@ -1147,6 +1119,34 @@ paths:
           schema:
             $ref: '#/definitions/types.ErrorResponse'
       summary: Check for Firmware Updates
+      tags:
+      - Firmware Update - Client API
+  /firmware/updates/status:
+    post:
+      consumes:
+      - application/json
+      description: Records the success or failure of a firmware bundle update installation.
+      parameters:
+      - description: Bundle update status details
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/types.LogBundleUpdateStatusPayload'
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: Update status logged successfully
+        "400":
+          description: Invalid request payload
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+      summary: Log Bundle Update Status
       tags:
       - Firmware Update - Client API
   /organization/role-management:

@@ -185,49 +185,6 @@ const docTemplate = `{
                 }
             }
         },
-        "/firmware/bundles/updates/status": {
-            "post": {
-                "description": "Records the success or failure of a firmware bundle update installation.",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Firmware Update - Client API"
-                ],
-                "summary": "Log Bundle Update Status",
-                "parameters": [
-                    {
-                        "description": "Bundle update status details",
-                        "name": "request",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/types.LogBundleUpdateStatusPayload"
-                        }
-                    }
-                ],
-                "responses": {
-                    "204": {
-                        "description": "Update status logged successfully"
-                    },
-                    "400": {
-                        "description": "Invalid request payload",
-                        "schema": {
-                            "$ref": "#/definitions/types.ErrorResponse"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal server error",
-                        "schema": {
-                            "$ref": "#/definitions/types.ErrorResponse"
-                        }
-                    }
-                }
-            }
-        },
         "/firmware/bundles/{bundleID}/approve": {
             "post": {
                 "security": [
@@ -374,6 +331,49 @@ const docTemplate = `{
                         "schema": {
                             "$ref": "#/definitions/types.CheckForUpdateResponse"
                         }
+                    },
+                    "400": {
+                        "description": "Invalid request payload",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/firmware/updates/status": {
+            "post": {
+                "description": "Records the success or failure of a firmware bundle update installation.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Firmware Update - Client API"
+                ],
+                "summary": "Log Bundle Update Status",
+                "parameters": [
+                    {
+                        "description": "Bundle update status details",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/types.LogBundleUpdateStatusPayload"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "Update status logged successfully"
                     },
                     "400": {
                         "description": "Invalid request payload",
