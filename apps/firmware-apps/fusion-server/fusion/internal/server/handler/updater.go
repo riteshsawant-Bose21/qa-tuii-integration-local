@@ -5,8 +5,8 @@ import (
 	"crypto/sha256"
 	"errors"
 	"fmt"
-	"fusion/internal/api"
 	"fusion-services-core/logging"
+	"fusion/internal/api"
 	"io"
 	"os"
 	"os/exec"
@@ -339,8 +339,8 @@ func (u *Updater) findBackups(binaryPath string) ([]struct {
 
 	backupPrefix := base + ".backup."
 	for _, file := range files {
-		if strings.HasPrefix(file.Name(), backupPrefix) {
-			timestampStr := strings.TrimPrefix(file.Name(), backupPrefix)
+		if after, ok := strings.CutPrefix(file.Name(), backupPrefix); ok {
+			timestampStr := after
 			timestamp, err := strconv.ParseInt(timestampStr, 10, 64)
 			if err != nil {
 				logging.GetLogger().Warn("Ignoring backup with invalid timestamp during rollback: %s", file.Name())
@@ -457,8 +457,8 @@ func (u *Updater) cleanupOldBackups(keep int) error {
 
 	backupPrefix := base + ".backup."
 	for _, file := range files {
-		if strings.HasPrefix(file.Name(), backupPrefix) {
-			timestampStr := strings.TrimPrefix(file.Name(), backupPrefix)
+		if after, ok := strings.CutPrefix(file.Name(), backupPrefix); ok {
+			timestampStr := after
 			timestamp, err := strconv.ParseInt(timestampStr, 10, 64)
 			if err != nil {
 				logging.GetLogger().Warn("Ignoring backup with invalid timestamp: %s", file.Name())

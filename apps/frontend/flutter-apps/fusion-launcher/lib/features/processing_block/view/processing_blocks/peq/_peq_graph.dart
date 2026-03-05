@@ -5,14 +5,9 @@ class _PeqGraphSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: context.colorScheme.elevation2,
-        borderRadius: BorderRadius.horizontal(
-          left: Radius.circular(context.mediumRadius),
-        ),
-      ),
-      padding: const EdgeInsets.all(8),
+    return PBSection(
+      type: PBSectionType.left,
+
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.end,
         children: <Widget>[
@@ -25,7 +20,7 @@ class _PeqGraphSection extends StatelessWidget {
           FusionNeumorphicButton(
             text: "Add Band",
             width: 100,
-            // height: 25,
+            padding: const EdgeInsets.symmetric(vertical: 10),
             textStyle: context.textTheme.bodySmall,
             onTap: () {
               context.read<PEQController>().addBand();

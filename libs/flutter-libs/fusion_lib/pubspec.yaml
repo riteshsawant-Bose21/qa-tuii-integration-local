@@ -42,6 +42,9 @@ dependencies:
   media_kit_libs_linux: any
   media_kit_libs_windows_audio: any
 
+  #For mdns device searching
+  multicast_dns: 0.3.3
+
 
 dev_dependencies:
   flutter_test:

@@ -206,6 +206,7 @@ class LocalProjectManager {
         "lastUploadedAt": null,
         "isCloudInstance": false,
         "is_deleted": false,
+        "metadata": projectDetails.metadata,
         "floors": [
           {
             "id": "FLOOR${FusionUtils.shortStringUUID()}",

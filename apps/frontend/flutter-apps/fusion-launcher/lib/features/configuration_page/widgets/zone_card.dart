@@ -1,15 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/features/configuration_page/widgets/sub_zone_card.dart';
-import 'package:fusion_launcher/features/processing_block/view/functions/source_select.dart';
+import 'package:fusion_launcher/features/zone_functions/source_select.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
 import '../../../core/constants/assets_constants.dart';
 import '../../../core/service_locator.dart';
 import '../../configuration/presentation/viewmodel/project_view_model.dart';
-import '../../processing_block/view/functions/source_matrix.dart';
-import '../../processing_block/view/functions/source_mix.dart';
 import '../../processing_block/view/processing_chain_view.dart';
+import '../../zone_functions/source_matrix.dart';
+import '../../zone_functions/source_mix.dart';
 
 class ZoneCard extends StatefulWidget {
   final String zoneId;
