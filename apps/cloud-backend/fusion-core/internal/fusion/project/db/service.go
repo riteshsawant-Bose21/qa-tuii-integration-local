@@ -243,6 +243,70 @@ func (s *Service) SelectAll(ctx context.Context, queryParams *types.GetAllProjec
 	return projectsArray, nil
 }
 
+// SelectById retrieves a single project by ID with user-specific metadata.
+func (s *Service) SelectById(ctx context.Context, projectID string, userID string, logger *zap.Logger) (*types.Project, error) {
+	query := `
+		SELECT p.id, p.name, p.description, p.venue, 
+		       p.environment_type, p.project_phase, p.application, p.budget_amount, 
+		       p.currency, p.is_archived, p.is_deleted, p.locked_by_user_id, 
+		       p.created_at, p.updated_at, pu.is_starred, u.email as locked_by_user_email
+		FROM project p
+		INNER JOIN project_user pu ON p.id = pu.project_id
+		LEFT JOIN app_user u ON p.locked_by_user_id = u.id
+		WHERE p.id = $1 AND pu.user_id = $2 AND p.is_deleted = $3
+	`
+
+	var projectRow model.Project
+	var isStarred bool
+	var lockedByUserEmail sql.NullString
+
+	err := s.db.QueryRowContext(ctx, query, projectID, userID, false).Scan(
+		&projectRow.ID,
+		&projectRow.Name,
+		&projectRow.Description,
+		&projectRow.Venue,
+		&projectRow.EnvironmentType,
+		&projectRow.ProjectPhase,
+		&projectRow.Application,
+		&projectRow.BudgetAmount,
+		&projectRow.Currency,
+		&projectRow.IsArchived,
+		&projectRow.IsDeleted,
+		&projectRow.LockedByUserID,
+		&projectRow.CreatedAt,
+		&projectRow.UpdatedAt,
+		&isStarred,
+		&lockedByUserEmail,
+	)
+
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, errors.New(errorutils.ErrMsgProjectNotFound)
+		}
+		logger.Error(errorutils.ErrMsgFailedToGetProject,
+			zap.Error(err),
+			zap.String("project_id", projectID),
+			zap.String("user_id", userID))
+		return nil, errors.New(errorutils.ErrMsgFailedToGetProject)
+	}
+
+	projectWithMetadata := customModel.GetProjectModel{
+		Project:           projectRow,
+		IsStarred:         isStarred,
+		LockedByUserEmail: lockedByUserEmail.String,
+	}
+
+	project, err := newProject(&projectWithMetadata)
+	if err != nil {
+		logger.Error(errorutils.ErrMsgFailedToParseRow,
+			zap.Error(err),
+			zap.String("project_id", projectID))
+		return nil, errors.New(errorutils.ErrMsgFailedToParseRow)
+	}
+
+	return project, nil
+}
+
 // Update updates an existing project in the database.
 func (s *Service) Update(ctx context.Context, projectRow *model.Project, project *types.ProjectUpdateRequest, logger *zap.Logger) error {
 

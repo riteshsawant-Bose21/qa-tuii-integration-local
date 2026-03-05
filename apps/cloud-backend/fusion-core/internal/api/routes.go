@@ -44,6 +44,7 @@ func (a *API) registerRoutes() {
 
 		projects.POST("", projectHandler.CreateProject)
 		projects.GET("", projectHandler.GetAllProjects)
+		projects.GET(constants.EndpointProjectByID, projectHandler.GetProjectByID)
 		projects.PATCH(constants.EndpointProjectByID, projectHandler.UpdateProject)
 		projects.DELETE(constants.EndpointProjectByID, projectHandler.DeleteProject)
 		projects.PUT(constants.EndpointProjectAssignUser, projectHandler.AssignUserToProject)
