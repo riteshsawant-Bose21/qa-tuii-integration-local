@@ -267,7 +267,7 @@ func (c *Cluster) SetVIP(w http.ResponseWriter, r *http.Request) {
 		}()
 	}
 
-	w.WriteHeader(http.StatusNoContent)
+	w.WriteHeader(http.StatusAccepted)
 }
 
 func (c *Cluster) UpdateVIPLocal(w http.ResponseWriter, r *http.Request) {
@@ -304,7 +304,7 @@ func (c *Cluster) ReloadVIP(w http.ResponseWriter, r *http.Request) {
 		}
 	}()
 
-	w.WriteHeader(http.StatusNoContent)
+	w.WriteHeader(http.StatusAccepted)
 }
 
 func (c *Cluster) ReloadVIPLocal(w http.ResponseWriter, r *http.Request) {
@@ -580,6 +580,50 @@ func (c *Cluster) ResetDevice(w http.ResponseWriter, r *http.Request) {
 		}
 		w.WriteHeader(http.StatusNoContent)
 	}
+	go func() {
+		// Reboot system outside of request after updating all the nodes
+		if err := postGenericToAdminLast(c, routes.ClusterRebootEndpoint, c.rebootSystem); err != nil {
+			// Log the error. Don't respond to client because it's async
+			logging.GetLogger().Error("Failed to reboot system: %v", err)
+		}
+	}()
+
+	w.WriteHeader(http.StatusNoContent)
+
+}
+
+
+func (c *Cluster) RebootSystem(w http.ResponseWriter, r *http.Request) {
+	if !utils.RequirePost(w, r) {
+		return
+	}
+	defer r.Body.Close()
+
+	go func() {
+		// Reboot system outside of request after updating all the nodes
+		if err := postGenericToAdminLast(c, routes.ClusterRebootEndpoint, c.rebootSystem); err != nil {
+			// Log the error. Don't respond to client because it's async
+			logging.GetLogger().Error("Failed to reboot system: %v", err)
+		}
+	}()
+
+	w.WriteHeader(http.StatusNoContent)
+
+}
+
+func (c *Cluster) RebootSystemLocal(w http.ResponseWriter, r *http.Request) {
+	if !utils.RequirePost(w, r) {
+		return
+	}
+	defer r.Body.Close()
+
+	if err := c.rebootSystem(); err != nil {
+		logging.GetLogger().Error("Failed to reboot local system: %v", err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusAccepted)
 }
 
 // updateVIP updates keepalived configuration with the new VIP but DOES NOT restart keepalived.
@@ -602,6 +646,14 @@ func (c *Cluster) updateVIP(vipValue string) error {
 func (c *Cluster) reloadVIP() error {
 
 	if err := c.restartKeepalived(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (c *Cluster) rebootSystem() error {
+	if err := c.restartSystem(); err != nil {
 		return err
 	}
 

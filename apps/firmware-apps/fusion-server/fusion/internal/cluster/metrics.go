@@ -237,6 +237,12 @@ func (mc *MetricsCollector) GetClusterStatus(w http.ResponseWriter, r *http.Requ
 }
 
 func (mc *MetricsCollector) GetHealthCheck(w http.ResponseWriter, r *http.Request) {
+	type healthCheckResponse struct {
+		Status        string     `json:"status"`
+		NodeHealth    NodeHealth `json:"node_health"`
+		ClusterHealth float64    `json:"cluster_health"`
+	}
+
 	mc.mutex.RLock()
 	health := mc.metrics.NodeHealth
 	clusterHealth := mc.clusterInfo.ClusterHealth
@@ -249,10 +255,10 @@ func (mc *MetricsCollector) GetHealthCheck(w http.ResponseWriter, r *http.Reques
 	}
 
 	w.Header().Set(api.ContentType, api.JsonMIMEType)
-	json.NewEncoder(w).Encode(map[string]any{
-		"status":         status,
-		"node_health":    health,
-		"cluster_health": clusterHealth,
+	json.NewEncoder(w).Encode(healthCheckResponse{
+		Status:        status,
+		NodeHealth:    health,
+		ClusterHealth: clusterHealth,
 	})
 }
 

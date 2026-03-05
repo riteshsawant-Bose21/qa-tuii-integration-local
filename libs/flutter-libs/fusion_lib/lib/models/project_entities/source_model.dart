@@ -9,7 +9,7 @@ enum SourceConnectionType {
   aes67input("Aes67"),
   bluetooth("Bluetooth"),
   usb("USB"),
-  audioJack("Audio Jack"),
+  audioJack("RCA/Jack"),
   xlr("XLR"),
   hdmi("HDMI");
 

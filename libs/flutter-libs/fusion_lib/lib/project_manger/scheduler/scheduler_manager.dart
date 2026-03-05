@@ -41,4 +41,11 @@ extension SchedulerManager on ProjectManager {
       schedulerConfig: projectService!.schedulerConfig.copyWith(reorderedList),
     );
   }
+
+  ScheduleConfig? getScheduleById(String scheduleId) {
+    if (projectService == null) {
+      throw Exception("Project service is not initialized.");
+    }
+    return projectService!.getScheduleById(scheduleId);
+  }
 }
