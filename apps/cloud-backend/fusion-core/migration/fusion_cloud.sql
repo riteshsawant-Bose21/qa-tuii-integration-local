@@ -229,7 +229,7 @@ CREATE TABLE user_settings (
 );
 
 
--- firmware update reated tables
+-- firmware update related tables
 CREATE TABLE bundle (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     version TEXT NOT NULL UNIQUE,
@@ -240,7 +240,7 @@ CREATE TABLE bundle (
     min_prev_version TEXT NOT NULL,
     min_prev_version_array INT[] GENERATED ALWAYS AS ( string_to_array( split_part(min_prev_version, '-', 1), '.' )::INT[] ) STORED,
     min_desktop_app_version TEXT NOT NULL,
-    min_desktop_app_version_array INT[] GENERATED ALWAYS AS ( string_to_array( split_part(min_prev_version, '-', 1), '.' )::INT[] ) STORED,
+    min_desktop_app_version_array INT[] GENERATED ALWAYS AS ( string_to_array( split_part(min_desktop_app_version, '-', 1), '.' )::INT[] ) STORED,
     manifest_data JSONB,
     checksum VARCHAR(64) NOT NULL,
     is_approved bool NOT NULL DEFAULT false,

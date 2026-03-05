@@ -244,7 +244,7 @@ func (h *FirmwareUpdateHandler) CheckForUpdate(c *gin.Context) {
 
 // GetBundleDownloadURL generates a presigned download URL for a firmware bundle
 // @Summary Get Firmware Bundle Download URL
-// @Description Generates a presigned S3 URL for downloading a specific firmware bundle artifact. The URL is valid for 5 hours and includes the file checksum for integrity verification. Only approved bundles can be downloaded.
+// @Description Generates a presigned S3 URL for downloading a specific firmware bundle artifact. The URL is valid for 2 hours and includes the file checksum for integrity verification. Only approved bundles can be downloaded.
 // @Tags Firmware Update - Client API
 // @Accept json
 // @Produce json

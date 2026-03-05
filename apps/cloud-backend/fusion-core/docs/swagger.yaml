@@ -989,7 +989,7 @@ paths:
       tags:
       - Firmware Update - CI/CD API
   /firmware/bundles/{bundleID}/approve:
-    post:
+    put:
       consumes:
       - application/json
       description: Approves a firmware bundle, making it available for deployment
@@ -1021,12 +1021,12 @@ paths:
       summary: Approve Firmware Bundle
       tags:
       - Firmware Update - Management API
-  /firmware/bundles/{bundleID}/download:
+  /firmware/bundles/{bundleID}/request-download-url:
     get:
       consumes:
       - application/json
       description: Generates a presigned S3 URL for downloading a specific firmware
-        bundle artifact. The URL is valid for 5 hours and includes the file checksum
+        bundle artifact. The URL is valid for 2 hours and includes the file checksum
         for integrity verification. Only approved bundles can be downloaded.
       parameters:
       - description: Unique identifier of the firmware bundle (UUID format)

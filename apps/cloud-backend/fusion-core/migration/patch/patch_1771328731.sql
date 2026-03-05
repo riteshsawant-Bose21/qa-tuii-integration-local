@@ -9,7 +9,7 @@ CREATE TABLE bundle (
     min_prev_version TEXT NOT NULL,
     min_prev_version_array INT[] GENERATED ALWAYS AS ( string_to_array( split_part(min_prev_version, '-', 1), '.' )::INT[] ) STORED,
     min_desktop_app_version TEXT NOT NULL,
-    min_desktop_app_version_array INT[] GENERATED ALWAYS AS ( string_to_array( split_part(min_prev_version, '-', 1), '.' )::INT[] ) STORED,
+    min_desktop_app_version_array INT[] GENERATED ALWAYS AS ( string_to_array( split_part(min_desktop_app_version, '-', 1), '.' )::INT[] ) STORED,
     manifest_data JSONB,
     checksum VARCHAR(64) NOT NULL,
     is_approved bool NOT NULL DEFAULT false,
@@ -38,8 +38,7 @@ CREATE TABLE bundle_update_status (
 
 
 -- permission tables data
-INSERT INTO feature (name, description);
-select * from feature;
+INSERT INTO feature (name, description)
 VALUES
   ('firmware.bundle.read', 'Can view and list firmware bundles'),
   ('firmware.bundle.create', 'Can upload new firmware bundles'),

@@ -186,7 +186,7 @@ const docTemplate = `{
             }
         },
         "/firmware/bundles/{bundleID}/approve": {
-            "post": {
+            "put": {
                 "security": [
                     {
                         "BearerAuth": []
@@ -237,9 +237,9 @@ const docTemplate = `{
                 }
             }
         },
-        "/firmware/bundles/{bundleID}/download": {
+        "/firmware/bundles/{bundleID}/request-download-url": {
             "get": {
-                "description": "Generates a presigned S3 URL for downloading a specific firmware bundle artifact. The URL is valid for 5 hours and includes the file checksum for integrity verification. Only approved bundles can be downloaded.",
+                "description": "Generates a presigned S3 URL for downloading a specific firmware bundle artifact. The URL is valid for 2 hours and includes the file checksum for integrity verification. Only approved bundles can be downloaded.",
                 "consumes": [
                     "application/json"
                 ],
