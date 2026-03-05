@@ -1,4 +1,4 @@
-package cloudfs
+package iot
 
 import (
 	"context"
@@ -6,6 +6,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/iot"
 	"github.com/aws/aws-sdk-go-v2/service/iot/types"
+	"github.com/aws/aws-sdk-go-v2/service/iotdataplane"
 	"go.uber.org/zap"
 )
 
@@ -20,26 +21,35 @@ type IoT interface {
 	DetatchCertificateFromThing(ctx context.Context, thingName string, certificateArn string, logger *zap.Logger) error
 	SetCertificateInactive(ctx context.Context, certificateId string, logger *zap.Logger) error
 	DetatchPolicyFromCertificate(ctx context.Context, policyName string, certificateArn string, logger *zap.Logger) error
+	Publish(ctx context.Context, topic string, payload []byte, logger *zap.Logger) error
 }
 
 // IoTClient is a concrete implementation of the IoT interface using AWS SDK
 type IoTClient struct {
-	Client *iot.Client
+	Client     *iot.Client
+	DataClient *iotdataplane.Client
 }
 
-// NewIoTClient creates a new instance of the IoTClient with the provided AWS region and logger
-func NewIoTClient(ctx context.Context, region string, logger *zap.Logger) (IoTClient, error) {
-	// 2. Load default AWS configuration (handles authentication and region from environment variables, etc.)
-	cfg, err := config.LoadDefaultConfig(context.TODO(), config.WithRegion(region))
+// NewIoTClient creates a new instance of the IoTClient with the provided AWS region, IoT endpoint, and logger
+func NewIoTClient(ctx context.Context, region string, iotEndpoint string, logger *zap.Logger) (IoTClient, error) {
+	// Load default AWS configuration (handles authentication and region from environment variables, etc.)
+	cfg, err := config.LoadDefaultConfig(ctx, config.WithRegion(region))
 	if err != nil {
 		logger.Error("failed to load SDK config", zap.Error(err))
+		return IoTClient{}, err
 	}
 
-	// 3. Create an AWS IoT client
+	// Create an AWS IoT client (control plane)
 	client := iot.NewFromConfig(cfg)
 
+	// Create an AWS IoT Data Plane client (for MQTT publish)
+	dataClient := iotdataplane.NewFromConfig(cfg, func(o *iotdataplane.Options) {
+		o.BaseEndpoint = &iotEndpoint
+	})
+
 	return IoTClient{
-		Client: client,
+		Client:     client,
+		DataClient: dataClient,
 	}, nil
 }
 
@@ -163,6 +173,23 @@ func (c IoTClient) DetatchPolicyFromCertificate(ctx context.Context, policyName 
 	_, err := c.Client.DetachPolicy(ctx, input)
 	if err != nil {
 		logger.Error("failed to detach policy from certificate", zap.Error(err))
+		return err
+	}
+
+	return nil
+}
+
+// Publish publishes a message to a specified topic in AWS IoT.
+func (c IoTClient) Publish(ctx context.Context, topic string, payload []byte, logger *zap.Logger) error {
+	input := &iotdataplane.PublishInput{
+		Topic:   &topic,
+		Qos:     0,
+		Payload: payload,
+	}
+
+	_, err := c.DataClient.Publish(ctx, input)
+	if err != nil {
+		logger.Error("failed to publish message to topic", zap.Error(err))
 		return err
 	}
 

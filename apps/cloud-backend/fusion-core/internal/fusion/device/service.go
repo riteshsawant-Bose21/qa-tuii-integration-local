@@ -5,6 +5,7 @@ import (
 
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/api/types"
 	cloudIot "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/cloud/iot"
+	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/config"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/model"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/model/models"
 	"go.uber.org/zap"
@@ -15,6 +16,7 @@ type Service struct {
 	dbService      DatabaseService
 	projectService ProjectService
 	iotService     cloudIot.IoT
+	cfg            config.CloudConfig
 }
 
 // ProjectService defines the contract for project query operations.
@@ -29,6 +31,7 @@ type DatabaseService interface {
 
 	// Query operations
 	GetDeviceByID(ctx context.Context, deviceID string, logger *zap.Logger) (*models.Device, error)
+	GetCommandStatus(ctx context.Context, commandID string, logger *zap.Logger) (*models.DeviceCommandHistory, error)
 
 	// Write operations (all require transaction)
 	Insert(ctx context.Context, req *types.DeviceCreateRequest, accountID string, cert types.CertificateInfo, tx model.DBTxExecutor, logger *zap.Logger) error
@@ -37,13 +40,16 @@ type DatabaseService interface {
 	Update(ctx context.Context, device models.Device, req *types.DeviceUpdateRequest, tx model.DBTxExecutor, logger *zap.Logger) error
 	UpdateCertificate(ctx context.Context, device models.Device, cert types.CertificateInfo, tx model.DBTxExecutor, logger *zap.Logger) error
 	Reset(ctx context.Context, device models.Device, tx model.DBTxExecutor, logger *zap.Logger) error
+	InsertCommand(ctx context.Context, projectID string, request *types.CommandRequest, logger *zap.Logger) (string, error)
+	UpdateCommandStatus(ctx context.Context, commandID, status string, logger *zap.Logger) error
 }
 
 // NewService creates a new device service instance.
-func NewService(dbService DatabaseService, projectService ProjectService, iotService cloudIot.IoT) *Service {
+func NewService(dbService DatabaseService, projectService ProjectService, iotService cloudIot.IoT, cfg config.CloudConfig) *Service {
 	return &Service{
 		dbService:      dbService,
 		projectService: projectService,
 		iotService:     iotService,
+		cfg:            cfg,
 	}
 }

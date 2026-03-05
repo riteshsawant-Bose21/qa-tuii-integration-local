@@ -1,4 +1,4 @@
-package cloudfs
+package iot
 
 import (
 	"context"

@@ -49,7 +49,7 @@ func (h *DeviceHandler) handleDeviceError(ctx *gin.Context, err error, logger *z
 	errMsg := err.Error()
 
 	switch errMsg {
-	case errorutil.ErrMsgDeviceNotFound, errorutil.ErrMsgProjectNotFound:
+	case errorutil.ErrMsgDeviceNotFound, errorutil.ErrMsgProjectNotFound, errorutil.ErrMsgCommandNotFound:
 		response.NotFound(ctx, errMsg)
 	case errorutil.MsgUnauthorized:
 		response.Unauthorized(ctx, errMsg)
@@ -255,6 +255,89 @@ func (h *DeviceHandler) RotateCertificate(ctx *gin.Context) {
 	res, err := h.device.RotateCertificate(ctx, deviceID, &req, *user, logger)
 	if err != nil {
 		h.handleDeviceError(ctx, err, logger, "rotate-cert")
+		return
+	}
+
+	response.OK(ctx, res)
+}
+
+// Command sends a command to the device cluster
+// @Summary Send command to device cluster
+// @Description Send a command to the device cluster
+// @Tags devices
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param project_id path string true "Project ID"
+// @Param body body types.CommandRequest true "Command details"
+// @Success 200 {object} types.CommandResponse "Successfully sent command"
+// @Failure 400 {object} types.ErrorResponse "Bad request - Invalid payload"
+// @Failure 401 {object} types.ErrorResponse "Unauthorized - User not authorized"
+// @Failure 404 {object} types.ErrorResponse "Project not found"
+// @Failure 500 {object} types.ErrorResponse "Internal server error"
+// @Router /commands/{project_id} [post]
+func (h *DeviceHandler) Command(ctx *gin.Context) {
+	logger, user, ok := h.getLoggerAndUser(ctx)
+	if !ok {
+		return
+	}
+
+	projectID := ctx.Param("project_id")
+	if projectID == "" {
+		response.BadRequest(ctx, "project_id is required")
+		return
+	}
+
+	var req types.CommandRequest
+	if err := ctx.ShouldBindJSON(&req); err != nil {
+		logger.Error("Invalid request payload", zap.Error(err))
+		response.BadRequest(ctx, err.Error())
+		return
+	}
+
+	commandID, err := h.device.Command(ctx, projectID, &req, *user, logger)
+	if err != nil {
+		h.handleDeviceError(ctx, err, logger, "command")
+		return
+	}
+
+	commandResponse := types.CommandResponse{
+		CommandID: commandID,
+	}
+
+	response.OK(ctx, commandResponse)
+}
+
+// GetCommandStatus retrieves the status of a command.
+// @Summary Get command status
+// @Description Get the status of a command by its ID
+// @Tags devices
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param command_id path string true "Command ID"
+// @Success 200 {object} types.CommandStatusResponse "Successfully retrieved command status"
+// @Failure 400 {object} types.ErrorResponse "Bad request - Invalid command ID"
+// @Failure 404 {object} types.ErrorResponse "Command not found"
+// @Failure 500 {object} types.ErrorResponse "Internal server error"
+// @Router /commands/{command_id}/status [get]
+func (h *DeviceHandler) GetCommandStatus(ctx *gin.Context) {
+	loggerFromContext, exists := ctx.Get("logger")
+	if !exists {
+		response.InternalError(ctx)
+		return
+	}
+	logger := loggerFromContext.(*zap.Logger)
+
+	commandID := ctx.Param("command_id")
+	if commandID == "" {
+		response.BadRequest(ctx, "command_id is required")
+		return
+	}
+
+	res, err := h.device.GetCommandStatus(ctx, commandID, logger)
+	if err != nil {
+		h.handleDeviceError(ctx, err, logger, "get-command-status")
 		return
 	}
 

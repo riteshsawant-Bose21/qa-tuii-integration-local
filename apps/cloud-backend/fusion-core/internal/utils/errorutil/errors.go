@@ -8,6 +8,7 @@ const (
 	ErrMsgDeviceNotFound       = "device not found"
 	ErrMsgDeviceNotClaimed     = "device is not claimed"
 	ErrMsgDeviceAlreadyClaimed = "device is already claimed"
+	ErrMsgCommandNotFound      = "command not found"
 	MsgAccessDenied            = "Access denied"
 	MsgInternalServerError     = "Internal Server Error"
 	MsgBadRequest              = "Bad Request"

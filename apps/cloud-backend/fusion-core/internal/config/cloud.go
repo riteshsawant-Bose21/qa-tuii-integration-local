@@ -12,6 +12,8 @@ type CloudConfig struct {
 	ProductS3Bucket string
 	ProjectS3Bucket string
 	Region          string
+	IoTEndpoint     string
+	IoTCommandTopic string
 }
 
 // Cloud retrieves the cloud configuration from the store.
@@ -36,10 +38,22 @@ func (s *Service) Cloud() (*CloudConfig, error) {
 		return nil, fmt.Errorf("failed to get S3 region: %w", err)
 	}
 
+	iotEndpoint, err := s.store.ReqString(environment.IOT.Endpoint)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get IoT endpoint: %w", err)
+	}
+
+	iotCommandTopic,  err := s.store.ReqString(environment.IOT.CommandTopic)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get IoT command topic: %w", err)
+	}
+
 	return &CloudConfig{
 		PriceS3Bucket:   priceBucket,
 		ProductS3Bucket: productBucket,
 		ProjectS3Bucket: projectBucket,
 		Region:          region,
+		IoTEndpoint:     iotEndpoint,
+		IoTCommandTopic: iotCommandTopic,
 	}, nil
 }

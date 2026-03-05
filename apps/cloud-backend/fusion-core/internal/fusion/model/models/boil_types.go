@@ -64,6 +64,23 @@ func AllClaimStatusEnum() []string {
 	}
 }
 
+// Enum values for CommandStatusEnum
+const (
+	CommandStatusEnumUNPUBLISHED string = "UNPUBLISHED"
+	CommandStatusEnumPUBLISHED   string = "PUBLISHED"
+	CommandStatusEnumSUCCESS     string = "SUCCESS"
+	CommandStatusEnumFAILURE     string = "FAILURE"
+)
+
+func AllCommandStatusEnum() []string {
+	return []string{
+		CommandStatusEnumUNPUBLISHED,
+		CommandStatusEnumPUBLISHED,
+		CommandStatusEnumSUCCESS,
+		CommandStatusEnumFAILURE,
+	}
+}
+
 // Enum values for ProductTypeEnum
 const (
 	ProductTypeEnumSpeaker    string = "speaker"

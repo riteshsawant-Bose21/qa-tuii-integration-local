@@ -2,6 +2,7 @@ package device
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 
@@ -387,4 +388,66 @@ func (s *Service) RotateCertificate(ctx context.Context, deviceID string, reques
 	s.revokeOldCertificate(ctx, deviceID, oldCertID, oldCertArn, logger)
 
 	return &types.DeviceRotateCertResponse{Certificate: *certPem}, nil
+}
+
+// Command sends a command to a device via IoT topic publish.
+func (s *Service) Command(ctx context.Context, projectID string, request *types.CommandRequest, user types.UserAuthorizationResponse, logger *zap.Logger) (string, error) {
+	// Validate project access
+	if _, err := s.validateProjectAccess(ctx, projectID, user.Account.ID, logger); err != nil {
+		return "", err
+	}
+
+	id, insertErr := s.dbService.InsertCommand(ctx, projectID, request, logger)
+	if insertErr != nil {
+		logger.Error("Failed to insert command into database", zap.Error(insertErr))
+		return "", fmt.Errorf("failed to insert command into database: %w", insertErr)
+	}
+
+	deviceCommand := struct {
+		Command types.CommandRequest `json:"command"`
+		ID      string               `json:"id"`
+	}{
+		Command: *request,
+		ID:      id, // ID can be set by the device if needed
+	}
+
+	requestBytes, err := json.Marshal(deviceCommand)
+	if err != nil {
+		logger.Error("Failed to marshal command request", zap.Error(err))
+		return "", fmt.Errorf("failed to marshal command request: %w", err)
+	}
+
+	err = s.iotService.Publish(ctx, fmt.Sprintf("cluster/%s/command", projectID), requestBytes, logger)
+	if err != nil {
+		logger.Error("Failed to publish command", zap.Error(err))
+		return "", fmt.Errorf("failed to publish command: %w", err)
+	}
+
+	s.dbService.UpdateCommandStatus(ctx, id, "PUBLISHED", logger)
+
+	if err != nil {
+		logger.Error("Failed to publish command", zap.Error(err))
+		return "", fmt.Errorf("failed to publish command: %w", err)
+	}
+
+	return id, nil
+}
+
+// GetCommandStatus retrieves the status of a command by its ID.
+func (s *Service) GetCommandStatus(ctx context.Context, commandID string, logger *zap.Logger) (*types.CommandStatusResponse, error) {
+	command, err := s.dbService.GetCommandStatus(ctx, commandID, logger)
+	if err != nil {
+		return nil, err
+	}
+	if command == nil {
+		logger.Error("Command not found", zap.String("commandID", commandID))
+		return nil, errors.New(errorutil.ErrMsgCommandNotFound)
+	}
+
+	return &types.CommandStatusResponse{
+		CommandID:   command.ID,
+		CommandName: command.CommandName,
+		Status:      command.Status,
+		IssuedAt:    command.IssuedAt.Format("2006-01-02T15:04:05Z07:00"),
+	}, nil
 }

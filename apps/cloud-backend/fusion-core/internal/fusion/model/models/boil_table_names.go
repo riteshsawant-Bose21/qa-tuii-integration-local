@@ -10,6 +10,7 @@ var TableNames = struct {
 	AccountTypeRole        string
 	AppUser                string
 	Device                 string
+	DeviceCommandHistory   string
 	DeviceOwnershipHistory string
 	DeviceProjectHistory   string
 	Feature                string
@@ -29,6 +30,7 @@ var TableNames = struct {
 	AccountTypeRole:        "account_type_role",
 	AppUser:                "app_user",
 	Device:                 "device",
+	DeviceCommandHistory:   "device_command_history",
 	DeviceOwnershipHistory: "device_ownership_history",
 	DeviceProjectHistory:   "device_project_history",
 	Feature:                "feature",

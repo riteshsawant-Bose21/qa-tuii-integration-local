@@ -35,12 +35,12 @@ import (
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/environment"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/log"
 
+	cloudIot "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/cloud/iot"
+	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/cloud/storage/cloudfs"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/device"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/product"
 	productdb "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/product/db"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/project"
-	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/cloud/storage/cloudfs"
-	cloudIot "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/cloud/iot"
 
 	sql "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/cloud/storage/sql"
 
@@ -193,7 +193,7 @@ func main() {
 	authMiddleware := middleware.NewAuth0Middleware(authSVC)
 	loggers.AppLogger.Info("Initialized Auth0 middleware")
 
-	iothandler, err := cloudIot.NewIoTClient(ctx, cfg.Cloud.Region, loggers.AppLogger)
+	iothandler, err := cloudIot.NewIoTClient(ctx, cfg.Cloud.Region, cfg.Cloud.IoTEndpoint, loggers.AppLogger)
 	if err != nil {
 		loggers.AppLogger.Fatal("Failed to initialize IoT client", zap.Error(err))
 	}
@@ -205,7 +205,7 @@ func main() {
 	loggers.AppLogger.Info("Initialized Device DB Service.")
 
 	//Initialize Device Service
-	deviceSVC := device.NewService(deviceDbSvc, projectDBSvc, iothandler)
+	deviceSVC := device.NewService(deviceDbSvc, projectDBSvc, iothandler, *cfg.Cloud)
 
 	// Initialize API Server (with configurable host and port)
 	server, err := api.New(&api.Config{

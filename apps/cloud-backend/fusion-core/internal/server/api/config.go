@@ -11,7 +11,7 @@ import (
 type APIconfig struct {
 	Server   *config.APIConfig
 	Postgres *config.Postgres
-	Cloud       *config.CloudConfig
+	Cloud    *config.CloudConfig
 	AuthZero *config.AuthZero
 }
 

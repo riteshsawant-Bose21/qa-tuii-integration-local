@@ -33,6 +33,12 @@ type EnvironmentAWSVariables struct {
 	Region string
 }
 
+// EnvironmentIoTVariables holds configuration variables for IoT services.
+type EnvironmentIoTVariables struct {
+	Endpoint string
+	CommandTopic string
+}
+
 // EnvironmentAuth0Variables holds configuration variables for Auth0 integration.
 type EnvironmentAuth0Variables struct {
 	Domain                           string

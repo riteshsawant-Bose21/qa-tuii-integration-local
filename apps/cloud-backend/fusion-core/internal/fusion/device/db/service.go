@@ -3,6 +3,7 @@ package db
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"errors"
 	"time"
 
@@ -316,4 +317,63 @@ func (s *Service) UpdateCertificate(ctx context.Context, device models.Device, c
 	}
 
 	return nil
+}
+
+// InsertCommand inserts a new command into the device command history and publishes it to the device cluster topic.
+// Returns the ID of the inserted command record.
+func (s *Service) InsertCommand(ctx context.Context, projectID string, request *types.CommandRequest, logger *zap.Logger) (string, error) {
+
+	// Marshal command request to JSON
+	payload, err := json.Marshal(request)
+	if err != nil {
+		logger.Error("Failed to marshal command request", zap.Error(err))
+		return "", err
+	}
+
+	// Insert command into database
+	command := models.DeviceCommandHistory{
+		ProjectID:      projectID,
+		CommandName:    string(request.Command),
+		CommandPayload: null.JSON{JSON: payload, Valid: true},
+		Status:         "UNPUBLISHED",
+		IssuedAt:       time.Now(),
+	}
+
+	if err := command.Insert(ctx, s.db, boil.Infer()); err != nil {
+		logger.Error("Failed to insert command", zap.Error(err))
+		return "", err
+	}
+
+	return command.ID, nil
+}
+
+// UpdateCommandStatus updates the status of a command in the device command history.
+func (s *Service) UpdateCommandStatus(ctx context.Context, commandID string, status string, logger *zap.Logger) error {
+	command, err := models.DeviceCommandHistories(models.DeviceCommandHistoryWhere.ID.EQ(commandID)).One(ctx, s.db)
+	if err != nil {
+		logger.Error("Failed to get command history", zap.String("commandID", commandID), zap.Error(err))
+		return err
+	}
+
+	command.Status = status
+	if _, err := command.Update(ctx, s.db, boil.Infer()); err != nil {
+		logger.Error("Failed to update command status", zap.String("commandID", commandID), zap.Error(err))
+		return err
+	}
+
+	return nil
+}
+
+// GetCommandStatus retrieves the status of a command by its ID.
+// Returns nil, nil if the command is not found.
+func (s *Service) GetCommandStatus(ctx context.Context, commandID string, logger *zap.Logger) (*models.DeviceCommandHistory, error) {
+	command, err := models.DeviceCommandHistories(models.DeviceCommandHistoryWhere.ID.EQ(commandID)).One(ctx, s.db)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, nil
+		}
+		logger.Error("Failed to get command status", zap.String("commandID", commandID), zap.Error(err))
+		return nil, err
+	}
+	return command, nil
 }

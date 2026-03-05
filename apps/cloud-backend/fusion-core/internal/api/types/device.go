@@ -56,3 +56,30 @@ type CertificateInfo struct {
 	ID  string // Certificate ID from AWS IoT
 	Arn string // Certificate ARN from AWS IoT
 }
+
+// CommandRequest represents the request payload for sending a command to the device cluster.
+type CommandType string
+
+const (
+	CommandRestart CommandType = "REBOOT"
+	CommandStandby CommandType = "STANDBY"
+)
+
+// CommandRequest represents the request payload for sending a command to the device cluster.
+type CommandRequest struct {
+	Command   CommandType `json:"command" binding:"required"`
+	DeviceIDs []string    `json:"device_ids"`
+}
+
+// CommandResponse represents the response payload after successfully sending a command to the device cluster.
+type CommandResponse struct {
+	CommandID string `json:"command_id"`
+}
+
+// CommandStatusResponse represents the response payload for getting the status of a command.
+type CommandStatusResponse struct {
+	CommandID   string `json:"command_id"`
+	CommandName string `json:"command_name"`
+	Status      string `json:"status"`
+	IssuedAt    string `json:"issued_at"`
+}

@@ -113,4 +113,12 @@ func (a *API) registerRoutes() {
 		devices.POST(constants.EndpointDeviceClaim, deviceHandler.ClaimDevice)
 		devices.POST(constants.EndpointDeviceRotateCert, deviceHandler.RotateCertificate)
 	}
+
+	// Command routes
+	commands := v1.Group(constants.EndpointCommands)
+	{
+		commands.Use(middleware.ExtractUserFromHeaders())
+		commands.POST(constants.EndpointCommandByProjectID, deviceHandler.Command)
+		commands.GET(constants.EndpointCommandStatus, deviceHandler.GetCommandStatus)
+	}
 }

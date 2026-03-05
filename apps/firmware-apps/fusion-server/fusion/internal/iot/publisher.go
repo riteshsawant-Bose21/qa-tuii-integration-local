@@ -42,8 +42,10 @@ type Config struct {
 	CertFile string
 	// KeyFile is the path to the device private key
 	KeyFile string
-	// TopicPrefix is the prefix for MQTT topics (e.g., "logs/")
+	// TopicPrefix is the prefix for MQTT topics (e.g., "cluster/")
 	TopicPrefix string
+	// ProjectID is the project ID for command subscription topic
+	ProjectID string
 	// MetricsInterval is how often to publish metrics
 	MetricsInterval time.Duration
 	// Enabled determines if IoT publishing is active

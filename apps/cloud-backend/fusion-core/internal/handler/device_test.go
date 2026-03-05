@@ -82,6 +82,19 @@ func (m *MockDeviceService) RotateCertificate(ctx context.Context, deviceID stri
 	return args.Get(0).(*types.DeviceRotateCertResponse), args.Error(1)
 }
 
+func (m *MockDeviceService) Command(ctx context.Context, projectID string, request *types.CommandRequest, user types.UserAuthorizationResponse, logger *zap.Logger) (string, error) {
+	args := m.Called(ctx, projectID, request, user, logger)
+	return args.String(0), args.Error(1)
+}
+
+func (m *MockDeviceService) GetCommandStatus(ctx context.Context, commandID string, logger *zap.Logger) (*types.CommandStatusResponse, error) {
+	args := m.Called(ctx, commandID, logger)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*types.CommandStatusResponse), args.Error(1)
+}
+
 // ---------------------------------------------------------------------------
 // Test Setup Helpers
 // ---------------------------------------------------------------------------

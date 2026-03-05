@@ -56,6 +56,7 @@ type App struct {
 	UDPServer         *network.UDPServer
 	ControllerManager *controllers.ControllerManager
 	IoTPublisher      *fusioniot.Publisher
+	IoTSubscriber     *fusioniot.Subscriber
 	memberlist        *memberlist.Memberlist
 	monitor           *network.Monitor
 	config            *api.AppConfig
@@ -88,6 +89,7 @@ func NewApp(config *api.AppConfig, iotConfig *fusioniot.Config) *App {
 	udpServer := initUDPServer(api.UDPPort, connectionHandler, hub)
 	fusionServer := server.NewFusionServer(config.NodeName, connectionHandler, hub)
 	iotPublisher := initIoTPublisher(iotConfig, clusterInstance.Metrics, clusterInstance)
+	iotSubscriber := initIoTSubscriber(iotConfig, clusterInstance)
 
 	// Setup the public routes
 	publicRouter := mux.NewRouter()
@@ -115,6 +117,7 @@ func NewApp(config *api.AppConfig, iotConfig *fusioniot.Config) *App {
 		UDPServer:         udpServer,
 		ControllerManager: controllerManager,
 		IoTPublisher:      iotPublisher,
+		IoTSubscriber:     iotSubscriber,
 		memberlist:        memberlist,
 		config:            config,
 		publicRouter:      publicRouter,
@@ -136,6 +139,9 @@ func (app *App) Close() {
 	}
 	if app.IoTPublisher != nil {
 		app.IoTPublisher.Stop()
+	}
+	if app.IoTSubscriber != nil {
+		app.IoTSubscriber.Stop()
 	}
 	if app.MDNSManager != nil {
 		if err := app.MDNSManager.Close(); err != nil {
@@ -417,6 +423,13 @@ func (app *App) Start(ctx context.Context) {
 		}
 	}
 
+	// Start the IoT subscriber for cloud commands
+	if app.IoTSubscriber != nil {
+		if err := app.IoTSubscriber.Start(); err != nil {
+			app.Logger.Error("Failed to start IoT subscriber: %v", err)
+		}
+	}
+
 	wg.Wait()
 }
 
@@ -579,6 +592,35 @@ func initIoTPublisher(iotConfig *fusioniot.Config, metrics *cluster.MetricsColle
 
 	logger.Info("IoT publisher initialized for endpoint: %s", iotConfig.Endpoint)
 	return publisher
+}
+
+// initIoTSubscriber initializes the AWS IoT Core subscriber for cloud commands
+func initIoTSubscriber(iotConfig *fusioniot.Config, cluster *cluster.Cluster) *fusioniot.Subscriber {
+	logger := logging.GetLogger()
+
+	if !iotConfig.Enabled {
+		logger.Info("IoT subscriber disabled")
+		return nil
+	}
+
+	if iotConfig.Endpoint == "" {
+		logger.Warn("IoT endpoint not configured, disabling IoT subscriber")
+		return nil
+	}
+
+	if iotConfig.ProjectID == "" {
+		logger.Warn("Project ID not configured, IoT subscriber will not be able to subscribe to commands")
+		return nil
+	}
+
+	subscriber, err := fusioniot.NewSubscriber(iotConfig, cluster)
+	if err != nil {
+		logger.Error("Failed to create IoT subscriber: %v", err)
+		return nil
+	}
+
+	logger.Info("IoT subscriber initialized for endpoint: %s, project: %s", iotConfig.Endpoint, iotConfig.ProjectID)
+	return subscriber
 }
 
 // withWebSocketMetrics adds metrics for WebSocket connections

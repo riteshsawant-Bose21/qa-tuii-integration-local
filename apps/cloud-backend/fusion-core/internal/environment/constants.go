@@ -35,6 +35,11 @@ var (
 		Region: "AWS_REGION",
 	}
 
+	IOT = types.EnvironmentIoTVariables{
+		Endpoint: "IOT_ENDPOINT",
+		CommandTopic: "IOT_COMMAND_TOPIC",
+	}
+
 	Auth0 = types.EnvironmentAuth0Variables{
 		Domain:                           "AUTH0_DOMAIN",
 		ClientID:                         "AUTH0_CLIENT_ID",
