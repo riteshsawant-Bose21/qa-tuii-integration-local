@@ -23,6 +23,8 @@ class FusionEndpoints extends HardwareComponent {
     super.communicationPorts,
     super.inputPortsData,
     super.outputPortsData,
+    required super.addedFromBuildingPage,
+    super.equipmentLocationPosition,
   }) : super(
          hardwareName: hardwareName ?? name,
          locationEntity: locationEntity ?? LocationModel(),
@@ -42,11 +44,13 @@ class FusionEndpoints extends HardwareComponent {
     LocationModel? locationEntity,
     Offset? pos,
     Offset? wiringPos,
+    int? equipmentLocationPosition,
     double? zAxis,
     bool? lockListeningArea,
     List<PortData>? communicationPorts,
     List<PortData>? inputPortsData,
     List<PortData>? outputPortsData,
+    bool? addedFromBuildingPage,
   }) {
     return FusionEndpoints(
       id: id ?? this.id,
@@ -64,6 +68,8 @@ class FusionEndpoints extends HardwareComponent {
       communicationPorts: communicationPorts ?? this.communicationPorts,
       inputPortsData: inputPortsData ?? this.inputPortsData,
       outputPortsData: outputPortsData ?? this.outputPortsData,
+      addedFromBuildingPage: addedFromBuildingPage ?? this.addedFromBuildingPage,
+      equipmentLocationPosition: equipmentLocationPosition ?? this.equipmentLocationPosition,
     );
   }
 
@@ -77,7 +83,7 @@ class FusionEndpoints extends HardwareComponent {
       'price': price,
       'hardwareName': hardwareName,
       'locationEntity': locationEntity.toJson(),
-      'pos': {'x': pos.dx, 'y': pos.dy},
+      'pos': pos != null ? <String, double>{'dx': pos!.dx, 'dy': pos!.dy} : null,
       'wiringPos': wiringPos != null ? {'x': wiringPos!.dx, 'y': wiringPos!.dy} : null,
       'zAxis': zAxis,
       'componentType': 'fusionEndpoint',
@@ -85,6 +91,8 @@ class FusionEndpoints extends HardwareComponent {
       'communicationPorts': communicationPorts.map((PortData port) => port.toJson()).toList(),
       'outputPortsData': outputPortsData.map((PortData port) => port.toJson()).toList(),
       'inputPortsData': inputPortsData.map((PortData port) => port.toJson()).toList(),
+      'addedFromBuildingPage': addedFromBuildingPage,
+      'equipmentLocationPosition': equipmentLocationPosition,
     };
   }
 
@@ -99,14 +107,16 @@ class FusionEndpoints extends HardwareComponent {
       price: (json['price'] as num).toDouble(),
       hardwareName: json['hardwareName'] as String?,
       locationEntity: LocationModel.fromJson(json['locationEntity'] as Map<String, dynamic>),
-      pos: Offset((json['pos']['x'] as num).toDouble(), (json['pos']['y'] as num).toDouble()),
+      pos: json['pos'] != null ? Offset((json['pos']['dx'] as num).toDouble(), (json['pos']['dy'] as num).toDouble()) : null,
       wiringPos: json['wiringPos'] != null ? Offset((json['wiringPos']['x'] as num).toDouble(), (json['wiringPos']['y'] as num).toDouble()) : null,
-      zAxis: (json['zAxis'] as num).toDouble(),
+      zAxis: (json['zAxis'] as num?)?.toDouble() ?? 0.0,
       lockListeningArea: json['lockListeningArea'] as bool? ?? false,
       communicationPorts:
           (json['communicationPorts'] as List<dynamic>?)?.map((dynamic e) => PortData.fromJson(e as Map<String, dynamic>)).toList() ?? <PortData>[],
       outputPortsData: (json['outputPortsData'] as List<dynamic>?)?.map((dynamic e) => PortData.fromJson(e as Map<String, dynamic>)).toList() ?? <PortData>[],
       inputPortsData: (json['inputPortsData'] as List<dynamic>?)?.map((dynamic e) => PortData.fromJson(e as Map<String, dynamic>)).toList() ?? <PortData>[],
+      addedFromBuildingPage: json['addedFromBuildingPage'] as bool? ?? false,
+      equipmentLocationPosition: DeserializationUtil.intDeserializer.deserialize(json['equipmentLocationPosition']),
     );
   }
 }

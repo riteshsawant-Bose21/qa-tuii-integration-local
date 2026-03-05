@@ -234,15 +234,35 @@ var UserProfileWhere = struct {
 
 // UserProfileRels is where relationship names are stored.
 var UserProfileRels = struct {
-}{}
+	User string
+}{
+	User: "User",
+}
 
 // userProfileR is where relationships are stored.
 type userProfileR struct {
+	User *AppUser `boil:"User" json:"User" toml:"User" yaml:"User"`
 }
 
 // NewStruct creates a new relationship struct
 func (*userProfileR) NewStruct() *userProfileR {
 	return &userProfileR{}
+}
+
+func (o *UserProfile) GetUser() *AppUser {
+	if o == nil {
+		return nil
+	}
+
+	return o.R.GetUser()
+}
+
+func (r *userProfileR) GetUser() *AppUser {
+	if r == nil {
+		return nil
+	}
+
+	return r.User
 }
 
 // userProfileL is where Load methods for each relationship are stored.
@@ -559,6 +579,184 @@ func (q userProfileQuery) Exists(ctx context.Context, exec boil.ContextExecutor)
 	}
 
 	return count > 0, nil
+}
+
+// User pointed to by the foreign key.
+func (o *UserProfile) User(mods ...qm.QueryMod) appUserQuery {
+	queryMods := []qm.QueryMod{
+		qm.Where("\"id\" = ?", o.UserID),
+	}
+
+	queryMods = append(queryMods, mods...)
+
+	return AppUsers(queryMods...)
+}
+
+// LoadUser allows an eager lookup of values, cached into the
+// loaded structs of the objects. This is for an N-1 relationship.
+func (userProfileL) LoadUser(ctx context.Context, e boil.ContextExecutor, singular bool, maybeUserProfile interface{}, mods queries.Applicator) error {
+	var slice []*UserProfile
+	var object *UserProfile
+
+	if singular {
+		var ok bool
+		object, ok = maybeUserProfile.(*UserProfile)
+		if !ok {
+			object = new(UserProfile)
+			ok = queries.SetFromEmbeddedStruct(&object, &maybeUserProfile)
+			if !ok {
+				return errors.New(fmt.Sprintf("failed to set %T from embedded struct %T", object, maybeUserProfile))
+			}
+		}
+	} else {
+		s, ok := maybeUserProfile.(*[]*UserProfile)
+		if ok {
+			slice = *s
+		} else {
+			ok = queries.SetFromEmbeddedStruct(&slice, maybeUserProfile)
+			if !ok {
+				return errors.New(fmt.Sprintf("failed to set %T from embedded struct %T", slice, maybeUserProfile))
+			}
+		}
+	}
+
+	args := make(map[interface{}]struct{})
+	if singular {
+		if object.R == nil {
+			object.R = &userProfileR{}
+		}
+		args[object.UserID] = struct{}{}
+
+	} else {
+		for _, obj := range slice {
+			if obj.R == nil {
+				obj.R = &userProfileR{}
+			}
+
+			args[obj.UserID] = struct{}{}
+
+		}
+	}
+
+	if len(args) == 0 {
+		return nil
+	}
+
+	argsSlice := make([]interface{}, len(args))
+	i := 0
+	for arg := range args {
+		argsSlice[i] = arg
+		i++
+	}
+
+	query := NewQuery(
+		qm.From(`app_user`),
+		qm.WhereIn(`app_user.id in ?`, argsSlice...),
+	)
+	if mods != nil {
+		mods.Apply(query)
+	}
+
+	results, err := query.QueryContext(ctx, e)
+	if err != nil {
+		return errors.Wrap(err, "failed to eager load AppUser")
+	}
+
+	var resultSlice []*AppUser
+	if err = queries.Bind(results, &resultSlice); err != nil {
+		return errors.Wrap(err, "failed to bind eager loaded slice AppUser")
+	}
+
+	if err = results.Close(); err != nil {
+		return errors.Wrap(err, "failed to close results of eager load for app_user")
+	}
+	if err = results.Err(); err != nil {
+		return errors.Wrap(err, "error occurred during iteration of eager loaded relations for app_user")
+	}
+
+	if len(appUserAfterSelectHooks) != 0 {
+		for _, obj := range resultSlice {
+			if err := obj.doAfterSelectHooks(ctx, e); err != nil {
+				return err
+			}
+		}
+	}
+
+	if len(resultSlice) == 0 {
+		return nil
+	}
+
+	if singular {
+		foreign := resultSlice[0]
+		object.R.User = foreign
+		if foreign.R == nil {
+			foreign.R = &appUserR{}
+		}
+		foreign.R.UserUserProfile = object
+		return nil
+	}
+
+	for _, local := range slice {
+		for _, foreign := range resultSlice {
+			if local.UserID == foreign.ID {
+				local.R.User = foreign
+				if foreign.R == nil {
+					foreign.R = &appUserR{}
+				}
+				foreign.R.UserUserProfile = local
+				break
+			}
+		}
+	}
+
+	return nil
+}
+
+// SetUser of the userProfile to the related item.
+// Sets o.R.User to related.
+// Adds o to related.R.UserUserProfile.
+func (o *UserProfile) SetUser(ctx context.Context, exec boil.ContextExecutor, insert bool, related *AppUser) error {
+	var err error
+	if insert {
+		if err = related.Insert(ctx, exec, boil.Infer()); err != nil {
+			return errors.Wrap(err, "failed to insert into foreign table")
+		}
+	}
+
+	updateQuery := fmt.Sprintf(
+		"UPDATE \"user_profile\" SET %s WHERE %s",
+		strmangle.SetParamNames("\"", "\"", 1, []string{"user_id"}),
+		strmangle.WhereClause("\"", "\"", 2, userProfilePrimaryKeyColumns),
+	)
+	values := []interface{}{related.ID, o.ID}
+
+	if boil.IsDebug(ctx) {
+		writer := boil.DebugWriterFrom(ctx)
+		fmt.Fprintln(writer, updateQuery)
+		fmt.Fprintln(writer, values)
+	}
+	if _, err = exec.ExecContext(ctx, updateQuery, values...); err != nil {
+		return errors.Wrap(err, "failed to update local table")
+	}
+
+	o.UserID = related.ID
+	if o.R == nil {
+		o.R = &userProfileR{
+			User: related,
+		}
+	} else {
+		o.R.User = related
+	}
+
+	if related.R == nil {
+		related.R = &appUserR{
+			UserUserProfile: o,
+		}
+	} else {
+		related.R.UserUserProfile = o
+	}
+
+	return nil
 }
 
 // UserProfiles retrieves all the records using an executor.

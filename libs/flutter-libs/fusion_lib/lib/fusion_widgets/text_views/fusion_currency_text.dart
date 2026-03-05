@@ -10,7 +10,25 @@ enum CurrencyType {
   cny, // Chinese Yuan
   aud, // Australian Dollar
   cad, // Canadian Dollar
-  custom, // For any custom currency symbol
+  custom; // For any custom currency symbol
+
+  static CurrencyType? fromString(String value) {
+    try {
+      return CurrencyType.values.firstWhere((CurrencyType element) => element.name == value);
+    } catch (e) {
+      return null;
+    }
+  }
+
+  static CurrencyType? fromJson(String value) {
+    try {
+      return CurrencyType.values.firstWhere((CurrencyType element) => element.name == value);
+    } catch (e) {
+      return null;
+    }
+  }
+
+  String toJson() => name;
 }
 
 /// A customizable text widget for the Fusion design system.
@@ -106,7 +124,7 @@ class FusionCurrencyText extends StatelessWidget {
   });
 
   /// Returns the correct currency symbol for the given [CurrencyType].
-  String _getCurrencySymbol() {
+  String getCurrencySymbol() {
     switch (currencyType) {
       case CurrencyType.usd:
         return '\$';
@@ -140,7 +158,7 @@ class FusionCurrencyText extends StatelessWidget {
       child: ExcludeSemantics(
         excluding: true,
         child: Text(
-          '${_getCurrencySymbol()}$text',
+          '${getCurrencySymbol()}$text',
           textAlign: textAlign,
           overflow: textOverflow ?? ((maxLine != null) ? TextOverflow.ellipsis : null),
           maxLines: maxLine,

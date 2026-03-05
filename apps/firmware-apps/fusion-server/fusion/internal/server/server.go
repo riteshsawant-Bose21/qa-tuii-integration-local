@@ -4,17 +4,15 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"reflect"
 	"regexp"
-	"strconv"
 	"strings"
 	"sync"
 	"time"
 
 	json "github.com/goccy/go-json"
 
+	"fusion-services-core/logging"
 	"fusion/internal/api"
-	"fusion/internal/logging"
 	"fusion/internal/persistence"
 	"fusion/internal/pubsub"
 	"fusion/internal/server/handler"
@@ -140,12 +138,15 @@ func (s *FusionServer) SetValue(w http.ResponseWriter, r *http.Request) {
 // UpdateValue handles HTTP PATCH requests to update a configuration value.
 // It supports partial updates based on the provided key query parameter or the entire JSON body.
 func (s *FusionServer) UpdateValue(w http.ResponseWriter, r *http.Request) {
+	type patchResponse struct {
+		Status  string         `json:"status"`
+		Updates map[string]any `json:"updates"`
+	}
 
 	if !utils.RequirePatch(w, r) {
 		return
 	}
 
-	// Read the request body.
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
 		http.Error(w, fmt.Sprintf("Error reading request body: %v", err), http.StatusBadRequest)
@@ -153,56 +154,48 @@ func (s *FusionServer) UpdateValue(w http.ResponseWriter, r *http.Request) {
 	}
 	defer r.Body.Close()
 
-	// Unmarshal the request body into a map.
 	var update map[string]any
 	if err := json.Unmarshal(body, &update); err != nil {
 		http.Error(w, fmt.Sprintf("Invalid JSON format: %v", err), http.StatusBadRequest)
 		return
 	}
 
-	// Retrieve the "key" query parameter.
 	key, err := getSingleQueryParam(r, "key")
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	// Retrieve the full current configuration state.
-	configData := s.handler.StateManager.GetStateMap()
-
-	// get another copy of a deep copy of configData to preserve the original configuration.
-	originalConfig := s.handler.StateManager.GetStateMap()
-
-	var updatedData any
+	// Build minimal patch map
+	var patch map[string]any
 	if key != "" {
-		// If a key is provided, update the nested value.
-		utils.SetNestedValue(configData, key, update["value"])
-		updatedData, err = s.handler.HandleHTTPPatch(configData)
+		patch = map[string]any{
+			key: update["value"],
+		}
 	} else {
-		// If no key is provided, treat the entire body as the update map.
-		updatedData, err = s.handler.HandleHTTPPatch(update)
+		patch = update
 	}
 
+	// Apply patch (diff is computed inside handler)
+	diff, err := s.handler.HandleHTTPPatch(patch)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	// Calculate the difference between the original and updated configuration.
-	diffData := calculateDiff(originalConfig, updatedData)
-
-	// Prepare the response with the update diff.
-	response := map[string]any{
-		"status":  "success",
-		"updates": diffData,
+	// Build response
+	resp := patchResponse{}
+	if diff == nil {
+		resp.Status = "noop"
+		resp.Updates = nil
+	} else {
+		resp.Status = "success"
+		resp.Updates = diff
 	}
 
-	// Write the JSON response.
-	if err := json.NewEncoder(w).Encode(response); err != nil {
-		http.Error(w, fmt.Sprintf("Error encoding response: %v", err), http.StatusInternalServerError)
-		return
-	}
+	// Send
 	w.Header().Set(api.ContentType, api.JsonMIMEType)
+	json.NewEncoder(w).Encode(resp)
 }
 
 // ExportState handles HTTP GET requests to export the entire configuration state.
@@ -348,24 +341,6 @@ func (s *FusionServer) GetVersion(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// UpdateVersion handles update version HTTP requests.
-func (s *FusionServer) UpdateVersion(w http.ResponseWriter, r *http.Request) {
-	if !utils.RequirePut(w, r) {
-		return
-	}
-
-	s.handler.HandleVersionRollback(w, r)
-}
-
-// RollbackVersion handles version rollback HTTP requests.
-func (s *FusionServer) RollbackVersion(w http.ResponseWriter, r *http.Request) {
-	if !utils.RequirePost(w, r) {
-		return
-	}
-
-	s.handler.HandleVersionRollback(w, r)
-}
-
 // UploadAudio handles HTTP POST requests for audio file uploads.
 // It delegates the audio upload handling to the handler.
 func (s *FusionServer) UploadAudio(w http.ResponseWriter, r *http.Request) {
@@ -375,111 +350,12 @@ func (s *FusionServer) UploadAudio(w http.ResponseWriter, r *http.Request) {
 	s.handler.HandleAudioUpload(w, r)
 }
 
-// ListSnapshots handles HTTP GET requests to list available snapshots.
-func (s *FusionServer) ListSnapshots(w http.ResponseWriter, r *http.Request) {
-	if !utils.RequireGet(w, r) {
-		return
-	}
-
-	// Retrieve the list of snapshots from the handler.
-	snapshots, err := s.handler.HandleListSnapshots()
-	if err != nil {
-		http.Error(w, fmt.Sprintf("Error listing snapshots: %v", err), http.StatusInternalServerError)
-		return
-	}
-
-	// Write the JSON response with the snapshots.
-	w.Header().Set(api.ContentType, api.JsonMIMEType)
-	json.NewEncoder(w).Encode(map[string]any{"snapshots": snapshots})
-}
-
-// ActivateSnapshot handles HTTP POST requests to activate a specific snapshot.
-// It expects a query parameter "name" specifying the snapshot to activate.
-func (s *FusionServer) ActivateSnapshot(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-
-	snapshotName, err := utils.ExtractName(r)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-
-	if err := s.handler.HandleActivateSnapshot(snapshotName); err != nil {
-		http.Error(w, fmt.Sprintf("Error activating snapshot: %v", err), http.StatusInternalServerError)
-		return
-	}
-
-	w.WriteHeader(http.StatusNoContent)
-}
-
-// CreateSnapshot handles HTTP POST requests to create a new snapshot.
-func (s *FusionServer) CreateSnapshot(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-
-	snapshotName, err := utils.ExtractName(r)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-
-	if s.handler.IsDefaultSnapshot(snapshotName) {
-		http.Error(w, "default snapshot cannot be overwritten", http.StatusBadRequest)
-		return
-	}
-
-	exists, err := s.handler.HandleSnapshotExists(snapshotName)
-	if err != nil {
-		http.Error(w, fmt.Sprintf("Error checking snapshot existence: %v", err), http.StatusInternalServerError)
-		return
-	}
-	if exists {
-		http.Error(w, "Snapshot already exists", http.StatusConflict)
-		return
-	}
-
-	if err := s.handler.HandleCreateSnapshot(snapshotName); err != nil {
-		http.Error(w, fmt.Sprintf("Error creating snapshot: %v", err), http.StatusInternalServerError)
-		return
-	}
-
-	w.WriteHeader(http.StatusNoContent)
-}
-
-// DeleteSnapshot handles HTTP DELETE requests to remove an existing snapshot.
-// It expects a query parameter "name" specifying the snapshot to delete.
-func (s *FusionServer) DeleteSnapshot(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodDelete {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-
-	snapshotName, err := utils.ExtractName(r)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-
-	if s.handler.IsDefaultSnapshot(snapshotName) {
-		http.Error(w, "default snapshot cannot be deleted", http.StatusBadRequest)
-		return
-	}
-
-	if err := s.handler.HandleDeleteSnapshot(snapshotName); err != nil {
-		http.Error(w, fmt.Sprintf("Error deleting snapshot: %v", err), http.StatusInternalServerError)
-		return
-	}
-
-	w.WriteHeader(http.StatusNoContent)
-}
-
 // GetDatabaseMetadata handles HTTP GET requests to retrieve fusion database metadata.
 func (s *FusionServer) GetDatabaseMetadata(w http.ResponseWriter, r *http.Request) {
+	type databaseMetadataResponse struct {
+		Metadata *api.DatabaseMetadata `json:"metadata"`
+	}
+
 	if !utils.RequireGet(w, r) {
 		return
 	}
@@ -487,36 +363,13 @@ func (s *FusionServer) GetDatabaseMetadata(w http.ResponseWriter, r *http.Reques
 	// Retrieve metadata from the handler.
 	metadata, err := s.handler.HandleGetDatabaseMetadata()
 	if err != nil {
-		http.Error(w, fmt.Sprintf("Error getting snapshot metadata: %v", err), http.StatusInternalServerError)
+		http.Error(w, fmt.Sprintf("Error getting database metadata: %v", err), http.StatusInternalServerError)
 		return
 	}
 
 	// Write the JSON response with metadata.
 	w.Header().Set(api.ContentType, api.JsonMIMEType)
-	json.NewEncoder(w).Encode(map[string]any{"metadata": metadata})
-}
-
-// GetSnapshot handles HTTP GET requests to retrieve a specific snapshot.
-func (s *FusionServer) GetSnapshot(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodGet {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-
-	snapshotName, err := utils.ExtractName(r)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-
-	snapshot, err := s.handler.HandleGetSnapshot(snapshotName)
-	if err != nil {
-		http.Error(w, fmt.Sprintf("Error getting snapshot: %v", err), http.StatusNotFound)
-		return
-	}
-
-	w.Header().Set(api.ContentType, api.JsonMIMEType)
-	json.NewEncoder(w).Encode(snapshot)
+	json.NewEncoder(w).Encode(databaseMetadataResponse{Metadata: metadata})
 }
 
 // ExportData handles HTTP GET requests to export all data.
@@ -525,14 +378,12 @@ func (s *FusionServer) ExportData(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Retrieve data from the handler.
 	data, err := s.handler.HandleExportData()
 	if err != nil {
 		http.Error(w, fmt.Sprintf("Error exporting data: %v", err), http.StatusInternalServerError)
 		return
 	}
 
-	// Write the JSON response with the snapshots.
 	w.Header().Set(api.ContentType, api.JsonMIMEType)
 	json.NewEncoder(w).Encode(data)
 }
@@ -673,13 +524,17 @@ func (s *FusionServer) CancelAlarms(w http.ResponseWriter, r *http.Request) {
 
 // GetSessions handles HTTP GET requests to get SAP sessions
 func (s *FusionServer) GetSessions(w http.ResponseWriter, r *http.Request) {
+	type sessionsResponse struct {
+		Sessions map[string]*handler.SAPSession `json:"sessions"`
+	}
+
 	if !utils.RequireGet(w, r) {
 		return
 	}
 
 	sessions := s.handler.HandleListSessions()
 
-	err := json.NewEncoder(w).Encode(map[string]any{"sessions": sessions})
+	err := json.NewEncoder(w).Encode(sessionsResponse{Sessions: sessions})
 	if err != nil {
 		logging.GetLogger().Error("Failed to encode JSON: %v", err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -760,6 +615,12 @@ func (s *FusionServer) GetControllerByID(w http.ResponseWriter, r *http.Request)
 	}
 }
 func (s *FusionServer) TriggerWinkById(w http.ResponseWriter, r *http.Request) {
+	type winkResponse struct {
+		Status       string `json:"status"`
+		Message      string `json:"message"`
+		ControllerID string `json:"controller_id"`
+	}
+
 	if !utils.RequireGet(w, r) {
 		return
 	}
@@ -784,10 +645,10 @@ func (s *FusionServer) TriggerWinkById(w http.ResponseWriter, r *http.Request) {
 	// Return success response for wink command
 	w.Header().Set(api.ContentType, api.JsonMIMEType)
 	w.WriteHeader(http.StatusOK)
-	response := map[string]any{
-		"status":        "success",
-		"message":       "Wink command sent successfully",
-		"controller_id": id,
+	response := winkResponse{
+		Status:       "success",
+		Message:      "Wink command sent successfully",
+		ControllerID: id,
 	}
 	if err := json.NewEncoder(w).Encode(response); err != nil {
 		http.Error(w, fmt.Sprintf("Failed to encode response: %v", err), http.StatusInternalServerError)
@@ -819,85 +680,19 @@ func getSingleQueryParam(r *http.Request, param string) (string, error) {
 	return params[0], nil
 }
 
-// calculateDiff recursively compares two data structures (maps or slices) and returns the differences.
-// If the data is not equal, it returns the updated data.
-func calculateDiff(oldData, newData any) any {
-	// If both values are slices, delegate to calculateSliceDiff.
-	if oldSlice, ok := oldData.([]any); ok {
-		if newSlice, ok2 := newData.([]any); ok2 {
-			return calculateSliceDiff(oldSlice, newSlice)
-		}
-	}
-
-	// If both values are maps, compare them key by key.
-	if oldMap, ok := oldData.(map[string]any); ok {
-		if newMap, ok2 := newData.(map[string]any); ok2 {
-			diff := make(map[string]any)
-
-			// Check keys present in the new map.
-			for key, newVal := range newMap {
-				if oldVal, exists := oldMap[key]; exists {
-					subDiff := calculateDiff(oldVal, newVal)
-					if subDiff != nil {
-						diff[key] = subDiff
-					}
-				} else {
-					// New key added.
-					diff[key] = newVal
-				}
-			}
-
-			// Check for keys that were removed.
-			for key := range oldMap {
-				if _, exists := newMap[key]; !exists {
-					diff[key] = nil
-				}
-			}
-			if len(diff) > 0 {
-				return diff
-			}
-			return nil
-		}
-	}
-
-	// For atomic types, if they differ, return the new value.
-	if !reflect.DeepEqual(oldData, newData) {
-		return newData
-	}
-	return nil
-}
-
-// calculateSliceDiff compares two slices element by element.
-// If the slices have different lengths, it returns the new slice entirely.
-// Otherwise, it returns a map with indices (as strings) where differences are found.
-func calculateSliceDiff(oldSlice, newSlice []any) any {
-	if len(oldSlice) != len(newSlice) {
-		return newSlice
-	}
-
-	diffMap := make(map[string]any)
-	for i, newVal := range newSlice {
-		subDiff := calculateDiff(oldSlice[i], newVal)
-		if subDiff != nil {
-			// Use the index (converted to string) as the key.
-			diffMap[strconv.Itoa(i)] = subDiff
-		}
-	}
-
-	if len(diffMap) > 0 {
-		return diffMap
-	}
-	return nil
-}
-
 // handleWebSocketMessage processes a message received over the WebSocket connection.
 // It delegates the message handling to the handler and sends the response back to the client.
 func (s *FusionServer) handleWebSocketMessage(conn *websocket.Conn, data []byte) {
+	type websocketErrorResponse struct {
+		Type    string `json:"type"`
+		Message string `json:"message"`
+	}
+
 	response, err := s.handler.HandleWebSocketMessage(data)
 	if err != nil {
-		if err := conn.WriteJSON(map[string]any{
-			"type":    "error",
-			"message": err.Error(),
+		if err := conn.WriteJSON(websocketErrorResponse{
+			Type:    "error",
+			Message: err.Error(),
 		}); err != nil {
 			logging.GetLogger().Error("Error sending error response: %v", err)
 		}

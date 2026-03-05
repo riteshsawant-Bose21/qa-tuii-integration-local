@@ -2,9 +2,16 @@ package controllers
 
 import (
 	"bufio"
-	"fusion/internal/logging"
+	"fusion-services-core/logging"
 	"net"
 	"sync"
+	"time"
+)
+
+const (
+	// TCP connection timeouts
+	tcpWriteTimeout = 10 * time.Second
+	tcpKeepAlive    = 30 * time.Second
 )
 
 // WallControllerTCPServer handles TCP connections specifically for wall controllers
@@ -37,14 +44,14 @@ func (s *WallControllerTCPServer) Start() error {
 
 	if s.running {
 		logger := logging.GetLogger()
-		logger.Info("🔄 Wall Controller TCP server already running on %s", s.addr)
+		logger.Info("Wall Controller TCP server already running on %s", s.addr)
 		return nil
 	}
 
 	listener, err := net.Listen("tcp", s.addr)
 	if err != nil {
 		logger := logging.GetLogger()
-		logger.Error("❌ Failed to start Wall Controller TCP server on %s: %v", s.addr, err)
+		logger.Error("Failed to start Wall Controller TCP server on %s: %v", s.addr, err)
 		return err
 	}
 
@@ -52,8 +59,7 @@ func (s *WallControllerTCPServer) Start() error {
 	s.running = true
 
 	logger := logging.GetLogger()
-	logger.Info("🚀 Wall Controller TCP server listening on %s", s.addr)
-	logger.Info("🎯 Ready to accept wall controller connections...")
+	logger.Info("Wall Controller TCP server listening on %s", s.addr)
 
 	go s.acceptConnections()
 
@@ -92,6 +98,13 @@ func (s *WallControllerTCPServer) handleConnection(conn net.Conn) {
 	connectionID := conn.RemoteAddr().String()
 	logger := logging.GetLogger()
 	logger.Info("Wall Controller TCP client connected: %s", connectionID)
+
+	if tcpConn, ok := conn.(*net.TCPConn); ok {
+		tcpConn.SetKeepAlive(true)
+		tcpConn.SetKeepAlivePeriod(tcpKeepAlive)
+	}
+
+	conn.SetWriteDeadline(time.Now().Add(tcpWriteTimeout))
 
 	s.clientsLock.Lock()
 	s.clients[connectionID] = conn

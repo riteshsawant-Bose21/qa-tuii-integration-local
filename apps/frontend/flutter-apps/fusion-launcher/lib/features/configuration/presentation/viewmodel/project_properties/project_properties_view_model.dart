@@ -25,8 +25,6 @@ extension ProjectPropertiesViewModel on ProjectViewModel {
 
   String? get virtualIP => projectManager.getVirtualIP();
 
-  String get metaData => projectManager.getMetaData();
-
   double get minSPL => projectManager.getMinSPL();
 
   double get maxSPL => projectManager.getMaxSPL();
@@ -34,8 +32,6 @@ extension ProjectPropertiesViewModel on ProjectViewModel {
   bool get isInControlMode => projectManager.inControlMode();
 
   List<Color> get projectColors => projectManager.getProjectColors();
-
-  bool get isAdminLogin => projectManager.isAdminLogin();
 
   int get currentFloorIndex => projectManager.getCurrentFloorIndex();
 
@@ -115,7 +111,7 @@ extension ProjectPropertiesViewModel on ProjectViewModel {
       if (autoSave) {
         saveProject();
       }
-      updateProject();
+      emitVipUpdated(ip);
     } catch (e) {
       FusionLogger.log(tag: LogTag.project, message: "Failed to set virtual IP: $e");
       throwError("Failed to set virtual IP: $e");
@@ -123,12 +119,12 @@ extension ProjectPropertiesViewModel on ProjectViewModel {
   }
 
   //set meta data
-  void setMetaData({required String metaData, bool autoSave = true}) {
+  void updateProjectMetaData({required ProjectMetaData metaData, bool autoSave = true}) {
     try {
       if (autoSave) {
         recordSnapshot();
       }
-      projectManager.setMetaData(metaData);
+      projectManager.updateProjectMetaData(metaData: metaData);
       if (autoSave) {
         saveProject();
       }
@@ -136,6 +132,16 @@ extension ProjectPropertiesViewModel on ProjectViewModel {
     } catch (e) {
       FusionLogger.log(tag: LogTag.project, message: "Failed to set meta data: $e");
       throwError("Failed to set meta data: $e");
+    }
+  }
+
+  ProjectMetaData? get projectMetaData {
+    try {
+      return projectManager.getProjectMetadata();
+    } catch (e) {
+      FusionLogger.log(tag: LogTag.project, message: "Failed to get project metadata: $e");
+      throwError("Failed to get project metadata: $e");
+      return null;
     }
   }
 
@@ -183,7 +189,9 @@ extension ProjectPropertiesViewModel on ProjectViewModel {
       if (autoSave) {
         saveProject();
       }
-      updateProject();
+      emitTabChanged(
+        projectManager.inControlMode() ? 1 : 0,
+      );
     } catch (e) {
       FusionLogger.log(tag: LogTag.project, message: "Failed to set control mode: $e");
       throwError("Failed to set control mode: $e");
@@ -204,6 +212,13 @@ extension ProjectPropertiesViewModel on ProjectViewModel {
   //update current floor index
   void setCurrentFloorIndex(int index) {
     try {
+      // clear the selections when changing floor
+      currentSelectedHardwareId = null;
+      currentSelectedListeningAreaId = null;
+      currentSelectedZoneId = null;
+      currentSelectedSubZoneId = null;
+      setShouldPlaceNonPlacedSpeakers(false);
+
       projectManager.setCurrentFloorIndex(index);
       updateProject();
     } catch (e) {
@@ -219,6 +234,7 @@ extension ProjectPropertiesViewModel on ProjectViewModel {
 
   void setCurrentSelectedListeningArea(String? area) {
     currentSelectedListeningAreaId = area;
+    if (area == null) setShouldPlaceNonPlacedSpeakers(false);
     updateProject();
   }
 

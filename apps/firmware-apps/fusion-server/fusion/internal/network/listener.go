@@ -7,7 +7,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"fusion/internal/logging"
+	"fusion-services-core/logging"
 )
 
 const defaultBufferSize = 65535

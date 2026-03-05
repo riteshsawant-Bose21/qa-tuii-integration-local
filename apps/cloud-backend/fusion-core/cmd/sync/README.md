@@ -1,248 +1,43 @@
-# Fusion Product Sync Tool
+# Fusion Product/Price Sync - Lambda
 
-A versatile tool for synchronizing Bose Professional product and pricing data from various sources (local files, S3) to the Fusion Cloud Backend database. The tool supports multiple execution modes: CLI, HTTP server, and AWS Lambda.
+Automatically syncs Bose Professional product and pricing data from S3 to the Fusion Cloud PostgreSQL database. Triggered on every S3 object upload via S3 Event Notifications.
 
-## Table of Contents
+## How It Works
 
-- [Overview](#overview)
-- [Installation](#installation)
-- [Configuration](#configuration)
-- [Usage](#usage)
-  - [CLI Mode](#cli-mode)
-  - [HTTP Server Mode](#http-server-mode)
-  - [AWS Lambda Mode](#aws-lambda-mode)
-- [Project Structure](#project-structure)
-- [Data Format](#data-format)
-- [Examples](#examples)
-- [Troubleshooting](#troubleshooting)
-
-## Overview
-
-The Fusion Product Sync Tool provides three operational modes:
-
-1. **CLI Mode**: Direct command-line execution for scripts and automation
-2. **HTTP Server Mode**: RESTful API server for integration with web applications
-3. **AWS Lambda Mode**: Serverless execution for cloud-based workflows
-
-### Features
-
-- **Multi-source support**: Local files and AWS S3 objects
-- **Data validation**: JSON schema validation against Bose Professional Product Data Schema
-- **Job tracking**: Complete audit trail with sync job management
-- **Error handling**: Comprehensive error reporting and retry mechanisms
-- **Flexible deployment**: CLI, HTTP server, or Lambda execution modes
-
-## Installation
-
-### Prerequisites
-
-- Go 1.19 or later
-- PostgreSQL database
-- AWS credentials (for S3 sources)
-
-### Build from Source
-
-```bash
-cd /path/to/fusion-monorepo/apps/cloud-backend/fusion-core/cmd/sync
-go mod tidy
-go build -o sync .
+```
+S3 Object Upload → S3 Event Notification → Lambda → PostgreSQL
 ```
 
-## Configuration
+The Lambda function receives the bucket name and object key from the S3 event, determines the sync type (product or price) by matching the bucket name against configured env variables, then validates and upserts the data into the database.
 
-The tool uses environment variables for configuration. Copy the example configuration:
+## Prerequisites
 
-```bash
-cp .env-example .env
-```
+- Go 1.22+
+- Docker
+- AWS CLI configured
+- PostgreSQL database accessible from Lambda (VPC or public endpoint)
 
-### Environment Variables
+## S3 Bucket Convention
 
-#### Database Configuration
-```bash
-# PostgreSQL Database Configuration (for API service)
-POSTGRES_HOST=localhost
-POSTGRES_PORT=5432
-POSTGRES_USER=fusion_cloud
-POSTGRES_PASS=your_password
-POSTGRES_INSTANCE=fusion_cloud
-DB_SSLMODE=disable
-```
+Two separate buckets are required. Object keys must follow this format:
 
-#### Application Settings
-```bash
-# Application Configuration
-LOG_LEVEL=info
-SCHEMA_PATH=project-data-standard-schema.json
+| Sync Type | Bucket Env Var     | Key Format                      |
+|-----------|--------------------|---------------------------------|
+| Product   | `S3_PRODUCT_BUCKET`  | `YYYY/products_YYYYMMDD.json`   |
+| Price     | `S3_PRICE_BUCKET`    | `YYYY/prices_YYYYMMDD.json`     |
 
-# Processing Configuration
-MAX_WORKERS=5
-BATCH_SIZE=50
-RETRY_ATTEMPTS=3
-RETRY_DELAY=2
-
-# Validation Configuration
-REQUIRE_VERSION=true
-DEFAULT_VERSION=1.0
-SUPPORTED_VERSIONS=1.0,1.1,2.0,3.0
-```
-
-#### AWS Configuration
-```bash
-# AWS Configuration
-AWS_REGION=us-east-2
-AWS_ACCESS_KEY_ID=your_aws_access_key
-AWS_SECRET_ACCESS_KEY=your_aws_secret_key
-```
-
-#### Server Configuration
-```bash
-# Server Configuration
-API_HOST=localhost
-API_PORT=8080
-SYNC_PORT=8080
-```
-
-## Usage
-
-### CLI Mode
-
-Direct command-line execution for automated scripts and manual operations.
-
-#### Sync Products from Local File
-```bash
-./sync --type=product --source=local --path=/path/to/products.json
-```
-
-#### Sync Products from S3
-```bash
-./sync --type=product --source=s3 --bucket=my-bucket --key=data/products.json --region=us-east-2
-```
-
-#### Sync Prices from Local File
-```bash
-./sync --type=price --source=local --path=/path/to/prices.json
-```
-
-#### Sync Prices from S3
-```bash
-./sync --type=price --source=s3 --bucket=my-bucket --key=data/prices.json
-```
-
-#### CLI Options
-- `--type`: Sync type - `product` or `price` (required)
-- `--source`: Source type - `local` or `s3` (required)
-- `--path`: Local file path (required for local source)
-- `--bucket`: S3 bucket name (required for S3 source)
-- `--key`: S3 object key (required for S3 source)
-- `--region`: AWS region (optional, uses config default)
-
-### HTTP Server Mode
-
-Run as a web service for API integration.
-
-#### Start HTTP Server
-```bash
-./sync --server
-```
-
-#### Start with Custom Port
-```bash
-./sync --server --port=9090
-```
-
-#### API Endpoints
-
-##### Health Check
-```bash
-GET /health
-```
-
-Response:
-```json
-{
-  "status": "healthy",
-  "service": "product-sync"
-}
-```
-
-##### Sync with JSON Body (S3 Source)
-```bash
-POST /sync
-Content-Type: application/json
-
-{
-  "syncType": "product",
-  "sourceType": "s3",
-  "s3Bucket": "my-bucket",
-  "s3Key": "data/products.json",
-  "region": "us-east-2"
-}
-```
-
-##### Sync with File Upload (Local Source)
-```bash
-POST /sync
-Content-Type: multipart/form-data
-
-# Form fields:
-# syncType: product
-# region: us-east-2
-# file: [uploaded JSON file]
-```
-
-#### HTTP Response Format
-```json
-{
-  "success": true,
-  "jobId": "uuid-job-id",
-  "totalItems": 150,
-  "successful": 148,
-  "failed": 2,
-  "errors": ["Product ABC123 missing required field", "..."],
-  "duration": "2.5s",
-  "message": "Sync completed: 148 successful, 2 failed, 0 skipped"
-}
-```
-
-### AWS Lambda Mode
-
-The tool automatically detects Lambda execution when `AWS_LAMBDA_RUNTIME_API` environment variable is present.
-
-#### Lambda Event Format
-```json
-{
-  "syncType": "product",
-  "sourceType": "s3",
-  "s3Bucket": "my-bucket",
-  "s3Key": "data/products.json",
-  "region": "us-east-2"
-}
-```
-
-#### Lambda Response Format
-```json
-{
-  "success": true,
-  "jobId": "uuid-job-id",
-  "totalItems": 150,
-  "successful": 148,
-  "failed": 2,
-  "errors": ["Product ABC123 missing required field"],
-  "duration": "2.5s",
-  "message": "Sync completed: 148 successful, 2 failed, 0 skipped"
-}
-```
+Any upload to either bucket automatically triggers the sync.
 
 ## Project Structure
 
 ```
 cmd/sync/
 ├── main.go              # Main application entry point
-├── sync                 # Compiled binary
-├── .env                 # Environment configuration
 ├── .env-example         # Example configuration
 └── README.md           # This documentation
+
+├── sync-lambda.dockerfile  # Dockerfile for Lambda Image
+├── sync-lambda-local.dockerfile  # Dockerfile for local Lambda testing
 
 Key Dependencies:
 ├── internal/fusion/sync/           # Core sync service logic
@@ -253,202 +48,89 @@ Key Dependencies:
 └── internal/storage/sql/           # Database connection
 ```
 
-### Core Components
+## Configuration
 
-- **Sync Service**: Orchestrates product and price synchronization
-- **Source Service**: Handles data reading from local files and S3
-- **Database Services**: Product, Price, and Job management
-- **Job Tracking**: Complete audit trail for all sync operations
+Set the following as Lambda environment variables:
 
-## Data Format
-
-The tool expects JSON data conforming to the Bose Professional Product Data Schema.
-
-### Product Data Example
-```json
-{
-  "version": "1.0",
-  "title": "Bose Professional Products",
-  "description": "Product catalog data",
-  "speakers": [
-    {
-      "product_id": "SPK001",
-      "name": "Professional Speaker Model X",
-      "description": "High-quality professional speaker",
-      "specifications": {
-        "frequency_response": "20Hz - 20kHz",
-        "max_power": "500W",
-        "impedance": "8 ohms"
-      }
-    }
-  ],
-  "amplifiers": [
-    {
-      "product_id": "AMP001",
-      "name": "Professional Amplifier Model Y",
-      "description": "High-performance amplifier",
-      "specifications": {
-        "power_output": "2x500W",
-        "thd": "< 0.1%"
-      }
-    }
-  ]
-}
-```
-
-### Price Data Example
-```json
-{
-  "version": "1.0",
-  "prices": [
-    {
-      "product_id": "SPK001",
-      "price": 1299.99,
-      "currency": "USD",
-      "effective_date": "2024-01-01T00:00:00Z"
-    }
-  ]
-}
-```
-
-## Examples
-
-### Example 1: Sync Products from Local Development File
 ```bash
-# Create a test products file
-cat > products.json << 'EOF'
-{
-  "version": "1.0",
-  "title": "Test Products",
-  "speakers": [
-    {
-      "product_id": "TEST001",
-      "name": "Test Speaker",
-      "description": "Test speaker for development"
-    }
-  ]
-}
-EOF
+# Database
+POSTGRES_HOST=localhost
+POSTGRES_PORT=5432
+POSTGRES_USER=fusion_cloud
+POSTGRES_PASS=your_password
+POSTGRES_INSTANCE=fusion_cloud
+DB_SSLMODE=disable
 
-# Sync the products
-./sync --type=product --source=local --path=products.json
+# S3 Buckets
+S3_PRODUCT_BUCKET=product-sync
+S3_PRICE_BUCKET=price-sync
+
+# AWS
+AWS_REGION=us-east-2
+
+# Application
+LOG_LEVEL=info
+SCHEMA_PATH=project-data-standard-schema.json
+MAX_WORKERS=5
+BATCH_SIZE=50
+RETRY_ATTEMPTS=3
+RETRY_DELAY=2
+
+# Validation
+REQUIRE_VERSION=true
+DEFAULT_VERSION=1.0
+SUPPORTED_VERSIONS=1.0,1.1,2.0,3.0
 ```
 
-### Example 2: HTTP Server Integration
-```bash
-# Start the server
-./sync --server &
+> No `.env` file is used in Lambda. All variables are injected directly by the runtime.
 
-# Test with curl
-curl -X POST http://localhost:8080/sync \
-  -H "Content-Type: application/json" \
-  -d '{
-    "syncType": "product",
-    "sourceType": "s3",
-    "s3Bucket": "fusion-product-data",
-    "s3Key": "catalog/products.json",
-    "region": "us-east-2"
-  }'
-
-# Health check
-curl http://localhost:8080/health
+Additonally set the following variables, if you are testing the Lambda locally:
+```
+AWS_ACCESS_KEY_ID=your_aws_access_key
+AWS_SECRET_ACCESS_KEY=your_aws_secret_key
 ```
 
-### Example 3: File Upload via HTTP
+## Build & Deploy on AWS
+
+### 1. Build the Image
+
+Run from the module root (`apps/cloud-backend/fusion-core/`):
+
 ```bash
-curl -X POST http://localhost:8080/sync \
-  -F "syncType=product" \
-  -F "region=us-east-2" \
-  -F "file=@products.json"
+docker build \
+  --platform linux/arm64 \
+  -f sync-lambda.dockerfile \
+  -t fusion-sync:latest \
+  .
 ```
 
-### Example 4: Production Deployment Script
+### 2. Push to ECR
+
 ```bash
-#!/bin/bash
-# production-sync.sh
+REGION=us-east-2
+ACCOUNT_ID=111122223333
+REPO_NAME=fusion-sync
 
-set -e
+# Authenticate
+aws ecr get-login-password --region $REGION \
+  | docker login --username AWS --password-stdin \
+    $ACCOUNT_ID.dkr.ecr.$REGION.amazonaws.com
 
-# Load environment
-source .env.production
+# Tag and push
+docker tag fusion-sync:latest \
+  $ACCOUNT_ID.dkr.ecr.$REGION.amazonaws.com/$REPO_NAME:latest
 
-# Sync products from S3
-./sync --type=product \
-       --source=s3 \
-       --bucket=fusion-prod-data \
-       --key=catalog/products-$(date +%Y%m%d).json \
-       --region=us-east-2
-
-# Sync prices from S3
-./sync --type=price \
-       --source=s3 \
-       --bucket=fusion-prod-data \
-       --key=pricing/prices-$(date +%Y%m%d).json \
-       --region=us-east-2
-
-echo "Production sync completed successfully"
+docker push \
+  $ACCOUNT_ID.dkr.ecr.$REGION.amazonaws.com/$REPO_NAME:latest
 ```
 
 ## Troubleshooting
 
-### Common Issues
+| Issue | Check |
+|-------|-------|
+| `unknown bucket` error | Verify `S3_PRODUCT_BUCKET` / `S3_PRICE_BUCKET` match the actual S3 bucket names exactly |
+| Database connection failed | Confirm Lambda is in the correct VPC and security group allows outbound on the correct port  |
+| Schema validation failed | Ensure JSON includes a valid `version` field from `SUPPORTED_VERSIONS` |
+| S3 key decode error | Check for unsupported special characters in the object key |
 
-#### Database Connection Errors
-```bash
-# Check database connectivity
-psql -h $POSTGRES_HOST -p $POSTGRES_PORT -U $POSTGRES_USER -d $POSTGRES_INSTANCE -c "SELECT 1;"
-
-# Verify environment variables
-env | grep POSTGRES
-```
-
-#### AWS S3 Access Issues
-```bash
-# Test AWS credentials
-aws sts get-caller-identity
-
-# Test S3 access
-aws s3 ls s3://your-bucket/path/
-```
-
-#### Schema Validation Errors
-- Ensure JSON data conforms to the Bose Professional Product Data Schema
-- Check the `version` field in your data
-- Validate required fields for each product type
-
-### Error Codes and Messages
-
-| Error | Description | Solution |
-|-------|-------------|----------|
-| `Failed to create data source` | Invalid source configuration | Check file path or S3 credentials |
-| `Schema validation failed` | JSON doesn't match schema | Validate data against schema |
-| `Database connection failed` | Cannot connect to PostgreSQL | Check database configuration |
-| `Failed to read data` | File or S3 object not accessible | Verify file path and permissions |
-
-### Logging
-
-Set log level in environment:
-```bash
-LOG_LEVEL=debug  # debug, info, warn, error
-```
-
-### Performance Tuning
-
-Adjust processing parameters:
-```bash
-MAX_WORKERS=10      # Increase for more parallelism
-BATCH_SIZE=100      # Larger batches for bulk operations
-RETRY_ATTEMPTS=5    # More retries for unreliable networks
-```
-
----
-
-## Support
-
-For issues and questions:
-- Check the logs for detailed error messages
-- Verify database connectivity and AWS credentials
-- Ensure data format matches the schema requirements
-- Review configuration environment variables
-
-For development questions, consult the internal documentation or contact the Fusion Cloud Backend team.
+Logs are available in CloudWatch under `/aws/lambda/<function-name>`. Set `LOG_LEVEL=debug` for verbose output.

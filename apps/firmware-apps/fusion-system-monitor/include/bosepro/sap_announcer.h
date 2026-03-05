@@ -135,6 +135,10 @@ public:
         setsockopt(sock_fd, IPPROTO_IP, IP_MULTICAST_TTL, &ttl, sizeof(ttl));
     }
 
+    inline void setSystemIp(const std::string& sys_ip) {
+        system_ip = sys_ip;
+    }
+
     ~SAPAnnouncer() {
         if (sock_fd >= 0) {
             close(sock_fd);

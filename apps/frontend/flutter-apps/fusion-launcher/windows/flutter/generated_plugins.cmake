@@ -3,7 +3,13 @@
 #
 
 list(APPEND FLUTTER_PLUGIN_LIST
+  app_links
+  audioplayers_windows
+  desktop_drop
   file_selector_windows
+  flutter_inappwebview_windows
+  flutter_secure_storage_windows
+  media_kit_libs_windows_audio
   permission_handler_windows
   share_plus
   url_launcher_windows

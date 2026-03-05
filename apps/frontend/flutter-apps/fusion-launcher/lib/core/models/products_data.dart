@@ -63,9 +63,11 @@ class SpeakerData extends DeviceComponent {
 
 class SourceData extends DeviceComponent {
   final SourceType type;
+  final SourceConnectionType connectionType;
 
   const SourceData({
     required this.type,
+    required this.connectionType,
     required super.assetPath,
     required super.name,
     required super.id,
@@ -73,43 +75,206 @@ class SourceData extends DeviceComponent {
   });
 
   static const List<SourceData> microphoneItems = <SourceData>[
-    SourceData(id: "gooseneck", name: "Gooseneck", assetPath: "assets/images/products/mic1.png", type: SourceType.analogInput, price: 100.0),
-    SourceData(id: "hanging", name: "Hanging", assetPath: "assets/images/products/hanging_mic.png", type: SourceType.analogInput, price: 100.0),
-    SourceData(id: "condenser", name: "Condenser", assetPath: "assets/images/products/mic1.png", type: SourceType.analogInput, price: 100.0),
-    SourceData(id: "dynamic", name: "Dynamic", assetPath: "assets/images/products/mic1.png", type: SourceType.analogInput, price: 100.0),
-    SourceData(id: "shotgun", name: "Shotgun", assetPath: "assets/images/products/mic1.png", type: SourceType.analogInput, price: 100.0),
-    SourceData(id: "pzm", name: "PZM", assetPath: "assets/images/products/mic1.png", type: SourceType.analogInput, price: 100.0),
-    SourceData(id: "lavalier", name: "Lavalier", assetPath: "assets/images/products/mic1.png", type: SourceType.analogInput, price: 100.0),
-    SourceData(id: "headset", name: "Headset", assetPath: "assets/images/products/mic1.png", type: SourceType.analogInput, price: 100.0),
-    SourceData(id: "handheld", name: "Handheld", assetPath: "assets/images/products/mic1.png", type: SourceType.analogInput, price: 100.0),
-    SourceData(id: "beltpack", name: "Beltpack", assetPath: "assets/images/products/mic1.png", type: SourceType.analogInput, price: 100.0),
-    SourceData(id: "paging", name: "Paging", assetPath: "assets/images/products/paging_mic.png", type: SourceType.analogInput, price: 100.0),
+    SourceData(
+      id: "gooseneck",
+      name: "Gooseneck",
+      assetPath: "assets/images/products/mic1.png",
+      type: SourceType.mic,
+      connectionType: SourceConnectionType.analogInput,
+      price: 100.0,
+    ),
+    SourceData(
+      id: "hanging",
+      name: "Hanging",
+      assetPath: "assets/images/products/hanging_mic.png",
+      type: SourceType.mic,
+      connectionType: SourceConnectionType.analogInput,
+      price: 100.0,
+    ),
+    SourceData(
+      id: "condenser",
+      name: "Condenser",
+      assetPath: "assets/images/products/mic1.png",
+      type: SourceType.mic,
+      connectionType: SourceConnectionType.analogInput,
+      price: 100.0,
+    ),
+    SourceData(
+      id: "dynamic",
+      name: "Dynamic",
+      assetPath: "assets/images/products/mic1.png",
+      type: SourceType.mic,
+      connectionType: SourceConnectionType.analogInput,
+      price: 100.0,
+    ),
+    SourceData(
+      id: "shotgun",
+      name: "Shotgun",
+      assetPath: "assets/images/products/mic1.png",
+      type: SourceType.mic,
+      connectionType: SourceConnectionType.analogInput,
+      price: 100.0,
+    ),
+    SourceData(
+      id: "pzm",
+      name: "PZM",
+      assetPath: "assets/images/products/mic1.png",
+      type: SourceType.mic,
+      connectionType: SourceConnectionType.analogInput,
+      price: 100.0,
+    ),
+    SourceData(
+      id: "lavalier",
+      name: "Lavalier",
+      assetPath: "assets/images/products/mic1.png",
+      type: SourceType.mic,
+      connectionType: SourceConnectionType.analogInput,
+      price: 100.0,
+    ),
+    SourceData(
+      id: "headset",
+      name: "Headset",
+      assetPath: "assets/images/products/mic1.png",
+      type: SourceType.mic,
+      connectionType: SourceConnectionType.analogInput,
+      price: 100.0,
+    ),
+    SourceData(
+      id: "handheld",
+      name: "Handheld",
+      assetPath: "assets/images/products/mic1.png",
+      type: SourceType.mic,
+      connectionType: SourceConnectionType.analogInput,
+      price: 100.0,
+    ),
+    SourceData(
+      id: "beltpack",
+      name: "Beltpack",
+      assetPath: "assets/images/products/mic1.png",
+      type: SourceType.mic,
+      connectionType: SourceConnectionType.analogInput,
+      price: 100.0,
+    ),
+    SourceData(
+      id: "paging",
+      name: "Paging",
+      assetPath: "assets/images/products/paging_mic.png",
+      type: SourceType.mic,
+      connectionType: SourceConnectionType.analogInput,
+      price: 100.0,
+    ),
+
+    SourceData(
+      id: "table",
+      name: "Table",
+      assetPath: "assets/images/products/paging_mic.png",
+      type: SourceType.mic,
+      connectionType: SourceConnectionType.analogInput,
+      price: 100.0,
+    ),
   ];
 
   static const List<SourceData> mediaSourceItems = <SourceData>[
-    SourceData(id: "generic_mono", name: "Generic Mono", assetPath: "assets/images/products/dvdplayer.png", type: SourceType.analogInput, price: 100.0),
-    SourceData(id: "generic_stereo", name: "Generic Stereo", assetPath: "assets/images/products/dvdplayer.png", type: SourceType.analogInput, price: 100.0),
-    SourceData(id: "cd", name: "CD", assetPath: "assets/images/products/dvdplayer.png", type: SourceType.analogInput, price: 100.0),
-    SourceData(id: "sat_cable_hdmi", name: "Sat/Cable - HDMI", assetPath: "assets/images/products/hdmi.png", type: SourceType.analogInput, price: 100.0),
-    SourceData(id: "media_player", name: "Media Player", assetPath: "assets/images/products/dvdplayer.png", type: SourceType.analogInput, price: 100.0),
-    SourceData(id: "tuner", name: "Tuner", assetPath: "assets/images/products/dvdplayer.png", type: SourceType.analogInput, price: 100.0),
-    SourceData(id: "dvd_hdmi", name: "DVD - HDMI", assetPath: "assets/images/products/hdmi.png", type: SourceType.analogInput, price: 100.0),
-    SourceData(id: "bluray_hdmi", name: "BluRay HDMI", assetPath: "assets/images/products/hdmi.png", type: SourceType.analogInput, price: 100.0),
     SourceData(
-      id: "laptop_usb_hdmi",
-      name: "Laptop - USB - or HDMI",
-      assetPath: "assets/images/products/laptop.png",
-      type: SourceType.usb,
+      id: "media_player",
+      name: "Media Player",
+      assetPath: "assets/images/products/dvdplayer.png",
+      type: SourceType.media,
+      connectionType: SourceConnectionType.analogInput,
       price: 100.0,
     ),
     SourceData(
-      id: "deskpc_usb_hdmi",
-      name: "DeskPC - USB - or HDMI",
+      id: "cd",
+      name: "CD",
+      assetPath: "assets/images/products/dvdplayer.png",
+      type: SourceType.media,
+      connectionType: SourceConnectionType.analogInput,
+      price: 100.0,
+    ),
+    SourceData(
+      id: "dvd",
+      name: "DVD",
+      assetPath: "assets/images/products/hdmi.png",
+      type: SourceType.media,
+      connectionType: SourceConnectionType.analogInput,
+      price: 100.0,
+    ),
+    SourceData(
+      id: "bluray",
+      name: "BluRay",
+      assetPath: "assets/images/products/hdmi.png",
+      type: SourceType.media,
+      connectionType: SourceConnectionType.analogInput,
+      price: 100.0,
+    ),
+    SourceData(
+      id: "sat_cable",
+      name: "Sat/Cable",
+      assetPath: "assets/images/products/hdmi.png",
+      type: SourceType.media,
+      connectionType: SourceConnectionType.hdmi,
+      price: 100.0,
+    ),
+    SourceData(
+      id: "tuner",
+      name: "Tuner",
+      assetPath: "assets/images/products/dvdplayer.png",
+      type: SourceType.media,
+      connectionType: SourceConnectionType.analogInput,
+      price: 100.0,
+    ),
+    SourceData(
+      id: "laptop",
+      name: "Laptop",
       assetPath: "assets/images/products/laptop.png",
-      type: SourceType.usb,
+      connectionType: SourceConnectionType.usb,
+      type: SourceType.media,
+      price: 100.0,
+    ),
+    SourceData(
+      id: "deskpc",
+      name: "Desk PC",
+      assetPath: "assets/images/products/laptop.png",
+      connectionType: SourceConnectionType.usb,
+      type: SourceType.media,
+      price: 100.0,
+    ),
+    SourceData(
+      id: "mixer",
+      name: "Mixer",
+      assetPath: "assets/images/products/dvdplayer.png",
+      type: SourceType.generic,
+      connectionType: SourceConnectionType.analogInput,
+      price: 100.0,
+    ),
+    SourceData(
+      id: "generic",
+      name: "Generic",
+      assetPath: "assets/images/products/dvdplayer.png",
+      type: SourceType.generic,
+      connectionType: SourceConnectionType.analogInput,
+      price: 100.0,
+    ),
+    SourceData(
+      id: "message_player",
+      name: "Message Player",
+      assetPath: "assets/images/products/dvdplayer.png",
+      type: SourceType.media,
+      connectionType: SourceConnectionType.analogInput,
       price: 100.0,
     ),
   ];
+
+  static SourceConnectionType getSourceConnectionType(String id) {
+    //search both microphone list and media list and return type
+    for (SourceData item in <SourceData>[...microphoneItems, ...mediaSourceItems]) {
+      if (item.id == id) {
+        return item.connectionType;
+      }
+    }
+
+    return SourceConnectionType.analogInput;
+  }
 
   static SourceType getSourceType(String id) {
     //search both microphone list and media list and return type
@@ -119,7 +284,7 @@ class SourceData extends DeviceComponent {
       }
     }
 
-    return SourceType.analogInput;
+    return SourceType.mic;
   }
 
   static const List<SourceData> demoSources = <SourceData>[
@@ -127,28 +292,32 @@ class SourceData extends DeviceComponent {
       assetPath: 'assets/images/products/mic1.png',
       name: 'Microphone',
       id: 'MIC01',
-      type: SourceType.analogInput,
+      type: SourceType.mic,
+      connectionType: SourceConnectionType.analogInput,
       price: 100.0,
     ),
     SourceData(
       assetPath: 'assets/images/products/dvdplayer.png',
       name: 'Music Player',
       id: 'LINE01',
-      type: SourceType.analogInput,
+      type: SourceType.media,
+      connectionType: SourceConnectionType.analogInput,
       price: 150.0,
     ),
     SourceData(
       assetPath: 'assets/icons/aes67.png',
       name: 'AES67 Input',
       id: 'AES01',
-      type: SourceType.aes67input,
+      type: SourceType.media,
+      connectionType: SourceConnectionType.aes67input,
       price: 200.0,
     ),
     SourceData(
       assetPath: 'assets/icons/bluetooth.png',
       name: 'Bluetooth Input',
       id: 'BLUETOOTH01',
-      type: SourceType.bluetooth,
+      type: SourceType.media,
+      connectionType: SourceConnectionType.bluetooth,
       price: 0.0,
     ),
   ];

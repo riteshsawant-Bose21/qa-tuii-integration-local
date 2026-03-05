@@ -9,6 +9,18 @@ extension SubzoneViewModel on ProjectViewModel {
         recordSnapshot();
       }
       projectManager.addSubZone(subZone);
+      for (final String algo in <String>[
+        "delay",
+        "peq",
+      ]) {
+        addProcessingBlockToParent(
+          processingBlock: ProcessingBlockModel.zoneBlocks.firstWhere(
+            (ProcessingBlockModel element) => element.algorithmId == algo,
+          ),
+          parentId: subZone.id,
+          autoSave: false,
+        );
+      }
       if (autoSave) {
         saveProject();
       }

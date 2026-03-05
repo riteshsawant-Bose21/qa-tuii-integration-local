@@ -1,0 +1,62 @@
+import 'package:flutter/material.dart';
+import 'package:fusion_lib/fusion_lib.dart';
+
+class FusionContainer extends StatelessWidget {
+  const FusionContainer({
+    super.key,
+    this.width,
+    this.borderRadius = 12.0,
+    required this.child,
+    this.raised = false,
+    this.color,
+    this.height,
+    this.alignment,
+    this.padding,
+    this.margin,
+  });
+  final double? width;
+  final double? height;
+  final double borderRadius;
+  final Widget child;
+  final bool raised;
+  final Color? color;
+  final AlignmentGeometry? alignment;
+  final EdgeInsetsGeometry? padding;
+  final EdgeInsetsGeometry? margin;
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 100),
+      width: width,
+      height: height,
+      alignment: alignment,
+      margin: margin ?? const EdgeInsets.all(2),
+      padding: padding,
+      decoration: BoxDecoration(
+        // color: context.colorScheme.shadowDark,
+        boxShadow: raised
+            ? <BoxShadow>[
+                BoxShadow(color: context.colorScheme.shadowLight, blurRadius: 6, offset: const Offset(-2, -2)),
+                BoxShadow(color: context.colorScheme.shadowDark, blurRadius: 8, offset: const Offset(2, 2)),
+                BoxShadow(color: color ?? context.colorScheme.elevation1),
+              ]
+            : <BoxShadow>[
+                BoxShadow(color: context.colorScheme.shadowDark, blurRadius: 2, offset: Offset(-2, -2), blurStyle: BlurStyle.inner),
+                BoxShadow(
+                  color: context.colorScheme.shadowLight,
+                  blurRadius: 2,
+                  offset: Offset(2, 2),
+                  blurStyle: BlurStyle.inner,
+                ),
+                BoxShadow(color: color ?? context.colorScheme.elevation1, blurRadius: 4, blurStyle: BlurStyle.inner),
+              ],
+        borderRadius: BorderRadius.circular(borderRadius),
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(borderRadius),
+        child: child,
+      ),
+    );
+  }
+}

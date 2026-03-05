@@ -106,3 +106,14 @@ install(DIRECTORY "${PROJECT_BUILD_DIR}/${FLUTTER_ASSET_DIR_NAME}"
 install(FILES "${AOT_LIBRARY}" DESTINATION "${INSTALL_BUNDLE_DATA_DIR}"
   CONFIGURATIONS Profile;Release
   COMPONENT Runtime)
+
+# ---- MACE DLL ----
+set(MACE_DLL "${CMAKE_CURRENT_SOURCE_DIR}/MACE/MaceAPI.dll")
+
+if (EXISTS "${MACE_DLL}")
+    install(FILES "${MACE_DLL}"
+            DESTINATION "${INSTALL_BUNDLE_LIB_DIR}"
+            COMPONENT Runtime)
+else()
+    message(WARNING "MaceAPI.dll not found at ${MACE_DLL}. Windows build will run without MACE.")
+endif()

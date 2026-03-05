@@ -64,12 +64,20 @@ func main() {
 	envName := flag.String("e", "local", "application environment (e.g. local, dev, staging, prod)")
 	flag.Parse()
 
+	// Check for environment variable first, then fallback to command line flag
+	actualEnvName := *envName
+	if envFromVar := os.Getenv("FUSION_ENVIRONMENT"); envFromVar != "" {
+		actualEnvName = envFromVar
+	}
+
 	env := environment.New(environment.DefaultLoadLookuper)
 
-	fmt.Println("Loading environment file", *envFile)
-	if *envName == "local" {
+	fmt.Printf("Running in %s environment\n", actualEnvName)
+
+	if actualEnvName == "local" {
 		if err := env.Load(*envFile); err != nil {
-			fmt.Println("error loading environment vars", zap.String("file", *envName), zap.Error(err))
+			fmt.Printf("Error loading environment file %s: %v\n", *envFile, err)
+			os.Exit(1)
 		}
 	}
 

@@ -37,6 +37,9 @@ const (
 	ClusterNTPSkewEndpoint                     = ClusterEndpoint + "/ntp-skew"
 	ClusterStatusEndpoint                      = ClusterEndpoint + "/status"
 
+	ClusterRebootEndpoint      = ClusterEndpoint + "/reboot"
+	ClusterRebootLocalEndpoint = ClusterRebootEndpoint
+
 	ControllersEndpoint       = "/controllers"
 	ControllersIDEndpoint     = ControllersEndpoint + "/{id}"
 	ControllersIDWinkEndpoint = ControllersEndpoint + "/wink" + "/{id}"
@@ -68,6 +71,7 @@ const (
 	PAVAZonesEndpoint          = PAVAEndpoint + "/zones"
 	PAVAMessagesIDEndpoint     = PAVAMessagesEndpoint + "/{id}"
 	PAVAMessagesTagsEndpoint   = PAVAMessagesEndpoint + "/tags"
+	PAVAScheduleIDEndpoint     = PAVAScheduleEndpoint + "/{id}"
 	PAVAMessageStreamEndpoint  = PAVAMessagesIDEndpoint + "/stream"
 	PAVAMessageTriggerEndpoint = PAVAMessagesIDEndpoint + "/trigger"
 	PAVAZoneStatusEndpoint     = PAVAZonesEndpoint + "/status/{name}"
@@ -78,13 +82,16 @@ const (
 	SessionsIdEndpoint = SessionsEndpoint + "/{id}"
 
 	SnapshotsEndpoint         = "/snapshots"
+	SnapshotsMetaEndpoint     = SnapshotsEndpoint + "/meta"
+	SnapshotsActiveEndpoint   = SnapshotsMetaEndpoint + "/active"
 	SnapshotsNameEndpoint     = SnapshotsEndpoint + "/{name}"
 	SnapshotsActivateEndpoint = SnapshotsEndpoint + "/activate/{name}"
+	SnapshotsUpdateEndpoint   = SnapshotsEndpoint + "/update/{name}"
 
 	TasksEndpoint          = "/tasks"
 	TasksHistoryEndpoint   = TasksEndpoint + "/history"
 	TasksIdEndpoint        = TasksEndpoint + "/{id}"
-	TasksIdDisableEndpoint = TasksIdEndpoint + "/enable"
+	TasksIdDisableEndpoint = TasksIdEndpoint + "/disable"
 	TasksIdEnableEndpoint  = TasksIdEndpoint + "/enable"
 
 	ValueEndpoint = "/value"
@@ -147,9 +154,17 @@ func RegisterEndpoint(router *mux.Router, method string, pattern string, handler
 		Endpoints = append(Endpoints, fmt.Sprintf("%s %s", method, pattern))
 	}
 	router.HandleFunc(pattern, handler).Methods(method)
+	// Register OPTIONS method for CORS preflight requests
+	router.HandleFunc(pattern, func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}).Methods("OPTIONS")
 }
 
 func ListRegisteredEndpoints(w http.ResponseWriter, r *http.Request) {
+	type routesResponse struct {
+		Routes []string `json:"routes"`
+	}
+
 	w.Header().Set(api.ContentType, api.JsonMIMEType)
-	json.NewEncoder(w).Encode(map[string]any{"routes": Endpoints})
+	json.NewEncoder(w).Encode(routesResponse{Routes: Endpoints})
 }

@@ -28,6 +28,18 @@ final class ProjectUpdated extends ProjectViewModelState {
   ProjectUpdated({required this.projectId});
 }
 
+final class VipUpdated extends ProjectViewModelState {
+  final String? vip;
+
+  VipUpdated({required this.vip});
+}
+
+final class TabChanged extends ProjectViewModelState {
+  final int tab;
+
+  TabChanged({required this.tab});
+}
+
 final class FloorsUpdated extends ProjectViewModelState {
   FloorsUpdated();
 }
@@ -72,6 +84,11 @@ final class DeviceSelectionsCleared extends ProjectViewModelState {}
 final class ToolbarModeChanged extends ProjectViewModelState {
   final ToolbarMode mode;
   ToolbarModeChanged(this.mode);
+}
+
+final class ConfigurationMenuModeChanged extends ProjectViewModelState {
+  final ConfigurationMenuMode mode;
+  ConfigurationMenuModeChanged(this.mode);
 }
 
 final class ProductToAddChanged extends ProjectViewModelState {

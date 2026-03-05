@@ -49,6 +49,7 @@ usage() {
 }
 
 detect_network_settings() {
+    
     echo "Detecting functional Multipass network..."
 
     # Find any running instance to query
@@ -71,9 +72,18 @@ detect_network_settings() {
     subnet_base=$(echo "$host_pingable_ip" | awk -F. '{print $1"."$2"."$3}')
     export VIRTUAL_IP="${subnet_base}.100"
 
-    # 3. Find which interface inside the VM carries that subnet
-    export NET_INTERFACE=$(multipass exec "$sample_instance" -- \
-        ip -o -4 addr show | awk -v sub="$subnet_base" '$4 ~ "^"sub"." {print $2; exit}')
+    # Find which interface inside the VM carries that subnet
+    export NET_INTERFACE=$(
+    multipass exec "$sample_instance" -- ip -o -4 addr show |
+    while read -r idx iface proto addr rest; do
+        # addr comes in like: 192.168.2.34/24
+        ip_clean="${addr%%/*}"   # strip "/mask"
+        if [[ "$ip_clean" == "$subnet_base."* ]]; then
+            echo "$iface"
+            break
+        fi
+    done
+    )
 
     echo "Detected functional subnet: ${subnet_base}.x"
     echo "Setting VIP=$VIRTUAL_IP  interface=$NET_INTERFACE"
@@ -274,12 +284,6 @@ setup_instance() {
         return 1
     fi
     print_success "fusion-server installed successfully"
-    
-    # Set the script used by systemd to launch fusion-server to executable
-    if ! multipass exec "$instance_name" -- sudo chmod 755 /usr/local/bin/fusion-server-start.sh; then
-        print_error "Failed to update fusion-server-start.sh"
-        return 1
-    fi
 
     print_step "Copying bbolt binary..."
     if ! multipass transfer "$HOST_BBOLT_DIR/bbolt-linux-$TARGET_BINARY_ARCH" "$instance_name":/tmp/bbolt; then
@@ -361,10 +365,6 @@ launch_instance() {
 
     local cloud_init_file="$HOST_TEMP_DIR/fusion-server.yaml"
 
-    # Copy to an accesible location. Linux default security for the multipass
-    # snap prevents open access to the local filesystem.
-    cp fusion-server.yaml "$cloud_init_file"
-    
     # Copy to an accesible location. Linux default security for the multipass
     # snap prevents open access to the local filesystem.
     cp fusion-server.yaml "$cloud_init_file"

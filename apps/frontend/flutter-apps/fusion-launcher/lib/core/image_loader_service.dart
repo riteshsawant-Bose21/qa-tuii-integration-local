@@ -38,7 +38,13 @@ class ImageLoaderService {
   /// Loads an image from the file system
   Future<ui.Image> _loadFileImage(String filePath) async {
     final Directory dir = await FusionUtils.getFusionAppDirectory();
-    final File file = File("${dir.path}/$filePath");
+
+    /// Check if filePath is absolute or relative
+    /// If relative, prepend the Fusion app directory path
+    if (!File(filePath).isAbsolute) {
+      filePath = "${dir.path}/$filePath";
+    }
+    final File file = File(filePath);
 
     if (!await file.exists()) {
       throw Exception('Image file not found: $filePath');
@@ -68,7 +74,7 @@ class ImageLoaderService {
 
   /// Determines if a path is an asset path or file path
   static bool _isAssetPath(String path) {
-    return path.startsWith('assets/');
+    return path.startsWith('assets/') || path.startsWith('packages/');
   }
 
   /// Gets a cached image if available
