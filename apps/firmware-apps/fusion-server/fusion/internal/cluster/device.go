@@ -424,7 +424,7 @@ func (c *Cluster) updateRemoteDevice(deviceID string, localInfo *persistence.Dev
 	if resp.StatusCode != http.StatusNoContent {
 		body, _ := io.ReadAll(resp.Body)
 		logging.GetLogger().Error("Remote patch to %s failed with body=%s", url, string(body))
-		return fmt.Errorf("PATCH failed: %s", string(body)), http.StatusBadGateway
+		return fmt.Errorf("PATCH failed: %s", string(body)), resp.StatusCode
 	}
 
 	// Broadcast for WebSocket updates only

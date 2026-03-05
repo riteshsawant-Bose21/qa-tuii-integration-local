@@ -228,9 +228,9 @@ func (h *Handler) getDeviceByID(deviceID string) (*persistence.DeviceInfo, error
 	allDevices := h.deviceProvider.GetAllDeviceInfos()
 
 	// Find device with matching ID
-	for _, deviceInfo := range allDevices {
+	for i, deviceInfo := range allDevices {
 		if deviceInfo.Id == deviceID {
-			return &deviceInfo, nil
+			return &allDevices[i], nil
 		}
 	}
 

@@ -34,6 +34,7 @@ const (
 	firmwarePath        = "/etc/buildinfo"
 	serialUnknown       = "Unknown"
 	firmwareUnknown     = "Unknown"
+	macUnknown          = "Unknown"
 	suspicionMult       = 3
 	tcpTimeout          = 10 * time.Second
 )
@@ -253,10 +254,11 @@ func (c *Cluster) updateDeviceInfo() {
 		}
 	}
 
-	if info.MacAddress == "" || info.MacAddress == "Unknown" {
+	if info.MacAddress == "" {
 		macAddr, err := network.GetMacAddress()
 		if err != nil {
-			logging.GetLogger().Error("Unable to read MAC address: %v", err)
+			logging.GetLogger().Warn("Unable to read MAC address: %v", err)
+			info.MacAddress = macUnknown
 		} else {
 			info.MacAddress = macAddr
 		}

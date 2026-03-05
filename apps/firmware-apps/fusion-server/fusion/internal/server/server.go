@@ -62,6 +62,10 @@ func NewFusionServer(node string, handler *handler.Handler, hub *pubsub.Hub) *Fu
 		EnableCompression: true,
 		ReadBufferSize:    wsBufferSize,
 		WriteBufferSize:   wsBufferSize,
+		// CheckOrigin allows all origins for WebSocket connections.
+		CheckOrigin: func(r *http.Request) bool {
+			return true // Allow all origins
+		},
 	}
 	hub.Register(server)
 	return server
