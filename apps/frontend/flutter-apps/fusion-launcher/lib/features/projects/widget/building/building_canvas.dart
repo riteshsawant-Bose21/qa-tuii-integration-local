@@ -219,6 +219,19 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
                                                       serviceLocator<ProjectViewModel>().setCurrentSelectedHardware(null);
                                                     }
                                                   },
+                                                  onAddPoints: (FusionBasePainter painter, List<FusionCanvasPoint> points, FusionCanvasLine line) {
+                                                    // print("Add Points: $points");
+                                                    if (painter is ListeningAreaPainter) {
+                                                      final ListeningArea area = painter.listeningArea;
+                                                      final FusionCanvasPoint start = line.start;
+                                                      final int indexToInsert = area.vertices.indexWhere((FusionCanvasPoint v) => v.id == start.id);
+                                                      final List<FusionCanvasPoint> updatedPoints = List<FusionCanvasPoint>.from(area.vertices);
+                                                      updatedPoints.insertAll(indexToInsert + 1, points);
+                                                      serviceLocator<ProjectViewModel>().updateListeningArea(
+                                                        area: area.copyWith(vertices: updatedPoints),
+                                                      );
+                                                    }
+                                                  },
                                                   onMoveLayer: (FusionBasePainter painter, Offset offset) {
                                                     if (painter is ListeningAreaPainter) {
                                                       final ListeningArea area = painter.listeningArea;

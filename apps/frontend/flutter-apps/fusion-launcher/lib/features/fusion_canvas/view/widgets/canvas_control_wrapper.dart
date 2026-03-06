@@ -34,12 +34,15 @@ class CanvasControlWrapper extends StatelessWidget {
     final FusionHoverState hoverState = context.watch<FusionCanvasHoverViewModel>().state;
 
     final FusionCanvasElement? hoveredElement = hoverState.hoveredElement;
+    final bool isHoveringLineCenter = hoverState.isCenterHandleHovered;
+
     return FusionKeyboardWrapper(
       onKeyEvent: (KeyEvent value) {
         context.read<FusionCanvasInputViewModel>().onKeyEvent(value);
       },
       child: MouseRegion(
         cursor: switch (toolState) {
+          _ when isHoveringLineCenter => SystemMouseCursors.precise,
           MeasureToolState _ => SystemMouseCursors.precise,
           PenToolState _ => SystemMouseCursors.precise,
           LayerDraggingState _ => SystemMouseCursors.grabbing,
