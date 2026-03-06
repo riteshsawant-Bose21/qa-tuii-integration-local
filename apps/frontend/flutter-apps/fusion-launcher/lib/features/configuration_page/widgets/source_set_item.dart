@@ -448,6 +448,7 @@ class _SourceSetItemState extends State<SourceSetItem> {
                           label: "Cancel",
                           textStyle: Theme.of(ctx).textTheme.labelLarge?.copyWith(fontSize: 11),
                           onTap: () => Navigator.of(ctx).pop(),
+                          accessLabel: '',
                         ),
                       ),
                       const SizedBox(width: 8),
@@ -465,6 +466,7 @@ class _SourceSetItemState extends State<SourceSetItem> {
                             _sourceSetsViewmodel.deleteSourceSet(widget.sourceSet.id);
                             _sourcesViewmodel.syncWithProjectViewModel();
                           },
+                          accessLabel: '',
                         ),
                       ),
                     ],
@@ -848,6 +850,7 @@ class _SourceSetCreationWidgetState extends State<_SourceSetCreationWidget> {
                   onTap: () {
                     widget.onCancel.call();
                   },
+                  accessLabel: '',
                 ),
               ),
               const SizedBox(width: 8),
@@ -863,6 +866,7 @@ class _SourceSetCreationWidgetState extends State<_SourceSetCreationWidget> {
                   onTap: () {
                     widget.onAddSourceSet.call();
                   },
+                  accessLabel: '',
                 ),
               ),
             ],

@@ -1161,6 +1161,7 @@ class _ZoneCardState extends State<ZoneCard> {
 
                     /// rebuild UI
                   },
+                  accessLabel: '',
                 ),
               ),
             ),

@@ -1005,6 +1005,7 @@ class _SourceSetCreationWidgetState extends State<_SourceSetCreationWidget> {
                     onTap: () {
                       widget.onCancel.call();
                     },
+                    accessLabel: '',
                   ),
                 ),
                 const SizedBox(width: 8),
@@ -1020,6 +1021,7 @@ class _SourceSetCreationWidgetState extends State<_SourceSetCreationWidget> {
                     onTap: () {
                       widget.onAddSourceSet.call();
                     },
+                    accessLabel: '',
                   ),
                 ),
               ],
