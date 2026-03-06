@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 import 'dart:ui' as ui;
+
 import 'package:flutter/material.dart';
 import 'package:fusion_launcher/features/fusion_canvas/state/fusion_snap_state.dart';
 import 'package:fusion_launcher/features/fusion_canvas/state/tools/drag_tool_state.dart';
@@ -129,10 +130,7 @@ abstract class FusionBasePainter {
     canvas.drawLine(from, arrowPoint2, paint);
   }
 
-  void drawDashedLine(Canvas canvas, Offset start, Offset end, Paint paint, FusionCanvasPainter painter) {
-    const double dashLength = 5.0;
-    const double gapLength = 3.0;
-
+  void drawDashedLine(Canvas canvas, Offset start, Offset end, Paint paint, FusionCanvasPainter painter, {double dashLength = 5.0, double gapLength = 3.0}) {
     final double distance = (end - start).distance;
     final Offset direction = (end - start) / distance;
 

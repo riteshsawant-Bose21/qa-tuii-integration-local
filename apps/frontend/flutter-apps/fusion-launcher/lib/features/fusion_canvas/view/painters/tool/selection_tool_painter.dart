@@ -44,23 +44,37 @@ class SelectionToolPainter extends FusionBasePainter {
   }
 
   void _paintHighlight(Canvas canvas, FusionCanvasPainter painter, FusionCanvasElement element, FusionBasePainter layer) {
-    final Paint highlightPaint =
-        Paint()
-          ..color = Colors.red
-          ..style = PaintingStyle.fill;
     if (element is FusionCanvasLine) {
-      canvas.drawLine(
+      drawDashedLine(
+        canvas,
         getEffectivePosition(element.start, painter, layer.id ?? ""),
         getEffectivePosition(element.end, painter, layer.id ?? ""),
-        highlightPaint
+        Paint()
+          ..color = selectionColor
           ..strokeWidth = nonScaling(strokeWidth * 2, painter)
+          ..strokeCap = StrokeCap.round
           ..style = PaintingStyle.stroke,
+        painter,
+        dashLength: nonScaling(5, painter),
+        gapLength: nonScaling(7, painter),
       );
     } else if (element is FusionCanvasPoint) {
+      final Offset effectivePosition = getEffectivePosition(element, painter, layer.id ?? "");
+      final double nonScaling2 = nonScaling(handleRadius * 2, painter);
       canvas.drawCircle(
-        getEffectivePosition(element, painter, layer.id ?? ""),
-        nonScaling(handleRadius * 2, painter),
-        highlightPaint,
+        effectivePosition,
+        nonScaling2,
+        Paint()
+          ..color = selectionColor.withValues(alpha: 0.75)
+          ..style = PaintingStyle.fill,
+      );
+      canvas.drawCircle(
+        effectivePosition,
+        nonScaling2 * 0.5,
+        Paint()
+          ..color = Colors.white
+          ..strokeWidth = nonScaling(strokeWidth, painter)
+          ..style = PaintingStyle.stroke,
       );
     }
   }
@@ -151,14 +165,17 @@ class SelectionToolPainter extends FusionBasePainter {
       final FusionCanvasPoint start = points[i];
       final FusionCanvasPoint end = points[(i + 1) % points.length];
 
-      final FusionCanvasLinePainter edgePainter = FusionCanvasLinePainter(
-        line: FusionCanvasLine(start: start, end: end),
-        thickness: strokeWidth,
-        color: selectionColor,
-        showPoints: true,
-        layerId: polygonPainter.id ?? '',
-      );
-      edgePainter.paint(canvas, size, painter);
+      final FusionCanvasLine fusionCanvasLine = FusionCanvasLine(start: start, end: end);
+      if (!state.isElementSelected(fusionCanvasLine.id)) {
+        final FusionCanvasLinePainter edgePainter = FusionCanvasLinePainter(
+          line: fusionCanvasLine,
+          thickness: strokeWidth,
+          color: selectionColor,
+          showPoints: true,
+          layerId: polygonPainter.id ?? '',
+        );
+        edgePainter.paint(canvas, size, painter);
+      }
     }
   }
 

@@ -78,6 +78,9 @@ class ListeningAreaPainter extends FusionPolygonPainter {
 
   @override
   Paint getStrokePaint(FusionCanvasPainter painter, bool isHovered) {
+    if (painter.isSelected(id)) {
+      return Paint()..color = Colors.transparent;
+    }
     return Paint()
       ..color = getColor(painter)
       ..strokeWidth = nonScaling(2, painter)

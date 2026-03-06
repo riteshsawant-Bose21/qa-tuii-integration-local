@@ -54,7 +54,7 @@ class LineCenterHandlePainter extends FusionBasePainter {
     final Paint fillPaint =
         Paint()
           ..style = PaintingStyle.fill
-          ..color = painter.context.colorScheme.primary;
+          ..color = painter.context.colorScheme.secondary;
 
     final Paint strokePaint =
         Paint()

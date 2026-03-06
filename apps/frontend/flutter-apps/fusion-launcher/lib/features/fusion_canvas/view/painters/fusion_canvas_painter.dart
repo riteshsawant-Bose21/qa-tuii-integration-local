@@ -13,6 +13,7 @@ import '../../../wiring_design/view/painters/dotted_grid_painter.dart';
 import '../../state/fusion_canvas_input_state.dart';
 import '../../state/fusion_canvas_state.dart';
 import '../../state/fusion_snap_state.dart';
+import '../../state/tools/select_tool_state.dart';
 import '../../viewmodel/fusion_canvas_hover_viewmodel.dart';
 import '../../viewmodel/fusion_canvas_image_viewmodel.dart';
 
@@ -82,4 +83,12 @@ class FusionCanvasPainter extends CustomPainter {
   FusionHoverState get hoverViewModel => context.read<FusionCanvasHoverViewModel>().state;
 
   FusionToolState get toolState => context.read<FusionCanvasToolViewModel>().state;
+
+  bool isSelected(String? id) {
+    final FusionToolState toolState = this.toolState;
+    if (toolState is SelectToolState) {
+      return toolState.isLayerSelected(id) || toolState.isElementSelected(id);
+    }
+    return false;
+  }
 }
