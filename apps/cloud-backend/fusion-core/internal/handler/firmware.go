@@ -51,12 +51,16 @@ func (h *FirmwareUpdateHandler) NotifyBundleUpload(c *gin.Context) {
 		return
 	}
 
-	if err := validation.ValidateMainVersionFormat(payload.MinPrevVersion); err != nil {
+	if err := validation.ValidateFirmwareVersionFormat(payload.MinPrevVersion); err != nil {
 		response.BadRequest(c, "invalid min_required_prev_version: "+err.Error())
 		return
 	}
-	if err := validation.ValidateMainVersionFormat(payload.MinDesktopAppVersion); err != nil {
+	if err := validation.ValidateFirmwareVersionFormat(payload.MinDesktopAppVersion); err != nil {
 		response.BadRequest(c, "invalid min_desktop_app_version: "+err.Error())
+		return
+	}
+	if err := validation.ValidateFirmwareVersionFormat(payload.Version); err != nil {
+		response.BadRequest(c, "invalid version: "+err.Error())
 		return
 	}
 
@@ -83,44 +87,56 @@ func (h *FirmwareUpdateHandler) NotifyBundleUpload(c *gin.Context) {
 // @Security BearerAuth
 // @Param page query int false "Page number (default: 1)" default(1)
 // @Param limit query int false "Items per page (default: 10, max: 100)" default(10)
-// @Param approve query bool false "Filter by approval status (true for APPROVED, false for REVOKED)"
+// @Param approval_status query string false "Filter by approval status (PENDING, APPROVED, REVOKED)"
 // @Success 200 {object} types.BundleListResponse "List of firmware bundles with pagination metadata"
 // @Failure 400 {object} types.ErrorResponse "Invalid query parameters"
 // @Failure 500 {object} types.ErrorResponse "Internal server error"
 // @Router /firmware/bundles [get]
 func (h *FirmwareUpdateHandler) ListBundles(c *gin.Context) {
+	loggerVal, exists := c.Get("logger")
+	if !exists {
+		response.InternalError(c)
+		return
+	}
+	logger, ok := loggerVal.(*zap.Logger)
+	if !ok {
+		response.InternalError(c)
+		return
+	}
+
 	pageStr := c.DefaultQuery("page", "1")
 	limitStr := c.DefaultQuery("limit", "10")
 
 	page, err := strconv.Atoi(pageStr)
 	if err != nil || page < 1 {
+		logger.Error("Failed to parse page parameter", zap.Error(err))
 		response.BadRequest(c, "invalid page parameter")
 		return
 	}
 
 	limit, err := strconv.Atoi(limitStr)
 	if err != nil || limit < 1 || limit > 100 {
+		logger.Error("Failed to parse limit parameter", zap.Error(err))
 		response.BadRequest(c, "invalid limit parameter (must be 1-100)")
 		return
 	}
 
 	var approvalStatus *string
-	approveQuery, exists := c.GetQuery("approve")
+	statusQuery, exists := c.GetQuery("approval_status")
 	if exists {
-		approveFlag, err := strconv.ParseBool(approveQuery)
-		if err != nil {
-			response.BadRequest(c, "invalid approve parameter (must be true or false)")
+		switch statusQuery {
+		case "PENDING", "APPROVED", "REVOKED":
+			approvalStatus = &statusQuery
+		default:
+			logger.Error("Invalid approval_status parameter", zap.String("status", statusQuery))
+			response.BadRequest(c, "invalid approval_status parameter (must be PENDING, APPROVED, or REVOKED)")
 			return
 		}
-		statusArg := "REVOKED"
-		if approveFlag {
-			statusArg = "APPROVED"
-		}
-		approvalStatus = &statusArg
 	}
 
 	resp, err := h.firmware.ListBundles(c, approvalStatus, page, limit)
 	if err != nil {
+		logger.Error("Failed to list bundles", zap.Error(err))
 		response.InternalError(c)
 		return
 	}
@@ -285,7 +301,7 @@ func (h *FirmwareUpdateHandler) GetBundleDownloadURL(c *gin.Context) {
 	}
 	logger := loggerVal.(*zap.Logger)
 
-	res, err := h.firmware.GetBundleDownloadURL(c.Request.Context(), bundleID, logger)
+	res, err := h.firmware.GetBundleDownloadURL(c, bundleID, logger)
 	if err != nil {
 		if errors.Is(err, errorutil.ErrBundleNotFound) {
 			response.NotFound(c, "bundle not found")
@@ -318,18 +334,23 @@ func (h *FirmwareUpdateHandler) GetBundleDownloadURL(c *gin.Context) {
 // @Failure 500 {object} types.ErrorResponse "Internal server error"
 // @Router /firmware/updates/status [post]
 func (h *FirmwareUpdateHandler) LogBundleUpdateStatus(c *gin.Context) {
-	var payload types.LogBundleUpdateStatusPayload
-	if err := c.ShouldBindJSON(&payload); err != nil {
-		response.BadRequest(c, "Invalid request payload: "+err.Error())
-		return
-	}
-
 	loggerVal, exists := c.Get("logger")
 	if !exists {
 		response.InternalError(c)
 		return
 	}
-	logger := loggerVal.(*zap.Logger)
+	logger, ok := loggerVal.(*zap.Logger)
+	if !ok {
+		response.InternalError(c)
+		return
+	}
+
+	var payload types.LogBundleUpdateStatusPayload
+	if err := c.ShouldBindJSON(&payload); err != nil {
+		logger.Error("Failed to bind LogBundleUpdateStatus payload", zap.Error(err))
+		response.BadRequest(c, "Invalid request payload: "+err.Error())
+		return
+	}
 
 	err := h.firmware.LogBundleUpdateStatus(c.Request.Context(), &payload, logger)
 	if err != nil {

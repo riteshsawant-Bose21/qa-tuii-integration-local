@@ -53,7 +53,7 @@ func (s *Service) GetBundleByVersion(ctx context.Context, version string) (*mode
 func (s *Service) GetLatestApprovedBundleNewerThan(ctx context.Context, currentFirmwareVersion string) (*models.Bundle, error) {
 	bundle, err := models.Bundles(
 		models.BundleWhere.ApprovalStatus.EQ(models.BundleApprovalStatusEnumAPPROVED),
-		qm.Where("version_array > string_to_array(?, '.')::int[]", currentFirmwareVersion),
+		qm.Where("version_array > string_to_array(split_part(?, '-', 1), '.')::int[]", currentFirmwareVersion),
 		qm.OrderBy("version_array DESC"),
 	).One(ctx, s.db)
 
@@ -146,8 +146,8 @@ func (s *Service) GetBundleByID(ctx context.Context, bundleID string) (*models.B
 func (s *Service) GetLatestBundleCompatibleWithFirmware(ctx context.Context, currentFirmwareVersion string, channel string) (*models.Bundle, error) {
 	queryMods := []qm.QueryMod{
 		models.BundleWhere.ApprovalStatus.EQ(models.BundleApprovalStatusEnumAPPROVED),
-		qm.Where("version_array > string_to_array(?, '.')::int[]", currentFirmwareVersion),
-		qm.Where("(min_prev_version = '0.0.0' OR min_prev_version_array <= string_to_array(?, '.')::int[])", currentFirmwareVersion),
+		qm.Where("version_array > string_to_array(split_part(?, '-', 1), '.')::int[]", currentFirmwareVersion),
+		qm.Where("(min_prev_version = '0.0.0' OR min_prev_version_array <= string_to_array(split_part(?, '-', 1), '.')::int[])", currentFirmwareVersion),
 		qm.OrderBy("version_array DESC"),
 	}
 
@@ -173,9 +173,9 @@ func (s *Service) GetLatestBundleCompatibleWithFirmware(ctx context.Context, cur
 func (s *Service) GetLatestCompatibleBundle(ctx context.Context, currentFirmwareVersion string, currentDesktopAppVersion string, channel string) (*models.Bundle, error) {
 	queryMods := []qm.QueryMod{
 		models.BundleWhere.ApprovalStatus.EQ(models.BundleApprovalStatusEnumAPPROVED),
-		qm.Where("version_array > string_to_array(?, '.')::int[]", currentFirmwareVersion),
-		qm.Where("(min_prev_version = '0.0.0' OR min_prev_version_array <= string_to_array(?, '.')::int[])", currentFirmwareVersion),
-		qm.Where("(min_desktop_app_version = '0.0.0' OR min_desktop_app_version_array <= string_to_array(?, '.')::int[])", currentDesktopAppVersion),
+		qm.Where("version_array > string_to_array(split_part(?, '-', 1), '.')::int[]", currentFirmwareVersion),
+		qm.Where("(min_prev_version = '0.0.0' OR min_prev_version_array <= string_to_array(split_part(?, '-', 1), '.')::int[])", currentFirmwareVersion),
+		qm.Where("(min_desktop_app_version = '0.0.0' OR min_desktop_app_version_array <= string_to_array(split_part(?, '-', 1), '.')::int[])", currentDesktopAppVersion),
 		qm.OrderBy("version_array DESC"),
 	}
 
@@ -204,9 +204,9 @@ func (s *Service) LogBundleUpdateStatus(ctx context.Context, payload *types.LogB
 		UpdateID:        payload.UpdateID,
 		ProjectID:       payload.ProjectID,
 		BundleVersion:   payload.BundleVersion,
-		PreviousVersion: null.StringFrom(payload.PreviousVersion),
+		PreviousVersion: null.NewString(payload.PreviousVersion, payload.PreviousVersion != ""),
 		Status:          payload.Status,
-		LauncherVersion: null.StringFrom(payload.LauncherVersion),
+		LauncherVersion: null.NewString(payload.LauncherVersion, payload.LauncherVersion != ""),
 		InstalledAt:     payload.InstalledAt,
 	}
 

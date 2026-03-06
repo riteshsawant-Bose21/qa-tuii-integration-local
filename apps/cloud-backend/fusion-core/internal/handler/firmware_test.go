@@ -218,6 +218,125 @@ func TestNotifyBundleUpload(t *testing.T) {
 	}
 }
 
+// ==================== ListBundles Tests ====================
+
+func TestListBundles(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	tests := []struct {
+		name           string
+		queryParams    map[string]string
+		setupLogger    bool
+		mockSetup      func(m *MockFirmwareService)
+		expectedStatus int
+		expectedBody   map[string]interface{}
+	}{
+		{
+			name:        "success - list all bundles (no filter)",
+			queryParams: nil,
+			setupLogger: true,
+			mockSetup: func(m *MockFirmwareService) {
+				m.On("ListBundles", mock.Anything, (*string)(nil), 1, 10).
+					Return(&types.BundleListResponse{
+						Bundles: []types.BundleDetails{{ID: "bundle-1"}},
+						Total:   1,
+						Page:    1,
+						Limit:   10,
+					}, nil)
+			},
+			expectedStatus: http.StatusOK,
+		},
+		{
+			name:        "success - filter by APPROVED",
+			queryParams: map[string]string{"approval_status": "APPROVED"},
+			setupLogger: true,
+			mockSetup: func(m *MockFirmwareService) {
+				status := "APPROVED"
+				m.On("ListBundles", mock.Anything, &status, 1, 10).
+					Return(&types.BundleListResponse{
+						Bundles: []types.BundleDetails{{ID: "bundle-approved"}},
+						Total:   1,
+						Page:    1,
+						Limit:   10,
+					}, nil)
+			},
+			expectedStatus: http.StatusOK,
+		},
+		{
+			name:        "success - filter by PENDING",
+			queryParams: map[string]string{"approval_status": "PENDING"},
+			setupLogger: true,
+			mockSetup: func(m *MockFirmwareService) {
+				status := "PENDING"
+				m.On("ListBundles", mock.Anything, &status, 1, 10).
+					Return(&types.BundleListResponse{
+						Bundles: []types.BundleDetails{{ID: "bundle-pending"}},
+						Total:   1,
+						Page:    1,
+						Limit:   10,
+					}, nil)
+			},
+			expectedStatus: http.StatusOK,
+		},
+		{
+			name:        "success - filter by REVOKED",
+			queryParams: map[string]string{"approval_status": "REVOKED"},
+			setupLogger: true,
+			mockSetup: func(m *MockFirmwareService) {
+				status := "REVOKED"
+				m.On("ListBundles", mock.Anything, &status, 1, 10).
+					Return(&types.BundleListResponse{
+						Bundles: []types.BundleDetails{{ID: "bundle-revoked"}},
+						Total:   1,
+						Page:    1,
+						Limit:   10,
+					}, nil)
+			},
+			expectedStatus: http.StatusOK,
+		},
+		{
+			name:           "bad request - invalid approval_status",
+			queryParams:    map[string]string{"approval_status": "INVALID"},
+			setupLogger:    true,
+			mockSetup:      func(m *MockFirmwareService) {},
+			expectedStatus: http.StatusBadRequest,
+		},
+		{
+			name:           "bad request - invalid page",
+			queryParams:    map[string]string{"page": "0"},
+			setupLogger:    true,
+			mockSetup:      func(m *MockFirmwareService) {},
+			expectedStatus: http.StatusBadRequest,
+		},
+		{
+			name:           "bad request - invalid limit",
+			queryParams:    map[string]string{"limit": "101"},
+			setupLogger:    true,
+			mockSetup:      func(m *MockFirmwareService) {},
+			expectedStatus: http.StatusBadRequest,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mockFirmware := new(MockFirmwareService)
+			tt.mockSetup(mockFirmware)
+
+			h := NewFirmwareUpdateHandler(mockFirmware)
+
+			w, c := setupTestContextWithQueryParams(http.MethodGet, "/firmware/bundles", tt.queryParams)
+			if !tt.setupLogger {
+				c.Keys = map[string]interface{}{}
+			}
+
+			h.ListBundles(c)
+
+			assert.Equal(t, tt.expectedStatus, w.Code)
+			mockFirmware.AssertExpectations(t)
+		})
+	}
+}
+
 // ==================== ApproveBundle Tests ====================
 
 func TestApproveBundle(t *testing.T) {

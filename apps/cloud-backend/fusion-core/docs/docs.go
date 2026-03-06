@@ -108,9 +108,9 @@ const docTemplate = `{
                         "in": "query"
                     },
                     {
-                        "type": "boolean",
-                        "description": "Filter by approval status (true for APPROVED, false for REVOKED)",
-                        "name": "approve",
+                        "type": "string",
+                        "description": "Filter by approval status (PENDING, APPROVED, REVOKED)",
+                        "name": "approval_status",
                         "in": "query"
                     }
                 ],

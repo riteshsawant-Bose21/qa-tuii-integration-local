@@ -938,10 +938,10 @@ paths:
         in: query
         name: limit
         type: integer
-      - description: Filter by approval status (true for APPROVED, false for REVOKED)
+      - description: Filter by approval status (PENDING, APPROVED, REVOKED)
         in: query
-        name: approve
-        type: boolean
+        name: approval_status
+        type: string
       produces:
       - application/json
       responses:

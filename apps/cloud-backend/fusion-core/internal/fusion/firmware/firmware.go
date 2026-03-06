@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/api/types"
+	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/model/models"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/utils/errorutil"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/utils/validation"
 	"go.uber.org/zap"
@@ -19,12 +20,6 @@ const (
 )
 
 func (s *Service) NotifyBundleUpload(ctx context.Context, payload *types.NotifyBundleUploadPayload, logger *zap.Logger) (*types.BundleResponse, error) {
-	// Validate version format MAJOR.MINOR.PATCH+prerelease_tag.prerelease_version
-	err := validation.ValidateFirmwareVersionFormat(payload.Version)
-	if err != nil {
-		return nil, fmt.Errorf("failed to validate bundle version format: %v", err)
-	}
-
 	// Check if the specific bundle version already exists
 	existingBundle, err := s.dbService.GetBundleByVersion(ctx, payload.Version)
 	if err != nil {
@@ -112,28 +107,7 @@ func (s *Service) CheckForUpdate(ctx context.Context, req *types.CheckForUpdateR
 
 	if compatibleBundle != nil {
 		// Compatible bundle found - database query already verified all compatibility constraints
-		response := &types.CheckForUpdateResponse{
-			UpdateAvailable:      true,
-			AppUpdateRequired:    false,
-			BundleID:             compatibleBundle.ID,
-			Version:              compatibleBundle.Version,
-			MinPrevVersion:       compatibleBundle.MinPrevVersion,
-			MinDesktopAppVersion: compatibleBundle.MinDesktopAppVersion,
-			CreatedAt:            &compatibleBundle.CreatedAt,
-		}
-
-		// Handle nullable fields
-		if compatibleBundle.ReleaseNotes.Valid {
-			response.ReleaseNotes = compatibleBundle.ReleaseNotes.String
-		}
-		if compatibleBundle.ManifestData.Valid {
-			var manifestData map[string]interface{}
-			if err := json.Unmarshal(compatibleBundle.ManifestData.JSON, &manifestData); err == nil {
-				response.ManifestData = manifestData
-			}
-		}
-
-		return response, nil
+		return mapBundleToUpdateResponse(compatibleBundle), nil
 	}
 
 	// 2. If no directly compatible bundle is found, or if firmware is too old,
@@ -161,6 +135,10 @@ func (s *Service) CheckForUpdate(ctx context.Context, req *types.CheckForUpdateR
 				MinDesktopAppVersion: latestCompatibleBundle.MinDesktopAppVersion,
 			}, nil
 		}
+
+		// If we reach here, the latest bundle compatible with firmware is ALSO compatible with the app.
+		// This might happen if there's a minor mismatch between DB and Go version comparison logic.
+		return mapBundleToUpdateResponse(latestCompatibleBundle), nil
 	}
 
 	// 3. If we reach here, no update is available.
@@ -168,6 +146,31 @@ func (s *Service) CheckForUpdate(ctx context.Context, req *types.CheckForUpdateR
 		UpdateAvailable:   false,
 		AppUpdateRequired: false,
 	}, nil
+}
+
+func mapBundleToUpdateResponse(b *models.Bundle) *types.CheckForUpdateResponse {
+	response := &types.CheckForUpdateResponse{
+		UpdateAvailable:      true,
+		AppUpdateRequired:    false,
+		BundleID:             b.ID,
+		Version:              b.Version,
+		MinPrevVersion:       b.MinPrevVersion,
+		MinDesktopAppVersion: b.MinDesktopAppVersion,
+		CreatedAt:            &b.CreatedAt,
+	}
+
+	// Handle nullable fields
+	if b.ReleaseNotes.Valid {
+		response.ReleaseNotes = b.ReleaseNotes.String
+	}
+	if b.ManifestData.Valid {
+		var manifestData map[string]interface{}
+		if err := json.Unmarshal(b.ManifestData.JSON, &manifestData); err == nil {
+			response.ManifestData = manifestData
+		}
+	}
+
+	return response
 }
 
 func (s *Service) GetBundleDownloadURL(ctx context.Context, bundleID string, logger *zap.Logger) (*types.DownloadArtifactResponse, error) {
