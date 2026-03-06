@@ -76,7 +76,7 @@ class _SnapshotItemCardState extends State<SnapshotItemCard> {
                 ReorderableDragStartListener(
                   index: widget.index,
                   child: FusionIcon.icon(
-                    semanticId: FusionTestKeys.instance.snplistitmdragindicator,
+                    semanticId: "${FusionTestKeys.instance.snplistitmdragindicator}_${widget.index}",
                     Icons.drag_indicator,
                     size: 16,
                     color: context.colorScheme.textPlaceholder,
@@ -84,6 +84,7 @@ class _SnapshotItemCardState extends State<SnapshotItemCard> {
                 ),
                 const SizedBox(width: 8),
                 FusionImage.asset(
+                  semanticId: "${FusionTestKeys.instance.snplistitmplayicon}_${widget.index}",
                   Assets.playIcon,
                   width: 24,
                   height: 24,
@@ -121,6 +122,7 @@ class _SnapshotItemCardState extends State<SnapshotItemCard> {
                             context: context,
                             builder:
                                 (_) => FusionDialog(
+                                  semanticId: SemanticHelper.createTestId(SemanticTypes.card, "delete_snapshot_${widget.index}"),
                                   title: 'Delete Snapshot?',
                                   description: "This will remove '${widget.snapShotData.name}' from the Snapshot list.",
                                   primaryButtonLabel: 'Delete',
@@ -138,6 +140,7 @@ class _SnapshotItemCardState extends State<SnapshotItemCard> {
                           );
                         },
                         child: FusionImage.asset(
+                          semanticId: "${FusionTestKeys.instance.snplistitmdeleteicon}_${widget.index}",
                           Assets.deleteIcon,
                           width: 17,
                           height: 17,
@@ -159,6 +162,7 @@ class _SnapshotItemCardState extends State<SnapshotItemCard> {
                           }
                         },
                         child: FusionImage.asset(
+                          semanticId: "${FusionTestKeys.instance.snplistitmduplicateicon}_${widget.index}",
                           Assets.duplicateIcon,
                           width: 16,
                           height: 16,

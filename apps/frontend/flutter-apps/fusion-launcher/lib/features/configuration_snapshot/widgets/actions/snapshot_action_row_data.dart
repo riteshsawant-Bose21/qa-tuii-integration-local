@@ -3,6 +3,9 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/features/configuration_snapshot/viewModel/actions_viewmodel/config_snapshot_actions_state.dart';
 import 'package:fusion_launcher/features/configuration_snapshot/viewModel/actions_viewmodel/config_snapshot_actions_viewmodel.dart';
 import 'package:fusion_launcher/features/configuration_snapshot/widgets/snapshots/snapshot_value_widget.dart';
+import 'package:fusion_lib/constants/fusion_constants.dart';
+import 'package:fusion_lib/constants/semantics/features/configuration/snapshots/SnapshotsKeys.dart';
+import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/fusion_theme/app_theme.dart';
 import 'package:fusion_lib/fusion_widgets/others/fusion_image.dart';
 import 'package:fusion_lib/fusion_widgets/others/fusion_toast.dart';
@@ -25,19 +28,22 @@ class SnapshotActionRowData extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return BlocBuilder<ConfigSnapshotActionsViewModel, ConfigSnapshotActionsState>(
-      builder: (BuildContext context, ConfigSnapshotActionsState state) {
-        // Get the latest action data from state
-        final SceneActionModel? currentAction = state.getActionById(action.id);
-        if (currentAction == null) {
-          return const SizedBox.shrink();
-        }
+    return SemanticHelper.container(
+      testId: SemanticHelper.createTestId(SemanticTypes.container, "${FusionTestKeys.instance.actionlistpanelrowdataitem}_$index"),
+      child: BlocBuilder<ConfigSnapshotActionsViewModel, ConfigSnapshotActionsState>(
+        builder: (BuildContext context, ConfigSnapshotActionsState state) {
+          // Get the latest action data from state
+          final SceneActionModel? currentAction = state.getActionById(action.id);
+          if (currentAction == null) {
+            return const SizedBox.shrink();
+          }
 
-        return _SnapshotActionRowContent(
-          action: currentAction,
-          index: index,
-        );
-      },
+          return _SnapshotActionRowContent(
+            action: currentAction,
+            index: index,
+          );
+        },
+      ),
     );
   }
 }
@@ -109,7 +115,12 @@ class _SnapshotActionRowContent extends StatelessWidget {
         width: 30,
         child: Opacity(
           opacity: 0.4,
-          child: Icon(Icons.drag_indicator, size: 16, color: context.colorScheme.iconWhite),
+          child: FusionIcon.icon(
+            semanticId: '${FusionTestKeys.instance.actionlistpanelrowdataitemdrag}_$index',
+            Icons.drag_indicator,
+            size: 16,
+            color: context.colorScheme.iconWhite,
+          ),
         ),
       ),
     );
@@ -118,7 +129,7 @@ class _SnapshotActionRowContent extends StatelessWidget {
   Widget _buildActionTypeDropdown(BuildContext context, ConfigSnapshotActionsViewModel cubit) {
     return Expanded(
       child: SemanticHelper.button(
-        testId: SemanticHelper.createTestId(SemanticTypes.button, "snapshot_action_type_$index"),
+        testId: SemanticHelper.createTestId(SemanticTypes.button, '${FusionTestKeys.instance.actionlistpanelrowdataitemactiontypdropdown}_$index'),
         child: FusionDropdown<SceneActionType>(
           value: action.actionType,
           hint: "Select Action Type",
@@ -154,7 +165,7 @@ class _SnapshotActionRowContent extends StatelessWidget {
 
     return Expanded(
       child: SemanticHelper.button(
-        testId: SemanticHelper.createTestId(SemanticTypes.button, "snapshot_action_item_$index"),
+        testId: SemanticHelper.createTestId(SemanticTypes.button, "${FusionTestKeys.instance.actionlistpanelrowdataitemactionitemdropdown}_$index"),
         child: FusionDropdown<SceneItemDropdown>(
           value: selected,
           items: itemList,
@@ -188,7 +199,7 @@ class _SnapshotActionRowContent extends StatelessWidget {
 
     return Expanded(
       child: SemanticHelper.button(
-        testId: SemanticHelper.createTestId(SemanticTypes.button, "snapshot_action_param_$index"),
+        testId: SemanticHelper.createTestId(SemanticTypes.button, "${FusionTestKeys.instance.actionlistpanelrowdataitemactionparmdropdown}_$index"),
         child: FusionDropdown<SceneParam>(
           hint: "Select Parameter",
           value: selected,
@@ -209,7 +220,7 @@ class _SnapshotActionRowContent extends StatelessWidget {
 
     return Expanded(
       child: SemanticHelper.button(
-        testId: SemanticHelper.createTestId(SemanticTypes.button, "snapshot_action_value_$index"),
+        testId: SemanticHelper.createTestId(SemanticTypes.button, "${FusionTestKeys.instance.actionlistpanelrowdataitemvaluedropdown}_$index"),
         child: SnapshotValueWidget(
           actionId: action.id,
           value:
@@ -233,38 +244,34 @@ class _SnapshotActionRowContent extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: <Widget>[
-          SemanticHelper.button(
-            testId: SemanticHelper.createTestId(SemanticTypes.button, "snapshot_action_delete_$index"),
-            child: GestureDetector(
-              onTap: () {
-                cubit.deleteAction(actionId: action.id);
-                FusionToast.success(context, message: "Action deleted successfully");
-              },
-              child: FusionImage.asset(
-                Assets.deleteIcon,
-                width: 20,
-                height: 20,
-                assetColor: context.colorScheme.iconWhite,
-                fit: BoxFit.contain,
-              ),
+          GestureDetector(
+            onTap: () {
+              cubit.deleteAction(actionId: action.id);
+              FusionToast.success(context, message: "Action deleted successfully");
+            },
+            child: FusionImage.asset(
+              semanticId: '${FusionTestKeys.instance.actionlistpanelrowdataitemdeleteicon}_$index',
+              Assets.deleteIcon,
+              width: 20,
+              height: 20,
+              assetColor: context.colorScheme.iconWhite,
+              fit: BoxFit.contain,
             ),
           ),
           const SizedBox(width: 6),
-          SemanticHelper.button(
-            testId: SemanticHelper.createTestId(SemanticTypes.button, "snapshot_action_duplicate_$index"),
-            child: GestureDetector(
-              onTap: () {
-                cubit.duplicateAction(actionId: action.id);
-                FusionToast.success(context, message: "Action duplicated successfully");
-              },
-              child: FusionImage.asset(
-                Assets.duplicateIcon,
-                width: 20,
-                height: 20,
-                assetColor: context.colorScheme.iconWhite,
+          GestureDetector(
+            onTap: () {
+              cubit.duplicateAction(actionId: action.id);
+              FusionToast.success(context, message: "Action duplicated successfully");
+            },
+            child: FusionImage.asset(
+              semanticId: '${FusionTestKeys.instance.actionlistpanelrowdataitemnduplicateicon}_$index',
+              Assets.duplicateIcon,
+              width: 20,
+              height: 20,
+              assetColor: context.colorScheme.iconWhite,
 
-                fit: BoxFit.contain,
-              ),
+              fit: BoxFit.contain,
             ),
           ),
         ],

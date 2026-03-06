@@ -1,7 +1,10 @@
+import 'package:fusion_lib/constants/semantics/features/configuration/snapshots/SnapshotsKeys.dart';
+import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/fusion_theme/app_theme.dart';
 import 'package:fusion_lib/fusion_widgets/others/fusion_toast.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:fusion_lib/fusion_widgets/semantics/semantic_helper.dart';
 import 'package:fusion_lib/fusion_widgets/text_views/fusion_app_text.dart';
 import 'package:fusion_lib/models/project_entities/non_processing/scene_set_model.dart';
 import 'package:fusion_lib/models/project_entities/non_processing/snapshot_model.dart';
@@ -36,50 +39,57 @@ class _SceneSetsState extends State<SceneSets> {
             BuildContext context,
             ConfigSceneSetsState configSceneSetsState,
           ) {
-            return Column(
-              children: <Widget>[
-                SectionHeader(
-                  semanticLabel: 'scenes',
-                  title: 'Scene Sets',
-                  isRounded: false,
-                  trailing: GestureDetector(
-                    onTap: () {
-                      _configSceneSetsViewmodel.addSceneSet();
-                      FusionToast.success(
-                        context,
-                        message: 'Scene Set created',
-                      );
-                    },
-                    child: Icon(
-                      Icons.add_sharp,
-                      size: 16,
-                      color: context.colorScheme.primaryWhite,
+            return SemanticHelper.container(
+              testId: SemanticHelper.createTestId(SemanticTypes.container, FusionTestKeys.instance.scenesetscontainer),
+              child: Column(
+                children: <Widget>[
+                  SectionHeader(
+                    semanticLabel: 'scene_sets',
+                    title: 'Scene Sets',
+                    isRounded: false,
+                    trailing: GestureDetector(
+                      onTap: () {
+                        _configSceneSetsViewmodel.addSceneSet();
+                        FusionToast.success(
+                          context,
+                          message: 'Scene Set created',
+                        );
+                      },
+                      child: Icon(
+                        semanticLabel: FusionTestKeys.instance.scenesetsheadericon,
+                        Icons.add_sharp,
+                        size: 16,
+                        color: context.colorScheme.primaryWhite,
+                      ),
                     ),
                   ),
-                ),
-                Expanded(
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: context.colorScheme.elevation1,
-                      borderRadius: const BorderRadius.only(
-                        bottomRight: Radius.circular(12),
-                        bottomLeft: Radius.circular(12),
-                      ),
-                      border: Border.symmetric(
-                        vertical: BorderSide(
-                          color: context.colorScheme.elevation2,
-                          width: 1,
+                  Expanded(
+                    child: SemanticHelper.container(
+                      testId: SemanticHelper.createTestId(SemanticTypes.container, FusionTestKeys.instance.scenesetssectiondata),
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: context.colorScheme.elevation1,
+                          borderRadius: const BorderRadius.only(
+                            bottomRight: Radius.circular(12),
+                            bottomLeft: Radius.circular(12),
+                          ),
+                          border: Border.symmetric(
+                            vertical: BorderSide(
+                              color: context.colorScheme.elevation2,
+                              width: 1,
+                            ),
+                          ),
+                        ),
+                        child: _buildSceneSetsList(
+                          context,
+                          configSnapshotsState,
+                          configSceneSetsState,
                         ),
                       ),
                     ),
-                    child: _buildSceneSetsList(
-                      context,
-                      configSnapshotsState,
-                      configSceneSetsState,
-                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             );
           },
         );
@@ -94,12 +104,15 @@ class _SceneSetsState extends State<SceneSets> {
   ) {
     final List<SceneSetModel> scenesSetList = sceneSetsState.sceneSets;
     if (scenesSetList.isEmpty) {
-      return Container(
-        alignment: Alignment.center,
-        child: FusionAppText(
-          text: 'No scenes available',
-          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-            fontSize: 12,
+      return SemanticHelper.container(
+        testId: SemanticHelper.createTestId(SemanticTypes.container, FusionTestKeys.instance.scenesetsectiondataemty),
+        child: Container(
+          alignment: Alignment.center,
+          child: FusionAppText(
+            text: 'No scenes available',
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              fontSize: 12,
+            ),
           ),
         ),
       );
@@ -112,6 +125,7 @@ class _SceneSetsState extends State<SceneSets> {
         final SceneSetModel sceneSetData = scenesSetList[index];
         final List<SnapshotsModel> associatedScenes = sceneSetsState.snapshotsInSceneSets[sceneSetData.id] ?? <SnapshotsModel>[];
         return ScenesExpandableCard(
+          index: index,
           sceneSetData: sceneSetData,
           isDragHovered: false,
           snapShotList: associatedScenes,
