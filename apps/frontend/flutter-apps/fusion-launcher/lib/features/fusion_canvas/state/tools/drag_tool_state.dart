@@ -174,23 +174,23 @@ class PointsDragEndState extends DragToolState {
   List<String> get pointIds => elements.expand((FusionCanvasElement e) => e.pointIds).toList();
 }
 
-/// State when canvas is being panned
-class CanvasPanningState extends DragToolState {
-  final Offset delta;
+// /// State when canvas is being panned
+// class CanvasPanningState extends DragToolState {
+//   final Offset delta;
 
-  CanvasPanningState({required this.delta});
+//   CanvasPanningState({required this.delta});
 
-  @override
-  bool operator ==(covariant FusionToolState other) {
-    if (identical(this, other)) return true;
-    return other is CanvasPanningState && other.delta == delta;
-  }
+//   @override
+//   bool operator ==(covariant FusionToolState other) {
+//     if (identical(this, other)) return true;
+//     return other is CanvasPanningState && other.delta == delta;
+//   }
 
-  @override
-  int get hashCode => delta.hashCode;
-  @override
-  Set<String> get selectedLayerIds => <String>{};
+//   @override
+//   int get hashCode => delta.hashCode;
+//   @override
+//   Set<String> get selectedLayerIds => <String>{};
 
-  @override
-  Set<String> get selectedElementIds => <String>{};
-}
+//   @override
+//   Set<String> get selectedElementIds => <String>{};
+// }

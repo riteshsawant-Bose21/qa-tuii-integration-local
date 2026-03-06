@@ -102,7 +102,7 @@ class FusionCanvas extends StatelessWidget {
                                     allPainters: elements,
                                   ),
 
-                                if (toolState is! FusionCanvasIdleToolState)
+                                if (toolState is! SelectToolState)
                                   SnapPainter(
                                     snapResult: snapState.snapResult,
                                   ),
@@ -127,7 +127,14 @@ class FusionCanvas extends StatelessWidget {
 
                                 // Delegate all input handling to the tool viewmodel
                                 final FusionCanvasToolViewModel toolVm = context.read<FusionCanvasToolViewModel>();
-                                toolVm.onInputStateChanged(state, inputContext);
+                                final bool isHandled = toolVm.onInputStateChanged(state, inputContext);
+                                if (!isHandled) {
+                                  if (state is FusionCanvasInputDraggingState) {
+                                    context.read<FusionCanvasStateViewModel>().onPanUpdate(
+                                      state.delta,
+                                    );
+                                  }
+                                }
 
                                 // Notify external callbacks for selection events
                                 // if (state is FusionCanvasInputTapUpState && state.gestureOrigin == FusionGestureOrigin.click) {

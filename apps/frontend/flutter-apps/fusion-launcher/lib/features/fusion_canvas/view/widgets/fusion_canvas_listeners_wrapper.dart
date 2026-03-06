@@ -14,7 +14,6 @@ import 'package:fusion_lib/fusion_lib.dart';
 import 'package:nested/nested.dart';
 
 import '../../state/tools/select_tool_state.dart';
-import '../../viewmodel/fusion_canvas_state_viewmodel.dart';
 import '../painters/elements/fusion_rect_painter.dart';
 
 class FusionCanvasListenersWrapper extends StatelessWidget {
@@ -212,11 +211,9 @@ class FusionCanvasListenersWrapper extends StatelessWidget {
                     : null,
               );
             }
-            if (state is CanvasPanningState) {
-              context.read<FusionCanvasStateViewModel>().onPanUpdate(
-                state.delta,
-              );
-            }
+            // if (state is CanvasPanningState) {
+
+            // }
           },
         ),
       ],

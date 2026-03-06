@@ -1,3 +1,3 @@
 abstract class FusionToolState {}
 
-class FusionCanvasIdleToolState extends FusionToolState {}
+// class FusionCanvasIdleToolState extends FusionToolState {}
