@@ -548,6 +548,37 @@ class _ConfigurationProcessingPageBodyState extends State<_ConfigurationProcessi
                                 key: sourceSetKey,
                                 sourceSet: sourceSet,
                                 isDragHovered: isHovered,
+                                onUpdateSourceSet: (SourceSet updatedSourceSet) {
+                                  _sourceSetsViewmodel.updateSourceSet(updatedSourceSet);
+                                },
+                                onUpdateSourcesInSourceSet: ({required String sourceSetId, required List<String> sourceIds}) {
+                                  _sourceSetsViewmodel.updateSourcesInSourceSet(
+                                    sourceSetId: sourceSetId,
+                                    sourceIds: sourceIds,
+                                  );
+                                },
+                                onSyncWithProjectViewModel: () {
+                                  _sourcesViewmodel.syncWithProjectViewModel();
+                                },
+                                onDeleteSourceSet: (String sourceSetId) {
+                                  _sourceSetsViewmodel.deleteSourceSet(sourceSetId);
+                                },
+                                onLinkSourceSet: ({required String sourceSetId}) {
+                                  _sourceSetsViewmodel.linkSourceSet(sourceSetId: sourceSetId);
+                                },
+                                onUnlinkSourceSet: ({required String sourceSetId}) {
+                                  _sourceSetsViewmodel.unlinkSourceSet(sourceSetId: sourceSetId);
+                                },
+                                canLinkSourceSet: ({required String sourceSetId}) {
+                                  return _sourceSetsViewmodel.canLinkSourceSet(sourceSetId: sourceSetId);
+                                },
+                                getSourcesInSourceSet: ({required String sourceSetId}) {
+                                  return _sourceSetsViewmodel.getSourcesInSourceSet(sourceSetId: sourceSetId);
+                                },
+                                getAllSources: () {
+                                  return _sourceSetsViewmodel.getAllSources();
+                                },
+                                sourcesInSourceSet: _sourceSetsViewmodel.getSourcesInSourceSet(sourceSetId: sourceSet.id),
                               ),
                             );
                           },
