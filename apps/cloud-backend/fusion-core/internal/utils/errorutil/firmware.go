@@ -8,7 +8,7 @@ var (
 	ErrBundleNotFound = errors.New("bundle not found")
 
 	// ErrVersionExists indicates that a firmware version already exists for the platform
-	ErrVersionExists = errors.New("a newer or equal version already exists for this platform")
+	ErrVersionExists = errors.New("an equal version already exists")
 
 	// ErrInvalidVersion indicates that the firmware version format is invalid
 	ErrInvalidVersion = errors.New("invalid version format")

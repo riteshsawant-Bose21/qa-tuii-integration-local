@@ -141,7 +141,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Creates a new firmware bundle entry containing the manifest details. This is intended to be called by CI/CD pipelines after successfully uploading a bundle to S3.",
+                "description": "Creates a new firmware bundle entry containing the manifest details. This is intended to be called by CI/CD pipelines after successfully uploading a bundle to S3. If there are no minimum version checks required, you MUST specify \"0.0.0\" for both min_prev_version and min_desktop_app_version.",
                 "consumes": [
                     "application/json"
                 ],
@@ -2322,16 +2322,19 @@ const docTemplate = `{
                 },
                 "manifest_data": {},
                 "min_desktop_app_version": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "0.0.0"
                 },
                 "min_prev_version": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "0.0.0"
                 },
                 "release_notes": {
                     "type": "string"
                 },
                 "version": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "1.2.3"
                 }
             }
         },

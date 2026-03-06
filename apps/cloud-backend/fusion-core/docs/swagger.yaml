@@ -269,12 +269,15 @@ definitions:
         type: string
       manifest_data: {}
       min_desktop_app_version:
+        example: 0.0.0
         type: string
       min_prev_version:
+        example: 0.0.0
         type: string
       release_notes:
         type: string
       version:
+        example: 1.2.3
         type: string
     required:
     - checksum
@@ -960,7 +963,8 @@ paths:
       - application/json
       description: Creates a new firmware bundle entry containing the manifest details.
         This is intended to be called by CI/CD pipelines after successfully uploading
-        a bundle to S3.
+        a bundle to S3. If there are no minimum version checks required, you MUST
+        specify "0.0.0" for both min_prev_version and min_desktop_app_version.
       parameters:
       - description: Firmware bundle metadata including version, checksum, and manifest
         in: body

@@ -26,7 +26,7 @@ func NewFirmwareUpdateHandler(firmware fusion.Firmware) *FirmwareUpdateHandler {
 
 // NotifyBundleUpload registers a new firmware bundle that has been uploaded to S3
 // @Summary Notify Firmware Bundle Upload
-// @Description Creates a new firmware bundle entry containing the manifest details. This is intended to be called by CI/CD pipelines after successfully uploading a bundle to S3.
+// @Description Creates a new firmware bundle entry containing the manifest details. This is intended to be called by CI/CD pipelines after successfully uploading a bundle to S3. If there are no minimum version checks required, you MUST specify "0.0.0" for both min_prev_version and min_desktop_app_version.
 // @Tags Firmware Update - CI/CD API
 // @Accept json
 // @Produce json

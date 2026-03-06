@@ -63,9 +63,6 @@ func ValidateFirmwareVersionFormat(version string) error {
 
 // ValidateMainVersionFormat validates that a version string is in the strict MAJOR.MINOR.PATCH format.
 func ValidateMainVersionFormat(version string) error {
-	if version == "" {
-		return nil // Allow empty string
-	}
 	if !mainVersionPattern.MatchString(version) {
 		return errors.New("version must be in the strict MAJOR.MINOR.PATCH format (e.g., 1.2.3)")
 	}

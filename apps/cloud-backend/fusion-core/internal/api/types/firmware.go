@@ -4,12 +4,13 @@ import (
 	"time"
 )
 
+// NotifyBundleUploadPayload contains the metadata for a firmware bundle upload.
 type NotifyBundleUploadPayload struct {
-	Version              string      `json:"version" binding:"required"`
+	Version              string      `json:"version" binding:"required" example:"1.2.3"`
 	Checksum             string      `json:"checksum" binding:"required"`
 	ReleaseNotes         string      `json:"release_notes"`
-	MinPrevVersion       string      `json:"min_prev_version" binding:"required"`
-	MinDesktopAppVersion string      `json:"min_desktop_app_version" binding:"required"`
+	MinPrevVersion       string      `json:"min_prev_version" binding:"required" example:"0.0.0"`
+	MinDesktopAppVersion string      `json:"min_desktop_app_version" binding:"required" example:"0.0.0"`
 	ManifestData         interface{} `json:"manifest_data" binding:"required"`
 }
 
