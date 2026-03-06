@@ -252,7 +252,7 @@ func (h *FirmwareUpdateHandler) CheckForUpdate(c *gin.Context) {
 // @Success 200 {object} types.DownloadArtifactResponse "Presigned download URL and file checksum"
 // @Failure 400 {object} types.ErrorResponse "Missing or invalid bundleID"
 // @Failure 403 {object} types.ErrorResponse "Bundle not approved for download"
-// @Failure 404 {object} types.ErrorResponse "Firmware bundle not found"
+// @Failure 404 {object} types.ErrorResponse "Firmware bundle not found, or bundle artifact not found in storage"
 // @Failure 500 {object} types.ErrorResponse "Internal server error"
 // @Router /firmware/bundles/{bundleID}/request-download-url [get]
 func (h *FirmwareUpdateHandler) GetBundleDownloadURL(c *gin.Context) {
@@ -274,6 +274,10 @@ func (h *FirmwareUpdateHandler) GetBundleDownloadURL(c *gin.Context) {
 	if err != nil {
 		if errors.Is(err, errorutil.ErrBundleNotFound) {
 			response.NotFound(c, "bundle not found")
+			return
+		}
+		if errors.Is(err, errorutil.ErrBundleArtifactNotFound) {
+			response.NotFound(c, "bundle artifact not found in storage")
 			return
 		}
 		if errors.Is(err, errorutil.ErrBundleNotApproved) {

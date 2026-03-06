@@ -13,9 +13,6 @@ import (
 )
 
 const (
-	firmwareBundleFileNameFormat = "bundle-%s.zip"
-	firmwareBundlePathFormat     = "bundles/%s/%s"
-
 	firmwareBundleDownloadUrlTTL = 2 * time.Hour
 
 	ChannelStable = "stable"
@@ -188,16 +185,19 @@ func (s *Service) GetBundleDownloadURL(ctx context.Context, bundleID string, log
 		return nil, errorutil.ErrBundleNotApproved
 	}
 
-	// Generate S3 object key
-	objectKey, err := s.generateBundleArtifactKey(bundle.Version)
-	if err != nil {
-		return nil, fmt.Errorf("failed to generate bundle artifact key: %w", err)
+	if bundle.S3Path == "" {
+		return nil, fmt.Errorf("no s3 path found for bundle")
 	}
 
+	// Use the artifact path stored in the database
 	// Generate presigned GET URL with a n-hour TTL
-	downloadURL, err := s.presigner.PresignGet(ctx, objectKey, firmwareBundleDownloadUrlTTL, logger)
+	downloadURL, err := s.presigner.PresignGet(ctx, bundle.S3Path, firmwareBundleDownloadUrlTTL, logger)
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate download URL: %v", err)
+	}
+
+	if downloadURL == "" {
+		return nil, errorutil.ErrBundleArtifactNotFound
 	}
 
 	return &types.DownloadArtifactResponse{
@@ -208,22 +208,4 @@ func (s *Service) GetBundleDownloadURL(ctx context.Context, bundleID string, log
 
 func (s *Service) LogBundleUpdateStatus(ctx context.Context, payload *types.LogBundleUpdateStatusPayload, logger *zap.Logger) error {
 	return s.dbService.LogBundleUpdateStatus(ctx, payload)
-}
-
-// generateBundleArtifactKey constructs the S3 object key for a given bundle version.
-// It uses the pre-release tag (e.g., "alpha", "beta") as the channel in the S3 path.
-// If no pre-release tag is present, it defaults to the "stable" channel.
-func (s *Service) generateBundleArtifactKey(version string) (string, error) {
-	parsedVersion, err := validation.ParseSemanticVersion(version)
-	if err != nil {
-		return "", fmt.Errorf("invalid bundle version for generating key: %w", err)
-	}
-
-	channel := ChannelStable
-	if parsedVersion.PrereleaseFlag != "" {
-		channel = parsedVersion.PrereleaseFlag
-	}
-
-	fileName := fmt.Sprintf(firmwareBundleFileNameFormat, version)
-	return fmt.Sprintf(firmwareBundlePathFormat, channel, fileName), nil
 }

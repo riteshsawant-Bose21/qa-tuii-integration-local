@@ -125,6 +125,7 @@ func TestNotifyBundleUpload(t *testing.T) {
 		ReleaseNotes:         "Bug fixes and improvements",
 		MinPrevVersion:       "1.0.0",
 		MinDesktopAppVersion: "1.0.0",
+		S3Path:               "bundles/stable/bundle-2.0.0.zip",
 		ManifestData: map[string]interface{}{
 			"devices": []string{"amp-8x300", "amp-4x150"},
 		},

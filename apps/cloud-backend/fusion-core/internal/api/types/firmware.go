@@ -11,6 +11,7 @@ type NotifyBundleUploadPayload struct {
 	ReleaseNotes         string      `json:"release_notes"`
 	MinPrevVersion       string      `json:"min_prev_version" binding:"required" example:"0.0.0"`
 	MinDesktopAppVersion string      `json:"min_desktop_app_version" binding:"required" example:"0.0.0"`
+	S3Path               string      `json:"s3_path" binding:"required" example:"bundles/stable/bundle-1.2.3.zip"`
 	ManifestData         interface{} `json:"manifest_data" binding:"required"`
 }
 

@@ -37,6 +37,7 @@ type Bundle struct {
 	MinDesktopAppVersionArray types.Int64Array `boil:"min_desktop_app_version_array" json:"min_desktop_app_version_array,omitempty" toml:"min_desktop_app_version_array" yaml:"min_desktop_app_version_array,omitempty"`
 	ManifestData              null.JSON        `boil:"manifest_data" json:"manifest_data,omitempty" toml:"manifest_data" yaml:"manifest_data,omitempty"`
 	Checksum                  string           `boil:"checksum" json:"checksum" toml:"checksum" yaml:"checksum"`
+	S3Path                    string           `boil:"s3_path" json:"s3_path" toml:"s3_path" yaml:"s3_path"`
 	IsApproved                bool             `boil:"is_approved" json:"is_approved" toml:"is_approved" yaml:"is_approved"`
 	ApprovedBy                null.String      `boil:"approved_by" json:"approved_by,omitempty" toml:"approved_by" yaml:"approved_by,omitempty"`
 	ApprovedAt                null.Time        `boil:"approved_at" json:"approved_at,omitempty" toml:"approved_at" yaml:"approved_at,omitempty"`
@@ -60,6 +61,7 @@ var BundleColumns = struct {
 	MinDesktopAppVersionArray string
 	ManifestData              string
 	Checksum                  string
+	S3Path                    string
 	IsApproved                string
 	ApprovedBy                string
 	ApprovedAt                string
@@ -78,6 +80,7 @@ var BundleColumns = struct {
 	MinDesktopAppVersionArray: "min_desktop_app_version_array",
 	ManifestData:              "manifest_data",
 	Checksum:                  "checksum",
+	S3Path:                    "s3_path",
 	IsApproved:                "is_approved",
 	ApprovedBy:                "approved_by",
 	ApprovedAt:                "approved_at",
@@ -98,6 +101,7 @@ var BundleTableColumns = struct {
 	MinDesktopAppVersionArray string
 	ManifestData              string
 	Checksum                  string
+	S3Path                    string
 	IsApproved                string
 	ApprovedBy                string
 	ApprovedAt                string
@@ -116,6 +120,7 @@ var BundleTableColumns = struct {
 	MinDesktopAppVersionArray: "bundle.min_desktop_app_version_array",
 	ManifestData:              "bundle.manifest_data",
 	Checksum:                  "bundle.checksum",
+	S3Path:                    "bundle.s3_path",
 	IsApproved:                "bundle.is_approved",
 	ApprovedBy:                "bundle.approved_by",
 	ApprovedAt:                "bundle.approved_at",
@@ -254,6 +259,7 @@ var BundleWhere = struct {
 	MinDesktopAppVersionArray whereHelpertypes_Int64Array
 	ManifestData              whereHelpernull_JSON
 	Checksum                  whereHelperstring
+	S3Path                    whereHelperstring
 	IsApproved                whereHelperbool
 	ApprovedBy                whereHelpernull_String
 	ApprovedAt                whereHelpernull_Time
@@ -272,6 +278,7 @@ var BundleWhere = struct {
 	MinDesktopAppVersionArray: whereHelpertypes_Int64Array{field: "\"bundle\".\"min_desktop_app_version_array\""},
 	ManifestData:              whereHelpernull_JSON{field: "\"bundle\".\"manifest_data\""},
 	Checksum:                  whereHelperstring{field: "\"bundle\".\"checksum\""},
+	S3Path:                    whereHelperstring{field: "\"bundle\".\"s3_path\""},
 	IsApproved:                whereHelperbool{field: "\"bundle\".\"is_approved\""},
 	ApprovedBy:                whereHelpernull_String{field: "\"bundle\".\"approved_by\""},
 	ApprovedAt:                whereHelpernull_Time{field: "\"bundle\".\"approved_at\""},
@@ -316,8 +323,8 @@ func (r *bundleR) GetApprovedByAppUser() *AppUser {
 type bundleL struct{}
 
 var (
-	bundleAllColumns            = []string{"id", "version", "version_array", "prerelease", "prerelease_num", "release_notes", "min_prev_version", "min_prev_version_array", "min_desktop_app_version", "min_desktop_app_version_array", "manifest_data", "checksum", "is_approved", "approved_by", "approved_at", "created_at", "updated_at"}
-	bundleColumnsWithoutDefault = []string{"version", "min_prev_version", "min_desktop_app_version", "checksum"}
+	bundleAllColumns            = []string{"id", "version", "version_array", "prerelease", "prerelease_num", "release_notes", "min_prev_version", "min_prev_version_array", "min_desktop_app_version", "min_desktop_app_version_array", "manifest_data", "checksum", "s3_path", "is_approved", "approved_by", "approved_at", "created_at", "updated_at"}
+	bundleColumnsWithoutDefault = []string{"version", "min_prev_version", "min_desktop_app_version", "checksum", "s3_path"}
 	bundleColumnsWithDefault    = []string{"id", "version_array", "prerelease", "prerelease_num", "release_notes", "min_prev_version_array", "min_desktop_app_version_array", "manifest_data", "is_approved", "approved_by", "approved_at", "created_at", "updated_at"}
 	bundlePrimaryKeyColumns     = []string{"id"}
 	bundleGeneratedColumns      = []string{"version_array", "min_prev_version_array", "min_desktop_app_version_array"}

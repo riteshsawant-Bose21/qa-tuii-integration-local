@@ -12,6 +12,7 @@ CREATE TABLE bundle (
     min_desktop_app_version_array INT[] GENERATED ALWAYS AS ( string_to_array( split_part(min_desktop_app_version, '-', 1), '.' )::INT[] ) STORED,
     manifest_data JSONB,
     checksum VARCHAR(64) NOT NULL,
+    s3_path TEXT NOT NULL,
     is_approved bool NOT NULL DEFAULT false,
     approved_by UUID references app_user(id),
     approved_at TIMESTAMPTZ,

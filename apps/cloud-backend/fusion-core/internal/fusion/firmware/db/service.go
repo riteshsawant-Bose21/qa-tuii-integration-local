@@ -79,6 +79,7 @@ func (s *Service) InsertBundle(ctx context.Context, payload types.NotifyBundleUp
 	bundleRecord := &models.Bundle{
 		Version:              payload.Version,
 		Checksum:             payload.Checksum,
+		S3Path:               payload.S3Path,
 		MinPrevVersion:       payload.MinPrevVersion,
 		MinDesktopAppVersion: payload.MinDesktopAppVersion,
 		ManifestData:         null.JSONFrom(manifestBytes),
