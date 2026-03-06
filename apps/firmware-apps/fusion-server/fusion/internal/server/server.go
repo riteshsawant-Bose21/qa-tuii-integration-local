@@ -1,6 +1,7 @@
 package server
 
 import (
+	stdjson "encoding/json"
 	"fmt"
 	"io"
 	"net/http"
@@ -369,7 +370,7 @@ func (s *FusionServer) GetDatabaseMetadata(w http.ResponseWriter, r *http.Reques
 
 	// Write the JSON response with metadata.
 	w.Header().Set(api.ContentType, api.JsonMIMEType)
-	json.NewEncoder(w).Encode(databaseMetadataResponse{Metadata: metadata})
+	stdjson.NewEncoder(w).Encode(databaseMetadataResponse{Metadata: metadata})
 }
 
 // ExportData handles HTTP GET requests to export all data.

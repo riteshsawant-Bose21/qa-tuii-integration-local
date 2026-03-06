@@ -307,7 +307,7 @@ func (p *Persistence) persistActiveState() (*PersistentState, error) {
 
 // loadMetadata retrieves and unmarshals the api.DatabaseMetadata from the database.
 func (p *Persistence) loadMetadata() (*api.DatabaseMetadata, error) {
-	var metadata api.DatabaseMetadata
+	var dataCopy []byte
 	err := p.db.View(func(tx *bbolt.Tx) error {
 		bucket := tx.Bucket([]byte(bucketFusion))
 		if bucket == nil {
@@ -317,11 +317,22 @@ func (p *Persistence) loadMetadata() (*api.DatabaseMetadata, error) {
 		if data == nil {
 			return fmt.Errorf("metadata not found")
 		}
-		return json.Unmarshal(data, &metadata)
+		dataCopy = append([]byte(nil), data...)
+		return nil
 	})
 	if err != nil {
 		return nil, err
 	}
+
+	var metadata api.DatabaseMetadata
+	if err := json.Unmarshal(dataCopy, &metadata); err != nil {
+		return nil, err
+	}
+	// Ensure no string field aliases a temporary decode buffer.
+	metadata.ActiveSnapshot = strings.Clone(metadata.ActiveSnapshot)
+	metadata.Hash = strings.Clone(metadata.Hash)
+	metadata.Version.NodeID = strings.Clone(metadata.Version.NodeID)
+
 	return &metadata, nil
 }
 
