@@ -252,13 +252,13 @@ abstract class FusionBasePainter {
     if (painter.toolState is PointsDraggingState) {
       final PointsDraggingState draggingState = painter.toolState as PointsDraggingState;
       if (draggingState.pointIds.contains(point.id)) {
-        return point.position + draggingState.delta;
+        return point.position + draggingState.delta + _getSnapAdjustment(painter);
       }
     }
     if (painter.toolState is LayerDraggingState) {
       final LayerDraggingState draggingState = painter.toolState as LayerDraggingState;
       if (draggingState.layerId == layerId) {
-        return point.position + draggingState.delta;
+        return point.position + draggingState.delta + _getSnapAdjustment(painter);
       }
     }
     return point.position;
@@ -268,9 +268,23 @@ abstract class FusionBasePainter {
     if (painter.toolState is LayerDraggingState) {
       final LayerDraggingState draggingState = painter.toolState as LayerDraggingState;
       if (draggingState.layerId == layerId) {
-        return offset + draggingState.delta;
+        return offset + draggingState.delta + _getSnapAdjustment(painter);
       }
     }
     return offset;
+  }
+
+  /// Calculate snap adjustment based on the current snap state
+  Offset _getSnapAdjustment(FusionCanvasPainter painter) {
+    final FusionSnapState snapState = painter.snapViewModel;
+    if (snapState.isSnapped && snapState.cursorPositions != null && snapState.snapResult?.cursorIndex != null) {
+      final int cursorIndex = snapState.snapResult!.cursorIndex!;
+      if (cursorIndex < snapState.cursorPositions!.length) {
+        final Offset currentPosition = snapState.cursorPositions![cursorIndex];
+        final Offset snappedPosition = snapState.snapResult!.snappedPosition;
+        return snappedPosition - currentPosition;
+      }
+    }
+    return Offset.zero;
   }
 }

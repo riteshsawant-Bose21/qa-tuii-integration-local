@@ -1,10 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:fusion_launcher/features/fusion_canvas/state/fusion_hover_state.dart';
 import 'package:fusion_launcher/features/fusion_canvas/state/fusion_tool_state.dart';
-import 'package:fusion_launcher/features/fusion_canvas/state/tools/measure_tool_state.dart';
-import 'package:fusion_launcher/features/fusion_canvas/state/tools/pen_tool_state.dart';
 import 'package:fusion_launcher/features/fusion_canvas/state/tools/select_tool_state.dart';
 import 'package:fusion_launcher/features/fusion_canvas/view/widgets/canvas_control_wrapper.dart';
 import 'package:fusion_launcher/features/fusion_canvas/view/widgets/fusion_canvas_listeners_wrapper.dart';
@@ -115,54 +112,29 @@ class FusionCanvas extends StatelessWidget {
                                 BuildContext context,
                                 FusionCanvasInputState state,
                               ) {
-                                context.read<FusionCanvasHoverViewModel>().updateHoverPosition(state.mousePosition, fusionCanvasPainter);
-
-                                final FusionCanvasToolViewModel toolVm = context.read<FusionCanvasToolViewModel>();
-                                toolVm.onInputStateChanged(
-                                  state,
-                                  context.read<FusionSnapViewModel>().state,
+                                // Update hover position
+                                context.read<FusionCanvasHoverViewModel>().updateHoverPosition(
+                                  state.mousePosition,
+                                  fusionCanvasPainter,
                                 );
 
-                                if ((toolVm.state is! MeasureToolState && toolVm.state is! PenToolState) && state is FusionCanvasInputTapDownState) {
-                                  final FusionHoverState item = context.read<FusionCanvasHoverViewModel>().state;
+                                // Build input context with all required state
+                                final FusionCanvasInputContext inputContext = FusionCanvasInputContext(
+                                  hoverState: context.read<FusionCanvasHoverViewModel>().state,
+                                  snapState: context.read<FusionSnapViewModel>().state,
+                                );
 
-                                  if (item.hoveredPainterId != null) {
-                                    print("Hove Item: ${item.hoveredPainterId}, ${item.hoveredElement}");
-                                    final FusionCanvasElement? hitElement = item.hoveredElement;
-                                    final List<String> pointIds = switch (hitElement) {
-                                      FusionCanvasPoint() => <String>[hitElement.id],
-                                      FusionCanvasLine(:final FusionCanvasPoint start, :final FusionCanvasPoint end) => <String>[start.id, end.id],
-                                      FusionCanvasPolygon(:final List<FusionCanvasPoint> points) => points.map((FusionCanvasPoint p) => p.id).toList(),
-                                      _ => <String>[],
-                                    };
-                                    if (pointIds.isNotEmpty) {
-                                      toolVm.startPointsDrag(
-                                        item.hoveredPainterId ?? '',
-                                        pointIds,
-                                      );
-                                    } else {
-                                      toolVm.startLayerDrag(item.hoveredPainterId ?? '');
-                                    }
-                                  } else {
-                                    toolVm.setCanvasPanning(Offset.zero);
-                                  }
-                                }
+                                // Delegate all input handling to the tool viewmodel
+                                final FusionCanvasToolViewModel toolVm = context.read<FusionCanvasToolViewModel>();
+                                toolVm.onInputStateChanged(state, inputContext);
 
-                                if (state is FusionCanvasInputDraggingState) {
-                                  toolVm.updateDragDelta(
-                                    state.delta,
-                                  );
-                                }
-
-                                if (state is FusionCanvasInputTapUpState) {
-                                  if (state.gestureOrigin == FusionGestureOrigin.click) {
-                                    final FusionBasePainter? hit = fusionCanvasPainter.isHit(state.mousePosition ?? Offset.zero);
-                                    toolbarEvents?.onLayerSelected?.call(hit);
-                                  }
-                                  if (state.gestureOrigin == FusionGestureOrigin.drag) {
-                                    toolVm.onDragEnd();
-                                  }
-                                }
+                                // Notify external callbacks for selection events
+                                // if (state is FusionCanvasInputTapUpState && state.gestureOrigin == FusionGestureOrigin.click) {
+                                //   final FusionBasePainter? hit = fusionCanvasPainter.isHit(
+                                //     state.mousePosition ?? Offset.zero,
+                                //   );
+                                //   toolbarEvents?.onLayerSelected?.call(hit);
+                                // }
                               },
 
                               child: CanvasControlWrapper(

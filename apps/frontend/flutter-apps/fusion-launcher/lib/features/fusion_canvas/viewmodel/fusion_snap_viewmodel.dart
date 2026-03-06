@@ -91,6 +91,8 @@ class FusionSnapViewModel extends Cubit<FusionSnapState> {
       ..addAll(points);
     if (state.cursorPosition != null) {
       updateCursorPosition(state.cursorPosition);
+    } else if (state.cursorPositions != null) {
+      updateCursorPositions(state.cursorPositions);
     }
   }
 }
