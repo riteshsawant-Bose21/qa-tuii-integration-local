@@ -67,12 +67,12 @@ definitions:
     type: object
   types.BundleDetails:
     properties:
+      approval_status:
+        type: string
       created_at:
         type: string
       id:
         type: string
-      is_approved:
-        type: boolean
       min_desktop_app_version:
         type: string
       min_prev_version:
@@ -276,6 +276,9 @@ definitions:
         type: string
       release_notes:
         type: string
+      s3_path:
+        example: bundles/stable/bundle-1.2.3.zip
+        type: string
       version:
         example: 1.2.3
         type: string
@@ -284,6 +287,7 @@ definitions:
     - manifest_data
     - min_desktop_app_version
     - min_prev_version
+    - s3_path
     - version
     type: object
   types.OrganizationUsersResponse:
@@ -934,9 +938,9 @@ paths:
         in: query
         name: limit
         type: integer
-      - description: Filter by approval status (true or false)
+      - description: Filter by approval status (true for APPROVED, false for REVOKED)
         in: query
-        name: is_approved
+        name: approve
         type: boolean
       produces:
       - application/json
@@ -998,16 +1002,16 @@ paths:
       - application/json
       description: Approves a firmware bundle, making it available for deployment
       parameters:
-      - description: Unique identifier of the firmware bundle
-        in: path
-        name: bundleID
+      - description: Set to true to approve, false to revoke
+        in: query
+        name: approve
         required: true
-        type: string
+        type: boolean
       produces:
       - application/json
       responses:
         "204":
-          description: Bundle successfully approved
+          description: Bundle successfully approved or revoked
         "400":
           description: Invalid bundleID or request payload
           schema:
@@ -1054,7 +1058,8 @@ paths:
           schema:
             $ref: '#/definitions/types.ErrorResponse'
         "404":
-          description: Firmware bundle not found
+          description: Firmware bundle not found, or bundle artifact not found in
+            storage
           schema:
             $ref: '#/definitions/types.ErrorResponse'
         "500":

@@ -52,7 +52,7 @@ func (s *Service) GetBundleByVersion(ctx context.Context, version string) (*mode
 
 func (s *Service) GetLatestApprovedBundleNewerThan(ctx context.Context, currentFirmwareVersion string) (*models.Bundle, error) {
 	bundle, err := models.Bundles(
-		models.BundleWhere.IsApproved.EQ(true),
+		models.BundleWhere.ApprovalStatus.EQ(models.BundleApprovalStatusEnumAPPROVED),
 		qm.Where("version_array > string_to_array(?, '.')::int[]", currentFirmwareVersion),
 		qm.OrderBy("version_array DESC"),
 	).One(ctx, s.db)
@@ -83,7 +83,7 @@ func (s *Service) InsertBundle(ctx context.Context, payload types.NotifyBundleUp
 		MinPrevVersion:       payload.MinPrevVersion,
 		MinDesktopAppVersion: payload.MinDesktopAppVersion,
 		ManifestData:         null.JSONFrom(manifestBytes),
-		IsApproved:           false,
+		ApprovalStatus:       models.BundleApprovalStatusEnumPENDING,
 	}
 
 	if payload.ReleaseNotes != "" {
@@ -100,7 +100,7 @@ func (s *Service) InsertBundle(ctx context.Context, payload types.NotifyBundleUp
 	return bundleRecord.ID, nil
 }
 
-func (s *Service) ApproveBundle(ctx context.Context, bundleID string, approvedBy string) error {
+func (s *Service) ApproveBundle(ctx context.Context, bundleID string, approvedBy string, approve bool) error {
 	if bundleID == "" {
 		return errors.New("bundleID cannot be empty")
 	}
@@ -108,14 +108,19 @@ func (s *Service) ApproveBundle(ctx context.Context, bundleID string, approvedBy
 		return errors.New("approvedBy cannot be empty")
 	}
 
-	bundle := &models.Bundle{
-		ID:         bundleID,
-		IsApproved: true,
-		ApprovedBy: null.StringFrom(approvedBy),
-		ApprovedAt: null.TimeFrom(time.Now()),
+	status := models.BundleApprovalStatusEnumREVOKED
+	if approve {
+		status = models.BundleApprovalStatusEnumAPPROVED
 	}
 
-	_, err := bundle.Update(ctx, s.db, boil.Whitelist(models.BundleColumns.IsApproved, models.BundleColumns.ApprovedBy, models.BundleColumns.ApprovedAt))
+	bundle := &models.Bundle{
+		ID:                      bundleID,
+		ApprovalStatus:          status,
+		ApprovalStatusChangedBy: null.StringFrom(approvedBy),
+		ApprovalStatusChangedAt: null.TimeFrom(time.Now()),
+	}
+
+	_, err := bundle.Update(ctx, s.db, boil.Whitelist(models.BundleColumns.ApprovalStatus, models.BundleColumns.ApprovalStatusChangedBy, models.BundleColumns.ApprovalStatusChangedAt))
 	return err
 }
 
@@ -140,7 +145,7 @@ func (s *Service) GetBundleByID(ctx context.Context, bundleID string) (*models.B
 
 func (s *Service) GetLatestBundleCompatibleWithFirmware(ctx context.Context, currentFirmwareVersion string, channel string) (*models.Bundle, error) {
 	queryMods := []qm.QueryMod{
-		models.BundleWhere.IsApproved.EQ(true),
+		models.BundleWhere.ApprovalStatus.EQ(models.BundleApprovalStatusEnumAPPROVED),
 		qm.Where("version_array > string_to_array(?, '.')::int[]", currentFirmwareVersion),
 		qm.Where("(min_prev_version = '0.0.0' OR min_prev_version_array <= string_to_array(?, '.')::int[])", currentFirmwareVersion),
 		qm.OrderBy("version_array DESC"),
@@ -167,7 +172,7 @@ func (s *Service) GetLatestBundleCompatibleWithFirmware(ctx context.Context, cur
 
 func (s *Service) GetLatestCompatibleBundle(ctx context.Context, currentFirmwareVersion string, currentDesktopAppVersion string, channel string) (*models.Bundle, error) {
 	queryMods := []qm.QueryMod{
-		models.BundleWhere.IsApproved.EQ(true),
+		models.BundleWhere.ApprovalStatus.EQ(models.BundleApprovalStatusEnumAPPROVED),
 		qm.Where("version_array > string_to_array(?, '.')::int[]", currentFirmwareVersion),
 		qm.Where("(min_prev_version = '0.0.0' OR min_prev_version_array <= string_to_array(?, '.')::int[])", currentFirmwareVersion),
 		qm.Where("(min_desktop_app_version = '0.0.0' OR min_desktop_app_version_array <= string_to_array(?, '.')::int[])", currentDesktopAppVersion),
@@ -208,11 +213,11 @@ func (s *Service) LogBundleUpdateStatus(ctx context.Context, payload *types.LogB
 	return status.Insert(ctx, s.db, boil.Infer())
 }
 
-func (s *Service) ListBundles(ctx context.Context, isApproved *bool, limit, offset int) ([]*models.Bundle, int, error) {
+func (s *Service) ListBundles(ctx context.Context, approvalStatus *string, limit, offset int) ([]*models.Bundle, int, error) {
 	var queryMods []qm.QueryMod
 
-	if isApproved != nil {
-		queryMods = append(queryMods, models.BundleWhere.IsApproved.EQ(*isApproved))
+	if approvalStatus != nil {
+		queryMods = append(queryMods, models.BundleWhere.ApprovalStatus.EQ(*approvalStatus))
 	}
 
 	// Get total count

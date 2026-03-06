@@ -94,29 +94,29 @@ var AppUserWhere = struct {
 
 // AppUserRels is where relationship names are stored.
 var AppUserRels = struct {
-	Account              string
-	AccountTypeRole      string
-	UserUserSetting      string
-	ApprovedByBundles    string
-	LockedByUserProjects string
-	UserProjectUsers     string
+	Account                        string
+	AccountTypeRole                string
+	UserUserSetting                string
+	ApprovalStatusChangedByBundles string
+	LockedByUserProjects           string
+	UserProjectUsers               string
 }{
-	Account:              "Account",
-	AccountTypeRole:      "AccountTypeRole",
-	UserUserSetting:      "UserUserSetting",
-	ApprovedByBundles:    "ApprovedByBundles",
-	LockedByUserProjects: "LockedByUserProjects",
-	UserProjectUsers:     "UserProjectUsers",
+	Account:                        "Account",
+	AccountTypeRole:                "AccountTypeRole",
+	UserUserSetting:                "UserUserSetting",
+	ApprovalStatusChangedByBundles: "ApprovalStatusChangedByBundles",
+	LockedByUserProjects:           "LockedByUserProjects",
+	UserProjectUsers:               "UserProjectUsers",
 }
 
 // appUserR is where relationships are stored.
 type appUserR struct {
-	Account              *Account         `boil:"Account" json:"Account" toml:"Account" yaml:"Account"`
-	AccountTypeRole      *AccountTypeRole `boil:"AccountTypeRole" json:"AccountTypeRole" toml:"AccountTypeRole" yaml:"AccountTypeRole"`
-	UserUserSetting      *UserSetting     `boil:"UserUserSetting" json:"UserUserSetting" toml:"UserUserSetting" yaml:"UserUserSetting"`
-	ApprovedByBundles    BundleSlice      `boil:"ApprovedByBundles" json:"ApprovedByBundles" toml:"ApprovedByBundles" yaml:"ApprovedByBundles"`
-	LockedByUserProjects ProjectSlice     `boil:"LockedByUserProjects" json:"LockedByUserProjects" toml:"LockedByUserProjects" yaml:"LockedByUserProjects"`
-	UserProjectUsers     ProjectUserSlice `boil:"UserProjectUsers" json:"UserProjectUsers" toml:"UserProjectUsers" yaml:"UserProjectUsers"`
+	Account                        *Account         `boil:"Account" json:"Account" toml:"Account" yaml:"Account"`
+	AccountTypeRole                *AccountTypeRole `boil:"AccountTypeRole" json:"AccountTypeRole" toml:"AccountTypeRole" yaml:"AccountTypeRole"`
+	UserUserSetting                *UserSetting     `boil:"UserUserSetting" json:"UserUserSetting" toml:"UserUserSetting" yaml:"UserUserSetting"`
+	ApprovalStatusChangedByBundles BundleSlice      `boil:"ApprovalStatusChangedByBundles" json:"ApprovalStatusChangedByBundles" toml:"ApprovalStatusChangedByBundles" yaml:"ApprovalStatusChangedByBundles"`
+	LockedByUserProjects           ProjectSlice     `boil:"LockedByUserProjects" json:"LockedByUserProjects" toml:"LockedByUserProjects" yaml:"LockedByUserProjects"`
+	UserProjectUsers               ProjectUserSlice `boil:"UserProjectUsers" json:"UserProjectUsers" toml:"UserProjectUsers" yaml:"UserProjectUsers"`
 }
 
 // NewStruct creates a new relationship struct
@@ -172,20 +172,20 @@ func (r *appUserR) GetUserUserSetting() *UserSetting {
 	return r.UserUserSetting
 }
 
-func (o *AppUser) GetApprovedByBundles() BundleSlice {
+func (o *AppUser) GetApprovalStatusChangedByBundles() BundleSlice {
 	if o == nil {
 		return nil
 	}
 
-	return o.R.GetApprovedByBundles()
+	return o.R.GetApprovalStatusChangedByBundles()
 }
 
-func (r *appUserR) GetApprovedByBundles() BundleSlice {
+func (r *appUserR) GetApprovalStatusChangedByBundles() BundleSlice {
 	if r == nil {
 		return nil
 	}
 
-	return r.ApprovedByBundles
+	return r.ApprovalStatusChangedByBundles
 }
 
 func (o *AppUser) GetLockedByUserProjects() ProjectSlice {
@@ -569,15 +569,15 @@ func (o *AppUser) UserUserSetting(mods ...qm.QueryMod) userSettingQuery {
 	return UserSettings(queryMods...)
 }
 
-// ApprovedByBundles retrieves all the bundle's Bundles with an executor via approved_by column.
-func (o *AppUser) ApprovedByBundles(mods ...qm.QueryMod) bundleQuery {
+// ApprovalStatusChangedByBundles retrieves all the bundle's Bundles with an executor via approval_status_changed_by column.
+func (o *AppUser) ApprovalStatusChangedByBundles(mods ...qm.QueryMod) bundleQuery {
 	var queryMods []qm.QueryMod
 	if len(mods) != 0 {
 		queryMods = append(queryMods, mods...)
 	}
 
 	queryMods = append(queryMods,
-		qm.Where("\"bundle\".\"approved_by\"=?", o.ID),
+		qm.Where("\"bundle\".\"approval_status_changed_by\"=?", o.ID),
 	)
 
 	return Bundles(queryMods...)
@@ -968,9 +968,9 @@ func (appUserL) LoadUserUserSetting(ctx context.Context, e boil.ContextExecutor,
 	return nil
 }
 
-// LoadApprovedByBundles allows an eager lookup of values, cached into the
+// LoadApprovalStatusChangedByBundles allows an eager lookup of values, cached into the
 // loaded structs of the objects. This is for a 1-M or N-M relationship.
-func (appUserL) LoadApprovedByBundles(ctx context.Context, e boil.ContextExecutor, singular bool, maybeAppUser interface{}, mods queries.Applicator) error {
+func (appUserL) LoadApprovalStatusChangedByBundles(ctx context.Context, e boil.ContextExecutor, singular bool, maybeAppUser interface{}, mods queries.Applicator) error {
 	var slice []*AppUser
 	var object *AppUser
 
@@ -1024,7 +1024,7 @@ func (appUserL) LoadApprovedByBundles(ctx context.Context, e boil.ContextExecuto
 
 	query := NewQuery(
 		qm.From(`bundle`),
-		qm.WhereIn(`bundle.approved_by in ?`, argsSlice...),
+		qm.WhereIn(`bundle.approval_status_changed_by in ?`, argsSlice...),
 	)
 	if mods != nil {
 		mods.Apply(query)
@@ -1055,24 +1055,24 @@ func (appUserL) LoadApprovedByBundles(ctx context.Context, e boil.ContextExecuto
 		}
 	}
 	if singular {
-		object.R.ApprovedByBundles = resultSlice
+		object.R.ApprovalStatusChangedByBundles = resultSlice
 		for _, foreign := range resultSlice {
 			if foreign.R == nil {
 				foreign.R = &bundleR{}
 			}
-			foreign.R.ApprovedByAppUser = object
+			foreign.R.ApprovalStatusChangedByAppUser = object
 		}
 		return nil
 	}
 
 	for _, foreign := range resultSlice {
 		for _, local := range slice {
-			if queries.Equal(local.ID, foreign.ApprovedBy) {
-				local.R.ApprovedByBundles = append(local.R.ApprovedByBundles, foreign)
+			if queries.Equal(local.ID, foreign.ApprovalStatusChangedBy) {
+				local.R.ApprovalStatusChangedByBundles = append(local.R.ApprovalStatusChangedByBundles, foreign)
 				if foreign.R == nil {
 					foreign.R = &bundleR{}
 				}
-				foreign.R.ApprovedByAppUser = local
+				foreign.R.ApprovalStatusChangedByAppUser = local
 				break
 			}
 		}
@@ -1451,22 +1451,22 @@ func (o *AppUser) SetUserUserSetting(ctx context.Context, exec boil.ContextExecu
 	return nil
 }
 
-// AddApprovedByBundles adds the given related objects to the existing relationships
+// AddApprovalStatusChangedByBundles adds the given related objects to the existing relationships
 // of the app_user, optionally inserting them as new records.
-// Appends related to o.R.ApprovedByBundles.
-// Sets related.R.ApprovedByAppUser appropriately.
-func (o *AppUser) AddApprovedByBundles(ctx context.Context, exec boil.ContextExecutor, insert bool, related ...*Bundle) error {
+// Appends related to o.R.ApprovalStatusChangedByBundles.
+// Sets related.R.ApprovalStatusChangedByAppUser appropriately.
+func (o *AppUser) AddApprovalStatusChangedByBundles(ctx context.Context, exec boil.ContextExecutor, insert bool, related ...*Bundle) error {
 	var err error
 	for _, rel := range related {
 		if insert {
-			queries.Assign(&rel.ApprovedBy, o.ID)
+			queries.Assign(&rel.ApprovalStatusChangedBy, o.ID)
 			if err = rel.Insert(ctx, exec, boil.Infer()); err != nil {
 				return errors.Wrap(err, "failed to insert into foreign table")
 			}
 		} else {
 			updateQuery := fmt.Sprintf(
 				"UPDATE \"bundle\" SET %s WHERE %s",
-				strmangle.SetParamNames("\"", "\"", 1, []string{"approved_by"}),
+				strmangle.SetParamNames("\"", "\"", 1, []string{"approval_status_changed_by"}),
 				strmangle.WhereClause("\"", "\"", 2, bundlePrimaryKeyColumns),
 			)
 			values := []interface{}{o.ID, rel.ID}
@@ -1480,38 +1480,38 @@ func (o *AppUser) AddApprovedByBundles(ctx context.Context, exec boil.ContextExe
 				return errors.Wrap(err, "failed to update foreign table")
 			}
 
-			queries.Assign(&rel.ApprovedBy, o.ID)
+			queries.Assign(&rel.ApprovalStatusChangedBy, o.ID)
 		}
 	}
 
 	if o.R == nil {
 		o.R = &appUserR{
-			ApprovedByBundles: related,
+			ApprovalStatusChangedByBundles: related,
 		}
 	} else {
-		o.R.ApprovedByBundles = append(o.R.ApprovedByBundles, related...)
+		o.R.ApprovalStatusChangedByBundles = append(o.R.ApprovalStatusChangedByBundles, related...)
 	}
 
 	for _, rel := range related {
 		if rel.R == nil {
 			rel.R = &bundleR{
-				ApprovedByAppUser: o,
+				ApprovalStatusChangedByAppUser: o,
 			}
 		} else {
-			rel.R.ApprovedByAppUser = o
+			rel.R.ApprovalStatusChangedByAppUser = o
 		}
 	}
 	return nil
 }
 
-// SetApprovedByBundles removes all previously related items of the
+// SetApprovalStatusChangedByBundles removes all previously related items of the
 // app_user replacing them completely with the passed
 // in related items, optionally inserting them as new records.
-// Sets o.R.ApprovedByAppUser's ApprovedByBundles accordingly.
-// Replaces o.R.ApprovedByBundles with related.
-// Sets related.R.ApprovedByAppUser's ApprovedByBundles accordingly.
-func (o *AppUser) SetApprovedByBundles(ctx context.Context, exec boil.ContextExecutor, insert bool, related ...*Bundle) error {
-	query := "update \"bundle\" set \"approved_by\" = null where \"approved_by\" = $1"
+// Sets o.R.ApprovalStatusChangedByAppUser's ApprovalStatusChangedByBundles accordingly.
+// Replaces o.R.ApprovalStatusChangedByBundles with related.
+// Sets related.R.ApprovalStatusChangedByAppUser's ApprovalStatusChangedByBundles accordingly.
+func (o *AppUser) SetApprovalStatusChangedByBundles(ctx context.Context, exec boil.ContextExecutor, insert bool, related ...*Bundle) error {
+	query := "update \"bundle\" set \"approval_status_changed_by\" = null where \"approval_status_changed_by\" = $1"
 	values := []interface{}{o.ID}
 	if boil.IsDebug(ctx) {
 		writer := boil.DebugWriterFrom(ctx)
@@ -1524,35 +1524,35 @@ func (o *AppUser) SetApprovedByBundles(ctx context.Context, exec boil.ContextExe
 	}
 
 	if o.R != nil {
-		for _, rel := range o.R.ApprovedByBundles {
-			queries.SetScanner(&rel.ApprovedBy, nil)
+		for _, rel := range o.R.ApprovalStatusChangedByBundles {
+			queries.SetScanner(&rel.ApprovalStatusChangedBy, nil)
 			if rel.R == nil {
 				continue
 			}
 
-			rel.R.ApprovedByAppUser = nil
+			rel.R.ApprovalStatusChangedByAppUser = nil
 		}
-		o.R.ApprovedByBundles = nil
+		o.R.ApprovalStatusChangedByBundles = nil
 	}
 
-	return o.AddApprovedByBundles(ctx, exec, insert, related...)
+	return o.AddApprovalStatusChangedByBundles(ctx, exec, insert, related...)
 }
 
-// RemoveApprovedByBundles relationships from objects passed in.
-// Removes related items from R.ApprovedByBundles (uses pointer comparison, removal does not keep order)
-// Sets related.R.ApprovedByAppUser.
-func (o *AppUser) RemoveApprovedByBundles(ctx context.Context, exec boil.ContextExecutor, related ...*Bundle) error {
+// RemoveApprovalStatusChangedByBundles relationships from objects passed in.
+// Removes related items from R.ApprovalStatusChangedByBundles (uses pointer comparison, removal does not keep order)
+// Sets related.R.ApprovalStatusChangedByAppUser.
+func (o *AppUser) RemoveApprovalStatusChangedByBundles(ctx context.Context, exec boil.ContextExecutor, related ...*Bundle) error {
 	if len(related) == 0 {
 		return nil
 	}
 
 	var err error
 	for _, rel := range related {
-		queries.SetScanner(&rel.ApprovedBy, nil)
+		queries.SetScanner(&rel.ApprovalStatusChangedBy, nil)
 		if rel.R != nil {
-			rel.R.ApprovedByAppUser = nil
+			rel.R.ApprovalStatusChangedByAppUser = nil
 		}
-		if _, err = rel.Update(ctx, exec, boil.Whitelist("approved_by")); err != nil {
+		if _, err = rel.Update(ctx, exec, boil.Whitelist("approval_status_changed_by")); err != nil {
 			return err
 		}
 	}
@@ -1561,16 +1561,16 @@ func (o *AppUser) RemoveApprovedByBundles(ctx context.Context, exec boil.Context
 	}
 
 	for _, rel := range related {
-		for i, ri := range o.R.ApprovedByBundles {
+		for i, ri := range o.R.ApprovalStatusChangedByBundles {
 			if rel != ri {
 				continue
 			}
 
-			ln := len(o.R.ApprovedByBundles)
+			ln := len(o.R.ApprovalStatusChangedByBundles)
 			if ln > 1 && i < ln-1 {
-				o.R.ApprovedByBundles[i] = o.R.ApprovedByBundles[ln-1]
+				o.R.ApprovalStatusChangedByBundles[i] = o.R.ApprovalStatusChangedByBundles[ln-1]
 			}
-			o.R.ApprovedByBundles = o.R.ApprovedByBundles[:ln-1]
+			o.R.ApprovalStatusChangedByBundles = o.R.ApprovalStatusChangedByBundles[:ln-1]
 			break
 		}
 	}

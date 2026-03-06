@@ -20,8 +20,8 @@ type DatabaseService interface {
 	// Bundle operations
 	GetBundleByVersion(ctx context.Context, version string) (*models.Bundle, error)
 	InsertBundle(ctx context.Context, payload types.NotifyBundleUploadPayload, logger *zap.Logger) (string, error)
-	ListBundles(ctx context.Context, isApproved *bool, limit, offset int) ([]*models.Bundle, int, error)
-	ApproveBundle(ctx context.Context, bundleID string, approvedBy string) error
+	ListBundles(ctx context.Context, approvalStatus *string, limit, offset int) ([]*models.Bundle, int, error)
+	ApproveBundle(ctx context.Context, bundleID string, approvedBy string, approve bool) error
 	GetBundleByID(ctx context.Context, bundleID string) (*models.Bundle, error)
 	GetLatestCompatibleBundle(ctx context.Context, currentFirmwareVersion string, currentDesktopAppVersion string, channel string) (*models.Bundle, error)
 	GetLatestApprovedBundleNewerThan(ctx context.Context, currentFirmwareVersion string) (*models.Bundle, error)

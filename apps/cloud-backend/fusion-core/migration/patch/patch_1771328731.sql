@@ -1,4 +1,10 @@
 
+CREATE TYPE bundle_approval_status_enum AS ENUM (
+    'PENDING',
+    'APPROVED',
+    'REVOKED'
+);
+
 CREATE TABLE bundle (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     version TEXT NOT NULL UNIQUE,
@@ -13,9 +19,9 @@ CREATE TABLE bundle (
     manifest_data JSONB,
     checksum VARCHAR(64) NOT NULL,
     s3_path TEXT NOT NULL,
-    is_approved bool NOT NULL DEFAULT false,
-    approved_by UUID references app_user(id),
-    approved_at TIMESTAMPTZ,
+    approval_status bundle_approval_status_enum NOT NULL DEFAULT 'PENDING',
+    approval_status_changed_by UUID references app_user(id),
+    approval_status_changed_at TIMESTAMPTZ,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );

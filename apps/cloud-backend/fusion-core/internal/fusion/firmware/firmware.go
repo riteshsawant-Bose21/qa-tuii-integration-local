@@ -46,7 +46,7 @@ func (s *Service) NotifyBundleUpload(ctx context.Context, payload *types.NotifyB
 	}, nil
 }
 
-func (s *Service) ListBundles(ctx context.Context, isApproved *bool, page, limit int) (*types.BundleListResponse, error) {
+func (s *Service) ListBundles(ctx context.Context, approvalStatus *string, page, limit int) (*types.BundleListResponse, error) {
 	if page < 1 {
 		page = 1
 	}
@@ -58,7 +58,7 @@ func (s *Service) ListBundles(ctx context.Context, isApproved *bool, page, limit
 
 	offset := (page - 1) * limit
 
-	bundles, total, err := s.dbService.ListBundles(ctx, isApproved, limit, offset)
+	bundles, total, err := s.dbService.ListBundles(ctx, approvalStatus, limit, offset)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list bundles: %w", err)
 	}
@@ -71,7 +71,7 @@ func (s *Service) ListBundles(ctx context.Context, isApproved *bool, page, limit
 			ReleaseNotes:         b.ReleaseNotes.String,
 			MinPrevVersion:       b.MinPrevVersion,
 			MinDesktopAppVersion: b.MinDesktopAppVersion,
-			IsApproved:           b.IsApproved,
+			ApprovalStatus:       b.ApprovalStatus,
 			CreatedAt:            b.CreatedAt,
 			UpdatedAt:            b.UpdatedAt,
 		})
@@ -85,7 +85,7 @@ func (s *Service) ListBundles(ctx context.Context, isApproved *bool, page, limit
 	}, nil
 }
 
-func (s *Service) ApproveBundle(ctx context.Context, bundleID string, approvedBy string, logger *zap.Logger) error {
+func (s *Service) ApproveBundle(ctx context.Context, bundleID string, approvedBy string, approve bool, logger *zap.Logger) error {
 	// Check if bundle exists
 	bundle, err := s.dbService.GetBundleByID(ctx, bundleID)
 	if err != nil {
@@ -95,7 +95,7 @@ func (s *Service) ApproveBundle(ctx context.Context, bundleID string, approvedBy
 		return errorutil.ErrBundleNotFound
 	}
 
-	err = s.dbService.ApproveBundle(ctx, bundleID, approvedBy)
+	err = s.dbService.ApproveBundle(ctx, bundleID, approvedBy, approve)
 	if err != nil {
 		return fmt.Errorf("failed to approve bundle: %v", err)
 	}
@@ -180,8 +180,7 @@ func (s *Service) GetBundleDownloadURL(ctx context.Context, bundleID string, log
 		return nil, errorutil.ErrBundleNotFound
 	}
 
-	// Only approved bundles can be downloaded
-	if !bundle.IsApproved {
+	if bundle.ApprovalStatus != "APPROVED" {
 		return nil, errorutil.ErrBundleNotApproved
 	}
 

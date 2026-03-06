@@ -25,7 +25,7 @@ type BundleDetails struct {
 	ReleaseNotes         string    `json:"release_notes,omitempty"`
 	MinPrevVersion       string    `json:"min_prev_version"`
 	MinDesktopAppVersion string    `json:"min_desktop_app_version"`
-	IsApproved           bool      `json:"is_approved"`
+	ApprovalStatus       string    `json:"approval_status"`
 	CreatedAt            time.Time `json:"created_at"`
 	UpdatedAt            time.Time `json:"updated_at"`
 }

@@ -83,7 +83,7 @@ func (h *FirmwareUpdateHandler) NotifyBundleUpload(c *gin.Context) {
 // @Security BearerAuth
 // @Param page query int false "Page number (default: 1)" default(1)
 // @Param limit query int false "Items per page (default: 10, max: 100)" default(10)
-// @Param is_approved query bool false "Filter by approval status (true or false)"
+// @Param approve query bool false "Filter by approval status (true for APPROVED, false for REVOKED)"
 // @Success 200 {object} types.BundleListResponse "List of firmware bundles with pagination metadata"
 // @Failure 400 {object} types.ErrorResponse "Invalid query parameters"
 // @Failure 500 {object} types.ErrorResponse "Internal server error"
@@ -104,18 +104,22 @@ func (h *FirmwareUpdateHandler) ListBundles(c *gin.Context) {
 		return
 	}
 
-	var isApproved *bool
-	isApprovedQuery, exists := c.GetQuery("is_approved")
+	var approvalStatus *string
+	approveQuery, exists := c.GetQuery("approve")
 	if exists {
-		parsed, err := strconv.ParseBool(isApprovedQuery)
+		approveFlag, err := strconv.ParseBool(approveQuery)
 		if err != nil {
-			response.BadRequest(c, "invalid is_approved parameter (must be true or false)")
+			response.BadRequest(c, "invalid approve parameter (must be true or false)")
 			return
 		}
-		isApproved = &parsed
+		statusArg := "REVOKED"
+		if approveFlag {
+			statusArg = "APPROVED"
+		}
+		approvalStatus = &statusArg
 	}
 
-	resp, err := h.firmware.ListBundles(c, isApproved, page, limit)
+	resp, err := h.firmware.ListBundles(c, approvalStatus, page, limit)
 	if err != nil {
 		response.InternalError(c)
 		return
@@ -131,13 +135,24 @@ func (h *FirmwareUpdateHandler) ListBundles(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Security BearerAuth
-// @Param bundleID path string true "Unique identifier of the firmware bundle"
-// @Success 204 "Bundle successfully approved"
+// @Param approve query bool true "Set to true to approve, false to revoke"
+// @Success 204 "Bundle successfully approved or revoked"
 // @Failure 400 {object} types.ErrorResponse "Invalid bundleID or request payload"
 // @Failure 404 {object} types.ErrorResponse "Bundle not found"
 // @Failure 500 {object} types.ErrorResponse "Internal server error"
 // @Router /firmware/bundles/{bundleID}/approve [put]
 func (h *FirmwareUpdateHandler) ApproveBundle(c *gin.Context) {
+	approveStr := c.Query("approve")
+	if approveStr == "" {
+		response.BadRequest(c, "missing approve query parameter")
+		return
+	}
+	approve, err := strconv.ParseBool(approveStr)
+	if err != nil {
+		response.BadRequest(c, "invalid approve query parameter (must be true or false)")
+		return
+	}
+
 	bundleID := c.Param("bundleID")
 	if !validation.IsValidUUID(bundleID) {
 		response.BadRequest(c, "invalid bundleID")
@@ -159,7 +174,7 @@ func (h *FirmwareUpdateHandler) ApproveBundle(c *gin.Context) {
 	user := userAuth.(*types.UserAuthorizationResponse)
 	approvedBy := user.User.ID
 
-	err := h.firmware.ApproveBundle(c, bundleID, approvedBy, logger)
+	err = h.firmware.ApproveBundle(c, bundleID, approvedBy, approve, logger)
 	if err != nil {
 		logger.Error("Failed to approve bundle", zap.String("bundleID", bundleID), zap.Error(err))
 		if errors.Is(err, errorutil.ErrBundleNotFound) {

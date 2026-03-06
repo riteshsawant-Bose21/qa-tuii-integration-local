@@ -38,9 +38,9 @@ type Bundle struct {
 	ManifestData              null.JSON        `boil:"manifest_data" json:"manifest_data,omitempty" toml:"manifest_data" yaml:"manifest_data,omitempty"`
 	Checksum                  string           `boil:"checksum" json:"checksum" toml:"checksum" yaml:"checksum"`
 	S3Path                    string           `boil:"s3_path" json:"s3_path" toml:"s3_path" yaml:"s3_path"`
-	IsApproved                bool             `boil:"is_approved" json:"is_approved" toml:"is_approved" yaml:"is_approved"`
-	ApprovedBy                null.String      `boil:"approved_by" json:"approved_by,omitempty" toml:"approved_by" yaml:"approved_by,omitempty"`
-	ApprovedAt                null.Time        `boil:"approved_at" json:"approved_at,omitempty" toml:"approved_at" yaml:"approved_at,omitempty"`
+	ApprovalStatus            string           `boil:"approval_status" json:"approval_status" toml:"approval_status" yaml:"approval_status"`
+	ApprovalStatusChangedBy   null.String      `boil:"approval_status_changed_by" json:"approval_status_changed_by,omitempty" toml:"approval_status_changed_by" yaml:"approval_status_changed_by,omitempty"`
+	ApprovalStatusChangedAt   null.Time        `boil:"approval_status_changed_at" json:"approval_status_changed_at,omitempty" toml:"approval_status_changed_at" yaml:"approval_status_changed_at,omitempty"`
 	CreatedAt                 time.Time        `boil:"created_at" json:"created_at" toml:"created_at" yaml:"created_at"`
 	UpdatedAt                 time.Time        `boil:"updated_at" json:"updated_at" toml:"updated_at" yaml:"updated_at"`
 
@@ -62,9 +62,9 @@ var BundleColumns = struct {
 	ManifestData              string
 	Checksum                  string
 	S3Path                    string
-	IsApproved                string
-	ApprovedBy                string
-	ApprovedAt                string
+	ApprovalStatus            string
+	ApprovalStatusChangedBy   string
+	ApprovalStatusChangedAt   string
 	CreatedAt                 string
 	UpdatedAt                 string
 }{
@@ -81,9 +81,9 @@ var BundleColumns = struct {
 	ManifestData:              "manifest_data",
 	Checksum:                  "checksum",
 	S3Path:                    "s3_path",
-	IsApproved:                "is_approved",
-	ApprovedBy:                "approved_by",
-	ApprovedAt:                "approved_at",
+	ApprovalStatus:            "approval_status",
+	ApprovalStatusChangedBy:   "approval_status_changed_by",
+	ApprovalStatusChangedAt:   "approval_status_changed_at",
 	CreatedAt:                 "created_at",
 	UpdatedAt:                 "updated_at",
 }
@@ -102,9 +102,9 @@ var BundleTableColumns = struct {
 	ManifestData              string
 	Checksum                  string
 	S3Path                    string
-	IsApproved                string
-	ApprovedBy                string
-	ApprovedAt                string
+	ApprovalStatus            string
+	ApprovalStatusChangedBy   string
+	ApprovalStatusChangedAt   string
 	CreatedAt                 string
 	UpdatedAt                 string
 }{
@@ -121,9 +121,9 @@ var BundleTableColumns = struct {
 	ManifestData:              "bundle.manifest_data",
 	Checksum:                  "bundle.checksum",
 	S3Path:                    "bundle.s3_path",
-	IsApproved:                "bundle.is_approved",
-	ApprovedBy:                "bundle.approved_by",
-	ApprovedAt:                "bundle.approved_at",
+	ApprovalStatus:            "bundle.approval_status",
+	ApprovalStatusChangedBy:   "bundle.approval_status_changed_by",
+	ApprovalStatusChangedAt:   "bundle.approval_status_changed_at",
 	CreatedAt:                 "bundle.created_at",
 	UpdatedAt:                 "bundle.updated_at",
 }
@@ -216,15 +216,6 @@ func (w whereHelpernull_JSON) GTE(x null.JSON) qm.QueryMod {
 func (w whereHelpernull_JSON) IsNull() qm.QueryMod    { return qmhelper.WhereIsNull(w.field) }
 func (w whereHelpernull_JSON) IsNotNull() qm.QueryMod { return qmhelper.WhereIsNotNull(w.field) }
 
-type whereHelperbool struct{ field string }
-
-func (w whereHelperbool) EQ(x bool) qm.QueryMod  { return qmhelper.Where(w.field, qmhelper.EQ, x) }
-func (w whereHelperbool) NEQ(x bool) qm.QueryMod { return qmhelper.Where(w.field, qmhelper.NEQ, x) }
-func (w whereHelperbool) LT(x bool) qm.QueryMod  { return qmhelper.Where(w.field, qmhelper.LT, x) }
-func (w whereHelperbool) LTE(x bool) qm.QueryMod { return qmhelper.Where(w.field, qmhelper.LTE, x) }
-func (w whereHelperbool) GT(x bool) qm.QueryMod  { return qmhelper.Where(w.field, qmhelper.GT, x) }
-func (w whereHelperbool) GTE(x bool) qm.QueryMod { return qmhelper.Where(w.field, qmhelper.GTE, x) }
-
 type whereHelpertime_Time struct{ field string }
 
 func (w whereHelpertime_Time) EQ(x time.Time) qm.QueryMod {
@@ -260,9 +251,9 @@ var BundleWhere = struct {
 	ManifestData              whereHelpernull_JSON
 	Checksum                  whereHelperstring
 	S3Path                    whereHelperstring
-	IsApproved                whereHelperbool
-	ApprovedBy                whereHelpernull_String
-	ApprovedAt                whereHelpernull_Time
+	ApprovalStatus            whereHelperstring
+	ApprovalStatusChangedBy   whereHelpernull_String
+	ApprovalStatusChangedAt   whereHelpernull_Time
 	CreatedAt                 whereHelpertime_Time
 	UpdatedAt                 whereHelpertime_Time
 }{
@@ -279,23 +270,23 @@ var BundleWhere = struct {
 	ManifestData:              whereHelpernull_JSON{field: "\"bundle\".\"manifest_data\""},
 	Checksum:                  whereHelperstring{field: "\"bundle\".\"checksum\""},
 	S3Path:                    whereHelperstring{field: "\"bundle\".\"s3_path\""},
-	IsApproved:                whereHelperbool{field: "\"bundle\".\"is_approved\""},
-	ApprovedBy:                whereHelpernull_String{field: "\"bundle\".\"approved_by\""},
-	ApprovedAt:                whereHelpernull_Time{field: "\"bundle\".\"approved_at\""},
+	ApprovalStatus:            whereHelperstring{field: "\"bundle\".\"approval_status\""},
+	ApprovalStatusChangedBy:   whereHelpernull_String{field: "\"bundle\".\"approval_status_changed_by\""},
+	ApprovalStatusChangedAt:   whereHelpernull_Time{field: "\"bundle\".\"approval_status_changed_at\""},
 	CreatedAt:                 whereHelpertime_Time{field: "\"bundle\".\"created_at\""},
 	UpdatedAt:                 whereHelpertime_Time{field: "\"bundle\".\"updated_at\""},
 }
 
 // BundleRels is where relationship names are stored.
 var BundleRels = struct {
-	ApprovedByAppUser string
+	ApprovalStatusChangedByAppUser string
 }{
-	ApprovedByAppUser: "ApprovedByAppUser",
+	ApprovalStatusChangedByAppUser: "ApprovalStatusChangedByAppUser",
 }
 
 // bundleR is where relationships are stored.
 type bundleR struct {
-	ApprovedByAppUser *AppUser `boil:"ApprovedByAppUser" json:"ApprovedByAppUser" toml:"ApprovedByAppUser" yaml:"ApprovedByAppUser"`
+	ApprovalStatusChangedByAppUser *AppUser `boil:"ApprovalStatusChangedByAppUser" json:"ApprovalStatusChangedByAppUser" toml:"ApprovalStatusChangedByAppUser" yaml:"ApprovalStatusChangedByAppUser"`
 }
 
 // NewStruct creates a new relationship struct
@@ -303,29 +294,29 @@ func (*bundleR) NewStruct() *bundleR {
 	return &bundleR{}
 }
 
-func (o *Bundle) GetApprovedByAppUser() *AppUser {
+func (o *Bundle) GetApprovalStatusChangedByAppUser() *AppUser {
 	if o == nil {
 		return nil
 	}
 
-	return o.R.GetApprovedByAppUser()
+	return o.R.GetApprovalStatusChangedByAppUser()
 }
 
-func (r *bundleR) GetApprovedByAppUser() *AppUser {
+func (r *bundleR) GetApprovalStatusChangedByAppUser() *AppUser {
 	if r == nil {
 		return nil
 	}
 
-	return r.ApprovedByAppUser
+	return r.ApprovalStatusChangedByAppUser
 }
 
 // bundleL is where Load methods for each relationship are stored.
 type bundleL struct{}
 
 var (
-	bundleAllColumns            = []string{"id", "version", "version_array", "prerelease", "prerelease_num", "release_notes", "min_prev_version", "min_prev_version_array", "min_desktop_app_version", "min_desktop_app_version_array", "manifest_data", "checksum", "s3_path", "is_approved", "approved_by", "approved_at", "created_at", "updated_at"}
+	bundleAllColumns            = []string{"id", "version", "version_array", "prerelease", "prerelease_num", "release_notes", "min_prev_version", "min_prev_version_array", "min_desktop_app_version", "min_desktop_app_version_array", "manifest_data", "checksum", "s3_path", "approval_status", "approval_status_changed_by", "approval_status_changed_at", "created_at", "updated_at"}
 	bundleColumnsWithoutDefault = []string{"version", "min_prev_version", "min_desktop_app_version", "checksum", "s3_path"}
-	bundleColumnsWithDefault    = []string{"id", "version_array", "prerelease", "prerelease_num", "release_notes", "min_prev_version_array", "min_desktop_app_version_array", "manifest_data", "is_approved", "approved_by", "approved_at", "created_at", "updated_at"}
+	bundleColumnsWithDefault    = []string{"id", "version_array", "prerelease", "prerelease_num", "release_notes", "min_prev_version_array", "min_desktop_app_version_array", "manifest_data", "approval_status", "approval_status_changed_by", "approval_status_changed_at", "created_at", "updated_at"}
 	bundlePrimaryKeyColumns     = []string{"id"}
 	bundleGeneratedColumns      = []string{"version_array", "min_prev_version_array", "min_desktop_app_version_array"}
 )
@@ -635,10 +626,10 @@ func (q bundleQuery) Exists(ctx context.Context, exec boil.ContextExecutor) (boo
 	return count > 0, nil
 }
 
-// ApprovedByAppUser pointed to by the foreign key.
-func (o *Bundle) ApprovedByAppUser(mods ...qm.QueryMod) appUserQuery {
+// ApprovalStatusChangedByAppUser pointed to by the foreign key.
+func (o *Bundle) ApprovalStatusChangedByAppUser(mods ...qm.QueryMod) appUserQuery {
 	queryMods := []qm.QueryMod{
-		qm.Where("\"id\" = ?", o.ApprovedBy),
+		qm.Where("\"id\" = ?", o.ApprovalStatusChangedBy),
 	}
 
 	queryMods = append(queryMods, mods...)
@@ -646,9 +637,9 @@ func (o *Bundle) ApprovedByAppUser(mods ...qm.QueryMod) appUserQuery {
 	return AppUsers(queryMods...)
 }
 
-// LoadApprovedByAppUser allows an eager lookup of values, cached into the
+// LoadApprovalStatusChangedByAppUser allows an eager lookup of values, cached into the
 // loaded structs of the objects. This is for an N-1 relationship.
-func (bundleL) LoadApprovedByAppUser(ctx context.Context, e boil.ContextExecutor, singular bool, maybeBundle interface{}, mods queries.Applicator) error {
+func (bundleL) LoadApprovalStatusChangedByAppUser(ctx context.Context, e boil.ContextExecutor, singular bool, maybeBundle interface{}, mods queries.Applicator) error {
 	var slice []*Bundle
 	var object *Bundle
 
@@ -679,8 +670,8 @@ func (bundleL) LoadApprovedByAppUser(ctx context.Context, e boil.ContextExecutor
 		if object.R == nil {
 			object.R = &bundleR{}
 		}
-		if !queries.IsNil(object.ApprovedBy) {
-			args[object.ApprovedBy] = struct{}{}
+		if !queries.IsNil(object.ApprovalStatusChangedBy) {
+			args[object.ApprovalStatusChangedBy] = struct{}{}
 		}
 
 	} else {
@@ -689,8 +680,8 @@ func (bundleL) LoadApprovedByAppUser(ctx context.Context, e boil.ContextExecutor
 				obj.R = &bundleR{}
 			}
 
-			if !queries.IsNil(obj.ApprovedBy) {
-				args[obj.ApprovedBy] = struct{}{}
+			if !queries.IsNil(obj.ApprovalStatusChangedBy) {
+				args[obj.ApprovalStatusChangedBy] = struct{}{}
 			}
 
 		}
@@ -746,22 +737,22 @@ func (bundleL) LoadApprovedByAppUser(ctx context.Context, e boil.ContextExecutor
 
 	if singular {
 		foreign := resultSlice[0]
-		object.R.ApprovedByAppUser = foreign
+		object.R.ApprovalStatusChangedByAppUser = foreign
 		if foreign.R == nil {
 			foreign.R = &appUserR{}
 		}
-		foreign.R.ApprovedByBundles = append(foreign.R.ApprovedByBundles, object)
+		foreign.R.ApprovalStatusChangedByBundles = append(foreign.R.ApprovalStatusChangedByBundles, object)
 		return nil
 	}
 
 	for _, local := range slice {
 		for _, foreign := range resultSlice {
-			if queries.Equal(local.ApprovedBy, foreign.ID) {
-				local.R.ApprovedByAppUser = foreign
+			if queries.Equal(local.ApprovalStatusChangedBy, foreign.ID) {
+				local.R.ApprovalStatusChangedByAppUser = foreign
 				if foreign.R == nil {
 					foreign.R = &appUserR{}
 				}
-				foreign.R.ApprovedByBundles = append(foreign.R.ApprovedByBundles, local)
+				foreign.R.ApprovalStatusChangedByBundles = append(foreign.R.ApprovalStatusChangedByBundles, local)
 				break
 			}
 		}
@@ -770,10 +761,10 @@ func (bundleL) LoadApprovedByAppUser(ctx context.Context, e boil.ContextExecutor
 	return nil
 }
 
-// SetApprovedByAppUser of the bundle to the related item.
-// Sets o.R.ApprovedByAppUser to related.
-// Adds o to related.R.ApprovedByBundles.
-func (o *Bundle) SetApprovedByAppUser(ctx context.Context, exec boil.ContextExecutor, insert bool, related *AppUser) error {
+// SetApprovalStatusChangedByAppUser of the bundle to the related item.
+// Sets o.R.ApprovalStatusChangedByAppUser to related.
+// Adds o to related.R.ApprovalStatusChangedByBundles.
+func (o *Bundle) SetApprovalStatusChangedByAppUser(ctx context.Context, exec boil.ContextExecutor, insert bool, related *AppUser) error {
 	var err error
 	if insert {
 		if err = related.Insert(ctx, exec, boil.Infer()); err != nil {
@@ -783,7 +774,7 @@ func (o *Bundle) SetApprovedByAppUser(ctx context.Context, exec boil.ContextExec
 
 	updateQuery := fmt.Sprintf(
 		"UPDATE \"bundle\" SET %s WHERE %s",
-		strmangle.SetParamNames("\"", "\"", 1, []string{"approved_by"}),
+		strmangle.SetParamNames("\"", "\"", 1, []string{"approval_status_changed_by"}),
 		strmangle.WhereClause("\"", "\"", 2, bundlePrimaryKeyColumns),
 	)
 	values := []interface{}{related.ID, o.ID}
@@ -797,54 +788,54 @@ func (o *Bundle) SetApprovedByAppUser(ctx context.Context, exec boil.ContextExec
 		return errors.Wrap(err, "failed to update local table")
 	}
 
-	queries.Assign(&o.ApprovedBy, related.ID)
+	queries.Assign(&o.ApprovalStatusChangedBy, related.ID)
 	if o.R == nil {
 		o.R = &bundleR{
-			ApprovedByAppUser: related,
+			ApprovalStatusChangedByAppUser: related,
 		}
 	} else {
-		o.R.ApprovedByAppUser = related
+		o.R.ApprovalStatusChangedByAppUser = related
 	}
 
 	if related.R == nil {
 		related.R = &appUserR{
-			ApprovedByBundles: BundleSlice{o},
+			ApprovalStatusChangedByBundles: BundleSlice{o},
 		}
 	} else {
-		related.R.ApprovedByBundles = append(related.R.ApprovedByBundles, o)
+		related.R.ApprovalStatusChangedByBundles = append(related.R.ApprovalStatusChangedByBundles, o)
 	}
 
 	return nil
 }
 
-// RemoveApprovedByAppUser relationship.
-// Sets o.R.ApprovedByAppUser to nil.
+// RemoveApprovalStatusChangedByAppUser relationship.
+// Sets o.R.ApprovalStatusChangedByAppUser to nil.
 // Removes o from all passed in related items' relationships struct.
-func (o *Bundle) RemoveApprovedByAppUser(ctx context.Context, exec boil.ContextExecutor, related *AppUser) error {
+func (o *Bundle) RemoveApprovalStatusChangedByAppUser(ctx context.Context, exec boil.ContextExecutor, related *AppUser) error {
 	var err error
 
-	queries.SetScanner(&o.ApprovedBy, nil)
-	if _, err = o.Update(ctx, exec, boil.Whitelist("approved_by")); err != nil {
+	queries.SetScanner(&o.ApprovalStatusChangedBy, nil)
+	if _, err = o.Update(ctx, exec, boil.Whitelist("approval_status_changed_by")); err != nil {
 		return errors.Wrap(err, "failed to update local table")
 	}
 
 	if o.R != nil {
-		o.R.ApprovedByAppUser = nil
+		o.R.ApprovalStatusChangedByAppUser = nil
 	}
 	if related == nil || related.R == nil {
 		return nil
 	}
 
-	for i, ri := range related.R.ApprovedByBundles {
-		if queries.Equal(o.ApprovedBy, ri.ApprovedBy) {
+	for i, ri := range related.R.ApprovalStatusChangedByBundles {
+		if queries.Equal(o.ApprovalStatusChangedBy, ri.ApprovalStatusChangedBy) {
 			continue
 		}
 
-		ln := len(related.R.ApprovedByBundles)
+		ln := len(related.R.ApprovalStatusChangedByBundles)
 		if ln > 1 && i < ln-1 {
-			related.R.ApprovedByBundles[i] = related.R.ApprovedByBundles[ln-1]
+			related.R.ApprovalStatusChangedByBundles[i] = related.R.ApprovalStatusChangedByBundles[ln-1]
 		}
-		related.R.ApprovedByBundles = related.R.ApprovedByBundles[:ln-1]
+		related.R.ApprovalStatusChangedByBundles = related.R.ApprovalStatusChangedByBundles[:ln-1]
 		break
 	}
 	return nil

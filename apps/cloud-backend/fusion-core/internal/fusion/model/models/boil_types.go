@@ -51,6 +51,21 @@ func makeCacheKey(cols boil.Columns, nzDefaults []string) string {
 	return str
 }
 
+// Enum values for BundleApprovalStatusEnum
+const (
+	BundleApprovalStatusEnumPENDING  string = "PENDING"
+	BundleApprovalStatusEnumAPPROVED string = "APPROVED"
+	BundleApprovalStatusEnumREVOKED  string = "REVOKED"
+)
+
+func AllBundleApprovalStatusEnum() []string {
+	return []string{
+		BundleApprovalStatusEnumPENDING,
+		BundleApprovalStatusEnumAPPROVED,
+		BundleApprovalStatusEnumREVOKED,
+	}
+}
+
 // Enum values for BundleUpdateStatusEnum
 const (
 	BundleUpdateStatusEnumINSTALL_SUCCESS string = "INSTALL_SUCCESS"

@@ -109,8 +109,8 @@ const docTemplate = `{
                     },
                     {
                         "type": "boolean",
-                        "description": "Filter by approval status (true or false)",
-                        "name": "is_approved",
+                        "description": "Filter by approval status (true for APPROVED, false for REVOKED)",
+                        "name": "approve",
                         "in": "query"
                     }
                 ],
@@ -205,16 +205,16 @@ const docTemplate = `{
                 "summary": "Approve Firmware Bundle",
                 "parameters": [
                     {
-                        "type": "string",
-                        "description": "Unique identifier of the firmware bundle",
-                        "name": "bundleID",
-                        "in": "path",
+                        "type": "boolean",
+                        "description": "Set to true to approve, false to revoke",
+                        "name": "approve",
+                        "in": "query",
                         "required": true
                     }
                 ],
                 "responses": {
                     "204": {
-                        "description": "Bundle successfully approved"
+                        "description": "Bundle successfully approved or revoked"
                     },
                     "400": {
                         "description": "Invalid bundleID or request payload",
@@ -279,7 +279,7 @@ const docTemplate = `{
                         }
                     },
                     "404": {
-                        "description": "Firmware bundle not found",
+                        "description": "Firmware bundle not found, or bundle artifact not found in storage",
                         "schema": {
                             "$ref": "#/definitions/types.ErrorResponse"
                         }
@@ -2029,14 +2029,14 @@ const docTemplate = `{
         "types.BundleDetails": {
             "type": "object",
             "properties": {
+                "approval_status": {
+                    "type": "string"
+                },
                 "created_at": {
                     "type": "string"
                 },
                 "id": {
                     "type": "string"
-                },
-                "is_approved": {
-                    "type": "boolean"
                 },
                 "min_desktop_app_version": {
                     "type": "string"
@@ -2314,6 +2314,7 @@ const docTemplate = `{
                 "manifest_data",
                 "min_desktop_app_version",
                 "min_prev_version",
+                "s3_path",
                 "version"
             ],
             "properties": {
@@ -2331,6 +2332,10 @@ const docTemplate = `{
                 },
                 "release_notes": {
                     "type": "string"
+                },
+                "s3_path": {
+                    "type": "string",
+                    "example": "bundles/stable/bundle-1.2.3.zip"
                 },
                 "version": {
                     "type": "string",

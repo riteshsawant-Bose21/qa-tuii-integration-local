@@ -31,16 +31,16 @@ func (m *MockFirmwareService) NotifyBundleUpload(ctx context.Context, payload *t
 	return args.Get(0).(*types.BundleResponse), args.Error(1)
 }
 
-func (m *MockFirmwareService) ListBundles(ctx context.Context, isApproved *bool, page, limit int) (*types.BundleListResponse, error) {
-	args := m.Called(ctx, isApproved, page, limit)
+func (m *MockFirmwareService) ListBundles(ctx context.Context, approvalStatus *string, page, limit int) (*types.BundleListResponse, error) {
+	args := m.Called(ctx, approvalStatus, page, limit)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
 	}
 	return args.Get(0).(*types.BundleListResponse), args.Error(1)
 }
 
-func (m *MockFirmwareService) ApproveBundle(ctx context.Context, bundleID string, approvedBy string, logger *zap.Logger) error {
-	args := m.Called(ctx, bundleID, approvedBy, logger)
+func (m *MockFirmwareService) ApproveBundle(ctx context.Context, bundleID string, approvedBy string, approve bool, logger *zap.Logger) error {
+	args := m.Called(ctx, bundleID, approvedBy, approve, logger)
 	return args.Error(0)
 }
 
@@ -226,6 +226,7 @@ func TestApproveBundle(t *testing.T) {
 	tests := []struct {
 		name           string
 		bundleID       string
+		approveParam   string
 		setupLogger    bool
 		setupUserAuth  bool
 		mockSetup      func(m *MockFirmwareService)
@@ -235,10 +236,23 @@ func TestApproveBundle(t *testing.T) {
 		{
 			name:          "success - bundle approved",
 			bundleID:      "550e8400-e29b-41d4-a716-446655440000",
+			approveParam:  "true",
 			setupLogger:   true,
 			setupUserAuth: true,
 			mockSetup: func(m *MockFirmwareService) {
-				m.On("ApproveBundle", mock.Anything, "550e8400-e29b-41d4-a716-446655440000", "user-123", mock.AnythingOfType("*zap.Logger")).
+				m.On("ApproveBundle", mock.Anything, "550e8400-e29b-41d4-a716-446655440000", "user-123", true, mock.AnythingOfType("*zap.Logger")).
+					Return(nil)
+			},
+			expectedStatus: http.StatusNoContent,
+		},
+		{
+			name:          "success - bundle revoked",
+			bundleID:      "550e8400-e29b-41d4-a716-446655440000",
+			approveParam:  "false",
+			setupLogger:   true,
+			setupUserAuth: true,
+			mockSetup: func(m *MockFirmwareService) {
+				m.On("ApproveBundle", mock.Anything, "550e8400-e29b-41d4-a716-446655440000", "user-123", false, mock.AnythingOfType("*zap.Logger")).
 					Return(nil)
 			},
 			expectedStatus: http.StatusNoContent,
@@ -246,6 +260,25 @@ func TestApproveBundle(t *testing.T) {
 		{
 			name:           "bad request - empty bundleID",
 			bundleID:       "",
+			approveParam:   "true",
+			setupLogger:    true,
+			setupUserAuth:  true,
+			mockSetup:      func(m *MockFirmwareService) {},
+			expectedStatus: http.StatusBadRequest,
+		},
+		{
+			name:           "bad request - missing approve param",
+			bundleID:       "550e8400-e29b-41d4-a716-446655440000",
+			approveParam:   "",
+			setupLogger:    true,
+			setupUserAuth:  true,
+			mockSetup:      func(m *MockFirmwareService) {},
+			expectedStatus: http.StatusBadRequest,
+		},
+		{
+			name:           "bad request - invalid approve param",
+			bundleID:       "550e8400-e29b-41d4-a716-446655440000",
+			approveParam:   "invalid",
 			setupLogger:    true,
 			setupUserAuth:  true,
 			mockSetup:      func(m *MockFirmwareService) {},
@@ -254,10 +287,11 @@ func TestApproveBundle(t *testing.T) {
 		{
 			name:          "not found - bundle does not exist",
 			bundleID:      "f47ac10b-58cc-4372-a567-0e02b2c3d479", // Valid UUID
+			approveParam:  "true",
 			setupLogger:   true,
 			setupUserAuth: true,
 			mockSetup: func(m *MockFirmwareService) {
-				m.On("ApproveBundle", mock.Anything, "f47ac10b-58cc-4372-a567-0e02b2c3d479", mock.AnythingOfType("string"), mock.AnythingOfType("*zap.Logger")).
+				m.On("ApproveBundle", mock.Anything, "f47ac10b-58cc-4372-a567-0e02b2c3d479", mock.AnythingOfType("string"), true, mock.AnythingOfType("*zap.Logger")).
 					Return(errorutil.ErrBundleNotFound)
 			},
 			expectedStatus: http.StatusNotFound,
@@ -265,10 +299,11 @@ func TestApproveBundle(t *testing.T) {
 		{
 			name:          "internal server error - service failure",
 			bundleID:      "550e8400-e29b-41d4-a716-446655440001",
+			approveParam:  "true",
 			setupLogger:   true,
 			setupUserAuth: true,
 			mockSetup: func(m *MockFirmwareService) {
-				m.On("ApproveBundle", mock.Anything, "550e8400-e29b-41d4-a716-446655440001", "user-123", mock.AnythingOfType("*zap.Logger")).
+				m.On("ApproveBundle", mock.Anything, "550e8400-e29b-41d4-a716-446655440001", "user-123", true, mock.AnythingOfType("*zap.Logger")).
 					Return(errors.New("database update failed"))
 			},
 			expectedStatus: http.StatusInternalServerError,
@@ -276,6 +311,7 @@ func TestApproveBundle(t *testing.T) {
 		{
 			name:           "internal server error - logger not in context",
 			bundleID:       "550e8400-e29b-41d4-a716-446655440002",
+			approveParam:   "true",
 			setupLogger:    false,
 			setupUserAuth:  true,
 			mockSetup:      func(m *MockFirmwareService) {},
@@ -284,6 +320,7 @@ func TestApproveBundle(t *testing.T) {
 		{
 			name:           "unauthorized - user auth not in context",
 			bundleID:       "550e8400-e29b-41d4-a716-446655440003",
+			approveParam:   "true",
 			setupLogger:    true,
 			setupUserAuth:  false,
 			mockSetup:      func(m *MockFirmwareService) {},
@@ -298,7 +335,12 @@ func TestApproveBundle(t *testing.T) {
 
 			h := NewFirmwareUpdateHandler(mockFirmware)
 
-			w, c := setupTestContext(http.MethodPut, "/firmware/bundles/"+tt.bundleID+"/approve", nil)
+			queryParams := map[string]string{}
+			if tt.approveParam != "" {
+				queryParams["approve"] = tt.approveParam
+			}
+
+			w, c := setupTestContextWithQueryParams(http.MethodPut, "/firmware/bundles/"+tt.bundleID+"/approve", queryParams)
 			c.Params = gin.Params{gin.Param{Key: "bundleID", Value: tt.bundleID}}
 			if !tt.setupLogger {
 				c.Keys = map[string]interface{}{}
