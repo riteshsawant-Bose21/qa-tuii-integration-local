@@ -498,9 +498,8 @@ class _ConfigurationProcessingPageBodyState extends State<_ConfigurationProcessi
                           color: context.colorScheme.elevation1,
                           child: SizedBox(
                             width: 220,
-                            child: child,
-
-                            // child: BlocProvider.value(value: _sourceSetsViewmodel, child: child),
+                            // child: child,
+                            child: BlocProvider<ConfigSourceSetsViewmodel>.value(value: _sourceSetsViewmodel, child: child),
                           ),
                         );
                       },
@@ -548,37 +547,6 @@ class _ConfigurationProcessingPageBodyState extends State<_ConfigurationProcessi
                                 key: sourceSetKey,
                                 sourceSet: sourceSet,
                                 isDragHovered: isHovered,
-                                onUpdateSourceSet: (SourceSet updatedSourceSet) {
-                                  _sourceSetsViewmodel.updateSourceSet(updatedSourceSet);
-                                },
-                                onUpdateSourcesInSourceSet: ({required String sourceSetId, required List<String> sourceIds}) {
-                                  _sourceSetsViewmodel.updateSourcesInSourceSet(
-                                    sourceSetId: sourceSetId,
-                                    sourceIds: sourceIds,
-                                  );
-                                },
-                                onSyncWithProjectViewModel: () {
-                                  _sourcesViewmodel.syncWithProjectViewModel();
-                                },
-                                onDeleteSourceSet: (String sourceSetId) {
-                                  _sourceSetsViewmodel.deleteSourceSet(sourceSetId);
-                                },
-                                onLinkSourceSet: ({required String sourceSetId}) {
-                                  _sourceSetsViewmodel.linkSourceSet(sourceSetId: sourceSetId);
-                                },
-                                onUnlinkSourceSet: ({required String sourceSetId}) {
-                                  _sourceSetsViewmodel.unlinkSourceSet(sourceSetId: sourceSetId);
-                                },
-                                canLinkSourceSet: ({required String sourceSetId}) {
-                                  return _sourceSetsViewmodel.canLinkSourceSet(sourceSetId: sourceSetId);
-                                },
-                                getSourcesInSourceSet: ({required String sourceSetId}) {
-                                  return _sourceSetsViewmodel.getSourcesInSourceSet(sourceSetId: sourceSetId);
-                                },
-                                getAllSources: () {
-                                  return _sourceSetsViewmodel.getAllSources();
-                                },
-                                sourcesInSourceSet: _sourceSetsViewmodel.getSourcesInSourceSet(sourceSetId: sourceSet.id),
                               ),
                             );
                           },
@@ -686,65 +654,6 @@ class _ConfigurationProcessingPageBodyState extends State<_ConfigurationProcessi
                                     _scrollZoneIntoView(zoneData.id);
                                   });
                                 }
-                              },
-                              setSelectedDevice: (String zoneId, SelectedItemType type) {
-                                _zonesViewmodel.setSelectedDevice(zoneId, type);
-                              },
-                              getSubZonesForZone: ({required String parentZoneId}) {
-                                return _zonesViewmodel.getSubZonesForZone(parentZoneId: parentZoneId);
-                              },
-                              getZoneFunctionForZone: ({required String zoneId}) {
-                                return _zonesViewmodel.getZoneFunctionForZone(zoneId: zoneId);
-                              },
-                              getPrioritySourcesInZone: ({required String zoneId}) {
-                                return _zonesViewmodel.getPrioritySourcesInZone(zoneId: zoneId);
-                              },
-                              getHardware: ({required String hardwareId}) {
-                                return _zonesViewmodel.getHardware(hardwareId: hardwareId);
-                              },
-                              removeSourceFromZone: ({required String zoneId, required String sourceId}) {
-                                _zonesViewmodel.removeSourceFromZone(zoneId: zoneId, sourceId: sourceId);
-                              },
-                              addPrioritySourceToZone: ({required String zoneId, required String sourceId, required int priority}) {
-                                _zonesViewmodel.addPrioritySourceToZone(zoneId: zoneId, sourceId: sourceId, priority: priority);
-                              },
-                              reOrderPrioritySourcesInZone: ({required String zoneId, required List<String> newOrder}) {
-                                _zonesViewmodel.reOrderPrioritySourcesInZone(zoneId: zoneId, newOrder: newOrder);
-                              },
-                              removePrioritySourceFromZone: ({required String zoneId, required String sourceId}) {
-                                _zonesViewmodel.removePrioritySourceFromZone(zoneId: zoneId, sourceId: sourceId);
-                              },
-                              addFunctionToZone: ({required String zoneId, required ZoneFunctions function}) {
-                                _zonesViewmodel.addFunctionToZone(zoneId: zoneId, function: function);
-                              },
-                              getSourcesInZone: ({required String zoneId}) {
-                                return _zonesViewmodel.getSourcesInZone(zoneId: zoneId);
-                              },
-                              getSourceSetsInZone: ({required String zoneId}) {
-                                return _zonesViewmodel.getSourceSetsInZone(zoneId: zoneId);
-                              },
-                              updateSourcesInZone: ({required String zoneId, required List<String> sourceIds}) {
-                                _zonesViewmodel.updateSourcesInZone(zoneId: zoneId, sourceIds: sourceIds);
-                              },
-                              updateSourceSets: ({required String zoneId, required List<String> sourceSetIds}) {
-                                _zonesViewmodel.updateSourceSets(zoneId: zoneId, sourceSetIds: sourceSetIds);
-                              },
-                              getSourceCountInZone: ({required String zoneId}) {
-                                return _zonesViewmodel.getSourceCountInZone(zoneId: zoneId);
-                              },
-                              getCircuitsInZone: (String zoneId) {
-                                return _zonesViewmodel.getCircuitsInZone(zoneId);
-                              },
-                              getHardwareForCircuit: ({required String circuitId}) {
-                                return _zonesViewmodel.getHardwareForCircuit(circuitId: circuitId);
-                              },
-                              reOrderSubZoneInZone: ({required String parentId, required int oldIndex, required int newIndex}) {
-                                _zonesViewmodel.reOrderSubZoneInZone(parentId: parentId, oldIndex: oldIndex, newIndex: newIndex);
-                              },
-                              availableSources: _sourcesViewmodel.state.sources,
-                              allSourceSets: _sourceSetsViewmodel.getAllSourceSets(),
-                              getSourcesInSourceSet: ({required String sourceSetId}) {
-                                return _sourceSetsViewmodel.getSourcesInSourceSet(sourceSetId: sourceSetId);
                               },
                             ),
                           );

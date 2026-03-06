@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/features/configuration_page/widgets/source_item.dart';
 import 'package:fusion_launcher/features/processing_block/view/processing_chain_view.dart';
 import 'package:fusion_lib/fusion_theme/app_theme.dart';
@@ -15,6 +16,9 @@ import 'package:fusion_lib/models/project_entities/source_model.dart';
 import 'package:fusion_lib/models/project_entities/source_set_model.dart';
 
 import '../../../core/constants/assets_constants.dart';
+import '../viewModel/source_sets_viewmodel/config_source_sets_state.dart';
+import '../viewModel/source_sets_viewmodel/config_source_sets_viewmodel.dart';
+import '../viewModel/sources_viewmodel/config_sources_viewmodel.dart';
 
 class SelectedSource {
   final String id;
@@ -28,34 +32,7 @@ class SourceSetItem extends StatefulWidget {
   final bool isDragHovered;
   final VoidCallback? onSourceDropped;
 
-  /// Callbacks passed from parent screen
-  final void Function(SourceSet sourceSet) onUpdateSourceSet;
-  final void Function({required String sourceSetId, required List<String> sourceIds}) onUpdateSourcesInSourceSet;
-  final void Function() onSyncWithProjectViewModel;
-  final void Function(String sourceSetId) onDeleteSourceSet;
-  final void Function({required String sourceSetId}) onLinkSourceSet;
-  final void Function({required String sourceSetId}) onUnlinkSourceSet;
-  final bool Function({required String sourceSetId}) canLinkSourceSet;
-  final List<Source> Function({required String sourceSetId}) getSourcesInSourceSet;
-  final List<Source> Function() getAllSources;
-  final List<Source> sourcesInSourceSet;
-
-  const SourceSetItem({
-    required this.sourceSet,
-    this.isDragHovered = false,
-    this.onSourceDropped,
-    required this.onUpdateSourceSet,
-    required this.onUpdateSourcesInSourceSet,
-    required this.onSyncWithProjectViewModel,
-    required this.onDeleteSourceSet,
-    required this.onLinkSourceSet,
-    required this.onUnlinkSourceSet,
-    required this.canLinkSourceSet,
-    required this.getSourcesInSourceSet,
-    required this.getAllSources,
-    required this.sourcesInSourceSet,
-    super.key,
-  });
+  const SourceSetItem({required this.sourceSet, this.isDragHovered = false, this.onSourceDropped, super.key});
 
   @override
   State<SourceSetItem> createState() => _SourceSetItemState();
@@ -64,6 +41,8 @@ class SourceSetItem extends StatefulWidget {
 class _SourceSetItemState extends State<SourceSetItem> {
   late ValueNotifier<bool> _isSourcesSetExpanded;
 
+  ConfigSourceSetsViewmodel get _sourceSetsViewmodel => context.read<ConfigSourceSetsViewmodel>();
+  ConfigSourcesViewmodel get _sourcesViewmodel => context.read<ConfigSourcesViewmodel>();
   final TextEditingController _sourceSetNameController = TextEditingController();
   final List<SelectedSource> _selectedSources = <SelectedSource>[];
   bool _isHovered = false;
@@ -100,13 +79,13 @@ class _SourceSetItemState extends State<SourceSetItem> {
     );
 
     /// Add selected sources to the new source set
-    widget.onUpdateSourceSet(newSourceSet);
+    _sourceSetsViewmodel.updateSourceSet(newSourceSet);
 
-    widget.onUpdateSourcesInSourceSet(
+    _sourceSetsViewmodel.updateSourcesInSourceSet(
       sourceSetId: newSourceSet.id,
       sourceIds: _selectedSources.map((SelectedSource s) => s.id).toList(),
     );
-    widget.onSyncWithProjectViewModel();
+    _sourcesViewmodel.syncWithProjectViewModel();
 
     /// Expand source set to show updated sources
     _isSourcesSetExpanded.value = true;
@@ -185,49 +164,53 @@ class _SourceSetItemState extends State<SourceSetItem> {
                         ),
 
                         Visibility(
-                          visible: widget.canLinkSourceSet(sourceSetId: widget.sourceSet.id),
-                          child: Tooltip(
-                            message: widget.sourceSet.isLinked ? 'Unlink Source Set' : 'Link Source Set',
-                            child: GestureDetector(
-                              onTap: () {
-                                showDialog(
-                                  context: context,
+                          visible: _sourceSetsViewmodel.canLinkSourceSet(sourceSetId: widget.sourceSet.id),
+                          child: BlocBuilder<ConfigSourceSetsViewmodel, ConfigSourceSetsState>(
+                            builder: (BuildContext context, ConfigSourceSetsState state) {
+                              return Tooltip(
+                                message: widget.sourceSet.isLinked ? 'Unlink Source Set' : 'Link Source Set',
+                                child: GestureDetector(
+                                  onTap: () {
+                                    showDialog(
+                                      context: context,
 
-                                  builder:
-                                      (_) => FusionDialog(
-                                        title: "Confirm ${widget.sourceSet.isLinked ? "Unlink" : 'Link'}",
-                                        description:
-                                            'Are you sure you want to ${widget.sourceSet.isLinked ? 'unlink' : 'link'} this source set? All associated processing blocks will be affected.',
-                                        primaryButtonLabel: widget.sourceSet.isLinked ? "Unlink" : 'Link',
-                                        secondaryButtonLabel: 'Cancel',
-                                        onPrimaryPressed: () {
-                                          if (widget.sourceSet.isLinked) {
-                                            widget.onUnlinkSourceSet(sourceSetId: widget.sourceSet.id);
-                                            FusionToast.success(
-                                              context,
-                                              message: "Source set unlinked successfully",
-                                            );
-                                          } else {
-                                            widget.onLinkSourceSet(sourceSetId: widget.sourceSet.id);
-                                            FusionToast.success(
-                                              context,
-                                              message: "Source set linked successfully",
-                                            );
-                                          }
-                                          Navigator.pop(context);
-                                        },
-                                        onSecondaryPressed: () => Navigator.pop(context),
-                                      ),
-                                );
-                              },
-                              child: FusionImage.asset(
-                                widget.sourceSet.isLinked ? Assets.unLinkIcon : Assets.linkIcon,
-                                width: 22,
-                                height: 22,
-                                assetColor: context.colorScheme.primaryWhite,
-                                fit: BoxFit.contain,
-                              ),
-                            ),
+                                      builder:
+                                          (_) => FusionDialog(
+                                            title: "Confirm ${widget.sourceSet.isLinked ? "Unlink" : 'Link'}",
+                                            description:
+                                                'Are you sure you want to ${widget.sourceSet.isLinked ? 'unlink' : 'link'} this source set? All associated processing blocks will be affected.',
+                                            primaryButtonLabel: widget.sourceSet.isLinked ? "Unlink" : 'Link',
+                                            secondaryButtonLabel: 'Cancel',
+                                            onPrimaryPressed: () {
+                                              if (widget.sourceSet.isLinked) {
+                                                _sourceSetsViewmodel.unlinkSourceSet(sourceSetId: widget.sourceSet.id);
+                                                FusionToast.success(
+                                                  context,
+                                                  message: "Source set unlinked successfully",
+                                                );
+                                              } else {
+                                                _sourceSetsViewmodel.linkSourceSet(sourceSetId: widget.sourceSet.id);
+                                                FusionToast.success(
+                                                  context,
+                                                  message: "Source set linked successfully",
+                                                );
+                                              }
+                                              Navigator.pop(context);
+                                            },
+                                            onSecondaryPressed: () => Navigator.pop(context),
+                                          ),
+                                    );
+                                  },
+                                  child: FusionImage.asset(
+                                    widget.sourceSet.isLinked ? Assets.unLinkIcon : Assets.linkIcon,
+                                    width: 22,
+                                    height: 22,
+                                    assetColor: context.colorScheme.primaryWhite,
+                                    fit: BoxFit.contain,
+                                  ),
+                                ),
+                              );
+                            },
                           ),
                         ),
 
@@ -298,7 +281,7 @@ class _SourceSetItemState extends State<SourceSetItem> {
     }
 
     /// Pre-select sources already in this source set
-    final List<Source> currentSourcesInSet = widget.getSourcesInSourceSet(sourceSetId: widget.sourceSet.id);
+    final List<Source> currentSourcesInSet = _sourceSetsViewmodel.getSourcesInSourceSet(sourceSetId: widget.sourceSet.id);
     for (final Source s in currentSourcesInSet) {
       final bool alreadyAdded = _selectedSources.any((SelectedSource sel) => sel.id == s.id);
       if (!alreadyAdded) {
@@ -331,7 +314,7 @@ class _SourceSetItemState extends State<SourceSetItem> {
                 return SingleChildScrollView(
                   child: _SourceSetCreationWidget(
                     sourceSetNameController: _sourceSetNameController,
-                    availableSources: widget.getAllSources(),
+                    availableSources: _sourceSetsViewmodel.getAllSources(),
                     selectedSources: _selectedSources,
                     onAddSourceSet: () {
                       _editSourceSet();
@@ -363,61 +346,65 @@ class _SourceSetItemState extends State<SourceSetItem> {
 
   /// Build the list of sources within the source set
   Widget _buildSourcesList() {
-    final List<Source> sourceList = widget.sourcesInSourceSet;
-    return Container(
-      padding: const EdgeInsets.only(top: 12, bottom: 12),
-      margin: const EdgeInsets.only(left: 12, right: 12),
-      color: context.colorScheme.elevation2.withAlpha(100),
-      child: ReorderableListView.builder(
-        shrinkWrap: true,
-        physics: const NeverScrollableScrollPhysics(),
-        buildDefaultDragHandles: false,
-        itemCount: sourceList.length,
-        onReorder: (int oldIndex, int newIndex) {},
-        itemBuilder: (BuildContext context, int index) {
-          final Source sourceData = sourceList[index];
-          return Draggable<Source>(
-            data: sourceData,
-            key: ValueKey<String>(sourceList[index].id),
-            dragAnchorStrategy: pointerDragAnchorStrategy,
-            onDragStarted: () {
-              setState(() {
-                _draggingSourceId = sourceData.id;
-              });
-            },
-            onDraggableCanceled: (_, __) {
-              setState(() {
-                _draggingSourceId = null;
-              });
-            },
-            onDragEnd: (_) {
-              setState(() {
-                _draggingSourceId = null;
-              });
-            },
-            feedback: Material(
-              color: Colors.transparent,
-              child: Opacity(
-                opacity: 0.8,
-                child: Container(
-                  color: context.colorScheme.elevation1,
-                  width: 220,
-                  child: SourceItem(
-                    index: index,
-                    source: sourceData,
-                    isDragging: true,
+    return BlocBuilder<ConfigSourceSetsViewmodel, ConfigSourceSetsState>(
+      builder: (BuildContext context, ConfigSourceSetsState state) {
+        final List<Source> sourceList = _sourceSetsViewmodel.getSourcesInSourceSet(sourceSetId: widget.sourceSet.id);
+        return Container(
+          padding: const EdgeInsets.only(top: 12, bottom: 12),
+          margin: const EdgeInsets.only(left: 12, right: 12),
+          color: context.colorScheme.elevation2.withAlpha(100),
+          child: ReorderableListView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            buildDefaultDragHandles: false,
+            itemCount: sourceList.length,
+            onReorder: (int oldIndex, int newIndex) {},
+            itemBuilder: (BuildContext context, int index) {
+              final Source sourceData = sourceList[index];
+              return Draggable<Source>(
+                data: sourceData,
+                key: ValueKey<String>(sourceList[index].id),
+                dragAnchorStrategy: pointerDragAnchorStrategy,
+                onDragStarted: () {
+                  setState(() {
+                    _draggingSourceId = sourceData.id;
+                  });
+                },
+                onDraggableCanceled: (_, __) {
+                  setState(() {
+                    _draggingSourceId = null;
+                  });
+                },
+                onDragEnd: (_) {
+                  setState(() {
+                    _draggingSourceId = null;
+                  });
+                },
+                feedback: Material(
+                  color: Colors.transparent,
+                  child: Opacity(
+                    opacity: 0.8,
+                    child: Container(
+                      color: context.colorScheme.elevation1,
+                      width: 220,
+                      child: SourceItem(
+                        index: index,
+                        source: sourceData,
+                        isDragging: true,
+                      ),
+                    ),
                   ),
                 ),
-              ),
-            ),
-            childWhenDragging: Opacity(
-              opacity: 0.5,
-              child: SourceItem(index: index, source: sourceData, isDragging: true),
-            ),
-            child: SourceItem(index: index, sourceSet: widget.sourceSet, source: sourceData, isDragging: _draggingSourceId == sourceData.id),
-          );
-        },
-      ),
+                childWhenDragging: Opacity(
+                  opacity: 0.5,
+                  child: SourceItem(index: index, source: sourceData, isDragging: true),
+                ),
+                child: SourceItem(index: index, sourceSet: widget.sourceSet, source: sourceData, isDragging: _draggingSourceId == sourceData.id),
+              );
+            },
+          ),
+        );
+      },
     );
   }
 
@@ -475,8 +462,8 @@ class _SourceSetItemState extends State<SourceSetItem> {
                           isActive: true,
                           onTap: () {
                             Navigator.of(ctx).pop();
-                            widget.onDeleteSourceSet(widget.sourceSet.id);
-                            widget.onSyncWithProjectViewModel();
+                            _sourceSetsViewmodel.deleteSourceSet(widget.sourceSet.id);
+                            _sourcesViewmodel.syncWithProjectViewModel();
                           },
                         ),
                       ),
