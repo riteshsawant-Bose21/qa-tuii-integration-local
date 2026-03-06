@@ -20,6 +20,10 @@ class FusionCanvasHoverViewModel extends Cubit<FusionHoverState> {
       return false;
     }
 
+    if (!painters.isSelected(hoveredPainter.id)) {
+      return false;
+    }
+
     return LineCenterHandlePainter.isLineCenterHit(
       pointerPosition,
       hoveredElement,

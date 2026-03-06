@@ -40,6 +40,8 @@ class LineCenterHandlePainter extends FusionBasePainter {
       return;
     }
 
+    if (!painter.isSelected(layerId)) return;
+
     final FusionBasePainter? hoveredPainter = painter.layers.cast<FusionBasePainter?>().firstWhere(
       (FusionBasePainter? layer) => layer?.id == layerId,
       orElse: () => null,
