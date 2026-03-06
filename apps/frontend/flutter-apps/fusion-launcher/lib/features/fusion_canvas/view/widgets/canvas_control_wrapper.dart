@@ -34,7 +34,6 @@ class CanvasControlWrapper extends StatelessWidget {
     final FusionHoverState hoverState = context.watch<FusionCanvasHoverViewModel>().state;
 
     final FusionCanvasElement? hoveredElement = hoverState.hoveredElement;
-    print("Hover State: $hoverState, Hovered Element: $hoveredElement, Tool State: $toolState");
     return FusionKeyboardWrapper(
       onKeyEvent: (KeyEvent value) {
         context.read<FusionCanvasInputViewModel>().onKeyEvent(value);

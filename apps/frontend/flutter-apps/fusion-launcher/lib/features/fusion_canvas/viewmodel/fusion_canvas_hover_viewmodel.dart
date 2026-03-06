@@ -2,6 +2,7 @@ import 'dart:ui';
 
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/features/fusion_canvas/state/fusion_hover_state.dart';
+import 'package:fusion_launcher/features/fusion_canvas/view/painters/fusion_base_painter.dart';
 import 'package:fusion_launcher/features/fusion_canvas/view/painters/fusion_canvas_painter.dart';
 
 class FusionCanvasHoverViewModel extends Cubit<FusionHoverState> {

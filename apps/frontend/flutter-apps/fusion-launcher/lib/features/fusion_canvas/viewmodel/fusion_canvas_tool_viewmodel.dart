@@ -32,8 +32,8 @@ class FusionCanvasToolViewModel extends Cubit<FusionToolState> {
     emit(LayerDragStartState(layerId: layerId));
   }
 
-  void startPointsDrag(String layerId, List<String> pointIds) {
-    emit(PointsDragStartState(layerId: layerId, pointIds: pointIds));
+  void startPointsDrag(String layerId, List<FusionCanvasElement> pointIds) {
+    emit(PointsDragStartState(layerId: layerId, elements: pointIds));
   }
 
   void updateDragDelta(Offset delta) {
@@ -44,9 +44,9 @@ class FusionCanvasToolViewModel extends Cubit<FusionToolState> {
       emit(LayerDraggingState(layerId: currentState.layerId, delta: currentState.delta + delta));
     }
     if (currentState is PointsDragStartState) {
-      emit(PointsDraggingState(layerId: currentState.layerId, pointIds: currentState.pointIds, delta: delta));
+      emit(PointsDraggingState(layerId: currentState.layerId, elements: currentState.elements, delta: delta));
     } else if (currentState is PointsDraggingState) {
-      emit(PointsDraggingState(layerId: currentState.layerId, pointIds: currentState.pointIds, delta: currentState.delta + delta));
+      emit(PointsDraggingState(layerId: currentState.layerId, elements: currentState.elements, delta: currentState.delta + delta));
     }
     if (currentState is IdleSelectToolState) {
       if (currentState.selectedLayerIds.isNotEmpty) {
@@ -81,7 +81,7 @@ class FusionCanvasToolViewModel extends Cubit<FusionToolState> {
     if (currentState is LayerDraggingState) {
       emit(LayerDragEndState(layerId: currentState.layerId, delta: currentState.delta + snapAdjustment));
     } else if (currentState is PointsDraggingState) {
-      emit(PointsDragEndState(layerId: currentState.layerId, pointIds: currentState.pointIds, delta: currentState.delta + snapAdjustment));
+      emit(PointsDragEndState(layerId: currentState.layerId, elements: currentState.elements, delta: currentState.delta + snapAdjustment));
     } else {
       setIdle();
     }
@@ -126,8 +126,9 @@ class FusionCanvasToolViewModel extends Cubit<FusionToolState> {
 
     if (hoverState.hoveredPainterId != null) {
       // User tapped on an element - determine if it's points or layer drag
-      final List<String> pointIds = _extractPointIds(hoverState.hoveredElement);
-
+      final List<FusionCanvasElement> pointIds =
+          hoverState.hoveredElement != null ? <FusionCanvasElement>[hoverState.hoveredElement!] : <FusionCanvasElement>[];
+      print("Hovered element: ${hoverState.hoveredElement}, extracted point IDs: ${pointIds.map((FusionCanvasElement e) => e.id).toList()}");
       if (pointIds.isNotEmpty) {
         startPointsDrag(hoverState.hoveredPainterId!, pointIds);
       } else {
@@ -216,7 +217,13 @@ class FusionCanvasToolViewModel extends Cubit<FusionToolState> {
     } else if (state is PenToolState) {
       return _handlePenToolClick(effectivePosition);
     } else if (context.hoverState.hoveredPainterId != null) {
-      selectLayer(context.hoverState.hoveredPainterId!);
+      final String? id2 = context.hoverState.hoveredElement?.id;
+      emit(
+        IdleSelectToolState(
+          selectedLayerIds: <String>{context.hoverState.hoveredPainterId!},
+          selectedElementIds: id2 != null ? <String>{id2} : <String>{},
+        ),
+      );
       return true;
     }
     return false;
@@ -244,18 +251,6 @@ class FusionCanvasToolViewModel extends Cubit<FusionToolState> {
     return true;
   }
 
-  // ==================== Helper Methods ====================
-
-  /// Extracts point IDs from a hovered canvas element
-  List<String> _extractPointIds(FusionCanvasElement? element) {
-    return switch (element) {
-      FusionCanvasPoint() => <String>[element.id],
-      FusionCanvasLine(:final FusionCanvasPoint start, :final FusionCanvasPoint end) => <String>[start.id, end.id],
-      FusionCanvasPolygon(:final List<FusionCanvasPoint> points) => points.map((FusionCanvasPoint p) => p.id).toList(),
-      _ => <String>[],
-    };
-  }
-
   void setTool(FusionToolState toolState) {
     emit(toolState);
   }
@@ -271,21 +266,13 @@ class FusionCanvasToolViewModel extends Cubit<FusionToolState> {
     return <String>{};
   }
 
-  /// Check if a layer is selected
-  bool isLayerSelected(String? layerId) {
-    if (layerId == null) return false;
-    return selectedLayerIds.contains(layerId);
-  }
-
   /// Select a single layer (replaces current selection)
-  void selectLayer(String layerId) {
-    print("Selecting layer: $layerId");
-    emit(IdleSelectToolState(selectedLayerIds: <String>{layerId}));
-  }
+  // void selectLayer(String layerId) {
+  //   emit(IdleSelectToolState(selectedLayerIds: <String>{layerId}));
+  // }
 
   /// Update selection from external source (sync with provided IDs)
   void syncSelection(Set<String> layerIds) {
-    print("Syncing selection with external IDs: $layerIds");
     emit(IdleSelectToolState(selectedLayerIds: layerIds));
   }
 }

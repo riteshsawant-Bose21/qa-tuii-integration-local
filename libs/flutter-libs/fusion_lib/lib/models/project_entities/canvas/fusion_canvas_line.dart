@@ -9,4 +9,7 @@ class FusionCanvasLine extends FusionCanvasElement {
   String get id => '${start.id}_${end.id}';
 
   bool get isVerticalLine => (start.position.dx - end.position.dx).abs() < (start.position.dy - end.position.dy).abs();
+  
+  @override
+  List<String> get pointIds => [start.id, end.id];
 }

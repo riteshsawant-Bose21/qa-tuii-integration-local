@@ -63,4 +63,7 @@ class FusionCanvasPoint extends FusionCanvasElement {
       id: id ?? this.id,
     );
   }
+  
+  @override
+  List<String> get pointIds => [id];
 }

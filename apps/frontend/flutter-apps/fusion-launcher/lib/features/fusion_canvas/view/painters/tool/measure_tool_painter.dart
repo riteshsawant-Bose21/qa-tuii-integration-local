@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:fusion_launcher/features/fusion_canvas/state/tools/measure_tool_state.dart';
+import 'package:fusion_launcher/features/fusion_canvas/view/painters/fusion_base_painter.dart';
 
 import '../fusion_canvas_painter.dart';
 

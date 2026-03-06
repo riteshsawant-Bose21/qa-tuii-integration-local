@@ -6,6 +6,7 @@ import 'package:fusion_launcher/features/fusion_canvas/state/tools/drag_tool_sta
 import 'package:fusion_launcher/features/fusion_canvas/state/tools/measure_tool_state.dart';
 import 'package:fusion_launcher/features/fusion_canvas/state/tools/pen_tool_state.dart';
 import 'package:fusion_launcher/features/fusion_canvas/view/fusion_canvas.dart';
+import 'package:fusion_launcher/features/fusion_canvas/view/painters/fusion_base_painter.dart';
 import 'package:fusion_launcher/features/fusion_canvas/viewmodel/fusion_canvas_input_viewmodel.dart';
 import 'package:fusion_launcher/features/fusion_canvas/viewmodel/fusion_canvas_tool_viewmodel.dart';
 import 'package:fusion_launcher/features/fusion_canvas/viewmodel/fusion_snap_viewmodel.dart';
@@ -15,7 +16,6 @@ import 'package:nested/nested.dart';
 import '../../state/tools/select_tool_state.dart';
 import '../../viewmodel/fusion_canvas_state_viewmodel.dart';
 import '../painters/elements/fusion_rect_painter.dart';
-import '../painters/fusion_canvas_painter.dart';
 
 class FusionCanvasListenersWrapper extends StatelessWidget {
   const FusionCanvasListenersWrapper({super.key, required this.child, this.toolbarEvents, required this.painters});

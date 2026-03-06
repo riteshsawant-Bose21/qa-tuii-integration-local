@@ -1,7 +1,8 @@
 import 'dart:ui';
 
 import 'package:fusion_launcher/features/fusion_canvas/state/fusion_tool_state.dart';
-import 'package:fusion_lib/models/project_entities/canvas/fusion_canvas_point.dart';
+import 'package:fusion_launcher/features/fusion_canvas/view/painters/fusion_base_painter.dart';
+import 'package:fusion_lib/fusion_lib.dart';
 
 import '../../state/tools/measure_tool_state.dart';
 import '../../state/tools/pen_tool_state.dart';
@@ -32,7 +33,7 @@ class ToolPainter extends FusionBasePainter {
   }
 
   @override
-  List<FusionCanvasPoint> get points => _toolPainter?.points ?? <FusionCanvasPoint>[];
+  List<FusionCanvasElement> get elements => _toolPainter?.elements ?? <FusionCanvasElement>[];
   @override
   bool shouldRepaint(covariant FusionBasePainter oldDelegate) {
     return true;

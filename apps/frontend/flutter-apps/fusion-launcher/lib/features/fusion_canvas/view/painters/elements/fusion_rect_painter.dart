@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:fusion_launcher/features/fusion_canvas/view/painters/fusion_base_painter.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
 import '../fusion_canvas_painter.dart';
@@ -27,8 +28,22 @@ abstract class FusionPolygonPainter extends FusionBasePainter {
   @override
   String? get id => polygon.id;
 
+  List<FusionCanvasLine> get lines {
+    final List<FusionCanvasLine> edges = <FusionCanvasLine>[];
+    for (int i = 0; i < polygon.points.length; i++) {
+      final FusionCanvasPoint start = polygon.points[i];
+      final FusionCanvasPoint end = polygon.points[(i + 1) % polygon.points.length];
+      edges.add(FusionCanvasLine(start: start, end: end));
+    }
+    return edges;
+  }
+
   @override
-  List<FusionCanvasPoint> get points => polygon.points;
+  List<FusionCanvasElement> get elements => <FusionCanvasElement>[
+    ...lines,
+    ...polygon.points,
+  ];
+
 
   Paint getFillPaint(FusionCanvasPainter painter, bool isHovered);
   Paint getStrokePaint(FusionCanvasPainter painter, bool isHovered);

@@ -1,5 +1,7 @@
 import 'dart:ui';
 
+import 'package:fusion_launcher/features/fusion_canvas/view/painters/fusion_base_painter.dart';
+
 import '../fusion_canvas_painter.dart';
 
 class FusionImagePainter extends FusionBasePainter {

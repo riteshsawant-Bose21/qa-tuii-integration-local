@@ -2,6 +2,7 @@
 import 'dart:ui';
 
 import 'package:flutter/foundation.dart';
+import 'package:fusion_lib/fusion_lib.dart';
 
 import '../fusion_tool_state.dart';
 import 'select_tool_state.dart';
@@ -19,6 +20,9 @@ class LayerDragStartState extends DragToolState {
   Set<String> get selectedLayerIds => <String>{
     layerId,
   };
+
+  @override
+  Set<String> get selectedElementIds => <String>{};
 }
 
 /// State when a layer is being dragged
@@ -46,6 +50,9 @@ class LayerDraggingState extends DragToolState {
   Set<String> get selectedLayerIds => <String>{
     layerId,
   };
+
+  @override
+  Set<String> get selectedElementIds => <String>{};
 }
 
 /// State when a layer drag operation has ended
@@ -70,85 +77,101 @@ class LayerDragEndState extends DragToolState {
   Set<String> get selectedLayerIds => <String>{
     layerId,
   };
+
+  @override
+  Set<String> get selectedElementIds => <String>{};
 }
 
 /// State when a points drag operation has started
 class PointsDragStartState extends DragToolState {
   final String layerId;
-  final List<String> pointIds;
+  final List<FusionCanvasElement> elements;
 
   PointsDragStartState({
     required this.layerId,
-    required this.pointIds,
+    required this.elements,
   });
 
   @override
   bool operator ==(covariant FusionToolState other) {
     if (identical(this, other)) return true;
-    return other is PointsDragStartState && other.layerId == layerId && listEquals(other.pointIds, pointIds);
+    return other is PointsDragStartState && other.layerId == layerId && listEquals(other.elements, elements);
   }
 
   @override
-  int get hashCode => layerId.hashCode ^ pointIds.hashCode;
+  int get hashCode => layerId.hashCode ^ elements.hashCode;
   @override
   Set<String> get selectedLayerIds => <String>{
     layerId,
   };
+
+  @override
+  Set<String> get selectedElementIds => elements.map((FusionCanvasElement e) => e.id).toSet();
 }
 
 /// State when points are being dragged
 class PointsDraggingState extends DragToolState {
   final String layerId;
-  final List<String> pointIds;
+  final List<FusionCanvasElement> elements;
   final Offset delta;
 
   PointsDraggingState({
     required this.layerId,
-    required this.pointIds,
+    required this.elements,
     required this.delta,
   });
 
   @override
-  String toString() => 'PointsDraggingState(layerId: $layerId, pointIds: $pointIds, delta: $delta)';
+  String toString() => 'PointsDraggingState(layerId: $layerId, elements: $elements, delta: $delta)';
 
   @override
   bool operator ==(covariant FusionToolState other) {
     if (identical(this, other)) return true;
-    return other is PointsDraggingState && other.layerId == layerId && listEquals(other.pointIds, pointIds) && other.delta == delta;
+    return other is PointsDraggingState && other.layerId == layerId && listEquals(other.elements, elements) && other.delta == delta;
   }
 
   @override
-  int get hashCode => layerId.hashCode ^ pointIds.hashCode ^ delta.hashCode;
+  int get hashCode => layerId.hashCode ^ elements.hashCode ^ delta.hashCode;
   @override
   Set<String> get selectedLayerIds => <String>{
     layerId,
   };
+
+  List<String> get pointIds => elements.expand((FusionCanvasElement e) => e.pointIds).toList();
+
+  @override
+  Set<String> get selectedElementIds => elements.map((FusionCanvasElement e) => e.id).toSet();
 }
 
 /// State when a points drag operation has ended
 class PointsDragEndState extends DragToolState {
   final String layerId;
-  final List<String> pointIds;
+  final List<FusionCanvasElement> elements;
   final Offset delta;
 
   PointsDragEndState({
     required this.layerId,
-    required this.pointIds,
+    required this.elements,
     required this.delta,
   });
 
   @override
   bool operator ==(covariant FusionToolState other) {
     if (identical(this, other)) return true;
-    return other is PointsDragEndState && other.layerId == layerId && listEquals(other.pointIds, pointIds) && other.delta == delta;
+    return other is PointsDragEndState && other.layerId == layerId && listEquals(other.elements, elements) && other.delta == delta;
   }
 
   @override
-  int get hashCode => layerId.hashCode ^ pointIds.hashCode ^ delta.hashCode;
+  int get hashCode => layerId.hashCode ^ elements.hashCode ^ delta.hashCode;
   @override
   Set<String> get selectedLayerIds => <String>{
     layerId,
   };
+
+  @override
+  Set<String> get selectedElementIds => elements.map((FusionCanvasElement e) => e.id).toSet();
+
+  List<String> get pointIds => elements.expand((FusionCanvasElement e) => e.pointIds).toList();
 }
 
 /// State when canvas is being panned
@@ -167,4 +190,7 @@ class CanvasPanningState extends DragToolState {
   int get hashCode => delta.hashCode;
   @override
   Set<String> get selectedLayerIds => <String>{};
+
+  @override
+  Set<String> get selectedElementIds => <String>{};
 }

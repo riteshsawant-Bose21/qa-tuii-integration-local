@@ -13,5 +13,8 @@ class FusionCanvasPolygon extends FusionCanvasElement {
 
   @override
   final String id;
+  
+  @override
+  List<String> get pointIds => points.map((FusionCanvasPoint e) => e.id).toList();
 }
 

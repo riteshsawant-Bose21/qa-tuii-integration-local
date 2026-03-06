@@ -1,5 +1,6 @@
 import 'dart:ui';
 
+import 'package:fusion_launcher/features/fusion_canvas/view/painters/fusion_base_painter.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
 import '../fusion_canvas_painter.dart';
@@ -34,7 +35,7 @@ class FusionCanvasPointPainter extends FusionBasePainter {
   }
 
   @override
-  List<FusionCanvasPoint> get points => <FusionCanvasPoint>[
+  List<FusionCanvasElement> get elements => <FusionCanvasElement>[
     point,
   ];
 
