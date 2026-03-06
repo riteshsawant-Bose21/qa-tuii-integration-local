@@ -50,9 +50,8 @@ class DragToolHelper {
         return LayerDragStartState(layerId: hoveredPainterId);
       }
     } else {
-      // User tapped on empty canvas - start panning
+      // User tapped on empty canvas - so ignore.
       return currentState;
-     // CanvasPanningState(delta: Offset.zero);
     }
   }
 
@@ -85,9 +84,7 @@ class DragToolHelper {
       );
     }
 
-    // if (currentState is CanvasPanningState) {
-    //   return CanvasPanningState(delta: delta);
-    // }
+
 
     return currentState;
   }

@@ -211,9 +211,6 @@ class FusionCanvasListenersWrapper extends StatelessWidget {
                     : null,
               );
             }
-            // if (state is CanvasPanningState) {
-
-            // }
           },
         ),
       ],
