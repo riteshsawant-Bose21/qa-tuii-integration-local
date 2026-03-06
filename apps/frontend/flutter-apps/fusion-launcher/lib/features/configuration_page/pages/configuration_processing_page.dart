@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/features/configuration_page/widgets/search_bar_sources.dart';
 import 'package:fusion_launcher/features/configuration_page/widgets/section_header.dart';
+import 'package:fusion_lib/constants/semantics/features/configuration/processing/config_sources.dart';
+import 'package:fusion_lib/constants/semantics/features/configuration/processing/config_zones_keys.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import '../../../core/service_locator.dart';
 import '../../configuration/presentation/viewmodel/project_view_model.dart';
@@ -233,7 +235,8 @@ class _ConfigurationProcessingPageBodyState extends State<_ConfigurationProcessi
       ),
       child: Column(
         children: <Widget>[
-          const SectionHeader(
+          SectionHeader(
+            semanticLabel: FusionTestKeys.instance.sourcehead,
             title: 'Sources',
             assetPath: 'assets/images/source_icon.png',
           ),
@@ -356,6 +359,7 @@ class _ConfigurationProcessingPageBodyState extends State<_ConfigurationProcessi
           DragDivider(onDragUpdate: _updateSourcesHeight),
 
           SectionHeader(
+            semanticLabel: FusionTestKeys.instance.sourcesetheader,
             title: 'Source Sets',
             isRounded: false,
             assetPath: 'assets/images/source_set_icon.png',
@@ -600,7 +604,8 @@ class _ConfigurationProcessingPageBodyState extends State<_ConfigurationProcessi
       child: Column(
         children: <Widget>[
           /// Zones Section
-          const SectionHeader(
+          SectionHeader(
+            semanticLabel: FusionTestKeys.instance.zoneheader,
             title: 'Zones',
             assetPath: 'assets/images/zone_icon.png',
           ),
@@ -767,11 +772,17 @@ class _SourceSetCreationWidgetState extends State<_SourceSetCreationWidget> {
             const SizedBox(height: 12),
 
             /// Source Selection Label
-            FusionAppText(
-              text: 'Select sources',
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                fontSize: 12,
-                fontWeight: FontWeight.w500,
+            SemanticHelper.container(
+              testId: SemanticHelper.createTestId(
+                SemanticTypes.container,
+                FusionTestKeys.instance.srcselectionlabel,
+              ),
+              child: FusionAppText(
+                text: 'Select sources',
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500,
+                ),
               ),
             ),
             const SizedBox(height: 8),
@@ -825,11 +836,19 @@ class _SourceSetCreationWidgetState extends State<_SourceSetCreationWidget> {
                                     child: Row(
                                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                       children: <Widget>[
-                                        FusionAppText(
-                                          text: "Select source",
-                                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                            fontSize: 12,
-                                            fontWeight: FontWeight.w600,
+                                        SemanticHelper.container(
+                                          testId: SemanticHelper.createTestId(
+                                            SemanticTypes.dropdown,
+                                            FusionTestKeys.instance.srccreationdropdownitemheader,
+                                          ),
+                                          child: FusionAppText(
+                                            text: "Select source",
+                                            style: Theme.of(
+                                              context,
+                                            ).textTheme.bodySmall?.copyWith(
+                                              fontSize: 12,
+                                              fontWeight: FontWeight.w600,
+                                            ),
                                           ),
                                         ),
                                         SemanticHelper.button(
@@ -970,13 +989,26 @@ class _SourceSetCreationWidgetState extends State<_SourceSetCreationWidget> {
                     child: Row(
                       children: <Widget>[
                         Expanded(
-                          child: FusionAppText(
-                            text:
-                                widget.selectedSources.isEmpty
-                                    ? "Select Sources"
-                                    : "${widget.selectedSources.length} source${widget.selectedSources.length > 1 ? 's' : ''} selected",
-                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: widget.selectedSources.isEmpty ? context.colorScheme.textSecondary : Theme.of(context).textTheme.bodySmall?.color,
+                          child: SemanticHelper.container(
+                            testId: SemanticHelper.createTestId(
+                              SemanticTypes.container,
+                              FusionTestKeys.instance.srcdropdowntxt,
+                            ),
+                            child: FusionAppText(
+                              text:
+                                  widget.selectedSources.isEmpty
+                                      ? "Select Sources"
+                                      : "${widget.selectedSources.length} source${widget.selectedSources.length > 1 ? 's' : ''} selected",
+                              style: Theme.of(
+                                context,
+                              ).textTheme.bodySmall?.copyWith(
+                                color:
+                                    widget.selectedSources.isEmpty
+                                        ? context.colorScheme.textSecondary
+                                        : Theme.of(
+                                          context,
+                                        ).textTheme.bodySmall?.color,
+                              ),
                             ),
                           ),
                         ),
