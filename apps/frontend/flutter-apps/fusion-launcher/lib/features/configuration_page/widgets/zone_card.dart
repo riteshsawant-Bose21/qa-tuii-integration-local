@@ -1,10 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/features/configuration_page/widgets/sub_zone_card.dart';
 import 'package:fusion_launcher/features/zone_functions/source_select.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
 import '../../../core/constants/assets_constants.dart';
 import '../../configuration/presentation/viewmodel/project_view_model.dart' show SelectedItemType;
+import '../viewModel/source_sets_viewmodel/config_source_sets_viewmodel.dart';
+import '../viewModel/sources_viewmodel/config_sources_viewmodel.dart';
+import '../viewModel/zones_viewmodel/config_zones_state.dart';
+import '../viewModel/zones_viewmodel/config_zones_viewmodel.dart';
 import '../../processing_block/view/processing_chain_view.dart';
 import '../../zone_functions/source_matrix.dart';
 import '../../zone_functions/source_mix.dart';
@@ -16,31 +21,6 @@ class ZoneCard extends StatefulWidget {
   final Zone zoneData;
   final Function(bool)? onExpansionChanged;
 
-  /// Callbacks passed from parent screen
-  final void Function(String zoneId, SelectedItemType type) setSelectedDevice;
-  final List<SubZone> Function({required String parentZoneId}) getSubZonesForZone;
-  final ZoneFunctions? Function({required String zoneId}) getZoneFunctionForZone;
-  final List<String> Function({required String zoneId}) getPrioritySourcesInZone;
-  final HardwareComponent? Function({required String hardwareId}) getHardware;
-  final void Function({required String zoneId, required String sourceId}) removeSourceFromZone;
-  final void Function({required String zoneId, required String sourceId, required int priority}) addPrioritySourceToZone;
-  final void Function({required String zoneId, required List<String> newOrder}) reOrderPrioritySourcesInZone;
-  final void Function({required String zoneId, required String sourceId}) removePrioritySourceFromZone;
-  final void Function({required String zoneId, required ZoneFunctions function}) addFunctionToZone;
-  final List<Source> Function({required String zoneId}) getSourcesInZone;
-  final List<SourceSet> Function({required String zoneId}) getSourceSetsInZone;
-  final void Function({required String zoneId, required List<String> sourceIds}) updateSourcesInZone;
-  final void Function({required String zoneId, required List<String> sourceSetIds}) updateSourceSets;
-  final int Function({required String zoneId}) getSourceCountInZone;
-  final List<CircuitModel> Function(String zoneId) getCircuitsInZone;
-  final List<HardwareComponent> Function({required String circuitId}) getHardwareForCircuit;
-  final void Function({required String parentId, required int oldIndex, required int newIndex}) reOrderSubZoneInZone;
-
-  /// Data passed from parent screen
-  final List<Source> availableSources;
-  final List<SourceSet> allSourceSets;
-  final List<Source> Function({required String sourceSetId}) getSourcesInSourceSet;
-
   const ZoneCard({
     super.key,
     required this.zoneId,
@@ -48,27 +28,6 @@ class ZoneCard extends StatefulWidget {
     required this.bgColor,
     required this.zoneData,
     this.onExpansionChanged,
-    required this.setSelectedDevice,
-    required this.getSubZonesForZone,
-    required this.getZoneFunctionForZone,
-    required this.getPrioritySourcesInZone,
-    required this.getHardware,
-    required this.removeSourceFromZone,
-    required this.addPrioritySourceToZone,
-    required this.reOrderPrioritySourcesInZone,
-    required this.removePrioritySourceFromZone,
-    required this.addFunctionToZone,
-    required this.getSourcesInZone,
-    required this.getSourceSetsInZone,
-    required this.updateSourcesInZone,
-    required this.updateSourceSets,
-    required this.getSourceCountInZone,
-    required this.getCircuitsInZone,
-    required this.getHardwareForCircuit,
-    required this.reOrderSubZoneInZone,
-    required this.availableSources,
-    required this.allSourceSets,
-    required this.getSourcesInSourceSet,
   });
 
   @override
@@ -85,6 +44,11 @@ class _ZoneCardState extends State<ZoneCard> {
   List<String> selectedZoneSourceIds = <String>[];
   List<String> selectedZoneSourceSetIds = <String>[];
   int? _hoveredCircuitIndex;
+
+  // Cubit getters
+  ConfigZonesViewmodel get _zonesViewmodel => context.read<ConfigZonesViewmodel>();
+  ConfigSourcesViewmodel get _sourcesViewmodel => context.read<ConfigSourcesViewmodel>();
+  ConfigSourceSetsViewmodel get _sourceSetsViewmodel => context.read<ConfigSourceSetsViewmodel>();
 
   @override
   void initState() {
@@ -103,8 +67,15 @@ class _ZoneCardState extends State<ZoneCard> {
     return FadeTransition(
       opacity: animation.drive(Tween<double>(begin: 0.95, end: 1.0)),
       child: Material(
-        color: Colors.transparent,
-        child: child,
+        color: context.colorScheme.elevation2.withAlpha(100),
+        child: MultiBlocProvider(
+          providers: <BlocProvider<dynamic>>[
+            BlocProvider<ConfigZonesViewmodel>.value(value: _zonesViewmodel),
+            BlocProvider<ConfigSourcesViewmodel>.value(value: _sourcesViewmodel),
+            BlocProvider<ConfigSourceSetsViewmodel>.value(value: _sourceSetsViewmodel),
+          ],
+          child: child,
+        ),
       ),
     );
   }
@@ -117,22 +88,26 @@ class _ZoneCardState extends State<ZoneCard> {
       child: ValueListenableBuilder<bool>(
         valueListenable: _isZoneExpanded,
         builder: (BuildContext context, bool zoneExpanded, Widget? child) {
-          return Column(
-            children: <Widget>[
-              MouseRegion(
-                onEnter: (_) => setState(() => isHovered = true),
-                onExit: (_) => setState(() => isHovered = false),
-                child: _buildZoneHeader(
-                  context: context,
-                  expanded: zoneExpanded,
-                  isHovered: isHovered,
-                  isSelected: false,
-                ),
-              ),
+          return BlocBuilder<ConfigZonesViewmodel, ConfigZonesState>(
+            builder: (BuildContext context, ConfigZonesState state) {
+              return Column(
+                children: <Widget>[
+                  MouseRegion(
+                    onEnter: (_) => setState(() => isHovered = true),
+                    onExit: (_) => setState(() => isHovered = false),
+                    child: _buildZoneHeader(
+                      context: context,
+                      expanded: zoneExpanded,
+                      isHovered: isHovered,
+                      isSelected: false,
+                    ),
+                  ),
 
-              /// Zone Content - shows subzones when expanded
-              if (zoneExpanded) _buildZoneContent(),
-            ],
+                  /// Zone Content - shows subzones when expanded
+                  if (zoneExpanded) _buildZoneContent(),
+                ],
+              );
+            },
           );
         },
       ),
@@ -150,7 +125,7 @@ class _ZoneCardState extends State<ZoneCard> {
         widget.onExpansionChanged?.call(newExpandedState);
 
         /// Select zone on tap
-        widget.setSelectedDevice(widget.zoneId, SelectedItemType.zone);
+        _zonesViewmodel.setSelectedDevice(widget.zoneId, SelectedItemType.zone);
       },
       child: Container(
         margin: const EdgeInsets.only(top: 6, right: 8, left: 8),
@@ -204,49 +179,53 @@ class _ZoneCardState extends State<ZoneCard> {
   Widget _buildZoneContent() {
     return LayoutBuilder(
       builder: (BuildContext context, BoxConstraints constraints) {
-        final List<SubZone> subZonesForZone = widget.getSubZonesForZone(parentZoneId: widget.zoneId);
-        final int subZoneCount = subZonesForZone.length;
-        final double calculatedHeight = subZoneCount * 100.0;
-        final double constrainedHeight = calculatedHeight.clamp(200.0, 400.0);
+        return BlocBuilder<ConfigZonesViewmodel, ConfigZonesState>(
+          builder: (BuildContext context, ConfigZonesState state) {
+            final List<SubZone> subZonesForZone = _zonesViewmodel.getSubZonesForZone(parentZoneId: widget.zoneId);
+            final int subZoneCount = subZonesForZone.length;
+            final double calculatedHeight = subZoneCount * 100.0;
+            final double constrainedHeight = calculatedHeight.clamp(200.0, 400.0);
 
-        return Container(
-          height: constrainedHeight,
-          margin: const EdgeInsets.symmetric(horizontal: 12),
-          color: context.colorScheme.elevation2.withAlpha(100),
+            return Container(
+              height: constrainedHeight,
+              margin: const EdgeInsets.symmetric(horizontal: 12),
+              color: context.colorScheme.elevation2.withAlpha(100),
 
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: <Widget>[
-              /// Functions Panel
-              Container(
-                width: constraints.maxWidth * 0.34,
-                height: constrainedHeight,
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  /// Functions Panel
+                  Container(
+                    width: constraints.maxWidth * 0.34,
+                    height: constrainedHeight,
 
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  border: Border(
-                    bottom: BorderSide(color: context.colorScheme.elevation2),
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      border: Border(
+                        bottom: BorderSide(color: context.colorScheme.elevation2),
+                      ),
+                    ),
+                    child: _buildZoneFunctionsPanel(),
                   ),
-                ),
-                child: _buildZoneFunctionsPanel(),
-              ),
 
-              /// Full height divider
-              Container(
-                width: 1,
-                height: constrainedHeight,
-                color: context.colorScheme.elevation2,
-              ),
+                  /// Full height divider
+                  Container(
+                    width: 1,
+                    height: constrainedHeight,
+                    color: context.colorScheme.elevation2,
+                  ),
 
-              /// Subzone Panel
-              Expanded(
-                child: SizedBox(
-                  height: constrainedHeight,
-                  child: _buildSubZonePanel(subZonesForZone),
-                ),
+                  /// Subzone Panel
+                  Expanded(
+                    child: SizedBox(
+                      height: constrainedHeight,
+                      child: _buildSubZonePanel(subZonesForZone),
+                    ),
+                  ),
+                ],
               ),
-            ],
-          ),
+            );
+          },
         );
       },
     );
@@ -255,7 +234,7 @@ class _ZoneCardState extends State<ZoneCard> {
   /// Zone functions panel
   Widget _buildZoneFunctionsPanel() {
     /// Sync with model if underlying zone function changed externally
-    final ZoneFunctions? existingFunction = widget.getZoneFunctionForZone(zoneId: widget.zoneId);
+    final ZoneFunctions? existingFunction = _zonesViewmodel.getZoneFunctionForZone(zoneId: widget.zoneId);
     if (existingFunction != null && selectedFunction != existingFunction.type) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) {
@@ -296,7 +275,7 @@ class _ZoneCardState extends State<ZoneCard> {
 
   /// Build reorderable priority function widgets
   Widget _buildReorderablePriorityWidgets() {
-    final ZoneFunctions? existingFunction = widget.getZoneFunctionForZone(zoneId: widget.zoneId);
+    final ZoneFunctions? existingFunction = _zonesViewmodel.getZoneFunctionForZone(zoneId: widget.zoneId);
 
     if (!(existingFunction?.hasPriority ?? false)) {
       return const SizedBox.shrink();
@@ -318,7 +297,7 @@ class _ZoneCardState extends State<ZoneCard> {
             /// Handle the reordering logic - swap sources using reOrderPrioritySourcesInZone
             if (oldIndex != newIndex) {
               /// Get current source IDs directly from view model
-              final List<String> prioritySources = widget.getPrioritySourcesInZone(zoneId: widget.zoneId);
+              final List<String> prioritySources = _zonesViewmodel.getPrioritySourcesInZone(zoneId: widget.zoneId);
               final String? source1 = prioritySources.isNotEmpty ? prioritySources[0] : null;
               final String? source2 = prioritySources.length > 1 ? prioritySources[1] : null;
 
@@ -335,7 +314,7 @@ class _ZoneCardState extends State<ZoneCard> {
               }
 
               /// Use the new reOrderPrioritySourcesInZone method
-              widget.reOrderPrioritySourcesInZone(
+              _zonesViewmodel.reOrderPrioritySourcesInZone(
                 zoneId: widget.zoneId,
                 newOrder: newOrder,
               );
@@ -366,12 +345,12 @@ class _ZoneCardState extends State<ZoneCard> {
   Widget buildPriorityFunctionWidget({required int priorityIndex}) {
     String? selectedSourceId;
     String? selectedSource;
-    final List<String> prioritySources = widget.getPrioritySourcesInZone(zoneId: widget.zoneId);
+    final List<String> prioritySources = _zonesViewmodel.getPrioritySourcesInZone(zoneId: widget.zoneId);
 
     /// priority 1
     if (priorityIndex == 1) {
       if (prioritySources.isNotEmpty && prioritySources[0].isNotEmpty) {
-        final HardwareComponent? sourceData = widget.getHardware(hardwareId: prioritySources[0]);
+        final HardwareComponent? sourceData = _zonesViewmodel.getHardware(hardwareId: prioritySources[0]);
         if (sourceData != null) {
           selectedSource = sourceData.name;
           selectedSourceId = prioritySources[0];
@@ -380,7 +359,7 @@ class _ZoneCardState extends State<ZoneCard> {
     } else {
       /// priority 2
       if (prioritySources.length > 1 && prioritySources[1].isNotEmpty) {
-        final HardwareComponent? sourceData = widget.getHardware(hardwareId: prioritySources[1]);
+        final HardwareComponent? sourceData = _zonesViewmodel.getHardware(hardwareId: prioritySources[1]);
         if (sourceData != null) {
           selectedSource = sourceData.name;
           selectedSourceId = prioritySources[1];
@@ -388,7 +367,7 @@ class _ZoneCardState extends State<ZoneCard> {
       }
     }
 
-    final ZoneFunctions? existingFunction = widget.getZoneFunctionForZone(zoneId: widget.zoneId);
+    final ZoneFunctions? existingFunction = _zonesViewmodel.getZoneFunctionForZone(zoneId: widget.zoneId);
 
     return Visibility(
       visible: existingFunction?.hasPriority ?? false,
@@ -414,10 +393,10 @@ class _ZoneCardState extends State<ZoneCard> {
               final String sourceId = source.id;
               setState(() {
                 /// Remove from regular source selection if it's currently selected
-                widget.removeSourceFromZone(zoneId: widget.zoneId, sourceId: sourceId);
+                _zonesViewmodel.removeSourceFromZone(zoneId: widget.zoneId, sourceId: sourceId);
 
                 /// Add to priority
-                widget.addPrioritySourceToZone(
+                _zonesViewmodel.addPrioritySourceToZone(
                   zoneId: widget.zoneId,
                   sourceId: sourceId,
                   priority: priorityIndex,
@@ -441,10 +420,10 @@ class _ZoneCardState extends State<ZoneCard> {
                   onSelected: (String value) {
                     setState(() {
                       /// Remove from regular source selection if it's currently selected
-                      widget.removeSourceFromZone(zoneId: widget.zoneId, sourceId: value);
+                      _zonesViewmodel.removeSourceFromZone(zoneId: widget.zoneId, sourceId: value);
 
                       /// Add to priority
-                      widget.addPrioritySourceToZone(
+                      _zonesViewmodel.addPrioritySourceToZone(
                         zoneId: widget.zoneId,
                         sourceId: value,
                         priority: priorityIndex,
@@ -477,7 +456,7 @@ class _ZoneCardState extends State<ZoneCard> {
                     );
 
                     /// Individual sources
-                    final List<Source> availableSources = widget.availableSources;
+                    final List<Source> availableSources = _sourcesViewmodel.state.sources;
                     if (availableSources.isEmpty) {
                       entries.add(
                         PopupMenuItem<String>(
@@ -575,7 +554,7 @@ class _ZoneCardState extends State<ZoneCard> {
                     );
 
                     /// Source sets with their sources
-                    final List<SourceSet> allSourceSets = widget.allSourceSets;
+                    final List<SourceSet> allSourceSets = _sourceSetsViewmodel.getAllSourceSets();
                     if (allSourceSets.isEmpty) {
                       entries.add(
                         PopupMenuItem<String>(
@@ -593,7 +572,7 @@ class _ZoneCardState extends State<ZoneCard> {
                     } else
                     {
                       for (final SourceSet sourceSet in allSourceSets) {
-                        final List<Source> sources = widget.getSourcesInSourceSet(sourceSetId: sourceSet.id);
+                        final List<Source> sources = _sourceSetsViewmodel.getSourcesInSourceSet(sourceSetId: sourceSet.id);
                         for (final Source src in sources) {
                           final String name = '${src.name} (${sourceSet.name})';
                           final String value = src.id;
@@ -728,7 +707,7 @@ class _ZoneCardState extends State<ZoneCard> {
             GestureDetector(
               onTap: () {
                 /// Remove priority source from zone using the actual ID from view model
-                widget.removePrioritySourceFromZone(
+                _zonesViewmodel.removePrioritySourceFromZone(
                   zoneId: widget.zoneId,
                   sourceId: selectedSourceId!,
                 );
@@ -763,7 +742,7 @@ class _ZoneCardState extends State<ZoneCard> {
       clipBehavior: Clip.none,
       onSelected: (ZoneFunctionsType value) {
         setState(() => selectedFunction = value);
-        widget.addFunctionToZone(
+        _zonesViewmodel.addFunctionToZone(
           zoneId: widget.zoneId,
           function: getNewZoneFunction(type: value),
         );
@@ -881,13 +860,13 @@ class _ZoneCardState extends State<ZoneCard> {
   /// Multi-select source selection for zone (checkboxes)
   Widget buildSourceSelectionForZone() {
     /// Get current selections from the zone
-    final List<Source> currentZoneSources = widget.getSourcesInZone(zoneId: widget.zoneId);
-    final List<SourceSet> currentZoneSourceSets = widget.getSourceSetsInZone(zoneId: widget.zoneId);
+    final List<Source> currentZoneSources = _zonesViewmodel.getSourcesInZone(zoneId: widget.zoneId);
+    final List<SourceSet> currentZoneSourceSets = _zonesViewmodel.getSourceSetsInZone(zoneId: widget.zoneId);
 
     final bool hasSelection = currentZoneSources.isNotEmpty || currentZoneSourceSets.isNotEmpty;
 
-    final List<Source> availableSources = widget.availableSources;
-    final List<SourceSet> sourceSetList = widget.allSourceSets;
+    final List<Source> availableSources = _sourcesViewmodel.state.sources;
+    final List<SourceSet> sourceSetList = _sourceSetsViewmodel.getAllSourceSets();
 
     return Theme(
       data: Theme.of(context).copyWith(
@@ -918,7 +897,7 @@ class _ZoneCardState extends State<ZoneCard> {
           final List<String> tempSelectedSourceSets = currentZoneSourceSets.map((SourceSet e) => e.id).toList();
 
           /// Get priority sources to disable them in source list
-          final List<String> prioritySources = widget.getPrioritySourcesInZone(zoneId: widget.zoneId);
+          final List<String> prioritySources = _zonesViewmodel.getPrioritySourcesInZone(zoneId: widget.zoneId);
 
           final List<PopupMenuEntry<String>> entries = <PopupMenuEntry<String>>[];
 
@@ -1088,7 +1067,7 @@ class _ZoneCardState extends State<ZoneCard> {
           } else {
             for (final SourceSet s in sourceSetList) {
               final String id = s.id;
-              final List<Source> sourcesInSet = widget.getSourcesInSourceSet(sourceSetId: s.id);
+              final List<Source> sourcesInSet = _sourceSetsViewmodel.getSourcesInSourceSet(sourceSetId: s.id);
 
               entries.add(
                 PopupMenuItem<String>(
@@ -1167,12 +1146,12 @@ class _ZoneCardState extends State<ZoneCard> {
                   width: double.infinity,
                   onTap: () {
                     /// Save full final selected lists
-                    widget.updateSourcesInZone(
+                    _zonesViewmodel.updateSourcesInZone(
                       zoneId: widget.zoneId,
                       sourceIds: tempSelectedSources,
                     );
 
-                    widget.updateSourceSets(
+                    _zonesViewmodel.updateSourceSets(
                       zoneId: widget.zoneId,
                       sourceSetIds: tempSelectedSourceSets,
                     );
@@ -1226,7 +1205,7 @@ class _ZoneCardState extends State<ZoneCard> {
                         borderRadius: BorderRadius.circular(3),
                       ),
                       child: FusionAppText(
-                        text: widget.getSourceCountInZone(zoneId: widget.zoneId).toString(),
+                        text: _zonesViewmodel.getSourceCountInZone(zoneId: widget.zoneId).toString(),
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
                           fontSize: 8,
                           color: context.colorScheme.primaryBlack,
@@ -1245,7 +1224,7 @@ class _ZoneCardState extends State<ZoneCard> {
 
   /// Subzone panel (now scrollable)
   Widget _buildSubZonePanel(List<SubZone> subZonesForZone) {
-    final List<CircuitModel> zoneCircuit = widget.getCircuitsInZone(widget.zoneId);
+    final List<CircuitModel> zoneCircuit = _zonesViewmodel.getCircuitsInZone(widget.zoneId);
 
     return Container(
       decoration: BoxDecoration(
@@ -1282,7 +1261,7 @@ class _ZoneCardState extends State<ZoneCard> {
                         itemCount: zoneCircuit.length,
                         itemBuilder: (BuildContext context, int index) {
                           final CircuitModel circuitData = zoneCircuit[index];
-                          final List<Speaker> speakersList = widget.getHardwareForCircuit(circuitId: circuitData.id).whereType<Speaker>().toList();
+                          final List<Speaker> speakersList = _zonesViewmodel.getHardwareForCircuit(circuitId: circuitData.id).whereType<Speaker>().toList();
                           return MouseRegion(
                             onEnter: (_) => setState(() => _hoveredCircuitIndex = index),
                             onExit: (_) => setState(() => _hoveredCircuitIndex = null),
@@ -1297,13 +1276,15 @@ class _ZoneCardState extends State<ZoneCard> {
 
                     /// else show subzones in reorderable list
                     ReorderableListView.builder(
+                      proxyDecorator: _defaultProxyDecorator,
+
                       shrinkWrap: true,
                       physics: const NeverScrollableScrollPhysics(),
                       buildDefaultDragHandles: false,
                       itemCount: subZonesForZone.length,
                       onReorder: (int oldIndex, int newIndex) {
                         if (oldIndex < newIndex) newIndex -= 1;
-                        widget.reOrderSubZoneInZone(
+                        _zonesViewmodel.reOrderSubZoneInZone(
                           parentId: widget.zoneId,
                           oldIndex: oldIndex,
                           newIndex: newIndex,

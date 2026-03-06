@@ -624,6 +624,26 @@ class _ConfigurationProcessingPageBodyState extends State<_ConfigurationProcessi
                       physics: const ClampingScrollPhysics(),
                       controller: _zonesScrollController,
                       child: ReorderableListView.builder(
+                        proxyDecorator: (Widget child, int index, Animation<double> animation) {
+                          return FadeTransition(
+                            opacity: animation.drive(Tween<double>(begin: 0.95, end: 1.0)),
+                            child: Material(
+                              color: context.colorScheme.primaryBlack,
+                              child: SizedBox(
+                                width: 220,
+                                // child: child,
+                                child: MultiBlocProvider(
+                                  providers: <BlocProvider<dynamic>>[
+                                    BlocProvider<ConfigZonesViewmodel>.value(value: _zonesViewmodel),
+                                    BlocProvider<ConfigSourcesViewmodel>.value(value: _sourcesViewmodel),
+                                    BlocProvider<ConfigSourceSetsViewmodel>.value(value: _sourceSetsViewmodel),
+                                  ],
+                                  child: child,
+                                ),
+                              ),
+                            ),
+                          );
+                        },
                         shrinkWrap: true,
                         physics: const NeverScrollableScrollPhysics(),
                         buildDefaultDragHandles: false,
