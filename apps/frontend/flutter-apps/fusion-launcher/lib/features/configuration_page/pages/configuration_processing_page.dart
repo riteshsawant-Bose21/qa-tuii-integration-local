@@ -687,6 +687,65 @@ class _ConfigurationProcessingPageBodyState extends State<_ConfigurationProcessi
                                   });
                                 }
                               },
+                              setSelectedDevice: (String zoneId, SelectedItemType type) {
+                                _zonesViewmodel.setSelectedDevice(zoneId, type);
+                              },
+                              getSubZonesForZone: ({required String parentZoneId}) {
+                                return _zonesViewmodel.getSubZonesForZone(parentZoneId: parentZoneId);
+                              },
+                              getZoneFunctionForZone: ({required String zoneId}) {
+                                return _zonesViewmodel.getZoneFunctionForZone(zoneId: zoneId);
+                              },
+                              getPrioritySourcesInZone: ({required String zoneId}) {
+                                return _zonesViewmodel.getPrioritySourcesInZone(zoneId: zoneId);
+                              },
+                              getHardware: ({required String hardwareId}) {
+                                return _zonesViewmodel.getHardware(hardwareId: hardwareId);
+                              },
+                              removeSourceFromZone: ({required String zoneId, required String sourceId}) {
+                                _zonesViewmodel.removeSourceFromZone(zoneId: zoneId, sourceId: sourceId);
+                              },
+                              addPrioritySourceToZone: ({required String zoneId, required String sourceId, required int priority}) {
+                                _zonesViewmodel.addPrioritySourceToZone(zoneId: zoneId, sourceId: sourceId, priority: priority);
+                              },
+                              reOrderPrioritySourcesInZone: ({required String zoneId, required List<String> newOrder}) {
+                                _zonesViewmodel.reOrderPrioritySourcesInZone(zoneId: zoneId, newOrder: newOrder);
+                              },
+                              removePrioritySourceFromZone: ({required String zoneId, required String sourceId}) {
+                                _zonesViewmodel.removePrioritySourceFromZone(zoneId: zoneId, sourceId: sourceId);
+                              },
+                              addFunctionToZone: ({required String zoneId, required ZoneFunctions function}) {
+                                _zonesViewmodel.addFunctionToZone(zoneId: zoneId, function: function);
+                              },
+                              getSourcesInZone: ({required String zoneId}) {
+                                return _zonesViewmodel.getSourcesInZone(zoneId: zoneId);
+                              },
+                              getSourceSetsInZone: ({required String zoneId}) {
+                                return _zonesViewmodel.getSourceSetsInZone(zoneId: zoneId);
+                              },
+                              updateSourcesInZone: ({required String zoneId, required List<String> sourceIds}) {
+                                _zonesViewmodel.updateSourcesInZone(zoneId: zoneId, sourceIds: sourceIds);
+                              },
+                              updateSourceSets: ({required String zoneId, required List<String> sourceSetIds}) {
+                                _zonesViewmodel.updateSourceSets(zoneId: zoneId, sourceSetIds: sourceSetIds);
+                              },
+                              getSourceCountInZone: ({required String zoneId}) {
+                                return _zonesViewmodel.getSourceCountInZone(zoneId: zoneId);
+                              },
+                              getCircuitsInZone: (String zoneId) {
+                                return _zonesViewmodel.getCircuitsInZone(zoneId);
+                              },
+                              getHardwareForCircuit: ({required String circuitId}) {
+                                return _zonesViewmodel.getHardwareForCircuit(circuitId: circuitId);
+                              },
+                              reOrderSubZoneInZone: ({required String parentId, required int oldIndex, required int newIndex}) {
+                                _zonesViewmodel.reOrderSubZoneInZone(parentId: parentId, oldIndex: oldIndex, newIndex: newIndex);
+                              },
+                              availableSources: _sourcesViewmodel.state.sources,
+                              allSourceSets: _sourceSetsViewmodel.getAllSourceSets(),
+                              getSourcesInSourceSet: ({required String sourceSetId}) {
+                                return _sourceSetsViewmodel.getSourcesInSourceSet(sourceSetId: sourceSetId);
+                              },
                             ),
                           );
                         },
