@@ -13,13 +13,20 @@ class SemanticHelper {
     required String testId,
     required Widget child,
     bool isActive = true,
+    String? label,
+    bool? state,
+    VoidCallback? ontap,
+    bool? selected,
   }) {
     return Semantics(
       identifier: testId,
       button: true,
+      onTap: ontap,
       container: true,
       enabled: isActive,
+      label: label,
       child: child,
+      checked: selected,
     );
   }
 
@@ -29,10 +36,27 @@ class SemanticHelper {
     required Widget child,
     bool explicitChildNodes = false,
     String? label,
+    String? value,
+  }) {
+    return Semantics(
+      value: value,
+      identifier: testId,
+      container: true,
+      explicitChildNodes: explicitChildNodes,
+      label: label,
+      child: child,
+    );
+  }
+
+  static Widget image({
+    required String testId,
+    required Widget child,
+    bool explicitChildNodes = false,
+    String? label,
   }) {
     return Semantics(
       identifier: testId,
-      container: true,
+      image: true,
       explicitChildNodes: explicitChildNodes,
       label: label,
       child: child,
@@ -134,6 +158,73 @@ class SemanticHelper {
       value: value,
       readOnly: true,
       child: child,
+    );
+  }
+
+  static Widget textInput({
+    required String testId,
+    required Widget child,
+    String? label,
+    bool? readonly,
+    bool? enabled,
+    bool? focused,
+    String? value,
+    bool? live,
+  }) {
+    return Semantics(
+      identifier: testId,
+      label: label,
+      readOnly: readonly,
+      enabled: enabled,
+      focused: focused,
+      value: value,
+      child: child,
+      liveRegion: live,
+    );
+  }
+
+  static Widget dropdown({
+    required String testId,
+    required Widget child,
+    String? value,
+  }) {
+    return Semantics(
+      button: true,
+      identifier: testId,
+      value: value,
+      child: child,
+    );
+  }
+
+  static Widget popupButton({
+    required String testId,
+    required Widget child,
+    bool? enabled,
+    bool? blur,
+  }) {
+    return Semantics(
+      button: true,
+      identifier: testId,
+      enabled: enabled,
+      child: child,
+      focusable: blur,
+    );
+  }
+
+  static Widget table({
+    required String testId,
+    required Widget child,
+    bool? enabled,
+    bool? blur,
+    String? value,
+  }) {
+    return Semantics(
+      button: true,
+      identifier: testId,
+      enabled: enabled,
+      child: child,
+      value: value,
+      focusable: blur,
     );
   }
 }

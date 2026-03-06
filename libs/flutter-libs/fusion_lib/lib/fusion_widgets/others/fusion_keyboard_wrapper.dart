@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:fusion_lib/fusion_lib.dart';
 
 class FusionKeyboardWrapper extends StatefulWidget {
   final Widget child;
@@ -17,9 +18,12 @@ class FusionKeyboardWrapper extends StatefulWidget {
   final VoidCallback? onRedo;
   final VoidCallback? onDelete;
 
+  final String? semanticId;
+
   const FusionKeyboardWrapper({
     super.key,
     required this.child,
+    this.semanticId,
     this.onUp,
     this.onDown,
     this.onLeft,
@@ -51,10 +55,13 @@ class _FusionKeyboardWrapperState extends State<FusionKeyboardWrapper> {
       return;
       // print("Key event: ${event.logicalKey.debugName}, isMeta: ${HardwareKeyboard.instance.isMetaPressed}, isControl: ${HardwareKeyboard.instance.isControlPressed}, isShift: ${HardwareKeyboard.instance.isShiftPressed}");
     }
-    final bool isMeta = HardwareKeyboard.instance.isMetaPressed || HardwareKeyboard.instance.isControlPressed;
+    final bool isMeta =
+        HardwareKeyboard.instance.isMetaPressed ||
+        HardwareKeyboard.instance.isControlPressed;
 
     final LogicalKeyboardKey logicalKey = event.logicalKey;
-    if (logicalKey == LogicalKeyboardKey.shiftLeft || logicalKey == LogicalKeyboardKey.shiftRight) {
+    if (logicalKey == LogicalKeyboardKey.shiftLeft ||
+        logicalKey == LogicalKeyboardKey.shiftRight) {
       if (event is KeyDownEvent) {
         widget.onShiftDown?.call();
       } else if (event is KeyUpEvent) {
@@ -62,7 +69,8 @@ class _FusionKeyboardWrapperState extends State<FusionKeyboardWrapper> {
       }
       return;
     }
-    if (logicalKey == LogicalKeyboardKey.controlLeft || logicalKey == LogicalKeyboardKey.controlRight) {
+    if (logicalKey == LogicalKeyboardKey.controlLeft ||
+        logicalKey == LogicalKeyboardKey.controlRight) {
       if (event is KeyDownEvent) {
         widget.onControlDown?.call();
       } else if (event is KeyUpEvent) {
@@ -80,7 +88,8 @@ class _FusionKeyboardWrapperState extends State<FusionKeyboardWrapper> {
       widget.onLeft?.call();
     } else if (logicalKey == LogicalKeyboardKey.arrowRight) {
       widget.onRight?.call();
-    } else if (logicalKey == LogicalKeyboardKey.delete || logicalKey == LogicalKeyboardKey.backspace) {
+    } else if (logicalKey == LogicalKeyboardKey.delete ||
+        logicalKey == LogicalKeyboardKey.backspace) {
       widget.onDelete?.call();
     }
 
@@ -98,16 +107,22 @@ class _FusionKeyboardWrapperState extends State<FusionKeyboardWrapper> {
 
   @override
   Widget build(BuildContext context) {
-    return MouseRegion(
-      onEnter: (PointerEnterEvent event) {
-        _focusNode.requestFocus();
-      },
-      onExit: (PointerExitEvent event) => _focusNode.unfocus(),
-      child: KeyboardListener(
-        focusNode: _focusNode,
-        autofocus: true,
-        onKeyEvent: _handleKey,
-        child: widget.child,
+    return SemanticHelper.container(
+      testId: SemanticHelper.createTestId(
+        SemanticTypes.container,
+        "fusion_keyboard_wrapper${widget.semanticId ?? ""}",
+      ),
+      child: MouseRegion(
+        onEnter: (PointerEnterEvent event) {
+          _focusNode.requestFocus();
+        },
+        onExit: (PointerExitEvent event) => _focusNode.unfocus(),
+        child: KeyboardListener(
+          focusNode: _focusNode,
+          autofocus: true,
+          onKeyEvent: _handleKey,
+          child: widget.child,
+        ),
       ),
     );
   }

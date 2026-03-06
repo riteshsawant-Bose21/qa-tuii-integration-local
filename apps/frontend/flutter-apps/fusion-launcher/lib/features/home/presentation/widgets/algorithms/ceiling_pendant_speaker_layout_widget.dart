@@ -7,25 +7,41 @@ class CeilingPendantSpeakerLayoutWidget extends StatefulWidget {
   const CeilingPendantSpeakerLayoutWidget({super.key});
 
   @override
-  State<CeilingPendantSpeakerLayoutWidget> createState() => _CeilingPendantSpeakerLayoutWidgetState();
+  State<CeilingPendantSpeakerLayoutWidget> createState() =>
+      _CeilingPendantSpeakerLayoutWidgetState();
 }
 
-class _CeilingPendantSpeakerLayoutWidgetState extends State<CeilingPendantSpeakerLayoutWidget> {
+class _CeilingPendantSpeakerLayoutWidgetState
+    extends State<CeilingPendantSpeakerLayoutWidget> {
   // Form controllers
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
-  final TextEditingController _roomWidthController = TextEditingController(text: '6.1');
-  final TextEditingController _roomLengthController = TextEditingController(text: '4.6');
-  final TextEditingController _ceilingHeightController = TextEditingController(text: '2.7');
-  final TextEditingController _listenerHeightController = TextEditingController(text: '1.2');
-  final TextEditingController _coverageAngleController = TextEditingController(text: '90.0');
-  final TextEditingController _pendantHeightController = TextEditingController(text: '2.1');
-  final TextEditingController _roomCoordinatesController = TextEditingController(
-    text: '(0,0), (6.1,0), (6.1,4.6), (0,4.6)', // Default rectangle
+  final TextEditingController _roomWidthController = TextEditingController(
+    text: '6.1',
   );
+  final TextEditingController _roomLengthController = TextEditingController(
+    text: '4.6',
+  );
+  final TextEditingController _ceilingHeightController = TextEditingController(
+    text: '2.7',
+  );
+  final TextEditingController _listenerHeightController = TextEditingController(
+    text: '1.2',
+  );
+  final TextEditingController _coverageAngleController = TextEditingController(
+    text: '90.0',
+  );
+  final TextEditingController _pendantHeightController = TextEditingController(
+    text: '2.1',
+  );
+  final TextEditingController _roomCoordinatesController =
+      TextEditingController(
+        text: '(0,0), (6.1,0), (6.1,4.6), (0,4.6)', // Default rectangle
+      );
 
   // Form state
   SpeakerType _selectedSpeakerType = SpeakerType.ceiling;
-  CoveragePreference _selectedCoveragePreference = CoveragePreference.minimumOverlap;
+  CoveragePreference _selectedCoveragePreference =
+      CoveragePreference.minimumOverlap;
   LayoutPattern _selectedLayoutPattern = LayoutPattern.square;
   RoomType _selectedRoomType = RoomType.symmetrical;
   bool _useCustomOrigin = false;
@@ -76,7 +92,9 @@ class _CeilingPendantSpeakerLayoutWidgetState extends State<CeilingPendantSpeake
         );
       } else {
         // Create asymmetrical room from coordinates
-        final List<Point2D> geometry = _parseRoomCoordinates(_roomCoordinatesController.text);
+        final List<Point2D> geometry = _parseRoomCoordinates(
+          _roomCoordinatesController.text,
+        );
         room = Room.asymmetrical(
           geometry: geometry,
           ceilingHeight: double.parse(_ceilingHeightController.text),
@@ -88,17 +106,27 @@ class _CeilingPendantSpeakerLayoutWidgetState extends State<CeilingPendantSpeake
       final SpeakerSpec speakerSpec = SpeakerSpec(
         coverageAngle: double.parse(_coverageAngleController.text),
         type: _selectedSpeakerType,
-        pendantHeight: _selectedSpeakerType == SpeakerType.pendant ? double.tryParse(_pendantHeightController.text) : null,
+        pendantHeight:
+            _selectedSpeakerType == SpeakerType.pendant
+                ? double.tryParse(_pendantHeightController.text)
+                : null,
       );
 
       // Create custom origin offset if specified
       Point2D? customOriginOffset;
-      if (_useCustomOrigin && (_customOriginOffsetX != 0.0 || _customOriginOffsetY != 0.0)) {
-        customOriginOffset = Point2D(_customOriginOffsetX, _customOriginOffsetY);
+      if (_useCustomOrigin &&
+          (_customOriginOffsetX != 0.0 || _customOriginOffsetY != 0.0)) {
+        customOriginOffset = Point2D(
+          _customOriginOffsetX,
+          _customOriginOffsetY,
+        );
       }
 
       // Ensure boundary threshold is within valid range
-      final double clampedBoundaryThreshold = _boundaryOverlapThreshold.clamp(0.01, 0.9);
+      final double clampedBoundaryThreshold = _boundaryOverlapThreshold.clamp(
+        0.01,
+        0.9,
+      );
 
       // Calculate placement with enhanced details
       final PlacementResult result = AutoSpeakerPlacement.calculatePlacement(
@@ -111,8 +139,15 @@ class _CeilingPendantSpeakerLayoutWidgetState extends State<CeilingPendantSpeake
       );
 
       // Generate all grid points for display purposes
-      final List<Point2D> allGridPoints = _generateAllGridPoints(room, result, _selectedLayoutPattern);
-      final List<Point2D> removedPoints = _calculateRemovedPoints(allGridPoints, result.speakerPositions);
+      final List<Point2D> allGridPoints = _generateAllGridPoints(
+        room,
+        result,
+        _selectedLayoutPattern,
+      );
+      final List<Point2D> removedPoints = _calculateRemovedPoints(
+        allGridPoints,
+        result.speakerPositions,
+      );
 
       setState(() {
         _result = result;
@@ -134,7 +169,11 @@ class _CeilingPendantSpeakerLayoutWidgetState extends State<CeilingPendantSpeake
   }
 
   /// Generate all initial grid points (before filtering) for visualization
-  List<Point2D> _generateAllGridPoints(Room room, PlacementResult result, LayoutPattern pattern) {
+  List<Point2D> _generateAllGridPoints(
+    Room room,
+    PlacementResult result,
+    LayoutPattern pattern,
+  ) {
     final List<Point2D> points = <Point2D>[];
 
     // Safety check for grid spacing
@@ -147,12 +186,17 @@ class _CeilingPendantSpeakerLayoutWidgetState extends State<CeilingPendantSpeake
 
     if (pattern == LayoutPattern.square) {
       // Generate square grid
-      final double maxStepsXDouble = (room.width - result.centroid.x) / result.gridSpacing;
-      final double maxStepsYDouble = (room.roomLength - result.centroid.y) / result.gridSpacing;
+      final double maxStepsXDouble =
+          (room.width - result.centroid.x) / result.gridSpacing;
+      final double maxStepsYDouble =
+          (room.roomLength - result.centroid.y) / result.gridSpacing;
       final double minStepsXDouble = result.centroid.x / result.gridSpacing;
       final double minStepsYDouble = result.centroid.y / result.gridSpacing;
 
-      if (maxStepsXDouble.isFinite && maxStepsYDouble.isFinite && minStepsXDouble.isFinite && minStepsYDouble.isFinite) {
+      if (maxStepsXDouble.isFinite &&
+          maxStepsYDouble.isFinite &&
+          minStepsXDouble.isFinite &&
+          minStepsYDouble.isFinite) {
         final int maxStepsX = maxStepsXDouble.floor().clamp(0, 50);
         final int maxStepsY = maxStepsYDouble.floor().clamp(0, 50);
         final int minStepsX = minStepsXDouble.floor().clamp(0, 50);
@@ -177,12 +221,17 @@ class _CeilingPendantSpeakerLayoutWidgetState extends State<CeilingPendantSpeake
       final double verticalSpacing = result.gridSpacing * sqrt(3) / 2;
       final double rowOffset = result.gridSpacing / 2;
 
-      final double maxStepsXDouble = (room.width - result.centroid.x) / horizontalSpacing;
-      final double maxStepsYDouble = (room.roomLength - result.centroid.y) / verticalSpacing;
+      final double maxStepsXDouble =
+          (room.width - result.centroid.x) / horizontalSpacing;
+      final double maxStepsYDouble =
+          (room.roomLength - result.centroid.y) / verticalSpacing;
       final double minStepsXDouble = result.centroid.x / horizontalSpacing;
       final double minStepsYDouble = result.centroid.y / verticalSpacing;
 
-      if (maxStepsXDouble.isFinite && maxStepsYDouble.isFinite && minStepsXDouble.isFinite && minStepsYDouble.isFinite) {
+      if (maxStepsXDouble.isFinite &&
+          maxStepsYDouble.isFinite &&
+          minStepsXDouble.isFinite &&
+          minStepsYDouble.isFinite) {
         final int maxStepsX = maxStepsXDouble.floor().clamp(0, 50);
         final int maxStepsY = maxStepsYDouble.floor().clamp(0, 50);
         final int minStepsX = minStepsXDouble.floor().clamp(0, 50);
@@ -210,11 +259,18 @@ class _CeilingPendantSpeakerLayoutWidgetState extends State<CeilingPendantSpeake
   }
 
   /// Calculate which points were removed/filtered out
-  List<Point2D> _calculateRemovedPoints(List<Point2D> allPoints, List<Point2D> validPoints) {
+  List<Point2D> _calculateRemovedPoints(
+    List<Point2D> allPoints,
+    List<Point2D> validPoints,
+  ) {
     final List<Point2D> removedPoints = <Point2D>[];
 
     for (Point2D point in allPoints) {
-      final bool isValid = validPoints.any((Point2D validPos) => (point.x - validPos.x).abs() < 0.001 && (point.y - validPos.y).abs() < 0.001);
+      final bool isValid = validPoints.any(
+        (Point2D validPos) =>
+            (point.x - validPos.x).abs() < 0.001 &&
+            (point.y - validPos.y).abs() < 0.001,
+      );
 
       if (!isValid) {
         removedPoints.add(point);
@@ -266,7 +322,10 @@ class _CeilingPendantSpeakerLayoutWidgetState extends State<CeilingPendantSpeake
                             children: <Widget>[
                               const Text(
                                 'Room Specifications',
-                                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                ),
                               ),
                               const SizedBox(height: 16),
                               _buildNumberField(
@@ -312,7 +371,9 @@ class _CeilingPendantSpeakerLayoutWidgetState extends State<CeilingPendantSpeake
                               // Symmetrical room option
                               RadioListTile<RoomType>(
                                 title: const Text('Symmetrical (Rectangular)'),
-                                subtitle: const Text('Standard width × length rectangle'),
+                                subtitle: const Text(
+                                  'Standard width × length rectangle',
+                                ),
                                 value: RoomType.symmetrical,
                                 groupValue: _selectedRoomType,
                                 onChanged: (RoomType? value) {
@@ -327,8 +388,12 @@ class _CeilingPendantSpeakerLayoutWidgetState extends State<CeilingPendantSpeake
 
                               // Asymmetrical room option
                               RadioListTile<RoomType>(
-                                title: const Text('Asymmetrical (Custom Shape)'),
-                                subtitle: const Text('Define room using coordinate points'),
+                                title: const Text(
+                                  'Asymmetrical (Custom Shape)',
+                                ),
+                                subtitle: const Text(
+                                  'Define room using coordinate points',
+                                ),
                                 value: RoomType.asymmetrical,
                                 groupValue: _selectedRoomType,
                                 onChanged: (RoomType? value) {
@@ -337,21 +402,29 @@ class _CeilingPendantSpeakerLayoutWidgetState extends State<CeilingPendantSpeake
                                   });
                                   // Automatically recalculate when room type changes
                                   // But only if coordinates are already provided
-                                  if (_roomCoordinatesController.text.isNotEmpty) {
+                                  if (_roomCoordinatesController
+                                      .text
+                                      .isNotEmpty) {
                                     _calculatePlacement();
                                   }
                                 },
                                 contentPadding: EdgeInsets.zero,
                               ),
 
-                              if (_selectedRoomType == RoomType.asymmetrical) ...<Widget>[
+                              if (_selectedRoomType ==
+                                  RoomType.asymmetrical) ...<Widget>[
                                 const SizedBox(height: 8),
                                 FusionTextFormField(
+                                  semanticId:
+                                      "ceiling_pendant_speaker_layout_room_coordinates",
                                   controller: _roomCoordinatesController,
                                   maxLines: 3,
                                   title: 'Room Coordinates',
-                                  isRequired: _selectedRoomType == RoomType.asymmetrical,
-                                  hintText: 'Enter coordinates as: (x1,y1), (x2,y2), (x3,y3), ...\nExample: (0,0), (10,0), (10,8), (0,8)',
+                                  isRequired:
+                                      _selectedRoomType ==
+                                      RoomType.asymmetrical,
+                                  hintText:
+                                      'Enter coordinates as: (x1,y1), (x2,y2), (x3,y3), ...\nExample: (0,0), (10,0), (10,8), (0,8)',
                                   // decoration: const InputDecoration(
                                   //   labelText: 'Room Coordinates',
                                   //   hintText: 'Enter coordinates as: (x1,y1), (x2,y2), (x3,y3), ...\nExample: (0,0), (10,0), (10,8), (0,8)',
@@ -361,15 +434,22 @@ class _CeilingPendantSpeakerLayoutWidgetState extends State<CeilingPendantSpeake
                                   // ),
                                   onChanged: (String value) {
                                     // Auto-recalculate when coordinates change (with debounce)
-                                    if (value.isNotEmpty && _selectedRoomType == RoomType.asymmetrical) {
+                                    if (value.isNotEmpty &&
+                                        _selectedRoomType ==
+                                            RoomType.asymmetrical) {
                                       try {
                                         _parseRoomCoordinates(value);
                                         // Only recalculate if coordinates are valid
-                                        Future<void>.delayed(const Duration(milliseconds: 500), () {
-                                          if (_roomCoordinatesController.text == value) {
-                                            _calculatePlacement();
-                                          }
-                                        });
+                                        Future<void>.delayed(
+                                          const Duration(milliseconds: 500),
+                                          () {
+                                            if (_roomCoordinatesController
+                                                    .text ==
+                                                value) {
+                                              _calculatePlacement();
+                                            }
+                                          },
+                                        );
                                       } catch (e) {
                                         // Don't recalculate if coordinates are invalid
                                       }
@@ -378,7 +458,8 @@ class _CeilingPendantSpeakerLayoutWidgetState extends State<CeilingPendantSpeake
                                   validator:
                                       _selectedRoomType == RoomType.asymmetrical
                                           ? (String? value) {
-                                            if (value == null || value.isEmpty) {
+                                            if (value == null ||
+                                                value.isEmpty) {
                                               return 'Room coordinates are required';
                                             }
                                             try {
@@ -396,22 +477,37 @@ class _CeilingPendantSpeakerLayoutWidgetState extends State<CeilingPendantSpeake
                                   decoration: BoxDecoration(
                                     color: Colors.blue.withValues(alpha: 0.1),
                                     borderRadius: BorderRadius.circular(4),
-                                    border: Border.all(color: Colors.blue.withValues(alpha: 0.2)),
+                                    border: Border.all(
+                                      color: Colors.blue.withValues(alpha: 0.2),
+                                    ),
                                   ),
                                   child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: <Widget>[
                                       const Text(
                                         'Quick Templates:',
-                                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 12,
+                                        ),
                                       ),
                                       const SizedBox(height: 4),
                                       Wrap(
                                         spacing: 4,
                                         children: <Widget>[
-                                          _buildTemplateButton('Rectangle', '(0,0), (10,0), (10,8), (0,8)'),
-                                          _buildTemplateButton('L-Shape', '(0,0), (10,0), (10,6), (4,6), (4,8), (0,8)'),
-                                          _buildTemplateButton('U-Shape', '(0,8), (0,0), (10,0), (10,8), (7,8), (7,2), (3,2), (3,8)'),
+                                          _buildTemplateButton(
+                                            'Rectangle',
+                                            '(0,0), (10,0), (10,8), (0,8)',
+                                          ),
+                                          _buildTemplateButton(
+                                            'L-Shape',
+                                            '(0,0), (10,0), (10,6), (4,6), (4,8), (0,8)',
+                                          ),
+                                          _buildTemplateButton(
+                                            'U-Shape',
+                                            '(0,8), (0,0), (10,0), (10,8), (7,8), (7,2), (3,2), (3,8)',
+                                          ),
                                         ],
                                       ),
                                     ],
@@ -422,26 +518,43 @@ class _CeilingPendantSpeakerLayoutWidgetState extends State<CeilingPendantSpeake
                               const SizedBox(height: 24),
                               const Text(
                                 'Speaker Specifications',
-                                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                ),
                               ),
                               const SizedBox(height: 16),
 
                               // Speaker Type
-                              const Text('Speaker Type:', style: TextStyle(fontWeight: FontWeight.w500)),
+                              const Text(
+                                'Speaker Type:',
+                                style: TextStyle(fontWeight: FontWeight.w500),
+                              ),
                               const SizedBox(height: 8),
                               FusionDropdownButtonFormField(
-                                semanticKey: "ceiling_pendant_speaker_layout_speaker_type",
+                                semanticKey:
+                                    "ceiling_pendant_speaker_layout_speaker_type",
                                 value: _selectedSpeakerType.name,
                                 onChanged: (String? value) {
                                   setState(() {
-                                    _selectedSpeakerType = SpeakerType.values.firstWhere((SpeakerType type) => type.name == value);
+                                    _selectedSpeakerType = SpeakerType.values
+                                        .firstWhere(
+                                          (SpeakerType type) =>
+                                              type.name == value,
+                                        );
                                   });
                                   // Auto-recalculate when speaker type changes
                                   _calculatePlacement();
                                 },
-                                options: SpeakerType.values.map((SpeakerType type) => type.name).toList(),
+                                options:
+                                    SpeakerType.values
+                                        .map((SpeakerType type) => type.name)
+                                        .toList(),
                                 displayString: (String value) {
-                                  final SpeakerType type = SpeakerType.values.firstWhere((SpeakerType t) => t.name == value);
+                                  final SpeakerType type = SpeakerType.values
+                                      .firstWhere(
+                                        (SpeakerType t) => t.name == value,
+                                      );
                                   return _getSpeakerTypeLabel(type);
                                 },
                                 // items:
@@ -466,27 +579,37 @@ class _CeilingPendantSpeakerLayoutWidgetState extends State<CeilingPendantSpeake
                               ),
 
                               // Pendant Height (conditional)
-                              if (_selectedSpeakerType == SpeakerType.pendant) ...<Widget>[
+                              if (_selectedSpeakerType ==
+                                  SpeakerType.pendant) ...<Widget>[
                                 const SizedBox(height: 12),
                                 _buildNumberField(
                                   controller: _pendantHeightController,
                                   label: 'Pendant Height (m)',
-                                  hint: 'Enter pendant speaker height in meters',
+                                  hint:
+                                      'Enter pendant speaker height in meters',
                                 ),
                               ],
 
                               const SizedBox(height: 24),
                               const Text(
                                 'Layout Configuration',
-                                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                ),
                               ),
                               const SizedBox(height: 16),
 
                               // Coverage Preference
-                              const Text('Coverage Preference:', style: TextStyle(fontWeight: FontWeight.w500)),
+                              const Text(
+                                'Coverage Preference:',
+                                style: TextStyle(fontWeight: FontWeight.w500),
+                              ),
                               const SizedBox(height: 8),
                               FusionContainer(
-                                child: DropdownButtonFormField<CoveragePreference>(
+                                child: DropdownButtonFormField<
+                                  CoveragePreference
+                                >(
                                   initialValue: _selectedCoveragePreference,
                                   onChanged: (CoveragePreference? value) {
                                     setState(() {
@@ -496,29 +619,44 @@ class _CeilingPendantSpeakerLayoutWidgetState extends State<CeilingPendantSpeake
                                     _calculatePlacement();
                                   },
                                   items:
-                                      CoveragePreference.values.map((CoveragePreference pref) {
-                                        return DropdownMenuItem<CoveragePreference>(
+                                      CoveragePreference.values.map((
+                                        CoveragePreference pref,
+                                      ) {
+                                        return DropdownMenuItem<
+                                          CoveragePreference
+                                        >(
                                           value: pref,
                                           child: SizedBox(
-                                            height: 40, // Constrain height to prevent overflow
+                                            height:
+                                                40, // Constrain height to prevent overflow
                                             child: Column(
-                                              crossAxisAlignment: CrossAxisAlignment.start,
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.start,
                                               mainAxisSize: MainAxisSize.min,
-                                              mainAxisAlignment: MainAxisAlignment.center,
+                                              mainAxisAlignment:
+                                                  MainAxisAlignment.center,
                                               children: <Widget>[
                                                 Text(
-                                                  _getCoveragePreferenceLabel(pref),
-                                                  style: const TextStyle(fontSize: 14),
+                                                  _getCoveragePreferenceLabel(
+                                                    pref,
+                                                  ),
+                                                  style: const TextStyle(
+                                                    fontSize: 14,
+                                                  ),
                                                 ),
                                                 Flexible(
                                                   child: Text(
                                                     pref.description,
                                                     style: TextStyle(
                                                       fontSize: 10,
-                                                      color: Colors.grey.withValues(alpha: 0.6),
+                                                      color: Colors.grey
+                                                          .withValues(
+                                                            alpha: 0.6,
+                                                          ),
                                                     ),
                                                     maxLines: 1,
-                                                    overflow: TextOverflow.ellipsis,
+                                                    overflow:
+                                                        TextOverflow.ellipsis,
                                                   ),
                                                 ),
                                               ],
@@ -532,7 +670,10 @@ class _CeilingPendantSpeakerLayoutWidgetState extends State<CeilingPendantSpeake
                                     enabledBorder: InputBorder.none,
                                     focusedBorder: InputBorder.none,
                                     errorBorder: InputBorder.none,
-                                    contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                    contentPadding: EdgeInsets.symmetric(
+                                      horizontal: 12,
+                                      vertical: 8,
+                                    ),
                                   ),
                                 ),
                               ),
@@ -540,21 +681,39 @@ class _CeilingPendantSpeakerLayoutWidgetState extends State<CeilingPendantSpeake
                               const SizedBox(height: 12),
 
                               // Layout Pattern
-                              const Text('Layout Pattern:', style: TextStyle(fontWeight: FontWeight.w500)),
+                              const Text(
+                                'Layout Pattern:',
+                                style: TextStyle(fontWeight: FontWeight.w500),
+                              ),
                               const SizedBox(height: 8),
                               FusionDropdownButtonFormField(
-                                semanticKey: "ceiling_pendant_speaker_layout_pattern",
+                                semanticKey:
+                                    "ceiling_pendant_speaker_layout_pattern",
                                 value: _selectedLayoutPattern.name,
                                 onChanged: (String? value) {
                                   setState(() {
-                                    _selectedLayoutPattern = LayoutPattern.values.firstWhere((LayoutPattern e) => e.name == value);
+                                    _selectedLayoutPattern = LayoutPattern
+                                        .values
+                                        .firstWhere(
+                                          (LayoutPattern e) => e.name == value,
+                                        );
                                   });
                                   // Auto-recalculate when layout pattern changes
                                   _calculatePlacement();
                                 },
-                                options: LayoutPattern.values.map((LayoutPattern pattern) => pattern.name).toList(),
+                                options:
+                                    LayoutPattern.values
+                                        .map(
+                                          (LayoutPattern pattern) =>
+                                              pattern.name,
+                                        )
+                                        .toList(),
                                 displayString: (String value) {
-                                  final LayoutPattern pattern = LayoutPattern.values.firstWhere((LayoutPattern e) => e.name == value);
+                                  final LayoutPattern pattern = LayoutPattern
+                                      .values
+                                      .firstWhere(
+                                        (LayoutPattern e) => e.name == value,
+                                      );
                                   return _getLayoutPatternLabel(pattern);
                                 },
                                 // items:
@@ -575,7 +734,9 @@ class _CeilingPendantSpeakerLayoutWidgetState extends State<CeilingPendantSpeake
                               // Custom Origin
                               CheckboxListTile(
                                 title: const Text('Use Custom Origin Offset'),
-                                subtitle: const Text('Adjust origin position relative to room centroid'),
+                                subtitle: const Text(
+                                  'Adjust origin position relative to room centroid',
+                                ),
                                 value: _useCustomOrigin,
                                 onChanged: (bool? value) {
                                   setState(() {
@@ -589,7 +750,8 @@ class _CeilingPendantSpeakerLayoutWidgetState extends State<CeilingPendantSpeake
                                   // Auto-recalculate when custom origin option changes
                                   _calculatePlacement();
                                 },
-                                controlAffinity: ListTileControlAffinity.leading,
+                                controlAffinity:
+                                    ListTileControlAffinity.leading,
                                 contentPadding: EdgeInsets.zero,
                               ),
 
@@ -600,34 +762,44 @@ class _CeilingPendantSpeakerLayoutWidgetState extends State<CeilingPendantSpeake
                                   decoration: BoxDecoration(
                                     color: Colors.blue.withValues(alpha: 0.05),
                                     borderRadius: BorderRadius.circular(8),
-                                    border: Border.all(color: Colors.blue.withValues(alpha: 0.2)),
+                                    border: Border.all(
+                                      color: Colors.blue.withValues(alpha: 0.2),
+                                    ),
                                   ),
                                   child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: <Widget>[
                                       const Text(
                                         'Origin Offset from Room Centroid',
-                                        style: TextStyle(fontWeight: FontWeight.bold),
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                        ),
                                       ),
                                       const SizedBox(height: 8),
                                       Text(
                                         'Current offset: (${_customOriginOffsetX.toStringAsFixed(2)}, ${_customOriginOffsetY.toStringAsFixed(2)}) m',
                                         style: TextStyle(
                                           fontSize: 12,
-                                          color: Colors.grey.withValues(alpha: 0.7),
+                                          color: Colors.grey.withValues(
+                                            alpha: 0.7,
+                                          ),
                                           fontFamily: 'monospace',
                                         ),
                                       ),
                                       const SizedBox(height: 12),
 
                                       // X Offset Slider
-                                      Text('X Offset: ${_customOriginOffsetX.toStringAsFixed(2)} m'),
+                                      Text(
+                                        'X Offset: ${_customOriginOffsetX.toStringAsFixed(2)} m',
+                                      ),
                                       Slider(
                                         value: _customOriginOffsetX,
                                         min: -3.0,
                                         max: 3.0,
                                         divisions: 60,
-                                        label: '${_customOriginOffsetX.toStringAsFixed(2)} m',
+                                        label:
+                                            '${_customOriginOffsetX.toStringAsFixed(2)} m',
                                         onChanged: (double value) {
                                           setState(() {
                                             _customOriginOffsetX = value;
@@ -642,13 +814,16 @@ class _CeilingPendantSpeakerLayoutWidgetState extends State<CeilingPendantSpeake
                                       const SizedBox(height: 8),
 
                                       // Y Offset Slider
-                                      Text('Y Offset: ${_customOriginOffsetY.toStringAsFixed(2)} m'),
+                                      Text(
+                                        'Y Offset: ${_customOriginOffsetY.toStringAsFixed(2)} m',
+                                      ),
                                       Slider(
                                         value: _customOriginOffsetY,
                                         min: -3.0,
                                         max: 3.0,
                                         divisions: 60,
-                                        label: '${_customOriginOffsetY.toStringAsFixed(2)} m',
+                                        label:
+                                            '${_customOriginOffsetY.toStringAsFixed(2)} m',
                                         onChanged: (double value) {
                                           setState(() {
                                             _customOriginOffsetY = value;
@@ -673,7 +848,9 @@ class _CeilingPendantSpeakerLayoutWidgetState extends State<CeilingPendantSpeake
                                               });
                                               _calculatePlacement();
                                             },
-                                            child: const Text('Reset to Centroid'),
+                                            child: const Text(
+                                              'Reset to Centroid',
+                                            ),
                                           ),
                                         ],
                                       ),
@@ -687,7 +864,10 @@ class _CeilingPendantSpeakerLayoutWidgetState extends State<CeilingPendantSpeake
                               // Boundary Overlap Threshold
                               const Text(
                                 'Boundary Filtering',
-                                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                ),
                               ),
                               const SizedBox(height: 16),
 
@@ -696,35 +876,48 @@ class _CeilingPendantSpeakerLayoutWidgetState extends State<CeilingPendantSpeake
                                 decoration: BoxDecoration(
                                   color: Colors.orange.withValues(alpha: 0.05),
                                   borderRadius: BorderRadius.circular(8),
-                                  border: Border.all(color: Colors.orange.withValues(alpha: 0.2)),
+                                  border: Border.all(
+                                    color: Colors.orange.withValues(alpha: 0.2),
+                                  ),
                                 ),
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: <Widget>[
                                     const Text(
                                       'Coverage Overlap Threshold',
-                                      style: TextStyle(fontWeight: FontWeight.bold),
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                      ),
                                     ),
                                     const SizedBox(height: 8),
                                     Text(
                                       'Minimum percentage of speaker coverage that must be within room boundaries: ${(_boundaryOverlapThreshold * 100).toStringAsFixed(0)}%',
                                       style: TextStyle(
                                         fontSize: 12,
-                                        color: Colors.grey.withValues(alpha: 0.7),
+                                        color: Colors.grey.withValues(
+                                          alpha: 0.7,
+                                        ),
                                       ),
                                     ),
                                     const SizedBox(height: 12),
 
-                                    Text('Boundary Threshold: ${(_boundaryOverlapThreshold * 100).toStringAsFixed(0)}%'),
+                                    Text(
+                                      'Boundary Threshold: ${(_boundaryOverlapThreshold * 100).toStringAsFixed(0)}%',
+                                    ),
                                     Slider(
-                                      value: _boundaryOverlapThreshold.clamp(0.01, 0.9),
+                                      value: _boundaryOverlapThreshold.clamp(
+                                        0.01,
+                                        0.9,
+                                      ),
                                       min: 0.01,
                                       max: 0.9,
                                       // divisions: 12,
-                                      label: '${(_boundaryOverlapThreshold * 100).toStringAsFixed(0)}%',
+                                      label:
+                                          '${(_boundaryOverlapThreshold * 100).toStringAsFixed(0)}%',
                                       onChanged: (double value) {
                                         setState(() {
-                                          _boundaryOverlapThreshold = value.clamp(0.01, 0.9);
+                                          _boundaryOverlapThreshold = value
+                                              .clamp(0.01, 0.9);
                                         });
                                       },
                                       onChangeEnd: (double value) {
@@ -738,11 +931,20 @@ class _CeilingPendantSpeakerLayoutWidgetState extends State<CeilingPendantSpeake
                                     // Quick preset buttons
                                     Row(
                                       children: <Widget>[
-                                        _buildThresholdPresetButton('Conservative (90%)', 0.9),
+                                        _buildThresholdPresetButton(
+                                          'Conservative (90%)',
+                                          0.9,
+                                        ),
                                         const SizedBox(width: 8),
-                                        _buildThresholdPresetButton('Balanced (70%)', 0.7),
+                                        _buildThresholdPresetButton(
+                                          'Balanced (70%)',
+                                          0.7,
+                                        ),
                                         const SizedBox(width: 8),
-                                        _buildThresholdPresetButton('Relaxed (50%)', 0.5),
+                                        _buildThresholdPresetButton(
+                                          'Relaxed (50%)',
+                                          0.5,
+                                        ),
                                       ],
                                     ),
 
@@ -756,7 +958,9 @@ class _CeilingPendantSpeakerLayoutWidgetState extends State<CeilingPendantSpeake
                                           : '• Relaxed: Allows speakers closer to walls, more coverage',
                                       style: TextStyle(
                                         fontSize: 11,
-                                        color: Colors.orange.withValues(alpha: 0.7),
+                                        color: Colors.orange.withValues(
+                                          alpha: 0.7,
+                                        ),
                                         fontStyle: FontStyle.italic,
                                       ),
                                     ),
@@ -768,25 +972,36 @@ class _CeilingPendantSpeakerLayoutWidgetState extends State<CeilingPendantSpeake
                               SizedBox(
                                 width: double.infinity,
                                 child: ElevatedButton(
-                                  onPressed: _isCalculating ? null : _calculatePlacement,
+                                  onPressed:
+                                      _isCalculating
+                                          ? null
+                                          : _calculatePlacement,
                                   style: ElevatedButton.styleFrom(
-                                    padding: const EdgeInsets.symmetric(vertical: 16),
+                                    padding: const EdgeInsets.symmetric(
+                                      vertical: 16,
+                                    ),
                                   ),
                                   child:
                                       _isCalculating
                                           ? const Row(
-                                            mainAxisAlignment: MainAxisAlignment.center,
+                                            mainAxisAlignment:
+                                                MainAxisAlignment.center,
                                             children: <Widget>[
                                               SizedBox(
                                                 width: 20,
                                                 height: 20,
-                                                child: CircularProgressIndicator(strokeWidth: 2),
+                                                child:
+                                                    CircularProgressIndicator(
+                                                      strokeWidth: 2,
+                                                    ),
                                               ),
                                               SizedBox(width: 8),
                                               Text('Calculating...'),
                                             ],
                                           )
-                                          : const Text('Calculate Speaker Placement'),
+                                          : const Text(
+                                            'Calculate Speaker Placement',
+                                          ),
                                 ),
                               ),
                             ],
@@ -807,7 +1022,10 @@ class _CeilingPendantSpeakerLayoutWidgetState extends State<CeilingPendantSpeake
                         children: <Widget>[
                           const Text(
                             'Calculation Results',
-                            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
                           const SizedBox(height: 16),
                           Expanded(
@@ -846,6 +1064,7 @@ class _CeilingPendantSpeakerLayoutWidgetState extends State<CeilingPendantSpeake
     bool autoRecalculate = false,
   }) {
     return FusionTextFormField(
+      semanticId: 'ceiling_pendant_speaker_layout_number_field',
       controller: controller,
       keyboardType: const TextInputType.numberWithOptions(decimal: true),
       title: label,
@@ -919,8 +1138,14 @@ class _CeilingPendantSpeakerLayoutWidgetState extends State<CeilingPendantSpeake
       style: ElevatedButton.styleFrom(
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
         minimumSize: const Size(60, 28),
-        backgroundColor: (_boundaryOverlapThreshold - threshold).abs() < 0.001 ? Theme.of(context).primaryColor : null,
-        foregroundColor: (_boundaryOverlapThreshold - threshold).abs() < 0.001 ? Colors.white : null,
+        backgroundColor:
+            (_boundaryOverlapThreshold - threshold).abs() < 0.001
+                ? Theme.of(context).primaryColor
+                : null,
+        foregroundColor:
+            (_boundaryOverlapThreshold - threshold).abs() < 0.001
+                ? Colors.white
+                : null,
       ),
       child: Text(
         label,
@@ -936,11 +1161,15 @@ class _CeilingPendantSpeakerLayoutWidgetState extends State<CeilingPendantSpeake
     final String cleaned = input.trim();
 
     // Use regex to find coordinate pairs in the format (x,y)
-    final RegExp regex = RegExp(r'\(\s*([+-]?\d*\.?\d+)\s*,\s*([+-]?\d*\.?\d+)\s*\)');
+    final RegExp regex = RegExp(
+      r'\(\s*([+-]?\d*\.?\d+)\s*,\s*([+-]?\d*\.?\d+)\s*\)',
+    );
     final Iterable<RegExpMatch> matches = regex.allMatches(cleaned);
 
     if (matches.isEmpty) {
-      throw const FormatException('No valid coordinate pairs found. Use format: (x,y), (x,y), ...');
+      throw const FormatException(
+        'No valid coordinate pairs found. Use format: (x,y), (x,y), ...',
+      );
     }
 
     for (final RegExpMatch match in matches) {
@@ -950,7 +1179,9 @@ class _CeilingPendantSpeakerLayoutWidgetState extends State<CeilingPendantSpeake
     }
 
     if (points.length < 3) {
-      throw const FormatException('At least 3 coordinate pairs are required to form a room');
+      throw const FormatException(
+        'At least 3 coordinate pairs are required to form a room',
+      );
     }
 
     return points;
@@ -974,20 +1205,44 @@ class _CeilingPendantSpeakerLayoutWidgetState extends State<CeilingPendantSpeake
                     style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 12),
-                  _buildSummaryRow('Number of Speakers:', '${_result!.speakerPositions.length}'),
-                  _buildSummaryRow('Grid Spacing:', '${_result!.gridSpacing.toStringAsFixed(2)} m'),
+                  _buildSummaryRow(
+                    'Number of Speakers:',
+                    '${_result!.speakerPositions.length}',
+                  ),
+                  _buildSummaryRow(
+                    'Grid Spacing:',
+                    '${_result!.gridSpacing.toStringAsFixed(2)} m',
+                  ),
 
                   // Show origin information based on whether custom offset is used
                   if (_result!.customOriginOffset != null) ...<Widget>[
-                    _buildSummaryRow('Base Centroid:', '${_result!.baseCentroid}'),
-                    _buildSummaryRow('Custom Offset:', '${_result!.customOriginOffset}'),
-                    _buildSummaryRow('Effective Origin:', '${_result!.centroid}'),
+                    _buildSummaryRow(
+                      'Base Centroid:',
+                      '${_result!.baseCentroid}',
+                    ),
+                    _buildSummaryRow(
+                      'Custom Offset:',
+                      '${_result!.customOriginOffset}',
+                    ),
+                    _buildSummaryRow(
+                      'Effective Origin:',
+                      '${_result!.centroid}',
+                    ),
                   ] else ...<Widget>[
-                    _buildSummaryRow('Origin (Centroid):', '${_result!.centroid}'),
+                    _buildSummaryRow(
+                      'Origin (Centroid):',
+                      '${_result!.centroid}',
+                    ),
                   ],
 
-                  _buildSummaryRow('Distance:', '${_result!.distance.toStringAsFixed(2)} m'),
-                  _buildSummaryRow('Boundary Threshold:', '${(_boundaryOverlapThreshold * 100).toStringAsFixed(0)}%'),
+                  _buildSummaryRow(
+                    'Distance:',
+                    '${_result!.distance.toStringAsFixed(2)} m',
+                  ),
+                  _buildSummaryRow(
+                    'Boundary Threshold:',
+                    '${(_boundaryOverlapThreshold * 100).toStringAsFixed(0)}%',
+                  ),
                 ],
               ),
             ),
@@ -1011,7 +1266,11 @@ class _CeilingPendantSpeakerLayoutWidgetState extends State<CeilingPendantSpeake
                   children: <Widget>[
                     Row(
                       children: <Widget>[
-                        Icon(Icons.info_outline, color: Colors.blue.withValues(alpha: 0.7), size: 16),
+                        Icon(
+                          Icons.info_outline,
+                          color: Colors.blue.withValues(alpha: 0.7),
+                          size: 16,
+                        ),
                         const SizedBox(width: 8),
                         Text(
                           'Total grid positions generated: ${_allGridPoints!.length}',
@@ -1027,7 +1286,9 @@ class _CeilingPendantSpeakerLayoutWidgetState extends State<CeilingPendantSpeake
                           children: <Widget>[
                             for (int i = 0; i < _allGridPoints!.length; i++)
                               Padding(
-                                padding: const EdgeInsets.symmetric(vertical: 2.0),
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 2.0,
+                                ),
                                 child: Row(
                                   children: <Widget>[
                                     Container(
@@ -1037,7 +1298,14 @@ class _CeilingPendantSpeakerLayoutWidgetState extends State<CeilingPendantSpeake
                                         color:
                                             _result!.speakerPositions.any(
                                                   (Point2D validPos) =>
-                                                      (_allGridPoints![i].x - validPos.x).abs() < 0.001 && (_allGridPoints![i].y - validPos.y).abs() < 0.001,
+                                                      (_allGridPoints![i].x -
+                                                                  validPos.x)
+                                                              .abs() <
+                                                          0.001 &&
+                                                      (_allGridPoints![i].y -
+                                                                  validPos.y)
+                                                              .abs() <
+                                                          0.001,
                                                 )
                                                 ? Colors.green
                                                 : Colors.red,
@@ -1047,7 +1315,14 @@ class _CeilingPendantSpeakerLayoutWidgetState extends State<CeilingPendantSpeake
                                         child: Icon(
                                           _result!.speakerPositions.any(
                                                 (Point2D validPos) =>
-                                                    (_allGridPoints![i].x - validPos.x).abs() < 0.001 && (_allGridPoints![i].y - validPos.y).abs() < 0.001,
+                                                    (_allGridPoints![i].x -
+                                                                validPos.x)
+                                                            .abs() <
+                                                        0.001 &&
+                                                    (_allGridPoints![i].y -
+                                                                validPos.y)
+                                                            .abs() <
+                                                        0.001,
                                               )
                                               ? Icons.check
                                               : Icons.close,
@@ -1060,13 +1335,23 @@ class _CeilingPendantSpeakerLayoutWidgetState extends State<CeilingPendantSpeake
                                     Expanded(
                                       child: Text(
                                         'Grid ${i + 1}: (${_allGridPoints![i].x.toStringAsFixed(2)}, ${_allGridPoints![i].y.toStringAsFixed(2)})',
-                                        style: const TextStyle(fontFamily: 'monospace', fontSize: 12),
+                                        style: const TextStyle(
+                                          fontFamily: 'monospace',
+                                          fontSize: 12,
+                                        ),
                                       ),
                                     ),
                                     Text(
                                       _result!.speakerPositions.any(
                                             (Point2D validPos) =>
-                                                (_allGridPoints![i].x - validPos.x).abs() < 0.001 && (_allGridPoints![i].y - validPos.y).abs() < 0.001,
+                                                (_allGridPoints![i].x -
+                                                            validPos.x)
+                                                        .abs() <
+                                                    0.001 &&
+                                                (_allGridPoints![i].y -
+                                                            validPos.y)
+                                                        .abs() <
+                                                    0.001,
                                           )
                                           ? 'VALID'
                                           : 'FILTERED',
@@ -1076,10 +1361,21 @@ class _CeilingPendantSpeakerLayoutWidgetState extends State<CeilingPendantSpeake
                                         color:
                                             _result!.speakerPositions.any(
                                                   (Point2D validPos) =>
-                                                      (_allGridPoints![i].x - validPos.x).abs() < 0.001 && (_allGridPoints![i].y - validPos.y).abs() < 0.001,
+                                                      (_allGridPoints![i].x -
+                                                                  validPos.x)
+                                                              .abs() <
+                                                          0.001 &&
+                                                      (_allGridPoints![i].y -
+                                                                  validPos.y)
+                                                              .abs() <
+                                                          0.001,
                                                 )
-                                                ? Colors.green.withValues(alpha: 0.7)
-                                                : Colors.red.withValues(alpha: 0.7),
+                                                ? Colors.green.withValues(
+                                                  alpha: 0.7,
+                                                )
+                                                : Colors.red.withValues(
+                                                  alpha: 0.7,
+                                                ),
                                       ),
                                     ),
                                   ],
@@ -1112,7 +1408,11 @@ class _CeilingPendantSpeakerLayoutWidgetState extends State<CeilingPendantSpeake
                   children: <Widget>[
                     Row(
                       children: <Widget>[
-                        Icon(Icons.warning_outlined, color: Colors.red.withValues(alpha: 0.7), size: 16),
+                        Icon(
+                          Icons.warning_outlined,
+                          color: Colors.red.withValues(alpha: 0.7),
+                          size: 16,
+                        ),
                         const SizedBox(width: 8),
                         Text(
                           'Positions removed due to boundary filtering: ${_removedPoints!.length}',
@@ -1127,11 +1427,16 @@ class _CeilingPendantSpeakerLayoutWidgetState extends State<CeilingPendantSpeake
                       children: <Widget>[
                         for (int i = 0; i < _removedPoints!.length; i++)
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 4,
+                            ),
                             decoration: BoxDecoration(
                               color: Colors.red.withValues(alpha: 0.1),
                               borderRadius: BorderRadius.circular(12),
-                              border: Border.all(color: Colors.red.withValues(alpha: 0.3)),
+                              border: Border.all(
+                                color: Colors.red.withValues(alpha: 0.3),
+                              ),
                             ),
                             child: Text(
                               '(${_removedPoints![i].x.toStringAsFixed(2)}, ${_removedPoints![i].y.toStringAsFixed(2)})',
@@ -1264,7 +1569,10 @@ class _CeilingPendantSpeakerLayoutWidgetState extends State<CeilingPendantSpeake
     final double roomLength = double.parse(_roomLengthController.text);
 
     // Create room geometry - for now using rectangular, but can be extended to support custom polygons
-    final List<Point2D> roomGeometry = _generateRoomGeometry(roomWidth, roomLength);
+    final List<Point2D> roomGeometry = _generateRoomGeometry(
+      roomWidth,
+      roomLength,
+    );
 
     return Column(
       children: <Widget>[
@@ -1273,7 +1581,10 @@ class _CeilingPendantSpeakerLayoutWidgetState extends State<CeilingPendantSpeake
           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
           children: <Widget>[
             _buildLegendItem(
-              icon: _selectedSpeakerType == SpeakerType.ceiling ? Icons.speaker : Icons.campaign,
+              icon:
+                  _selectedSpeakerType == SpeakerType.ceiling
+                      ? Icons.speaker
+                      : Icons.campaign,
               label: _getSpeakerTypeLabel(_selectedSpeakerType),
               color: Colors.blue,
             ),
@@ -1344,11 +1655,18 @@ class _CeilingPendantSpeakerLayoutWidgetState extends State<CeilingPendantSpeake
                 children: <Widget>[
                   Row(
                     children: <Widget>[
-                      Icon(Icons.info_outline, color: Colors.green.withValues(alpha: 0.7), size: 16),
+                      Icon(
+                        Icons.info_outline,
+                        color: Colors.green.withValues(alpha: 0.7),
+                        size: 16,
+                      ),
                       const SizedBox(width: 8),
                       const Text(
                         'Custom Room Coordinates',
-                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
+                        ),
                       ),
                     ],
                   ),
@@ -1402,7 +1720,8 @@ class _CeilingPendantSpeakerLayoutWidgetState extends State<CeilingPendantSpeake
   }
 
   List<Point2D> _generateRoomGeometry(double width, double length) {
-    if (_selectedRoomType == RoomType.asymmetrical && _roomCoordinatesController.text.isNotEmpty) {
+    if (_selectedRoomType == RoomType.asymmetrical &&
+        _roomCoordinatesController.text.isNotEmpty) {
       try {
         return _parseRoomCoordinates(_roomCoordinatesController.text);
       } catch (e) {
@@ -1473,7 +1792,10 @@ class _CeilingPendantSpeakerLayoutWidgetState extends State<CeilingPendantSpeake
               _buildStatItem(
                 icon: Icons.settings_input_antenna,
                 label: 'Coverage',
-                value: _getCoveragePreferenceLabel(_selectedCoveragePreference).split(' ')[0],
+                value:
+                    _getCoveragePreferenceLabel(
+                      _selectedCoveragePreference,
+                    ).split(' ')[0],
               ),
             ],
           ),
@@ -1654,9 +1976,11 @@ class RoomLayoutPainter extends CustomPainter {
     final double scaledWidth = roomWidth * scaleFactor;
     final double scaledHeight = roomHeight * scaleFactor;
 
-    final double offsetX = (size.width - scaledWidth) / 2 - bounds.minX * scaleFactor;
+    final double offsetX =
+        (size.width - scaledWidth) / 2 - bounds.minX * scaleFactor;
     // Adjust Y offset for bottom-left origin coordinate system
-    final double offsetY = (size.height - scaledHeight) / 2 - bounds.minY * scaleFactor;
+    final double offsetY =
+        (size.height - scaledHeight) / 2 - bounds.minY * scaleFactor;
 
     return Offset(offsetX, offsetY);
   }
@@ -1677,11 +2001,19 @@ class RoomLayoutPainter extends CustomPainter {
 
     // Create path from room geometry points
     if (roomGeometry.isNotEmpty) {
-      final Offset firstPoint = _transformPoint(roomGeometry.first, scaleFactor, offset);
+      final Offset firstPoint = _transformPoint(
+        roomGeometry.first,
+        scaleFactor,
+        offset,
+      );
       path.moveTo(firstPoint.dx, firstPoint.dy);
 
       for (int i = 1; i < roomGeometry.length; i++) {
-        final Offset point = _transformPoint(roomGeometry[i], scaleFactor, offset);
+        final Offset point = _transformPoint(
+          roomGeometry[i],
+          scaleFactor,
+          offset,
+        );
         path.lineTo(point.dx, point.dy);
       }
 
@@ -1706,15 +2038,31 @@ class RoomLayoutPainter extends CustomPainter {
 
     // Draw vertical lines
     for (double x = bounds.minX; x <= bounds.maxX; x += gridSpacing) {
-      final Offset startPoint = _transformPoint(Point2D(x, bounds.minY), scaleFactor, offset);
-      final Offset endPoint = _transformPoint(Point2D(x, bounds.maxY), scaleFactor, offset);
+      final Offset startPoint = _transformPoint(
+        Point2D(x, bounds.minY),
+        scaleFactor,
+        offset,
+      );
+      final Offset endPoint = _transformPoint(
+        Point2D(x, bounds.maxY),
+        scaleFactor,
+        offset,
+      );
       canvas.drawLine(startPoint, endPoint, paint);
     }
 
     // Draw horizontal lines
     for (double y = bounds.minY; y <= bounds.maxY; y += gridSpacing) {
-      final Offset startPoint = _transformPoint(Point2D(bounds.minX, y), scaleFactor, offset);
-      final Offset endPoint = _transformPoint(Point2D(bounds.maxX, y), scaleFactor, offset);
+      final Offset startPoint = _transformPoint(
+        Point2D(bounds.minX, y),
+        scaleFactor,
+        offset,
+      );
+      final Offset endPoint = _transformPoint(
+        Point2D(bounds.maxX, y),
+        scaleFactor,
+        offset,
+      );
       canvas.drawLine(startPoint, endPoint, paint);
     }
   }
@@ -1732,7 +2080,11 @@ class RoomLayoutPainter extends CustomPainter {
 
     for (double x = bounds.minX; x <= bounds.maxX; x += gridSpacing) {
       for (double y = bounds.minY; y <= bounds.maxY; y += gridSpacing * 0.866) {
-        final Offset centerPoint = _transformPoint(Point2D(x, y), scaleFactor, offset);
+        final Offset centerPoint = _transformPoint(
+          Point2D(x, y),
+          scaleFactor,
+          offset,
+        );
         final double radius = gridSpacing * scaleFactor * 0.3;
 
         // Draw small hexagon outline
@@ -1777,7 +2129,11 @@ class RoomLayoutPainter extends CustomPainter {
 
   void _drawCentroid(Canvas canvas, double scaleFactor, Offset offset) {
     // Draw base centroid (always present)
-    final Offset baseCenterPoint = _transformPoint(baseCentroid, scaleFactor, offset);
+    final Offset baseCenterPoint = _transformPoint(
+      baseCentroid,
+      scaleFactor,
+      offset,
+    );
 
     final Paint basePaint =
         Paint()
@@ -1805,7 +2161,11 @@ class RoomLayoutPainter extends CustomPainter {
 
     // Draw effective origin (if different from base centroid)
     if (customOriginOffset != null) {
-      final Offset effectiveCenter = _transformPoint(centroid, scaleFactor, offset);
+      final Offset effectiveCenter = _transformPoint(
+        centroid,
+        scaleFactor,
+        offset,
+      );
 
       final Paint paint =
           Paint()
@@ -1854,7 +2214,8 @@ class RoomLayoutPainter extends CustomPainter {
     final Offset direction = end - start;
     final double length = direction.distance;
 
-    if (length < arrowLength * 2) return; // Don't draw arrow if line is too short
+    if (length < arrowLength * 2)
+      return; // Don't draw arrow if line is too short
 
     final Offset unitDirection = direction / length;
 
@@ -1932,7 +2293,11 @@ class RoomLayoutPainter extends CustomPainter {
           ..strokeWidth = 2.0;
 
     for (int i = 0; i < speakerPositions.length; i++) {
-      final Offset center = _transformPoint(speakerPositions[i], scaleFactor, offset);
+      final Offset center = _transformPoint(
+        speakerPositions[i],
+        scaleFactor,
+        offset,
+      );
 
       // Draw speaker circle
       canvas.drawCircle(center, 12, paint);
@@ -1962,7 +2327,12 @@ class RoomLayoutPainter extends CustomPainter {
     }
   }
 
-  void _drawDimensions(Canvas canvas, double scaleFactor, Offset offset, Size size) {
+  void _drawDimensions(
+    Canvas canvas,
+    double scaleFactor,
+    Offset offset,
+    Size size,
+  ) {
     final RoomBounds bounds = _calculateBounds();
     final double roomWidth = bounds.maxX - bounds.minX;
     final double roomHeight = bounds.maxY - bounds.minY;
@@ -1982,7 +2352,10 @@ class RoomLayoutPainter extends CustomPainter {
     );
 
     textPainter.layout();
-    textPainter.paint(canvas, Offset(size.width / 2 - textPainter.width / 2, 10));
+    textPainter.paint(
+      canvas,
+      Offset(size.width / 2 - textPainter.width / 2, 10),
+    );
 
     // Draw height dimension (rotated)
     final TextPainter heightPainter = TextPainter(

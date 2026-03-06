@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/core/service_locator.dart';
-import 'package:fusion_launcher/features/processing_block/view/widgets/pb_slider.dart';
 import 'package:fusion_launcher/features/zone_functions/widgets/horizontal_scroll_effect_wrapper.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
@@ -31,12 +30,14 @@ class ZoneSubZoneBuilderWidget extends StatefulWidget {
   });
 
   @override
-  State<ZoneSubZoneBuilderWidget> createState() => _ZoneSubZoneSettingBuilderState();
+  State<ZoneSubZoneBuilderWidget> createState() =>
+      _ZoneSubZoneSettingBuilderState();
 }
 
 class _ZoneSubZoneSettingBuilderState extends State<ZoneSubZoneBuilderWidget> {
   late final ScrollController _scrollController = ScrollController();
-  late final ProjectViewModel projectViewModel = serviceLocator<ProjectViewModel>();
+  late final ProjectViewModel projectViewModel =
+      serviceLocator<ProjectViewModel>();
 
   late List<SubZone> subZones;
   late Zone? zone;
@@ -46,7 +47,8 @@ class _ZoneSubZoneSettingBuilderState extends State<ZoneSubZoneBuilderWidget> {
   void initState() {
     super.initState();
     subZones = projectViewModel.getSubZonesForZone(parentZoneId: widget.zoneID);
-    if (subZones.isEmpty) zone = projectViewModel.getZone(zoneId: widget.zoneID);
+    if (subZones.isEmpty)
+      zone = projectViewModel.getZone(zoneId: widget.zoneID);
     isSubZonesAvailable = subZones.isNotEmpty;
   }
 
@@ -82,14 +84,21 @@ class _ZoneSubZoneSettingBuilderState extends State<ZoneSubZoneBuilderWidget> {
               shrinkWrap: true,
               scrollDirection: Axis.horizontal,
               physics: const ClampingScrollPhysics(),
-              separatorBuilder: (BuildContext context, int index) => Divider(color: context.colorScheme.strokeLight, height: 0),
+              separatorBuilder:
+                  (BuildContext context, int index) => Divider(
+                    color: context.colorScheme.strokeLight,
+                    height: 0,
+                  ),
               itemBuilder: (BuildContext context, int index) {
-                final SubZone? subZone = isSubZonesAvailable ? subZones[index] : null;
+                final SubZone? subZone =
+                    isSubZonesAvailable ? subZones[index] : null;
 
-                final String? title = isSubZonesAvailable ? subZone!.name : zone?.name;
+                final String? title =
+                    isSubZonesAvailable ? subZone!.name : zone?.name;
                 if (title == null) return const SizedBox.shrink();
 
-                final String zoneOrSubzoneID = isSubZonesAvailable ? subZone!.id : zone!.id;
+                final String zoneOrSubzoneID =
+                    isSubZonesAvailable ? subZone!.id : zone!.id;
 
                 final bool isAllowMute = widget.isAllowMute(zoneOrSubzoneID);
 
@@ -112,7 +121,10 @@ class _ZoneSubZoneSettingBuilderState extends State<ZoneSubZoneBuilderWidget> {
                           style: Theme.of(context).textTheme.labelMedium,
                         ),
                       ),
-                      Divider(color: context.colorScheme.strokeLight, height: 0),
+                      Divider(
+                        color: context.colorScheme.strokeLight,
+                        height: 0,
+                      ),
                       const SizedBox(height: 10),
                       Expanded(
                         child: Column(
@@ -121,32 +133,57 @@ class _ZoneSubZoneSettingBuilderState extends State<ZoneSubZoneBuilderWidget> {
                               child: VerticalRangeSelectionSlider(
                                 min: -60,
                                 max: 12,
-                                lowerValue: widget.getLowerGain(zoneOrSubzoneID),
-                                upperValue: widget.getUpperGain(zoneOrSubzoneID),
-                                onLowerChanged: (num value) => widget.onLowerRangeChanged(zoneOrSubzoneID, value),
-                                onUpperChanged: (num value) => widget.onUpperRangeChanged(zoneOrSubzoneID, value),
+                                lowerValue: widget.getLowerGain(
+                                  zoneOrSubzoneID,
+                                ),
+                                upperValue: widget.getUpperGain(
+                                  zoneOrSubzoneID,
+                                ),
+                                onLowerChanged:
+                                    (num value) => widget.onLowerRangeChanged(
+                                      zoneOrSubzoneID,
+                                      value,
+                                    ),
+                                onUpperChanged:
+                                    (num value) => widget.onUpperRangeChanged(
+                                      zoneOrSubzoneID,
+                                      value,
+                                    ),
                               ),
                             ),
                             Padding(
                               padding: const EdgeInsets.symmetric(vertical: 10),
-                              child: Divider(color: context.colorScheme.strokeLight, height: 0),
+                              child: Divider(
+                                color: context.colorScheme.strokeLight,
+                                height: 0,
+                              ),
                             ),
                             Padding(
                               padding: const EdgeInsets.symmetric(vertical: 10),
                               child: Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceEvenly,
                                 children: <Widget>[
                                   Flexible(
                                     child: FusionAppText(
                                       text: "Allow mute",
-                                      style: context.textTheme.labelMedium?.copyWith(
-                                        color: context.colorScheme.textSecondary,
-                                      ),
+                                      style: context.textTheme.labelMedium
+                                          ?.copyWith(
+                                            color:
+                                                context
+                                                    .colorScheme
+                                                    .textSecondary,
+                                          ),
                                     ),
                                   ),
                                   FusionCheckbox(
+                                    semanticId: 'zone_subzone_allow_mute',
                                     value: isAllowMute,
-                                    onChanged: () => widget.onAllowMuteChanged(zoneOrSubzoneID, !isAllowMute),
+                                    onChanged:
+                                        () => widget.onAllowMuteChanged(
+                                          zoneOrSubzoneID,
+                                          !isAllowMute,
+                                        ),
                                   ),
                                 ],
                               ),

@@ -102,7 +102,10 @@ class _SchedulingPageState extends State<SchedulingPage> {
               decoration: BoxDecoration(
                 color: context.colorScheme.elevation1.withAlpha(120),
                 border: Border(
-                  top: BorderSide(color: context.colorScheme.elevation2, width: 1),
+                  top: BorderSide(
+                    color: context.colorScheme.elevation2,
+                    width: 1,
+                  ),
                 ),
               ),
               child: Row(
@@ -115,7 +118,10 @@ class _SchedulingPageState extends State<SchedulingPage> {
                         width: 20,
                       ),
                       SemanticHelper.button(
-                        testId: SemanticHelper.createTestId(SemanticTypes.button, "scheduler_tab_button"),
+                        testId: SemanticHelper.createTestId(
+                          SemanticTypes.button,
+                          "scheduler_tab_button",
+                        ),
                         child: InkWell(
                           onTap: () {
                             setState(() {
@@ -133,7 +139,10 @@ class _SchedulingPageState extends State<SchedulingPage> {
                         width: 10,
                       ),
                       SemanticHelper.button(
-                        testId: SemanticHelper.createTestId(SemanticTypes.button, "timeline_tab_button"),
+                        testId: SemanticHelper.createTestId(
+                          SemanticTypes.button,
+                          "timeline_tab_button",
+                        ),
                         child: InkWell(
                           onTap: () {
                             setState(() {
@@ -158,6 +167,7 @@ class _SchedulingPageState extends State<SchedulingPage> {
                           return SizedBox(
                             width: 200,
                             child: FusionTextField(
+                              semanticFieldId: 'scheduler_search_field',
                               hintText: "Search",
                               autofocus: true,
                               prefixIcon: const Icon(
@@ -166,7 +176,10 @@ class _SchedulingPageState extends State<SchedulingPage> {
                                 color: Colors.black,
                               ),
                               suffixIcon: SemanticHelper.button(
-                                testId: SemanticHelper.createTestId(SemanticTypes.button, "search_close_button"),
+                                testId: SemanticHelper.createTestId(
+                                  SemanticTypes.button,
+                                  "search_close_button",
+                                ),
                                 child: InkWell(
                                   onTap: () {
                                     context.read<SchedulerViewmodel>().idle();
@@ -179,7 +192,9 @@ class _SchedulingPageState extends State<SchedulingPage> {
                                 ),
                               ),
                               onChanged: (String query) {
-                                context.read<SchedulerViewmodel>().searchSchedules(query);
+                                context
+                                    .read<SchedulerViewmodel>()
+                                    .searchSchedules(query);
                               },
                             ),
                           );
@@ -187,10 +202,15 @@ class _SchedulingPageState extends State<SchedulingPage> {
                         return Row(
                           children: <Widget>[
                             SemanticHelper.button(
-                              testId: SemanticHelper.createTestId(SemanticTypes.button, "search_button"),
+                              testId: SemanticHelper.createTestId(
+                                SemanticTypes.button,
+                                "search_button",
+                              ),
                               child: InkWell(
                                 onTap: () {
-                                  BlocProvider.of<SchedulerViewmodel>(context).searchSchedules("");
+                                  BlocProvider.of<SchedulerViewmodel>(
+                                    context,
+                                  ).searchSchedules("");
                                 },
                                 child: const _ActionButton(
                                   title: "Search",
@@ -258,11 +278,19 @@ class _TabHeader extends StatelessWidget {
   final bool isSelected;
   @override
   Widget build(BuildContext context) {
-    final Color fgColor = isSelected ? context.colorScheme.textPrimary : context.colorScheme.textSecondary;
+    final Color fgColor =
+        isSelected
+            ? context.colorScheme.textPrimary
+            : context.colorScheme.textSecondary;
     return AnimatedContainer(
       duration: const Duration(milliseconds: 200),
       decoration: BoxDecoration(
-        border: Border(bottom: BorderSide(color: isSelected ? fgColor : Colors.transparent, width: 2)),
+        border: Border(
+          bottom: BorderSide(
+            color: isSelected ? fgColor : Colors.transparent,
+            width: 2,
+          ),
+        ),
       ),
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 0),

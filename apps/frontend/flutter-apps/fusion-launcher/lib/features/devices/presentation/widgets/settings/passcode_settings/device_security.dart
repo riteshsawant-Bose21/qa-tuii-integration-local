@@ -33,9 +33,11 @@ class _SecuritySectionState extends State<SecuritySection> {
 
   // Controllers
   final TextEditingController _setupController = TextEditingController();
-  final TextEditingController _currentPasscodeController = TextEditingController(text: "******");
+  final TextEditingController _currentPasscodeController =
+      TextEditingController(text: "******");
   final TextEditingController _newPasscodeController = TextEditingController();
-  final TextEditingController _confirmPasscodeController = TextEditingController();
+  final TextEditingController _confirmPasscodeController =
+      TextEditingController();
 
   @override
   void dispose() {
@@ -114,8 +116,12 @@ class _SecuritySectionState extends State<SecuritySection> {
                   ),
                   const SizedBox(width: 16),
                   FusionNeumorphicButton(
+                    semanticId: 'bluetooth_settings_save_button',
                     borderRadius: 6,
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 8,
+                    ),
                     margin: EdgeInsets.zero,
                     text: "Save",
                     onTap: () {
@@ -181,8 +187,12 @@ class _SecuritySectionState extends State<SecuritySection> {
                   PasscodeInputField(controller: _confirmPasscodeController),
                   const SizedBox(width: 16),
                   FusionNeumorphicButton(
+                    semanticId: 'bluetooth_settings_save_button',
                     borderRadius: 6,
-                    padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 8),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 32,
+                      vertical: 8,
+                    ),
                     margin: EdgeInsets.zero,
                     text: "Save",
                     onTap: _handleSaveNewPasscode,
