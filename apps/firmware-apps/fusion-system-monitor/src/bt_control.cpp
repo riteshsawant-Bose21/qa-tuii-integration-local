@@ -5,6 +5,7 @@
 
 #include <chrono>
 #include <cstring>
+#include <cstdlib>
 #include <filesystem>
 #include <fstream>
 #include <string>
@@ -24,6 +25,7 @@ private:
     bool ensure_adapter();
     bool register_agent();
     bool set_adapter_properties();
+    bool set_adapter_class();
     void handle_message(DBusMessage *msg);
 
     void reply_ok(DBusMessage *msg);
@@ -50,6 +52,7 @@ private:
     std::chrono::steady_clock::time_point last_adapter_refresh;
     std::chrono::steady_clock::time_point last_adapter_warn;
     bool agent_registered;
+    bool class_set;
 
     static constexpr const char *kAgentPath = "/com/bosepro/FusionBtAgent";
     static constexpr const char *kBluezBus = "org.bluez";
@@ -62,7 +65,8 @@ MODULE_REGISTER(BtControl, "bt_control");
 BtControl::BtControl(const bosepro::BlockConfiguration &configuration)
     : bosepro::Module(configuration),
       conn(nullptr),
-      agent_registered(false)
+      agent_registered(false),
+      class_set(false)
 {
     last_adapter_refresh = std::chrono::steady_clock::time_point::min();
     last_adapter_warn = std::chrono::steady_clock::time_point::min();
@@ -257,8 +261,26 @@ bool BtControl::set_adapter_properties()
     ok &= set_property_bool(adapter_path.c_str(), "org.bluez.Adapter1", "Discoverable", true);
     ok &= set_property_uint32(adapter_path.c_str(), "org.bluez.Adapter1", "PairableTimeout", 0);
     ok &= set_property_uint32(adapter_path.c_str(), "org.bluez.Adapter1", "DiscoverableTimeout", 0);
+    ok &= set_adapter_class();
 
     return ok;
+}
+
+bool BtControl::set_adapter_class()
+{
+    if (class_set) {
+        return true;
+    }
+
+    int rc = std::system("hciconfig hci0 class 0x240414");
+    if (rc == 0) {
+        class_set = true;
+        SPDLOG_INFO("Bluetooth class set to 0x240414");
+        return true;
+    }
+
+    SPDLOG_WARN("Failed to set Bluetooth class (hciconfig rc={})", rc);
+    return false;
 }
 
 void BtControl::handle_message(DBusMessage *msg)
@@ -278,8 +300,13 @@ void BtControl::handle_message(DBusMessage *msg)
         return;
     }
 
-    if (std::strcmp(member, "Release") == 0 ||
-        std::strcmp(member, "Cancel") == 0 ||
+    if (std::strcmp(member, "Release") == 0) {
+        agent_registered = false;
+        reply_ok(msg);
+        return;
+    }
+
+    if (std::strcmp(member, "Cancel") == 0 ||
         std::strcmp(member, "DisplayPasskey") == 0 ||
         std::strcmp(member, "DisplayPinCode") == 0) {
         reply_ok(msg);
