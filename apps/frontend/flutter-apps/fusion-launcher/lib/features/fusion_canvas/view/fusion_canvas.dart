@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/features/fusion_canvas/state/fusion_tool_state.dart';
 import 'package:fusion_launcher/features/fusion_canvas/state/tools/select_tool_state.dart';
@@ -169,6 +170,9 @@ class FusionCanvas extends StatelessWidget {
 
                               child: CanvasControlWrapper(
                                 painter: fusionCanvasPainter,
+                                onKeyEvent: (KeyEvent event) {
+                                  _handleDeleteKeyEvent(context, event);
+                                },
                                 child: CustomPaint(
                                   painter: fusionCanvasPainter,
                                   child: const SizedBox(
@@ -192,6 +196,49 @@ class FusionCanvas extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  void _handleDeleteKeyEvent(BuildContext context, KeyEvent event) {
+    if (event is! KeyDownEvent) {
+      return;
+    }
+
+    final LogicalKeyboardKey key = event.logicalKey;
+    final bool isDeleteKey = key == LogicalKeyboardKey.delete || key == LogicalKeyboardKey.backspace;
+    if (!isDeleteKey) {
+      return;
+    }
+
+    final FusionCanvasToolViewModel toolVm = context.read<FusionCanvasToolViewModel>();
+    final Set<String> selectedLayerIds = toolVm.selectedLayerIds;
+    if (selectedLayerIds.isEmpty) {
+      return;
+    }
+
+    final String layerId = selectedLayerIds.first;
+    final FusionBasePainter? selectedPainter = elements.cast<FusionBasePainter?>().firstWhere(
+      (FusionBasePainter? painter) => painter?.id == layerId,
+      orElse: () => null,
+    );
+
+    if (selectedPainter == null) {
+      return;
+    }
+
+    final Set<String> selectedElementIds = toolVm.selectedElementIds;
+    if (selectedPainter is FusionPolygonPainter && selectedElementIds.isNotEmpty) {
+      final List<FusionCanvasPoint> selectedPoints =
+          selectedPainter.polygon.points.where((FusionCanvasPoint point) => selectedElementIds.contains(point.id)).toList();
+
+      if (selectedPoints.isNotEmpty) {
+        toolbarEvents?.onRemovePoints?.call(selectedPainter, selectedPoints);
+        toolVm.syncSelection(<String>{layerId});
+        return;
+      }
+    }
+
+    toolbarEvents?.onDeleteLayer?.call(selectedPainter);
+    toolVm.syncSelection(<String>{});
   }
 }
 

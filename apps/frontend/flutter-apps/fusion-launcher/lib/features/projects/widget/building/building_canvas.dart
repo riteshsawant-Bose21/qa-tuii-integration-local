@@ -243,6 +243,23 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
                                                       );
                                                     }
                                                   },
+                                                  onDeleteLayer: (FusionBasePainter painter) {
+                                                    if (painter is ListeningAreaPainter) {
+                                                      serviceLocator<ProjectViewModel>().removeListeningArea(areaId: painter.listeningArea.id);
+                                                    }
+                                                  },
+                                                  onRemovePoints: (FusionBasePainter painter, List<FusionCanvasPoint> points) {
+                                                    if (painter is ListeningAreaPainter) {
+                                                      final ListeningArea area = painter.listeningArea;
+                                                      final List<FusionCanvasPoint> updatedPoints =
+                                                          area.vertices
+                                                              .where((FusionCanvasPoint v) => points.every((FusionCanvasPoint p) => p.id != v.id))
+                                                              .toList();
+                                                      serviceLocator<ProjectViewModel>().updateListeningArea(
+                                                        area: area.copyWith(vertices: updatedPoints),
+                                                      );
+                                                    }
+                                                  },
                                                   onMovePoints: (FusionBasePainter painter, List<FusionCanvasPoint> points, Offset delta) {
                                                     if (painter is ListeningAreaPainter) {
                                                       final ListeningArea area = painter.listeningArea;

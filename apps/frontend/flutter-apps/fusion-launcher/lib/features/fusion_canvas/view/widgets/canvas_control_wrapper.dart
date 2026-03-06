@@ -20,10 +20,12 @@ class CanvasControlWrapper extends StatelessWidget {
 
     required this.child,
     required this.painter,
+    this.onKeyEvent,
   });
 
   final Widget child;
   final FusionCanvasPainter painter;
+  final ValueChanged<KeyEvent>? onKeyEvent;
 
   @override
   Widget build(BuildContext context) {
@@ -39,6 +41,7 @@ class CanvasControlWrapper extends StatelessWidget {
     return FusionKeyboardWrapper(
       onKeyEvent: (KeyEvent value) {
         context.read<FusionCanvasInputViewModel>().onKeyEvent(value);
+        onKeyEvent?.call(value);
       },
       child: MouseRegion(
         cursor: switch (toolState) {

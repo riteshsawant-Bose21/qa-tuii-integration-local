@@ -107,6 +107,15 @@ class FusionCanvasToolViewModel extends Cubit<FusionToolState> {
     return <String>{};
   }
 
+  /// Get current selected element IDs
+  Set<String> get selectedElementIds {
+    final FusionToolState currentState = state;
+    if (currentState is SelectToolState) {
+      return currentState.selectedElementIds;
+    }
+    return <String>{};
+  }
+
   /// Update selection from external source (sync with provided IDs)
   void syncSelection(Set<String> layerIds) {
     emit(IdleSelectToolState(selectedLayerIds: layerIds));
