@@ -14,6 +14,7 @@ import (
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/api/types"
 	customModel "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/model"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/model/models"
+	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/utils/validation"
 	"github.com/aarondl/sqlboiler/v4/boil"
 	"github.com/aarondl/sqlboiler/v4/queries/qm"
 	"go.uber.org/zap"
@@ -76,6 +77,13 @@ func (s *Service) InsertBundle(ctx context.Context, payload types.NotifyBundleUp
 		return "", fmt.Errorf("failed to marshal manifest: %w", err)
 	}
 
+	// Parse version to extract prerelease information
+	parsedVersion, err := validation.ParseSemanticVersion(payload.Version)
+	if err != nil {
+		logger.Error("Failed to parse bundle version", zap.Error(err), zap.String("version", payload.Version))
+		return "", fmt.Errorf("failed to parse version: %w", err)
+	}
+
 	bundleRecord := &models.Bundle{
 		Version:              payload.Version,
 		Checksum:             payload.Checksum,
@@ -84,6 +92,12 @@ func (s *Service) InsertBundle(ctx context.Context, payload types.NotifyBundleUp
 		MinDesktopAppVersion: payload.MinDesktopAppVersion,
 		ManifestData:         null.JSONFrom(manifestBytes),
 		ApprovalStatus:       models.BundleApprovalStatusEnumPENDING,
+	}
+
+	// Set prerelease fields if present
+	if parsedVersion.PrereleaseFlag != "" {
+		bundleRecord.Prerelease = null.StringFrom(parsedVersion.PrereleaseFlag)
+		bundleRecord.PrereleaseNum = null.IntFrom(parsedVersion.PrereleaseVer)
 	}
 
 	if payload.ReleaseNotes != "" {

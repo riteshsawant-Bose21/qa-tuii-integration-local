@@ -315,6 +315,30 @@ func TestListBundles(t *testing.T) {
 			mockSetup:      func(m *MockFirmwareService) {},
 			expectedStatus: http.StatusBadRequest,
 		},
+		{
+			name:        "internal server error - service failure",
+			queryParams: nil,
+			setupLogger: true,
+			mockSetup: func(m *MockFirmwareService) {
+				m.On("ListBundles", mock.Anything, (*string)(nil), 1, 10).
+					Return(nil, errors.New("db error"))
+			},
+			expectedStatus: http.StatusInternalServerError,
+		},
+		{
+			name:           "internal server error - logger not in context",
+			queryParams:    nil,
+			setupLogger:    false,
+			mockSetup:      func(m *MockFirmwareService) {},
+			expectedStatus: http.StatusInternalServerError,
+		},
+		{
+			name:           "internal server error - logger wrong type",
+			queryParams:    nil,
+			setupLogger:    true,
+			mockSetup:      func(m *MockFirmwareService) {},
+			expectedStatus: http.StatusInternalServerError,
+		},
 	}
 
 	for _, tt := range tests {
@@ -327,6 +351,8 @@ func TestListBundles(t *testing.T) {
 			w, c := setupTestContextWithQueryParams(http.MethodGet, "/firmware/bundles", tt.queryParams)
 			if !tt.setupLogger {
 				c.Keys = map[string]interface{}{}
+			} else if tt.name == "internal server error - logger wrong type" {
+				c.Set("logger", "not-a-logger")
 			}
 
 			h.ListBundles(c)
