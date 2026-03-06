@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:fusion_launcher/features/fusion_canvas/state/fusion_tool_state.dart';
+import 'package:fusion_launcher/features/fusion_canvas/state/tools/select_tool_state.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
 import '../fusion_canvas_painter.dart';
@@ -6,16 +8,22 @@ import 'fusion_rect_painter.dart';
 
 class ListeningAreaPainter extends FusionPolygonPainter {
   final ListeningArea listeningArea;
-  @override
-  final bool isSelected;
-  ListeningAreaPainter({required this.listeningArea, required this.isSelected})
+  ListeningAreaPainter({required this.listeningArea})
     : super(
         polygon: FusionCanvasPolygon(points: listeningArea.vertices, id: listeningArea.id),
       );
 
+  bool _isSelected(FusionCanvasPainter painter) {
+    final FusionToolState toolState = painter.toolState;
+    if (toolState is SelectToolState) {
+      return toolState.isLayerSelected(id);
+    }
+    return false;
+  }
+
   @override
   String toString() {
-    return 'ListeningAreaPainter(name: ${listeningArea.name}, vertices: ${listeningArea.vertices.length}, isSelected: $isSelected)';
+    return 'ListeningAreaPainter(name: ${listeningArea.name}, vertices: ${listeningArea.vertices.length})';
   }
 
   Color getColor(FusionCanvasPainter painter) => painter.context.colorScheme.elevation4;
@@ -57,13 +65,14 @@ class ListeningAreaPainter extends FusionPolygonPainter {
   @override
   Paint getFillPaint(FusionCanvasPainter painter, bool isHovered) {
     final Color color = getColor(painter);
+    final bool selected = _isSelected(painter);
     return Paint()
       ..color =
-          isSelected
-              ? color.withOpacity(0.7)
+          selected
+              ? color.withValues(alpha: 0.7)
               : isHovered
-              ? color.withOpacity(0.5)
-              : color.withOpacity(0.3)
+              ? color.withValues(alpha: 0.5)
+              : color.withValues(alpha: 0.3)
       ..style = PaintingStyle.fill;
   }
 

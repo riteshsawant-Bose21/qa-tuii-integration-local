@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/features/fusion_canvas/state/fusion_canvas_input_state.dart';
 import 'package:fusion_launcher/features/fusion_canvas/state/fusion_tool_state.dart';
+import 'package:fusion_launcher/features/fusion_canvas/state/tools/drag_tool_state.dart';
 import 'package:fusion_launcher/features/fusion_canvas/state/tools/measure_tool_state.dart';
 import 'package:fusion_launcher/features/fusion_canvas/state/tools/pen_tool_state.dart';
 import 'package:fusion_launcher/features/fusion_canvas/view/fusion_canvas.dart';
@@ -11,9 +12,7 @@ import 'package:fusion_launcher/features/fusion_canvas/viewmodel/fusion_snap_vie
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:nested/nested.dart';
 
-import '../../state/fusion_action_state.dart';
 import '../../state/tools/select_tool_state.dart';
-import '../../viewmodel/fusion_canvas_action_viewmodel.dart';
 import '../../viewmodel/fusion_canvas_state_viewmodel.dart';
 import '../painters/elements/fusion_rect_painter.dart';
 import '../painters/fusion_canvas_painter.dart';
@@ -40,11 +39,12 @@ class FusionCanvasListenersWrapper extends StatelessWidget {
           },
           listener: (BuildContext context, FusionCanvasInputState state) {
             final FusionToolState fusionToolState = context.read<FusionCanvasToolViewModel>().state;
-            if (fusionToolState is SelectingSelectToolState) {
+            if (fusionToolState is SelectToolState && fusionToolState.selectedLayerIds.isNotEmpty) {
               context.read<FusionSnapViewModel>().updateCursorPositions(
                 <Offset>[
                   for (final FusionBasePainter painter in painters) ...<Offset>[
-                    if (painter.isSelected && painter is FusionPolygonPainter) ...painter.polygon.points.map((FusionCanvasPoint e) => e.position),
+                    if (fusionToolState.isLayerSelected(painter.id) && painter is FusionPolygonPainter)
+                      ...painter.polygon.points.map((FusionCanvasPoint e) => e.position),
                   ],
                 ],
               );
@@ -95,9 +95,12 @@ class FusionCanvasListenersWrapper extends StatelessWidget {
           },
         ),
 
-        BlocListener<FusionCanvasActionViewModel, FusionActionState>(
-          listener: (BuildContext context, FusionActionState state) {
-            if (state is FusionLayerDragEndState) {
+        BlocListener<FusionCanvasToolViewModel, FusionToolState>(
+          listenWhen: (FusionToolState previous, FusionToolState current) {
+            return current is DragToolState || previous is DragToolState;
+          },
+          listener: (BuildContext context, FusionToolState state) {
+            if (state is LayerDragEndState) {
               toolbarEvents?.onMoveLayer?.call(
                 painters.firstWhere(
                   (FusionBasePainter p) => p.id == state.layerId,
@@ -105,7 +108,7 @@ class FusionCanvasListenersWrapper extends StatelessWidget {
                 ),
                 state.delta,
               );
-            } else if (state is FusionPointsDragEndState) {
+            } else if (state is PointsDragEndState) {
               final FusionBasePainter basePainter = painters.firstWhere(
                 (FusionBasePainter p) => p.id == state.layerId,
                 orElse: () => throw Exception('Painter with id ${state.layerId} not found'),
@@ -113,12 +116,12 @@ class FusionCanvasListenersWrapper extends StatelessWidget {
               toolbarEvents?.onMovePoints?.call(
                 basePainter,
                 basePainter is FusionPolygonPainter
-                    ? basePainter.polygon.points.where((FusionCanvasPoint p) => state.pointId.contains(p.id)).toList()
+                    ? basePainter.polygon.points.where((FusionCanvasPoint p) => state.pointIds.contains(p.id)).toList()
                     : <FusionCanvasPoint>[],
                 state.delta,
               );
             }
-            if (state is FusionLayerDragStartState) {
+            if (state is LayerDragStartState) {
               toolbarEvents?.onLayerSelected?.call(
                 painters.firstWhere(
                   (FusionBasePainter p) => p.id == state.layerId,
@@ -126,7 +129,7 @@ class FusionCanvasListenersWrapper extends StatelessWidget {
                 ),
               );
             }
-            if (state is FusionPointsDragStartState) {
+            if (state is PointsDragStartState) {
               toolbarEvents?.onLayerSelected?.call(
                 painters.firstWhere(
                   (FusionBasePainter p) => p.id == state.layerId,
@@ -135,7 +138,7 @@ class FusionCanvasListenersWrapper extends StatelessWidget {
               );
             }
 
-            if (state is FusionCanvasPanningState) {
+            if (state is CanvasPanningState) {
               context.read<FusionCanvasStateViewModel>().onPanUpdate(
                 state.delta,
               );

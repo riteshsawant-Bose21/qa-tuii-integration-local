@@ -192,6 +192,10 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
                                       child:
                                           showFloorCanvas
                                               ? FusionCanvas(
+                                                selectedIds:
+                                                    serviceLocator<ProjectViewModel>().currentSelectedListeningAreaId != null
+                                                        ? <String>{serviceLocator<ProjectViewModel>().currentSelectedListeningAreaId!}
+                                                        : null,
                                                 elements: <FusionBasePainter>[
                                                   FusionImagePainter(
                                                     image: floor.floorPlan.imagePath,
@@ -203,7 +207,6 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
                                                   ))
                                                     ListeningAreaPainter(
                                                       listeningArea: area,
-                                                      isSelected: serviceLocator<ProjectViewModel>().currentSelectedListeningAreaId == area.id,
                                                     ),
                                                 ],
                                                 toolbarEvents: FusionCanvasEvents(

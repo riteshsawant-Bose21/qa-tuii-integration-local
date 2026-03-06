@@ -3,9 +3,11 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:fusion_launcher/features/fusion_canvas/state/fusion_action_state.dart';
 import 'package:fusion_launcher/features/fusion_canvas/state/fusion_hover_state.dart';
+import 'package:fusion_launcher/features/fusion_canvas/state/fusion_tool_state.dart';
+import 'package:fusion_launcher/features/fusion_canvas/state/tools/drag_tool_state.dart';
 import 'package:fusion_launcher/features/fusion_canvas/viewmodel/fusion_canvas_input_viewmodel.dart';
+import 'package:fusion_launcher/features/fusion_canvas/viewmodel/fusion_canvas_tool_viewmodel.dart';
 import 'package:fusion_launcher/features/fusion_canvas/viewmodel/fusion_snap_viewmodel.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
@@ -13,7 +15,6 @@ import '../../../wiring_design/view/painters/dotted_grid_painter.dart';
 import '../../state/fusion_canvas_input_state.dart';
 import '../../state/fusion_canvas_state.dart';
 import '../../state/fusion_snap_state.dart';
-import '../../viewmodel/fusion_canvas_action_viewmodel.dart';
 import '../../viewmodel/fusion_canvas_hover_viewmodel.dart';
 import '../../viewmodel/fusion_canvas_image_viewmodel.dart';
 
@@ -82,13 +83,12 @@ class FusionCanvasPainter extends CustomPainter {
 
   FusionHoverState get hoverViewModel => context.read<FusionCanvasHoverViewModel>().state;
 
-  FusionActionState get actionState => context.read<FusionCanvasActionViewModel>().state;
+  FusionToolState get toolState => context.read<FusionCanvasToolViewModel>().state;
 }
 
 abstract class FusionBasePainter {
   void paint(Canvas canvas, Size size, FusionCanvasPainter painter);
   bool shouldRepaint(covariant FusionBasePainter oldDelegate);
-  bool get isSelected => false;
 
   String? get id => null;
   FusionCanvasElement? isHit(Offset position, FusionCanvasPainter painter) {
@@ -249,14 +249,14 @@ abstract class FusionBasePainter {
   }
 
   ui.Offset getEffectivePosition(FusionCanvasPoint point, FusionCanvasPainter painter, String? layerId) {
-    if (painter.actionState is FusionPointsDraggingState) {
-      final FusionPointsDraggingState draggingState = painter.actionState as FusionPointsDraggingState;
-      if (draggingState.pointId.contains(point.id)) {
+    if (painter.toolState is PointsDraggingState) {
+      final PointsDraggingState draggingState = painter.toolState as PointsDraggingState;
+      if (draggingState.pointIds.contains(point.id)) {
         return point.position + draggingState.delta;
       }
     }
-    if (painter.actionState is FusionLayerDraggingState) {
-      final FusionLayerDraggingState draggingState = painter.actionState as FusionLayerDraggingState;
+    if (painter.toolState is LayerDraggingState) {
+      final LayerDraggingState draggingState = painter.toolState as LayerDraggingState;
       if (draggingState.layerId == layerId) {
         return point.position + draggingState.delta;
       }
@@ -265,8 +265,8 @@ abstract class FusionBasePainter {
   }
 
   ui.Offset transformOffsetForLayer(Offset offset, FusionCanvasPainter painter, String? layerId) {
-    if (painter.actionState is FusionLayerDraggingState) {
-      final FusionLayerDraggingState draggingState = painter.actionState as FusionLayerDraggingState;
+    if (painter.toolState is LayerDraggingState) {
+      final LayerDraggingState draggingState = painter.toolState as LayerDraggingState;
       if (draggingState.layerId == layerId) {
         return offset + draggingState.delta;
       }
