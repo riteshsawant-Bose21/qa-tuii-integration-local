@@ -104,7 +104,7 @@ class FusionCanvas extends StatelessWidget {
                                     allPainters: elements,
                                   ),
 
-                                if (toolState is! SelectToolState)
+                                if (toolState is! IdleSelectToolState)
                                   SnapPainter(
                                     snapResult: snapState.snapResult,
                                   ),
