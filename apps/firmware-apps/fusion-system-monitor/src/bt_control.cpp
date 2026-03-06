@@ -34,6 +34,8 @@ private:
 
     void trust_device_and_store(const char *device_path);
     void set_device_trusted(const char *device_path);
+    bool is_device_paired(const char *device_path);
+    void remove_device(const char *device_path);
     std::string device_path_to_mac(const char *device_path) const;
 
     bool set_property_bool(const char *obj_path,
@@ -44,6 +46,10 @@ private:
                              const char *iface,
                              const char *prop,
                              uint32_t value);
+    bool get_property_bool(const char *obj_path,
+                           const char *iface,
+                           const char *prop,
+                           dbus_bool_t &out_value);
 
     DBusConnection *conn;
     std::string adapter_path;
@@ -378,6 +384,16 @@ void BtControl::trust_device_and_store(const char *device_path)
         return;
     }
 
+    if (is_device_paired(device_path)) {
+        const std::string mac = device_path_to_mac(device_path);
+        if (mac.empty()) {
+            SPDLOG_INFO("Device already paired; removing to allow re-pairing");
+        } else {
+            SPDLOG_INFO("Device {} already paired; removing to allow re-pairing", mac);
+        }
+        remove_device(device_path);
+    }
+
     set_device_trusted(device_path);
 
     std::string mac = device_path_to_mac(device_path);
@@ -402,6 +418,52 @@ void BtControl::set_device_trusted(const char *device_path)
         return;
     }
     set_property_bool(device_path, "org.bluez.Device1", "Trusted", true);
+}
+
+bool BtControl::is_device_paired(const char *device_path)
+{
+    if (device_path == nullptr) {
+        return false;
+    }
+
+    dbus_bool_t paired = false;
+    if (!get_property_bool(device_path, "org.bluez.Device1", "Paired", paired)) {
+        return false;
+    }
+    return paired != 0;
+}
+
+void BtControl::remove_device(const char *device_path)
+{
+    if (device_path == nullptr || adapter_path.empty() || conn == nullptr) {
+        return;
+    }
+
+    DBusMessage *msg = dbus_message_new_method_call(
+        kBluezBus, adapter_path.c_str(),
+        "org.bluez.Adapter1", "RemoveDevice");
+    if (msg == nullptr) {
+        return;
+    }
+
+    dbus_message_append_args(msg,
+                             DBUS_TYPE_OBJECT_PATH, &device_path,
+                             DBUS_TYPE_INVALID);
+
+    DBusError err;
+    dbus_error_init(&err);
+    DBusMessage *reply = dbus_connection_send_with_reply_and_block(
+        conn, msg, 3000, &err);
+    dbus_message_unref(msg);
+
+    if (dbus_error_is_set(&err)) {
+        SPDLOG_WARN("RemoveDevice failed: {}", err.message);
+        dbus_error_free(&err);
+    }
+
+    if (reply != nullptr) {
+        dbus_message_unref(reply);
+    }
 }
 
 std::string BtControl::device_path_to_mac(const char *device_path) const
@@ -508,6 +570,61 @@ bool BtControl::set_property_uint32(const char *obj_path,
     if (reply != nullptr) {
         dbus_message_unref(reply);
     }
+    return true;
+}
+
+bool BtControl::get_property_bool(const char *obj_path,
+                                  const char *iface,
+                                  const char *prop,
+                                  dbus_bool_t &out_value)
+{
+    if (conn == nullptr) {
+        return false;
+    }
+
+    DBusMessage *msg = dbus_message_new_method_call(
+        kBluezBus, obj_path,
+        "org.freedesktop.DBus.Properties", "Get");
+    if (msg == nullptr) {
+        return false;
+    }
+
+    dbus_message_append_args(msg,
+                             DBUS_TYPE_STRING, &iface,
+                             DBUS_TYPE_STRING, &prop,
+                             DBUS_TYPE_INVALID);
+
+    DBusError err;
+    dbus_error_init(&err);
+    DBusMessage *reply = dbus_connection_send_with_reply_and_block(
+        conn, msg, 3000, &err);
+    dbus_message_unref(msg);
+
+    if (dbus_error_is_set(&err)) {
+        dbus_error_free(&err);
+        return false;
+    }
+
+    if (reply == nullptr) {
+        return false;
+    }
+
+    DBusMessageIter iter;
+    if (!dbus_message_iter_init(reply, &iter) ||
+        dbus_message_iter_get_arg_type(&iter) != DBUS_TYPE_VARIANT) {
+        dbus_message_unref(reply);
+        return false;
+    }
+
+    DBusMessageIter variant;
+    dbus_message_iter_recurse(&iter, &variant);
+    if (dbus_message_iter_get_arg_type(&variant) != DBUS_TYPE_BOOLEAN) {
+        dbus_message_unref(reply);
+        return false;
+    }
+
+    dbus_message_iter_get_basic(&variant, &out_value);
+    dbus_message_unref(reply);
     return true;
 }
 
