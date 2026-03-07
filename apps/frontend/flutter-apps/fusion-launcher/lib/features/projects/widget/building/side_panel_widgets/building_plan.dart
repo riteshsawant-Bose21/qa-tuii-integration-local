@@ -189,13 +189,13 @@ class _BuildingPlanState extends State<BuildingPlan> {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.start,
-        children: <Widget>[
-          Row(
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisAlignment: MainAxisAlignment.start,
+      children: <Widget>[
+        Padding(
+          padding: const EdgeInsets.all(12),
+          child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             crossAxisAlignment: CrossAxisAlignment.center,
             children: <Widget>[
@@ -219,44 +219,47 @@ class _BuildingPlanState extends State<BuildingPlan> {
               ),
             ],
           ),
+        ),
 
-          const SizedBox(height: 10),
+        /// List view for floors
+        BlocBuilder<ProjectViewModel, ProjectViewModelState>(
+          builder: (BuildContext context, ProjectViewModelState state) {
+            final ProjectViewModel viewModel = serviceLocator<ProjectViewModel>();
+            final List<FloorModel> floors = viewModel.floors;
 
-          /// List view for floors
-          BlocBuilder<ProjectViewModel, ProjectViewModelState>(
-            builder: (BuildContext context, ProjectViewModelState state) {
-              final ProjectViewModel viewModel = serviceLocator<ProjectViewModel>();
-              final List<FloorModel> floors = viewModel.floors;
+            // Synchronize selectedIndex with ProjectViewModel's current floor index
+            if (selectedIndex != viewModel.currentFloorIndex) {
+              selectedIndex = viewModel.currentFloorIndex;
+            }
 
-              // Synchronize selectedIndex with ProjectViewModel's current floor index
-              if (selectedIndex != viewModel.currentFloorIndex) {
-                selectedIndex = viewModel.currentFloorIndex;
-              }
+            // Ensure selectedIndex is within bounds
+            if (selectedIndex >= floors.length) {
+              selectedIndex = floors.isNotEmpty ? floors.length - 1 : 0;
+              viewModel.setCurrentFloorIndex(selectedIndex);
+            }
 
-              // Ensure selectedIndex is within bounds
-              if (selectedIndex >= floors.length) {
-                selectedIndex = floors.isNotEmpty ? floors.length - 1 : 0;
-                viewModel.setCurrentFloorIndex(selectedIndex);
-              }
-
-              if (floors.isEmpty) {
-                return Center(
-                  child: Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: FusionAppText(
-                      text: "No floors available",
-                      textAlign: TextAlign.center,
-                      style: context.textTheme.bodySmall?.copyWith(
-                        color: context.colorScheme.primaryWhite,
-                      ),
+            if (floors.isEmpty) {
+              return Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: FusionAppText(
+                    text: "No floors available",
+                    textAlign: TextAlign.center,
+                    style: context.textTheme.bodySmall?.copyWith(
+                      color: context.colorScheme.primaryWhite,
                     ),
                   ),
-                );
-              }
+                ),
+              );
+            }
 
-              return Column(
-                children:
-                    floors.asMap().entries.map((MapEntry<int, FloorModel> entry) {
+            return Flexible(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.symmetric(horizontal: 8),
+                physics: const ClampingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
+                child: Column(
+                  children: <Widget>[
+                    ...floors.asMap().entries.map((MapEntry<int, FloorModel> entry) {
                       final int index = entry.key;
                       final FloorModel floor = entry.value;
                       final bool isSelected = index == selectedIndex;
@@ -278,9 +281,7 @@ class _BuildingPlanState extends State<BuildingPlan> {
                                   isEditing
                                       ? null
                                       : () {
-                                        setState(() {
-                                          selectedIndex = index;
-                                        });
+                                        setState(() => selectedIndex = index);
                                         viewModel.setCurrentFloorIndex(index);
                                       },
                               borderRadius: BorderRadius.circular(FusionSizes.borderRadius8),
@@ -458,12 +459,14 @@ class _BuildingPlanState extends State<BuildingPlan> {
                           ),
                         ),
                       );
-                    }).toList(),
-              );
-            },
-          ),
-        ],
-      ),
+                    }),
+                  ],
+                ),
+              ),
+            );
+          },
+        ),
+      ],
     );
   }
 

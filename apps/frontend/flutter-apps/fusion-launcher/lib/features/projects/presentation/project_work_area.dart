@@ -402,14 +402,14 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with TickerProviderSt
 
   List<DockItemConfig> _createBuildingDockItems(ToolbarMode toolbarMode, FloorCanvasController floorCanvasController) {
     return <DockItemConfig>[
-      const DockItemConfig(
-        id: "1",
-        title: "FLOORS",
-        side: "left",
-        allowUndock: true,
-        isCollapsibleSection: false,
-        dockItemWidget: BuildingPlan(),
-      ),
+      // const DockItemConfig(
+      //   id: "1",
+      //   title: "FLOORS",
+      //   side: "left",
+      //   allowUndock: true,
+      //   isCollapsibleSection: false,
+      //   dockItemWidget: BuildingPlan(),
+      // ),
       DockItemConfig(
         id: "5",
         title: "PROPERTIES",
@@ -449,22 +449,22 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with TickerProviderSt
                   .toList(),
         ),
       ),
-      DockItemConfig(
-        id: "7",
-        title: toolbarMode == ToolbarMode.acoustics ? "LISTENING AREAS" : "ZONES",
-        side: "left",
-        controller: zoneAreaController,
-        allowUndock: false,
-        initiallyExpanded: true,
-        dockItemWidget:
-            toolbarMode == ToolbarMode.acoustics
-                ? ListeningAreasPanel(
-                  floorCanvasController: floorCanvasController,
-                )
-                : ZoneAndListeningAreaPanel(
-                  floorCanvasController: floorCanvasController,
-                ),
-      ),
+      // DockItemConfig(
+      //   id: "7",
+      //   title: toolbarMode == ToolbarMode.acoustics ? "LISTENING AREAS" : "ZONES",
+      //   side: "left",
+      //   controller: zoneAreaController,
+      //   allowUndock: false,
+      //   initiallyExpanded: true,
+      //   dockItemWidget:
+      //       toolbarMode == ToolbarMode.acoustics
+      //           ? ListeningAreasPanel(
+      //             floorCanvasController: floorCanvasController,
+      //           )
+      //           : ZoneAndListeningAreaPanel(
+      //             floorCanvasController: floorCanvasController,
+      //           ),
+      // ),
       // DockItemConfig(
       //   id: "8",
       //   title: "PRODUCT QUERY",
@@ -488,23 +488,23 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with TickerProviderSt
           },
         ),
       ),
-      const DockItemConfig(
-        id: "20",
-        title: "SPEAKERS",
-        side: "left",
-        allowUndock: false,
-        isCollapsibleSection: false,
-        dockItemWidget: SpeakerSelectionWidget(),
-      ),
+      // const DockItemConfig(
+      //   id: "20",
+      //   title: "SPEAKERS",
+      //   side: "left",
+      //   allowUndock: false,
+      //   isCollapsibleSection: false,
+      //   dockItemWidget: SpeakerSelectionWidget(),
+      // ),
       // if (toolbarMode == ToolbarMode.system)
-      DockItemConfig(
-        id: "21",
-        title: "EQUIPMENT LOCATIONS",
-        side: "left",
-        allowUndock: false,
-        isCollapsibleSection: false,
-        dockItemWidget: toolbarMode == ToolbarMode.system ? const EquipmentLocationSection() : const SizedBox(),
-      ),
+      // DockItemConfig(
+      //   id: "21",
+      //   title: "EQUIPMENT LOCATIONS",
+      //   side: "left",
+      //   allowUndock: false,
+      //   isCollapsibleSection: false,
+      //   dockItemWidget: toolbarMode == ToolbarMode.system ? const EquipmentLocationSection() : const SizedBox(),
+      // ),
     ];
   }
 
@@ -512,38 +512,108 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with TickerProviderSt
     /// Building tab
     final Widget buildingPage = BlocBuilder<ProjectViewModel, ProjectViewModelState>(
       builder: (BuildContext context, ProjectViewModelState state) {
+        final ToolbarMode toolbarMode = context.watch<ProjectViewModel>().currentToolbarMode;
+        final String? currentSelectedListeningAreaId = context.watch<ProjectViewModel>().currentSelectedListeningAreaId;
+
         return FusionDockableArea(
           tabKey: "building_tab",
-          showLeft: true,
+          showLeft: false,
           showRight: true,
           mainArea: BlocBuilder<ProjectViewModel, ProjectViewModelState>(
             builder: (BuildContext context, ProjectViewModelState state) {
-              return SemanticHelper.container(
-                testId: SemanticHelper.createTestId(SemanticTypes.container, FusionTestKeys.buildingCanvas),
-                child: BuildingCanvas(
-                  splRangeController: _splRangeController,
-                  onSplStateChanged: (bool value) {
-                    if (value) {
-                      productsController.collapse();
-                      splController.expand();
-                    } else {
-                      splController.collapse();
-                    }
-                  },
-                  floorCanvasController: _floorCanvasController,
-                  onCalculateSpl: calculateSPL,
-                  splPanelData: _lastPanelData!,
-                  onProductSelected: () {
-                    productsController.expand();
-                  },
-                  onProductDeselected: () {
-                    productsController.collapse();
-                  },
-                ),
+              return Row(
+                children: <Widget>[
+                  Container(
+                    color: context.colorScheme.elevation1,
+                    child: FusionResizableSidebar(
+                      sections: <FusionResizableSidebarSection>[
+                        FusionResizableSidebarSection(
+                          sementicId: 'building_plan_floors_list',
+                          enableExpandCollapse: false,
+                          initialHeight: 260,
+                          stickToTop: true,
+                          builder: (BuildContext context, bool isExpanded, VoidCallback toggleExpand, Animation<double> expandAnimation) {
+                            return const BuildingPlan();
+                          },
+                        ),
+                        FusionResizableSidebarSection(
+                          sementicId: 'building_plan_listening_areas_zones_lists',
+                          initialHeight: 260,
+                          builder: (BuildContext context, bool isExpanded, VoidCallback toggleExpand, Animation<double> expandAnimation) {
+                            return Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: <Widget>[
+                                FusionSidebarSectionHeader(
+                                  title: toolbarMode == ToolbarMode.acoustics ? "LISTENING AREAS" : "ZONES",
+                                  isExpanded: isExpanded,
+                                  onTap: toggleExpand,
+                                ),
+                                Flexible(
+                                  child: SizeTransition(
+                                    sizeFactor: expandAnimation,
+                                    child: switch (toolbarMode) {
+                                      ToolbarMode.acoustics => ListeningAreasPanel(floorCanvasController: _floorCanvasController),
+                                      ToolbarMode.system => ZoneAndListeningAreaPanel(floorCanvasController: _floorCanvasController),
+                                    },
+                                  ),
+                                ),
+                              ],
+                            );
+                          },
+                        ),
+
+                        if (toolbarMode == ToolbarMode.system)
+                          FusionResizableSidebarSection(
+                            sementicId: 'building_plan_equipment_location',
+                            enableExpandCollapse: false,
+                            stickToBottom: true,
+                            builder: (BuildContext context, bool isExpanded, VoidCallback toggleExpand, Animation<double> expandAnimation) {
+                              return const EquipmentLocationSection();
+                            },
+                          ),
+
+                        if (toolbarMode == ToolbarMode.acoustics && currentSelectedListeningAreaId != null)
+                          FusionResizableSidebarSection(
+                            sementicId: 'building_plan_equipment_location',
+                            enableExpandCollapse: false,
+                            stickToBottom: true,
+                            builder: (BuildContext context, bool isExpanded, VoidCallback toggleExpand, Animation<double> expandAnimation) {
+                              return const SpeakerSelectionWidget();
+                            },
+                          ),
+                      ],
+                    ),
+                  ),
+                  Expanded(
+                    child: SemanticHelper.container(
+                      testId: SemanticHelper.createTestId(SemanticTypes.container, FusionTestKeys.buildingCanvas),
+                      child: BuildingCanvas(
+                        splRangeController: _splRangeController,
+                        onSplStateChanged: (bool value) {
+                          if (value) {
+                            productsController.collapse();
+                            splController.expand();
+                          } else {
+                            splController.collapse();
+                          }
+                        },
+                        floorCanvasController: _floorCanvasController,
+                        onCalculateSpl: calculateSPL,
+                        splPanelData: _lastPanelData!,
+                        onProductSelected: () {
+                          productsController.expand();
+                        },
+                        onProductDeselected: () {
+                          productsController.collapse();
+                        },
+                      ),
+                    ),
+                  ),
+                ],
               );
             },
           ),
-          dockItemList: _createBuildingDockItems(serviceLocator<ProjectViewModel>().currentToolbarMode, _floorCanvasController),
+          dockItemList: _createBuildingDockItems(toolbarMode, _floorCanvasController),
         );
       },
     );
