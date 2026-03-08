@@ -8,7 +8,6 @@
 #include <linux/ktime.h>
 #include <linux/kthread.h>
 #include <linux/sched.h>
-#include <linux/sched/types.h>
 #include <linux/cpumask.h>
 #include <linux/smp.h>
 #include <linux/math64.h>
@@ -545,6 +544,7 @@ int fusion_cn_mgr_start(struct fusion_cn_manager *mgr)
         }
         process_thread = worker->task;
         set_cpus_allowed_ptr(process_thread, cpumask_of(3));
+        /* RT prio set from userspace (irq-affinity.sh) */
         kthread_init_work(&process_work, audio_frame_process_work);
         atomic_set(&process_pending, 0);
         /* Publish the worker only after fully initialized */
