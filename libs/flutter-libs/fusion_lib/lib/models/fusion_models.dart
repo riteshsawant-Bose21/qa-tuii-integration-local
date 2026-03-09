@@ -47,3 +47,7 @@ export 'timezones/time_zone.dart';
 export 'mdns/mdns_device.dart';
 
 export 'dro/dro_input_model.dart';
+
+export 'fusion_device/fusion_network_device.dart';
+
+export 'dro/dro_response.dart';

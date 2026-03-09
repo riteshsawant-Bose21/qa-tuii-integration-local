@@ -373,7 +373,7 @@ class DroSourceSet {
     'name': name,
     'algorithm': algorithm,
     'algorithm_properties': algorithmProperties,
-    'algorithm_terminals': algorithmTerminals?.toJson(),
+    'algorithm_terminals': algorithmTerminals?.toJson() ?? {},
     'sources': sources,
     'source_connections': sourceConnections?.map((e) => e.toJson()).toList(),
     'processing_blocks': processingBlocks?.map((e) => e.toJson()).toList(),
@@ -631,7 +631,7 @@ class DroSubzone {
   Map<String, dynamic> toJson() => {
     'id': id,
     'subzone_control': subzoneControl?.toJson() ?? {},
-    'subzone_processing': subzoneProcessing?.toJson(),
+    'subzone_processing': subzoneProcessing?.toJson() ?? {},
   };
 
   DroSubzone copyWith({

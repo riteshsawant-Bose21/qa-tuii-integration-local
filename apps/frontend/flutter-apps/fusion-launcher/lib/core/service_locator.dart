@@ -8,14 +8,15 @@ import 'package:fusion_launcher/core/models/algorithm/algorithm_metadata.dart';
 import 'package:fusion_launcher/core/network_clients/rest_client/interceptor.dart';
 import 'package:fusion_launcher/core/services/user_profile_manager.dart';
 import 'package:fusion_launcher/features/authentication/viewmodel/auth_view_model.dart';
-import 'package:fusion_launcher/features/commission/view_models/mdns_search_viewmodel.dart';
 import 'package:fusion_launcher/features/dynamic_config/domain/usecases/get_panel_entity_usecase.dart';
+import 'package:fusion_launcher/features/projects/view_model/dsp_sync/config_sync_view_model.dart';
 import 'package:fusion_launcher/features/projects/view_model/project_sync_view_model.dart';
 import 'package:fusion_launcher/features/projects/widget/building/speaker_selection_section/view_model/product_query_view_model.dart';
 import 'package:fusion_lib/di/service_locator.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/fusion_networking/network/rest_client/dio_client.dart';
 import 'package:fusion_lib/service/auth/fusion_auth_service.dart';
+import 'package:fusion_lib/service/dro/dro_config_service.dart';
 import 'package:get_it/get_it.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -177,6 +178,24 @@ Future<void> setupServiceLocator() async {
     ),
   );
 
+  serviceLocator.registerSingleton<FusionDeviceService>(
+    FusionDeviceService(
+      networkClient: serviceLocator<FusionNetworkClient>(),
+    ),
+  );
+
+  serviceLocator.registerSingleton<FusionConfigSyncService>(
+    FusionConfigSyncService(
+      networkClient: serviceLocator<FusionNetworkClient>(),
+    ),
+  );
+
+  serviceLocator.registerSingleton<DroConfigService>(
+    DroConfigService(
+      serviceLocator<FusionNetworkClient>(),
+    ),
+  );
+
   final ProjectManager pm = ProjectManager(
     projectCloudSyncManager: serviceLocator<ProjectCloudSyncManager>(),
     localProjectManager: serviceLocator<LocalProjectManager>(),
@@ -212,9 +231,10 @@ Future<void> setupServiceLocator() async {
 
   serviceLocator.registerLazySingleton<ProductQueryCubit>(() => ProductQueryCubit());
 
-  serviceLocator.registerLazySingleton<MdnsScanViewModel>(
-    () => MdnsScanViewModel(
-      serviceLocator<MdnsService>(),
+  serviceLocator.registerLazySingleton<ConfigSyncViewModel>(
+    () => ConfigSyncViewModel(
+      droConfigService: serviceLocator<DroConfigService>(),
+      fusionConfigSyncService: serviceLocator<FusionConfigSyncService>(),
     ),
   );
   serviceLocator.registerLazySingleton<GuideShowCaseController>(() => GuideShowCaseController(globalNavigatorKey.currentContext!));

@@ -14,9 +14,12 @@ extension SubzoneViewModel on ProjectViewModel {
         "peq",
       ]) {
         addProcessingBlockToParent(
-          processingBlock: ProcessingBlockModel.zoneBlocks.firstWhere(
-            (ProcessingBlockModel element) => element.algorithmId == algo,
-          ),
+          processingBlock:
+              ProcessingBlockModel.zoneBlocks
+                  .firstWhere(
+                    (ProcessingBlockModel element) => element.algorithmId == algo,
+                  )
+                  .clone(),
           parentId: subZone.id,
           autoSave: false,
         );

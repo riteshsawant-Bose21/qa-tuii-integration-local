@@ -173,13 +173,17 @@ class ZoneFunctions {
     switch (type) {
       case ZoneFunctionsType.sourceSelect:
       case ZoneFunctionsType.sourceSelectWithPriority:
-        return "source_select";
+        return "source_selector";
       case ZoneFunctionsType.sourceMix:
       case ZoneFunctionsType.sourceMixWithPriority:
-        return "source_mix";
+        return "source_selector";
+
+      // return "standard_mixer";
       case ZoneFunctionsType.sourceMatrix:
       case ZoneFunctionsType.sourceMatrixWithPriority:
-        return "mini_matrix";
+        return "source_selector";
+
+      // return "matrix_mixer";
     }
   }
 }

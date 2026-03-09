@@ -65,9 +65,12 @@ extension ZoneViewModel on ProjectViewModel {
         "peq",
       ]) {
         addProcessingBlockToParent(
-          processingBlock: ProcessingBlockModel.zoneBlocks.firstWhere(
-            (ProcessingBlockModel element) => element.algorithmId == algo,
-          ),
+          processingBlock:
+              ProcessingBlockModel.zoneBlocks
+                  .firstWhere(
+                    (ProcessingBlockModel element) => element.algorithmId == algo,
+                  )
+                  .clone(),
           parentId: zone.id,
           autoSave: false,
         );

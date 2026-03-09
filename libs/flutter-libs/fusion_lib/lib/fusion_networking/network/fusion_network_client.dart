@@ -37,12 +37,12 @@ class FusionNetworkClient {
   ZSocket? subscriberSocket;
   final ZContext _context = ZContext();
 
-  String geApiUrl(FusionApiEndpoint api, {String? baseUrlToOverride}) {
+  String geApiUrl(FusionApiEndpoint api, {String? baseUrlToOverride, bool isSecure = true}) {
     if (baseUrlToOverride != null) {
-      return "http://$baseUrlToOverride${api.path}";
+      return isSecure ? "https://$baseUrlToOverride${api.path}" : "http://$baseUrlToOverride${api.path}";
     }
     if (api.type == FusionApiType.droServer) {
-      return "http://TODO${api.path}";
+      return "http://localhost:8080${api.path}";
     } else if (api.type == FusionApiType.fusionServer) {
       return "http://TODO:8080${api.path}";
     } else if (api.type == FusionApiType.backendServer) {
@@ -66,12 +66,13 @@ class FusionNetworkClient {
     Map<String, dynamic>? urlParameters,
     String? additionalPath,
     String? baseUrlToOverride,
-    T Function(Map<String, dynamic>)? fromJson,
+    bool isSecure = true,
+    T Function(dynamic)? fromJson,
   }) async {
     try {
       final String url = additionalPath != null
           ? "${geApiUrl(api, baseUrlToOverride: baseUrlToOverride)}/$additionalPath"
-          : geApiUrl(api, baseUrlToOverride: baseUrlToOverride);
+          : geApiUrl(api, baseUrlToOverride: baseUrlToOverride, isSecure: isSecure);
 
       final Map<String, dynamic> headers = httpClient.dioInstance.options.headers;
       final String? token = await getAccessTokenForApi(api);
@@ -107,12 +108,13 @@ class FusionNetworkClient {
     dynamic data,
     String? additionalPath,
     String? baseUrlToOverride,
-    T Function(Map<String, dynamic>)? fromJson,
+    bool isSecure = true,
+    T Function(dynamic)? fromJson,
   }) async {
     try {
       final String url = additionalPath != null
-          ? "${geApiUrl(api, baseUrlToOverride: baseUrlToOverride)}/$additionalPath"
-          : geApiUrl(api, baseUrlToOverride: baseUrlToOverride);
+          ? "${geApiUrl(api, baseUrlToOverride: baseUrlToOverride, isSecure: isSecure)}/$additionalPath"
+          : geApiUrl(api, baseUrlToOverride: baseUrlToOverride, isSecure: isSecure);
 
       final Map<String, dynamic> headers = httpClient.dioInstance.options.headers;
       final String? token = await getAccessTokenForApi(api);
@@ -141,12 +143,13 @@ class FusionNetworkClient {
     dynamic data,
     String? additionalPath,
     String? baseUrlToOverride,
-    T Function(Map<String, dynamic>)? fromJson,
+    bool isSecure = true,
+    T Function(dynamic)? fromJson,
   }) async {
     try {
       final String url = additionalPath != null
-          ? "${geApiUrl(api, baseUrlToOverride: baseUrlToOverride)}/$additionalPath"
-          : geApiUrl(api, baseUrlToOverride: baseUrlToOverride);
+          ? "${geApiUrl(api, baseUrlToOverride: baseUrlToOverride, isSecure: isSecure)}/$additionalPath"
+          : geApiUrl(api, baseUrlToOverride: baseUrlToOverride, isSecure: isSecure);
 
       final Map<String, dynamic> headers = httpClient.dioInstance.options.headers;
       final String? token = await getAccessTokenForApi(api);
@@ -181,7 +184,8 @@ class FusionNetworkClient {
     Map<String, dynamic>? urlParameters,
     String? additionalPath,
     String? baseUrlToOverride,
-    T Function(Map<String, dynamic>)? fromJson,
+    bool isSecure = true,
+    T Function(dynamic)? fromJson,
   }) async {
     try {
       final Map<String, dynamic> headers = httpClient.dioInstance.options.headers;
@@ -196,7 +200,17 @@ class FusionNetworkClient {
       );
 
       final Response<dynamic> response = await httpClient.dioInstance.patch(
-        additionalPath != null ? "${geApiUrl(api, baseUrlToOverride: baseUrlToOverride)}/$additionalPath" : geApiUrl(api, baseUrlToOverride: baseUrlToOverride),
+        additionalPath != null
+            ? "${geApiUrl(
+                api,
+                baseUrlToOverride: baseUrlToOverride,
+                isSecure: isSecure,
+              )}/$additionalPath"
+            : geApiUrl(
+                api,
+                baseUrlToOverride: baseUrlToOverride,
+                isSecure: isSecure,
+              ),
         options: options,
         data: data,
         queryParameters: urlParameters,
@@ -217,14 +231,23 @@ class FusionNetworkClient {
   Future<ResponseCallback<T>> delete<T>({
     required FusionApiEndpoint api,
     Map<String, dynamic>? urlParameters,
-    T Function(Map<String, dynamic>)? fromJson,
+    T Function(dynamic)? fromJson,
     String? additionalPath,
+    bool isSecure = true,
     String? baseUrlToOverride,
   }) async {
     try {
       final String url = additionalPath != null
-          ? "${geApiUrl(api, baseUrlToOverride: baseUrlToOverride)}/$additionalPath"
-          : geApiUrl(api, baseUrlToOverride: baseUrlToOverride);
+          ? "${geApiUrl(
+              api,
+              baseUrlToOverride: baseUrlToOverride,
+              isSecure: isSecure,
+            )}/$additionalPath"
+          : geApiUrl(
+              api,
+              baseUrlToOverride: baseUrlToOverride,
+              isSecure: isSecure,
+            );
 
       final Map<String, dynamic> headers = httpClient.dioInstance.options.headers;
       final String? token = await getAccessTokenForApi(api);
@@ -252,9 +275,9 @@ class FusionNetworkClient {
     }
   }
 
-  Future<ResponseCallback<T>> connect<T>() async {
+  Future<ResponseCallback<T>> connect<T>({required String vip}) async {
     try {
-      await telemetryData.initializeTelemetryAddresses(this);
+      await telemetryData.initializeTelemetryAddresses(this, vip);
       subscriberSocket = _context.createSocket(SocketType.sub);
       for (String url in TelemetryData.telemetryAddresses) {
         subscriberSocket!.connect(url);
@@ -302,12 +325,8 @@ enum FusionApiType { fusionServer, droServer, backendServer }
 
 enum FusionApiEndpoint {
   //Fusion Backend endpoints
-  dro('/dro-endpoint', FusionApiType.fusionServer),
-  dsp('/dsp-endpoint', FusionApiType.fusionServer),
   process('/process', FusionApiType.droServer), //DRO endpoint
-  fusionGetValue('/value', FusionApiType.fusionServer),
-  fusionSetValue('/value', FusionApiType.fusionServer),
-  fusionUpdateValue('/value', FusionApiType.fusionServer),
+  fusionValue('/value', FusionApiType.fusionServer),
   fusionGetEndPoints('/endpoints', FusionApiType.fusionServer),
   fusionDelete('/clear', FusionApiType.fusionServer),
 
@@ -328,9 +347,7 @@ enum FusionApiEndpoint {
 
 extension ApiEndpointTypeCheckExtension on String {
   bool isFusionServerEndpoint() {
-    return contains(FusionApiEndpoint.fusionGetValue.path) ||
-        contains(FusionApiEndpoint.fusionSetValue.path) ||
-        contains(FusionApiEndpoint.fusionUpdateValue.path) ||
+    return contains(FusionApiEndpoint.fusionValue.path) ||
         contains(FusionApiEndpoint.fusionGetEndPoints.path) ||
         contains(FusionApiEndpoint.fusionDelete.path) ||
         contains(FusionApiEndpoint.fusionDevice.path) ||
