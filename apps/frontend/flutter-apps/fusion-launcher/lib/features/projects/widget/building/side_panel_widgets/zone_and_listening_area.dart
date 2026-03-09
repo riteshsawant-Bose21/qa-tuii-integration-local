@@ -326,7 +326,7 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
             color:
                 hasIncomingData && canAcceptDrops
                     ? (canAcceptDrop ? Colors.blue.withValues(alpha: 0.3) : Colors.red.withValues(alpha: 0.3))
-                    : (isSelected ? Colors.grey[200] : Colors.transparent),
+                    : (isSelected ? context.colorScheme.elevation2 : Colors.transparent),
           ),
           child: Container(
             padding: const EdgeInsets.fromLTRB(8, 6, 8, 6),
@@ -499,14 +499,6 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
         borderRadius: 4,
       ),
     );
-    // return Container(
-    //   width: 4,
-    //   height: 24,
-    //   decoration: BoxDecoration(
-    //     color: zone.color,
-    //     borderRadius: BorderRadius.circular(2),
-    //   ),
-    // );
   }
 
   static Color hexToColor(String hexString) {
@@ -863,7 +855,7 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
                       const SizedBox(width: 8),
                       Expanded(
                         child: FusionAppText(
-                          text: circuitSpeakers.isNotEmpty ? '${circuitSpeakers.first.name} (${circuitSpeakers.length}x)' : 'Empty circuit',
+                          text: circuitSpeakers.isNotEmpty ? '${circuitSpeakers.first.speakerSKU} (${circuitSpeakers.length}x)' : 'Empty circuit',
                           style: Theme.of(context).textTheme.bodySmall?.copyWith(
                             fontSize: 11,
                             fontWeight: FontWeight.w500,
@@ -1118,9 +1110,9 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
       margin: const EdgeInsets.only(left: 12, right: 6, top: 2, bottom: 2),
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
       decoration: BoxDecoration(
-        color: Colors.grey[50],
+        color: context.colorScheme.elevation1,
         borderRadius: BorderRadius.circular(4),
-        border: Border.all(color: Colors.grey[200]!, width: 1),
+        border: Border.all(color: context.colorScheme.strokeLight, width: 1),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.max,
@@ -1248,9 +1240,9 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: context.colorScheme.elevation1,
                 borderRadius: BorderRadius.circular(4),
-                border: Border.all(color: Colors.grey[300]!, width: 1),
+                // border: Border.all(color: context.colorScheme.strokeLight, width: 1),
               ),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
@@ -1264,11 +1256,11 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
                     height: 12,
                   ),
                   const SizedBox(width: 4),
-                  Text(
-                    speaker.name,
-                    style: const TextStyle(
+                  FusionAppText(
+                    text: speaker.name,
+                    style: context.textTheme.bodySmall?.copyWith(
                       fontSize: 10,
-                      color: Colors.black87,
+                      color: context.colorScheme.textPrimary,
                     ),
                   ),
                 ],
@@ -1278,7 +1270,7 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
           child: Container(
             margin: const EdgeInsets.only(left: 40, top: 2),
             decoration: BoxDecoration(
-              color: isSelected ? Colors.grey[200] : Colors.transparent,
+              color: isSelected ? context.colorScheme.elevation4 : Colors.transparent,
               borderRadius: BorderRadius.circular(4),
             ),
             child: InkWell(
@@ -1303,10 +1295,10 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
                     Expanded(
                       child: FusionAppText(
                         text: speaker.name,
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        style: context.textTheme.bodySmall?.copyWith(
                           fontSize: 11,
                           fontWeight: isSelected ? FontWeight.w500 : FontWeight.w400,
-                          color: Colors.black38,
+                          color: context.colorScheme.textPrimary,
                         ),
                       ),
                     ),
