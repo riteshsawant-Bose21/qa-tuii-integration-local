@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:fusion_web/core/widgets/fusion_sidebar.dart';
 import 'package:fusion_web/core/navigation/app_router.dart';
-import 'package:fusion_web/features/dashboard/presentation/pages/dashboard_page.dart';
+import 'package:fusion_web/features/dashboard/presentation/pages/partner_dashboard_page.dart';
 import 'package:fusion_web/features/projects/presentation/pages/projects_page.dart';
 import 'package:fusion_web/features/users/presentation/pages/users_page.dart';
 import 'package:fusion_web/features/devices/presentation/pages/devices_page.dart';
@@ -78,7 +78,7 @@ class _MainLayoutState extends State<MainLayout> {
   Widget _getScreenForTab(DashboardTabs tab) {
     switch (tab) {
       case DashboardTabs.dashboard:
-        return const DashboardPage();
+        return const PartnerDashboardPage();
       case DashboardTabs.projects:
         return const ProjectsPage();
       case DashboardTabs.users:

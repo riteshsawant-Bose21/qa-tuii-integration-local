@@ -92,14 +92,10 @@ class Auth0DataSource {
         print('Auth0 Credentials Debug:');
         print('- User ID: ${credentials.user.sub}');
         print('- User Email: ${credentials.user.email}');
-        print('- Access Token available: ${credentials.accessToken != null}');
-        print('- ID Token available: ${credentials.idToken != null}');
-        if (credentials.accessToken != null) {
-          print('- Access Token length: ${credentials.accessToken!.length}');
-        }
-        if (credentials.idToken != null) {
-          print('- ID Token length: ${credentials.idToken!.length}');
-        }
+        print('- Access Token available: true');
+        print('- ID Token available: true');
+        print('- Access Token length: ${credentials.accessToken.length}');
+        print('- ID Token length: ${credentials.idToken.length}');
       }
 
       if (credentials != null && credentials.user.email != null) {

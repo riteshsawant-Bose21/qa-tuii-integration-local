@@ -44,7 +44,7 @@ class _LoginPageState extends State<LoginPage> {
 
   void _onAuthStateChanged() {
     if (_viewModel.isLoggedIn && mounted) {
-      Navigator.pushReplacementNamed(context, AppConstants.usersRoute);
+      Navigator.pushReplacementNamed(context, AppConstants.dashboardRoute);
     }
   }
 
@@ -55,7 +55,7 @@ class _LoginPageState extends State<LoginPage> {
     await _viewModel.checkAuthStatus();
 
     if (_viewModel.isLoggedIn && mounted) {
-      Navigator.pushReplacementNamed(context, AppConstants.usersRoute);
+      Navigator.pushReplacementNamed(context, AppConstants.dashboardRoute);
     }
   }
 
@@ -73,7 +73,7 @@ class _LoginPageState extends State<LoginPage> {
 
     // Check if login was successful and redirect
     if (_viewModel.isLoggedIn && mounted) {
-      Navigator.pushReplacementNamed(context, AppConstants.usersRoute);
+      Navigator.pushReplacementNamed(context, AppConstants.dashboardRoute);
     }
   }
 
