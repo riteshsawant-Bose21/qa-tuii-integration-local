@@ -85,17 +85,19 @@ def configure(conf):
     else:
         conf.env.append_value('LDFLAGS', '-lpthread')
 
-        if conf.env['IS_LINUX']:
-            # NOTE: Doing the old way of boost::bind for now.
-            # /usr/include/boost/bind.hpp:36:1: note: ‘#pragma message: The practice of declaring the Bind placeholders (_1, _2, ...) in the 
-            # global namespace is deprecated. Please use <boost/bind/bind.hpp> + using namespace boost::placeholders, 
-            # or define BOOST_BIND_GLOBAL_PLACEHOLDERS to retain the current behavior.’
-            conf.env.append_value('CXXFLAGS', '-DBOOST_BIND_GLOBAL_PLACEHOLDERS')
+    if conf.env['IS_LINUX']:
+        # NOTE: Doing the old way of boost::bind for now.
+        # /usr/include/boost/bind.hpp:36:1: note: ‘#pragma message: The practice of declaring the Bind placeholders (_1, _2, ...) in the 
+        # global namespace is deprecated. Please use <boost/bind/bind.hpp> + using namespace boost::placeholders, 
+        # or define BOOST_BIND_GLOBAL_PLACEHOLDERS to retain the current behavior.’
+        conf.env.append_value('CXXFLAGS', '-DBOOST_BIND_GLOBAL_PLACEHOLDERS')
+
+    conf.check_cfg(package='dbus-1', uselib_store='DBUS', args='--cflags --libs', mandatory=True)
 
 def build(bld):
     bld(export_includes=['./external/doctest', './include'], name='common-include')
 
     bld.program(target='fusion_system_monitor',
                 source=bld.path.ant_glob(['src/*.cpp', 'src/*.c']),
-                use=['common-include'],
+                use=['common-include', 'DBUS'],
                 lib=['jack', 'fmt', 'sndfile', 'boost_program_options', 'jsoncpp', 'curl'])

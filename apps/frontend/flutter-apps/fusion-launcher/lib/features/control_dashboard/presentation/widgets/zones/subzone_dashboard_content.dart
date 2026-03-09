@@ -31,7 +31,7 @@ class _SubzoneDashboardContentState extends State<SubzoneDashboardContent> {
 
   @override
   void initState() {
-    volumeController = TextEditingController(text: "5.0");
+    volumeController = TextEditingController(text: "10.0");
     super.initState();
   }
 
@@ -78,8 +78,8 @@ class _SubzoneDashboardContentState extends State<SubzoneDashboardContent> {
                   onVolumeChanged: (double newVolume) {
                     if (newVolume < 0.0) {
                       newVolume = 0.0;
-                    } else if (newVolume > 10.0) {
-                      newVolume = 10.0;
+                    } else if (newVolume > 100.0) {
+                      newVolume = 100.0;
                     }
                     volumeController.text = newVolume.toStringAsFixed(1);
                   },
@@ -87,8 +87,8 @@ class _SubzoneDashboardContentState extends State<SubzoneDashboardContent> {
                     double currentVolume = double.tryParse(volumeController.text) ?? 0.0;
 
                     currentVolume += 1.0;
-                    if (currentVolume > 10.0) {
-                      currentVolume = 10.0;
+                    if (currentVolume > 100.0) {
+                      currentVolume = 100.0;
                     }
                     volumeController.text = currentVolume.toStringAsFixed(1);
                   },
@@ -99,6 +99,7 @@ class _SubzoneDashboardContentState extends State<SubzoneDashboardContent> {
                     if (currentVolume < 0.0) {
                       currentVolume = 0.0;
                     }
+
                     volumeController.text = currentVolume.toStringAsFixed(1);
                   },
                 ),

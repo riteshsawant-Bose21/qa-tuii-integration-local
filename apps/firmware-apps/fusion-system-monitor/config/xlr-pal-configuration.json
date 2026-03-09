@@ -32,18 +32,6 @@
             ]
         },
         {
-            "name": "bt_control",
-            "property_settings": [
-                { "name": "period_ms", "value": 500 }
-            ],
-            "blocks": [
-                {
-                    "name": "bt_control",
-                    "module": "bt_control"
-                }
-            ]
-        },
-        {
             "name": "hw_control",
             "blocks": [
                 {
@@ -51,43 +39,13 @@
                     "module": "hw_control",
                     "property_settings": [
                         { 
-                            "name": "num_gain_chs",
-                            "value": 4
-                        },
-                        { 
-                            "name": "gain_paths",
-                            "value": [
-                                "fm6/block_ana/ep_aud_in_chs-34/gpio_gain_ch3_0",
-                                "fm6/block_ana/ep_aud_in_chs-34/gpio_gain_ch4_0",
-                                "fm6/block_ana/ep_aud_in_chs-56/gpio_gain_ch5_0",
-                                "fm6/block_ana/ep_aud_in_chs-56/gpio_gain_ch6_0"
-                            ]
-                        },
-                        { 
                             "name": "num_php_chs",
-                            "value": 4
+                            "value": 1
                         },
                         { 
                             "name": "php_paths",
                             "value": [
-                                "fm6/block_ana/ep_aud_in_chs-34/gpio_php_en_ch3",
-                                "fm6/block_ana/ep_aud_in_chs-34/gpio_php_en_ch4",
-                                "fm6/block_ana/ep_aud_in_chs-56/gpio_php_en_ch5",
-                                "fm6/block_ana/ep_aud_in_chs-56/gpio_php_en_ch6"
-                            ]
-                        },
-                        { 
-                            "name": "num_user_gpio",
-                            "value": 5
-                        },
-                        { 
-                            "name": "user_gpio_ctrl_paths",
-                            "value": [
-                                "fm6/block_gpio/gpio_ctrl0_gpio0",
-                                "fm6/block_gpio/gpio_ctrl0_gpio1",
-                                "fm6/block_gpio/gpio_ctrl0_gpio2",
-                                "fm6/block_gpio/gpio_ctrl0_gpio3",
-                                "fm6/block_gpio/gpio_ctrl0_gpio4"
+                                "xlr-pal/gpio_PWR_SW1"
                             ]
                         }
                     ]
