@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:fusion_lib/fusion_lib.dart';
 
 class FusionVerticalResizableWidget extends StatefulWidget {
   final Widget child;
@@ -8,8 +9,10 @@ class FusionVerticalResizableWidget extends StatefulWidget {
   final bool dragBottom;
   final double initialHeight;
   final ValueChanged<double>? onHeightChanged;
+  final String? semanticId;
 
   const FusionVerticalResizableWidget({
+    this.semanticId,
     super.key,
     required this.child,
     this.minHeight = 100,
@@ -21,16 +24,21 @@ class FusionVerticalResizableWidget extends StatefulWidget {
   });
 
   @override
-  State<FusionVerticalResizableWidget> createState() => _FusionVerticalResizableWidgetState();
+  State<FusionVerticalResizableWidget> createState() =>
+      _FusionVerticalResizableWidgetState();
 }
 
-class _FusionVerticalResizableWidgetState extends State<FusionVerticalResizableWidget> {
+class _FusionVerticalResizableWidgetState
+    extends State<FusionVerticalResizableWidget> {
   late double _currentHeight;
 
   @override
   void initState() {
     super.initState();
-    _currentHeight = widget.initialHeight.clamp(widget.minHeight, widget.maxHeight);
+    _currentHeight = widget.initialHeight.clamp(
+      widget.minHeight,
+      widget.maxHeight,
+    );
   }
 
   @override
@@ -38,14 +46,20 @@ class _FusionVerticalResizableWidgetState extends State<FusionVerticalResizableW
     super.didUpdateWidget(oldWidget);
     if (widget.initialHeight != oldWidget.initialHeight) {
       setState(() {
-        _currentHeight = widget.initialHeight.clamp(widget.minHeight, widget.maxHeight);
+        _currentHeight = widget.initialHeight.clamp(
+          widget.minHeight,
+          widget.maxHeight,
+        );
       });
     }
   }
 
   void _handleResize(double delta) {
     final double newHeight = _currentHeight + delta;
-    final double clampedHeight = newHeight.clamp(widget.minHeight, widget.maxHeight);
+    final double clampedHeight = newHeight.clamp(
+      widget.minHeight,
+      widget.maxHeight,
+    );
 
     // Always try to update, let parent validate the constraints
     if (widget.onHeightChanged != null) {
@@ -62,7 +76,8 @@ class _FusionVerticalResizableWidgetState extends State<FusionVerticalResizableW
       child: MouseRegion(
         cursor: SystemMouseCursors.resizeRow,
         child: GestureDetector(
-          onPanUpdate: (details) => _handleResize(isBottom ? details.delta.dy : -details.delta.dy),
+          onPanUpdate: (details) =>
+              _handleResize(isBottom ? details.delta.dy : -details.delta.dy),
           child: Container(
             height: 8,
             color: Colors.transparent,
@@ -75,14 +90,21 @@ class _FusionVerticalResizableWidgetState extends State<FusionVerticalResizableW
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      height: _currentHeight,
-      child: Stack(
-        children: [
-          Positioned.fill(child: widget.child),
-          if (widget.dragTop) _buildResizeHandle(isBottom: false),
-          if (widget.dragBottom) _buildResizeHandle(isBottom: true),
-        ],
+    return SemanticHelper.container(
+      testId: SemanticHelper.createTestId(
+        SemanticTypes.section,
+        "fusion_vertical_resizable${widget.semanticId ?? ""}",
+      ),
+
+      child: SizedBox(
+        height: _currentHeight,
+        child: Stack(
+          children: [
+            Positioned.fill(child: widget.child),
+            if (widget.dragTop) _buildResizeHandle(isBottom: false),
+            if (widget.dragBottom) _buildResizeHandle(isBottom: true),
+          ],
+        ),
       ),
     );
   }

@@ -54,6 +54,7 @@ class MDNSSearchScreen extends StatelessWidget {
         ),
         const SizedBox(height: 16),
         FusionSecondaryButton(
+          semanticId: 'mdns_configure_wireless_button',
           text: 'Configure Wireless Devices',
           onPressed: onConfigureWireless,
         ),
