@@ -8,7 +8,7 @@ services:
     environment:
       # IMPORTANT: Set your actual Auth0 domain here!
       # Get this from your Auth0 dashboard (e.g., your-tenant.auth0.com or your-tenant.us.auth0.com)
-      - AUTH0_DOMAIN=${AUTH0_DOMAIN}
+      - AUTH0_DOMAIN=id-dev.boseprofessional.com
       - DB_HOST='host.docker.internal'  # Use host.docker.internal to connect to the host machine's database
       - DB_PORT=5432
       - DB_USER='fusion_cloud'

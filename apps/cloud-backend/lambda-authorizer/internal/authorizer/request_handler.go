@@ -16,11 +16,11 @@ func HandleRequestAuthorizer(ctx context.Context, event map[string]interface{}) 
 	// Generate a new request ID for this request
 	requestID := uuid.New().String()
 
-	// Extract source IP from request context
+	// Extract source IP from request context (API Gateway v2 HTTP API format)
 	sourceIP := ""
 	if requestContext, ok := event["requestContext"].(map[string]interface{}); ok {
-		if identity, ok := requestContext["identity"].(map[string]interface{}); ok {
-			sourceIP, _ = identity["sourceIp"].(string)
+		if http, ok := requestContext["http"].(map[string]interface{}); ok {
+			sourceIP, _ = http["sourceIp"].(string)
 		}
 	}
 
