@@ -12,13 +12,15 @@ class SemanticHelper {
   static Widget button({
     required String testId,
     required Widget child,
-    bool isActive=true,
+    bool isEnabled = true,
+    bool isSelected = false,
   }) {
     return Semantics(
       identifier: testId,
       button: true,
       container: true,
-      enabled: isActive,
+      enabled: isEnabled,
+      selected: isSelected,
       child: child,
     );
   }
