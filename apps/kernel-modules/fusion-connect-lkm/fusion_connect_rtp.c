@@ -22,6 +22,10 @@
 void fusion_cn_rtp_stream_release(struct kref *ref)
 {
     struct fusion_cn_rtp_stream *stream = container_of(ref, struct fusion_cn_rtp_stream, ref);
+    if (stream->metrics) {
+        fusion_cn_metrics_destroy(stream->metrics);
+        stream->metrics = NULL;
+    }
     if (stream->next_action_times) {
         kfree(stream->next_action_times);
     }

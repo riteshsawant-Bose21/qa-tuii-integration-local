@@ -1,0 +1,36 @@
+{
+    "rrp_data": [
+      {
+        "sku": 28337,
+        "variants": [
+          {
+            "variant": null,
+            "price": 11000
+          },
+          {
+            "currency": "USD",
+            "price": -50
+          },
+          {
+            "currency": "CA",
+            "price": 108,
+            "created_at": "2025-10-31T05:29:51Z",
+            "updated_at": "2025-10-31T05:29:51Z"
+          }
+        ]
+      },
+      {
+        "sku": 0,
+        "variants": []
+      },
+      {
+        "variants": [
+          {
+            "variant": null,
+            "currency": "EUR",
+            "price": 70
+          }
+        ]
+      }
+    ]
+}

@@ -1,11 +1,10 @@
 //go:build linux
-// +build linux
 
 package cluster
 
 import (
+	"fusion-services-core/logging"
 	"fusion-services-core/vip"
-	"fusion/internal/logging"
 
 	"github.com/vishvananda/netlink"
 )

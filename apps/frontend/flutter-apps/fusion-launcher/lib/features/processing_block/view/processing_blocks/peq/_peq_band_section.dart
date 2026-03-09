@@ -8,10 +8,9 @@ class _PeqBandSection extends StatelessWidget {
     return Consumer<PEQController>(
       builder: (BuildContext context, PEQController controller, Widget? child) {
         final List<_PEQDataPoint> tableData = controller.tableMappedData;
-        return Container(
-          decoration: BoxDecoration(
-            color: context.colorScheme.elevation2,
-          ),
+        return PBSection(
+          type: PBSectionType.middle,
+          padding: EdgeInsets.zero,
           child: ListView.builder(
             padding: const EdgeInsets.only(right: 8, left: 8),
             itemCount: tableData.length + 1,
@@ -45,9 +44,9 @@ class _PeqBandSection extends StatelessWidget {
                       FusionPopupMenu<String>(
                         onSelected: (String? value) {
                           // Handle menu item selection
-                          if('reset' == value) {
+                          if ('reset' == value) {
                             controller.resetAllBands();
-                          } else if('delete' == value) {
+                          } else if ('delete' == value) {
                             controller.deleteAllBands();
                           }
                         },

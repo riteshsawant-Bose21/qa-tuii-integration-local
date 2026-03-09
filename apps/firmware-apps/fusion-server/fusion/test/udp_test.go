@@ -300,7 +300,7 @@ func TestFusionUDP_Stress(t *testing.T) {
 	var wg sync.WaitGroup
 	stop := time.Now().Add(testDuration)
 
-	for i := 0; i < numWriters; i++ {
+	for i := range numWriters {
 		wg.Add(1)
 		go func(id int) {
 			defer wg.Done()

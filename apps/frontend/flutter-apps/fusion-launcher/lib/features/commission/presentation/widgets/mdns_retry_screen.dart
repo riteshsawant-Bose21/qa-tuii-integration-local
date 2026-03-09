@@ -45,6 +45,7 @@ class MDNSRetryScreen extends StatelessWidget {
             text: 'Retry',
             onTap: onRetry,
             width: 0.25 * MediaQuery.of(context).size.width,
+            height: 35,
           ),
           const SizedBox(height: 16),
           Text(

@@ -5,8 +5,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"fusion-services-core/logging"
 	"fusion/internal/api"
-	"fusion/internal/logging"
 	"io"
 	"net/http"
 	"strings"
@@ -40,8 +40,14 @@ type BluetoothHTTPRequest struct {
 
 // BluetoothHTTPResponse represents the structure of outgoing HTTP responses.
 type BluetoothHTTPResponse struct {
-	Type    string         `json:"type"` // "response" or "error"
-	Payload map[string]any `json:"payload"`
+	Type    string               `json:"type"` // "response" or "error"
+	Payload BluetoothHTTPPayload `json:"payload"`
+}
+
+type BluetoothHTTPPayload struct {
+	Error  string `json:"error,omitempty"`
+	Status int    `json:"status,omitempty"`
+	Body   string `json:"body,omitempty"`
 }
 
 // ResponseChunk defines the structure of each chunk notification.
@@ -67,8 +73,8 @@ func performHTTPRequest(req BluetoothHTTPRequest) (BluetoothHTTPResponse, error)
 	default:
 		return BluetoothHTTPResponse{
 			Type: "error",
-			Payload: map[string]any{
-				"error": "Unsupported HTTP method",
+			Payload: BluetoothHTTPPayload{
+				Error: "Unsupported HTTP method",
 			},
 		}, fmt.Errorf("unsupported HTTP method: %s", req.Method)
 	}
@@ -76,8 +82,8 @@ func performHTTPRequest(req BluetoothHTTPRequest) (BluetoothHTTPResponse, error)
 	if err != nil {
 		return BluetoothHTTPResponse{
 			Type: "error",
-			Payload: map[string]any{
-				"error": err.Error(),
+			Payload: BluetoothHTTPPayload{
+				Error: err.Error(),
 			},
 		}, err
 	}
@@ -86,9 +92,9 @@ func performHTTPRequest(req BluetoothHTTPRequest) (BluetoothHTTPResponse, error)
 	body, _ := io.ReadAll(httpResp.Body)
 	response = BluetoothHTTPResponse{
 		Type: "response",
-		Payload: map[string]any{
-			"status": httpResp.StatusCode,
-			"body":   string(body),
+		Payload: BluetoothHTTPPayload{
+			Status: httpResp.StatusCode,
+			Body:   string(body),
 		},
 	}
 
