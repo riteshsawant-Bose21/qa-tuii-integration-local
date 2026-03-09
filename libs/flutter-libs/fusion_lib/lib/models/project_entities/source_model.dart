@@ -2,7 +2,7 @@ import 'dart:ui';
 
 import 'package:fusion_lib/fusion_lib.dart';
 
-enum SourceType { mic, media, generic }
+enum SourceType { mic, media, generic /*, messagePlayer */ }
 
 enum SourceConnectionType {
   analogInput("Wired"),

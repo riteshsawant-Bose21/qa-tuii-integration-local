@@ -58,6 +58,7 @@ class ProjectService {
   final SchedulerRepository schedulerConfig;
   final EventsRepository events;
   final MediaFileRepository mediaFiles;
+  final MessagePlayerRepository messagePlayers;
 
   final RelationshipManager relationships;
 
@@ -122,6 +123,7 @@ class ProjectService {
     SchedulerRepository? schedulerConfig,
     EventsRepository? events,
     MediaFileRepository? mediaFiles,
+    MessagePlayerRepository? messagePlayers,
   }) : floors = floors ?? FloorRepository(),
        listeningAreas = listeningAreas ?? ListeningAreaRepository(),
        zones = zones ?? ZoneRepository(),
@@ -144,7 +146,8 @@ class ProjectService {
        gpioConfigs = gpioRepository ?? GPIORepository(),
        schedulerConfig = schedulerConfig ?? SchedulerRepository(),
        events = events ?? EventsRepository(),
-       mediaFiles = mediaFiles ?? MediaFileRepository();
+       mediaFiles = mediaFiles ?? MediaFileRepository(),
+       messagePlayers = messagePlayers ?? MessagePlayerRepository();
 
   ProjectService updateVip(String? vip) {
     ProjectService projectService = ProjectService(
@@ -198,6 +201,7 @@ class ProjectService {
       schedulerConfig: schedulerConfig,
       events: events,
       mediaFiles: mediaFiles,
+      messagePlayers: messagePlayers,
       metadata: metadata,
     );
 
@@ -260,6 +264,7 @@ class ProjectService {
     SchedulerRepository? schedulerConfig,
     EventsRepository? events,
     MediaFileRepository? mediaFiles,
+    MessagePlayerRepository? messagePlayers,
   }) {
     ProjectService projectService = ProjectService(
       id: id ?? this.id,
@@ -312,6 +317,7 @@ class ProjectService {
       schedulerConfig: schedulerConfig ?? this.schedulerConfig,
       events: events ?? this.events,
       mediaFiles: mediaFiles ?? this.mediaFiles,
+      messagePlayers: messagePlayers ?? this.messagePlayers,
       metadata: metadata ?? this.metadata,
     );
 
@@ -387,6 +393,7 @@ class ProjectService {
       "schedulerConfig": schedulerConfig.toJson((s) => s.toJson()),
       "events": events.toJson((e) => e.toJson()),
       "mediaFiles": mediaFiles.toJson((m) => m.toJson()),
+      "messagePlayers": messagePlayers.toJson((m) => m.toJson()),
       'metadata': metadata.toJson(),
     };
   }
@@ -468,6 +475,7 @@ class ProjectService {
     service.schedulerConfig.fromJsonList(json["schedulerConfig"], (m) => ScheduleConfig.fromJson(m), "id");
     service.events.fromJsonList(json["events"], (m) => FusionEvent.fromJson(m), "id");
     service.mediaFiles.fromJsonList(json["mediaFiles"], (m) => MediaFileModel.fromJson(m), "id");
+    service.messagePlayers.fromJsonList(json["messagePlayers"], (m) => MessagePlayerModel.fromJson(m), "id");
 
     service.relationships.fromJson(json["relationships"]);
 
