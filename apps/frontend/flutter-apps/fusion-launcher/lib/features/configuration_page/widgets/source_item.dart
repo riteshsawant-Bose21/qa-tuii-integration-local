@@ -97,7 +97,10 @@ class _SourceItemState extends State<SourceItem> {
               visible: widget.source.pagingSourceType != null,
               child: InkWell(
                 onTap: () {
-                  MessagePlayerConfigDialog.show(context);
+                  MessagePlayerConfigDialog.show(
+                    context,
+                    messagePlayerId: widget.source.id,
+                  );
                 },
                 child: FusionImage.asset(
                   Assets.configurationFilledIcon,

@@ -58,6 +58,7 @@ class MessagePlayerConfigCubit extends Cubit<MessagePlayerConfigState> {
     // Get available zones from project manager
     final List<Zone> availableZones = _projectViewModel.projectManager.getAllZones();
 
+    // Priority 1: Use provided message player
     if (messagePlayer != null) {
       emit(
         MessagePlayerLoaded(
@@ -65,22 +66,77 @@ class MessagePlayerConfigCubit extends Cubit<MessagePlayerConfigState> {
           availableZones: availableZones,
         ),
       );
-    } else {
-      // Create a new message player if none provided
-      final MessagePlayerModel newPlayer = MessagePlayerModel.create(
+      return;
+    }
+
+    // Priority 2: Load by messagePlayerId if provided
+    if (messagePlayerId != null) {
+      final MessagePlayerModel? existingPlayer = _projectViewModel.getMessagePlayerById(messagePlayerId);
+      if (existingPlayer != null) {
+        emit(
+          MessagePlayerLoaded(
+            messagePlayer: existingPlayer,
+            availableZones: availableZones,
+          ),
+        );
+        return;
+      }
+
+      // Create a new message player with the specific ID if not found
+      final MessagePlayerModel newPlayer = MessagePlayerModel(
+        id: messagePlayerId,
         name: 'Message Player',
       );
+
+      // Save the new player to the project immediately
+      _projectViewModel.addMessagePlayer(
+        messagePlayer: newPlayer,
+        autoSave: true,
+      );
+
       emit(
         MessagePlayerLoaded(
           messagePlayer: newPlayer,
           availableZones: availableZones,
         ),
       );
+      return;
     }
+
+    // Priority 3: Load existing message players from project (for backward compatibility)
+    final List<MessagePlayerModel> existingPlayers = _projectViewModel.getAllMessagePlayers();
+    if (existingPlayers.isNotEmpty) {
+      // Use the first existing message player
+      emit(
+        MessagePlayerLoaded(
+          messagePlayer: existingPlayers.first,
+          availableZones: availableZones,
+        ),
+      );
+      return;
+    }
+
+    // Priority 4: Create a new message player if none exist
+    final MessagePlayerModel newPlayer = MessagePlayerModel.create(
+      name: 'Message Player',
+    );
+
+    // Save the new player to the project immediately
+    _projectViewModel.addMessagePlayer(
+      messagePlayer: newPlayer,
+      autoSave: true,
+    );
+
+    emit(
+      MessagePlayerLoaded(
+        messagePlayer: newPlayer,
+        availableZones: availableZones,
+      ),
+    );
   }
 
   /// Add a new message to the player
-  void addMessage() {
+  Future<void> addMessage() async {
     final MessagePlayerLoaded? loaded = _loadedState;
     if (loaded == null || loaded.messagePlayer == null) return;
 
@@ -96,6 +152,9 @@ class MessagePlayerConfigCubit extends Cubit<MessagePlayerConfigState> {
     final MessagePlayerModel updatedPlayer = loaded.messagePlayer!.copyWith(
       messages: updatedMessages,
     );
+
+    // Save to ProjectViewModel
+    await _saveMessagePlayerToProject(updatedPlayer);
 
     emit(
       loaded.copyWith(
@@ -121,8 +180,25 @@ class MessagePlayerConfigCubit extends Cubit<MessagePlayerConfigState> {
     );
   }
 
+  /// Helper method to save message player to ProjectViewModel
+  Future<void> _saveMessagePlayerToProject(MessagePlayerModel player) async {
+    final MessagePlayerModel? existingPlayer = _projectViewModel.getMessagePlayerById(player.id);
+
+    if (existingPlayer != null) {
+      await _projectViewModel.updateMessagePlayer(
+        messagePlayer: player,
+        autoSave: true,
+      );
+    } else {
+      await _projectViewModel.addMessagePlayer(
+        messagePlayer: player,
+        autoSave: true,
+      );
+    }
+  }
+
   /// Update message name
-  void updateMessageName(String name) {
+  Future<void> updateMessageName(String name) async {
     final MessagePlayerLoaded? loaded = _loadedState;
     if (loaded == null || loaded.selectedMessageId == null || loaded.messagePlayer == null) return;
 
@@ -133,15 +209,20 @@ class MessagePlayerConfigCubit extends Cubit<MessagePlayerConfigState> {
             )
             .toList();
 
+    final MessagePlayerModel updatedPlayer = loaded.messagePlayer!.copyWith(messages: updatedMessages);
+
+    // Save to ProjectViewModel
+    await _saveMessagePlayerToProject(updatedPlayer);
+
     emit(
       loaded.copyWith(
-        messagePlayer: loaded.messagePlayer!.copyWith(messages: updatedMessages),
+        messagePlayer: updatedPlayer,
       ),
     );
   }
 
   /// Assign audio file to selected message
-  void assignAudioFile(String audioFileId, String audioFileName) {
+  Future<void> assignAudioFile(String audioFileId, String audioFileName) async {
     final MessagePlayerLoaded? loaded = _loadedState;
     if (loaded == null || loaded.selectedMessageId == null || loaded.messagePlayer == null) return;
 
@@ -152,9 +233,14 @@ class MessagePlayerConfigCubit extends Cubit<MessagePlayerConfigState> {
             )
             .toList();
 
+    final MessagePlayerModel updatedPlayer = loaded.messagePlayer!.copyWith(messages: updatedMessages);
+
+    // Save to ProjectViewModel
+    await _saveMessagePlayerToProject(updatedPlayer);
+
     emit(
       loaded.copyWith(
-        messagePlayer: loaded.messagePlayer!.copyWith(messages: updatedMessages),
+        messagePlayer: updatedPlayer,
       ),
     );
 
@@ -177,7 +263,7 @@ class MessagePlayerConfigCubit extends Cubit<MessagePlayerConfigState> {
   }
 
   /// Update gain for selected message
-  void updateGain(double gain) {
+  Future<void> updateGain(double gain) async {
     final MessagePlayerLoaded? loaded = _loadedState;
     if (loaded == null || loaded.selectedMessageId == null || loaded.messagePlayer == null) return;
 
@@ -188,15 +274,20 @@ class MessagePlayerConfigCubit extends Cubit<MessagePlayerConfigState> {
             )
             .toList();
 
+    final MessagePlayerModel updatedPlayer = loaded.messagePlayer!.copyWith(messages: updatedMessages);
+
+    // Save to ProjectViewModel
+    await _saveMessagePlayerToProject(updatedPlayer);
+
     emit(
       loaded.copyWith(
-        messagePlayer: loaded.messagePlayer!.copyWith(messages: updatedMessages),
+        messagePlayer: updatedPlayer,
       ),
     );
   }
 
   /// Toggle repeat for selected message
-  void toggleRepeat(bool repeat) {
+  Future<void> toggleRepeat(bool repeat) async {
     final MessagePlayerLoaded? loaded = _loadedState;
     if (loaded == null || loaded.selectedMessageId == null || loaded.messagePlayer == null) return;
 
@@ -207,15 +298,20 @@ class MessagePlayerConfigCubit extends Cubit<MessagePlayerConfigState> {
             )
             .toList();
 
+    final MessagePlayerModel updatedPlayer = loaded.messagePlayer!.copyWith(messages: updatedMessages);
+
+    // Save to ProjectViewModel
+    await _saveMessagePlayerToProject(updatedPlayer);
+
     emit(
       loaded.copyWith(
-        messagePlayer: loaded.messagePlayer!.copyWith(messages: updatedMessages),
+        messagePlayer: updatedPlayer,
       ),
     );
   }
 
   /// Update repeat count for selected message
-  void updateRepeatCount(int count) {
+  Future<void> updateRepeatCount(int count) async {
     final MessagePlayerLoaded? loaded = _loadedState;
     if (loaded == null || loaded.selectedMessageId == null || loaded.messagePlayer == null) return;
 
@@ -226,15 +322,20 @@ class MessagePlayerConfigCubit extends Cubit<MessagePlayerConfigState> {
             )
             .toList();
 
+    final MessagePlayerModel updatedPlayer = loaded.messagePlayer!.copyWith(messages: updatedMessages);
+
+    // Save to ProjectViewModel
+    await _saveMessagePlayerToProject(updatedPlayer);
+
     emit(
       loaded.copyWith(
-        messagePlayer: loaded.messagePlayer!.copyWith(messages: updatedMessages),
+        messagePlayer: updatedPlayer,
       ),
     );
   }
 
   /// Update repeat interval for selected message
-  void updateRepeatInterval(int seconds) {
+  Future<void> updateRepeatInterval(int seconds) async {
     final MessagePlayerLoaded? loaded = _loadedState;
     if (loaded == null || loaded.selectedMessageId == null || loaded.messagePlayer == null) return;
 
@@ -245,44 +346,54 @@ class MessagePlayerConfigCubit extends Cubit<MessagePlayerConfigState> {
             )
             .toList();
 
+    final MessagePlayerModel updatedPlayer = loaded.messagePlayer!.copyWith(messages: updatedMessages);
+
+    // Save to ProjectViewModel
+    await _saveMessagePlayerToProject(updatedPlayer);
+
     emit(
       loaded.copyWith(
-        messagePlayer: loaded.messagePlayer!.copyWith(messages: updatedMessages),
+        messagePlayer: updatedPlayer,
       ),
     );
   }
 
   /// Toggle zone assignment for selected message
-  void toggleZoneAssignment(String zoneId) {
+  Future<void> toggleZoneAssignment(String zoneId) async {
     final MessagePlayerLoaded? loaded = _loadedState;
-    if (loaded == null || loaded.selectedMessageId == null || loaded.messagePlayer == null) return;
+    if (loaded == null || loaded.selectedMessageId == null) return;
 
-    final MessageModel? selectedMessage = loaded.selectedMessage;
-    if (selectedMessage == null) return;
+    await _projectViewModel.toggleZoneAssignmentForMessage(
+      messageId: loaded.selectedMessageId!,
+      zoneId: zoneId,
+      autoSave: true,
+    );
 
-    List<String> updatedZoneIds;
-    if (selectedMessage.assignedZoneIds.contains(zoneId)) {
-      updatedZoneIds = selectedMessage.assignedZoneIds.where((String id) => id != zoneId).toList();
-    } else {
-      updatedZoneIds = <String>[...selectedMessage.assignedZoneIds, zoneId];
-    }
+    // Emit same state to trigger rebuild - zones are managed via RelationshipManager
+    emit(loaded.copyWith());
+  }
 
-    final List<MessageModel> updatedMessages =
-        loaded.messagePlayer!.messages
-            .map(
-              (MessageModel m) => m.id == loaded.selectedMessageId ? m.copyWith(assignedZoneIds: updatedZoneIds) : m,
-            )
-            .toList();
+  /// Get zones assigned to selected message
+  Set<String> getAssignedZonesForSelectedMessage() {
+    final MessagePlayerLoaded? loaded = _loadedState;
+    if (loaded == null || loaded.selectedMessageId == null) return <String>{};
 
-    emit(
-      loaded.copyWith(
-        messagePlayer: loaded.messagePlayer!.copyWith(messages: updatedMessages),
-      ),
+    return _projectViewModel.getZonesForMessage(loaded.selectedMessageId!);
+  }
+
+  /// Check if a zone is assigned to selected message
+  bool isZoneAssignedToSelectedMessage(String zoneId) {
+    final MessagePlayerLoaded? loaded = _loadedState;
+    if (loaded == null || loaded.selectedMessageId == null) return false;
+
+    return _projectViewModel.isZoneAssignedToMessage(
+      messageId: loaded.selectedMessageId!,
+      zoneId: zoneId,
     );
   }
 
   /// Delete selected message
-  void deleteSelectedMessage() {
+  Future<void> deleteSelectedMessage() async {
     final MessagePlayerLoaded? loaded = _loadedState;
     if (loaded == null || loaded.selectedMessageId == null || loaded.messagePlayer == null) return;
 
@@ -290,9 +401,14 @@ class MessagePlayerConfigCubit extends Cubit<MessagePlayerConfigState> {
 
     final List<MessageModel> updatedMessages = loaded.messagePlayer!.messages.where((MessageModel m) => m.id != loaded.selectedMessageId).toList();
 
+    final MessagePlayerModel updatedPlayer = loaded.messagePlayer!.copyWith(messages: updatedMessages);
+
+    // Save to ProjectViewModel
+    await _saveMessagePlayerToProject(updatedPlayer);
+
     emit(
       loaded.copyWith(
-        messagePlayer: loaded.messagePlayer!.copyWith(messages: updatedMessages),
+        messagePlayer: updatedPlayer,
         clearSelectedMessage: true,
       ),
     );

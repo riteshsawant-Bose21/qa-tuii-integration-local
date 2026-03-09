@@ -15,6 +15,15 @@ extension MessagePlayerService on ProjectService {
   /// Add a new message player
   void addMessagePlayer({required MessagePlayerModel messagePlayer}) {
     messagePlayers.add(messagePlayer.id, messagePlayer);
+
+    // Link player to messages using RelationshipManager
+    for (final MessageModel message in messagePlayer.messages) {
+      relationships.link(
+        RelationshipType.playerMessages,
+        messagePlayer.id,
+        message.id,
+      );
+    }
   }
 
   /// Update an existing message player
@@ -30,6 +39,17 @@ extension MessagePlayerService on ProjectService {
     if (!messagePlayers.exists(id)) {
       throw Exception("Message player with id $id does not exist.");
     }
+
+    // Remove all relationships for this player
+    final MessagePlayerModel? player = getMessagePlayerById(id);
+    if (player != null) {
+      for (final MessageModel message in player.messages) {
+        // Remove message-zone relationships
+        relationships.removeAllRelationships(message.id);
+      }
+    }
+    relationships.removeAllRelationships(id);
+
     messagePlayers.remove(id);
   }
 
@@ -46,6 +66,13 @@ extension MessagePlayerService on ProjectService {
     final List<MessageModel> updatedMessages = <MessageModel>[...player.messages, message];
     final MessagePlayerModel updatedPlayer = player.copyWith(messages: updatedMessages);
     updateMessagePlayer(messagePlayer: updatedPlayer);
+
+    // Link message to player
+    relationships.link(
+      RelationshipType.playerMessages,
+      messagePlayerId,
+      message.id,
+    );
   }
 
   /// Update a message in a message player
@@ -73,8 +100,65 @@ extension MessagePlayerService on ProjectService {
       throw Exception("Message player with id $messagePlayerId does not exist.");
     }
 
+    // Remove all relationships for this message
+    relationships.removeAllRelationships(messageId);
+
     final List<MessageModel> updatedMessages = player.messages.where((MessageModel m) => m.id != messageId).toList();
     final MessagePlayerModel updatedPlayer = player.copyWith(messages: updatedMessages);
     updateMessagePlayer(messagePlayer: updatedPlayer);
+  }
+
+  // ==================== Zone Assignment Methods ====================
+
+  /// Assign a zone to a message
+  void assignZoneToMessage({
+    required String messageId,
+    required String zoneId,
+  }) {
+    relationships.link(
+      RelationshipType.messageZones,
+      messageId,
+      zoneId,
+    );
+  }
+
+  /// Unassign a zone from a message
+  void unassignZoneFromMessage({
+    required String messageId,
+    required String zoneId,
+  }) {
+    relationships.unlink(
+      RelationshipType.messageZones,
+      messageId,
+      zoneId,
+    );
+  }
+
+  /// Get all zones assigned to a message
+  Set<String> getZonesForMessage(String messageId) {
+    return relationships.getChildren(
+      RelationshipType.messageZones,
+      messageId,
+    );
+  }
+
+  /// Check if a zone is assigned to a message
+  bool isZoneAssignedToMessage({
+    required String messageId,
+    required String zoneId,
+  }) {
+    return getZonesForMessage(messageId).contains(zoneId);
+  }
+
+  /// Toggle zone assignment for a message
+  void toggleZoneAssignmentForMessage({
+    required String messageId,
+    required String zoneId,
+  }) {
+    if (isZoneAssignedToMessage(messageId: messageId, zoneId: zoneId)) {
+      unassignZoneFromMessage(messageId: messageId, zoneId: zoneId);
+    } else {
+      assignZoneToMessage(messageId: messageId, zoneId: zoneId);
+    }
   }
 }

@@ -52,14 +52,13 @@ class MessagePlayerConfigDialog extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Load message player from ProjectViewModel if ID is provided
-    MessagePlayerModel? player = messagePlayer;
-    if (player == null && messagePlayerId != null) {
-      player = serviceLocator<ProjectViewModel>().getMessagePlayerById(messagePlayerId!);
-    }
-
     return BlocProvider<MessagePlayerConfigCubit>(
-      create: (BuildContext context) => MessagePlayerConfigCubit()..init(messagePlayer: player),
+      create:
+          (BuildContext context) =>
+              MessagePlayerConfigCubit()..init(
+                messagePlayer: messagePlayer,
+                messagePlayerId: messagePlayerId,
+              ),
       child: const _MessagePlayerConfigDialogContent(),
     );
   }

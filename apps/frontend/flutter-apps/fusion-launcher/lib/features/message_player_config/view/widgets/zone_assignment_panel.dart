@@ -41,7 +41,7 @@ class ZoneAssignmentPanel extends StatelessWidget {
 
                 return _ZoneList(
                   availableZones: state.availableZones,
-                  assignedZoneIds: selectedMessage.assignedZoneIds,
+                  selectedMessageId: selectedMessage.id,
                 );
               },
             ),
@@ -54,16 +54,19 @@ class ZoneAssignmentPanel extends StatelessWidget {
 
 class _ZoneList extends StatelessWidget {
   final List<Zone> availableZones;
-  final List<String> assignedZoneIds;
+  final String selectedMessageId;
 
   const _ZoneList({
     required this.availableZones,
-    required this.assignedZoneIds,
+    required this.selectedMessageId,
   });
 
   @override
   Widget build(BuildContext context) {
     final MessagePlayerConfigCubit cubit = context.read<MessagePlayerConfigCubit>();
+
+    // Get assigned zone IDs from RelationshipManager
+    final Set<String> assignedZoneIds = cubit.getAssignedZonesForSelectedMessage();
 
     // Separate assigned and unassigned zones
     final List<Zone> assignedZones = availableZones.where((Zone z) => assignedZoneIds.contains(z.id)).toList();
@@ -82,7 +85,7 @@ class _ZoneList extends StatelessWidget {
         // Add zone button/dropdown
         _AddZoneDropdown(
           availableZones: availableZones,
-          assignedZoneIds: assignedZoneIds,
+          assignedZoneIds: assignedZoneIds.toList(),
           onZoneSelected: (String zoneId) => cubit.toggleZoneAssignment(zoneId),
         ),
       ],

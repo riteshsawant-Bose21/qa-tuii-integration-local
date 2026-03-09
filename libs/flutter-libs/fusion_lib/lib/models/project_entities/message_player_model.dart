@@ -10,7 +10,6 @@ class MessageModel {
   final bool repeat;
   final int repeatCount;
   final int repeatIntervalSeconds;
-  final List<String> assignedZoneIds;
 
   const MessageModel({
     required this.id,
@@ -21,7 +20,6 @@ class MessageModel {
     this.repeat = false,
     this.repeatCount = 1,
     this.repeatIntervalSeconds = 2,
-    this.assignedZoneIds = const <String>[],
   });
 
   factory MessageModel.create({String? name}) {
@@ -40,7 +38,6 @@ class MessageModel {
     bool? repeat,
     int? repeatCount,
     int? repeatIntervalSeconds,
-    List<String>? assignedZoneIds,
     bool clearAudioFile = false,
   }) {
     return MessageModel(
@@ -52,7 +49,6 @@ class MessageModel {
       repeat: repeat ?? this.repeat,
       repeatCount: repeatCount ?? this.repeatCount,
       repeatIntervalSeconds: repeatIntervalSeconds ?? this.repeatIntervalSeconds,
-      assignedZoneIds: assignedZoneIds ?? this.assignedZoneIds,
     );
   }
 
@@ -65,7 +61,6 @@ class MessageModel {
     'repeat': repeat,
     'repeatCount': repeatCount,
     'repeatIntervalSeconds': repeatIntervalSeconds,
-    'assignedZoneIds': assignedZoneIds,
   };
 
   factory MessageModel.fromJson(Map<String, dynamic> json) => MessageModel(
@@ -77,7 +72,6 @@ class MessageModel {
     repeat: json['repeat'] as bool? ?? false,
     repeatCount: json['repeatCount'] as int? ?? 1,
     repeatIntervalSeconds: json['repeatIntervalSeconds'] as int? ?? 2,
-    assignedZoneIds: (json['assignedZoneIds'] as List<dynamic>?)?.map((dynamic e) => e as String).toList() ?? <String>[],
   );
 }
 

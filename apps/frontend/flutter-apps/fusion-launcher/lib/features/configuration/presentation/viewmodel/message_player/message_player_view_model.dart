@@ -139,4 +139,85 @@ extension MessagePlayerViewModels on ProjectViewModel {
       isZoneSelectType: isZoneSelectType,
     );
   }
+
+  // ==================== Zone Assignment Methods ====================
+
+  /// Assign a zone to a message
+  Future<void> assignZoneToMessage({
+    required String messageId,
+    required String zoneId,
+    bool autoSave = true,
+  }) async {
+    if (autoSave) {
+      recordSnapshot();
+    }
+
+    projectManager.assignZoneToMessage(
+      messageId: messageId,
+      zoneId: zoneId,
+    );
+
+    if (autoSave) {
+      await saveProject();
+    }
+    updateProject();
+  }
+
+  /// Unassign a zone from a message
+  Future<void> unassignZoneFromMessage({
+    required String messageId,
+    required String zoneId,
+    bool autoSave = true,
+  }) async {
+    if (autoSave) {
+      recordSnapshot();
+    }
+
+    projectManager.unassignZoneFromMessage(
+      messageId: messageId,
+      zoneId: zoneId,
+    );
+
+    if (autoSave) {
+      await saveProject();
+    }
+    updateProject();
+  }
+
+  /// Get all zones assigned to a message
+  Set<String> getZonesForMessage(String messageId) {
+    return projectManager.getZonesForMessage(messageId);
+  }
+
+  /// Check if a zone is assigned to a message
+  bool isZoneAssignedToMessage({
+    required String messageId,
+    required String zoneId,
+  }) {
+    return projectManager.isZoneAssignedToMessage(
+      messageId: messageId,
+      zoneId: zoneId,
+    );
+  }
+
+  /// Toggle zone assignment for a message
+  Future<void> toggleZoneAssignmentForMessage({
+    required String messageId,
+    required String zoneId,
+    bool autoSave = true,
+  }) async {
+    if (autoSave) {
+      recordSnapshot();
+    }
+
+    projectManager.toggleZoneAssignmentForMessage(
+      messageId: messageId,
+      zoneId: zoneId,
+    );
+
+    if (autoSave) {
+      await saveProject();
+    }
+    updateProject();
+  }
 }
