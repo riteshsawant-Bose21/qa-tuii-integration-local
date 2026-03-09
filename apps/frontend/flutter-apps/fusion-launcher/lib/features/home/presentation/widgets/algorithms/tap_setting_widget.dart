@@ -3,8 +3,12 @@ import 'package:fusion_lib/fusion_lib.dart';
 
 class SpeakerInput {
   String? selectedModel;
-  final TextEditingController speakerHeightController = TextEditingController(text: '3.7');
-  final TextEditingController listenerHeightController = TextEditingController(text: '1.8');
+  final TextEditingController speakerHeightController = TextEditingController(
+    text: '3.7',
+  );
+  final TextEditingController listenerHeightController = TextEditingController(
+    text: '1.8',
+  );
 
   void dispose() {
     speakerHeightController.dispose();
@@ -27,7 +31,9 @@ class _TapSettingWidgetState extends State<TapSettingWidget> {
 
   // Circuit configuration
   String circuitType = 'hi-z';
-  final TextEditingController voltageController = TextEditingController(text: '100');
+  final TextEditingController voltageController = TextEditingController(
+    text: '100',
+  );
 
   @override
   void dispose() {
@@ -47,7 +53,9 @@ class _TapSettingWidgetState extends State<TapSettingWidget> {
         children: <Widget>[
           const FusionGradientText(
             text: 'Tap Setting Calculation',
-            gradient: LinearGradient(colors: <Color>[Colors.orange, Colors.red]),
+            gradient: LinearGradient(
+              colors: <Color>[Colors.orange, Colors.red],
+            ),
             fontSize: 24,
             fontWeight: FontWeight.bold,
           ),
@@ -183,7 +191,10 @@ class _TapSettingWidgetState extends State<TapSettingWidget> {
                         children: <Widget>[
                           Text(
                             'Speaker ${index + 1}',
-                            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
                           const Spacer(),
                           if (speakers.length > 1)
@@ -204,13 +215,15 @@ class _TapSettingWidgetState extends State<TapSettingWidget> {
                                 // const Text('Speaker Model *', style: TextStyle(fontWeight: FontWeight.w500)),
                                 // const SizedBox(height: 8),
                                 FusionDropdownButtonFormField(
-                                  semanticKey: "tap_setting_speaker_model_dropdown_$index",
+                                  semanticKey:
+                                      "tap_setting_speaker_model_dropdown_$index",
                                   value: input.selectedModel,
                                   hintText: 'Select speaker model',
 
                                   options: speakerDatabase.keys.toList(),
                                   displayString: (String model) {
-                                    final SpeakerModel speaker = speakerDatabase[model]!;
+                                    final SpeakerModel speaker =
+                                        speakerDatabase[model]!;
                                     return '$model (${speaker.mountingType}, ${speaker.maxSpl}dB)';
                                   },
                                   // items:
@@ -226,7 +239,11 @@ class _TapSettingWidgetState extends State<TapSettingWidget> {
                                       input.selectedModel = newValue;
                                     });
                                   },
-                                  validator: (String? value) => value == null ? 'Please select a speaker model' : null,
+                                  validator:
+                                      (String? value) =>
+                                          value == null
+                                              ? 'Please select a speaker model'
+                                              : null,
                                 ),
                               ],
                             ),
@@ -239,6 +256,7 @@ class _TapSettingWidgetState extends State<TapSettingWidget> {
                         children: <Widget>[
                           Expanded(
                             child: FusionTextFormField(
+                              semanticId: 'tap_setting_speaker_height',
                               title: 'Speaker Height (m)',
                               hintText: 'e.g., 3.7',
                               controller: input.speakerHeightController,
@@ -249,6 +267,7 @@ class _TapSettingWidgetState extends State<TapSettingWidget> {
                           const SizedBox(width: 12),
                           Expanded(
                             child: FusionTextFormField(
+                              semanticId: 'tap_setting_listener_height',
                               title: 'Listener Height (m)',
                               hintText: 'e.g., 1.8',
                               controller: input.listenerHeightController,
@@ -279,6 +298,7 @@ class _TapSettingWidgetState extends State<TapSettingWidget> {
               const SizedBox(width: 12),
               Expanded(
                 child: FusionGradientButton(
+                  accessLabel: 'tap_setting_calculateTapSetting',
                   label: 'Calculate Tap Settings',
                   onTap: _calculateTapSetting,
                   gradient: const LinearGradient(
@@ -319,14 +339,20 @@ class _TapSettingWidgetState extends State<TapSettingWidget> {
               ),
               const Spacer(),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 8.0,
+                  vertical: 4.0,
+                ),
                 decoration: BoxDecoration(
                   color: Colors.orange.withValues(alpha: 0.2),
                   borderRadius: BorderRadius.circular(12.0),
                 ),
                 child: Text(
                   '${tapResult!.results.length} speakers',
-                  style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                  ),
                 ),
               ),
             ],
@@ -353,7 +379,10 @@ class _TapSettingWidgetState extends State<TapSettingWidget> {
                           child: Center(
                             child: Text(
                               '${i + 1}',
-                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16,
+                              ),
                             ),
                           ),
                         ),
@@ -363,28 +392,48 @@ class _TapSettingWidgetState extends State<TapSettingWidget> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: <Widget>[
                               Text(
-                                i < speakers.length ? (speakers[i].selectedModel ?? 'Unknown Model') : 'Unknown Model',
-                                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                                i < speakers.length
+                                    ? (speakers[i].selectedModel ??
+                                        'Unknown Model')
+                                    : 'Unknown Model',
+                                style: const TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                ),
                               ),
                               Text(
                                 'Distance: ${tapResult!.results[i].distanceMeters.toStringAsFixed(2)}m',
-                                style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  color: Colors.grey[600],
+                                ),
                               ),
                             ],
                           ),
                         ),
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 6.0),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12.0,
+                            vertical: 6.0,
+                          ),
                           decoration: BoxDecoration(
-                            color: tapResult!.results[i].powerWatts > 0 ? Colors.green.withValues(alpha: 0.2) : Colors.red.withValues(alpha: 0.2),
+                            color:
+                                tapResult!.results[i].powerWatts > 0
+                                    ? Colors.green.withValues(alpha: 0.2)
+                                    : Colors.red.withValues(alpha: 0.2),
                             borderRadius: BorderRadius.circular(16.0),
                           ),
                           child: Text(
-                            tapResult!.results[i].powerWatts > 0 ? '${tapResult!.results[i].powerWatts.toStringAsFixed(1)}W' : 'N/A',
+                            tapResult!.results[i].powerWatts > 0
+                                ? '${tapResult!.results[i].powerWatts.toStringAsFixed(1)}W'
+                                : 'N/A',
                             style: TextStyle(
                               fontSize: 12,
                               fontWeight: FontWeight.bold,
-                              color: tapResult!.results[i].powerWatts > 0 ? Colors.green : Colors.red,
+                              color:
+                                  tapResult!.results[i].powerWatts > 0
+                                      ? Colors.green
+                                      : Colors.red,
                             ),
                           ),
                         ),
@@ -405,23 +454,36 @@ class _TapSettingWidgetState extends State<TapSettingWidget> {
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: <Widget>[
-                              const Text('SPL Loss:', style: TextStyle(fontWeight: FontWeight.w500)),
-                              Text('${tapResult!.results[i].splLoss.toStringAsFixed(2)}dB'),
+                              const Text(
+                                'SPL Loss:',
+                                style: TextStyle(fontWeight: FontWeight.w500),
+                              ),
+                              Text(
+                                '${tapResult!.results[i].splLoss.toStringAsFixed(2)}dB',
+                              ),
                             ],
                           ),
                           const SizedBox(height: 8),
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: <Widget>[
-                              const Text('Attenuation:', style: TextStyle(fontWeight: FontWeight.w500)),
-                              Text('${tapResult!.results[i].attenuationDb.toStringAsFixed(2)}dB'),
+                              const Text(
+                                'Attenuation:',
+                                style: TextStyle(fontWeight: FontWeight.w500),
+                              ),
+                              Text(
+                                '${tapResult!.results[i].attenuationDb.toStringAsFixed(2)}dB',
+                              ),
                             ],
                           ),
                           const SizedBox(height: 8),
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: <Widget>[
-                              const Text('Circuit Type:', style: TextStyle(fontWeight: FontWeight.w500)),
+                              const Text(
+                                'Circuit Type:',
+                                style: TextStyle(fontWeight: FontWeight.w500),
+                              ),
                               Text(circuitType.toUpperCase()),
                             ],
                           ),
@@ -429,7 +491,10 @@ class _TapSettingWidgetState extends State<TapSettingWidget> {
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: <Widget>[
-                              const Text('Voltage:', style: TextStyle(fontWeight: FontWeight.w500)),
+                              const Text(
+                                'Voltage:',
+                                style: TextStyle(fontWeight: FontWeight.w500),
+                              ),
                               Text('${voltageController.text}V'),
                             ],
                           ),
@@ -444,10 +509,16 @@ class _TapSettingWidgetState extends State<TapSettingWidget> {
                       width: double.infinity,
                       padding: const EdgeInsets.all(8.0),
                       decoration: BoxDecoration(
-                        color: tapResult!.results[i].powerWatts > 0 ? Colors.blue.withValues(alpha: 0.1) : Colors.red.withValues(alpha: 0.1),
+                        color:
+                            tapResult!.results[i].powerWatts > 0
+                                ? Colors.blue.withValues(alpha: 0.1)
+                                : Colors.red.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(6.0),
                         border: Border.all(
-                          color: tapResult!.results[i].powerWatts > 0 ? Colors.blue.withValues(alpha: 0.3) : Colors.red.withValues(alpha: 0.3),
+                          color:
+                              tapResult!.results[i].powerWatts > 0
+                                  ? Colors.blue.withValues(alpha: 0.3)
+                                  : Colors.red.withValues(alpha: 0.3),
                         ),
                       ),
                       child: Text(
@@ -457,7 +528,10 @@ class _TapSettingWidgetState extends State<TapSettingWidget> {
                         style: TextStyle(
                           fontSize: 12,
                           fontStyle: FontStyle.italic,
-                          color: tapResult!.results[i].powerWatts > 0 ? Colors.blue[700] : Colors.red[700],
+                          color:
+                              tapResult!.results[i].powerWatts > 0
+                                  ? Colors.blue[700]
+                                  : Colors.red[700],
                         ),
                       ),
                     ),
@@ -485,24 +559,42 @@ class _TapSettingWidgetState extends State<TapSettingWidget> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: <Widget>[
-                    const Text('Reference Distance:', style: TextStyle(fontWeight: FontWeight.w500)),
-                    Text('${tapResult!.referenceDistance.toStringAsFixed(2)}m', style: const TextStyle(fontWeight: FontWeight.bold)),
+                    const Text(
+                      'Reference Distance:',
+                      style: TextStyle(fontWeight: FontWeight.w500),
+                    ),
+                    Text(
+                      '${tapResult!.referenceDistance.toStringAsFixed(2)}m',
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
                   ],
                 ),
                 const SizedBox(height: 8),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: <Widget>[
-                    const Text('Number of Speakers:', style: TextStyle(fontWeight: FontWeight.w500)),
-                    Text('${tapResult!.results.length}', style: const TextStyle(fontWeight: FontWeight.bold)),
+                    const Text(
+                      'Number of Speakers:',
+                      style: TextStyle(fontWeight: FontWeight.w500),
+                    ),
+                    Text(
+                      '${tapResult!.results.length}',
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
                   ],
                 ),
                 const SizedBox(height: 8),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: <Widget>[
-                    const Text('Calculation Method:', style: TextStyle(fontWeight: FontWeight.w500)),
-                    Text(tapResult!.calculationMethod, style: const TextStyle(fontWeight: FontWeight.bold)),
+                    const Text(
+                      'Calculation Method:',
+                      style: TextStyle(fontWeight: FontWeight.w500),
+                    ),
+                    Text(
+                      tapResult!.calculationMethod,
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
                   ],
                 ),
               ],
@@ -554,7 +646,9 @@ class _TapSettingWidgetState extends State<TapSettingWidget> {
       final int voltage = int.parse(voltageController.text);
 
       for (final SpeakerInput input in speakers) {
-        if (input.selectedModel == null || input.speakerHeightController.text.isEmpty || input.listenerHeightController.text.isEmpty) {
+        if (input.selectedModel == null ||
+            input.speakerHeightController.text.isEmpty ||
+            input.listenerHeightController.text.isEmpty) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('Please fill in all speaker fields')),
           );

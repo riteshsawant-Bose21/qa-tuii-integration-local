@@ -9,7 +9,6 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/core/service_locator.dart';
 import 'package:fusion_launcher/features/fusion_canvas/view/painters/fusion_base_painter.dart';
 import 'package:fusion_launcher/features/projects/widget/building/toolbar/canvas_toolbar.dart';
-import 'package:fusion_lib/constants/test_keys.dart';
 import 'package:fusion_lib/fusion_building_view/floor_canvas_controller.dart';
 import 'package:fusion_lib/fusion_building_view/floor_plan_calibrator.dart';
 import 'package:fusion_lib/fusion_building_view/spl_range_controller.dart';
@@ -63,12 +62,16 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
 
   void zoneSelectionMode(Zone zone) async {
     final List<ListeningArea>? selectedAreas = await widget.floorCanvasController.requestListeningAreaSelection(
-      serviceLocator<ProjectViewModel>().getListeningAreasForZone(zoneId: zone.id),
+      serviceLocator<ProjectViewModel>().getListeningAreasForZone(
+        zoneId: zone.id,
+      ),
       zone,
     );
 
     if (selectedAreas != null) {
-      print("Selected areas for zone ${zone.name}: ${selectedAreas.map((ListeningArea e) => e.name).toList()}");
+      print(
+        "Selected areas for zone ${zone.name}: ${selectedAreas.map((ListeningArea e) => e.name).toList()}",
+      );
       serviceLocator<ProjectViewModel>().updateListeningAreasInZone(
         zoneId: zone.id,
         listeningAreaIds: selectedAreas.map((ListeningArea e) => e.id).toList(),
@@ -80,12 +83,16 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
 
   void subzoneSelectionMode(SubZone subZone) async {
     final List<ListeningArea>? selectedAreas = await widget.floorCanvasController.requestListeningAreaSelectionForSubZone(
-      serviceLocator<ProjectViewModel>().getListeningAreasInSubZone(subZoneId: subZone.id),
+      serviceLocator<ProjectViewModel>().getListeningAreasInSubZone(
+        subZoneId: subZone.id,
+      ),
       subZone,
     );
 
     if (selectedAreas != null) {
-      print("Selected areas for subzone ${subZone.name}: ${selectedAreas.map((ListeningArea e) => e.name).toList()}");
+      print(
+        "Selected areas for subzone ${subZone.name}: ${selectedAreas.map((ListeningArea e) => e.name).toList()}",
+      );
       serviceLocator<ProjectViewModel>().updateListeningAreasInSubZone(
         subZoneId: subZone.id,
         listeningAreaIds: selectedAreas.map((ListeningArea e) => e.id).toList(),
@@ -163,6 +170,7 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
                                   });
                                 },
                                 child: GuideShowcaseWrapper(
+                                  semanticId: "building_canvas_floor_plan",
                                   step: GuideShowCaseSteps.showListeningAreaSelectionArea,
                                   child: SemanticHelper.container(
                                     testId: SemanticHelper.createTestId(SemanticTypes.container, "building_floor_canvas"),
@@ -632,6 +640,7 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
                                       ),
                                       const SizedBox(width: 12),
                                       GuideShowcaseWrapper(
+                                        semanticId: "confirm_select_listening_area_button",
                                         step: GuideShowCaseSteps.confirmSelectListeningArea,
                                         onHighlightedSpotTap: (TapDownDetails details) {
                                           serviceLocator<ProjectViewModel>().clearSelectedZone();
@@ -646,7 +655,9 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
                                               serviceLocator<ProjectViewModel>().clearSelectedZone();
                                               widget.floorCanvasController.completeListeningAreaSelection();
                                             },
-                                            borderRadius: BorderRadius.circular(12),
+                                            borderRadius: BorderRadius.circular(
+                                              12,
+                                            ),
                                             child: Container(
                                               padding: const EdgeInsets.all(5),
                                               decoration: BoxDecoration(
@@ -858,7 +869,9 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
           /// Title
           FusionAppText(
             text: "Getting Started",
-            style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
+            style: Theme.of(
+              context,
+            ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
           ),
           const SizedBox(height: 16),
 
@@ -872,9 +885,11 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
 
           /// Upload Button
           GuideShowcaseWrapper(
+            semanticId: 'building_canvas_upload_floor_plan',
             step: GuideShowCaseSteps.uploadFloorPlan,
             onHighlightedSpotTap: (TapDownDetails details) => _showFloorPlanPicker(),
             child: FusionOutlinedButton(
+              accessLabel: 'upload_floor_plan',
               height: 32,
               width: 160,
               semanticsId: FusionTestKeys.uploadFloorPlan,
@@ -903,7 +918,9 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
       builder:
           (BuildContext ctx) => Dialog(
             backgroundColor: Theme.of(context).colorScheme.elevation1,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(8),
+            ),
             child: Container(
               width: 720,
               height: 600,
@@ -918,14 +935,19 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
                       Expanded(
                         child: FusionAppText(
                           text: 'Upload Floor Plan',
-                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          style: Theme.of(
+                            context,
+                          ).textTheme.titleMedium?.copyWith(
                             fontWeight: FontWeight.w600,
                             color: context.colorScheme.textPrimary,
                           ),
                         ),
                       ),
                       SemanticHelper.button(
-                        testId: SemanticHelper.createTestId(SemanticTypes.button, FusionTestKeys.closeX),
+                        testId: SemanticHelper.createTestId(
+                          SemanticTypes.button,
+                          FusionTestKeys.closeX,
+                        ),
                         child: IconButton(
                           onPressed: () => Navigator.of(ctx).pop(),
                           icon: Icon(
@@ -951,18 +973,24 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
                   // Divider
                   Row(
                     children: <Widget>[
-                      Expanded(child: Divider(color: context.colorScheme.elevation2)),
+                      Expanded(
+                        child: Divider(color: context.colorScheme.elevation2),
+                      ),
                       Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 16),
                         child: FusionAppText(
                           text: 'or choose from samples',
-                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          style: Theme.of(
+                            context,
+                          ).textTheme.bodySmall?.copyWith(
                             color: context.colorScheme.primaryWhite,
                             fontWeight: FontWeight.w500,
                           ),
                         ),
                       ),
-                      Expanded(child: Divider(color: context.colorScheme.elevation2)),
+                      Expanded(
+                        child: Divider(color: context.colorScheme.elevation2),
+                      ),
                     ],
                   ),
 
@@ -992,7 +1020,11 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
       onAcceptWithDetails: (DragTargetDetails<String> details) {
         _importFloorPlan();
       },
-      builder: (BuildContext context, List<String?> candidateData, List<dynamic> rejectedData) {
+      builder: (
+        BuildContext context,
+        List<String?> candidateData,
+        List<dynamic> rejectedData,
+      ) {
         final bool isDragActive = candidateData.isNotEmpty;
 
         return GestureDetector(
@@ -1000,7 +1032,12 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
           child: Container(
             width: double.infinity,
             decoration: BoxDecoration(
-              color: isDragActive ? Theme.of(context).colorScheme.primaryColor.withValues(alpha: 0.05) : context.colorScheme.elevation1,
+              color:
+                  isDragActive
+                      ? Theme.of(
+                        context,
+                      ).colorScheme.primaryColor.withValues(alpha: 0.05)
+                      : context.colorScheme.elevation1,
               border: Border.all(
                 width: isDragActive ? 2 : 1,
                 color: isDragActive ? Theme.of(context).colorScheme.primaryWhite : context.colorScheme.elevation2,
@@ -1014,7 +1051,14 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
                   duration: const Duration(milliseconds: 200),
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: isDragActive ? context.colorScheme.primaryWhite.withValues(alpha: 0.15) : context.colorScheme.primaryWhite.withValues(alpha: 0.1),
+                    color:
+                        isDragActive
+                            ? context.colorScheme.primaryWhite.withValues(
+                              alpha: 0.15,
+                            )
+                            : context.colorScheme.primaryWhite.withValues(
+                              alpha: 0.1,
+                            ),
                     shape: BoxShape.circle,
                   ),
                   child: Icon(
@@ -1040,13 +1084,18 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
                 ),
                 const SizedBox(height: 16),
                 FusionOutlinedButton(
+                  accessLabel: 'building_canvas_browse_files',
                   height: 36,
                   width: 140,
                   label: 'Browse Files',
-                  textStyle: Theme.of(context).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w500),
+                  textStyle: Theme.of(
+                    context,
+                  ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w500),
                   foregroundColor: Theme.of(context).colorScheme.textPrimary,
                   activeBorderColor: Theme.of(context).colorScheme.primaryWhite,
-                  backgroundColor: Theme.of(context).colorScheme.primaryColor.withValues(alpha: 0.05),
+                  backgroundColor: Theme.of(
+                    context,
+                  ).colorScheme.primaryColor.withValues(alpha: 0.05),
                   onTap: () => _importFloorPlan(),
                 ),
               ],
@@ -1061,7 +1110,10 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
     final String title = planPath.split('/').last.split('.').first.replaceAll('_', ' ').toUpperCase();
 
     return SemanticHelper.container(
-      testId: SemanticHelper.createTestId(SemanticTypes.container, 'floor_plan_sample_${index + 1}'),
+      testId: SemanticHelper.createTestId(
+        SemanticTypes.container,
+        'floor_plan_sample_${index + 1}',
+      ),
       child: Container(
         height: 120,
         margin: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
@@ -1111,7 +1163,11 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
       return Image.file(
         File(imagePath),
         fit: BoxFit.cover,
-        errorBuilder: (BuildContext context, Object error, StackTrace? stackTrace) {
+        errorBuilder: (
+          BuildContext context,
+          Object error,
+          StackTrace? stackTrace,
+        ) {
           return Container(
             color: Colors.grey.shade300,
             child: Icon(
@@ -1127,7 +1183,9 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
 
   Future<void> _selectAssetFloorPlan(String assetImagePath) async {
     if (mounted) Navigator.of(context).pop();
-    serviceLocator<GuideShowCaseController>().completeStep(GuideShowCaseSteps.uploadFloorPlan);
+    serviceLocator<GuideShowCaseController>().completeStep(
+      GuideShowCaseSteps.uploadFloorPlan,
+    );
 
     final ResponseCallback<String?> responseCallback = await serviceLocator<ProjectViewModel>().addAssetImageToProject(
       assetPath: assetImagePath,
@@ -1164,12 +1222,16 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
                 ),
           );
 
-          final ResponseCallback<String?> responseCallback = await serviceLocator<ProjectViewModel>().addImageToProject(imagePath: sourcePath);
+          final ResponseCallback<String?> responseCallback = await serviceLocator<ProjectViewModel>().addImageToProject(
+            imagePath: sourcePath,
+          );
 
           if (mounted) Navigator.of(context).pop();
 
           // ignore: use_build_context_synchronously
-          serviceLocator<GuideShowCaseController>().completeStep(GuideShowCaseSteps.uploadFloorPlan);
+          serviceLocator<GuideShowCaseController>().completeStep(
+            GuideShowCaseSteps.uploadFloorPlan,
+          );
 
           if (responseCallback.success && responseCallback.data != null) {
             final String savedImagePath = responseCallback.data!;
@@ -1194,7 +1256,9 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: FusionAppText(text: 'Error importing floor plan: ${e.toString()}'),
+          content: FusionAppText(
+            text: 'Error importing floor plan: ${e.toString()}',
+          ),
           backgroundColor: Colors.red,
         ),
       );
@@ -1227,7 +1291,9 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
               child: FloorPlanCalibrationDialog(
                 floorPlanImage: image,
                 onCalibrationComplete: (CalibrationData data) {
-                  serviceLocator<GuideShowCaseController>().completeStep(GuideShowCaseSteps.confirmFloorCalibrated);
+                  serviceLocator<GuideShowCaseController>().completeStep(
+                    GuideShowCaseSteps.confirmFloorCalibrated,
+                  );
                   if (context.mounted) {
                     Navigator.of(context).pop(data);
                   }
@@ -1278,7 +1344,10 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
 
         final double canvasWidthInPixels = widthInMeters * canvasPixelsPerMeter;
         final double canvasHeightInPixels = heightInMeters * canvasPixelsPerMeter;
-        final Size floorPlanSize = Size(canvasWidthInPixels, canvasHeightInPixels);
+        final Size floorPlanSize = Size(
+          canvasWidthInPixels,
+          canvasHeightInPixels,
+        );
 
         debugPrint(
           'Real-world dimensions: ${widthInMeters.toStringAsFixed(2)}m x ${heightInMeters.toStringAsFixed(2)}m',
@@ -1291,7 +1360,10 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
         String imagePathToUse = savedImagePath;
         if (calibrationData.croppedImage != null) {
           // Save the cropped image
-          final String croppedImagePath = await _saveCroppedImage(calibrationData.croppedImage!, savedImagePath);
+          final String croppedImagePath = await _saveCroppedImage(
+            calibrationData.croppedImage!,
+            savedImagePath,
+          );
           imagePathToUse = croppedImagePath;
         }
 
@@ -1307,7 +1379,9 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
 
         widget.floorCanvasController.loadFloorPlanImage();
         // ignore: use_build_context_synchronously
-        serviceLocator<GuideShowCaseController>().completeStep(GuideShowCaseSteps.confirmFloorCalibrated);
+        serviceLocator<GuideShowCaseController>().completeStep(
+          GuideShowCaseSteps.confirmFloorCalibrated,
+        );
       } else {
         debugPrint('Calibration cancelled by user');
       }
@@ -1336,9 +1410,14 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
     }
   }
 
-  Future<String> _saveCroppedImage(ui.Image croppedImage, String originalImagePath) async {
+  Future<String> _saveCroppedImage(
+    ui.Image croppedImage,
+    String originalImagePath,
+  ) async {
     // Convert the cropped image to byte data
-    final ByteData? byteData = await croppedImage.toByteData(format: ui.ImageByteFormat.png);
+    final ByteData? byteData = await croppedImage.toByteData(
+      format: ui.ImageByteFormat.png,
+    );
     if (byteData == null) throw Exception('Failed to convert cropped image to byte data.');
 
     // Create a temporary file to save the cropped image

@@ -31,15 +31,25 @@ class SchematicAddDeviceForm<T> extends StatelessWidget {
   Widget build(BuildContext context) {
     return BlocProvider<AddDeviceFormViewModel<T>>(
       create: (_) => AddDeviceFormViewModel<T>(),
-      child: BlocBuilder<AddDeviceFormViewModel<T>, DeviceFormState<DeviceFormData<T>>>(
-        builder: (BuildContext context, DeviceFormState<DeviceFormData<T>> state) {
-          final AddDeviceFormViewModel<T> viewModel = context.watch<AddDeviceFormViewModel<T>>();
+      child: BlocBuilder<
+        AddDeviceFormViewModel<T>,
+        DeviceFormState<DeviceFormData<T>>
+      >(
+        builder: (
+          BuildContext context,
+          DeviceFormState<DeviceFormData<T>> state,
+        ) {
+          final AddDeviceFormViewModel<T> viewModel =
+              context.watch<AddDeviceFormViewModel<T>>();
           return SizedBox(
             width: 250,
             child: Form(
               key: viewModel.formKey,
               child: Padding(
-                padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                padding: const EdgeInsets.symmetric(
+                  vertical: 12,
+                  horizontal: 16,
+                ),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -52,16 +62,23 @@ class SchematicAddDeviceForm<T> extends StatelessWidget {
                     Divider(color: context.colorScheme.strokeLight),
                     const SizedBox(height: 8),
                     SemanticHelper.radioGroup(
-                      testId: SemanticHelper.createTestId(SemanticTypes.section, "${semanticsId}_radio_group"),
+                      testId: SemanticHelper.createTestId(
+                        SemanticTypes.section,
+                        "${semanticsId}_radio_group",
+                      ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         spacing: 4,
                         children:
                             products.map((T item) {
                               final String label = itemLabel(item);
-                              final bool value = state.formData.selectedDevice == item;
+                              final bool value =
+                                  state.formData.selectedDevice == item;
                               return SemanticHelper.radio(
-                                testId: SemanticHelper.createTestId(SemanticTypes.radio, "${semanticsId}_radio_${label.toLowerCase()}"),
+                                testId: SemanticHelper.createTestId(
+                                  SemanticTypes.radio,
+                                  "${semanticsId}_radio_${label.toLowerCase()}",
+                                ),
                                 value: value,
                                 label: label,
                                 child: InkWell(
@@ -74,12 +91,20 @@ class SchematicAddDeviceForm<T> extends StatelessWidget {
                                     decoration: BoxDecoration(
                                       borderRadius: BorderRadius.circular(4),
                                       border: Border.all(
-                                        color: value ? context.colorScheme.strokeLight : context.colorScheme.elevation2,
+                                        color:
+                                            value
+                                                ? context
+                                                    .colorScheme
+                                                    .strokeLight
+                                                : context
+                                                    .colorScheme
+                                                    .elevation2,
                                         width: value ? 2 : 1,
                                       ),
                                     ),
                                     child: Row(
-                                      mainAxisAlignment: MainAxisAlignment.start,
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.start,
                                       mainAxisSize: MainAxisSize.min,
                                       children: <Widget>[
                                         Image.asset(
@@ -91,15 +116,23 @@ class SchematicAddDeviceForm<T> extends StatelessWidget {
                                         Expanded(
                                           child: FusionAppText(
                                             text: label,
-                                            style: context.textTheme.bodySmall?.copyWith(
-                                              fontSize: 10,
-                                              // color: context.colorScheme.textBody,
-                                            ),
+                                            style: context.textTheme.bodySmall
+                                                ?.copyWith(
+                                                  fontSize: 10,
+                                                  // color: context.colorScheme.textBody,
+                                                ),
                                           ),
                                         ),
 
                                         const SizedBox(width: 24),
-                                        Icon(Icons.check_circle, size: 16, color: value ? context.colorScheme.primary : Colors.transparent),
+                                        Icon(
+                                          Icons.check_circle,
+                                          size: 16,
+                                          color:
+                                              value
+                                                  ? context.colorScheme.primary
+                                                  : Colors.transparent,
+                                        ),
                                       ],
                                     ),
                                   ),
@@ -120,15 +153,27 @@ class SchematicAddDeviceForm<T> extends StatelessWidget {
                     SizedBox(
                       width: double.infinity,
                       child: ListeningAreaDropdownWidget(
-                        listeningAreas: serviceLocator<ProjectViewModel>().listeningAreas,
-                        selectedListeningAreaIds: <String>[if (state.formData.selectedLocation != null) state.formData.selectedLocation!],
-                        onSelectionChanged: (List<String> selectedIds, String floorId) {
-                          if (selectedIds.isNotEmpty) viewModel.selectLocation(selectedIds.first, floorId);
+                        listeningAreas:
+                            serviceLocator<ProjectViewModel>().listeningAreas,
+                        selectedListeningAreaIds: <String>[
+                          if (state.formData.selectedLocation != null)
+                            state.formData.selectedLocation!,
+                        ],
+                        onSelectionChanged: (
+                          List<String> selectedIds,
+                          String floorId,
+                        ) {
+                          if (selectedIds.isNotEmpty)
+                            viewModel.selectLocation(
+                              selectedIds.first,
+                              floorId,
+                            );
                         },
                       ),
                     ),
                     const SizedBox(height: 16),
                     FusionButton(
+                      accessLabel: 'add_device',
                       label: "Add Device",
                       width: double.infinity,
                       isActive: state.isComplete,

@@ -1958,11 +1958,62 @@ const struct base_device bd_fusion_fm8y = {
     }
 };
 
+const struct base_device bd_fusion_xlr_pal = {
+    .data = {
+        .model = "xlr-pal",
+        .sn = "tbd",
+        .type = BD_TYPE_FUSION_XLR_PAL
+    },
+    .num_gpios = 3,
+    .gpios = (struct endpoint_gpio[]) {
+        {
+            .name = "gpio_XLR_SW",
+            .type = EP_GPIO_TYPE_PHYS,
+            .export = true,
+            .dir = EP_GPIO_DIR_I,
+            .num = 5 // GPIO1_IO5
+        },
+        {
+            .name = "gpio_TRS_SW",
+            .type = EP_GPIO_TYPE_PHYS,
+            .export = true,
+            .dir = EP_GPIO_DIR_I,
+            .num = 6 // GPIO1_IO6
+        },
+        {
+            .name = "gpio_PWR_SW1",
+            .type = EP_GPIO_TYPE_PHYS,
+            .export = true,
+            .num = 123 // GPIO1_IO6
+        }
+    }
+};
+
+const struct base_device bd_fusion_blue_pal = {
+    .data = {
+        .model = "blue-pal",
+        .sn = "tbd",
+        .type = BD_TYPE_FUSION_BLUE_PAL
+    },
+    .num_gpios = 1,
+    .gpios = (struct endpoint_gpio[]) {
+        {
+            .name = "gpio_BT_SWn",
+            .type = EP_GPIO_TYPE_PHYS,
+            .export = true,
+            .dir = EP_GPIO_DIR_I,
+            .num = 5 // GPIO1_IO5
+        }
+    }
+};
+
 const enum base_device_type default_bd_types[] = {
     BD_TYPE_FUSION_POWERSMART,
     BD_TYPE_FUSION_C1_EVK,
     BD_TYPE_FUSION_FM6,
     BD_TYPE_FUSION_FM8Y,
+    BD_TYPE_FUSION_XLR_PAL,
+    BD_TYPE_FUSION_BLUE_PAL,
     BD_TYPE_NONE
 };
 
@@ -1970,5 +2021,7 @@ const struct base_device *default_bds[] = {
     &bd_fusion_powersmart,
     &bd_fusion_c1_evk,
     &bd_fusion_fm6,
-    &bd_fusion_fm8y
+    &bd_fusion_fm8y,
+    &bd_fusion_xlr_pal,
+    &bd_fusion_blue_pal
 };

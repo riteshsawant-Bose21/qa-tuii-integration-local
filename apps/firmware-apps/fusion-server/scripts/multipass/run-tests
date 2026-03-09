@@ -18,6 +18,7 @@ function show_help() {
     echo "  --state       Run only state manager tests"     
     echo "  --tasks       Run only tasks tests"     
     echo "  --udp         Run only UDP tests"     
+    echo "  --udp-chaos   Run UDP chaos mesh test (multi-node virtual devices + fault injection)"
     echo "  --integration Run only integration tests (ex: --integration --size 5) (build tag integration)"
     echo "  --websocket   Run only websocket tests"
     echo "  --test-name   Run only a specific Go test name or subtest"
@@ -49,6 +50,7 @@ while [[ $# -gt 0 ]]; do
         --state)        test_type="state"; shift ;;
         --tasks)        test_type="tasks"; shift ;;
         --udp)          test_type="udp"; shift ;;
+        --udp-chaos)    test_type="udp-chaos"; shift ;;
         --websocket)    test_type="websocket"; shift ;;
         --integration)  test_type="integration"; shift ;;
         --size)         cluster_size="$2"; shift 2 ;;
@@ -112,6 +114,7 @@ function test_file_for_type() {
         state)        echo "state_test.go" ;;
         tasks)        echo "tasks_test.go" ;;
         udp)          echo "udp_test.go" ;;
+        udp-chaos)    echo "udp_chaos_test.go" ;;
         websocket)    echo "websocket_test.go" ;;
         integration)  echo "integration tests" ;;
         all)          echo "" ;;
@@ -137,6 +140,13 @@ if [[ "$list_tests" = true ]]; then
     if [[ -z "$file" ]]; then
         echo "No file found for test type '$test_type'"
         exit 1
+    fi
+
+    if [[ "$test_type" == "udp-chaos" ]]; then
+        echo "Tests in package ./ matching UDP chaos:"
+        go test -list . ./ | grep 'Chaos\|UDP' | sort
+        echo ""
+        exit 0
     fi
 
     list_tests_from_file "./$file"
@@ -194,6 +204,15 @@ case "$test_type" in
     state)        run_test_file ./state_test.go ;;
     tasks)        run_test_file ./tasks_test.go ;;
     udp)          run_test_file ./udp_test.go ;;
+    udp-chaos)
+        export FUSION_UDP_CHAOS_TEST=1
+        # Run package mode (not single-file mode) so shared TestMain/helpers are available.
+        if [[ -n "$test_name" ]]; then
+            go test -v --race ./ -run "$test_name" -- -auto --vip "$vip"
+        else
+            go test -v --race ./ -run "ChaosMesh" -- -auto --vip "$vip"
+        fi
+        ;;
     websocket)    run_test_file ./websocket_test.go ;;
     integration)
         # Export env for integration helpers

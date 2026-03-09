@@ -112,6 +112,20 @@ type ConfigValue struct {
 	Value json.RawMessage `json:"value,omitempty"`
 }
 
+// DeviceInfo represents device configuration data.
+type DeviceInfo struct {
+	Address         string `json:"address"`
+	Id              string `json:"id"`
+	Location        string `json:"location"`
+	Name            string `json:"name"`
+	ModelName       string `json:"model_name"`
+	MacAddress      string `json:"mac_address"`
+	IsClaimed       bool   `json:"is_claimed"`
+	SerialNumber    string `json:"serial_number"`
+	IsPrimaryNode   bool   `json:"is_primary"`
+	FirmwareVersion string `json:"firmware_version"`
+}
+
 // ControllerInfo represents a generic hardware controller
 type ControllerInfo struct {
 	ID      string `json:"id"`
@@ -241,4 +255,34 @@ type ControllerIdentifyResponse struct {
 
 type ControllerWinkResponse struct {
 	Status string `json:"status"`
+}
+
+// WebSocketRequest represents an incoming WebSocket request message
+type WebSocketRequest struct {
+	ID      string          `json:"id"`             // Unique request ID for response correlation
+	Version int             `json:"version"`        // Protocol version (currently 1)
+	Type    string          `json:"type"`           // Message type (devices, device_by_id, etc.)
+	Data    json.RawMessage `json:"data,omitempty"` // Request payload
+}
+
+// WebSocketResponse represents an outgoing WebSocket response message
+type WebSocketResponse struct {
+	ID        *string   `json:"id"`        // Request ID for correlation (null for server push)
+	Version   int       `json:"version"`   // Protocol version
+	Type      string    `json:"type"`      // Response type
+	Code      int       `json:"code"`      // Status code
+	Status    string    `json:"status"`    // Status (success, error, event)
+	Message   string    `json:"message"`   // Human-readable message
+	Data      any       `json:"data"`      // Response payload (can be null)
+	Timestamp time.Time `json:"timestamp"` // ISO 8601 timestamp
+}
+
+// WebSocketStats represents connection and usage statistics
+type WebSocketStats struct {
+	Connections    int              `json:"connections"`                // Active connections
+	Messages       int64            `json:"messages"`                   // Total messages processed
+	Errors         int64            `json:"errors"`                     // Total errors
+	Uptime         time.Duration    `json:"uptime"`                     // Server uptime
+	LastReset      time.Time        `json:"last_reset"`                 // Stats last reset
+	MessagesByType map[string]int64 `json:"messages_by_type,omitempty"` // Messages by type
 }

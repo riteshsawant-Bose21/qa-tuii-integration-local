@@ -37,6 +37,9 @@ const (
 	ClusterNTPSkewEndpoint                     = ClusterEndpoint + "/ntp-skew"
 	ClusterStatusEndpoint                      = ClusterEndpoint + "/status"
 
+	ClusterRebootEndpoint      = ClusterEndpoint + "/reboot"
+	ClusterRebootLocalEndpoint = ClusterRebootEndpoint
+
 	ControllersEndpoint       = "/controllers"
 	ControllersIDEndpoint     = ControllersEndpoint + "/{id}"
 	ControllersIDWinkEndpoint = ControllersEndpoint + "/wink" + "/{id}"
@@ -158,6 +161,10 @@ func RegisterEndpoint(router *mux.Router, method string, pattern string, handler
 }
 
 func ListRegisteredEndpoints(w http.ResponseWriter, r *http.Request) {
+	type routesResponse struct {
+		Routes []string `json:"routes"`
+	}
+
 	w.Header().Set(api.ContentType, api.JsonMIMEType)
-	json.NewEncoder(w).Encode(map[string]any{"routes": Endpoints})
+	json.NewEncoder(w).Encode(routesResponse{Routes: Endpoints})
 }

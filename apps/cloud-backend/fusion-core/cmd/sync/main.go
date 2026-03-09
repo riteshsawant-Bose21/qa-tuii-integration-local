@@ -3,9 +3,12 @@ package main
 
 import (
 	"context"
-	"flag"
+	"fmt"
 	inbuiltlog "log"
-	"os"
+	"net/url"
+
+	"github.com/aws/aws-lambda-go/events"
+	"github.com/aws/aws-lambda-go/lambda"
 
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/api/types"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/config"
@@ -20,94 +23,62 @@ import (
 	sql "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/storage/sql"
 )
 
-// main supports Lambda, CLI, and HTTP server execution
-func main() {
-	// Load logger
-	logger, err := log.NewProduction()
+var (
+	logger     *log.Logger
+	productSVC *product.Service
+
+	productBucket string
+	priceBucket   string
+)
+
+// init runs exactly once per each Lambda cold start, before the first handler is called.
+// All expensive setup ís placed within the init
+func init() {
+	var err error
+
+	logger, err = log.NewProduction()
 	if err != nil {
-		inbuiltlog.Fatalf("Error while initializing the logger: %v\n", err)
+		inbuiltlog.Fatalf("Failed to initialize logger: %v", err)
 	}
 
-	// Parse the flags
-	envFile := flag.String("c", ".env", "config environment file")
-	envName := flag.String("e", "local", "application environment (e.g. local, dev, staging, prod)")
-
-	// CLI mode flags
-	syncType := flag.String("type", "", "Sync type: 'product' or 'price' (required)")
-	syncOperation := flag.String("operation", "manual_sync", "Sync operation: 'manual_sync' or 'scheduled_sync' (default: manual_sync)")
-	sourceType := flag.String("source", "", "Source type: 'local' or 's3' (required)")
-	filePath := flag.String("path", "", "File path (required for local source)")
-	bucket := flag.String("bucket", "", "S3 bucket name (required for s3 source)")
-	key := flag.String("key", "", "S3 object key (required for s3 source)")
-	region := flag.String("region", "", "AWS region (optional, uses config default)")
-	flag.Parse()
-
+	// Lambda environment variables are injected directly by the runtime.
 	env := environment.New(environment.DefaultLoadLookuper)
-	logger.Info("Loading environment file", zap.String("file", *envFile))
-	if *envName == "local" {
-		if err := env.Load(*envFile); err != nil {
-			logger.Fatal("error loading environment vars", zap.String("file", *envName), zap.Error(err))
-		}
-	}
 
-	// Initialize configuration service
 	configSVC, err := config.NewService(env)
 	if err != nil {
 		logger.Fatal("Failed to initialize config service", zap.Error(err))
 	}
 
-	// Load Sync configuration
 	syncCfg, err := serverSync.NewSyncConfig(configSVC)
 	if err != nil {
-		logger.Fatal("Failed to load Sync config", zap.Error(err))
+		logger.Fatal("Failed to load sync config", zap.Error(err))
 	}
 
-	// Initialize the database connection
+	productBucket = syncCfg.S3.ProductBucket
+	priceBucket = syncCfg.S3.PriceBucket
+	s3Region := syncCfg.S3.Region
+
+	if productBucket == "" || priceBucket == "" {
+		logger.Fatal("S3_PRODUCT_BUCKET and S3_PRICE_BUCKET environment variables must be set")
+	}
+
+	if s3Region == "" {
+		logger.Fatal("AWS_REGION environment variable must be set.")
+	}
+
 	pgs, err := sql.New(
 		sql.PostgresOpener,
-		syncCfg.Postgres.Host,
+		syncCfg.Postgres.Host, // Use a proxy for AWS Rds
 		syncCfg.Postgres.Port,
 		syncCfg.Postgres.User,
 		syncCfg.Postgres.Password,
 		syncCfg.Postgres.Database,
 		syncCfg.Postgres.SSLMode,
 	)
+
 	if err != nil {
-		logger.Fatal("Failed to connect to the database", zap.Error(err))
+		logger.Fatal("Failed to connect to database", zap.Error(err))
 	}
-	defer func() {
-		if err := pgs.Close(); err != nil {
-			logger.Error("Failed to close database connection", zap.Error(err))
-		}
-	}()
-
-	logger.Info("Database connection established successfully")
-
-	// db := &syncDB.Database{DB: pgs}
-
-	// CLI mode - validate required flags
-	if *syncType == "" || *sourceType == "" {
-		flag.Usage()
-		logger.Fatal("Error: --type and --source are required (or use --server for HTTP mode)")
-	}
-
-	if *sourceType == "local" && *filePath == "" {
-		logger.Fatal("Error: --path is required for local source")
-	}
-
-	if *sourceType == "s3" && (*bucket == "" || *key == "") {
-		logger.Fatal("Error: --bucket and --key are required for s3 source")
-	}
-
-	// Initialize sync services
-	logger.Info("Initializing sync services...")
-
-	//Initialize Product DB Service
-	productDBSvc := productdb.NewService(pgs, logger.JobSyncLog())
-	if productDBSvc == nil {
-		logger.Fatal("Failed to initialize product database service")
-	}
-	logger.Info("Initialized Product DB Service.")
 
 	validationCfg, err := configSVC.Validation()
 	if err != nil {
@@ -119,55 +90,131 @@ func main() {
 		logger.Fatal("Failed to get processing config", zap.Error(err))
 	}
 
-	// Initialize S3 client
-	s3Handler, err := cloudfs.NewS3Client(context.Background(), syncCfg.S3.Region)
+	s3Handler, err := cloudfs.NewS3Client(context.Background(), s3Region)
 	if err != nil {
 		logger.Fatal("Failed to initialize S3 client", zap.Error(err))
 	}
-	logger.Info("Initialized S3 client")
 
-	//Initialize Product Service (now includes sync functionality)
-	productSVC := product.NewService(productDBSvc, validationCfg.DefaultVersion, validationCfg, processingCfg, s3Handler, logger.JobSyncLog())
+	productDBSvc := productdb.NewService(pgs, logger.JobSyncLog())
+	if productDBSvc == nil {
+		logger.Fatal("Failed to initialize product database service")
+	}
+
+	productSVC = product.NewService(
+		productDBSvc,
+		validationCfg.DefaultVersion,
+		validationCfg,
+		processingCfg,
+		s3Handler,
+		logger.JobSyncLog(),
+	)
 	if productSVC == nil {
 		logger.Fatal("Failed to initialize product service")
 	}
-	logger.Info("Initialized Product Service.")
 
-	syncRequestRegion := *region
-	if syncRequestRegion == "" {
-		syncRequestRegion = syncCfg.S3.Region
-	}
+	logger.Info("Lambda cold start init complete.")
+}
 
-	syncRequest := &types.SyncRequest{
-		SyncType:         *syncType,
-		SyncOperation:    *syncOperation,
-		SourceType:       *sourceType,
-		FilePath:         *filePath,
-		S3Bucket:         *bucket,
-		S3Key:            *key,
-		Region:           syncRequestRegion,
-		EnableValidation: true,
-	}
-
-	result, err := productSVC.Execute(context.Background(), syncRequest)
-	if err != nil {
-		logger.Fatal("Sync execution failed", zap.Error(err))
-	}
-
-	// Print results
-	logger.Info("Sync completed successfully",
-		zap.String("sync_type", *syncType),
-		zap.Int("total_items", result.TotalItems),
-		zap.Int("successful", result.Successful),
-		zap.Int("failed", result.Failed),
-		zap.Duration("duration", result.Duration),
-	)
-
-	if result.Failed > 0 {
-		logger.Warn("Some items failed",
-			zap.Int("failed_count", result.Failed),
-			zap.Strings("validation_warnings", result.ValidationWarnings),
+// inferSyncType determines the sync type from the S3 object key path.
+// Prefix convention:
+// s3://<S3_PRODUCT_BUCKET>/XXXX/<file>.json -> "product"
+// s3://<S3_PRICE_BUCKET>/XXXX/<file>.json   -> "price"
+func inferSyncType(bucket string) (string, error) {
+	switch bucket {
+	case productBucket:
+		return "product", nil
+	case priceBucket:
+		return "price", nil
+	default:
+		return "", fmt.Errorf(
+			"unknown bucket %q: must match S3_PRODUCT_BUCKET or S3_PRICE_BUCKET",
+			bucket,
 		)
-		os.Exit(1)
 	}
+}
+
+// handler is invoked by the Lambda runtime for each S3 event notif.
+// If it returns non-nil value, it tells Lambda to retry
+func handler(ctx context.Context, s3Event events.S3Event) error {
+	for _, record := range s3Event.Records {
+
+		key, err := url.QueryUnescape(record.S3.Object.Key)
+
+		if err != nil {
+			logger.Error("failed to URL-decode S3 key",
+				zap.String("raw_key", record.S3.Object.Key),
+				zap.Error(err),
+			)
+			return fmt.Errorf("invalid S3 key encoding %q: %w", record.S3.Object.Key, err)
+		}
+
+		bucket := record.S3.Bucket.Name
+		region := record.AWSRegion
+
+		logger.Info("Received S3 event",
+			zap.String("bucket", bucket),
+			zap.String("key", key),
+			zap.String("region", region),
+			zap.String("eventName", record.EventName),
+		)
+
+		syncType, err := inferSyncType(bucket)
+		if err != nil {
+			logger.Error("failed to infer sync type",
+				zap.String("key", key),
+				zap.Error(err),
+			)
+			return err
+		}
+
+		syncRequest := &types.SyncRequest{
+			SyncType:         syncType,
+			SyncOperation:    "scheduled_sync",
+			SourceType:       "s3",
+			S3Bucket:         bucket,
+			S3Key:            key,
+			Region:           region,
+			EnableValidation: true,
+		}
+
+		result, err := productSVC.Execute(ctx, syncRequest)
+		if err != nil {
+			logger.Error("sync execution failed",
+				zap.String("bucket", bucket),
+				zap.String("key", key),
+				zap.String("sync_type", syncType),
+				zap.Error(err),
+			)
+			// Non-nil error -> Lambda retries according to retry policy.
+			return fmt.Errorf("sync failed for s3://%s/%s: %w", bucket, key, err)
+		}
+
+		logger.Info("sync completed",
+			zap.String("bucket", bucket),
+			zap.String("key", key),
+			zap.String("sync_type", syncType),
+			zap.Int("total_items", result.TotalItems),
+			zap.Int("successful", result.Successful),
+			zap.Int("failed", result.Failed),
+			zap.Duration("duration", result.Duration),
+		)
+
+		if result.Failed > 0 {
+			logger.Warn("sync completed with partial failures",
+				zap.Int("failed_count", result.Failed),
+				zap.Strings("validation_warnings", result.ValidationWarnings),
+			)
+			return fmt.Errorf(
+				"sync completed with %d item failure(s) for s3://%s/%s",
+				result.Failed, bucket, key,
+			)
+		}
+	}
+
+	return nil
+}
+
+// main just calls the lambda handler
+func main() {
+	lambda.Start(handler)
 }

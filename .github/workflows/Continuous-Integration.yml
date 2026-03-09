@@ -22,7 +22,6 @@ jobs:
     outputs:
       all: ${{ steps.filter.outputs.all }}
       fusionLauncher: ${{ steps.filter.outputs.fusionLauncher }}
-      cloudServicesUI: ${{ steps.filter.outputs.cloudServicesUI }}
       cloudServicesBackend: ${{ steps.filter.outputs.cloudServicesBackend }}
       fusionDSP: ${{ steps.filter.outputs.fusionDSP }}
       fusionServer: ${{ steps.filter.outputs.fusionServer }}
@@ -49,8 +48,6 @@ jobs:
               - "./apps/**"
             fusionLauncher:
               - "./apps/frontend/flutter-apps/**"
-            cloudServicesUI:
-              - "./apps/frontend/react-apps/**"
             cloudServicesBackend:
               - "./apps/cloud-backend/fusion-core/**"
             fusionDSP:
@@ -136,24 +133,6 @@ jobs:
       #     nexus_password: ${{ secrets.NEXUS_PASSWORD }}
       #     nexus_url: ${{ secrets.NEXUS_BASE_URL }}
       #     keychain_password: ${{ secrets.KEYCHAIN_PASSWORD }}
-
-  # cloud-servicesUI-build:
-  #   needs: buildChecks
-  #   if: needs.buildChecks.outputs.cloudServicesUI == 'true'
-  #   concurrency:
-  #     group: cloud-servicesUI-build
-  #   runs-on: ubuntu-agent
-  #   timeout-minutes: 30
-
-  #   steps:
-  #     - name: Clone project
-  #       uses: actions/checkout@v4
-
-  #     - name: Setup Monorepo Toolchain
-  #       uses: ./.github/reusable-actions/setup-toolchain
-
-  #     - name: Build Apps
-  #       uses: ./.github/reusable-actions/build-cloud-servicesUI
 
   cloud-web-backend-build:
     needs: buildChecks
@@ -432,66 +411,66 @@ jobs:
           echo "Firmware version set to $FIRMWARE_VERSION"
           echo "firmware_bundle_version=$FIRMWARE_VERSION" >> $GITHUB_OUTPUT
 
-  yocto-image-build:
-    needs:
-      - integration-tests
-      - fusion-server-build
-      - fusion-system-monitor-build
-      - fusion-edge-gateway-build
-      - fusion-telemetry-core-build
-      - fusion-dsp-build
-    if: |
-      always() && (
-        needs.integration-tests.result == 'success' && needs.integration-tests.outputs.ran == 'true'
-      )
-    concurrency:
-      group: yocto-image-build
-    runs-on: ubuntu-agent
-    timeout-minutes: 30
-    steps:
-      - name: Checkout target repo
-        uses: actions/checkout@v4
-        with:
-          repository: BoseProfessional/meta-fusion
-          ref: develop
-          token: ${{ secrets.META_FUSION_REPO_TOKEN }}
-          fetch-depth: 0
+  # yocto-image-build:
+  #   needs:
+  #     - integration-tests
+  #     - fusion-server-build
+  #     - fusion-system-monitor-build
+  #     - fusion-edge-gateway-build
+  #     - fusion-telemetry-core-build
+  #     - fusion-dsp-build
+  #   if: |
+  #     always() && (
+  #       needs.integration-tests.result == 'success' && needs.integration-tests.outputs.ran == 'true'
+  #     )
+  #   concurrency:
+  #     group: yocto-image-build
+  #   runs-on: ubuntu-agent
+  #   timeout-minutes: 30
+  #   steps:
+  #     - name: Checkout target repo
+  #       uses: actions/checkout@v4
+  #       with:
+  #         repository: BoseProfessional/meta-fusion
+  #         ref: develop
+  #         token: ${{ secrets.META_FUSION_REPO_TOKEN }}
+  #         fetch-depth: 0
 
-      - name: Update fusion config file with branch name
-        env:
-          BRANCH_NAME: ${{ github.head_ref || github.ref_name }}
-        run: |
-          FILE="conf/fusion-nano_properties.inc"
-          VERSION_INFO_FILE="recipes-bsp/fusion-init/fusion-init/fusion-nano/version_info.txt"
-          MONOREPO_COMMIT_HASH=${{ needs.integration-tests.outputs.MONOREPO_COMMIT_HASH }}
-          FIRMWARE_BUNDLE_VERSION=${{ needs.integration-tests.outputs.FIRMWARE_BUNDLE_VERSION }}
+  #     - name: Update fusion config file with branch name
+  #       env:
+  #         BRANCH_NAME: ${{ github.head_ref || github.ref_name }}
+  #       run: |
+  #         FILE="conf/fusion-nano_properties.inc"
+  #         VERSION_INFO_FILE="recipes-bsp/fusion-init/fusion-init/fusion-nano/version_info.txt"
+  #         MONOREPO_COMMIT_HASH=${{ needs.integration-tests.outputs.MONOREPO_COMMIT_HASH }}
+  #         FIRMWARE_BUNDLE_VERSION=${{ needs.integration-tests.outputs.FIRMWARE_BUNDLE_VERSION }}
 
-          if [ ! -f "$FILE" ]; then
-            echo "File $FILE does not exist. Failing the step."
-            exit 1          
-          else
-            if grep -q "^FUSION_MONOREPO_BRANCH=" "$FILE"; then
-              sed -i "s|^FUSION_MONOREPO_BRANCH=.*|FUSION_MONOREPO_BRANCH=\"${BRANCH_NAME}\"|" "$FILE"
-            else
-              echo "FUSION_MONOREPO_BRANCH=\"${BRANCH_NAME}\"" >> "$FILE"
-            fi
-            if grep -q "^FUSION_MONOREPO_COMMIT_HASH=" "$FILE"; then
-              sed -i "s|^FUSION_MONOREPO_COMMIT_HASH=.*|FUSION_MONOREPO_COMMIT_HASH=\"${MONOREPO_COMMIT_HASH}\"|" "$FILE"
-            else
-              echo "FUSION_MONOREPO_COMMIT_HASH=\"${MONOREPO_COMMIT_HASH}\"" >> "$FILE"
-            fi
-            if grep -q "^FIRMWARE_BUNDLE_VERSION=" "$FILE"; then
-              sed -i "s|^FIRMWARE_BUNDLE_VERSION=.*|FIRMWARE_BUNDLE_VERSION=\"${FIRMWARE_BUNDLE_VERSION}\"|" "$FILE"
-            else
-              echo "FIRMWARE_BUNDLE_VERSION=\"${FIRMWARE_BUNDLE_VERSION}\"" >> "$FILE"
-            fi
-          fi
+  #         if [ ! -f "$FILE" ]; then
+  #           echo "File $FILE does not exist. Failing the step."
+  #           exit 1          
+  #         else
+  #           if grep -q "^FUSION_MONOREPO_BRANCH=" "$FILE"; then
+  #             sed -i "s|^FUSION_MONOREPO_BRANCH=.*|FUSION_MONOREPO_BRANCH=\"${BRANCH_NAME}\"|" "$FILE"
+  #           else
+  #             echo "FUSION_MONOREPO_BRANCH=\"${BRANCH_NAME}\"" >> "$FILE"
+  #           fi
+  #           if grep -q "^FUSION_MONOREPO_COMMIT_HASH=" "$FILE"; then
+  #             sed -i "s|^FUSION_MONOREPO_COMMIT_HASH=.*|FUSION_MONOREPO_COMMIT_HASH=\"${MONOREPO_COMMIT_HASH}\"|" "$FILE"
+  #           else
+  #             echo "FUSION_MONOREPO_COMMIT_HASH=\"${MONOREPO_COMMIT_HASH}\"" >> "$FILE"
+  #           fi
+  #           if grep -q "^FIRMWARE_BUNDLE_VERSION=" "$FILE"; then
+  #             sed -i "s|^FIRMWARE_BUNDLE_VERSION=.*|FIRMWARE_BUNDLE_VERSION=\"${FIRMWARE_BUNDLE_VERSION}\"|" "$FILE"
+  #           else
+  #             echo "FIRMWARE_BUNDLE_VERSION=\"${FIRMWARE_BUNDLE_VERSION}\"" >> "$FILE"
+  #           fi
+  #         fi
 
-          git status
-          git add conf/fusion-nano_properties.inc
-          git commit -m "CI: Build trigger from Fusion Monorepo branch: ${{ github.ref_name }}" || echo "No changes to commit"
+  #         git status
+  #         git add conf/fusion-nano_properties.inc
+  #         git commit -m "CI: Build trigger from Fusion Monorepo branch: ${{ github.ref_name }}" || echo "No changes to commit"
 
 
-      - name: Push commit to target repo
-        run: |
-          git push origin HEAD
+  #     - name: Push commit to target repo
+  #       run: |
+  #         git push origin HEAD
