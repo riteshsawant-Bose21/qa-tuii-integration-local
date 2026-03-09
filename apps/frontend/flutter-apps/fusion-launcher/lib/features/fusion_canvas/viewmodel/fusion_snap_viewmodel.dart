@@ -30,9 +30,9 @@ class FusionSnapViewModel extends Cubit<FusionSnapState> {
     final SnapResult snapResult = _snapService.findSnapPoint(
       cursorPosition: position,
       existingPoints: <Offset>[
+        ..._polygonTempPoints,
         ..._toolPoints,
         ..._polygonPoints,
-        ..._polygonTempPoints,
       ],
       scale: _currentScale,
     );
@@ -54,7 +54,7 @@ class FusionSnapViewModel extends Cubit<FusionSnapState> {
 
     final SnapResult snapResult = _snapService.findBestSnapPoint(
       cursorPositions: positions,
-      existingPoints: <Offset>[..._toolPoints, ..._polygonPoints, ..._polygonTempPoints],
+      existingPoints: <Offset>[..._polygonTempPoints, ..._toolPoints, ..._polygonPoints],
       scale: _currentScale,
     );
 
