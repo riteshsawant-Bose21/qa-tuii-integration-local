@@ -21,8 +21,10 @@ class ZoneCard extends StatefulWidget {
   final Color bgColor;
   final Zone zoneData;
   final Function(bool)? onExpansionChanged;
+  final int? index;
 
   const ZoneCard({
+    this.index,
     super.key,
     required this.zoneId,
     required this.zoneName,
@@ -93,14 +95,17 @@ class _ZoneCardState extends State<ZoneCard> {
             builder: (BuildContext context, ConfigZonesState state) {
               return Column(
                 children: <Widget>[
-                  MouseRegion(
-                    onEnter: (_) => setState(() => isHovered = true),
-                    onExit: (_) => setState(() => isHovered = false),
-                    child: _buildZoneHeader(
-                      context: context,
-                      expanded: zoneExpanded,
-                      isHovered: isHovered,
-                      isSelected: false,
+                  SemanticHelper.container(
+                    testId: SemanticHelper.createTestId(SemanticTypes.container, "${FusionTestKeys.instance.zoneitmheader}_${widget.index}"),
+                    child: MouseRegion(
+                      onEnter: (_) => setState(() => isHovered = true),
+                      onExit: (_) => setState(() => isHovered = false),
+                      child: _buildZoneHeader(
+                        context: context,
+                        expanded: zoneExpanded,
+                        isHovered: isHovered,
+                        isSelected: false,
+                      ),
                     ),
                   ),
 
@@ -142,51 +147,36 @@ class _ZoneCardState extends State<ZoneCard> {
         child: Row(
           children: <Widget>[
             /// Expand/collapse icon
-            SemanticHelper.container(
-              testId: SemanticHelper.createTestId(
-                SemanticTypes.container,
-                FusionTestKeys.instance.zonelisticon,
-              ),
-              child: Icon(
-                expanded ? Icons.arrow_drop_up_rounded : Icons.arrow_drop_down_rounded,
-                color: Theme.of(context).colorScheme.primaryWhite,
-              ),
+            FusionIcon.icon(
+              semanticId: "${FusionTestKeys.instance.zonelisticon}_${widget.index}",
+              expanded ? Icons.arrow_drop_up_rounded : Icons.arrow_drop_down_rounded,
+              color: Theme.of(context).colorScheme.primaryWhite,
             ),
+
             const SizedBox(width: 4),
 
             /// Zone name
             Expanded(
-              child: SemanticHelper.staticText(
-                testId: SemanticHelper.createTestId(
-                  SemanticTypes.text,
-                  FusionTestKeys.instance.zonelistlabel,
-                ),
-
-                child: FusionAppText(
-                  text: widget.zoneName,
-                  maxLine: 1,
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600,
-                  ),
+              child: FusionAppText(
+                semanticId: "${FusionTestKeys.instance.zonelistlabel}_${widget.index}",
+                text: widget.zoneName,
+                maxLine: 1,
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
                 ),
               ),
             ),
-            SemanticHelper.button(
-              testId: SemanticHelper.createTestId(
-                SemanticTypes.button,
-                FusionTestKeys.instance.zonelistprocessingbutton,
-              ),
-              child: InkWell(
-                onTap: () {
-                  ProcessingChainView.showForZone(context, widget.zoneData);
-                },
-                child: const FusionImage.asset(
-                  Assets.processingBlocksFilledWhiteIcon,
-                  width: 24,
-                  height: 24,
-                  fit: BoxFit.contain,
-                ),
+            InkWell(
+              onTap: () {
+                ProcessingChainView.showForZone(context, widget.zoneData);
+              },
+              child: FusionImage.asset(
+                semanticId: "${FusionTestKeys.instance.zonelistprocessingbutton}_${widget.index}",
+                Assets.processingBlocksFilledWhiteIcon,
+                width: 24,
+                height: 24,
+                fit: BoxFit.contain,
               ),
             ),
           ],
@@ -221,10 +211,7 @@ class _ZoneCardState extends State<ZoneCard> {
                   children: <Widget>[
                     /// Functions Panel
                     SemanticHelper.container(
-                      testId: SemanticHelper.createTestId(
-                        SemanticTypes.container,
-                        FusionTestKeys.instance.zonelistfunctionspanel,
-                      ),
+                      testId: SemanticHelper.createTestId(SemanticTypes.container, "${FusionTestKeys.instance.zonelistfunctionspanel}_${widget.index}"),
                       child: Container(
                         width: constraints.maxWidth * 0.34,
                         height: constrainedHeight,
@@ -282,18 +269,12 @@ class _ZoneCardState extends State<ZoneCard> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
         SemanticHelper.container(
-          testId: SemanticHelper.createTestId(
-            SemanticTypes.container,
-            FusionTestKeys.instance.zonelistfunctionspanelheader,
-          ),
+          testId: SemanticHelper.createTestId(SemanticTypes.container, "${FusionTestKeys.instance.zonelistfunctionspanelheader}_${widget.index}"),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: <Widget>[
               SemanticHelper.staticText(
-                testId: SemanticHelper.createTestId(
-                  SemanticTypes.text,
-                  FusionTestKeys.instance.zonelistfunctionspanelheaderlabel,
-                ),
+                testId: SemanticHelper.createTestId(SemanticTypes.text, "${FusionTestKeys.instance.zonelistfunctionspanelheaderlabel}_${widget.index}"),
                 child: FusionAppText(
                   text: 'FUNCTIONS',
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
@@ -385,10 +366,7 @@ class _ZoneCardState extends State<ZoneCard> {
   /// Function selection widget
   Widget buildFunctionWidget() {
     return SemanticHelper.container(
-      testId: SemanticHelper.createTestId(
-        SemanticTypes.container,
-        FusionTestKeys.instance.functionselect,
-      ),
+      testId: SemanticHelper.createTestId(SemanticTypes.container, "${FusionTestKeys.instance.functionselect}_${widget.index}"),
       child: _hasSelectedFunction ? buildSelectedFunctionButton() : buildAddFunctionButton(),
     );
   }
@@ -496,6 +474,7 @@ class _ZoneCardState extends State<ZoneCard> {
                         enabled: false,
                         height: 20,
                         child: FusionAppText(
+                          semanticId: "${FusionTestKeys.instance.sorcprioitypopupheader}_${widget.index}",
                           text: 'SOURCES',
                           maxLine: 1,
                           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
@@ -516,6 +495,7 @@ class _ZoneCardState extends State<ZoneCard> {
                           height: 20,
                           child: Center(
                             child: FusionAppText(
+                              semanticId: "${FusionTestKeys.instance.sorcprioitypopuptext}_${widget.index}",
                               text: 'No available sources',
                               maxLine: 1,
                               style: context.textTheme.bodyMedium?.copyWith(
@@ -718,6 +698,7 @@ class _ZoneCardState extends State<ZoneCard> {
                         Expanded(
                           child: FusionAppText(
                             text: selectedSource ?? 'Select priority',
+                            semanticId: "${FusionTestKeys.instance.sorcprioity}_${widget.index}",
                             maxLine: 1,
                             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                               fontSize: 11,
@@ -736,6 +717,7 @@ class _ZoneCardState extends State<ZoneCard> {
                             borderRadius: BorderRadius.circular(3),
                           ),
                           child: FusionAppText(
+                            semanticId: "${FusionTestKeys.instance.sorcprioityindex}_${widget.index}",
                             text: 'P$priorityIndex',
                             style: Theme.of(context).textTheme.bodySmall?.copyWith(
                               fontSize: 8,
@@ -766,6 +748,7 @@ class _ZoneCardState extends State<ZoneCard> {
                 setState(() {});
               },
               child: FusionImage.asset(
+                semanticId: "${FusionTestKeys.instance.sorcprioitydeletebutton}_${widget.index}",
                 Assets.deleteIcon,
                 width: 17,
                 height: 17,
@@ -781,10 +764,7 @@ class _ZoneCardState extends State<ZoneCard> {
   /// Add Function button (Popup Menu)
   Widget buildAddFunctionButton({bool isEdit = false}) {
     return SemanticHelper.button(
-      testId: SemanticHelper.createTestId(
-        SemanticTypes.button,
-        FusionTestKeys.instance.zonelistfunctionspaneleditbutton,
-      ),
+      testId: SemanticHelper.createTestId(SemanticTypes.button, "${FusionTestKeys.instance.zonelistfunctionspaneleditbutton}_${widget.index}"),
       child: PopupMenuButton<ZoneFunctionsType>(
         shadowColor: Colors.transparent,
         position: PopupMenuPosition.under,
@@ -827,7 +807,7 @@ class _ZoneCardState extends State<ZoneCard> {
         },
         child:
             isEdit
-                ? Icon(Icons.edit, size: 14, color: context.colorScheme.textPrimary)
+                ? FusionIcon.icon(Icons.edit, size: 14, color: context.colorScheme.textPrimary)
                 : Container(
                   height: 22,
                   width: 170,
@@ -842,7 +822,7 @@ class _ZoneCardState extends State<ZoneCard> {
                     crossAxisAlignment: CrossAxisAlignment.center,
                     mainAxisAlignment: MainAxisAlignment.start,
                     children: <Widget>[
-                      Icon(Icons.add, color: context.colorScheme.iconWhite, size: 12),
+                      FusionIcon.icon(Icons.add, color: context.colorScheme.iconWhite, size: 12),
                       const SizedBox(width: 4),
                       FusionAppText(
                         text: 'Add Function',
@@ -894,34 +874,24 @@ class _ZoneCardState extends State<ZoneCard> {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: <Widget>[
             Expanded(
-              child: SemanticHelper.container(
-                testId: SemanticHelper.createTestId(
-                  SemanticTypes.container,
-                  FusionTestKeys.instance.functionselecttext,
-                ),
-                child: FusionAppText(
-                  text: selectedFunction?.displayName ?? '',
-                  maxLine: 1,
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w400,
-                  ),
+              child: FusionAppText(
+                semanticId: "${FusionTestKeys.instance.functionselecttext}_${widget.index}",
+                text: selectedFunction?.displayName ?? '',
+                maxLine: 1,
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w400,
                 ),
               ),
             ),
             const SizedBox(width: 8),
-            SemanticHelper.image(
-              testId: SemanticHelper.createTestId(
-                SemanticTypes.icon,
-                FusionTestKeys.instance.functionselecticon,
-              ),
-              child: FusionImage.asset(
-                Assets.configurationFilledIcon,
-                width: 14,
-                height: 14,
-                fit: BoxFit.contain,
-                assetColor: context.colorScheme.primaryWhite,
-              ),
+            FusionImage.asset(
+              semanticId: "${FusionTestKeys.instance.functionselecticon}_${widget.index}",
+              Assets.configurationFilledIcon,
+              width: 14,
+              height: 14,
+              fit: BoxFit.contain,
+              assetColor: context.colorScheme.primaryWhite,
             ),
           ],
         ),
@@ -951,10 +921,7 @@ class _ZoneCardState extends State<ZoneCard> {
         ),
       ),
       child: SemanticHelper.container(
-        testId: SemanticHelper.createTestId(
-          SemanticTypes.container,
-          FusionTestKeys.instance.selectsrc,
-        ),
+        testId: SemanticHelper.createTestId(SemanticTypes.container, "${FusionTestKeys.instance.selectsrc}_${widget.index}"),
         child: PopupMenuButton<String>(
           onSelected: (String? value) {
             if (value == 'add') {
@@ -986,6 +953,7 @@ class _ZoneCardState extends State<ZoneCard> {
                 enabled: false,
                 height: 24,
                 child: FusionAppText(
+                  semanticId: "${FusionTestKeys.instance.selectsrcpopupupheader}_${widget.index}",
                   text: 'SOURCES',
                   maxLine: 1,
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
@@ -1006,6 +974,7 @@ class _ZoneCardState extends State<ZoneCard> {
                   height: 20,
                   child: Center(
                     child: FusionAppText(
+                      semanticId: "${FusionTestKeys.instance.selectsrcpopupupempty}_${widget.index}",
                       text: 'No available sources',
                       maxLine: 1,
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontSize: 10),
@@ -1071,6 +1040,7 @@ class _ZoneCardState extends State<ZoneCard> {
                                   children: <Widget>[
                                     Expanded(
                                       child: FusionAppText(
+                                        semanticId: "${FusionTestKeys.instance.selectsrcpopupuptext}_${widget.index}",
                                         text: src.name,
                                         capitalize: true,
                                         maxLine: 1,
@@ -1114,6 +1084,7 @@ class _ZoneCardState extends State<ZoneCard> {
                 enabled: false,
                 height: 24,
                 child: FusionAppText(
+                  semanticId: "${FusionTestKeys.instance.selectsrcpopupupsetsheader}_${widget.index}",
                   text: 'SOURCE SETS',
                   maxLine: 1,
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
@@ -1134,6 +1105,7 @@ class _ZoneCardState extends State<ZoneCard> {
                   height: 20,
                   child: Center(
                     child: FusionAppText(
+                      semanticId: "${FusionTestKeys.instance.selectsrcpopupupsetsempty}_${widget.index}",
                       text: 'No available source sets',
                       maxLine: 1,
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontSize: 10),
@@ -1188,6 +1160,7 @@ class _ZoneCardState extends State<ZoneCard> {
                               const SizedBox(width: 4),
                               Expanded(
                                 child: FusionAppText(
+                                  semanticId: "${FusionTestKeys.instance.selectsrcpopupupsettext}_${widget.index}",
                                   text: '${s.name} (${sourcesInSet.length} sources)',
                                   maxLine: 1,
                                   capitalize: true,
@@ -1217,28 +1190,31 @@ class _ZoneCardState extends State<ZoneCard> {
                 height: 28,
                 value: 'add',
                 child: Center(
-                  child: FusionButton(
-                    label: 'Add',
-                    height: 28,
-                    width: double.infinity,
-                    onTap: () {
-                      /// Save full final selected lists
-                      _zonesViewmodel.updateSourcesInZone(
-                        zoneId: widget.zoneId,
-                        sourceIds: tempSelectedSources,
-                      );
+                  child: SemanticHelper.button(
+                    testId: SemanticHelper.createTestId(SemanticTypes.button, "${FusionTestKeys.instance.selectsrcpopupupaddbutton}_${widget.index}"),
+                    child: FusionButton(
+                      label: 'Add',
+                      height: 28,
+                      width: double.infinity,
+                      onTap: () {
+                        /// Save full final selected lists
+                        _zonesViewmodel.updateSourcesInZone(
+                          zoneId: widget.zoneId,
+                          sourceIds: tempSelectedSources,
+                        );
 
-                      _zonesViewmodel.updateSourceSets(
-                        zoneId: widget.zoneId,
-                        sourceSetIds: tempSelectedSourceSets,
-                      );
+                        _zonesViewmodel.updateSourceSets(
+                          zoneId: widget.zoneId,
+                          sourceSetIds: tempSelectedSourceSets,
+                        );
 
-                      Navigator.pop(context, 'add');
-                      setState(() {});
+                        Navigator.pop(context, 'add');
+                        setState(() {});
 
-                      /// rebuild UI
-                    },
-                    accessLabel: 'zone_add_button',
+                        /// rebuild UI
+                      },
+                      accessLabel: 'zone_add_button',
+                    ),
                   ),
                 ),
               ),
@@ -1263,23 +1239,18 @@ class _ZoneCardState extends State<ZoneCard> {
             child: Row(
               children: <Widget>[
                 Expanded(
-                  child: SemanticHelper.staticText(
-                    testId: SemanticHelper.createTestId(
-                      SemanticTypes.text,
-                      FusionTestKeys.instance.selectsrctxt,
-                    ),
-                    child: FusionAppText(
-                      text: hasSelection ? 'Sources selected' : 'Select sources',
-                      maxLine: 1,
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        fontSize: 11,
-                        color:
-                            hasSelection
-                                ? context.colorScheme.primaryWhite
-                                : context.colorScheme.primaryWhite.withAlpha(
-                                  150,
-                                ),
-                      ),
+                  child: FusionAppText(
+                    semanticId: "${FusionTestKeys.instance.selectsrctxt}_${widget.index}",
+                    text: hasSelection ? 'Sources selected' : 'Select sources',
+                    maxLine: 1,
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      fontSize: 11,
+                      color:
+                          hasSelection
+                              ? context.colorScheme.primaryWhite
+                              : context.colorScheme.primaryWhite.withAlpha(
+                                150,
+                              ),
                     ),
                   ),
                 ),
@@ -1329,7 +1300,7 @@ class _ZoneCardState extends State<ZoneCard> {
     return SemanticHelper.container(
       testId: SemanticHelper.createTestId(
         SemanticTypes.container,
-        FusionTestKeys.instance.zonecircuit,
+        "${FusionTestKeys.instance.zonecircuit}_${widget.index}",
       ),
       child: Container(
         decoration: BoxDecoration(
@@ -1349,6 +1320,7 @@ class _ZoneCardState extends State<ZoneCard> {
                         FusionTestKeys.instance.zonenocircuit,
                       ),
                       child: FusionAppText(
+                        semanticId: "${FusionTestKeys.instance.zonenocircuit}_${widget.index}",
                         text: 'No sub zones / circuits added yet',
                         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                           fontSize: 12,
@@ -1432,42 +1404,51 @@ class _ZoneCardState extends State<ZoneCard> {
   Widget _buildCircuitCard({required int index, required CircuitModel circuitData, required List<Speaker> speakersList}) {
     final bool isThisCircuitHovered = _hoveredCircuitIndex == index;
 
-    return Container(
-      decoration: BoxDecoration(
-        color: isThisCircuitHovered ? context.colorScheme.elevation2 : null,
-        borderRadius: BorderRadius.circular(8),
+    return SemanticHelper.container(
+      testId: SemanticHelper.createTestId(
+        SemanticTypes.container,
+        "${FusionTestKeys.instance.zonecircuititm}_${widget.index}",
       ),
-      padding: const EdgeInsets.only(top: 4, bottom: 4, left: 10, right: 13),
-      margin: const EdgeInsets.only(bottom: 4, top: 4, left: 10),
-      child: Row(
-        children: <Widget>[
-          FusionImage.asset(
-            speakersList.isNotEmpty ? speakersList.first.assetImagePath : "",
-            width: 24,
-            height: 24,
-            fit: BoxFit.contain,
-          ),
-          const SizedBox(width: 6),
-          Expanded(
-            child: FusionAppText(
-              text: circuitData.name,
-              maxLine: 1,
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(fontSize: 11),
-            ),
-          ),
-          InkWell(
-            onTap: () {
-              ProcessingChainView.showForCircuit(context, circuitData);
-            },
-            child: FusionImage.asset(
-              Assets.processingBlocksFilledIcon,
+      child: Container(
+        decoration: BoxDecoration(
+          color: isThisCircuitHovered ? context.colorScheme.elevation2 : null,
+          borderRadius: BorderRadius.circular(8),
+        ),
+        padding: const EdgeInsets.only(top: 4, bottom: 4, left: 10, right: 13),
+        margin: const EdgeInsets.only(bottom: 4, top: 4, left: 10),
+        child: Row(
+          children: <Widget>[
+            FusionImage.asset(
+              semanticId: "${FusionTestKeys.instance.zonecircuititmimg}_${widget.index}",
+              speakersList.isNotEmpty ? speakersList.first.assetImagePath : "",
               width: 24,
               height: 24,
-              assetColor: context.colorScheme.primaryWhite,
               fit: BoxFit.contain,
             ),
-          ),
-        ],
+            const SizedBox(width: 6),
+            Expanded(
+              child: FusionAppText(
+                semanticId: "${FusionTestKeys.instance.zonecircuititmtxt}_${widget.index}",
+                text: circuitData.name,
+                maxLine: 1,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(fontSize: 11),
+              ),
+            ),
+            InkWell(
+              onTap: () {
+                ProcessingChainView.showForCircuit(context, circuitData);
+              },
+              child: FusionImage.asset(
+                semanticId: "${FusionTestKeys.instance.zonecircuititmimg2}_${widget.index}",
+                Assets.processingBlocksFilledIcon,
+                width: 24,
+                height: 24,
+                assetColor: context.colorScheme.primaryWhite,
+                fit: BoxFit.contain,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

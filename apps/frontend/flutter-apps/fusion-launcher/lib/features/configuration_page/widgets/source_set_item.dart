@@ -33,8 +33,9 @@ class SourceSetItem extends StatefulWidget {
   final SourceSet sourceSet;
   final bool isDragHovered;
   final VoidCallback? onSourceDropped;
+  final int? index;
 
-  const SourceSetItem({required this.sourceSet, this.isDragHovered = false, this.onSourceDropped, super.key});
+  const SourceSetItem({required this.sourceSet, this.isDragHovered = false, this.onSourceDropped, super.key, this.index});
 
   @override
   State<SourceSetItem> createState() => _SourceSetItemState();
@@ -112,142 +113,138 @@ class _SourceSetItemState extends State<SourceSetItem> {
 
   @override
   Widget build(BuildContext context) {
-    return AnimatedSize(
-      duration: const Duration(milliseconds: 250),
-      alignment: AlignmentGeometry.topCenter,
-      child: ValueListenableBuilder<bool>(
-        valueListenable: _isSourcesSetExpanded,
-        builder: (BuildContext context, bool subZoneExpanded, Widget? child) {
-          return Column(
-            children: <Widget>[
-              MouseRegion(
-                onEnter: (_) => setState(() => _isHovered = true),
-                onExit: (_) => setState(() => _isHovered = false),
+    return SemanticHelper.container(
+      testId: SemanticHelper.createTestId(SemanticTypes.container, '${FusionTestKeys.instance.sourcesetdata}_${widget.index}'),
+      child: AnimatedSize(
+        duration: const Duration(milliseconds: 250),
+        alignment: AlignmentGeometry.topCenter,
+        child: ValueListenableBuilder<bool>(
+          valueListenable: _isSourcesSetExpanded,
+          builder: (BuildContext context, bool subZoneExpanded, Widget? child) {
+            return Column(
+              children: <Widget>[
+                MouseRegion(
+                  onEnter: (_) => setState(() => _isHovered = true),
+                  onExit: (_) => setState(() => _isHovered = false),
 
-                child: GestureDetector(
-                  onTap: () {
-                    /// Toggle expand/collapse
-                    _isSourcesSetExpanded.value = !_isSourcesSetExpanded.value;
-                  },
-                  child: Container(
-                    margin: const EdgeInsets.only(top: 8, left: 8, right: 8),
-                    padding: const EdgeInsets.only(left: 12, right: 12),
-                    height: 36,
-                    decoration: BoxDecoration(
-                      border: Border.all(
-                        color: widget.isDragHovered ? Theme.of(context).colorScheme.primary : Colors.transparent,
-                        width: 1.0,
+                  child: GestureDetector(
+                    onTap: () {
+                      /// Toggle expand/collapse
+                      _isSourcesSetExpanded.value = !_isSourcesSetExpanded.value;
+                    },
+                    child: Container(
+                      margin: const EdgeInsets.only(top: 8, left: 8, right: 8),
+                      padding: const EdgeInsets.only(left: 12, right: 12),
+                      height: 36,
+                      decoration: BoxDecoration(
+                        border: Border.all(
+                          color: widget.isDragHovered ? Theme.of(context).colorScheme.primary : Colors.transparent,
+                          width: 1.0,
+                        ),
+                        borderRadius: BorderRadius.circular(6),
+                        color:
+                            widget.isDragHovered
+                                ? Theme.of(context).colorScheme.primary.withAlpha(50)
+                                : (_isHovered ? context.colorScheme.elevation3 : context.colorScheme.elevation2),
                       ),
-                      borderRadius: BorderRadius.circular(6),
-                      color:
-                          widget.isDragHovered
-                              ? Theme.of(context).colorScheme.primary.withAlpha(50)
-                              : (_isHovered ? context.colorScheme.elevation3 : context.colorScheme.elevation2),
-                    ),
-                    child: SemanticHelper.container(
-                      testId: SemanticHelper.createTestId(
-                        SemanticTypes.container,
-                        FusionTestKeys.instance.sourcesetheader,
-                      ),
-                      child: Row(
-                        children: <Widget>[
-                          /// Expand/collapse icon
-                          SemanticHelper.button(
-                            testId: SemanticHelper.createTestId(
-                              SemanticTypes.button,
-                              FusionTestKeys.instance.sourcesetheadericon,
-                            ),
-                            child: Icon(
-                              _isSourcesSetExpanded.value ? Icons.arrow_drop_up_rounded : Icons.arrow_drop_down_rounded,
-                              color: Theme.of(context).colorScheme.iconWhite,
-                            ),
-                          ),
-                          const SizedBox(width: 4),
-
-                          /// Source set name
-                          Expanded(
-                            child: SemanticHelper.staticText(
+                      child: SemanticHelper.container(
+                        testId: SemanticHelper.createTestId(SemanticTypes.container, '${FusionTestKeys.instance.sourcesetdataitmheader}_${widget.index}'),
+                        child: Row(
+                          children: <Widget>[
+                            /// Expand/collapse icon
+                            SemanticHelper.button(
                               testId: SemanticHelper.createTestId(
-                                SemanticTypes.text,
-                                FusionTestKeys.instance.sourcesetheadername,
+                                SemanticTypes.button,
+                                '${FusionTestKeys.instance.sourcesetdataitmheadericon}_${widget.index}',
                               ),
-                              child: FusionAppText(
-                                text: widget.sourceSet.name,
-                                maxLine: 1,
-                                style: Theme.of(
-                                  context,
-                                ).textTheme.bodyMedium?.copyWith(
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w600,
-                                ),
+                              child: Icon(
+                                _isSourcesSetExpanded.value ? Icons.arrow_drop_up_rounded : Icons.arrow_drop_down_rounded,
+                                color: Theme.of(context).colorScheme.iconWhite,
                               ),
                             ),
-                          ),
+                            const SizedBox(width: 4),
 
-                          Visibility(
-                            visible: _sourceSetsViewmodel.canLinkSourceSet(sourceSetId: widget.sourceSet.id),
-                            child: BlocBuilder<ConfigSourceSetsViewmodel, ConfigSourceSetsState>(
-                              builder: (BuildContext context, ConfigSourceSetsState state) {
-                                return Tooltip(
-                                  message: widget.sourceSet.isLinked ? 'Unlink Source Set' : 'Link Source Set',
-                                  child: GestureDetector(
-                                    onTap: () {
-                                      showDialog(
-                                        context: context,
-
-                                        builder:
-                                            (_) => FusionDialog(
-                                              title: "Confirm ${widget.sourceSet.isLinked ? "Unlink" : 'Link'}",
-                                              description:
-                                                  'Are you sure you want to ${widget.sourceSet.isLinked ? 'unlink' : 'link'} this source set? All associated processing blocks will be affected.',
-                                              primaryButtonLabel: widget.sourceSet.isLinked ? "Unlink" : 'Link',
-                                              secondaryButtonLabel: 'Cancel',
-                                              onPrimaryPressed: () {
-                                                if (widget.sourceSet.isLinked) {
-                                                  _sourceSetsViewmodel.unlinkSourceSet(sourceSetId: widget.sourceSet.id);
-                                                  FusionToast.success(
-                                                    context,
-                                                    message: "Source set unlinked successfully",
-                                                  );
-                                                } else {
-                                                  _sourceSetsViewmodel.linkSourceSet(sourceSetId: widget.sourceSet.id);
-                                                  FusionToast.success(
-                                                    context,
-                                                    message: "Source set linked successfully",
-                                                  );
-                                                }
-                                                Navigator.pop(context);
-                                              },
-                                              onSecondaryPressed: () => Navigator.pop(context),
-                                            ),
-                                      );
-                                    },
-                                    child: FusionImage.asset(
-                                      widget.sourceSet.isLinked ? Assets.unLinkIcon : Assets.linkIcon,
-                                      width: 22,
-                                      height: 22,
-                                      assetColor: context.colorScheme.primaryWhite,
-                                      fit: BoxFit.contain,
-                                    ),
-                                  ),
-                                );
-                              },
-                            ),
-                          ),
-
-                          const SizedBox(width: 8),
-                          Tooltip(
-                            message: 'Processing Blocks',
-                            child: InkWell(
-                              onTap: () {
-                                ProcessingChainView.showForSourceSet(context, widget.sourceSet);
-                              },
-                              child: SemanticHelper.container(
+                            /// Source set name
+                            Expanded(
+                              child: SemanticHelper.staticText(
                                 testId: SemanticHelper.createTestId(
-                                  SemanticTypes.container,
-                                  FusionTestKeys.instance.sourcesetheaderprocessingblock,
+                                  SemanticTypes.text,
+                                  '${FusionTestKeys.instance.sourcesetdataitmheadername}_${widget.index}',
                                 ),
+                                child: FusionAppText(
+                                  text: widget.sourceSet.name,
+                                  maxLine: 1,
+                                  style: Theme.of(
+                                    context,
+                                  ).textTheme.bodyMedium?.copyWith(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ),
+                            ),
+
+                            Visibility(
+                              visible: _sourceSetsViewmodel.canLinkSourceSet(sourceSetId: widget.sourceSet.id),
+                              child: BlocBuilder<ConfigSourceSetsViewmodel, ConfigSourceSetsState>(
+                                builder: (BuildContext context, ConfigSourceSetsState state) {
+                                  return Tooltip(
+                                    message: widget.sourceSet.isLinked ? 'Unlink Source Set' : 'Link Source Set',
+                                    child: GestureDetector(
+                                      onTap: () {
+                                        showDialog(
+                                          context: context,
+
+                                          builder:
+                                              (_) => FusionDialog(
+                                                title: "Confirm ${widget.sourceSet.isLinked ? "Unlink" : 'Link'}",
+                                                description:
+                                                    'Are you sure you want to ${widget.sourceSet.isLinked ? 'unlink' : 'link'} this source set? All associated processing blocks will be affected.',
+                                                primaryButtonLabel: widget.sourceSet.isLinked ? "Unlink" : 'Link',
+                                                secondaryButtonLabel: 'Cancel',
+                                                onPrimaryPressed: () {
+                                                  if (widget.sourceSet.isLinked) {
+                                                    _sourceSetsViewmodel.unlinkSourceSet(sourceSetId: widget.sourceSet.id);
+                                                    FusionToast.success(
+                                                      context,
+                                                      message: "Source set unlinked successfully",
+                                                    );
+                                                  } else {
+                                                    _sourceSetsViewmodel.linkSourceSet(sourceSetId: widget.sourceSet.id);
+                                                    FusionToast.success(
+                                                      context,
+                                                      message: "Source set linked successfully",
+                                                    );
+                                                  }
+                                                  Navigator.pop(context);
+                                                },
+                                                onSecondaryPressed: () => Navigator.pop(context),
+                                              ),
+                                        );
+                                      },
+                                      child: FusionImage.asset(
+                                        widget.sourceSet.isLinked ? Assets.unLinkIcon : Assets.linkIcon,
+                                        width: 22,
+                                        height: 22,
+                                        assetColor: context.colorScheme.primaryWhite,
+                                        fit: BoxFit.contain,
+                                      ),
+                                    ),
+                                  );
+                                },
+                              ),
+                            ),
+
+                            const SizedBox(width: 8),
+                            Tooltip(
+                              message: 'Processing Blocks',
+                              child: InkWell(
+                                onTap: () {
+                                  ProcessingChainView.showForSourceSet(context, widget.sourceSet);
+                                },
+
                                 child: FusionImage.asset(
+                                  semanticId: '${FusionTestKeys.instance.sourcesetdataitmheaderprocessingblock}_${widget.index}',
                                   Assets.processingBlocksIcon,
                                   width: 18,
                                   height: 12,
@@ -256,19 +253,14 @@ class _SourceSetItemState extends State<SourceSetItem> {
                                 ),
                               ),
                             ),
-                          ),
-                          const SizedBox(width: 8),
-                          Tooltip(
-                            message: 'Edit Source Set',
-                            child: GestureDetector(
-                              key: _addSourceIconKey,
-                              onTap: _showEditSourceSetPopup,
-                              child: SemanticHelper.container(
-                                testId: SemanticHelper.createTestId(
-                                  SemanticTypes.container,
-                                  FusionTestKeys.instance.sourcesetheadereditsource,
-                                ),
+                            const SizedBox(width: 8),
+                            Tooltip(
+                              message: 'Edit Source Set',
+                              child: GestureDetector(
+                                key: _addSourceIconKey,
+                                onTap: _showEditSourceSetPopup,
                                 child: FusionImage.asset(
+                                  semanticId: '${FusionTestKeys.instance.sourcesetdataitmheadereditsource}_${widget.index}',
                                   Assets.addSourceIcon,
                                   width: 22,
                                   height: 22,
@@ -277,19 +269,14 @@ class _SourceSetItemState extends State<SourceSetItem> {
                                 ),
                               ),
                             ),
-                          ),
-                          const SizedBox(width: 4),
+                            const SizedBox(width: 4),
 
-                          Tooltip(
-                            message: 'Delete Source Set',
-                            child: GestureDetector(
-                              onTap: _confirmDeleteSourceSet,
-                              child: SemanticHelper.container(
-                                testId: SemanticHelper.createTestId(
-                                  SemanticTypes.container,
-                                  FusionTestKeys.instance.sourcesetheaderdeletesource,
-                                ),
+                            Tooltip(
+                              message: 'Delete Source Set',
+                              child: GestureDetector(
+                                onTap: _confirmDeleteSourceSet,
                                 child: FusionImage.asset(
+                                  semanticId: '${FusionTestKeys.instance.sourcesetdataitmheaderdeletesource}_${widget.index}',
                                   Assets.deleteIcon,
                                   width: 17,
                                   height: 17,
@@ -298,17 +285,17 @@ class _SourceSetItemState extends State<SourceSetItem> {
                                 ),
                               ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
                     ),
                   ),
                 ),
-              ),
-              if (subZoneExpanded) _buildSourcesList(),
-            ],
-          );
-        },
+                if (subZoneExpanded) _buildSourcesList(),
+              ],
+            );
+          },
+        ),
       ),
     );
   }

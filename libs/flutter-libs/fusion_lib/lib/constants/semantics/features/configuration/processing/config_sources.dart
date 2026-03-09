@@ -1,28 +1,28 @@
 import 'package:fusion_lib/constants/fusion_constants.dart';
 
 extension ConfigurationSources on FusionTestKeys {
-  String get sourcesec => "sources_panel";
+  String get processingsec => "processing_panel";
+  String get sourcespan => "sources_panel";
+  String get sourcesec => "sources_section";
   String get sourcehead => "sources_header";
   String get sourcesethead => "sources_set_header";
   String get sourcesearch => "sources_search";
-  String get sourcelist => "sources_list";
-  String get sourcelistitems => "sources_list_items";
+  String get sourcedata => "sources_data";
+  String get sourcedataitems => "sources_data_item";
   String get sourceempty => "sources_empty";
-  String get sourcechildWhenDragging => "sources_child_When_Dragging";
-  String get sourcelistchild => "sources_list_item";
   String get sourcelistitemimage => "sources_list_item_image";
   String get sourcelistitemtext => "sources_list_item_text";
   String get sourceitemprocessing => "source_item_processing";
+
   String get sourcesetheadicon => "sources_set_header_icon";
-  String get sourcesetheader => "source_set_item_header";
-  String get sourcesetheadericon => "source_set_item_header_icon";
-  String get sourcesetheadername => "source_set_item_header_name";
-  String get sourcesetheaderprocessingblock =>
-      "source_set_item_header_processing_block_button";
-  String get sourcesetheadereditsource =>
-      "source_set_item_header_edit_source_button";
-  String get sourcesetheaderdeletesource =>
-      "source_set_item_header_delete_button";
+  String get sourcesetheader => "source_set_header";
+  String get sourcesetdata => "source_set_data_item";
+  String get sourcesetdataitmheader => "source_set_data_item_header";
+  String get sourcesetdataitmheadericon => "source_set_data_item_header_icon";
+  String get sourcesetdataitmheadername => "source_set_data_item_header_name";
+  String get sourcesetdataitmheaderprocessingblock => "source_set_item_header_processing_block_button";
+  String get sourcesetdataitmheadereditsource => "source_set_item_header_edit_source_button";
+  String get sourcesetdataitmheaderdeletesource => "source_set_item_header_delete_button";
   String get createsourcesemenu => "create_source_set_menu";
   String get sourcesedata => "source_set_list";
   String get createsourcese => "source_set_list";
@@ -34,22 +34,17 @@ extension ConfigurationSources on FusionTestKeys {
   String get srcnamelabel => "source_set_creation_widget_name_label";
   String get srcselectionlabel => "source_set_creation_selection_label";
   String get srccreationdropdown => "source_set_creation_widget_dropdown";
-  String get srccreationdropdownitemheader =>
-      "source_set_creation_widget_dropdown_item_header";
-  String get srccreationdropdownheaderitemicon =>
-      "source_set_creation_widget_dropdown_item_header_icon";
+  String get srccreationdropdownitemheader => "source_set_creation_widget_dropdown_item_header";
+  String get srccreationdropdownheaderitemicon => "source_set_creation_widget_dropdown_item_header_icon";
   String get srccreationdropdownitem => "source_select_sources_dropdown_item";
-  String get emtysrccreationdropdownitemtxt =>
-      "empty_source_select_sources_dropdown_item_text";
+  String get emtysrccreationdropdownitemtxt => "empty_source_select_sources_dropdown_item_text";
   String get srccreationdropdownchkbox => "select_sources_dropdown_checkbox";
   String get srccreationdropdownitemname => "select_sources_dropdown_name";
   String get srcdropdown => "source_set_creation_dropdown";
   String get srcdropdowntxt => "source_set_creation_dropdown_text";
   String get srcdropdownicon => "source_set_creation_dropdown_icon";
-  String get srccreationheadcancel =>
-      "source_set_creation_widget_cancel_button";
-  String get srccreationheadcreate =>
-      "source_set_creation_widget_create_button";
+  String get srccreationheadcancel => "source_set_creation_widget_cancel_button";
+  String get srccreationheadcreate => "source_set_creation_widget_create_button";
   String get srcsetlist => "source_set_list";
   String get srcsetlistitem => "source_set_list_item";
 }

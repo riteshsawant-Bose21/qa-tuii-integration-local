@@ -88,7 +88,7 @@ class _SubZoneCardState extends State<SubZoneCard> {
     return SemanticHelper.container(
       testId: SemanticHelper.createTestId(
         SemanticTypes.container,
-        FusionTestKeys.instance.zoneheader,
+        FusionTestKeys.instance.zoneitmheader,
       ),
       child: GestureDetector(
         onTap: () {
@@ -120,7 +120,7 @@ class _SubZoneCardState extends State<SubZoneCard> {
               SemanticHelper.container(
                 testId: SemanticHelper.createTestId(
                   SemanticTypes.container,
-                  FusionTestKeys.instance.zoneheadericon,
+                  FusionTestKeys.instance.zoneitmheadericon,
                 ),
                 child: Icon(
                   expanded ? Icons.arrow_drop_up_rounded : Icons.arrow_drop_down_rounded,
@@ -143,7 +143,7 @@ class _SubZoneCardState extends State<SubZoneCard> {
                 child: SemanticHelper.staticText(
                   testId: SemanticHelper.createTestId(
                     SemanticTypes.text,
-                    FusionTestKeys.instance.zoneheadername,
+                    FusionTestKeys.instance.zoneitmheadername,
                   ),
                   child: FusionAppText(
                     text: widget.subZoneName,
