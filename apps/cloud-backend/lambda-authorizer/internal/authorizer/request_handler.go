@@ -12,10 +12,19 @@ import (
 // HandleRequestAuthorizer supports API Gateway REQUEST authorizer events
 func HandleRequestAuthorizer(ctx context.Context, event map[string]interface{}) (map[string]interface{}, error) {
 	startTime := time.Now()
-	
+
 	// Generate a new request ID for this request
 	requestID := uuid.New().String()
-	log := logger.NewLogger(requestID)
+
+	// Extract source IP from request context
+	sourceIP := ""
+	if requestContext, ok := event["requestContext"].(map[string]interface{}); ok {
+		if identity, ok := requestContext["identity"].(map[string]interface{}); ok {
+			sourceIP, _ = identity["sourceIp"].(string)
+		}
+	}
+
+	log := logger.NewLogger(requestID, sourceIP)
 
 	log.Info("Processing authorization request")
 
@@ -84,15 +93,14 @@ func HandleRequestAuthorizer(ctx context.Context, event map[string]interface{}) 
 	}
 
 	contextMap := map[string]interface{}{
-		"requestId":       requestID,
-		"userId":          userCtx.UserID,
-		"userEmail":       userCtx.Email,
-		"userRole":        userCtx.Role,
-		"accountId":       userCtx.AccountID,
-		"accountName":     userCtx.AccountName,
-		"accountType":     userCtx.AccountType,
-		"roleId":          userCtx.RoleID,
-		// "userPermissions": userCtx.Permissions, // e.g. comma-separated or JSON
+		"requestId":   requestID,
+		"userId":      userCtx.UserID,
+		"userEmail":   userCtx.Email,
+		"userRole":    userCtx.Role,
+		"accountId":   userCtx.AccountID,
+		"accountName": userCtx.AccountName,
+		"accountType": userCtx.AccountType,
+		"roleId":      userCtx.RoleID,
 	}
 
 	// Log successful authorization with full context

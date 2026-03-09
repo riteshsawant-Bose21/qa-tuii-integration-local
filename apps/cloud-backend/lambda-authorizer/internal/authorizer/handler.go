@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 	"os"
+
 	// Import postgres driver to ensure it's registered before sql.Open is called
 	_ "github.com/lib/pq"
 
@@ -21,7 +22,7 @@ var (
 
 func init() {
 	// Use init logger (no request ID yet)
-	initLogger := logger.NewLogger("INIT")
+	initLogger := logger.NewLogger("INIT", "")
 	initLogger.Info("Initializing Lambda authorizer")
 
 	cfg := config.Config{

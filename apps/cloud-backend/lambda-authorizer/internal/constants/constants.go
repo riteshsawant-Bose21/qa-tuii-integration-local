@@ -45,4 +45,8 @@ const (
 	PermissionAdmin = "admin"
 	// Wildcard permissions
 	AllPermissions = "*"
+
+	// Policy effect constants
+	Allow = "allow"
+	Deny  = "deny"
 )
