@@ -13,6 +13,7 @@ class FusionSnapViewModel extends Cubit<FusionSnapState> {
 
   // Properties for snap context
   List<Offset> _polygonPoints = <Offset>[];
+  List<Offset> _polygonTempPoints = <Offset>[];
   final List<Offset> _toolPoints = <Offset>[];
   final double _currentScale = 1.0;
 
@@ -31,6 +32,7 @@ class FusionSnapViewModel extends Cubit<FusionSnapState> {
       existingPoints: <Offset>[
         ..._toolPoints,
         ..._polygonPoints,
+        ..._polygonTempPoints,
       ],
       scale: _currentScale,
     );
@@ -52,10 +54,7 @@ class FusionSnapViewModel extends Cubit<FusionSnapState> {
 
     final SnapResult snapResult = _snapService.findBestSnapPoint(
       cursorPositions: positions,
-      existingPoints: <Offset>[
-        ..._toolPoints,
-        ..._polygonPoints,
-      ],
+      existingPoints: <Offset>[..._toolPoints, ..._polygonPoints, ..._polygonTempPoints],
       scale: _currentScale,
     );
 
@@ -67,11 +66,23 @@ class FusionSnapViewModel extends Cubit<FusionSnapState> {
     );
   }
 
-  void addPolygonPoints(List<Offset> points) {
+  void addPolygonPoints(List<Offset> points, [List<Offset>? tempPoints]) {
     // Only update if points have changed
     if (_arePointsEqual(_polygonPoints, points)) return;
 
     _polygonPoints = points.toList();
+    if (tempPoints != null) {
+      _polygonTempPoints = tempPoints.toList();
+    } else {
+      _polygonTempPoints = <Offset>[];
+    }
+    if (state.cursorPosition != null) {
+      updateCursorPosition(state.cursorPosition);
+    }
+  }
+
+  void addTempPolygonPoints(List<Offset> tempPoints) {
+    _polygonTempPoints = tempPoints.toList();
     if (state.cursorPosition != null) {
       updateCursorPosition(state.cursorPosition);
     }

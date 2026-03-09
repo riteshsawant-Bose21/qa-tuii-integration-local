@@ -8,6 +8,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/core/service_locator.dart';
 import 'package:fusion_launcher/features/fusion_canvas/view/painters/fusion_base_painter.dart';
+import 'package:fusion_launcher/features/projects/widget/building/toolbar/canvas_toolbar.dart';
 import 'package:fusion_lib/constants/test_keys.dart';
 import 'package:fusion_lib/fusion_building_view/floor_canvas_controller.dart';
 import 'package:fusion_lib/fusion_building_view/floor_plan_calibrator.dart';
@@ -20,8 +21,6 @@ import '../../../fusion_canvas/view/fusion_canvas.dart';
 import '../../../fusion_canvas/view/painters/elements/fusion_image_painter.dart';
 import '../../../fusion_canvas/view/painters/elements/listening_area_painter.dart';
 import 'toolbar/building_toolbar.dart';
-import 'toolbar/canvas_tool_selection_toolbar.dart';
-import 'toolbar/mode_selection_toolbar.dart';
 
 class BuildingCanvas extends StatefulWidget {
   final SplRangeController? splRangeController;
@@ -112,520 +111,540 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
     }
   }
 
+  void selectListeningArea() {}
+
   @override
   Widget build(BuildContext context) {
     final bool showFloorCanvas = kDebugMode;
-    return FusionKeyboardWrapper(
-      onUndo: () {
-        // if (serviceLocator<ProjectViewModel>().canUndo) {
-        //   serviceLocator<ProjectViewModel>().undo();
-        // }
-      },
-      onRedo: () {
-        // if (serviceLocator<ProjectViewModel>().canRedo) {
-        //   serviceLocator<ProjectViewModel>().redo();
-        // }
-      },
-      onDelete: () {
-        //IN Building page
-        if (serviceLocator<ProjectViewModel>().currentSelectedHardwareId != null) {
-          serviceLocator<ProjectViewModel>().removeHardware(
-            hardwareId: serviceLocator<ProjectViewModel>().currentSelectedHardwareId!,
-          );
-        } else if (serviceLocator<ProjectViewModel>().currentSelectedListeningAreaId != null) {
-          serviceLocator<ProjectViewModel>().removeListeningArea(
-            areaId: serviceLocator<ProjectViewModel>().currentSelectedListeningAreaId!,
-          );
-        }
-        widget.onCalculateSpl();
-      },
-      child: Container(
-        decoration: const BoxDecoration(color: Colors.white),
-        child: Column(
-          children: <Widget>[
-            // Canvas with floor plan and components
-            Expanded(
-              child: Stack(
-                children: <Widget>[
-                  // Main canvas area
-                  ClipRRect(
-                    borderRadius: const BorderRadius.vertical(
-                      bottom: Radius.circular(6),
-                    ),
-                    child: BlocConsumer<ProjectViewModel, ProjectViewModelState>(
-                      listener: (BuildContext context, ProjectViewModelState state) {
-                        // if (state is FloorsUpdated) {
-                        //   onFloorUpdated();
-                        // }
-                      },
-                      builder: (BuildContext context, ProjectViewModelState state) {
-                        final int currentFloorIndex = serviceLocator<ProjectViewModel>().currentFloorIndex;
-                        final FloorModel floor = serviceLocator<ProjectViewModel>().floors[currentFloorIndex];
-
-                        /// If no floor plan image,
-                        /// show upload floor plan widget
-                        if (floor.floorPlan.imagePath.isEmpty) {
-                          return _buildEmptyFloorWidget();
-                        }
-
-                        return ValueListenableBuilder<bool>(
-                          valueListenable: widget.floorCanvasController.isDrawing,
-                          builder: (BuildContext context, bool isDrawingValue, Widget? child) {
-                            return Stack(
-                              children: <Widget>[
-                                MouseRegion(
-                                  cursor: cursorType,
-                                  onHover: (PointerHoverEvent event) {
-                                    setState(() {
-                                      cursorPosition = event.localPosition;
-                                    });
-                                  },
-                                  onExit: (PointerExitEvent event) {
-                                    setState(() {
-                                      cursorPosition = null;
-                                    });
-                                  },
-                                  child: GuideShowcaseWrapper(
-                                    step: GuideShowCaseSteps.showListeningAreaSelectionArea,
-                                    child: SemanticHelper.container(
-                                      testId: SemanticHelper.createTestId(SemanticTypes.container, "building_floor_canvas"),
-                                      child:
-                                          showFloorCanvas
-                                              ? FusionCanvas(
-                                                selectedIds:
-                                                    serviceLocator<ProjectViewModel>().currentSelectedListeningAreaId != null
-                                                        ? <String>{serviceLocator<ProjectViewModel>().currentSelectedListeningAreaId!}
-                                                        : null,
-                                                elements: <FusionBasePainter>[
-                                                  FusionImagePainter(
-                                                    image: floor.floorPlan.imagePath,
-                                                    position: floor.floorPlan.position,
-                                                    size: floor.floorPlan.size,
-                                                  ),
-                                                  for (final ListeningArea area in serviceLocator<ProjectViewModel>().getListeningAreasForFloor(
-                                                    floorId: floor.id,
-                                                  ))
-                                                    ListeningAreaPainter(
-                                                      listeningArea: area,
-                                                    ),
-                                                ],
-                                                toolbarEvents: FusionCanvasEvents(
-                                                  onLayerSelected: (FusionBasePainter? value) {
-                                                    if (value is ListeningAreaPainter) {
-                                                      serviceLocator<ProjectViewModel>().setCurrentSelectedListeningArea(value.listeningArea.id);
-                                                      serviceLocator<ProjectViewModel>().setCurrentSelectedHardware(null);
-                                                    } else {
-                                                      serviceLocator<ProjectViewModel>().setCurrentSelectedListeningArea(null);
-                                                      serviceLocator<ProjectViewModel>().setCurrentSelectedHardware(null);
-                                                    }
-                                                  },
-                                                  onAddPoints: (FusionBasePainter painter, List<FusionCanvasPoint> points, FusionCanvasLine line) {
-                                                    // print("Add Points: $points");
-                                                    if (painter is ListeningAreaPainter) {
-                                                      final ListeningArea area = painter.listeningArea;
-                                                      final FusionCanvasPoint start = line.start;
-                                                      final int indexToInsert = area.vertices.indexWhere((FusionCanvasPoint v) => v.id == start.id);
-                                                      final List<FusionCanvasPoint> updatedPoints = List<FusionCanvasPoint>.from(area.vertices);
-                                                      updatedPoints.insertAll(indexToInsert + 1, points);
-                                                      serviceLocator<ProjectViewModel>().updateListeningArea(
-                                                        area: area.copyWith(vertices: updatedPoints),
-                                                      );
-                                                    }
-                                                  },
-                                                  onMoveLayer: (FusionBasePainter painter, Offset offset) {
-                                                    if (painter is ListeningAreaPainter) {
-                                                      final ListeningArea area = painter.listeningArea;
-                                                      serviceLocator<ProjectViewModel>().updateListeningArea(
-                                                        area: area.copyWith(
-                                                          vertices:
-                                                              area.vertices.map((FusionCanvasPoint v) => v.copyWith(position: v.position + offset)).toList(),
-                                                        ),
-                                                      );
-                                                    }
-                                                  },
-                                                  onDeleteLayer: (FusionBasePainter painter) {
-                                                    if (painter is ListeningAreaPainter) {
-                                                      serviceLocator<ProjectViewModel>().removeListeningArea(areaId: painter.listeningArea.id);
-                                                    }
-                                                  },
-                                                  onRemovePoints: (FusionBasePainter painter, List<FusionCanvasPoint> points) {
-                                                    if (painter is ListeningAreaPainter) {
-                                                      final ListeningArea area = painter.listeningArea;
-                                                      final List<FusionCanvasPoint> updatedPoints =
-                                                          area.vertices
-                                                              .where((FusionCanvasPoint v) => points.every((FusionCanvasPoint p) => p.id != v.id))
-                                                              .toList();
-                                                      serviceLocator<ProjectViewModel>().updateListeningArea(
-                                                        area: area.copyWith(vertices: updatedPoints),
-                                                      );
-                                                    }
-                                                  },
-                                                  onMovePoints: (FusionBasePainter painter, List<FusionCanvasPoint> points, Offset delta) {
-                                                    if (painter is ListeningAreaPainter) {
-                                                      final ListeningArea area = painter.listeningArea;
-                                                      final List<FusionCanvasPoint> updatedPoints =
-                                                          area.vertices.map((FusionCanvasPoint v) {
-                                                            if (points.any((FusionCanvasPoint p) => p.id == v.id)) {
-                                                              return v.copyWith(position: v.position + delta);
-                                                            } else {
-                                                              return v;
-                                                            }
-                                                          }).toList();
-                                                      serviceLocator<ProjectViewModel>().updateListeningArea(
-                                                        area: area.copyWith(vertices: updatedPoints),
-                                                      );
-                                                    }
-                                                  },
-                                                  penToolEvents: FusionPenToolEvents(
-                                                    onPathClosed: (List<FusionCanvasPoint> value) {
-                                                      final ProjectViewModel projectVM = serviceLocator<ProjectViewModel>();
-                                                      projectVM.addListeningArea(
-                                                        area: ListeningArea(
-                                                          vertices: value,
-                                                          name: "Listening Area ${projectVM.listeningAreas.length + 1}",
-                                                        ),
-                                                        floorId: floor.id,
-                                                      );
-                                                    },
-                                                  ),
-                                                ),
-                                                builder:
-                                                    (BuildContext context) => const Stack(
-                                                      children: <Widget>[
-                                                        Positioned(
-                                                          bottom: 20,
-                                                          child: Row(
-                                                            children: <Widget>[
-                                                              ModeSelectionToolbar(),
-                                                              CanvasToolSelectionToolbar(),
-                                                            ],
-                                                          ),
-                                                        ),
-                                                      ],
-                                                    ),
-                                              )
-                                              : FloorCanvas(
-                                                gridSize: 100,
-                                                controller: widget.floorCanvasController,
-                                                hardwareComponents: serviceLocator<ProjectViewModel>().getHardwareInFloorWithPosition(
-                                                  floorId: floor.id,
-                                                ),
-                                                listeningAreas: serviceLocator<ProjectViewModel>().getListeningAreasForFloor(
-                                                  floorId: floor.id,
-                                                ),
-                                                floor: floor,
-                                                floorPlanEntity: floor.floorPlan,
-                                                selectedHardwareId: serviceLocator<ProjectViewModel>().currentSelectedHardwareId,
-                                                selectedListeningAreaId: serviceLocator<ProjectViewModel>().currentSelectedListeningAreaId,
-                                                onUpdateHardwareComponent: (HardwareComponent updatedHw) {
-                                                  final HardwareComponent oldHw = serviceLocator<ProjectViewModel>().getHardware(hardwareId: updatedHw.id)!;
-
-                                                  //check for pos && listening area id since only those two can be updated from canvas
-                                                  if (oldHw.pos != updatedHw.pos ||
-                                                      oldHw.locationEntity.listeningAreaId != updatedHw.locationEntity.listeningAreaId ||
-                                                      oldHw.locationEntity.floorId != updatedHw.locationEntity.floorId) {
-                                                    serviceLocator<ProjectViewModel>().updateHardware(hardware: updatedHw);
-                                                  } else {
-                                                    debugPrint(
-                                                      "No changes detected for hardware ${updatedHw.id}, skipping update.",
-                                                    );
-                                                  }
-                                                },
-                                                zones: serviceLocator<ProjectViewModel>().zones,
-                                                subZones: serviceLocator<ProjectViewModel>().subZones,
-                                                splPanelData: widget.splPanelData,
-                                                onCanvasZoomChanged: (double z) {
-                                                  serviceLocator<ProjectViewModel>().updateFloor(
-                                                    floor: floor.copyWith(floorPlan: floor.floorPlan.copyWith(canvasZoom: z)),
-                                                  );
-                                                },
-                                                onCanvasPanChanged: (ui.Offset p) {
-                                                  serviceLocator<ProjectViewModel>().updateFloor(
-                                                    floor: floor.copyWith(floorPlan: floor.floorPlan.copyWith(canvasPan: p)),
-                                                  );
-                                                },
-                                                onRightClick: (PointerDownEvent e) {
-                                                  if (widget.floorCanvasController.isDrawing.value) {
-                                                    widget.floorCanvasController.toggleDraw();
-                                                  }
-                                                  if (projectViewModel.shouldPlaceNonPlacedSpeakers) {
-                                                    projectViewModel.setShouldPlaceNonPlacedSpeakers(false);
-                                                  }
-                                                },
-                                                moveHardware: (
-                                                  HardwareComponent hardware,
-                                                  String? newListeningAreaId,
-                                                  String? floorId,
-                                                ) {
-                                                  serviceLocator<ProjectViewModel>().moveHardware(
-                                                    hardwareId: hardware.id,
-                                                    floorId: floorId,
-                                                    listeningAreaId: newListeningAreaId,
-                                                  );
-                                                  // serviceLocator<ProjectViewModel>().saveProjectToLocal();
-                                                },
-                                                onAddListeningArea: (
-                                                  ListeningArea created,
-                                                  List<HardwareComponent>? containedHardware,
-                                                ) {
-                                                  serviceLocator<ProjectViewModel>().recordSnapshot();
-                                                  serviceLocator<ProjectViewModel>().addListeningArea(
-                                                    area: created,
-                                                    floorId: floor.id,
-                                                    autoSave: false,
-                                                  );
-                                                  if (containedHardware != null) {
-                                                    for (final HardwareComponent hc in containedHardware) {
-                                                      serviceLocator<ProjectViewModel>().moveHardware(
-                                                        hardwareId: hc.id,
-                                                        listeningAreaId: created.id,
-                                                        floorId: floor.id,
-                                                        autoSave: false,
-                                                      );
-                                                    }
-                                                  }
-                                                  widget.onCalculateSpl();
-                                                  serviceLocator<ProjectViewModel>().saveProject();
-                                                  serviceLocator<GuideShowCaseController>().completeStep(GuideShowCaseSteps.drawListeningArea);
-                                                },
-                                                onUpdateListeningArea: (ListeningArea area) {
-                                                  serviceLocator<ProjectViewModel>().updateListeningArea(area: area);
-                                                },
-                                                onFloorPlanUpdated: (FloorPlanModel updatedPlan) {
-                                                  serviceLocator<ProjectViewModel>().updateFloor(
-                                                    floor: floor.copyWith(floorPlan: updatedPlan),
-                                                  );
-                                                },
-                                                onViewportCenterUpdated: (ui.Offset center) {
-                                                  viewPortCenter = center;
-                                                },
-                                                onComponentTransformed: (dynamic component) {
-                                                  if (component is Speaker || component is ListeningArea) {
-                                                    widget.onCalculateSpl();
-                                                  }
-                                                },
-                                                onTapListeningArea: (ListeningArea value) {
-                                                  serviceLocator<ProjectViewModel>().setCurrentSelectedListeningArea(value.id);
-                                                  serviceLocator<GuideShowCaseController>().completeStep(GuideShowCaseSteps.showListeningAreaSelectionArea);
-                                                },
-                                                onSelectedListeningAreaIdChanged: (String? value) {
-                                                  serviceLocator<ProjectViewModel>().setCurrentSelectedListeningArea(value);
-                                                  serviceLocator<ProjectViewModel>().setCurrentSelectedHardware(null);
-                                                },
-                                                onSelectedHardwareComponentIdChanged: (String? value) {
-                                                  serviceLocator<ProjectViewModel>().setCurrentSelectedHardware(value);
-                                                  serviceLocator<ProjectViewModel>().setCurrentSelectedListeningArea(null);
-                                                },
-                                                onSelectedFloorPlanIdChanged: () {
-                                                  serviceLocator<ProjectViewModel>().setCurrentSelectedHardware(null);
-                                                  serviceLocator<ProjectViewModel>().setCurrentSelectedListeningArea(null);
-                                                },
-                                                splMin: serviceLocator<ProjectViewModel>().minSPL,
-                                                splMax: serviceLocator<ProjectViewModel>().maxSPL,
-                                                addNewHardwareComponent: (Offset speakerPosition) {
-                                                  final ProjectViewModel projectViewModel = serviceLocator<ProjectViewModel>();
-
-                                                  if (projectViewModel.shouldPlaceNonPlacedSpeakers) {
-                                                    projectViewModel.placeSelectedSpeaker(position: speakerPosition, isFromBuildingPage: true);
-                                                  }
-                                                  // else {
-                                                  //   if (projectViewModel.selectedProductToAdd == null) return;
-                                                  //   projectViewModel.addSelectedProduct(
-                                                  //     position: speakerPosition,
-                                                  //     listeningAreaId: listeningAreaId,
-                                                  //     isFromBuildingPage: true,
-                                                  //   );
-                                                  // }
-
-                                                  serviceLocator<GuideShowCaseController>().completeStep(GuideShowCaseSteps.addSpeakers);
-
-                                                  if (serviceLocator<GuideShowCaseController>().isStepCompleted(GuideShowCaseSteps.systemMode)) {
-                                                    serviceLocator<GuideShowCaseController>().completeStep(GuideShowCaseSteps.systemModeTabs);
-                                                  }
-                                                  widget.onCalculateSpl();
-                                                },
-                                                listeningAreaToZoneMap: serviceLocator<ProjectViewModel>().getListeningAreaToZoneMap(),
-                                                subZoneToZoneMap: serviceLocator<ProjectViewModel>().getSubZoneToZoneMap(),
-                                                listeningAreaToSubZoneMap: serviceLocator<ProjectViewModel>().getListeningAreaToSubZoneMap(),
-                                                isAcousticsMode: serviceLocator<ProjectViewModel>().currentToolbarMode == ToolbarMode.acoustics,
-                                                isInSpeakerPlacementMode: projectViewModel.shouldPlaceNonPlacedSpeakers,
-                                                showLiveSpl: showLiveSpl,
-                                              ),
-                                    ),
-                                  ),
-                                ),
-
-                                if (shouldUseCustomCursor && cursorPosition != null) ...<Widget>[
-                                  Positioned(
-                                    left: cursorPosition!.dx - 12,
-                                    top: cursorPosition!.dy - 12,
-                                    child: IgnorePointer(
-                                      child: Builder(
-                                        builder: (BuildContext context) {
-                                          if (serviceLocator<ProjectViewModel>().shouldPlaceNonPlacedSpeakers) {
-                                            final List<Speaker> nonPlacedSpeakers = projectViewModel.getNonPlacedSpeakersForCurrentListeningArea();
-
-                                            if (nonPlacedSpeakers.isEmpty) return const SizedBox();
-
-                                            final MountingType? speakerMountType = nonPlacedSpeakers.first.mountingType;
-
-                                            return Stack(
-                                              clipBehavior: Clip.none,
-                                              children: <Widget>[
-                                                Builder(
-                                                  builder: (BuildContext context) {
-                                                    if (speakerMountType == MountingType.surface) {
-                                                      return const RotatedBox(
-                                                        quarterTurns: 1,
-                                                        child: Icon(
-                                                          Icons.rectangle,
-                                                          size: 32,
-                                                          color: Colors.black,
-                                                        ),
-                                                      );
-                                                    } else if (speakerMountType == MountingType.pendant) {
-                                                      return SizedBox(
-                                                        width: 24,
-                                                        height: 24,
-                                                        child: CustomPaint(
-                                                          painter: TrianglePainter(
-                                                            color: Colors.black,
-                                                            isUp: true,
-                                                          ),
-                                                        ),
-                                                      );
-                                                    } else {
-                                                      return const Icon(
-                                                        Icons.circle,
-                                                        size: 32,
-                                                        color: Colors.black,
-                                                      );
-                                                    }
-                                                  },
-                                                ),
-                                                Positioned(
-                                                  bottom: -10,
-                                                  right: -10,
-                                                  child: Container(
-                                                    decoration: const BoxDecoration(
-                                                      color: Colors.black,
-                                                      shape: BoxShape.circle,
-                                                    ),
-                                                    padding: const EdgeInsets.all(5),
-                                                    child: FusionAppText(
-                                                      text: '${nonPlacedSpeakers.length}',
-                                                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                                                        color: context.colorScheme.onPrimary,
-                                                        fontSize: 10,
-                                                      ),
-                                                    ),
-                                                  ),
-                                                ),
-                                              ],
-                                            );
-                                          } else if (serviceLocator<ProjectViewModel>().selectedProductToAdd != null) {
-                                            return Image.asset(
-                                              serviceLocator<ProjectViewModel>().selectedProductToAdd!.image,
-                                              width: 32,
-                                              height: 32,
-                                            );
-                                          } else {
-                                            return const SizedBox.shrink();
-                                          }
-                                        },
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ],
-                            );
-                          },
-                        );
-                      },
-                    ),
+    return Container(
+      decoration: const BoxDecoration(color: Colors.white),
+      child: Column(
+        children: <Widget>[
+          // Canvas with floor plan and components
+          Expanded(
+            child: Stack(
+              children: <Widget>[
+                // Main canvas area
+                ClipRRect(
+                  borderRadius: const BorderRadius.vertical(
+                    bottom: Radius.circular(6),
                   ),
-
-                  // Clean floating toolbar
-                  BlocConsumer<ProjectViewModel, ProjectViewModelState>(
+                  child: BlocConsumer<ProjectViewModel, ProjectViewModelState>(
                     listener: (BuildContext context, ProjectViewModelState state) {
-                      if (state is ZoneSelectionMode) {
-                        //Create new zone
-                        final Zone zone = state.zone;
-                        zoneSelectionMode(zone);
-                      }
-
-                      if (state is SubZoneSelectionMode) {
-                        //Create new subzone
-                        final SubZone subZone = state.subZone;
-                        subzoneSelectionMode(subZone);
-                      }
-
-                      if (state is ListeningAreaSelectionMode) {
-                        widget.floorCanvasController.setDraw(true);
-                      }
-
-                      if (serviceLocator<ProjectViewModel>().currentToolbarMode == ToolbarMode.system &&
-                          !serviceLocator<ProjectViewModel>().isInListeningAreaMode &&
-                          widget.floorCanvasController.isDrawing.value) {
-                        widget.floorCanvasController.toggleDraw();
-                      }
-
-                      if (!serviceLocator<ProjectViewModel>().isInZoneSelectionMode && widget.floorCanvasController.isListeningAreaSelectionActive.value) {
-                        widget.floorCanvasController.cancelListeningAreaSelection();
-                      }
+                      // if (state is FloorsUpdated) {
+                      //   onFloorUpdated();
+                      // }
                     },
                     builder: (BuildContext context, ProjectViewModelState state) {
                       final int currentFloorIndex = serviceLocator<ProjectViewModel>().currentFloorIndex;
-                      final FloorModel currentFloor = serviceLocator<ProjectViewModel>().floors[currentFloorIndex];
-                      return Visibility(
-                        visible: currentFloor.floorPlan.imagePath.isNotEmpty || currentFloor.floorPlan.imagePath != "" ? true : false,
-                        child: Align(
-                          alignment: Alignment.bottomRight,
-                          child: Padding(
-                            padding: const EdgeInsets.only(bottom: 12.0),
-                            child: ValueListenableBuilder<bool>(
-                              valueListenable: widget.floorCanvasController.isListeningAreaSelectionActive,
-                              builder: (_, bool isListeningAreaSelectionActive, __) {
-                                if (isListeningAreaSelectionActive) {
-                                  return Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 16,
-                                      vertical: 8,
+                      final FloorModel floor = serviceLocator<ProjectViewModel>().floors[currentFloorIndex];
+
+                      /// If no floor plan image,
+                      /// show upload floor plan widget
+                      if (floor.floorPlan.imagePath.isEmpty) {
+                        return _buildEmptyFloorWidget();
+                      }
+
+                      return ValueListenableBuilder<bool>(
+                        valueListenable: widget.floorCanvasController.isDrawing,
+                        builder: (BuildContext context, bool isDrawingValue, Widget? child) {
+                          return Stack(
+                            children: <Widget>[
+                              MouseRegion(
+                                cursor: cursorType,
+                                onHover: (PointerHoverEvent event) {
+                                  setState(() {
+                                    cursorPosition = event.localPosition;
+                                  });
+                                },
+                                onExit: (PointerExitEvent event) {
+                                  setState(() {
+                                    cursorPosition = null;
+                                  });
+                                },
+                                child: GuideShowcaseWrapper(
+                                  step: GuideShowCaseSteps.showListeningAreaSelectionArea,
+                                  child: SemanticHelper.container(
+                                    testId: SemanticHelper.createTestId(SemanticTypes.container, "building_floor_canvas"),
+                                    child:
+                                        showFloorCanvas
+                                            ? FusionCanvas(
+                                              selectedIds:
+                                                  serviceLocator<ProjectViewModel>().currentSelectedListeningAreaId != null
+                                                      ? <String>{serviceLocator<ProjectViewModel>().currentSelectedListeningAreaId!}
+                                                      : null,
+                                              elements: <FusionBasePainter>[
+                                                FusionImagePainter(
+                                                  image: floor.floorPlan.imagePath,
+                                                  position: floor.floorPlan.position,
+                                                  size: floor.floorPlan.size,
+                                                ),
+                                                for (final ListeningArea area in serviceLocator<ProjectViewModel>().getListeningAreasForFloor(
+                                                  floorId: floor.id,
+                                                ))
+                                                  ListeningAreaPainter(
+                                                    listeningArea: area,
+                                                  ),
+                                              ],
+                                              toolbarEvents: FusionCanvasEvents(
+                                                onLayerSelected: (FusionBasePainter? value) {
+                                                  if (value is ListeningAreaPainter) {
+                                                    serviceLocator<ProjectViewModel>().setCurrentSelectedListeningArea(value.listeningArea.id);
+                                                    serviceLocator<ProjectViewModel>().setCurrentSelectedHardware(null);
+                                                  } else {
+                                                    serviceLocator<ProjectViewModel>().setCurrentSelectedListeningArea(null);
+                                                    serviceLocator<ProjectViewModel>().setCurrentSelectedHardware(null);
+                                                  }
+                                                },
+                                                onAddPoints: (FusionBasePainter painter, List<FusionCanvasPoint> points, FusionCanvasLine line) {
+                                                  // print("Add Points: $points");
+                                                  if (painter is ListeningAreaPainter) {
+                                                    final ListeningArea area = painter.listeningArea;
+                                                    final FusionCanvasPoint start = line.start;
+                                                    final int indexToInsert = area.vertices.indexWhere((FusionCanvasPoint v) => v.id == start.id);
+                                                    final List<FusionCanvasPoint> updatedPoints = List<FusionCanvasPoint>.from(area.vertices);
+                                                    updatedPoints.insertAll(indexToInsert + 1, points);
+                                                    serviceLocator<ProjectViewModel>().updateListeningArea(
+                                                      area: area.copyWith(vertices: updatedPoints),
+                                                    );
+                                                  }
+                                                },
+                                                onMoveLayer: (FusionBasePainter painter, Offset offset) {
+                                                  if (painter is ListeningAreaPainter) {
+                                                    final ListeningArea area = painter.listeningArea;
+                                                    serviceLocator<ProjectViewModel>().updateListeningArea(
+                                                      area: area.copyWith(
+                                                        vertices:
+                                                            area.vertices.map((FusionCanvasPoint v) => v.copyWith(position: v.position + offset)).toList(),
+                                                      ),
+                                                    );
+                                                  }
+                                                },
+                                                onDeleteLayer: (FusionBasePainter painter) {
+                                                  if (painter is ListeningAreaPainter) {
+                                                    serviceLocator<ProjectViewModel>().removeListeningArea(areaId: painter.listeningArea.id);
+                                                  }
+                                                },
+                                                onRemovePoints: (FusionBasePainter painter, List<FusionCanvasPoint> points) {
+                                                  if (painter is ListeningAreaPainter) {
+                                                    final ListeningArea area = painter.listeningArea;
+                                                    final List<FusionCanvasPoint> updatedPoints =
+                                                        area.vertices
+                                                            .where((FusionCanvasPoint v) => points.every((FusionCanvasPoint p) => p.id != v.id))
+                                                            .toList();
+                                                    serviceLocator<ProjectViewModel>().updateListeningArea(
+                                                      area: area.copyWith(vertices: updatedPoints),
+                                                    );
+                                                  }
+                                                },
+                                                onMovePoints: (FusionBasePainter painter, List<FusionCanvasPoint> points, Offset delta) {
+                                                  if (painter is ListeningAreaPainter) {
+                                                    final ListeningArea area = painter.listeningArea;
+                                                    final List<FusionCanvasPoint> updatedPoints =
+                                                        area.vertices.map((FusionCanvasPoint v) {
+                                                          if (points.any((FusionCanvasPoint p) => p.id == v.id)) {
+                                                            return v.copyWith(position: v.position + delta);
+                                                          } else {
+                                                            return v;
+                                                          }
+                                                        }).toList();
+                                                    serviceLocator<ProjectViewModel>().updateListeningArea(
+                                                      area: area.copyWith(vertices: updatedPoints),
+                                                    );
+                                                  }
+                                                },
+                                                penToolEvents: FusionPenToolEvents(
+                                                  onPathClosed: (List<FusionCanvasPoint> value) {
+                                                    final ProjectViewModel projectVM = serviceLocator<ProjectViewModel>();
+                                                    projectVM.addListeningArea(
+                                                      area: ListeningArea(
+                                                        vertices: value,
+                                                        name: "Listening Area ${projectVM.listeningAreas.length + 1}",
+                                                      ),
+                                                      floorId: floor.id,
+                                                    );
+                                                  },
+                                                ),
+                                              ),
+                                              builder:
+                                                  (BuildContext context) => const Stack(
+                                                    children: <Widget>[
+                                                      Positioned(
+                                                        bottom: 20,
+                                                        child: CanvasToolBar(),
+                                                      ),
+                                                    ],
+                                                  ),
+                                            )
+                                            : FloorCanvas(
+                                              gridSize: 100,
+                                              controller: widget.floorCanvasController,
+                                              hardwareComponents: serviceLocator<ProjectViewModel>().getHardwareInFloorWithPosition(
+                                                floorId: floor.id,
+                                              ),
+                                              listeningAreas: serviceLocator<ProjectViewModel>().getListeningAreasForFloor(
+                                                floorId: floor.id,
+                                              ),
+                                              floor: floor,
+                                              floorPlanEntity: floor.floorPlan,
+                                              selectedHardwareId: serviceLocator<ProjectViewModel>().currentSelectedHardwareId,
+                                              selectedListeningAreaId: serviceLocator<ProjectViewModel>().currentSelectedListeningAreaId,
+                                              onUpdateHardwareComponent: (HardwareComponent updatedHw) {
+                                                final HardwareComponent oldHw = serviceLocator<ProjectViewModel>().getHardware(hardwareId: updatedHw.id)!;
+
+                                                //check for pos && listening area id since only those two can be updated from canvas
+                                                if (oldHw.pos != updatedHw.pos ||
+                                                    oldHw.locationEntity.listeningAreaId != updatedHw.locationEntity.listeningAreaId ||
+                                                    oldHw.locationEntity.floorId != updatedHw.locationEntity.floorId) {
+                                                  serviceLocator<ProjectViewModel>().updateHardware(hardware: updatedHw);
+                                                } else {
+                                                  debugPrint(
+                                                    "No changes detected for hardware ${updatedHw.id}, skipping update.",
+                                                  );
+                                                }
+                                              },
+                                              zones: serviceLocator<ProjectViewModel>().zones,
+                                              subZones: serviceLocator<ProjectViewModel>().subZones,
+                                              splPanelData: widget.splPanelData,
+                                              onCanvasZoomChanged: (double z) {
+                                                serviceLocator<ProjectViewModel>().updateFloor(
+                                                  floor: floor.copyWith(floorPlan: floor.floorPlan.copyWith(canvasZoom: z)),
+                                                );
+                                              },
+                                              onCanvasPanChanged: (ui.Offset p) {
+                                                serviceLocator<ProjectViewModel>().updateFloor(
+                                                  floor: floor.copyWith(floorPlan: floor.floorPlan.copyWith(canvasPan: p)),
+                                                );
+                                              },
+                                              onRightClick: (PointerDownEvent e) {
+                                                if (widget.floorCanvasController.isDrawing.value) {
+                                                  widget.floorCanvasController.toggleDraw();
+                                                }
+                                                if (projectViewModel.shouldPlaceNonPlacedSpeakers) {
+                                                  projectViewModel.setShouldPlaceNonPlacedSpeakers(false);
+                                                }
+                                              },
+                                              moveHardware: (
+                                                HardwareComponent hardware,
+                                                String? newListeningAreaId,
+                                                String? floorId,
+                                              ) {
+                                                serviceLocator<ProjectViewModel>().moveHardware(
+                                                  hardwareId: hardware.id,
+                                                  floorId: floorId,
+                                                  listeningAreaId: newListeningAreaId,
+                                                );
+                                                // serviceLocator<ProjectViewModel>().saveProjectToLocal();
+                                              },
+                                              onAddListeningArea: (
+                                                ListeningArea created,
+                                                List<HardwareComponent>? containedHardware,
+                                              ) {
+                                                serviceLocator<ProjectViewModel>().recordSnapshot();
+                                                serviceLocator<ProjectViewModel>().addListeningArea(
+                                                  area: created,
+                                                  floorId: floor.id,
+                                                  autoSave: false,
+                                                );
+                                                if (containedHardware != null) {
+                                                  for (final HardwareComponent hc in containedHardware) {
+                                                    serviceLocator<ProjectViewModel>().moveHardware(
+                                                      hardwareId: hc.id,
+                                                      listeningAreaId: created.id,
+                                                      floorId: floor.id,
+                                                      autoSave: false,
+                                                    );
+                                                  }
+                                                }
+                                                widget.onCalculateSpl();
+                                                serviceLocator<ProjectViewModel>().saveProject();
+                                                serviceLocator<GuideShowCaseController>().completeStep(GuideShowCaseSteps.drawListeningArea);
+                                              },
+                                              onUpdateListeningArea: (ListeningArea area) {
+                                                serviceLocator<ProjectViewModel>().updateListeningArea(area: area);
+                                              },
+                                              onFloorPlanUpdated: (FloorPlanModel updatedPlan) {
+                                                serviceLocator<ProjectViewModel>().updateFloor(
+                                                  floor: floor.copyWith(floorPlan: updatedPlan),
+                                                );
+                                              },
+                                              onViewportCenterUpdated: (ui.Offset center) {
+                                                viewPortCenter = center;
+                                              },
+                                              onComponentTransformed: (dynamic component) {
+                                                if (component is Speaker || component is ListeningArea) {
+                                                  widget.onCalculateSpl();
+                                                }
+                                              },
+                                              onTapListeningArea: (ListeningArea value) {
+                                                serviceLocator<ProjectViewModel>().setCurrentSelectedListeningArea(value.id);
+                                                serviceLocator<GuideShowCaseController>().completeStep(GuideShowCaseSteps.showListeningAreaSelectionArea);
+                                              },
+                                              onSelectedListeningAreaIdChanged: (String? value) {
+                                                serviceLocator<ProjectViewModel>().setCurrentSelectedListeningArea(value);
+                                                serviceLocator<ProjectViewModel>().setCurrentSelectedHardware(null);
+                                              },
+                                              onSelectedHardwareComponentIdChanged: (String? value) {
+                                                serviceLocator<ProjectViewModel>().setCurrentSelectedHardware(value);
+                                                serviceLocator<ProjectViewModel>().setCurrentSelectedListeningArea(null);
+                                              },
+                                              onSelectedFloorPlanIdChanged: () {
+                                                serviceLocator<ProjectViewModel>().setCurrentSelectedHardware(null);
+                                                serviceLocator<ProjectViewModel>().setCurrentSelectedListeningArea(null);
+                                              },
+                                              splMin: serviceLocator<ProjectViewModel>().minSPL,
+                                              splMax: serviceLocator<ProjectViewModel>().maxSPL,
+                                              addNewHardwareComponent: (Offset speakerPosition) {
+                                                final ProjectViewModel projectViewModel = serviceLocator<ProjectViewModel>();
+
+                                                if (projectViewModel.shouldPlaceNonPlacedSpeakers) {
+                                                  projectViewModel.placeSelectedSpeaker(position: speakerPosition, isFromBuildingPage: true);
+                                                }
+                                                // else {
+                                                //   if (projectViewModel.selectedProductToAdd == null) return;
+                                                //   projectViewModel.addSelectedProduct(
+                                                //     position: speakerPosition,
+                                                //     listeningAreaId: listeningAreaId,
+                                                //     isFromBuildingPage: true,
+                                                //   );
+                                                // }
+
+                                                serviceLocator<GuideShowCaseController>().completeStep(GuideShowCaseSteps.addSpeakers);
+
+                                                if (serviceLocator<GuideShowCaseController>().isStepCompleted(GuideShowCaseSteps.systemMode)) {
+                                                  serviceLocator<GuideShowCaseController>().completeStep(GuideShowCaseSteps.systemModeTabs);
+                                                }
+                                                widget.onCalculateSpl();
+                                              },
+                                              listeningAreaToZoneMap: serviceLocator<ProjectViewModel>().getListeningAreaToZoneMap(),
+                                              subZoneToZoneMap: serviceLocator<ProjectViewModel>().getSubZoneToZoneMap(),
+                                              listeningAreaToSubZoneMap: serviceLocator<ProjectViewModel>().getListeningAreaToSubZoneMap(),
+                                              isAcousticsMode: serviceLocator<ProjectViewModel>().currentToolbarMode == ToolbarMode.acoustics,
+                                              isInSpeakerPlacementMode: projectViewModel.shouldPlaceNonPlacedSpeakers,
+                                              showLiveSpl: showLiveSpl,
+                                            ),
+                                  ),
+                                ),
+                              ),
+
+                              if (shouldUseCustomCursor && cursorPosition != null) ...<Widget>[
+                                Positioned(
+                                  left: cursorPosition!.dx - 12,
+                                  top: cursorPosition!.dy - 12,
+                                  child: IgnorePointer(
+                                    child: Builder(
+                                      builder: (BuildContext context) {
+                                        if (serviceLocator<ProjectViewModel>().shouldPlaceNonPlacedSpeakers) {
+                                          final List<Speaker> nonPlacedSpeakers = projectViewModel.getNonPlacedSpeakersForCurrentListeningArea();
+
+                                          if (nonPlacedSpeakers.isEmpty) return const SizedBox();
+
+                                          final MountingType? speakerMountType = nonPlacedSpeakers.first.mountingType;
+
+                                          return Stack(
+                                            clipBehavior: Clip.none,
+                                            children: <Widget>[
+                                              Builder(
+                                                builder: (BuildContext context) {
+                                                  if (speakerMountType == MountingType.surface) {
+                                                    return const RotatedBox(
+                                                      quarterTurns: 1,
+                                                      child: Icon(
+                                                        Icons.rectangle,
+                                                        size: 32,
+                                                        color: Colors.black,
+                                                      ),
+                                                    );
+                                                  } else if (speakerMountType == MountingType.pendant) {
+                                                    return SizedBox(
+                                                      width: 24,
+                                                      height: 24,
+                                                      child: CustomPaint(
+                                                        painter: TrianglePainter(
+                                                          color: Colors.black,
+                                                          isUp: true,
+                                                        ),
+                                                      ),
+                                                    );
+                                                  } else {
+                                                    return const Icon(
+                                                      Icons.circle,
+                                                      size: 32,
+                                                      color: Colors.black,
+                                                    );
+                                                  }
+                                                },
+                                              ),
+                                              Positioned(
+                                                bottom: -10,
+                                                right: -10,
+                                                child: Container(
+                                                  decoration: const BoxDecoration(
+                                                    color: Colors.black,
+                                                    shape: BoxShape.circle,
+                                                  ),
+                                                  padding: const EdgeInsets.all(5),
+                                                  child: FusionAppText(
+                                                    text: '${nonPlacedSpeakers.length}',
+                                                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                                                      color: context.colorScheme.onPrimary,
+                                                      fontSize: 10,
+                                                    ),
+                                                  ),
+                                                ),
+                                              ),
+                                            ],
+                                          );
+                                        } else if (serviceLocator<ProjectViewModel>().selectedProductToAdd != null) {
+                                          return Image.asset(
+                                            serviceLocator<ProjectViewModel>().selectedProductToAdd!.image,
+                                            width: 32,
+                                            height: 32,
+                                          );
+                                        } else {
+                                          return const SizedBox.shrink();
+                                        }
+                                      },
                                     ),
-                                    decoration: BoxDecoration(
-                                      color: serviceLocator<ProjectViewModel>().getCurrentSelectionZoneColor(),
-                                      borderRadius: BorderRadius.circular(24),
-                                      boxShadow: <BoxShadow>[
-                                        BoxShadow(
-                                          color: Colors.black.withAlpha((0.1 * 255).toInt()),
-                                          blurRadius: 4,
-                                          offset: const Offset(0, 2),
+                                  ),
+                                ),
+                              ],
+                            ],
+                          );
+                        },
+                      );
+                    },
+                  ),
+                ),
+
+                // Clean floating toolbar
+                BlocConsumer<ProjectViewModel, ProjectViewModelState>(
+                  listener: (BuildContext context, ProjectViewModelState state) {
+                    if (state is ZoneSelectionMode) {
+                      //Create new zone
+                      final Zone zone = state.zone;
+                      zoneSelectionMode(zone);
+                    }
+
+                    if (state is SubZoneSelectionMode) {
+                      //Create new subzone
+                      final SubZone subZone = state.subZone;
+                      subzoneSelectionMode(subZone);
+                    }
+
+                    if (state is ListeningAreaSelectionMode) {
+                      widget.floorCanvasController.setDraw(true);
+                    }
+
+                    if (serviceLocator<ProjectViewModel>().currentToolbarMode == ToolbarMode.system &&
+                        !serviceLocator<ProjectViewModel>().isInListeningAreaMode &&
+                        widget.floorCanvasController.isDrawing.value) {
+                      widget.floorCanvasController.toggleDraw();
+                    }
+
+                    if (!serviceLocator<ProjectViewModel>().isInZoneSelectionMode && widget.floorCanvasController.isListeningAreaSelectionActive.value) {
+                      widget.floorCanvasController.cancelListeningAreaSelection();
+                    }
+                  },
+                  builder: (BuildContext context, ProjectViewModelState state) {
+                    final int currentFloorIndex = serviceLocator<ProjectViewModel>().currentFloorIndex;
+                    final FloorModel currentFloor = serviceLocator<ProjectViewModel>().floors[currentFloorIndex];
+                    return Visibility(
+                      visible: currentFloor.floorPlan.imagePath.isNotEmpty || currentFloor.floorPlan.imagePath != "" ? true : false,
+                      child: Align(
+                        alignment: Alignment.bottomRight,
+                        child: Padding(
+                          padding: const EdgeInsets.only(bottom: 12.0),
+                          child: ValueListenableBuilder<bool>(
+                            valueListenable: widget.floorCanvasController.isListeningAreaSelectionActive,
+                            builder: (_, bool isListeningAreaSelectionActive, __) {
+                              if (isListeningAreaSelectionActive) {
+                                return Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 16,
+                                    vertical: 8,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: serviceLocator<ProjectViewModel>().getCurrentSelectionZoneColor(),
+                                    borderRadius: BorderRadius.circular(24),
+                                    boxShadow: <BoxShadow>[
+                                      BoxShadow(
+                                        color: Colors.black.withAlpha((0.1 * 255).toInt()),
+                                        blurRadius: 4,
+                                        offset: const Offset(0, 2),
+                                      ),
+                                    ],
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: <Widget>[
+                                      FusionAppText(
+                                        text: 'Select listening areas for ${serviceLocator<ProjectViewModel>().getCurrentSelectionZoneName()}',
+                                        style: TextStyle(
+                                          fontSize: 14,
+                                          color:
+                                              ThemeData.estimateBrightnessForColor(
+                                                        serviceLocator<ProjectViewModel>().getCurrentSelectionZoneColor(),
+                                                      ) ==
+                                                      Brightness.light
+                                                  ? Colors.grey.shade800
+                                                  : Colors.white,
                                         ),
-                                      ],
-                                    ),
-                                    child: Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: <Widget>[
-                                        FusionAppText(
-                                          text: 'Select listening areas for ${serviceLocator<ProjectViewModel>().getCurrentSelectionZoneName()}',
-                                          style: TextStyle(
-                                            fontSize: 14,
-                                            color:
-                                                ThemeData.estimateBrightnessForColor(
-                                                          serviceLocator<ProjectViewModel>().getCurrentSelectionZoneColor(),
-                                                        ) ==
-                                                        Brightness.light
-                                                    ? Colors.grey.shade800
-                                                    : Colors.white,
+                                      ),
+                                      const SizedBox(width: 16),
+                                      SemanticHelper.button(
+                                        testId: SemanticHelper.createTestId(SemanticTypes.button, FusionTestKeys.close),
+                                        child: InkWell(
+                                          onTap: () {
+                                            serviceLocator<ProjectViewModel>().clearSelectedZone();
+                                            widget.floorCanvasController.cancelListeningAreaSelection();
+                                          },
+                                          borderRadius: BorderRadius.circular(12),
+                                          child: Container(
+                                            padding: const EdgeInsets.all(5),
+                                            decoration: BoxDecoration(
+                                              border: Border.all(
+                                                color:
+                                                    ThemeData.estimateBrightnessForColor(
+                                                              serviceLocator<ProjectViewModel>().getCurrentSelectionZoneColor(),
+                                                            ) ==
+                                                            Brightness.light
+                                                        ? Colors.grey.shade800
+                                                        : Colors.white,
+                                                width: 1,
+                                              ),
+                                              borderRadius: BorderRadius.circular(10),
+                                            ),
+
+                                            child: Icon(
+                                              Icons.close,
+                                              size: 16,
+                                              color:
+                                                  ThemeData.estimateBrightnessForColor(
+                                                            serviceLocator<ProjectViewModel>().getCurrentSelectionZoneColor(),
+                                                          ) ==
+                                                          Brightness.light
+                                                      ? Colors.grey.shade800
+                                                      : Colors.white,
+                                            ),
                                           ),
                                         ),
-                                        const SizedBox(width: 16),
-                                        SemanticHelper.button(
-                                          testId: SemanticHelper.createTestId(SemanticTypes.button, FusionTestKeys.close),
+                                      ),
+                                      const SizedBox(width: 12),
+                                      GuideShowcaseWrapper(
+                                        step: GuideShowCaseSteps.confirmSelectListeningArea,
+                                        onHighlightedSpotTap: (TapDownDetails details) {
+                                          serviceLocator<ProjectViewModel>().clearSelectedZone();
+                                          serviceLocator<ProjectViewModel>().clearSelectedSubZone();
+                                          widget.floorCanvasController.completeListeningAreaSelection();
+                                          serviceLocator<GuideShowCaseController>().completeStep(GuideShowCaseSteps.confirmSelectListeningArea);
+                                        },
+                                        child: SemanticHelper.button(
+                                          testId: SemanticHelper.createTestId(SemanticTypes.button, FusionTestKeys.check),
                                           child: InkWell(
                                             onTap: () {
                                               serviceLocator<ProjectViewModel>().clearSelectedZone();
-                                              widget.floorCanvasController.cancelListeningAreaSelection();
+                                              widget.floorCanvasController.completeListeningAreaSelection();
                                             },
                                             borderRadius: BorderRadius.circular(12),
                                             child: Container(
@@ -643,9 +662,8 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
                                                 ),
                                                 borderRadius: BorderRadius.circular(10),
                                               ),
-
                                               child: Icon(
-                                                Icons.close,
+                                                Icons.check,
                                                 size: 16,
                                                 color:
                                                     ThemeData.estimateBrightnessForColor(
@@ -658,201 +676,154 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
                                             ),
                                           ),
                                         ),
-                                        const SizedBox(width: 12),
-                                        GuideShowcaseWrapper(
-                                          step: GuideShowCaseSteps.confirmSelectListeningArea,
-                                          onHighlightedSpotTap: (TapDownDetails details) {
-                                            serviceLocator<ProjectViewModel>().clearSelectedZone();
-                                            serviceLocator<ProjectViewModel>().clearSelectedSubZone();
-                                            widget.floorCanvasController.completeListeningAreaSelection();
-                                            serviceLocator<GuideShowCaseController>().completeStep(GuideShowCaseSteps.confirmSelectListeningArea);
-                                          },
-                                          child: SemanticHelper.button(
-                                            testId: SemanticHelper.createTestId(SemanticTypes.button, FusionTestKeys.check),
-                                            child: InkWell(
-                                              onTap: () {
-                                                serviceLocator<ProjectViewModel>().clearSelectedZone();
-                                                widget.floorCanvasController.completeListeningAreaSelection();
-                                              },
-                                              borderRadius: BorderRadius.circular(12),
-                                              child: Container(
-                                                padding: const EdgeInsets.all(5),
-                                                decoration: BoxDecoration(
-                                                  border: Border.all(
-                                                    color:
-                                                        ThemeData.estimateBrightnessForColor(
-                                                                  serviceLocator<ProjectViewModel>().getCurrentSelectionZoneColor(),
-                                                                ) ==
-                                                                Brightness.light
-                                                            ? Colors.grey.shade800
-                                                            : Colors.white,
-                                                    width: 1,
-                                                  ),
-                                                  borderRadius: BorderRadius.circular(10),
-                                                ),
-                                                child: Icon(
-                                                  Icons.check,
-                                                  size: 16,
-                                                  color:
-                                                      ThemeData.estimateBrightnessForColor(
-                                                                serviceLocator<ProjectViewModel>().getCurrentSelectionZoneColor(),
-                                                              ) ==
-                                                              Brightness.light
-                                                          ? Colors.grey.shade800
-                                                          : Colors.white,
-                                                ),
-                                              ),
-                                            ),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  );
-                                }
-
-                                return Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 16,
-                                    vertical: 8,
-                                  ),
-                                  child: ValueListenableBuilder<bool>(
-                                    valueListenable: widget.floorCanvasController.isDrawing,
-                                    builder: (_, bool isDrawing, __) {
-                                      return ValueListenableBuilder<bool>(
-                                        valueListenable: widget.floorCanvasController.isShowingSpl,
-                                        builder: (_, bool isShowingSpl, __) {
-                                          return BuildingToolbar(
-                                            onSplSelected: () {
-                                              widget.floorCanvasController.toggleSpl();
-                                              widget.onCalculateSpl();
-                                              widget.onSplStateChanged(
-                                                widget.floorCanvasController.isShowingSpl.value,
-                                              );
-                                            },
-                                            onSplDisabled: () {
-                                              widget.floorCanvasController.setSpl(false);
-                                              widget.onSplStateChanged(false);
-                                            },
-                                            onPanSelected: () {},
-                                            onMoveSelected: () {},
-                                            onDrawSelected: () {
-                                              if (!widget.floorCanvasController.isDrawing.value) {
-                                                serviceLocator<ProjectViewModel>().enterListeningAreaMode();
-                                              } else {
-                                                serviceLocator<ProjectViewModel>().exitSelectionModes();
-                                              }
-                                            },
-                                            onDrawingDisabled: () {
-                                              widget.floorCanvasController.setDraw(false);
-                                            },
-                                            onEditFloorPlanSelected: _showFloorPlanPicker,
-                                            onTrashSelected: () {},
-                                            onFitSelected: () {
-                                              widget.floorCanvasController.fitToView();
-                                            },
-                                            onAddSpeakerSelected: () {
-                                              serviceLocator<ProjectViewModel>().changeDeviceTypeIndex(
-                                                0,
-                                              ); // DeviceType.speakers
-                                            },
-                                            onAddSourceSelected: () {
-                                              serviceLocator<ProjectViewModel>().changeDeviceTypeIndex(
-                                                1,
-                                              ); // DeviceType.sources
-                                            },
-                                            onAddEndpointSelected: () {
-                                              serviceLocator<ProjectViewModel>().changeDeviceTypeIndex(
-                                                2,
-                                              ); // DeviceType.endpoints
-                                            },
-                                            onAddAmplifierSelected: () {
-                                              serviceLocator<ProjectViewModel>().changeDeviceTypeIndex(
-                                                3,
-                                              ); // DeviceType.amplifiers
-                                            },
-                                            onAddDspSelected: () {
-                                              serviceLocator<ProjectViewModel>().changeDeviceTypeIndex(
-                                                4,
-                                              ); // DeviceType.dsp
-                                            },
-                                            onAddControllerSelected: () {
-                                              serviceLocator<ProjectViewModel>().changeDeviceTypeIndex(
-                                                5,
-                                              ); // DeviceType.controllers
-                                            },
-                                            onAddRackSelected: () {
-                                              serviceLocator<ProjectViewModel>().changeDeviceTypeIndex(
-                                                6,
-                                              ); // DeviceType.rack
-                                            },
-                                            onProductSelected: widget.onProductSelected,
-                                            onProductDeselected: widget.onProductDeselected,
-                                            isDrawSelected: isDrawing,
-                                            isSplSelected: isShowingSpl,
-                                          );
-                                        },
-                                      );
-                                    },
+                                      ),
+                                    ],
                                   ),
                                 );
-                              },
-                            ),
+                              }
+
+                              return Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                  vertical: 8,
+                                ),
+                                child: ValueListenableBuilder<bool>(
+                                  valueListenable: widget.floorCanvasController.isDrawing,
+                                  builder: (_, bool isDrawing, __) {
+                                    return ValueListenableBuilder<bool>(
+                                      valueListenable: widget.floorCanvasController.isShowingSpl,
+                                      builder: (_, bool isShowingSpl, __) {
+                                        return BuildingToolbar(
+                                          onSplSelected: () {
+                                            widget.floorCanvasController.toggleSpl();
+                                            widget.onCalculateSpl();
+                                            widget.onSplStateChanged(
+                                              widget.floorCanvasController.isShowingSpl.value,
+                                            );
+                                          },
+                                          onSplDisabled: () {
+                                            widget.floorCanvasController.setSpl(false);
+                                            widget.onSplStateChanged(false);
+                                          },
+                                          onPanSelected: () {},
+                                          onMoveSelected: () {},
+                                          onDrawSelected: () {
+                                            if (!widget.floorCanvasController.isDrawing.value) {
+                                              serviceLocator<ProjectViewModel>().enterListeningAreaMode();
+                                            } else {
+                                              serviceLocator<ProjectViewModel>().exitSelectionModes();
+                                            }
+                                          },
+                                          onDrawingDisabled: () {
+                                            widget.floorCanvasController.setDraw(false);
+                                          },
+                                          onEditFloorPlanSelected: _showFloorPlanPicker,
+                                          onTrashSelected: () {},
+                                          onFitSelected: () {
+                                            widget.floorCanvasController.fitToView();
+                                          },
+                                          onAddSpeakerSelected: () {
+                                            serviceLocator<ProjectViewModel>().changeDeviceTypeIndex(
+                                              0,
+                                            ); // DeviceType.speakers
+                                          },
+                                          onAddSourceSelected: () {
+                                            serviceLocator<ProjectViewModel>().changeDeviceTypeIndex(
+                                              1,
+                                            ); // DeviceType.sources
+                                          },
+                                          onAddEndpointSelected: () {
+                                            serviceLocator<ProjectViewModel>().changeDeviceTypeIndex(
+                                              2,
+                                            ); // DeviceType.endpoints
+                                          },
+                                          onAddAmplifierSelected: () {
+                                            serviceLocator<ProjectViewModel>().changeDeviceTypeIndex(
+                                              3,
+                                            ); // DeviceType.amplifiers
+                                          },
+                                          onAddDspSelected: () {
+                                            serviceLocator<ProjectViewModel>().changeDeviceTypeIndex(
+                                              4,
+                                            ); // DeviceType.dsp
+                                          },
+                                          onAddControllerSelected: () {
+                                            serviceLocator<ProjectViewModel>().changeDeviceTypeIndex(
+                                              5,
+                                            ); // DeviceType.controllers
+                                          },
+                                          onAddRackSelected: () {
+                                            serviceLocator<ProjectViewModel>().changeDeviceTypeIndex(
+                                              6,
+                                            ); // DeviceType.rack
+                                          },
+                                          onProductSelected: widget.onProductSelected,
+                                          onProductDeselected: widget.onProductDeselected,
+                                          isDrawSelected: isDrawing,
+                                          isSplSelected: isShowingSpl,
+                                        );
+                                      },
+                                    );
+                                  },
+                                ),
+                              );
+                            },
                           ),
                         ),
-                      );
-                    },
-                  ),
+                      ),
+                    );
+                  },
+                ),
 
-                  //SPL range slider
-                  ValueListenableBuilder<bool>(
-                    valueListenable: widget.floorCanvasController.isShowingSpl,
-                    builder: (_, bool isShowingSpl, __) {
-                      if (!isShowingSpl) {
-                        return const SizedBox.shrink();
-                      }
-                      return LayoutBuilder(
-                        builder: (BuildContext context, BoxConstraints constraints) {
-                          return Align(
-                            alignment: Alignment.centerRight,
-                            child: SPLRangeSlider(
-                              width: 24,
-                              height: constraints.maxHeight,
-                              controller: widget.splRangeController,
-                              minValue: serviceLocator<ProjectViewModel>().minSPL,
-                              maxValue: serviceLocator<ProjectViewModel>().maxSPL,
-                              invertedColors: widget.splPanelData.splInvertColor,
-                              onChanged: (double min, double max) {
-                                // debugPrint("SPL Range changed: ${min.round()} - ${max.round()}");
-                                serviceLocator<ProjectViewModel>().setMinSPL(minSPL: min, autoSave: false);
-                                serviceLocator<ProjectViewModel>().setMaxSPL(maxSPL: max);
-                                if (!showLiveSpl) {
-                                  setState(() {
-                                    showLiveSpl = true;
-                                  });
-                                }
-                              },
-                              onChangeEnd: (double min, double max) {
-                                // debugPrint("SPL Range change ended: ${min.round()} - ${max.round()}");
-                                serviceLocator<ProjectViewModel>().setMinSPL(minSPL: min, autoSave: false);
-                                serviceLocator<ProjectViewModel>().setMaxSPL(maxSPL: max);
-                                // serviceLocator<ProjectViewModel>().saveProjectToLocal();
-                                if (showLiveSpl) {
-                                  setState(() {
-                                    showLiveSpl = false;
-                                  });
-                                }
-                              },
-                            ),
-                          );
-                        },
-                      );
-                    },
-                  ),
-                ],
-              ),
+                //SPL range slider
+                ValueListenableBuilder<bool>(
+                  valueListenable: widget.floorCanvasController.isShowingSpl,
+                  builder: (_, bool isShowingSpl, __) {
+                    if (!isShowingSpl) {
+                      return const SizedBox.shrink();
+                    }
+                    return LayoutBuilder(
+                      builder: (BuildContext context, BoxConstraints constraints) {
+                        return Align(
+                          alignment: Alignment.centerRight,
+                          child: SPLRangeSlider(
+                            width: 24,
+                            height: constraints.maxHeight,
+                            controller: widget.splRangeController,
+                            minValue: serviceLocator<ProjectViewModel>().minSPL,
+                            maxValue: serviceLocator<ProjectViewModel>().maxSPL,
+                            invertedColors: widget.splPanelData.splInvertColor,
+                            onChanged: (double min, double max) {
+                              // debugPrint("SPL Range changed: ${min.round()} - ${max.round()}");
+                              serviceLocator<ProjectViewModel>().setMinSPL(minSPL: min, autoSave: false);
+                              serviceLocator<ProjectViewModel>().setMaxSPL(maxSPL: max);
+                              if (!showLiveSpl) {
+                                setState(() {
+                                  showLiveSpl = true;
+                                });
+                              }
+                            },
+                            onChangeEnd: (double min, double max) {
+                              // debugPrint("SPL Range change ended: ${min.round()} - ${max.round()}");
+                              serviceLocator<ProjectViewModel>().setMinSPL(minSPL: min, autoSave: false);
+                              serviceLocator<ProjectViewModel>().setMaxSPL(maxSPL: max);
+                              // serviceLocator<ProjectViewModel>().saveProjectToLocal();
+                              if (showLiveSpl) {
+                                setState(() {
+                                  showLiveSpl = false;
+                                });
+                              }
+                            },
+                          ),
+                        );
+                      },
+                    );
+                  },
+                ),
+              ],
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
