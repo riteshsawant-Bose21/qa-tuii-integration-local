@@ -1,0 +1,1 @@
+ALTER TABLE product RENAME COLUMN isfusioncompatible TO is_fusion_compatible;

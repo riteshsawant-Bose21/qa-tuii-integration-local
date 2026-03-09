@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/core/assets/asset_svg.dart';
 import 'package:fusion_lib/fusion_lib.dart';
-import 'package:fusion_lib/fusion_theme/app_theme.dart';
-import '../../../configuration/presentation/viewmodel/project_view_model.dart';
+
 import '../../../../core/service_locator.dart';
+import '../../../configuration/presentation/viewmodel/project_view_model.dart';
 import '../../../projects/widget/building/speaker_selection_section/parts/select_speaker_popup.dart';
 import 'circuit_device_widget.dart';
 
@@ -91,14 +91,13 @@ class _ExpandableSubZoneWidgetState extends State<ExpandableSubZoneWidget> {
                               child: GestureDetector(
                                 onTap: () {
                                   /// Select  subzone on tap
-                                  if (widget.subZoneId == null) return;
                                   _projectViewModel.setSelectedDevice(widget.subZoneId!, SelectedItemType.subzone);
                                 },
                                 // onTap: () => _isZoneExpanded.value = !_isZoneExpanded.value,
                                 child: _buildZoneName(context, widget.name),
                               ),
                             ),
-                
+
                             // /// Add device button
                             // AddSpeakersMenu(
                             //   zoneId: widget.zoneId ?? "",
@@ -186,7 +185,9 @@ class _ExpandableSubZoneWidgetState extends State<ExpandableSubZoneWidget> {
               final List<ListeningArea> location = _projectViewModel.getListeningAreasForCircuit(circuitId: circuitData.id);
               return DragTarget<CircuitModel>(
                 key: ValueKey<String>(deviceId),
-                onWillAccept: (CircuitModel? incoming) {
+                onWillAcceptWithDetails: (DragTargetDetails<CircuitModel>? param) {
+                  final CircuitModel? incoming = param?.data;
+
                   /// Only accept if the incoming circuit has the same name but different ID
                   ///
                   if (incoming == null) return false;
@@ -196,7 +197,7 @@ class _ExpandableSubZoneWidgetState extends State<ExpandableSubZoneWidget> {
                   }
 
                   // return incoming != null && incoming.name == circuitData.name && incoming.id != circuitData.id;
-                  final List<Speaker> incomingSpeakers = _projectViewModel.getHardwareForCircuit(circuitId: incoming!.id).whereType<Speaker>().toList();
+                  final List<Speaker> incomingSpeakers = _projectViewModel.getHardwareForCircuit(circuitId: incoming.id).whereType<Speaker>().toList();
                   final List<Speaker> currentData = _projectViewModel.getHardwareForCircuit(circuitId: circuitData.id).whereType<Speaker>().toList();
                   final SubZone? circuitSubZone = _projectViewModel.getSubZoneForCircuit(circuitId: incoming.id);
 
@@ -204,7 +205,9 @@ class _ExpandableSubZoneWidgetState extends State<ExpandableSubZoneWidget> {
                       incoming.id != circuitData.id &&
                       (circuitSubZone != null && circuitSubZone.id == widget.subZoneId);
                 },
-                onAccept: (CircuitModel incoming) {
+                onAcceptWithDetails: (DragTargetDetails<CircuitModel> param) {
+                  final CircuitModel incoming = param.data;
+
                   /// Add speaker to target circuit
                   final List<Speaker> incomingSpeakers = _projectViewModel.getHardwareForCircuit(circuitId: incoming.id).whereType<Speaker>().toList();
 
@@ -229,6 +232,7 @@ class _ExpandableSubZoneWidgetState extends State<ExpandableSubZoneWidget> {
                         child: SizedBox(
                           width: 220,
                           child: CircuitDeviceWidget(
+                            prefix: "drag_",
                             index: index,
                             deviceId: deviceId,
                             circuitModel: circuitData,
@@ -269,6 +273,7 @@ class _ExpandableSubZoneWidgetState extends State<ExpandableSubZoneWidget> {
                         child: SizedBox(
                           width: 220,
                           child: CircuitDeviceWidget(
+                            prefix: "child_",
                             index: index,
                             circuitModel: circuitData,
                             deviceId: deviceId,
@@ -293,6 +298,7 @@ class _ExpandableSubZoneWidgetState extends State<ExpandableSubZoneWidget> {
                       ),
                     ),
                     child: CircuitDeviceWidget(
+                      prefix: "child_",
                       index: index,
                       deviceId: deviceId,
                       location: location,
@@ -384,7 +390,7 @@ class _ExpandableSubZoneWidgetState extends State<ExpandableSubZoneWidget> {
               height: 26,
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
               onTap: () {
-                widget.onDelete?.call(widget.subZoneId!);
+                widget.onDelete?.call(widget.subZoneId);
               },
               child: FusionAppText(
                 text: "Delete",

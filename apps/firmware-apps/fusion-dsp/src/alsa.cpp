@@ -185,12 +185,13 @@ private:
     bosepro::DspTempMemory<float []> asrc_out_buf;
     int channels;
     int read_samples;
-    int target_depth;
-    int max_depth;
-    int min_depth;
+    int_fast32_t target_depth;
+    int_fast32_t max_depth;
+    int_fast32_t min_depth;
     double min_ratio;
     double max_ratio;
-    static const int_fast32_t MIN_DEPTH = 128;
+    double base_ratio;
+    static const int_fast32_t MIN_DEPTH = 1024;
 
     ALGORITHM_DECLARE(AlsaIn);
 };
@@ -212,12 +213,12 @@ private:
     bosepro::DspTempMemory<float []> asrc_out_buf;
     int channels;
     int max_write_samples;
-    int target_depth;
-    int max_depth;
-    int min_depth;
+    int_fast32_t target_depth;
+    int_fast32_t max_depth;
+    int_fast32_t min_depth;
     double min_ratio;
     double max_ratio;
-    static const int_fast32_t MIN_DEPTH = 128;
+    static const int_fast32_t MIN_DEPTH = 1024;
 
     ALGORITHM_DECLARE(AlsaOut);
 };
@@ -255,7 +256,8 @@ void AlsaDevice::open_device()
     // If the device name starts with "hw:", it's a full device name that we
     // can open immediately.  If it doesn't, it's the name of a fusion connect
     // stream, and we need to look up its device number first.
-    if (device_name.compare(0, 3, "hw:") != 0)
+    if ((device_name.compare(0, 3, "hw:") != 0)
+        && (device_name.compare(0, 9, "bluealsa:") != 0))
     {
         SPDLOG_DEBUG("Getting device number for: {}", device_name);
         int device_number = get_device_number(device_name);
@@ -338,8 +340,8 @@ int AlsaDevice::get_buffer_depth()
 
     if (depth < 0)
     {
-        SPDLOG_ERROR("Failed to get ALSA buffer depth: {}",
-                snd_strerror(depth));
+        SPDLOG_DEBUG("Failed to get ALSA buffer depth: {}",
+                     snd_strerror(depth));
         return 0;
     }
 
@@ -379,15 +381,14 @@ int AlsaDevice::adjust_buffer_depth(int samples)
 
         if (rewound < 0)
         {
-            SPDLOG_ERROR("Failed to adjust ALSA buffer depth: {}",
-                    snd_strerror(rewound));
+            SPDLOG_DEBUG("Failed to adjust ALSA buffer depth: {}",
+                         snd_strerror(rewound));
             return 0;
         }
 
         if (rewound != samples)
         {
-            SPDLOG_ERROR("Unexpected number of samples rewound: {}",
-                    rewound);
+            SPDLOG_DEBUG("Unexpected number of samples rewound: {}", rewound);
         }
     }
 
@@ -423,15 +424,13 @@ int AlsaDevice::read(float *buffer, int samples)
             return samples;
         }
 
-        SPDLOG_ERROR("Failed to read from ALSA device: {}",
-                snd_strerror(res));
+        SPDLOG_DEBUG("Failed to read from ALSA device: {}", snd_strerror(res));
         return 0;
     }
 
     if (res != samples)
     {
-        SPDLOG_ERROR("Unexpected number of samples read: {}",
-                res);
+        SPDLOG_DEBUG("Unexpected number of samples read: {}", res);
     }
 
     convert_read(sample_buffer.get(), buffer, channels, samples);
@@ -541,6 +540,12 @@ void AlsaDevice::set_hw_params()
     // (enabled by default). It may be useful for allowing 44.1 kHz
     // Bluetooth A2DP inputs, but we may want to disable it and use our
     // own resampler, depending on the quality of the ALSA resampler.
+    error = snd_pcm_hw_params_set_rate_resample(alsa, hw_params, 0);
+    if (error < 0)
+    {
+        SPDLOG_ERROR("Failed to disable ALSA resampling: {}",
+                     snd_strerror(error));
+    }
 
     // `snd_pcm_hw_params_set_export_buffer()` allows the buffer to be
     // accessible from "outside".  It's enabled by default (probably fine).
@@ -1027,29 +1032,42 @@ AlsaIn::AlsaIn(const bosepro::BlockConfiguration &configuration)
 {
     std::string device_name;
     int_fast32_t period_size;
+    int_fast32_t device_sample_rate;
 
     get_property("device_name", device_name);
     get_property("period_size", period_size);
+    get_property("device_sample_rate", device_sample_rate);
+
+    if (device_sample_rate == 0)
+    {
+        device_sample_rate = get_sample_rate();
+    }
 
     assign_terminal("out", out);
 
     get_terminal_num_channels("out", channels);
 
-    read_samples = get_frame_size() + 1;
+    base_ratio = static_cast<double>(get_sample_rate()) / device_sample_rate;
+
+    read_samples = static_cast<int>(std::ceil(get_frame_size() / base_ratio))
+        + 1;
 
     min_depth = std::max(2 * get_frame_size(), MIN_DEPTH);
+    min_depth = std::max(min_depth, 2 * period_size);
     if (min_depth % period_size != 0)
     {
         min_depth += period_size - (min_depth % period_size);
     }
 
     max_depth = std::max(6 * get_frame_size(), 3 * MIN_DEPTH);
+    max_depth = std::max(max_depth, 6 * period_size);
     if (max_depth % period_size != 0)
     {
         max_depth += period_size - (max_depth % period_size);
     }
 
     target_depth = std::max(4 * get_frame_size(), 2 * MIN_DEPTH);
+    target_depth = std::max(target_depth, 4 * period_size);
     if (target_depth % period_size != 0)
     {
         target_depth += period_size - (target_depth % period_size);
@@ -1059,13 +1077,13 @@ AlsaIn::AlsaIn(const bosepro::BlockConfiguration &configuration)
     // The JND for pitch is about 0.6% (or about 10 cents).  We can limit the
     // ratio to be smaller than this to avoid pitch artifacts, while still
     // allowing the servo to correct for reasonable jitter and clock mismatch.
-    min_ratio = 0.999;
-    max_ratio = 1.001;
+    min_ratio = base_ratio * 0.998;
+    max_ratio = base_ratio * 1.002;
 
     asrc_in_buf.resize(channels * read_samples);
     asrc_out_buf.resize(channels * get_frame_size());
 
-    new (device.get()) AlsaDevice(device_name, channels, get_sample_rate(),
+    new (device.get()) AlsaDevice(device_name, channels, device_sample_rate,
                                   period_size, read_samples, true);
     new (asrc.get()) asrc::Asrc(channels, get_frame_size(), true);
     new (servo.get()) servo::Servo();
@@ -1102,6 +1120,7 @@ void AlsaIn::process()
 
     // Run the servo loop to adjust the sample rate
     double ratio = 1.0 - servo->update(depth - target_depth);
+    ratio *= base_ratio;
 
     ratio = (ratio < min_ratio) ? min_ratio : ratio;
     ratio = (ratio > max_ratio) ? max_ratio : ratio;
@@ -1110,8 +1129,8 @@ void AlsaIn::process()
 
     if (actually_read < read_samples)
     {
-        SPDLOG_WARN("Only read {} samples, expected {}", actually_read,
-                    read_samples);
+        SPDLOG_DEBUG("Only read {} samples, expected {}", actually_read,
+                     read_samples);
     }
 
     // Perform ASRC
@@ -1169,8 +1188,8 @@ AlsaOut::AlsaOut(const bosepro::BlockConfiguration &configuration)
     // The JND for pitch is about 0.6% (or about 10 cents).  We can limit the
     // ratio to be smaller than this to avoid pitch artifacts, while still
     // allowing the servo to correct for reasonable jitter and clock mismatch.
-    min_ratio = 0.999;
-    max_ratio = 1.001;
+    min_ratio = 0.998;
+    max_ratio = 1.002;
 
     asrc_in_buf.resize(channels * get_frame_size());
     asrc_out_buf.resize(channels * max_write_samples);
@@ -1224,7 +1243,7 @@ void AlsaOut::process()
     }
 
     // Run the servo loop to adjust the sample rate
-    double ratio = 1.0 - servo->update(depth - target_depth);
+    double ratio = 1.0 - servo->update(target_depth - depth);
 
     ratio = (ratio < min_ratio) ? min_ratio : ratio;
     ratio = (ratio > max_ratio) ? max_ratio : ratio;

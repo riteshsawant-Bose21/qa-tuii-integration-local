@@ -25,7 +25,7 @@ class InitialScreen extends StatelessWidget {
             FusionImage.asset(
               Assets.mobileHotspot,
               height: 200,
-              assetColor: context.colorScheme.primaryWhite,
+              assetColor: context.colorScheme.textSecondary,
             ),
 
             const SizedBox(width: 40),
@@ -40,18 +40,21 @@ class InitialScreen extends StatelessWidget {
                     text: 'Configure your devices to\nconnect to the network',
                     style: context.textTheme.headlineSmall,
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 12),
                   FusionAppText(
                     text: 'Allow your project to sync with actual hardware installations\nto monitor and control the complete audio system',
-                    style: context.textTheme.titleSmall,
+                    style: context.textTheme.bodyMedium?.copyWith(
+                      color: context.colorScheme.textSecondary,
+                    ),
                   ),
-                  const SizedBox(height: 32),
+                  const SizedBox(height: 12),
 
                   // 3. The "Start" Button
                   FusionNeumorphicButton(
                     onTap: onConfigureNetwork,
                     text: "Configure Network",
-                    width: 200,
+                    width: 358,
+                    height: 48,
                   ),
                 ],
               ),

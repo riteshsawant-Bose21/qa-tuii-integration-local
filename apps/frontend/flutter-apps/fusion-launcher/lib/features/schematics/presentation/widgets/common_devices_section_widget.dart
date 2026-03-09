@@ -229,7 +229,7 @@ class _CommonDevicesSectionWidgetState extends State<CommonDevicesSectionWidget>
                                   ? EQLDeviceType.processor
                                   : title == "Endpoints"
                                   ? EQLDeviceType.endpoint
-                                  : EQLDeviceType.mixerAmp,
+                                  : EQLDeviceType.endpoint,
                         ),
                         child: Icon(
                           LucideIcons.plus200,

@@ -67,7 +67,91 @@
             ]
         },
         {
+            "name": "hw_control",
+            "properties": [
+                {
+                    "name": "num_gain_chs",
+                    "value_type": "integer",
+                    "default_value": 1,
+                    "minimum_value": 1,
+                    "maximum_value": 16
+                },
+                {
+                    "name": "gain_paths",
+                    "value_type": "string",
+                    "default_value": ""
+                },
+                {
+                    "name": "num_php_chs",
+                    "value_type": "integer",
+                    "default_value": 1,
+                    "minimum_value": 1,
+                    "maximum_value": 16
+                },
+                {
+                    "name": "php_paths",
+                    "value_type": "string",
+                    "default_value": ""
+                },
+                {
+                    "name": "num_user_gpio",
+                    "value_type": "integer",
+                    "default_value": 1,
+                    "minimum_value": 1,
+                    "maximum_value": 16
+                },
+                {
+                    "name": "user_gpio_ctrl_paths",
+                    "value_type": "string",
+                    "default_value": ""
+                }
+            ],
+            "parameters": [
+                {
+                    "name": "gain",
+                    "value_type": "integer",
+                    "default_value": 0,
+                    "dimensions": ["num_gain_chs"]
+                },
+                {
+                    "name": "php",
+                    "value_type": "bool",
+                    "default_value": false,
+                    "dimensions": ["num_php_chs"]
+                },
+                {
+                    "name": "gpio_dir",
+                    "value_type": "string",
+                    "default_value": "out",
+                    "dimensions": ["num_user_gpio"]
+                },
+                {
+                    "name": "gpio_val",
+                    "value_type": "integer",
+                    "default_value": 0,
+                    "dimensions": ["num_user_gpio"]
+                }
+            ]
+        },
+        {
             "name": "fusion_connect_client",
+            "properties": [
+                {
+                    "name": "period_ms",
+                    "value_type": "integer",
+                    "default_value": 500
+                },
+                {
+                    "name": "enet_iface",
+                    "value_type": "string",
+                    "default_value": "lan1"
+                },
+                {
+                    "name": "debug",
+                    "value_type": "bool",
+                    "default_value": false
+                }
+            ],
             "parameters": [
                 {
                     "name": "audio_streams_update",
@@ -75,6 +159,56 @@
                     "default_value": ""
                 }
             ]
+        },
+        {
+            "name": "bdif_client",
+            "properties": [
+                {
+                    "name": "uart_device",
+                    "value_type": "string",
+                    "default_value": "/dev/ttymxc2"
+                },
+                {
+                    "name": "num_amps",
+                    "value_type": "integer",
+                    "default_value": 4
+                },
+                {
+                    "name": "reset_pin",
+                    "value_type": "string",
+                    "default_value": ""
+                },
+                {
+                    "name": "mute_pin",
+                    "value_type": "string",
+                    "default_value": ""
+                },
+                {
+                    "name": "boot_pin",
+                    "value_type": "string",
+                    "default_value": ""
+                }
+            ],
+            "parameters": [
+                {
+                    "name": "set",
+                    "value_type": "string",
+                    "default_value": ""
+                },
+                {
+                    "name": "get",
+                    "value_type": "string",
+                    "default_value": ""
+                },
+                {
+                    "name": "setget",
+                    "value_type": "string",
+                    "default_value": ""
+                }
+            ]
+        },
+        {
+            "name": "bt_control"
         }
     ]
 }

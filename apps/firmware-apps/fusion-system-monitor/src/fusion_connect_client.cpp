@@ -10,6 +10,7 @@
 #include <cstdint>
 #include <cstdio>
 #include <cstdlib>
+#include <ctime>
 #include <climits>
 #include <cstring>
 #include <iomanip>
@@ -22,6 +23,7 @@
 
 #include <arpa/inet.h>
 #include <curl/curl.h>
+#include <fcntl.h>
 #include <ifaddrs.h>
 #include <json/json.h>
 #include <linux/if_addr.h>
@@ -52,16 +54,18 @@ enum fusion_cn_ctrl_cmd {
     FUSION_CN_CTRL_CMD_NONE = 0,
     FUSION_CN_CTRL_CMD_START_MANAGER,
     FUSION_CN_CTRL_CMD_STOP_MANAGER,
-    FUSION_CN_CTRL_CMD_SET_PTP_SYNC,
     FUSION_CN_CTRL_CMD_ADD_STREAM,
     FUSION_CN_CTRL_CMD_REMOVE_STREAM,
-    FUSION_CN_CTRL_CMD_GET_METRICS
+    FUSION_CN_CTRL_CMD_GET_METRICS,
+    FUSION_CN_CTRL_CMD_SET_PHC_ANCHOR,
+    FUSION_CN_CTRL_CMD_GET_PHC_STATUS,
+    FUSION_CN_CTRL_CMD_SET_DEBUG,
+    FUSION_CN_CTRL_CMD_SET_ETH_IFACE
 };
 
 enum mgr_start_errno {
     MGR_START_OK = 0,
     MGR_START_ERRNO_RUNNING,
-    MGR_START_ERRNO_PTP,
     MGR_START_ERRNO_MODE
 };
 
@@ -126,6 +130,20 @@ struct fusion_cn_metrics_record {
     struct fusion_cn_metrics_snapshot snap;
 } __attribute__((packed));
 
+#ifndef CLOCKFD
+#define CLOCKFD 3
+#endif
+#ifndef FD_TO_CLOCKID
+#define FD_TO_CLOCKID(fd) ((clockid_t)((((unsigned int)~(fd)) << 3) | CLOCKFD))
+#endif
+
+struct fc_get_phc_status_reply
+{
+    uint8_t epoch_valid;
+    uint8_t aligned;
+    uint32_t pps_seq;
+} __attribute__((packed));
+
 // Helper function to convert uint32_t IP to string
 std::string ip_to_string(uint32_t ip) {
     struct in_addr addr;
@@ -175,14 +193,33 @@ int addattr_l(struct nlmsghdr *n, size_t maxlen, int type, const void *data, siz
     return 0;
 }
 
-// Helper function to get system IP address
-std::string get_system_ip() {
+// Helper function to get system IP address (prefers a named interface if provided)
+std::string get_system_ip(const std::string& preferred_ifname = "", bool log_on_fail = true) {
     struct ifaddrs *ifaddr, *ifa;
     char addr_str[INET_ADDRSTRLEN] = {0};
 
     if (getifaddrs(&ifaddr) == -1) {
         SPDLOG_ERROR("Failed to get interface addresses: {}", strerror(errno));
         return "";
+    }
+
+    auto name_matches = [&](const char* name) -> bool {
+        if (!name || preferred_ifname.empty()) return false;
+        if (preferred_ifname == name) return true;
+        const size_t n = preferred_ifname.size();
+        return (strncmp(name, preferred_ifname.c_str(), n) == 0 && name[n] == '@');
+    };
+
+    if (!preferred_ifname.empty()) {
+        for (ifa = ifaddr; ifa != nullptr; ifa = ifa->ifa_next) {
+            if (!ifa->ifa_addr || ifa->ifa_addr->sa_family != AF_INET) continue;
+            if (!name_matches(ifa->ifa_name)) continue;
+            struct sockaddr_in *sa = (struct sockaddr_in *)ifa->ifa_addr;
+            if (inet_ntop(AF_INET, &sa->sin_addr, addr_str, sizeof(addr_str))) {
+                freeifaddrs(ifaddr);
+                return std::string(addr_str);
+            }
+        }
     }
 
     for (ifa = ifaddr; ifa != nullptr; ifa = ifa->ifa_next) {
@@ -203,7 +240,13 @@ std::string get_system_ip() {
     }
 
     freeifaddrs(ifaddr);
-    SPDLOG_ERROR("No valid IPv4 address found on non-loopback interfaces");
+    if (log_on_fail) {
+        if (!preferred_ifname.empty()) {
+            SPDLOG_ERROR("No valid IPv4 address found on interface '{}'", preferred_ifname);
+        } else {
+            SPDLOG_ERROR("No valid IPv4 address found on non-loopback interfaces");
+        }
+    }
     return "";
 }
 
@@ -334,153 +377,6 @@ public:
 //     return reply.err == 0;
 // }
 
-static bool nl_set_ptp_sync_raw(NetlinkClient& c, bool sync) {
-    fusion_cn_ctrl_msg reply{};
-    uint8_t v = sync ? 1 : 0;
-    if (!c.send_message(FUSION_CN_CTRL_CMD_SET_PTP_SYNC, &v, sizeof(v), &reply)) return false;
-    if (reply.err != 0) SPDLOG_ERROR("SET_PTP_SYNC({}) err={}", (int)sync, reply.err);
-    if (reply.data) free(reply.data);
-    return reply.err == 0;
-}
-
-static bool set_ptp_sync(NetlinkClient& c)
-{
-    auto trim = [](std::string s){
-        const char* ws = " \t\r\n";
-        size_t a = s.find_first_not_of(ws);
-        size_t b = s.find_last_not_of(ws);
-        return a == std::string::npos ? std::string() : s.substr(a, b - a + 1);
-    };
-
-    // gmPresent poller: returns 1 if true, 0 if false, -1 if unknown/error
-    auto poll_gm_present = [&]() -> int {
-        FILE* fp = popen("/usr/sbin/pmc -u -b 0 -f /etc/linuxptp/ptp4l.conf 'GET TIME_STATUS_NP'", "r");
-        if (!fp) return -1;
-
-        char buf[512];
-        int result = -1;
-        while (fgets(buf, sizeof(buf), fp)) {
-            std::string line(buf);
-            auto pos = line.find("gmPresent");
-            if (pos != std::string::npos) {
-                std::string v = trim(line.substr(pos + std::strlen("gmPresent")));
-                for (char& ch : v) ch = (char)std::tolower((unsigned char)ch);
-                if (v.find("true") != std::string::npos)      result = 1;
-                else if (v.find("false") != std::string::npos) result = 0;
-                break;
-            }
-        }
-        pclose(fp);
-        return result;
-    };
-
-    // master_offset poller: returns true on success and fills ns (can be negative)
-    auto poll_master_offset_ns = [&](long long& ns_out) -> bool {
-        FILE* fp = popen("/usr/sbin/pmc -u -b 0 -f /etc/linuxptp/ptp4l.conf 'GET TIME_STATUS_NP'", "r");
-        if (!fp) return false;
-
-        bool ok = false;
-        char buf[512];
-        while (fgets(buf, sizeof(buf), fp)) {
-            std::string line(buf);
-            auto pos = line.find("master_offset");
-            if (pos != std::string::npos) {
-                std::string v = trim(line.substr(pos + std::strlen("master_offset")));
-                // v should be an integer (may have leading +/-, may be followed by junk-free newline)
-                // Be strict: parse continuous integer prefix only.
-                const char* s = v.c_str();
-                char* endp   = nullptr;
-                errno = 0;
-                long long val = std::strtoll(s, &endp, 10);
-                if (errno == 0 && endp != s) {
-                    ns_out = val;
-                    ok = true;
-                }
-                break;
-            }
-        }
-        pclose(fp);
-        return ok;
-    };
-
-    // --- Decide startup role using only gmPresent (unchanged) ---
-    constexpr int GM_FALSE_CONSEC = 25;  // you said you had to crank this up
-    constexpr int SAMPLE_MS       = 500;
-    constexpr int MAX_DECIDE_MS   = 15000;
-
-    int false_streak = 0;
-    int role_flag = -1; // 1=Follower, 0=GM, -1=unknown
-    for (int elapsed = 0; elapsed < MAX_DECIDE_MS; elapsed += SAMPLE_MS) {
-        const int r = poll_gm_present();
-        if (r == 1) { role_flag = 1; break; }                       // Follower on first TRUE
-        if (r == 0) { if (++false_streak >= GM_FALSE_CONSEC) { role_flag = 0; break; } }
-        std::this_thread::sleep_for(std::chrono::milliseconds(SAMPLE_MS));
-    }
-    if (role_flag == -1) role_flag = 1; // safer default → Follower
-    SPDLOG_INFO("PTP: startup role by gmPresent-only: {} false_streak {}",
-                role_flag == 0 ? "GM" : "Follower", false_streak);
-
-    // --- Main wait loop (now keyed only on master_offset) ---
-    constexpr long long OFFSET_OK_NS = 1000; // 1 µs window
-    const auto start = std::chrono::steady_clock::now();
-    auto last_reprobe = start;
-    int good = 0;
-
-    for (;;) {
-        // Re-probe gmPresent periodically to cope with late stabilization/role changes.
-        if (std::chrono::steady_clock::now() - last_reprobe > std::chrono::seconds(3)) {
-            const int r = poll_gm_present();
-            if (r == 1) { role_flag = 1; false_streak = 0; }
-            else if (r == 0) { if (role_flag != 0 && ++false_streak >= GM_FALSE_CONSEC) role_flag = 0; }
-            last_reprobe = std::chrono::steady_clock::now();
-        }
-        const bool i_am_gm = (role_flag == 0);
-
-        if (i_am_gm) {
-            SPDLOG_INFO("PTP: enabling in kernel (role=GM)");
-            if (!nl_set_ptp_sync_raw(c, true)) {
-                SPDLOG_ERROR("PTP: criteria met but kernel refused SET_PTP_SYNC(true)");
-                return false;
-            }
-            SPDLOG_INFO("PTP: kernel accepted SET_PTP_SYNC(true)");
-            return true;
-        } else {
-            // Read master_offset
-            long long mo = 0;
-            bool have_mo = poll_master_offset_ns(mo);
-            long long best_abs = (have_mo && mo) ? std::llabs(mo) : LLONG_MAX;
-
-            // Detailed log (kept)
-            SPDLOG_DEBUG("PTP master_offset={} ns, best_abs={} ns, role={}",
-                        have_mo ? mo : 0, best_abs, i_am_gm ? "GM" : "Follower");
-
-            // Gate on master_offset only:
-            //  - Follower: need |master_offset| ≤ 200µs (servo settled to GM)
-            //  - GM:      TIME_STATUS_NP shows gmPresent=false and master_offset typically 0 → same gate
-            const bool good_now = (best_abs != LLONG_MAX) && (best_abs <= OFFSET_OK_NS);
-            good = good_now ? (good + 1) : 0;
-
-            if (good >= 3) {
-                SPDLOG_INFO("PTP: enabling in kernel (role=Follower, master_offset={} ns, window={} ns)",
-                            have_mo ? mo : 0, OFFSET_OK_NS);
-                if (!nl_set_ptp_sync_raw(c, true)) {
-                    SPDLOG_ERROR("PTP: criteria met but kernel refused SET_PTP_SYNC(true)");
-                    return false;
-                }
-                SPDLOG_INFO("PTP: kernel accepted SET_PTP_SYNC(true)");
-                return true;
-            }
-        }        
-
-        if (std::chrono::steady_clock::now() - start > std::chrono::seconds(120)) {
-            SPDLOG_WARN("PTP: criteria not met within 120 s");
-            return false;
-        }
-
-        std::this_thread::sleep_for(std::chrono::milliseconds(500));
-    }
-}
-
 static bool get_all_metrics(NetlinkClient &client,
                             std::vector<fusion_cn_metrics_record> *out)
 {
@@ -553,6 +449,169 @@ static bool get_all_metrics(NetlinkClient &client,
 //     free(reply.data);
 //     return true;
 // }
+
+static bool nl_set_phc_anchor(NetlinkClient& c, uint64_t phc_ns_at_pps) {
+    fusion_cn_ctrl_msg reply{};
+    if (!c.send_message(FUSION_CN_CTRL_CMD_SET_PHC_ANCHOR, &phc_ns_at_pps, sizeof(phc_ns_at_pps), &reply)) {
+        return false;
+    }
+    if (reply.err != 0) {
+        SPDLOG_ERROR("SET_PHC_ANCHOR({}) err={}", phc_ns_at_pps, reply.err);
+    }
+    if (reply.data) free(reply.data);
+    return reply.err == 0;
+}
+
+static bool nl_set_debug(NetlinkClient& c, bool enable) {
+    fusion_cn_ctrl_msg reply{};
+    uint8_t v = enable ? 1 : 0;
+    if (!c.send_message(FUSION_CN_CTRL_CMD_SET_DEBUG, &v, sizeof(v), &reply)) return false;
+    if (reply.err != 0) SPDLOG_ERROR("SET_DEBUG({}) err={}", (int)enable, reply.err);
+    if (reply.data) free(reply.data);
+    return reply.err == 0;
+}
+
+static bool nl_set_eth_iface(NetlinkClient& c, const std::string& iface) {
+    fusion_cn_ctrl_msg reply{};
+    if (iface.empty()) return false;
+    std::array<char, IFNAMSIZ> buf{};
+    std::strncpy(buf.data(), iface.c_str(), buf.size() - 1);
+    if (!c.send_message(FUSION_CN_CTRL_CMD_SET_ETH_IFACE, buf.data(), buf.size(), &reply)) return false;
+    if (reply.err != 0) SPDLOG_ERROR("SET_ETH_IFACE({}) err={}", iface, reply.err);
+    if (reply.data) free(reply.data);
+    return reply.err == 0;
+}
+
+static bool nl_get_phc_status(NetlinkClient& c, fc_get_phc_status_reply *out)
+{
+    if (!out) return false;
+    fusion_cn_ctrl_msg reply{};
+    if (!c.send_message(FUSION_CN_CTRL_CMD_GET_PHC_STATUS, nullptr, 0, &reply)) return false;
+    if (reply.err != 0) {
+        SPDLOG_ERROR("GET_PHC_STATUS err={}", reply.err);
+        if (reply.data) free(reply.data);
+        return false;
+    }
+    if (reply.data_size != sizeof(*out) || !reply.data) {
+        SPDLOG_ERROR("GET_PHC_STATUS bad payload size={} data={}",
+                     reply.data_size, reply.data ? "present" : "null");
+        if (reply.data) free(reply.data);
+        return false;
+    }
+    memcpy(out, reply.data, sizeof(*out));
+    if (reply.data) free(reply.data);
+    return true;
+}
+
+static bool read_phc_ns(uint64_t *out_ns)
+{
+    static int ptp_fd = -1;
+
+    if (!out_ns) return false;
+    if (ptp_fd < 0) {
+        ptp_fd = open("/dev/ptp0", O_RDONLY);
+        if (ptp_fd < 0) {
+            SPDLOG_ERROR("Failed to open /dev/ptp0: {}", strerror(errno));
+            return false;
+        }
+    }
+
+    timespec ts{};
+    clockid_t clkid = FD_TO_CLOCKID(ptp_fd);
+    if (clock_gettime(clkid, &ts) != 0) {
+        SPDLOG_ERROR("clock_gettime(/dev/ptp0) failed: {}", strerror(errno));
+        return false;
+    }
+
+    *out_ns = (static_cast<uint64_t>(ts.tv_sec) * 1000000000ULL) +
+              static_cast<uint64_t>(ts.tv_nsec);
+    return true;
+}
+
+static bool poll_time_status_np(bool *gm_present, bool *gm_present_valid,
+                                long long *master_offset, bool *master_offset_valid)
+{
+    if (gm_present) *gm_present = false;
+    if (gm_present_valid) *gm_present_valid = false;
+    if (master_offset) *master_offset = 0;
+    if (master_offset_valid) *master_offset_valid = false;
+
+    FILE* fp = popen("/usr/sbin/pmc -u -b 0 -f /etc/linuxptp/ptp4l.conf 'GET TIME_STATUS_NP'", "r");
+    if (!fp) return false;
+
+    char buf[512];
+    bool found_any = false;
+    auto trim = [](std::string s){
+        const char* ws = " \t\r\n";
+        size_t a = s.find_first_not_of(ws);
+        size_t b = s.find_last_not_of(ws);
+        return a == std::string::npos ? std::string() : s.substr(a, b - a + 1);
+    };
+
+    while (fgets(buf, sizeof(buf), fp)) {
+        std::string line(buf);
+        auto gm_pos = line.find("gmPresent");
+        if (gm_pos != std::string::npos && gm_present && gm_present_valid) {
+            std::string v = trim(line.substr(gm_pos + std::strlen("gmPresent")));
+            for (char& ch : v) ch = (char)std::tolower((unsigned char)ch);
+            if (v.find("true") != std::string::npos) {
+                *gm_present = true;
+                *gm_present_valid = true;
+                found_any = true;
+            } else if (v.find("false") != std::string::npos) {
+                *gm_present = false;
+                *gm_present_valid = true;
+                found_any = true;
+            }
+        }
+
+        auto mo_pos = line.find("master_offset");
+        if (mo_pos != std::string::npos && master_offset && master_offset_valid) {
+            std::string v = trim(line.substr(mo_pos + std::strlen("master_offset")));
+            const char* s = v.c_str();
+            char* endp   = nullptr;
+            errno = 0;
+            long long val = std::strtoll(s, &endp, 10);
+            if (errno == 0 && endp != s) {
+                *master_offset = val;
+                *master_offset_valid = true;
+                found_any = true;
+            }
+        }
+    }
+
+    int rc = pclose(fp);
+    if (rc != 0) {
+        SPDLOG_WARN("pmc GET TIME_STATUS_NP exited with status {}", rc);
+        return false;
+    }
+    if (!found_any) {
+        SPDLOG_WARN("pmc GET TIME_STATUS_NP returned no usable fields");
+        return false;
+    }
+    return true;
+}
+
+static bool set_pps_enable(bool enable)
+{
+    const char *path = "/sys/class/ptp/ptp0/pps_enable";
+    const char *val = enable ? "1" : "0";
+    int fd = open(path, O_WRONLY | O_CLOEXEC);
+    if (fd < 0) {
+        SPDLOG_ERROR("Failed to open {}: {}", path, strerror(errno));
+        return false;
+    }
+
+    ssize_t rc = write(fd, val, 1);
+    if (rc != 1) {
+        SPDLOG_ERROR("Failed to write {} to {}: rc={} err={}", val, path, rc, strerror(errno));
+        close(fd);
+        return false;
+    }
+
+    close(fd);
+    return true;
+}
 
 // Callback for curl to write response data
 size_t curl_write_callback(void* contents, size_t size, size_t nmemb, std::string* output) {
@@ -671,24 +730,51 @@ public:
 
 private:
     NetlinkClient client;
-    uint8_t ptp_synchronized;
     bool mgr_started;
     std::string device_id;
     std::string system_ip;
     std::map<std::string, fusion_cn_stream_config> fusion_connect_stream_map;
     std::map<std::string, fusion_cn_stream_config> aes67_stream_map;
     std::map<std::string, struct fc_stream_state> pending_streams;
-    std::string network_interface;
+    std::string enet_iface;
+    int period_ms;
+    bool debug_enabled;
+    bool debug_sent;
+    bool iface_sent;
+    bool phc_anchor_logged;
     SAPAnnouncer sap_announcer;
-    uint32_t announce_counter;
 
     std::string audio_streams_update;
+    bool audio_update_pending;
+    std::chrono::steady_clock::time_point audio_update_last_retry;
+    bool ptp_sync_good;
+    bool ptp_anchor_pending;
+    int ptp_good_streak;
+    int ptp_bad_streak;
+    int ptp_role_flag;
+    int ptp_false_streak;
+    std::chrono::steady_clock::time_point ptp_last_poll;
+    std::chrono::steady_clock::time_point ptp_last_role_probe;
+    std::chrono::steady_clock::time_point ptp_last_gm_present;
+    std::chrono::steady_clock::time_point ptp_state_since;
+    std::chrono::steady_clock::time_point ptp_last_anchor;
+    std::chrono::steady_clock::time_point ptp_last_status_poll;
+    std::chrono::steady_clock::time_point mgr_last_start_attempt;
+    int mgr_start_failures;
+    enum class PtpState { RESET, WAIT_GM, WAIT_LOCK, SYNCED };
+    PtpState ptp_state;
 
     bool is_source_stream(uint64_t stream_handle);
     int create_stream(fusion_cn_stream_config& config);
     int remove_stream(uint64_t stream_handle);
     void join_multicast_group(uint32_t multicast_ip);
     void audio_streams_update_func();
+    bool process_audio_streams_update(bool is_retry);
+    void maybe_retry_audio_streams_update();
+    void maybe_start_manager();
+    void maybe_set_debug();
+    void update_ptp_state();
+    void maybe_set_phc_anchor();
 
     MODULE_DECLARE(FusionConnectClient);
 };
@@ -696,21 +782,41 @@ private:
 MODULE_REGISTER(FusionConnectClient, "fusion_connect_client");
 
 FusionConnectClient::FusionConnectClient(const bosepro::BlockConfiguration &configuration)
-    : bosepro::Module(configuration), ptp_synchronized(0), mgr_started(false), device_id(""),
-      network_interface("lan3"), sap_announcer(get_system_ip()), announce_counter(0) {
-    system_ip = get_system_ip();
-    if (system_ip.empty()) {
-        SPDLOG_ERROR("Failed to initialize: No valid system IP found");
-        return;
-    }
+    : bosepro::Module(configuration), mgr_started(false), device_id(""),
+      enet_iface("lan1"), period_ms(1000), debug_enabled(false),
+      debug_sent(false), iface_sent(false), phc_anchor_logged(false), sap_announcer(""),
+      audio_update_pending(false),
+      ptp_sync_good(false), ptp_anchor_pending(true), ptp_good_streak(0),
+      ptp_bad_streak(0), ptp_role_flag(-1), ptp_false_streak(0), mgr_start_failures(0),
+      ptp_state(PtpState::RESET) {
+    system_ip = "";
 
     if (!client.is_valid()) {
         SPDLOG_ERROR("Failed to initialize netlink client");
         return;
     }
 
+    get_property("period_ms", period_ms);
+    get_property("enet_iface", enet_iface);
+    get_property("debug", debug_enabled);
+    if (period_ms <= 0) {
+        period_ms = 1000;
+    }
+    if (enet_iface.empty()) {
+        enet_iface = "lan1";
+    }
+
     assign_parameter("audio_streams_update", &audio_streams_update, 
                      POST_FUNCTION_SCALAR(audio_streams_update_func));
+
+    ptp_last_poll = std::chrono::steady_clock::now();
+    ptp_last_role_probe = ptp_last_poll;
+    ptp_last_gm_present = ptp_last_poll;
+    ptp_state_since = ptp_last_poll;
+    ptp_last_anchor = ptp_last_poll - std::chrono::seconds(60);
+    ptp_last_status_poll = ptp_last_poll - std::chrono::seconds(1);
+    mgr_last_start_attempt = ptp_last_poll - std::chrono::seconds(2);
+    audio_update_last_retry = ptp_last_poll - std::chrono::seconds(1);
 }
 
 static bool is_source_stream_by_name(const char *name) {
@@ -802,9 +908,9 @@ void FusionConnectClient::join_multicast_group(uint32_t multicast_ip) {
     ifa->ifa_flags     = 0;
     ifa->ifa_scope     = 0;
 
-    int ifindex = if_nametoindex(network_interface.c_str());
+    int ifindex = if_nametoindex(enet_iface.c_str());
     if (!ifindex) {
-        SPDLOG_ERROR("Failed to get interface index for {}: {}", network_interface, strerror(errno));
+        SPDLOG_ERROR("Failed to get interface index for {}: {}", enet_iface, strerror(errno));
         return;
     }
     ifa->ifa_index = ifindex;
@@ -831,7 +937,7 @@ void FusionConnectClient::join_multicast_group(uint32_t multicast_ip) {
     sockaddr_nl nladdr{};
     nladdr.nl_family = AF_NETLINK;
 
-    SPDLOG_DEBUG("Joining multicast group {} on interface {}", ip_to_string(multicast_ip), network_interface);
+    SPDLOG_DEBUG("Joining multicast group {} on interface {}", ip_to_string(multicast_ip), enet_iface);
 
     if (sendto(sock, buf.data(), nlh->nlmsg_len, 0, reinterpret_cast<sockaddr*>(&nladdr), sizeof(nladdr)) < 0) {
         SPDLOG_ERROR("Failed to send netlink message for IGMP join: {}", strerror(errno));
@@ -840,23 +946,29 @@ void FusionConnectClient::join_multicast_group(uint32_t multicast_ip) {
     }
 
     close(sock);
-    SPDLOG_INFO("Successfully joined multicast group {} on interface {}", ip_to_string(multicast_ip), network_interface);
+    SPDLOG_INFO("Successfully joined multicast group {} on interface {}", ip_to_string(multicast_ip), enet_iface);
 }
 
-void FusionConnectClient::audio_streams_update_func() {
+bool FusionConnectClient::process_audio_streams_update(bool is_retry) {
     if (audio_streams_update.empty()) {
         SPDLOG_DEBUG("audio_streams_update is empty, exiting");
-        return;
+        return true;
     }
 
-    SPDLOG_DEBUG("Received audio_streams_update: {}", audio_streams_update);
+    if (!is_retry) {
+        SPDLOG_DEBUG("Received audio_streams_update: {}", audio_streams_update);
+    }
 
     // --- Crucial pre-reqs -----------------------------------------------------
+    if (system_ip.empty()) {
+        if (!is_retry) SPDLOG_ERROR("Cannot process audio_streams_update: no system IP yet");
+        return false;
+    }
     if (device_id.empty()) {
         device_id = get_device_id(system_ip);
         if (device_id.empty()) {
-            SPDLOG_ERROR("Failed to get device_id after audio_streams update!");
-            return;
+            if (!is_retry) SPDLOG_ERROR("Failed to get device_id after audio_streams update!");
+            return false;
         }
         SPDLOG_INFO("Initialized device_id: {}, system_ip: {}", device_id, system_ip);
     }
@@ -865,7 +977,7 @@ void FusionConnectClient::audio_streams_update_func() {
     Json::Reader reader;
     if (!reader.parse(audio_streams_update, root) || !root.isArray()) {
         SPDLOG_ERROR("Failed to parse audio_streams_update JSON or not an array: {}", audio_streams_update);
-        return;
+        return true;
     }
 
     auto ip_to_be32 = [](const std::string& s) -> uint32_t {
@@ -876,7 +988,7 @@ void FusionConnectClient::audio_streams_update_func() {
     auto local_ip_be = ip_to_be32(system_ip);
     if (local_ip_be == INADDR_NONE || local_ip_be == 0) {
         SPDLOG_ERROR("Invalid system_ip '{}'", system_ip);
-        return;
+        return true;
     }
 
     std::set<std::string> json_stream_names;
@@ -1128,34 +1240,325 @@ void FusionConnectClient::audio_streams_update_func() {
             ++it;
         }
     }
+    return true;
 }
 
-void FusionConnectClient::process() { 
-    if (!ptp_synchronized) {
-        if (set_ptp_sync(client)) {
-            ptp_synchronized = 1;
-        } else {
-            // Not synced yet—bail early, we’ll try again next tick
+void FusionConnectClient::maybe_start_manager()
+{
+    const auto now = std::chrono::steady_clock::now();
+    if (now - mgr_last_start_attempt < std::chrono::seconds(1)) return;
+    mgr_last_start_attempt = now;
+
+    if (!iface_sent) {
+        if (!nl_set_eth_iface(client, enet_iface)) {
+            SPDLOG_ERROR("Failed to set ETH iface '{}' before manager start", enet_iface);
+            return;
+        }
+        iface_sent = true;
+    }
+
+    fusion_cn_ctrl_msg reply{};
+    if (!client.send_message(FUSION_CN_CTRL_CMD_START_MANAGER, nullptr, 0, &reply)) {
+        mgr_start_failures++;
+        SPDLOG_ERROR("FC manager start: netlink send failed (attempt {})", mgr_start_failures);
+        return;
+    }
+
+    if (reply.err == MGR_START_OK || reply.err == -MGR_START_ERRNO_RUNNING) {
+        SPDLOG_INFO("FC manager started (err={})", reply.err);
+        mgr_started = true;
+        mgr_start_failures = 0;
+    } else {
+        mgr_start_failures++;
+        SPDLOG_ERROR("Failed to start FC manager: err={} (attempt {})", reply.err, mgr_start_failures);
+    }
+
+    if (reply.data) free(reply.data);
+    return;
+}
+
+void FusionConnectClient::audio_streams_update_func() {
+    audio_update_pending = true;
+    if (process_audio_streams_update(false)) {
+        audio_update_pending = false;
+    }
+}
+
+void FusionConnectClient::maybe_retry_audio_streams_update() {
+    if (!audio_update_pending) return;
+    if (!device_id.empty()) {
+        audio_update_pending = false;
+        return;
+    }
+    const auto now = std::chrono::steady_clock::now();
+    if (now - audio_update_last_retry < std::chrono::seconds(1)) return;
+    audio_update_last_retry = now;
+    if (process_audio_streams_update(true)) {
+        audio_update_pending = false;
+    }
+}
+
+void FusionConnectClient::maybe_set_debug()
+{
+    if (debug_sent) return;
+    if (!nl_set_debug(client, debug_enabled)) {
+        SPDLOG_ERROR("Failed to set debug to {}", debug_enabled ? "true" : "false");
+        return;
+    }
+    debug_sent = true;
+}
+
+void FusionConnectClient::update_ptp_state()
+{
+    constexpr auto GM_WAIT = std::chrono::seconds(25);
+    constexpr long long OFFSET_LOCK_NS = 1000; // 1 us lock window
+    constexpr long long OFFSET_REPORT_NS = 1000; // report above 1 us
+    constexpr long long OFFSET_LOSS_NS = 10000; // 10 us loss threshold
+    constexpr int LOCK_CONSEC = 3;
+    constexpr int LOSS_CONSEC = 3;
+    const auto now = std::chrono::steady_clock::now();
+    constexpr auto STATUS_POLL_PERIOD = std::chrono::seconds(1);
+
+    if (now - ptp_last_poll < std::chrono::milliseconds(period_ms)) return;
+    if (now - ptp_last_status_poll < STATUS_POLL_PERIOD) return;
+    ptp_last_poll = now;
+    ptp_last_status_poll = now;
+
+    bool gm_present = false;
+    bool gm_present_valid = false;
+    long long master_offset = 0;
+    bool master_offset_valid = false;
+    if (!poll_time_status_np(&gm_present, &gm_present_valid, &master_offset, &master_offset_valid)) {
+        SPDLOG_WARN("PTP status poll failed; keeping previous sync state");
+        return;
+    }
+
+    if (!gm_present_valid) {
+        SPDLOG_DEBUG("PTP status missing gmPresent; keeping previous sync state");
+        return;
+    }
+
+    auto disable_ptp = [&]() {
+        nl_set_phc_anchor(client, 0);
+        if (!set_pps_enable(false)) {
+            SPDLOG_WARN("Failed to disable PPS");
+        }
+    };
+
+    auto enable_ptp = [&]() {
+        if (!set_pps_enable(false) || !set_pps_enable(true)) {
+            SPDLOG_WARN("Failed to re-arm PPS");
+        }
+    };
+
+    if (ptp_state == PtpState::RESET) {
+        ptp_sync_good = false;
+        ptp_good_streak = 0;
+        ptp_bad_streak = 0;
+        ptp_anchor_pending = true;
+        ptp_role_flag = -1;
+        disable_ptp();
+        ptp_state = PtpState::WAIT_GM;
+        ptp_state_since = now;
+        SPDLOG_INFO("PTP reset; entering GM detection window");
+    }
+
+    for (int i = 0; i < 3; ++i) {
+        PtpState prev_state = ptp_state;
+        switch (ptp_state) {
+        case PtpState::WAIT_GM:
+            if (gm_present) {
+                ptp_role_flag = 1; // follower
+                ptp_sync_good = false;
+                ptp_good_streak = 0;
+                ptp_bad_streak = 0;
+                ptp_anchor_pending = true;
+                ptp_state = PtpState::WAIT_LOCK;
+                ptp_state_since = now;
+                SPDLOG_INFO("GM detected; waiting for lock");
+            } else if (now - ptp_state_since >= GM_WAIT) {
+                ptp_role_flag = 0; // GM
+                ptp_sync_good = true;
+                ptp_good_streak = 0;
+                ptp_bad_streak = 0;
+                ptp_anchor_pending = true;
+                ptp_state = PtpState::SYNCED;
+                ptp_state_since = now;
+                SPDLOG_INFO("No GM after {}s; assuming GM role", GM_WAIT.count());
+                enable_ptp();
+            }
+            break;
+
+        case PtpState::WAIT_LOCK:
+            if (!gm_present) {
+                ptp_role_flag = -1;
+                ptp_sync_good = false;
+                ptp_good_streak = 0;
+                ptp_bad_streak = 0;
+                ptp_anchor_pending = true;
+                ptp_state = PtpState::WAIT_GM;
+                ptp_state_since = now;
+                SPDLOG_INFO("GM lost before lock; restarting GM detection");
+                disable_ptp();
+                break;
+            }
+            if (master_offset_valid) {
+                long long best_abs = master_offset ? std::llabs(master_offset) : 0;
+                if (best_abs > OFFSET_REPORT_NS) {
+                    SPDLOG_WARN("PTP offset {} ns exceeds {} ns", master_offset, OFFSET_REPORT_NS);
+                }
+                if (best_abs <= OFFSET_LOCK_NS) {
+                    ptp_good_streak++;
+                } else {
+                    ptp_good_streak = 0;
+                }
+                if (ptp_good_streak >= LOCK_CONSEC) {
+                    ptp_sync_good = true;
+                    ptp_bad_streak = 0;
+                    ptp_anchor_pending = true;
+                    ptp_state = PtpState::SYNCED;
+                    ptp_state_since = now;
+                    SPDLOG_INFO("PTP lock achieved; enabling PPS");
+                    enable_ptp();
+                }
+            } else {
+                ptp_good_streak = 0;
+            }
+            break;
+
+        case PtpState::SYNCED:
+            if (ptp_role_flag == 0) {
+                if (gm_present) {
+                    ptp_role_flag = 1;
+                    ptp_sync_good = false;
+                    ptp_good_streak = 0;
+                    ptp_bad_streak = 0;
+                    ptp_anchor_pending = true;
+                    ptp_state = PtpState::WAIT_LOCK;
+                    ptp_state_since = now;
+                    SPDLOG_INFO("GM appeared; switching to follower and waiting for lock");
+                    disable_ptp();
+                }
+                break;
+            }
+
+            if (!gm_present) {
+                ptp_state = PtpState::RESET;
+                ptp_state_since = now;
+                SPDLOG_WARN("GM lost; resetting PTP state");
+                disable_ptp();
+                break;
+            }
+
+            if (master_offset_valid) {
+                long long best_abs = master_offset ? std::llabs(master_offset) : 0;
+                if (best_abs > OFFSET_REPORT_NS) {
+                    SPDLOG_WARN("PTP offset {} ns exceeds {} ns", master_offset, OFFSET_REPORT_NS);
+                }
+                if (best_abs > OFFSET_LOSS_NS) {
+                    ptp_bad_streak++;
+                } else {
+                    ptp_bad_streak = 0;
+                }
+                if (ptp_bad_streak >= LOSS_CONSEC) {
+                    ptp_state = PtpState::RESET;
+                    ptp_state_since = now;
+                    ptp_sync_good = false;
+                    ptp_good_streak = 0;
+                    ptp_bad_streak = 0;
+                    ptp_anchor_pending = true;
+                    SPDLOG_WARN("PTP sync lost ({}x > {} ns); resetting",
+                                LOSS_CONSEC, OFFSET_LOSS_NS);
+                    disable_ptp();
+                }
+            } else {
+                ptp_bad_streak = 0;
+            }
+            break;
+        default:
+            break;
+        }
+
+        if (ptp_state == prev_state) break;
+    }
+
+    auto state_str = [&](PtpState s) {
+        switch (s) {
+        case PtpState::RESET: return "RESET";
+        case PtpState::WAIT_GM: return "WAIT_GM";
+        case PtpState::WAIT_LOCK: return "WAIT_LOCK";
+        case PtpState::SYNCED: return "SYNCED";
+        }
+        return "UNKNOWN";
+    };
+
+    SPDLOG_DEBUG("PTP status: state={} gm_present={} role={} master_offset_valid={} master_offset={} good={}",
+                 state_str(ptp_state), gm_present,
+                 (ptp_role_flag == 0 ? "GM" : (ptp_role_flag == 1 ? "Follower" : "Unknown")),
+                 master_offset_valid, master_offset, ptp_sync_good);
+}
+
+void FusionConnectClient::maybe_set_phc_anchor()
+{
+    constexpr uint64_t ONE_SEC_NS = 1000000000ULL;
+    constexpr uint64_t MIN_LEAD_NS = 500000000ULL; // 500 ms
+    constexpr auto MIN_ANCHOR_INTERVAL = std::chrono::seconds(5);
+    if (!ptp_sync_good) return;
+
+    const auto now = std::chrono::steady_clock::now();
+
+    if (!ptp_anchor_pending) return;
+    if (now - ptp_last_anchor < MIN_ANCHOR_INTERVAL) return;
+
+    fc_get_phc_status_reply st{};
+    if (nl_get_phc_status(client, &st)) {
+        if (st.epoch_valid) {
+            ptp_anchor_pending = false;
+            SPDLOG_DEBUG("PHC anchor already valid (aligned={}); skipping re-arm", st.aligned);
             return;
         }
     }
 
-    if (ptp_synchronized && !mgr_started) {
-        fusion_cn_ctrl_msg reply{};
-        if (client.send_message(FUSION_CN_CTRL_CMD_START_MANAGER, nullptr, 0, &reply)) {
-            if (reply.err == MGR_START_OK || reply.err == -MGR_START_ERRNO_RUNNING) {
-                mgr_started = true;
-            } else if (reply.err == -MGR_START_ERRNO_PTP) {
-                ptp_synchronized = 0;
-                if (reply.data) free(reply.data);
-                return;
-            }
-        }
-        if (reply.data) free(reply.data);
+    uint64_t phc_ns = 0;
+    if (!read_phc_ns(&phc_ns)) return;
+
+    uint64_t next_pps_ns = ((phc_ns / ONE_SEC_NS) + 1ULL) * ONE_SEC_NS;
+    uint64_t delta = next_pps_ns - phc_ns;
+    if (delta < MIN_LEAD_NS) {
+        SPDLOG_DEBUG("PHC anchor delayed: next PPS in {} ns (< {} ns)", delta, MIN_LEAD_NS);
+        return;
     }
 
-    if (!(ptp_synchronized && mgr_started)) return;
+    if (nl_set_phc_anchor(client, next_pps_ns)) {
+        ptp_last_anchor = now;
+        ptp_anchor_pending = false;
+        if (!phc_anchor_logged) {
+            SPDLOG_INFO("Set PHC anchor for next PPS at {} ns (lead {} ns)", next_pps_ns, delta);
+            phc_anchor_logged = true;
+        } else if (debug_enabled) {
+            SPDLOG_DEBUG("Set PHC anchor for next PPS at {} ns (lead {} ns)", next_pps_ns, delta);
+        }
+    }
+}
 
+void FusionConnectClient::process() { 
+    if (system_ip.empty()) {
+        system_ip = get_system_ip(enet_iface, false);
+        if (system_ip.empty()) return;
+        sap_announcer.setSystemIp(system_ip);
+        SPDLOG_INFO("Detected system IP: {}", system_ip);
+    }
+
+    if (!mgr_started) {
+        maybe_start_manager();
+        if (!mgr_started) return;
+    }
+
+    maybe_set_debug();
+    maybe_retry_audio_streams_update();
+    update_ptp_state();
+    maybe_set_phc_anchor();
+    
     // --- Fusion Connect ---
     for (auto it = fusion_connect_stream_map.begin(); it != fusion_connect_stream_map.end();) {
         const std::string& name = it->first;
@@ -1203,7 +1606,7 @@ void FusionConnectClient::process() {
             SPDLOG_DEBUG("Created AES67 stream {} in process loop", name);
             if (!cfg.is_source && is_ip_mcast(cfg.dest_ip)) {
                 join_multicast_group(cfg.dest_ip);
-            } else {
+            } else if (cfg.is_source) {
                 sap_announcer.addAnnouncement(name, cfg.dest_ip, cfg.channels,
                                             cfg.sample_rate, cfg.format, cfg.dest_port,
                                             cfg.payload_type, cfg.stream_handle);
@@ -1222,9 +1625,11 @@ void FusionConnectClient::process() {
         }
     }
 
-    // Metrics every second
-    static uint32_t metrics_tick = 0;
-    if ((metrics_tick++ % 5) == 0) {
+    // Metrics every second (derived from period_ms)
+    static uint32_t metrics_elapsed_ms = 0;
+    metrics_elapsed_ms += static_cast<uint32_t>(period_ms);
+    if (metrics_elapsed_ms >= 1000) {
+        metrics_elapsed_ms -= 1000;
         std::vector<fusion_cn_metrics_record> recs;
         if (get_all_metrics(client, &recs)) {
             for (const auto &r : recs) {
@@ -1277,8 +1682,11 @@ void FusionConnectClient::process() {
         }
     }
 
-    // SAP announcements every 30 seconds
-    if (announce_counter++ % 30 == 0) {
+    // SAP announcements every 30 seconds (derived from period_ms)
+    static uint32_t sap_elapsed_ms = 0;
+    sap_elapsed_ms += static_cast<uint32_t>(period_ms);
+    if (sap_elapsed_ms >= 30000) {
+        sap_elapsed_ms -= 30000;
         sap_announcer.announceAll();
     }
     // Handle deletion packets

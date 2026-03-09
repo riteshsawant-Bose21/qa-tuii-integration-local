@@ -3,7 +3,7 @@ package cluster
 import (
 	"fmt"
 	"fusion/internal/api"
-	"fusion/internal/logging"
+	"fusion-services-core/logging"
 	"fusion/internal/routes"
 	"fusion/internal/utils"
 	"io"

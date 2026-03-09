@@ -65,6 +65,7 @@ class VipSuccessScreen extends StatelessWidget {
             text: 'Finish',
             onTap: onFinish,
             width: 0.25 * MediaQuery.of(context).size.width,
+            height: 35,
           ),
         ],
       ),

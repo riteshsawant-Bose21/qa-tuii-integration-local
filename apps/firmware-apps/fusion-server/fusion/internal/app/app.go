@@ -4,11 +4,11 @@ import (
 	"bufio"
 	"context"
 	"fmt"
+	"fusion-services-core/logging"
 	"fusion/internal/api"
 	"fusion/internal/cluster"
 	clustertransport "fusion/internal/cluster/transport"
 	"fusion/internal/controllers"
-	"fusion/internal/logging"
 	"fusion/internal/network"
 	"fusion/internal/persistence"
 	"fusion/internal/pubsub"
@@ -86,15 +86,19 @@ func NewApp(config *api.AppConfig) *App {
 	udpServer := initUDPServer(api.UDPPort, connectionHandler, hub)
 	fusionServer := server.NewFusionServer(config.NodeName, connectionHandler, hub)
 
+	connectionHandler.SetDeviceProvider(clusterInstance)
+
 	// Setup the public routes
 	publicRouter := mux.NewRouter()
 	publicRouter.Use(loggingMiddleware(config))
 	publicRouter.Use(recoveryMiddleware())
+	publicRouter.Use(corsMiddleware())
 
 	// Setup the private routes
 	privateRouter := mux.NewRouter()
 	privateRouter.Use(loggingMiddleware(config))
 	privateRouter.Use(recoveryMiddleware())
+	privateRouter.Use(corsMiddleware())
 
 	app := &App{
 		Logger:            logger,
@@ -182,6 +186,7 @@ func (app *App) setupPublicRoutes() {
 	app.registerPublicGET(routes.ClusterMembersEndpoint, app.Server.GetMembers)
 	app.registerPublicGET(routes.ClusterNTPSkewEndpoint, app.Cluster.GetNTPSkew)
 	app.registerPublicGET(routes.ClusterStatusEndpoint, app.Cluster.Metrics.GetClusterStatus)
+	app.registerPublicPOST(routes.ClusterRebootEndpoint, app.Cluster.RebootSystem)
 
 	// Controllers
 	app.registerPublicGET(routes.ControllersEndpoint, app.Server.GetControllers)
@@ -270,6 +275,7 @@ func (app *App) setupPrivateRoutes() {
 	app.registerPrivateGET(routes.ClusterLatencySyncAveragesLocalEndpoint, app.Cluster.GetSyncLatencyAveragesLocal)
 	app.registerPrivateGET(routes.ClusterLatencyNetworkFailuresLocalEndpoint, app.Cluster.GetNetworkFailuresLocal)
 	app.registerPrivateGET(routes.ClusterLatencyStatusLocalEndpoint, app.Cluster.GetLatencyStatusLocal)
+	app.registerPrivatePOST(routes.ClusterRebootLocalEndpoint, app.Cluster.RebootSystemLocal)
 
 	app.registerPrivateGET(routes.DeviceEndpoint, app.Cluster.GetDeviceInfo)
 	app.registerPrivatePOST(routes.DeviceEndpoint, app.Cluster.SetDeviceInfo)
@@ -289,7 +295,7 @@ func (app *App) startNetworkMonitor() {
 	logger := logging.GetLogger()
 	logger.Info("Network monitor is active")
 
-	app.monitor = network.NewMonitor(networkMonitorInterval, func(oldIP, newIP string) {
+	app.monitor = network.NewMonitor(networkMonitorInterval, app.config.NetIface, func(oldIP, newIP string) {
 		logger.Debug("IP changed from %s to %s.", oldIP, newIP)
 		app.leaveCluster()
 		app.joinCluster(newIP)
@@ -593,4 +599,28 @@ func (rec *statusRecorder) Hijack() (net.Conn, *bufio.ReadWriter, error) {
 		return hijacker.Hijack()
 	}
 	return nil, nil, fmt.Errorf("underlying ResponseWriter does not implement http.Hijacker")
+}
+
+// corsMiddleware adds CORS headers to all responses
+func corsMiddleware() mux.MiddlewareFunc {
+	logging.GetLogger().Warn(
+		"Enabled CORS middleware for manufacturing tests. Review and adjust for production use.",
+	)
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			// Set CORS headers
+			w.Header().Set("Access-Control-Allow-Origin", "*")
+			w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS")
+			w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With")
+			w.Header().Set("Access-Control-Max-Age", "3600")
+
+			// Handle preflight OPTIONS request
+			if r.Method == "OPTIONS" {
+				w.WriteHeader(http.StatusOK)
+				return
+			}
+
+			next.ServeHTTP(w, r)
+		})
+	}
 }

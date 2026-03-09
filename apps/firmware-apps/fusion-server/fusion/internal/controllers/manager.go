@@ -3,8 +3,8 @@ package controllers
 import (
 	"encoding/json"
 	"fmt"
+	"fusion-services-core/logging"
 	"fusion/internal/api"
-	"fusion/internal/logging"
 	"fusion/internal/pubsub"
 	"net"
 	"time"
@@ -276,6 +276,15 @@ func (cm *ControllerManager) GetControllerByID(id string) (*api.ControllerInfo, 
 
 // StartWinkCommand initiates a wink command for a controller
 func (cm *ControllerManager) StartWinkCommand(controllerID string) error {
+	type winkPayload struct {
+		Duration  int64 `json:"duration"`
+		Timestamp int64 `json:"timestamp"`
+	}
+	type winkMessage struct {
+		Action  string      `json:"action"`
+		Payload winkPayload `json:"payload"`
+	}
+
 	logger := logging.GetLogger()
 	logger.Debug("💡 Starting wink command for controller %s", controllerID)
 
@@ -298,15 +307,15 @@ func (cm *ControllerManager) StartWinkCommand(controllerID string) error {
 	logger.Debug("✅ Found controller %s, sending wink command", controllerID)
 
 	// Send wink command
-	winkMessage := map[string]interface{}{
-		"action": "performWink",
-		"payload": map[string]interface{}{
-			"duration":  5000, // 5 seconds
-			"timestamp": time.Now().Unix(),
+	winkMsg := winkMessage{
+		Action: "performWink",
+		Payload: winkPayload{
+			Duration:  5000, // 5 seconds
+			Timestamp: time.Now().Unix(),
 		},
 	}
 
-	messageBytes, err := json.Marshal(winkMessage)
+	messageBytes, err := json.Marshal(winkMsg)
 	if err != nil {
 		logger.Error("❌ Failed to marshal wink message: %v", err)
 		return fmt.Errorf("failed to marshal wink message: %v", err)

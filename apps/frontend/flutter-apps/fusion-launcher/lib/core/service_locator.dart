@@ -8,6 +8,7 @@ import 'package:fusion_launcher/core/models/algorithm/algorithm_metadata.dart';
 import 'package:fusion_launcher/core/network_clients/rest_client/interceptor.dart';
 import 'package:fusion_launcher/core/services/user_profile_manager.dart';
 import 'package:fusion_launcher/features/authentication/viewmodel/auth_view_model.dart';
+import 'package:fusion_launcher/features/commission/view_models/mdns_search_viewmodel.dart';
 import 'package:fusion_launcher/features/dynamic_config/domain/usecases/get_panel_entity_usecase.dart';
 import 'package:fusion_launcher/features/projects/view_model/project_sync_view_model.dart';
 import 'package:fusion_launcher/features/projects/widget/building/speaker_selection_section/view_model/product_query_view_model.dart';
@@ -91,6 +92,10 @@ Future<void> setupServiceLocator() async {
       secureStorageService: serviceLocator<FusionSecureStorage>(),
       apiBaseUrl: AppConfig.awsApiBaseUrl,
     ),
+  );
+
+  serviceLocator.registerSingleton<MdnsService>(
+    MdnsService(serviceType: '_http._tcp'),
   );
 
   final UserProfile initialUserProfile = UserProfile(
@@ -206,6 +211,12 @@ Future<void> setupServiceLocator() async {
   );
 
   serviceLocator.registerLazySingleton<ProductQueryCubit>(() => ProductQueryCubit());
+
+  serviceLocator.registerLazySingleton<MdnsScanViewModel>(
+    () => MdnsScanViewModel(
+      serviceLocator<MdnsService>(),
+    ),
+  );
   serviceLocator.registerLazySingleton<GuideShowCaseController>(() => GuideShowCaseController(globalNavigatorKey.currentContext!));
 
   // TODO: ALWAYS KEEP THIS AT THE END OF THE FILE
