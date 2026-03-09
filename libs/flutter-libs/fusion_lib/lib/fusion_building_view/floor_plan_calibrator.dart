@@ -5,7 +5,6 @@ import 'dart:ui' as ui;
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:fusion_lib/fusion_lib.dart';
-import 'package:fusion_lib/strings/fusion_strings.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../constants/test_keys.dart';
@@ -29,95 +28,56 @@ class FloorPlanCalibrationDialog extends StatelessWidget {
   Widget build(BuildContext context) {
     return SemanticHelper.container(
       testId: SemanticHelper.createTestId(SemanticTypes.container, "floor_plan_calibration_dialog"),
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.surface,
-          borderRadius: BorderRadius.circular(12),
-          boxShadow: <BoxShadow>[
-            BoxShadow(
-              color: Theme.of(context).colorScheme.shadow.withValues(alpha: 0.18),
-              blurRadius: 28,
-              offset: const Offset(0, 16),
-            ),
-          ],
-        ),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(12),
-          child: _FloorPlanShell(
-            title: title,
-            onClose: onCancel,
-            child: SemanticHelper.container(
-              testId: SemanticHelper.createTestId(SemanticTypes.container, "floor_plan_calibrator"),
-              child: FloorPlanCalibrator(
-                floorPlanImage: floorPlanImage,
-                onCalibrationComplete: onCalibrationComplete,
-                onCancel: onCancel,
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-/// Simple shell to mimic the modal chrome in the reference:
-/// Title bar, toolbar row, content, and bottom action bar.
-class _FloorPlanShell extends StatelessWidget {
-  final String title;
-  final Widget child;
-  final VoidCallback? onClose;
-
-  const _FloorPlanShell({
-    required this.title,
-    required this.child,
-    this.onClose,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: <Widget>[
-        // Title bar
-        SemanticHelper.container(
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(12),
+        child: SemanticHelper.container(
           testId: SemanticHelper.createTestId(SemanticTypes.container, "floor_plan_calibrator_title_bar"),
-          child: Container(
-            height: 40,
-            padding: const EdgeInsets.symmetric(horizontal: 12),
-            decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.surface,
-              border: Border(bottom: BorderSide(color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.3))),
-            ),
-            child: Row(
-              children: <Widget>[
-                FusionAppText(
-                  text: title,
-                  style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                    fontWeight: FontWeight.w600,
-                    color: Theme.of(context).colorScheme.onSurface,
-                  ),
-                ),
-                const Spacer(),
-                SemanticHelper.button(
-                  testId: SemanticHelper.createTestId(SemanticTypes.button, FusionTestKeys.closeX),
-                  child: IconButton(
-                    tooltip: 'Close',
-                    icon: Icon(
-                      Icons.close,
-                      size: 18,
-                      color: Theme.of(context).colorScheme.onSurface,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            child: Column(
+              children: [
+                Row(
+                  children: <Widget>[
+                    FusionAppText(
+                      text: title,
+                      style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                        fontWeight: FontWeight.w600,
+                        color: Theme.of(context).colorScheme.onSurface,
+                      ),
                     ),
-                    splashRadius: 18,
-                    onPressed: onClose,
+                    const Spacer(),
+                    SemanticHelper.button(
+                      testId: SemanticHelper.createTestId(SemanticTypes.button, FusionTestKeys.closeX),
+                      child: IconButton(
+                        tooltip: 'Close',
+                        icon: Icon(
+                          Icons.close,
+                          size: 18,
+                          color: Theme.of(context).colorScheme.onSurface,
+                        ),
+                        splashRadius: 18,
+                        onPressed: () => Navigator.of(context).pop(),
+                      ),
+                    ),
+                  ],
+                ),
+                SizedBox(height: 6),
+
+                Flexible(
+                  child: SemanticHelper.container(
+                    testId: SemanticHelper.createTestId(SemanticTypes.container, "floor_plan_calibrator"),
+                    child: FloorPlanCalibrator(
+                      floorPlanImage: floorPlanImage,
+                      onCalibrationComplete: onCalibrationComplete,
+                      onCancel: onCancel,
+                    ),
                   ),
                 ),
               ],
             ),
           ),
         ),
-        // The calibrator will render its own toolbar row + canvas + footer
-        Expanded(child: child),
-      ],
+      ),
     );
   }
 }
@@ -680,36 +640,42 @@ class _FloorPlanCalibratorState extends State<FloorPlanCalibrator> {
           _cornerOffsetBL = _cornerStartBL;
           break;
 
-        // Edge handles - move two corners together (pivot = opposite edge)
+        // Edge handles - true 2D shear (parallelogram, not perspective/trapezoid).
+        // Top/bottom edges shear horizontally (X only), left/right edges shear vertically (Y only).
+        // This keeps opposite sides parallel, avoiding any perspective distortion.
         case _SkewHandle.topCenter:
-          // Pivot = bottom edge (BL, BR stay fixed)
-          // Move both top corners together
-          _cornerOffsetTL = _cornerStartTL + normalizedDelta;
-          _cornerOffsetTR = _cornerStartTR + normalizedDelta;
+          // Horizontal shear: pivot = bottom edge (BL, BR stay fixed).
+          // Only X movement — constraining Y to 0 keeps top & bottom edges parallel.
+          final hDeltaTop = Offset(normalizedDeltaX, 0);
+          _cornerOffsetTL = _cornerStartTL + hDeltaTop;
+          _cornerOffsetTR = _cornerStartTR + hDeltaTop;
           _cornerOffsetBL = _cornerStartBL;
           _cornerOffsetBR = _cornerStartBR;
           break;
         case _SkewHandle.bottomCenter:
-          // Pivot = top edge (TL, TR stay fixed)
-          // Move both bottom corners together
-          _cornerOffsetBL = _cornerStartBL + normalizedDelta;
-          _cornerOffsetBR = _cornerStartBR + normalizedDelta;
+          // Horizontal shear: pivot = top edge (TL, TR stay fixed).
+          // Only X movement — constraining Y to 0 keeps top & bottom edges parallel.
+          final hDeltaBot = Offset(normalizedDeltaX, 0);
+          _cornerOffsetBL = _cornerStartBL + hDeltaBot;
+          _cornerOffsetBR = _cornerStartBR + hDeltaBot;
           _cornerOffsetTL = _cornerStartTL;
           _cornerOffsetTR = _cornerStartTR;
           break;
         case _SkewHandle.leftCenter:
-          // Pivot = right edge (TR, BR stay fixed)
-          // Move both left corners together
-          _cornerOffsetTL = _cornerStartTL + normalizedDelta;
-          _cornerOffsetBL = _cornerStartBL + normalizedDelta;
+          // Vertical shear: pivot = right edge (TR, BR stay fixed).
+          // Only Y movement — constraining X to 0 keeps left & right edges parallel.
+          final vDeltaLeft = Offset(0, normalizedDeltaY);
+          _cornerOffsetTL = _cornerStartTL + vDeltaLeft;
+          _cornerOffsetBL = _cornerStartBL + vDeltaLeft;
           _cornerOffsetTR = _cornerStartTR;
           _cornerOffsetBR = _cornerStartBR;
           break;
         case _SkewHandle.rightCenter:
-          // Pivot = left edge (TL, BL stay fixed)
-          // Move both right corners together
-          _cornerOffsetTR = _cornerStartTR + normalizedDelta;
-          _cornerOffsetBR = _cornerStartBR + normalizedDelta;
+          // Vertical shear: pivot = left edge (TL, BL stay fixed).
+          // Only Y movement — constraining X to 0 keeps left & right edges parallel.
+          final vDeltaRight = Offset(0, normalizedDeltaY);
+          _cornerOffsetTR = _cornerStartTR + vDeltaRight;
+          _cornerOffsetBR = _cornerStartBR + vDeltaRight;
           _cornerOffsetTL = _cornerStartTL;
           _cornerOffsetBL = _cornerStartBL;
           break;
@@ -1494,298 +1460,299 @@ class _FloorPlanCalibratorState extends State<FloorPlanCalibrator> {
     }
 
     return Column(
-      children: <Widget>[
-        // Toolbar row
-        Container(
-          height: 44,
-          padding: const EdgeInsets.symmetric(horizontal: 12),
-          decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.surface,
-            border: Border(bottom: BorderSide(color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.3))),
-          ),
-          child: Row(
-            spacing: 8,
-            children: <Widget>[
-              // Left: tool icons
-              _ToolbarIcon(
-                icon: LucideIcons.rulerDimensionLine200,
-                seemanticKey: FusionTestKeys.measureScale,
-                tooltip: 'Measure scale (draw line)',
-                active: _mode == _ToolMode.measure,
-                enabled: !_hasPendingSkew && !_hasPendingCrop,
-                onTap: () => setState(() => _mode = _ToolMode.measure),
-              ),
-              _ToolbarIcon(
-                icon: LucideIcons.crop200,
-                seemanticKey: FusionTestKeys.cropImage,
-                tooltip: 'Crop',
-                active: _mode == _ToolMode.crop,
-                enabled: !_hasPendingSkew,
-                onTap: () => setState(() => _mode = _ToolMode.crop),
-              ),
-              _ToolbarIcon(
-                icon: LucideIcons.rotateCcw200,
-                seemanticKey: FusionTestKeys.rotateImage,
-                tooltip: 'Rotate',
-                active: _mode == _ToolMode.rotate,
-                enabled: !_hasPendingSkew && !_hasPendingCrop,
-                onTap: () => setState(() => _mode = _ToolMode.rotate),
-              ),
+      children: [
+        Flexible(
+          child: Container(
+            decoration: BoxDecoration(
+              border: Border.all(color: context.colorScheme.strokeLight),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: Column(
+                children: <Widget>[
+                  // Toolbar row
+                  Container(
+                    height: 44,
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    child: Row(
+                      spacing: 8,
+                      children: <Widget>[
+                        // Left: tool icons
+                        _ToolbarIcon(
+                          icon: LucideIcons.rulerDimensionLine200,
+                          seemanticKey: FusionTestKeys.measureScale,
+                          tooltip: 'Measure scale (draw line)',
+                          active: _mode == _ToolMode.measure,
+                          enabled: !_hasPendingSkew && !_hasPendingCrop,
+                          onTap: () => setState(() => _mode = _ToolMode.measure),
+                        ),
+                        _ToolbarIcon(
+                          icon: LucideIcons.crop200,
+                          seemanticKey: FusionTestKeys.cropImage,
+                          tooltip: 'Crop',
+                          active: _mode == _ToolMode.crop,
+                          enabled: !_hasPendingSkew,
+                          onTap: () => setState(() => _mode = _ToolMode.crop),
+                        ),
+                        _ToolbarIcon(
+                          icon: LucideIcons.rotateCcw200,
+                          seemanticKey: FusionTestKeys.rotateImage,
+                          tooltip: 'Rotate',
+                          active: _mode == _ToolMode.rotate,
+                          enabled: !_hasPendingSkew && !_hasPendingCrop,
+                          onTap: () => setState(() => _mode = _ToolMode.rotate),
+                        ),
 
-              _ToolbarIcon(
-                icon: LucideIcons.flipHorizontal2200,
-                seemanticKey: FusionTestKeys.flipHorizontal,
-                tooltip: 'Flip Horizontal',
-                enabled: !_hasPendingSkew && !_hasPendingCrop,
-                onTap: _applyFlipHorizontal,
-              ),
-              _ToolbarIcon(
-                icon: LucideIcons.flipVertical2200,
-                seemanticKey: FusionTestKeys.flipVertical,
-                tooltip: 'Flip Vertical',
-                enabled: !_hasPendingSkew && !_hasPendingCrop,
-                onTap: _applyFlipVertical,
-              ),
-              _ToolbarIcon(
-                svgIcon: "packages/fusion_lib/lib/assets/svgs/skew.svg",
-                seemanticKey: FusionTestKeys.skew,
-                tooltip: 'Skew',
-                active: _mode == _ToolMode.skew,
-                enabled: !_hasPendingCrop,
-                onTap: () => setState(() => _mode = _ToolMode.skew),
-              ),
-              _ToolbarIcon(
-                svgIcon: "packages/fusion_lib/lib/assets/svgs/reset.svg",
-                seemanticKey: FusionTestKeys.reset,
-                tooltip: 'Reset to original',
-                enabled: !_hasPendingSkew && !_hasPendingCrop,
-                onTap: _resetToOriginal,
-              ),
-              _ToolbarIcon(
-                seemanticKey: FusionTestKeys.fitToScreen,
-                icon: LucideIcons.expand200,
-                tooltip: 'Fit to screen',
-                enabled: !_hasPendingSkew && !_hasPendingCrop,
-                onTap: () => _fitToScreen(),
-              ),
-              Spacer(),
-              // Rotate Left/Right buttons (visible when in rotate mode)
-              if (_mode == _ToolMode.rotate) ...<Widget>[
-                _ToolbarIcon(
-                  icon: LucideIcons.rotateCcw200,
-                  seemanticKey: FusionTestKeys.rotateLeft,
-                  tooltip: 'Rotate Left (90°)',
-                  onTap: _rotateLeft,
-                ),
-                _ToolbarIcon(
-                  icon: LucideIcons.rotateCw200,
-                  seemanticKey: FusionTestKeys.rotateRight,
-                  tooltip: 'Rotate Right (90°)',
-                  onTap: _rotateRight,
-                ),
-              ],
+                        _ToolbarIcon(
+                          icon: LucideIcons.flipHorizontal2200,
+                          seemanticKey: FusionTestKeys.flipHorizontal,
+                          tooltip: 'Flip Horizontal',
+                          enabled: !_hasPendingSkew && !_hasPendingCrop,
+                          onTap: _applyFlipHorizontal,
+                        ),
+                        _ToolbarIcon(
+                          icon: LucideIcons.flipVertical2200,
+                          seemanticKey: FusionTestKeys.flipVertical,
+                          tooltip: 'Flip Vertical',
+                          enabled: !_hasPendingSkew && !_hasPendingCrop,
+                          onTap: _applyFlipVertical,
+                        ),
+                        _ToolbarIcon(
+                          svgIcon: "packages/fusion_lib/lib/assets/svgs/skew.svg",
+                          seemanticKey: FusionTestKeys.skew,
+                          tooltip: 'Skew',
+                          active: _mode == _ToolMode.skew,
+                          enabled: !_hasPendingCrop,
+                          onTap: () => setState(() => _mode = _ToolMode.skew),
+                        ),
+                        _ToolbarIcon(
+                          svgIcon: "packages/fusion_lib/lib/assets/svgs/reset.svg",
+                          seemanticKey: FusionTestKeys.reset,
+                          tooltip: 'Reset to original',
+                          enabled: !_hasPendingSkew && !_hasPendingCrop,
+                          onTap: _resetToOriginal,
+                        ),
+                        _ToolbarIcon(
+                          seemanticKey: FusionTestKeys.fitToScreen,
+                          icon: LucideIcons.expand200,
+                          tooltip: 'Fit to screen',
+                          enabled: !_hasPendingSkew && !_hasPendingCrop,
+                          onTap: () => _fitToScreen(),
+                        ),
+                        Spacer(),
+                        // Rotate Left/Right buttons (visible when in rotate mode)
+                        if (_mode == _ToolMode.rotate) ...<Widget>[
+                          _ToolbarIcon(
+                            icon: LucideIcons.rotateCcw200,
+                            seemanticKey: FusionTestKeys.rotateLeft,
+                            tooltip: 'Rotate Left (90°)',
+                            onTap: _rotateLeft,
+                          ),
+                          _ToolbarIcon(
+                            icon: LucideIcons.rotateCw200,
+                            seemanticKey: FusionTestKeys.rotateRight,
+                            tooltip: 'Rotate Right (90°)',
+                            onTap: _rotateRight,
+                          ),
+                        ],
 
-              // Crop confirm/cancel buttons (visible when in crop mode with pending crop)
-              if (_mode == _ToolMode.crop && _hasPendingCrop) ...<Widget>[
-                _ToolbarIcon(
-                  icon: LucideIcons.check200,
-                  seemanticKey: FusionTestKeys.cropConfirm,
-                  tooltip: 'Apply Crop',
-                  onTap: _applyCrop,
-                ),
-                _ToolbarIcon(
-                  icon: LucideIcons.x200,
-                  seemanticKey: FusionTestKeys.cropCancel,
-                  tooltip: 'Cancel Crop',
-                  onTap: _cancelCrop,
-                ),
-              ],
+                        // Crop confirm/cancel buttons (visible when in crop mode with pending crop)
+                        if (_mode == _ToolMode.crop && _hasPendingCrop) ...<Widget>[
+                          _ToolbarIcon(
+                            icon: LucideIcons.check200,
+                            seemanticKey: FusionTestKeys.cropConfirm,
+                            tooltip: 'Apply Crop',
+                            onTap: _applyCrop,
+                          ),
+                          _ToolbarIcon(
+                            icon: LucideIcons.x200,
+                            seemanticKey: FusionTestKeys.cropCancel,
+                            tooltip: 'Cancel Crop',
+                            onTap: _cancelCrop,
+                          ),
+                        ],
 
-              // Skew reset/apply buttons (visible when in skew mode with pending skew)
-              if (_mode == _ToolMode.skew && _hasPendingSkew) ...<Widget>[
-                _ToolbarIcon(
-                  icon: LucideIcons.check200,
-                  seemanticKey: FusionTestKeys.skewApply,
-                  tooltip: 'Apply Skew',
-                  onTap: _applySkew,
-                ),
-                _ToolbarIcon(
-                  icon: LucideIcons.x200,
-                  seemanticKey: FusionTestKeys.skewReset,
-                  tooltip: 'Cancel Skew',
-                  onTap: _cancelSkew,
-                ),
-              ],
-              const Spacer(),
-              // Right: distance + units controls
-              FusionAppText(
-                text: 'Distance',
-                style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.8),
-                ),
-              ),
-              SizedBox(
-                width: 96,
-                child: SemanticHelper.formControl(
-                  testId: SemanticHelper.createTestId(SemanticTypes.textInput, FusionTestKeys.calibrationDistance),
-                  child: PropertyTextField(
-                    controller: _distanceController,
-                    hintText: '1.00',
-                    textAlign: TextAlign.right,
-                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                    onChanged: (value) {
-                      setState(() {});
-                    },
-                  ),
-                ),
-              ),
-              const SizedBox(width: 8),
-              FusionAppText(
-                text: 'Units',
-                style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.8),
-                ),
-              ),
-              SizedBox(
-                width: 160,
-                child: FusionDropdown2<MeasurementUnit>(
-                  padding: EdgeInsets.all(6),
-                  borderRadius: 6,
-                  selectedValue: _selectedUnit,
-                  items: MeasurementUnit.values,
-                  labelBuilder: (item) => '${item.displayName} (${item.symbol})',
-                  onChanged: (MeasurementUnit value) {
-                    setState(() => _selectedUnit = value);
-                  },
-                ),
-              ),
-            ],
-          ),
-        ),
-
-        // Canvas
-        Expanded(
-          child: Listener(
-            onPointerSignal: _handleScrollWheelZoom,
-            onPointerPanZoomStart: _handlePanZoomStart,
-            onPointerPanZoomUpdate: _handlePanZoomUpdate,
-            onPointerDown: _handlePointerDown,
-            onPointerMove: _handlePointerMove,
-            onPointerUp: _handlePointerUp,
-            child: Container(
-              clipBehavior: Clip.hardEdge,
-              alignment: Alignment.center,
-              decoration: BoxDecoration(color: Colors.white),
-              child: MouseRegion(
-                cursor: _mode == _ToolMode.measure
-                    ? SystemMouseCursors.precise
-                    : _mode == _ToolMode.rotate
-                    ? (_isRotating ? SystemMouseCursors.grabbing : SystemMouseCursors.grab)
-                    : _mode == _ToolMode.skew
-                    ? (_isSkewing ? SystemMouseCursors.grabbing : SystemMouseCursors.grab)
-                    : SystemMouseCursors.resizeUpLeftDownRight,
-                onHover: _mode == _ToolMode.measure ? _onMeasureHover : null,
-                child: GestureDetector(
-                  behavior: HitTestBehavior.opaque,
-                  onTapDown: _mode == _ToolMode.measure ? _onMeasureTapDown : null,
-                  onPanStart: _mode == _ToolMode.crop
-                      ? _onCropPanStart
-                      : _mode == _ToolMode.rotate
-                      ? _onRotatePanStart
-                      : _mode == _ToolMode.skew
-                      ? _onSkewPanStart
-                      : null,
-                  onPanUpdate: _mode == _ToolMode.measure
-                      ? _onMeasurePanUpdate
-                      : _mode == _ToolMode.crop
-                      ? _onCropPanUpdate
-                      : _mode == _ToolMode.rotate
-                      ? _onRotatePanUpdate
-                      : _mode == _ToolMode.skew
-                      ? _onSkewPanUpdate
-                      : null,
-                  onPanEnd: (d) {
-                    if (_mode == _ToolMode.crop) _onCropPanEnd(d);
-                    if (_mode == _ToolMode.rotate) _onRotatePanEnd(d);
-                    if (_mode == _ToolMode.skew) _onSkewPanEnd(d);
-                    if (_mode == _ToolMode.measure && _isDrawing) {
-                      setState(() => _isDrawing = false);
-                    }
-                  },
-                  child: GuideShowcaseWrapper(
-                    step: GuideShowCaseSteps.showFloorPickCalibration,
-                    onHighlightedSpotTap: (TapDownDetails details) {
-                      if (_mode == _ToolMode.measure) {
-                        // Get the exact RenderBox of the CustomPaint
-                        final RenderBox? renderBox = _customPaintKey.currentContext?.findRenderObject() as RenderBox?;
-                        if (renderBox != null) {
-                          final Offset localPosition = renderBox.globalToLocal(details.globalPosition);
-
-                          // Create new TapDownDetails with local position
-                          final TapDownDetails localDetails = TapDownDetails(
-                            globalPosition: details.globalPosition,
-                            localPosition: localPosition,
-                            kind: details.kind,
-                          );
-
-                          _onMeasureTapDown(localDetails);
-                        }
-                      }
-                    },
-                    child: Center(
-                      child: SemanticHelper.container(
-                        testId: SemanticHelper.createTestId(SemanticTypes.container, FusionTestKeys.floorCalibrationCanvas),
-                        child: CustomPaint(
-                          key: _customPaintKey,
-                          painter: FloorPlanCalibrationPainter(
-                            image: _currentImage,
-                            startPoint: _startPointDisplay,
-                            endPoint: _endPointDisplay,
-                            distanceText: _distanceController.text.trim(),
-                            unit: _selectedUnit,
-                            cropRectNormalized: _cropRectN,
-                            showCropHandles: _mode == _ToolMode.crop,
-                            showRotationHandles: _mode == _ToolMode.rotate,
-                            showSkewHandles: _mode == _ToolMode.skew,
-                            rotationAngle: _rotationAngle,
-                            cornerOffsetTL: _cornerOffsetTL,
-                            cornerOffsetTR: _cornerOffsetTR,
-                            cornerOffsetBL: _cornerOffsetBL,
-                            cornerOffsetBR: _cornerOffsetBR,
-                            zoomScale: _zoomScale,
-                            panOffset: _panOffset,
-                            flipHorizontal: false,
-                            flipVertical: false,
-                            onImageRectChanged: (ui.Rect r) {
-                              _imageRect = r;
-                              // keep display points in sync if image rect changes
-                              if (_startPointNormalized != null) {
-                                _startPointDisplay = _normalizedToCanvas(_startPointNormalized!);
-                              }
-                              if (_endPointNormalized != null) {
-                                _endPointDisplay = _normalizedToCanvas(_endPointNormalized!);
-                              }
+                        // Skew reset/apply buttons (visible when in skew mode with pending skew)
+                        if (_mode == _ToolMode.skew && _hasPendingSkew) ...<Widget>[
+                          _ToolbarIcon(
+                            icon: LucideIcons.check200,
+                            seemanticKey: FusionTestKeys.skewApply,
+                            tooltip: 'Apply Skew',
+                            onTap: _applySkew,
+                          ),
+                          _ToolbarIcon(
+                            icon: LucideIcons.x200,
+                            seemanticKey: FusionTestKeys.skewReset,
+                            tooltip: 'Cancel Skew',
+                            onTap: _cancelSkew,
+                          ),
+                        ],
+                        const Spacer(),
+                        // Right: distance + units controls
+                        FusionAppText(
+                          text: 'Distance',
+                          style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.8),
+                          ),
+                        ),
+                        SizedBox(
+                          width: 96,
+                          child: SemanticHelper.formControl(
+                            testId: SemanticHelper.createTestId(SemanticTypes.textInput, FusionTestKeys.calibrationDistance),
+                            child: PropertyTextField(
+                              controller: _distanceController,
+                              hintText: '1.00',
+                              textAlign: TextAlign.right,
+                              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                              onChanged: (value) {
+                                setState(() {});
+                              },
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        FusionAppText(
+                          text: 'Units',
+                          style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.8),
+                          ),
+                        ),
+                        SizedBox(
+                          width: 160,
+                          child: FusionDropdown2<MeasurementUnit>(
+                            padding: EdgeInsets.all(6),
+                            borderRadius: 6,
+                            selectedValue: _selectedUnit,
+                            items: MeasurementUnit.values,
+                            labelBuilder: (item) => '${item.displayName} (${item.symbol})',
+                            onChanged: (MeasurementUnit value) {
+                              setState(() => _selectedUnit = value);
                             },
                           ),
-                          child: const SizedBox.expand(),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  // Canvas
+                  Expanded(
+                    child: Listener(
+                      onPointerSignal: _handleScrollWheelZoom,
+                      onPointerPanZoomStart: _handlePanZoomStart,
+                      onPointerPanZoomUpdate: _handlePanZoomUpdate,
+                      onPointerDown: _handlePointerDown,
+                      onPointerMove: _handlePointerMove,
+                      onPointerUp: _handlePointerUp,
+                      child: Container(
+                        clipBehavior: Clip.hardEdge,
+                        alignment: Alignment.center,
+                        decoration: BoxDecoration(),
+                        child: MouseRegion(
+                          cursor: switch (_mode) {
+                            _ToolMode.measure => SystemMouseCursors.precise,
+                            _ToolMode.rotate => (_isRotating ? SystemMouseCursors.grabbing : SystemMouseCursors.grab),
+                            _ToolMode.skew => (_isSkewing ? SystemMouseCursors.grabbing : SystemMouseCursors.grab),
+                            _ => SystemMouseCursors.resizeUpLeftDownRight,
+                          },
+                          onHover: _mode == _ToolMode.measure ? _onMeasureHover : null,
+                          child: GestureDetector(
+                            behavior: HitTestBehavior.opaque,
+                            onTapDown: _mode == _ToolMode.measure ? _onMeasureTapDown : null,
+                            onPanStart: switch (_mode) {
+                              _ToolMode.crop => _onCropPanStart,
+                              _ToolMode.rotate => _onRotatePanStart,
+                              _ToolMode.skew => _onSkewPanStart,
+                              _ => null,
+                            },
+                            onPanUpdate: switch (_mode) {
+                              _ToolMode.measure => _onMeasurePanUpdate,
+                              _ToolMode.crop => _onCropPanUpdate,
+                              _ToolMode.rotate => _onRotatePanUpdate,
+                              _ToolMode.skew => _onSkewPanUpdate,
+                            },
+                            onPanEnd: (d) {
+                              if (_mode == _ToolMode.crop) _onCropPanEnd(d);
+                              if (_mode == _ToolMode.rotate) _onRotatePanEnd(d);
+                              if (_mode == _ToolMode.skew) _onSkewPanEnd(d);
+                              if (_mode == _ToolMode.measure && _isDrawing) {
+                                setState(() => _isDrawing = false);
+                              }
+                            },
+                            child: GuideShowcaseWrapper(
+                              step: GuideShowCaseSteps.showFloorPickCalibration,
+                              onHighlightedSpotTap: (TapDownDetails details) {
+                                if (_mode == _ToolMode.measure) {
+                                  // Get the exact RenderBox of the CustomPaint
+                                  final RenderBox? renderBox = _customPaintKey.currentContext?.findRenderObject() as RenderBox?;
+                                  if (renderBox != null) {
+                                    final Offset localPosition = renderBox.globalToLocal(details.globalPosition);
+
+                                    // Create new TapDownDetails with local position
+                                    final TapDownDetails localDetails = TapDownDetails(
+                                      globalPosition: details.globalPosition,
+                                      localPosition: localPosition,
+                                      kind: details.kind,
+                                    );
+
+                                    _onMeasureTapDown(localDetails);
+                                  }
+                                }
+                              },
+                              child: Center(
+                                child: SemanticHelper.container(
+                                  testId: SemanticHelper.createTestId(SemanticTypes.container, FusionTestKeys.floorCalibrationCanvas),
+                                  child: CustomPaint(
+                                    key: _customPaintKey,
+                                    painter: FloorPlanCalibrationPainter(
+                                      image: _currentImage,
+                                      startPoint: _startPointDisplay,
+                                      endPoint: _endPointDisplay,
+                                      distanceText: _distanceController.text.trim(),
+                                      unit: _selectedUnit,
+                                      cropRectNormalized: _cropRectN,
+                                      showCropHandles: _mode == _ToolMode.crop,
+                                      showRotationHandles: _mode == _ToolMode.rotate,
+                                      showSkewHandles: _mode == _ToolMode.skew,
+                                      rotationAngle: _rotationAngle,
+                                      cornerOffsetTL: _cornerOffsetTL,
+                                      cornerOffsetTR: _cornerOffsetTR,
+                                      cornerOffsetBL: _cornerOffsetBL,
+                                      cornerOffsetBR: _cornerOffsetBR,
+                                      zoomScale: _zoomScale,
+                                      panOffset: _panOffset,
+                                      flipHorizontal: false,
+                                      flipVertical: false,
+                                      onImageRectChanged: (ui.Rect r) {
+                                        _imageRect = r;
+                                        // keep display points in sync if image rect changes
+                                        if (_startPointNormalized != null) {
+                                          _startPointDisplay = _normalizedToCanvas(_startPointNormalized!);
+                                        }
+                                        if (_endPointNormalized != null) {
+                                          _endPointDisplay = _normalizedToCanvas(_endPointNormalized!);
+                                        }
+                                      },
+                                    ),
+                                    child: const SizedBox.expand(),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
                         ),
                       ),
                     ),
                   ),
-                ),
+                ],
               ),
             ),
           ),
         ),
 
-        // Footer buttons (right aligned)
         Container(
-          height: 48,
+          height: 50,
           padding: EdgeInsets.symmetric(horizontal: 16),
-          decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.surface,
-            border: Border(top: BorderSide(color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.3))),
-          ),
           child: Row(
             children: <Widget>[
               const Spacer(),
@@ -1793,7 +1760,7 @@ class _FloorPlanCalibratorState extends State<FloorPlanCalibrator> {
                 width: 120,
                 height: 36,
                 borderRadius: 12,
-                label: FusionStrings.cancelButton,
+                label: "Cancel",
                 onTap: () {
                   widget.onCancel!();
                 },
@@ -1807,7 +1774,7 @@ class _FloorPlanCalibratorState extends State<FloorPlanCalibrator> {
                   }
                 },
                 child: FusionButton(
-                  label: FusionStrings.confirmButton,
+                  label: "Confirm",
                   width: 120,
                   height: 36,
                   borderRadius: 12,

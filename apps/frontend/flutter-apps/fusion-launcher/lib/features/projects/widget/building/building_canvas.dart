@@ -1054,7 +1054,8 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
                 ),
                 const SizedBox(height: 4),
                 FusionAppText(
-                  text: 'Upload .JPEG and .PNG files',
+                  text: 'Upload PDF .JPEG or .PNG\nfiles (max file size- 5MB)',
+                  textAlign: TextAlign.center,
                   style: context.textTheme.bodyMedium?.copyWith(
                     color: isDragActive ? context.colorScheme.primaryWhite : context.colorScheme.elevation4,
                   ),
@@ -1161,7 +1162,7 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
       final FilePickerResult? result = await FilePicker.platform.pickFiles(
         type: FileType.custom,
         allowMultiple: false,
-        allowedExtensions: <String>['png', 'jpg', 'jpeg'],
+        allowedExtensions: <String>['png', 'jpg', 'jpeg', 'pdf'],
       );
 
       if (result != null && result.files.single.path != null) {
@@ -1176,10 +1177,7 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
           showDialog(
             context: context,
             barrierDismissible: false,
-            builder:
-                (BuildContext context) => const Center(
-                  child: CircularProgressIndicator(),
-                ),
+            builder: (BuildContext context) => const Center(child: CircularProgressIndicator()),
           );
 
           final ResponseCallback<String?> responseCallback = await serviceLocator<ProjectViewModel>().addImageToProject(imagePath: sourcePath);
@@ -1242,18 +1240,17 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
         barrierDismissible: true,
         builder: (_) {
           return Dialog(
+            insetPadding: const EdgeInsets.all(100),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            backgroundColor: context.colorScheme.elevation1,
             child: FloorPlanCalibrationDialog(
               floorPlanImage: image,
               onCalibrationComplete: (CalibrationData data) {
                 serviceLocator<GuideShowCaseController>().completeStep(GuideShowCaseSteps.confirmFloorCalibrated);
-                if (context.mounted) {
-                  Navigator.of(context).pop(data);
-                }
+                if (context.mounted) Navigator.of(context).pop(data);
               },
               onCancel: () {
-                if (context.mounted) {
-                  Navigator.of(context).pop();
-                }
+                if (context.mounted) Navigator.of(context).pop();
               },
             ),
           );
