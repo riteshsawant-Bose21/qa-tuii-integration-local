@@ -2,6 +2,7 @@ package tasks
 
 import (
 	"fmt"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -78,13 +79,7 @@ func withinRecurringWindow(r *api.RecurringWindow, now time.Time) bool {
 	// Day-of-week check
 	if len(r.Days) > 0 {
 		dow := int(now.Weekday()) // 0=Sunday
-		ok := false
-		for _, d := range r.Days {
-			if d == dow {
-				ok = true
-				break
-			}
-		}
+		ok := slices.Contains(r.Days, dow)
 		if !ok {
 			return false
 		}
