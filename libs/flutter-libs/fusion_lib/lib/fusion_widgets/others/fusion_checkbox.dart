@@ -27,8 +27,8 @@ class FusionCheckbox extends StatelessWidget {
         SemanticTypes.button,
         "fusion_checkbox${semanticId ?? ''}",
       ),
-      isActive: enabled,
-      selected: value,
+      isEnabled: enabled,
+      isSelected: isActive,
       child: MouseRegion(
         cursor: enabled ? SystemMouseCursors.click : SystemMouseCursors.basic,
         child: GestureDetector(
@@ -41,9 +41,7 @@ class FusionCheckbox extends StatelessWidget {
               borderRadius: BorderRadius.circular(4),
               color: isActive ? context.colorScheme.primaryColor : null,
               border: Border.all(
-                color: isActive
-                    ? Colors.transparent
-                    : context.colorScheme.iconDisabled,
+                color: isActive ? Colors.transparent : context.colorScheme.iconDisabled,
               ),
             ),
             child: Icon(

@@ -38,8 +38,7 @@ class FusionSwitch extends StatefulWidget {
   State<FusionSwitch> createState() => _FusionSwitchState();
 }
 
-class _FusionSwitchState extends State<FusionSwitch>
-    with SingleTickerProviderStateMixin {
+class _FusionSwitchState extends State<FusionSwitch> with SingleTickerProviderStateMixin {
   late AnimationController _animationController;
   late Animation<double> _positionAnimation;
   late Animation<Color?> _trackColorAnimation;
@@ -90,9 +89,7 @@ class _FusionSwitchState extends State<FusionSwitch>
 
     _thumbColorAnimation = ColorTween(
       begin: widget.inactiveThumbColor ?? context.colorScheme.elevation3,
-      end:
-          widget.activeThumbColor ??
-          Colors.grey.shade200, //context.colorScheme.primaryWhite,
+      end: widget.activeThumbColor ?? Colors.grey.shade200, //context.colorScheme.primaryWhite,
     ).animate(_animationController);
   }
 
@@ -132,15 +129,9 @@ class _FusionSwitchState extends State<FusionSwitch>
 
     final thumbWidth = widget.height * 0.7;
     final trackWidth = widget.width;
-    final dragDistance =
-        trackWidth -
-        thumbWidth -
-        padding; // Available drag distance (4px padding on each side)
+    final dragDistance = trackWidth - thumbWidth - padding; // Available drag distance (4px padding on each side)
 
-    final newValue =
-        (_dragStartValue! +
-                (details.localPosition.dx - thumbWidth / 2 - 4) / dragDistance)
-            .clamp(0.0, 1.0);
+    final newValue = (_dragStartValue! + (details.localPosition.dx - thumbWidth / 2 - 4) / dragDistance).clamp(0.0, 1.0);
 
     _animationController.value = newValue;
   }
@@ -198,7 +189,7 @@ class _FusionSwitchState extends State<FusionSwitch>
         SemanticTypes.button,
         "fusion_switch_${widget.semanticId ?? ""}",
       ),
-      state: widget.value,
+      isSelected: widget.value,
       child: GestureDetector(
         onTap: _onTap,
         onPanStart: _onPanStart,
@@ -210,11 +201,7 @@ class _FusionSwitchState extends State<FusionSwitch>
           child: AnimatedBuilder(
             animation: _animationController,
             builder: (context, child) {
-              final thumbPosition =
-                  _positionAnimation.value *
-                  (trackWidth -
-                      thumbWidth -
-                      (padding)); // 8 for padding (4px on each side)
+              final thumbPosition = _positionAnimation.value * (trackWidth - thumbWidth - (padding)); // 8 for padding (4px on each side)
 
               return Stack(
                 children: [
@@ -234,8 +221,7 @@ class _FusionSwitchState extends State<FusionSwitch>
                   ),
                   // Thumb
                   Positioned(
-                    left:
-                        (padding / 2) + thumbPosition, // 4px padding from left
+                    left: (padding / 2) + thumbPosition, // 4px padding from left
                     top: padding / 2, // 4px padding from top
                     child: AnimatedSize(
                       duration: const Duration(milliseconds: 100),
