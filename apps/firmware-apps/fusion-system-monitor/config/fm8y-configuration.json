@@ -89,6 +89,14 @@
                                 "fm8y/block_gpio/gpio_ctrl0_gpio3",
                                 "fm8y/block_gpio/gpio_ctrl0_gpio4"
                             ]
+                        },
+                        { 
+                            "name": "system_mute_path",
+                            "value": "fm8y/block_ana/ep_aud_out_chs-12/gpio_dac_mute"
+                        },
+                        { 
+                            "name": "system_unmute_time",
+                            "value": 45
                         }
                     ]
                 }
