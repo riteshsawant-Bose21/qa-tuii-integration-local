@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/features/configuration_events/viewModel/events_viewmodel/config_events_state.dart';
 import 'package:fusion_launcher/features/configuration_page/widgets/section_header.dart';
+import 'package:fusion_lib/constants/semantics/features/configuration/events/configation_events_keys.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/fusion_theme/app_theme.dart';
 import 'package:fusion_lib/fusion_widgets/buttons/fusion_button.dart';
@@ -19,60 +20,67 @@ class EventsPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return BlocBuilder<ConfigEventsViewmodel, ConfigEventsState>(
-      builder: (BuildContext context, ConfigEventsState state) {
-        final ConfigEventsViewmodel cubit = context.read<ConfigEventsViewmodel>();
+    return SemanticHelper.container(
+      testId: SemanticHelper.createTestId(SemanticTypes.container, FusionTestKeys.instance.events_section),
+      child: BlocBuilder<ConfigEventsViewmodel, ConfigEventsState>(
+        builder: (BuildContext context, ConfigEventsState state) {
+          final ConfigEventsViewmodel cubit = context.read<ConfigEventsViewmodel>();
 
-        return Column(
-          children: <Widget>[
-            /// Events Section
-            SectionHeader(
-              semanticLabel: 'event_panel',
-              title: 'Events',
-              trailing: GestureDetector(
-                onTap: () {
-                  cubit.addEvent();
-                  FusionToast.success(context, message: "Event created");
-                },
-                child: Icon(
-                  Icons.add_sharp,
-                  size: 16,
-                  color: context.colorScheme.iconWhite,
+          return Column(
+            children: <Widget>[
+              /// Events Section
+              SectionHeader(
+                semanticLabel: FusionTestKeys.instance.events_section_header,
+                title: 'Events',
+                trailing: GestureDetector(
+                  onTap: () {
+                    cubit.addEvent();
+                    FusionToast.success(context, message: "Event created");
+                  },
+                  child: FusionIcon.icon(
+                    semanticId: FusionTestKeys.instance.events_section_headericon,
+                    Icons.add_sharp,
+                    size: 16,
+                    color: context.colorScheme.iconWhite,
+                  ),
                 ),
               ),
-            ),
 
-            /// Event list
-            Expanded(
-              child: Container(
-                clipBehavior: Clip.hardEdge,
-                decoration: BoxDecoration(
-                  borderRadius: const BorderRadius.only(
-                    bottomLeft: Radius.circular(12),
-                    bottomRight: Radius.circular(12),
+              /// Event list
+              Expanded(
+                child: SemanticHelper.container(
+                  testId: SemanticHelper.createTestId(SemanticTypes.container, FusionTestKeys.instance.events_list),
+                  child: Container(
+                    clipBehavior: Clip.hardEdge,
+                    decoration: BoxDecoration(
+                      borderRadius: const BorderRadius.only(
+                        bottomLeft: Radius.circular(12),
+                        bottomRight: Radius.circular(12),
+                      ),
+                      border: Border(
+                        bottom: BorderSide(
+                          color: context.colorScheme.elevation2,
+                          width: 1,
+                        ),
+                        left: BorderSide(
+                          color: context.colorScheme.elevation2,
+                          width: 1,
+                        ),
+                        right: BorderSide(
+                          color: context.colorScheme.elevation2,
+                          width: 1,
+                        ),
+                      ),
+                      color: Theme.of(context).colorScheme.elevation1,
+                    ),
+                    child: _buildEventsList(context, state, cubit),
                   ),
-                  border: Border(
-                    bottom: BorderSide(
-                      color: context.colorScheme.elevation2,
-                      width: 1,
-                    ),
-                    left: BorderSide(
-                      color: context.colorScheme.elevation2,
-                      width: 1,
-                    ),
-                    right: BorderSide(
-                      color: context.colorScheme.elevation2,
-                      width: 1,
-                    ),
-                  ),
-                  color: Theme.of(context).colorScheme.elevation1,
                 ),
-                child: _buildEventsList(context, state, cubit),
               ),
-            ),
-          ],
-        );
-      },
+            ],
+          );
+        },
+      ),
     );
   }
 
@@ -94,6 +102,7 @@ class EventsPanel extends StatelessWidget {
       width: double.infinity,
       alignment: Alignment.center,
       child: FusionAppText(
+        semanticId: FusionTestKeys.instance.events_list_emty,
         text: 'No events available',
         style: Theme.of(context).textTheme.bodySmall?.copyWith(fontSize: 12),
       ),
@@ -108,6 +117,7 @@ class EventsPanel extends StatelessWidget {
           Icon(Icons.error_outline, size: 48, color: context.colorScheme.error),
           const SizedBox(height: 16),
           FusionAppText(
+            semanticId: FusionTestKeys.instance.events_list_error,
             text: 'Error loading events',
             style: Theme.of(context).textTheme.bodyMedium,
           ),

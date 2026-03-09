@@ -6,6 +6,7 @@ import 'package:fusion_launcher/features/configuration_events/viewModel/actions_
 import 'package:fusion_launcher/features/configuration_events/viewModel/events_viewmodel/config_events_state.dart';
 import 'package:fusion_launcher/features/configuration_events/widgets/events/events_panel.dart';
 import 'package:fusion_launcher/features/configuration_events/widgets/actions/trigger_panel.dart';
+import 'package:fusion_lib/constants/semantics/features/configuration/events/configation_events_keys.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
 import '../viewModel/events_viewmodel/config_events_viewmodel.dart';
@@ -17,22 +18,25 @@ class ConfigurationEvents extends StatelessWidget {
   Widget build(BuildContext context) {
     final ProjectViewModel projectViewModel = serviceLocator<ProjectViewModel>();
 
-    return MultiBlocProvider(
-      providers: <BlocProvider<dynamic>>[
-        BlocProvider<ConfigEventsViewmodel>(
-          create:
-              (BuildContext context) => ConfigEventsViewmodel(
-                projectViewModel: projectViewModel,
-              ),
-        ),
-        BlocProvider<ConfigEventActionsViewmodel>(
-          create:
-              (BuildContext context) => ConfigEventActionsViewmodel(
-                projectViewModel: projectViewModel,
-              ),
-        ),
-      ],
-      child: const _ConfigurationEventsBody(),
+    return SemanticHelper.container(
+      testId: SemanticHelper.createTestId(SemanticTypes.container, FusionTestKeys.instance.events_panel),
+      child: MultiBlocProvider(
+        providers: <BlocProvider<dynamic>>[
+          BlocProvider<ConfigEventsViewmodel>(
+            create:
+                (BuildContext context) => ConfigEventsViewmodel(
+                  projectViewModel: projectViewModel,
+                ),
+          ),
+          BlocProvider<ConfigEventActionsViewmodel>(
+            create:
+                (BuildContext context) => ConfigEventActionsViewmodel(
+                  projectViewModel: projectViewModel,
+                ),
+          ),
+        ],
+        child: const _ConfigurationEventsBody(),
+      ),
     );
   }
 }
