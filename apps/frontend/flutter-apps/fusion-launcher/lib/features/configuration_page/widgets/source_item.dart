@@ -93,15 +93,20 @@ class _SourceItemState extends State<SourceItem> {
               ),
             ),
             // todo : add configuration icon back in when source configuration is supported (ex:media player)
-            InkWell(
-              onTap: () {
-                MessagePlayerConfigDialog.show(context);
-              },
-              child: const FusionImage.asset(
-                Assets.configurationFilledIcon,
-                width: 24,
-                height: 24,
-                fit: BoxFit.contain,
+            Visibility(
+              visible: widget.source.pagingSourceType != null,
+              child: InkWell(
+                onTap: () {
+                  MessagePlayerConfigDialog.show(context);
+                },
+                child: FusionImage.asset(
+                  Assets.configurationFilledIcon,
+                  width: 24,
+                  height: 24,
+                  assetColor: context.colorScheme.primaryWhite,
+
+                  fit: BoxFit.contain,
+                ),
               ),
             ),
             const SizedBox(width: 8),

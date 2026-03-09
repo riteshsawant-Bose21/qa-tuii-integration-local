@@ -2,7 +2,9 @@ import 'dart:ui';
 
 import 'package:fusion_lib/fusion_lib.dart';
 
-enum SourceType { mic, media, generic /*, messagePlayer */ }
+enum SourceType { mic, media, generic, paging }
+
+enum PagingSourceType { messagePlayer, messagePlayerWithZoneSelect, pagingMic, pagingMicWithZoneSelect }
 
 enum SourceConnectionType {
   analogInput("Wired"),
@@ -24,6 +26,7 @@ class Source extends HardwareComponent {
   final SourceConnectionType connectionType;
   String? ipAddress; //for AES67 sources
   final String sku;
+  final PagingSourceType? pagingSourceType; // Only applicable for paging sources
 
   /// Constructor for SourceEntity
   Source({
@@ -48,6 +51,7 @@ class Source extends HardwareComponent {
     super.inputPortsData,
     super.outputPortsData,
     required super.addedFromBuildingPage,
+    this.pagingSourceType,
   }) : super(
          hardwareName: hardwareName ?? name,
          id: id ?? "SOURCE${FusionUtils.shortStringUUID()}",
@@ -74,6 +78,7 @@ class Source extends HardwareComponent {
     List<PortData>? inputPortsData,
     List<PortData>? outputPortsData,
     bool? addedFromBuildingPage,
+    PagingSourceType? pagingSourceType,
   }) {
     return Source(
       id: id ?? this.id,
@@ -95,6 +100,7 @@ class Source extends HardwareComponent {
       outputPortsData: outputPortsData ?? this.outputPortsData,
       addedFromBuildingPage: addedFromBuildingPage ?? this.addedFromBuildingPage,
       equipmentLocationPosition: equipmentLocationPosition ?? this.equipmentLocationPosition,
+      pagingSourceType: pagingSourceType ?? this.pagingSourceType,
     );
   }
 
@@ -128,6 +134,12 @@ class Source extends HardwareComponent {
       inputPortsData: (json['inputPortsData'] as List<dynamic>?)?.map((dynamic e) => PortData.fromJson(e as Map<String, dynamic>)).toList() ?? <PortData>[],
       addedFromBuildingPage: json['addedFromBuildingPage'] as bool? ?? false,
       equipmentLocationPosition: DeserializationUtil.intDeserializer.deserialize(json['equipmentLocationPosition']),
+      pagingSourceType: json['pagingSourceType'] != null
+          ? PagingSourceType.values.firstWhere(
+              (PagingSourceType e) => e.name == json['pagingSourceType'],
+              orElse: () => PagingSourceType.messagePlayer,
+            )
+          : null,
     );
   }
 
@@ -153,6 +165,7 @@ class Source extends HardwareComponent {
       'inputPortsData': inputPortsData.map((PortData port) => port.toJson()).toList(),
       'addedFromBuildingPage': addedFromBuildingPage,
       'equipmentLocationPosition': equipmentLocationPosition,
+      'pagingSourceType': pagingSourceType?.name,
     };
   }
 }
