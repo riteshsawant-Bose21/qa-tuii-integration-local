@@ -27,7 +27,7 @@ class __CreateNewListeningAreaWidgetState extends State<_CreateNewListeningAreaW
 
     final ListeningArea newListeningArea = ListeningArea(
       name: locationName,
-      vertices: <Offset>[],
+      vertices: <FusionCanvasPoint>[],
       isDrawn: false,
     );
 

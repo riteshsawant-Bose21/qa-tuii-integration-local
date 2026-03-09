@@ -227,6 +227,13 @@ class _FusionSidebarState extends State<FusionSidebar> {
                                       isSelected: widget.selectedTab == DashboardTabs.settings,
                                       onTap: () => widget.onTabChanged?.call(DashboardTabs.settings),
                                     ),
+                                    _HoverNavItem(
+                                      icon: Icons.account_circle,
+                                      title: DashboardTabs.testLibrady.name,
+                                      semanticsId: 'test_library_tab',
+                                      isSelected: widget.selectedTab == DashboardTabs.testLibrady,
+                                      onTap: () => widget.onTabChanged?.call(DashboardTabs.testLibrady),
+                                    ),
                                   ],
                                 ),
                               ),

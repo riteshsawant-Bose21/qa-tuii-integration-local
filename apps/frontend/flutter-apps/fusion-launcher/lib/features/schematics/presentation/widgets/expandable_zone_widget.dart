@@ -62,38 +62,42 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
 
   @override
   Widget build(BuildContext context) {
-    return ValueListenableBuilder<bool>(
-      valueListenable: _isZoneExpanded,
-      builder: (BuildContext context, bool zoneExpanded, Widget? child) {
-        return BlocBuilder<ProjectViewModel, ProjectViewModelState>(
-          builder: (BuildContext context, ProjectViewModelState state) {
-            final SelectedItem? selectedDevice = _projectViewModel.selectedDevice;
-            final bool isSelected = selectedDevice?.id == widget.zoneId && selectedDevice?.type == SelectedItemType.zone;
+    return AnimatedSize(
+      duration: const Duration(milliseconds: 200),
+      alignment: Alignment.topCenter,
+      child: ValueListenableBuilder<bool>(
+        valueListenable: _isZoneExpanded,
+        builder: (BuildContext context, bool zoneExpanded, Widget? child) {
+          return BlocBuilder<ProjectViewModel, ProjectViewModelState>(
+            builder: (BuildContext context, ProjectViewModelState state) {
+              final SelectedItem? selectedDevice = _projectViewModel.selectedDevice;
+              final bool isSelected = selectedDevice?.id == widget.zoneId && selectedDevice?.type == SelectedItemType.zone;
 
-            return SemanticHelper.container(
-              testId: SemanticHelper.createTestId(SemanticTypes.container, "zone_item_${widget.index}"),
-              child: Column(
-                children: <Widget>[
-                  MouseRegion(
-                    onEnter: (_) => setState(() => isHovered = true),
-                    onExit: (_) => setState(() => isHovered = false),
-                    child: _buildZoneHeader(
-                      context: context,
-                      expanded: zoneExpanded,
-                      isHovered: isHovered,
-                      isSelected: isSelected,
-                      index: widget.index,
+              return SemanticHelper.container(
+                testId: SemanticHelper.createTestId(SemanticTypes.container, "zone_item_${widget.index}"),
+                child: Column(
+                  children: <Widget>[
+                    MouseRegion(
+                      onEnter: (_) => setState(() => isHovered = true),
+                      onExit: (_) => setState(() => isHovered = false),
+                      child: _buildZoneHeader(
+                        context: context,
+                        expanded: zoneExpanded,
+                        isHovered: isHovered,
+                        isSelected: isSelected,
+                        index: widget.index,
+                      ),
                     ),
-                  ),
 
-                  /// Zone Content - shows subzones when expanded
-                  if (zoneExpanded) _buildZoneContent(),
-                ],
-              ),
-            );
-          },
-        );
-      },
+                    /// Zone Content - shows subzones when expanded
+                    if (zoneExpanded) _buildZoneContent(),
+                  ],
+                ),
+              );
+            },
+          );
+        },
+      ),
     );
   }
 
@@ -921,7 +925,7 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
                     if (locationName.trim().isNotEmpty && floorId.isNotEmpty) {
                       final ListeningArea newListeningArea = ListeningArea(
                         name: locationName.trim(),
-                        vertices: <Offset>[],
+                        vertices: <FusionCanvasPoint>[],
                         isDrawn: false,
                       );
 

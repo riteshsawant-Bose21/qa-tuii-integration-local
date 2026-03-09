@@ -19,5 +19,6 @@ export 'fusion_toast.dart';
 export 'fusion_vertical_resizable_widget.dart';
 export 'hover_dropdown.dart';
 export 'fusion_table.dart';
+export 'fusion_flat_container.dart';
 export 'fusion_comma_seperated_tag_textfield.dart';
 export 'property_textfield.dart';

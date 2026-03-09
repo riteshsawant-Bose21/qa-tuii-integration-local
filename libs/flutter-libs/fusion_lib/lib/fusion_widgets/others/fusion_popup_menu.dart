@@ -26,7 +26,7 @@ class FusionPopupMenu<T> extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final childKey = GlobalKey();
-    var createTestId = semanticsId??SemanticHelper.createTestId(SemanticTypes.dropdown, tooltip ?? 'popup_menu');
+    var createTestId = semanticsId ?? SemanticHelper.createTestId(SemanticTypes.dropdown, tooltip ?? 'popup_menu');
     return SemanticHelper.button(
       testId: createTestId,
       child: CustomPopupMenuButton<T>(

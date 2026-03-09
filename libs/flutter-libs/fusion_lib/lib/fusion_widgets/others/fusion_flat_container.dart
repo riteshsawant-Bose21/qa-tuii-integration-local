@@ -38,7 +38,7 @@ class FusionFlatContainer extends StatelessWidget {
           color: color ?? context.colorScheme.elevation1,
 
           borderRadius: BorderRadius.circular(borderRadius),
-          border: Border.all(color: borderColor ?? context.colorScheme.textGrey, width: 1),
+          border: Border.all(color: borderColor ?? context.colorScheme.elevation2, width: 1),
         ),
         child: ClipRRect(
           borderRadius: BorderRadius.circular(borderRadius),

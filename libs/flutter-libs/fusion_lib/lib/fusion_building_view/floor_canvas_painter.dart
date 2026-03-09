@@ -160,7 +160,7 @@ class FloorCanvasPainter extends CustomPainter {
 
       // 1) compute clipPath once
       tmpPath.reset();
-      tmpPath.addPolygon(listeningArea.vertices, true);
+      tmpPath.addPolygon(listeningArea.vertices.map((FusionCanvasPoint v) => v.position).toList(), true);
       canvas.save();
       canvas.clipPath(tmpPath);
       print("HEatMap Data Length: ${heatMapData.length}");
@@ -206,7 +206,7 @@ class FloorCanvasPainter extends CustomPainter {
           splRef: s,
           fieldPointsLen: s?.fieldPoints.length ?? -1,
           splValuesLen: s?.splValues.length ?? -1,
-          vertices: a.vertices,
+          vertices: a.vertices.map((FusionCanvasPoint v) => v.position).toList(),
         ),
       );
     }
@@ -230,7 +230,7 @@ class FloorCanvasPainter extends CustomPainter {
 
       // Clip to listening area polygon once
       tmpPath.reset();
-      tmpPath.addPolygon(listeningArea.vertices, true);
+      tmpPath.addPolygon(listeningArea.vertices.map((FusionCanvasPoint v) => v.position).toList(), true);
       final bounds = tmpPath.getBounds();
 
       // Skip if bounds are invalid
@@ -248,7 +248,7 @@ class FloorCanvasPainter extends CustomPainter {
           splRef: spl,
           fieldPointsLen: spl.fieldPoints.length,
           splValuesLen: spl.splValues.length,
-          vertices: listeningArea.vertices,
+          vertices: listeningArea.vertices.map((FusionCanvasPoint v) => v.position).toList(),
         ),
         () {
           final ui.PictureRecorder areaRecorder = ui.PictureRecorder();
@@ -362,7 +362,7 @@ class FloorCanvasPainter extends CustomPainter {
   /// Draw all listening areas on the canvas
   void _drawListeningAreas(Canvas canvas) {
     for (int i = 0; i < listeningAreas.length; i++) {
-      final List<ui.Offset> poly = listeningAreas[i].vertices;
+      final List<ui.Offset> poly = listeningAreas[i].vertices.map((FusionCanvasPoint v) => v.position).toList();
       final ui.Path path = Path()..addPolygon(poly, true);
 
       bool selected = false;

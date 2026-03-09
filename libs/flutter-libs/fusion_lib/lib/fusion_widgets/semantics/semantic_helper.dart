@@ -12,7 +12,7 @@ class SemanticHelper {
   static Widget button({
     required String testId,
     required Widget child,
-    bool isActive=true,
+    bool isActive = true,
   }) {
     return Semantics(
       identifier: testId,
@@ -57,6 +57,37 @@ class SemanticHelper {
     );
   }
 
+  // Radio controls
+  static Widget radio({
+    required String testId,
+    required bool value,
+    required Widget child,
+    String? label,
+    bool excludeChildSemantics = true,
+  }) {
+    return Semantics(
+      container: true,
+      identifier: testId,
+      selected: value,
+      label: label,
+      excludeSemantics: excludeChildSemantics,
+      child: child,
+    );
+  }
+
+  static Widget radioGroup({
+    required String testId,
+    required Widget child,
+    String? label,
+  }) {
+    return Semantics(
+      container: true,
+      identifier: testId,
+      label: label,
+      child: child,
+    );
+  }
+
   // List items with proper ordering
   static Widget listItem({
     required String testId,
@@ -94,11 +125,13 @@ class SemanticHelper {
     required String testId,
     required Widget child,
     String? label,
+    String? value,
   }) {
     return Semantics(
       container: true,
       identifier: testId,
       label: label,
+      value: value,
       readOnly: true,
       child: child,
     );

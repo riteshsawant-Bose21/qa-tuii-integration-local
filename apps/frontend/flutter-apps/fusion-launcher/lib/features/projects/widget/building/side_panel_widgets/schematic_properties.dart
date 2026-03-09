@@ -1251,7 +1251,7 @@ class _AddNewLocationWidgetState extends State<AddNewLocationWidget> {
 
                         final ListeningArea newListeningArea = ListeningArea(
                           name: locationName,
-                          vertices: <Offset>[],
+                          vertices: <FusionCanvasPoint>[],
                           isDrawn: false,
                         );
 

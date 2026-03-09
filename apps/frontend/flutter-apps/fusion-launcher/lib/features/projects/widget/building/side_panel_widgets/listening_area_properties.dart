@@ -63,9 +63,9 @@ class ListeningAreaProperties extends StatelessWidget {
 
         //prepare List<PropertyRow> rows from selectedListeningArea vertices
         final List<PropertyRow> rows =
-            selectedListeningArea.vertices.asMap().entries.map((MapEntry<int, Offset> entry) {
+            selectedListeningArea.vertices.asMap().entries.map((MapEntry<int, FusionCanvasPoint> entry) {
               final int index = entry.key + 1; // Start index from 1
-              final Offset vertex = entry.value;
+              final Offset vertex = entry.value.position;
               return PropertyRow(
                 title: "P $index",
                 x: double.parse(vertex.dx.toStringAsFixed(2)),
