@@ -28,6 +28,7 @@ class _FloorsSectionState extends State<FloorsSection> {
   @override
   void initState() {
     super.initState();
+
     /// Initialize selectedIndex from ProjectViewModel's current floor index
     final ProjectViewModel viewModel = serviceLocator<ProjectViewModel>();
     selectedIndex = viewModel.currentFloorIndex;
@@ -55,11 +56,11 @@ class _FloorsSectionState extends State<FloorsSection> {
     _errorMessage = null;
   }
 
-  /// Check if floor name already exists
-  bool _floorNameExists(String name) {
-    final ProjectViewModel viewModel = serviceLocator<ProjectViewModel>();
-    return viewModel.floors.any((FloorModel floor) => floor.name.toLowerCase() == name.toLowerCase());
-  }
+  // /// Check if floor name already exists
+  // bool _floorNameExists(String name) {
+  //   final ProjectViewModel viewModel = serviceLocator<ProjectViewModel>();
+  //   return viewModel.floors.any((FloorModel floor) => floor.name.toLowerCase() == name.toLowerCase());
+  // }
 
   /// Add a new floor to the project
   void _addFloor() {
@@ -72,13 +73,13 @@ class _FloorsSectionState extends State<FloorsSection> {
       return;
     }
 
-    // Check if floor name already exists
-    if (_floorNameExists(floorName)) {
-      setState(() {
-        _errorMessage = "Floor name already exists";
-      });
-      return;
-    }
+    // // Check if floor name already exists
+    // if (_floorNameExists(floorName)) {
+    //   setState(() {
+    //     _errorMessage = "Floor name already exists";
+    //   });
+    //   return;
+    // }
 
     final FloorModel model = FloorModel(
       name: floorName,

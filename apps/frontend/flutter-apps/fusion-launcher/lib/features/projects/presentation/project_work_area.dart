@@ -530,7 +530,6 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with TickerProviderSt
                         FusionResizableSidebarSection(
                           sementicId: 'building_plan_floors_list',
                           enableExpandCollapse: false,
-                          initialHeight: 260,
                           stickToTop: true,
                           builder: (BuildContext context, bool isExpanded, VoidCallback toggleExpand, Animation<double> expandAnimation) {
                             return const BuildingPlan();
@@ -538,7 +537,6 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with TickerProviderSt
                         ),
                         FusionResizableSidebarSection(
                           sementicId: 'building_plan_listening_areas_zones_lists',
-                          initialHeight: 260,
                           builder: (BuildContext context, bool isExpanded, VoidCallback toggleExpand, Animation<double> expandAnimation) {
                             return Column(
                               mainAxisSize: MainAxisSize.min,
