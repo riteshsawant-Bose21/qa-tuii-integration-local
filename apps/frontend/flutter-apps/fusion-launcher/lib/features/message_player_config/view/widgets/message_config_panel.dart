@@ -1,3 +1,6 @@
+import 'dart:io';
+
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/features/message_player_config/viewmodel/message_player_config_cubit.dart';
@@ -167,9 +170,6 @@ class _AudioFileSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final MessagePlayerConfigCubit cubit = context.read<MessagePlayerConfigCubit>();
-    final List<MediaFileModel> audioFiles = cubit.getAvailableAudioFiles();
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
@@ -180,75 +180,250 @@ class _AudioFileSection extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 8),
-        FusionDropDown<MediaFileModel>(
-          semanticId: 'audio_file_dropdown',
-          items: audioFiles,
-          selectedIndex: audioFiles.indexWhere(
-            (MediaFileModel f) => f.id == selectedMessage.audioFileId,
+        _AudioFileDropdown(selectedMessage: selectedMessage),
+      ],
+    );
+  }
+}
+
+/// Enum for audio file dropdown options
+enum _AudioFileOption { selectAudioFile, uploadAudioFile }
+
+class _AudioFileDropdown extends StatelessWidget {
+  final MessageModel selectedMessage;
+
+  const _AudioFileDropdown({required this.selectedMessage});
+
+  @override
+  Widget build(BuildContext context) {
+    final MessagePlayerConfigCubit cubit = context.read<MessagePlayerConfigCubit>();
+
+    return FusionDropDown<_AudioFileOption>(
+      semanticId: 'audio_file_options_dropdown',
+      items: const <_AudioFileOption>[
+        _AudioFileOption.selectAudioFile,
+        _AudioFileOption.uploadAudioFile,
+      ],
+      selectedIndex: null,
+      backgroundColor: context.colorScheme.elevation2,
+      offset: const Offset(0, 50),
+      trigger: FusionContainer(
+        raised: false,
+        borderRadius: 8,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          decoration: BoxDecoration(
+            color: context.colorScheme.elevation2,
+            borderRadius: BorderRadius.circular(8),
           ),
-          backgroundColor: context.colorScheme.elevation2,
-          offset: const Offset(0, 50),
-          trigger: FusionContainer(
-            raised: false,
-            borderRadius: 8,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-              decoration: BoxDecoration(
-                color: context.colorScheme.elevation2,
-                borderRadius: BorderRadius.circular(8),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: <Widget>[
+              Expanded(
+                child: FusionAppText(
+                  text: selectedMessage.audioFileName ?? 'Select Audio File',
+                  style: context.textTheme.bodyMedium?.copyWith(
+                    color: selectedMessage.audioFileName != null ? context.colorScheme.textPrimary : context.colorScheme.textPlaceholder,
+                  ),
+                  maxLine: 1,
+                  textOverflow: TextOverflow.ellipsis,
+                ),
               ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: <Widget>[
-                  Expanded(
-                    child: FusionAppText(
-                      text: selectedMessage.audioFileName ?? 'Select Audio File',
-                      style: context.textTheme.bodyMedium?.copyWith(
-                        color: selectedMessage.audioFileName != null ? context.colorScheme.textPrimary : context.colorScheme.textPlaceholder,
-                      ),
-                      maxLine: 1,
-                      textOverflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                  Icon(
-                    Icons.keyboard_arrow_down,
-                    color: context.colorScheme.iconDefault,
-                  ),
-                ],
+              Icon(
+                Icons.keyboard_arrow_down,
+                color: context.colorScheme.iconDefault,
+              ),
+            ],
+          ),
+        ),
+      ),
+      itemBuilder: (BuildContext context, _AudioFileOption item, bool isSelected) {
+        return Row(
+          children: <Widget>[
+            Icon(
+              item == _AudioFileOption.selectAudioFile ? LucideIcons.upload : LucideIcons.upload,
+              size: 18,
+              color: context.colorScheme.textPrimary,
+            ),
+            const SizedBox(width: 12),
+            FusionAppText(
+              text: item == _AudioFileOption.selectAudioFile ? 'Select Audio File' : 'Upload Audio File',
+              style: context.textTheme.bodyMedium?.copyWith(
+                color: context.colorScheme.textPrimary,
               ),
             ),
-          ),
-          itemBuilder: (BuildContext context, MediaFileModel item, bool isSelected) {
-            return Row(
+          ],
+        );
+      },
+      onSelected: (int index) {
+        final _AudioFileOption option =
+            <_AudioFileOption>[
+              _AudioFileOption.selectAudioFile,
+              _AudioFileOption.uploadAudioFile,
+            ][index];
+
+        if (option == _AudioFileOption.selectAudioFile) {
+          _showSelectAudioFileDialog(context, cubit);
+        } else {
+          _uploadAudioFile(context, cubit);
+        }
+      },
+    );
+  }
+
+  void _showSelectAudioFileDialog(BuildContext context, MessagePlayerConfigCubit cubit) {
+    final List<MediaFileModel> audioFiles = cubit.getAvailableAudioFiles();
+
+    if (audioFiles.isEmpty) {
+      FusionToast.error(context, message: 'No audio files available. Please upload an audio file first.');
+      return;
+    }
+
+    showDialog(
+      context: context,
+      builder: (BuildContext dialogContext) {
+        return _SelectAudioFileDialog(
+          audioFiles: audioFiles,
+          selectedAudioFileId: selectedMessage.audioFileId,
+          onSelect: (MediaFileModel file) {
+            cubit.assignAudioFile(file.id, file.name);
+            Navigator.of(dialogContext).pop();
+          },
+        );
+      },
+    );
+  }
+
+  Future<void> _uploadAudioFile(BuildContext context, MessagePlayerConfigCubit cubit) async {
+    try {
+      final FilePickerResult? result = await FilePicker.platform.pickFiles(
+        type: FileType.audio,
+        allowMultiple: false,
+      );
+
+      if (result != null && result.files.isNotEmpty) {
+        final PlatformFile platformFile = result.files.first;
+        if (platformFile.path != null) {
+          final File file = File(platformFile.path!);
+          await cubit.uploadAudioFile(file, fileName: platformFile.name);
+
+          // After upload, get the newly added file and assign it
+          final List<MediaFileModel> audioFiles = cubit.getAvailableAudioFiles();
+          if (audioFiles.isNotEmpty) {
+            final MediaFileModel newFile = audioFiles.last;
+            cubit.assignAudioFile(newFile.id, newFile.name);
+          }
+
+          if (context.mounted) {
+            FusionToast.success(context, message: 'Audio file uploaded successfully');
+          }
+        }
+      }
+    } catch (e) {
+      if (context.mounted) {
+        FusionToast.error(context, message: 'Failed to upload audio file');
+      }
+    }
+  }
+}
+
+class _SelectAudioFileDialog extends StatelessWidget {
+  final List<MediaFileModel> audioFiles;
+  final String? selectedAudioFileId;
+  final Function(MediaFileModel) onSelect;
+
+  const _SelectAudioFileDialog({
+    required this.audioFiles,
+    required this.selectedAudioFileId,
+    required this.onSelect,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      backgroundColor: context.colorScheme.elevation1,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Container(
+        width: 400,
+        constraints: const BoxConstraints(maxHeight: 400),
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: <Widget>[
-                if (isSelected)
-                  Icon(
-                    Icons.check,
-                    size: 16,
-                    color: context.colorScheme.primary,
-                  )
-                else
-                  const SizedBox(width: 16),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: FusionAppText(
-                    text: item.name,
-                    style: context.textTheme.bodyMedium?.copyWith(
-                      color: isSelected ? context.colorScheme.primary : context.colorScheme.textPrimary,
-                    ),
-                    maxLine: 1,
-                    textOverflow: TextOverflow.ellipsis,
+                FusionAppText(
+                  text: 'Select Audio File',
+                  style: context.textTheme.titleSmall?.copyWith(
+                    fontWeight: FontWeight.w600,
+                    color: context.colorScheme.textPrimary,
                   ),
                 ),
+                IconButton(
+                  icon: Icon(LucideIcons.x, color: context.colorScheme.iconDefault),
+                  onPressed: () => Navigator.of(context).pop(),
+                ),
               ],
-            );
-          },
-          onSelected: (int index) {
-            final MediaFileModel file = audioFiles[index];
-            cubit.assignAudioFile(file.id, file.name);
-          },
+            ),
+            const SizedBox(height: 16),
+            Flexible(
+              child: ListView.separated(
+                shrinkWrap: true,
+                itemCount: audioFiles.length,
+                separatorBuilder: (_, __) => const SizedBox(height: 8),
+                itemBuilder: (BuildContext context, int index) {
+                  final MediaFileModel file = audioFiles[index];
+                  final bool isSelected = file.id == selectedAudioFileId;
+
+                  return Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      onTap: () => onSelect(file),
+                      borderRadius: BorderRadius.circular(8),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                        decoration: BoxDecoration(
+                          color: isSelected ? context.colorScheme.primary.withOpacity(0.1) : context.colorScheme.elevation2,
+                          borderRadius: BorderRadius.circular(8),
+                          border: isSelected ? Border.all(color: context.colorScheme.primary, width: 1) : null,
+                        ),
+                        child: Row(
+                          children: <Widget>[
+                            Icon(
+                              LucideIcons.upload,
+                              size: 18,
+                              color: isSelected ? context.colorScheme.primary : context.colorScheme.iconDefault,
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: FusionAppText(
+                                text: file.name,
+                                style: context.textTheme.bodyMedium?.copyWith(
+                                  color: isSelected ? context.colorScheme.primary : context.colorScheme.textPrimary,
+                                ),
+                                maxLine: 1,
+                                textOverflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            if (isSelected)
+                              Icon(
+                                LucideIcons.check,
+                                size: 18,
+                                color: context.colorScheme.primary,
+                              ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+          ],
         ),
-      ],
+      ),
     );
   }
 }

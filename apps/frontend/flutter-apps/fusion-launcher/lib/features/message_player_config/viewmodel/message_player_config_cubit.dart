@@ -13,27 +13,43 @@ part 'message_player_config_state.dart';
 class MessagePlayerConfigCubit extends Cubit<MessagePlayerConfigState> {
   final AudioPlayer _audioPlayer = AudioPlayer();
 
-  MessagePlayerConfigCubit() : super(const MessagePlayerConfigState()) {
+  MessagePlayerConfigCubit() : super(const MessagePlayerInitial()) {
     _initializeAudioPlayer();
   }
 
   ProjectViewModel get _projectViewModel => serviceLocator<ProjectViewModel>();
 
+  /// Helper to get current loaded state or null
+  MessagePlayerLoaded? get _loadedState {
+    final MessagePlayerConfigState currentState = state;
+    if (currentState is MessagePlayerLoaded) {
+      return currentState;
+    }
+    return null;
+  }
+
   void _initializeAudioPlayer() {
     _audioPlayer.onPlayerStateChanged.listen((PlayerState playerState) {
+      final MessagePlayerLoaded? loaded = _loadedState;
+      if (loaded == null) return;
+
       if (playerState == PlayerState.playing) {
-        emit(state.copyWith(isPlaying: true));
+        emit(loaded.copyWith(isPlaying: true));
       } else if (playerState == PlayerState.paused || playerState == PlayerState.stopped || playerState == PlayerState.completed) {
-        emit(state.copyWith(isPlaying: false));
+        emit(loaded.copyWith(isPlaying: false));
       }
     });
 
     _audioPlayer.onPositionChanged.listen((Duration position) {
-      emit(state.copyWith(currentPosition: position));
+      final MessagePlayerLoaded? loaded = _loadedState;
+      if (loaded == null) return;
+      emit(loaded.copyWith(currentPosition: position));
     });
 
     _audioPlayer.onDurationChanged.listen((Duration duration) {
-      emit(state.copyWith(totalDuration: duration));
+      final MessagePlayerLoaded? loaded = _loadedState;
+      if (loaded == null) return;
+      emit(loaded.copyWith(totalDuration: duration));
     });
   }
 
@@ -44,7 +60,7 @@ class MessagePlayerConfigCubit extends Cubit<MessagePlayerConfigState> {
 
     if (messagePlayer != null) {
       emit(
-        state.copyWith(
+        MessagePlayerLoaded(
           messagePlayer: messagePlayer,
           availableZones: availableZones,
         ),
@@ -55,7 +71,7 @@ class MessagePlayerConfigCubit extends Cubit<MessagePlayerConfigState> {
         name: 'Message Player',
       );
       emit(
-        state.copyWith(
+        MessagePlayerLoaded(
           messagePlayer: newPlayer,
           availableZones: availableZones,
         ),
@@ -65,23 +81,24 @@ class MessagePlayerConfigCubit extends Cubit<MessagePlayerConfigState> {
 
   /// Add a new message to the player
   void addMessage() {
-    if (state.messagePlayer == null) return;
+    final MessagePlayerLoaded? loaded = _loadedState;
+    if (loaded == null || loaded.messagePlayer == null) return;
 
-    final int messageCount = state.messagePlayer!.messages.length;
+    final int messageCount = loaded.messagePlayer!.messages.length;
     final String defaultName = 'Untitled_${(messageCount + 1).toString().padLeft(2, '0')}';
 
     final MessageModel newMessage = MessageModel.create(name: defaultName);
     final List<MessageModel> updatedMessages = <MessageModel>[
-      ...state.messagePlayer!.messages,
+      ...loaded.messagePlayer!.messages,
       newMessage,
     ];
 
-    final MessagePlayerModel updatedPlayer = state.messagePlayer!.copyWith(
+    final MessagePlayerModel updatedPlayer = loaded.messagePlayer!.copyWith(
       messages: updatedMessages,
     );
 
     emit(
-      state.copyWith(
+      loaded.copyWith(
         messagePlayer: updatedPlayer,
         selectedMessageId: newMessage.id,
       ),
@@ -90,48 +107,54 @@ class MessagePlayerConfigCubit extends Cubit<MessagePlayerConfigState> {
 
   /// Select a message for editing
   void selectMessage(String messageId) {
+    final MessagePlayerLoaded? loaded = _loadedState;
+    if (loaded == null) return;
+
     _stopPlayback();
     emit(
-      state.copyWith(
+      loaded.copyWith(
         selectedMessageId: messageId,
         currentPosition: Duration.zero,
         isPlaying: false,
+        clearTotalDuration: true,
       ),
     );
   }
 
   /// Update message name
   void updateMessageName(String name) {
-    if (state.selectedMessageId == null || state.messagePlayer == null) return;
+    final MessagePlayerLoaded? loaded = _loadedState;
+    if (loaded == null || loaded.selectedMessageId == null || loaded.messagePlayer == null) return;
 
     final List<MessageModel> updatedMessages =
-        state.messagePlayer!.messages
+        loaded.messagePlayer!.messages
             .map(
-              (MessageModel m) => m.id == state.selectedMessageId ? m.copyWith(name: name) : m,
+              (MessageModel m) => m.id == loaded.selectedMessageId ? m.copyWith(name: name) : m,
             )
             .toList();
 
     emit(
-      state.copyWith(
-        messagePlayer: state.messagePlayer!.copyWith(messages: updatedMessages),
+      loaded.copyWith(
+        messagePlayer: loaded.messagePlayer!.copyWith(messages: updatedMessages),
       ),
     );
   }
 
   /// Assign audio file to selected message
   void assignAudioFile(String audioFileId, String audioFileName) {
-    if (state.selectedMessageId == null || state.messagePlayer == null) return;
+    final MessagePlayerLoaded? loaded = _loadedState;
+    if (loaded == null || loaded.selectedMessageId == null || loaded.messagePlayer == null) return;
 
     final List<MessageModel> updatedMessages =
-        state.messagePlayer!.messages
+        loaded.messagePlayer!.messages
             .map(
-              (MessageModel m) => m.id == state.selectedMessageId ? m.copyWith(audioFileId: audioFileId, audioFileName: audioFileName) : m,
+              (MessageModel m) => m.id == loaded.selectedMessageId ? m.copyWith(audioFileId: audioFileId, audioFileName: audioFileName) : m,
             )
             .toList();
 
     emit(
-      state.copyWith(
-        messagePlayer: state.messagePlayer!.copyWith(messages: updatedMessages),
+      loaded.copyWith(
+        messagePlayer: loaded.messagePlayer!.copyWith(messages: updatedMessages),
       ),
     );
 
@@ -146,87 +169,95 @@ class MessagePlayerConfigCubit extends Cubit<MessagePlayerConfigState> {
       );
       await _audioPlayer.setSourceDeviceFile(file.path);
     } catch (e) {
-      emit(state.copyWith(errorMessage: 'Failed to load audio file'));
+      final MessagePlayerLoaded? loaded = _loadedState;
+      if (loaded != null) {
+        emit(loaded.copyWith(errorMessage: 'Failed to load audio file'));
+      }
     }
   }
 
   /// Update gain for selected message
   void updateGain(double gain) {
-    if (state.selectedMessageId == null || state.messagePlayer == null) return;
+    final MessagePlayerLoaded? loaded = _loadedState;
+    if (loaded == null || loaded.selectedMessageId == null || loaded.messagePlayer == null) return;
 
     final List<MessageModel> updatedMessages =
-        state.messagePlayer!.messages
+        loaded.messagePlayer!.messages
             .map(
-              (MessageModel m) => m.id == state.selectedMessageId ? m.copyWith(gain: gain) : m,
+              (MessageModel m) => m.id == loaded.selectedMessageId ? m.copyWith(gain: gain) : m,
             )
             .toList();
 
     emit(
-      state.copyWith(
-        messagePlayer: state.messagePlayer!.copyWith(messages: updatedMessages),
+      loaded.copyWith(
+        messagePlayer: loaded.messagePlayer!.copyWith(messages: updatedMessages),
       ),
     );
   }
 
   /// Toggle repeat for selected message
   void toggleRepeat(bool repeat) {
-    if (state.selectedMessageId == null || state.messagePlayer == null) return;
+    final MessagePlayerLoaded? loaded = _loadedState;
+    if (loaded == null || loaded.selectedMessageId == null || loaded.messagePlayer == null) return;
 
     final List<MessageModel> updatedMessages =
-        state.messagePlayer!.messages
+        loaded.messagePlayer!.messages
             .map(
-              (MessageModel m) => m.id == state.selectedMessageId ? m.copyWith(repeat: repeat) : m,
+              (MessageModel m) => m.id == loaded.selectedMessageId ? m.copyWith(repeat: repeat) : m,
             )
             .toList();
 
     emit(
-      state.copyWith(
-        messagePlayer: state.messagePlayer!.copyWith(messages: updatedMessages),
+      loaded.copyWith(
+        messagePlayer: loaded.messagePlayer!.copyWith(messages: updatedMessages),
       ),
     );
   }
 
   /// Update repeat count for selected message
   void updateRepeatCount(int count) {
-    if (state.selectedMessageId == null || state.messagePlayer == null) return;
+    final MessagePlayerLoaded? loaded = _loadedState;
+    if (loaded == null || loaded.selectedMessageId == null || loaded.messagePlayer == null) return;
 
     final List<MessageModel> updatedMessages =
-        state.messagePlayer!.messages
+        loaded.messagePlayer!.messages
             .map(
-              (MessageModel m) => m.id == state.selectedMessageId ? m.copyWith(repeatCount: count) : m,
+              (MessageModel m) => m.id == loaded.selectedMessageId ? m.copyWith(repeatCount: count) : m,
             )
             .toList();
 
     emit(
-      state.copyWith(
-        messagePlayer: state.messagePlayer!.copyWith(messages: updatedMessages),
+      loaded.copyWith(
+        messagePlayer: loaded.messagePlayer!.copyWith(messages: updatedMessages),
       ),
     );
   }
 
   /// Update repeat interval for selected message
   void updateRepeatInterval(int seconds) {
-    if (state.selectedMessageId == null || state.messagePlayer == null) return;
+    final MessagePlayerLoaded? loaded = _loadedState;
+    if (loaded == null || loaded.selectedMessageId == null || loaded.messagePlayer == null) return;
 
     final List<MessageModel> updatedMessages =
-        state.messagePlayer!.messages
+        loaded.messagePlayer!.messages
             .map(
-              (MessageModel m) => m.id == state.selectedMessageId ? m.copyWith(repeatIntervalSeconds: seconds) : m,
+              (MessageModel m) => m.id == loaded.selectedMessageId ? m.copyWith(repeatIntervalSeconds: seconds) : m,
             )
             .toList();
 
     emit(
-      state.copyWith(
-        messagePlayer: state.messagePlayer!.copyWith(messages: updatedMessages),
+      loaded.copyWith(
+        messagePlayer: loaded.messagePlayer!.copyWith(messages: updatedMessages),
       ),
     );
   }
 
   /// Toggle zone assignment for selected message
   void toggleZoneAssignment(String zoneId) {
-    if (state.selectedMessageId == null || state.messagePlayer == null) return;
+    final MessagePlayerLoaded? loaded = _loadedState;
+    if (loaded == null || loaded.selectedMessageId == null || loaded.messagePlayer == null) return;
 
-    final MessageModel? selectedMessage = state.selectedMessage;
+    final MessageModel? selectedMessage = loaded.selectedMessage;
     if (selectedMessage == null) return;
 
     List<String> updatedZoneIds;
@@ -237,30 +268,31 @@ class MessagePlayerConfigCubit extends Cubit<MessagePlayerConfigState> {
     }
 
     final List<MessageModel> updatedMessages =
-        state.messagePlayer!.messages
+        loaded.messagePlayer!.messages
             .map(
-              (MessageModel m) => m.id == state.selectedMessageId ? m.copyWith(assignedZoneIds: updatedZoneIds) : m,
+              (MessageModel m) => m.id == loaded.selectedMessageId ? m.copyWith(assignedZoneIds: updatedZoneIds) : m,
             )
             .toList();
 
     emit(
-      state.copyWith(
-        messagePlayer: state.messagePlayer!.copyWith(messages: updatedMessages),
+      loaded.copyWith(
+        messagePlayer: loaded.messagePlayer!.copyWith(messages: updatedMessages),
       ),
     );
   }
 
   /// Delete selected message
   void deleteSelectedMessage() {
-    if (state.selectedMessageId == null || state.messagePlayer == null) return;
+    final MessagePlayerLoaded? loaded = _loadedState;
+    if (loaded == null || loaded.selectedMessageId == null || loaded.messagePlayer == null) return;
 
     _stopPlayback();
 
-    final List<MessageModel> updatedMessages = state.messagePlayer!.messages.where((MessageModel m) => m.id != state.selectedMessageId).toList();
+    final List<MessageModel> updatedMessages = loaded.messagePlayer!.messages.where((MessageModel m) => m.id != loaded.selectedMessageId).toList();
 
     emit(
-      state.copyWith(
-        messagePlayer: state.messagePlayer!.copyWith(messages: updatedMessages),
+      loaded.copyWith(
+        messagePlayer: loaded.messagePlayer!.copyWith(messages: updatedMessages),
         clearSelectedMessage: true,
       ),
     );
@@ -268,14 +300,15 @@ class MessagePlayerConfigCubit extends Cubit<MessagePlayerConfigState> {
 
   /// Play/pause audio
   Future<void> togglePlayPause() async {
-    if (state.selectedMessage?.audioFileId == null) return;
+    final MessagePlayerLoaded? loaded = _loadedState;
+    if (loaded == null || loaded.selectedMessage?.audioFileId == null) return;
 
-    if (state.isPlaying) {
+    if (loaded.isPlaying) {
       await _audioPlayer.pause();
     } else {
       // Load audio if not already loaded
-      if (state.totalDuration == null) {
-        await _loadAudioFile(state.selectedMessage!.audioFileId!);
+      if (loaded.totalDuration == null) {
+        await _loadAudioFile(loaded.selectedMessage!.audioFileId!);
       }
       await _audioPlayer.resume();
     }
@@ -288,12 +321,15 @@ class MessagePlayerConfigCubit extends Cubit<MessagePlayerConfigState> {
 
   void _stopPlayback() {
     _audioPlayer.stop();
-    emit(
-      state.copyWith(
-        isPlaying: false,
-        currentPosition: Duration.zero,
-      ),
-    );
+    final MessagePlayerLoaded? loaded = _loadedState;
+    if (loaded != null) {
+      emit(
+        loaded.copyWith(
+          isPlaying: false,
+          currentPosition: Duration.zero,
+        ),
+      );
+    }
   }
 
   /// Get zone name by ID
@@ -310,38 +346,54 @@ class MessagePlayerConfigCubit extends Cubit<MessagePlayerConfigState> {
     return _projectViewModel.getAllMediaFiles();
   }
 
+  /// Upload a new audio file
+  Future<void> uploadAudioFile(File file, {String? fileName}) async {
+    try {
+      await _projectViewModel.addMediaFile(file: file, fileName: fileName);
+      // Refresh the audio files list - the dropdown will rebuild with new files
+    } catch (e) {
+      final MessagePlayerLoaded? loaded = _loadedState;
+      if (loaded != null) {
+        emit(loaded.copyWith(errorMessage: 'Failed to upload audio file: $e'));
+      }
+    }
+  }
+
   /// Clear error message
   void clearError() {
-    emit(state.copyWith(clearError: true));
+    final MessagePlayerLoaded? loaded = _loadedState;
+    if (loaded != null) {
+      emit(loaded.copyWith(clearError: true));
+    }
   }
 
   /// Save the current message player to the project
   Future<void> saveMessagePlayer() async {
-    if (state.messagePlayer == null) return;
+    final MessagePlayerLoaded? loaded = _loadedState;
+    if (loaded == null || loaded.messagePlayer == null) return;
 
     try {
-      emit(state.copyWith(isLoading: true));
+      emit(const MessagePlayerLoading());
 
       // Check if this is a new player or updating existing
       final MessagePlayerModel? existingPlayer = _projectViewModel.getMessagePlayerById(
-        state.messagePlayer!.id,
+        loaded.messagePlayer!.id,
       );
 
       if (existingPlayer != null) {
         await _projectViewModel.updateMessagePlayer(
-          messagePlayer: state.messagePlayer!,
+          messagePlayer: loaded.messagePlayer!,
         );
       } else {
         await _projectViewModel.addMessagePlayer(
-          messagePlayer: state.messagePlayer!,
+          messagePlayer: loaded.messagePlayer!,
         );
       }
 
-      emit(state.copyWith(isLoading: false));
+      emit(loaded);
     } catch (e) {
       emit(
-        state.copyWith(
-          isLoading: false,
+        loaded.copyWith(
           errorMessage: 'Failed to save message player: $e',
         ),
       );
@@ -351,9 +403,10 @@ class MessagePlayerConfigCubit extends Cubit<MessagePlayerConfigState> {
   /// Load a message player from the project by ID
   void loadMessagePlayer(String messagePlayerId) {
     final MessagePlayerModel? player = _projectViewModel.getMessagePlayerById(messagePlayerId);
-    if (player != null) {
+    final MessagePlayerLoaded? loaded = _loadedState;
+    if (player != null && loaded != null) {
       emit(
-        state.copyWith(
+        loaded.copyWith(
           messagePlayer: player,
           clearSelectedMessage: true,
         ),
@@ -363,24 +416,22 @@ class MessagePlayerConfigCubit extends Cubit<MessagePlayerConfigState> {
 
   /// Delete the current message player from the project
   Future<void> deleteMessagePlayer() async {
-    if (state.messagePlayer == null) return;
+    final MessagePlayerLoaded? loaded = _loadedState;
+    if (loaded == null || loaded.messagePlayer == null) return;
 
     try {
-      emit(state.copyWith(isLoading: true));
+      emit(const MessagePlayerLoading());
       await _projectViewModel.removeMessagePlayer(
-        messagePlayerId: state.messagePlayer!.id,
+        messagePlayerId: loaded.messagePlayer!.id,
       );
       emit(
-        state.copyWith(
-          isLoading: false,
-          messagePlayer: null,
-          clearSelectedMessage: true,
+        MessagePlayerLoaded(
+          availableZones: loaded.availableZones,
         ),
       );
     } catch (e) {
       emit(
-        state.copyWith(
-          isLoading: false,
+        loaded.copyWith(
           errorMessage: 'Failed to delete message player: $e',
         ),
       );

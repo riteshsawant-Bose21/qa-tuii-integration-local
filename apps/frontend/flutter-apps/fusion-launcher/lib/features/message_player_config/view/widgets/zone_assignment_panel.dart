@@ -203,7 +203,7 @@ class _AddZoneDropdown extends StatelessWidget {
     return FusionDropDown<Zone>(
       semanticId: 'add_zone_dropdown',
       items: unassignedZones,
-      selectedIndex: -1,
+      selectedIndex: null,
       backgroundColor: context.colorScheme.elevation2,
       offset: const Offset(0, 50),
       trigger: FusionContainer(

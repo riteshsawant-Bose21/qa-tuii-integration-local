@@ -4,8 +4,7 @@ import 'package:fusion_lib/fusion_lib.dart';
 class FusionDropDown<T> extends StatelessWidget {
   final List<T>? items;
   final int? selectedIndex;
-  final Widget Function(BuildContext context, T item, bool isSelected)?
-  itemBuilder;
+  final Widget Function(BuildContext context, T item, bool isSelected)? itemBuilder;
   final Widget Function(BuildContext context, int index, T item)? childBuilder;
   final void Function(int index)? onSelected;
 
@@ -47,9 +46,7 @@ class FusionDropDown<T> extends StatelessWidget {
         SemanticTypes.dropdown,
         "fusion_drop_down",
       ),
-      value: selectedIndex == null
-          ? 'No selection'
-          : items?[selectedIndex as int].toString(),
+      value: selectedIndex == null ? 'No selection' : items?[selectedIndex as int].toString(),
       child: PopupMenuButton(
         tooltip: tooltip,
         offset: offset,
@@ -74,10 +71,10 @@ class FusionDropDown<T> extends StatelessWidget {
             ];
           }
 
-          if (items != null && selectedIndex != null && itemBuilder != null) {
-            // Case 1: Build list with selection
+          if (items != null && itemBuilder != null) {
+            // Case 1: Build list with selection (selectedIndex can be null for no selection)
             return List<PopupMenuEntry<int>>.generate(items!.length, (index) {
-              final isSelected = index == selectedIndex;
+              final isSelected = selectedIndex != null && index == selectedIndex;
               return PopupMenuItem<int>(
                 value: index,
                 padding: const EdgeInsets.all(12),
@@ -87,7 +84,7 @@ class FusionDropDown<T> extends StatelessWidget {
           }
 
           throw Exception(
-            "FusionDropDown requires either (items + selectedIndex + itemBuilder) or (customDropdownBuilder)",
+            "FusionDropDown requires either (items + itemBuilder) or (customDropdownBuilder)",
           );
         },
         child:

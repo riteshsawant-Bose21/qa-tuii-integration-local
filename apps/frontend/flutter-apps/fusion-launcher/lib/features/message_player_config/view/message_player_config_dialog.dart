@@ -120,7 +120,7 @@ class _MessagePlayerConfigDialogContent extends StatelessWidget {
                   Expanded(
                     child: BlocBuilder<MessagePlayerConfigCubit, MessagePlayerConfigState>(
                       builder: (BuildContext context, MessagePlayerConfigState state) {
-                        if (state.isLoading) {
+                        if (state is MessagePlayerLoading) {
                           return const Center(child: CircularProgressIndicator());
                         }
                         if (state.hasNoMessages) {

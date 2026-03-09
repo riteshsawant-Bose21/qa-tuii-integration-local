@@ -1,37 +1,25 @@
 part of 'message_player_config_cubit.dart';
 
-/// State for the Message Player Configuration Dialog
-class MessagePlayerConfigState extends Equatable {
-  /// The message player being configured
-  final MessagePlayerModel? messagePlayer;
+/// Base state class for the Message Player Configuration Dialog
+sealed class MessagePlayerConfigState extends Equatable {
+  const MessagePlayerConfigState();
 
-  /// ID of the currently selected message
-  final String? selectedMessageId;
+  /// Get the message player being configured
+  MessagePlayerModel? get messagePlayer => null;
 
-  /// Loading state
-  final bool isLoading;
+  /// Get the ID of the currently selected message
+  String? get selectedMessageId => null;
 
-  /// Error message if any
-  final String? errorMessage;
+  /// Get the error message if any
+  String? get errorMessage => null;
 
-  /// Audio playback state
-  final bool isPlaying;
-  final Duration currentPosition;
-  final Duration? totalDuration;
+  /// Get audio playback state
+  bool get isPlaying => false;
+  Duration get currentPosition => Duration.zero;
+  Duration? get totalDuration => null;
 
-  /// Available zones for assignment
-  final List<Zone> availableZones;
-
-  const MessagePlayerConfigState({
-    this.messagePlayer,
-    this.selectedMessageId,
-    this.isLoading = false,
-    this.errorMessage,
-    this.isPlaying = false,
-    this.currentPosition = Duration.zero,
-    this.totalDuration,
-    this.availableZones = const <Zone>[],
-  });
+  /// Get available zones for assignment
+  List<Zone> get availableZones => const <Zone>[];
 
   /// Returns true if there are no messages in the player
   bool get hasNoMessages => messagePlayer?.messages.isEmpty ?? true;
@@ -51,10 +39,57 @@ class MessagePlayerConfigState extends Equatable {
   /// Returns all messages in the player
   List<MessageModel> get messages => messagePlayer?.messages ?? <MessageModel>[];
 
-  MessagePlayerConfigState copyWith({
+  @override
+  List<Object?> get props => <Object?>[];
+}
+
+/// Initial state - no data loaded yet
+class MessagePlayerInitial extends MessagePlayerConfigState {
+  const MessagePlayerInitial();
+}
+
+/// Loading state - performing an operation
+class MessagePlayerLoading extends MessagePlayerConfigState {
+  const MessagePlayerLoading();
+}
+
+/// Loaded state - message player successfully loaded
+class MessagePlayerLoaded extends MessagePlayerConfigState {
+  @override
+  final MessagePlayerModel? messagePlayer;
+
+  @override
+  final String? selectedMessageId;
+
+  @override
+  final String? errorMessage;
+
+  @override
+  final bool isPlaying;
+
+  @override
+  final Duration currentPosition;
+
+  @override
+  final Duration? totalDuration;
+
+  @override
+  final List<Zone> availableZones;
+
+  const MessagePlayerLoaded({
+    this.messagePlayer,
+    this.selectedMessageId,
+    this.errorMessage,
+    this.isPlaying = false,
+    this.currentPosition = Duration.zero,
+    this.totalDuration,
+    this.availableZones = const <Zone>[],
+  });
+
+  /// Create a copy with updated values
+  MessagePlayerLoaded copyWith({
     MessagePlayerModel? messagePlayer,
     String? selectedMessageId,
-    bool? isLoading,
     String? errorMessage,
     bool? isPlaying,
     Duration? currentPosition,
@@ -62,15 +97,15 @@ class MessagePlayerConfigState extends Equatable {
     List<Zone>? availableZones,
     bool clearSelectedMessage = false,
     bool clearError = false,
+    bool clearTotalDuration = false,
   }) {
-    return MessagePlayerConfigState(
+    return MessagePlayerLoaded(
       messagePlayer: messagePlayer ?? this.messagePlayer,
       selectedMessageId: clearSelectedMessage ? null : (selectedMessageId ?? this.selectedMessageId),
-      isLoading: isLoading ?? this.isLoading,
       errorMessage: clearError ? null : (errorMessage ?? this.errorMessage),
       isPlaying: isPlaying ?? this.isPlaying,
       currentPosition: currentPosition ?? this.currentPosition,
-      totalDuration: totalDuration ?? this.totalDuration,
+      totalDuration: clearTotalDuration ? null : (totalDuration ?? this.totalDuration),
       availableZones: availableZones ?? this.availableZones,
     );
   }
@@ -79,11 +114,23 @@ class MessagePlayerConfigState extends Equatable {
   List<Object?> get props => <Object?>[
     messagePlayer,
     selectedMessageId,
-    isLoading,
     errorMessage,
     isPlaying,
     currentPosition,
     totalDuration,
     availableZones,
   ];
+}
+
+/// Error state - failed to load or save message player
+class MessagePlayerError extends MessagePlayerConfigState {
+  final String message;
+
+  const MessagePlayerError({required this.message});
+
+  @override
+  String? get errorMessage => message;
+
+  @override
+  List<Object?> get props => <Object?>[message];
 }
