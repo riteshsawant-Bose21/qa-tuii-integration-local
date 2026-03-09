@@ -29,9 +29,11 @@ class _BluetoothSettingsPageState extends State<BluetoothSettingsPage> {
 
   // Controllers
   final TextEditingController _setupController = TextEditingController();
-  final TextEditingController _currentPasscodeController = TextEditingController(text: "676767"); // Mocked existing
+  final TextEditingController _currentPasscodeController =
+      TextEditingController(text: "676767"); // Mocked existing
   final TextEditingController _newPasscodeController = TextEditingController();
-  final TextEditingController _confirmPasscodeController = TextEditingController();
+  final TextEditingController _confirmPasscodeController =
+      TextEditingController();
 
   @override
   void dispose() {
@@ -47,7 +49,8 @@ class _BluetoothSettingsPageState extends State<BluetoothSettingsPage> {
     setState(() {
       _isPasscodeSet = true;
       _isChangingPasscode = false; // Close the change menu
-      _currentPasscodeController.text = _newPasscodeController.text; // Update mock
+      _currentPasscodeController.text =
+          _newPasscodeController.text; // Update mock
       _newPasscodeController.clear();
       _confirmPasscodeController.clear();
     });
@@ -106,14 +109,19 @@ class _BluetoothSettingsPageState extends State<BluetoothSettingsPage> {
                     ),
                     const SizedBox(width: 16),
                     FusionNeumorphicButton(
+                      semanticId: 'bluetooth_settings_save_button',
                       borderRadius: 6,
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 8,
+                      ),
                       margin: EdgeInsets.zero,
                       text: "Save Passcode",
                       onTap: () {
                         setState(() {
                           _isPasscodeSet = true;
-                          _currentPasscodeController.text = _setupController.text;
+                          _currentPasscodeController.text =
+                              _setupController.text;
                         });
                       },
                       textStyle: context.textTheme.labelMedium!.copyWith(
@@ -172,8 +180,12 @@ class _BluetoothSettingsPageState extends State<BluetoothSettingsPage> {
                     PasscodeInputField(controller: _confirmPasscodeController),
                     const SizedBox(width: 16),
                     FusionNeumorphicButton(
+                      semanticId: 'bluetooth_settings_save_button',
                       borderRadius: 6,
-                      padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 8),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 32,
+                        vertical: 8,
+                      ),
                       margin: EdgeInsets.zero,
                       text: "Save",
                       onTap: _handleSaveNewPasscode,
