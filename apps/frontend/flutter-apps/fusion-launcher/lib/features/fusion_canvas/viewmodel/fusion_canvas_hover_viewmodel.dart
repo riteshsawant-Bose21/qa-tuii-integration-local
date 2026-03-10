@@ -51,6 +51,7 @@ class FusionCanvasHoverViewModel extends Cubit<FusionHoverState> {
             ),
           ),
         );
+        // print("Hovering over painter ${pos.id} and element ${hoveredElement?.id}");
       } else {
         emit(FusionHoverState(hoveredPainterId: null));
       }

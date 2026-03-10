@@ -39,6 +39,9 @@ class SnapPainter extends FusionBasePainter {
         case SnapPointType.point:
           _drawPointSnapIndicator(canvas, position, indicatorPaint, fillPaint, painter);
           break;
+        case SnapPointType.equidistant:
+          _drawEquidistantSnapIndicator(canvas, snapPoint, snappedPosition, indicatorPaint, fillPaint, painter);
+          break;
         case SnapPointType.orthogonalX:
         case SnapPointType.orthogonalY:
           _lineSnapIndicator(canvas, snapPoint, snappedPosition, indicatorPaint, painter);
@@ -80,6 +83,34 @@ class SnapPainter extends FusionBasePainter {
     _drawCross(canvas, referencePoint, indicatorPaint, painter);
   }
 
+  void _drawEquidistantSnapIndicator(
+    Canvas canvas,
+    SnapPoint snapPoint,
+    Offset snappedPosition,
+    Paint indicatorPaint,
+    Paint fillPaint,
+    FusionCanvasPainter painter,
+  ) {
+    final Paint dashedPaint =
+        Paint()
+          ..color = indicatorPaint.color
+          ..strokeWidth = indicatorPaint.strokeWidth
+          ..style = PaintingStyle.stroke;
+
+    final Offset anchorPoint = snapPoint.referencePosition;
+    final Offset? sourcePoint = snapPoint.secondaryReferencePosition;
+
+    if (sourcePoint != null) {
+      drawDashedLine(canvas, sourcePoint, anchorPoint, dashedPaint, painter);
+      _drawCross(canvas, sourcePoint, indicatorPaint, painter);
+    }
+
+    drawDashedLine(canvas, anchorPoint, snappedPosition, dashedPaint, painter);
+    _drawCross(canvas, anchorPoint, indicatorPaint, painter);
+
+    _drawPointSnapIndicator(canvas, snappedPosition, indicatorPaint, fillPaint, painter);
+  }
+
   void _drawCross(Canvas canvas, Offset center, Paint paint, FusionCanvasPainter painter) {
     final double size = nonScaling(4, painter);
     canvas.drawLine(
@@ -97,6 +128,8 @@ class SnapPainter extends FusionBasePainter {
   Color _getColorForSnapType(SnapPointType type) {
     switch (type) {
       case SnapPointType.point:
+        return Colors.red;
+      case SnapPointType.equidistant:
         return Colors.red;
       case SnapPointType.orthogonalX:
       case SnapPointType.orthogonalY:

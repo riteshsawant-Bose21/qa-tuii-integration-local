@@ -20,7 +20,6 @@ class FusionSnapViewModel extends Cubit<FusionSnapState> {
   /// Get current polygon points for comparison
   List<Offset> get polygonPoints => _polygonPoints;
 
-  /// Update cursor position and calculate snap
   void updateCursorPosition(Offset? position) {
     if (position == null) {
       emit(const FusionSnapState.initial());

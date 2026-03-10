@@ -3,12 +3,14 @@ import 'dart:ui';
 /// Represents a point that can be snapped to
 class SnapPoint {
   final Offset referencePosition;
+  final Offset? secondaryReferencePosition;
   final Offset position;
   final SnapPointType type;
   final String? label;
 
   const SnapPoint({
     required this.referencePosition,
+    this.secondaryReferencePosition,
     required this.position,
     required this.type,
     this.label,
@@ -20,6 +22,7 @@ enum SnapPointType {
   point,
   orthogonalX,
   orthogonalY,
+  equidistant,
 }
 
 /// Configuration for snapping behavior
@@ -28,6 +31,8 @@ class SnapSettings {
   final bool enableGridSnap;
   final bool enablePointSnap;
   final bool enableOrthogonalSnap;
+  final bool enableEquidistantSnap;
+  final double axisAlignmentTolerance;
   final double gridSize;
 
   const SnapSettings({
@@ -35,6 +40,8 @@ class SnapSettings {
     this.enableGridSnap = false,
     this.enablePointSnap = true,
     this.enableOrthogonalSnap = true,
+    this.enableEquidistantSnap = true,
+    this.axisAlignmentTolerance = 12.0,
     this.gridSize = 50.0,
   });
 }
@@ -137,9 +144,11 @@ class SnapService {
 
     // Find all snap points within snap distance, grouped by type
     SnapPoint? closestPointSnap;
+    SnapPoint? closestEquidistantSnap;
     SnapPoint? closestOrthogonalX;
     SnapPoint? closestOrthogonalY;
     double closestPointDistance = double.infinity;
+    double closestEquidistantDistance = double.infinity;
     double closestOrthogonalXDistance = double.infinity;
     double closestOrthogonalYDistance = double.infinity;
 
@@ -152,6 +161,12 @@ class SnapService {
           if (distance < closestPointDistance) {
             closestPointDistance = distance;
             closestPointSnap = snapPoint;
+          }
+          break;
+        case SnapPointType.equidistant:
+          if (distance < closestEquidistantDistance) {
+            closestEquidistantDistance = distance;
+            closestEquidistantSnap = snapPoint;
           }
           break;
         case SnapPointType.orthogonalX:
@@ -177,6 +192,15 @@ class SnapService {
       activeSnapPoints.add(closestPointSnap);
       return SnapResult(
         snappedPosition: closestPointSnap.position,
+        snapPoints: activeSnapPoints,
+        hasSnapped: true,
+      );
+    }
+
+    if (closestEquidistantSnap != null) {
+      activeSnapPoints.add(closestEquidistantSnap);
+      return SnapResult(
+        snappedPosition: closestEquidistantSnap.position,
         snapPoints: activeSnapPoints,
         hasSnapped: true,
       );
@@ -231,6 +255,15 @@ class SnapService {
       }
     }
 
+    if (settings.enableEquidistantSnap) {
+      snapPoints.addAll(
+        _generateEquidistantSnapPoints(
+          existingPoints,
+          cursorPosition,
+        ),
+      );
+    }
+
     return snapPoints;
   }
 
@@ -275,11 +308,81 @@ class SnapService {
     return orthogonalPoints;
   }
 
+  /// Generate equidistant snap points by extending existing segments with equal length
+  List<SnapPoint> _generateEquidistantSnapPoints(
+    List<Offset> existingPoints,
+    Offset cursorPosition,
+  ) {
+    final List<SnapPoint> equidistantPoints = <SnapPoint>[];
+
+    if (existingPoints.length < 2) {
+      return equidistantPoints;
+    }
+
+    for (int i = 0; i < existingPoints.length; i++) {
+      for (int j = 0; j < existingPoints.length; j++) {
+        if (i == j) continue;
+
+        final Offset startPoint = existingPoints[i];
+        final Offset endPoint = existingPoints[j];
+
+        final bool isHorizontal = (startPoint.dy - endPoint.dy).abs() <= settings.axisAlignmentTolerance;
+        final bool isVertical = (startPoint.dx - endPoint.dx).abs() <= settings.axisAlignmentTolerance;
+
+        if (!isHorizontal && !isVertical) {
+          continue;
+        }
+
+        if (isHorizontal && (cursorPosition.dy - endPoint.dy).abs() > settings.axisAlignmentTolerance) {
+          continue;
+        }
+
+        if (isVertical && (cursorPosition.dx - endPoint.dx).abs() > settings.axisAlignmentTolerance) {
+          continue;
+        }
+
+        final Offset targetPosition;
+
+        if (isHorizontal) {
+          final double segmentDistance = endPoint.dx - startPoint.dx;
+          if (segmentDistance.abs() < 0.001) continue;
+
+          final double stepCount = ((cursorPosition.dx - endPoint.dx) / segmentDistance).roundToDouble();
+          if (stepCount == 0) continue;
+
+          targetPosition = Offset(endPoint.dx + (segmentDistance * stepCount), endPoint.dy);
+        } else {
+          final double segmentDistance = endPoint.dy - startPoint.dy;
+          if (segmentDistance.abs() < 0.001) continue;
+
+          final double stepCount = ((cursorPosition.dy - endPoint.dy) / segmentDistance).roundToDouble();
+          if (stepCount == 0) continue;
+
+          targetPosition = Offset(endPoint.dx, endPoint.dy + (segmentDistance * stepCount));
+        }
+
+        equidistantPoints.add(
+          SnapPoint(
+            referencePosition: endPoint,
+            secondaryReferencePosition: startPoint,
+            position: targetPosition,
+            type: SnapPointType.equidistant,
+            label: 'Equidistant',
+          ),
+        );
+      }
+    }
+
+    return equidistantPoints;
+  }
+
   /// Check if snapping is enabled for a specific type
   bool isSnapTypeEnabled(SnapPointType type) {
     switch (type) {
       case SnapPointType.point:
         return settings.enablePointSnap;
+      case SnapPointType.equidistant:
+        return settings.enableEquidistantSnap;
       case SnapPointType.orthogonalX:
       case SnapPointType.orthogonalY:
         return settings.enableOrthogonalSnap;

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:fusion_launcher/features/fusion_canvas/view/painters/elements/fusion_canvas_element_painter.dart';
 import 'package:fusion_launcher/features/fusion_canvas/view/painters/fusion_base_painter.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
@@ -89,9 +90,19 @@ class SelectionToolPainter extends FusionBasePainter {
       _paintPolygonSelection(canvas, size, painter, element);
     } else if (element is FusionCanvasLinePainter) {
       _paintLineSelection(canvas, size, painter, element);
-    } else if (element is FusionImagePainter) {
-      _paintImageSelection(canvas, size, painter, element);
+    } else if (element is FusionCanvasElementPainter) {
+      _paintSimpleRectSelection(canvas, element.getTransformedRect(painter), painter);
     }
+  }
+
+  void _paintSimpleRectSelection(Canvas canvas, Rect rect, FusionCanvasPainter painter) {
+    canvas.drawRect(
+      rect,
+      Paint()
+        ..color = selectionColor
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = nonScaling(strokeWidth, painter),
+    );
   }
 
   void _paintLineSelection(

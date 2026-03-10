@@ -6,6 +6,7 @@ import 'package:fusion_launcher/features/fusion_canvas/state/tools/drag_tool_sta
 import 'package:fusion_launcher/features/fusion_canvas/state/tools/measure_tool_state.dart';
 import 'package:fusion_launcher/features/fusion_canvas/state/tools/pen_tool_state.dart';
 import 'package:fusion_launcher/features/fusion_canvas/view/fusion_canvas.dart';
+import 'package:fusion_launcher/features/fusion_canvas/view/painters/elements/fusion_canvas_element_painter.dart';
 import 'package:fusion_launcher/features/fusion_canvas/view/painters/fusion_base_painter.dart';
 import 'package:fusion_launcher/features/fusion_canvas/viewmodel/fusion_canvas_input_viewmodel.dart';
 import 'package:fusion_launcher/features/fusion_canvas/viewmodel/fusion_canvas_tool_viewmodel.dart';
@@ -50,6 +51,11 @@ class FusionCanvasListenersWrapper extends StatelessWidget {
                   painter.polygon.points.map((FusionCanvasPoint e) => e.position + fusionToolState.delta).toList(),
                 );
                 return;
+              } else if (painter is FusionCanvasElementPainter) {
+                context.read<FusionSnapViewModel>().updateCursorPositions(
+                  <Offset>[painter.getRect().center + fusionToolState.delta],
+                );
+                return;
               }
             }
 
@@ -65,6 +71,11 @@ class FusionCanvasListenersWrapper extends StatelessWidget {
                       .where((FusionCanvasPoint p) => fusionToolState.pointIds.contains(p.id))
                       .map((FusionCanvasPoint e) => e.position + fusionToolState.delta)
                       .toList(),
+                );
+                return;
+              } else if (painter is FusionCanvasElementPainter) {
+                context.read<FusionSnapViewModel>().updateCursorPositions(
+                  <Offset>[painter.getRect().center + fusionToolState.delta],
                 );
                 return;
               }
@@ -125,6 +136,10 @@ class FusionCanvasListenersWrapper extends StatelessWidget {
               if (painter is FusionPolygonPainter) {
                 context.read<FusionSnapViewModel>().updateCursorPositions(
                   painter.polygon.points.map((FusionCanvasPoint e) => e.position + state.delta).toList(),
+                );
+              } else if (painter is FusionCanvasElementPainter) {
+                context.read<FusionSnapViewModel>().updateCursorPositions(
+                  <Offset>[painter.getRect().center + state.delta],
                 );
               }
             } else if (state is PointsDraggingState) {
