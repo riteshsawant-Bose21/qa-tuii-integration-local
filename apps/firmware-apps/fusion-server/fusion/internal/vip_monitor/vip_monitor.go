@@ -573,7 +573,7 @@ func (m *VIPMonitor) handleVRRPUpdate(vipAddr string, srcIP string) {
 	}
 }
 
-// UpdateVIP updates the VIP in the configuration file (does NOT reload keepalived)
+// UpdateVIP updates the VIP in the configuration file and reloads keepalived if needed.
 func (m *VIPMonitor) updateVIP(vipValue string) error {
 	logger := logging.GetLogger()
 
@@ -614,17 +614,6 @@ func (m *VIPMonitor) reloadKeepalived() error {
 
 	logger.Info("Reloading keepalived service")
 	return exec.Command("systemctl", "reload", "keepalived").Run()
-}
-
-// UpdateVIPAndReload updates the VIP configuration and reloads keepalived
-func (m *VIPMonitor) updateVIPAndReload(vipValue string) error {
-	if err := m.updateVIP(vipValue); err != nil {
-		return err
-	}
-	if err := m.reloadKeepalived(); err != nil {
-		return err
-	}
-	return nil
 }
 
 // getVIPInLocalConfig is for use in "local" development mode only
