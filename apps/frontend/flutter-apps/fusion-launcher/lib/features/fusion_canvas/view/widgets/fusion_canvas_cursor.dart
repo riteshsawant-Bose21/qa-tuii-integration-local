@@ -13,10 +13,10 @@ import 'package:fusion_launcher/features/fusion_canvas/viewmodel/fusion_canvas_t
 import 'package:fusion_lib/fusion_lib.dart';
 
 enum _CanvasCursorType {
-  basic(image: "assets/icons/canvas_cursor/cursor.png", pointerTip: Alignment.topLeft),
-  precise(image: "assets/icons/canvas_cursor/pencil.png", pointerTip: Alignment.bottomLeft),
-  grab(image: "assets/icons/canvas_cursor/cursor.png", pointerTip: Alignment.topLeft),
-  grabbing(image: "assets/icons/canvas_cursor/cursor.png", pointerTip: Alignment.topLeft),
+  basic(image: "assets/icons/canvas_cursor/cursor.png", pointerTip: Alignment.center),
+  precise(image: "assets/icons/canvas_cursor/pencil.png", pointerTip: Alignment.bottomCenter),
+  grab(image: "assets/icons/canvas_cursor/cursor.png", pointerTip: Alignment.center),
+  grabbing(image: "assets/icons/canvas_cursor/cursor.png", pointerTip: Alignment.center),
   resizeLeftRight(image: "assets/icons/canvas_cursor/move_horizontal.png", pointerTip: Alignment.center),
   resizeUpDown(image: "assets/icons/canvas_cursor/move_vertical.png", pointerTip: Alignment.center);
 
@@ -65,16 +65,21 @@ class FusionCanvasCursor extends StatelessWidget {
         final Offset effectiveMousePosition = canvasState.transformPosition(mousePosition);
         final Widget cursor = _buildCursor(cursorType);
         final (Alignment, Widget)? customCursor = builder != null ? builder!(context) : null;
-        final Alignment alignment = Alignment.center; //customCursor != null ? customCursor.$1 : cursorType.pointerTip;
+
+        final Alignment alignment = customCursor != null ? customCursor.$1 : cursorType.pointerTip;
         final Widget cursorWidget = customCursor != null ? customCursor.$2 : cursor;
+        print("Cursor Alignment: ${alignment.x} , ${alignment.y} for cursor type $cursorType");
         return Positioned(
-          left: effectiveMousePosition.dx + alignment.x * -12,
-          top: effectiveMousePosition.dy + alignment.y * 12,
+          left: effectiveMousePosition.dx,
+          top: effectiveMousePosition.dy,
           child: IgnorePointer(
-            child: SizedBox(
-              height: 24,
-              width: 24,
-              child: cursorWidget,
+            child: Transform.translate(
+              offset: Offset(alignment.x * 24, alignment.y * -24),
+              child: SizedBox(
+                height: 24,
+                width: 24,
+                child: cursorWidget,
+              ),
             ),
           ),
         );

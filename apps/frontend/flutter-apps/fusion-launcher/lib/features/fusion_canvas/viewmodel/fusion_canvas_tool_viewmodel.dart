@@ -56,7 +56,6 @@ class FusionCanvasToolViewModel extends Cubit<FusionToolState> {
     FusionCanvasInputContext context,
   ) {
     final FusionToolState currentState = state;
-    print("Current tool state: ${currentState.runtimeType}, input state: ${inputState.runtimeType}");
     if (currentState is MeasureToolState) {
       return _measureToolHelper.transform(
         inputState: inputState,
