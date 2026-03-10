@@ -22,6 +22,7 @@ class FusionSnapViewModel extends Cubit<FusionSnapState> {
 
   /// Update cursor position and calculate snap
   void updateCursorPosition(Offset? position) {
+    print("UPdate cursor position: $position");
     if (position == null) {
       emit(const FusionSnapState.initial());
       return;

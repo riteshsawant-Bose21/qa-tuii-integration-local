@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/features/fusion_canvas/state/fusion_tool_state.dart';
 import 'package:fusion_launcher/features/fusion_canvas/state/tools/select_tool_state.dart';
+import 'package:fusion_launcher/features/fusion_canvas/view/painters/elements/fusion_canvas_element_painter.dart';
 import 'package:fusion_launcher/features/fusion_canvas/view/painters/fusion_base_painter.dart';
 import 'package:fusion_launcher/features/fusion_canvas/view/widgets/canvas_control_wrapper.dart';
 import 'package:fusion_launcher/features/fusion_canvas/view/widgets/fusion_canvas_listeners_wrapper.dart';
@@ -121,6 +122,18 @@ class FusionCanvas extends StatelessWidget {
                                 BuildContext context,
                                 FusionCanvasInputState inputState,
                               ) {
+                                final bool? shouldSkipEvent = switch (inputState) {
+                                  FusionCanvasInputTapDownState _ => toolbarEvents?.inputEvents?.onMouseDown?.call(inputState),
+                                  FusionCanvasInputTapUpState _ => toolbarEvents?.inputEvents?.onMouseUp?.call(inputState),
+                                  FusionCanvasInputDraggingState _ => toolbarEvents?.inputEvents?.onDrag?.call(inputState),
+                                  FusionCanvasInputDoubleTapState _ => toolbarEvents?.inputEvents?.onDoubleTap?.call(inputState),
+                                  FusionCanvasInputLongPressState _ => toolbarEvents?.inputEvents?.onLongPress?.call(inputState),
+                                  FusionCanvasInputSecondaryTapState _ => toolbarEvents?.inputEvents?.onSecondaryClick?.call(inputState),
+                                  _ => null,
+                                };
+                                if (shouldSkipEvent == true) {
+                                  return;
+                                }
                                 // Update hover position
                                 context.read<FusionCanvasHoverViewModel>().updateHoverPosition(
                                   inputState.mousePosition,
@@ -255,6 +268,7 @@ class FusionCanvas extends StatelessWidget {
 
 class FusionCanvasEvents {
   final FusionPenToolEvents? penToolEvents;
+  final FusionCanvasInputEvents? inputEvents;
   final ValueChanged<FusionBasePainter?>? onLayerSelected;
   final void Function(FusionBasePainter painter, Offset offset)? onMoveLayer;
 
@@ -273,6 +287,7 @@ class FusionCanvasEvents {
     this.onRemovePoints,
     this.onDeleteLayer,
     this.onMovePoints,
+    this.inputEvents,
   });
 }
 
@@ -281,6 +296,33 @@ class FusionPenToolEvents {
   final ValueChanged<List<FusionCanvasPoint>>? onPathClosed;
 
   FusionPenToolEvents({this.onPointsChanged, this.onPathClosed});
+}
+
+///
+/// Should return `true` if the event is handled and should not be used inside again.
+///
+typedef FusionCanvasEventCallback<T> = bool Function(T event);
+
+class FusionCanvasInputEvents {
+  final FusionCanvasEventCallback<KeyEvent>? onKeyEvent;
+  final FusionCanvasEventCallback<FusionCanvasInputIdleState>? onMouseMove;
+  final FusionCanvasEventCallback<FusionCanvasInputTapDownState>? onMouseDown;
+  final FusionCanvasEventCallback<FusionCanvasInputTapUpState>? onMouseUp;
+  final FusionCanvasEventCallback<FusionCanvasInputDraggingState>? onDrag;
+  final FusionCanvasEventCallback<FusionCanvasInputDoubleTapState>? onDoubleTap;
+  final FusionCanvasEventCallback<FusionCanvasInputLongPressState>? onLongPress;
+  final FusionCanvasEventCallback<FusionCanvasInputSecondaryTapState>? onSecondaryClick;
+
+  FusionCanvasInputEvents({
+    this.onKeyEvent,
+    this.onMouseMove,
+    this.onMouseDown,
+    this.onMouseUp,
+    this.onDrag,
+    this.onDoubleTap,
+    this.onLongPress,
+    this.onSecondaryClick,
+  });
 }
 
 class _PolygonPointsSync extends StatefulWidget {
@@ -302,12 +344,14 @@ class _PolygonPointsSyncState extends State<_PolygonPointsSync> {
     final Set<String> selectedIds = toolVm.selectedLayerIds;
     final List<Offset> points = <Offset>[];
     for (final FusionBasePainter element in widget.elements) {
-      if (element is FusionPolygonPainter) {
-        // Don't include points from selected elements (they can be moved)
-        if (!selectedIds.contains(element.id)) {
+      if (!selectedIds.contains(element.id)) {
+        if (element is FusionPolygonPainter) {
+          // Don't include points from selected elements (they can be moved)
           points.addAll(
             element.polygon.points.map((FusionCanvasPoint p) => p.position),
           );
+        } else if (element is FusionCanvasElementPainter) {
+          points.add(element.getRect().center);
         }
       }
     }

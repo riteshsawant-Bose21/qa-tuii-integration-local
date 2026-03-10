@@ -25,7 +25,7 @@ enum _CanvasCursorType {
   final Alignment pointerTip;
 }
 
-typedef CursorBuilder = (Widget, Alignment)? Function(BuildContext context);
+typedef CursorBuilder = (Alignment, Widget)? Function(BuildContext context);
 
 class FusionCanvasCursor extends StatelessWidget {
   const FusionCanvasCursor({super.key, this.builder});
@@ -64,9 +64,9 @@ class FusionCanvasCursor extends StatelessWidget {
         final FusionCanvasStateViewModel canvasState = context.watch<FusionCanvasStateViewModel>();
         final Offset effectiveMousePosition = canvasState.transformPosition(mousePosition);
         final Widget cursor = _buildCursor(cursorType);
-        final (Widget, Alignment)? customCursor = builder != null ? builder!(context) : null;
-        final Alignment alignment = Alignment.topRight; //customCursor != null ? customCursor.$2 : cursorType.pointerTip;
-        final Widget cursorWidget = customCursor != null ? customCursor.$1 : cursor;
+        final (Alignment, Widget)? customCursor = builder != null ? builder!(context) : null;
+        final Alignment alignment = Alignment.center; //customCursor != null ? customCursor.$1 : cursorType.pointerTip;
+        final Widget cursorWidget = customCursor != null ? customCursor.$2 : cursor;
         return Positioned(
           left: effectiveMousePosition.dx + alignment.x * -12,
           top: effectiveMousePosition.dy + alignment.y * 12,

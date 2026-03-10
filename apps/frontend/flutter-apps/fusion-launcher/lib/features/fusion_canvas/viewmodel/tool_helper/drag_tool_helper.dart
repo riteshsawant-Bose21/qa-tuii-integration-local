@@ -26,6 +26,21 @@ class DragToolHelper {
     if (inputState is FusionCanvasInputTapUpState) {
       if (inputState.gestureOrigin == FusionGestureOrigin.drag) {
         return _handleDragEnd(context.snapState, currentState);
+      } else if (inputState.gestureOrigin == FusionGestureOrigin.click && inputState.button == FusionMouseButton.left) {
+        // Handle click gestures for selection
+        final String? hoveredPainterId = context.hoverState.hoveredPainterId;
+        final String? hoveredElementId = context.hoverState.hoveredElement?.id;
+
+        if (hoveredPainterId != null) {
+          // Clicked on a layer - select it
+          return IdleSelectToolState(
+            selectedLayerIds: <String>{hoveredPainterId},
+            selectedElementIds: hoveredElementId != null ? <String>{hoveredElementId} : <String>{},
+          );
+        } else {
+          // Clicked on empty canvas - clear selection
+          return IdleSelectToolState();
+        }
       }
     }
 
@@ -42,7 +57,9 @@ class DragToolHelper {
     if (hoveredPainterId != null) {
       // User tapped on an element - determine if it's points or layer drag
       final List<FusionCanvasElement> elements =
-          context.hoverState.hoveredElement != null ? <FusionCanvasElement>[context.hoverState.hoveredElement!] : <FusionCanvasElement>[];
+          context.hoverState.hoveredElement != null && context.hoverState.hoveredElement!.pointIds.isNotEmpty
+              ? <FusionCanvasElement>[context.hoverState.hoveredElement!]
+              : <FusionCanvasElement>[];
 
       if (elements.isNotEmpty) {
         return PointsDragStartState(layerId: hoveredPainterId, elements: elements);
@@ -84,8 +101,6 @@ class DragToolHelper {
       );
     }
 
-
-
     return currentState;
   }
 
@@ -95,7 +110,7 @@ class DragToolHelper {
   ) {
     // Calculate snap adjustment if snapping is active
     final Offset snapAdjustment = _calculateSnapAdjustment(snapState);
-
+  
     if (currentState is LayerDraggingState) {
       return LayerDragEndState(
         layerId: currentState.layerId,
