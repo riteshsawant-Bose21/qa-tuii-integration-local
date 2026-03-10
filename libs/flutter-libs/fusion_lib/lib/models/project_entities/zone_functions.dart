@@ -5,8 +5,8 @@ enum ZoneFunctionsType {
   sourceSelectWithPriority,
   sourceMix,
   sourceMixWithPriority,
-  miniMatrix,
-  miniMatrixWithPriority,
+  sourceMatrix,
+  sourceMatrixWithPriority,
 }
 
 extension ZoneFunctionsTypeList on ZoneFunctionsType {
@@ -20,10 +20,10 @@ extension ZoneFunctionsTypeList on ZoneFunctionsType {
         return 'Source Mix';
       case ZoneFunctionsType.sourceMixWithPriority:
         return 'Source Mix + Priority Override';
-      case ZoneFunctionsType.miniMatrix:
-        return 'Mini Matrix';
-      case ZoneFunctionsType.miniMatrixWithPriority:
-        return 'Mini Matrix With Priority';
+      case ZoneFunctionsType.sourceMatrix:
+        return 'Source Matrix';
+      case ZoneFunctionsType.sourceMatrixWithPriority:
+        return 'Source Matrix With Priority';
     }
   }
 
@@ -34,8 +34,8 @@ extension ZoneFunctionsTypeList on ZoneFunctionsType {
         return false;
       case ZoneFunctionsType.sourceMix:
       case ZoneFunctionsType.sourceMixWithPriority:
-      case ZoneFunctionsType.miniMatrix:
-      case ZoneFunctionsType.miniMatrixWithPriority:
+      case ZoneFunctionsType.sourceMatrix:
+      case ZoneFunctionsType.sourceMatrixWithPriority:
         return true;
     }
   }
@@ -44,8 +44,8 @@ extension ZoneFunctionsTypeList on ZoneFunctionsType {
     switch (this) {
       case ZoneFunctionsType.sourceSelect:
       case ZoneFunctionsType.sourceSelectWithPriority:
-      case ZoneFunctionsType.miniMatrix:
-      case ZoneFunctionsType.miniMatrixWithPriority:
+      case ZoneFunctionsType.sourceMatrix:
+      case ZoneFunctionsType.sourceMatrixWithPriority:
         return false;
       case ZoneFunctionsType.sourceMix:
       case ZoneFunctionsType.sourceMixWithPriority:
@@ -60,8 +60,21 @@ extension ZoneFunctionsTypeList on ZoneFunctionsType {
       case ZoneFunctionsType.sourceMix:
       case ZoneFunctionsType.sourceMixWithPriority:
         return false;
-      case ZoneFunctionsType.miniMatrix:
-      case ZoneFunctionsType.miniMatrixWithPriority:
+      case ZoneFunctionsType.sourceMatrix:
+      case ZoneFunctionsType.sourceMatrixWithPriority:
+        return true;
+    }
+  }
+
+  bool get hasPriority {
+    switch (this) {
+      case ZoneFunctionsType.sourceSelect:
+      case ZoneFunctionsType.sourceMix:
+      case ZoneFunctionsType.sourceMatrix:
+        return false;
+      case ZoneFunctionsType.sourceSelectWithPriority:
+      case ZoneFunctionsType.sourceMixWithPriority:
+      case ZoneFunctionsType.sourceMatrixWithPriority:
         return true;
     }
   }
@@ -144,7 +157,7 @@ class ZoneFunctions {
                 ? MonoMatrixMixer.fromJson(json['matrixMixer'])
                 : StereoMatrixMixer.fromJson(json['matrixMixer'])
           : null,
-      mixScenes: ((json['mixScenes']??[]) as List).map((e) {
+      mixScenes: ((json['mixScenes'] ?? []) as List).map((e) {
         if (e['type'] == MixSceneType.source.name) {
           return SourceMixScene.fromJson(e);
         } else {
@@ -183,15 +196,15 @@ ZoneFunctions getNewZoneFunction({required ZoneFunctionsType type, String? name}
         type: type,
         hasPriority: true,
       );
-    case ZoneFunctionsType.miniMatrix:
+    case ZoneFunctionsType.sourceMatrix:
       return ZoneFunctions(
-        name: name ?? "Mini Matrix",
+        name: name ?? "Source Matrix",
         type: type,
         hasPriority: false,
       );
-    case ZoneFunctionsType.miniMatrixWithPriority:
+    case ZoneFunctionsType.sourceMatrixWithPriority:
       return ZoneFunctions(
-        name: name ?? "Mini Matrix With Priority",
+        name: name ?? "Source Matrix With Priority",
         type: type,
         hasPriority: true,
       );

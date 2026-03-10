@@ -53,6 +53,24 @@ extension GpioViewModel on ProjectViewModel {
     }
   }
 
+  List<GpioConfig> getGpiConfigs() {
+    try {
+      return projectManager.getGpiConfigs();
+    } catch (e) {
+      throwError("Get GPI Configs Error  ${e.toString()}");
+      return <GpioConfig>[];
+    }
+  }
+
+  List<GpioConfig> getGpoConfigs() {
+    try {
+      return projectManager.getGpoConfigs();
+    } catch (e) {
+      throwError("Get GPO Configs Error  ${e.toString()}");
+      return <GpioConfig>[];
+    }
+  }
+
   List<GpiAction> getGPIActions() {
     try {
       return projectManager.getGPIActions();
@@ -86,6 +104,14 @@ extension GpioViewModel on ProjectViewModel {
     } catch (e) {
       throwError("Get Total GPIO Ports Error  ${e.toString()}");
       return 0;
+    }
+  }
+
+  void reOrderGpioConfigs({required String gpioIdToMove, required String gpioAtNewIndexId}) {
+    try {
+      projectManager.reOrderGpio(gpioIdToMove: gpioIdToMove, gpioAtNewIndexId: gpioAtNewIndexId);
+    } catch (e) {
+      throwError("Reorder GPIO Configs Error  ${e.toString()}");
     }
   }
 }

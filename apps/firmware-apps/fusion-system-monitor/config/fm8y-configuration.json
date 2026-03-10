@@ -1,0 +1,117 @@
+{
+    "session": {
+        "name": "fusion_system_monitor"
+    },
+    "periodic_tasks": [
+        {
+            "name": "fw_monitor",
+            "property_settings": [
+                { "name": "period_ms", "value": 2000 }
+            ],
+            "blocks": [
+                {
+                    "name": "cpu_usage",
+                    "module": "cpu_usage",
+                    "telemetry": [
+                        { "name": "cpu" },
+                        { "name": "high_cpu_usage" }
+                    ]
+                },
+                {
+                    "name": "space_usage",
+                    "module": "space_usage",
+                    "telemetry": [
+                        { "name": "ram" },
+                        { "name": "high_ram_usage" },
+                        { "name": "emmc" },
+                        { "name": "high_emmc_usage" },
+                        { "name": "usb_storage" },
+                        { "name": "usb_connected" }
+                    ]
+                }
+            ]
+        },
+        {
+            "name": "bt_control",
+            "property_settings": [
+                { "name": "period_ms", "value": 500 }
+            ],
+            "blocks": [
+                {
+                    "name": "bt_control",
+                    "module": "bt_control"
+                }
+            ]
+        },
+        {
+            "name": "hw_control",
+            "blocks": [
+                {
+                    "name": "hw_control",
+                    "module": "hw_control",
+                    "property_settings": [
+                        { 
+                            "name": "num_gain_chs",
+                            "value": 4
+                        },
+                        { 
+                            "name": "gain_paths",
+                            "value": [
+                                "fm8y/block_ana/ep_aud_in_chs-34/gpio_gain_ch3_0",
+                                "fm8y/block_ana/ep_aud_in_chs-34/gpio_gain_ch4_0",
+                                "fm8y/block_ana/ep_aud_in_chs-56/gpio_gain_ch5_0",
+                                "fm8y/block_ana/ep_aud_in_chs-56/gpio_gain_ch6_0"
+                            ]
+                        },
+                        { 
+                            "name": "num_php_chs",
+                            "value": 4
+                        },
+                        { 
+                            "name": "php_paths",
+                            "value": [
+                                "fm8y/block_ana/ep_aud_in_chs-34/gpio_php_en_ch3",
+                                "fm8y/block_ana/ep_aud_in_chs-34/gpio_php_en_ch4",
+                                "fm8y/block_ana/ep_aud_in_chs-56/gpio_php_en_ch5",
+                                "fm8y/block_ana/ep_aud_in_chs-56/gpio_php_en_ch6"
+                            ]
+                        },
+                        { 
+                            "name": "num_user_gpio",
+                            "value": 5
+                        },
+                        { 
+                            "name": "user_gpio_ctrl_paths",
+                            "value": [
+                                "fm8y/block_gpio/gpio_ctrl0_gpio0",
+                                "fm8y/block_gpio/gpio_ctrl0_gpio1",
+                                "fm8y/block_gpio/gpio_ctrl0_gpio2",
+                                "fm8y/block_gpio/gpio_ctrl0_gpio3",
+                                "fm8y/block_gpio/gpio_ctrl0_gpio4"
+                            ]
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "name": "fusion_connect",
+            "property_settings": [
+                { "name": "period_ms", "value": 500 }
+            ],
+            "blocks": [
+                {
+                    "name": "fusion_connect_client",
+                    "module": "fusion_connect_client",
+                    "property_settings": [
+                        { "name": "period_ms", "value": 500 },
+                        { "name": "enet_iface", "value": "lan1" }
+                    ],
+                    "parameters": [
+                        { "name": "audio_streams_update" }
+                    ]
+                }
+            ]
+        }
+    ]
+}

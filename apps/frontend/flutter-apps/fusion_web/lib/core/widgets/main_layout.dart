@@ -3,22 +3,19 @@ import 'package:fusion_web/core/constants/app_constants.dart';
 import 'package:fusion_web/core/navigation/app_router.dart';
 import 'package:fusion_web/core/services/service_locator.dart';
 import 'package:fusion_web/core/widgets/fusion_sidebar.dart';
-import 'package:fusion_web/features/dashboard/presentation/pages/dashboard_page.dart';
+import 'package:fusion_web/features/dashboard/presentation/pages/partner_dashboard_page.dart';
 import 'package:fusion_web/features/devices/presentation/pages/devices_page.dart';
 import 'package:fusion_web/features/projects/presentation/pages/projects_page.dart';
 import 'package:fusion_web/features/roles/presentation/pages/roles_page.dart';
 import 'package:fusion_web/features/settings/presentation/pages/settings_page.dart';
 import 'package:fusion_web/features/users/presentation/pages/users_page.dart';
 import 'package:go_router/go_router.dart';
+
 class MainLayout extends StatefulWidget {
   final DashboardTabs initialTab;
   final Widget? child;
 
-  const MainLayout({
-    super.key,
-    required this.initialTab,
-    this.child,
-  });
+  const MainLayout({super.key, required this.initialTab, this.child});
 
   @override
   State<MainLayout> createState() => _MainLayoutState();
@@ -50,7 +47,16 @@ class _MainLayoutState extends State<MainLayout> {
 
   Future<void> _checkAuthenticationAndRestoreToken() async {
     try {
+      print('MainLayout: Starting auth check...');
+      print('MainLayout: Current URL: ${Uri.base.toString()}');
+
+      // Give Auth0 SDK significant time to initialize and restore session
+      // This is critical for session persistence across page refreshes
+      await Future.delayed(const Duration(milliseconds: 1500));
+
       final authViewModel = ServiceLocator().authViewModel;
+
+      print('MainLayout: Calling authViewModel.checkAuthStatus()...');
       await authViewModel.checkAuthStatus();
 
       setState(() {
@@ -58,10 +64,22 @@ class _MainLayoutState extends State<MainLayout> {
         _isAuthChecking = false;
       });
 
+      print(
+        'MainLayout: Auth check complete, isAuthenticated: $_isAuthenticated',
+      );
+      print(
+        'MainLayout: Current user: ${authViewModel.currentUser?.email ?? "null"}',
+      );
+      print('MainLayout: Auth error: ${authViewModel.error ?? "none"}');
+
       if (!_isAuthenticated) {
+        print('MainLayout: User not authenticated, redirecting to login');
         _redirectToLogin();
+      } else {
+        print('MainLayout: User authenticated, staying on current page');
       }
     } catch (e) {
+      print('MainLayout: Auth check error: $e');
       setState(() {
         _isAuthChecking = false;
         _isAuthenticated = false;
@@ -71,15 +89,15 @@ class _MainLayoutState extends State<MainLayout> {
   }
 
   void _redirectToLogin() {
-  if (mounted) {
-    context.go(AppConstants.loginRoute);
+    if (mounted) {
+      context.go(AppConstants.loginRoute);
+    }
   }
-}
 
   Widget _getScreenForTab(DashboardTabs tab) {
     switch (tab) {
       case DashboardTabs.dashboard:
-        return const DashboardPage();
+        return const PartnerDashboardPage();
       case DashboardTabs.projects:
         return const ProjectsPage();
       case DashboardTabs.devices:
@@ -96,9 +114,7 @@ class _MainLayoutState extends State<MainLayout> {
   @override
   Widget build(BuildContext context) {
     if (_isAuthChecking) {
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
-      );
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
     if (!_isAuthenticated) {
@@ -120,9 +136,7 @@ class _MainLayoutState extends State<MainLayout> {
               context.go(tab.route);
             },
           ),
-          Expanded(
-            child: widget.child ?? _getScreenForTab(_currentTab),
-          ),
+          Expanded(child: widget.child ?? _getScreenForTab(_currentTab)),
         ],
       ),
     );

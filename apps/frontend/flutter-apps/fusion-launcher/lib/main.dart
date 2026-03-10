@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:desktop_auth0_flutter/desktop_auth0_flutter.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/semantics.dart';
@@ -10,15 +11,19 @@ import 'package:fusion_launcher/core/router/routes.dart';
 import 'package:fusion_launcher/core/service_locator.dart';
 import 'package:fusion_launcher/features/authentication/viewmodel/auth_view_model.dart';
 import 'package:fusion_launcher/features/authentication/viewmodel/session_view_model.dart';
+import 'package:fusion_launcher/features/projects/view_model/project_sync_view_model.dart';
 import 'package:fusion_lib/fusion_lib.dart';
-import 'package:fusion_lib/fusion_theme/app_theme.dart';
+import 'package:fusion_lib/fusion_theme/fusion_theme_notifier.dart';
 import 'package:nested/nested.dart' show SingleChildWidget;
+import 'package:universal_platform/universal_platform.dart';
 
 import 'core/config/app_config.dart';
+import 'features/commission/view_models/mdns_search_viewmodel.dart';
 import 'features/configuration/presentation/viewmodel/project_view_model.dart';
-import 'features/dashboard/presentation/pages/dashboard_page.dart';
+import 'features/home/presentation/pages/launcher_home_page.dart';
 import 'features/dynamic_config/presentation/bloc/panel_bloc.dart';
 import 'features/product_query/presentation/viewModel/product_query_view_model_cubit.dart';
+import 'features/projects/widget/building/speaker_selection_section/view_model/product_query_view_model.dart';
 
 Future<void> main() async {
   await runZonedGuarded(() async {
@@ -32,7 +37,18 @@ Future<void> main() async {
     await AppConfig.initialize();
 
     await setupServiceLocator();
-
+    if (UniversalPlatform.isWindows) {
+      await initDesktopAuth0Flutter(
+        const DesktopAuth0FlutterInitOptions(
+          bundleName: 'com.bosepro.fusion',
+          auth0Scheme: 'com.bosepro.fusion',
+          categories: 'Office;Productivity',
+          comment: 'Fusion Launcher',
+          name: 'Fusion Launcher',
+          iconAssetPath: 'assets/images/splash/splash_app_icon.png',
+        ),
+      );
+    }
     runApp(const MyApp());
 
     //TODO: Only for web automation build
@@ -79,12 +95,17 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MultiBlocProvider(
       providers: <SingleChildWidget>[
-        BlocProvider<SessionViewModel>(
-          create: (BuildContext context) => serviceLocator<SessionViewModel>(),
+        BlocProvider<SessionViewModel>.value(
+          value: serviceLocator<SessionViewModel>(),
         ),
-        BlocProvider<AuthViewModel>(
-          create: (BuildContext context) => serviceLocator<AuthViewModel>()..initialize(),
-          lazy: false,
+
+        BlocProvider<ProductQueryViewModel>.value(
+          value: serviceLocator<ProductQueryViewModel>()..loadProducts(),
+        ),
+
+        BlocProvider<AuthViewModel>.value(
+          value: serviceLocator<AuthViewModel>()..initialize(),
+          // lazy: false,
         ),
 
         BlocProvider<PanelBloc>(
@@ -93,53 +114,62 @@ class MyApp extends StatelessWidget {
         BlocProvider<ProjectViewModel>(
           create: (BuildContext context) => serviceLocator<ProjectViewModel>(),
         ),
+        BlocProvider<ProjectSyncViewModel>(
+          create: (BuildContext context) => serviceLocator<ProjectSyncViewModel>(),
+        ),
         BlocProvider<ProductQueryCubit>(
           create: (BuildContext context) => serviceLocator<ProductQueryCubit>(),
         ),
         BlocProvider<GuideShowCaseController>(
           create: (BuildContext context) => serviceLocator<GuideShowCaseController>(),
         ),
+        BlocProvider<MdnsScanViewModel>(
+          create: (BuildContext context) => serviceLocator<MdnsScanViewModel>(),
+        ),
       ],
       child: FusionThemeBuilder(
         builder: (BuildContext context, ThemeMode mode) {
-          return MaterialApp(
-            title: 'Fusion Launcher',
-            debugShowCheckedModeBanner: false,
-            theme: FusionAppTheme.lightTheme,
-            darkTheme: FusionAppTheme.darkTheme,
-            themeMode: ThemeMode.dark,
+          return BlocConsumer<SessionViewModel, SessionViewModelState>(
+            // Listener: Handle one-off events like errors (optional)
+            listener: (BuildContext context, SessionViewModelState state) {
+              if (state is SessionExpired) {
+                // USAGE: Use the Global Key to navigate
+                // pushNamedAndRemoveUntil ensures the user can't go 'back' to the protected page
+                globalNavigatorKey.currentState?.pushNamedAndRemoveUntil(
+                  Routes.launcherSignInPage,
+                  (Route<dynamic> route) => false, // Remove all previous routes
+                );
+              }
+            },
+            builder: (BuildContext context, SessionViewModelState state) {
+              return ValueListenableBuilder<ThemeMode>(
+                valueListenable: FusionThemeController.themeModeNotifier,
+                builder: (BuildContext context, ThemeMode themeMode, Widget? child) {
+                  return MaterialApp(
+                    title: 'Fusion Launcher',
+                    debugShowCheckedModeBanner: false,
+                    theme: FusionAppTheme.lightTheme,
+                    darkTheme: FusionAppTheme.darkTheme,
+                    themeMode: themeMode,
 
-            home: BlocConsumer<SessionViewModel, SessionViewModelState>(
-              // Listener: Handle one-off events like errors (optional)
-              listener: (BuildContext context, SessionViewModelState state) {
-                if (state is SessionExpired) {
-                  // USAGE: Use the Global Key to navigate
-                  // pushNamedAndRemoveUntil ensures the user can't go 'back' to the protected page
-                  globalNavigatorKey.currentState?.pushNamedAndRemoveUntil(
-                    Routes.launcherSignInPage,
-                    (Route<dynamic> route) => false, // Remove all previous routes
-                  );
-                }
-              },
-              // Builder: Determines WHICH page to show
-              builder: (BuildContext context, SessionViewModelState state) {
-                if (state is SessionValid) {
-                  return const HomePage();
-                } else {
-                  return const Scaffold(
-                    body: Center(
-                      child: CircularProgressIndicator(),
-                    ),
-                  );
-                }
-              },
-            ),
+                    home:
+                        (state is SessionValid)
+                            ? const HomePage()
+                            : const Scaffold(
+                              body: Center(
+                                child: CircularProgressIndicator(),
+                              ),
+                            ),
 
-            navigatorKey: globalNavigatorKey,
-            navigatorObservers: <NavigatorObserver>[
-              AppNavigatorObserver(),
-            ],
-            onGenerateRoute: (RouteSettings settings) => Routes.onGenerateRoute(settings),
+                    navigatorKey: globalNavigatorKey,
+                    navigatorObservers: <NavigatorObserver>[
+                      AppNavigatorObserver(),
+                    ],
+                    onGenerateRoute: (RouteSettings settings) => Routes.onGenerateRoute(settings),
+                  );
+                },
+              );
+            },
           );
         },
       ),

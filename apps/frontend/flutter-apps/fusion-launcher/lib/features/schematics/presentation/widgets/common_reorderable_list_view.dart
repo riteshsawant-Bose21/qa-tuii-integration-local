@@ -27,9 +27,10 @@ class CommonReorderableListView<T> extends StatelessWidget {
         child: Center(
           child: FusionAppText(
             text: emptyMessage,
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              fontSize: 12,
-              color: Colors.grey[600],
+            textAlign: TextAlign.center,
+            style: context.textTheme.bodySmall?.copyWith(
+              fontSize: FusionSizes.fontSize12,
+              color: context.colorScheme.textBody,
             ),
           ),
         ),
@@ -37,39 +38,23 @@ class CommonReorderableListView<T> extends StatelessWidget {
     }
 
     return ReorderableListView.builder(
-      proxyDecorator: proxyDecorator ?? _defaultProxyDecorator,
+      proxyDecorator: proxyDecorator ?? (Widget child, int index, Animation<double> animation) => child,
       shrinkWrap: true,
       physics: const ClampingScrollPhysics(),
       buildDefaultDragHandles: false,
       itemCount: items.length,
-      onReorder: onReorder,
+      onReorder: (int oldIndex, int newIndex) {
+        final int adjustedNewIndex = newIndex > oldIndex ? newIndex - 1 : newIndex;
+        onReorder(oldIndex, adjustedNewIndex);
+      },
       itemBuilder: (BuildContext context, int index) {
         final T item = items[index];
         return ReorderableDragStartListener(
           key: ValueKey<String>(keyExtractor(item)),
           index: index,
-          child: itemBuilder(context, item, index),
+          child: Material(color: Colors.transparent, child: itemBuilder(context, item, index)),
         );
       },
-    );
-  }
-
-  Widget _defaultProxyDecorator(Widget child, int index, Animation<double> animation) {
-    return AnimatedBuilder(
-      animation: animation,
-      builder: (BuildContext context, Widget? child) {
-        return Transform.scale(
-          scale: 1.05,
-          child: Container(
-            decoration: BoxDecoration(
-              color: Colors.blue.shade100,
-              borderRadius: BorderRadius.circular(4),
-            ),
-            child: child,
-          ),
-        );
-      },
-      child: child,
     );
   }
 }

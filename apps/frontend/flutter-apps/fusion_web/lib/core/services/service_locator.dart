@@ -8,6 +8,8 @@ import 'package:fusion_web/features/projects/data/repositories/projects_reposito
 import 'package:fusion_web/features/projects/presentation/viewmodels/projects_viewmodel.dart';
 import 'package:fusion_web/features/users/data/datasources/users_datasource.dart';
 import 'package:fusion_web/features/users/data/repositories/users_repository_impl.dart';
+import 'package:fusion_web/features/users/presentation/viewmodels/users_viewmodel.dart';
+import 'package:fusion_web/features/users/domain/usecases/users_usecases.dart';
 
 class ServiceLocator {
   static final ServiceLocator _instance = ServiceLocator._internal();
@@ -17,6 +19,7 @@ class ServiceLocator {
   ApiService? _apiService;
   AuthViewModel? _authViewModel;
   ProjectsViewModel? _projectsViewModel;
+  UsersViewModel? _usersViewModel;
 
   // ================= REPOSITORIES =================
   AuthRepositoryImpl? _authRepository;
@@ -64,6 +67,41 @@ class ServiceLocator {
     return _projectsViewModel!;
   }
 
+  // ================= USERS VIEWMODEL (SINGLETON) =================
+  UsersViewModel get usersViewModel {
+    if (_usersViewModel == null) {
+      final remoteDataSource = UsersRemoteDataSource(apiService: apiService);
+      final localDataSource = UsersLocalDataSource();
+
+      final repository = UsersRepositoryImpl(
+        remoteDataSource: remoteDataSource,
+        localDataSource: localDataSource,
+      );
+
+      _usersViewModel = UsersViewModel(
+        getUsersUseCase: GetUsersUseCase(repository),
+        getUserByIdUseCase: GetUserByIdUseCase(repository),
+        createUserUseCase: CreateUserUseCase(repository),
+        updateUserUseCase: UpdateUserUseCase(repository),
+        deleteUserUseCase: DeleteUserUseCase(repository),
+        searchUsersUseCase: SearchUsersUseCase(repository),
+        inviteUserUseCase: InviteUserUseCase(repository),
+        resendInviteUseCase: ResendInviteUseCase(repository),
+        updateUserRolesUseCase: UpdateUserRolesUseCase(repository),
+        assignUserToProjectsUseCase: AssignUserToProjectsUseCase(repository),
+        removeUserFromProjectsUseCase: RemoveUserFromProjectsUseCase(
+          repository,
+        ),
+        activateUserUseCase: ActivateUserUseCase(repository),
+        deactivateUserUseCase: DeactivateUserUseCase(repository),
+        filterUsersUseCase: FilterUsersUseCase(repository),
+        getUserMetricsUseCase: GetUserMetricsUseCase(repository),
+      );
+    }
+
+    return _usersViewModel!;
+  }
+
   // ================= AUTH REPOSITORY =================
   AuthRepositoryImpl get authRepository {
     _authRepository ??= AuthRepositoryImpl(dataSource: Auth0DataSource());
@@ -104,6 +142,7 @@ class ServiceLocator {
     _apiService = null;
     _authViewModel = null;
     _projectsViewModel = null;
+    _usersViewModel = null;
     _authRepository = null;
     _projectsRepository = null;
     _usersRepository = null;
@@ -113,6 +152,7 @@ class ServiceLocator {
     _apiService?.dispose();
     _authViewModel = null;
     _projectsViewModel = null;
+    _usersViewModel = null;
     _authRepository = null;
     _projectsRepository = null;
     _usersRepository = null;

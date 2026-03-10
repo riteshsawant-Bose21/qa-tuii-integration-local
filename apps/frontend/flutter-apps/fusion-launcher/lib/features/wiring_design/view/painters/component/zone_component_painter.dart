@@ -12,7 +12,7 @@ class ZoneComponentPainter extends ComponentDataPainter {
     final Rect rect = component.position & component.size;
     final Paint paint =
         Paint()
-          ..color = data.zone.color.withAlpha(125) // const Color(0xFFCCCCCC)
+          ..color = data.zone.color.withAlpha(90) // const Color(0xFFCCCCCC)
           ..style = PaintingStyle.fill;
 
     // Draw component body

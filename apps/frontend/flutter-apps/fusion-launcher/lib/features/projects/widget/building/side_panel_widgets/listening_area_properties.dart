@@ -4,7 +4,6 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/core/service_locator.dart';
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
 import 'package:fusion_lib/fusion_lib.dart';
-import 'package:fusion_lib/fusion_theme/app_theme.dart';
 
 class ListeningAreaProperties extends StatelessWidget {
   final ListeningArea selectedListeningArea;
@@ -13,13 +12,6 @@ class ListeningAreaProperties extends StatelessWidget {
     super.key,
     required this.selectedListeningArea,
   });
-
-  final List<String> venueOptions = <String>[
-    "Indoor",
-    "Outdoor",
-    "Mixed",
-    "Stadium",
-  ];
 
   final List<String> listeningHeightOptions = <String>[
     "Sitting",
@@ -82,203 +74,206 @@ class ListeningAreaProperties extends StatelessWidget {
               );
             }).toList();
 
-        return Container(
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: <Widget>[
-              // Header section with name and delete button
-              Row(
-                children: <Widget>[
-                  Expanded(
-                    flex: 7,
-                    child: TextFormField(
-                      controller: listeningAreaController,
-                      maxLength: 24,
-                      decoration: const InputDecoration(
-                        counterText: "",
-                        hintText: 'Area Name',
-                        border: InputBorder.none,
-                        contentPadding: EdgeInsets.zero,
-                      ),
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+        return SemanticHelper.container(
+          testId: SemanticHelper.createTestId(SemanticTypes.container, "hardware_properties_panel"),
+          child: Container(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                // Header section with name and delete button
+                // Row(
+                //   children: <Widget>[
+                //     Expanded(
+                //       flex: 7,
+                //       child: TextFormField(
+                //         controller: listeningAreaController,
+                //         maxLength: 24,
+                //         decoration: const InputDecoration(
+                //           counterText: "",
+                //           hintText: 'Area Name',
+                //           border: InputBorder.none,
+                //           contentPadding: EdgeInsets.zero,
+                //         ),
+                //         style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                //           fontWeight: FontWeight.w600,
+                //           fontSize: 14,
+                //         ),
+                //         onFieldSubmitted: (String v) {
+                //           if (v.trim().isNotEmpty) {
+                //             final ListeningArea updatedLA = selectedListeningArea.copyWith(name: v.trim());
+                //             viewModel.updateListeningArea(area: updatedLA);
+                //           } else {
+                //             // Reset to previous value if empty
+                //             listeningAreaController.text = selectedListeningArea.name;
+                //           }
+                //         },
+                //       ),
+                //     ),
+                //     const SizedBox(width: 8),
+                //     //small delete icon button to delete the selectedListeningArea
+                //     IconButton(
+                //       icon: Icon(
+                //         Icons.delete,
+                //         size: 18,
+                //         color: Theme.of(context).colorScheme.error,
+                //       ),
+                //       onPressed: () {
+                //         viewModel.removeListeningArea(areaId: selectedListeningArea.id);
+                //       },
+                //     ),
+                //   ],
+                // ),
+
+                // const SizedBox(height: 20),
+
+                // Properties section
+                // Column(
+                //   crossAxisAlignment: CrossAxisAlignment.start,
+                //   children: <Widget>[
+                //     Text(
+                //       'Properties',
+                //       style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                //         fontSize: 11,
+                //         fontWeight: FontWeight.w600,
+                //         color: Theme.of(context).colorScheme.textPrimary.withValues(alpha: 0.7),
+                //       ),
+                //     ),
+                //     const SizedBox(height: 12),
+                //     _buildLAPropertyRow(
+                //       context: context,
+                //       label: "Zone",
+                //       value: viewModel.getZonesForListeningArea(areaId: selectedListeningArea.id)?.name ?? "N/A",
+                //       options: viewModel.zones.map((Zone zone) => zone.name).toList(),
+                //       onOptionSelected: (int selectedIndex) {
+                //         final Zone selectedZone = viewModel.zones[selectedIndex];
+                //         viewModel.addListeningAreaToZone(listeningAreaId: selectedListeningArea.id, zoneId: selectedZone.id);
+                //       },
+                //     ),
+                //     const SizedBox(height: 10),
+                //     _buildLAPropertyRow(
+                //       context: context,
+                //       label: "Type",
+                //       value: selectedListeningArea.venuType?.name ?? "",
+                //       options: VenueType.values.map((VenueType type) => type.name).toList(),
+                //       onOptionSelected: (int selectedIndex) {
+                //         final VenueType selectedType = VenueType.values[selectedIndex];
+                //         final ListeningArea updatedLA = selectedListeningArea.copyWith(venuType: selectedType);
+                //         viewModel.updateListeningArea(area: updatedLA);
+                //       },
+                //     ),
+                //     const SizedBox(height: 10),
+                //     _buildLAPropertyRow(
+                //       context: context,
+                //       label: "Listening Ht",
+                //       value: displayValue,
+                //       options: listeningHeightOptions,
+                //       onOptionSelected: (int selectedIndex) {
+                //         final String selectedOption = listeningHeightOptions[selectedIndex];
+                //         final double heightValue = listeningHeightValues[selectedOption] ?? 3.0;
+
+                //         final ListeningArea updatedLA = selectedListeningArea.copyWith(listeningHeight: heightValue);
+                //         viewModel.updateListeningArea(area: updatedLA);
+                //       },
+                //     ),
+
+                //     // Show custom listening height text field if "Custom" is selected
+                //     if (isCustomListeningHeight) ...<Widget>[
+                //       const SizedBox(height: 10),
+                //       _buildValidatedPropertyRowForTextField(
+                //         context: context,
+                //         label: "Custom Height",
+                //         controller: customListeningHeightController,
+                //         hintText: "e.g., 4.5",
+                //         onSubmit: (String newValue) {
+                //           final double? customHeight = double.tryParse(newValue);
+                //           if (customHeight != null && customHeight > 0) {
+                //             final ListeningArea updatedLA = selectedListeningArea.copyWith(listeningHeight: customHeight);
+                //             viewModel.updateListeningArea(area: updatedLA);
+                //           }
+                //         },
+                //         viewModel: viewModel,
+                //       ),
+                //     ],
+
+                //     const SizedBox(height: 10),
+                //     _buildLAPropertyRow(
+                //       context: context,
+                //       label: "SPL Range",
+                //       value: _getCurrentSplRange(selectedListeningArea.minSPL, selectedListeningArea.maxSPL),
+                //       options: splRangeOptions,
+                //       onOptionSelected: (int selectedIndex) {
+                //         // Set min/max SPL values based on selection
+                //         double minSPL, maxSPL;
+                //         switch (selectedIndex) {
+                //           case 0: // Background Music
+                //             minSPL = 60.0;
+                //             maxSPL = 70.0;
+                //             break;
+                //           case 1: // Paging
+                //             minSPL = 70.0;
+                //             maxSPL = 80.0;
+                //             break;
+                //           case 2: // Foreground Music
+                //             minSPL = 75.0;
+                //             maxSPL = 90.0;
+                //             break;
+                //           case 3: // Moderate live sound reinforcement
+                //             minSPL = 90.0;
+                //             maxSPL = 100.0;
+                //             break;
+                //           case 4: // High-SPL live sound reinforcement
+                //             minSPL = 100.0;
+                //             maxSPL = 120.0;
+                //             break;
+                //           default:
+                //             minSPL = 60.0;
+                //             maxSPL = 70.0;
+                //         }
+
+                //         final ListeningArea updatedLA = selectedListeningArea.copyWith(
+                //           minSPL: minSPL,
+                //           maxSPL: maxSPL,
+                //         );
+                //         viewModel.updateListeningArea(area: updatedLA);
+                //       },
+                //     ),
+                //     const SizedBox(height: 10),
+                //     _buildPropertyRowForTextField(
+                //       context: context,
+                //       label: "Ceiling Ht",
+                //       controller: ceilingHeightController,
+                //       hintText: "e.g., 10 ft",
+                //       onSubmit: (String newValue) {
+                //         final ListeningArea updatedLA = selectedListeningArea.copyWith(ceilingHeight: newValue);
+                //         viewModel.updateListeningArea(area: updatedLA);
+                //       },
+                //     ),
+                //   ],
+                // ),
+
+                // const SizedBox(height: 12),
+
+                // Vertices section
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    FusionAppText(
+                      text: 'Vertices',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        fontSize: 11,
                         fontWeight: FontWeight.w600,
-                        fontSize: 14,
+                        color: Theme.of(context).colorScheme.textPrimary.withValues(alpha: 0.7),
                       ),
-                      onFieldSubmitted: (String v) {
-                        if (v.trim().isNotEmpty) {
-                          final ListeningArea updatedLA = selectedListeningArea.copyWith(name: v.trim());
-                          viewModel.updateListeningArea(area: updatedLA);
-                        } else {
-                          // Reset to previous value if empty
-                          listeningAreaController.text = selectedListeningArea.name;
-                        }
-                      },
                     ),
-                  ),
-                  const SizedBox(width: 8),
-                  //small delete icon button to delete the selectedListeningArea
-                  IconButton(
-                    icon: Icon(
-                      Icons.delete,
-                      size: 18,
-                      color: Theme.of(context).colorScheme.error,
-                    ),
-                    onPressed: () {
-                      viewModel.removeListeningArea(areaId: selectedListeningArea.id);
-                    },
-                  ),
-                ],
-              ),
-
-              const SizedBox(height: 20),
-
-              // Properties section
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: <Widget>[
-                  Text(
-                    'Properties',
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w600,
-                      color: Theme.of(context).colorScheme.fusionTextViewColor.withValues(alpha: 0.7),
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  _buildLAPropertyRow(
-                    context: context,
-                    label: "Zone",
-                    value: viewModel.getZonesForListeningArea(areaId: selectedListeningArea.id)?.name ?? "N/A",
-                    options: viewModel.zones.map((Zone zone) => zone.name).toList(),
-                    onOptionSelected: (int selectedIndex) {
-                      final Zone selectedZone = viewModel.zones[selectedIndex];
-                      viewModel.addListeningAreaToZone(listeningAreaId: selectedListeningArea.id, zoneId: selectedZone.id);
-                    },
-                  ),
-                  const SizedBox(height: 10),
-                  _buildLAPropertyRow(
-                    context: context,
-                    label: "Type",
-                    value: selectedListeningArea.venuType,
-                    options: venueOptions,
-                    onOptionSelected: (int selectedIndex) {
-                      final String selectedType = venueOptions[selectedIndex];
-                      final ListeningArea updatedLA = selectedListeningArea.copyWith(venuType: selectedType);
-                      viewModel.updateListeningArea(area: updatedLA);
-                    },
-                  ),
-                  const SizedBox(height: 10),
-                  _buildLAPropertyRow(
-                    context: context,
-                    label: "Listening Ht",
-                    value: displayValue,
-                    options: listeningHeightOptions,
-                    onOptionSelected: (int selectedIndex) {
-                      final String selectedOption = listeningHeightOptions[selectedIndex];
-                      final double heightValue = listeningHeightValues[selectedOption] ?? 3.0;
-
-                      final ListeningArea updatedLA = selectedListeningArea.copyWith(listeningHeight: heightValue);
-                      viewModel.updateListeningArea(area: updatedLA);
-                    },
-                  ),
-
-                  // Show custom listening height text field if "Custom" is selected
-                  if (isCustomListeningHeight) ...<Widget>[
-                    const SizedBox(height: 10),
-                    _buildValidatedPropertyRowForTextField(
-                      context: context,
-                      label: "Custom Height",
-                      controller: customListeningHeightController,
-                      hintText: "e.g., 4.5",
-                      onSubmit: (String newValue) {
-                        final double? customHeight = double.tryParse(newValue);
-                        if (customHeight != null && customHeight > 0) {
-                          final ListeningArea updatedLA = selectedListeningArea.copyWith(listeningHeight: customHeight);
-                          viewModel.updateListeningArea(area: updatedLA);
-                        }
-                      },
-                      viewModel: viewModel,
+                    const SizedBox(height: 12),
+                    PropertyListWidget(
+                      rows: rows,
                     ),
                   ],
-
-                  const SizedBox(height: 10),
-                  _buildLAPropertyRow(
-                    context: context,
-                    label: "SPL Range",
-                    value: _getCurrentSplRange(selectedListeningArea.minSPL, selectedListeningArea.maxSPL),
-                    options: splRangeOptions,
-                    onOptionSelected: (int selectedIndex) {
-                      // Set min/max SPL values based on selection
-                      double minSPL, maxSPL;
-                      switch (selectedIndex) {
-                        case 0: // Background Music
-                          minSPL = 60.0;
-                          maxSPL = 70.0;
-                          break;
-                        case 1: // Paging
-                          minSPL = 70.0;
-                          maxSPL = 80.0;
-                          break;
-                        case 2: // Foreground Music
-                          minSPL = 75.0;
-                          maxSPL = 90.0;
-                          break;
-                        case 3: // Moderate live sound reinforcement
-                          minSPL = 90.0;
-                          maxSPL = 100.0;
-                          break;
-                        case 4: // High-SPL live sound reinforcement
-                          minSPL = 100.0;
-                          maxSPL = 120.0;
-                          break;
-                        default:
-                          minSPL = 60.0;
-                          maxSPL = 70.0;
-                      }
-
-                      final ListeningArea updatedLA = selectedListeningArea.copyWith(
-                        minSPL: minSPL,
-                        maxSPL: maxSPL,
-                      );
-                      viewModel.updateListeningArea(area: updatedLA);
-                    },
-                  ),
-                  const SizedBox(height: 10),
-                  _buildPropertyRowForTextField(
-                    context: context,
-                    label: "Ceiling Ht",
-                    controller: ceilingHeightController,
-                    hintText: "e.g., 10 ft",
-                    onSubmit: (String newValue) {
-                      final ListeningArea updatedLA = selectedListeningArea.copyWith(ceilingHeight: newValue);
-                      viewModel.updateListeningArea(area: updatedLA);
-                    },
-                  ),
-                ],
-              ),
-
-              const SizedBox(height: 12),
-
-              // Vertices section
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: <Widget>[
-                  Text(
-                    'Vertices',
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w600,
-                      color: Theme.of(context).colorScheme.fusionTextViewColor.withValues(alpha: 0.7),
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  PropertyListWidget(
-                    rows: rows,
-                  ),
-                ],
-              ),
-            ],
+                ),
+              ],
+            ),
           ),
         );
       },
@@ -305,9 +300,9 @@ class ListeningAreaProperties extends StatelessWidget {
       offset: const Offset(50, 8),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(6),
-        side: BorderSide(color: Theme.of(context).colorScheme.dividerColor),
+        side: BorderSide(color: Theme.of(context).colorScheme.primaryBlack),
       ),
-      color: Theme.of(context).colorScheme.white,
+      color: Theme.of(context).colorScheme.primaryWhite,
       elevation: 1,
       itemBuilder: (BuildContext context) {
         if (options == null || options.isEmpty) {
@@ -315,10 +310,13 @@ class ListeningAreaProperties extends StatelessWidget {
         }
 
         return options.map((String option) {
+          final int index = options.indexOf(option);
+
           return PopupMenuItem<String>(
             value: option,
             child: FusionAppText(
               text: option,
+              semanticId: "${label}_item_index_$index",
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                 fontSize: 11,
               ),
@@ -336,7 +334,7 @@ class ListeningAreaProperties extends StatelessWidget {
               text: label,
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                 fontSize: 11,
-                color: Theme.of(context).colorScheme.fusionTextViewColor.withValues(alpha: 0.5),
+                color: Theme.of(context).colorScheme.textPrimary.withValues(alpha: 0.5),
               ),
             ),
             // Right: Value + Arrow
@@ -359,7 +357,7 @@ class ListeningAreaProperties extends StatelessWidget {
                   Icon(
                     Icons.keyboard_arrow_down,
                     size: 16,
-                    color: Theme.of(context).colorScheme.fusionTextViewColor,
+                    color: Theme.of(context).colorScheme.textPrimary,
                   ),
                 ],
               ),
@@ -387,7 +385,7 @@ class ListeningAreaProperties extends StatelessWidget {
             text: label,
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
               fontSize: 11,
-              color: Theme.of(context).colorScheme.fusionTextViewColor.withValues(alpha: 0.5),
+              color: Theme.of(context).colorScheme.textPrimary.withValues(alpha: 0.5),
             ),
           ),
 
@@ -395,26 +393,29 @@ class ListeningAreaProperties extends StatelessWidget {
           SizedBox(
             width: 80,
             height: 28,
-            child: TextField(
-              controller: controller,
-              onSubmitted: onSubmit,
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                fontSize: 11,
-                color: Theme.of(context).colorScheme.fusionTextViewColor,
-              ),
-              decoration: InputDecoration(
-                isDense: true,
-                contentPadding: const EdgeInsets.symmetric(vertical: 6, horizontal: 10),
-                hintText: hintText,
-                hintStyle: Theme.of(context).textTheme.bodySmall?.copyWith(
+            child: SemanticHelper.formControl(
+              testId: SemanticHelper.createTestId(SemanticTypes.textInput, "${label}_input"),
+              child: TextField(
+                controller: controller,
+                onSubmitted: onSubmit,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
                   fontSize: 11,
-                  color: Theme.of(context).colorScheme.fusionTextViewColor.withValues(alpha: 0.5),
+                  color: Theme.of(context).colorScheme.textPrimary,
                 ),
-                fillColor: Theme.of(context).colorScheme.white,
+                decoration: InputDecoration(
+                  isDense: true,
+                  contentPadding: const EdgeInsets.symmetric(vertical: 6, horizontal: 10),
+                  hintText: hintText,
+                  hintStyle: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    fontSize: 11,
+                    color: Theme.of(context).colorScheme.textPrimary.withValues(alpha: 0.5),
+                  ),
+                  fillColor: Theme.of(context).colorScheme.primaryWhite,
+                ),
+                inputFormatters: <TextInputFormatter>[
+                  FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
+                ],
               ),
-              inputFormatters: <TextInputFormatter>[
-                FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
-              ],
             ),
           ),
         ],
@@ -441,7 +442,7 @@ class ListeningAreaProperties extends StatelessWidget {
             text: label,
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
               fontSize: 11,
-              color: Theme.of(context).colorScheme.fusionTextViewColor.withValues(alpha: 0.5),
+              color: Theme.of(context).colorScheme.textPrimary.withValues(alpha: 0.5),
             ),
           ),
 
@@ -449,83 +450,86 @@ class ListeningAreaProperties extends StatelessWidget {
           SizedBox(
             width: 80,
             height: 28,
-            child: TextFormField(
-              controller: controller,
-              maxLength: 24,
-              keyboardType: const TextInputType.numberWithOptions(decimal: true),
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                fontSize: 11,
-                color: Theme.of(context).colorScheme.fusionTextViewColor,
-              ),
-              decoration: InputDecoration(
-                counterText: "",
-                isDense: true,
-                contentPadding: const EdgeInsets.symmetric(vertical: 6, horizontal: 10),
-                hintText: hintText,
-                hintStyle: Theme.of(context).textTheme.bodySmall?.copyWith(
+            child: SemanticHelper.formControl(
+              testId: SemanticHelper.createTestId(SemanticTypes.textInput, "${label}_input"),
+              child: TextFormField(
+                controller: controller,
+                maxLength: 24,
+                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
                   fontSize: 11,
-                  color: Theme.of(context).colorScheme.fusionTextViewColor.withValues(alpha: 0.5),
+                  color: Theme.of(context).colorScheme.textPrimary,
                 ),
-                fillColor: Theme.of(context).colorScheme.white,
-              ),
+                decoration: InputDecoration(
+                  counterText: "",
+                  isDense: true,
+                  contentPadding: const EdgeInsets.symmetric(vertical: 6, horizontal: 10),
+                  hintText: hintText,
+                  hintStyle: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    fontSize: 11,
+                    color: Theme.of(context).colorScheme.textPrimary.withValues(alpha: 0.5),
+                  ),
+                  fillColor: Theme.of(context).colorScheme.primaryWhite,
+                ),
 
-              inputFormatters: <TextInputFormatter>[
-                FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*$')),
-                LengthLimitingTextInputFormatter(8), // Limit to reasonable length
-              ],
-              validator: (String? value) {
-                if (value == null || value.isEmpty) {
-                  return 'Required';
-                }
+                inputFormatters: <TextInputFormatter>[
+                  FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*$')),
+                  LengthLimitingTextInputFormatter(8), // Limit to reasonable length
+                ],
+                validator: (String? value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Required';
+                  }
 
-                final double? parsed = double.tryParse(value);
-                if (parsed == null) {
-                  return 'Invalid decimal';
-                }
+                  final double? parsed = double.tryParse(value);
+                  if (parsed == null) {
+                    return 'Invalid decimal';
+                  }
 
-                if (parsed <= 0) {
-                  return 'Must be > 0';
-                }
+                  if (parsed <= 0) {
+                    return 'Must be > 0';
+                  }
 
-                if (parsed > 1000) {
-                  return 'Too large';
-                }
+                  if (parsed > 1000) {
+                    return 'Too large';
+                  }
 
-                return null;
-              },
-              onFieldSubmitted: (String value) {
-                final double? parsed = double.tryParse(value);
-                if (parsed != null && parsed > 0 && parsed <= 1000) {
-                  onSubmit?.call(value);
-                } else {
-                  // Reset to previous valid value if invalid
-                  controller.text = selectedListeningArea.listeningHeight.toString();
+                  return null;
+                },
+                onFieldSubmitted: (String value) {
+                  final double? parsed = double.tryParse(value);
+                  if (parsed != null && parsed > 0 && parsed <= 1000) {
+                    onSubmit?.call(value);
+                  } else {
+                    // Reset to previous valid value if invalid
+                    controller.text = selectedListeningArea.listeningHeight.toString();
 
-                  // Show error feedback
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(
-                        'Please enter a valid decimal value between 0.1 and 1000',
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: Colors.white,
+                    // Show error feedback
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: FusionAppText(
+                          text: 'Please enter a valid decimal value between 0.1 and 1000',
+                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: Colors.white,
+                          ),
                         ),
+                        backgroundColor: Theme.of(context).colorScheme.error,
+                        duration: const Duration(seconds: 2),
                       ),
-                      backgroundColor: Theme.of(context).colorScheme.error,
-                      duration: const Duration(seconds: 2),
-                    ),
-                  );
-                }
-              },
-              onChanged: (String value) {
-                // Real-time validation feedback
-                final double? parsed = double.tryParse(value);
-                if (value.isNotEmpty && (parsed == null || parsed <= 0 || parsed > 1000)) {
-                  // Visual feedback for invalid input
-                  controller.selection = TextSelection.fromPosition(
-                    TextPosition(offset: controller.text.length),
-                  );
-                }
-              },
+                    );
+                  }
+                },
+                onChanged: (String value) {
+                  // Real-time validation feedback
+                  final double? parsed = double.tryParse(value);
+                  if (value.isNotEmpty && (parsed == null || parsed <= 0 || parsed > 1000)) {
+                    // Visual feedback for invalid input
+                    controller.selection = TextSelection.fromPosition(
+                      TextPosition(offset: controller.text.length),
+                    );
+                  }
+                },
+              ),
             ),
           ),
         ],
@@ -597,8 +601,8 @@ class _PropertyListWidgetState extends State<PropertyListWidget> {
               onTap: () {
                 setState(() => _showAll = !_showAll);
               },
-              child: Text(
-                _showAll ? "Show Less" : "Show More",
+              child: FusionAppText(
+                text: _showAll ? "Show Less" : "Show More",
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
                   fontSize: 11,
                   color: Theme.of(context).primaryColor,
@@ -626,7 +630,7 @@ class _PropertyRowWidget extends StatelessWidget {
     );
     final TextStyle? textStyleBlack = Theme.of(context).textTheme.bodySmall?.copyWith(
       fontSize: 9,
-      color: Colors.black87,
+      color: context.colorScheme.textPrimary,
       fontWeight: FontWeight.w400,
     );
 
@@ -637,19 +641,19 @@ class _PropertyRowWidget extends StatelessWidget {
           // Title
           Expanded(
             flex: 1,
-            child: Text(row.title, style: textStyleGrey),
+            child: FusionAppText(text: row.title, style: textStyleGrey),
           ),
 
           Expanded(
             flex: 2,
             child: Row(
               children: <Widget>[
-                Text("X", style: textStyleGrey),
+                FusionAppText(text: "X:", style: textStyleGrey),
                 const SizedBox(width: 4),
-                Text(
-                  "${row.x}",
+                FusionAppText(
+                  text: "${row.x}",
                   style: textStyleBlack,
-                  overflow: TextOverflow.ellipsis,
+                  // overflow: TextOverflow.ellipsis,
                 ),
               ],
             ),
@@ -659,12 +663,12 @@ class _PropertyRowWidget extends StatelessWidget {
             flex: 2,
             child: Row(
               children: <Widget>[
-                Text("Y", style: textStyleGrey),
+                FusionAppText(text: "Y:", style: textStyleGrey),
                 const SizedBox(width: 4),
-                Text(
-                  "${row.y}",
+                FusionAppText(
+                  text: "${row.y}",
                   style: textStyleBlack,
-                  overflow: TextOverflow.ellipsis,
+                  // overflow: TextOverflow.ellipsis,
                 ),
               ],
             ),
@@ -674,12 +678,12 @@ class _PropertyRowWidget extends StatelessWidget {
             flex: 2,
             child: Row(
               children: <Widget>[
-                Text("Z", style: textStyleGrey),
+                FusionAppText(text: "Z:", style: textStyleGrey),
                 const SizedBox(width: 4),
-                Text(
-                  "${row.z}",
+                FusionAppText(
+                  text: "${row.z}",
                   style: textStyleBlack,
-                  overflow: TextOverflow.ellipsis,
+                  // overflow: TextOverflow.ellipsis,
                 ),
               ],
             ),

@@ -3,7 +3,7 @@ package handler
 import (
 	"fmt"
 	"fusion/internal/api"
-	"fusion/internal/logging"
+	"fusion-services-core/logging"
 )
 
 func (h *Handler) HandleGetControllers() []*api.ControllerInfo {

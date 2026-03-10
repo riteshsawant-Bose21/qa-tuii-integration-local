@@ -2,18 +2,20 @@ package cluster
 
 import (
 	"fmt"
+	coreNetwork "fusion-services-core/network"
+	"fusion-services-core/vip"
+
+	"fusion-services-core/logging"
 	"fusion/internal/api"
-	"fusion/internal/logging"
 	"fusion/internal/network"
 	"fusion/internal/routes"
-	"fusion/internal/utils"
 	"io"
 	"net"
 	"net/http"
 	"os"
 	"os/exec"
 	"path/filepath"
-	"regexp"
+	"runtime"
 	"strings"
 	"sync"
 	"time"
@@ -23,8 +25,7 @@ import (
 )
 
 const (
-	ConfFile             = "keepalived.conf"
-	configPath           = "/etc/keepalived/" + ConfFile
+	configPath           = "/etc/keepalived/" + vip.DefaultConfFile
 	statusUpdateInterval = 30 * time.Second
 	monitorInterval      = 10 * time.Second
 )
@@ -72,9 +73,10 @@ type Cluster struct {
 	Metrics          *MetricsCollector
 	networkLatencies *NetworkLatencyStore
 	vipMu            sync.Mutex
+	mdnsManager      *network.MDNSManager
 }
 
-func NewCluster(appConfig *api.AppConfig, delegate *ClusterDelegate, memberlist *memberlist.Memberlist) *Cluster {
+func NewCluster(appConfig *api.AppConfig, delegate *ClusterDelegate, memberlist *memberlist.Memberlist, mdnsManager *network.MDNSManager) *Cluster {
 
 	cluster := &Cluster{
 		appConfig:        appConfig,
@@ -84,6 +86,7 @@ func NewCluster(appConfig *api.AppConfig, delegate *ClusterDelegate, memberlist 
 		configPath:       configPath,
 		Metrics:          NewMetricsCollector(memberlist, delegate.stateManager),
 		networkLatencies: NewNetworkLatencyStore(maxLatencyCount, latencyPruneTime),
+		mdnsManager:      mdnsManager,
 	}
 
 	logger := logging.GetLogger()
@@ -94,12 +97,15 @@ func NewCluster(appConfig *api.AppConfig, delegate *ClusterDelegate, memberlist 
 			logger.Fatal("startVRRPListener: %v", err)
 		}
 
-		vip, err := cluster.getVIPFromConfig()
+		vipValue, multiple, err := vip.ReadFromKeepalivedConfig(cluster.configPath)
 		if err != nil {
-			logger.Fatal("getVIPFromConfig: %v", err)
+			logger.Fatal("read keepalived config: %v", err)
+		}
+		if multiple {
+			logger.Warn("More than one VIP found.")
 		}
 
-		canonical := canonicalVIP(vip)
+		canonical := vip.Canonicalize(vipValue)
 		cluster.vip = canonical
 	}
 
@@ -158,55 +164,41 @@ func (c *Cluster) getClusterIPs() []string {
 	return ips
 }
 
-// canonicalVIP canonicalizes an IP address.
-// "192.168.2.100/24" becomes "192.168.2.100"
-func canonicalVIP(s string) string {
-	if s == "" {
-		return ""
-	}
-	// handle CIDR form
-	if ip, _, err := net.ParseCIDR(s); err == nil && ip != nil {
-		if v4 := ip.To4(); v4 != nil {
-			return v4.String()
-		}
-		// drop IPv6
-		return ""
-	}
-	// handle plain IP form
-	if ip := net.ParseIP(s); ip != nil {
-		if v4 := ip.To4(); v4 != nil {
-			return v4.String()
-		}
-	}
-	return ""
-}
-
 // listenerUpdated is called when VRRP state changes
-func (c *Cluster) listenerUpdated(vip, srcIP string) {
+func (c *Cluster) listenerUpdated(vipAddr, srcIP string) {
 
 	logger := logging.GetLogger()
 
-	newVIP := canonicalVIP(vip)
+	newVIP := vip.Canonicalize(vipAddr)
 
 	c.vipLock.Lock()
 	defer c.vipLock.Unlock()
 
 	oldVIP := c.vip
 	oldHolder := c.vipHolder
+	logger.Debug("[CLUSTER] listenerUpdated called: oldVIP=%s oldHolder=%s vip=%s srcIP=%s",
+		oldVIP, oldHolder, c.vip, srcIP,
+	)
 
 	// VIP has been removed entirely
 	if newVIP == "" {
 		if oldVIP == "" {
 			// no change
+			logger.Warn("[CLUSTER] Both oldVIP and newVIP are empty - no change.")
 			return
 		}
 
-		logger.Info("VIP %s removed (old holder %s)", oldVIP, oldHolder)
+		logger.Debug("[CLUSTER] VIP %s removed (old holder %s)", oldVIP, oldHolder)
 
 		c.vip = ""
 		c.vipHolder = ""
 
 		c.notifyLocalVIPChange(false)
+		if err := c.mdnsManager.Close(); err != nil {
+			logger.Error("[Discovery] Failed to stop mDNS service: %v", err)
+		} else {
+			logger.Debug("[Discovery] mDNS service stopped successfully via manager")
+		}
 		return
 	}
 
@@ -216,15 +208,20 @@ func (c *Cluster) listenerUpdated(vip, srcIP string) {
 	}
 
 	// Determine ownership
-	oldLocal := c.isLocalVIP(oldHolder)
-	newLocal := c.isLocalVIP(srcIP)
 
-	logger.Debug("VIP update: oldVIP=%s newVIP=%s oldHolder=%s newHolder=%s oldLocal=%v newLocal=%v",
-		oldVIP, newVIP, oldHolder, srcIP, oldLocal, newLocal)
+	oldLocal, err := vip.IsLocalVIP(oldHolder)
+	if err != nil {
+		logger.Error("isLocalVIP(oldHolder): %v", err)
+	}
+
+	newLocal, err := vip.IsLocalVIP(srcIP)
+	if err != nil {
+		logger.Error("isLocalVIP(srcIP): %v", err)
+	}
 
 	// VIP address changed
 	if newVIP != oldVIP {
-
+		logger.Info("VIP changed: oldVIP=%s newVIP=%s", oldVIP, newVIP)
 		if err := c.updateVIP(newVIP); err != nil {
 			logger.Error("updateVIP(%q): %v", newVIP, err)
 			return
@@ -234,16 +231,34 @@ func (c *Cluster) listenerUpdated(vip, srcIP string) {
 			logger.Error("reloadVIP: %v", err)
 			return
 		}
+
+		// Parse the VIP string into net.IP before passing to mDNS manager
+		if ip := net.ParseIP(newVIP); ip == nil {
+			logger.Error("[Discovery] Invalid VIP %s for mDNS", newVIP)
+		} else {
+			if err := c.mdnsManager.StartWithVIP(ip); err != nil {
+				logger.Error("[Discovery] Failed to start mDNS service: %v", err)
+			}
+		}
 	}
 
 	c.vip = newVIP
 	c.vipHolder = srcIP
+
+	logger.Debug("VIP update: oldVIP=%s newVIP=%s oldHolder=%s newHolder=%s oldLocal=%v newLocal=%v",
+		oldVIP, newVIP, oldHolder, srcIP, oldLocal, newLocal)
 
 	// Handle ownership transition
 	switch {
 	case oldLocal && !newLocal:
 		logger.Info("VIP %s moved (was %s, now %s)", newVIP, oldHolder, srcIP)
 		c.notifyLocalVIPChange(false)
+
+		if err := c.mdnsManager.Close(); err != nil {
+			logger.Error("[Discovery] Failed to stop mDNS service: %v", err)
+		} else {
+			logger.Debug("[Discovery] mDNS service stopped successfully via manager")
+		}
 
 	case !oldLocal && newLocal:
 		logger.Debug("VIP %s gained locally (holder %s)", newVIP, srcIP)
@@ -258,13 +273,22 @@ func (c *Cluster) listenerUpdated(vip, srcIP string) {
 				logger.Info("Joined memberlist with VIP %s", newVIP)
 			}
 		}
-
 		c.notifyLocalVIPChange(true)
+
+		// Parse the VIP string into net.IP before passing to mDNS manager
+		if ip := net.ParseIP(newVIP); ip == nil {
+			logger.Error("[Discovery] Invalid VIP %s for mDNS", newVIP)
+		} else {
+			if err := c.mdnsManager.StartWithVIP(ip); err != nil {
+				logger.Error("[Discovery] Failed to start mDNS service: %v", err)
+			}
+		}
 	}
 }
 
 func (c *Cluster) startVRRPListener(iface string) error {
-	if err := network.StartVRRPListener(c.listenerUpdated); err != nil {
+
+	if err := coreNetwork.StartVRRPListener(logging.GetLogger(), c.listenerUpdated); err != nil {
 		return fmt.Errorf("unable to start keepalived listener: %v", err)
 	}
 
@@ -273,137 +297,35 @@ func (c *Cluster) startVRRPListener(iface string) error {
 	return nil
 }
 
-// isLocalVIP compares the VIP (which might be in CIDR format) to the IPs on local interfaces.
-func (c *Cluster) isLocalVIP(vip string) bool {
-	expectedIP := net.ParseIP(vip)
-	if expectedIP == nil {
-		ip, _, err := net.ParseCIDR(vip)
-		if err != nil {
-			return false
-		}
-		expectedIP = ip
-	}
-
-	addrs, err := net.InterfaceAddrs()
-	if err != nil {
-		return false
-	}
-
-	for _, addr := range addrs {
-		if ipnet, ok := addr.(*net.IPNet); ok {
-			ip4 := ipnet.IP.To4()
-			if ip4 == nil || ip4.IsLoopback() {
-				// Skip IPv6 and loopback
-				continue
-			}
-			if ip4.Equal(expectedIP) {
-				return true
-			}
-		}
-	}
-	return false
-}
-
-// getLocalAndVIP checks whether `vip` (CIDR or plain IP) is assigned on any local interface.
-// If so, it returns:
-//   - internalAddr: the first non-loopback IPv4 address that is NOT equal to the VIP
-//   - vipAddr: the exact Addr where vip was found
-//   - ok = true
-//
-// If vip isn’t present on any interface, it returns (nil, nil, false).
-func (c *Cluster) getLocalForVIP(vip string) (net.Addr, net.Addr, bool) {
-	expectedIP := net.ParseIP(vip)
-	if expectedIP == nil {
-		ip, _, err := net.ParseCIDR(vip)
-		if err != nil {
-			return nil, nil, false
-		}
-		expectedIP = ip
-	}
-
-	addrs, err := net.InterfaceAddrs()
-	if err != nil {
-		return nil, nil, false
-	}
-
-	var vipAddr net.Addr
-	var internalAddr net.Addr
-
-	for _, addr := range addrs {
-		ipnet, ok := addr.(*net.IPNet)
-		if !ok {
-			continue
-		}
-
-		ip4 := ipnet.IP.To4()
-		if ip4 == nil || ip4.IsLoopback() {
-			// Skip IPv6 and loopback
-			continue
-		}
-
-		// Match exact VIP
-		if expectedIP.To4() != nil && ip4.Equal(expectedIP) {
-			vipAddr = &net.IPAddr{IP: ip4}
-			continue
-		}
-
-		// Save the first non-loopback IPv4 as internal address
-		if internalAddr == nil {
-			internalAddr = &net.IPAddr{IP: ip4}
-		}
-	}
-
-	if vipAddr == nil {
-		return nil, nil, false
-	}
-
-	return internalAddr, vipAddr, true
-}
-
-func (c *Cluster) getVIPFromConfig() (string, error) {
-
-	data, err := os.ReadFile(c.configPath)
-	if err != nil {
-		return "", fmt.Errorf("unable to read config file: %v", err)
-	}
-	configText := string(data)
-
-	// This regex looks for a block starting with "virtual_ipaddress" and
-	// captures everything until the closing brace.
-	re := regexp.MustCompile(`virtual_ipaddress\s*{([^}]+)}`)
-	matches := re.FindStringSubmatch(configText)
-	if len(matches) < 2 {
-		return "", fmt.Errorf("no virtual_ipaddress block found")
-	}
-
-	// Extract the content between braces and split by newline or whitespace
-	vipBlock := matches[1]
-
-	// Split lines and remove extra spaces
-	lines := strings.Split(vipBlock, "\n")
-	var vips []string
-	for _, line := range lines {
-		v := strings.TrimSpace(line)
-		if v != "" {
-			vips = append(vips, v)
-		}
-	}
-
-	if len(vips) == 0 {
-		return "", fmt.Errorf("no VIP found")
-	}
-
-	if len(vips) > 1 {
-		logger := logging.GetLogger()
-		logger.Warn("More than one VIP found.")
-	}
-
-	return vips[0], nil
-}
-
 // restartKeepalived reloads the keepalived process
 func (c *Cluster) restartKeepalived() error {
 	return exec.Command("systemctl", "reload", "keepalived").Run()
+}
+
+// reboot the system...
+func (c *Cluster) restartSystem() error {
+	logger := logging.GetLogger()
+	logger.Info("Rebooting Server in 5 seconds")
+
+	// If running in local mode, skip reboot
+	if c.appConfig != nil && c.appConfig.Local {
+		logger.Info("Local mode enabled (appConfig.Local), skipping reboot.")
+		return nil
+	}
+
+	if runtime.GOOS == "darwin" {
+		// macOS: use goroutine with sleep since systemd-run doesn't exist
+		go func() {
+			time.Sleep(5 * time.Second)
+			if err := exec.Command("reboot").Run(); err != nil {
+				logger.Error("Failed to reboot: %v", err)
+			}
+		}()
+		return nil
+	}
+
+	// Linux: use systemd-run for non-blocking delayed reboot
+	return exec.Command("systemd-run", "--on-active=5s", "/usr/bin/systemctl", "reboot").Run()
 }
 
 // monitorState continuously monitors the cluster membership state
@@ -605,6 +527,40 @@ func postGenericToAdmin(
 	return nil
 }
 
+func postGenericToAdminLast(
+	c *Cluster,
+	endpoint string,
+	localFn func() error,
+) error {
+	for _, addr := range c.getNodeAdminAddresses() {
+		if c.hostIsLocal(addr) {
+			continue
+		}
+
+		// POST to the remote node’s admin endpoint
+		urlStr := getLocalURL(addr, endpoint)
+		resp, err := http.Post(urlStr, "", nil)
+		if err != nil {
+			logging.GetLogger().Error("POST to %s failed: %v", urlStr, err)
+			return err
+		}
+		if resp.StatusCode == http.StatusNotFound {
+			logging.GetLogger().Warn("POST to %s returned 404 Not Found", urlStr)
+		} else {
+			logging.GetLogger().Info("POST to %s succeeded with status %d", urlStr, resp.StatusCode)
+		}
+		resp.Body.Close()
+	}
+
+	// Invoke local function only after all remote nodes were posted.
+	if err := localFn(); err != nil {
+		logging.GetLogger().Error("Local function for endpoint %s failed: %v", endpoint, err)
+		return fmt.Errorf("local function failed: %w", err)
+	}
+
+	return nil
+}
+
 // getLocalEndpointResponse calls a endpoint
 func getLocalEndpointResponse(c *Cluster, addr, endpoint string) (response *http.Response, err error) {
 
@@ -644,22 +600,14 @@ func getLocalURL(addr, endpoint string) string {
 
 func (c *Cluster) notifyLocalVIPChange(gained bool) {
 	logger := logging.GetLogger()
-	event := ternary(gained, "gained", "lost")
+	event := ternary(gained, vip.EventGained, vip.EventLost)
 
-	msg := map[string]any{
-		"vip":       c.vip,
-		"host":      c.appConfig.BindAddr,
-		"event":     event,
-		"timestamp": time.Now().Unix(),
-	}
-
-	addr := &net.UDPAddr{IP: net.IPv4(127, 0, 0, 1), Port: api.VIPNotifierPort}
-	if err := utils.SendUDPMessage(addr, msg); err != nil {
+	if err := vip.SendLocalStatus(c.vip, c.appConfig.BindAddr, gained); err != nil {
 		logger.Error("SendUDPMessage failed: %v", err)
 		return
 	}
 
-	logger.Debug("Local VIP changed %s: %s. Notified localhost:%d", event, c.vip, api.VIPNotifierPort)
+	logger.Debug("Local VIP changed %s: %s. Notified localhost:%d", event, c.vip, vip.Port)
 }
 
 func ternary(cond bool, a, b string) string {

@@ -1,0 +1,9 @@
+platform: fusion-mini-DSP
+firmwareBundleVersion: 1.0.0
+model: Fusion-Mini DSP
+deviceType: DSP
+
+compatibility:
+  fusionServicesApiLevel: 1.3.0
+  minDesktopAppVersion: 0.3.5
+  cloudServicesApiLevel: 1.0.1

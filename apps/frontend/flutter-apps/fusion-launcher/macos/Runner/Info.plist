@@ -52,5 +52,11 @@
 	<string>NSApplication</string>
 	<key>com.apple.security.files.user-selected.read-write</key>
     <true/>
+    <key>NSLocalNetworkUsageDescription</key>
+    <string>We need to scan the local network to find your device.</string>
+    <key>NSBonjourServices</key>
+    <array>
+        <string>_http._tcp</string>
+    </array>
 </dict>
 </plist>

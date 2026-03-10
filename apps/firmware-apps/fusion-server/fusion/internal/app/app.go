@@ -4,11 +4,11 @@ import (
 	"bufio"
 	"context"
 	"fmt"
+	"fusion-services-core/logging"
 	"fusion/internal/api"
 	"fusion/internal/cluster"
 	clustertransport "fusion/internal/cluster/transport"
 	"fusion/internal/controllers"
-	"fusion/internal/logging"
 	"fusion/internal/network"
 	"fusion/internal/persistence"
 	"fusion/internal/pubsub"
@@ -59,6 +59,7 @@ type App struct {
 	config            *api.AppConfig
 	publicRouter      *mux.Router
 	privateRouter     *mux.Router
+	MDNSManager       *network.MDNSManager
 }
 
 // NewApp is a factory function to set up the application
@@ -78,21 +79,26 @@ func NewApp(config *api.AppConfig) *App {
 	transport := clustertransport.NewMemberlistTransport(memberlist)
 	hub.SetClusterTransport(transport)
 	connectionHandler := handler.NewHandler(config, memberlist, persistence, stateManager, hub, controllerManager)
-	clusterInstance := cluster.NewCluster(config, delegate, memberlist)
+	mdnsManager := initMDNSManager()
+	clusterInstance := cluster.NewCluster(config, delegate, memberlist, mdnsManager)
 	bleServer := initBLEServer()
 	sapServer := initSAPServer(config, api.SAPPort, connectionHandler, hub)
 	udpServer := initUDPServer(api.UDPPort, connectionHandler, hub)
 	fusionServer := server.NewFusionServer(config.NodeName, connectionHandler, hub)
 
+	connectionHandler.SetDeviceProvider(clusterInstance)
+
 	// Setup the public routes
 	publicRouter := mux.NewRouter()
 	publicRouter.Use(loggingMiddleware(config))
 	publicRouter.Use(recoveryMiddleware())
+	publicRouter.Use(corsMiddleware())
 
 	// Setup the private routes
 	privateRouter := mux.NewRouter()
 	privateRouter.Use(loggingMiddleware(config))
 	privateRouter.Use(recoveryMiddleware())
+	privateRouter.Use(corsMiddleware())
 
 	app := &App{
 		Logger:            logger,
@@ -111,6 +117,7 @@ func NewApp(config *api.AppConfig) *App {
 		config:            config,
 		publicRouter:      publicRouter,
 		privateRouter:     privateRouter,
+		MDNSManager:       mdnsManager,
 	}
 
 	return app
@@ -124,6 +131,11 @@ func (app *App) Close() {
 	}
 	if app.ControllerManager != nil {
 		app.ControllerManager.Stop()
+	}
+	if app.MDNSManager != nil {
+		if err := app.MDNSManager.Close(); err != nil {
+			app.Logger.Error("Failed to close mDNS manager: %v", err)
+		}
 	}
 	app.Cluster.Stop()
 	app.UDPServer.Stop()
@@ -174,6 +186,7 @@ func (app *App) setupPublicRoutes() {
 	app.registerPublicGET(routes.ClusterMembersEndpoint, app.Server.GetMembers)
 	app.registerPublicGET(routes.ClusterNTPSkewEndpoint, app.Cluster.GetNTPSkew)
 	app.registerPublicGET(routes.ClusterStatusEndpoint, app.Cluster.Metrics.GetClusterStatus)
+	app.registerPublicPOST(routes.ClusterRebootEndpoint, app.Cluster.RebootSystem)
 
 	// Controllers
 	app.registerPublicGET(routes.ControllersEndpoint, app.Server.GetControllers)
@@ -262,6 +275,7 @@ func (app *App) setupPrivateRoutes() {
 	app.registerPrivateGET(routes.ClusterLatencySyncAveragesLocalEndpoint, app.Cluster.GetSyncLatencyAveragesLocal)
 	app.registerPrivateGET(routes.ClusterLatencyNetworkFailuresLocalEndpoint, app.Cluster.GetNetworkFailuresLocal)
 	app.registerPrivateGET(routes.ClusterLatencyStatusLocalEndpoint, app.Cluster.GetLatencyStatusLocal)
+	app.registerPrivatePOST(routes.ClusterRebootLocalEndpoint, app.Cluster.RebootSystemLocal)
 
 	app.registerPrivateGET(routes.DeviceEndpoint, app.Cluster.GetDeviceInfo)
 	app.registerPrivatePOST(routes.DeviceEndpoint, app.Cluster.SetDeviceInfo)
@@ -281,7 +295,7 @@ func (app *App) startNetworkMonitor() {
 	logger := logging.GetLogger()
 	logger.Info("Network monitor is active")
 
-	app.monitor = network.NewMonitor(networkMonitorInterval, func(oldIP, newIP string) {
+	app.monitor = network.NewMonitor(networkMonitorInterval, app.config.NetIface, func(oldIP, newIP string) {
 		logger.Debug("IP changed from %s to %s.", oldIP, newIP)
 		app.leaveCluster()
 		app.joinCluster(newIP)
@@ -512,6 +526,16 @@ func initLogging(config *api.AppConfig) *logging.Logger {
 	return logging.GetLogger()
 }
 
+func initMDNSManager() *network.MDNSManager {
+	logger := logging.GetLogger()
+	logger.Info("Initializing mDNS manager")
+
+	manager := network.NewMDNSManager()
+
+	logger.Info("mDNS manager initialized successfully")
+	return manager
+}
+
 // withWebSocketMetrics adds metrics for WebSocket connections
 func withWebSocketMetrics(config *api.AppConfig, handler http.HandlerFunc, metrics *cluster.MetricsCollector) http.HandlerFunc {
 	if config.Verbose {
@@ -575,4 +599,28 @@ func (rec *statusRecorder) Hijack() (net.Conn, *bufio.ReadWriter, error) {
 		return hijacker.Hijack()
 	}
 	return nil, nil, fmt.Errorf("underlying ResponseWriter does not implement http.Hijacker")
+}
+
+// corsMiddleware adds CORS headers to all responses
+func corsMiddleware() mux.MiddlewareFunc {
+	logging.GetLogger().Warn(
+		"Enabled CORS middleware for manufacturing tests. Review and adjust for production use.",
+	)
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			// Set CORS headers
+			w.Header().Set("Access-Control-Allow-Origin", "*")
+			w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS")
+			w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With")
+			w.Header().Set("Access-Control-Max-Age", "3600")
+
+			// Handle preflight OPTIONS request
+			if r.Method == "OPTIONS" {
+				w.WriteHeader(http.StatusOK)
+				return
+			}
+
+			next.ServeHTTP(w, r)
+		})
+	}
 }

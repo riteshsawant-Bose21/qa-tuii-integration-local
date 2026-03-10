@@ -8,7 +8,7 @@
 // // import 'package:fusion_web/features/auth/data/repositories/auth_repository_impl.dart';
 // // import 'package:fusion_web/features/auth/domain/usecases/auth_usecases.dart';
 // // import 'package:lucide_icons_flutter/lucide_icons.dart';
-// // import 'package:go_router/go_router.dart';
+import 'package:go_router/go_router.dart';
 // // class FusionSidebar extends StatefulWidget {
 // //   const FusionSidebar({super.key});
 
@@ -312,7 +312,6 @@
 // //     );
 // //   }
 // // }
-
 
 // import 'package:flutter/material.dart';
 // import 'package:fusion_lib/fusion_lib.dart';
@@ -663,22 +662,19 @@ class FusionSidebar extends StatelessWidget {
         vm.initialize(selectedTab);
         return vm;
       },
-      child:
-          BlocBuilder<SidebarViewModel, BaseState<DashboardTabs?>>(
+      child: BlocBuilder<SidebarViewModel, BaseState<DashboardTabs?>>(
         builder: (context, state) {
           final viewModel = context.read<SidebarViewModel>();
 
           return Container(
             width: AppConstants.sidebarWidth,
             height: double.infinity,
-            decoration:
-                BoxDecoration(color: Theme.of(context).cardColor),
+            decoration: BoxDecoration(color: Theme.of(context).cardColor),
             child: SafeArea(
               child: Padding(
                 padding: const EdgeInsets.all(8.0),
                 child: Column(
-                  crossAxisAlignment:
-                      CrossAxisAlignment.start,
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     /// LOGO
                     Container(
@@ -700,8 +696,7 @@ class FusionSidebar extends StatelessWidget {
                     const SizedBox(height: 16),
 
                     Expanded(
-                      child: _buildNavigationSection(
-                          context, viewModel),
+                      child: _buildNavigationSection(context, viewModel),
                     ),
                   ],
                 ),
@@ -717,54 +712,37 @@ class FusionSidebar extends StatelessWidget {
   // USER SECTION
   // ===============================
 
-  Widget _buildUserSection(
-      BuildContext context,
-      SidebarViewModel viewModel) {
+  Widget _buildUserSection(BuildContext context, SidebarViewModel viewModel) {
     return Container(
       decoration: BoxDecoration(
-        color: context.colorScheme.primaryContainer
-            .withValues(alpha: 0.1),
-        borderRadius:
-            BorderRadius.circular(AppConstants.borderRadius),
+        color: context.colorScheme.primaryContainer.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(AppConstants.borderRadius),
         border: Border.all(
-          color: context.colorScheme.outline
-              .withValues(alpha: 0.1),
+          color: context.colorScheme.outline.withValues(alpha: 0.1),
         ),
       ),
       padding: const EdgeInsets.all(AppConstants.padding),
       child: Column(
-        crossAxisAlignment:
-            CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
-            mainAxisAlignment:
-                MainAxisAlignment.end,
+            mainAxisAlignment: MainAxisAlignment.end,
             children: [
               GestureDetector(
-                onTap:
-                    viewModel.clearNotifications,
+                onTap: viewModel.clearNotifications,
                 child: Badge(
                   smallSize: 10,
-                  alignment:
-                      Alignment.topRight,
-                  backgroundColor:
-                      Colors.red,
-                  isLabelVisible:
-                      viewModel
-                          .hasNotifications,
+                  alignment: Alignment.topRight,
+                  backgroundColor: Colors.red,
+                  isLabelVisible: viewModel.hasNotifications,
                   child: Container(
                     height: 36,
                     width: 36,
-                    decoration:
-                        BoxDecoration(
+                    decoration: BoxDecoration(
                       color: Colors.white,
-                      borderRadius:
-                          BorderRadius
-                              .circular(8),
+                      borderRadius: BorderRadius.circular(8),
                     ),
-                    child: const Icon(
-                        LucideIcons.bell,
-                        size: 16),
+                    child: const Icon(LucideIcons.bell, size: 16),
                   ),
                 ),
               ),
@@ -776,25 +754,16 @@ class FusionSidebar extends StatelessWidget {
               Expanded(
                 child: FusionAppText(
                   text: viewModel.appName,
-                  style: context
-                      .textTheme.labelMedium
-                      ?.copyWith(
-                    color:
-                        FusionDarkColorPallette
-                            .medium50,
+                  style: context.textTheme.labelMedium?.copyWith(
+                    color: FusionDarkColorPallette.medium50,
                   ),
                 ),
               ),
-              const Icon(
-                  LucideIcons.chevronDown),
+              const Icon(LucideIcons.chevronDown),
             ],
           ),
           const SizedBox(height: 10),
-          Text(
-            viewModel.userName,
-            style: context
-                .textTheme.titleMedium,
-          ),
+          Text(viewModel.userName, style: context.textTheme.titleMedium),
         ],
       ),
     );
@@ -805,59 +774,61 @@ class FusionSidebar extends StatelessWidget {
   // ===============================
 
   Widget _buildNavigationSection(
-      BuildContext context,
-      SidebarViewModel viewModel) {
+    BuildContext context,
+    SidebarViewModel viewModel,
+  ) {
     return Container(
       decoration: BoxDecoration(
         color: context.colorScheme.surface,
-        borderRadius:
-            BorderRadius.circular(
-                AppConstants.borderRadius),
+        borderRadius: BorderRadius.circular(AppConstants.borderRadius),
         border: Border.all(
-          color: context.colorScheme.outline
-              .withValues(alpha: 0.1),
+          color: context.colorScheme.outline.withValues(alpha: 0.1),
         ),
       ),
       child: Column(
         children: [
           Expanded(
             child: Padding(
-              padding: const EdgeInsets.all(
-                  AppConstants.padding),
+              padding: const EdgeInsets.all(AppConstants.padding),
               child: Column(
-                crossAxisAlignment:
-                    CrossAxisAlignment.start,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   _buildNavItem(
-                      context,
-                      viewModel,
-                      Icons.home_filled,
-                      DashboardTabs.dashboard),
+                    context,
+                    viewModel,
+                    Icons.home_filled,
+                    DashboardTabs.dashboard,
+                  ),
                   _buildNavItem(
-                      context,
-                      viewModel,
-                      Icons.work,
-                      DashboardTabs.projects),
+                    context,
+                    viewModel,
+                    Icons.work,
+                    DashboardTabs.projects,
+                  ),
                   _buildNavItem(
-                      context,
-                      viewModel,
-                      Icons.devices,
-                      DashboardTabs.devices),
+                    context,
+                    viewModel,
+                    Icons.devices,
+                    DashboardTabs.devices,
+                  ),
                   _buildNavItem(
-                      context,
-                      viewModel,
-                      Icons.people,
-                      DashboardTabs.users),
+                    context,
+                    viewModel,
+                    Icons.people,
+                    DashboardTabs.users,
+                  ),
                   _buildNavItem(
-                      context,
-                      viewModel,
-                      Icons.security,
-                      DashboardTabs.roles),
+                    context,
+                    viewModel,
+                    Icons.security,
+                    DashboardTabs.roles,
+                  ),
                   _buildNavItem(
-                      context,
-                      viewModel,
-                      Icons.settings,
-                      DashboardTabs.settings),
+                    context,
+                    viewModel,
+                    Icons.settings,
+                    DashboardTabs.settings,
+                  ),
                 ],
               ),
             ),
@@ -866,15 +837,12 @@ class FusionSidebar extends StatelessWidget {
           const Divider(height: 0),
 
           Padding(
-            padding: const EdgeInsets.all(
-                AppConstants.padding),
+            padding: const EdgeInsets.all(AppConstants.padding),
             child: _HoverNavItem(
               icon: LucideIcons.logOut,
               title: 'Sign Out',
-              semanticsId:
-                  'signout_section',
-              onTap: () =>
-                  _handleLogout(context),
+              semanticsId: 'signout_section',
+              onTap: () => _handleLogout(context),
             ),
           ),
         ],
@@ -883,17 +851,16 @@ class FusionSidebar extends StatelessWidget {
   }
 
   Widget _buildNavItem(
-      BuildContext context,
-      SidebarViewModel viewModel,
-      IconData icon,
-      DashboardTabs tab) {
+    BuildContext context,
+    SidebarViewModel viewModel,
+    IconData icon,
+    DashboardTabs tab,
+  ) {
     return _HoverNavItem(
       icon: icon,
       title: tab.title,
-      semanticsId:
-          'test-${tab.name}-tab',
-      isSelected:
-          viewModel.selectedTab == tab,
+      semanticsId: 'test-${tab.name}-tab',
+      isSelected: viewModel.selectedTab == tab,
       onTap: () {
         viewModel.setSelectedTab(tab);
         onTabChanged?.call(tab);
@@ -908,21 +875,16 @@ class FusionSidebar extends StatelessWidget {
   void _handleLogout(BuildContext context) async {
     try {
       final dataSource = Auth0DataSource();
-      final repository =
-          AuthRepositoryImpl(
-              dataSource: dataSource);
-      final logoutUseCase =
-          LogoutUseCase(repository);
+      final repository = AuthRepositoryImpl(dataSource: dataSource);
+      final logoutUseCase = LogoutUseCase(repository);
 
       await logoutUseCase();
 
-      Navigator.pushReplacementNamed(
-          context,
-          AppConstants.loginRoute);
-    } catch (_) {
-      Navigator.pushReplacementNamed(
-          context,
-          AppConstants.loginRoute);
+      context.go(AppConstants.loginRoute);
+    } catch (e) {
+      print('Logout error: $e');
+      // Navigate to login even if logout fails
+      context.go(AppConstants.loginRoute);
     }
   }
 }
@@ -969,8 +931,8 @@ class _HoverNavItemState extends State<_HoverNavItem> {
               color: widget.isSelected
                   ? themeColor.withValues(alpha: 0.04)
                   : (_isHovered
-                      ? themeColor.withValues(alpha: 0.02)
-                      : Colors.transparent),
+                        ? themeColor.withValues(alpha: 0.02)
+                        : Colors.transparent),
               borderRadius: BorderRadius.circular(8),
             ),
             padding: const EdgeInsets.all(8),

@@ -2,12 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/core/router/routes.dart';
 import 'package:fusion_launcher/features/authentication/viewmodel/auth_view_model.dart';
+import 'package:fusion_launcher/features/authentication/viewmodel/session_view_model.dart';
 import 'package:fusion_lib/fusion_lib.dart';
-import 'package:fusion_lib/fusion_theme/app_theme.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../core/service_locator.dart';
 import '../../core/utils/fusion_utils.dart';
+import '../processing_block/view/processing_blocks/widgets/disabled_widget_wrapper.dart';
 import '../user_account_setup/presentation/widgets/account_creation_success_popup.dart';
 
 class LauncherSignInPage extends StatelessWidget {
@@ -92,6 +93,7 @@ class _LauncherSignInPageView extends StatelessWidget {
                       constraints: const BoxConstraints(maxWidth: 500),
                       child: Column(
                         spacing: 10,
+                        crossAxisAlignment: CrossAxisAlignment.end,
                         children: <Widget>[
                           NeumorphicDarkButton(
                             onTap: () => _handleAuthAction(context, isAuthenticated),
@@ -130,6 +132,31 @@ class _LauncherSignInPageView extends StatelessWidget {
                               ),
                             ),
                           ),
+                          // skip login Ui
+                          const SizedBox(
+                            height: 44,
+                          ),
+                          Padding(
+                            padding: const EdgeInsets.only(right: 10.0),
+                            child: SemanticHelper.button(
+                              testId: SemanticHelper.createTestId(SemanticTypes.button, "skip_login_button"),
+                              child: TextButton(
+                                onPressed: () {
+                                  serviceLocator<SessionViewModel>().skipLogin();
+                                  Navigator.pushNamedAndRemoveUntil(
+                                    context,
+                                    Routes.launcherHomePage,
+                                    (Route<dynamic> route) => false,
+                                  );
+                                },
+                                child: FusionAppText(
+                                  text: 'Skip login',
+                                  textAlign: TextAlign.start,
+                                  style: context.textTheme.bodyMedium,
+                                ),
+                              ),
+                            ),
+                          ),
                         ],
                       ),
                     ),
@@ -160,12 +187,17 @@ class NeumorphicDarkTextField extends StatelessWidget {
   final TextInputType? keyboardType;
   final FormFieldValidator<String>? validator;
   final String? hintText;
+  final TextStyle? hintStyle;
   final double borderRadius;
   final Widget? prefix;
   final Widget? suffix;
   final bool isObscured;
   final double? width;
+  final double? height;
   final EdgeInsetsGeometry? contentPadding;
+  final Color? color;
+  final bool enabled;
+  final TextStyle? textStyle;
 
   const NeumorphicDarkTextField({
     super.key,
@@ -174,53 +206,65 @@ class NeumorphicDarkTextField extends StatelessWidget {
     this.keyboardType,
     this.validator,
     this.hintText,
+    this.hintStyle,
     this.borderRadius = 12,
     this.prefix,
     this.suffix,
     this.isObscured = false,
     this.width,
+    this.height,
     this.contentPadding,
+    this.enabled = true,
+    this.color,
+    this.textStyle,
   });
 
   @override
   Widget build(BuildContext context) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(borderRadius),
-      child: Container(
-        width: width,
-        margin: const EdgeInsets.all(2),
-        decoration: BoxDecoration(
-          boxShadow: <BoxShadow>[
-            const BoxShadow(color: Colors.black54, blurRadius: 1, offset: Offset(-2, -2), blurStyle: BlurStyle.inner),
-            const BoxShadow(color: Colors.white12, blurRadius: 1, offset: Offset(2, 2), blurStyle: BlurStyle.inner),
-            const BoxShadow(color: FusionDarkColorPallette.dark70, blurRadius: 4, blurStyle: BlurStyle.inner),
-          ],
-          borderRadius: BorderRadius.circular(borderRadius),
-        ),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(borderRadius),
-          child: TextFormField(
-            controller: controller,
-            onChanged: onChanged,
-            keyboardType: keyboardType,
-            validator: validator,
-            style: context.textTheme.labelLarge,
-            obscureText: isObscured,
-            decoration: InputDecoration(
-              prefixIcon: prefix,
-              prefixIconConstraints: const BoxConstraints(minWidth: 0, minHeight: 0),
-              suffixIcon: suffix,
-              suffixIconConstraints: const BoxConstraints(minWidth: 0, minHeight: 0),
-              filled: true,
-              isDense: true,
-              fillColor: const Color(0xFF282826),
-              border: InputBorder.none,
-              enabledBorder: InputBorder.none,
-              focusedBorder: InputBorder.none,
-              hintText: hintText,
-              hoverColor: Colors.transparent,
-              contentPadding: contentPadding ?? const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-              hintStyle: context.textTheme.labelLarge?.copyWith(color: Colors.grey),
+    return Padding(
+      padding: const EdgeInsets.all(2.0),
+      child: DisabledWidgetWrapper(
+        isDisabled: !enabled,
+        child: FusionContainer(
+          width: width,
+          height: height,
+          borderRadius: borderRadius,
+          color: color,
+
+          // margin: const EdgeInsets.all(2),
+          // decoration: BoxDecoration(
+          //   boxShadow: <BoxShadow>[
+          //     const BoxShadow(color: Colors.black54, blurRadius: 1, offset: Offset(-2, -2), blurStyle: BlurStyle.inner),
+          //     const BoxShadow(color: Colors.white12, blurRadius: 1, offset: Offset(2, 2), blurStyle: BlurStyle.inner),
+          //     const BoxShadow(color: FusionDarkColorPallette.dark70, blurRadius: 4, blurStyle: BlurStyle.inner),
+          //   ],
+          //   borderRadius: BorderRadius.circular(borderRadius),
+          // ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(borderRadius),
+            child: TextFormField(
+              controller: controller,
+              onChanged: onChanged,
+              keyboardType: keyboardType,
+              validator: validator,
+              style: textStyle ?? context.textTheme.labelLarge,
+              obscureText: isObscured,
+              enabled: enabled,
+              decoration: InputDecoration(
+                prefixIcon: prefix,
+                prefixIconConstraints: const BoxConstraints(minWidth: 0, minHeight: 0),
+                suffixIcon: suffix,
+                suffixIconConstraints: const BoxConstraints(minWidth: 0, minHeight: 0),
+                filled: false,
+                isDense: true,
+                border: InputBorder.none,
+                enabledBorder: InputBorder.none,
+                focusedBorder: InputBorder.none,
+                hintText: hintText,
+                hoverColor: Colors.transparent,
+                contentPadding: contentPadding ?? const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+                hintStyle: hintStyle ?? context.textTheme.labelLarge?.copyWith(color: Colors.grey),
+              ),
             ),
           ),
         ),
@@ -237,6 +281,8 @@ class NeumorphicDarkButton extends StatefulWidget {
   final double? height;
   final VoidCallback? onTap;
   final double borderRadius;
+  final Color? backgroundColor;
+
   const NeumorphicDarkButton({
     super.key,
     this.text,
@@ -245,6 +291,7 @@ class NeumorphicDarkButton extends StatefulWidget {
     this.onTap,
     this.width,
     this.height,
+    this.backgroundColor,
   });
 
   @override
@@ -258,40 +305,23 @@ class _NeumorphicDarkButtonState extends State<NeumorphicDarkButton> {
   Widget build(BuildContext context) {
     assert(widget.text != null || widget.child != null);
 
-    return GestureDetector(
-      onTapDown: (_) => setState(() => isPressed = true),
-      onTapCancel: () => setState(() => isPressed = false),
-      onTapUp: (_) {
-        setState(() => isPressed = false);
-        widget.onTap?.call();
-      },
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 100),
+    return Padding(
+      padding: const EdgeInsets.all(2.0),
+      child: FusionNeumorphicButton(
+        onTap: widget.onTap ?? () {},
         width: widget.width,
         height: widget.height ?? 44,
-        margin: const EdgeInsets.all(2),
-        decoration: BoxDecoration(
-          boxShadow: <BoxShadow>[
-            if (isPressed) ...<BoxShadow>[
-              const BoxShadow(color: Colors.black54, blurRadius: 1, offset: Offset(-2, -2), blurStyle: BlurStyle.inner),
-              const BoxShadow(color: Colors.white12, blurRadius: 1, offset: Offset(2, 2), blurStyle: BlurStyle.inner),
-              const BoxShadow(color: FusionDarkColorPallette.dark70, blurRadius: 4, blurStyle: BlurStyle.inner),
-            ] else ...<BoxShadow>[
-              const BoxShadow(color: Colors.black, blurRadius: 1, offset: Offset(0.5, 1)),
-              const BoxShadow(color: Colors.white24, blurRadius: 1, offset: Offset(-0.5, -1)),
-            ],
-          ],
-          borderRadius: BorderRadius.circular(widget.borderRadius),
-        ),
+        borderRadius: widget.borderRadius,
+        text: widget.text ?? "",
         child: ClipRRect(
           borderRadius: BorderRadius.circular(widget.borderRadius),
           child: Container(
             decoration: BoxDecoration(
-              color: const Color(0xFF232523),
+              color: widget.backgroundColor,
               borderRadius: BorderRadius.circular(widget.borderRadius),
             ),
             child: Center(
-              child: widget.child ?? FusionAppText(text: widget.text!),
+              child: widget.child ?? FusionAppText(text: widget.text ?? ""),
             ),
           ),
         ),

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:fusion_lib/fusion_lib.dart';
 
 import '../../dto/pb_item.dart';
 import '../../dto/pb_item_param.dart';
@@ -38,6 +39,7 @@ class PBSlider extends StatelessWidget {
             min: data.min,
             max: data.max,
             showIntervals: showIntervals,
+            activeColor: context.colorScheme.primary,
             onChanged:
                 onChanged ??
                 (num value) {
@@ -59,10 +61,8 @@ class VerticalSlider extends StatefulWidget {
     required this.max,
     this.onChanged,
     this.showIntervals = true,
-    this.activeColor = const Color(0xFF303030),
-    this.inactiveColor = const Color(0xFFBABABA),
-    this.thumbColor = Colors.black,
-    this.thumbInnerColor = Colors.white,
+    this.activeColor,
+    this.inactiveColor,
     this.trackWidth = 4.0,
     this.thumbSize = 16.0,
     this.intervalSpacing = 50.0,
@@ -77,10 +77,8 @@ class VerticalSlider extends StatefulWidget {
   final bool showIntervals;
 
   // Styling
-  final Color activeColor;
-  final Color inactiveColor;
-  final Color thumbColor;
-  final Color thumbInnerColor;
+  final Color? activeColor;
+  final Color? inactiveColor;
   final double trackWidth;
   final double thumbSize;
   final double intervalSpacing;
@@ -168,6 +166,21 @@ class _VerticalSliderState extends State<VerticalSlider> {
     );
   }
 
+  void _jumpToPosition(double localDy, double height) {
+    final double trackRange = height - widget.thumbSize;
+    final double clampedDy = localDy.clamp(widget.thumbSize / 2, height - widget.thumbSize / 2);
+
+    final double normalized = 1 - ((clampedDy - widget.thumbSize / 2) / trackRange);
+
+    final num newValue = _fromNormalized(normalized);
+
+    setState(() {
+      _currentValue = num.parse(newValue.toStringAsFixed(2));
+    });
+
+    widget.onChanged?.call(_currentValue);
+  }
+
   @override
   Widget build(BuildContext context) {
     return LayoutBuilder(
@@ -209,10 +222,10 @@ class _VerticalSliderState extends State<VerticalSlider> {
                               spacing: 2,
                               mainAxisSize: MainAxisSize.min,
                               children: <Widget>[
-                                Text(
-                                  v.round().toString(),
-                                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                                    color: widget.inactiveColor,
+                                FusionAppText(
+                                  text: v.round().toString(),
+                                  style: context.textTheme.labelSmall?.copyWith(
+                                    color: context.colorScheme.textPrimary,
                                     fontWeight: FontWeight.w500,
                                     fontSize: 8,
                                   ),
@@ -221,7 +234,7 @@ class _VerticalSliderState extends State<VerticalSlider> {
                                   height: 2,
                                   width: widget.intervalTickWidth,
                                   decoration: BoxDecoration(
-                                    color: widget.inactiveColor,
+                                    color: context.colorScheme.textPrimary,
                                     borderRadius: BorderRadius.circular(1),
                                   ),
                                 ),
@@ -237,85 +250,66 @@ class _VerticalSliderState extends State<VerticalSlider> {
                 SizedBox(
                   width: widget.thumbSize,
                   height: height,
-                  child: Stack(
-                    clipBehavior: Clip.none,
-                    children: <Widget>[
-                      // Track - centered
-                      Positioned.fill(
-                        child: Center(
-                          child: SizedBox(
-                            width: widget.trackWidth,
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: <Widget>[
-                                // Inactive (top)
-                                Container(
-                                  width: widget.trackWidth,
-                                  height: inactiveHeight,
-                                  decoration: BoxDecoration(
-                                    color: widget.inactiveColor,
-                                    borderRadius: const BorderRadius.vertical(
-                                      top: Radius.circular(100),
+                  child: GestureDetector(
+                    behavior: HitTestBehavior.translucent,
+                    onTapDown: (TapDownDetails d) => _jumpToPosition(d.localPosition.dy, height),
+                    onVerticalDragStart: (DragStartDetails d) => _jumpToPosition(d.localPosition.dy, height),
+                    onVerticalDragUpdate: (DragUpdateDetails d) => _jumpToPosition(d.localPosition.dy, height),
+                    child: Stack(
+                      clipBehavior: Clip.none,
+                      children: <Widget>[
+                        // Track - centered
+                        Positioned.fill(
+                          child: Center(
+                            child: SizedBox(
+                              width: widget.trackWidth,
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: <Widget>[
+                                  // Inactive (top)
+                                  Container(
+                                    width: widget.trackWidth,
+                                    height: inactiveHeight,
+                                    decoration: BoxDecoration(
+                                      color: context.colorScheme.elevation5,
+                                      borderRadius: const BorderRadius.vertical(
+                                        top: Radius.circular(100),
+                                      ),
                                     ),
                                   ),
-                                ),
-                                // Active (bottom)
-                                Container(
-                                  width: widget.trackWidth,
-                                  height: activeHeight,
-                                  decoration: BoxDecoration(
-                                    color: widget.activeColor,
-                                    borderRadius: const BorderRadius.vertical(
-                                      bottom: Radius.circular(100),
+                                  // Active (bottom)
+                                  Container(
+                                    width: widget.trackWidth,
+                                    height: activeHeight,
+                                    decoration: BoxDecoration(
+                                      color: widget.activeColor ?? context.colorScheme.primaryColor,
+                                      borderRadius: const BorderRadius.vertical(
+                                        bottom: Radius.circular(100),
+                                      ),
                                     ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
-
-                      // Thumb - centered horizontally
-                      Positioned(
-                        left: 0,
-                        right: 0,
-                        bottom: thumbBottom,
-                        child: Center(
-                          child: GestureDetector(
-                            behavior: HitTestBehavior.opaque,
-                            onPanStart: _onPanStart,
-                            onPanUpdate: (DragUpdateDetails details) => _onPanUpdate(details, height),
-                            onPanEnd: _onPanEnd,
-                            child: Container(
-                              height: widget.thumbSize,
-                              width: widget.thumbSize,
-                              decoration: BoxDecoration(
-                                color: widget.thumbColor,
-                                shape: BoxShape.circle,
-                                boxShadow: <BoxShadow>[
-                                  BoxShadow(
-                                    color: Colors.black.withOpacity(0.15),
-                                    blurRadius: 4,
-                                    offset: const Offset(0, 2),
                                   ),
                                 ],
                               ),
-                              child: Center(
-                                child: Container(
-                                  height: widget.thumbSize / 2,
-                                  width: widget.thumbSize / 2,
-                                  decoration: BoxDecoration(
-                                    color: widget.thumbInnerColor,
-                                    shape: BoxShape.circle,
-                                  ),
-                                ),
-                              ),
                             ),
                           ),
                         ),
-                      ),
-                    ],
+
+                        // Thumb - centered horizontally
+                        Positioned(
+                          left: 0,
+                          right: 0,
+                          bottom: thumbBottom,
+                          child: Center(
+                            child: _Thumb(
+                              size: widget.thumbSize,
+                              onStart: _onPanStart,
+                              onUpdate: (DragUpdateDetails details) => _onPanUpdate(details, height),
+                              onEnd: _onPanEnd,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ],
@@ -323,6 +317,241 @@ class _VerticalSliderState extends State<VerticalSlider> {
           ),
         );
       },
+    );
+  }
+}
+
+class VerticalRangeSelectionSlider extends StatefulWidget {
+  const VerticalRangeSelectionSlider({
+    super.key,
+    required this.lowerValue,
+    required this.upperValue,
+    required this.min,
+    required this.max,
+    required this.onLowerChanged,
+    required this.onUpperChanged,
+    this.minGap = 1,
+    this.showIntervals = true,
+    this.trackWidth = 4,
+    this.thumbSize = 16,
+    this.intervalSpacing = 50,
+    this.intervalTickWidth = 10,
+    this.intervalGap,
+  });
+
+  final num lowerValue;
+  final num upperValue;
+  final num min;
+  final num max;
+
+  final ValueChanged<num> onLowerChanged;
+  final ValueChanged<num> onUpperChanged;
+
+  final num minGap;
+
+  final bool showIntervals;
+  final double trackWidth;
+  final double thumbSize;
+  final double intervalSpacing;
+  final double intervalTickWidth;
+  final num? intervalGap;
+
+  @override
+  State<VerticalRangeSelectionSlider> createState() => _VerticalRangeSelectionSliderState();
+}
+
+class _VerticalRangeSelectionSliderState extends State<VerticalRangeSelectionSlider> {
+  num? _dragStartLower;
+  num? _dragStartUpper;
+  double _dragStartDy = 0;
+
+  double _toNorm(num v) => ((v - widget.min) / (widget.max - widget.min)).clamp(0.0, 1.0);
+
+  num _fromNorm(num n) => widget.min + n * (widget.max - widget.min);
+
+  void _startLower(DragStartDetails d) {
+    _dragStartLower = widget.lowerValue;
+    _dragStartDy = d.localPosition.dy;
+  }
+
+  void _startUpper(DragStartDetails d) {
+    _dragStartUpper = widget.upperValue;
+    _dragStartDy = d.localPosition.dy;
+  }
+
+  void _updateLower(DragUpdateDetails d, double h) {
+    if (_dragStartLower == null) return;
+
+    final double range = h - widget.thumbSize;
+    final double delta = _dragStartDy - d.localPosition.dy;
+
+    final double startNorm = _toNorm(_dragStartLower!);
+    final num nextNorm = (startNorm + delta / range).clamp(0, 1);
+
+    final num next = _fromNorm(nextNorm).clamp(widget.min, widget.upperValue - widget.minGap);
+
+    widget.onLowerChanged(next);
+  }
+
+  void _updateUpper(DragUpdateDetails d, double h) {
+    if (_dragStartUpper == null) return;
+
+    final double range = h - widget.thumbSize;
+    final double delta = _dragStartDy - d.localPosition.dy;
+
+    final double startNorm = _toNorm(_dragStartUpper!);
+    final num nextNorm = (startNorm + delta / range).clamp(0, 1);
+
+    final num next = _fromNorm(nextNorm).clamp(widget.lowerValue + widget.minGap, widget.max);
+
+    widget.onUpperChanged(next);
+  }
+
+  void _end(_) {
+    _dragStartLower = null;
+    _dragStartUpper = null;
+  }
+
+  List<num> _intervals(double h) {
+    if (widget.intervalGap != null) {
+      final int count = ((widget.max - widget.min) / widget.intervalGap!).floor() + 1;
+
+      return List<num>.generate(count, (int i) => widget.max - i * widget.intervalGap!);
+    }
+
+    final int ticks = ((h / widget.intervalSpacing).floor()).clamp(3, 12);
+    final double step = (widget.max - widget.min) / (ticks - 1);
+
+    return List<num>.generate(ticks, (int i) => widget.max - i * step);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (_, BoxConstraints c) {
+        final double h = c.maxHeight;
+
+        final double half = widget.thumbSize / 2;
+        final double range = h - widget.thumbSize;
+
+        final double lowerNorm = _toNorm(widget.lowerValue);
+        final double upperNorm = _toNorm(widget.upperValue);
+
+        final double lowerCenter = half + lowerNorm * range;
+        final double upperCenter = half + upperNorm * range;
+
+        final List<num> ticks = widget.showIntervals ? _intervals(h) : <num>[];
+
+        return Row(
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            if (widget.showIntervals)
+              Column(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: <Widget>[
+                  ...ticks.map(
+                    (num v) => Row(
+                      children: <Widget>[
+                        Text(v.round().toString(), style: const TextStyle(fontSize: 8)),
+                        Container(
+                          width: widget.intervalTickWidth,
+                          height: 2,
+                          color: context.colorScheme.textPrimary,
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+
+            SizedBox(
+              width: widget.thumbSize,
+              height: h,
+              child: Stack(
+                children: <Widget>[
+                  Positioned.fill(
+                    child: Center(
+                      child: Container(
+                        width: widget.trackWidth,
+                        color: context.colorScheme.strokeLight,
+                      ),
+                    ),
+                  ),
+
+                  Positioned.fill(
+                    bottom: lowerCenter,
+                    top: h - upperCenter,
+                    child: Center(
+                      child: Container(
+                        width: widget.trackWidth,
+                        color: context.colorScheme.primaryColor,
+                      ),
+                    ),
+                  ),
+
+                  Positioned(
+                    bottom: lowerCenter - half,
+                    left: 0,
+                    right: 0,
+                    child: _Thumb(
+                      size: widget.thumbSize,
+                      onStart: _startLower,
+                      onUpdate: (DragUpdateDetails d) => _updateLower(d, h),
+                      onEnd: _end,
+                    ),
+                  ),
+
+                  Positioned(
+                    bottom: upperCenter - half,
+                    left: 0,
+                    right: 0,
+                    child: _Thumb(
+                      size: widget.thumbSize,
+                      onStart: _startUpper,
+                      onUpdate: (DragUpdateDetails d) => _updateUpper(d, h),
+                      onEnd: _end,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _Thumb extends StatelessWidget {
+  const _Thumb({
+    required this.size,
+    required this.onStart,
+    required this.onUpdate,
+    required this.onEnd,
+  });
+
+  final double size;
+  final GestureDragStartCallback onStart;
+  final GestureDragUpdateCallback onUpdate;
+  final GestureDragEndCallback onEnd;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onPanStart: onStart,
+      onPanUpdate: onUpdate,
+      onPanEnd: onEnd,
+      child: Center(
+        child: Container(
+          height: size,
+          width: size,
+          decoration: const BoxDecoration(
+            shape: BoxShape.circle,
+            color: Colors.white,
+          ),
+        ),
+      ),
     );
   }
 }

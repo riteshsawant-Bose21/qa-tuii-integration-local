@@ -2,10 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:data_table_2/data_table_2.dart';
 import 'package:intl/intl.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:fusion_web/core/presentation/base_viewmodel.dart';
 import 'package:fusion_web/features/users/presentation/viewmodels/users_viewmodel.dart';
-import 'package:fusion_web/features/users/data/datasources/users_datasource.dart';
-import 'package:fusion_web/features/users/data/repositories/users_repository_impl.dart';
-import 'package:fusion_web/features/users/domain/usecases/users_usecases.dart';
 import 'package:fusion_web/features/users/domain/entities/user_entity.dart';
 import 'package:fusion_web/features/users/presentation/widgets/invite_user_dialog.dart';
 import 'package:fusion_web/features/users/presentation/widgets/edit_user_dialog.dart';
@@ -20,7 +19,7 @@ class UsersPage extends StatefulWidget {
 }
 
 class _UsersPageState extends State<UsersPage> {
-  late UsersViewModel _viewModel;
+  late final UsersViewModel _viewModel = ServiceLocator().usersViewModel;
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
   String? _selectedRole;
@@ -29,50 +28,13 @@ class _UsersPageState extends State<UsersPage> {
   @override
   void initState() {
     super.initState();
-    _initializeViewModel();
+    _viewModel.initialize();
     _searchController.addListener(() {
       setState(() {
         _searchQuery = _searchController.text;
       });
       _viewModel.searchUsers(_searchQuery);
     });
-  }
-
-  void _initializeViewModel() {
-    final apiService = ServiceLocator().apiService;
-    final remoteDataSource = UsersRemoteDataSource(apiService: apiService);
-    final localDataSource = UsersLocalDataSource();
-    final repository = UsersRepositoryImpl(
-      remoteDataSource: remoteDataSource,
-      localDataSource: localDataSource,
-    );
-
-    _viewModel = UsersViewModel(
-      getUsersUseCase: GetUsersUseCase(repository),
-      getUserByIdUseCase: GetUserByIdUseCase(repository),
-      createUserUseCase: CreateUserUseCase(repository),
-      updateUserUseCase: UpdateUserUseCase(repository),
-      deleteUserUseCase: DeleteUserUseCase(repository),
-      searchUsersUseCase: SearchUsersUseCase(repository),
-      inviteUserUseCase: InviteUserUseCase(repository),
-      resendInviteUseCase: ResendInviteUseCase(repository),
-      updateUserRolesUseCase: UpdateUserRolesUseCase(repository),
-      assignUserToProjectsUseCase: AssignUserToProjectsUseCase(repository),
-      removeUserFromProjectsUseCase: RemoveUserFromProjectsUseCase(repository),
-      activateUserUseCase: ActivateUserUseCase(repository),
-      deactivateUserUseCase: DeactivateUserUseCase(repository),
-      filterUsersUseCase: FilterUsersUseCase(repository),
-      getUserMetricsUseCase: GetUserMetricsUseCase(repository),
-    );
-
-    _viewModel.initialize();
-  }
-
-  @override
-  void dispose() {
-    _searchController.dispose();
-    _viewModel.dispose();
-    super.dispose();
   }
 
   void _applyFilters() {
@@ -90,49 +52,52 @@ class _UsersPageState extends State<UsersPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.grey[50],
-      body: SafeArea(
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            return SingleChildScrollView(
-              padding: const EdgeInsets.all(24),
-              child: ConstrainedBox(
-                constraints: BoxConstraints(
-                  minHeight: constraints.maxHeight - 48, // Account for padding
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Header Section with Metrics
-                    _buildHeaderWithMetrics(),
-                    const SizedBox(height: 24),
+    return BlocProvider.value(
+      value: _viewModel,
+      child: Scaffold(
+        backgroundColor: Colors.grey[50],
+        body: SafeArea(
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              return SingleChildScrollView(
+                padding: const EdgeInsets.all(24),
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(
+                    minHeight:
+                        constraints.maxHeight - 48, // Account for padding
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Header Section with Metrics
+                      _buildHeaderWithMetrics(),
+                      const SizedBox(height: 24),
 
-                    // Filters and Search Section
-                    _buildFiltersSection(),
-                    const SizedBox(height: 24),
+                      // Filters and Search Section
+                      _buildFiltersSection(),
+                      const SizedBox(height: 24),
 
-                    // Data Table Section
-                    SizedBox(
-                      height:
-                          constraints.maxHeight -
-                          400, // Reserve space for header and filters
-                      child: _buildDataTable(),
-                    ),
-                  ],
+                      // Data Table Section
+                      SizedBox(
+                        height:
+                            constraints.maxHeight -
+                            400, // Reserve space for header and filters
+                        child: _buildDataTable(),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-            );
-          },
+              );
+            },
+          ),
         ),
       ),
     );
   }
 
   Widget _buildHeaderWithMetrics() {
-    return ListenableBuilder(
-      listenable: _viewModel,
-      builder: (context, _) {
+    return BlocBuilder<UsersViewModel, BaseState<List<UserEntity>>>(
+      builder: (context, state) {
         final metrics = _viewModel.metrics;
 
         return Column(
@@ -616,16 +581,15 @@ class _UsersPageState extends State<UsersPage> {
               ),
             ],
           ),
-          child: ListenableBuilder(
-            listenable: _viewModel,
-            builder: (context, child) {
-              if (_viewModel.isLoading) {
+          child: BlocBuilder<UsersViewModel, BaseState<List<UserEntity>>>(
+            builder: (context, state) {
+              if (state is LoadingState<List<UserEntity>>) {
                 return const Center(
                   child: CircularProgressIndicator(color: Colors.black87),
                 );
               }
 
-              if (_viewModel.hasError) {
+              if (state is ErrorState<List<UserEntity>>) {
                 return _buildErrorState();
               }
 

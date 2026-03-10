@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:fusion_lib/fusion_lib.dart';
 
 /// A customizable and reusable text field for the Fusion design system.
 ///
@@ -38,6 +39,9 @@ class FusionTextField extends StatelessWidget {
   /// Callback for when the text changes.
   final ValueChanged<String>? onChanged;
 
+  // Callback for when the field is submitted (e.g., pressing "Enter").
+  final ValueChanged<String>? onSubmitted;
+
   /// Whether the field is enabled or read-only.
   final bool enabled;
 
@@ -72,6 +76,13 @@ class FusionTextField extends StatelessWidget {
 
   final bool autofocus;
 
+  final Color? color;
+  final String? semanticFieldId;
+
+  final EdgeInsetsGeometry? contentPadding;
+  final double? height;
+  final double? width;
+
   const FusionTextField({
     super.key,
     required this.hintText,
@@ -79,6 +90,7 @@ class FusionTextField extends StatelessWidget {
     this.obscureText = false,
     this.keyboardType = TextInputType.text,
     this.onChanged,
+    this.onSubmitted,
     this.enabled = true,
     this.prefixIcon,
     this.suffixIcon,
@@ -91,6 +103,11 @@ class FusionTextField extends StatelessWidget {
     this.maxLength = 24,
     this.inputFormatters,
     this.autofocus = false,
+    this.color,
+    this.semanticFieldId,
+    this.contentPadding,
+    this.height,
+    this.width,
   });
 
   @override
@@ -99,30 +116,44 @@ class FusionTextField extends StatelessWidget {
 
     final defaultDecoration = InputDecoration(
       hintText: hintText,
-      hintStyle: hintStyle ?? theme.inputDecorationTheme.hintStyle,
+      hintStyle:
+          hintStyle ??
+          theme.inputDecorationTheme.hintStyle?.copyWith(
+            color: theme.colorScheme.elevation5,
+          ),
       prefixIcon: prefixIcon,
       suffixIcon: suffixIcon,
       counterText: '',
-      border: border ?? const OutlineInputBorder(borderSide: BorderSide(color: Colors.transparent)),
-      enabledBorder: border ?? const OutlineInputBorder(borderSide: BorderSide(color: Colors.transparent)),
-      focusedBorder: border ?? const OutlineInputBorder(borderSide: BorderSide(color: Colors.transparent)),
+      fillColor: color ?? theme.colorScheme.elevation1,
+      filled: true,
+      border: border ?? InputBorder.none,
+      enabledBorder: border ?? InputBorder.none,
+      focusedBorder: border ?? InputBorder.none,
       isDense: true,
-      contentPadding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+      contentPadding: contentPadding ?? const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
     );
 
-    return TextField(
-      maxLength: maxLength,
-      controller: controller,
-      focusNode: focusNode,
-      obscureText: obscureText,
-      keyboardType: keyboardType,
-      onChanged: onChanged,
-      enabled: enabled,
-      autofocus: autofocus,
-      style: style ?? theme.textTheme.bodySmall,
-      textAlign: textAlign,
-      inputFormatters: inputFormatters,
-      decoration: decoration ?? defaultDecoration,
+    return SemanticHelper.formControl(
+      testId: SemanticHelper.createTestId(SemanticTypes.textInput, semanticFieldId ?? "fusion_text_field"),
+      child: SizedBox(
+        height: height,
+        width: width,
+        child: TextField(
+          maxLength: maxLength,
+          controller: controller,
+          focusNode: focusNode,
+          obscureText: obscureText,
+          keyboardType: keyboardType,
+          onChanged: onChanged,
+          onSubmitted: onSubmitted,
+          enabled: enabled,
+          autofocus: autofocus,
+          style: style ?? theme.textTheme.bodySmall,
+          textAlign: textAlign,
+          inputFormatters: inputFormatters,
+          decoration: decoration ?? defaultDecoration,
+        ),
+      ),
     );
   }
 }

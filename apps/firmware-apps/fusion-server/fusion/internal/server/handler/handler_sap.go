@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"fusion/internal/logging"
+	"fusion-services-core/logging"
 
 	sdp "github.com/pion/sdp/v3"
 )

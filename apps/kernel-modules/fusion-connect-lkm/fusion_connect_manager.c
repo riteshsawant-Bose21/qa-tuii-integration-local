@@ -8,17 +8,21 @@
 #include <linux/ktime.h>
 #include <linux/kthread.h>
 #include <linux/sched.h>
-#include <linux/sched/types.h>
 #include <linux/cpumask.h>
 #include <linux/smp.h>
 #include <linux/math64.h>
 #include <linux/netlink.h>
+#include <linux/if.h>
 #include <net/netlink.h>
 #include "fusion_connect_manager.h"
 #include "fusion_connect_metrics.h"
+#include "fusion_gpt_client.h"
 
 
 #define TIMER_BASE_INTERVAL_NS 333333
+#define GPT_TICK_NS            100
+
+#define FUSION_CN_RT_PRIO        80
 
 #ifndef abs64
 #define abs64(x) ((x) >= 0 ? (x) : -(x))
@@ -52,7 +56,7 @@ static int alsa_ops_start_interrupts(void *cn_mgr, u64 stream_handle, struct fus
     struct fusion_cn_manager *mgr = cn_mgr;
 
     if (!mgr || !mgr->rtp.cn_mgr) {
-        printk(KERN_ERR "fusion_cn: start_interrupts: Invalid manager or uninitialized RTP for stream %llu\n", stream_handle);
+        pr_err("fusion_cn: start_interrupts: Invalid manager or uninitialized RTP for stream %llu\n", stream_handle);
         return -EINVAL;
     }
 
@@ -64,7 +68,7 @@ static int alsa_ops_stop_interrupts(void *cn_mgr, u64 stream_handle)
     struct fusion_cn_manager *mgr = cn_mgr;
 
     if (!mgr || !mgr->rtp.cn_mgr) {
-        printk(KERN_ERR "fusion_cn: stop_interrupts: Invalid manager or uninitialized RTP for stream %llu\n", stream_handle);
+        pr_err("fusion_cn: stop_interrupts: Invalid manager or uninitialized RTP for stream %llu\n", stream_handle);
         return -EINVAL;
     }
 
@@ -76,12 +80,6 @@ const struct fusion_cn_alsa_ops fusion_cn_alsa_ops = {
     .start_interrupts = alsa_ops_start_interrupts,
     .stop_interrupts = alsa_ops_stop_interrupts
 };
-
-/* RTP Callbacks */
-static u64 fusion_cn_rtp_get_phc_ns(void)
-{
-    return ktime_get_real_ns();
-}
 
 static void *fusion_cn_rtp_ops_get_buffer(void *alsa_stream)
 {
@@ -99,6 +97,11 @@ static u32 fusion_cn_rtp_ops_get_buffer_offset(void *alsa_stream)
 {
     struct fusion_cn_substream *stream = alsa_stream;
     return stream->buffer_pos;
+}
+
+u64 fusion_cn_get_phc_ns(void)
+{
+    return fusion_gpt_read_phc_ns();
 }
 
 /* helpers: compute how many interrupts are due, and advance state */
@@ -119,7 +122,7 @@ static inline int rtp_compute_sink_interrupts(struct fusion_cn_rtp_stream *s, u6
                 break;
             }
 
-            if (g_fusion_cn_mgr->debug) printk(KERN_DEBUG "fusion_cn: compute_sink: stream %s playback_idx=%u count=%u now=%llu\n", s->info.stream_name, s->playback_index, count, now);
+            if (g_fusion_cn_mgr->debug) pr_debug("fusion_cn: compute_sink: stream %s playback_idx=%u count=%u now=%llu\n", s->info.stream_name, s->playback_index, count, now);
 
             if (++s->playback_index >= s->buf_size_in_packets)
                 s->playback_index = 0;
@@ -161,8 +164,7 @@ static void audio_frame_process(struct fusion_cn_manager *mgr)
     } fn_sink[32], other[32];
     int fn_sink_cnt = 0, other_cnt = 0;
 
-    if (!atomic_read(&mgr->state.ptp_synchronized) ||
-        !atomic_read(&mgr->state.is_started))
+    if (!atomic_read(&mgr->state.is_started))
         return;
 
     /* -------- Phase 1: FusionConnect sinks (low latency priority) -------- */
@@ -178,7 +180,7 @@ static void audio_frame_process(struct fusion_cn_manager *mgr)
 
         /* compute due interrupts with stream->lock, still under mgr->rtp.lock */
         {
-            int n = rtp_compute_sink_interrupts(r, mgr->ptp.hrtimer_last_tick_ns);
+            int n = rtp_compute_sink_interrupts(r, mgr->timer.last_tick_ns);
             if (n > 0 && fn_sink_cnt < 32) {
                 if (!kref_get_unless_zero(&r->ref))
                     continue;
@@ -214,7 +216,7 @@ static void audio_frame_process(struct fusion_cn_manager *mgr)
         if (!r || !a) continue;
         if (!atomic_read(&r->is_running) || !r->info.is_source || !r->info.is_fusion_connect) continue;
 
-        int n = rtp_compute_source_interrupts(r, mgr->ptp.hrtimer_last_tick_ns, mgr->ptp.hrtimer_next_tick_ns);
+        int n = rtp_compute_source_interrupts(r, mgr->timer.last_tick_ns, mgr->timer.next_tick_ns);
         if (n > 0 && other_cnt < 32) {
             if (!kref_get_unless_zero(&r->ref)) continue;
             if (!kref_get_unless_zero(&a->ref)) { kref_put(&r->ref, fusion_cn_rtp_stream_release); continue; }
@@ -229,7 +231,7 @@ static void audio_frame_process(struct fusion_cn_manager *mgr)
         if (!r || !a) continue;
         if (!atomic_read(&r->is_running) || r->info.is_source || r->info.is_fusion_connect) continue;
 
-        int n = rtp_compute_sink_interrupts(r, mgr->ptp.hrtimer_last_tick_ns);
+        int n = rtp_compute_sink_interrupts(r, mgr->timer.last_tick_ns);
         if (n > 0 && other_cnt < 32) {
             if (!kref_get_unless_zero(&r->ref)) continue;
             if (!kref_get_unless_zero(&a->ref)) { kref_put(&r->ref, fusion_cn_rtp_stream_release); continue; }
@@ -244,7 +246,7 @@ static void audio_frame_process(struct fusion_cn_manager *mgr)
         if (!r || !a) continue;
         if (!atomic_read(&r->is_running) || !r->info.is_source || r->info.is_fusion_connect) continue;
 
-        int n = rtp_compute_source_interrupts(r, mgr->ptp.hrtimer_last_tick_ns, mgr->ptp.hrtimer_next_tick_ns);
+        int n = rtp_compute_source_interrupts(r, mgr->timer.last_tick_ns, mgr->timer.next_tick_ns);
         if (n > 0 && other_cnt < 32) {
             if (!kref_get_unless_zero(&r->ref)) continue;
             if (!kref_get_unless_zero(&a->ref)) { kref_put(&r->ref, fusion_cn_rtp_stream_release); continue; }
@@ -274,70 +276,75 @@ static void do_metrics(struct fusion_cn_manager *mgr)
 {
     struct stream_node *node, *tmp;
     unsigned long flags;
+    struct {
+        struct fusion_cn_rtp_stream *rtp;
+        struct fusion_cn_substream  *alsa;
+        bool is_source;
+    } todo[FUSION_CN_MAX_STREAMS];
+    int todo_cnt = 0;
 
-    if (!atomic_read(&mgr->state.ptp_synchronized) ||
-        !atomic_read(&mgr->state.is_started))
+    if (!atomic_read(&mgr->state.is_started))
         return;
 
     read_lock_irqsave(&mgr->rtp.lock, flags);
 
-    /* One helper macro to avoid duplication */
-#define AGG_ON_PENDING(list_head)                                              \
+    /* Collect work under lock, then aggregate outside */
+#define COLLECT_PENDING(list_head)                                             \
     list_for_each_entry_safe(node, tmp, &(list_head), node) {                  \
         struct fusion_cn_rtp_stream *r = node->rtp_stream;                     \
+        struct fusion_cn_substream  *a = node->alsa_stream;                    \
         if (!r || !r->metrics) continue;                                       \
         if (!atomic_xchg(&node->metrics_pending, 0)) continue;                 \
+        if (todo_cnt >= FUSION_CN_MAX_STREAMS) {                               \
+            atomic_set(&node->metrics_pending, 1);                             \
+            continue;                                                         \
+        }                                                                      \
+        if (!kref_get_unless_zero(&r->ref)) {                                  \
+            atomic_set(&node->metrics_pending, 1);                             \
+            continue;                                                         \
+        }                                                                      \
         if (!r->info.is_source) {                                              \
-            u32 jb = fusion_cn_alsa_get_buffer_depth(node->alsa_stream);       \
-            fusion_cn_metrics_aggregate_rx(r->metrics, jb);                    \
-        } else {                                                                \
-            fusion_cn_metrics_aggregate_tx(r->metrics);                        \
-        }                                                                       \
+            if (!a || !kref_get_unless_zero(&a->ref)) {                        \
+                kref_put(&r->ref, fusion_cn_rtp_stream_release);               \
+                atomic_set(&node->metrics_pending, 1);                         \
+                continue;                                                     \
+            }                                                                  \
+        }                                                                      \
+        todo[todo_cnt++] = (typeof(todo[0])) {                                 \
+            .rtp = r, .alsa = a, .is_source = r->info.is_source                \
+        };                                                                     \
     }
 
-    AGG_ON_PENDING(mgr->active_streams.fn_sink);
-    AGG_ON_PENDING(mgr->active_streams.fn_source);
-    AGG_ON_PENDING(mgr->active_streams.aes67_sink);
-    AGG_ON_PENDING(mgr->active_streams.aes67_source);
+    COLLECT_PENDING(mgr->active_streams.fn_sink);
+    COLLECT_PENDING(mgr->active_streams.fn_source);
+    COLLECT_PENDING(mgr->active_streams.aes67_sink);
+    COLLECT_PENDING(mgr->active_streams.aes67_source);
 
-#undef AGG_ON_PENDING
+#undef COLLECT_PENDING
 
     read_unlock_irqrestore(&mgr->rtp.lock, flags);
-}
 
-
-static enum hrtimer_restart audio_frame_tick_hrtimer(struct hrtimer *timer)
-{
-    struct fusion_cn_manager *mgr = container_of(timer, struct fusion_cn_manager, ptp.audio_timer);
-
-    mgr->ptp.hrtimer_last_tick_ns = mgr->ptp.hrtimer_next_tick_ns;
-
-    mgr->ptp.hrtimer_next_tick_ns += TIMER_BASE_INTERVAL_NS;
-    // after 3 ticks, square the tick with the ms
-    if (++mgr->ptp.tick_count % 3 == 0) {
-        mgr->ptp.tick_count = 0;
-        mgr->ptp.hrtimer_next_tick_ns += 1;
+    for (int i = 0; i < todo_cnt; i++) {
+        if (!todo[i].is_source) {
+            u32 jb = fusion_cn_alsa_get_buffer_depth(todo[i].alsa);
+            fusion_cn_metrics_aggregate_rx(todo[i].rtp->metrics, jb);
+            kref_put(&todo[i].alsa->ref, fusion_cn_alsa_substream_release);
+        } else {
+            fusion_cn_metrics_aggregate_tx(todo[i].rtp->metrics);
+        }
+        kref_put(&todo[i].rtp->ref, fusion_cn_rtp_stream_release);
     }
-
-        /* Defer TX work to RT kthread */
-    if (likely(atomic_inc_return(&process_pending) == 1))
-        kthread_queue_work(process_worker, &process_work);
-
-    hrtimer_start(timer, ns_to_ktime(mgr->ptp.hrtimer_next_tick_ns), HRTIMER_MODE_ABS);
-
-    return HRTIMER_RESTART;
 }
 
 /* Manager Functions */
 static int fusion_cn_state_init(struct fusion_cn_manager *mgr)
 {
     atomic_set(&mgr->state.is_started, false);
-    atomic_set(&mgr->state.ptp_synchronized, false);
     return 0;
 }
 
 static struct fusion_cn_rtp_ops rtp_ops = {
-    .get_phc_ns = fusion_cn_rtp_get_phc_ns,
+    .get_phc_ns = fusion_cn_get_phc_ns,
     .get_buffer = fusion_cn_rtp_ops_get_buffer,
     .get_buffer_size_in_frames = fusion_cn_rtp_ops_get_buffer_size_in_frames,
     .get_buffer_offset = fusion_cn_rtp_ops_get_buffer_offset
@@ -349,18 +356,80 @@ static int fusion_cn_alsa_init(struct fusion_cn_manager *mgr)
     return fusion_cn_alsa_driver_init(mgr, &fusion_cn_alsa_ops);
 }
 
-
-static int fusion_cn_ptp_init(struct fusion_cn_manager *mgr)
+/* --- Coalesced queue helper (re-uses your existing worker) --- */
+static inline void fusion_cn_queue_process(void)
 {
-    if (mgr->ptp.ptp_timing_mode == TIMING_GPT) {
-        // TODO
-    } else {
-        mgr->ptp.ptp_timing_mode = TIMING_HRTIMER;
-        hrtimer_init(&mgr->ptp.audio_timer, CLOCK_REALTIME, HRTIMER_MODE_ABS);
-        mgr->ptp.audio_timer.function = audio_frame_tick_hrtimer;
+    struct kthread_worker *worker = READ_ONCE(process_worker);
+
+    /* Ignore ticks until worker is created and work item initialized */
+    if (!worker)
+        return;
+
+    /* Coalesce: only queue if not already pending */
+    if (atomic_cmpxchg(&process_pending, 0, 1) == 0)
+        kthread_queue_work(worker, &process_work);
+}
+
+/* --- GPT client callback (softirq via irq_work) --- */
+static void fusion_cn_gpt_tick(void *ctx, u64 tick64)
+{
+    struct fusion_cn_manager *mgr = ctx;
+    bool epoch_ok, aligned;
+    u32  seq;
+    u64  now_ns;
+
+    if (fusion_gpt_get_phc_status(&epoch_ok, &aligned, &seq) || !epoch_ok || !aligned)
+        return; /* hard gate: no PHC, no work */
+
+    now_ns = fusion_gpt_read_phc_ns();
+    if (!now_ns)
+        return; /* extremely defensive; should not happen if epoch_ok */
+
+    mgr->timer.last_tick_ns = now_ns;
+    mgr->timer.next_tick_ns = now_ns + TIMER_BASE_INTERVAL_NS;
+
+    if (++mgr->timer.tick_count == 3) {
+        mgr->timer.tick_count = 0;
+        mgr->timer.next_tick_ns += 1; /* 3333/3333/3334 cadence */
     }
-    printk(KERN_DEBUG "fusion_cn: Initialized with %s timing\n",
-           mgr->ptp.ptp_timing_mode == TIMING_HRTIMER ? "hrtimer" : "GPT");
+
+    fusion_cn_queue_process();
+}
+
+static const struct fusion_gpt_client_ops fusion_cn_gpt_ops = {
+    .tick = fusion_cn_gpt_tick,
+};
+
+static int fusion_cn_timer_init(struct fusion_cn_manager *mgr)
+{
+    int ret;
+    bool epoch_ok, aligned;
+    u32  seq;
+    u64  now_ns = 0;
+
+    mgr->timer.tick_count = 0;
+
+    ret = fusion_gpt_register_client(&fusion_cn_gpt_ops, mgr, THIS_MODULE);
+    if (ret) {
+        pr_err("fusion_cn: GPT register failed: %d\n", ret);
+        return ret;
+    }
+
+    if (!fusion_gpt_get_phc_status(&epoch_ok, &aligned, &seq) && epoch_ok) {
+        now_ns = fusion_gpt_read_phc_ns();
+    }
+
+    if (now_ns) {
+        mgr->timer.last_tick_ns = now_ns;
+        mgr->timer.next_tick_ns = now_ns + TIMER_BASE_INTERVAL_NS;
+        pr_info("fusion_cn: GPT timing active (PHC-aligned%s)\n",
+                aligned ? ", aligned" : ", waiting alignment");
+    } else {
+        mgr->timer.last_tick_ns = 0;
+        mgr->timer.next_tick_ns = 0;
+        pr_info("fusion_cn: waiting for PHC epoch/alignment before processing\n");
+    }
+
     return 0;
 }
 
@@ -373,7 +442,7 @@ static int fusion_cn_nl_init(struct fusion_cn_manager *mgr)
     mgr->netlink.nl_family = NETLINK_USERSOCK;
     mgr->netlink.nl_sock = netlink_kernel_create(&init_net, mgr->netlink.nl_family, &cfg);
     if (!mgr->netlink.nl_sock) {
-        printk(KERN_ERR "fusion_cn: Failed to create netlink socket\n");
+        pr_err("fusion_cn: Failed to create netlink socket\n");
         return -ENOMEM;
     }
     mgr->netlink.nl_sock->sk_user_data = mgr;
@@ -400,13 +469,13 @@ int fusion_cn_mgr_init(struct fusion_cn_manager *mgr)
     if ((ret = fusion_cn_alsa_init(mgr)) < 0) goto err;
     if ((ret = fusion_cn_rtp_init(&mgr->rtp, &mgr->netfilter, &rtp_ops, mgr)) < 0) goto err_rtp;
     if ((ret = fusion_cn_nf_init(&mgr->rtp)) < 0) goto err_nf;
-    if ((ret = fusion_cn_ptp_init(mgr)) < 0) goto err_ptp;
+    if ((ret = fusion_cn_timer_init(mgr)) < 0) goto err_timer;
     if ((ret = fusion_cn_nl_init(mgr)) < 0) goto err_nl;
 
     return 0;
 
 err_nl:
-err_ptp:
+err_timer:
     fusion_cn_nf_destroy(&mgr->netfilter);
 err_nf:
     fusion_cn_rtp_destroy(&mgr->rtp);
@@ -426,12 +495,8 @@ void fusion_cn_mgr_destroy(struct fusion_cn_manager *mgr)
     /* Unregister netfilter hook to stop packet processing */
     fusion_cn_nf_destroy(&mgr->netfilter);
 
-    /* Stop PTP timing to prevent further audio frame processing */
-    if (mgr->ptp.ptp_timing_mode == TIMING_HRTIMER) {
-        hrtimer_cancel(&mgr->ptp.audio_timer);
-    } else if (mgr->ptp.ptp_timing_mode == TIMING_GPT) {
-        // TODO
-    }
+    /* Stop timer to prevent further audio frame processing */
+    fusion_gpt_unregister_client();
 
     /* Stop RTP streams, which might be using ALSA buffers */
     fusion_cn_rtp_destroy(&mgr->rtp);
@@ -445,9 +510,7 @@ void fusion_cn_mgr_destroy(struct fusion_cn_manager *mgr)
 
 enum mgr_start_errno {
     MGR_START_OK = 0,
-    MGR_START_ERRNO_RUNNING,
-    MGR_START_ERRNO_PTP,
-    MGR_START_ERRNO_MODE
+    MGR_START_ERRNO_RUNNING
 };
 
 /* kthread worker routine: drains coalesced ticks */
@@ -463,30 +526,30 @@ static void audio_frame_process_work(struct kthread_work *work)
 
 int fusion_cn_mgr_start(struct fusion_cn_manager *mgr)
 {
+    struct kthread_worker *worker;
+
     if (atomic_read(&mgr->state.is_started)) {
-        printk(KERN_DEBUG "fusion_cn: mgr already started\n");
+        pr_debug("fusion_cn: mgr already started\n");
         return -MGR_START_ERRNO_RUNNING;
-    }
-    if (!atomic_read(&mgr->state.ptp_synchronized)) {
-        printk(KERN_ERR "fusion_cn: ptp not sync'd\n");
-        return -MGR_START_ERRNO_PTP;
     }
 
     
     /* Initialize PREEMPT_RT-friendly TX worker once */
     if (!process_worker) {
-        process_worker = kthread_create_worker(0, "fusion-cn");
-        if (IS_ERR(process_worker)) {
-            int err = PTR_ERR(process_worker);
-            process_worker = NULL;
-            printk(KERN_ERR "fusion_cn: failed to create fusion-cn worker: %d\n", err);
+        worker = kthread_create_worker(0, "fusion-cn");
+        if (IS_ERR(worker)) {
+            int err = PTR_ERR(worker);
+            pr_err("fusion_cn: failed to create fusion-cn worker: %d\n", err);
             return err;
         }
-        process_thread = process_worker->task;
-        set_cpus_allowed_ptr(process_thread, cpumask_of(0));
-        sched_set_fifo_low(process_thread);   /* or: sched_set_fifo(process_thread) for max RT prio */
+        process_thread = worker->task;
+        set_cpus_allowed_ptr(process_thread, cpumask_of(3));
+        /* RT prio set from userspace (irq-affinity.sh) */
         kthread_init_work(&process_work, audio_frame_process_work);
         atomic_set(&process_pending, 0);
+        /* Publish the worker only after fully initialized */
+        smp_wmb();
+        process_worker = worker;
     }
     g_fusion_cn_mgr = mgr;
     INIT_LIST_HEAD(&mgr->active_streams.fn_sink);
@@ -494,48 +557,17 @@ int fusion_cn_mgr_start(struct fusion_cn_manager *mgr)
     INIT_LIST_HEAD(&mgr->active_streams.aes67_sink);
     INIT_LIST_HEAD(&mgr->active_streams.aes67_source);
 
-    if (mgr->ptp.ptp_timing_mode == TIMING_HRTIMER) {
-        u64 current_phc_ns;
-        u64 first_tick;
-
-        // Get current PHC time
-        current_phc_ns = fusion_cn_rtp_get_phc_ns();
-        if (current_phc_ns == 0) {
-            printk(KERN_ERR "fusion_cn: mgr_start: Failed to get PHC time\n");
-            return -MGR_START_ERRNO_PTP;
-        }
-
-        // Align to the next 1 ms boundary
-        first_tick = current_phc_ns - (current_phc_ns % NSEC_PER_MSEC) + NSEC_PER_MSEC;
-
-        // Start hrtimer first tick to the next 1 ms boundary
-        hrtimer_start(&mgr->ptp.audio_timer, ns_to_ktime(first_tick), HRTIMER_MODE_ABS);
-        mgr->ptp.hrtimer_next_tick_ns = first_tick;
-        mgr->ptp.tick_count = 0; // start from 1 bc next tick
-        printk(KERN_DEBUG "fusion_cn: mgr_start: Aligned hrtimer to PHC boundary, current_phc=%llu, first_tick=%llu ns\n",
-               current_phc_ns, first_tick);
-    } else if (mgr->ptp.ptp_timing_mode == TIMING_GPT) {
-        // TODO
-        return -MGR_START_ERRNO_MODE;
-    } else {
-        printk(KERN_ERR "fusion_cn: Invalid timing mode\n");
-        return -MGR_START_ERRNO_MODE;
-    }
-
     atomic_set(&mgr->netfilter.is_enabled, true);
     atomic_set(&mgr->state.is_started, true);
-    printk(KERN_DEBUG "fusion_cn: mgr_start: Started manager\n");
+    pr_debug("fusion_cn: mgr_start: Started manager\n");
     return MGR_START_OK;
 }
 
 bool fusion_cn_mgr_stop(struct fusion_cn_manager *mgr)
 {
     if (!mgr || !atomic_read(&mgr->state.is_started)) return false;
-    if (mgr->ptp.ptp_timing_mode == TIMING_HRTIMER) {
-        hrtimer_cancel(&mgr->ptp.audio_timer);
-    } else if (mgr->ptp.ptp_timing_mode == TIMING_GPT) {
-        // TODO
-    }
+
+    fusion_gpt_unregister_client();
     
     /* Flush and destroy TX worker on stop */
     if (process_worker) {
@@ -549,7 +581,7 @@ bool fusion_cn_mgr_stop(struct fusion_cn_manager *mgr)
     
     atomic_set(&mgr->netfilter.is_enabled, false);
     atomic_set(&mgr->state.is_started, false);
-    printk(KERN_DEBUG "fusion_cn: mgr_start: Stopped manager\n");
+    pr_debug("fusion_cn: mgr_stop: Stopped manager\n");
     return true;
 }
 
@@ -565,24 +597,6 @@ static int handle_stop(struct fusion_cn_manager *mgr, struct fusion_cn_ctrl_msg 
                     struct fusion_cn_ctrl_msg *reply)
 {
     reply->err = fusion_cn_mgr_stop(mgr) ? 0 : -EIO;
-    return 0;
-}
-
-static int handle_set_ptp_sync(struct fusion_cn_manager *mgr,
-                               struct fusion_cn_ctrl_msg *msg,
-                               struct fusion_cn_ctrl_msg *reply)
-{
-    u8 ptp_sync = 0;
-
-    if (msg->data_size != sizeof(u8) || !msg->data) {
-        reply->err = -EINVAL;
-        return 0;
-    }
-
-    ptp_sync = *(u8 *)msg->data;
-    printk(KERN_DEBUG "fusion_cn: Setting ptp sync=%s\n", ptp_sync ? "true" : "false");
-    atomic_set(&mgr->state.ptp_synchronized, ptp_sync);
-    reply->err = 0;
     return 0;
 }
 
@@ -619,9 +633,7 @@ static int remove_stream(struct fusion_cn_manager *mgr,
         return ret;
     }
 
-    /* Free metrics and node now that readers can’t see it */
-    fusion_cn_metrics_destroy(rtp_stream->metrics);
-    rtp_stream->metrics = NULL;
+    /* Metrics are released with the RTP stream refcount */
 
     ret = fusion_cn_alsa_remove_substream(alsa_stream);
     
@@ -642,14 +654,14 @@ static int handle_add_stream(struct fusion_cn_manager *mgr, struct fusion_cn_ctr
     unsigned long flags;
 
     if (msg->data_size != sizeof(struct fusion_cn_stream_config)) {
-        printk(KERN_ERR "fusion_cn: handle_add_stream: Invalid data size: %u, expected %zu\n",
+        pr_err("fusion_cn: handle_add_stream: Invalid data size: %u, expected %zu\n",
                msg->data_size, sizeof(struct fusion_cn_stream_config));
         return reply->err = -EINVAL;
     }
     config = (struct fusion_cn_stream_config *)msg->data;
 
     if (!mgr->alsa.alsa_chip) {
-        printk(KERN_ERR "fusion_cn: handle_add_stream: ALSA chip is NULL\n");
+        pr_err("fusion_cn: handle_add_stream: ALSA chip is NULL\n");
         return reply->err = -EINVAL;
     }
 
@@ -674,7 +686,7 @@ static int handle_add_stream(struct fusion_cn_manager *mgr, struct fusion_cn_ctr
         hlist_for_each_entry(rtp_stream, &mgr->rtp.streams[bucket], hnode) {
             if (rtp_stream->info.stream_handle == config->stream_handle) {
                 read_unlock_irqrestore(&mgr->rtp.lock, flags);
-                printk(KERN_ERR "fusion_cn: handle_add_stream: Stream handle %llu already exists\n", config->stream_handle);
+                pr_err("fusion_cn: handle_add_stream: Stream handle %llu already exists\n", config->stream_handle);
                 return reply->err = -EEXIST;
             }
         }
@@ -686,20 +698,20 @@ static int handle_add_stream(struct fusion_cn_manager *mgr, struct fusion_cn_ctr
     ret = fusion_cn_alsa_open_substream(mgr->alsa.alsa_chip, config->stream_handle, config->stream_name, direction,
                                         config->channels, config->sample_rate, config->format, config->frames_per_packet, &alsa_stream);
     if (ret < 0 || alsa_stream == NULL) {
-        printk(KERN_ERR "fusion_cn: handle_add_stream: alsa_open_substream failed for %s: %d\n", config->stream_name, ret);
+        pr_err("fusion_cn: handle_add_stream: alsa_open_substream failed for %s: %d\n", config->stream_name, ret);
         return reply->err = ret;
     }
 
     ret = fusion_cn_rtp_add_stream(&mgr->rtp, config, alsa_stream, &rtp_stream);
     if (ret < 0 || rtp_stream == NULL) {
-        printk(KERN_ERR "fusion_cn: handle_add_stream: fusion_cn_rtp_add_stream failed for %s: %d\n", config->stream_name, ret);
+        pr_err("fusion_cn: handle_add_stream: fusion_cn_rtp_add_stream failed for %s: %d\n", config->stream_name, ret);
         fusion_cn_alsa_remove_substream(alsa_stream);
         return reply->err = ret;
     }
 
     stream_metrics = fusion_cn_metrics_create(rtp_stream->info.sample_rate, rtp_stream->info.playout_delay);
     if (!stream_metrics) {
-        printk(KERN_ERR "fusion_cn: handle_add_stream: Failed to create stream_metrics\n");
+        pr_err("fusion_cn: handle_add_stream: Failed to create stream_metrics\n");
         fusion_cn_rtp_remove_stream(&mgr->rtp, rtp_stream);
         fusion_cn_alsa_remove_substream(alsa_stream);
         return reply->err = -ENOMEM;
@@ -708,7 +720,7 @@ static int handle_add_stream(struct fusion_cn_manager *mgr, struct fusion_cn_ctr
     stream_node = kzalloc(sizeof(*stream_node), GFP_KERNEL);
     if (!stream_node) {
         fusion_cn_metrics_destroy(stream_metrics);
-        printk(KERN_ERR "fusion_cn: handle_add_stream: Failed to allocate stream_node\n");
+        pr_err("fusion_cn: handle_add_stream: Failed to allocate stream_node\n");
         fusion_cn_rtp_remove_stream(&mgr->rtp, rtp_stream);
         fusion_cn_alsa_remove_substream(alsa_stream);
         return reply->err = -ENOMEM;
@@ -739,7 +751,7 @@ static int handle_add_stream(struct fusion_cn_manager *mgr, struct fusion_cn_ctr
     reply->data_size = sizeof(u64);
     reply->data = kmemdup(&rtp_stream->info.stream_handle, sizeof(rtp_stream->info.stream_handle), GFP_KERNEL);
     if (!reply->data) {
-        printk(KERN_ERR "fusion_cn: handle_add_stream: kmemdup failed\n");
+        pr_err("fusion_cn: handle_add_stream: kmemdup failed\n");
         remove_stream(mgr, config->stream_handle, config->stream_name, rtp_stream, alsa_stream);
         return reply->err = -ENOMEM;
     }
@@ -748,7 +760,7 @@ static int handle_add_stream(struct fusion_cn_manager *mgr, struct fusion_cn_ctr
     kref_get(&rtp_stream->ref);
     kref_get(&alsa_stream->ref);
 
-    printk(KERN_DEBUG "fusion_cn: handle_add_stream: Success, name=%s, handle=%llu\n",
+    pr_debug("fusion_cn: handle_add_stream: Success, name=%s, handle=%llu\n",
            config->stream_name, config->stream_handle);
     return 0;
 }
@@ -896,30 +908,122 @@ static int handle_get_metrics(struct fusion_cn_manager *mgr,
     return 0;
 }
 
+/* SET_PHC_ANCHOR */
+static int handle_set_phc_anchor(struct fusion_cn_manager *mgr,
+                                 struct fusion_cn_ctrl_msg *msg,
+                                 struct fusion_cn_ctrl_msg *reply)
+{
+    u64 phc_ns_at_pps;
+
+    if (msg->data_size != sizeof(phc_ns_at_pps))
+        return reply->err = -EINVAL;
+
+    phc_ns_at_pps = *(const u64 *)msg->data;
+    reply->err = fusion_gpt_set_phc_anchor(phc_ns_at_pps);
+    if (!reply->err)
+        pr_info("fusion_cn: set_phc_anchor %llu\n", phc_ns_at_pps);
+    return 0;
+}
+
+struct fc_get_phc_status_reply
+{
+    bool epoch_valid;
+    bool aligned;
+    u32  pps_seq;
+} __packed;
+
+static int handle_get_phc_status(struct fusion_cn_manager *mgr,
+                                 struct fusion_cn_ctrl_msg *msg,
+                                 struct fusion_cn_ctrl_msg *reply)
+{
+    struct fc_get_phc_status_reply r;
+    int rc = fusion_gpt_get_phc_status(&r.epoch_valid, &r.aligned, &r.pps_seq);
+    if (rc)
+        return reply->err = rc;
+
+    reply->data = kmemdup(&r, sizeof(r), GFP_KERNEL);
+    if (!reply->data)
+        return reply->err = -ENOMEM;
+
+    reply->data_size = sizeof(r);
+    reply->err = 0;
+    return 0;
+}
+
+static int handle_set_debug(struct fusion_cn_manager *mgr,
+                            struct fusion_cn_ctrl_msg *msg,
+                            struct fusion_cn_ctrl_msg *reply)
+{
+    u8 enable;
+
+    if (msg->data_size != sizeof(enable))
+        return reply->err = -EINVAL;
+
+    enable = *(const u8 *)msg->data;
+    mgr->debug = !!enable;
+    mgr->rtp.debug = mgr->debug;
+    if (mgr->alsa.alsa_chip)
+        mgr->alsa.alsa_chip->debug = mgr->debug;
+
+    pr_info("fusion_cn: debug %s\n", mgr->debug ? "on" : "off");
+    reply->err = 0;
+    return 0;
+}
+
+static int handle_set_eth_iface(struct fusion_cn_manager *mgr,
+                                struct fusion_cn_ctrl_msg *msg,
+                                struct fusion_cn_ctrl_msg *reply)
+{
+    char iface[IFNAMSIZ];
+
+    if (!msg->data || msg->data_size <= 0 || msg->data_size > IFNAMSIZ)
+        return reply->err = -EINVAL;
+
+    if (atomic_read(&mgr->state.is_started))
+        return reply->err = -EBUSY;
+
+    memset(iface, 0, sizeof(iface));
+    memcpy(iface, msg->data, msg->data_size);
+
+    if (iface[0] == '\0')
+        return reply->err = -EINVAL;
+
+    strscpy(mgr->netfilter.iface_name, iface, IFNAMSIZ);
+    pr_info("fusion_cn: iface %s\n", mgr->netfilter.iface_name);
+    reply->err = 0;
+    return 0;
+}
+
 static const struct message_handler_entry message_handlers[] = {
     { FUSION_CN_CTRL_CMD_START_MANAGER, handle_start },
     { FUSION_CN_CTRL_CMD_STOP_MANAGER,  handle_stop },
-    { FUSION_CN_CTRL_CMD_SET_PTP_SYNC,  handle_set_ptp_sync },
     { FUSION_CN_CTRL_CMD_ADD_STREAM,    handle_add_stream },
     { FUSION_CN_CTRL_CMD_REMOVE_STREAM, handle_remove_stream },
     { FUSION_CN_CTRL_CMD_GET_METRICS,   handle_get_metrics },
+    { FUSION_CN_CTRL_CMD_SET_PHC_ANCHOR, handle_set_phc_anchor },
+    { FUSION_CN_CTRL_CMD_GET_PHC_STATUS, handle_get_phc_status },
+    { FUSION_CN_CTRL_CMD_SET_DEBUG, handle_set_debug },
+    { FUSION_CN_CTRL_CMD_SET_ETH_IFACE, handle_set_eth_iface },
     { 0, NULL }
 };
 
 /* Netlink Functions */
-static void fusion_cn_nl_send_msg(struct fusion_cn_manager *mgr, struct fusion_cn_ctrl_msg *reply)
+static void fusion_cn_nl_send_msg(struct fusion_cn_manager *mgr,
+                                  struct fusion_cn_ctrl_msg *reply)
 {
     struct sk_buff *skb;
     struct nlmsghdr *nlh;
-    int msg_size = sizeof(*reply) + reply->data_size;
+    struct fusion_cn_ctrl_msg hdr = *reply; /* stack copy */
+    int msg_size;
 
     if (!mgr || !mgr->netlink.nl_sock) return;
 
+    hdr.data = NULL; /* don’t leak kernel pointer */
+    msg_size = sizeof(hdr) + reply->data_size;
+
     skb = nlmsg_new(msg_size, GFP_KERNEL);
-    if (!skb) {
-        printk(KERN_ERR "fusion_cn: Failed to allocate netlink skb\n");
+    if (!skb)
         goto out_free_data;
-    }
 
     nlh = nlmsg_put(skb, 0, 0, NLMSG_DONE, msg_size, 0);
     if (!nlh) {
@@ -927,18 +1031,14 @@ static void fusion_cn_nl_send_msg(struct fusion_cn_manager *mgr, struct fusion_c
         goto out_free_data;
     }
 
-    memcpy(nlmsg_data(nlh), reply, sizeof(*reply));
-    if (reply->data_size && reply->data) {
-        memcpy(nlmsg_data(nlh) + sizeof(*reply), reply->data, reply->data_size);
-    }
+    memcpy(nlmsg_data(nlh), &hdr, sizeof(hdr));
+    if (reply->data_size && reply->data)
+        memcpy(nlmsg_data(nlh) + sizeof(hdr), reply->data, reply->data_size);
 
-    if (netlink_unicast(mgr->netlink.nl_sock, skb, reply->pid, MSG_DONTWAIT) < 0) {
-        printk(KERN_ERR "fusion_cn: Failed to send netlink reply\n");
+    if (netlink_unicast(mgr->netlink.nl_sock, skb, reply->pid, MSG_DONTWAIT) < 0)
         kfree_skb(skb);
-    }
-
 out_free_data:
-    if (reply->data) kfree(reply->data); /* Caller must set to NULL if not owned */
+    kfree(reply->data); /* ok if NULL */
 }
 
 static void fusion_cn_process_nl_msg(struct fusion_cn_manager *mgr, struct fusion_cn_ctrl_msg *msg_rcv)
@@ -1007,4 +1107,3 @@ static void fusion_cn_nl_recv_msg(struct sk_buff *skb)
     msg_rcv.pid = nlh->nlmsg_pid;
     fusion_cn_process_nl_msg(mgr, &msg_rcv);
 }
-
