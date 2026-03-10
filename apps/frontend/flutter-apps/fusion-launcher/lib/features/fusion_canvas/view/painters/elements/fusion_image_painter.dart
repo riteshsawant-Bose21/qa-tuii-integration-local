@@ -15,13 +15,16 @@ class FusionImagePainter extends FusionBasePainter {
     required this.size,
   });
 
+  Rect getRect() {
+    return Rect.fromLTWH(position.dx, position.dy, size.width, size.height);
+  }
+
   @override
   void paint(Canvas canvas, Size size, FusionCanvasPainter painter) {
-    final Rect dstRect = Rect.fromLTWH(position.dx, position.dy, this.size.width, this.size.height);
     drawImage(
       canvas: canvas,
       imagePath: image,
-      rect: dstRect,
+      rect: getRect(),
       painter: painter,
     );
   }
