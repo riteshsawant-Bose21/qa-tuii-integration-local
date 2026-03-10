@@ -4,8 +4,9 @@ import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/fusion_theme/app_theme.dart';
 
 import '../../../core/constants/assets_constants.dart';
-import '../../../core/service_locator.dart';
-import '../../configuration/presentation/viewmodel/project_view_model.dart';
+import '../../configuration/presentation/viewmodel/project_view_model.dart' show SelectedItem, SelectedItemType;
+import '../viewModel/zones_viewmodel/config_zones_state.dart';
+import '../viewModel/zones_viewmodel/config_zones_viewmodel.dart';
 import '../../processing_block/view/processing_chain_view.dart';
 
 class SubZoneCard extends StatefulWidget {
@@ -28,7 +29,7 @@ class SubZoneCard extends StatefulWidget {
 
 class _SubZoneCardState extends State<SubZoneCard> {
   late ValueNotifier<bool> _isSubZoneExpanded;
-  ProjectViewModel get _projectViewModel => serviceLocator<ProjectViewModel>();
+  ConfigZonesViewmodel get _zonesViewmodel => context.read<ConfigZonesViewmodel>();
   bool _isSubZoneHovered = false;
   int? _hoveredCircuitIndex;
 
@@ -52,9 +53,9 @@ class _SubZoneCardState extends State<SubZoneCard> {
       child: ValueListenableBuilder<bool>(
         valueListenable: _isSubZoneExpanded,
         builder: (BuildContext context, bool subZoneExpanded, Widget? child) {
-          return BlocBuilder<ProjectViewModel, ProjectViewModelState>(
-            builder: (BuildContext context, ProjectViewModelState state) {
-              final SelectedItem? selectedDevice = _projectViewModel.selectedDevice;
+          return BlocBuilder<ConfigZonesViewmodel, ConfigZonesState>(
+            builder: (BuildContext context, ConfigZonesState state) {
+              final SelectedItem? selectedDevice = _zonesViewmodel.selectedDevice;
               final bool isSelected = selectedDevice?.id == widget.subZoneId && selectedDevice?.type == SelectedItemType.subzone;
 
               return Column(
@@ -169,9 +170,9 @@ class _SubZoneCardState extends State<SubZoneCard> {
 
   /// Subzone content - shows circuits/devices
   Widget _buildSubZoneContent() {
-    return BlocBuilder<ProjectViewModel, ProjectViewModelState>(
-      builder: (BuildContext context, ProjectViewModelState state) {
-        final List<CircuitModel> circuitList = _projectViewModel.getCircuitsInSubZone(subZoneId: widget.subZoneId);
+    return BlocBuilder<ConfigZonesViewmodel, ConfigZonesState>(
+      builder: (BuildContext context, ConfigZonesState state) {
+        final List<CircuitModel> circuitList = _zonesViewmodel.getCircuitsInSubZone(subZoneId: widget.subZoneId);
         return Container(
           constraints: const BoxConstraints(minHeight: 60, maxHeight: 400),
           padding: const EdgeInsets.only(top: 12, bottom: 12),
@@ -188,7 +189,7 @@ class _SubZoneCardState extends State<SubZoneCard> {
                     itemCount: circuitList.length,
                     itemBuilder: (BuildContext context, int index) {
                       final CircuitModel circuitData = circuitList[index];
-                      final List<Speaker> speakersList = _projectViewModel.getHardwareForCircuit(circuitId: circuitData.id).whereType<Speaker>().toList();
+                      final List<Speaker> speakersList = _zonesViewmodel.getHardwareForCircuit(circuitId: circuitData.id).whereType<Speaker>().toList();
                       return MouseRegion(
                         onEnter: (_) => setState(() => _hoveredCircuitIndex = index),
                         onExit: (_) => setState(() => _hoveredCircuitIndex = null),

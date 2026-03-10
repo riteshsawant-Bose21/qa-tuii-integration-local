@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:fusion_launcher/features/processing_block/view/widgets/pb_meter.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
 class OutMeter extends StatelessWidget {
@@ -37,6 +36,7 @@ class OutMeter extends StatelessWidget {
             child: Padding(
               padding: EdgeInsets.all(12.0),
               child: VerticalMeter(
+                semanticId: 'out_meter_vertical_meter',
                 value: -60,
                 min: -60,
                 max: 0,

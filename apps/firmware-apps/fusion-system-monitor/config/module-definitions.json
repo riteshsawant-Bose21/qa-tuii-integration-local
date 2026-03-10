@@ -104,6 +104,16 @@
                     "name": "user_gpio_ctrl_paths",
                     "value_type": "string",
                     "default_value": ""
+                },
+                {
+                    "name": "system_mute_path",
+                    "value_type": "string",
+                    "default_value": ""
+                },
+                {
+                    "name": "system_unmute_time",
+                    "value_type": "integer",
+                    "default_value": 0
                 }
             ],
             "parameters": [

@@ -133,7 +133,7 @@ class _SchedulerSection extends StatelessWidget {
                   shape: BoxShape.circle,
                 ),
               ),
-              FusionButton(label: "Test", onTap: () {}),
+              FusionButton(label: "Test",accessLabel: 'scheduler_test_button', onTap: () {}),
               SemanticHelper.button(
                 testId: SemanticHelper.createTestId(SemanticTypes.button, "scheduler_run_button_$index"),
                 child: InkWell(

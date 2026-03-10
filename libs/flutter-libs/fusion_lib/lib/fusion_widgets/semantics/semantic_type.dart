@@ -4,6 +4,8 @@ class SemanticTypes {
   static const String toggle = 'tgl';
   static const String navigation = 'nav';
   static const String textInput = 'tin';
+  static const String radio = 'rdo';
+  static const String checkbox = 'cbx';
 
   // Content types
   static const String text = 'txt';
@@ -19,4 +21,5 @@ class SemanticTypes {
   static const String formControl = 'form';
   static const String dropdown = 'dd';
   static const String dropdownItem = 'dd_item';
+  static const String icon = 'icon';
 }

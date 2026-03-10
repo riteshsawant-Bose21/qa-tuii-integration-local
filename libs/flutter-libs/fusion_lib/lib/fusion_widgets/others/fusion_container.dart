@@ -13,8 +13,10 @@ class FusionContainer extends StatelessWidget {
     this.alignment,
     this.padding,
     this.margin,
+    this.semanticId,
   });
   final double? width;
+  final String? semanticId;
   final double? height;
   final double borderRadius;
   final Widget child;
@@ -26,36 +28,58 @@ class FusionContainer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 100),
-      width: width,
-      height: height,
-      alignment: alignment,
-      margin: margin ?? const EdgeInsets.all(2),
-      padding: padding,
-      decoration: BoxDecoration(
-        // color: context.colorScheme.shadowDark,
-        boxShadow: raised
-            ? <BoxShadow>[
-                BoxShadow(color: context.colorScheme.shadowLight, blurRadius: 6, offset: const Offset(-2, -2)),
-                BoxShadow(color: context.colorScheme.shadowDark, blurRadius: 8, offset: const Offset(2, 2)),
-                BoxShadow(color: color ?? context.colorScheme.elevation1),
-              ]
-            : <BoxShadow>[
-                BoxShadow(color: context.colorScheme.shadowDark, blurRadius: 2, offset: Offset(-2, -2), blurStyle: BlurStyle.inner),
-                BoxShadow(
-                  color: context.colorScheme.shadowLight,
-                  blurRadius: 2,
-                  offset: Offset(2, 2),
-                  blurStyle: BlurStyle.inner,
-                ),
-                BoxShadow(color: color ?? context.colorScheme.elevation1, blurRadius: 4, blurStyle: BlurStyle.inner),
-              ],
-        borderRadius: BorderRadius.circular(borderRadius),
+    return SemanticHelper.container(
+      testId: SemanticHelper.createTestId(
+        SemanticTypes.container,
+        "fusion_container_${semanticId ?? ""}",
       ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(borderRadius),
-        child: child,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 100),
+        width: width,
+        height: height,
+        alignment: alignment,
+        margin: const EdgeInsets.all(2),
+        decoration: BoxDecoration(
+          // color: context.colorScheme.shadowDark,
+          boxShadow: raised
+              ? <BoxShadow>[
+                  BoxShadow(
+                    color: context.colorScheme.shadowLight,
+                    blurRadius: 2,
+                    offset: const Offset(-2, -2),
+                  ),
+                  BoxShadow(
+                    color: context.colorScheme.shadowDark,
+                    blurRadius: 4,
+                    offset: const Offset(2, 2),
+                  ),
+                  BoxShadow(color: color ?? context.colorScheme.elevation1),
+                ]
+              : <BoxShadow>[
+                  BoxShadow(
+                    color: context.colorScheme.shadowDark,
+                    blurRadius: 1,
+                    offset: Offset(-2, -2),
+                    blurStyle: BlurStyle.inner,
+                  ),
+                  BoxShadow(
+                    color: context.colorScheme.shadowLight,
+                    blurRadius: 1,
+                    offset: Offset(2, 2),
+                    blurStyle: BlurStyle.inner,
+                  ),
+                  BoxShadow(
+                    color: color ?? context.colorScheme.elevation1,
+                    blurRadius: 4,
+                    blurStyle: BlurStyle.inner,
+                  ),
+                ],
+          borderRadius: BorderRadius.circular(borderRadius),
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(borderRadius),
+          child: child,
+        ),
       ),
     );
   }

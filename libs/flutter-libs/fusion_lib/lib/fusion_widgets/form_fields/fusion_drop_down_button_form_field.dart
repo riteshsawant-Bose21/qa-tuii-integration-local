@@ -44,6 +44,7 @@ class FusionDropdownButtonFormField extends StatelessWidget {
   final BorderRadius? borderRadius;
   final EdgeInsetsGeometry? padding;
   final String semanticKey;
+  final String Function(String value)? displayString;
 
   const FusionDropdownButtonFormField({
     super.key,
@@ -77,69 +78,101 @@ class FusionDropdownButtonFormField extends StatelessWidget {
     this.borderRadius,
     this.padding,
     required this.semanticKey,
+    this.displayString,
   });
 
   @override
   Widget build(BuildContext context) {
-    return SemanticHelper.button(
-      testId: SemanticHelper.createTestId(SemanticTypes.dropdown, semanticKey),
-      child: DropdownButtonFormField<String>(
-        key: key,
-        initialValue: value,
-        isExpanded: isExpanded, // Use the parameter value
-        items: List<DropdownMenuItem<String>>.generate(
-          options.length,
-          (int index) {
-            final String option = options[index];
-            return DropdownMenuItem<String>(
-              value: option,
-              child: FusionAppText(
-                text: option,
-                semanticId: SemanticHelper.createTestId(SemanticTypes.dropdownItem, '${semanticKey}_item_$index'),
-                // overflow: TextOverflow.ellipsis, // Handle text overflow
-              ),
-            );
-          },
-        ),
-        // options
-        //     .map(
-        //       (String option) => DropdownMenuItem<String>(
-        //         value: option,
-        //         child:
-        //     ) ,
-        onChanged: onChanged,
-        onTap: onTap,
-        validator: validator,
-        onSaved: onSaved,
-        autovalidateMode: autovalidateMode ? AutovalidateMode.always : AutovalidateMode.disabled,
-        decoration:
-            decoration ??
-            InputDecoration(
-              labelText: hintText ?? 'Select an option',
-              contentPadding: padding ?? const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              border: OutlineInputBorder(
-                borderRadius: borderRadius ?? BorderRadius.circular(8),
-              ),
+    return Column(
+      children: [
+        if (hintText != null && hintText!.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 8.0),
+            child: Row(
+              children: [
+                Text(hintText!, style: Theme.of(context).textTheme.labelMedium),
+                // if (widget.isRequired) Text(' *', style: TextStyle(color: Colors.red.shade600)),
+              ],
             ),
-        hint: hint,
-        disabledHint: disabledHint,
-        elevation: elevation,
-        style: style,
-        icon: icon,
-        iconDisabledColor: iconDisabledColor,
-        iconEnabledColor: iconEnabledColor,
-        iconSize: iconSize,
-        isDense: isDense,
-        itemHeight: itemHeight,
-        focusColor: focusColor,
-        focusNode: focusNode,
-        autofocus: autofocus,
-        dropdownColor: dropdownColor,
-        menuMaxHeight: menuMaxHeight,
-        enableFeedback: enableFeedback,
-        alignment: alignment,
-        borderRadius: borderRadius,
-      ),
+          ),
+
+        const SizedBox(height: 4),
+        SemanticHelper.button(
+          testId: SemanticHelper.createTestId(
+            SemanticTypes.dropdown,
+            semanticKey,
+          ),
+          child: FusionContainer(
+            child: DropdownButtonFormField<String>(
+              key: key,
+              initialValue: value,
+              isExpanded: isExpanded, // Use the parameter value
+              items: List<DropdownMenuItem<String>>.generate(
+                options.length,
+                (int index) {
+                  final String option = options[index];
+                  return DropdownMenuItem<String>(
+                    value: option,
+                    child: FusionAppText(
+                      text: displayString != null
+                          ? displayString!(option)
+                          : option,
+                      semanticId: SemanticHelper.createTestId(
+                        SemanticTypes.dropdownItem,
+                        '${semanticKey}_item_$index',
+                      ),
+                      // overflow: TextOverflow.ellipsis, // Handle text overflow
+                    ),
+                  );
+                },
+              ),
+              // options
+              //     .map(
+              //       (String option) => DropdownMenuItem<String>(
+              //         value: option,
+              //         child:
+              //     ) ,
+              onChanged: onChanged,
+              onTap: onTap,
+              validator: validator,
+              onSaved: onSaved,
+              autovalidateMode: autovalidateMode
+                  ? AutovalidateMode.always
+                  : AutovalidateMode.disabled,
+              decoration:
+                  decoration ??
+                  InputDecoration(
+                    filled: false,
+
+                    contentPadding:
+                        padding ??
+                        const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    border: InputBorder.none,
+                    enabledBorder: InputBorder.none,
+                    focusedBorder: InputBorder.none,
+                  ),
+              hint: hint,
+              disabledHint: disabledHint,
+              elevation: elevation,
+              style: style,
+              icon: icon,
+              iconDisabledColor: iconDisabledColor,
+              iconEnabledColor: iconEnabledColor,
+              iconSize: iconSize,
+              isDense: isDense,
+              itemHeight: itemHeight,
+              focusColor: focusColor,
+              focusNode: focusNode,
+              autofocus: autofocus,
+              dropdownColor: dropdownColor,
+              menuMaxHeight: menuMaxHeight,
+              enableFeedback: enableFeedback,
+              alignment: alignment,
+              borderRadius: borderRadius,
+            ),
+          ),
+        ),
+      ],
     );
   }
 }
