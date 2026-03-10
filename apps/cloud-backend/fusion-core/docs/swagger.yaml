@@ -103,7 +103,6 @@ definitions:
         type: string
     type: object
   types.CheckForUpdateResponse:
-    description: Full response when update is available with bundle details
     properties:
       app_update_required:
         example: false
@@ -1002,18 +1001,21 @@ paths:
       - application/json
       description: Approves a firmware bundle, making it available for deployment
       parameters:
-      - description: Set to true to approve, false to revoke
+      - description: Action to perform
+        enum:
+        - approve
+        - revoke
         in: query
-        name: approve
+        name: action
         required: true
-        type: boolean
+        type: string
       produces:
       - application/json
       responses:
         "204":
           description: Bundle successfully approved or revoked
         "400":
-          description: Invalid bundleID or request payload
+          description: Invalid bundleID or request payload or bundle not approved
           schema:
             $ref: '#/definitions/types.ErrorResponse'
         "404":
@@ -1115,8 +1117,7 @@ paths:
       - application/json
       responses:
         "200":
-          description: 'Response varies by scenario - see description above and Models:
-            CheckForUpdateResponse, CheckForUpdateAppUpdateRequired, CheckForUpdateNoUpdate'
+          description: Response varies by scenario - see description above
           schema:
             $ref: '#/definitions/types.CheckForUpdateResponse'
         "400":

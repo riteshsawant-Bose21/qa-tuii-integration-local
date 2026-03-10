@@ -2,11 +2,13 @@ package handler
 
 import (
 	"errors"
+	"fmt"
 	"strconv"
 
 	response "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/api/response"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/api/types"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion"
+	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/log"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/utils/errorutil"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/utils/validation"
 	"github.com/gin-gonic/gin"
@@ -38,29 +40,24 @@ func NewFirmwareUpdateHandler(firmware fusion.Firmware) *FirmwareUpdateHandler {
 // @Router /firmware/bundles [post]
 func (h *FirmwareUpdateHandler) NotifyBundleUpload(c *gin.Context) {
 	var payload types.NotifyBundleUploadPayload
-	loggerVal, exists := c.Get("logger")
-	if !exists {
-		response.InternalError(c)
-		return
-	}
-	logger := loggerVal.(*zap.Logger)
+	logger := log.GetLogger(c)
 
 	if err := c.ShouldBindJSON(&payload); err != nil {
 		logger.Error("Failed to bind NotifyBundleUpload payload", zap.Error(err))
-		response.BadRequest(c, "Invalid request payload: "+err.Error())
+		response.BadRequest(c, fmt.Sprintf("Invalid request payload: %s", err.Error()))
 		return
 	}
 
 	if err := validation.ValidateFirmwareVersionFormat(payload.MinPrevVersion); err != nil {
-		response.BadRequest(c, "invalid min_required_prev_version: "+err.Error())
+		response.BadRequest(c, fmt.Sprintf("invalid min_required_prev_version: %s", err.Error()))
 		return
 	}
 	if err := validation.ValidateFirmwareVersionFormat(payload.MinDesktopAppVersion); err != nil {
-		response.BadRequest(c, "invalid min_desktop_app_version: "+err.Error())
+		response.BadRequest(c, fmt.Sprintf("invalid min_desktop_app_version: %s", err.Error()))
 		return
 	}
 	if err := validation.ValidateFirmwareVersionFormat(payload.Version); err != nil {
-		response.BadRequest(c, "invalid version: "+err.Error())
+		response.BadRequest(c, fmt.Sprintf("invalid version: %s", err.Error()))
 		return
 	}
 
@@ -68,7 +65,7 @@ func (h *FirmwareUpdateHandler) NotifyBundleUpload(c *gin.Context) {
 	if err != nil {
 		logger.Error("Failed to notify bundle upload", zap.Error(err))
 		if errors.Is(err, errorutil.ErrVersionExists) {
-			response.BadRequest(c, err.Error())
+			response.BadRequest(c, fmt.Sprintf("version already exists: %s", err.Error()))
 			return
 		}
 		response.InternalError(c)
@@ -93,16 +90,7 @@ func (h *FirmwareUpdateHandler) NotifyBundleUpload(c *gin.Context) {
 // @Failure 500 {object} types.ErrorResponse "Internal server error"
 // @Router /firmware/bundles [get]
 func (h *FirmwareUpdateHandler) ListBundles(c *gin.Context) {
-	loggerVal, exists := c.Get("logger")
-	if !exists {
-		response.InternalError(c)
-		return
-	}
-	logger, ok := loggerVal.(*zap.Logger)
-	if !ok {
-		response.InternalError(c)
-		return
-	}
+	logger := log.GetLogger(c)
 
 	pageStr := c.DefaultQuery("page", "1")
 	limitStr := c.DefaultQuery("limit", "10")
@@ -125,7 +113,7 @@ func (h *FirmwareUpdateHandler) ListBundles(c *gin.Context) {
 	statusQuery, exists := c.GetQuery("approval_status")
 	if exists {
 		switch statusQuery {
-		case "PENDING", "APPROVED", "REVOKED":
+		case types.BundleStatusPending, types.BundleStatusApproved, types.BundleStatusRevoked:
 			approvalStatus = &statusQuery
 		default:
 			logger.Error("Invalid approval_status parameter", zap.String("status", statusQuery))
@@ -151,50 +139,53 @@ func (h *FirmwareUpdateHandler) ListBundles(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Security BearerAuth
-// @Param approve query bool true "Set to true to approve, false to revoke"
+// @Param action query string true "Action to perform" Enums(approve, revoke)
 // @Success 204 "Bundle successfully approved or revoked"
-// @Failure 400 {object} types.ErrorResponse "Invalid bundleID or request payload"
+// @Failure 400 {object} types.ErrorResponse "Invalid bundleID or request payload or bundle not approved"
 // @Failure 404 {object} types.ErrorResponse "Bundle not found"
 // @Failure 500 {object} types.ErrorResponse "Internal server error"
 // @Router /firmware/bundles/{bundleID}/approve [put]
 func (h *FirmwareUpdateHandler) ApproveBundle(c *gin.Context) {
-	approveStr := c.Query("approve")
-	if approveStr == "" {
-		response.BadRequest(c, "missing approve query parameter")
+	approveStr := c.Query("action")
+	logger := log.GetLogger(c)
+	var approvalStatus string
+
+	if approveStr == "" || (approveStr != "approve" && approveStr != "revoke") {
+		logger.Error("Missing or invalid action query parameter")
+		response.BadRequest(c, "missing or invalid action query parameter")
 		return
 	}
-	approve, err := strconv.ParseBool(approveStr)
-	if err != nil {
-		response.BadRequest(c, "invalid approve query parameter (must be true or false)")
-		return
+
+	if approveStr == "approve" {
+		approvalStatus = types.BundleStatusApproved
+	} else {
+		approvalStatus = types.BundleStatusRevoked
 	}
 
 	bundleID := c.Param("bundleID")
 	if !validation.IsValidUUID(bundleID) {
+		logger.Error("Invalid bundleID", zap.String("bundleID", bundleID))
 		response.BadRequest(c, "invalid bundleID")
 		return
 	}
 
-	loggerVal, exists := c.Get("logger")
-	if !exists {
-		response.InternalError(c)
-		return
-	}
-	logger := loggerVal.(*zap.Logger)
-
 	userAuth, exists := c.Get("user_auth")
 	if !exists {
+		logger.Error("User not found")
 		response.Unauthorized(c, errorutil.MsgUnauthorized)
 		return
 	}
 	user := userAuth.(*types.UserAuthorizationResponse)
 	approvedBy := user.User.ID
 
-	err = h.firmware.ApproveBundle(c, bundleID, approvedBy, approve, logger)
+	err := h.firmware.ApproveBundle(c, bundleID, approvedBy, approvalStatus, logger)
 	if err != nil {
 		logger.Error("Failed to approve bundle", zap.String("bundleID", bundleID), zap.Error(err))
 		if errors.Is(err, errorutil.ErrBundleNotFound) {
 			response.NotFound(c, "Bundle not found")
+			return
+		} else if errors.Is(err, errorutil.ErrBundleNotApproved) {
+			response.BadRequest(c, "Bundle not approved")
 			return
 		}
 		response.InternalError(c)
@@ -234,32 +225,27 @@ func (h *FirmwareUpdateHandler) ApproveBundle(c *gin.Context) {
 // @Param current_firmware_version query string true "Current firmware version (semver format)"
 // @Param current_desktop_app_version query string true "Current desktop application version (semver format)"
 // @Param channel query string false "Release channel: 'beta', 'alpha', etc. Omit for stable releases (prerelease IS NULL)"
-// @Success 200 {object} types.CheckForUpdateResponse "Response varies by scenario - see description above and Models: CheckForUpdateResponse, CheckForUpdateAppUpdateRequired, CheckForUpdateNoUpdate"
+// @Success 200 {object} types.CheckForUpdateResponse "Response varies by scenario - see description above"
 // @Failure 400 {object} types.ErrorResponse "Invalid request payload"
 // @Failure 500 {object} types.ErrorResponse "Internal server error"
 // @Router /firmware/updates/check [get]
 func (h *FirmwareUpdateHandler) CheckForUpdate(c *gin.Context) {
 	var payload types.CheckForUpdateRequest
-	loggerVal, exists := c.Get("logger")
-	if !exists {
-		response.InternalError(c)
-		return
-	}
-	logger := loggerVal.(*zap.Logger)
+	logger := log.GetLogger(c)
 
 	if err := c.ShouldBindQuery(&payload); err != nil {
 		logger.Error("Failed to bind CheckForUpdate query params", zap.Error(err))
-		response.BadRequest(c, "Invalid request parameters: "+err.Error())
+		response.BadRequest(c, fmt.Sprintf("Invalid request parameters: %s", err.Error()))
 		return
 	}
 
 	// Validate version formats
 	if err := validation.ValidateFirmwareVersionFormat(payload.CurrentFirmwareVersion); err != nil {
-		response.BadRequest(c, "invalid current_firmware_version format: "+err.Error())
+		response.BadRequest(c, fmt.Sprintf("invalid current_firmware_version format: %s", err.Error()))
 		return
 	}
 	if err := validation.ValidateFirmwareVersionFormat(payload.CurrentDesktopAppVersion); err != nil {
-		response.BadRequest(c, "invalid current_desktop_app_version format: "+err.Error())
+		response.BadRequest(c, fmt.Sprintf("invalid current_desktop_app_version format: %s", err.Error()))
 		return
 	}
 
@@ -294,12 +280,7 @@ func (h *FirmwareUpdateHandler) GetBundleDownloadURL(c *gin.Context) {
 		return
 	}
 
-	loggerVal, exists := c.Get("logger")
-	if !exists {
-		response.InternalError(c)
-		return
-	}
-	logger := loggerVal.(*zap.Logger)
+	logger := log.GetLogger(c)
 
 	res, err := h.firmware.GetBundleDownloadURL(c, bundleID, logger)
 	if err != nil {
@@ -311,7 +292,7 @@ func (h *FirmwareUpdateHandler) GetBundleDownloadURL(c *gin.Context) {
 			response.NotFound(c, "bundle artifact not found in storage")
 			return
 		}
-		if errors.Is(err, errorutil.ErrBundleNotApproved) {
+		if errors.Is(err, errorutil.ErrBundleNotApprovedForDownload) {
 			response.Forbidden(c, "bundle not approved for download")
 			return
 		}
@@ -334,25 +315,16 @@ func (h *FirmwareUpdateHandler) GetBundleDownloadURL(c *gin.Context) {
 // @Failure 500 {object} types.ErrorResponse "Internal server error"
 // @Router /firmware/updates/status [post]
 func (h *FirmwareUpdateHandler) LogBundleUpdateStatus(c *gin.Context) {
-	loggerVal, exists := c.Get("logger")
-	if !exists {
-		response.InternalError(c)
-		return
-	}
-	logger, ok := loggerVal.(*zap.Logger)
-	if !ok {
-		response.InternalError(c)
-		return
-	}
+	logger := log.GetLogger(c)
 
 	var payload types.LogBundleUpdateStatusPayload
 	if err := c.ShouldBindJSON(&payload); err != nil {
 		logger.Error("Failed to bind LogBundleUpdateStatus payload", zap.Error(err))
-		response.BadRequest(c, "Invalid request payload: "+err.Error())
+		response.BadRequest(c, fmt.Sprintf("Invalid request payload: %s", err.Error()))
 		return
 	}
 
-	err := h.firmware.LogBundleUpdateStatus(c.Request.Context(), &payload, logger)
+	err := h.firmware.InsertBundleUpdateStatus(c.Request.Context(), &payload, logger)
 	if err != nil {
 		logger.Error("Failed to log bundle update status", zap.Error(err))
 		response.InternalError(c)

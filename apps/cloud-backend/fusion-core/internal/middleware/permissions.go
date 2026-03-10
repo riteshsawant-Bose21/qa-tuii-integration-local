@@ -95,23 +95,11 @@ func SetupUserSettingsPermissions(acc *AccessControlConfig) {
 
 // SetupFirmwarePermissions configures access control permissions for firmware update endpoints
 func SetupFirmwarePermissions(acc *AccessControlConfig) {
-	// Firmware bundle endpoints
-	basePath := fmt.Sprintf("%s%s", constants.APIV1Path, constants.EndpointFirmware)
-
-	// List bundles - require read permission
-	acc.RegisterPermission("GET", fmt.Sprintf("%s%s", basePath, constants.EndpointFirmwareBundles), FirmwareBundleRead, PermissionRead, "View firmware bundles")
-
-	// Approve bundle - require admin/approve permission
-	acc.RegisterPermission("PUT", fmt.Sprintf("%s%s", basePath, constants.EndpointApproveBundle), FirmwareBundleApprove, PermissionWrite, "Approve firmware bundle")
-
-	// Check for updates - require read permission
-	acc.RegisterPermission("GET", fmt.Sprintf("%s%s", basePath, constants.EndpointFirmwareUpdateCheck), FirmwareUpdateCheck, PermissionRead, "Check for firmware updates")
-
-	// Download bundle - require read permission
-	acc.RegisterPermission("GET", fmt.Sprintf("%s%s", basePath, constants.EndpointBundleDownload), FirmwareDownload, PermissionRead, "Download firmware bundle")
-
-	// Log bundle update status - require write permission
-	acc.RegisterPermission("POST", fmt.Sprintf("%s%s", basePath, constants.EndpointLogBundleUpdateStatus), FirmwareUpdateLog, PermissionWrite, "Log firmware update status")
+	acc.RegisterPermission("GET", fmt.Sprintf("%s%s", constants.APIV1Path, constants.EndpointFirmwareBundles), FirmwareBundleRead, PermissionRead, "View firmware bundles")
+	acc.RegisterPermission("PUT", fmt.Sprintf("%s%s", constants.APIV1Path, constants.EndpointApproveBundle), FirmwareBundleApprove, PermissionWrite, "Approve firmware bundle")
+	acc.RegisterPermission("GET", fmt.Sprintf("%s%s", constants.APIV1Path, constants.EndpointFirmwareUpdateCheck), FirmwareUpdateCheck, PermissionRead, "Check for firmware updates")
+	acc.RegisterPermission("GET", fmt.Sprintf("%s%s", constants.APIV1Path, constants.EndpointBundleDownload), FirmwareDownload, PermissionRead, "Download firmware bundle")
+	acc.RegisterPermission("POST", fmt.Sprintf("%s%s", constants.APIV1Path, constants.EndpointLogBundleUpdateStatus), FirmwareUpdateLog, PermissionWrite, "Log firmware update status")
 }
 
 // SetupCommonPermissions configures common permission patterns

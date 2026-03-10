@@ -11,17 +11,11 @@ var (
 	ErrBundleArtifactNotFound = errors.New("bundle artifact not found in storage")
 
 	// ErrVersionExists indicates that a firmware version already exists for the platform
-	ErrVersionExists = errors.New("an equal version already exists")
+	ErrVersionExists = errors.New("version already exists")
 
-	// ErrInvalidVersion indicates that the firmware version format is invalid
-	ErrInvalidVersion = errors.New("invalid version format")
+	// ErrBundleNotApprovedForDownload indicates that the bundle exists but has not been approved for download
+	ErrBundleNotApprovedForDownload = errors.New("bundle not approved for download")
 
-	// ErrInvalidChannel indicates that the distribution channel is invalid
-	ErrInvalidChannel = errors.New("invalid distribution channel")
-
-	// ErrInvalidReleaseStatus indicates that the release status is not suitable for the operation
-	ErrInvalidReleaseStatus = errors.New("invalid release status for this operation")
-
-	// ErrBundleNotApproved indicates that the bundle exists but has not been approved for download
-	ErrBundleNotApproved = errors.New("bundle not approved for download")
+	// ErrBundleNotApproved indicates that the bundle exists but has not been approved
+	ErrBundleNotApproved = errors.New("bundle not approved")
 )

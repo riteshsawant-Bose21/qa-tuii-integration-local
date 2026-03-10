@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/api/types"
+	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/constants"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/model/models"
 	errorutils "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/utils/errorutil"
 	"go.uber.org/zap"
@@ -161,7 +162,7 @@ func (s *Service) CreateProject(ctx context.Context, project *types.ProjectCreat
 	}
 
 	if project.IsProjectFileCreated {
-		presignURL, err := s.generateProjectFileURL(ctx, id, types.ProjectFileTypeProjectFile, time.Minute*15, "put", logger)
+		presignURL, err := s.generateProjectFileURL(ctx, id, types.ProjectFileTypeProjectFile, constants.S3PresignedUrlTTL, "put", logger)
 		if err != nil {
 			return nil, fmt.Errorf("failed to generate presign URL: %v", err)
 		}
@@ -169,7 +170,7 @@ func (s *Service) CreateProject(ctx context.Context, project *types.ProjectCreat
 	}
 
 	if project.IsProjectThumbnailCreated {
-		presignURL, err := s.generateProjectFileURL(ctx, id, types.ProjectFileTypeProjectThumbnail, time.Minute*15, "put", logger)
+		presignURL, err := s.generateProjectFileURL(ctx, id, types.ProjectFileTypeProjectThumbnail, constants.S3PresignedUrlTTL, "put", logger)
 		if err != nil {
 			return nil, fmt.Errorf("failed to generate presign URL: %v", err)
 		}
@@ -188,7 +189,7 @@ func (s *Service) GetAllProjects(ctx context.Context, queryParams *types.GetAllP
 
 	// Generate presigned URLs for all projects
 	for i := range projects {
-		presignURL, err := s.generateProjectFileURL(ctx, projects[i].ID, types.ProjectFileTypeProjectFile, time.Minute*5, "get", logger)
+		presignURL, err := s.generateProjectFileURL(ctx, projects[i].ID, types.ProjectFileTypeProjectFile, constants.S3PresignedUrlTTL, "get", logger)
 		if err != nil {
 			return nil, fmt.Errorf("failed to generate presign URL for project %s: %v", projects[i].ID, err)
 		}
@@ -197,7 +198,7 @@ func (s *Service) GetAllProjects(ctx context.Context, queryParams *types.GetAllP
 			projects[i].ProjectFileURL = &presignURL
 		}
 
-		thumbnailURL, err := s.generateProjectFileURL(ctx, projects[i].ID, types.ProjectFileTypeProjectThumbnail, time.Minute*5, "get", logger)
+		thumbnailURL, err := s.generateProjectFileURL(ctx, projects[i].ID, types.ProjectFileTypeProjectThumbnail, constants.S3PresignedUrlTTL, "get", logger)
 		if err != nil {
 			return nil, fmt.Errorf("failed to generate thumbnail URL for project %s: %v", projects[i].ID, err)
 		}
@@ -245,7 +246,7 @@ func (s *Service) UpdateProject(ctx context.Context, project *types.ProjectUpdat
 	response := &types.ProjectUpdateResponse{}
 
 	if project.IsProjectFileDirty {
-		presignURL, err := s.generateProjectFileURL(ctx, projectRow.ID, types.ProjectFileTypeProjectFile, time.Minute*15, "put", logger)
+		presignURL, err := s.generateProjectFileURL(ctx, projectRow.ID, types.ProjectFileTypeProjectFile, constants.S3PresignedUrlTTL, "put", logger)
 		if err != nil {
 			return nil, fmt.Errorf("failed to generate presign URL: %v", err)
 		}
@@ -253,7 +254,7 @@ func (s *Service) UpdateProject(ctx context.Context, project *types.ProjectUpdat
 	}
 
 	if project.IsProjectThumbnailDirty {
-		presignURL, err := s.generateProjectFileURL(ctx, projectRow.ID, types.ProjectFileTypeProjectThumbnail, time.Minute*15, "put", logger)
+		presignURL, err := s.generateProjectFileURL(ctx, projectRow.ID, types.ProjectFileTypeProjectThumbnail, constants.S3PresignedUrlTTL, "put", logger)
 		if err != nil {
 			return nil, fmt.Errorf("failed to generate presign URL: %v", err)
 		}

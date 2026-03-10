@@ -11,7 +11,7 @@ type S3Config struct {
 	PriceBucket          string
 	ProductBucket        string
 	ProjectBucket        string
-	FirmwareUpdateBucket string
+	FirmwareBundleBucket string
 	Region               string
 }
 
@@ -32,7 +32,7 @@ func (s *Service) S3() (*S3Config, error) {
 		return nil, fmt.Errorf("failed to get S3 price bucket: %w", err)
 	}
 
-	firmwareUpdateBucket, err := s.store.ReqString(environment.S3.FirmwareUpdateBucket)
+	FirmwareBundleBucket, err := s.store.ReqString(environment.S3.FirmwareBundleBucket)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get S3 firmware bucket: %w", err)
 	}
@@ -46,7 +46,7 @@ func (s *Service) S3() (*S3Config, error) {
 		PriceBucket:          priceBucket,
 		ProductBucket:        productBucket,
 		ProjectBucket:        projectBucket,
-		FirmwareUpdateBucket: firmwareUpdateBucket,
+		FirmwareBundleBucket: FirmwareBundleBucket,
 		Region:               region,
 	}, nil
 }

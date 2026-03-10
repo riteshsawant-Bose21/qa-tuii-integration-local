@@ -11,12 +11,13 @@ import (
 	"github.com/aarondl/null/v8"
 	"github.com/google/uuid"
 
-	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/api/types"
+	apiTypes "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/api/types"
 	customModel "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/model"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/model/models"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/utils/validation"
 	"github.com/aarondl/sqlboiler/v4/boil"
 	"github.com/aarondl/sqlboiler/v4/queries/qm"
+	"github.com/aarondl/sqlboiler/v4/types"
 	"go.uber.org/zap"
 )
 
@@ -51,24 +52,7 @@ func (s *Service) GetBundleByVersion(ctx context.Context, version string) (*mode
 	return bundle, nil
 }
 
-func (s *Service) GetLatestApprovedBundleNewerThan(ctx context.Context, currentFirmwareVersion string) (*models.Bundle, error) {
-	bundle, err := models.Bundles(
-		models.BundleWhere.ApprovalStatus.EQ(models.BundleApprovalStatusEnumAPPROVED),
-		qm.Where("version_array > string_to_array(split_part(?, '-', 1), '.')::int[]", currentFirmwareVersion),
-		qm.OrderBy("version_array DESC"),
-	).One(ctx, s.db)
-
-	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return nil, nil // No bundle found
-		}
-		return nil, fmt.Errorf("failed to get latest bundle: %w", err)
-	}
-
-	return bundle, nil
-}
-
-func (s *Service) InsertBundle(ctx context.Context, payload types.NotifyBundleUploadPayload, logger *zap.Logger) (string, error) {
+func (s *Service) InsertBundle(ctx context.Context, payload apiTypes.NotifyBundleUploadPayload, logger *zap.Logger) (string, error) {
 
 	// Convert manifest data to proper JSON for sqlboiler type
 	manifestBytes, err := json.Marshal(payload.ManifestData)
@@ -114,7 +98,7 @@ func (s *Service) InsertBundle(ctx context.Context, payload types.NotifyBundleUp
 	return bundleRecord.ID, nil
 }
 
-func (s *Service) ApproveBundle(ctx context.Context, bundleID string, approvedBy string, approve bool) error {
+func (s *Service) ApproveBundle(ctx context.Context, bundleID string, approvedBy string, approvalStatus string) error {
 	if bundleID == "" {
 		return errors.New("bundleID cannot be empty")
 	}
@@ -122,14 +106,9 @@ func (s *Service) ApproveBundle(ctx context.Context, bundleID string, approvedBy
 		return errors.New("approvedBy cannot be empty")
 	}
 
-	status := models.BundleApprovalStatusEnumREVOKED
-	if approve {
-		status = models.BundleApprovalStatusEnumAPPROVED
-	}
-
 	bundle := &models.Bundle{
 		ID:                      bundleID,
-		ApprovalStatus:          status,
+		ApprovalStatus:          approvalStatus,
 		ApprovalStatusChangedBy: null.StringFrom(approvedBy),
 		ApprovalStatusChangedAt: null.TimeFrom(time.Now()),
 	}
@@ -158,10 +137,18 @@ func (s *Service) GetBundleByID(ctx context.Context, bundleID string) (*models.B
 }
 
 func (s *Service) GetLatestBundleCompatibleWithFirmware(ctx context.Context, currentFirmwareVersion string, channel string) (*models.Bundle, error) {
+	parsedFirmware, err := s.toVersionArray(currentFirmwareVersion)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse current firmware version: %w", err)
+	}
+
 	queryMods := []qm.QueryMod{
 		models.BundleWhere.ApprovalStatus.EQ(models.BundleApprovalStatusEnumAPPROVED),
-		qm.Where("version_array > string_to_array(split_part(?, '-', 1), '.')::int[]", currentFirmwareVersion),
-		qm.Where("(min_prev_version = '0.0.0' OR min_prev_version_array <= string_to_array(split_part(?, '-', 1), '.')::int[])", currentFirmwareVersion),
+		models.BundleWhere.VersionArray.GT(parsedFirmware),
+		qm.Expr(
+			models.BundleWhere.MinPrevVersion.EQ("0.0.0"),
+			qm.Or2(models.BundleWhere.MinPrevVersionArray.LTE(parsedFirmware)),
+		),
 		qm.OrderBy("version_array DESC"),
 	}
 
@@ -185,11 +172,27 @@ func (s *Service) GetLatestBundleCompatibleWithFirmware(ctx context.Context, cur
 }
 
 func (s *Service) GetLatestCompatibleBundle(ctx context.Context, currentFirmwareVersion string, currentDesktopAppVersion string, channel string) (*models.Bundle, error) {
+	parsedCurrentFirmwareVersion, err := s.toVersionArray(currentFirmwareVersion)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse current firmware version: %w", err)
+	}
+
+	parsedCurrentDesktopAppVersion, err := s.toVersionArray(currentDesktopAppVersion)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse current desktop app version: %w", err)
+	}
+
 	queryMods := []qm.QueryMod{
 		models.BundleWhere.ApprovalStatus.EQ(models.BundleApprovalStatusEnumAPPROVED),
-		qm.Where("version_array > string_to_array(split_part(?, '-', 1), '.')::int[]", currentFirmwareVersion),
-		qm.Where("(min_prev_version = '0.0.0' OR min_prev_version_array <= string_to_array(split_part(?, '-', 1), '.')::int[])", currentFirmwareVersion),
-		qm.Where("(min_desktop_app_version = '0.0.0' OR min_desktop_app_version_array <= string_to_array(split_part(?, '-', 1), '.')::int[])", currentDesktopAppVersion),
+		models.BundleWhere.VersionArray.GT(parsedCurrentFirmwareVersion),
+		qm.Expr(
+			models.BundleWhere.MinPrevVersion.EQ("0.0.0"),
+			qm.Or2(models.BundleWhere.MinPrevVersionArray.LTE(parsedCurrentFirmwareVersion)),
+		),
+		qm.Expr(
+			models.BundleWhere.MinDesktopAppVersion.EQ("0.0.0"),
+			qm.Or2(models.BundleWhere.MinDesktopAppVersionArray.LTE(parsedCurrentDesktopAppVersion)),
+		),
 		qm.OrderBy("version_array DESC"),
 	}
 
@@ -212,7 +215,7 @@ func (s *Service) GetLatestCompatibleBundle(ctx context.Context, currentFirmware
 	return bundle, nil
 }
 
-func (s *Service) LogBundleUpdateStatus(ctx context.Context, payload *types.LogBundleUpdateStatusPayload) error {
+func (s *Service) InsertBundleUpdateStatus(ctx context.Context, payload *apiTypes.LogBundleUpdateStatusPayload) error {
 	status := &models.BundleUpdateStatus{
 		ID:              uuid.New().String(),
 		UpdateID:        payload.UpdateID,
@@ -253,4 +256,12 @@ func (s *Service) ListBundles(ctx context.Context, approvalStatus *string, limit
 	}
 
 	return bundles, int(totalCount), nil
+}
+
+func (s *Service) toVersionArray(version string) (types.Int64Array, error) {
+	parsed, err := validation.ParseSemanticVersion(version)
+	if err != nil {
+		return nil, err
+	}
+	return types.Int64Array{int64(parsed.Major), int64(parsed.Minor), int64(parsed.Patch)}, nil
 }

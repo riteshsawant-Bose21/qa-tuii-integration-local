@@ -4,19 +4,13 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"time"
 
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/api/types"
+	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/constants"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/model/models"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/utils/errorutil"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/utils/validation"
 	"go.uber.org/zap"
-)
-
-const (
-	firmwareBundleDownloadUrlTTL = 2 * time.Hour
-
-	ChannelStable = "stable"
 )
 
 func (s *Service) NotifyBundleUpload(ctx context.Context, payload *types.NotifyBundleUploadPayload, logger *zap.Logger) (*types.BundleResponse, error) {
@@ -42,15 +36,6 @@ func (s *Service) NotifyBundleUpload(ctx context.Context, payload *types.NotifyB
 }
 
 func (s *Service) ListBundles(ctx context.Context, approvalStatus *string, page, limit int) (*types.BundleListResponse, error) {
-	if page < 1 {
-		page = 1
-	}
-	if limit < 1 {
-		limit = 10
-	} else if limit > 100 {
-		limit = 100
-	}
-
 	offset := (page - 1) * limit
 
 	bundles, total, err := s.dbService.ListBundles(ctx, approvalStatus, limit, offset)
@@ -80,7 +65,7 @@ func (s *Service) ListBundles(ctx context.Context, approvalStatus *string, page,
 	}, nil
 }
 
-func (s *Service) ApproveBundle(ctx context.Context, bundleID string, approvedBy string, approve bool, logger *zap.Logger) error {
+func (s *Service) ApproveBundle(ctx context.Context, bundleID string, approvedBy string, approvalStatus string, logger *zap.Logger) error {
 	// Check if bundle exists
 	bundle, err := s.dbService.GetBundleByID(ctx, bundleID)
 	if err != nil {
@@ -90,7 +75,12 @@ func (s *Service) ApproveBundle(ctx context.Context, bundleID string, approvedBy
 		return errorutil.ErrBundleNotFound
 	}
 
-	err = s.dbService.ApproveBundle(ctx, bundleID, approvedBy, approve)
+	// not allowing to revoke approval if bundle is not approved yet
+	if bundle.ApprovalStatus != types.BundleStatusApproved && approvalStatus == types.BundleStatusRevoked {
+		return errorutil.ErrBundleNotApproved
+	}
+
+	err = s.dbService.ApproveBundle(ctx, bundleID, approvedBy, approvalStatus)
 	if err != nil {
 		return fmt.Errorf("failed to approve bundle: %v", err)
 	}
@@ -184,7 +174,7 @@ func (s *Service) GetBundleDownloadURL(ctx context.Context, bundleID string, log
 	}
 
 	if bundle.ApprovalStatus != "APPROVED" {
-		return nil, errorutil.ErrBundleNotApproved
+		return nil, errorutil.ErrBundleNotApprovedForDownload
 	}
 
 	if bundle.S3Path == "" {
@@ -193,7 +183,7 @@ func (s *Service) GetBundleDownloadURL(ctx context.Context, bundleID string, log
 
 	// Use the artifact path stored in the database
 	// Generate presigned GET URL with a n-hour TTL
-	downloadURL, err := s.presigner.PresignGet(ctx, bundle.S3Path, firmwareBundleDownloadUrlTTL, logger)
+	downloadURL, err := s.presigner.PresignGet(ctx, bundle.S3Path, constants.S3PresignedUrlTTL, logger)
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate download URL: %v", err)
 	}
@@ -208,6 +198,6 @@ func (s *Service) GetBundleDownloadURL(ctx context.Context, bundleID string, log
 	}, nil
 }
 
-func (s *Service) LogBundleUpdateStatus(ctx context.Context, payload *types.LogBundleUpdateStatusPayload, logger *zap.Logger) error {
-	return s.dbService.LogBundleUpdateStatus(ctx, payload)
+func (s *Service) InsertBundleUpdateStatus(ctx context.Context, payload *types.LogBundleUpdateStatusPayload, logger *zap.Logger) error {
+	return s.dbService.InsertBundleUpdateStatus(ctx, payload)
 }

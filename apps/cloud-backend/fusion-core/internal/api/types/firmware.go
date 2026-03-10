@@ -4,7 +4,12 @@ import (
 	"time"
 )
 
-// NotifyBundleUploadPayload contains the metadata for a firmware bundle upload.
+const (
+	BundleStatusPending  string = "PENDING"
+	BundleStatusApproved string = "APPROVED"
+	BundleStatusRevoked  string = "REVOKED"
+)
+
 type NotifyBundleUploadPayload struct {
 	Version              string      `json:"version" binding:"required" example:"1.2.3"`
 	Checksum             string      `json:"checksum" binding:"required"`
@@ -48,8 +53,6 @@ type CheckForUpdateRequest struct {
 	Channel                  string `form:"channel"` // Optional: "beta", "alpha", etc. Empty or omitted = stable (prerelease is null)
 }
 
-// CheckForUpdateResponse represents a response when a firmware update is available
-// @Description Full response when update is available with bundle details
 type CheckForUpdateResponse struct {
 	UpdateAvailable      bool                   `json:"update_available" example:"true"`
 	AppUpdateRequired    bool                   `json:"app_update_required" example:"false"`
@@ -62,22 +65,6 @@ type CheckForUpdateResponse struct {
 	CreatedAt            *time.Time             `json:"created_at,omitempty"`
 }
 
-// CheckForUpdateAppUpdateRequired represents a response when desktop app update is required before firmware update
-// @Description Response when firmware update exists but desktop app needs to be updated first
-type CheckForUpdateAppUpdateRequired struct {
-	UpdateAvailable      bool   `json:"update_available" example:"true"`
-	AppUpdateRequired    bool   `json:"app_update_required" example:"true"`
-	MinDesktopAppVersion string `json:"min_desktop_app_version" example:"2.0.0"`
-}
-
-// CheckForUpdateNoUpdate represents a response when no update is available
-// @Description Response when the system is up to date
-type CheckForUpdateNoUpdate struct {
-	UpdateAvailable   bool `json:"update_available" example:"false"`
-	AppUpdateRequired bool `json:"app_update_required" example:"false"`
-}
-
-// CheckForUpdateResponseStatusAppUpdateRequired CheckForUpdateResponseStatus = "APP_UPDATE_REQUIRED"
 type LogBundleUpdateStatusPayload struct {
 	UpdateID        string    `json:"update_id" binding:"required,uuid"`
 	ProjectID       string    `json:"project_id" binding:"required,uuid"`

@@ -111,11 +111,9 @@ func (a *API) registerRoutes() {
 		organization.GET(constants.EndpointOrganizationUsers, roleManagementHandler.GetOrganizationUsers)
 	}
 
-	firmwareUpdate := v1.Group(constants.EndpointFirmware)
+	firmwareUpdate := v1.Group("")
 	firmwareHandler := handler.NewFirmwareUpdateHandler(a.firmware)
-
 	{
-		// Internal APIs - TODO: Add Authentication
 		firmwareUpdate.POST(constants.EndpointFirmwareBundles, firmwareHandler.NotifyBundleUpload)
 	}
 

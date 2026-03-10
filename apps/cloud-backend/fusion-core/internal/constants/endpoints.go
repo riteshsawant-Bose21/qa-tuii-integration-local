@@ -68,9 +68,9 @@ const (
 
 	// Device Update endpoints
 	EndpointFirmware              = "/firmware"
-	EndpointFirmwareBundles       = "/bundles"
-	EndpointApproveBundle         = "/bundles/:bundleID/approve"
-	EndpointFirmwareUpdateCheck   = "/updates/check"
-	EndpointBundleDownload        = "/bundles/:bundleID/request-download-url"
-	EndpointLogBundleUpdateStatus = "/updates/status"
+	EndpointFirmwareBundles       = EndpointFirmware + "/bundles"
+	EndpointApproveBundle         = EndpointFirmwareBundles + "/:bundleID/approve"
+	EndpointFirmwareUpdateCheck   = EndpointFirmware + "/updates/check"
+	EndpointBundleDownload        = EndpointFirmwareBundles + "/:bundleID/request-download-url"
+	EndpointLogBundleUpdateStatus = EndpointFirmware + "/updates/status"
 )

@@ -205,9 +205,13 @@ const docTemplate = `{
                 "summary": "Approve Firmware Bundle",
                 "parameters": [
                     {
-                        "type": "boolean",
-                        "description": "Set to true to approve, false to revoke",
-                        "name": "approve",
+                        "enum": [
+                            "approve",
+                            "revoke"
+                        ],
+                        "type": "string",
+                        "description": "Action to perform",
+                        "name": "action",
                         "in": "query",
                         "required": true
                     }
@@ -217,7 +221,7 @@ const docTemplate = `{
                         "description": "Bundle successfully approved or revoked"
                     },
                     "400": {
-                        "description": "Invalid bundleID or request payload",
+                        "description": "Invalid bundleID or request payload or bundle not approved",
                         "schema": {
                             "$ref": "#/definitions/types.ErrorResponse"
                         }
@@ -327,7 +331,7 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "Response varies by scenario - see description above and Models: CheckForUpdateResponse, CheckForUpdateAppUpdateRequired, CheckForUpdateNoUpdate",
+                        "description": "Response varies by scenario - see description above",
                         "schema": {
                             "$ref": "#/definitions/types.CheckForUpdateResponse"
                         }
@@ -2084,7 +2088,6 @@ const docTemplate = `{
             }
         },
         "types.CheckForUpdateResponse": {
-            "description": "Full response when update is available with bundle details",
             "type": "object",
             "properties": {
                 "app_update_required": {
