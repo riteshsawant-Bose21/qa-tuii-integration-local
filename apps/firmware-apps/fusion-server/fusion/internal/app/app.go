@@ -93,6 +93,7 @@ func NewApp(config *api.AppConfig) *App {
 	// Initialize VIPMonitor
 	vipMonitor := vipmonitor.NewVIPMonitor(config.NetIface, config.Local, clusterInstance)
 	clusterInstance.SetVIPMonitor(vipMonitor)
+	connectionHandler.SetDeviceProvider(clusterInstance) //Check
 
 	// Setup the public routes
 	publicRouter := mux.NewRouter()
@@ -197,6 +198,7 @@ func (app *App) setupPublicRoutes() {
 	app.registerPublicGET(routes.ClusterMembersEndpoint, app.Server.GetMembers)
 	app.registerPublicGET(routes.ClusterNTPSkewEndpoint, app.Cluster.GetNTPSkew)
 	app.registerPublicGET(routes.ClusterStatusEndpoint, app.Cluster.Metrics.GetClusterStatus)
+	app.registerPublicPOST(routes.ClusterRebootEndpoint, app.Cluster.RebootSystem)
 
 	// Controllers
 	app.registerPublicGET(routes.ControllersEndpoint, app.Server.GetControllers)
@@ -285,6 +287,7 @@ func (app *App) setupPrivateRoutes() {
 	app.registerPrivateGET(routes.ClusterLatencySyncAveragesLocalEndpoint, app.Cluster.GetSyncLatencyAveragesLocal)
 	app.registerPrivateGET(routes.ClusterLatencyNetworkFailuresLocalEndpoint, app.Cluster.GetNetworkFailuresLocal)
 	app.registerPrivateGET(routes.ClusterLatencyStatusLocalEndpoint, app.Cluster.GetLatencyStatusLocal)
+	app.registerPrivatePOST(routes.ClusterRebootLocalEndpoint, app.Cluster.RebootSystemLocal)
 
 	app.registerPrivateGET(routes.DeviceEndpoint, app.Cluster.GetDeviceInfo)
 	app.registerPrivatePOST(routes.DeviceEndpoint, app.Cluster.SetDeviceInfo)

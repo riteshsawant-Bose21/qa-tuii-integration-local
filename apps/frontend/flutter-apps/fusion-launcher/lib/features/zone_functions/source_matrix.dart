@@ -393,6 +393,7 @@ class _SourceMatrixControlsState extends State<SourceMatrixControls> {
                                     ),
                                   ),
                                   FusionNeumorphicButton(
+                                    semanticId: 'source_matrix_icon',
                                     onTap: () {
                                       projectViewModel.updateMatrixSettings(
                                         matrixSettings: matrixSetting.copyWith(

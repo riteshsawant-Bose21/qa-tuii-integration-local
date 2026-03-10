@@ -62,6 +62,7 @@ class VipSuccessScreen extends StatelessWidget {
           ),
           const SizedBox(height: 32),
           FusionNeumorphicButton(
+            semanticId: 'vip_success_finish_button',
             text: 'Finish',
             onTap: onFinish,
             width: 0.25 * MediaQuery.of(context).size.width,
