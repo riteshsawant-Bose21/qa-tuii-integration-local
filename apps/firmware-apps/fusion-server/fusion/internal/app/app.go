@@ -64,6 +64,7 @@ type App struct {
 	privateRouter     *mux.Router
 	MDNSManager       *network.MDNSManager
 	VIPMonitor        *vipmonitor.VIPMonitor
+	Hub               *pubsub.Hub
 }
 
 // NewApp is a factory function to set up the application
@@ -126,8 +127,8 @@ func NewApp(config *api.AppConfig) *App {
 		privateRouter:     privateRouter,
 		MDNSManager:       mdnsManager,
 		VIPMonitor:        vipMonitor,
+		Hub:               hub,
 	}
-
 	vipMonitor.SetCallback(app.handleVIPStateChange)
 	return app
 }
@@ -480,6 +481,7 @@ func (app *App) joinCluster(ip string) {
 	app.Cluster.SetMemberlist(memberlist)
 	app.StateManager.SetMemberlist(memberlist)
 	app.ConnectionHandler.SetClusterTransport(clusterTransport)
+	app.Hub.SetClusterTransport(clusterTransport)
 
 }
 

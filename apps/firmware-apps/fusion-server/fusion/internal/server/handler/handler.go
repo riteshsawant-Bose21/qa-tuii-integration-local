@@ -25,14 +25,14 @@ type DeviceInfoProvider interface {
 type Handler struct {
 
 	appConfig      *api.AppConfig
-	memberlist     *memberlist.Memberlist //check
-	clusterTransport transport.ClusterTransport //check
+	memberlist     *memberlist.Memberlist 
+	clusterTransport transport.ClusterTransport
 
 	persistence    *persistence.Persistence
 	StateManager   *persistence.StateManager
 	hub            *pubsub.Hub
 	endpoints      []string
-	deviceProvider DeviceInfoProvider // Provides device info using same logic as REST API //check
+	deviceProvider DeviceInfoProvider // Provides device info using same logic as REST API
 
 	sessions     map[string]*SAPSession
 	sessionsLock sync.RWMutex
