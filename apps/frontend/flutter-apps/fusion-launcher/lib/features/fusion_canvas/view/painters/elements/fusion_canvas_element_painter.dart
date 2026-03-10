@@ -14,7 +14,8 @@ abstract class FusionCanvasElementPainter extends FusionBasePainter {
   Size getSize();
 
   Rect getRect() {
-    return getOffset() & getSize();
+    final Size size = getSize();
+    return Rect.fromCenter(center: getOffset(), width: size.width, height: size.height);
   }
 
   Rect getTransformedRect(FusionCanvasPainter painter) {
@@ -32,13 +33,9 @@ abstract class FusionCanvasElementPainter extends FusionBasePainter {
   @override
   FusionCanvasElement? isHit(Offset position, FusionCanvasPainter painter) {
     final Rect elementRect = getTransformedRect(painter);
-    print("Rect : $elementRect");
-    // print("Is hit check for ${item.id} at position $position with elementRect $elementRect");
     if (elementRect.contains(position)) {
-      // print("Is hit check for ${item.id} at position $position with elementRect $elementRect - hit");
       return item;
     }
-    // print("Is hit check for ${item.id} at position $position with elementRect $elementRect - not hit");
     return null;
   }
 }
