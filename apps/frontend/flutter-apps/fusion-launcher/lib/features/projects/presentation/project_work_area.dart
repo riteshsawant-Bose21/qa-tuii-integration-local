@@ -522,87 +522,94 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with TickerProviderSt
             builder: (BuildContext context, ProjectViewModelState state) {
               return Row(
                 children: <Widget>[
-                  Container(
-                    color: context.colorScheme.elevation1,
-                    child: FusionResizableSidebar(
-                      sections: <FusionResizableSidebarSection>[
-                        FusionResizableSidebarSection(
-                          sementicId: 'building_plan_floors_list',
-                          enableExpandCollapse: false,
-                          stickToTop: true,
-                          builder: (BuildContext context, bool isExpanded, VoidCallback toggleExpand, Animation<double> expandAnimation) {
-                            return const BuildingPlan();
-                          },
-                        ),
-                        FusionResizableSidebarSection(
-                          sementicId: 'building_plan_listening_areas_zones_lists',
-                          builder: (BuildContext context, bool isExpanded, VoidCallback toggleExpand, Animation<double> expandAnimation) {
-                            return Column(
-                              mainAxisSize: MainAxisSize.min,
-                              children: <Widget>[
-                                FusionSidebarSectionHeader(
-                                  title: toolbarMode == ToolbarMode.acoustics ? "LISTENING AREAS" : "ZONES",
-                                  isExpanded: isExpanded,
-                                  onTap: toggleExpand,
-                                ),
-                                Flexible(
-                                  child: SizeTransition(
-                                    sizeFactor: expandAnimation,
-                                    child: switch (toolbarMode) {
-                                      ToolbarMode.acoustics => ListeningAreasPanel(floorCanvasController: _floorCanvasController),
-                                      ToolbarMode.system => ZoneAndListeningAreaPanel(floorCanvasController: _floorCanvasController),
-                                    },
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    child: Container(
+                      height: double.infinity,
+                      color: context.colorScheme.elevation1,
+                      child: FusionResizableSidebar(
+                        sections: <FusionResizableSidebarSection>[
+                          FusionResizableSidebarSection(
+                            sementicId: 'building_plan_floors_list',
+                            enableExpandCollapse: false,
+                            stickToTop: true,
+                            builder: (BuildContext context, bool isExpanded, VoidCallback toggleExpand, Animation<double> expandAnimation) {
+                              return const BuildingPlan();
+                            },
+                          ),
+                          FusionResizableSidebarSection(
+                            sementicId: 'building_plan_listening_areas_zones_lists',
+                            builder: (BuildContext context, bool isExpanded, VoidCallback toggleExpand, Animation<double> expandAnimation) {
+                              return Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: <Widget>[
+                                  FusionSidebarSectionHeader(
+                                    title: toolbarMode == ToolbarMode.acoustics ? "LISTENING AREAS" : "ZONES",
+                                    isExpanded: isExpanded,
+                                    onTap: toggleExpand,
                                   ),
-                                ),
-                              ],
-                            );
-                          },
-                        ),
-
-                        if (toolbarMode == ToolbarMode.system)
-                          FusionResizableSidebarSection(
-                            sementicId: 'building_plan_equipment_location',
-                            enableExpandCollapse: false,
-                            stickToBottom: true,
-                            builder: (BuildContext context, bool isExpanded, VoidCallback toggleExpand, Animation<double> expandAnimation) {
-                              return const EquipmentLocationSection();
+                                  Flexible(
+                                    child: SizeTransition(
+                                      sizeFactor: expandAnimation,
+                                      child: switch (toolbarMode) {
+                                        ToolbarMode.acoustics => ListeningAreasPanel(floorCanvasController: _floorCanvasController),
+                                        ToolbarMode.system => ZoneAndListeningAreaPanel(floorCanvasController: _floorCanvasController),
+                                      },
+                                    ),
+                                  ),
+                                ],
+                              );
                             },
                           ),
 
-                        if (toolbarMode == ToolbarMode.acoustics && currentSelectedListeningAreaId != null)
-                          FusionResizableSidebarSection(
-                            sementicId: 'building_plan_equipment_location',
-                            enableExpandCollapse: false,
-                            stickToBottom: true,
-                            builder: (BuildContext context, bool isExpanded, VoidCallback toggleExpand, Animation<double> expandAnimation) {
-                              return const SpeakerSelectionWidget();
-                            },
-                          ),
-                      ],
+                          if (toolbarMode == ToolbarMode.system)
+                            FusionResizableSidebarSection(
+                              sementicId: 'building_plan_equipment_location',
+                              enableExpandCollapse: false,
+                              stickToBottom: true,
+                              builder: (BuildContext context, bool isExpanded, VoidCallback toggleExpand, Animation<double> expandAnimation) {
+                                return const EquipmentLocationSection();
+                              },
+                            ),
+
+                          if (toolbarMode == ToolbarMode.acoustics && currentSelectedListeningAreaId != null)
+                            FusionResizableSidebarSection(
+                              sementicId: 'building_plan_equipment_location',
+                              enableExpandCollapse: false,
+                              stickToBottom: true,
+                              builder: (BuildContext context, bool isExpanded, VoidCallback toggleExpand, Animation<double> expandAnimation) {
+                                return const SpeakerSelectionWidget();
+                              },
+                            ),
+                        ],
+                      ),
                     ),
                   ),
                   Expanded(
-                    child: SemanticHelper.container(
-                      testId: SemanticHelper.createTestId(SemanticTypes.container, FusionTestKeys.buildingCanvas),
-                      child: BuildingCanvas(
-                        splRangeController: _splRangeController,
-                        onSplStateChanged: (bool value) {
-                          if (value) {
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(12),
+                      child: SemanticHelper.container(
+                        testId: SemanticHelper.createTestId(SemanticTypes.container, FusionTestKeys.buildingCanvas),
+                        child: BuildingCanvas(
+                          splRangeController: _splRangeController,
+                          onSplStateChanged: (bool value) {
+                            if (value) {
+                              productsController.collapse();
+                              splController.expand();
+                            } else {
+                              splController.collapse();
+                            }
+                          },
+                          floorCanvasController: _floorCanvasController,
+                          onCalculateSpl: calculateSPL,
+                          splPanelData: _lastPanelData!,
+                          onProductSelected: () {
+                            productsController.expand();
+                          },
+                          onProductDeselected: () {
                             productsController.collapse();
-                            splController.expand();
-                          } else {
-                            splController.collapse();
-                          }
-                        },
-                        floorCanvasController: _floorCanvasController,
-                        onCalculateSpl: calculateSPL,
-                        splPanelData: _lastPanelData!,
-                        onProductSelected: () {
-                          productsController.expand();
-                        },
-                        onProductDeselected: () {
-                          productsController.collapse();
-                        },
+                          },
+                        ),
                       ),
                     ),
                   ),

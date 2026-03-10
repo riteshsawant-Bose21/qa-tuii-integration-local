@@ -473,18 +473,21 @@ class _FloorPlanCalibratorState extends State<FloorPlanCalibrator> {
   void _onRotatePanEnd(DragEndDetails d) {
     _activeRotationHandle = _RotationHandle.none;
     setState(() => _isRotating = false);
+    if (_rotationAngle != 0.0) _clearMeasurement();
   }
 
   void _rotateLeft() {
     setState(() {
       _rotationAngle -= _quickRotateAngle;
     });
+    _clearMeasurement();
   }
 
   void _rotateRight() {
     setState(() {
       _rotationAngle += _quickRotateAngle;
     });
+    _clearMeasurement();
   }
 
   // ---------- 4-point free transform interaction ----------
@@ -744,6 +747,7 @@ class _FloorPlanCalibratorState extends State<FloorPlanCalibrator> {
         _cornerOffsetBL = Offset.zero;
         _cornerOffsetBR = Offset.zero;
         _hasPendingSkew = false;
+        _clearMeasurement();
       });
     } catch (e) {
       // If skew fails, just reset the pending state
@@ -949,6 +953,7 @@ class _FloorPlanCalibratorState extends State<FloorPlanCalibrator> {
         _cornerOffsetTR = Offset.zero;
         _cornerOffsetBL = Offset.zero;
         _cornerOffsetBR = Offset.zero;
+        _clearMeasurement();
       });
     } catch (e) {
       // If crop fails, just reset the pending state
@@ -1017,6 +1022,7 @@ class _FloorPlanCalibratorState extends State<FloorPlanCalibrator> {
       _cornerOffsetBR = Offset.zero;
       _workingImage = null; // Reset to original image
       _hasPendingCrop = false;
+      _clearMeasurement();
     });
   }
 
@@ -1042,6 +1048,7 @@ class _FloorPlanCalibratorState extends State<FloorPlanCalibrator> {
 
       setState(() {
         _workingImage = resultImage;
+        _clearMeasurement();
       });
     } catch (e) {
       // If flip fails, do nothing
@@ -1070,6 +1077,7 @@ class _FloorPlanCalibratorState extends State<FloorPlanCalibrator> {
 
       setState(() {
         _workingImage = resultImage;
+        _clearMeasurement();
       });
     } catch (e) {
       // If flip fails, do nothing
@@ -2087,6 +2095,8 @@ class FloorPlanCalibrationPainter extends CustomPainter {
       }
     }
 
+    _drawGrid(canvas, imageRect);
+
     // --- rotation handles (4 corners) ---
     if (showRotationHandles) {
       final cos = math.cos(rotationAngle);
@@ -2299,32 +2309,55 @@ class FloorPlanCalibrationPainter extends CustomPainter {
 
       // corner + side handles
       if (showCropHandles) {
-        final Map<_CropHandle, Offset> pts = {
-          _CropHandle.topLeft: crop.topLeft,
-          _CropHandle.top: Offset((crop.left + crop.right) / 2, crop.top),
-          _CropHandle.topRight: crop.topRight,
-          _CropHandle.right: Offset(crop.right, (crop.top + crop.bottom) / 2),
-          _CropHandle.bottomRight: crop.bottomRight,
-          _CropHandle.bottom: Offset((crop.left + crop.right) / 2, crop.bottom),
-          _CropHandle.bottomLeft: crop.bottomLeft,
-          _CropHandle.left: Offset(crop.left, (crop.top + crop.bottom) / 2),
-        };
+        // --- L-shaped corner brackets (like the reference screenshot) ---
+        const double baseArmLen = 16.0;
+        const double baseThickness = 3.0;
+        final double armLen = (baseArmLen / zoomScale).clamp(8.0, 24.0);
+        final double thickness = (baseThickness / zoomScale).clamp(1.5, 5.0);
 
-        // Scale crop handles inversely with zoom
-        const double baseHandleSize = 12;
-        final double handleSize = (baseHandleSize / zoomScale).clamp(6.0, 18.0);
-        final Paint hp = Paint()
-          ..color = Colors.white
-          ..style = PaintingStyle.fill;
-        final Paint hb = Paint()
-          ..color = Colors.black
-          ..strokeWidth = 2.5 / zoomScale.clamp(0.5, 2.0)
+        final Paint cornerPaint = Paint()
+          ..color = Colors.grey
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = thickness
+          ..strokeCap = StrokeCap.square
           ..style = PaintingStyle.stroke;
 
-        for (final p in pts.values) {
-          final r = Rect.fromCenter(center: p, width: handleSize, height: handleSize);
-          canvas.drawRect(r, hp);
-          canvas.drawRect(r, hb);
+        void drawLCorner(Offset corner, double hDir, double vDir) {
+          // horizontal arm
+          canvas.drawLine(corner, corner + Offset(armLen * hDir, 0), cornerPaint);
+          // vertical arm
+          canvas.drawLine(corner, corner + Offset(0, armLen * vDir), cornerPaint);
+        }
+
+        drawLCorner(crop.topLeft, 1, 1);
+        drawLCorner(crop.topRight, -1, 1);
+        drawLCorner(crop.bottomLeft, 1, -1);
+        drawLCorner(crop.bottomRight, -1, -1);
+
+        // --- mid-edge pill handles ---
+        const double baseEdgeLen = 20.0;
+        const double baseEdgeThick = 3.0;
+        final double edgeLen = (baseEdgeLen / zoomScale).clamp(10.0, 30.0);
+        final double edgeThick = (baseEdgeThick / zoomScale).clamp(1.5, 5.0);
+
+        final Paint edgePaint = Paint()
+          ..color = Colors.grey
+          ..strokeWidth = edgeThick
+          ..strokeCap = StrokeCap.round
+          ..style = PaintingStyle.stroke;
+
+        final Offset topMidC = Offset((crop.left + crop.right) / 2, crop.top);
+        final Offset bottomMidC = Offset((crop.left + crop.right) / 2, crop.bottom);
+        final Offset leftMidC = Offset(crop.left, (crop.top + crop.bottom) / 2);
+        final Offset rightMidC = Offset(crop.right, (crop.top + crop.bottom) / 2);
+
+        // horizontal edges (top/bottom)
+        for (final p in [topMidC, bottomMidC]) {
+          canvas.drawLine(p + Offset(-edgeLen / 2, 0), p + Offset(edgeLen / 2, 0), edgePaint);
+        }
+        // vertical edges (left/right)
+        for (final p in [leftMidC, rightMidC]) {
+          canvas.drawLine(p + Offset(0, -edgeLen / 2), p + Offset(0, edgeLen / 2), edgePaint);
         }
       }
 
@@ -2396,6 +2429,28 @@ class FloorPlanCalibrationPainter extends CustomPainter {
       tp.paint(canvas, labPos);
     }
     canvas.restore();
+  }
+
+  void _drawGrid(Canvas canvas, Rect imageRect) {
+    final Paint paint = Paint()
+      ..color = Colors.black
+      ..strokeWidth = 1 / zoomScale
+      ..style = PaintingStyle.stroke;
+
+    final double thirdW = imageRect.width / 3;
+    final double thirdH = imageRect.height / 3;
+
+    // 2 vertical lines at 1/3 and 2/3
+    for (int i = 1; i <= 2; i++) {
+      final double x = imageRect.left + thirdW * i;
+      canvas.drawLine(Offset(x, imageRect.top), Offset(x, imageRect.bottom), paint);
+    }
+
+    // 2 horizontal lines at 1/3 and 2/3
+    for (int i = 1; i <= 2; i++) {
+      final double y = imageRect.top + thirdH * i;
+      canvas.drawLine(Offset(imageRect.left, y), Offset(imageRect.right, y), paint);
+    }
   }
 
   void _drawArrowHead(Canvas canvas, Offset from, Offset to, Paint p) {

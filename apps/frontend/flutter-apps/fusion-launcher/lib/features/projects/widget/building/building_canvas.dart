@@ -1166,6 +1166,20 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
         final String sourcePath = result.files.single.path!;
         final String fileName = result.files.single.name;
 
+        // Enforce 5 MB maximum file size
+        const int maxBytes = 5 * 1024 * 1024; // 5 MB
+        final int fileSize = result.files.single.size;
+        if (fileSize > maxBytes) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('File is too large. Maximum allowed size is 5 MB.'),
+              ),
+            );
+          }
+          return;
+        }
+
         // Handle PDF files: convert selected page to image first
         String imagePath = sourcePath;
         if (fileName.toLowerCase().endsWith('.pdf')) {

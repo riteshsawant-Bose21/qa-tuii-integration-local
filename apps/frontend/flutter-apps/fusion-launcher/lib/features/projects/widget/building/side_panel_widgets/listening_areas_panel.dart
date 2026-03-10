@@ -68,7 +68,8 @@ class ListeningAreasPanelState extends State<ListeningAreasPanel> with TickerPro
   }
 
   Widget _buildEmptyState() {
-    return Padding(
+    return SingleChildScrollView(
+      physics: const ClampingScrollPhysics(),
       padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
       child: Center(
         child: Column(
