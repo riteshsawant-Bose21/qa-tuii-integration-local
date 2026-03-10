@@ -49,49 +49,30 @@ class MessageListPanel extends StatelessWidget {
   Widget _buildAddMessageButton(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.all(12),
-      child: SemanticHelper.button(
-        testId: SemanticHelper.createTestId(
-          SemanticTypes.button,
-          'add_message_panel',
-        ),
-        child: Material(
-          color: Colors.transparent,
-          child: InkWell(
-            onTap: () {
-              context.read<MessagePlayerConfigCubit>().addMessage();
-            },
-            borderRadius: BorderRadius.circular(8),
-            child: FusionContainer(
-              raised: true,
-              borderRadius: 8,
-              child: Container(
-                width: double.infinity,
-                padding: const EdgeInsets.symmetric(vertical: 12),
-                decoration: BoxDecoration(
-                  color: context.colorScheme.elevation2,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: <Widget>[
-                    Icon(
-                      Icons.add,
-                      size: 18,
-                      color: context.colorScheme.iconWhite,
-                    ),
-                    const SizedBox(width: 8),
-                    FusionAppText(
-                      text: 'Add Message',
-                      style: context.textTheme.labelMedium?.copyWith(
-                        color: context.colorScheme.textPrimary,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ],
-                ),
+      child: NeumorphicButton(
+        semanticId: 'add_message_panel',
+        onTap: () {
+          context.read<MessagePlayerConfigCubit>().addMessage();
+        },
+        height: 42,
+        borderRadius: 8,
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: <Widget>[
+            Icon(
+              Icons.add,
+              size: 18,
+              color: context.colorScheme.iconWhite,
+            ),
+            const SizedBox(width: 8),
+            FusionAppText(
+              text: 'Add Message',
+              style: context.textTheme.labelMedium?.copyWith(
+                color: context.colorScheme.textPrimary,
+                fontWeight: FontWeight.w500,
               ),
             ),
-          ),
+          ],
         ),
       ),
     );

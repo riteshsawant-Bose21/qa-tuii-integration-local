@@ -94,46 +94,30 @@ class _AddMessageButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SemanticHelper.button(
-      testId: SemanticHelper.createTestId(
-        SemanticTypes.button,
-        'add_message_empty_state',
-      ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: onPressed,
-          borderRadius: BorderRadius.circular(8),
-          child: FusionContainer(
-            raised: true,
-            borderRadius: 8,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-              decoration: BoxDecoration(
-                color: context.colorScheme.elevation2,
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: <Widget>[
-                  Icon(
-                    Icons.add,
-                    size: 18,
-                    color: context.colorScheme.iconWhite,
-                  ),
-                  const SizedBox(width: 8),
-                  FusionAppText(
-                    text: 'Add Message',
-                    style: context.textTheme.labelMedium?.copyWith(
-                      color: context.colorScheme.textPrimary,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ],
-              ),
+    return NeumorphicButton(
+      semanticId: 'add_message_empty_state',
+      onTap: onPressed,
+      width: 160,
+      height: 42,
+      borderRadius: 8,
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: <Widget>[
+          Icon(
+            Icons.add,
+            size: 18,
+            color: context.colorScheme.iconWhite,
+          ),
+          const SizedBox(width: 8),
+          FusionAppText(
+            text: 'Add Message',
+            style: context.textTheme.labelMedium?.copyWith(
+              color: context.colorScheme.textPrimary,
+              fontWeight: FontWeight.w500,
             ),
           ),
-        ),
+        ],
       ),
     );
   }

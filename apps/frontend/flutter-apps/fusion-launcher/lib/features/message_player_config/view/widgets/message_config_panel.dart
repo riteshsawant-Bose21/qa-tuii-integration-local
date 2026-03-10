@@ -129,30 +129,13 @@ class _MessageNameFieldState extends State<_MessageNameField> {
           ),
         ),
         const SizedBox(height: 8),
-        FusionContainer(
-          raised: false,
-          borderRadius: 8,
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-            decoration: BoxDecoration(
-              color: context.colorScheme.elevation2,
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: TextField(
-              controller: _controller,
-              style: context.textTheme.bodyMedium?.copyWith(
-                color: context.colorScheme.textPrimary,
-              ),
-              decoration: InputDecoration(
-                border: InputBorder.none,
-                hintText: 'Message Name',
-                hintStyle: context.textTheme.bodyMedium?.copyWith(
-                  color: context.colorScheme.textPlaceholder,
-                ),
-              ),
-              onChanged: widget.onChanged,
-            ),
-          ),
+        FusionTextField(
+          controller: _controller,
+          hintText: 'Message Name',
+          semanticFieldId: 'message_name_field',
+          color: context.colorScheme.elevation2,
+          onChanged: widget.onChanged,
+          height: 48,
         ),
       ],
     );
@@ -385,7 +368,7 @@ class _SelectAudioFileDialog extends StatelessWidget {
                       child: Container(
                         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                         decoration: BoxDecoration(
-                          color: isSelected ? context.colorScheme.primary.withOpacity(0.1) : context.colorScheme.elevation2,
+                          color: isSelected ? context.colorScheme.primary.withAlpha(25) : context.colorScheme.elevation2,
                           borderRadius: BorderRadius.circular(8),
                           border: isSelected ? Border.all(color: context.colorScheme.primary, width: 1) : null,
                         ),
