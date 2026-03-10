@@ -15,7 +15,10 @@ class _ProductTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final String? assetImagePath = product.assetPath;
     return SemanticHelper.container(
-      testId: SemanticHelper.createTestId(SemanticTypes.container, "equipment_location_dialog_product_tile_$index"),
+      testId: SemanticHelper.createTestId(
+        SemanticTypes.container,
+        "equipment_location_dialog_product_tile_$index",
+      ),
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 4),
         decoration: BoxDecoration(
@@ -28,7 +31,10 @@ class _ProductTile extends StatelessWidget {
               spacing: 10,
               children: <Widget>[
                 SemanticHelper.container(
-                  testId: SemanticHelper.createTestId(SemanticTypes.container, "equipment_location_dialog_product_tile_image_$index"),
+                  testId: SemanticHelper.createTestId(
+                    SemanticTypes.container,
+                    "equipment_location_dialog_product_tile_image_$index",
+                  ),
                   child: Container(
                     width: 40,
                     height: 40,
@@ -59,19 +65,24 @@ class _ProductTile extends StatelessWidget {
                         children: <Widget>[
                           Flexible(
                             child: SemanticHelper.staticText(
-                            testId: SemanticHelper.createTestId(SemanticTypes.text, "device_name"),
-                            child: FusionAppText(
-                              text: product.name,
-                              style: context.textTheme.labelSmall?.copyWith(
-                                fontWeight: FontWeight.bold,
-                                color: context.colorScheme.onSurface,
+                              testId: SemanticHelper.createTestId(
+                                SemanticTypes.text,
+                                "device_name",
+                              ),
+                              child: FusionAppText(
+                                text: product.name,
+                                style: context.textTheme.labelSmall?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                  color: context.colorScheme.onSurface,
+                                ),
                               ),
                             ),
-                          ),
                           ),
                           const SizedBox(width: 4),
                           // info
                           FusionArrowPopup(
+                            semanticId:
+                                'equipment_location_dialog_product_tile_info_button_$index',
                             content: SizedBox(
                               width: 300,
                               child: Padding(
@@ -81,43 +92,65 @@ class _ProductTile extends StatelessWidget {
                                   mainAxisSize: MainAxisSize.min,
                                   children: <Widget>[
                                     FusionAppText(
-                                      text: product.description, //"L 22.4cm | W 14.7cm | H 8.3cm | 9kg", // TODO: hardcoded
-                                      style: context.textTheme.bodySmall?.copyWith(
-                                        color: context.colorScheme.onSurface,
-                                      ),
+                                      text:
+                                          product
+                                              .description, //"L 22.4cm | W 14.7cm | H 8.3cm | 9kg", // TODO: hardcoded
+                                      style: context.textTheme.bodySmall
+                                          ?.copyWith(
+                                            color:
+                                                context.colorScheme.onSurface,
+                                          ),
                                     ),
 
                                     // GRID VIEW
-                                    Divider(color: context.colorScheme.onSurface.withValues(alpha: 0.2)),
+                                    Divider(
+                                      color: context.colorScheme.onSurface
+                                          .withValues(alpha: 0.2),
+                                    ),
                                     Builder(
                                       builder: (BuildContext context) {
-                                        final Map<String, String> details = product.specifications;
+                                        final Map<String, String> details =
+                                            product.specifications;
 
                                         final List<Widget> children = <Widget>[
                                           ...details.keys.map((String key) {
                                             return Column(
-                                              crossAxisAlignment: CrossAxisAlignment.start,
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.start,
                                               mainAxisSize: MainAxisSize.min,
                                               children: <Widget>[
                                                 FusionAppText(
                                                   text: key,
-                                                  style: context.textTheme.bodySmall?.copyWith(
-                                                    fontWeight: FontWeight.normal,
-                                                  ),
+                                                  style: context
+                                                      .textTheme
+                                                      .bodySmall
+                                                      ?.copyWith(
+                                                        fontWeight:
+                                                            FontWeight.normal,
+                                                      ),
                                                 ),
                                                 FusionAppText(
                                                   text: details[key]!,
-                                                  style: context.textTheme.bodySmall?.copyWith(
-                                                    fontWeight: FontWeight.normal,
-                                                    color: context.colorScheme.onSurface.withAlpha(128),
-                                                  ),
+                                                  style: context
+                                                      .textTheme
+                                                      .bodySmall
+                                                      ?.copyWith(
+                                                        fontWeight:
+                                                            FontWeight.normal,
+                                                        color: context
+                                                            .colorScheme
+                                                            .onSurface
+                                                            .withAlpha(128),
+                                                      ),
                                                 ),
                                               ],
                                             );
                                           }),
                                         ];
 
-                                        return BuildingPageGridView(children: children);
+                                        return BuildingPageGridView(
+                                          children: children,
+                                        );
                                       },
                                     ),
                                   ],
@@ -125,7 +158,10 @@ class _ProductTile extends StatelessWidget {
                               ),
                             ),
                             child: SemanticHelper.button(
-                              testId: SemanticHelper.createTestId(SemanticTypes.button, "equipment_location_dialog_product_tile_info_button_$index"),
+                              testId: SemanticHelper.createTestId(
+                                SemanticTypes.button,
+                                "equipment_location_dialog_product_tile_info_button_$index",
+                              ),
                               child: Icon(
                                 LucideIcons.info200,
                                 size: 12,
@@ -136,25 +172,35 @@ class _ProductTile extends StatelessWidget {
                         ],
                       ),
                       SemanticHelper.staticText(
-                      testId: SemanticHelper.createTestId(SemanticTypes.text, "cost"),
-                      child: FusionAppText(
-                        text: "\$${product.price.toStringAsFixed(2)}", // TODO: hardcoded
-                        style: context.textTheme.bodySmall?.copyWith(
-                          fontWeight: FontWeight.normal,
-                          color: context.colorScheme.onSurface.withValues(alpha: 0.5),
+                        testId: SemanticHelper.createTestId(
+                          SemanticTypes.text,
+                          "cost",
                         ),
-                      ),
+                        child: FusionAppText(
+                          text:
+                              "\$${product.price.toStringAsFixed(2)}", // TODO: hardcoded
+                          style: context.textTheme.bodySmall?.copyWith(
+                            fontWeight: FontWeight.normal,
+                            color: context.colorScheme.onSurface.withValues(
+                              alpha: 0.5,
+                            ),
+                          ),
+                        ),
                       ),
                     ],
                   ),
                 ),
                 SemanticHelper.button(
-                  testId: SemanticHelper.createTestId(SemanticTypes.button, "equipment_location_dialog_product_tile_add_button_$index"),
+                  testId: SemanticHelper.createTestId(
+                    SemanticTypes.button,
+                    "equipment_location_dialog_product_tile_add_button_$index",
+                  ),
                   child: NeumorphicDarkButton(
                     height: 24,
                     width: 24,
                     borderRadius: 6,
-                    backgroundColor: null, //isSelected ? FusionDarkColorPallette.green20 : null,
+                    backgroundColor:
+                        null, //isSelected ? FusionDarkColorPallette.green20 : null,
                     child: Icon(
                       LucideIcons.plus,
                       size: 12,

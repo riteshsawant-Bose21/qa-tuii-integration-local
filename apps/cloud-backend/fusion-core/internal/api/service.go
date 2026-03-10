@@ -80,13 +80,13 @@ func New(cfg *Config,
 	}
 
 	api := &API{
-		engine:         engine,
-		product:        productSvc,
-		project:        project,
-		user:           userSvc,
-		auth:           authSvc,
-		authMiddleware: authMiddleware,
-		appLog:         loggers.AppLogger,
+		engine:                engine,
+		product:               productSvc,
+		project:               project,
+		user:                  userSvc,
+		auth:                  authSvc,
+		authMiddleware:        authMiddleware,
+		appLog:                loggers.AppLogger,
 	}
 
 	api.registerRoutes()

@@ -15,19 +15,39 @@ import (
 	"github.com/hashicorp/memberlist"
 )
 
+// DeviceInfoProvider defines interface for getting and updating device information
+type DeviceInfoProvider interface {
+	GetAllDeviceInfos() []persistence.DeviceInfo
+	UpdateDeviceInfoForWebSocket(deviceID string, patch *persistence.DevicePatch) error
+}
+
 // Handler is the container for server implimentations.
 type Handler struct {
-	appConfig        *api.AppConfig
-	clusterTransport transport.ClusterTransport
-	persistence      *persistence.Persistence
-	StateManager     *persistence.StateManager
-	hub              *pubsub.Hub
-	endpoints        []string
+
+	appConfig      *api.AppConfig
+	memberlist     *memberlist.Memberlist //check
+	clusterTransport transport.ClusterTransport //check
+
+	persistence    *persistence.Persistence
+	StateManager   *persistence.StateManager
+	hub            *pubsub.Hub
+	endpoints      []string
+	deviceProvider DeviceInfoProvider // Provides device info using same logic as REST API //check
 
 	sessions     map[string]*SAPSession
 	sessionsLock sync.RWMutex
 
 	controllerManager controllers.ControllerManagerInterface
+}
+
+type serverInfoResponse struct {
+	Name        string   `json:"name"`
+	Version     string   `json:"version"`
+	Commit      string   `json:"commit"`
+	BuildTime   string   `json:"build_time"`
+	NodeID      string   `json:"node_id"`
+	Endpoints   []string `json:"endpoints"`
+	ClusterSize int      `json:"cluster_size"`
 }
 
 func NewHandler(
@@ -53,12 +73,10 @@ func (h *Handler) SetEndpoints(endpoints []string) {
 	h.endpoints = endpoints
 }
 
-func (h *Handler) GetInitialState() (WebSocketResponse, error) {
+
+func (h *Handler) GetInitialState() (map[string]any, error) {
 	data := h.StateManager.GetStateMap()
-	return WebSocketResponse{
-		Type: "initial_state",
-		Data: data,
-	}, nil
+	return data, nil
 }
 
 func (h *Handler) SetClusterTransport(clusterTransport transport.ClusterTransport) {
@@ -66,17 +84,23 @@ func (h *Handler) SetClusterTransport(clusterTransport transport.ClusterTranspor
 }
 
 func (h *Handler) HandleHTTPGet(key string) (any, error) {
+	type keyLookupResponse struct {
+		Exists bool `json:"exists"`
+		Value  any  `json:"value,omitempty"`
+		Error  any  `json:"error,omitempty"`
+	}
+
 	if key != "" {
 		value, exists := h.StateManager.Get(key)
 		if !exists {
-			return map[string]any{
-				"exists": false,
-				"error":  "key not found",
+			return keyLookupResponse{
+				Exists: false,
+				Error:  "key not found",
 			}, nil
 		}
-		return map[string]any{
-			"exists": true,
-			"value":  value,
+		return keyLookupResponse{
+			Exists: true,
+			Value:  value,
 		}, nil
 	}
 
@@ -86,18 +110,28 @@ func (h *Handler) HandleHTTPGet(key string) (any, error) {
 
 // HandleHTTPSet replaces the entire configuration state with the new data.
 func (h *Handler) HandleHTTPSet(update map[string]any) (any, error) {
+	type setResponse struct {
+		Status  string         `json:"status"`
+		Updates map[string]any `json:"updates"`
+	}
 
 	existing := h.StateManager.GetStateMap()
 
 	if reflect.DeepEqual(existing, update) {
-		return map[string]any{"status": "noop", "updates": nil}, nil
+		return setResponse{
+			Status:  "noop",
+			Updates: nil,
+		}, nil
 	}
 
 	if err := h.handleConfigUpdate(update, true); err != nil {
 		return nil, err
 	}
 
-	return map[string]any{"status": "success", "updates": update}, nil
+	return setResponse{
+		Status:  "success",
+		Updates: update,
+	}, nil
 }
 
 // HandleHTTPPatch updates only the specified fields.
@@ -141,14 +175,15 @@ func (h *Handler) GetMembers() []*memberlist.Node {
 	return h.clusterTransport.Members()
 }
 
-func (h *Handler) GetServerInfo() (map[string]any, error) {
-	info := map[string]any{
-		"name":       "Fusion Server",
-		"version":    version.Version,
-		"commit":     version.Commit,
-		"build_time": version.BuildTime, "node_id": h.clusterTransport.LocalNode().Name,
-		"endpoints":    h.endpoints,
-		"cluster_size": len(h.clusterTransport.Members()),
+func (h *Handler) GetServerInfo() (any, error) {
+	info := serverInfoResponse{
+		Name:        "Fusion Server",
+		Version:     version.Version,
+		Commit:      version.Commit,
+		BuildTime:   version.BuildTime,
+		NodeID:      h.memberlist.LocalNode().Name, //h.clusterTransport.LocalNode().Name
+		Endpoints:   h.endpoints,
+		ClusterSize: len(h.memberlist.Members()),
 	}
 
 	return info, nil
@@ -190,4 +225,9 @@ func (h *Handler) handleConfigUpdate(data map[string]any, clear bool) error {
 	}
 
 	return nil
+}
+
+// SetDeviceProvider sets the device info provider
+func (h *Handler) SetDeviceProvider(provider DeviceInfoProvider) {
+	h.deviceProvider = provider
 }

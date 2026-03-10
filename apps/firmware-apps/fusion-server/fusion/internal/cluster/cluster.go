@@ -3,6 +3,7 @@ package cluster
 import (
 	"fmt"
 	"fusion-services-core/vip"
+	"os/exec"
 
 	"fusion-services-core/logging"
 	"fusion/internal/api"
@@ -12,6 +13,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"time"
 
@@ -158,6 +160,32 @@ func (c *Cluster) getCurrentVIP() string {
 		return c.vipMonitor.GetCurrentVIP()
 	}
 	return ""
+}
+
+// reboot the system...
+func (c *Cluster) restartSystem() error {
+	logger := logging.GetLogger()
+	logger.Info("Rebooting Server in 5 seconds")
+
+	// If running in local mode, skip reboot
+	if c.appConfig != nil && c.appConfig.Local {
+		logger.Info("Local mode enabled (appConfig.Local), skipping reboot.")
+		return nil
+	}
+
+	if runtime.GOOS == "darwin" {
+		// macOS: use goroutine with sleep since systemd-run doesn't exist
+		go func() {
+			time.Sleep(5 * time.Second)
+			if err := exec.Command("reboot").Run(); err != nil {
+				logger.Error("Failed to reboot: %v", err)
+			}
+		}()
+		return nil
+	}
+
+	// Linux: use systemd-run for non-blocking delayed reboot
+	return exec.Command("systemd-run", "--on-active=5s", "/usr/bin/systemctl", "reboot").Run()
 }
 
 // monitorState continuously monitors the cluster membership state
@@ -354,6 +382,40 @@ func PostGenericToAdmin(
 			return err
 		}
 		resp.Body.Close()
+	}
+
+	return nil
+}
+
+func postGenericToAdminLast(
+	c *Cluster,
+	endpoint string,
+	localFn func() error,
+) error {
+	for _, addr := range c.getNodeAdminAddresses() {
+		if c.hostIsLocal(addr) {
+			continue
+		}
+
+		// POST to the remote node’s admin endpoint
+		urlStr := getLocalURL(addr, endpoint)
+		resp, err := http.Post(urlStr, "", nil)
+		if err != nil {
+			logging.GetLogger().Error("POST to %s failed: %v", urlStr, err)
+			return err
+		}
+		if resp.StatusCode == http.StatusNotFound {
+			logging.GetLogger().Warn("POST to %s returned 404 Not Found", urlStr)
+		} else {
+			logging.GetLogger().Info("POST to %s succeeded with status %d", urlStr, resp.StatusCode)
+		}
+		resp.Body.Close()
+	}
+
+	// Invoke local function only after all remote nodes were posted.
+	if err := localFn(); err != nil {
+		logging.GetLogger().Error("Local function for endpoint %s failed: %v", endpoint, err)
+		return fmt.Errorf("local function failed: %w", err)
 	}
 
 	return nil

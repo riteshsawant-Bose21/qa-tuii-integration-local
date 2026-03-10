@@ -17,7 +17,9 @@ class GpioForm extends StatelessWidget {
     return Dialog(
       insetPadding: const EdgeInsets.symmetric(horizontal: 200, vertical: 100),
       child: ChangeNotifierProvider<GpioFormViewModel>(
-        create: (BuildContext context) => GpioFormViewModel(viewModel: viewModel, initial: initial),
+        create:
+            (BuildContext context) =>
+                GpioFormViewModel(viewModel: viewModel, initial: initial),
         child: Material(
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -31,11 +33,16 @@ class GpioForm extends StatelessWidget {
                     const SizedBox(width: 10),
                     Text(
                       initial == null ? "Create GPIO" : "Edit GPIO",
-                      style: context.textTheme.titleMedium?.copyWith(color: Colors.white),
+                      style: context.textTheme.titleMedium?.copyWith(
+                        color: Colors.white,
+                      ),
                     ),
                     const Spacer(),
                     SemanticHelper.button(
-                      testId: SemanticHelper.createTestId(SemanticTypes.button, "close_gpio_form_button"),
+                      testId: SemanticHelper.createTestId(
+                        SemanticTypes.button,
+                        "close_gpio_form_button",
+                      ),
                       child: IconButton(
                         icon: const Icon(Icons.close, color: Colors.white),
                         onPressed: () {
@@ -48,7 +55,11 @@ class GpioForm extends StatelessWidget {
               ),
               Flexible(
                 child: Consumer<GpioFormViewModel>(
-                  builder: (BuildContext context, GpioFormViewModel vm, Widget? child) {
+                  builder: (
+                    BuildContext context,
+                    GpioFormViewModel vm,
+                    Widget? child,
+                  ) {
                     return Padding(
                       padding: const EdgeInsets.all(15.0),
                       child: SingleChildScrollView(
@@ -64,20 +75,27 @@ class GpioForm extends StatelessWidget {
                                 children: <Widget>[
                                   FusionAppText(
                                     text: "GPIO Name",
-                                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                    style: Theme.of(
+                                      context,
+                                    ).textTheme.bodySmall?.copyWith(
                                       fontSize: 12,
                                       fontWeight: FontWeight.w500,
                                     ),
                                   ),
                                   Container(
-                                    constraints: const BoxConstraints(maxWidth: 400),
+                                    constraints: const BoxConstraints(
+                                      maxWidth: 400,
+                                    ),
                                     child: FusionTextField(
+                                      semanticFieldId: 'gpio_name_field',
                                       controller: vm.name,
                                       hintText: "Enter GPIO name",
-                                      decoration: FusionInputDecoration.fusionDense(
-                                        colorScheme: Theme.of(context).colorScheme,
-                                        hintText: 'Enter GPIO name',
-                                      ),
+                                      decoration:
+                                          FusionInputDecoration.fusionDense(
+                                            colorScheme:
+                                                Theme.of(context).colorScheme,
+                                            hintText: 'Enter GPIO name',
+                                          ),
                                     ),
                                   ),
                                 ],
@@ -89,7 +107,9 @@ class GpioForm extends StatelessWidget {
                                 children: <Widget>[
                                   FusionAppText(
                                     text: "Direction",
-                                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                    style: Theme.of(
+                                      context,
+                                    ).textTheme.bodySmall?.copyWith(
                                       fontSize: 12,
                                       fontWeight: FontWeight.w500,
                                     ),
@@ -97,11 +117,15 @@ class GpioForm extends StatelessWidget {
                                   const SizedBox(height: 8),
                                   RadioGroup<GpioDirection>(
                                     groupValue: vm.direction,
-                                    onChanged: (GpioDirection? value) => vm.direction = value!,
+                                    onChanged:
+                                        (GpioDirection? value) =>
+                                            vm.direction = value!,
                                     child: Row(
                                       spacing: 40,
                                       children: <Widget>[
-                                        ...GpioDirection.values.map((GpioDirection d) {
+                                        ...GpioDirection.values.map((
+                                          GpioDirection d,
+                                        ) {
                                           return Row(
                                             children: <Widget>[
                                               Radio<GpioDirection>(
@@ -123,11 +147,14 @@ class GpioForm extends StatelessWidget {
                                 builder: (BuildContext context) {
                                   if (vm.direction == GpioDirection.input) {
                                     return Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
                                       children: <Widget>[
                                         FusionAppText(
                                           text: "GPI Action",
-                                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                          style: Theme.of(
+                                            context,
+                                          ).textTheme.bodySmall?.copyWith(
                                             fontSize: 12,
                                             fontWeight: FontWeight.w500,
                                           ),
@@ -135,28 +162,41 @@ class GpioForm extends StatelessWidget {
                                         const SizedBox(height: 8),
                                         SizedBox(
                                           width: 400,
-                                          child: DropdownButtonFormField<GpiAction>(
+                                          child: DropdownButtonFormField<
+                                            GpiAction
+                                          >(
                                             initialValue: vm.gpiAction,
                                             items:
                                                 vm.gpiActions
                                                     .map(
-                                                      (GpiAction e) => DropdownMenuItem<GpiAction>(
+                                                      (
+                                                        GpiAction e,
+                                                      ) => DropdownMenuItem<
+                                                        GpiAction
+                                                      >(
                                                         value: e,
                                                         child: Text(
                                                           e.displayName,
-                                                          style: context.textTheme.bodySmall,
+                                                          style:
+                                                              context
+                                                                  .textTheme
+                                                                  .bodySmall,
                                                         ),
                                                       ),
                                                     )
                                                     .toList(),
-                                            onChanged: (GpiAction? value) => vm.gpiAction = value,
+                                            onChanged:
+                                                (GpiAction? value) =>
+                                                    vm.gpiAction = value,
                                             decoration: InputDecoration(
                                               border: OutlineInputBorder(
-                                                borderRadius: BorderRadius.circular(4.0),
+                                                borderRadius:
+                                                    BorderRadius.circular(4.0),
                                               ),
                                             ),
                                             validator: (GpiAction? value) {
-                                              if (value == null) return 'Please select a GPI action';
+                                              if (value == null)
+                                                return 'Please select a GPI action';
                                               return null;
                                             },
                                           ),
@@ -165,11 +205,14 @@ class GpioForm extends StatelessWidget {
                                     );
                                   }
                                   return Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: <Widget>[
                                       FusionAppText(
                                         text: "GPO Action",
-                                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                        style: Theme.of(
+                                          context,
+                                        ).textTheme.bodySmall?.copyWith(
                                           fontSize: 12,
                                           fontWeight: FontWeight.w500,
                                         ),
@@ -178,26 +221,45 @@ class GpioForm extends StatelessWidget {
                                       SizedBox(
                                         width: 400,
                                         child: SemanticHelper.button(
-                                          testId: SemanticHelper.createTestId(SemanticTypes.button, "gpo_action_dropdown_button"),
-                                          child: DropdownButtonFormField<GpoAction>(
+                                          testId: SemanticHelper.createTestId(
+                                            SemanticTypes.button,
+                                            "gpo_action_dropdown_button",
+                                          ),
+                                          child: DropdownButtonFormField<
+                                            GpoAction
+                                          >(
                                             initialValue: vm.gpoAction,
                                             items:
                                                 vm.gpoActions
                                                     .map(
-                                                      (GpoAction e) => DropdownMenuItem<GpoAction>(
+                                                      (
+                                                        GpoAction e,
+                                                      ) => DropdownMenuItem<
+                                                        GpoAction
+                                                      >(
                                                         value: e,
-                                                        child: Text(e.displayName, style: context.textTheme.bodySmall),
+                                                        child: Text(
+                                                          e.displayName,
+                                                          style:
+                                                              context
+                                                                  .textTheme
+                                                                  .bodySmall,
+                                                        ),
                                                       ),
                                                     )
                                                     .toList(),
                                             decoration: InputDecoration(
                                               border: OutlineInputBorder(
-                                                borderRadius: BorderRadius.circular(4.0),
+                                                borderRadius:
+                                                    BorderRadius.circular(4.0),
                                               ),
                                             ),
-                                            onChanged: (GpoAction? value) => vm.gpoAction = value,
+                                            onChanged:
+                                                (GpoAction? value) =>
+                                                    vm.gpoAction = value,
                                             validator: (GpoAction? value) {
-                                              if (value == null) return 'Please select a GPO action';
+                                              if (value == null)
+                                                return 'Please select a GPO action';
                                               return null;
                                             },
                                           ),
@@ -216,9 +278,14 @@ class GpioForm extends StatelessWidget {
                                     children: <Widget>[
                                       Checkbox(
                                         value: vm.invert,
-                                        onChanged: (bool? value) => vm.invert = value ?? false,
+                                        onChanged:
+                                            (bool? value) =>
+                                                vm.invert = value ?? false,
                                       ),
-                                      Text('Invert', style: context.textTheme.bodyMedium),
+                                      Text(
+                                        'Invert',
+                                        style: context.textTheme.bodyMedium,
+                                      ),
                                     ],
                                   ),
                                   // Row(
@@ -238,11 +305,13 @@ class GpioForm extends StatelessWidget {
                                 mainAxisAlignment: MainAxisAlignment.end,
                                 children: <Widget>[
                                   FusionOutlinedButton(
+                                    accessLabel: 'gpio_form_cancel',
                                     label: "Cancel",
                                     onTap: () => Navigator.pop(context),
                                   ),
                                   const SizedBox(width: 12),
                                   FusionButton(
+                                    accessLabel: 'gpio_form_submit',
                                     label: "Done",
                                     isActive: vm.canEnableSubmit,
                                     onTap: () async {
@@ -252,7 +321,10 @@ class GpioForm extends StatelessWidget {
                                           Navigator.pop(context);
                                         }
                                       } catch (e) {
-                                        FusionToast.error(context, message: e.toString());
+                                        FusionToast.error(
+                                          context,
+                                          message: e.toString(),
+                                        );
                                       }
                                     },
                                   ),
@@ -274,7 +346,11 @@ class GpioForm extends StatelessWidget {
     );
   }
 
-  static Future<void> show(BuildContext context, GpioViewmodel viewModel, {GpioConfig? initial}) async {
+  static Future<void> show(
+    BuildContext context,
+    GpioViewmodel viewModel, {
+    GpioConfig? initial,
+  }) async {
     await showDialog(
       context: context,
       builder: (BuildContext context) {

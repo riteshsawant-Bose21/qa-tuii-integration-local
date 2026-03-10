@@ -14,7 +14,9 @@ class Aes70SettingsPage extends StatefulWidget {
 
 class _Aes70SettingsPageState extends State<Aes70SettingsPage> {
   bool _isEnabled = true;
-  final TextEditingController _portController = TextEditingController(text: "12345");
+  final TextEditingController _portController = TextEditingController(
+    text: "12345",
+  );
 
   @override
   void dispose() {
@@ -66,6 +68,7 @@ class _Aes70SettingsPageState extends State<Aes70SettingsPage> {
                   ),
                   const SizedBox(width: 16),
                   FusionNeumorphicButton(
+                    semanticId: 'aes_settings_save_button',
                     borderRadius: 6,
                     height: 35,
                     padding: const EdgeInsets.symmetric(
@@ -77,7 +80,10 @@ class _Aes70SettingsPageState extends State<Aes70SettingsPage> {
                     onTap: () {},
                     enabled: _isEnabled,
                     textStyle: context.textTheme.labelMedium!.copyWith(
-                      color: _isEnabled ? context.colorScheme.textPrimary : context.colorScheme.textDisabled,
+                      color:
+                          _isEnabled
+                              ? context.colorScheme.textPrimary
+                              : context.colorScheme.textDisabled,
                     ),
                   ),
                 ],

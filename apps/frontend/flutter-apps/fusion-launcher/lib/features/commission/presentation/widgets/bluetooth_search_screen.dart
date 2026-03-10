@@ -39,6 +39,7 @@ class BluetoothSearchScreen extends StatelessWidget {
           ),
           const SizedBox(height: 24),
           FusionSecondaryButton(
+            semanticId: 'bluetooth_search_go_back_button',
             text: 'Go back',
             onPressed: onGoBack,
           ),
