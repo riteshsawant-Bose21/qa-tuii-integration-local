@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:fusion_lib/constants/test_keys.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
@@ -506,6 +505,7 @@ class _FloorsSectionState extends State<FloorsSection> {
           ),
           actions: <Widget>[
             FusionOutlinedButton(
+              accessLabel: 'building_plan_cancel_floor_button',
               height: 32,
               width: 80,
               label: "Cancel",
@@ -516,6 +516,7 @@ class _FloorsSectionState extends State<FloorsSection> {
             ),
             const SizedBox(width: 8),
             FusionButton(
+              accessLabel: 'building_plan_delete_floor_button',
               height: 32,
               width: 80,
               label: "Delete",
@@ -559,6 +560,7 @@ class _FloorsSectionState extends State<FloorsSection> {
           ),
           actions: <Widget>[
             FusionOutlinedButton(
+              accessLabel: 'building_plan_reset_cancel',
               height: 32,
               width: 80,
               label: "Cancel",
@@ -569,6 +571,7 @@ class _FloorsSectionState extends State<FloorsSection> {
             ),
             const SizedBox(width: 8),
             FusionButton(
+              accessLabel: 'building_plan_delete_floor_button',
               height: 32,
               width: 80,
               label: "Delete",
@@ -678,6 +681,7 @@ class _FloorsSectionState extends State<FloorsSection> {
                       mainAxisAlignment: MainAxisAlignment.end,
                       children: <Widget>[
                         FusionOutlinedButton(
+                          accessLabel: 'building_plan_cancel_floor_button',
                           height: 28,
                           width: 64,
                           label: "Cancel",
@@ -690,6 +694,7 @@ class _FloorsSectionState extends State<FloorsSection> {
 
                         const SizedBox(width: 8),
                         FusionButton(
+                          accessLabel: 'building_plan_add_floor_button',
                           height: 28,
                           width: 80,
                           textStyle: Theme.of(context).textTheme.labelLarge?.copyWith(fontSize: 10, color: context.colorScheme.primaryBlack),
