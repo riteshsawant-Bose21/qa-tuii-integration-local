@@ -9,7 +9,7 @@ import 'package:fusion_launcher/features/scheduling/view/scheduling_page.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
 import '../../configuration/presentation/viewmodel/project_view_model.dart';
-import '../../configuration_page/widgets/snapshots/action_drop_down.dart';
+import '../../../core/widgets/configuration_widgets/action_drop_down.dart';
 import '../state/gpio_state.dart';
 import '../viewmodel/gpio_viewmodel.dart';
 
@@ -328,7 +328,7 @@ class GpioPage extends StatelessWidget {
                                       ),
                                     )
                                   else
-                                    FusionButton(label: "Test", onTap: () {}),
+                                    FusionButton(label: "Test",accessLabel: 'gpio_page_test_button', onTap: () {}),
 
                                   if (gpio.direction == GpioDirection.input)
                                     SemanticHelper.button(

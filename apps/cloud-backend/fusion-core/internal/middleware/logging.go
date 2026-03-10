@@ -15,8 +15,8 @@ const RequestIDKey = "requestID"
 // RequestLoggerMiddleware logs HTTP requests to the audit log
 func RequestLoggerMiddleware(auditLogger *zap.Logger) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		// Generate a unique request ID
-		requestID := uuid.New().String()
+		// Extract request ID from headers (set by lambda authorizer)
+		requestID := c.GetHeader("X-Request-ID")
 
 		// Create an audit logger with the request ID field
 		requestAuditLogger := auditLogger.With(zap.String(RequestIDKey, requestID))

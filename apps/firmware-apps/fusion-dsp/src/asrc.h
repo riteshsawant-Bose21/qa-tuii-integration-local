@@ -52,7 +52,7 @@ private:
     // - SRC_SINC_MEDIUM_QUALITY: 90% bandwidth (21.6 kHz at 48 kHz)
     // - SRC_SINC_FASTEST:        80% bandwidth (19.2 kHz at 48 kHz)
     // trading off bandwidth for speed.
-    static const int converter_type = SRC_SINC_MEDIUM_QUALITY;
+    static const int converter_type = SRC_SINC_FASTEST;
     SRC_STATE * state;
     int frame_size;
     bool is_input;

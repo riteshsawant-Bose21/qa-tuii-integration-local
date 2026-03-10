@@ -11,7 +11,7 @@ import (
 )
 
 // registerRoutes sets up the API routes.
-// Authentication and authorization are handled by the lambda-authorizer. The extract user middleware is used to pull user
+// Authentication and authorization are handled by the lambda-authorizer. The extract user middleware is used to pull user 
 // info from headers set by the authorizer and make it available to handlers via context.
 func (a *API) registerRoutes() {
 	v1 := a.engine.Group(constants.APIV1Path)

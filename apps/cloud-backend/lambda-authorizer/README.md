@@ -1,19 +1,19 @@
 # Lambda Authorizer for API Gateway
 
-AWS Lambda authorizer for validating JWT tokens from Auth0 and checking user permissions against PostgreSQL database.
+AWS Lambda REQUEST authorizer for validating JWT tokens from Auth0 and checking user permissions against PostgreSQL database.
 
 ## Architecture
 
 ```
-API Gateway → Lambda Authorizer (JWT + DB check) → Backend API
+HTTP API Gateway → Lambda REQUEST Authorizer (JWT + DB check) → Backend API
 ```
 
 The authorizer:
-1. Validates JWT token from Auth0 using JWKS
+1. Validates JWT token from Auth0 using JWKS (extracted from Authorization header)
 2. Extracts user email from token claims
-3. Parses the API Gateway method ARN to extract HTTP method and resource path
+3. Extracts HTTP method and path from the REQUEST event (requestContext.http.method + rawPath)
 4. Checks if the user has the specific permission required for that endpoint
-5. Returns IAM policy (Allow/Deny) to API Gateway
+5. Returns IAM policy (Allow/Deny) with user context to API Gateway
 
 ## Permission System
 
@@ -21,11 +21,12 @@ The Lambda authorizer implements the same permission system as the fusion-core A
 
 ### Permission Checking Flow
 
-1. **Parse Request**: Extract HTTP method (GET, POST, etc.) and resource path from the method ARN
-2. **Match Endpoint**: Find the registered permission requirement for that method+path combination
-3. **Query Database**: Retrieve user's permissions from the database
-4. **Check Permission**: Verify the user has the required permission feature and level
-5. **Return Policy**: Allow access if permitted, deny otherwise
+1. **Extract Token**: Extract JWT token from Authorization header in the REQUEST event
+2. **Parse Request**: Extract HTTP method from requestContext.http.method and path from rawPath
+3. **Match Endpoint**: Find the registered permission requirement for that method+path combination
+4. **Query Database**: Retrieve user's permissions from the database
+5. **Check Permission**: Verify the user has the required permission feature and level
+6. **Return Policy**: Allow access with user context if permitted, deny otherwise
 
 ### Registered Permissions
 
@@ -67,7 +68,7 @@ Users with `admin` or wildcard `*` permissions have access to all endpoints.
 - **Pattern Matching**: Paths with parameters (e.g., `/api/v1/projects/:id`) match actual IDs (e.g., `/api/v1/projects/123`)
 - **Wildcard Permissions**: Feature permissions ending with `*` (e.g., `project.*`) grant access to all features under that namespace
 - **Admin Override**: Users with `admin` permission bypass specific permission checks
-- **Default Deny**: Endpoints without registered permissions are denied by default
+- **Unregistered Endpoints**: Endpoints without registered permissions are allowed by this authorizer by default and must be protected via explicit permission registration or other access controls (e.g., API Gateway configuration).
 
 ## Local Development & Testing
 
@@ -109,9 +110,18 @@ The Lambda will be available at `http://localhost:9000/2015-03-31/functions/func
 curl -X POST "http://localhost:9000/2015-03-31/functions/function/invocations" \
   -H "Content-Type: application/json" \
   -d '{
-    "type": "TOKEN",
-    "authorizationToken": "",
-    "methodArn": "arn:aws:execute-api:us-east-1:123456789012:abcdef123/prod/GET/api/v1/products"
+    "version": "2.0",
+    "type": "REQUEST",
+    "routeKey": "GET /api/v1/projects",
+    "rawPath": "/api/v1/projects",
+    "headers": {},
+    "requestContext": {
+      "requestId": "test-request-123",
+      "http": {
+        "method": "GET",
+        "path": "/api/v1/projects"
+      }
+    }
   }'
 ```
 
@@ -123,11 +133,14 @@ Expected response:
     "Version": "2012-10-17",
     "Statement": [
       {
-        "Action": ["execute-api:Invoke"],
+        "Action": "execute-api:Invoke",
         "Effect": "Deny",
-        "Resource": ["arn:aws:execute-api:us-east-1:123456789012:abcdef123/prod/GET/api/v1/products"]
+        "Resource": "*"
       }
     ]
+  },
+  "context": {
+    "error": "No token provided"
   }
 }
 ```
@@ -138,9 +151,20 @@ Expected response:
 curl -X POST "http://localhost:9000/2015-03-31/functions/function/invocations" \
   -H "Content-Type: application/json" \
   -d '{
-    "type": "TOKEN",
-    "authorizationToken": "Bearer invalid-token-123",
-    "methodArn": "arn:aws:execute-api:us-east-1:123456789012:abcdef123/prod/GET/api/v1/products"
+    "version": "2.0",
+    "type": "REQUEST",
+    "routeKey": "GET /api/v1/projects",
+    "rawPath": "/api/v1/projects",
+    "headers": {
+      "authorization": "Bearer invalid-token-123"
+    },
+    "requestContext": {
+      "requestId": "test-request-123",
+      "http": {
+        "method": "GET",
+        "path": "/api/v1/projects"
+      }
+    }
   }'
 ```
 
@@ -153,9 +177,20 @@ export AUTH0_TOKEN="your-valid-jwt-token"
 curl -X POST "http://localhost:9000/2015-03-31/functions/function/invocations" \
   -H "Content-Type: application/json" \
   -d "{
-    \"type\": \"TOKEN\",
-    \"authorizationToken\": \"Bearer $AUTH0_TOKEN\",
-    \"methodArn\": \"arn:aws:execute-api:us-east-1:123456789012:abcdef123/prod/GET/api/v1/products\"
+    \"version\": \"2.0\",
+    \"type\": \"REQUEST\",
+    \"routeKey\": \"GET /api/v1/projects\",
+    \"rawPath\": \"/api/v1/projects\",
+    \"headers\": {
+      \"authorization\": \"Bearer $AUTH0_TOKEN\"
+    },
+    \"requestContext\": {
+      \"requestId\": \"test-request-123\",
+      \"http\": {
+        \"method\": \"GET\",
+        \"path\": \"/api/v1/projects\"
+      }
+    }
   }"
 ```
 
@@ -238,9 +273,18 @@ docker-compose up --build
 curl -X POST "http://localhost:9000/2015-03-31/functions/function/invocations" \
   -H "Content-Type: application/json" \
   -d '{
-    "type": "TOKEN",
-    "authorizationToken": "",
-    "methodArn": "arn:aws:execute-api:us-east-1:123456789012:abcdef123/prod/GET/api/v1/products"
+    "version": "2.0",
+    "type": "REQUEST",
+    "routeKey": "GET /api/v1/projects",
+    "rawPath": "/api/v1/projects",
+    "headers": {},
+    "requestContext": {
+      "requestId": "test-request-123",
+      "http": {
+        "method": "GET",
+        "path": "/api/v1/projects"
+      }
+    }
   }'
 
 # 4. View logs
@@ -298,9 +342,8 @@ chmod +x deploy.sh
    - **Name**: fusion-auth0-authorizer
    - **Type**: Lambda
    - **Lambda Function**: fusion-lambda-authorizer
-   - **Lambda Event Payload**: Token
-   - **Token Source**: Authorization
-   - **Token Validation**: (leave empty)
+   - **Lambda Event Payload**: Request
+   - **Identity Sources**: $request.header.Authorization
    - **Authorization Caching**: Enabled (300 seconds recommended)
 
 6. Test the authorizer with a valid JWT token
@@ -390,7 +433,7 @@ Look for initialization logs:
 # Test Lambda directly
 aws lambda invoke \
   --function-name fusion-lambda-authorizer \
-  --payload '{"type":"TOKEN","authorizationToken":"Bearer YOUR_TOKEN","methodArn":"arn:aws:execute-api:us-east-1:123456789012:abcdef123/prod/GET/api/v1/products"}' \
+  --payload '{"version":"2.0","type":"REQUEST","routeKey":"GET /api/v1/projects","rawPath":"/api/v1/projects","headers":{"authorization":"Bearer YOUR_TOKEN"},"requestContext":{"requestId":"test-123","http":{"method":"GET","path":"/api/v1/projects"}}}' \
   response.json
 
 cat response.json | jq

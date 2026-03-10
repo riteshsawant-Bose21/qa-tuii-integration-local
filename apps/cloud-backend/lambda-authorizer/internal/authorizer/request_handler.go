@@ -6,15 +6,25 @@ import (
 	"time"
 
 	"github.com/BoseProfessional/lambda-authorizer/internal/logger"
+	"github.com/google/uuid"
 )
 
 // HandleRequestAuthorizer supports API Gateway REQUEST authorizer events
 func HandleRequestAuthorizer(ctx context.Context, event map[string]interface{}) (map[string]interface{}, error) {
 	startTime := time.Now()
-	
-	// Extract request ID from context for structured logging
-	requestID := extractRequestID(event)
-	log := logger.NewLogger(requestID)
+
+	// Generate a new request ID for this request
+	requestID := uuid.New().String()
+
+	// Extract source IP from request context (API Gateway v2 HTTP API format)
+	sourceIP := ""
+	if requestContext, ok := event["requestContext"].(map[string]interface{}); ok {
+		if http, ok := requestContext["http"].(map[string]interface{}); ok {
+			sourceIP, _ = http["sourceIp"].(string)
+		}
+	}
+
+	log := logger.NewLogger(requestID, sourceIP)
 
 	log.Info("Processing authorization request")
 
@@ -83,14 +93,14 @@ func HandleRequestAuthorizer(ctx context.Context, event map[string]interface{}) 
 	}
 
 	contextMap := map[string]interface{}{
-		"userId":          userCtx.UserID,
-		"userEmail":       userCtx.Email,
-		"userRole":        userCtx.Role,
-		"accountId":       userCtx.AccountID,
-		"accountName":     userCtx.AccountName,
-		"accountType":     userCtx.AccountType,
-		"roleId":          userCtx.RoleID,
-		// "userPermissions": userCtx.Permissions, // e.g. comma-separated or JSON
+		"requestId":   requestID,
+		"userId":      userCtx.UserID,
+		"userEmail":   userCtx.Email,
+		"userRole":    userCtx.Role,
+		"accountId":   userCtx.AccountID,
+		"accountName": userCtx.AccountName,
+		"accountType": userCtx.AccountType,
+		"roleId":      userCtx.RoleID,
 	}
 
 	// Log successful authorization with full context

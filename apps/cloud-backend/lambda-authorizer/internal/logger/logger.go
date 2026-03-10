@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"time"
+
+	"github.com/BoseProfessional/lambda-authorizer/internal/constants"
 )
 
 // LogLevel represents the severity of a log message
@@ -22,6 +24,7 @@ type LogEntry struct {
 	Level       LogLevel               `json:"level"`
 	Message     string                 `json:"message"`
 	RequestID   string                 `json:"request_id,omitempty"`
+	SourceIP    string                 `json:"source_ip,omitempty"`
 	Email       string                 `json:"email,omitempty"`
 	Method      string                 `json:"method,omitempty"`
 	Path        string                 `json:"path,omitempty"`
@@ -36,17 +39,24 @@ type LogEntry struct {
 // Logger provides structured logging for Lambda
 type Logger struct {
 	requestID string
+	sourceIP  string
 }
 
 // NewLogger creates a new logger instance
-func NewLogger(requestID string) *Logger {
-	return &Logger{requestID: requestID}
+func NewLogger(requestID, sourceIP string) *Logger {
+	return &Logger{
+		requestID: requestID,
+		sourceIP:  sourceIP,
+	}
 }
 
 // log outputs a structured JSON log entry to stdout (CloudWatch)
 func (l *Logger) log(entry LogEntry) {
 	entry.Timestamp = time.Now().UTC().Format(time.RFC3339Nano)
 	entry.RequestID = l.requestID
+	if l.sourceIP != "" {
+		entry.SourceIP = l.sourceIP
+	}
 
 	jsonBytes, err := json.Marshal(entry)
 	if err != nil {
@@ -95,9 +105,9 @@ func (l *Logger) Debug(message string) {
 
 // LogAuthAttempt logs an authentication attempt
 func (l *Logger) LogAuthAttempt(email, method, path string, success bool, reason string) {
-	decision := "deny"
+	decision := constants.Deny
 	if success {
-		decision = "allow"
+		decision = constants.Allow
 	}
 
 	l.log(LogEntry{
@@ -113,10 +123,10 @@ func (l *Logger) LogAuthAttempt(email, method, path string, success bool, reason
 
 // LogAuthZDecision logs an authorization decision
 func (l *Logger) LogAuthZDecision(email, method, path string, allowed bool, reason string, durationMs int64) {
-	decision := "deny"
+	decision := constants.Deny
 	level := LogLevelWarn
 	if allowed {
-		decision = "allow"
+		decision = constants.Allow
 		level = LogLevelInfo
 	}
 
@@ -140,7 +150,7 @@ func (l *Logger) LogUserContext(email, method, path string, userContext map[stri
 		Email:       email,
 		Method:      method,
 		Path:        path,
-		Decision:    "allow",
+		Decision:    constants.Allow,
 		DurationMs:  durationMs,
 		UserContext: userContext,
 	})

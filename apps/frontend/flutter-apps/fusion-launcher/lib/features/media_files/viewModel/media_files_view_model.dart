@@ -46,7 +46,8 @@ class MediaFilesViewModel extends Cubit<ConfigurationMediaFilesState> {
   MediaFileModel? getSelectedFile() {
     if (state.selectedMediaFileId == null) return null;
 
-    final MediaFileModel? selectedFile = serviceLocator<ProjectViewModel>().getMediaFileModelById(state.selectedMediaFileId!);
+    final MediaFileModel? selectedFile = serviceLocator<ProjectViewModel>()
+        .getMediaFileModelById(state.selectedMediaFileId!);
 
     return selectedFile;
   }
@@ -72,7 +73,8 @@ class MediaFilesViewModel extends Cubit<ConfigurationMediaFilesState> {
             emit(
               state.copyWith(
                 isLoading: false,
-                errorMessage: 'File size exceeds 20MB limit. Please select a smaller file.',
+                errorMessage:
+                    'File size exceeds 20MB limit. Please select a smaller file.',
               ),
             );
             return;
@@ -88,7 +90,8 @@ class MediaFilesViewModel extends Cubit<ConfigurationMediaFilesState> {
       emit(
         state.copyWith(
           isLoading: false,
-          errorMessage: 'An error occurred while uploading the file. Please try again.',
+          errorMessage:
+              'An error occurred while uploading the file. Please try again.',
         ),
       );
     }
@@ -105,7 +108,8 @@ class MediaFilesViewModel extends Cubit<ConfigurationMediaFilesState> {
       // Handle error if needed
     }
     try {
-      final File file = await serviceLocator<ProjectViewModel>().getMediaFileFromProject(mediaId: mediaFileModel.id);
+      final File file = await serviceLocator<ProjectViewModel>()
+          .getMediaFileFromProject(mediaId: mediaFileModel.id);
       await _audioPlayer.setSourceDeviceFile(file.path);
     } catch (e) {
       // Handle error if needed
@@ -121,7 +125,8 @@ class MediaFilesViewModel extends Cubit<ConfigurationMediaFilesState> {
   }
 
   Future<void> deleteMediaFile(String mediaId) async {
-    final MediaFileModel? mediaFile = serviceLocator<ProjectViewModel>().getMediaFileModelById(mediaId);
+    final MediaFileModel? mediaFile = serviceLocator<ProjectViewModel>()
+        .getMediaFileModelById(mediaId);
     if (mediaFile == null) return;
 
     // Check if we're deleting the currently selected file
@@ -162,7 +167,9 @@ class MediaFilesViewModel extends Cubit<ConfigurationMediaFilesState> {
     if (state.selectedMediaFileId == null) return;
 
     final List<MediaFileModel> stateFiles = getAllFiles();
-    final int currentIndex = stateFiles.indexWhere((MediaFileModel file) => file.id == state.selectedMediaFileId);
+    final int currentIndex = stateFiles.indexWhere(
+      (MediaFileModel file) => file.id == state.selectedMediaFileId,
+    );
     if (currentIndex == -1) return;
 
     final int nextIndex = currentIndex + 1;
@@ -176,7 +183,9 @@ class MediaFilesViewModel extends Cubit<ConfigurationMediaFilesState> {
     if (state.selectedMediaFileId == null) return;
 
     final List<MediaFileModel> stateFiles = getAllFiles();
-    final int currentIndex = stateFiles.indexWhere((MediaFileModel file) => file.id == state.selectedMediaFileId);
+    final int currentIndex = stateFiles.indexWhere(
+      (MediaFileModel file) => file.id == state.selectedMediaFileId,
+    );
     if (currentIndex == -1) return;
 
     final int previousIndex = currentIndex - 1;

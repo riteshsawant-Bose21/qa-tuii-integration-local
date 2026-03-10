@@ -4,6 +4,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart' show SchedulerBinding;
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/fusion_widgets/fusion_widgets.dart';
 
 import '../../../di/service_locator.dart';
@@ -12,8 +13,10 @@ import '../controller/guide_showcase_controller.dart';
 class GuideShowcaseTexts {
   static const String stepPattern = 'Step {index} of {total}';
   static const String skip = 'End tour';
-  static const String askGuideTitle = 'Would you like a guide on using Fusion Launcher?';
-  static const String askGuideContent = 'A brief walkthrough to help you use Fusion Launcher efficiently.';
+  static const String askGuideTitle =
+      'Would you like a guide on using Fusion Launcher?';
+  static const String askGuideContent =
+      'A brief walkthrough to help you use Fusion Launcher efficiently.';
   static const String no = 'No';
   static const String yes = 'Yes';
   static const String barrierLabel = 'Popup';
@@ -24,10 +27,12 @@ class GuideShowcaseWrapper extends StatelessWidget {
   final Widget child;
   final ValueChanged<TapDownDetails>? onHighlightedSpotTap;
   final bool show;
+  final String semanticId;
 
   const GuideShowcaseWrapper({
     super.key,
     required this.step,
+    required this.semanticId,
     required this.child,
     this.onHighlightedSpotTap,
     this.show = true,
@@ -35,64 +40,77 @@ class GuideShowcaseWrapper extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final GuideShowCaseController controller = context.watch<GuideShowCaseController>();
+    final GuideShowCaseController controller = context
+        .watch<GuideShowCaseController>();
     // Only show if this is the current step and not completed
     final bool shouldShow = controller.shouldShowStep(step);
 
     if (!show || !shouldShow) return child;
 
-    return FussionPopup(
-      show: true,
-      barrierDismissible: false,
-      barrierColor: Colors.black.withValues(alpha: 0.4),
-      spotlightBorderRadius: 12.0,
-      content: ConstrainedBox(
-        constraints: BoxConstraints(
-          maxWidth: MediaQuery.sizeOf(context).width * 0.3,
-        ),
-        child: Column(
-          spacing: 10,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          children: <Widget>[
-            // Step indicator
-            Row(
-              spacing: 10,
-              children: <Widget>[
-                Expanded(
-                  child: FusionAppText(
-                    text: GuideShowcaseTexts.stepPattern
-                        .replaceFirst('{index}', '${GuideShowCaseSteps.values.indexOf(step) + 1}')
-                        .replaceFirst('{total}', '${GuideShowCaseSteps.values.length}'),
-                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                      color: Colors.grey,
-                    ),
-                  ),
-                ),
-                GestureDetector(
-                  onTap: () {
-                    fusionLibLocator<GuideShowCaseController>().endGuide();
-                    Navigator.pop(context);
-                  },
-                  behavior: HitTestBehavior.translucent,
-                  child: FusionAppText(
-                    text: GuideShowcaseTexts.skip,
-                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                      color: Colors.grey,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            FusionAppText(text: step.description),
-          ],
-        ),
+    return SemanticHelper.container(
+      testId: SemanticHelper.createTestId(
+        SemanticTypes.section,
+        'guide_showcase_$semanticId',
       ),
-      onSpotTap: (TapDownDetails details) {
-        Navigator.pop(context);
-        onHighlightedSpotTap?.call(details);
-      },
-      child: child,
+      child: FussionPopup(
+        show: true,
+        barrierDismissible: false,
+        barrierColor: Colors.black.withValues(alpha: 0.4),
+        spotlightBorderRadius: 12.0,
+        content: ConstrainedBox(
+          constraints: BoxConstraints(
+            maxWidth: MediaQuery.sizeOf(context).width * 0.3,
+          ),
+          child: Column(
+            spacing: 10,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              // Step indicator
+              Row(
+                spacing: 10,
+                children: <Widget>[
+                  Expanded(
+                    child: FusionAppText(
+                      text: GuideShowcaseTexts.stepPattern
+                          .replaceFirst(
+                            '{index}',
+                            '${GuideShowCaseSteps.values.indexOf(step) + 1}',
+                          )
+                          .replaceFirst(
+                            '{total}',
+                            '${GuideShowCaseSteps.values.length}',
+                          ),
+                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                        color: Colors.grey,
+                      ),
+                    ),
+                  ),
+                  GestureDetector(
+                    onTap: () {
+                      fusionLibLocator<GuideShowCaseController>().endGuide();
+                      Navigator.pop(context);
+                    },
+                    behavior: HitTestBehavior.translucent,
+                    child: FusionAppText(
+                      text: GuideShowcaseTexts.skip,
+                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                        color: Colors.grey,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              FusionAppText(text: step.description),
+            ],
+          ),
+        ),
+        onSpotTap: (TapDownDetails details) {
+          Navigator.pop(context);
+          onHighlightedSpotTap?.call(details);
+        },
+        child: child,
+      ),
     );
   }
 
@@ -103,7 +121,9 @@ class GuideShowcaseWrapper extends StatelessWidget {
         return AlertDialog(
           backgroundColor: Colors.white,
           constraints: const BoxConstraints(maxWidth: 600),
-          shape: const RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(6))),
+          shape: const RoundedRectangleBorder(
+            borderRadius: BorderRadius.all(Radius.circular(6)),
+          ),
           title: Text(
             GuideShowcaseTexts.askGuideTitle,
             style: Theme.of(context).textTheme.titleMedium?.copyWith(
@@ -116,10 +136,13 @@ class GuideShowcaseWrapper extends StatelessWidget {
           ),
           actions: <Widget>[
             FusionOutlinedButton(
+              accessLabel: 'guide_showcase_no',
               height: 32,
               width: 80,
               label: GuideShowcaseTexts.no,
-              textStyle: Theme.of(context).textTheme.labelLarge?.copyWith(fontSize: 12),
+              textStyle: Theme.of(
+                context,
+              ).textTheme.labelLarge?.copyWith(fontSize: 12),
               onTap: () {
                 fusionLibLocator<GuideShowCaseController>().endGuide();
                 Navigator.of(context).pop();
@@ -127,6 +150,7 @@ class GuideShowcaseWrapper extends StatelessWidget {
             ),
             const SizedBox(width: 8),
             FusionButton(
+              accessLabel: 'guide_showcase_yes',
               height: 32,
               width: 80,
               label: GuideShowcaseTexts.yes,
@@ -153,7 +177,9 @@ class GuideShowcaseWrapper extends StatelessWidget {
         return AlertDialog(
           backgroundColor: Colors.white,
           constraints: const BoxConstraints(maxWidth: 600),
-          shape: const RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(6))),
+          shape: const RoundedRectangleBorder(
+            borderRadius: BorderRadius.all(Radius.circular(6)),
+          ),
 
           title: Row(
             children: [
@@ -171,6 +197,7 @@ class GuideShowcaseWrapper extends StatelessWidget {
           ),
           actions: <Widget>[
             FusionButton(
+              accessLabel: 'guide_showcase_close',
               height: 32,
               width: 80,
               label: "Close",
@@ -245,7 +272,9 @@ class _FussionPopupState extends State<FussionPopup> {
     final BuildContext anchor = widget.anchorKey?.currentContext ?? context;
     final RenderBox? renderBox = anchor.findRenderObject() as RenderBox?;
     if (renderBox == null) return;
-    final Offset offset = renderBox.localToGlobal(renderBox.paintBounds.topLeft);
+    final Offset offset = renderBox.localToGlobal(
+      renderBox.paintBounds.topLeft,
+    );
     Navigator.of(context).push(
       _PopupRoute(
         targetRect: offset & renderBox.paintBounds.size,
@@ -356,7 +385,14 @@ class _TrianglePainter extends CustomPainter {
     );
     path.cubicTo(size.width * 0.34, size.height * 0.86, 0, 0, 0, 0);
     path.cubicTo(0, 0, size.width, 0, size.width, 0);
-    path.cubicTo(size.width, 0, size.width * 0.66, size.height * 0.86, size.width * 0.66, size.height * 0.86);
+    path.cubicTo(
+      size.width,
+      0,
+      size.width * 0.66,
+      size.height * 0.86,
+      size.width * 0.66,
+      size.height * 0.86,
+    );
     path.cubicTo(
       size.width * 0.66,
       size.height * 0.86,
@@ -390,7 +426,8 @@ class _SpotlightBarrierPainter extends CustomPainter {
       ..color = barrierColor
       ..style = PaintingStyle.fill;
 
-    final Path outerPath = Path()..addRect(Rect.fromLTWH(0, 0, size.width, size.height));
+    final Path outerPath = Path()
+      ..addRect(Rect.fromLTWH(0, 0, size.width, size.height));
 
     final Path innerPath = Path()
       ..addRRect(
@@ -411,7 +448,8 @@ class _SpotlightBarrierPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(_SpotlightBarrierPainter oldDelegate) {
-    return oldDelegate.spotlightRect != spotlightRect || oldDelegate.barrierColor != barrierColor;
+    return oldDelegate.spotlightRect != spotlightRect ||
+        oldDelegate.barrierColor != barrierColor;
   }
 }
 
@@ -483,9 +521,12 @@ class _PopupRoute extends PopupRoute<void> {
 
   Rect? _getRect(GlobalKey key) {
     final BuildContext? currentContext = key.currentContext;
-    final RenderBox? renderBox = currentContext?.findRenderObject() as RenderBox?;
+    final RenderBox? renderBox =
+        currentContext?.findRenderObject() as RenderBox?;
     if (renderBox == null) return null;
-    final Offset offset = renderBox.localToGlobal(renderBox.paintBounds.topLeft);
+    final Offset offset = renderBox.localToGlobal(
+      renderBox.paintBounds.topLeft,
+    );
     return offset & renderBox.paintBounds.size;
   }
 
@@ -515,7 +556,9 @@ class _PopupRoute extends PopupRoute<void> {
     final double topHeight = targetRect.top - _viewportRect.top;
     final double bottomHeight = _viewportRect.bottom - targetRect.bottom;
     final double maximum = max(topHeight, bottomHeight);
-    final double maxHeight = childRect.height > maximum ? maximum : childRect.height;
+    final double maxHeight = childRect.height > maximum
+        ? maximum
+        : childRect.height;
     if (maxHeight > bottomHeight) {
       _bottom = _Screen.height - targetRect.top;
       _arrowDirection = _ArrowDirection.bottom;
@@ -605,7 +648,8 @@ class _PopupRoute extends PopupRoute<void> {
             child: CustomPaint(
               painter: _SpotlightBarrierPainter(
                 spotlightRect: targetRect,
-                barrierColor: barriersColor ?? Colors.black.withValues(alpha: 0.7),
+                barrierColor:
+                    barriersColor ?? Colors.black.withValues(alpha: 0.7),
               ),
             ),
           ),

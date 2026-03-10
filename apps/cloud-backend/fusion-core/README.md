@@ -466,7 +466,12 @@ Before you begin, ensure you have the following installed:
 3. **Test the API endpoints**
    ```bash
    # Health check
-   curl http://localhost:8080/api/v1/products
+   curl -X GET http://localhost:8080/api/v1/products \
+  -H "X-User-ID: adduserid123" \
+  -H "X-Account-ID: addAccountId123" \
+  -H "X-User-Email: user@boseprofessional.com" \
+  -H "X-Role-ID: 9" \
+  -H "X-Request-ID: 10000001"
    
    # View API documentation
    open http://localhost:8080/docs/index.html

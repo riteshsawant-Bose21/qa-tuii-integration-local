@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:fusion_lib/fusion_lib.dart';
 import 'package:shimmer/shimmer.dart';
 
 /// A reusable shimmer loading widget for the Fusion design system.
@@ -47,9 +48,12 @@ class FusionShimmer extends StatelessWidget {
   /// Highlight color of the shimmer. Default is `Colors.grey.shade100`.
   final Color highlightColor;
 
+  final String? semanticId;
+
   /// Creates a [FusionShimmer].
   const FusionShimmer({
     super.key,
+    this.semanticId,
     this.width = 50.0,
     this.height = 12.0,
     this.radius = 4.0,
@@ -61,17 +65,26 @@ class FusionShimmer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Shimmer.fromColors(
-      baseColor: baseColor,
-      highlightColor: highlightColor,
-      child: customisedShimmerLoader && customisedShimmerWidget != null
-          ? customisedShimmerWidget!
-          : Container(
-              margin: const EdgeInsets.only(top: 5),
-              width: width,
-              height: height,
-              decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(radius)),
-            ),
+    return SemanticHelper.container(
+      testId: SemanticHelper.createTestId(
+        SemanticTypes.card,
+        "fusion_shimmer${semanticId ?? ""}",
+      ),
+      child: Shimmer.fromColors(
+        baseColor: baseColor,
+        highlightColor: highlightColor,
+        child: customisedShimmerLoader && customisedShimmerWidget != null
+            ? customisedShimmerWidget!
+            : Container(
+                margin: const EdgeInsets.only(top: 5),
+                width: width,
+                height: height,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(radius),
+                ),
+              ),
+      ),
     );
   }
 }

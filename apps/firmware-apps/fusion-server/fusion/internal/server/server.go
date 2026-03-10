@@ -1,6 +1,7 @@
 package server
 
 import (
+	stdjson "encoding/json"
 	"fmt"
 	"io"
 	"net/http"
@@ -21,57 +22,54 @@ import (
 	"github.com/gorilla/websocket"
 )
 
-const (
-	wsBufferSize = 1024
-	wsPingTime   = 30
-	wsPongTime   = 60
-	wsTimeout    = 10
-)
-
 // FusionServer handles networks connections to manage Fusion state.
 type FusionServer struct {
-	node      string
-	handler   *handler.Handler
-	wsClients map[*websocket.Conn]bool
-	wsLock    sync.RWMutex
-	upgrader  websocket.Upgrader
+	node          string
+	handler       *handler.Handler
+	wsClients     map[*websocket.Conn]bool
+	wsWriteMutex  map[*websocket.Conn]*sync.Mutex     // Per-connection write mutexes
+	subscriptions map[string]map[*websocket.Conn]bool // Topic-based subscriptions: topic -> connections
+	wsLock        sync.RWMutex
+	upgrader      websocket.Upgrader
+	wsStats       *api.WebSocketStats
+	statsLock     sync.RWMutex
+
+	maxConnections int
 }
 
 // NewFusionServer creates and initializes a new configuration server with the provided node name,
 // handler and cluster member list. It also sets up a WebSocket upgrader with custom options.
 func NewFusionServer(node string, handler *handler.Handler, hub *pubsub.Hub) *FusionServer {
 	server := &FusionServer{
-		node:      node,
-		handler:   handler,
-		wsClients: make(map[*websocket.Conn]bool),
-		upgrader: websocket.Upgrader{
-			CheckOrigin: func(r *http.Request) bool {
-				return true
-			},
-			HandshakeTimeout:  wsTimeout * time.Second,
-			EnableCompression: true,
-			ReadBufferSize:    wsBufferSize,
-			WriteBufferSize:   wsBufferSize,
+		node:           node,
+		handler:        handler,
+		wsClients:      make(map[*websocket.Conn]bool),
+		wsWriteMutex:   make(map[*websocket.Conn]*sync.Mutex),
+		subscriptions:  make(map[string]map[*websocket.Conn]bool),
+		maxConnections: wsMaxConnections,
+		wsStats: &api.WebSocketStats{
+			Connections:    0,
+			Messages:       0,
+			Errors:         0,
+			Uptime:         0,
+			LastReset:      time.Now(),
+			MessagesByType: make(map[string]int64),
+		},
+	}
+
+	// Set up the WebSocket upgrader after server creation
+	server.upgrader = websocket.Upgrader{
+		HandshakeTimeout:  wsTimeout * time.Second,
+		EnableCompression: true,
+		ReadBufferSize:    wsBufferSize,
+		WriteBufferSize:   wsBufferSize,
+		// CheckOrigin allows all origins for WebSocket connections.
+		CheckOrigin: func(r *http.Request) bool {
+			return true // Allow all origins
 		},
 	}
 	hub.Register(server)
 	return server
-}
-
-// BroadcastMessage sends a notification message to all connected WebSocket clients.
-// It acquires a read lock on the clients list to ensure thread-safe access.
-func (s *FusionServer) BroadcastMessage(message *api.NotifyMessage) error {
-	s.wsLock.RLock()
-	defer s.wsLock.RUnlock()
-
-	for conn := range s.wsClients {
-		if err := conn.WriteJSON(message); err != nil {
-			logging.GetLogger().Error("Error broadcasting to WebSocket client: %v", err)
-			conn.Close()
-			delete(s.wsClients, conn)
-		}
-	}
-	return nil
 }
 
 // GetValue handles HTTP GET requests to retrieve a configuration value based on a "key" query parameter.
@@ -250,76 +248,6 @@ func (s *FusionServer) ImportState(w http.ResponseWriter, r *http.Request) {
 	s.handler.StateManager.SetState(state.State)
 }
 
-// HandleWebSocket upgrades an HTTP connection to a WebSocket connection, sets up ping handlers,
-// sends an initial state to the client, and listens for incoming messages.
-func (s *FusionServer) HandleWebSocket(w http.ResponseWriter, r *http.Request) {
-	// Upgrade the HTTP connection to a WebSocket connection.
-	conn, err := s.upgrader.Upgrade(w, r, nil)
-	if err != nil {
-		logging.GetLogger().Error("Failed to upgrade connection: %v", err)
-		return
-	}
-
-	// Set initial read deadline and pong handler for connection keep-alive.
-	conn.SetReadDeadline(time.Now().Add(wsPongTime * time.Second))
-	conn.SetPongHandler(func(string) error {
-		conn.SetReadDeadline(time.Now().Add(wsPongTime * time.Second))
-		return nil
-	})
-
-	// Start a ticker to periodically send ping messages.
-	pingTicker := time.NewTicker(wsPingTime * time.Second)
-	go func() {
-		defer pingTicker.Stop()
-		for range pingTicker.C {
-			if err := conn.WriteControl(websocket.PingMessage, []byte{}, time.Now().Add(10*time.Second)); err != nil {
-				logging.GetLogger().Error("Ping failed: %v", err)
-				return
-			}
-		}
-	}()
-
-	// Add the connection to the list of WebSocket clients.
-	s.wsLock.Lock()
-	s.wsClients[conn] = true
-	s.wsLock.Unlock()
-
-	// Ensure cleanup when the function returns.
-	defer func() {
-		pingTicker.Stop()
-		conn.Close()
-		s.wsLock.Lock()
-		delete(s.wsClients, conn)
-		s.wsLock.Unlock()
-	}()
-
-	// Send the initial state to the client.
-	state, err := s.handler.HandleHTTPGet("")
-	if err != nil {
-		logging.GetLogger().Error("Failed to get data: %v", err)
-		return
-	}
-
-	if err := conn.WriteJSON(state); err != nil {
-		logging.GetLogger().Error("Failure sending initial state: %v", err)
-		return
-	}
-
-	// Listen for messages from the WebSocket client.
-	for {
-		messageType, data, err := conn.ReadMessage()
-		if err != nil {
-			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
-				logging.GetLogger().Error("WebSocket error: %v", err)
-			}
-			break
-		}
-		if messageType == websocket.TextMessage {
-			s.handleWebSocketMessage(conn, data)
-		}
-	}
-}
-
 // HandleRoot handles requests to the root URL ("/") and returns server information.
 func (s *FusionServer) HandleRoot(w http.ResponseWriter, r *http.Request) {
 	// Only serve the root path.
@@ -404,7 +332,7 @@ func (s *FusionServer) GetDatabaseMetadata(w http.ResponseWriter, r *http.Reques
 	}
 
 	w.Header().Set(api.ContentType, api.JsonMIMEType)
-	w.Write(data)
+	stdjson.NewEncoder(w).Encode(databaseMetadataResponse{Metadata: metadata})
 }
 
 // ExportData handles HTTP GET requests to export all data.
@@ -717,28 +645,4 @@ func getSingleQueryParam(r *http.Request, param string) (string, error) {
 		return "", fmt.Errorf("invalid characters in parameter %q", param)
 	}
 	return params[0], nil
-}
-
-// handleWebSocketMessage processes a message received over the WebSocket connection.
-// It delegates the message handling to the handler and sends the response back to the client.
-func (s *FusionServer) handleWebSocketMessage(conn *websocket.Conn, data []byte) {
-	type websocketErrorResponse struct {
-		Type    string `json:"type"`
-		Message string `json:"message"`
-	}
-
-	response, err := s.handler.HandleWebSocketMessage(data)
-	if err != nil {
-		if err := conn.WriteJSON(websocketErrorResponse{
-			Type:    "error",
-			Message: err.Error(),
-		}); err != nil {
-			logging.GetLogger().Error("Error sending error response: %v", err)
-		}
-		return
-	}
-
-	if err := conn.WriteJSON(response); err != nil {
-		logging.GetLogger().Error("Error sending response: %v", err)
-	}
 }
