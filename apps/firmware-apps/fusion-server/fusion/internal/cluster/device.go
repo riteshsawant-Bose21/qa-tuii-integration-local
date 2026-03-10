@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"fmt"
 	"fusion-services-core/logging"
-	"fusion-services-core/vip"
 	"fusion/internal/api"
 	"fusion/internal/persistence"
 	"fusion/internal/routes"

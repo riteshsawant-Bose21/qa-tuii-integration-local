@@ -3,6 +3,7 @@ package cluster
 import (
 	"fmt"
 	"fusion-services-core/vip"
+	"os/exec"
 
 	"fusion-services-core/logging"
 	"fusion/internal/api"
