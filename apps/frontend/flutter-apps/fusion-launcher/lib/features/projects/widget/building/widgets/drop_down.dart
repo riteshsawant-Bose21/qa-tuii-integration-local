@@ -20,7 +20,8 @@ class BuildingPageDronDown<T> extends StatefulWidget {
   });
 
   @override
-  State<BuildingPageDronDown<T>> createState() => _BuildingPageDronDownState<T>();
+  State<BuildingPageDronDown<T>> createState() =>
+      _BuildingPageDronDownState<T>();
 }
 
 class _BuildingPageDronDownState<T> extends State<BuildingPageDronDown<T>> {
@@ -73,7 +74,11 @@ class _BuildingPageDronDownState<T> extends State<BuildingPageDronDown<T>> {
         items: widget.items,
         onSelected: widget.onSelect,
         popupOffset: const Offset(0, 10),
-        itemBuilder: (BuildContext context, T option) => widget.valueBuilder != null ? widget.valueBuilder!(option) : widget.labelBuilder(option),
+        itemBuilder:
+            (BuildContext context, T option) =>
+                widget.valueBuilder != null
+                    ? widget.valueBuilder!(option)
+                    : widget.labelBuilder(option),
         // itemBuilder: (BuildContext context) {
         //   return <PopupMenuEntry<String>>[
         //     PopupMenuItem<String>(
@@ -126,9 +131,14 @@ class _BuildingPageDronDownState<T> extends State<BuildingPageDronDown<T>> {
         //   ];
         // },
         child: SemanticHelper.container(
-          testId: SemanticHelper.createTestId(SemanticTypes.container, "multi_section_dropdown_${widget.hintText}"),
+          testId: SemanticHelper.createTestId(
+            SemanticTypes.container,
+            "multi_section_dropdown_${widget.hintText}",
+          ),
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 4.0).copyWith(right: 8),
+            padding: const EdgeInsets.symmetric(
+              horizontal: 4.0,
+            ).copyWith(right: 8),
             child: Row(
               children: <Widget>[
                 Expanded(
@@ -142,8 +152,12 @@ class _BuildingPageDronDownState<T> extends State<BuildingPageDronDown<T>> {
                           return FusionAppText(
                             text: widget.hintText ?? 'Select',
                             maxLine: 1,
-                            style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                              color: context.colorScheme.onSurface.withValues(alpha: widget.value == null ? 0.5 : 1.0),
+                            style: Theme.of(
+                              context,
+                            ).textTheme.labelLarge?.copyWith(
+                              color: context.colorScheme.onSurface.withValues(
+                                alpha: widget.value == null ? 0.5 : 1.0,
+                              ),
                               fontWeight: FontWeight.normal,
                               fontSize: 12,
                             ),
@@ -154,7 +168,10 @@ class _BuildingPageDronDownState<T> extends State<BuildingPageDronDown<T>> {
                   ),
                 ),
                 SemanticHelper.container(
-                  testId: SemanticHelper.createTestId(SemanticTypes.container, "multi_section_dropdown_${widget.hintText}_arrow"),
+                  testId: SemanticHelper.createTestId(
+                    SemanticTypes.container,
+                    "multi_section_dropdown_${widget.hintText}_arrow",
+                  ),
                   child: Icon(
                     Icons.keyboard_arrow_down,
                     color: Colors.grey[600],
@@ -199,7 +216,8 @@ class MultiSectionDropDown<T> extends StatefulWidget {
   });
 
   @override
-  State<MultiSectionDropDown<T>> createState() => _MultiSectionDropDownState<T>();
+  State<MultiSectionDropDown<T>> createState() =>
+      _MultiSectionDropDownState<T>();
 }
 
 class _MultiSectionDropDownState<T> extends State<MultiSectionDropDown<T>> {
@@ -209,13 +227,15 @@ class _MultiSectionDropDownState<T> extends State<MultiSectionDropDown<T>> {
   void initState() {
     super.initState();
     _expandedSections = <int, bool>{
-      for (int i = 0; i < widget.sections.length; i++) i: widget.sections[i].initiallyExpanded,
+      for (int i = 0; i < widget.sections.length; i++)
+        i: widget.sections[i].initiallyExpanded,
     };
   }
 
   @override
   Widget build(BuildContext context) {
     return FusionArrowPopup(
+      semanticId: 'multi_section_dropdown_${widget.hintText}',
       content: StatefulBuilder(
         builder: (BuildContext context, StateSetter stateSetter) {
           return _buildMenuContent(context, stateSetter);
@@ -242,7 +262,9 @@ class _MultiSectionDropDownState<T> extends State<MultiSectionDropDown<T>> {
                         text: widget.hintText ?? 'Select',
                         style: context.textTheme.labelLarge?.copyWith(
                           fontSize: 12,
-                          color: context.colorScheme.onSurface.withValues(alpha: 0.5),
+                          color: context.colorScheme.onSurface.withValues(
+                            alpha: 0.5,
+                          ),
                         ),
                       );
                     }
@@ -285,7 +307,14 @@ class _MultiSectionDropDownState<T> extends State<MultiSectionDropDown<T>> {
             return DecoratedBox(
               decoration: BoxDecoration(
                 border: Border(
-                  bottom: isLast ? BorderSide.none : BorderSide(color: context.colorScheme.onSurface.withOpacity(0.1)),
+                  bottom:
+                      isLast
+                          ? BorderSide.none
+                          : BorderSide(
+                            color: context.colorScheme.onSurface.withOpacity(
+                              0.1,
+                            ),
+                          ),
                 ),
               ),
               child: Padding(
@@ -303,7 +332,10 @@ class _MultiSectionDropDownState<T> extends State<MultiSectionDropDown<T>> {
                         stateSetter(() {});
                       },
                       child: Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
+                        padding: const EdgeInsets.symmetric(
+                          vertical: 6,
+                          horizontal: 4,
+                        ),
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           spacing: 20,
@@ -318,7 +350,9 @@ class _MultiSectionDropDownState<T> extends State<MultiSectionDropDown<T>> {
                               ),
                             ),
                             Icon(
-                              isExpanded ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
+                              isExpanded
+                                  ? Icons.keyboard_arrow_up
+                                  : Icons.keyboard_arrow_down,
                               size: 16,
                             ),
                           ],
@@ -336,7 +370,10 @@ class _MultiSectionDropDownState<T> extends State<MultiSectionDropDown<T>> {
                             Navigator.of(context).pop();
                           },
                           child: Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 6,
+                            ),
                             child: widget.labelBuilder(item),
                           ),
                         ),
@@ -370,10 +407,12 @@ class MultiSectionMultiSelectDropDown<T> extends StatefulWidget {
   });
 
   @override
-  State<MultiSectionMultiSelectDropDown<T>> createState() => _MultiSectionMultiSelectDropDownState<T>();
+  State<MultiSectionMultiSelectDropDown<T>> createState() =>
+      _MultiSectionMultiSelectDropDownState<T>();
 }
 
-class _MultiSectionMultiSelectDropDownState<T> extends State<MultiSectionMultiSelectDropDown<T>> {
+class _MultiSectionMultiSelectDropDownState<T>
+    extends State<MultiSectionMultiSelectDropDown<T>> {
   late Map<int, bool> _expandedSections;
 
   /// TEMP state (popup only)
@@ -385,7 +424,8 @@ class _MultiSectionMultiSelectDropDownState<T> extends State<MultiSectionMultiSe
     _syncTempWithParent();
 
     _expandedSections = <int, bool>{
-      for (int i = 0; i < widget.sections.length; i++) i: widget.sections[i].initiallyExpanded,
+      for (int i = 0; i < widget.sections.length; i++)
+        i: widget.sections[i].initiallyExpanded,
     };
   }
 
@@ -404,6 +444,7 @@ class _MultiSectionMultiSelectDropDownState<T> extends State<MultiSectionMultiSe
   @override
   Widget build(BuildContext context) {
     return FusionArrowPopup(
+      semanticId: 'multi_section_dropdown_${widget.hintText}',
       onDismiss: () {
         // Discard temp changes if popup closes
         _syncTempWithParent();
@@ -435,10 +476,16 @@ class _MultiSectionMultiSelectDropDownState<T> extends State<MultiSectionMultiSe
           children: <Widget>[
             Expanded(
               child: FusionAppText(
-                text: widget.selectedValues.isEmpty ? (widget.hintText ?? 'Select') : '${widget.selectedValues.length} selected',
+                text:
+                    widget.selectedValues.isEmpty
+                        ? (widget.hintText ?? 'Select')
+                        : '${widget.selectedValues.length} selected',
                 style: context.textTheme.labelLarge?.copyWith(
                   fontSize: 12,
-                  color: widget.selectedValues.isEmpty ? context.colorScheme.onSurface.withValues(alpha: 0.5) : context.colorScheme.onSurface,
+                  color:
+                      widget.selectedValues.isEmpty
+                          ? context.colorScheme.onSurface.withValues(alpha: 0.5)
+                          : context.colorScheme.onSurface,
                 ),
               ),
             ),
@@ -485,7 +532,9 @@ class _MultiSectionMultiSelectDropDownState<T> extends State<MultiSectionMultiSe
                         isLast
                             ? BorderSide.none
                             : BorderSide(
-                              color: context.colorScheme.onSurface.withOpacity(0.1),
+                              color: context.colorScheme.onSurface.withOpacity(
+                                0.1,
+                              ),
                             ),
                   ),
                 ),
@@ -591,7 +640,10 @@ class _MultiSectionMultiSelectDropDownState<T> extends State<MultiSectionMultiSe
             Icon(
               isSelected ? Icons.check_box : Icons.check_box_outline_blank,
               size: 16,
-              color: isSelected ? context.colorScheme.primary : context.colorScheme.onSurface.withOpacity(0.4),
+              color:
+                  isSelected
+                      ? context.colorScheme.primary
+                      : context.colorScheme.onSurface.withOpacity(0.4),
             ),
             const SizedBox(width: 8),
             Expanded(child: widget.labelBuilder(item, isSelected)),
@@ -676,6 +728,7 @@ class _MultiSelectDropDownState<T> extends State<MultiSelectDropDown<T>> {
   @override
   Widget build(BuildContext context) {
     return FusionArrowPopup(
+      semanticId: 'multi_section_dropdown_${widget.hintText}',
       onDismiss: _syncTempWithParent,
       showArrow: false,
       blurAmount: 0,
@@ -706,10 +759,16 @@ class _MultiSelectDropDownState<T> extends State<MultiSelectDropDown<T>> {
           children: <Widget>[
             Expanded(
               child: FusionAppText(
-                text: widget.selectedValues.isEmpty ? (widget.hintText ?? 'Select') : '${widget.selectedValues.length} selected',
+                text:
+                    widget.selectedValues.isEmpty
+                        ? (widget.hintText ?? 'Select')
+                        : '${widget.selectedValues.length} selected',
                 style: context.textTheme.labelLarge?.copyWith(
                   fontSize: 12,
-                  color: widget.selectedValues.isEmpty ? context.colorScheme.onSurface.withValues(alpha: 0.5) : context.colorScheme.onSurface,
+                  color:
+                      widget.selectedValues.isEmpty
+                          ? context.colorScheme.onSurface.withValues(alpha: 0.5)
+                          : context.colorScheme.onSurface,
                 ),
               ),
             ),
@@ -778,7 +837,10 @@ class _MultiSelectDropDownState<T> extends State<MultiSelectDropDown<T>> {
             Icon(
               isSelected ? Icons.check_box : Icons.check_box_outline_blank,
               size: 16,
-              color: isSelected ? context.colorScheme.onSurface : context.colorScheme.onSurface.withOpacity(0.4),
+              color:
+                  isSelected
+                      ? context.colorScheme.onSurface
+                      : context.colorScheme.onSurface.withOpacity(0.4),
             ),
             const SizedBox(width: 8),
             Expanded(child: widget.labelBuilder(item, isSelected)),

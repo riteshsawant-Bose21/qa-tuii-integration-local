@@ -1,18 +1,10 @@
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:fusion_launcher/features/fusion_canvas/state/fusion_hover_state.dart';
-import 'package:fusion_launcher/features/fusion_canvas/state/fusion_tool_state.dart';
-import 'package:fusion_launcher/features/fusion_canvas/state/tools/drag_tool_state.dart';
-import 'package:fusion_launcher/features/fusion_canvas/state/tools/measure_tool_state.dart';
-import 'package:fusion_launcher/features/fusion_canvas/state/tools/pen_tool_state.dart';
 import 'package:fusion_launcher/features/fusion_canvas/view/painters/fusion_canvas_painter.dart';
 import 'package:fusion_launcher/features/fusion_canvas/viewmodel/fusion_canvas_input_viewmodel.dart';
 import 'package:fusion_launcher/features/fusion_canvas/viewmodel/fusion_canvas_state_viewmodel.dart';
-import 'package:fusion_launcher/features/fusion_canvas/viewmodel/fusion_canvas_tool_viewmodel.dart';
 import 'package:fusion_lib/fusion_lib.dart';
-
-import '../../viewmodel/fusion_canvas_hover_viewmodel.dart';
 
 class CanvasControlWrapper extends StatelessWidget {
   const CanvasControlWrapper({
@@ -31,35 +23,13 @@ class CanvasControlWrapper extends StatelessWidget {
   Widget build(BuildContext context) {
     final FusionCanvasStateViewModel controller = context.read<FusionCanvasStateViewModel>();
 
-    final FusionToolState toolState = context.watch<FusionCanvasToolViewModel>().state;
-
-    final FusionHoverState hoverState = context.watch<FusionCanvasHoverViewModel>().state;
-
-    final FusionCanvasElement? hoveredElement = hoverState.hoveredElement;
-    final bool isHoveringLineCenter = hoverState.isCenterHandleHovered;
-
     return FusionKeyboardWrapper(
       onKeyEvent: (KeyEvent value) {
         context.read<FusionCanvasInputViewModel>().onKeyEvent(value);
         onKeyEvent?.call(value);
       },
       child: MouseRegion(
-        cursor: switch (toolState) {
-          _ when isHoveringLineCenter => SystemMouseCursors.precise,
-          MeasureToolState _ => SystemMouseCursors.precise,
-          PenToolState _ => SystemMouseCursors.precise,
-          LayerDraggingState _ => SystemMouseCursors.grabbing,
-          PointsDraggingState _ => SystemMouseCursors.grabbing,
-          _ =>
-            hoverState.hoveredPainterId != null
-                ? switch (hoveredElement) {
-                  FusionCanvasLine() => hoveredElement.isVerticalLine ? SystemMouseCursors.resizeLeftRight : SystemMouseCursors.resizeUpDown,
-                  FusionCanvasPoint _ => SystemMouseCursors.grab,
-                  FusionCanvasPolygon _ => SystemMouseCursors.grab,
-                  _ => SystemMouseCursors.basic,
-                }
-                : SystemMouseCursors.basic,
-        },
+        cursor: SystemMouseCursors.none,
         onExit: (PointerExitEvent event) {
           context.read<FusionCanvasInputViewModel>().updateMousePosition(null, null);
         },

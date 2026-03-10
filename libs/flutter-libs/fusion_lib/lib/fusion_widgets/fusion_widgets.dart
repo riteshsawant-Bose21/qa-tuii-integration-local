@@ -16,6 +16,7 @@ export 'dockable_side_bar/fusion_resizable_sidebar.dart';
 export 'form_fields/fusion_text_field.dart';
 export 'form_fields/fusion_text_form_field.dart';
 export 'form_fields/fusion_toggle_switch.dart';
+export 'form_fields/text_fleld.dart';
 export 'others/fusion_arrow_popup.dart';
 export 'others/fusion_checkbox.dart';
 export 'others/fusion_container.dart';

@@ -10,7 +10,8 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 class FusionDropDown<T> extends StatelessWidget {
   final List<T>? items;
   final int? selectedIndex;
-  final Widget Function(BuildContext context, T item, bool isSelected)? itemBuilder;
+  final Widget Function(BuildContext context, T item, bool isSelected)?
+  itemBuilder;
   final Widget Function(BuildContext context, int index, T item)? childBuilder;
   final void Function(int index)? onSelected;
 
@@ -23,8 +24,10 @@ class FusionDropDown<T> extends StatelessWidget {
   final Color? backgroundColor;
   final String? tooltip;
   final EdgeInsetsGeometry? padding;
+  final String? semanticId;
 
   const FusionDropDown({
+    this.semanticId,
     super.key,
     this.items,
     this.selectedIndex,
@@ -45,51 +48,60 @@ class FusionDropDown<T> extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return PopupMenuButton(
-      tooltip: tooltip,
-      offset: offset,
-      shape: shape,
-      elevation: elevation,
-      color: backgroundColor ?? Theme.of(context).colorScheme.surface,
-      padding: padding ?? EdgeInsets.zero,
-      onSelected: (value) {
-        if (value is int && onSelected != null) {
-          onSelected!(value);
-        }
-      },
-      itemBuilder: (BuildContext context) {
-        if (customDropdownBuilder != null) {
-          // Case 2: Build custom widget
-          return [
-            PopupMenuItem(
-              enabled: false,
-              padding: EdgeInsets.zero,
-              child: customDropdownBuilder!(context),
-            ),
-          ];
-        }
+    return SemanticHelper.dropdown(
+      testId: SemanticHelper.createTestId(
+        SemanticTypes.dropdown,
+        "fusion_drop_down",
+      ),
+      value: selectedIndex == null
+          ? 'No selection'
+          : items?[selectedIndex as int].toString(),
+      child: PopupMenuButton(
+        tooltip: tooltip,
+        offset: offset,
+        shape: shape,
+        elevation: elevation,
+        color: backgroundColor ?? Theme.of(context).colorScheme.surface,
+        padding: padding ?? EdgeInsets.zero,
+        onSelected: (value) {
+          if (value is int && onSelected != null) {
+            onSelected!(value);
+          }
+        },
+        itemBuilder: (BuildContext context) {
+          if (customDropdownBuilder != null) {
+            // Case 2: Build custom widget
+            return [
+              PopupMenuItem(
+                enabled: false,
+                padding: EdgeInsets.zero,
+                child: customDropdownBuilder!(context),
+              ),
+            ];
+          }
 
-        if (items != null && selectedIndex != null && itemBuilder != null) {
-          // Case 1: Build list with selection
-          return List<PopupMenuEntry<int>>.generate(items!.length, (index) {
-            final isSelected = index == selectedIndex;
-            return PopupMenuItem<int>(
-              value: index,
-              padding: const EdgeInsets.all(12),
-              child: itemBuilder!(context, items![index], isSelected),
-            );
-          });
-        }
+          if (items != null && selectedIndex != null && itemBuilder != null) {
+            // Case 1: Build list with selection
+            return List<PopupMenuEntry<int>>.generate(items!.length, (index) {
+              final isSelected = index == selectedIndex;
+              return PopupMenuItem<int>(
+                value: index,
+                padding: const EdgeInsets.all(12),
+                child: itemBuilder!(context, items![index], isSelected),
+              );
+            });
+          }
 
-        throw Exception(
-          "FusionDropDown requires either (items + selectedIndex + itemBuilder) or (customDropdownBuilder)",
-        );
-      },
-      child:
-          trigger ??
-          (items != null && selectedIndex != null && childBuilder != null
-              ? childBuilder!(context, selectedIndex!, items![selectedIndex!])
-              : const Icon(Icons.arrow_drop_down)),
+          throw Exception(
+            "FusionDropDown requires either (items + selectedIndex + itemBuilder) or (customDropdownBuilder)",
+          );
+        },
+        child:
+            trigger ??
+            (items != null && selectedIndex != null && childBuilder != null
+                ? childBuilder!(context, selectedIndex!, items![selectedIndex!])
+                : const Icon(Icons.arrow_drop_down)),
+      ),
     );
   }
 }

@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:fusion_lib/constants/test_keys.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
@@ -165,7 +164,9 @@ class _BuildingPlanState extends State<BuildingPlan> {
 
     if (!nameExists) {
       // Update the floor name
-      final FloorModel updatedFloor = viewModel.floors[index].copyWith(name: newName);
+      final FloorModel updatedFloor = viewModel.floors[index].copyWith(
+        name: newName,
+      );
       viewModel.updateFloor(floor: updatedFloor);
 
       setState(() {
@@ -207,7 +208,10 @@ class _BuildingPlanState extends State<BuildingPlan> {
                 ),
               ),
               SemanticHelper.button(
-                testId: SemanticHelper.createTestId(SemanticTypes.button, FusionTestKeys.addFloorPlusButton),
+                testId: SemanticHelper.createTestId(
+                  SemanticTypes.button,
+                  FusionTestKeys.addFloorPlusButton,
+                ),
                 child: GestureDetector(
                   onTap: _showAddFloorDropdown,
                   child: Icon(
@@ -267,12 +271,17 @@ class _BuildingPlanState extends State<BuildingPlan> {
 
                       return SemanticHelper.listItem(
                         index: index,
-                        testId: SemanticHelper.createTestId(SemanticTypes.listItem, "floor_item_$index"),
+                        testId: SemanticHelper.createTestId(
+                          SemanticTypes.listItem,
+                          "floor_item_$index",
+                        ),
                         child: Container(
                           margin: const EdgeInsets.symmetric(vertical: 2),
                           decoration: BoxDecoration(
                             color: isSelected ? context.colorScheme.elevation2 : Colors.transparent,
-                            borderRadius: BorderRadius.circular(FusionSizes.borderRadius8),
+                            borderRadius: BorderRadius.circular(
+                              FusionSizes.borderRadius8,
+                            ),
                           ),
                           child: Material(
                             color: Colors.transparent,
@@ -284,9 +293,14 @@ class _BuildingPlanState extends State<BuildingPlan> {
                                         setState(() => selectedIndex = index);
                                         viewModel.setCurrentFloorIndex(index);
                                       },
-                              borderRadius: BorderRadius.circular(FusionSizes.borderRadius8),
+                              borderRadius: BorderRadius.circular(
+                                FusionSizes.borderRadius8,
+                              ),
                               child: Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                  vertical: 10,
+                                ),
                                 child: Column(
                                   children: <Widget>[
                                     Row(
@@ -298,12 +312,16 @@ class _BuildingPlanState extends State<BuildingPlan> {
                                           alignment: Alignment.center,
                                           decoration: BoxDecoration(
                                             color: context.colorScheme.primaryWhite,
-                                            borderRadius: BorderRadius.circular(4),
+                                            borderRadius: BorderRadius.circular(
+                                              4,
+                                            ),
                                           ),
                                           child: FusionAppText(
                                             text: floor.name.length >= 2 ? floor.name.substring(0, 2).toUpperCase() : floor.name.toUpperCase(),
                                             textAlign: TextAlign.center,
-                                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                            style: Theme.of(
+                                              context,
+                                            ).textTheme.bodyMedium?.copyWith(
                                               fontSize: 8,
                                               fontWeight: FontWeight.w600,
                                               color: context.colorScheme.primaryBlack,
@@ -317,7 +335,10 @@ class _BuildingPlanState extends State<BuildingPlan> {
                                             builder: (BuildContext context) {
                                               if (isEditing) {
                                                 return SemanticHelper.formControl(
-                                                  testId: SemanticHelper.createTestId(SemanticTypes.formControl, "floor_name_edit_input_$index"),
+                                                  testId: SemanticHelper.createTestId(
+                                                    SemanticTypes.formControl,
+                                                    "floor_name_edit_input_$index",
+                                                  ),
                                                   child: PropertyTextField(
                                                     hintText: "Enter floor name",
                                                     controller: _editControllers[index],
@@ -340,8 +361,14 @@ class _BuildingPlanState extends State<BuildingPlan> {
                                                         });
                                                       }
                                                     },
-                                                    onSubmitted: (_) => _saveFloorName(index),
-                                                    onTapOutside: (_) => _saveFloorName(index),
+                                                    onSubmitted:
+                                                        (_) => _saveFloorName(
+                                                          index,
+                                                        ),
+                                                    onTapOutside:
+                                                        (_) => _saveFloorName(
+                                                          index,
+                                                        ),
                                                   ),
                                                 );
                                               } else {
@@ -363,7 +390,10 @@ class _BuildingPlanState extends State<BuildingPlan> {
                                         if (isSelected) ...<Widget>[
                                           (isEditing)
                                               ? SemanticHelper.button(
-                                                testId: SemanticHelper.createTestId(SemanticTypes.button, "floor_name_edit_save_check_button_$index"),
+                                                testId: SemanticHelper.createTestId(
+                                                  SemanticTypes.button,
+                                                  "floor_name_edit_save_check_button_$index",
+                                                ),
                                                 child: IconButton(
                                                   icon: Icon(
                                                     Icons.check,
@@ -386,7 +416,10 @@ class _BuildingPlanState extends State<BuildingPlan> {
                                               : Container(),
                                           (!isEditing)
                                               ? SemanticHelper.button(
-                                                testId: SemanticHelper.createTestId(SemanticTypes.button, "floor_name_edit_button_$index"),
+                                                testId: SemanticHelper.createTestId(
+                                                  SemanticTypes.button,
+                                                  "floor_name_edit_button_$index",
+                                                ),
                                                 child: IconButton(
                                                   icon: Icon(
                                                     Icons.edit,
@@ -397,7 +430,10 @@ class _BuildingPlanState extends State<BuildingPlan> {
                                                     // Prevent starting edit if already editing
                                                     if (_editingFloorIndex != null) return;
 
-                                                    _startEditingFloor(index, floor.name);
+                                                    _startEditingFloor(
+                                                      index,
+                                                      floor.name,
+                                                    );
                                                   },
                                                   padding: EdgeInsets.zero,
                                                   constraints: const BoxConstraints(
@@ -410,9 +446,15 @@ class _BuildingPlanState extends State<BuildingPlan> {
                                           // Only show delete if there's more than one floor and not editing
                                           if (floors.length > 1 && !isEditing)
                                             SemanticHelper.button(
-                                              testId: SemanticHelper.createTestId(SemanticTypes.button, "delete_floor_button_$index"),
+                                              testId: SemanticHelper.createTestId(
+                                                SemanticTypes.button,
+                                                "delete_floor_button_$index",
+                                              ),
                                               child: GestureDetector(
-                                                onTap: () => _showDeleteConfirmDialog(index),
+                                                onTap:
+                                                    () => _showDeleteConfirmDialog(
+                                                      index,
+                                                    ),
                                                 child: const Icon(
                                                   LucideIcons.trash200,
                                                   size: 16,
@@ -422,9 +464,15 @@ class _BuildingPlanState extends State<BuildingPlan> {
                                             ),
                                           if (floors.length == 1 && !isEditing)
                                             SemanticHelper.button(
-                                              testId: SemanticHelper.createTestId(SemanticTypes.button, "delete_floor_button_$index"),
+                                              testId: SemanticHelper.createTestId(
+                                                SemanticTypes.button,
+                                                "delete_floor_button_$index",
+                                              ),
                                               child: GestureDetector(
-                                                onTap: () => _showRestConfirmDialog(index),
+                                                onTap:
+                                                    () => _showRestConfirmDialog(
+                                                      index,
+                                                    ),
                                                 child: const Icon(
                                                   LucideIcons.trash200,
                                                   size: 16,
@@ -441,10 +489,14 @@ class _BuildingPlanState extends State<BuildingPlan> {
                                       Align(
                                         alignment: Alignment.centerLeft,
                                         child: Padding(
-                                          padding: const EdgeInsets.only(left: 30), // Align with text field
+                                          padding: const EdgeInsets.only(
+                                            left: 30,
+                                          ), // Align with text field
                                           child: FusionAppText(
                                             text: _errorMessage!,
-                                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                            style: Theme.of(
+                                              context,
+                                            ).textTheme.bodySmall?.copyWith(
                                               fontSize: 10,
                                               color: Colors.red,
                                             ),
@@ -509,16 +561,20 @@ class _BuildingPlanState extends State<BuildingPlan> {
           ),
           actions: <Widget>[
             FusionOutlinedButton(
+              accessLabel: 'building_plan_cancel_floor_button',
               height: 32,
               width: 80,
               label: "Cancel",
-              textStyle: Theme.of(context).textTheme.labelLarge?.copyWith(fontSize: 12),
+              textStyle: Theme.of(
+                context,
+              ).textTheme.labelLarge?.copyWith(fontSize: 12),
               onTap: () {
                 Navigator.of(context).pop(false);
               },
             ),
             const SizedBox(width: 8),
             FusionButton(
+              accessLabel: 'building_plan_delete_floor_button',
               height: 32,
               width: 80,
               label: "Delete",
@@ -554,7 +610,10 @@ class _BuildingPlanState extends State<BuildingPlan> {
             ),
           ),
           content: SemanticHelper.staticText(
-            testId: SemanticHelper.createTestId(SemanticTypes.text, "dialog_reset_floor_confirmation"),
+            testId: SemanticHelper.createTestId(
+              SemanticTypes.text,
+              "dialog_reset_floor_confirmation",
+            ),
             child: Text(
               'Are you sure you want to Reset "$floorName"? This action cannot be undone.',
               style: Theme.of(context).textTheme.bodyMedium,
@@ -562,16 +621,20 @@ class _BuildingPlanState extends State<BuildingPlan> {
           ),
           actions: <Widget>[
             FusionOutlinedButton(
+              accessLabel: 'building_plan_reset_cancel',
               height: 32,
               width: 80,
               label: "Cancel",
-              textStyle: Theme.of(context).textTheme.labelLarge?.copyWith(fontSize: 12),
+              textStyle: Theme.of(
+                context,
+              ).textTheme.labelLarge?.copyWith(fontSize: 12),
               onTap: () {
                 Navigator.of(context).pop(false);
               },
             ),
             const SizedBox(width: 8),
             FusionButton(
+              accessLabel: 'building_plan_delete_floor_button',
               height: 32,
               width: 80,
               label: "Delete",
@@ -600,7 +663,10 @@ class _BuildingPlanState extends State<BuildingPlan> {
     final RelativeRect position = RelativeRect.fromRect(
       Rect.fromPoints(
         button.localToGlobal(const Offset(50, 18), ancestor: overlay),
-        button.localToGlobal(button.size.bottomRight(Offset.zero), ancestor: overlay),
+        button.localToGlobal(
+          button.size.bottomRight(Offset.zero),
+          ancestor: overlay,
+        ),
       ),
       Offset.zero & overlay.size,
     );
@@ -642,7 +708,10 @@ class _BuildingPlanState extends State<BuildingPlan> {
                     ),
                     const SizedBox(height: 12),
                     SemanticHelper.formControl(
-                      testId: SemanticHelper.createTestId(SemanticTypes.textInput, FusionTestKeys.floorName),
+                      testId: SemanticHelper.createTestId(
+                        SemanticTypes.textInput,
+                        FusionTestKeys.floorName,
+                      ),
                       child: PropertyTextField(
                         controller: _floorNameController,
                         focusNode: _floorNameFocusNode,
@@ -681,10 +750,13 @@ class _BuildingPlanState extends State<BuildingPlan> {
                       mainAxisAlignment: MainAxisAlignment.end,
                       children: <Widget>[
                         FusionOutlinedButton(
+                          accessLabel: 'building_plan_cancel_floor_button',
                           height: 28,
                           width: 64,
                           label: "Cancel",
-                          textStyle: Theme.of(context).textTheme.labelLarge?.copyWith(fontSize: 10),
+                          textStyle: Theme.of(
+                            context,
+                          ).textTheme.labelLarge?.copyWith(fontSize: 10),
                           onTap: () {
                             _clearFields();
                             Navigator.of(context).pop();
@@ -693,9 +765,15 @@ class _BuildingPlanState extends State<BuildingPlan> {
 
                         const SizedBox(width: 8),
                         FusionButton(
+                          accessLabel: 'building_plan_add_floor_button',
                           height: 28,
                           width: 80,
-                          textStyle: Theme.of(context).textTheme.labelLarge?.copyWith(fontSize: 10, color: context.colorScheme.primaryBlack),
+                          textStyle: Theme.of(
+                            context,
+                          ).textTheme.labelLarge?.copyWith(
+                            fontSize: 10,
+                            color: context.colorScheme.primaryBlack,
+                          ),
                           label: "Add Floor",
                           activeBackgroundColor: context.colorScheme.primaryWhite,
                           onTap: () {

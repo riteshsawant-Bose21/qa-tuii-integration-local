@@ -11,7 +11,6 @@ import 'package:fusion_launcher/core/assets/asset_icons.dart';
 import 'package:fusion_launcher/core/assets/asset_svg.dart';
 import 'package:fusion_launcher/core/spl_calculation/isolate_mace_calculation_manager.dart';
 import 'package:fusion_launcher/core/utils/fusion_utils.dart';
-import 'package:fusion_launcher/features/configuration_page/pages/configuration_events.dart';
 import 'package:fusion_launcher/features/create_new_project/views/create_new_project_dialog.dart';
 import 'package:fusion_launcher/features/media_files/view/configuration_media_files_pages.dart';
 import 'package:fusion_launcher/features/media_files/viewModel/media_files_view_model.dart';
@@ -19,7 +18,6 @@ import 'package:fusion_launcher/features/projects/view_model/project_sync_view_m
 import 'package:fusion_launcher/features/projects/widget/building/speaker_selection_section/side_speaker_section.dart';
 import 'package:fusion_launcher/features/scheduling/view/scheduling_page.dart';
 import 'package:fusion_launcher/features/wiring_design/view/wiring_device_list_view.dart';
-import 'package:fusion_lib/constants/test_keys.dart';
 import 'package:fusion_lib/fusion_building_view/floor_canvas_controller.dart';
 import 'package:fusion_lib/fusion_building_view/spl_range_controller.dart';
 import 'package:fusion_lib/fusion_lib.dart';
@@ -39,8 +37,9 @@ import '../../../core/widgets/clean_widgets.dart';
 import '../../authentication/viewmodel/session_view_model.dart';
 import '../../commission/presentation/pages/network_config_trigger_page.dart';
 import '../../configuration/presentation/viewmodel/project_view_model.dart';
+import '../../configuration_events/widgets/configuration_events.dart';
 import '../../configuration_page/pages/configuration_processing_page.dart';
-import '../../configuration_page/pages/configuration_snapshots.dart';
+import '../../configuration_snapshot/widgets/configuration_snapshots.dart';
 import '../../control_dashboard/presentation/pages/fusion_control_dashboard.dart';
 import '../../devices/presentation/pages/fusion_devices_page.dart';
 import '../../devices/presentation/widgets/device_mapping_dialog.dart';
@@ -948,6 +947,7 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with TickerProviderSt
                               child: SizedBox(
                                 height: 35,
                                 child: FusionNeumorphicButton(
+                                  semanticId: "push_configuration",
                                   onTap: () {},
                                   height: 20,
                                   borderRadius: 6,

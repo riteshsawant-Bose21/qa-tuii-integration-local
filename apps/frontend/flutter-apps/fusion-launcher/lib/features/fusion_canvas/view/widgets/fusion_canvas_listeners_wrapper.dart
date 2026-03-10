@@ -133,6 +133,9 @@ class FusionCanvasListenersWrapper extends StatelessWidget {
                 orElse: () => null,
               );
               if (painter is FusionPolygonPainter) {
+                context.read<FusionSnapViewModel>().addTempPolygonPoints(
+                  painter.polygon.points.where((FusionCanvasPoint p) => !state.pointIds.contains(p.id)).map((FusionCanvasPoint e) => e.position).toList(),
+                );
                 context.read<FusionSnapViewModel>().updateCursorPositions(
                   painter.polygon.points
                       .where((FusionCanvasPoint p) => state.pointIds.contains(p.id))

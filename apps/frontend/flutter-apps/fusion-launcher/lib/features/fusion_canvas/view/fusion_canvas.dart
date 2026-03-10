@@ -26,6 +26,7 @@ import 'painters/snap_painter.dart';
 import 'painters/tool/line_center_handle_painter.dart';
 import 'painters/tool/selection_tool_painter.dart';
 import 'painters/tool_painter.dart';
+import 'widgets/fusion_canvas_cursor.dart';
 
 class FusionCanvas extends StatelessWidget {
   const FusionCanvas({
@@ -34,10 +35,13 @@ class FusionCanvas extends StatelessWidget {
     required this.builder,
     this.toolbarEvents,
     this.selectedIds,
+    this.cursorBuilder,
   });
   final List<FusionBasePainter> elements;
   final Widget Function(BuildContext context)? builder;
   final FusionCanvasEvents? toolbarEvents;
+
+  final CursorBuilder? cursorBuilder;
 
   /// Set of selected layer IDs to sync with selection state
   final Set<String>? selectedIds;
@@ -175,9 +179,16 @@ class FusionCanvas extends StatelessWidget {
                                 },
                                 child: CustomPaint(
                                   painter: fusionCanvasPainter,
-                                  child: const SizedBox(
+                                  child: SizedBox(
                                     width: double.infinity,
                                     height: double.infinity,
+                                    child: Stack(
+                                      children: <Widget>[
+                                        FusionCanvasCursor(
+                                          builder: cursorBuilder,
+                                        ),
+                                      ],
+                                    ),
                                   ),
                                 ),
                               ),

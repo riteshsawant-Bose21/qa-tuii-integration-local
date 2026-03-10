@@ -18,6 +18,7 @@ class _PeqGraphSection extends StatelessWidget {
             ),
           ),
           FusionNeumorphicButton(
+            semanticId: 'peq_add_band',
             text: "Add Band",
             width: 100,
             padding: const EdgeInsets.symmetric(vertical: 10),
@@ -37,48 +38,73 @@ class _PEQGraph extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Consumer<PEQController>(
-      builder: (BuildContext context, PEQController controller, Widget? child) {
-        final List<_PEQDataPoint> tableData = controller.tableMappedData;
-        final (List<double> posX, List<double> amplitudes) = controller.graphData;
+    return SemanticHelper.container(
+      testId: SemanticHelper.createTestId(
+        SemanticTypes.container,
+        'peq_graph',
+      ),
+      child: Consumer<PEQController>(
+        builder: (
+          BuildContext context,
+          PEQController controller,
+          Widget? child,
+        ) {
+          final List<_PEQDataPoint> tableData = controller.tableMappedData;
+          final (List<double> posX, List<double> amplitudes) =
+              controller.graphData;
 
-        return GestureDetector(
-          onPanStart: (DragStartDetails details) {
-            _handleDragStart(details, controller, tableData, context);
-          },
-          onPanUpdate: (DragUpdateDetails details) {
-            _handleDragUpdate(details, controller, tableData, context);
-          },
-          onPanEnd: (DragEndDetails details) {
-            _handleDragEnd();
-          },
-          child: CustomPaint(
-            painter: _PEQGraphPainter(
-              amplitudes: amplitudes,
-              tableData: tableData,
-              textColor: context.colorScheme.onSurface,
-              gridColor: context.colorScheme.outline.withOpacity(0.3),
-              curveColor: context.colorScheme.primary,
-              graphBackgroundColor: context.colorScheme.elevation1,
-              strokeDarkColor: context.colorScheme.strokeDark,
+          return GestureDetector(
+            onPanStart: (DragStartDetails details) {
+              _handleDragStart(details, controller, tableData, context);
+            },
+            onPanUpdate: (DragUpdateDetails details) {
+              _handleDragUpdate(details, controller, tableData, context);
+            },
+            onPanEnd: (DragEndDetails details) {
+              _handleDragEnd();
+            },
+            child: CustomPaint(
+              painter: _PEQGraphPainter(
+                amplitudes: amplitudes,
+                tableData: tableData,
+                textColor: context.colorScheme.onSurface,
+                gridColor: context.colorScheme.outline.withOpacity(0.3),
+                curveColor: context.colorScheme.primary,
+                graphBackgroundColor: context.colorScheme.elevation1,
+                strokeDarkColor: context.colorScheme.strokeDark,
+              ),
+              child: const SizedBox.expand(),
             ),
-            child: const SizedBox.expand(),
-          ),
-        );
-      },
+          );
+        },
+      ),
     );
   }
 
   int? _draggedBandIndex;
 
-  void _handleDragStart(DragStartDetails details, PEQController controller, List<_PEQDataPoint> tableData, BuildContext context) {
+  void _handleDragStart(
+    DragStartDetails details,
+    PEQController controller,
+    List<_PEQDataPoint> tableData,
+    BuildContext context,
+  ) {
     final RenderBox renderBox = context.findRenderObject() as RenderBox;
     final Offset localPosition = details.localPosition;
 
-    _draggedBandIndex = _findNearestBandPoint(localPosition, tableData, renderBox.size);
+    _draggedBandIndex = _findNearestBandPoint(
+      localPosition,
+      tableData,
+      renderBox.size,
+    );
   }
 
-  void _handleDragUpdate(DragUpdateDetails details, PEQController controller, List<_PEQDataPoint> tableData, BuildContext context) {
+  void _handleDragUpdate(
+    DragUpdateDetails details,
+    PEQController controller,
+    List<_PEQDataPoint> tableData,
+    BuildContext context,
+  ) {
     if (_draggedBandIndex == null) return;
 
     final RenderBox renderBox = context.findRenderObject() as RenderBox;
@@ -93,13 +119,27 @@ class _PEQGraph extends StatelessWidget {
 
     final double graphWidth = size.width - leftPadding - rightPadding;
     final double graphHeight = size.height - topPadding - bottomPadding;
-    final Rect graphRect = Rect.fromLTWH(leftPadding, topPadding, graphWidth, graphHeight);
+    final Rect graphRect = Rect.fromLTWH(
+      leftPadding,
+      topPadding,
+      graphWidth,
+      graphHeight,
+    );
 
     // Convert position to frequency and gain
-    final double clampedX = localPosition.dx.clamp(graphRect.left, graphRect.right);
-    final double clampedY = localPosition.dy.clamp(graphRect.top, graphRect.bottom);
+    final double clampedX = localPosition.dx.clamp(
+      graphRect.left,
+      graphRect.right,
+    );
+    final double clampedY = localPosition.dy.clamp(
+      graphRect.top,
+      graphRect.bottom,
+    );
 
-    final double frequency = _xToFrequency(clampedX - graphRect.left, graphRect.width);
+    final double frequency = _xToFrequency(
+      clampedX - graphRect.left,
+      graphRect.width,
+    );
     final double gain = _yToDb(clampedY - graphRect.top, graphRect.height);
 
     // Update the controller
@@ -111,7 +151,11 @@ class _PEQGraph extends StatelessWidget {
     _draggedBandIndex = null;
   }
 
-  int? _findNearestBandPoint(Offset position, List<_PEQDataPoint> tableData, Size size) {
+  int? _findNearestBandPoint(
+    Offset position,
+    List<_PEQDataPoint> tableData,
+    Size size,
+  ) {
     const double leftPadding = 50.0;
     const double rightPadding = 20.0;
     const double topPadding = 20.0;
@@ -119,7 +163,12 @@ class _PEQGraph extends StatelessWidget {
 
     final double graphWidth = size.width - leftPadding - rightPadding;
     final double graphHeight = size.height - topPadding - bottomPadding;
-    final Rect graphRect = Rect.fromLTWH(leftPadding, topPadding, graphWidth, graphHeight);
+    final Rect graphRect = Rect.fromLTWH(
+      leftPadding,
+      topPadding,
+      graphWidth,
+      graphHeight,
+    );
 
     const double touchRadius = 20.0; // Radius around point to detect touch
 
@@ -133,7 +182,8 @@ class _PEQGraph extends StatelessWidget {
       final double gain = dataPoint.gain.toDouble();
 
       // Calculate position
-      final double x = graphRect.left + _frequencyToX(frequency, graphRect.width);
+      final double x =
+          graphRect.left + _frequencyToX(frequency, graphRect.width);
       final double y = graphRect.top + _dbToY(gain, graphRect.height);
 
       // Check if touch is within radius of point
@@ -158,7 +208,8 @@ class _PEQGraph extends StatelessWidget {
   double _dbToY(double db, double height) {
     const double minDb = -24.0;
     const double maxDb = 24.0;
-    final double normalizedDb = (db.clamp(minDb, maxDb) - minDb) / (maxDb - minDb);
+    final double normalizedDb =
+        (db.clamp(minDb, maxDb) - minDb) / (maxDb - minDb);
     return height * (1.0 - normalizedDb);
   }
 
@@ -212,7 +263,12 @@ class _PEQGraphPainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     final double graphWidth = size.width - leftPadding - rightPadding;
     final double graphHeight = size.height - topPadding - bottomPadding;
-    final Rect graphRect = Rect.fromLTWH(leftPadding, topPadding, graphWidth, graphHeight);
+    final Rect graphRect = Rect.fromLTWH(
+      leftPadding,
+      topPadding,
+      graphWidth,
+      graphHeight,
+    );
 
     // Draw background
     final Paint backgroundPaint = Paint()..color = Colors.transparent;
@@ -288,7 +344,16 @@ class _PEQGraphPainter extends CustomPainter {
     }
 
     // Major vertical grid lines (frequency)
-    final List<double> freqGridValues = <double>[50, 100, 200, 500, 1000, 2000, 5000, 10000];
+    final List<double> freqGridValues = <double>[
+      50,
+      100,
+      200,
+      500,
+      1000,
+      2000,
+      5000,
+      10000,
+    ];
     for (final double freq in freqGridValues) {
       if (freq >= minFreq && freq <= maxFreq) {
         final double x = graphRect.left + _frequencyToX(freq, graphRect.width);
@@ -301,7 +366,17 @@ class _PEQGraphPainter extends CustomPainter {
     }
 
     // Horizontal grid lines (dB)
-    final List<double> dbGridValues = <double>[-20, -15, -10, -5, 0, 5, 10, 15, 20];
+    final List<double> dbGridValues = <double>[
+      -20,
+      -15,
+      -10,
+      -5,
+      0,
+      5,
+      10,
+      15,
+      20,
+    ];
     for (final double db in dbGridValues) {
       if (db >= minDb && db <= maxDb) {
         final double y = graphRect.top + _dbToY(db, graphRect.height);
@@ -370,7 +445,8 @@ class _PEQGraphPainter extends CustomPainter {
     final List<int> dbLabels = <int>[-20, -10, 0, 10, 20];
     for (final int db in dbLabels) {
       if (db >= minDb && db <= maxDb) {
-        final double y = graphRect.top + _dbToY(db.toDouble(), graphRect.height);
+        final double y =
+            graphRect.top + _dbToY(db.toDouble(), graphRect.height);
         final TextPainter textPainter = TextPainter(
           text: TextSpan(text: '${db}dB', style: labelStyle),
           textDirection: TextDirection.ltr,
@@ -378,7 +454,10 @@ class _PEQGraphPainter extends CustomPainter {
         textPainter.layout();
         textPainter.paint(
           canvas,
-          Offset(leftPadding - textPainter.width - 5, y - textPainter.height / 2),
+          Offset(
+            leftPadding - textPainter.width - 5,
+            y - textPainter.height / 2,
+          ),
         );
       }
     }
@@ -478,7 +557,8 @@ class _PEQGraphPainter extends CustomPainter {
 
     // Linear interpolation between the two closest points
     final double fraction = exactIndex - lowerIndex;
-    return amplitudes[lowerIndex] + (amplitudes[upperIndex] - amplitudes[lowerIndex]) * fraction;
+    return amplitudes[lowerIndex] +
+        (amplitudes[upperIndex] - amplitudes[lowerIndex]) * fraction;
   }
 
   double _frequencyToX(double frequency, double width) {
@@ -489,7 +569,8 @@ class _PEQGraphPainter extends CustomPainter {
   }
 
   double _dbToY(double db, double height) {
-    final double normalizedDb = (db.clamp(minDb, maxDb) - minDb) / (maxDb - minDb);
+    final double normalizedDb =
+        (db.clamp(minDb, maxDb) - minDb) / (maxDb - minDb);
     return height * (1.0 - normalizedDb);
   }
 
@@ -524,11 +605,15 @@ class _PEQGraphPainter extends CustomPainter {
       final double gain = dataPoint.gain.toDouble();
 
       // Calculate position
-      final double x = graphRect.left + _frequencyToX(frequency, graphRect.width);
+      final double x =
+          graphRect.left + _frequencyToX(frequency, graphRect.width);
       final double y = graphRect.top + _dbToY(gain, graphRect.height);
 
       // Check if point is within graph bounds
-      if (x >= graphRect.left && x <= graphRect.right && y >= graphRect.top && y <= graphRect.bottom) {
+      if (x >= graphRect.left &&
+          x <= graphRect.right &&
+          y >= graphRect.top &&
+          y <= graphRect.bottom) {
         // Draw circle background
         canvas.drawCircle(Offset(x, y), pointRadius, circlePaint);
 

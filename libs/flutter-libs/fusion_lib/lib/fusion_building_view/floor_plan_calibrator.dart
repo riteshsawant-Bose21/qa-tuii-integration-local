@@ -7,7 +7,6 @@ import 'package:flutter/material.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
-import '../constants/test_keys.dart';
 import '../di/service_locator.dart';
 
 class FloorPlanCalibrationDialog extends StatelessWidget {
@@ -154,7 +153,9 @@ class _FloorPlanCalibratorState extends State<FloorPlanCalibrator> {
   Offset _middleMousePanOffset = Offset.zero;
 
   // --- UI/controls ---
-  final TextEditingController _distanceController = TextEditingController(text: '5.00');
+  final TextEditingController _distanceController = TextEditingController(
+    text: '5.00',
+  );
   MeasurementUnit _selectedUnit = MeasurementUnit.feet;
   _ToolMode _mode = _ToolMode.measure;
 
@@ -225,7 +226,9 @@ class _FloorPlanCalibratorState extends State<FloorPlanCalibrator> {
         _endPointDisplay = local;
         _isDrawing = false;
       });
-      fusionLibLocator<GuideShowCaseController>().completeStep(GuideShowCaseSteps.showFloorPickCalibration);
+      fusionLibLocator<GuideShowCaseController>().completeStep(
+        GuideShowCaseSteps.showFloorPickCalibration,
+      );
     }
   }
 
@@ -1387,7 +1390,9 @@ class _FloorPlanCalibratorState extends State<FloorPlanCalibrator> {
   }
 
   void _completeCalibration() async {
-    if (_startPointNormalized == null || _endPointNormalized == null || _distanceController.text.trim().isEmpty) {
+    if (_startPointNormalized == null ||
+        _endPointNormalized == null ||
+        _distanceController.text.trim().isEmpty) {
       return;
     }
 
@@ -1414,7 +1419,9 @@ class _FloorPlanCalibratorState extends State<FloorPlanCalibrator> {
     widget.onCalibrationComplete(data);
 
     // ignore: use_build_context_synchronously
-    fusionLibLocator<GuideShowCaseController>().completeStep(GuideShowCaseSteps.confirmFloorCalibrated);
+    fusionLibLocator<GuideShowCaseController>().completeStep(
+      GuideShowCaseSteps.confirmFloorCalibrated,
+    );
   }
 
   final GlobalKey _customPaintKey = GlobalKey();
@@ -1431,7 +1438,9 @@ class _FloorPlanCalibratorState extends State<FloorPlanCalibrator> {
           children: <Widget>[
             Icon(
               Icons.error_outline,
-              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+              color: Theme.of(
+                context,
+              ).colorScheme.onSurface.withValues(alpha: 0.6),
               size: 48,
             ),
             const SizedBox(height: 12),
@@ -1446,11 +1455,14 @@ class _FloorPlanCalibratorState extends State<FloorPlanCalibrator> {
             FusionAppText(
               text: 'Image dimensions: ${_currentImage.width}×${_currentImage.height}',
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+                color: Theme.of(
+                  context,
+                ).colorScheme.onSurface.withValues(alpha: 0.7),
               ),
             ),
             const SizedBox(height: 16),
             FusionOutlinedButton(
+              accessLabel: 'floor_plan_calibration_cancel',
               label: 'Close',
               onTap: () => widget.onCancel?.call(),
             ),
@@ -1680,6 +1692,7 @@ class _FloorPlanCalibratorState extends State<FloorPlanCalibrator> {
                               }
                             },
                             child: GuideShowcaseWrapper(
+                              semanticId: "guide_showcase_floor_calibration",
                               step: GuideShowCaseSteps.showFloorPickCalibration,
                               onHighlightedSpotTap: (TapDownDetails details) {
                                 if (_mode == _ToolMode.measure) {
@@ -1757,6 +1770,7 @@ class _FloorPlanCalibratorState extends State<FloorPlanCalibrator> {
             children: <Widget>[
               const Spacer(),
               FusionOutlinedButton(
+                accessLabel: 'floor_plan_calibration_cancel',
                 width: 120,
                 height: 36,
                 borderRadius: 12,
@@ -1767,13 +1781,17 @@ class _FloorPlanCalibratorState extends State<FloorPlanCalibrator> {
               ),
               const SizedBox(width: 8),
               GuideShowcaseWrapper(
+                semanticId: 'floor_plan_calibrator_confirm',
                 step: GuideShowCaseSteps.confirmFloorCalibrated,
                 onHighlightedSpotTap: (TapDownDetails details) {
-                  if (_startPointNormalized != null && _endPointNormalized != null && _distanceController.text.trim().isNotEmpty) {
+                  if (_startPointNormalized != null &&
+                      _endPointNormalized != null &&
+                      _distanceController.text.trim().isNotEmpty) {
                     _completeCalibration();
                   }
                 },
                 child: FusionButton(
+                  accessLabel: "floor_plan_calibrator_confirm",
                   label: "Confirm",
                   width: 120,
                   height: 36,
@@ -2375,7 +2393,9 @@ class FloorPlanCalibrationPainter extends CustomPainter {
 
       // label (black rounded pill)
       final mid = Offset((p1.dx + p2.dx) / 2, (p1.dy + p2.dy) / 2);
-      final String label = distanceText.isNotEmpty ? '$distanceText ${unit.symbol}' : '1 ${unit.symbol}';
+      final String label = distanceText.isNotEmpty
+          ? '$distanceText ${unit.symbol}'
+          : '1 ${unit.symbol}';
 
       final tp = TextPainter(
         text: TextSpan(
@@ -2390,7 +2410,10 @@ class FloorPlanCalibrationPainter extends CustomPainter {
       )..layout();
 
       const double pad = 6;
-      final Offset labPos = Offset(mid.dx - tp.width / 2, mid.dy - 28 - tp.height / 2);
+      final Offset labPos = Offset(
+        mid.dx - tp.width / 2,
+        mid.dy - 28 - tp.height / 2,
+      );
       final RRect bg = RRect.fromRectAndRadius(
         Rect.fromLTWH(
           labPos.dx - pad,
@@ -2401,7 +2424,10 @@ class FloorPlanCalibrationPainter extends CustomPainter {
         const Radius.circular(4),
       );
 
-      canvas.drawRRect(bg, Paint()..color = Colors.black.withValues(alpha: 0.8));
+      canvas.drawRRect(
+        bg,
+        Paint()..color = Colors.black.withValues(alpha: 0.8),
+      );
       tp.paint(canvas, labPos);
     }
     canvas.restore();
@@ -2419,7 +2445,10 @@ class FloorPlanCalibrationPainter extends CustomPainter {
     final uy = dir.dy / d;
 
     // rotate (-angle) and (+angle)
-    Offset rot(double a) => Offset(ux * math.cos(a) - uy * math.sin(a), ux * math.sin(a) + uy * math.cos(a));
+    Offset rot(double a) => Offset(
+      ux * math.cos(a) - uy * math.sin(a),
+      ux * math.sin(a) + uy * math.cos(a),
+    );
 
     final a1 = from + rot(angle) * len;
     final a2 = from + rot(-angle) * len;
@@ -2470,23 +2499,31 @@ class CalibrationData {
     if (realWorldDistance.isNaN || realWorldDistance <= 0) {
       throw ArgumentError('Invalid real world distance: $realWorldDistance');
     }
-    if (imageSize.width.isNaN || imageSize.height.isNaN || imageSize.width <= 0 || imageSize.height <= 0) {
+    if (imageSize.width.isNaN ||
+        imageSize.height.isNaN ||
+        imageSize.width <= 0 ||
+        imageSize.height <= 0) {
       throw ArgumentError('Invalid image size: $imageSize');
     }
   }
 
   double get pixelDistance => (endPoint - startPoint).distance;
 
-  double get pixelsPerUnit => pixelDistance > 0 && realWorldDistance > 0 ? pixelDistance / realWorldDistance : 0;
+  double get pixelsPerUnit => pixelDistance > 0 && realWorldDistance > 0
+      ? pixelDistance / realWorldDistance
+      : 0;
 
-  double get unitsPerPixel => pixelDistance > 0 && realWorldDistance > 0 ? realWorldDistance / pixelDistance : 0;
+  double get unitsPerPixel => pixelDistance > 0 && realWorldDistance > 0
+      ? realWorldDistance / pixelDistance
+      : 0;
 
   double pixelsToUnits(double px) => unitsPerPixel > 0 ? px * unitsPerPixel : 0;
 
   double unitsToPixels(double u) => pixelsPerUnit > 0 ? u * pixelsPerUnit : 0;
 
   @override
-  String toString() => 'CalibrationData($realWorldDistance ${unit.symbol} = ${pixelDistance.toStringAsFixed(1)} px)';
+  String toString() =>
+      'CalibrationData($realWorldDistance ${unit.symbol} = ${pixelDistance.toStringAsFixed(1)} px)';
 }
 
 enum MeasurementUnit {
@@ -2502,7 +2539,9 @@ enum MeasurementUnit {
 
   static MeasurementUnit? fromString(String value) {
     try {
-      return MeasurementUnit.values.firstWhere((MeasurementUnit element) => element.name == value);
+      return MeasurementUnit.values.firstWhere(
+        (MeasurementUnit element) => element.name == value,
+      );
     } catch (e) {
       return null;
     }

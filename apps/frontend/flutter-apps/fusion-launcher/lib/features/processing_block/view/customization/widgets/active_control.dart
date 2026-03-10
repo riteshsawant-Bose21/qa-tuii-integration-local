@@ -11,34 +11,39 @@ class _ActiveControlWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Stack(
-      children: <Widget>[
-        /// Main draggable container
-        Positioned(
-          left: active.x * widthPerCell,
-          top: active.y * widthPerCell,
-          child: Consumer<PbcViewmodel>(
-            builder: (BuildContext context, PbcViewmodel viewModel, _) {
-              return GestureDetector(
-                onPanUpdate: (DragUpdateDetails details) {
-                  /// dragging the full container moves it
-                  viewModel.move(details.delta / widthPerCell);
-                },
-                child: Container(
-                  width: active.width * widthPerCell,
-                  height: active.height * widthPerCell,
-                  decoration: BoxDecoration(
-                    border: Border.all(color: Colors.black, width: 1),
+    return SemanticHelper.button(
+      testId: SemanticHelper.createTestId(
+        SemanticTypes.button,
+        "active_control_widget",
+      ),
+      child: Stack(
+        children: <Widget>[
+          Positioned(
+            left: active.x * widthPerCell,
+            top: active.y * widthPerCell,
+            child: Consumer<PbcViewmodel>(
+              builder: (BuildContext context, PbcViewmodel viewModel, _) {
+                return GestureDetector(
+                  onPanUpdate: (DragUpdateDetails details) {
+                    /// dragging the full container moves it
+                    viewModel.move(details.delta / widthPerCell);
+                  },
+                  child: Container(
+                    width: active.width * widthPerCell,
+                    height: active.height * widthPerCell,
+                    decoration: BoxDecoration(
+                      border: Border.all(color: Colors.black, width: 1),
+                    ),
                   ),
-                ),
-              );
-            },
+                );
+              },
+            ),
           ),
-        ),
 
-        /// Drag Handles (one for each corner)
-        ..._cornerHandles(context),
-      ],
+          /// Drag Handles (one for each corner)
+          ..._cornerHandles(context),
+        ],
+      ),
     );
   }
 
@@ -53,8 +58,14 @@ class _ActiveControlWidget extends StatelessWidget {
 
   Widget _buildHandle(BuildContext context, Alignment alignment) {
     return Positioned(
-      left: (active.x * widthPerCell) + (alignment.x < 0 ? 0 : active.width * widthPerCell) - 6,
-      top: (active.y * widthPerCell) + (alignment.y < 0 ? 0 : active.height * widthPerCell) - 6,
+      left:
+          (active.x * widthPerCell) +
+          (alignment.x < 0 ? 0 : active.width * widthPerCell) -
+          6,
+      top:
+          (active.y * widthPerCell) +
+          (alignment.y < 0 ? 0 : active.height * widthPerCell) -
+          6,
       child: Consumer<PbcViewmodel>(
         builder: (BuildContext context, PbcViewmodel viewModel, _) {
           return GestureDetector(

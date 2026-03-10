@@ -83,7 +83,7 @@ class ListeningAreaPainter extends FusionPolygonPainter {
     }
     return Paint()
       ..color = getColor(painter)
-      ..strokeWidth = nonScaling(2, painter)
+      ..strokeWidth = nonScaling(4, painter)
       ..strokeCap = StrokeCap.round
       ..strokeJoin = StrokeJoin.round
       ..style = PaintingStyle.stroke;

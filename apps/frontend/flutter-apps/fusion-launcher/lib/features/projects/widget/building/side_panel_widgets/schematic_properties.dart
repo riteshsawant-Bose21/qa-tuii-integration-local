@@ -1084,6 +1084,7 @@ class _SelectListeningAreaForZoneAndSubzonePopupWidgetState extends State<Select
                     ),
                   ),
                   FusionButton(
+                    accessLabel: 'scematic_properties_save_button',
                     width: 80,
                     height: 32,
                     label: "Save",
@@ -1240,8 +1241,9 @@ class _AddNewLocationWidgetState extends State<AddNewLocationWidget> {
                   const SizedBox(height: 12),
 
                   FusionButton(
-                    height: 32,
+                    accessLabel: 'scematic_properties_save_button',
                     width: double.infinity,
+                    height: 32,
                     label: "Add",
                     activeBackgroundColor: context.colorScheme.primaryColor,
                     textStyle: context.textTheme.labelMedium?.copyWith(color: Colors.white),

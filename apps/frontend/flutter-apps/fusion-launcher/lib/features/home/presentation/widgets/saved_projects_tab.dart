@@ -13,7 +13,10 @@ import '../../../authentication/viewmodel/session_view_model.dart';
 import '../../../create_new_project/views/create_new_project_dialog.dart';
 import 'import_project_dialog.dart';
 
-Border _getBorder(BuildContext context) => Border.all(color: context.colorScheme.onSurface.withValues(alpha: 0.3), width: 0.3);
+Border _getBorder(BuildContext context) => Border.all(
+  color: context.colorScheme.onSurface.withValues(alpha: 0.3),
+  width: 0.3,
+);
 
 enum _SavedProjectsSortOption {
   name("Name");
@@ -58,6 +61,7 @@ class SavedProjectsTabContent extends StatelessWidget {
                         ),
                       ),
                       FusionNeumorphicButton(
+                        semanticId: 'create_new_project_button',
                         onTap: () {
                           showDialog(
                             context: context,
@@ -74,8 +78,12 @@ class SavedProjectsTabContent extends StatelessWidget {
                       MouseRegion(
                         cursor: SystemMouseCursors.click,
                         child: SemanticHelper.button(
-                          testId: SemanticHelper.createTestId(SemanticTypes.button, "create_new_project_button"),
+                          testId: SemanticHelper.createTestId(
+                            SemanticTypes.button,
+                            "create_new_project_button",
+                          ),
                           child: FusionNeumorphicButton(
+                            semanticId: 'create_new_project_button',
                             onTap: () {
                               CreateNewProjectDialog.show(context);
                             },
@@ -199,7 +207,9 @@ class _SavedProjectListState extends State<_SavedProjectList> {
 
   void _listenToSearchChanges() {
     final String query = _searchController.text.trim();
-    setState(() => _isSearching = query.isNotEmpty && query.length >= MIN_SEARCH_LENGTH);
+    setState(
+      () => _isSearching = query.isNotEmpty && query.length >= MIN_SEARCH_LENGTH,
+    );
   }
 
   List<ProjectData> get getProjects {
@@ -211,7 +221,14 @@ class _SavedProjectListState extends State<_SavedProjectList> {
     final String searchQuery = _searchController.text.trim().toLowerCase();
     if (searchQuery.isNotEmpty && searchQuery.length >= MIN_SEARCH_LENGTH) {
       final List<ProjectData> allProjects = serviceLocator<ProjectViewModel>().allProjects;
-      projects = allProjects.where((ProjectData project) => project.name.toLowerCase().contains(searchQuery.toLowerCase())).toList();
+      projects =
+          allProjects
+              .where(
+                (ProjectData project) => project.name.toLowerCase().contains(
+                  searchQuery.toLowerCase(),
+                ),
+              )
+              .toList();
     } else {
       // ======= SHOW ALL PROJECTS IF QUERY IS EMPTY ==========
       projects = allProjects;
@@ -219,7 +236,9 @@ class _SavedProjectListState extends State<_SavedProjectList> {
 
     // ======= SORT LOGIN AT THE END =======
     if (selectedSortOption == _SavedProjectsSortOption.name) {
-      projects.sort((ProjectData a, ProjectData b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+      projects.sort(
+        (ProjectData a, ProjectData b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()),
+      );
     }
 
     return projects;
@@ -251,7 +270,10 @@ class _SavedProjectListState extends State<_SavedProjectList> {
             return LayoutBuilder(
               builder: (BuildContext context, BoxConstraints constraints) {
                 return SemanticHelper.container(
-                  testId: SemanticHelper.createTestId(SemanticTypes.container, "saved_projects_section"),
+                  testId: SemanticHelper.createTestId(
+                    SemanticTypes.container,
+                    "saved_projects_section",
+                  ),
                   child: Container(
                     width: double.infinity,
                     decoration: BoxDecoration(
@@ -282,7 +304,10 @@ class _SavedProjectListState extends State<_SavedProjectList> {
                                     //cloud sync icon button
                                     if (hasCloudAccess)
                                       SemanticHelper.button(
-                                        testId: SemanticHelper.createTestId(SemanticTypes.button, "saved_projects_section_item_upload"),
+                                        testId: SemanticHelper.createTestId(
+                                          SemanticTypes.button,
+                                          "saved_projects_section_item_upload",
+                                        ),
                                         child: IconButton(
                                           onPressed: () {
                                             serviceLocator<ProjectSyncViewModel>().uploadAllProjects();
@@ -298,10 +323,15 @@ class _SavedProjectListState extends State<_SavedProjectList> {
                                     //cloud download icon button
                                     if (hasCloudAccess)
                                       SemanticHelper.button(
-                                        testId: SemanticHelper.createTestId(SemanticTypes.button, "saved_projects_section_item_download"),
+                                        testId: SemanticHelper.createTestId(
+                                          SemanticTypes.button,
+                                          "saved_projects_section_item_download",
+                                        ),
                                         child: IconButton(
                                           onPressed: () {
-                                            serviceLocator<ProjectSyncViewModel>().getAllProjects(forceFetch: true);
+                                            serviceLocator<ProjectSyncViewModel>().getAllProjects(
+                                              forceFetch: true,
+                                            );
                                           },
                                           tooltip: "Download All Projects from Cloud",
                                           icon: Icon(
@@ -317,11 +347,17 @@ class _SavedProjectListState extends State<_SavedProjectList> {
 
                               ValueListenableBuilder<bool>(
                                 valueListenable: showSearchBarNotifier,
-                                builder: (BuildContext context, bool showSearchBar, Widget? child) {
+                                builder: (
+                                  BuildContext context,
+                                  bool showSearchBar,
+                                  Widget? child,
+                                ) {
                                   return AnimatedContainer(
                                     duration: const Duration(milliseconds: 200),
                                     height: 32,
-                                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 8,
+                                    ),
                                     decoration: BoxDecoration(
                                       color: showSearchBar ? context.colorScheme.onSurface.withValues(alpha: 0.1) : Colors.transparent,
                                       borderRadius: BorderRadius.circular(60),
@@ -329,10 +365,15 @@ class _SavedProjectListState extends State<_SavedProjectList> {
                                     child: Row(
                                       children: <Widget>[
                                         AnimatedContainer(
-                                          duration: const Duration(milliseconds: 200),
+                                          duration: const Duration(
+                                            milliseconds: 200,
+                                          ),
                                           width: showSearchBar ? 250 : 0,
                                           child: SemanticHelper.formControl(
-                                            testId: SemanticHelper.createTestId(SemanticTypes.textInput, "saved_projects_section_search_input"),
+                                            testId: SemanticHelper.createTestId(
+                                              SemanticTypes.textInput,
+                                              "saved_projects_section_search_input",
+                                            ),
                                             child: TextFormField(
                                               focusNode: _searchFocusNode,
                                               controller: _searchController,
@@ -350,7 +391,9 @@ class _SavedProjectListState extends State<_SavedProjectList> {
                                                 hintText: "Search projects",
                                                 hoverColor: Colors.transparent,
                                                 contentPadding: EdgeInsets.zero,
-                                                hintStyle: context.textTheme.labelMedium?.copyWith(color: Colors.grey),
+                                                hintStyle: context.textTheme.labelMedium?.copyWith(
+                                                  color: Colors.grey,
+                                                ),
                                               ),
                                             ),
                                           ),
@@ -365,17 +408,27 @@ class _SavedProjectListState extends State<_SavedProjectList> {
                                             });
                                           },
                                           child: AnimatedSwitcher(
-                                            duration: const Duration(milliseconds: 200),
-                                            transitionBuilder: (Widget child, Animation<double> animation) {
+                                            duration: const Duration(
+                                              milliseconds: 200,
+                                            ),
+                                            transitionBuilder: (
+                                              Widget child,
+                                              Animation<double> animation,
+                                            ) {
                                               return FadeTransition(
                                                 opacity: animation,
                                                 child: child,
                                               );
                                             },
                                             child: SemanticHelper.button(
-                                              testId: SemanticHelper.createTestId(SemanticTypes.button, "saved_projects_section_search_button"),
+                                              testId: SemanticHelper.createTestId(
+                                                SemanticTypes.button,
+                                                "saved_projects_section_search_button",
+                                              ),
                                               child: Icon(
-                                                key: ValueKey<bool>(showSearchBar),
+                                                key: ValueKey<bool>(
+                                                  showSearchBar,
+                                                ),
                                                 showSearchBar ? LucideIcons.x : LucideIcons.search,
                                                 size: 18,
                                               ),
@@ -458,21 +511,33 @@ class _SavedProjectListState extends State<_SavedProjectList> {
                                     crossAxisSpacing: 16,
                                     mainAxisSpacing: 16,
                                   ),
-                                  itemBuilder: (BuildContext context, int index) {
+                                  itemBuilder: (
+                                    BuildContext context,
+                                    int index,
+                                  ) {
                                     final ProjectData project = projects[index];
 
                                     return GestureDetector(
-                                      onTap: () => ProjectDetailsDialog.show(context, project: project),
+                                      onTap:
+                                          () => ProjectDetailsDialog.show(
+                                            context,
+                                            project: project,
+                                          ),
                                       child: Container(
                                         decoration: BoxDecoration(
                                           color: context.colorScheme.surface,
-                                          borderRadius: BorderRadius.circular(12),
+                                          borderRadius: BorderRadius.circular(
+                                            12,
+                                          ),
                                           border: _getBorder(context),
                                         ),
                                         child: ProjectCard(
                                           index: index,
                                           projectData: project,
-                                          onDelete: () => serviceLocator<ProjectSyncViewModel>().deleteProject(projectId: project.id),
+                                          onDelete:
+                                              () => serviceLocator<ProjectSyncViewModel>().deleteProject(
+                                                projectId: project.id,
+                                              ),
                                         ),
                                       ),
                                     );
@@ -499,7 +564,10 @@ class _SortByWidget extends StatelessWidget {
   final _SavedProjectsSortOption? selectedSortOption;
   final ValueChanged<_SavedProjectsSortOption>? onSelect;
 
-  const _SortByWidget({required this.selectedSortOption, required this.onSelect});
+  const _SortByWidget({
+    required this.selectedSortOption,
+    required this.onSelect,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -543,7 +611,10 @@ class _SortByWidget extends StatelessWidget {
                       ..._SavedProjectsSortOption.values.map(
                         (_SavedProjectsSortOption sortBy) {
                           return SemanticHelper.button(
-                            testId: SemanticHelper.createTestId(SemanticTypes.button, "saved_projects_section_sort_button_$sortBy"),
+                            testId: SemanticHelper.createTestId(
+                              SemanticTypes.button,
+                              "saved_projects_section_sort_button_$sortBy",
+                            ),
                             child: InkWell(
                               onTap: () {
                                 onSelect?.call(sortBy);
@@ -554,7 +625,10 @@ class _SortByWidget extends StatelessWidget {
                                 children: <Widget>[
                                   Expanded(
                                     child: Padding(
-                                      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 4,
+                                        vertical: 8,
+                                      ),
                                       child: FusionAppText(
                                         text: sortBy.title,
                                         style: context.textTheme.labelMedium,
@@ -582,7 +656,10 @@ class _SortByWidget extends StatelessWidget {
           ];
         },
         child: SemanticHelper.button(
-          testId: SemanticHelper.createTestId(SemanticTypes.button, "saved_projects_section_sort_button"),
+          testId: SemanticHelper.createTestId(
+            SemanticTypes.button,
+            "saved_projects_section_sort_button",
+          ),
           child: Container(
             height: 32,
             padding: const EdgeInsets.symmetric(horizontal: 10),
@@ -665,7 +742,10 @@ class _FilterByWidget extends StatelessWidget {
                             child: Row(
                               children: <Widget>[
                                 Padding(
-                                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 4,
+                                    vertical: 8,
+                                  ),
                                   child: FusionAppText(
                                     text: sortBy.title,
                                     style: context.textTheme.labelMedium,
@@ -684,7 +764,10 @@ class _FilterByWidget extends StatelessWidget {
           ];
         },
         child: SemanticHelper.button(
-          testId: SemanticHelper.createTestId(SemanticTypes.button, "saved_projects_section_item_upload"),
+          testId: SemanticHelper.createTestId(
+            SemanticTypes.button,
+            "saved_projects_section_item_upload",
+          ),
           child: Container(
             height: 32,
             padding: const EdgeInsets.symmetric(horizontal: 10),
@@ -826,7 +909,9 @@ class _BorderedTextfieldState extends State<BorderedTextfield> {
             enabled: widget.isEnabled,
             obscureText: isObscured,
             inputFormatters: widget.inputFormatters,
-            style: context.textTheme.labelLarge?.copyWith(color: context.colorScheme.textPrimary),
+            style: context.textTheme.labelLarge?.copyWith(
+              color: context.colorScheme.textPrimary,
+            ),
             onChanged: widget.onChanged,
             validator: widget.validator,
             mouseCursor: widget.isEnabled ? null : SystemMouseCursors.forbidden,
