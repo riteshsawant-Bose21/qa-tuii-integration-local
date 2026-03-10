@@ -118,12 +118,12 @@ class _FloorPlanCalibratorState extends State<FloorPlanCalibrator> {
   Offset _cornerOffsetBR = Offset.zero; // bottomRight offset
   bool _isSkewing = false;
   _SkewHandle _activeSkewHandle = _SkewHandle.none;
-  Offset _skewStartPosition = Offset.zero;
+  final Offset _skewStartPosition = Offset.zero;
   // Store starting offsets for all corners (needed for pivot-based skew)
-  Offset _cornerStartTL = Offset.zero;
-  Offset _cornerStartTR = Offset.zero;
-  Offset _cornerStartBL = Offset.zero;
-  Offset _cornerStartBR = Offset.zero;
+  final Offset _cornerStartTL = Offset.zero;
+  final Offset _cornerStartTR = Offset.zero;
+  final Offset _cornerStartBL = Offset.zero;
+  final Offset _cornerStartBR = Offset.zero;
   bool _hasPendingSkew = false; // true when skew is modified but not yet applied
   // --- zoom/pan state ---
   double _zoomScale = 1.0;
@@ -135,6 +135,7 @@ class _FloorPlanCalibratorState extends State<FloorPlanCalibrator> {
   Offset? _startPointDisplay;
   Offset? _endPointDisplay;
   bool _isDrawing = false;
+  Offset _lastSkewPosition = Offset.zero;
 
   // --- crop state (normalized to the displayed image rect 0..1) ---
   Rect _cropRectN = const Rect.fromLTWH(0, 0, 1, 1);
@@ -576,16 +577,12 @@ class _FloorPlanCalibratorState extends State<FloorPlanCalibrator> {
 
   void _onSkewPanStart(DragStartDetails d) {
     final handle = _hitTestSkewHandle(d.localPosition);
+
     if (handle != _SkewHandle.none) {
       setState(() {
         _activeSkewHandle = handle;
         _isSkewing = true;
-        _skewStartPosition = d.localPosition;
-        // Store starting offsets for ALL corners (needed for pivot-based skew)
-        _cornerStartTL = _cornerOffsetTL;
-        _cornerStartTR = _cornerOffsetTR;
-        _cornerStartBL = _cornerOffsetBL;
-        _cornerStartBR = _cornerOffsetBR;
+        _lastSkewPosition = d.localPosition;
       });
     }
   }
@@ -596,97 +593,69 @@ class _FloorPlanCalibratorState extends State<FloorPlanCalibrator> {
     final r = _imageRect;
     if (r == null) return;
 
-    // Get screen delta
-    final screenDelta = d.localPosition - _skewStartPosition;
+    // incremental delta
+    final screenDelta = d.localPosition - _lastSkewPosition;
+    _lastSkewPosition = d.localPosition;
 
-    // Convert screen delta to object-local coordinate space by applying inverse rotation
+    // convert to local image space (respect rotation)
     final cos = math.cos(-_rotationAngle);
     final sin = math.sin(-_rotationAngle);
-    var localDeltaX = screenDelta.dx * cos - screenDelta.dy * sin;
-    var localDeltaY = screenDelta.dx * sin + screenDelta.dy * cos;
 
-    // Normalize delta by image dimensions and zoom
-    final normalizedDeltaX = localDeltaX / (r.width * _zoomScale);
-    final normalizedDeltaY = localDeltaY / (r.height * _zoomScale);
+    final localDX = screenDelta.dx * cos - screenDelta.dy * sin;
+    final localDY = screenDelta.dx * sin + screenDelta.dy * cos;
 
-    final normalizedDelta = Offset(normalizedDeltaX, normalizedDeltaY);
+    final normalizedDX = localDX / (r.width * _zoomScale);
+    final normalizedDY = localDY / (r.height * _zoomScale);
 
     setState(() {
       switch (_activeSkewHandle) {
-        // Corner handles - only the dragged corner moves, all others stay fixed
+        /// CORNERS — free movement
         case _SkewHandle.topLeft:
-          _cornerOffsetTL = _cornerStartTL + normalizedDelta;
-          // All other corners stay fixed
-          _cornerOffsetTR = _cornerStartTR;
-          _cornerOffsetBL = _cornerStartBL;
-          _cornerOffsetBR = _cornerStartBR;
-          break;
-        case _SkewHandle.topRight:
-          _cornerOffsetTR = _cornerStartTR + normalizedDelta;
-          // All other corners stay fixed
-          _cornerOffsetTL = _cornerStartTL;
-          _cornerOffsetBL = _cornerStartBL;
-          _cornerOffsetBR = _cornerStartBR;
-          break;
-        case _SkewHandle.bottomLeft:
-          _cornerOffsetBL = _cornerStartBL + normalizedDelta;
-          // All other corners stay fixed
-          _cornerOffsetTL = _cornerStartTL;
-          _cornerOffsetTR = _cornerStartTR;
-          _cornerOffsetBR = _cornerStartBR;
-          break;
-        case _SkewHandle.bottomRight:
-          _cornerOffsetBR = _cornerStartBR + normalizedDelta;
-          // All other corners stay fixed
-          _cornerOffsetTL = _cornerStartTL;
-          _cornerOffsetTR = _cornerStartTR;
-          _cornerOffsetBL = _cornerStartBL;
+          _cornerOffsetTL += Offset(normalizedDX, normalizedDY);
           break;
 
-        // Edge handles - true 2D shear (parallelogram, not perspective/trapezoid).
-        // Top/bottom edges shear horizontally (X only), left/right edges shear vertically (Y only).
-        // This keeps opposite sides parallel, avoiding any perspective distortion.
+        case _SkewHandle.topRight:
+          _cornerOffsetTR += Offset(normalizedDX, normalizedDY);
+          break;
+
+        case _SkewHandle.bottomLeft:
+          _cornerOffsetBL += Offset(normalizedDX, normalizedDY);
+          break;
+
+        case _SkewHandle.bottomRight:
+          _cornerOffsetBR += Offset(normalizedDX, normalizedDY);
+          break;
+
+        /// EDGE HANDLES — constrained movement
+
+        // top edge → horizontal only
         case _SkewHandle.topCenter:
-          // Horizontal shear: pivot = bottom edge (BL, BR stay fixed).
-          // Only X movement — constraining Y to 0 keeps top & bottom edges parallel.
-          final hDeltaTop = Offset(normalizedDeltaX, 0);
-          _cornerOffsetTL = _cornerStartTL + hDeltaTop;
-          _cornerOffsetTR = _cornerStartTR + hDeltaTop;
-          _cornerOffsetBL = _cornerStartBL;
-          _cornerOffsetBR = _cornerStartBR;
+          _cornerOffsetTL += Offset(normalizedDX, 0);
+          _cornerOffsetTR += Offset(normalizedDX, 0);
           break;
+
+        // bottom edge → horizontal only
         case _SkewHandle.bottomCenter:
-          // Horizontal shear: pivot = top edge (TL, TR stay fixed).
-          // Only X movement — constraining Y to 0 keeps top & bottom edges parallel.
-          final hDeltaBot = Offset(normalizedDeltaX, 0);
-          _cornerOffsetBL = _cornerStartBL + hDeltaBot;
-          _cornerOffsetBR = _cornerStartBR + hDeltaBot;
-          _cornerOffsetTL = _cornerStartTL;
-          _cornerOffsetTR = _cornerStartTR;
+          _cornerOffsetBL += Offset(normalizedDX, 0);
+          _cornerOffsetBR += Offset(normalizedDX, 0);
           break;
+
+        // left edge → vertical only
         case _SkewHandle.leftCenter:
-          // Vertical shear: pivot = right edge (TR, BR stay fixed).
-          // Only Y movement — constraining X to 0 keeps left & right edges parallel.
-          final vDeltaLeft = Offset(0, normalizedDeltaY);
-          _cornerOffsetTL = _cornerStartTL + vDeltaLeft;
-          _cornerOffsetBL = _cornerStartBL + vDeltaLeft;
-          _cornerOffsetTR = _cornerStartTR;
-          _cornerOffsetBR = _cornerStartBR;
+          _cornerOffsetTL += Offset(0, normalizedDY);
+          _cornerOffsetBL += Offset(0, normalizedDY);
           break;
+
+        // right edge → vertical only
         case _SkewHandle.rightCenter:
-          // Vertical shear: pivot = left edge (TL, BL stay fixed).
-          // Only Y movement — constraining X to 0 keeps left & right edges parallel.
-          final vDeltaRight = Offset(0, normalizedDeltaY);
-          _cornerOffsetTR = _cornerStartTR + vDeltaRight;
-          _cornerOffsetBR = _cornerStartBR + vDeltaRight;
-          _cornerOffsetTL = _cornerStartTL;
-          _cornerOffsetBL = _cornerStartBL;
+          _cornerOffsetTR += Offset(0, normalizedDY);
+          _cornerOffsetBR += Offset(0, normalizedDY);
           break;
+
         case _SkewHandle.none:
           break;
       }
 
-      // Mark as pending skew if any corner has been modified
       _hasPendingSkew = _cornerOffsetTL != Offset.zero || _cornerOffsetTR != Offset.zero || _cornerOffsetBL != Offset.zero || _cornerOffsetBR != Offset.zero;
     });
   }
@@ -755,45 +724,14 @@ class _FloorPlanCalibratorState extends State<FloorPlanCalibrator> {
       final brAdjusted = Offset(br.dx - minX, br.dy - minY);
       final blAdjusted = Offset(bl.dx - minX, bl.dy - minY);
 
-      // Create shader from source image
-      final shader = ImageShader(
-        sourceImage,
-        TileMode.clamp,
-        TileMode.clamp,
-        Matrix4.identity().storage,
+      _drawTexturedQuad(
+        canvas,
+        image: sourceImage,
+        dstTL: tlAdjusted,
+        dstTR: trAdjusted,
+        dstBL: blAdjusted,
+        dstBR: brAdjusted,
       );
-
-      // Build vertices for two triangles covering the quadrilateral
-      final positions = Float32List.fromList([
-        // Triangle 1: TL, TR, BR
-        tlAdjusted.dx, tlAdjusted.dy,
-        trAdjusted.dx, trAdjusted.dy,
-        brAdjusted.dx, brAdjusted.dy,
-        // Triangle 2: TL, BR, BL
-        tlAdjusted.dx, tlAdjusted.dy,
-        brAdjusted.dx, brAdjusted.dy,
-        blAdjusted.dx, blAdjusted.dy,
-      ]);
-
-      final textureCoords = Float32List.fromList([
-        // Triangle 1: TL, TR, BR
-        0, 0,
-        fullWidth, 0,
-        fullWidth, fullHeight,
-        // Triangle 2: TL, BR, BL
-        0, 0,
-        fullWidth, fullHeight,
-        0, fullHeight,
-      ]);
-
-      final vertices = ui.Vertices.raw(
-        VertexMode.triangles,
-        positions,
-        textureCoordinates: textureCoords,
-      );
-
-      final paint = Paint()..shader = shader;
-      canvas.drawVertices(vertices, BlendMode.srcOver, paint);
 
       final picture = recorder.endRecording();
       final resultImage = await picture.toImage(newWidth.round(), newHeight.round());
@@ -986,45 +924,14 @@ class _FloorPlanCalibratorState extends State<FloorPlanCalibrator> {
         final brAdjusted = Offset(br.dx - minX, br.dy - minY);
         final blAdjusted = Offset(bl.dx - minX, bl.dy - minY);
 
-        // Create shader from image
-        final shader = ImageShader(
-          resultImage,
-          TileMode.clamp,
-          TileMode.clamp,
-          Matrix4.identity().storage,
+        _drawTexturedQuad(
+          canvas,
+          image: resultImage,
+          dstTL: tlAdjusted,
+          dstTR: trAdjusted,
+          dstBL: blAdjusted,
+          dstBR: brAdjusted,
         );
-
-        // Build vertices for two triangles covering the quadrilateral
-        final positions = Float32List.fromList([
-          // Triangle 1: TL, TR, BR
-          tlAdjusted.dx, tlAdjusted.dy,
-          trAdjusted.dx, trAdjusted.dy,
-          brAdjusted.dx, brAdjusted.dy,
-          // Triangle 2: TL, BR, BL
-          tlAdjusted.dx, tlAdjusted.dy,
-          brAdjusted.dx, brAdjusted.dy,
-          blAdjusted.dx, blAdjusted.dy,
-        ]);
-
-        final textureCoords = Float32List.fromList([
-          // Triangle 1: TL, TR, BR
-          0, 0,
-          fullWidth, 0,
-          fullWidth, fullHeight,
-          // Triangle 2: TL, BR, BL
-          0, 0,
-          fullWidth, fullHeight,
-          0, fullHeight,
-        ]);
-
-        final vertices = ui.Vertices.raw(
-          VertexMode.triangles,
-          positions,
-          textureCoordinates: textureCoords,
-        );
-
-        final paint = Paint()..shader = shader;
-        canvas.drawVertices(vertices, BlendMode.srcOver, paint);
 
         final picture = recorder.endRecording();
         resultImage = await picture.toImage(newWidth.round(), newHeight.round());
@@ -1334,45 +1241,14 @@ class _FloorPlanCalibratorState extends State<FloorPlanCalibrator> {
         final brAdjusted = Offset(br.dx - minX, br.dy - minY);
         final blAdjusted = Offset(bl.dx - minX, bl.dy - minY);
 
-        // Create shader from image
-        final shader = ImageShader(
-          sourceImage,
-          TileMode.clamp,
-          TileMode.clamp,
-          Matrix4.identity().storage,
+        _drawTexturedQuad(
+          canvas,
+          image: sourceImage,
+          dstTL: tlAdjusted,
+          dstTR: trAdjusted,
+          dstBL: blAdjusted,
+          dstBR: brAdjusted,
         );
-
-        // Build vertices for two triangles covering the quadrilateral
-        final positions = Float32List.fromList([
-          // Triangle 1: TL, TR, BR
-          tlAdjusted.dx, tlAdjusted.dy,
-          trAdjusted.dx, trAdjusted.dy,
-          brAdjusted.dx, brAdjusted.dy,
-          // Triangle 2: TL, BR, BL
-          tlAdjusted.dx, tlAdjusted.dy,
-          brAdjusted.dx, brAdjusted.dy,
-          blAdjusted.dx, blAdjusted.dy,
-        ]);
-
-        final textureCoords = Float32List.fromList([
-          // Triangle 1: TL, TR, BR
-          0, 0,
-          fullWidth, 0,
-          fullWidth, fullHeight,
-          // Triangle 2: TL, BR, BL
-          0, 0,
-          fullWidth, fullHeight,
-          0, fullHeight,
-        ]);
-
-        final vertices = ui.Vertices.raw(
-          VertexMode.triangles,
-          positions,
-          textureCoordinates: textureCoords,
-        );
-
-        final paint = Paint()..shader = shader;
-        canvas.drawVertices(vertices, BlendMode.srcOver, paint);
 
         final picture = recorder.endRecording();
         sourceImage = await picture.toImage(
@@ -1390,9 +1266,7 @@ class _FloorPlanCalibratorState extends State<FloorPlanCalibrator> {
   }
 
   void _completeCalibration() async {
-    if (_startPointNormalized == null ||
-        _endPointNormalized == null ||
-        _distanceController.text.trim().isEmpty) {
+    if (_startPointNormalized == null || _endPointNormalized == null || _distanceController.text.trim().isEmpty) {
       return;
     }
 
@@ -1663,7 +1537,7 @@ class _FloorPlanCalibratorState extends State<FloorPlanCalibrator> {
                         child: MouseRegion(
                           cursor: switch (_mode) {
                             _ToolMode.measure => SystemMouseCursors.precise,
-                            _ToolMode.rotate => (_isRotating ? SystemMouseCursors.grabbing : SystemMouseCursors.grab),
+                            _ToolMode.rotate => (_isRotating ? SystemMouseCursors.grabbing : SystemMouseCursors.alias),
                             _ToolMode.skew => (_isSkewing ? SystemMouseCursors.grabbing : SystemMouseCursors.grab),
                             _ => SystemMouseCursors.resizeUpLeftDownRight,
                           },
@@ -1784,9 +1658,7 @@ class _FloorPlanCalibratorState extends State<FloorPlanCalibrator> {
                 semanticId: 'floor_plan_calibrator_confirm',
                 step: GuideShowCaseSteps.confirmFloorCalibrated,
                 onHighlightedSpotTap: (TapDownDetails details) {
-                  if (_startPointNormalized != null &&
-                      _endPointNormalized != null &&
-                      _distanceController.text.trim().isNotEmpty) {
+                  if (_startPointNormalized != null && _endPointNormalized != null && _distanceController.text.trim().isNotEmpty) {
                     _completeCalibration();
                   }
                 },
@@ -1912,6 +1784,126 @@ enum _SkewHandle {
   topRight,
   bottomLeft,
   bottomRight,
+}
+
+/// Builds a subdivided triangle mesh that maps a source rectangle to an
+/// arbitrary destination quadrilateral using bilinear interpolation.
+///
+/// With only 2 triangles the GPU does per-triangle affine interpolation,
+/// which creates a visible diagonal seam and looks like perspective
+/// distortion. Subdividing into [divisions]×[divisions] cells (default 10)
+/// produces 200 tiny triangles whose bilinear UV mapping is visually
+/// smooth — no perspective artifact.
+ui.Vertices _buildSubdividedQuadVertices({
+  required Offset dstTL,
+  required Offset dstTR,
+  required Offset dstBL,
+  required Offset dstBR,
+  required double srcWidth,
+  required double srcHeight,
+  int divisions = 10,
+}) {
+  final int cols = divisions;
+  final int rows = divisions;
+  final int vertexCount = (cols + 1) * (rows + 1);
+  final int triangleCount = cols * rows * 2;
+
+  final positions = Float32List(vertexCount * 2);
+  final texCoords = Float32List(vertexCount * 2);
+  final indices = Uint16List(triangleCount * 3);
+
+  // Build grid vertices with bilinear interpolation
+  int vi = 0;
+  for (int r = 0; r <= rows; r++) {
+    final double v = r / rows; // 0..1 vertically
+    // Lerp left edge and right edge
+    final leftX = dstTL.dx + (dstBL.dx - dstTL.dx) * v;
+    final leftY = dstTL.dy + (dstBL.dy - dstTL.dy) * v;
+    final rightX = dstTR.dx + (dstBR.dx - dstTR.dx) * v;
+    final rightY = dstTR.dy + (dstBR.dy - dstTR.dy) * v;
+
+    for (int c = 0; c <= cols; c++) {
+      final double u = c / cols; // 0..1 horizontally
+      // Bilinear position
+      positions[vi * 2] = leftX + (rightX - leftX) * u;
+      positions[vi * 2 + 1] = leftY + (rightY - leftY) * u;
+      // Texture coordinate
+      texCoords[vi * 2] = srcWidth * u;
+      texCoords[vi * 2 + 1] = srcHeight * v;
+      vi++;
+    }
+  }
+
+  // Build triangle indices
+  int ii = 0;
+  for (int r = 0; r < rows; r++) {
+    for (int c = 0; c < cols; c++) {
+      final int i = r * (cols + 1) + c;
+      // Triangle 1
+      indices[ii++] = i;
+      indices[ii++] = i + 1;
+      indices[ii++] = i + cols + 1;
+      // Triangle 2
+      indices[ii++] = i + 1;
+      indices[ii++] = i + cols + 2;
+      indices[ii++] = i + cols + 1;
+    }
+  }
+
+  return ui.Vertices.raw(
+    VertexMode.triangles,
+    _expandIndexed(positions, indices),
+    textureCoordinates: _expandIndexed(texCoords, indices),
+  );
+}
+
+/// Expands indexed vertex data into non-indexed triangle list.
+Float32List _expandIndexed(Float32List data, Uint16List indices) {
+  final result = Float32List(indices.length * 2);
+  for (int i = 0; i < indices.length; i++) {
+    final idx = indices[i];
+    result[i * 2] = data[idx * 2];
+    result[i * 2 + 1] = data[idx * 2 + 1];
+  }
+  return result;
+}
+
+/// Draws a textured quadrilateral on [canvas] by subdividing into a grid mesh.
+void _drawTexturedQuad(
+  Canvas canvas, {
+  required ui.Image image,
+  required Offset dstTL,
+  required Offset dstTR,
+  required Offset dstBL,
+  required Offset dstBR,
+  double? srcWidth,
+  double? srcHeight,
+}) {
+  final sw = srcWidth ?? image.width.toDouble();
+  final sh = srcHeight ?? image.height.toDouble();
+
+  final vertices = _buildSubdividedQuadVertices(
+    dstTL: dstTL,
+    dstTR: dstTR,
+    dstBL: dstBL,
+    dstBR: dstBR,
+    srcWidth: sw,
+    srcHeight: sh,
+  );
+
+  final shader = ImageShader(
+    image,
+    TileMode.clamp,
+    TileMode.clamp,
+    Matrix4.identity().storage,
+    filterQuality: FilterQuality.high,
+  );
+
+  canvas.drawVertices(
+    vertices,
+    BlendMode.srcOver,
+    Paint()..shader = shader,
+  );
 }
 
 class FloorPlanCalibrationPainter extends CustomPainter {
@@ -2054,46 +2046,14 @@ class FloorPlanCalibrationPainter extends CustomPainter {
     final hasCornerOffsets = cornerOffsetTL != Offset.zero || cornerOffsetTR != Offset.zero || cornerOffsetBL != Offset.zero || cornerOffsetBR != Offset.zero;
 
     if (hasCornerOffsets) {
-      // Use drawVertices for 4-point transform (renders image as textured quadrilateral)
-      // Split quad into 2 triangles: TL-TR-BR and TL-BR-BL
-      final positions = Float32List.fromList([
-        topLeft.dx, topLeft.dy, // 0: TL
-        topRight.dx, topRight.dy, // 1: TR
-        bottomRight.dx, bottomRight.dy, // 2: BR
-        topLeft.dx, topLeft.dy, // 3: TL (repeated)
-        bottomRight.dx, bottomRight.dy, // 4: BR (repeated)
-        bottomLeft.dx, bottomLeft.dy, // 5: BL
-      ]);
-
-      // Texture coordinates mapping to image
-      final textureCoords = Float32List.fromList([
-        0.0, 0.0, // 0: TL -> image (0,0)
-        image.width.toDouble(), 0.0, // 1: TR -> image (w,0)
-        image.width.toDouble(), image.height.toDouble(), // 2: BR -> image (w,h)
-        0.0, 0.0, // 3: TL
-        image.width.toDouble(), image.height.toDouble(), // 4: BR
-        0.0, image.height.toDouble(), // 5: BL -> image (0,h)
-      ]);
-
-      final vertices = ui.Vertices.raw(
-        VertexMode.triangles,
-        positions,
-        textureCoordinates: textureCoords,
-      );
-
-      // Create shader from image
-      final shader = ImageShader(
-        image,
-        TileMode.clamp,
-        TileMode.clamp,
-        Matrix4.identity().storage,
-        filterQuality: FilterQuality.high,
-      );
-
-      canvas.drawVertices(
-        vertices,
-        BlendMode.srcOver,
-        Paint()..shader = shader,
+      // Render image as textured quadrilateral using subdivided grid mesh
+      _drawTexturedQuad(
+        canvas,
+        image: image,
+        dstTL: topLeft,
+        dstTR: topRight,
+        dstBL: bottomLeft,
+        dstBR: bottomRight,
       );
     } else {
       // No corner offsets - use simple drawImageRect with rotation/flip
@@ -2164,20 +2124,22 @@ class FloorPlanCalibrationPainter extends CustomPainter {
           ..style = PaintingStyle.stroke,
       );
 
-      // Draw corner handles
-      const double handleSize = 14;
+      // Draw corner handles (scale inversely with zoom, clamped for visibility)
+      const double baseHandleSize = 12;
+      final double handleSize = (baseHandleSize / zoomScale).clamp(6.0, 18.0);
       final Paint handleFill = Paint()
         ..color = Colors.white
         ..style = PaintingStyle.fill;
       final Paint handleStroke = Paint()
         ..color = Colors.blue
-        ..strokeWidth = 2
+        ..strokeWidth = 2.5 / zoomScale.clamp(0.5, 2.0)
         ..style = PaintingStyle.stroke;
 
       for (final corner in corners) {
-        // Draw circular handles
-        canvas.drawCircle(corner, handleSize / 2, handleFill);
-        canvas.drawCircle(corner, handleSize / 2, handleStroke);
+        // Draw square handles with border
+        final rect = Rect.fromCenter(center: corner, width: handleSize, height: handleSize);
+        canvas.drawRect(rect, handleFill);
+        canvas.drawRect(rect, handleStroke);
       }
 
       // Draw rotation angle indicator
@@ -2260,17 +2222,20 @@ class FloorPlanCalibrationPainter extends CustomPainter {
           ..style = PaintingStyle.stroke,
       );
 
-      // Handle dimensions
-      const double edgeHandleWidth = 20;
-      const double edgeHandleHeight = 8;
-      const double cornerHandleSize = 12;
+      // Handle dimensions (scale inversely with zoom, clamped for visibility)
+      const double baseEdgeHandleWidth = 20;
+      const double baseEdgeHandleHeight = 8;
+      const double baseCornerHandleSize = 12;
+      final double edgeHandleWidth = (baseEdgeHandleWidth / zoomScale).clamp(10.0, 30.0);
+      final double edgeHandleHeight = (baseEdgeHandleHeight / zoomScale).clamp(4.0, 12.0);
+      final double cornerHandleSize = (baseCornerHandleSize / zoomScale).clamp(6.0, 18.0);
 
       final Paint handleFill = Paint()
         ..color = Colors.white
         ..style = PaintingStyle.fill;
       final Paint handleStroke = Paint()
         ..color = Colors.black
-        ..strokeWidth = 2
+        ..strokeWidth = 2.5 / zoomScale.clamp(0.5, 2.0)
         ..style = PaintingStyle.stroke;
 
       // Draw corner handles (squares for independent corner movement)
@@ -2345,17 +2310,19 @@ class FloorPlanCalibrationPainter extends CustomPainter {
           _CropHandle.left: Offset(crop.left, (crop.top + crop.bottom) / 2),
         };
 
-        const double s = 12;
+        // Scale crop handles inversely with zoom
+        const double baseHandleSize = 12;
+        final double handleSize = (baseHandleSize / zoomScale).clamp(6.0, 18.0);
         final Paint hp = Paint()
           ..color = Colors.white
           ..style = PaintingStyle.fill;
         final Paint hb = Paint()
           ..color = Colors.black
-          ..strokeWidth = 1
+          ..strokeWidth = 2.5 / zoomScale.clamp(0.5, 2.0)
           ..style = PaintingStyle.stroke;
 
         for (final p in pts.values) {
-          final r = Rect.fromCenter(center: p, width: s, height: s);
+          final r = Rect.fromCenter(center: p, width: handleSize, height: handleSize);
           canvas.drawRect(r, hp);
           canvas.drawRect(r, hb);
         }
@@ -2393,9 +2360,7 @@ class FloorPlanCalibrationPainter extends CustomPainter {
 
       // label (black rounded pill)
       final mid = Offset((p1.dx + p2.dx) / 2, (p1.dy + p2.dy) / 2);
-      final String label = distanceText.isNotEmpty
-          ? '$distanceText ${unit.symbol}'
-          : '1 ${unit.symbol}';
+      final String label = distanceText.isNotEmpty ? '$distanceText ${unit.symbol}' : '1 ${unit.symbol}';
 
       final tp = TextPainter(
         text: TextSpan(
@@ -2467,7 +2432,12 @@ class FloorPlanCalibrationPainter extends CustomPainter {
       old.cropRectNormalized != cropRectNormalized ||
       old.showCropHandles != showCropHandles ||
       old.showRotationHandles != showRotationHandles ||
+      old.showSkewHandles != showSkewHandles ||
       old.rotationAngle != rotationAngle ||
+      old.cornerOffsetTL != cornerOffsetTL ||
+      old.cornerOffsetTR != cornerOffsetTR ||
+      old.cornerOffsetBL != cornerOffsetBL ||
+      old.cornerOffsetBR != cornerOffsetBR ||
       old.zoomScale != zoomScale ||
       old.panOffset != panOffset ||
       old.flipHorizontal != flipHorizontal ||
@@ -2499,31 +2469,23 @@ class CalibrationData {
     if (realWorldDistance.isNaN || realWorldDistance <= 0) {
       throw ArgumentError('Invalid real world distance: $realWorldDistance');
     }
-    if (imageSize.width.isNaN ||
-        imageSize.height.isNaN ||
-        imageSize.width <= 0 ||
-        imageSize.height <= 0) {
+    if (imageSize.width.isNaN || imageSize.height.isNaN || imageSize.width <= 0 || imageSize.height <= 0) {
       throw ArgumentError('Invalid image size: $imageSize');
     }
   }
 
   double get pixelDistance => (endPoint - startPoint).distance;
 
-  double get pixelsPerUnit => pixelDistance > 0 && realWorldDistance > 0
-      ? pixelDistance / realWorldDistance
-      : 0;
+  double get pixelsPerUnit => pixelDistance > 0 && realWorldDistance > 0 ? pixelDistance / realWorldDistance : 0;
 
-  double get unitsPerPixel => pixelDistance > 0 && realWorldDistance > 0
-      ? realWorldDistance / pixelDistance
-      : 0;
+  double get unitsPerPixel => pixelDistance > 0 && realWorldDistance > 0 ? realWorldDistance / pixelDistance : 0;
 
   double pixelsToUnits(double px) => unitsPerPixel > 0 ? px * unitsPerPixel : 0;
 
   double unitsToPixels(double u) => pixelsPerUnit > 0 ? u * pixelsPerUnit : 0;
 
   @override
-  String toString() =>
-      'CalibrationData($realWorldDistance ${unit.symbol} = ${pixelDistance.toStringAsFixed(1)} px)';
+  String toString() => 'CalibrationData($realWorldDistance ${unit.symbol} = ${pixelDistance.toStringAsFixed(1)} px)';
 }
 
 enum MeasurementUnit {

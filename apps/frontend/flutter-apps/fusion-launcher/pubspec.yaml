@@ -82,6 +82,7 @@ dependencies:
 
   universal_platform: ^1.1.0
   desktop_drop: ^0.7.0
+  pdfrx: ^1.0.94
 
   fusion_lib:
     path: ../../../../libs/flutter-libs/fusion_lib
