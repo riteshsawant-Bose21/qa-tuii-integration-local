@@ -7,7 +7,7 @@ class FusionFlatContainer extends StatelessWidget {
     this.width,
     this.borderRadius = 12.0,
     required this.child,
-    this.semanticsId,
+    this.semanticId,
     this.color,
     this.borderColor,
     this.height,
@@ -22,11 +22,14 @@ class FusionFlatContainer extends StatelessWidget {
   final Color? borderColor;
   final AlignmentGeometry? alignment;
   final EdgeInsetsGeometry? padding;
-  final String? semanticsId;
+  final String? semanticId;
   @override
   Widget build(BuildContext context) {
     return SemanticHelper.container(
-      testId: SemanticHelper.createTestId(SemanticTypes.container, "fusion_flat_container_${semanticsId ?? ""}"),
+      testId: SemanticHelper.createTestId(
+        SemanticTypes.container,
+        "fusion_flat_container_${semanticId ?? ""}",
+      ),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 100),
         width: width,
@@ -36,14 +39,13 @@ class FusionFlatContainer extends StatelessWidget {
         padding: padding ?? EdgeInsets.all(16),
         decoration: BoxDecoration(
           color: color ?? context.colorScheme.elevation1,
-
           borderRadius: BorderRadius.circular(borderRadius),
-          border: Border.all(color: borderColor ?? context.colorScheme.textGrey, width: 1),
+          border: Border.all(
+            color: borderColor ?? context.colorScheme.strokeLight,
+            width: 1,
+          ),
         ),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(borderRadius),
-          child: child,
-        ),
+        child: child,
       ),
     );
   }

@@ -36,7 +36,9 @@ class CreateNewProjectDialog extends StatefulWidget {
 class _CreateNewProjectDialogState extends State<CreateNewProjectDialog> {
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
 
-  ValueNotifier<bool> shouldShowMoreDetailsNotifier = ValueNotifier<bool>(false);
+  ValueNotifier<bool> shouldShowMoreDetailsNotifier = ValueNotifier<bool>(
+    false,
+  );
 
   @override
   void dispose() {
@@ -52,11 +54,15 @@ class _CreateNewProjectDialogState extends State<CreateNewProjectDialog> {
       create: (_) => CreateNewProjectViewmodel(isEditMode: widget.isEditMode),
       child: LayoutBuilder(
         builder: (BuildContext context, BoxConstraints constraints) {
-          final double cardWidth = constraints.maxWidth * 0.5 > 660 ? 660 : constraints.maxWidth * 0.5;
+          final double cardWidth =
+              constraints.maxWidth * 0.5 > 660
+                  ? 660
+                  : constraints.maxWidth * 0.5;
 
           return BlocBuilder<CreateNewProjectViewmodel, NewProjectDetails>(
             builder: (BuildContext context, NewProjectDetails state) {
-              final CreateNewProjectViewmodel createNewProjectViewmodel = context.read<CreateNewProjectViewmodel>();
+              final CreateNewProjectViewmodel createNewProjectViewmodel =
+                  context.read<CreateNewProjectViewmodel>();
 
               final bool isEditMode = createNewProjectViewmodel.isEditMode;
 
@@ -77,7 +83,10 @@ class _CreateNewProjectDialogState extends State<CreateNewProjectDialog> {
                         children: <Widget>[
                           Expanded(
                             child: FusionAppText(
-                              text: isEditMode ? "Edit Project" : "Create New Project",
+                              text:
+                                  isEditMode
+                                      ? "Edit Project"
+                                      : "Create New Project",
                               style: context.textTheme.titleMedium?.copyWith(
                                 color: context.colorScheme.onSurface,
                                 fontWeight: FontWeight.bold,
@@ -98,7 +107,9 @@ class _CreateNewProjectDialogState extends State<CreateNewProjectDialog> {
                             decoration: BoxDecoration(
                               borderRadius: BorderRadius.circular(borderRadius),
                               color: context.colorScheme.elevation1,
-                              border: Border.all(color: context.colorScheme.elevation2),
+                              border: Border.all(
+                                color: context.colorScheme.elevation2,
+                              ),
                             ),
                             child: ClipRRect(
                               borderRadius: BorderRadius.circular(borderRadius),
@@ -109,20 +120,24 @@ class _CreateNewProjectDialogState extends State<CreateNewProjectDialog> {
                                   key: _formKey,
                                   child: Column(
                                     spacing: 10,
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: <Widget>[
                                       FusionAppText(
                                         text: "BASIC INFORMATION",
                                         maxLine: 2,
-                                        style: context.textTheme.bodySmall?.copyWith(
-                                          fontWeight: FontWeight.bold,
-                                          color: context.colorScheme.onSurface,
-                                        ),
+                                        style: context.textTheme.bodySmall
+                                            ?.copyWith(
+                                              fontWeight: FontWeight.bold,
+                                              color:
+                                                  context.colorScheme.onSurface,
+                                            ),
                                       ),
 
                                       Row(
                                         spacing: 10,
-                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
                                         children: <Widget>[
                                           Expanded(
                                             child: BorderedTextfield(
@@ -131,25 +146,33 @@ class _CreateNewProjectDialogState extends State<CreateNewProjectDialog> {
                                               label: "Project file name *",
                                               hintText: "Project Name",
                                               validator: (String? value) {
-                                                if (value?.isEmpty ?? true) return "Project name cannot be empty";
+                                                if (value?.isEmpty ?? true)
+                                                  return "Project name cannot be empty";
                                                 return null;
                                               },
                                               onChanged: (String value) {
-                                                createNewProjectViewmodel.update(
-                                                  state.copyWith(name: value),
-                                                );
+                                                createNewProjectViewmodel
+                                                    .update(
+                                                      state.copyWith(
+                                                        name: value,
+                                                      ),
+                                                    );
                                               },
                                             ),
                                           ),
                                           Expanded(
                                             child: BorderedTextfield(
-                                              controllerValue: state.metadata.fileVersion,
+                                              controllerValue:
+                                                  state.metadata.fileVersion,
                                               label: "File version",
                                               hintText: "Version Number",
                                               onChanged: (String value) {
-                                                createNewProjectViewmodel.updateMetaData(
-                                                  state.metadata.copyWith(fileVersion: value),
-                                                );
+                                                createNewProjectViewmodel
+                                                    .updateMetaData(
+                                                      state.metadata.copyWith(
+                                                        fileVersion: value,
+                                                      ),
+                                                    );
                                               },
                                             ),
                                           ),
@@ -157,45 +180,62 @@ class _CreateNewProjectDialogState extends State<CreateNewProjectDialog> {
                                       ),
                                       const SizedBox(height: 5),
                                       FusionCommaSeperatedTagTextfield(
-                                        values: state.metadata.tags ?? <String>[],
+                                        values:
+                                            state.metadata.tags ?? <String>[],
                                         label: "Project tags or categories",
-                                        hintText: "Add tags or categories (separated by commas)",
+                                        hintText:
+                                            "Add tags or categories (separated by commas)",
                                         onChanged: (List<String> values) {
-                                          createNewProjectViewmodel.updateMetaData(
-                                            state.metadata.copyWith(tags: values),
-                                          );
+                                          createNewProjectViewmodel
+                                              .updateMetaData(
+                                                state.metadata.copyWith(
+                                                  tags: values,
+                                                ),
+                                              );
                                         },
                                       ),
                                       const SizedBox(height: 5),
                                       Row(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
                                         spacing: 10,
                                         children: <Widget>[
                                           Expanded(
                                             child: BorderedTextfield(
-                                              controllerValue: state.metadata.authorName,
+                                              controllerValue:
+                                                  state.metadata.authorName,
                                               label: "Author name",
                                               hintText: "Full Name",
                                               onChanged: (String value) {
-                                                createNewProjectViewmodel.updateMetaData(
-                                                  state.metadata.copyWith(authorName: value),
-                                                );
+                                                createNewProjectViewmodel
+                                                    .updateMetaData(
+                                                      state.metadata.copyWith(
+                                                        authorName: value,
+                                                      ),
+                                                    );
                                               },
                                             ),
                                           ),
                                           Expanded(
                                             child: BorderedTextfield(
-                                              controllerValue: state.metadata.organisationName,
+                                              controllerValue:
+                                                  state
+                                                      .metadata
+                                                      .organisationName,
                                               label: "Organisation *",
                                               hintText: "Organisation name",
                                               validator: (String? value) {
-                                                if (value?.isEmpty ?? true) return "Organisation cannot be empty";
+                                                if (value?.isEmpty ?? true)
+                                                  return "Organisation cannot be empty";
                                                 return null;
                                               },
                                               onChanged: (String value) {
-                                                createNewProjectViewmodel.updateMetaData(
-                                                  state.metadata.copyWith(organisationName: value),
-                                                );
+                                                createNewProjectViewmodel
+                                                    .updateMetaData(
+                                                      state.metadata.copyWith(
+                                                        organisationName: value,
+                                                      ),
+                                                    );
                                               },
                                             ),
                                           ),
@@ -206,14 +246,24 @@ class _CreateNewProjectDialogState extends State<CreateNewProjectDialog> {
                                       //  Add More Details Section
                                       // =============================================
                                       ValueListenableBuilder<bool>(
-                                        valueListenable: shouldShowMoreDetailsNotifier,
+                                        valueListenable:
+                                            shouldShowMoreDetailsNotifier,
 
-                                        builder: (BuildContext context, bool value, Widget? child) {
+                                        builder: (
+                                          BuildContext context,
+                                          bool value,
+                                          Widget? child,
+                                        ) {
                                           return AnimatedSwitcher(
-                                            duration: const Duration(milliseconds: 300),
+                                            duration: const Duration(
+                                              milliseconds: 300,
+                                            ),
                                             switchInCurve: Curves.easeOut,
                                             switchOutCurve: Curves.easeIn,
-                                            transitionBuilder: (Widget child, Animation<double> animation) {
+                                            transitionBuilder: (
+                                              Widget child,
+                                              Animation<double> animation,
+                                            ) {
                                               return SizeTransition(
                                                 sizeFactor: animation,
                                                 child: child,
@@ -222,52 +272,101 @@ class _CreateNewProjectDialogState extends State<CreateNewProjectDialog> {
                                             child: Builder(
                                               key: ValueKey<bool>(value),
                                               builder: (BuildContext context) {
-                                                if (!value) return const SizedBox.shrink();
+                                                if (!value)
+                                                  return const SizedBox.shrink();
                                                 return Padding(
-                                                  padding: const EdgeInsets.symmetric(vertical: 12).copyWith(bottom: 0),
+                                                  padding:
+                                                      const EdgeInsets.symmetric(
+                                                        vertical: 12,
+                                                      ).copyWith(bottom: 0),
                                                   child: Column(
                                                     spacing: 10,
-                                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                                    crossAxisAlignment:
+                                                        CrossAxisAlignment
+                                                            .start,
                                                     children: <Widget>[
                                                       // ===============================
                                                       //  Organisation DETAILS SECTION
                                                       // ===============================
                                                       FusionAppText(
-                                                        text: "Organisation DETAILS",
+                                                        text:
+                                                            "Organisation DETAILS",
                                                         maxLine: 2,
-                                                        style: context.textTheme.bodySmall?.copyWith(
-                                                          fontWeight: FontWeight.bold,
-                                                          color: context.colorScheme.onSurface,
-                                                        ),
+                                                        style: context
+                                                            .textTheme
+                                                            .bodySmall
+                                                            ?.copyWith(
+                                                              fontWeight:
+                                                                  FontWeight
+                                                                      .bold,
+                                                              color:
+                                                                  context
+                                                                      .colorScheme
+                                                                      .onSurface,
+                                                            ),
                                                       ),
 
                                                       const SizedBox(height: 5),
                                                       Row(
-                                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                                        crossAxisAlignment:
+                                                            CrossAxisAlignment
+                                                                .start,
                                                         spacing: 10,
                                                         children: <Widget>[
                                                           Expanded(
-                                                            child: FusionDarkDropdown<FusionCountries>(
-                                                              selectedValue: state.metadata.country,
-                                                              title: "Project country",
-                                                              placeholder: "Select country",
-                                                              items: FusionCountries.values,
-                                                              labelBuilder: (FusionCountries value) => value.name.toUpperCase(),
-                                                              onChanged: (FusionCountries value) {
+                                                            child: FusionDarkDropdown<
+                                                              FusionCountries
+                                                            >(
+                                                              selectedValue:
+                                                                  state
+                                                                      .metadata
+                                                                      .country,
+                                                              title:
+                                                                  "Project country",
+                                                              placeholder:
+                                                                  "Select country",
+                                                              items:
+                                                                  FusionCountries
+                                                                      .values,
+                                                              labelBuilder:
+                                                                  (
+                                                                    FusionCountries
+                                                                    value,
+                                                                  ) =>
+                                                                      value.name
+                                                                          .toUpperCase(),
+                                                              onChanged: (
+                                                                FusionCountries
+                                                                value,
+                                                              ) {
                                                                 createNewProjectViewmodel.updateMetaData(
-                                                                  state.metadata.copyWith(country: value),
+                                                                  state.metadata
+                                                                      .copyWith(
+                                                                        country:
+                                                                            value,
+                                                                      ),
                                                                 );
                                                               },
                                                             ),
                                                           ),
                                                           Expanded(
                                                             child: BorderedTextfield(
-                                                              controllerValue: state.metadata.state,
-                                                              label: "Project state",
+                                                              controllerValue:
+                                                                  state
+                                                                      .metadata
+                                                                      .state,
+                                                              label:
+                                                                  "Project state",
                                                               hintText: "State",
-                                                              onChanged: (String value) {
+                                                              onChanged: (
+                                                                String value,
+                                                              ) {
                                                                 createNewProjectViewmodel.updateMetaData(
-                                                                  state.metadata.copyWith(state: value),
+                                                                  state.metadata
+                                                                      .copyWith(
+                                                                        state:
+                                                                            value,
+                                                                      ),
                                                                 );
                                                               },
                                                             ),
@@ -279,30 +378,65 @@ class _CreateNewProjectDialogState extends State<CreateNewProjectDialog> {
 
                                                       Row(
                                                         spacing: 10,
-                                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                                        crossAxisAlignment:
+                                                            CrossAxisAlignment
+                                                                .start,
                                                         children: <Widget>[
                                                           Expanded(
-                                                            child: FusionDarkDropdown<FusionTimeZones>(
-                                                              selectedValue: state.metadata.timeZone,
-                                                              title: "Project time zone",
-                                                              placeholder: "Select time zone",
-                                                              items: FusionTimeZones.values,
-                                                              labelBuilder: (FusionTimeZones value) => value.name.toUpperCase(),
-                                                              onChanged: (FusionTimeZones value) {
+                                                            child: FusionDarkDropdown<
+                                                              FusionTimeZones
+                                                            >(
+                                                              selectedValue:
+                                                                  state
+                                                                      .metadata
+                                                                      .timeZone,
+                                                              title:
+                                                                  "Project time zone",
+                                                              placeholder:
+                                                                  "Select time zone",
+                                                              items:
+                                                                  FusionTimeZones
+                                                                      .values,
+                                                              labelBuilder:
+                                                                  (
+                                                                    FusionTimeZones
+                                                                    value,
+                                                                  ) =>
+                                                                      value.name
+                                                                          .toUpperCase(),
+                                                              onChanged: (
+                                                                FusionTimeZones
+                                                                value,
+                                                              ) {
                                                                 createNewProjectViewmodel.updateMetaData(
-                                                                  state.metadata.copyWith(timeZone: value),
+                                                                  state.metadata
+                                                                      .copyWith(
+                                                                        timeZone:
+                                                                            value,
+                                                                      ),
                                                                 );
                                                               },
                                                             ),
                                                           ),
                                                           Expanded(
                                                             child: BorderedTextfield(
-                                                              controllerValue: state.metadata.primaryBuildingName,
-                                                              label: "Primary Building Name",
-                                                              hintText: "Primary Building Name",
-                                                              onChanged: (String value) {
+                                                              controllerValue:
+                                                                  state
+                                                                      .metadata
+                                                                      .primaryBuildingName,
+                                                              label:
+                                                                  "Primary Building Name",
+                                                              hintText:
+                                                                  "Primary Building Name",
+                                                              onChanged: (
+                                                                String value,
+                                                              ) {
                                                                 createNewProjectViewmodel.updateMetaData(
-                                                                  state.metadata.copyWith(primaryBuildingName: value),
+                                                                  state.metadata
+                                                                      .copyWith(
+                                                                        primaryBuildingName:
+                                                                            value,
+                                                                      ),
                                                                 );
                                                               },
                                                             ),
@@ -315,43 +449,92 @@ class _CreateNewProjectDialogState extends State<CreateNewProjectDialog> {
                                                       //  BUDGET & OBJECTIVES SECTION
                                                       // ===============================
                                                       FusionAppText(
-                                                        text: "BUDGET & OBJECTIVES",
+                                                        text:
+                                                            "BUDGET & OBJECTIVES",
                                                         maxLine: 2,
-                                                        style: context.textTheme.bodySmall?.copyWith(
-                                                          fontWeight: FontWeight.bold,
-                                                          color: context.colorScheme.onSurface,
-                                                        ),
+                                                        style: context
+                                                            .textTheme
+                                                            .bodySmall
+                                                            ?.copyWith(
+                                                              fontWeight:
+                                                                  FontWeight
+                                                                      .bold,
+                                                              color:
+                                                                  context
+                                                                      .colorScheme
+                                                                      .onSurface,
+                                                            ),
                                                       ),
                                                       const SizedBox(height: 5),
                                                       Row(
                                                         spacing: 10,
-                                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                                        crossAxisAlignment:
+                                                            CrossAxisAlignment
+                                                                .start,
                                                         children: <Widget>[
                                                           Expanded(
-                                                            child: FusionDarkDropdown<CurrencyType>(
-                                                              selectedValue: state.metadata.currency,
+                                                            child: FusionDarkDropdown<
+                                                              CurrencyType
+                                                            >(
+                                                              selectedValue:
+                                                                  state
+                                                                      .metadata
+                                                                      .currency,
                                                               title: "Currency",
-                                                              placeholder: "Select currency",
-                                                              items: CurrencyType.values,
-                                                              labelBuilder: (CurrencyType value) => value.name.toUpperCase(),
-                                                              onChanged: (CurrencyType value) {
+                                                              placeholder:
+                                                                  "Select currency",
+                                                              items:
+                                                                  CurrencyType
+                                                                      .values,
+                                                              labelBuilder:
+                                                                  (
+                                                                    CurrencyType
+                                                                    value,
+                                                                  ) =>
+                                                                      value.name
+                                                                          .toUpperCase(),
+                                                              onChanged: (
+                                                                CurrencyType
+                                                                value,
+                                                              ) {
                                                                 createNewProjectViewmodel.updateMetaData(
-                                                                  state.metadata.copyWith(currency: value),
+                                                                  state.metadata
+                                                                      .copyWith(
+                                                                        currency:
+                                                                            value,
+                                                                      ),
                                                                 );
                                                               },
                                                             ),
                                                           ),
                                                           Expanded(
                                                             child: BorderedTextfield(
-                                                              controllerValue: state.metadata.budget,
-                                                              label: "Target Budget",
-                                                              hintText: "Budget",
-                                                              inputFormatters: <TextInputFormatter>[
-                                                                FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}')),
+                                                              controllerValue:
+                                                                  state
+                                                                      .metadata
+                                                                      .budget,
+                                                              label:
+                                                                  "Target Budget",
+                                                              hintText:
+                                                                  "Budget",
+                                                              inputFormatters: <
+                                                                TextInputFormatter
+                                                              >[
+                                                                FilteringTextInputFormatter.allow(
+                                                                  RegExp(
+                                                                    r'^\d*\.?\d{0,2}',
+                                                                  ),
+                                                                ),
                                                               ],
-                                                              onChanged: (String value) {
+                                                              onChanged: (
+                                                                String value,
+                                                              ) {
                                                                 createNewProjectViewmodel.updateMetaData(
-                                                                  state.metadata.copyWith(budget: value),
+                                                                  state.metadata
+                                                                      .copyWith(
+                                                                        budget:
+                                                                            value,
+                                                                      ),
                                                                 );
                                                               },
                                                             ),
@@ -362,15 +545,26 @@ class _CreateNewProjectDialogState extends State<CreateNewProjectDialog> {
                                                       // Project Time Zone
                                                       const SizedBox(height: 5),
                                                       BorderedTextfield(
-                                                        controllerValue: state.metadata.projectGoals,
+                                                        controllerValue:
+                                                            state
+                                                                .metadata
+                                                                .projectGoals,
                                                         label: "Project Goals",
-                                                        hintText: "Add project goals or objectives",
+                                                        hintText:
+                                                            "Add project goals or objectives",
                                                         minLines: 1,
                                                         maxLines: 10,
-                                                        onChanged: (String value) {
-                                                          createNewProjectViewmodel.updateMetaData(
-                                                            state.metadata.copyWith(projectGoals: value),
-                                                          );
+                                                        onChanged: (
+                                                          String value,
+                                                        ) {
+                                                          createNewProjectViewmodel
+                                                              .updateMetaData(
+                                                                state.metadata
+                                                                    .copyWith(
+                                                                      projectGoals:
+                                                                          value,
+                                                                    ),
+                                                              );
                                                         },
                                                       ),
 
@@ -380,42 +574,94 @@ class _CreateNewProjectDialogState extends State<CreateNewProjectDialog> {
                                                       //  UNITS & GLOBAL SETTINGS SECTION
                                                       // ===============================
                                                       FusionAppText(
-                                                        text: "UNITS & GLOBAL SETTINGS",
+                                                        text:
+                                                            "UNITS & GLOBAL SETTINGS",
                                                         maxLine: 2,
-                                                        style: context.textTheme.bodySmall?.copyWith(
-                                                          fontWeight: FontWeight.bold,
-                                                          color: context.colorScheme.onSurface,
-                                                        ),
+                                                        style: context
+                                                            .textTheme
+                                                            .bodySmall
+                                                            ?.copyWith(
+                                                              fontWeight:
+                                                                  FontWeight
+                                                                      .bold,
+                                                              color:
+                                                                  context
+                                                                      .colorScheme
+                                                                      .onSurface,
+                                                            ),
                                                       ),
                                                       const SizedBox(height: 5),
                                                       Row(
                                                         spacing: 10,
-                                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                                        crossAxisAlignment:
+                                                            CrossAxisAlignment
+                                                                .start,
                                                         children: <Widget>[
                                                           Expanded(
-                                                            child: FusionDarkDropdown<MeasurementUnit>(
-                                                              selectedValue: state.metadata.measurementUnit,
-                                                              title: "Measurement Units",
-                                                              placeholder: "Select",
-                                                              items: MeasurementUnit.values,
-                                                              labelBuilder: (MeasurementUnit value) => "${value.displayName} (${value.symbol})",
-                                                              onChanged: (MeasurementUnit value) {
+                                                            child: FusionDarkDropdown<
+                                                              MeasurementUnit
+                                                            >(
+                                                              selectedValue:
+                                                                  state
+                                                                      .metadata
+                                                                      .measurementUnit,
+                                                              title:
+                                                                  "Measurement Units",
+                                                              placeholder:
+                                                                  "Select",
+                                                              items:
+                                                                  MeasurementUnit
+                                                                      .values,
+                                                              labelBuilder:
+                                                                  (
+                                                                    MeasurementUnit
+                                                                    value,
+                                                                  ) =>
+                                                                      "${value.displayName} (${value.symbol})",
+                                                              onChanged: (
+                                                                MeasurementUnit
+                                                                value,
+                                                              ) {
                                                                 createNewProjectViewmodel.updateMetaData(
-                                                                  state.metadata.copyWith(measurementUnit: value),
+                                                                  state.metadata
+                                                                      .copyWith(
+                                                                        measurementUnit:
+                                                                            value,
+                                                                      ),
                                                                 );
                                                               },
                                                             ),
                                                           ),
                                                           Expanded(
-                                                            child: FusionDarkDropdown<String>(
-                                                              selectedValue: state.metadata.temperature,
-                                                              title: "Temperature",
-                                                              placeholder: "Select",
-                                                              items: <String>['Celsius', 'Fahrenheit'],
-                                                              labelBuilder: (String value) => value,
-                                                              onChanged: (String value) {
+                                                            child: FusionDarkDropdown<
+                                                              String
+                                                            >(
+                                                              selectedValue:
+                                                                  state
+                                                                      .metadata
+                                                                      .temperature,
+                                                              title:
+                                                                  "Temperature",
+                                                              placeholder:
+                                                                  "Select",
+                                                              items: <String>[
+                                                                'Celsius',
+                                                                'Fahrenheit',
+                                                              ],
+                                                              labelBuilder:
+                                                                  (
+                                                                    String
+                                                                    value,
+                                                                  ) => value,
+                                                              onChanged: (
+                                                                String value,
+                                                              ) {
                                                                 createNewProjectViewmodel.updateMetaData(
-                                                                  state.metadata.copyWith(temperature: value),
+                                                                  state.metadata
+                                                                      .copyWith(
+                                                                        temperature:
+                                                                            value,
+                                                                      ),
                                                                 );
                                                               },
                                                             ),
@@ -439,9 +685,12 @@ class _CreateNewProjectDialogState extends State<CreateNewProjectDialog> {
                                         minLines: 5,
                                         maxLines: 10,
                                         onChanged: (String value) {
-                                          createNewProjectViewmodel.updateMetaData(
-                                            state.metadata.copyWith(notes: value),
-                                          );
+                                          createNewProjectViewmodel
+                                              .updateMetaData(
+                                                state.metadata.copyWith(
+                                                  notes: value,
+                                                ),
+                                              );
                                         },
                                       ),
                                     ],
@@ -462,28 +711,45 @@ class _CreateNewProjectDialogState extends State<CreateNewProjectDialog> {
                           Padding(
                             padding: const EdgeInsets.symmetric(horizontal: 18),
                             child: InkWell(
-                              onTap: () => shouldShowMoreDetailsNotifier.value = !shouldShowMoreDetailsNotifier.value,
+                              onTap:
+                                  () =>
+                                      shouldShowMoreDetailsNotifier.value =
+                                          !shouldShowMoreDetailsNotifier.value,
                               splashColor: Colors.transparent,
                               child: ValueListenableBuilder<bool>(
                                 valueListenable: shouldShowMoreDetailsNotifier,
-                                builder: (BuildContext context, bool value, Widget? child) {
+                                builder: (
+                                  BuildContext context,
+                                  bool value,
+                                  Widget? child,
+                                ) {
                                   return Row(
                                     mainAxisSize: MainAxisSize.min,
                                     children: <Widget>[
                                       Flexible(
                                         child: FusionAppText(
-                                          text: value ? "Show Less Details" : "Show More Details",
-                                          style: context.textTheme.bodySmall?.copyWith(
-                                            fontWeight: FontWeight.w600,
-                                            color: context.colorScheme.onSurface.withValues(alpha: 0.6),
-                                          ),
+                                          text:
+                                              value
+                                                  ? "Show Less Details"
+                                                  : "Show More Details",
+                                          style: context.textTheme.bodySmall
+                                              ?.copyWith(
+                                                fontWeight: FontWeight.w600,
+                                                color: context
+                                                    .colorScheme
+                                                    .onSurface
+                                                    .withValues(alpha: 0.6),
+                                              ),
                                         ),
                                       ),
                                       const SizedBox(width: 4),
                                       Icon(
-                                        value ? LucideIcons.chevronUp : LucideIcons.chevronDown,
+                                        value
+                                            ? LucideIcons.chevronUp
+                                            : LucideIcons.chevronDown,
                                         size: FusionSizes.iconSize16,
-                                        color: context.colorScheme.onSurface.withValues(alpha: 0.6),
+                                        color: context.colorScheme.onSurface
+                                            .withValues(alpha: 0.6),
                                       ),
                                     ],
                                   );
@@ -493,26 +759,34 @@ class _CreateNewProjectDialogState extends State<CreateNewProjectDialog> {
                           ),
                           const Spacer(),
                           SemanticHelper.button(
-                            testId: SemanticHelper.createTestId(SemanticTypes.button, "create_new_project_button"),
+                            testId: SemanticHelper.createTestId(
+                              SemanticTypes.button,
+                              "create_new_project_button",
+                            ),
                             child: FusionNeumorphicButton(
+                              semanticId: 'create_new_project_button',
                               onTap: () async {
-                                final bool isFormFilled = _formKey.currentState?.validate() ?? false;
+                                final bool isFormFilled =
+                                    _formKey.currentState?.validate() ?? false;
                                 if (!isFormFilled) return;
                                 createNewProjectViewmodel.onSubmit(context);
                               },
                               width: 160,
                               height: 40,
                               child: Padding(
-                                padding: const EdgeInsets.symmetric(horizontal: 8),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                ),
                                 child: Row(
                                   children: <Widget>[
                                     Expanded(
                                       child: FusionAppText(
                                         text: isEditMode ? 'Save' : 'Continue',
                                         textAlign: TextAlign.center,
-                                        style: context.textTheme.titleSmall?.copyWith(
-                                          fontWeight: FontWeight.w600,
-                                        ),
+                                        style: context.textTheme.titleSmall
+                                            ?.copyWith(
+                                              fontWeight: FontWeight.w600,
+                                            ),
                                       ),
                                     ),
                                     MouseRegion(
@@ -521,8 +795,11 @@ class _CreateNewProjectDialogState extends State<CreateNewProjectDialog> {
                                         height: 28,
                                         width: 47,
                                         decoration: BoxDecoration(
-                                          color: FusionDarkColorPallette.green20,
-                                          borderRadius: BorderRadius.circular(6),
+                                          color:
+                                              FusionDarkColorPallette.green20,
+                                          borderRadius: BorderRadius.circular(
+                                            6,
+                                          ),
                                         ),
                                         child: const Icon(
                                           LucideIcons.arrowRight,

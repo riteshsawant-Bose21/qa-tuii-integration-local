@@ -50,10 +50,16 @@ class _FusionDockableAreaState extends State<FusionDockableArea> {
     for (var config in widget.dockItemList) {
       if (!_globalDockItems.containsKey(config.id)) {
         print("Initializing GLOBAL DockItem: ${config.id} === ${config.title}");
-        _globalDockItems[config.id] = DockItem(id: config.id, title: config.title, side: config.side);
+        _globalDockItems[config.id] = DockItem(
+          id: config.id,
+          title: config.title,
+          side: config.side,
+        );
         _globalDockItems[config.id]!.zIndex ??= 0;
       } else {
-        print("Reusing existing GLOBAL DockItem: ${config.id} === ${config.title}");
+        print(
+          "Reusing existing GLOBAL DockItem: ${config.id} === ${config.title}",
+        );
       }
     }
   }
@@ -82,7 +88,11 @@ class _FusionDockableAreaState extends State<FusionDockableArea> {
   /// Get items that belong to this tab - now checks global state
   List<DockItem> getItemsForTab() {
     /// Return items that are configured for this tab, using global state
-    return widget.dockItemList.map((config) => _globalDockItems[config.id]).where((item) => item != null).cast<DockItem>().toList();
+    return widget.dockItemList
+        .map((config) => _globalDockItems[config.id])
+        .where((item) => item != null)
+        .cast<DockItem>()
+        .toList();
   }
 
   /// Get config for a specific item
@@ -112,13 +122,19 @@ class _FusionDockableAreaState extends State<FusionDockableArea> {
   }
 
   /// Handle drag end to determine docking or floating
-  void _handleFloatingItemDragEnd(DockItem item, DraggableDetails details, double screenWidth) {
+  void _handleFloatingItemDragEnd(
+    DockItem item,
+    DraggableDetails details,
+    double screenWidth,
+  ) {
     final dx = details.offset.dx;
     final dy = details.offset.dy;
 
     /// Calculate more generous docking zones
     final double leftDockZone = widget.showLeft ? 240 : 0;
-    final double rightDockZone = widget.showRight ? screenWidth - 484 : screenWidth;
+    final double rightDockZone = widget.showRight
+        ? screenWidth - 484
+        : screenWidth;
 
     if (widget.showLeft && dx < leftDockZone) {
       /// Dock to left side
@@ -150,10 +166,16 @@ class _FusionDockableAreaState extends State<FusionDockableArea> {
 
   /// Handle undocking from sidebar
   void _handleSidebarUndock(DockItem item, DraggableDetails details) {
-    print("Undocking ${item.title} from ${item.side} sidebar at: ${details.offset}");
+    print(
+      "Undocking ${item.title} from ${item.side} sidebar at: ${details.offset}",
+    );
 
     // First handle the undocking with the main drag end logic
-    _handleFloatingItemDragEnd(item, details, MediaQuery.of(context).size.width);
+    _handleFloatingItemDragEnd(
+      item,
+      details,
+      MediaQuery.of(context).size.width,
+    );
 
     // If it didn't dock to a sidebar, make it floating
     if (!item.docked) {
@@ -201,7 +223,8 @@ class _FusionDockableAreaState extends State<FusionDockableArea> {
     final items = getItemsForTab();
 
     /// Get only floating items that are configured for this tab
-    final floatingItems = items.where((item) => !item.docked).toList()..sort((a, b) => (a.zIndex ?? 0).compareTo(b.zIndex ?? 0));
+    final floatingItems = items.where((item) => !item.docked).toList()
+      ..sort((a, b) => (a.zIndex ?? 0).compareTo(b.zIndex ?? 0));
 
     return Stack(
       children: [
@@ -210,15 +233,27 @@ class _FusionDockableAreaState extends State<FusionDockableArea> {
             /// Left Sidebar
             if (widget.showLeft)
               SemanticHelper.container(
-                testId: SemanticHelper.createTestId(SemanticTypes.container, "horizontal_resizable_left"),
+                testId: SemanticHelper.createTestId(
+                  SemanticTypes.container,
+                  "horizontal_resizable_left",
+                ),
                 child: FusionHorizontalResizableWidget(
                   minWidth: 240,
                   maxWidth: screenWidth * 0.3,
                   dragLeft: false,
                   dragRight: true,
                   child: FusionDockSidebar(
+                    semanticId: 'fusion_dockable_area_left_sidebar',
                     side: "left",
-                    items: items.where((i) => i.docked && i.side == "left").toList()..sort((a, b) => (a.dockedOrder ?? 0).compareTo(b.dockedOrder ?? 0)),
+                    items:
+                        items
+                            .where((i) => i.docked && i.side == "left")
+                            .toList()
+                          ..sort(
+                            (a, b) => (a.dockedOrder ?? 0).compareTo(
+                              b.dockedOrder ?? 0,
+                            ),
+                          ),
                     itemConfigs: widget.dockItemList,
                     onItemUndock: _handleSidebarUndock,
                     onExpansionChanged: _handleExpansionChanged,
@@ -232,7 +267,10 @@ class _FusionDockableAreaState extends State<FusionDockableArea> {
                 builder: (BuildContext context, BoxConstraints constraints) {
                   return Container(
                     clipBehavior: Clip.hardEdge,
-                    margin: const EdgeInsets.symmetric(horizontal: 2, vertical: 4),
+                    margin: const EdgeInsets.symmetric(
+                      horizontal: 2,
+                      vertical: 4,
+                    ),
                     decoration: BoxDecoration(
                       borderRadius: const BorderRadius.all(Radius.circular(12)),
                     ),
@@ -247,15 +285,27 @@ class _FusionDockableAreaState extends State<FusionDockableArea> {
             /// Right Sidebar
             if (widget.showRight)
               SemanticHelper.container(
-                testId: SemanticHelper.createTestId(SemanticTypes.container, "horizontal_resizable_right"),
+                testId: SemanticHelper.createTestId(
+                  SemanticTypes.container,
+                  "horizontal_resizable_right",
+                ),
                 child: FusionHorizontalResizableWidget(
                   minWidth: 240,
                   maxWidth: screenWidth * 0.3,
                   dragLeft: true,
                   dragRight: false,
                   child: FusionDockSidebar(
+                    semanticId: 'fusion_dockable_area_right_sidebar',
                     side: "right",
-                    items: items.where((i) => i.docked && i.side == "right").toList()..sort((a, b) => (a.dockedOrder ?? 0).compareTo(b.dockedOrder ?? 0)),
+                    items:
+                        items
+                            .where((i) => i.docked && i.side == "right")
+                            .toList()
+                          ..sort(
+                            (a, b) => (a.dockedOrder ?? 0).compareTo(
+                              b.dockedOrder ?? 0,
+                            ),
+                          ),
                     itemConfigs: widget.dockItemList,
                     onItemUndock: _handleSidebarUndock,
                     onExpansionChanged: _handleExpansionChanged,
@@ -273,12 +323,15 @@ class _FusionDockableAreaState extends State<FusionDockableArea> {
             child: GestureDetector(
               onTap: () => _handleItemTap(item),
               child: FusionFloatingPanel(
+                semanticId: 'fusion_dockable_area_floating_panel',
                 item: item,
                 config: getConfigForItem(item.id)!,
                 onDragStart: () => _handleItemDragStart(item),
-                onDragEnd: (details) => _handleFloatingItemDragEnd(item, details, screenWidth),
+                onDragEnd: (details) =>
+                    _handleFloatingItemDragEnd(item, details, screenWidth),
                 onClose: () => onCloseButtonPressed(item),
-                onResize: (deltaX, deltaY) => _handleItemResize(item, deltaX, deltaY),
+                onResize: (deltaX, deltaY) =>
+                    _handleItemResize(item, deltaX, deltaY),
               ),
             ),
           ),
