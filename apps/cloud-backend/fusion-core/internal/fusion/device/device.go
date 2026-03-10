@@ -391,13 +391,13 @@ func (s *Service) RotateCertificate(ctx context.Context, deviceID string, reques
 }
 
 // Command sends a command to a device via IoT topic publish.
-func (s *Service) Command(ctx context.Context, projectID string, request *types.CommandRequest, user types.UserAuthorizationResponse, logger *zap.Logger) (string, error) {
+func (s *Service) Command(ctx context.Context, request *types.CommandRequest, user types.UserAuthorizationResponse, logger *zap.Logger) (string, error) {
 	// Validate project access
-	if _, err := s.validateProjectAccess(ctx, projectID, user.Account.ID, logger); err != nil {
+	if _, err := s.validateProjectAccess(ctx, request.ProjectID, user.Account.ID, logger); err != nil {
 		return "", err
 	}
 
-	id, insertErr := s.dbService.InsertCommand(ctx, projectID, request, logger)
+	id, insertErr := s.dbService.InsertCommand(ctx, request.ProjectID, request, logger)
 	if insertErr != nil {
 		logger.Error("Failed to insert command into database", zap.Error(insertErr))
 		return "", fmt.Errorf("failed to insert command into database: %w", insertErr)
@@ -417,7 +417,7 @@ func (s *Service) Command(ctx context.Context, projectID string, request *types.
 		return "", fmt.Errorf("failed to marshal command request: %w", err)
 	}
 
-	err = s.iotService.Publish(ctx, fmt.Sprintf("cluster/%s/command", projectID), requestBytes, logger)
+	err = s.iotService.Publish(ctx, fmt.Sprintf("cluster/%s/command", request.ProjectID), requestBytes, logger)
 	if err != nil {
 		logger.Error("Failed to publish command", zap.Error(err))
 		return "", fmt.Errorf("failed to publish command: %w", err)

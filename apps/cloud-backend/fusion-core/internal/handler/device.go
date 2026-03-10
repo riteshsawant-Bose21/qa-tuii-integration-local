@@ -268,23 +268,16 @@ func (h *DeviceHandler) RotateCertificate(ctx *gin.Context) {
 // @Accept json
 // @Produce json
 // @Security BearerAuth
-// @Param project_id path string true "Project ID"
 // @Param body body types.CommandRequest true "Command details"
 // @Success 200 {object} types.CommandResponse "Successfully sent command"
 // @Failure 400 {object} types.ErrorResponse "Bad request - Invalid payload"
 // @Failure 401 {object} types.ErrorResponse "Unauthorized - User not authorized"
 // @Failure 404 {object} types.ErrorResponse "Project not found"
 // @Failure 500 {object} types.ErrorResponse "Internal server error"
-// @Router /commands/{project_id}/command [post]
+// @Router /devices/commands/ [post]
 func (h *DeviceHandler) Command(ctx *gin.Context) {
 	logger, user, ok := h.getLoggerAndUser(ctx)
 	if !ok {
-		return
-	}
-
-	projectID := ctx.Param("project_id")
-	if projectID == "" {
-		response.BadRequest(ctx, "project_id is required")
 		return
 	}
 
@@ -295,7 +288,7 @@ func (h *DeviceHandler) Command(ctx *gin.Context) {
 		return
 	}
 
-	commandID, err := h.device.Command(ctx, projectID, &req, *user, logger)
+	commandID, err := h.device.Command(ctx, &req, *user, logger)
 	if err != nil {
 		h.handleDeviceError(ctx, err, logger, "command")
 		return
@@ -320,7 +313,7 @@ func (h *DeviceHandler) Command(ctx *gin.Context) {
 // @Failure 400 {object} types.ErrorResponse "Bad request - Invalid command ID"
 // @Failure 404 {object} types.ErrorResponse "Command not found"
 // @Failure 500 {object} types.ErrorResponse "Internal server error"
-// @Router /commands/{command_id}/status [get]
+// @Router /devices/commands/{command_id}/status [get]
 func (h *DeviceHandler) GetCommandStatus(ctx *gin.Context) {
 	loggerFromContext, exists := ctx.Get("logger")
 	if !exists {

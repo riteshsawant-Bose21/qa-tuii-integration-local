@@ -77,10 +77,10 @@ const (
 	// EndpointDeviceRotateCert is the endpoint for rotating a device certificate.
 	EndpointDeviceRotateCert = "/:device_id/rotate-cert"
 	// EndpointDeviceCommand is the endpoint for sending a command to a device.
-	EndpointDeviceCommand = "/:project_id/command"
+	EndpointDeviceCommand = "/commands/"
 
 	// EndpointCommands is the base endpoint for command operations.
 	EndpointCommands = "/commands"
 	// EndpointCommandStatus is the endpoint for getting the status of a command.
-	EndpointCommandStatus = "/:command_id/status"
+	EndpointCommandStatus = "/command/:command_id/status"
 )

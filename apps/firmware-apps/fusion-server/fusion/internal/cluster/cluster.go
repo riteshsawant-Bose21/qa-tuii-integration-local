@@ -208,17 +208,12 @@ func (c *Cluster) listenerUpdated(vipAddr, srcIP string) {
 	}
 
 	// Determine ownership
-
-	var oldLocal, newLocal bool
-	var err error
-	if oldHolder != "" {
-		oldLocal, err = vip.IsLocalVIP(oldHolder)
-		if err != nil {
-			logger.Error("isLocalVIP(oldHolder): %v", err)
-		}
+	oldLocal, err := vip.IsLocalVIP(oldHolder)
+	if err != nil {
+		logger.Error("isLocalVIP(oldHolder): %v", err)
 	}
 
-	newLocal, err = vip.IsLocalVIP(srcIP)
+	newLocal, err := vip.IsLocalVIP(srcIP)
 	if err != nil {
 		logger.Error("isLocalVIP(srcIP): %v", err)
 	}
@@ -328,24 +323,7 @@ func (c *Cluster) restartSystem() error {
 		return nil
 	}
 
-	// Linux: use shutdown command for cleaner reboot that works in VMs
-	// shutdown -r schedules a graceful reboot
-	cmd := exec.Command("shutdown", "-r", "+0", "Scheduled reboot by fusion-server")
-	output, err := cmd.CombinedOutput()
-	if err != nil {
-		logger.Error("shutdown failed: %v, output: %s", err, string(output))
-		// Fallback: try systemctl reboot directly
-		logger.Info("Attempting fallback reboot method...")
-		fallbackCmd := exec.Command("systemctl", "reboot")
-		if fallbackErr := fallbackCmd.Start(); fallbackErr != nil {
-			logger.Error("Fallback reboot also failed: %v", fallbackErr)
-			return fmt.Errorf("reboot failed: %v (fallback: %v)", err, fallbackErr)
-		}
-		logger.Info("Fallback reboot initiated")
-		return nil
-	}
-	logger.Info("Reboot scheduled via shutdown: %s", string(output))
-	return nil
+	return exec.Command("systemd-run", "--on-active=5s", "/usr/bin/systemctl", "reboot").Run()
 }
 
 // monitorState continuously monitors the cluster membership state

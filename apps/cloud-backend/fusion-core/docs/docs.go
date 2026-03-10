@@ -74,7 +74,65 @@ const docTemplate = `{
                 }
             }
         },
-        "/commands/{command_id}/status": {
+        "/devices": {
+            "post": {
+                "description": "Create a new device in the system",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "devices"
+                ],
+                "summary": "Create a new device",
+                "parameters": [
+                    {
+                        "description": "Device details",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/types.DeviceCreateRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Successfully created device",
+                        "schema": {
+                            "$ref": "#/definitions/types.DeviceCreateResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad request - Invalid payload or device already exists",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized - User not authorized",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Project not found",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/devices/command/{command_id}/status": {
             "get": {
                 "security": [
                     {
@@ -129,7 +187,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/commands/{project_id}/command": {
+        "/devices/command/{project_id}/": {
             "post": {
                 "security": [
                     {
@@ -174,64 +232,6 @@ const docTemplate = `{
                     },
                     "400": {
                         "description": "Bad request - Invalid payload",
-                        "schema": {
-                            "$ref": "#/definitions/types.ErrorResponse"
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized - User not authorized",
-                        "schema": {
-                            "$ref": "#/definitions/types.ErrorResponse"
-                        }
-                    },
-                    "404": {
-                        "description": "Project not found",
-                        "schema": {
-                            "$ref": "#/definitions/types.ErrorResponse"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal server error",
-                        "schema": {
-                            "$ref": "#/definitions/types.ErrorResponse"
-                        }
-                    }
-                }
-            }
-        },
-        "/devices": {
-            "post": {
-                "description": "Create a new device in the system",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "devices"
-                ],
-                "summary": "Create a new device",
-                "parameters": [
-                    {
-                        "description": "Device details",
-                        "name": "body",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/types.DeviceCreateRequest"
-                        }
-                    }
-                ],
-                "responses": {
-                    "201": {
-                        "description": "Successfully created device",
-                        "schema": {
-                            "$ref": "#/definitions/types.DeviceCreateResponse"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad request - Invalid payload or device already exists",
                         "schema": {
                             "$ref": "#/definitions/types.ErrorResponse"
                         }

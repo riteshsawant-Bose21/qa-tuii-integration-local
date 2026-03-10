@@ -912,86 +912,6 @@ paths:
       summary: Get Auth0 tokens for automation testing
       tags:
       - auth
-  /commands/{command_id}/status:
-    get:
-      consumes:
-      - application/json
-      description: Get the status of a command by its ID
-      parameters:
-      - description: Command ID
-        in: path
-        name: command_id
-        required: true
-        type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: Successfully retrieved command status
-          schema:
-            $ref: '#/definitions/types.CommandStatusResponse'
-        "400":
-          description: Bad request - Invalid command ID
-          schema:
-            $ref: '#/definitions/types.ErrorResponse'
-        "404":
-          description: Command not found
-          schema:
-            $ref: '#/definitions/types.ErrorResponse'
-        "500":
-          description: Internal server error
-          schema:
-            $ref: '#/definitions/types.ErrorResponse'
-      security:
-      - BearerAuth: []
-      summary: Get command status
-      tags:
-      - devices
-  /commands/{project_id}/command:
-    post:
-      consumes:
-      - application/json
-      description: Send a command to the device cluster
-      parameters:
-      - description: Project ID
-        in: path
-        name: project_id
-        required: true
-        type: string
-      - description: Command details
-        in: body
-        name: body
-        required: true
-        schema:
-          $ref: '#/definitions/types.CommandRequest'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: Successfully sent command
-          schema:
-            $ref: '#/definitions/types.CommandResponse'
-        "400":
-          description: Bad request - Invalid payload
-          schema:
-            $ref: '#/definitions/types.ErrorResponse'
-        "401":
-          description: Unauthorized - User not authorized
-          schema:
-            $ref: '#/definitions/types.ErrorResponse'
-        "404":
-          description: Project not found
-          schema:
-            $ref: '#/definitions/types.ErrorResponse'
-        "500":
-          description: Internal server error
-          schema:
-            $ref: '#/definitions/types.ErrorResponse'
-      security:
-      - BearerAuth: []
-      summary: Send command to device cluster
-      tags:
-      - devices
   /devices:
     post:
       consumes:
@@ -1195,6 +1115,86 @@ paths:
       security:
       - BearerAuth: []
       summary: Rotate device certificate
+      tags:
+      - devices
+  /devices/command/{command_id}/status:
+    get:
+      consumes:
+      - application/json
+      description: Get the status of a command by its ID
+      parameters:
+      - description: Command ID
+        in: path
+        name: command_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Successfully retrieved command status
+          schema:
+            $ref: '#/definitions/types.CommandStatusResponse'
+        "400":
+          description: Bad request - Invalid command ID
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+        "404":
+          description: Command not found
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get command status
+      tags:
+      - devices
+  /devices/command/{project_id}/:
+    post:
+      consumes:
+      - application/json
+      description: Send a command to the device cluster
+      parameters:
+      - description: Project ID
+        in: path
+        name: project_id
+        required: true
+        type: string
+      - description: Command details
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/types.CommandRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Successfully sent command
+          schema:
+            $ref: '#/definitions/types.CommandResponse'
+        "400":
+          description: Bad request - Invalid payload
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+        "401":
+          description: Unauthorized - User not authorized
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+        "404":
+          description: Project not found
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/types.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Send command to device cluster
       tags:
       - devices
   /organization/role-management:

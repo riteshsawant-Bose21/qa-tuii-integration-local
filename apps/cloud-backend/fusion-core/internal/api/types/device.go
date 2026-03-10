@@ -68,6 +68,7 @@ const (
 // CommandRequest represents the request payload for sending a command to the device cluster.
 type CommandRequest struct {
 	Command   CommandType `json:"command" binding:"required"`
+	ProjectID string      `json:"project_id" binding:"required"`
 	DeviceIDs []string    `json:"device_ids"`
 }
 

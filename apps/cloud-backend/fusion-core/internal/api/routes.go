@@ -112,13 +112,7 @@ func (a *API) registerRoutes() {
 		devices.DELETE(constants.EndpointDeviceReset, deviceHandler.ResetDevice)
 		devices.POST(constants.EndpointDeviceClaim, deviceHandler.ClaimDevice)
 		devices.POST(constants.EndpointDeviceRotateCert, deviceHandler.RotateCertificate)
-	}
-
-	// Command routes
-	commands := v1.Group(constants.EndpointCommands)
-	{
-		commands.Use(middleware.ExtractUserFromHeaders())
-		commands.GET(constants.EndpointCommandStatus, deviceHandler.GetCommandStatus)
-		commands.POST(constants.EndpointDeviceCommand, deviceHandler.Command)
+		devices.POST(constants.EndpointDeviceCommand, deviceHandler.Command)
+		devices.GET(constants.EndpointCommandStatus, deviceHandler.GetCommandStatus)
 	}
 }
