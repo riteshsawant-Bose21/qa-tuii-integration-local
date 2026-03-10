@@ -128,8 +128,8 @@ func (m *mockDBService) GetProjectByID(ctx context.Context, projectID string, lo
 	return args.Get(0).(*models.Project), args.Error(1)
 }
 
-func (m *mockDBService) SelectByID(ctx context.Context, projectID string, userID string, logger *zap.Logger) (*types.Project, error) {
-	args := m.Called(ctx, projectID, userID, logger)
+func (m *mockDBService) SelectByID(ctx context.Context, projectID string, userAuth types.UserAuthorizationResponse, logger *zap.Logger) (*types.Project, error) {
+	args := m.Called(ctx, projectID, userAuth, logger)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
 	}

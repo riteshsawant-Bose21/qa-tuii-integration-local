@@ -244,40 +244,60 @@ func (s *Service) SelectAll(ctx context.Context, queryParams *types.GetAllProjec
 }
 
 // SelectByID retrieves a single project by ID with user-specific metadata.
-func (s *Service) SelectByID(ctx context.Context, projectID string, userID string, logger *zap.Logger) (*types.Project, error) {
-	query := `
-		SELECT p.id, p.name, p.description, p.venue, 
-		       p.environment_type, p.project_phase, p.application, p.budget_amount, 
-		       p.currency, p.is_archived, p.is_deleted, p.locked_by_user_id, 
-		       p.created_at, p.updated_at, pu.is_starred, u.email as locked_by_user_email
-		FROM project p
-		INNER JOIN project_user pu ON p.id = pu.project_id
-		LEFT JOIN app_user u ON p.locked_by_user_id = u.id
-		WHERE p.id = $1 AND pu.user_id = $2 AND p.is_deleted = $3
-	`
+func (s *Service) SelectByID(ctx context.Context, projectID string, userAuth types.UserAuthorizationResponse, logger *zap.Logger) (*types.Project, error) {
+	var rows *sql.Rows
+	var err error
+
+	if userAuth.Role.RoleName == "Admin" {
+		query := `
+			SELECT p.id, p.name, p.description, p.venue, 
+				p.environment_type, p.project_phase, p.application, p.budget_amount, 
+				p.currency, p.is_archived, p.is_deleted, p.locked_by_user_id, 
+				p.created_at, p.updated_at, pu.is_starred, u.email as locked_by_user_email
+			FROM project p
+			INNER JOIN project_user pu ON p.id = pu.project_id
+			LEFT JOIN app_user u ON p.locked_by_user_id = u.id
+			WHERE p.id = $1 AND p.primary_owner_account_id = $2 AND p.is_deleted = $3
+		`
+		rows, err = s.db.QueryContext(ctx, query, projectID, userAuth.Account.ID, false)
+	} else {
+		query := `
+			SELECT p.id, p.name, p.description, p.venue, 
+				p.environment_type, p.project_phase, p.application, p.budget_amount, 
+				p.currency, p.is_archived, p.is_deleted, p.locked_by_user_id, 
+				p.created_at, p.updated_at, pu.is_starred, u.email as locked_by_user_email
+			FROM project p
+			INNER JOIN project_user pu ON p.id = pu.project_id
+			LEFT JOIN app_user u ON p.locked_by_user_id = u.id
+			WHERE p.id = $1 AND pu.user_id = $2 AND p.is_deleted = $3
+		`
+		rows, err = s.db.QueryContext(ctx, query, projectID, userAuth.User.ID, false)
+	}
 
 	var projectRow model.Project
 	var isStarred bool
 	var lockedByUserEmail sql.NullString
 
-	err := s.db.QueryRowContext(ctx, query, projectID, userID, false).Scan(
-		&projectRow.ID,
-		&projectRow.Name,
-		&projectRow.Description,
-		&projectRow.Venue,
-		&projectRow.EnvironmentType,
-		&projectRow.ProjectPhase,
-		&projectRow.Application,
-		&projectRow.BudgetAmount,
-		&projectRow.Currency,
-		&projectRow.IsArchived,
-		&projectRow.IsDeleted,
-		&projectRow.LockedByUserID,
-		&projectRow.CreatedAt,
-		&projectRow.UpdatedAt,
-		&isStarred,
-		&lockedByUserEmail,
-	)
+	if rows.Next() {
+		err = rows.Scan(
+			&projectRow.ID,
+			&projectRow.Name,
+			&projectRow.Description,
+			&projectRow.Venue,
+			&projectRow.EnvironmentType,
+			&projectRow.ProjectPhase,
+			&projectRow.Application,
+			&projectRow.BudgetAmount,
+			&projectRow.Currency,
+			&projectRow.IsArchived,
+			&projectRow.IsDeleted,
+			&projectRow.LockedByUserID,
+			&projectRow.CreatedAt,
+			&projectRow.UpdatedAt,
+			&isStarred,
+			&lockedByUserEmail,
+		)
+	}
 
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -286,7 +306,7 @@ func (s *Service) SelectByID(ctx context.Context, projectID string, userID strin
 		logger.Error(errorutils.ErrMsgFailedToGetProject,
 			zap.Error(err),
 			zap.String("project_id", projectID),
-			zap.String("user_id", userID))
+			zap.String("user_id", userAuth.User.ID))
 		return nil, errors.New(errorutils.ErrMsgFailedToGetProject)
 	}
 

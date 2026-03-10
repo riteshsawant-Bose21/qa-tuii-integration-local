@@ -217,7 +217,7 @@ func (s *Service) GetAllProjects(ctx context.Context, queryParams *types.GetAllP
 // GetProjectById retrieves a project by its ID with metadata.
 func (s *Service) GetProjectById(ctx context.Context, projectID string, userAuth types.UserAuthorizationResponse, logger *zap.Logger) (*types.Project, error) {
 	// SelectByID handles user assignment validation via JOIN and returns full project with metadata
-	project, err := s.dbService.SelectByID(ctx, projectID, userAuth.User.ID, logger)
+	project, err := s.dbService.SelectByID(ctx, projectID, userAuth, logger)
 	if err != nil {
 		return nil, err
 	}
