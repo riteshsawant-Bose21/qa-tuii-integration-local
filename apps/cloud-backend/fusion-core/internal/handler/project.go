@@ -166,6 +166,12 @@ func (h *ProjectHandler) GetProjectByID(ctx *gin.Context) {
 
 	projectID := ctx.Param("projectId")
 
+	// Validate UUID format
+	if !validation.IsValidUUID(projectID) {
+		response.NotFound(ctx, errorutil.ErrMsgProjectNotFound)
+		return
+	}
+
 	userAuth, exists := ctx.Get("user_auth")
 	if !exists {
 		response.Unauthorized(ctx, errorutil.MsgUnauthorized)
@@ -180,6 +186,11 @@ func (h *ProjectHandler) GetProjectByID(ctx *gin.Context) {
 
 	res, err := h.project.GetProjectById(ctx, projectID, *user, logger)
 	if err != nil {
+		// Check if it's a "not found" error (project doesn't exist or user not assigned)
+		if err.Error() == errorutil.ErrMsgProjectNotFound || err.Error() == errorutil.ErrMsgSQLNoRows {
+			response.NotFound(ctx, errorutil.ErrMsgProjectNotFound)
+			return
+		}
 		response.InternalError(ctx)
 		return
 	}
