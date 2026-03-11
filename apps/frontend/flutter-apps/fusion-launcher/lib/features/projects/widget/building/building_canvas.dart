@@ -125,7 +125,7 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
 
   @override
   Widget build(BuildContext context) {
-    final bool showFloorCanvas = kDebugMode;
+    final bool showFloorCanvas = !kDebugMode;
     return Container(
       decoration: const BoxDecoration(color: Colors.white),
       child: Column(

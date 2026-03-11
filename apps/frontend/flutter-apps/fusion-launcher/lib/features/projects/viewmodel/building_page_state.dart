@@ -22,3 +22,9 @@ enum SplState {
   display,
   hidden,
 }
+
+enum DefaultTool {
+  select,
+  pen,
+  measure,
+}
