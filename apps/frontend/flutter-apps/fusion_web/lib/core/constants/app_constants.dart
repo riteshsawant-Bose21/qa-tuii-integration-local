@@ -10,6 +10,9 @@ class AppConstants {
   static const String settingsRoute = '/settings';
   static const String projectDetailBaseRoute = '/projects/';
   static const String projectDetailRoute = '/projects/detail';
+  static const String deviceDetailBaseRoute = '/devices';
+  static const String deviceDetailRoute = '/devices/detail';
+
 
 
   // App Info

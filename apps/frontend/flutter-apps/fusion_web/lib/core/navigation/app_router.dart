@@ -1,95 +1,4 @@
-// import 'package:flutter/material.dart';
-// import 'package:fusion_web/core/constants/app_constants.dart';
-// import 'package:fusion_web/core/widgets/main_layout.dart';
-// import 'package:fusion_web/features/auth/presentation/pages/login_page.dart';
-// import 'package:fusion_web/features/projects/data/models/project_model.dart';
-// import 'package:fusion_web/features/projects/presentation/pages/project_detail_page.dart';
-
-// enum DashboardTabs {
-//   dashboard("Dashboard"),
-//   projects("Projects"),
-//   devices("Devices"),
-//   users("Users"),
-//   roles("Roles"),
-//   settings("Settings");
-
-//   final String title;
-//   const DashboardTabs(this.title);
-
-//   String get route {
-//     switch (this) {
-//       case DashboardTabs.dashboard:
-//         return AppConstants.dashboardRoute;
-//       case DashboardTabs.projects:
-//         return AppConstants.projectsRoute;
-//       case DashboardTabs.devices:
-//         return AppConstants.devicesRoute;
-//       case DashboardTabs.users:
-//         return AppConstants.usersRoute;
-//       case DashboardTabs.roles:
-//         return AppConstants.rolesRoute;
-//       case DashboardTabs.settings:
-//         return AppConstants.settingsRoute;
-//     }
-//   }
-// }
-
-// class AppRouter {
-//   static Route<dynamic> generateRoute(RouteSettings settings) {
-
-//     // LOGIN
-//     if (settings.name == AppConstants.loginRoute) {
-//       return MaterialPageRoute(
-//         builder: (_) => const LoginPage(),
-//         settings: settings,
-//       );
-//     }
-
-//     // PROJECT DETAILS
-//     if (settings.name != null &&
-//         settings.name!.startsWith('${AppConstants.projectsRoute}/')) {
-
-//       final uri = Uri.parse(settings.name!);
-//       final projectId = uri.pathSegments.last;
-
-//       final args = settings.arguments as Map<String, dynamic>?;
-
-//       final project = args?['project'];
-//       final viewModel = args?['viewModel'];
-
-//       return MaterialPageRoute(
-//         builder: (_) => MainLayout(
-//           initialTab: DashboardTabs.projects,
-//           child: ProjectDetailPage(
-//             project: project,
-//             viewModel: viewModel,
-//           ),
-//         ),
-//         settings: settings,
-//       );
-//     }
-
-//     // NORMAL TABS
-//     DashboardTabs initialTab;
-
-//     switch (settings.name) {
-//       case AppConstants.dashboardRoute:
-//         initialTab = DashboardTabs.dashboard;
-//         break;
-//       case AppConstants.projectsRoute:
-//         initialTab = DashboardTabs.projects;
-//         break;
-//       default:
-//         initialTab = DashboardTabs.dashboard;
-//     }
-
-//     return MaterialPageRoute(
-//       builder: (_) => MainLayout(initialTab: initialTab),
-//       settings: settings,
-//     );
-//   }
-// }
-
+import 'package:fusion_web/features/devices/presentation/pages/device_detail_page.dart';
 import 'package:fusion_web/features/devices/presentation/pages/devices_page.dart';
 import 'package:fusion_web/features/projects/presentation/pages/project_detail_page.dart';
 import 'package:fusion_web/features/roles/presentation/pages/roles_page.dart';
@@ -170,6 +79,15 @@ final GoRouter appRouter = GoRouter(
         GoRoute(
           path: AppConstants.devicesRoute,
           builder: (_, __) => const DevicesPage(),
+        ),
+
+        //Device page update
+        GoRoute(
+          path: '${AppConstants.devicesRoute}/:id',
+          builder: (context, state) {
+            final id = state.pathParameters['id']!;
+            return DeviceDetailPage(id: id);
+          },
         ),
 
         GoRoute(
