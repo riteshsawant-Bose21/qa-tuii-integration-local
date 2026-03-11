@@ -28,6 +28,15 @@ export 'circuiting/circuiting_calculation.dart';
 export 'circuiting/circuiting_types.dart';
 export 'circuiting/circuiting_helpers.dart';
 
+// Speaker Placement exports
+export 'ceiling_pendant_speakers_autolayout/ceiling_pendant_speakers_autolayout.dart';
+
+// EdgeMax Speaker Auto-Layout exports
+export 'edgemax_speakers_autolayout/edgemax_speakers_autolayout.dart';
+
+// Surface Speaker Placement exports
+export 'surface_speakers_autolayout/surface_speakers_autolayout.dart' hide CoveragePreference;
+
 // Device Recommender exports
 export 'device_recommender/device_recommender.dart';
 

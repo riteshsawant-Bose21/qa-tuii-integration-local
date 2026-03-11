@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:fusion_lib/fusion_algorithms/device_recommender/device_recommender.dart';
+import 'package:fusion_lib/fusion_lib.dart';
 
 class DeviceRecommenderWidget extends StatefulWidget {
   const DeviceRecommenderWidget({super.key});
@@ -8,8 +8,7 @@ class DeviceRecommenderWidget extends StatefulWidget {
   State<DeviceRecommenderWidget> createState() => _DeviceRecommenderWidgetState();
 }
 
-class _DeviceRecommenderWidgetState extends State<DeviceRecommenderWidget>
-    with TickerProviderStateMixin {
+class _DeviceRecommenderWidgetState extends State<DeviceRecommenderWidget> with TickerProviderStateMixin {
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
   late Animation<Offset> _slideAnimation;
@@ -24,8 +23,8 @@ class _DeviceRecommenderWidgetState extends State<DeviceRecommenderWidget>
 
   // Analog Output state (separated into line vs speakers)
   Map<String, int> analogOutputs = <String, int>{
-    'lineOut': 0,      // Line-level outputs
-    'speakers': 0,     // Loudspeaker/amplified outputs
+    'lineOut': 0, // Line-level outputs
+    'speakers': 0, // Loudspeaker/amplified outputs
   };
 
   @override
@@ -74,11 +73,11 @@ class _DeviceRecommenderWidgetState extends State<DeviceRecommenderWidget>
 
       // Get device recommendations from the new analog algorithm
       final List<String> devices = DeviceRecommender.recommendAnalogDevices(input);
-      
+
       if (devices.isEmpty) {
         return "No suitable device configuration found";
       }
-      
+
       return "Recommend: ${devices.join(' + ')}";
     } catch (e) {
       return "Error calculating recommendation: ${e.toString()}";
@@ -122,11 +121,7 @@ class _DeviceRecommenderWidgetState extends State<DeviceRecommenderWidget>
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        border: Border.all(color: Colors.grey.shade300),
-        borderRadius: BorderRadius.circular(8),
-        color: Colors.white,
-      ),
+      decoration: BoxDecoration(border: Border.all(color: Colors.grey.shade300), borderRadius: BorderRadius.circular(8), color: context.colorScheme.elevation2),
       child: Row(
         children: <Widget>[
           Icon(icon, size: 20, color: Colors.grey.shade700),
@@ -144,15 +139,18 @@ class _DeviceRecommenderWidgetState extends State<DeviceRecommenderWidget>
                 width: 32,
                 height: 32,
                 child: OutlinedButton(
-                  onPressed: count > 0 ? () {
-                    setState(() {
-                      if (isOutput) {
-                        analogOutputs[key] = (analogOutputs[key]! - 1).clamp(0, double.infinity).toInt();
-                      } else {
-                        analogInputs[key] = (analogInputs[key]! - 1).clamp(0, double.infinity).toInt();
-                      }
-                    });
-                  } : null,
+                  onPressed:
+                      count > 0
+                          ? () {
+                            setState(() {
+                              if (isOutput) {
+                                analogOutputs[key] = (analogOutputs[key]! - 1).clamp(0, double.infinity).toInt();
+                              } else {
+                                analogInputs[key] = (analogInputs[key]! - 1).clamp(0, double.infinity).toInt();
+                              }
+                            });
+                          }
+                          : null,
                   style: OutlinedButton.styleFrom(
                     padding: EdgeInsets.zero,
                     minimumSize: const Size(32, 32),
@@ -204,7 +202,7 @@ class _DeviceRecommenderWidgetState extends State<DeviceRecommenderWidget>
     final int totalSpeakers = analogOutputs['speakers']!;
 
     return Scaffold(
-      backgroundColor: Colors.grey.shade50,
+      backgroundColor: Colors.transparent,
       body: Padding(
         padding: const EdgeInsets.all(16),
         child: Row(
@@ -271,8 +269,10 @@ class _DeviceRecommenderWidgetState extends State<DeviceRecommenderWidget>
               flex: 3,
               child: SizedBox(
                 height: MediaQuery.of(context).size.height - 32,
-                child: Card(
-                  elevation: 4,
+                child: FusionFlatContainer(
+                  // elevation: 4,
+                  color: context.colorScheme.elevation2,
+                  borderColor: context.colorScheme.elevation3,
                   child: Padding(
                     padding: const EdgeInsets.all(20),
                     child: Column(
@@ -289,7 +289,7 @@ class _DeviceRecommenderWidgetState extends State<DeviceRecommenderWidget>
                           width: double.infinity,
                           padding: const EdgeInsets.all(16),
                           decoration: BoxDecoration(
-                            color: Colors.blue.shade50,
+                            color: Colors.blue.withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(8),
                             border: Border.all(color: Colors.blue.shade200),
                           ),
@@ -308,7 +308,7 @@ class _DeviceRecommenderWidgetState extends State<DeviceRecommenderWidget>
                             child: Container(
                               padding: const EdgeInsets.all(16),
                               decoration: BoxDecoration(
-                                color: Colors.grey.shade50,
+                                color: context.colorScheme.elevation3,
                                 borderRadius: BorderRadius.circular(8),
                               ),
                               child: Column(
@@ -319,24 +319,27 @@ class _DeviceRecommenderWidgetState extends State<DeviceRecommenderWidget>
                                     style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
                                   ),
                                   const SizedBox(height: 12),
-                            _buildSummaryRow('Analog Inputs', '$totalAnalogIn (Mic: ${analogInputs['mics']}, Line: ${analogInputs['line']}, RCA: ${analogInputs['rca']}, 3.5mm: ${analogInputs['jack35']})'),
-                            _buildSummaryRow('Line Outputs', '$totalLineOut'),
-                            _buildSummaryRow('Loudspeaker Outputs', '$totalSpeakers'),
+                                  _buildSummaryRow(
+                                    'Analog Inputs',
+                                    '$totalAnalogIn (Mic: ${analogInputs['mics']}, Line: ${analogInputs['line']}, RCA: ${analogInputs['rca']}, 3.5mm: ${analogInputs['jack35']})',
+                                  ),
+                                  _buildSummaryRow('Line Outputs', '$totalLineOut'),
+                                  _buildSummaryRow('Loudspeaker Outputs', '$totalSpeakers'),
                                   const SizedBox(height: 16),
                                   const Divider(),
                                   const SizedBox(height: 16),
-                                  
+
                                   const Text(
                                     'Scaling Algorithm Rules',
                                     style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
                                   ),
                                   const SizedBox(height: 8),
                                   ..._buildScalingRules(),
-                                  
+
                                   const SizedBox(height: 16),
                                   const Divider(),
                                   const SizedBox(height: 16),
-                                  
+
                                   const Text(
                                     'Device Capabilities',
                                     style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
@@ -401,7 +404,7 @@ class _DeviceRecommenderWidgetState extends State<DeviceRecommenderWidget>
 
   List<Widget> _buildScalingRules() {
     final List<Widget> widgets = <Widget>[];
-    
+
     final List<String> rules = <String>[
       '1. Always start with 4ch PowerSmart',
       '2. Input Scaling: More inputs than outputs → FM6 + PowerPure',
@@ -418,7 +421,7 @@ class _DeviceRecommenderWidgetState extends State<DeviceRecommenderWidget>
 
   List<Widget> _buildCapabilitiesList() {
     final List<Widget> widgets = <Widget>[];
-    
+
     // Add device capabilities with new analog I/O format
     final List<String> capabilities = <String>[
       '4ch PowerSmart → 4 Inputs + 4 Line Outputs + 4 Loudspeaker Outputs',
