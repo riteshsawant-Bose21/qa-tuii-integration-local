@@ -243,7 +243,7 @@ verify_instance() {
             print_substep "Checking VIP accessibility..."
             
             local response
-            response=$(multipass exec "$instance_name" -- curl -sf http://$VIRTUAL_IP:8080 2>/dev/null)
+            response=$(multipass exec "$instance_name" -- curl -sfS --connect-timeout 2 --max-time 5 http://$VIRTUAL_IP:8080/devices 2>/dev/null)
             if [ $? -eq 0 ]; then
                 print_success "VIP is accessible"
                 printf "${CYAN}Server response: ${NC}%s\n" "$response"
