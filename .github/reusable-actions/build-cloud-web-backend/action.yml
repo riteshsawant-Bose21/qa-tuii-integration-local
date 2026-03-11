@@ -57,8 +57,24 @@ runs:
         moon run fusion-core:test
         moon run fusion-core:integration-tests
         VERSION="${{ steps.read_version.outputs.version }}-${GITHUB_RUN_NUMBER}+$(git rev-parse --short HEAD)"
-        docker build -t ${{ inputs.DOCKER_REGISTRY_DEV }}/go-image:$(git rev-parse --short HEAD) .
-        docker image ls ${{ inputs.DOCKER_REGISTRY_DEV }}/go-image:$(git rev-parse --short HEAD)
+        docker build \
+          -t ${{ inputs.DOCKER_REGISTRY_DEV }}/go-image:$(git rev-parse --short HEAD) \
+          -t ${{ inputs.DOCKER_REGISTRY_DEV }}/go-image:latest \
+          .
+
+        docker build \
+          -f sync-lambda.dockerfile \
+          -t ${{ inputs.DOCKER_REGISTRY_DEV }}/go-image:$(git rev-parse --short HEAD) \
+          -t ${{ inputs.DOCKER_REGISTRY_DEV }}/go-image-product-data:latest \
+          .
+
+        cd ../lambda-authorizer/
+        docker build \
+          -t ${{ inputs.DOCKER_REGISTRY_DEV }}/go-image:$(git rev-parse --short HEAD) \
+          -t ${{ inputs.DOCKER_REGISTRY_DEV }}/go-image-auth:latest \
+          .
+
+        docker image ls
      #    curl -k --ssl-no-revoke -f -u github-actions-uploader:${{ inputs.nexus_password }} -T ./fusion-web-services ${{ inputs.nexus_url }}/Fusion-Cloud-Backend/Continuous/${GITHUB_HEAD_REF:-${GITHUB_REF_NAME}}/$VERSION/fusion-web-services-$VERSION
 
     - name: Login to ECR
@@ -72,9 +88,13 @@ runs:
       shell: bash
       working-directory: apps/cloud-backend/fusion-core
       run: |
-        docker image ls ${{ inputs.DOCKER_REGISTRY_DEV }}/go-image:$(git rev-parse --short HEAD)
         docker push ${{ inputs.DOCKER_REGISTRY_DEV }}/go-image:$(git rev-parse --short HEAD)
-
+        docker push ${{ inputs.DOCKER_REGISTRY_DEV }}/go-image:latest
+        docker push ${{ inputs.DOCKER_REGISTRY_DEV }}/go-image-auth:$(git rev-parse --short HEAD)
+        docker push ${{ inputs.DOCKER_REGISTRY_DEV }}/go-image-auth:latest
+        docker push ${{ inputs.DOCKER_REGISTRY_DEV }}/go-image-product-data:$(git rev-parse --short HEAD)
+        docker push ${{ inputs.DOCKER_REGISTRY_DEV }}/go-image-product-data:latest
+        
     - name: Trigger new ECS deployment
       shell: bash
       working-directory: apps/cloud-backend/fusion-core
