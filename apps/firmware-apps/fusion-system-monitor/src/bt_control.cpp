@@ -9,8 +9,83 @@
 #include <filesystem>
 #include <fstream>
 #include <string>
+#include <sstream>
 
 namespace {
+
+
+static std::string dbus_type_name(int type)
+{
+    switch (type) {
+    case DBUS_TYPE_BOOLEAN: return "bool";
+    case DBUS_TYPE_STRING: return "string";
+    case DBUS_TYPE_OBJECT_PATH: return "object-path";
+    case DBUS_TYPE_UINT16: return "uint16";
+    case DBUS_TYPE_UINT32: return "uint32";
+    case DBUS_TYPE_INT16: return "int16";
+    case DBUS_TYPE_INT32: return "int32";
+    case DBUS_TYPE_ARRAY: return "array";
+    case DBUS_TYPE_VARIANT: return "variant";
+    case DBUS_TYPE_INVALID: return "invalid";
+    default: return "type-" + std::to_string(type);
+    }
+}
+
+static std::string variant_value_string(DBusMessageIter *variant)
+{
+    const int type = dbus_message_iter_get_arg_type(variant);
+    switch (type) {
+    case DBUS_TYPE_BOOLEAN: {
+        dbus_bool_t value = false;
+        dbus_message_iter_get_basic(variant, &value);
+        return value ? "true" : "false";
+    }
+    case DBUS_TYPE_STRING:
+    case DBUS_TYPE_OBJECT_PATH: {
+        const char *value = nullptr;
+        dbus_message_iter_get_basic(variant, &value);
+        return value ? value : "<null>";
+    }
+    case DBUS_TYPE_UINT16: {
+        dbus_uint16_t value = 0;
+        dbus_message_iter_get_basic(variant, &value);
+        return std::to_string(value);
+    }
+    case DBUS_TYPE_UINT32: {
+        dbus_uint32_t value = 0;
+        dbus_message_iter_get_basic(variant, &value);
+        return std::to_string(value);
+    }
+    case DBUS_TYPE_INT16: {
+        dbus_int16_t value = 0;
+        dbus_message_iter_get_basic(variant, &value);
+        return std::to_string(value);
+    }
+    case DBUS_TYPE_INT32: {
+        dbus_int32_t value = 0;
+        dbus_message_iter_get_basic(variant, &value);
+        return std::to_string(value);
+    }
+    case DBUS_TYPE_ARRAY: {
+        DBusMessageIter array_iter;
+        dbus_message_iter_recurse(variant, &array_iter);
+        std::ostringstream oss;
+        oss << "array(";
+        bool first = true;
+        while (dbus_message_iter_get_arg_type(&array_iter) != DBUS_TYPE_INVALID) {
+            if (!first)
+                oss << ',';
+            first = false;
+            oss << dbus_type_name(dbus_message_iter_get_arg_type(&array_iter));
+            dbus_message_iter_next(&array_iter);
+        }
+        oss << ')';
+        return oss.str();
+    }
+    default:
+        return "<" + dbus_type_name(type) + ">";
+    }
+}
 
 class BtControl : public bosepro::Module
 {
@@ -33,6 +108,9 @@ private:
 
     void track_pairing_attempt(const char *device_path);
     void clear_pairing_attempt();
+    void track_connect_attempt(const char *device_path);
+    void note_connect_activity(const char *path);
+    void handle_connect_drop(const char *device_path);
 
     void reply_ok(DBusMessage *msg);
     void reply_string(DBusMessage *msg, const char *value);
@@ -66,9 +144,11 @@ private:
     bool agent_registered;
     bool class_set;
     bool signal_matches_installed;
-    bool pending_device_was_paired;
-    bool pending_device_removed_for_repair;
+    bool connect_attempt_was_paired;
+    bool connect_attempt_had_followon_activity;
     std::string pending_device_path;
+    std::string connect_attempt_device_path;
+    std::chrono::steady_clock::time_point connect_attempt_started_at;
 
     static constexpr const char *kAgentPath = "/com/bosepro/FusionBtAgent";
     static constexpr const char *kBluezBus = "org.bluez";
@@ -84,8 +164,8 @@ BtControl::BtControl(const bosepro::BlockConfiguration &configuration)
       agent_registered(false),
       class_set(false),
       signal_matches_installed(false),
-      pending_device_was_paired(false),
-      pending_device_removed_for_repair(false)
+      connect_attempt_was_paired(false),
+      connect_attempt_had_followon_activity(false)
 {
     last_adapter_refresh = std::chrono::steady_clock::time_point::min();
     last_adapter_warn = std::chrono::steady_clock::time_point::min();
@@ -145,6 +225,10 @@ void BtControl::process()
         agent_registered = false;
         signal_matches_installed = false;
         clear_pairing_attempt();
+        connect_attempt_device_path.clear();
+        connect_attempt_was_paired = false;
+        connect_attempt_had_followon_activity = false;
+        connect_attempt_started_at = std::chrono::steady_clock::time_point::min();
     }
 }
 
@@ -356,22 +440,24 @@ void BtControl::handle_message(DBusMessage *msg)
     }
 
     if (std::strcmp(member, "Release") == 0) {
+        SPDLOG_INFO("BlueZ agent released");
         agent_registered = false;
         reply_ok(msg);
         return;
     }
 
     if (std::strcmp(member, "Cancel") == 0) {
-        if (!pending_device_path.empty() && pending_device_was_paired && !pending_device_removed_for_repair) {
+        if (pending_device_path.empty()) {
+            SPDLOG_INFO("BlueZ pairing canceled with no tracked device");
+        } else {
             const std::string mac = device_path_to_mac(pending_device_path.c_str());
             if (mac.empty()) {
-                SPDLOG_INFO("Pairing canceled for previously paired device; removing stale bond");
+                SPDLOG_INFO("BlueZ pairing canceled for tracked device");
             } else {
-                SPDLOG_INFO("Pairing canceled for previously paired device {}; removing stale bond", mac);
+                SPDLOG_INFO("BlueZ pairing canceled for {}", mac);
             }
-            remove_device(pending_device_path.c_str());
-            pending_device_removed_for_repair = true;
         }
+        clear_pairing_attempt();
         reply_ok(msg);
         return;
     }
@@ -390,6 +476,7 @@ void BtControl::handle_message(DBusMessage *msg)
             dbus_message_iter_get_basic(&iter, &device_path);
         }
         track_pairing_attempt(device_path);
+        SPDLOG_INFO("BlueZ RequestPinCode for {}", device_path ? device_path_to_mac(device_path) : std::string("<unknown>"));
         reply_string(msg, "0000");
         return;
     }
@@ -402,13 +489,12 @@ void BtControl::handle_message(DBusMessage *msg)
             dbus_message_iter_get_basic(&iter, &device_path);
         }
         track_pairing_attempt(device_path);
+        SPDLOG_INFO("BlueZ RequestPasskey for {}", device_path ? device_path_to_mac(device_path) : std::string("<unknown>"));
         reply_uint32(msg, 0);
         return;
     }
 
-    if (std::strcmp(member, "RequestConfirmation") == 0 ||
-        std::strcmp(member, "RequestAuthorization") == 0 ||
-        std::strcmp(member, "AuthorizeService") == 0) {
+    if (std::strcmp(member, "RequestConfirmation") == 0) {
         DBusMessageIter iter;
         const char *device_path = nullptr;
         if (dbus_message_iter_init(msg, &iter) &&
@@ -416,6 +502,21 @@ void BtControl::handle_message(DBusMessage *msg)
             dbus_message_iter_get_basic(&iter, &device_path);
         }
         track_pairing_attempt(device_path);
+        SPDLOG_INFO("BlueZ {} for {}", member, device_path ? device_path_to_mac(device_path) : std::string("<unknown>"));
+        trust_device_and_store(device_path);
+        reply_ok(msg);
+        return;
+    }
+
+    if (std::strcmp(member, "RequestAuthorization") == 0 ||
+        std::strcmp(member, "AuthorizeService") == 0) {
+        DBusMessageIter iter;
+        const char *device_path = nullptr;
+        if (dbus_message_iter_init(msg, &iter) &&
+            dbus_message_iter_get_arg_type(&iter) == DBUS_TYPE_OBJECT_PATH) {
+            dbus_message_iter_get_basic(&iter, &device_path);
+        }
+        SPDLOG_INFO("BlueZ {} for {}", member, device_path ? device_path_to_mac(device_path) : std::string("<unknown>"));
         trust_device_and_store(device_path);
         reply_ok(msg);
         return;
@@ -427,12 +528,19 @@ void BtControl::handle_message(DBusMessage *msg)
 void BtControl::handle_signal(DBusMessage *msg)
 {
     const char *iface = dbus_message_get_interface(msg);
-    if (iface == nullptr) {
+    const char *member = dbus_message_get_member(msg);
+    const char *path = dbus_message_get_path(msg);
+
+    if (path != nullptr) {
+        note_connect_activity(path);
+    }
+
+    if (iface == nullptr || member == nullptr) {
         return;
     }
 
     if (std::strcmp(iface, "org.freedesktop.DBus.Properties") == 0 &&
-        std::strcmp(dbus_message_get_member(msg), "PropertiesChanged") == 0) {
+        std::strcmp(member, "PropertiesChanged") == 0) {
         handle_properties_changed(msg);
     }
 }
@@ -440,7 +548,7 @@ void BtControl::handle_signal(DBusMessage *msg)
 void BtControl::handle_properties_changed(DBusMessage *msg)
 {
     const char *path = dbus_message_get_path(msg);
-    if (path == nullptr || pending_device_path.empty() || pending_device_path != path) {
+    if (path == nullptr) {
         return;
     }
 
@@ -452,7 +560,7 @@ void BtControl::handle_properties_changed(DBusMessage *msg)
 
     const char *iface = nullptr;
     dbus_message_iter_get_basic(&iter, &iface);
-    if (iface == nullptr || std::strcmp(iface, "org.bluez.Device1") != 0) {
+    if (iface == nullptr) {
         return;
     }
 
@@ -461,6 +569,15 @@ void BtControl::handle_properties_changed(DBusMessage *msg)
         return;
     }
 
+    DBusMessageIter invalidated_iter;
+
+    const bool is_device = std::strcmp(iface, "org.bluez.Device1") == 0;
+    const bool is_adapter = std::strcmp(iface, "org.bluez.Adapter1") == 0;
+    if (!is_device && !is_adapter) {
+        return;
+    }
+
+    const std::string target = is_device ? device_path_to_mac(path) : std::string(path);
     DBusMessageIter dict;
     dbus_message_iter_recurse(&iter, &dict);
     while (dbus_message_iter_get_arg_type(&dict) == DBUS_TYPE_DICT_ENTRY) {
@@ -474,20 +591,52 @@ void BtControl::handle_properties_changed(DBusMessage *msg)
                 dbus_message_iter_get_arg_type(&entry) == DBUS_TYPE_VARIANT) {
                 DBusMessageIter variant;
                 dbus_message_iter_recurse(&entry, &variant);
-                if (dbus_message_iter_get_arg_type(&variant) == DBUS_TYPE_BOOLEAN) {
+                const int type = dbus_message_iter_get_arg_type(&variant);
+                const char *label = is_device ? "Device1" : "Adapter1";
+                const std::string name = target.empty() ? std::string("<unknown>") : target;
+                const std::string value_str = variant_value_string(&variant);
+                SPDLOG_INFO("BlueZ {} {}={} ({}) for {}", label, prop, value_str,
+                            dbus_type_name(type), name);
+
+                if (is_device && type == DBUS_TYPE_BOOLEAN) {
                     dbus_bool_t value = false;
                     dbus_message_iter_get_basic(&variant, &value);
-                    if ((std::strcmp(prop, "Paired") == 0 ||
-                         std::strcmp(prop, "Connected") == 0 ||
+
+                    if (pending_device_path == path &&
+                        (std::strcmp(prop, "Paired") == 0 ||
                          std::strcmp(prop, "ServicesResolved") == 0) && value) {
                         clear_pairing_attempt();
-                        return;
+                    }
+
+                    if (std::strcmp(prop, "Connected") == 0) {
+                        if (value) {
+                            track_connect_attempt(path);
+                        } else {
+                            handle_connect_drop(path);
+                        }
+                    } else if (std::strcmp(prop, "ServicesResolved") == 0 && value) {
+                        note_connect_activity(path);
                     }
                 }
             }
         }
 
         dbus_message_iter_next(&dict);
+    }
+
+    if (dbus_message_iter_next(&iter) &&
+        dbus_message_iter_get_arg_type(&iter) == DBUS_TYPE_ARRAY) {
+        dbus_message_iter_recurse(&iter, &invalidated_iter);
+        while (dbus_message_iter_get_arg_type(&invalidated_iter) == DBUS_TYPE_STRING) {
+            const char *prop = nullptr;
+            dbus_message_iter_get_basic(&invalidated_iter, &prop);
+            if (prop != nullptr) {
+                const char *label = is_device ? "Device1" : "Adapter1";
+                const std::string name = target.empty() ? std::string("<unknown>") : target;
+                SPDLOG_INFO("BlueZ {} {} invalidated for {}", label, prop, name);
+            }
+            dbus_message_iter_next(&invalidated_iter);
+        }
     }
 }
 
@@ -503,15 +652,95 @@ void BtControl::track_pairing_attempt(const char *device_path)
     }
 
     pending_device_path = path;
-    pending_device_was_paired = is_device_paired(device_path);
-    pending_device_removed_for_repair = false;
+    const bool currently_paired = is_device_paired(device_path);
+
+    const std::string mac = device_path_to_mac(device_path);
+    if (mac.empty()) {
+        SPDLOG_INFO("Tracking Bluetooth pairing attempt; currently paired={}", currently_paired ? "true" : "false");
+    } else {
+        SPDLOG_INFO("Tracking Bluetooth pairing attempt for {}; currently paired={}", mac, currently_paired ? "true" : "false");
+    }
 }
 
 void BtControl::clear_pairing_attempt()
 {
+    if (!pending_device_path.empty()) {
+        const std::string mac = device_path_to_mac(pending_device_path.c_str());
+        if (mac.empty()) {
+            SPDLOG_INFO("Clearing tracked Bluetooth pairing attempt");
+        } else {
+            SPDLOG_INFO("Clearing tracked Bluetooth pairing attempt for {}", mac);
+        }
+    }
+
     pending_device_path.clear();
-    pending_device_was_paired = false;
-    pending_device_removed_for_repair = false;
+}
+
+void BtControl::track_connect_attempt(const char *device_path)
+{
+    if (device_path == nullptr) {
+        return;
+    }
+
+    connect_attempt_device_path = device_path;
+    connect_attempt_started_at = std::chrono::steady_clock::now();
+    connect_attempt_was_paired = is_device_paired(device_path);
+    connect_attempt_had_followon_activity = false;
+
+    const std::string mac = device_path_to_mac(device_path);
+    if (mac.empty()) {
+        SPDLOG_INFO("Tracking Bluetooth connection attempt; paired={}",
+                    connect_attempt_was_paired ? "true" : "false");
+    } else {
+        SPDLOG_INFO("Tracking Bluetooth connection attempt for {}; paired={}",
+                    mac, connect_attempt_was_paired ? "true" : "false");
+    }
+}
+
+void BtControl::note_connect_activity(const char *path)
+{
+    if (path == nullptr || connect_attempt_device_path.empty()) {
+        return;
+    }
+
+    const std::string signal_path(path);
+    if (signal_path.rfind(connect_attempt_device_path + "/", 0) == 0) {
+        connect_attempt_had_followon_activity = true;
+    }
+}
+
+void BtControl::handle_connect_drop(const char *device_path)
+{
+    if (device_path == nullptr || connect_attempt_device_path.empty()) {
+        return;
+    }
+
+    if (connect_attempt_device_path != device_path) {
+        return;
+    }
+
+    const auto age = std::chrono::steady_clock::now() - connect_attempt_started_at;
+    const bool should_remove =
+        connect_attempt_was_paired &&
+        !connect_attempt_had_followon_activity &&
+        pending_device_path.empty() &&
+        age <= std::chrono::seconds(10) &&
+        is_device_paired(device_path);
+
+    const std::string mac = device_path_to_mac(device_path);
+    if (should_remove) {
+        if (mac.empty()) {
+            SPDLOG_INFO("Bluetooth connection dropped quickly for paired device; removing stale bond");
+        } else {
+            SPDLOG_INFO("Bluetooth connection dropped quickly for paired device {}; removing stale bond", mac);
+        }
+        remove_device(device_path);
+    }
+
+    connect_attempt_device_path.clear();
+    connect_attempt_was_paired = false;
+    connect_attempt_had_followon_activity = false;
+    connect_attempt_started_at = std::chrono::steady_clock::time_point::min();
 }
 
 void BtControl::reply_ok(DBusMessage *msg)
