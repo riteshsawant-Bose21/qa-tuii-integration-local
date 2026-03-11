@@ -10,6 +10,13 @@ import (
 	"go.uber.org/zap"
 )
 
+// Error message constants for device handler.
+const (
+	errMsgInvalidRequestPayload = "Invalid request payload"
+	errMsgDeviceIDRequired      = "device_id is required"
+	errMsgCommandIDRequired     = "command_id is required"
+)
+
 // DeviceHandler handles HTTP requests for device management.
 type DeviceHandler struct {
 	device fusion.Device
@@ -86,7 +93,7 @@ func (h *DeviceHandler) CreateDevice(ctx *gin.Context) {
 
 	var req types.DeviceCreateRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
-		logger.Error("Invalid request payload", zap.Error(err))
+		logger.Error(errMsgInvalidRequestPayload, zap.Error(err))
 		response.BadRequest(ctx, err.Error())
 		return
 	}
@@ -123,13 +130,13 @@ func (h *DeviceHandler) UpdateDevice(ctx *gin.Context) {
 
 	deviceID := ctx.Param("device_id")
 	if deviceID == "" {
-		response.BadRequest(ctx, "device_id is required")
+		response.BadRequest(ctx, errMsgDeviceIDRequired)
 		return
 	}
 
 	var req types.DeviceUpdateRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
-		logger.Error("Invalid request payload", zap.Error(err))
+		logger.Error(errMsgInvalidRequestPayload, zap.Error(err))
 		response.BadRequest(ctx, err.Error())
 		return
 	}
@@ -163,7 +170,7 @@ func (h *DeviceHandler) ResetDevice(ctx *gin.Context) {
 
 	deviceID := ctx.Param("device_id")
 	if deviceID == "" {
-		response.BadRequest(ctx, "device_id is required")
+		response.BadRequest(ctx, errMsgDeviceIDRequired)
 		return
 	}
 
@@ -198,13 +205,13 @@ func (h *DeviceHandler) ClaimDevice(ctx *gin.Context) {
 
 	deviceID := ctx.Param("device_id")
 	if deviceID == "" {
-		response.BadRequest(ctx, "device_id is required")
+		response.BadRequest(ctx, errMsgDeviceIDRequired)
 		return
 	}
 
 	var req types.DeviceClaimRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
-		logger.Error("Invalid request payload", zap.Error(err))
+		logger.Error(errMsgInvalidRequestPayload, zap.Error(err))
 		response.BadRequest(ctx, err.Error())
 		return
 	}
@@ -241,13 +248,13 @@ func (h *DeviceHandler) RotateCertificate(ctx *gin.Context) {
 
 	deviceID := ctx.Param("device_id")
 	if deviceID == "" {
-		response.BadRequest(ctx, "device_id is required")
+		response.BadRequest(ctx, errMsgDeviceIDRequired)
 		return
 	}
 
 	var req types.DeviceRotateCertRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
-		logger.Error("Invalid request payload", zap.Error(err))
+		logger.Error(errMsgInvalidRequestPayload, zap.Error(err))
 		response.BadRequest(ctx, err.Error())
 		return
 	}
@@ -283,7 +290,7 @@ func (h *DeviceHandler) Command(ctx *gin.Context) {
 
 	var req types.CommandRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
-		logger.Error("Invalid request payload", zap.Error(err))
+		logger.Error(errMsgInvalidRequestPayload, zap.Error(err))
 		response.BadRequest(ctx, err.Error())
 		return
 	}
@@ -324,7 +331,7 @@ func (h *DeviceHandler) GetCommandStatus(ctx *gin.Context) {
 
 	commandID := ctx.Param("command_id")
 	if commandID == "" {
-		response.BadRequest(ctx, "command_id is required")
+		response.BadRequest(ctx, errMsgCommandIDRequired)
 		return
 	}
 

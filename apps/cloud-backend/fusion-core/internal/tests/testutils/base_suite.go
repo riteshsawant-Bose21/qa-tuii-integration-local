@@ -37,6 +37,11 @@ import (
 	"go.uber.org/zap"
 )
 
+// Test configuration constants.
+const (
+	testAWSRegion = "us-east-1"
+)
+
 // BaseIntegrationSuite provides shared infrastructure for all integration test suites.
 // Embed this in your module-specific test suite to get PostgreSQL container,
 // database connection, and service initialization automatically.
@@ -207,7 +212,7 @@ func (suite *BaseIntegrationSuite) setupServices() error {
 		RetryDelay:    "5s",
 	}
 
-	s3Client, err := cloudfs.NewS3Client(context.Background(), "us-east-1")
+	s3Client, err := cloudfs.NewS3Client(context.Background(), testAWSRegion)
 	require.NoError(suite.T(), err, "Failed to create S3 client for testing")
 
 	suite.ProductSVC = product.NewService(productDBSvc, "v1", validationCfg, processingCfg, s3Client, loggers.AppLogger)
@@ -227,15 +232,25 @@ func (suite *BaseIntegrationSuite) setupServices() error {
 	suite.UserSVC = user.NewService(userDBSvc)
 	require.NotNil(suite.T(), suite.UserSVC, "Failed to initialize user service")
 
+	// Initialize test cloud configuration
+	cloudCfg := config.CloudConfig{
+		PriceS3Bucket:   "test-price-bucket",
+		ProductS3Bucket: "test-product-bucket",
+		ProjectS3Bucket: "test-project-bucket",
+		Region:          testAWSRegion,
+		IoTEndpoint:     "test-iot-endpoint.iot." + testAWSRegion + ".amazonaws.com",
+		IoTCommandTopic: "test/commands",
+	}
+
 	// Initialize IoT handler for device service
-	iotHandler, err := cloudIot.NewIoTClient(context.Background(), "us-east-1", loggers.AppLogger)
+	iotHandler, err := cloudIot.NewIoTClient(context.Background(), testAWSRegion, cloudCfg.IoTEndpoint, loggers.AppLogger)
 	require.NoError(suite.T(), err, "Failed to initialize IoT client")
 
 	// Initialize Device services
 	deviceDBSvc := devicedb.NewService(suite.DB)
 	require.NotNil(suite.T(), deviceDBSvc, "Failed to initialize device database service")
 
-	suite.DeviceSVC = device.NewService(deviceDBSvc, projectDBSvc, iotHandler)
+	suite.DeviceSVC = device.NewService(deviceDBSvc, projectDBSvc, iotHandler, cloudCfg)
 	require.NotNil(suite.T(), suite.DeviceSVC, "Failed to initialize device service")
 
 	// Initialize API server
