@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:fusion_launcher/core/service_locator.dart';
-import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
 import 'package:fusion_launcher/features/message_player_config/viewmodel/message_player_config_cubit.dart';
 import 'package:fusion_launcher/features/message_player_config/view/widgets/message_list_panel.dart';
 import 'package:fusion_launcher/features/message_player_config/view/widgets/message_config_panel.dart';
@@ -70,11 +68,11 @@ class _MessagePlayerConfigDialogContent extends StatelessWidget {
   Future<void> _onClose(BuildContext context) async {
     final MessagePlayerConfigCubit cubit = context.read<MessagePlayerConfigCubit>();
 
-    // Auto-save on close if there are messages
+    /// Auto-save on close if there are messages
     if (cubit.currentMessagePlayer != null && cubit.currentMessagePlayer!.messages.isNotEmpty) {
       await cubit.saveMessagePlayer();
       if (context.mounted) {
-        FusionToast.success(context, message: 'Message player saved');
+        // FusionToast.success(context, message: 'Message player saved');
       }
     }
 
@@ -90,18 +88,18 @@ class _MessagePlayerConfigDialogContent extends StatelessWidget {
       type: MaterialType.transparency,
       child: Stack(
         children: <Widget>[
-          // Dismiss on tap outside
+          /// Dismiss on tap outside
           GestureDetector(
             onTap: () => _onClose(context),
             child: Container(color: Colors.transparent),
           ),
 
-          // Dialog content
+          /// Dialog content
           Center(
             child: Container(
               margin: const EdgeInsets.all(24.0),
               constraints: BoxConstraints(
-                maxWidth: 900,
+                maxWidth: 948,
                 maxHeight: MediaQuery.of(context).size.height * 0.85,
               ),
               decoration: BoxDecoration(
@@ -112,10 +110,10 @@ class _MessagePlayerConfigDialogContent extends StatelessWidget {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: <Widget>[
-                  // Header
+                  /// Header
                   _buildHeader(context),
 
-                  // Main content
+                  /// Main content
                   Expanded(
                     child: BlocBuilder<MessagePlayerConfigCubit, MessagePlayerConfigState>(
                       builder: (BuildContext context, MessagePlayerConfigState state) {
@@ -138,14 +136,15 @@ class _MessagePlayerConfigDialogContent extends StatelessWidget {
     );
   }
 
+  /// Dialog header with title and close button
   Widget _buildHeader(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       decoration: BoxDecoration(
         border: Border(
           bottom: BorderSide(
             color: context.colorScheme.strokeLight,
-            width: 0.5,
+            width: 1,
           ),
         ),
       ),
@@ -154,12 +153,14 @@ class _MessagePlayerConfigDialogContent extends StatelessWidget {
         children: <Widget>[
           FusionAppText(
             text: 'MESSAGE PLAYER',
-            style: context.textTheme.titleSmall?.copyWith(
+            style: context.textTheme.bodySmall?.copyWith(
               letterSpacing: 1.0,
               fontWeight: FontWeight.w600,
               color: context.colorScheme.textPrimary,
             ),
           ),
+
+          /// Close button
           Material(
             color: Colors.transparent,
             child: InkWell(
@@ -189,31 +190,31 @@ class _ConfigurationContent extends StatelessWidget {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
-        // Left panel - Message list
+        /// Left panel - Message list
         const SizedBox(
           width: 220,
           child: MessageListPanel(),
         ),
 
-        // Divider
+        /// Divider
         Container(
           width: 1,
           color: context.colorScheme.strokeLight,
         ),
 
-        // Center panel - Message configuration
+        /// Center panel - Message configuration
         const Expanded(
           flex: 2,
           child: MessageConfigPanel(),
         ),
 
-        // Divider
+        /// Divider
         Container(
           width: 1,
           color: context.colorScheme.strokeLight,
         ),
 
-        // Right panel - Zone assignment
+        /// Right panel - Zone assignment
         const SizedBox(
           width: 220,
           child: ZoneAssignmentPanel(),

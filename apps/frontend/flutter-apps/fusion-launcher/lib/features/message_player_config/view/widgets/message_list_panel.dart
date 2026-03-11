@@ -14,10 +14,10 @@ class MessageListPanel extends StatelessWidget {
       color: context.colorScheme.elevation1,
       child: Column(
         children: <Widget>[
-          // Add Message button at top
+          /// Add Message button at top
           _buildAddMessageButton(context),
 
-          // Message list
+          /// Message list
           Expanded(
             child: BlocBuilder<MessagePlayerConfigCubit, MessagePlayerConfigState>(
               builder: (BuildContext context, MessagePlayerConfigState state) {
@@ -54,7 +54,7 @@ class MessageListPanel extends StatelessWidget {
         onTap: () {
           context.read<MessagePlayerConfigCubit>().addMessage();
         },
-        height: 42,
+        height: 32,
         borderRadius: 8,
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -65,13 +65,7 @@ class MessageListPanel extends StatelessWidget {
               color: context.colorScheme.iconWhite,
             ),
             const SizedBox(width: 8),
-            FusionAppText(
-              text: 'Add Message',
-              style: context.textTheme.labelMedium?.copyWith(
-                color: context.colorScheme.textPrimary,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
+            FusionAppText(text: 'Add Message', style: context.textTheme.l1Medium),
           ],
         ),
       ),
