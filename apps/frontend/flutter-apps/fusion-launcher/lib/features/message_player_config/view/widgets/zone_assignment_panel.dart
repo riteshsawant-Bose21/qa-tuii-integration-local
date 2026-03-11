@@ -15,13 +15,10 @@ class ZoneAssignmentPanel extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          FusionAppText(
-            text: 'Assign Zones',
-            style: context.textTheme.labelMedium?.copyWith(
-              color: context.colorScheme.textSecondary,
-            ),
-          ),
+          FusionAppText(text: 'Assign Zones', style: context.textTheme.l1Medium),
           const SizedBox(height: 12),
+
+          /// Zone list or empty state
           Expanded(
             child: BlocBuilder<MessagePlayerConfigCubit, MessagePlayerConfigState>(
               builder: (BuildContext context, MessagePlayerConfigState state) {
@@ -65,10 +62,10 @@ class _ZoneList extends StatelessWidget {
   Widget build(BuildContext context) {
     final MessagePlayerConfigCubit cubit = context.read<MessagePlayerConfigCubit>();
 
-    // Get assigned zone IDs from RelationshipManager
+    /// Get assigned zone IDs from RelationshipManager
     final Set<String> assignedZoneIds = cubit.getAssignedZonesForSelectedMessage();
 
-    // Separate assigned and unassigned zones
+    /// Separate assigned and unassigned zones
     final List<Zone> assignedZones = availableZones.where((Zone z) => assignedZoneIds.contains(z.id)).toList();
 
     return Column(

@@ -1,101 +1,60 @@
 import 'package:fusion_lib/fusion_lib.dart';
 
-/// Extension on ProjectManager for managing Message Players
+/// Extension on ProjectManager for managing Messages linked to Sources
 extension MessagePlayerManager on ProjectManager {
-  /// Get all message players
-  List<MessagePlayerModel> getAllMessagePlayers() {
+  /// Get all messages for a source (message player)
+  List<MessageModel> getMessagesForSource(String sourceId) {
     if (projectService == null) {
       throw Exception("ProjectService is not initialized.");
     }
-    return projectService!.getAllMessagePlayers();
+    return projectService!.getMessagesForSource(sourceId: sourceId);
   }
 
-  /// Get a message player by ID
-  MessagePlayerModel? getMessagePlayerById(String id) {
-    if (projectService == null) {
-      throw Exception("ProjectService is not initialized.");
-    }
-    return projectService!.getMessagePlayerById(id);
-  }
-
-  /// Add a new message player
-  void addMessagePlayer({required MessagePlayerModel messagePlayer}) {
-    if (projectService == null) {
-      throw Exception("ProjectService is not initialized.");
-    }
-    projectService!.addMessagePlayer(messagePlayer: messagePlayer);
-  }
-
-  /// Update an existing message player
-  void updateMessagePlayer({required MessagePlayerModel messagePlayer}) {
-    if (projectService == null) {
-      throw Exception("ProjectService is not initialized.");
-    }
-    projectService!.updateMessagePlayer(messagePlayer: messagePlayer);
-  }
-
-  /// Remove a message player by ID
-  void removeMessagePlayerById(String id) {
-    if (projectService == null) {
-      throw Exception("ProjectService is not initialized.");
-    }
-    projectService!.removeMessagePlayerById(id);
-  }
-
-  /// Add a message to a message player
-  void addMessageToPlayer({
-    required String messagePlayerId,
+  /// Add a message and link it to a source
+  void addMessageToSource({
+    required String sourceId,
     required MessageModel message,
   }) {
     if (projectService == null) {
       throw Exception("ProjectService is not initialized.");
     }
-    projectService!.addMessageToPlayer(
-      messagePlayerId: messagePlayerId,
-      message: message,
-    );
+    projectService!.addMessageToSource(sourceId: sourceId, message: message);
   }
 
-  /// Update a message in a message player
-  void updateMessageInPlayer({
-    required String messagePlayerId,
-    required MessageModel message,
-  }) {
+  /// Update a message
+  void updateMessage({required MessageModel message}) {
     if (projectService == null) {
       throw Exception("ProjectService is not initialized.");
     }
-    projectService!.updateMessageInPlayer(
-      messagePlayerId: messagePlayerId,
-      message: message,
-    );
+    projectService!.messages.add(message.id, message);
   }
 
-  /// Remove a message from a message player
-  void removeMessageFromPlayer({
-    required String messagePlayerId,
+  /// Remove a message from a source
+  void removeMessageFromSource({
+    required String sourceId,
     required String messageId,
   }) {
     if (projectService == null) {
       throw Exception("ProjectService is not initialized.");
     }
-    projectService!.removeMessageFromPlayer(
-      messagePlayerId: messagePlayerId,
-      messageId: messageId,
+    // Unlink from source
+    projectService!.relationships.unlink(
+      RelationshipType.sourceMessages,
+      sourceId,
+      messageId,
     );
+    // Remove all zone relationships for this message
+    projectService!.relationships.removeAllRelationships(messageId);
+    // Remove the message itself
+    projectService!.messages.remove(messageId);
   }
 
-  /// Create a new message player with default settings
-  MessagePlayerModel createNewMessagePlayer({
-    String? name,
-    bool isZoneSelectType = false,
-  }) {
-    final List<MessagePlayerModel> existingPlayers = getAllMessagePlayers();
-    final String defaultName = name ?? 'Message Player ${existingPlayers.length + 1}';
-
-    return MessagePlayerModel.create(
-      name: defaultName,
-      isZoneSelectType: isZoneSelectType,
-    );
+  /// Get a message by ID
+  MessageModel? getMessageById(String messageId) {
+    if (projectService == null) {
+      throw Exception("ProjectService is not initialized.");
+    }
+    return projectService!.messages.get(messageId);
   }
 
   // ==================== Zone Assignment Methods ====================

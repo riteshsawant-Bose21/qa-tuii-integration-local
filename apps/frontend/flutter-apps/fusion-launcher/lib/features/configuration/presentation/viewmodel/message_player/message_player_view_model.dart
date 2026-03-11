@@ -1,77 +1,16 @@
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
-/// Extension on ProjectViewModel for managing Message Players
+/// Extension on ProjectViewModel for managing Messages linked to Sources
 extension MessagePlayerViewModels on ProjectViewModel {
-  /// Get all message players from the project
-  List<MessagePlayerModel> getAllMessagePlayers() {
-    return projectManager.getAllMessagePlayers();
+  /// Get all messages for a source (message player)
+  List<MessageModel> getMessagesForSource(String sourceId) {
+    return projectManager.getMessagesForSource(sourceId);
   }
 
-  /// Get a message player by ID
-  MessagePlayerModel? getMessagePlayerById(String id) {
-    try {
-      return projectManager.getMessagePlayerById(id);
-    } catch (ex) {
-      FusionLogger.log(tag: LogTag.project, message: "Error getting message player by id: $ex");
-      return null;
-    }
-  }
-
-  /// Add a new message player
-  Future<void> addMessagePlayer({
-    required MessagePlayerModel messagePlayer,
-    bool autoSave = true,
-  }) async {
-    if (autoSave) {
-      recordSnapshot();
-    }
-
-    projectManager.addMessagePlayer(messagePlayer: messagePlayer);
-
-    if (autoSave) {
-      await saveProject();
-    }
-    updateProject();
-  }
-
-  /// Update an existing message player
-  Future<void> updateMessagePlayer({
-    required MessagePlayerModel messagePlayer,
-    bool autoSave = true,
-  }) async {
-    if (autoSave) {
-      recordSnapshot();
-    }
-
-    projectManager.updateMessagePlayer(messagePlayer: messagePlayer);
-
-    if (autoSave) {
-      await saveProject();
-    }
-    updateProject();
-  }
-
-  /// Remove a message player by ID
-  Future<void> removeMessagePlayer({
-    required String messagePlayerId,
-    bool autoSave = true,
-  }) async {
-    if (autoSave) {
-      recordSnapshot();
-    }
-
-    projectManager.removeMessagePlayerById(messagePlayerId);
-
-    if (autoSave) {
-      await saveProject();
-    }
-    updateProject();
-  }
-
-  /// Add a message to a specific message player
-  Future<void> addMessageToPlayer({
-    required String messagePlayerId,
+  /// Add a message to a source
+  Future<void> addMessageToSource({
+    required String sourceId,
     required MessageModel message,
     bool autoSave = true,
   }) async {
@@ -79,8 +18,8 @@ extension MessagePlayerViewModels on ProjectViewModel {
       recordSnapshot();
     }
 
-    projectManager.addMessageToPlayer(
-      messagePlayerId: messagePlayerId,
+    projectManager.addMessageToSource(
+      sourceId: sourceId,
       message: message,
     );
 
@@ -90,9 +29,8 @@ extension MessagePlayerViewModels on ProjectViewModel {
     updateProject();
   }
 
-  /// Update a message in a specific message player
-  Future<void> updateMessageInPlayer({
-    required String messagePlayerId,
+  /// Update a message
+  Future<void> updateMessage({
     required MessageModel message,
     bool autoSave = true,
   }) async {
@@ -100,10 +38,7 @@ extension MessagePlayerViewModels on ProjectViewModel {
       recordSnapshot();
     }
 
-    projectManager.updateMessageInPlayer(
-      messagePlayerId: messagePlayerId,
-      message: message,
-    );
+    projectManager.updateMessage(message: message);
 
     if (autoSave) {
       await saveProject();
@@ -111,9 +46,9 @@ extension MessagePlayerViewModels on ProjectViewModel {
     updateProject();
   }
 
-  /// Remove a message from a specific message player
-  Future<void> removeMessageFromPlayer({
-    required String messagePlayerId,
+  /// Remove a message from a source
+  Future<void> removeMessageFromSource({
+    required String sourceId,
     required String messageId,
     bool autoSave = true,
   }) async {
@@ -121,8 +56,8 @@ extension MessagePlayerViewModels on ProjectViewModel {
       recordSnapshot();
     }
 
-    projectManager.removeMessageFromPlayer(
-      messagePlayerId: messagePlayerId,
+    projectManager.removeMessageFromSource(
+      sourceId: sourceId,
       messageId: messageId,
     );
 
@@ -132,12 +67,9 @@ extension MessagePlayerViewModels on ProjectViewModel {
     updateProject();
   }
 
-  /// Create a new message player with default settings
-  MessagePlayerModel createNewMessagePlayer({String? name, bool isZoneSelectType = false}) {
-    return projectManager.createNewMessagePlayer(
-      name: name,
-      isZoneSelectType: isZoneSelectType,
-    );
+  /// Get a message by ID
+  MessageModel? getMessageById(String messageId) {
+    return projectManager.getMessageById(messageId);
   }
 
   // ==================== Zone Assignment Methods ====================

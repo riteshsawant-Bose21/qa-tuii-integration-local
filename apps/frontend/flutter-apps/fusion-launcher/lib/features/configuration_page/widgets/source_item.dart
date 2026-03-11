@@ -99,7 +99,7 @@ class _SourceItemState extends State<SourceItem> {
                 onTap: () {
                   MessagePlayerConfigDialog.show(
                     context,
-                    messagePlayerId: widget.source.id,
+                    sourceId: widget.source.id,
                   );
                 },
                 child: FusionImage.asset(

@@ -20,8 +20,7 @@ class BuildingPageDronDown<T> extends StatefulWidget {
   });
 
   @override
-  State<BuildingPageDronDown<T>> createState() =>
-      _BuildingPageDronDownState<T>();
+  State<BuildingPageDronDown<T>> createState() => _BuildingPageDronDownState<T>();
 }
 
 class _BuildingPageDronDownState<T> extends State<BuildingPageDronDown<T>> {
@@ -74,11 +73,7 @@ class _BuildingPageDronDownState<T> extends State<BuildingPageDronDown<T>> {
         items: widget.items,
         onSelected: widget.onSelect,
         popupOffset: const Offset(0, 10),
-        itemBuilder:
-            (BuildContext context, T option) =>
-                widget.valueBuilder != null
-                    ? widget.valueBuilder!(option)
-                    : widget.labelBuilder(option),
+        itemBuilder: (BuildContext context, T option) => widget.valueBuilder != null ? widget.valueBuilder!(option) : widget.labelBuilder(option),
         // itemBuilder: (BuildContext context) {
         //   return <PopupMenuEntry<String>>[
         //     PopupMenuItem<String>(
@@ -216,8 +211,7 @@ class MultiSectionDropDown<T> extends StatefulWidget {
   });
 
   @override
-  State<MultiSectionDropDown<T>> createState() =>
-      _MultiSectionDropDownState<T>();
+  State<MultiSectionDropDown<T>> createState() => _MultiSectionDropDownState<T>();
 }
 
 class _MultiSectionDropDownState<T> extends State<MultiSectionDropDown<T>> {
@@ -227,8 +221,7 @@ class _MultiSectionDropDownState<T> extends State<MultiSectionDropDown<T>> {
   void initState() {
     super.initState();
     _expandedSections = <int, bool>{
-      for (int i = 0; i < widget.sections.length; i++)
-        i: widget.sections[i].initiallyExpanded,
+      for (int i = 0; i < widget.sections.length; i++) i: widget.sections[i].initiallyExpanded,
     };
   }
 
@@ -350,9 +343,7 @@ class _MultiSectionDropDownState<T> extends State<MultiSectionDropDown<T>> {
                               ),
                             ),
                             Icon(
-                              isExpanded
-                                  ? Icons.keyboard_arrow_up
-                                  : Icons.keyboard_arrow_down,
+                              isExpanded ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
                               size: 16,
                             ),
                           ],
@@ -407,12 +398,10 @@ class MultiSectionMultiSelectDropDown<T> extends StatefulWidget {
   });
 
   @override
-  State<MultiSectionMultiSelectDropDown<T>> createState() =>
-      _MultiSectionMultiSelectDropDownState<T>();
+  State<MultiSectionMultiSelectDropDown<T>> createState() => _MultiSectionMultiSelectDropDownState<T>();
 }
 
-class _MultiSectionMultiSelectDropDownState<T>
-    extends State<MultiSectionMultiSelectDropDown<T>> {
+class _MultiSectionMultiSelectDropDownState<T> extends State<MultiSectionMultiSelectDropDown<T>> {
   late Map<int, bool> _expandedSections;
 
   /// TEMP state (popup only)
@@ -424,8 +413,7 @@ class _MultiSectionMultiSelectDropDownState<T>
     _syncTempWithParent();
 
     _expandedSections = <int, bool>{
-      for (int i = 0; i < widget.sections.length; i++)
-        i: widget.sections[i].initiallyExpanded,
+      for (int i = 0; i < widget.sections.length; i++) i: widget.sections[i].initiallyExpanded,
     };
   }
 
@@ -476,16 +464,10 @@ class _MultiSectionMultiSelectDropDownState<T>
           children: <Widget>[
             Expanded(
               child: FusionAppText(
-                text:
-                    widget.selectedValues.isEmpty
-                        ? (widget.hintText ?? 'Select')
-                        : '${widget.selectedValues.length} selected',
+                text: widget.selectedValues.isEmpty ? (widget.hintText ?? 'Select') : '${widget.selectedValues.length} selected',
                 style: context.textTheme.labelLarge?.copyWith(
                   fontSize: 12,
-                  color:
-                      widget.selectedValues.isEmpty
-                          ? context.colorScheme.onSurface.withValues(alpha: 0.5)
-                          : context.colorScheme.onSurface,
+                  color: widget.selectedValues.isEmpty ? context.colorScheme.onSurface.withValues(alpha: 0.5) : context.colorScheme.onSurface,
                 ),
               ),
             ),
@@ -640,10 +622,7 @@ class _MultiSectionMultiSelectDropDownState<T>
             Icon(
               isSelected ? Icons.check_box : Icons.check_box_outline_blank,
               size: 16,
-              color:
-                  isSelected
-                      ? context.colorScheme.primary
-                      : context.colorScheme.onSurface.withOpacity(0.4),
+              color: isSelected ? context.colorScheme.primary : context.colorScheme.onSurface.withOpacity(0.4),
             ),
             const SizedBox(width: 8),
             Expanded(child: widget.labelBuilder(item, isSelected)),
@@ -759,16 +738,10 @@ class _MultiSelectDropDownState<T> extends State<MultiSelectDropDown<T>> {
           children: <Widget>[
             Expanded(
               child: FusionAppText(
-                text:
-                    widget.selectedValues.isEmpty
-                        ? (widget.hintText ?? 'Select')
-                        : '${widget.selectedValues.length} selected',
+                text: widget.selectedValues.isEmpty ? (widget.hintText ?? 'Select') : '${widget.selectedValues.length} selected',
                 style: context.textTheme.labelLarge?.copyWith(
                   fontSize: 12,
-                  color:
-                      widget.selectedValues.isEmpty
-                          ? context.colorScheme.onSurface.withValues(alpha: 0.5)
-                          : context.colorScheme.onSurface,
+                  color: widget.selectedValues.isEmpty ? context.colorScheme.onSurface.withValues(alpha: 0.5) : context.colorScheme.onSurface,
                 ),
               ),
             ),
@@ -837,10 +810,7 @@ class _MultiSelectDropDownState<T> extends State<MultiSelectDropDown<T>> {
             Icon(
               isSelected ? Icons.check_box : Icons.check_box_outline_blank,
               size: 16,
-              color:
-                  isSelected
-                      ? context.colorScheme.onSurface
-                      : context.colorScheme.onSurface.withOpacity(0.4),
+              color: isSelected ? context.colorScheme.onSurface : context.colorScheme.onSurface.withOpacity(0.4),
             ),
             const SizedBox(width: 8),
             Expanded(child: widget.labelBuilder(item, isSelected)),

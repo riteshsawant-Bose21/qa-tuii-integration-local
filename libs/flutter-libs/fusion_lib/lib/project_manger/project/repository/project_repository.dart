@@ -160,9 +160,9 @@ class EventsRepository extends Repository<FusionEvent> {
 
 class MediaFileRepository extends Repository<MediaFileModel> {}
 
-class MessagePlayerRepository extends Repository<MessagePlayerModel> {
-  MessagePlayerRepository copyWith(Map<String, MessagePlayerModel> items) {
-    final newRepo = MessagePlayerRepository();
+class MessageRepository extends Repository<MessageModel> {
+  MessageRepository copyWith(Map<String, MessageModel> items) {
+    final newRepo = MessageRepository();
     newRepo._items.addAll(items);
     return newRepo;
   }

@@ -76,55 +76,47 @@ class MessageModel {
 }
 
 /// Represents a Message Player source
-class MessagePlayerModel {
-  final String id;
-  final String name;
-  final List<MessageModel> messages;
-  final bool isZoneSelectType;
-
-  const MessagePlayerModel({
-    required this.id,
-    required this.name,
-    this.messages = const <MessageModel>[],
-    this.isZoneSelectType = false,
-  });
-
-  factory MessagePlayerModel.create({
-    required String name,
-    bool isZoneSelectType = false,
-  }) {
-    return MessagePlayerModel(
-      id: 'MSGPLAYER${FusionUtils.shortStringUUID()}',
-      name: name,
-      isZoneSelectType: isZoneSelectType,
-    );
-  }
-
-  MessagePlayerModel copyWith({
-    String? id,
-    String? name,
-    List<MessageModel>? messages,
-    bool? isZoneSelectType,
-  }) {
-    return MessagePlayerModel(
-      id: id ?? this.id,
-      name: name ?? this.name,
-      messages: messages ?? this.messages,
-      isZoneSelectType: isZoneSelectType ?? this.isZoneSelectType,
-    );
-  }
-
-  Map<String, dynamic> toJson() => <String, dynamic>{
-    'id': id,
-    'name': name,
-    'messages': messages.map((MessageModel m) => m.toJson()).toList(),
-    'isZoneSelectType': isZoneSelectType,
-  };
-
-  factory MessagePlayerModel.fromJson(Map<String, dynamic> json) => MessagePlayerModel(
-    id: json['id'] as String,
-    name: json['name'] as String,
-    messages: (json['messages'] as List<dynamic>?)?.map((dynamic e) => MessageModel.fromJson(e as Map<String, dynamic>)).toList() ?? <MessageModel>[],
-    isZoneSelectType: json['isZoneSelectType'] as bool? ?? false,
-  );
-}
+// class MessagePlayerModel {
+//   final String id;
+//   final String name;
+//   final List<MessageModel> messages;
+//
+//   const MessagePlayerModel({
+//     required this.id,
+//     required this.name,
+//     this.messages = const <MessageModel>[],
+//   });
+//
+//   factory MessagePlayerModel.create({
+//     required String name,
+//   }) {
+//     return MessagePlayerModel(
+//       id: 'MSGPLAYER${FusionUtils.shortStringUUID()}',
+//       name: name,
+//     );
+//   }
+//
+//   MessagePlayerModel copyWith({
+//     String? id,
+//     String? name,
+//     List<MessageModel>? messages,
+//   }) {
+//     return MessagePlayerModel(
+//       id: id ?? this.id,
+//       name: name ?? this.name,
+//       messages: messages ?? this.messages,
+//     );
+//   }
+//
+//   Map<String, dynamic> toJson() => <String, dynamic>{
+//     'id': id,
+//     'name': name,
+//     'messages': messages.map((MessageModel m) => m.toJson()).toList(),
+//   };
+//
+//   factory MessagePlayerModel.fromJson(Map<String, dynamic> json) => MessagePlayerModel(
+//     id: json['id'] as String,
+//     name: json['name'] as String,
+//     messages: (json['messages'] as List<dynamic>?)?.map((dynamic e) => MessageModel.fromJson(e as Map<String, dynamic>)).toList() ?? <MessageModel>[],
+//   );
+// }

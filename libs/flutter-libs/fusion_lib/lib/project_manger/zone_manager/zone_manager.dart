@@ -213,4 +213,12 @@ extension ZoneManager on ProjectManager {
     }
     return projectService!.getZonesWithoutSubzones();
   }
+
+  /// Get all zones where a source is assigned (as normal source or priority source)
+  List<Zone> getZonesWhereSourceIsAssigned(String sourceId) {
+    if (projectService == null) {
+      throw Exception('No project is currently open');
+    }
+    return projectService!.getZonesWhereSourceIsAssigned(sourceId);
+  }
 }

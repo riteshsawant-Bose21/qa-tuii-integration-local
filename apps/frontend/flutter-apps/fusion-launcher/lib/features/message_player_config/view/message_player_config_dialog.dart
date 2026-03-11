@@ -18,20 +18,17 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 /// - Configuring repeat settings
 /// - Assigning zones
 class MessagePlayerConfigDialog extends StatelessWidget {
-  final MessagePlayerModel? messagePlayer;
-  final String? messagePlayerId;
+  final String sourceId;
 
   const MessagePlayerConfigDialog({
     super.key,
-    this.messagePlayer,
-    this.messagePlayerId,
+    required this.sourceId,
   });
 
   /// Show the message player configuration dialog
   static Future<void> show(
     BuildContext context, {
-    MessagePlayerModel? messagePlayer,
-    String? messagePlayerId,
+    required String sourceId,
   }) async {
     await showGeneralDialog(
       context: context,
@@ -41,8 +38,7 @@ class MessagePlayerConfigDialog extends StatelessWidget {
       transitionDuration: const Duration(milliseconds: 200),
       pageBuilder: (BuildContext buildContext, _, __) {
         return MessagePlayerConfigDialog(
-          messagePlayer: messagePlayer,
-          messagePlayerId: messagePlayerId,
+          sourceId: sourceId,
         );
       },
     );
@@ -51,12 +47,7 @@ class MessagePlayerConfigDialog extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return BlocProvider<MessagePlayerConfigCubit>(
-      create:
-          (BuildContext context) =>
-              MessagePlayerConfigCubit()..init(
-                messagePlayer: messagePlayer,
-                messagePlayerId: messagePlayerId,
-              ),
+      create: (BuildContext context) => MessagePlayerConfigCubit()..init(sourceId: sourceId),
       child: const _MessagePlayerConfigDialogContent(),
     );
   }
@@ -66,16 +57,6 @@ class _MessagePlayerConfigDialogContent extends StatelessWidget {
   const _MessagePlayerConfigDialogContent();
 
   Future<void> _onClose(BuildContext context) async {
-    final MessagePlayerConfigCubit cubit = context.read<MessagePlayerConfigCubit>();
-
-    /// Auto-save on close if there are messages
-    if (cubit.currentMessagePlayer != null && cubit.currentMessagePlayer!.messages.isNotEmpty) {
-      await cubit.saveMessagePlayer();
-      if (context.mounted) {
-        // FusionToast.success(context, message: 'Message player saved');
-      }
-    }
-
     if (context.mounted) {
       Navigator.of(context).pop();
     }
@@ -99,7 +80,7 @@ class _MessagePlayerConfigDialogContent extends StatelessWidget {
             child: Container(
               margin: const EdgeInsets.all(24.0),
               constraints: BoxConstraints(
-                maxWidth: 948,
+                maxWidth: MediaQuery.of(context).size.width * 0.7,
                 maxHeight: MediaQuery.of(context).size.height * 0.85,
               ),
               decoration: BoxDecoration(
@@ -192,7 +173,7 @@ class _ConfigurationContent extends StatelessWidget {
       children: <Widget>[
         /// Left panel - Message list
         const SizedBox(
-          width: 220,
+          width: 260,
           child: MessageListPanel(),
         ),
 
@@ -216,7 +197,7 @@ class _ConfigurationContent extends StatelessWidget {
 
         /// Right panel - Zone assignment
         const SizedBox(
-          width: 220,
+          width: 308,
           child: ZoneAssignmentPanel(),
         ),
       ],

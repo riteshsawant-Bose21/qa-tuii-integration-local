@@ -1,111 +1,43 @@
 import 'package:fusion_lib/fusion_lib.dart';
 
-/// Extension on ProjectService for managing Message Players
+/// Extension on ProjectService for managing Messages linked to Sources
 extension MessagePlayerService on ProjectService {
-  /// Get all message players
-  List<MessagePlayerModel> getAllMessagePlayers() {
-    return messagePlayers.getAll();
+  /// Add a message to the messages repository
+  void addMessage({required MessageModel message}) {
+    messages.add(message.id, message);
   }
 
-  /// Get a message player by ID
-  MessagePlayerModel? getMessagePlayerById(String id) {
-    return messagePlayers.get(id);
-  }
-
-  /// Add a new message player
-  void addMessagePlayer({required MessagePlayerModel messagePlayer}) {
-    messagePlayers.add(messagePlayer.id, messagePlayer);
-
-    // Link player to messages using RelationshipManager
-    for (final MessageModel message in messagePlayer.messages) {
-      relationships.link(
-        RelationshipType.playerMessages,
-        messagePlayer.id,
-        message.id,
-      );
-    }
-  }
-
-  /// Update an existing message player
-  void updateMessagePlayer({required MessagePlayerModel messagePlayer}) {
-    if (!messagePlayers.exists(messagePlayer.id)) {
-      throw Exception("Message player with id ${messagePlayer.id} does not exist.");
-    }
-    messagePlayers.add(messagePlayer.id, messagePlayer);
-  }
-
-  /// Remove a message player by ID
-  void removeMessagePlayerById(String id) {
-    if (!messagePlayers.exists(id)) {
-      throw Exception("Message player with id $id does not exist.");
-    }
-
-    // Remove all relationships for this player
-    final MessagePlayerModel? player = getMessagePlayerById(id);
-    if (player != null) {
-      for (final MessageModel message in player.messages) {
-        // Remove message-zone relationships
-        relationships.removeAllRelationships(message.id);
-      }
-    }
-    relationships.removeAllRelationships(id);
-
-    messagePlayers.remove(id);
-  }
-
-  /// Add a message to a message player
-  void addMessageToPlayer({
-    required String messagePlayerId,
-    required MessageModel message,
-  }) {
-    final MessagePlayerModel? player = getMessagePlayerById(messagePlayerId);
-    if (player == null) {
-      throw Exception("Message player with id $messagePlayerId does not exist.");
-    }
-
-    final List<MessageModel> updatedMessages = <MessageModel>[...player.messages, message];
-    final MessagePlayerModel updatedPlayer = player.copyWith(messages: updatedMessages);
-    updateMessagePlayer(messagePlayer: updatedPlayer);
-
-    // Link message to player
+  /// Link a message to a source
+  void linkMessageToSource({required String sourceId, required String messageId}) {
     relationships.link(
-      RelationshipType.playerMessages,
-      messagePlayerId,
-      message.id,
+      RelationshipType.sourceMessages,
+      sourceId,
+      messageId,
     );
   }
 
-  /// Update a message in a message player
-  void updateMessageInPlayer({
-    required String messagePlayerId,
-    required MessageModel message,
-  }) {
-    final MessagePlayerModel? player = getMessagePlayerById(messagePlayerId);
-    if (player == null) {
-      throw Exception("Message player with id $messagePlayerId does not exist.");
-    }
-
-    final List<MessageModel> updatedMessages = player.messages.map((MessageModel m) => m.id == message.id ? message : m).toList();
-    final MessagePlayerModel updatedPlayer = player.copyWith(messages: updatedMessages);
-    updateMessagePlayer(messagePlayer: updatedPlayer);
+  /// Add a message and link it to a source
+  void addMessageToSource({required String sourceId, required MessageModel message}) {
+    addMessage(message: message);
+    linkMessageToSource(sourceId: sourceId, messageId: message.id);
   }
 
-  /// Remove a message from a message player
-  void removeMessageFromPlayer({
-    required String messagePlayerId,
-    required String messageId,
-  }) {
-    final MessagePlayerModel? player = getMessagePlayerById(messagePlayerId);
-    if (player == null) {
-      throw Exception("Message player with id $messagePlayerId does not exist.");
-    }
+  /// Get all messages for a source
+  List<MessageModel> getMessagesForSource({required String sourceId}) {
+    final Set<String> messageIds = relationships.getChildren(
+      RelationshipType.sourceMessages,
+      sourceId,
+    );
+    return messageIds.map((String id) => messages.get(id)).whereType<MessageModel>().toList();
+  }
 
-    // Remove all relationships for this message
-    relationships.removeAllRelationships(messageId);
-
-    final List<MessageModel> updatedMessages = player.messages.where((MessageModel m) => m.id != messageId).toList();
-    final MessagePlayerModel updatedPlayer = player.copyWith(messages: updatedMessages);
-    updateMessagePlayer(messagePlayer: updatedPlayer);
+  /// Link a message to a zone
+  void linkMessageToZone({required String zoneId, required String messageId}) {
+    relationships.link(
+      RelationshipType.messageZones,
+      messageId,
+      zoneId,
+    );
   }
 
   // ==================== Zone Assignment Methods ====================

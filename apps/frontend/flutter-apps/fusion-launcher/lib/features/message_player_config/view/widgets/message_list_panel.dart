@@ -105,17 +105,14 @@ class _MessageListItem extends StatelessWidget {
               decoration: BoxDecoration(
                 color: isSelected ? context.colorScheme.elevation3 : Colors.transparent,
                 borderRadius: BorderRadius.circular(8),
-                border: isSelected ? Border.all(color: context.colorScheme.strokeLight) : null,
+                border: isSelected ? Border.all(color: context.colorScheme.strokeLight) : Border.all(color: context.colorScheme.strokeLight),
               ),
               child: Row(
                 children: <Widget>[
                   Expanded(
                     child: FusionAppText(
                       text: message.name,
-                      style: context.textTheme.bodyMedium?.copyWith(
-                        color: context.colorScheme.textPrimary,
-                        fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
-                      ),
+                      style: context.textTheme.l1Regular,
                       maxLine: 1,
                       textOverflow: TextOverflow.ellipsis,
                     ),
@@ -125,7 +122,7 @@ class _MessageListItem extends StatelessWidget {
                       onTap: onDelete,
                       borderRadius: BorderRadius.circular(4),
                       child: Padding(
-                        padding: const EdgeInsets.all(4),
+                        padding: const EdgeInsets.all(0),
                         child: Icon(
                           LucideIcons.trash2,
                           size: 16,
