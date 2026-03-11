@@ -95,9 +95,7 @@ func (s *FusionServer) GetValue(w http.ResponseWriter, r *http.Request) {
 
 	// Write the JSON response.
 	w.Header().Set(api.ContentType, api.JsonMIMEType)
-	if err := json.NewEncoder(w).Encode(response); err != nil {
-		logging.GetLogger().Error("Error encoding GET response: %v", err)
-	}
+	json.NewEncoder(w).Encode(response)
 }
 
 // SetValue handles HTTP PUT requests to set a configuration value.
@@ -132,9 +130,7 @@ func (s *FusionServer) SetValue(w http.ResponseWriter, r *http.Request) {
 
 	// Write the JSON response.
 	w.Header().Set(api.ContentType, api.JsonMIMEType)
-	if err := json.NewEncoder(w).Encode(response); err != nil {
-		logging.GetLogger().Error("Error encoding SET response: %v", err)
-	}
+	json.NewEncoder(w).Encode(response)
 }
 
 // UpdateValue handles HTTP PATCH requests to update a configuration value.
@@ -197,9 +193,7 @@ func (s *FusionServer) UpdateValue(w http.ResponseWriter, r *http.Request) {
 
 	// Send
 	w.Header().Set(api.ContentType, api.JsonMIMEType)
-	if err := json.NewEncoder(w).Encode(resp); err != nil {
-		logging.GetLogger().Error("Error encoding PATCH response: %v", err)
-	}
+	json.NewEncoder(w).Encode(resp)
 }
 
 // ExportState handles HTTP GET requests to export the entire configuration state.
@@ -265,9 +259,7 @@ func (s *FusionServer) HandleRoot(w http.ResponseWriter, r *http.Request) {
 
 	// Write the JSON response.
 	w.Header().Set(api.ContentType, api.JsonMIMEType)
-	if err := json.NewEncoder(w).Encode(info); err != nil {
-		logging.GetLogger().Error("Error encoding server info: %v", err)
-	}
+	json.NewEncoder(w).Encode(info)
 }
 
 // GetVersion handles version HTTP requests.
@@ -303,34 +295,7 @@ func (s *FusionServer) GetDatabaseMetadata(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	// Check for nil metadata to prevent encoding panics during shutdown
-	if metadata == nil {
-		http.Error(w, "Metadata not available", http.StatusServiceUnavailable)
-		return
-	}
-
-	// Marshal to bytes first to catch any panics before writing to response
-	var data []byte
-	func() {
-		defer func() {
-			if r := recover(); r != nil {
-				logging.GetLogger().Error("Panic while encoding metadata: %v", r)
-				data = nil
-			}
-		}()
-		var marshalErr error
-		data, marshalErr = json.Marshal(databaseMetadataResponse{Metadata: metadata})
-		if marshalErr != nil {
-			logging.GetLogger().Error("Error marshaling database metadata: %v", marshalErr)
-			data = nil
-		}
-	}()
-
-	if data == nil {
-		http.Error(w, "Error encoding metadata", http.StatusInternalServerError)
-		return
-	}
-
+	// Write the JSON response with metadata.
 	w.Header().Set(api.ContentType, api.JsonMIMEType)
 	stdjson.NewEncoder(w).Encode(databaseMetadataResponse{Metadata: metadata})
 }
@@ -348,9 +313,7 @@ func (s *FusionServer) ExportData(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set(api.ContentType, api.JsonMIMEType)
-	if err := json.NewEncoder(w).Encode(data); err != nil {
-		logging.GetLogger().Error("Error encoding export data: %v", err)
-	}
+	json.NewEncoder(w).Encode(data)
 }
 
 // ImportData handles HTTP POST requests to import data.
@@ -542,9 +505,7 @@ func (s *FusionServer) GetControllers(w http.ResponseWriter, r *http.Request) {
 
 	result := s.handler.HandleGetControllers()
 	w.Header().Set(api.ContentType, api.JsonMIMEType)
-	if err := json.NewEncoder(w).Encode(result); err != nil {
-		logging.GetLogger().Error("Error encoding controllers: %v", err)
-	}
+	json.NewEncoder(w).Encode(result)
 }
 
 // GetControllerByID handles HTTP GET requests to get a specific controller info.
