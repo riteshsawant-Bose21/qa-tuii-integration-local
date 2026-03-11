@@ -18,7 +18,7 @@ class DevicesGridView extends StatelessWidget {
         crossAxisCount: 3,
         crossAxisSpacing: 20,
         mainAxisSpacing: 20,
-        childAspectRatio: 0.70,
+        childAspectRatio: 0.65,
       ),
       itemBuilder: (context, index) {
         final device = devices[index];
