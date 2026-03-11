@@ -423,7 +423,7 @@ func (s *Service) Command(ctx context.Context, request *types.CommandRequest, us
 		return "", fmt.Errorf("failed to publish command: %w", err)
 	}
 
-	s.dbService.UpdateCommandStatus(ctx, id, "PUBLISHED", logger)
+	err = s.dbService.UpdateCommandStatus(ctx, id, "PUBLISHED", logger)
 
 	if err != nil {
 		logger.Error("Failed to publish command", zap.Error(err))
