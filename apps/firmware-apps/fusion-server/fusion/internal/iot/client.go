@@ -11,13 +11,14 @@ import (
 	mqtt "github.com/eclipse/paho.mqtt.golang"
 
 	"fusion-services-core/logging"
+	"fusion/internal/api"
 	"fusion/internal/utils"
 )
 
 // Client is a shared MQTT client for AWS IoT Core that can be used by both
 // the publisher and subscriber. This ensures only one connection per certificate.
 type Client struct {
-	config    *Config
+	config    *api.IoTConfig
 	client    mqtt.Client
 	logger    *logging.Logger
 	stopCh    chan struct{}
@@ -31,7 +32,7 @@ type Client struct {
 }
 
 // NewClient creates a new shared IoT client
-func NewClient(config *Config) (*Client, error) {
+func NewClient(config *api.IoTConfig) (*Client, error) {
 	if config == nil {
 		return nil, fmt.Errorf("config cannot be nil")
 	}
@@ -297,6 +298,6 @@ func (c *Client) Subscribe(topic string, qos byte, handler mqtt.MessageHandler) 
 }
 
 // GetConfig returns the client configuration
-func (c *Client) GetConfig() *Config {
+func (c *Client) GetConfig() *api.IoTConfig {
 	return c.config
 }

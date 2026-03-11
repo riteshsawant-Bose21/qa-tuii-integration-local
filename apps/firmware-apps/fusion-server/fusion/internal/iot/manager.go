@@ -2,13 +2,14 @@ package fusioniot
 
 import (
 	"fusion-services-core/logging"
+	"fusion/internal/api"
 	"fusion/internal/cluster"
 	"fusion/internal/persistence"
 )
 
 // Manager consolidates IoT client, publisher, and subscriber into a single manager.
 type Manager struct {
-	config     *Config
+	config     *api.IoTConfig
 	client     *Client
 	publisher  *Publisher
 	subscriber *Subscriber
@@ -17,7 +18,7 @@ type Manager struct {
 
 // NewManager creates a new IoT manager with all components.
 // Returns nil if IoT is disabled or not properly configured.
-func NewManager(config *Config, metrics *cluster.MetricsCollector, clusterInstance *cluster.Cluster, persistence *persistence.Persistence) *Manager {
+func NewManager(config *api.IoTConfig, metrics *cluster.MetricsCollector, clusterInstance *cluster.Cluster, persistence *persistence.Persistence) *Manager {
 	logger := logging.GetLogger()
 
 	if config == nil || !config.Enabled {

@@ -8,6 +8,7 @@ import (
 	json "github.com/goccy/go-json"
 
 	"fusion-services-core/logging"
+	"fusion/internal/api"
 	"fusion/internal/cluster"
 )
 
@@ -23,33 +24,9 @@ const (
 	DefaultMetricsInterval = 10 * time.Second
 )
 
-// Config holds the AWS IoT Core connection configuration
-type Config struct {
-	// Endpoint is the AWS IoT Core endpoint (e.g., "a1a77o9cigolk4-ats.iot.us-east-2.amazonaws.com")
-	Endpoint string
-	// Port is the MQTT port (default 8883 for TLS)
-	Port int
-	// ClientID is the unique identifier for this device
-	ClientID string
-	// CAFile is the path to the Amazon Root CA certificate
-	CAFile string
-	// CertFile is the path to the device certificate
-	CertFile string
-	// KeyFile is the path to the device private key
-	KeyFile string
-	// TopicPrefix is the prefix for MQTT topics (e.g., "cluster/")
-	TopicPrefix string
-	// ProjectID is the project ID for command subscription topic
-	ProjectID string
-	// MetricsInterval is how often to publish metrics
-	MetricsInterval time.Duration
-	// Enabled determines if IoT publishing is active
-	Enabled bool
-}
-
 // Publisher handles publishing metrics to AWS IoT Core
 type Publisher struct {
-	config  *Config
+	config  *api.IoTConfig
 	client  *Client
 	metrics *cluster.MetricsCollector
 	logger  *logging.Logger

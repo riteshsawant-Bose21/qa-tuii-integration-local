@@ -65,7 +65,7 @@ type App struct {
 }
 
 // NewApp is a factory function to set up the application
-func NewApp(config *api.AppConfig, iotConfig *fusioniot.Config) *App {
+func NewApp(config *api.AppConfig) *App {
 
 	logger := initLogging(config)
 
@@ -89,7 +89,7 @@ func NewApp(config *api.AppConfig, iotConfig *fusioniot.Config) *App {
 	fusionServer := server.NewFusionServer(config.NodeName, connectionHandler, hub)
 
 	// Initialize IoT manager (consolidates client, publisher, subscriber)
-	iotManager := fusioniot.NewManager(iotConfig, clusterInstance.Metrics, clusterInstance, persistence)
+	iotManager := fusioniot.NewManager(config.IoT, clusterInstance.Metrics, clusterInstance, persistence)
 
 	// Setup the public routes
 	publicRouter := mux.NewRouter()

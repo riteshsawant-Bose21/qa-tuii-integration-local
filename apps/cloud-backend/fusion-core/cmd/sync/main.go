@@ -112,11 +112,6 @@ func init() {
 	if productSVC == nil {
 		logger.Fatal("Failed to initialize product service")
 	}
-
-	syncRequestRegion := s3Region
-	if syncRequestRegion == "" {
-		syncRequestRegion = syncCfg.Cloud.Region
-	}
 }
 
 // inferSyncType determines the sync type from the S3 object key path.

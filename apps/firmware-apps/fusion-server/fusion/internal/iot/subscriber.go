@@ -9,6 +9,7 @@ import (
 	json "github.com/goccy/go-json"
 
 	"fusion-services-core/logging"
+	"fusion/internal/api"
 	"fusion/internal/cluster"
 	"fusion/internal/persistence"
 )
@@ -56,7 +57,7 @@ type CommandResponsePayload struct {
 
 // Subscriber handles subscribing to commands from AWS IoT Core
 type Subscriber struct {
-	config                   *Config
+	config                   *api.IoTConfig
 	client                   *Client
 	cluster                  *cluster.Cluster
 	persistence              *persistence.Persistence

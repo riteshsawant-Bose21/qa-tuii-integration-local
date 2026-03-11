@@ -19,7 +19,6 @@ import (
 	"fusion-services-core/logging"
 	"fusion/internal/api"
 	"fusion/internal/app"
-	fusioniot "fusion/internal/iot"
 	"fusion/internal/utils"
 	"fusion/internal/version"
 )
@@ -30,7 +29,7 @@ const (
 )
 
 // parseFlags parses and validates command-line flags.
-func parseFlags() (*api.AppConfig, *fusioniot.Config) {
+func parseFlags() *api.AppConfig {
 	versionFlag := flag.Bool("version", false, "Show version information")
 	//On the hardware, we no longer pass in the IP address, instead we pass in the interface name
 	bindAddr := flag.String("bind-addr", "0.0.0.0", "Bind address for cluster communication")
@@ -77,20 +76,21 @@ func parseFlags() (*api.AppConfig, *fusioniot.Config) {
 	nodeName := createUniqueNodeName(baseName)
 
 	return &api.AppConfig{
-			NodeName: nodeName,
-			BindAddr: *bindAddr,
-			BindPort: *bindPort,
-			NetIface: *netIface,
-			Local:    *local,
-			Verbose:  *verbose,
-			Profile:  *profile,
-		}, &fusioniot.Config{
+		NodeName: nodeName,
+		BindAddr: *bindAddr,
+		BindPort: *bindPort,
+		NetIface: *netIface,
+		Local:    *local,
+		Verbose:  *verbose,
+		Profile:  *profile,
+		IoT: &api.IoTConfig{
 			Enabled:     *iotEnabled,
 			Endpoint:    *iotEndpoint,
 			ClientID:    fmt.Sprintf("%s_instance", nodeName),
 			TopicPrefix: *iotTopicPrefix,
 			ProjectID:   *projectID,
-		}
+		},
+	}
 }
 
 // createUniqueNodeName creates a unique name using current time and a random number
@@ -108,7 +108,7 @@ func main() {
 		}
 	}()
 
-	appConfig, iotConfig := parseFlags()
+	appConfig := parseFlags()
 
 	if appConfig.Profile {
 		// Create profile dump
@@ -131,7 +131,7 @@ func main() {
 		defer pprof.StopCPUProfile()
 	}
 
-	app := app.NewApp(appConfig, iotConfig)
+	app := app.NewApp(appConfig)
 	defer app.Close()
 
 	ctx, cancel := context.WithCancel(context.Background())
