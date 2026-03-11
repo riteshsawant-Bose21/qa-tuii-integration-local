@@ -14,14 +14,20 @@ abstract class FusionPolygonPainter extends FusionBasePainter {
   void paint(Canvas canvas, Size size, FusionCanvasPainter painter) {
     path = getPolygonPath(polygon, painter);
     if (path != null) {
-      canvas.drawPath(
-        path!,
-        getFillPaint(painter, id != null && painter.hoverViewModel.hoveredPainterId == id),
-      );
-      canvas.drawPath(
-        path!,
-        getStrokePaint(painter, id != null && painter.hoverViewModel.hoveredPainterId == id),
-      );
+      final Paint? fillPaint = getFillPaint(painter, id != null && painter.hoverViewModel.hoveredPainterId == id);
+      if (fillPaint != null) {
+        canvas.drawPath(
+          path!,
+          fillPaint,
+        );
+      }
+      final Paint? strokePaint = getStrokePaint(painter, id != null && painter.hoverViewModel.hoveredPainterId == id);
+      if (strokePaint != null) {
+        canvas.drawPath(
+          path!,
+          strokePaint,
+        );
+      }
     }
   }
 
@@ -44,9 +50,8 @@ abstract class FusionPolygonPainter extends FusionBasePainter {
     ...polygon.points,
   ];
 
-
-  Paint getFillPaint(FusionCanvasPainter painter, bool isHovered);
-  Paint getStrokePaint(FusionCanvasPainter painter, bool isHovered);
+  Paint? getFillPaint(FusionCanvasPainter painter, bool isHovered);
+  Paint? getStrokePaint(FusionCanvasPainter painter, bool isHovered);
 
   @override
   bool shouldRepaint(covariant FusionBasePainter oldDelegate) {
