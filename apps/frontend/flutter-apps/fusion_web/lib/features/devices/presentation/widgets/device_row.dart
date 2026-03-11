@@ -147,12 +147,7 @@ class DeviceRow extends StatelessWidget {
                       );
                       break;
 
-                    case "download":
-                      DeviceActionsHandler.downloadReport(
-                        context: context,
-                        device: device,
-                      );
-                      break;
+
                   }
                 },
                 itemBuilder: (context) => const [
@@ -166,17 +161,7 @@ class DeviceRow extends StatelessWidget {
                       ],
                     ),
                   ),
-                  PopupMenuItem(
-                    value: "download",
-                    enabled: false,
-                    child: Row(
-                      children: [
-                        Icon(Icons.download_outlined),
-                        SizedBox(width: 8),
-                        Text("Download Report"),
-                      ],
-                    ),
-                  ),
+
                 ],
               ),
             ],

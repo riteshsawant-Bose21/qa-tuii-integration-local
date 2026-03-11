@@ -75,7 +75,7 @@ final GoRouter appRouter = GoRouter(
             return ProjectDetailPage(projectId: id);
           },
         ),
-        
+
         GoRoute(
           path: AppConstants.devicesRoute,
           builder: (_, __) => const DevicesPage(),
@@ -83,10 +83,10 @@ final GoRouter appRouter = GoRouter(
 
         //Device page update
         GoRoute(
-          path: '${AppConstants.devicesRoute}/:id',
+          path: '${AppConstants.devicesRoute}/:deviceId',
           builder: (context, state) {
-            final id = state.pathParameters['id']!;
-            return DeviceDetailPage(id: id);
+            final deviceId = state.pathParameters['deviceId']!;
+            return DeviceDetailPage(id: deviceId);
           },
         ),
 
