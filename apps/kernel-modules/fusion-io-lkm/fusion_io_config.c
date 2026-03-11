@@ -1043,6 +1043,17 @@ const struct base_device bd_fusion_fm6 = {
                     { .reg_addr  = EP9512T_REG_AUDIO_CFG,    .data = 0x01 }  // A_IN = 01 (I2S)
                 }
             }
+        },
+        .num_post_cfg_cmds = 1,
+        .post_cfg_cmds = (struct config_sequence_cmd[]) {
+            {
+                .name = "dac_mute",
+                .parent_ep_name = "ep_ioexp_tca9535-1",
+                .num_msgs = 1,
+                .msgs = (struct endpoint_cmd_msg[]) { 
+                    { .reg_addr = TCA9535_REG_OUTPUT_PORT0, .op_size = ENDPOINT_CMD_MSG_OP_16BIT, .data = 0x0030 } 
+                }
+            }
         }
     }
 };
@@ -1930,6 +1941,17 @@ const struct base_device bd_fusion_fm8y = {
                     // from tests, this turns on arc and 5v en
                     // also, prevents tv from going black for a second.
                     { .reg_addr  = EP9512T_REG_AUDIO_CFG,    .data = 0x01 }  // A_IN = 01 (I2S)
+                }
+            }
+        },
+        .num_post_cfg_cmds = 1,
+        .post_cfg_cmds = (struct config_sequence_cmd[]) {
+            {
+                .name = "dac_mute",
+                .parent_ep_name = "ep_ioexp_tca9535-1",
+                .num_msgs = 1,
+                .msgs = (struct endpoint_cmd_msg[]) { 
+                    { .reg_addr = TCA9535_REG_OUTPUT_PORT0, .op_size = ENDPOINT_CMD_MSG_OP_16BIT, .data = 0x0030 } 
                 }
             }
         }
