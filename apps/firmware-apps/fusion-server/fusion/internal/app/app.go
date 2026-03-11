@@ -86,6 +86,8 @@ func NewApp(config *api.AppConfig) *App {
 	udpServer := initUDPServer(api.UDPPort, connectionHandler, hub)
 	fusionServer := server.NewFusionServer(config.NodeName, connectionHandler, hub)
 
+	connectionHandler.SetDeviceProvider(clusterInstance)
+
 	// Setup the public routes
 	publicRouter := mux.NewRouter()
 	publicRouter.Use(loggingMiddleware(config))

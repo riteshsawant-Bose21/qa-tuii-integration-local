@@ -9,7 +9,6 @@
 #include <linux/of_irq.h>
 #include <linux/io.h>
 #include <linux/interrupt.h>
-#include <linux/irq_work.h>
 #include <linux/spinlock.h>
 #include <linux/math64.h>
 #include <linux/seqlock.h>
@@ -59,8 +58,6 @@ struct fusion_gpt
 
 	u32 next_ocr1;
 	u8  frac;
-
-	struct irq_work tick_iw;
 
 	u32 last32;
 	u64 hi;
@@ -114,9 +111,8 @@ static u64 gpt_read_ticks64(struct fusion_gpt *g)
 	return (hi | lo);
 }
 
-static void gpt_tick_iw(struct irq_work *iw)
+static inline void gpt_tick_direct(struct fusion_gpt *g)
 {
-	struct fusion_gpt *g = container_of(iw, struct fusion_gpt, tick_iw);
 	const struct fusion_gpt_client_ops *ops = READ_ONCE(g->ops);
 	if (ops && ops->tick)
 		ops->tick(g->ops_ctx, gpt_read_ticks64(g));
@@ -183,9 +179,6 @@ void fusion_gpt_unregister_client(void)
 	/* Make readers see NULL first */
 	WRITE_ONCE(g->ops, NULL);
 	smp_mb(); /* publish NULL before we flush */
-
-	/* Ensure any queued work that might have captured a non-NULL ops is done */
-	irq_work_sync(&g->tick_iw);
 
 	if (g->ops_owner)
 		module_put(g->ops_owner);
@@ -455,8 +448,7 @@ static irqreturn_t gpt_irq(int irq, void *dev_id)
 			if (clr) wrl(g, clr, GPT_SR);
 
 			/* Still notify the client for this tick */
-			if (READ_ONCE(g->ops))
-				irq_work_queue(&g->tick_iw);
+			gpt_tick_direct(g);
 
 			return IRQ_HANDLED;                         /* skip normal schedule this time */
 		}
@@ -464,8 +456,7 @@ static irqreturn_t gpt_irq(int irq, void *dev_id)
 		/* Normal path once aligned (or if no epoch yet) */
 		gpt_program_next_compare(g);
 		clr |= SR_OF1;
-		if (READ_ONCE(g->ops))
-			irq_work_queue(&g->tick_iw);
+		gpt_tick_direct(g);
 	}
 
 	if (clr) wrl(g, clr, GPT_SR);
@@ -553,7 +544,7 @@ static int gpt_probe(struct platform_device *pdev)
 	}
 
 	platform_set_drvdata(pdev, g);
-	init_irq_work(&g->tick_iw, gpt_tick_iw);
+	
 	mutex_init(&g->ops_lock);
 
 	ret = devm_request_irq(&pdev->dev, g->irq, gpt_irq, IRQF_NO_THREAD,

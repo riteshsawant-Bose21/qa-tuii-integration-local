@@ -26,29 +26,46 @@ class _DeviceListTabState extends State<DeviceListTab> {
   // Access Real Devices from Service Locator
   List<HardwareComponent> get _fusionDevices {
     // Combine DSPs, Amplifiers, and Controllers
-    final List<HardwareComponent> dsp = serviceLocator<ProjectViewModel>().fusionDsps;
-    final List<HardwareComponent> amplifiers = serviceLocator<ProjectViewModel>().amplifiers;
-    final List<HardwareComponent> controllers = serviceLocator<ProjectViewModel>().fusionControllers;
-    final List<HardwareComponent> endpoints = serviceLocator<ProjectViewModel>().fusionEndpoints;
-    return <HardwareComponent>[...dsp, ...amplifiers, ...controllers, ...endpoints];
+    final List<HardwareComponent> dsp =
+        serviceLocator<ProjectViewModel>().fusionDsps;
+    final List<HardwareComponent> amplifiers =
+        serviceLocator<ProjectViewModel>().amplifiers;
+    final List<HardwareComponent> controllers =
+        serviceLocator<ProjectViewModel>().fusionControllers;
+    final List<HardwareComponent> endpoints =
+        serviceLocator<ProjectViewModel>().fusionEndpoints;
+    return <HardwareComponent>[
+      ...dsp,
+      ...amplifiers,
+      ...controllers,
+      ...endpoints,
+    ];
   }
 
   String _getDeviceLocation(HardwareComponent device) {
     if (device.locationEntity.listeningAreaId != null) {
-      final Zone? zone = serviceLocator<ProjectViewModel>().getZonesForListeningArea(areaId: device.locationEntity.listeningAreaId!);
+      final Zone? zone = serviceLocator<ProjectViewModel>()
+          .getZonesForListeningArea(
+            areaId: device.locationEntity.listeningAreaId!,
+          );
       if (zone != null) {
         return zone.name;
       }
-      final SubZone? subZone = serviceLocator<ProjectViewModel>().getSubZoneForListeningArea(areaId: device.locationEntity.listeningAreaId!);
+      final SubZone? subZone = serviceLocator<ProjectViewModel>()
+          .getSubZoneForListeningArea(
+            areaId: device.locationEntity.listeningAreaId!,
+          );
       if (subZone != null) {
-        final Zone? parentZone = serviceLocator<ProjectViewModel>().getZoneForSubZone(subZoneId: subZone.id);
+        final Zone? parentZone = serviceLocator<ProjectViewModel>()
+            .getZoneForSubZone(subZoneId: subZone.id);
         if (parentZone != null) {
           return "${parentZone.name} > ${subZone.name}";
         }
         return subZone.name;
       }
     }
-    final EquipLocation? location = serviceLocator<ProjectViewModel>().getEquipLocationForHardware(hardwareId: device.id);
+    final EquipLocation? location = serviceLocator<ProjectViewModel>()
+        .getEquipLocationForHardware(hardwareId: device.id);
     if (location != null) {
       return location.name;
     }
@@ -100,7 +117,12 @@ class _DeviceListTabState extends State<DeviceListTab> {
         FusionTableColumn(key: 'temp', header: 'TEMP', flex: 1),
         FusionTableColumn(key: 'disk', header: 'DISK USE', flex: 1),
         FusionTableColumn(key: 'cpu', header: 'CPU USE', flex: 1),
-        FusionTableColumn(key: 'controls', header: 'CONTROLS', flex: 2, sortable: false),
+        FusionTableColumn(
+          key: 'controls',
+          header: 'CONTROLS',
+          flex: 2,
+          sortable: false,
+        ),
       ],
       // Map real devices to rows, passing index for dummy data generation
       rows:
@@ -112,7 +134,9 @@ class _DeviceListTabState extends State<DeviceListTab> {
 
   FusionTableRow _buildFusionRow(HardwareComponent device, int index) {
     // --- DUMMY DATA GENERATION ---
-    final Random r = Random(index); // Seed with index to keep values stable during rebuilds
+    final Random r = Random(
+      index,
+    ); // Seed with index to keep values stable during rebuilds
     final bool isOnline = index % 5 != 4; // Mock status logic
     final int tempCelsius = 20 + r.nextInt(30); // 20-50
     final double diskUsage = 0.2 + (r.nextDouble() * 0.7); // 0.2 - 0.9
@@ -142,33 +166,56 @@ class _DeviceListTabState extends State<DeviceListTab> {
         // ),
         'location': FusionTableCell(
           value: locationName,
-          child: FusionAppText(text: locationName, style: context.textTheme.labelMedium, maxLine: 1),
+          child: FusionAppText(
+            text: locationName,
+            style: context.textTheme.labelMedium,
+            maxLine: 1,
+          ),
         ),
         'ip': FusionTableCell(
           value: dummyIp,
-          child: FusionAppText(text: dummyIp, style: context.textTheme.labelMedium, maxLine: 1),
+          child: FusionAppText(
+            text: dummyIp,
+            style: context.textTheme.labelMedium,
+            maxLine: 1,
+          ),
         ),
         'firmware': FusionTableCell(
           value: dummyFirmware,
           child:
-              (device is! Amplifier || !device.hardwareName.toLowerCase().startsWith("pp"))
-                  ? FusionAppText(text: dummyFirmware, style: context.textTheme.labelMedium, maxLine: 1)
-                  : Text("-", style: TextStyle(color: context.colorScheme.primaryWhite)),
+              (device is! Amplifier ||
+                      !device.hardwareName.toLowerCase().startsWith("pp"))
+                  ? FusionAppText(
+                    text: dummyFirmware,
+                    style: context.textTheme.labelMedium,
+                    maxLine: 1,
+                  )
+                  : Text(
+                    "-",
+                    style: TextStyle(color: context.colorScheme.primaryWhite),
+                  ),
         ),
         'temp': FusionTableCell(
           value: tempCelsius,
           child:
-              (isOnline && (device is! Amplifier || !device.hardwareName.toLowerCase().startsWith("pp")))
+              (isOnline &&
+                      (device is! Amplifier ||
+                          !device.hardwareName.toLowerCase().startsWith("pp")))
                   ? CompactThermostatWidget(
                     temperature: tempCelsius,
                     maxTemperature: 100,
                   )
-                  : Text("-", style: TextStyle(color: context.colorScheme.primaryWhite)),
+                  : Text(
+                    "-",
+                    style: TextStyle(color: context.colorScheme.primaryWhite),
+                  ),
         ),
         'disk': FusionTableCell(
           value: diskUsage,
           child:
-              (isOnline && (device is! Amplifier || !device.hardwareName.toLowerCase().startsWith("pp")))
+              (isOnline &&
+                      (device is! Amplifier ||
+                          !device.hardwareName.toLowerCase().startsWith("pp")))
                   ? Row(
                     children: <Widget>[
                       GaugeWidget(
@@ -182,12 +229,18 @@ class _DeviceListTabState extends State<DeviceListTab> {
                       ),
                     ],
                   )
-                  : Text("-", style: TextStyle(color: context.colorScheme.primaryWhite)),
+                  : Text(
+                    "-",
+                    style: TextStyle(color: context.colorScheme.primaryWhite),
+                  ),
         ),
         'cpu': FusionTableCell(
           value: cpuUsage,
           child:
-              (isOnline && (device is FusionDsp || (device is Amplifier && device.hardwareName.startsWith("PSM"))))
+              (isOnline &&
+                      (device is FusionDsp ||
+                          (device is Amplifier &&
+                              device.hardwareName.startsWith("PSM"))))
                   ? Row(
                     children: <Widget>[
                       DiskUsageWidget(
@@ -201,15 +254,23 @@ class _DeviceListTabState extends State<DeviceListTab> {
                       ),
                     ],
                   )
-                  : Text("-", style: TextStyle(color: context.colorScheme.primaryWhite)),
+                  : Text(
+                    "-",
+                    style: TextStyle(color: context.colorScheme.primaryWhite),
+                  ),
         ),
         'controls': FusionTableCell(
           value: '',
           child: Row(
             mainAxisAlignment: MainAxisAlignment.start,
             children: <Widget>[
-              if (device is! FusionDsp && (device is! Amplifier || !device.hardwareName.toLowerCase().startsWith("pp"))) ...<Widget>[
+              if (device is! FusionDsp &&
+                  (device is! Amplifier ||
+                      !device.hardwareName.toLowerCase().startsWith(
+                        "pp",
+                      ))) ...<Widget>[
                 FusionNeumorphicButton(
+                  semanticId: 'standby_button',
                   width: 26,
                   height: 26,
                   borderRadius: 6,
@@ -226,8 +287,10 @@ class _DeviceListTabState extends State<DeviceListTab> {
                 const SizedBox(width: 10),
               ],
 
-              if (device is! Amplifier || !device.hardwareName.toLowerCase().startsWith("pp"))
+              if (device is! Amplifier ||
+                  !device.hardwareName.toLowerCase().startsWith("pp"))
                 FusionNeumorphicButton(
+                  semanticId: 'reboot_button',
                   width: 26,
                   height: 26,
                   borderRadius: 6,
@@ -264,7 +327,8 @@ class _DeviceListTabState extends State<DeviceListTab> {
   Widget _buildLinkText(HardwareComponent device) {
     return InkWell(
       onTap: () {
-        if (device is! Amplifier || !device.hardwareName.toLowerCase().startsWith("pp")) {
+        if (device is! Amplifier ||
+            !device.hardwareName.toLowerCase().startsWith("pp")) {
           Navigator.pushNamed(
             context,
             Routes.deviceDetails,
@@ -286,14 +350,18 @@ class _DeviceListTabState extends State<DeviceListTab> {
     );
   }
 
-  void _showStandbyConfirmation(BuildContext context, HardwareComponent device) async {
+  void _showStandbyConfirmation(
+    BuildContext context,
+    HardwareComponent device,
+  ) async {
     final bool? result = await showDialog<bool>(
       context: context,
       barrierDismissible: false,
       builder:
           (BuildContext context) => FusionActionPopup(
             title: 'STANDBY',
-            description: 'Do you want to set ${device.name} device to standby ?',
+            description:
+                'Do you want to set ${device.name} device to standby ?',
             loadingMessage: 'Device going standby',
             onConfirm: () {
               // TODO: Implement actual standby logic if needed before loading
@@ -309,7 +377,10 @@ class _DeviceListTabState extends State<DeviceListTab> {
     }
   }
 
-  _showRebootConfirmation(BuildContext context, HardwareComponent device) async {
+  _showRebootConfirmation(
+    BuildContext context,
+    HardwareComponent device,
+  ) async {
     final bool? result = await showDialog<bool>(
       context: context,
       barrierDismissible: false,

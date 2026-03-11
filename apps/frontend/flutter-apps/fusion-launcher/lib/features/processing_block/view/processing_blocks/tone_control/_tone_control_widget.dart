@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:fusion_launcher/features/processing_block/view/processing_blocks/widgets/disabled_widget_wrapper.dart';
-import 'package:fusion_launcher/features/processing_block/view/widgets/pb_slider.dart';
 import 'package:fusion_launcher/features/processing_block/view/widgets/pb_textfield.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
@@ -12,6 +11,7 @@ class ToneControlWidget extends StatelessWidget {
   final void Function(bool) onBypassChanged;
   final num value;
   final void Function(num) onChanged;
+  final String? semanticId;
   const ToneControlWidget({
     super.key,
     this.leftRadius = false,
@@ -21,6 +21,7 @@ class ToneControlWidget extends StatelessWidget {
     required this.isBypassed,
     required this.onBypassChanged,
     required this.isDisabled,
+    this.semanticId,
   });
 
   @override
@@ -30,7 +31,8 @@ class ToneControlWidget extends StatelessWidget {
       decoration: BoxDecoration(
         color: context.colorScheme.elevation2,
         borderRadius: BorderRadius.horizontal(
-          left: leftRadius ? Radius.circular(context.mediumRadius) : Radius.zero,
+          left:
+              leftRadius ? Radius.circular(context.mediumRadius) : Radius.zero,
         ),
       ),
       child: Column(
@@ -60,6 +62,7 @@ class ToneControlWidget extends StatelessWidget {
                     child: Padding(
                       padding: const EdgeInsets.symmetric(vertical: 12.0),
                       child: VerticalSlider(
+                        semanticId: 'tone_slider$semanticId',
                         value: value.toDouble(),
                         min: -15,
                         max: 15,
@@ -75,7 +78,9 @@ class ToneControlWidget extends StatelessWidget {
                     padding: const EdgeInsets.symmetric(vertical: 8.0),
                     decoration: BoxDecoration(
                       border: Border(
-                        bottom: BorderSide(color: context.colorScheme.strokeLight),
+                        bottom: BorderSide(
+                          color: context.colorScheme.strokeLight,
+                        ),
                         top: BorderSide(color: context.colorScheme.strokeLight),
                       ),
                     ),
@@ -87,6 +92,7 @@ class ToneControlWidget extends StatelessWidget {
                           width: 80,
                           // height: 25,
                           child: PBNumberTextField(
+                            semanticId: 'tone_threshold$semanticId',
                             // value: context.watch<LimiterController>().currentThreshold ?? 0,
                             value: value,
                             onChanged: (num value) {
@@ -98,7 +104,11 @@ class ToneControlWidget extends StatelessWidget {
                           ),
                         ),
                         const SizedBox(height: 4),
-                        FusionAppText(text: "db", capitalize: false, style: context.textTheme.bodySmall),
+                        FusionAppText(
+                          text: "db",
+                          capitalize: false,
+                          style: context.textTheme.bodySmall,
+                        ),
                       ],
                     ),
                   ),
@@ -113,8 +123,12 @@ class ToneControlWidget extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: <Widget>[
                 // by pass text with bypass toggle
-                FusionAppText(text: "Bypass", style: context.textTheme.bodySmall),
+                FusionAppText(
+                  text: "Bypass",
+                  style: context.textTheme.bodySmall,
+                ),
                 FusionSwitch(
+                  semanticId: 'tone_bypass$semanticId',
                   inactiveTrackColor: context.colorScheme.elevation1,
                   value: isBypassed,
                   onChanged: (bool value) {

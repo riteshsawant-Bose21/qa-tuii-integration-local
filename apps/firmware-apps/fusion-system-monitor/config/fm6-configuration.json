@@ -32,6 +32,18 @@
             ]
         },
         {
+            "name": "bt_control",
+            "property_settings": [
+                { "name": "period_ms", "value": 500 }
+            ],
+            "blocks": [
+                {
+                    "name": "bt_control",
+                    "module": "bt_control"
+                }
+            ]
+        },
+        {
             "name": "hw_control",
             "blocks": [
                 {
@@ -77,6 +89,14 @@
                                 "fm6/block_gpio/gpio_ctrl0_gpio3",
                                 "fm6/block_gpio/gpio_ctrl0_gpio4"
                             ]
+                        },
+                        { 
+                            "name": "system_mute_path",
+                            "value": "fm6/block_ana/ep_aud_out_chs-12/gpio_dac_mute"
+                        },
+                        { 
+                            "name": "system_unmute_time",
+                            "value": 45
                         }
                     ]
                 }

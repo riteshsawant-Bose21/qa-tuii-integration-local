@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/core/service_locator.dart';
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
-import 'package:fusion_launcher/features/processing_block/view/widgets/pb_slider.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
@@ -32,15 +31,18 @@ class SourceMixAdditionalSettingsDialog extends StatefulWidget {
   }
 
   @override
-  State<SourceMixAdditionalSettingsDialog> createState() => _SourceMixAdditionalSettingsState();
+  State<SourceMixAdditionalSettingsDialog> createState() =>
+      _SourceMixAdditionalSettingsState();
 }
 
-class _SourceMixAdditionalSettingsState extends State<SourceMixAdditionalSettingsDialog> {
+class _SourceMixAdditionalSettingsState
+    extends State<SourceMixAdditionalSettingsDialog> {
   late ZoneFunctions zoneFunction;
   @override
   void initState() {
     super.initState();
-    zoneFunction = projectViewModel.getZoneFunctionForZone(zoneId: widget.zoneID)!;
+    zoneFunction =
+        projectViewModel.getZoneFunctionForZone(zoneId: widget.zoneID)!;
   }
 
   final ProjectViewModel projectViewModel = serviceLocator<ProjectViewModel>();
@@ -49,7 +51,9 @@ class _SourceMixAdditionalSettingsState extends State<SourceMixAdditionalSetting
     final String? selectedId = zoneFunction.selectedMixSceneId;
     if (selectedId == null) return null;
     try {
-      return zoneFunction.mixScenes.firstWhere((MixScene scene) => scene.id == selectedId);
+      return zoneFunction.mixScenes.firstWhere(
+        (MixScene scene) => scene.id == selectedId,
+      );
     } catch (e) {
       return null;
     }
@@ -85,7 +89,10 @@ class _SourceMixAdditionalSettingsState extends State<SourceMixAdditionalSetting
                       top: 0,
                       left: 0,
                       child: Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 15, horizontal: 20),
+                        padding: const EdgeInsets.symmetric(
+                          vertical: 15,
+                          horizontal: 20,
+                        ),
                         child: FusionAppText(
                           text: "SOURCE MIX - PRIORITY SETTINGS ",
                           style: context.textTheme.titleSmall,
@@ -123,12 +130,30 @@ class _SourceMixAdditionalSettingsState extends State<SourceMixAdditionalSetting
                     Padding(
                       padding: const EdgeInsets.only(top: 50),
                       child: SemanticHelper.container(
-                        testId: SemanticHelper.createTestId(SemanticTypes.container, "source_select_main_container"),
-                        child: BlocProvider<SourceMixAdditionalSettingsViewmodel>(
-                          create: (_) => SourceMixAdditionalSettingsViewmodel()..init(zoneID: widget.zoneID),
-                          child: BlocBuilder<SourceMixAdditionalSettingsViewmodel, SourceMixAdditionalSettingsVmState>(
-                            builder: (BuildContext context, SourceMixAdditionalSettingsVmState state) {
-                              final SourceMixAdditionalSettingsViewmodel vm = context.watch<SourceMixAdditionalSettingsViewmodel>();
+                        testId: SemanticHelper.createTestId(
+                          SemanticTypes.container,
+                          "source_select_main_container",
+                        ),
+                        child: BlocProvider<
+                          SourceMixAdditionalSettingsViewmodel
+                        >(
+                          create:
+                              (_) =>
+                                  SourceMixAdditionalSettingsViewmodel()
+                                    ..init(zoneID: widget.zoneID),
+                          child: BlocBuilder<
+                            SourceMixAdditionalSettingsViewmodel,
+                            SourceMixAdditionalSettingsVmState
+                          >(
+                            builder: (
+                              BuildContext context,
+                              SourceMixAdditionalSettingsVmState state,
+                            ) {
+                              final SourceMixAdditionalSettingsViewmodel vm =
+                                  context
+                                      .watch<
+                                        SourceMixAdditionalSettingsViewmodel
+                                      >();
 
                               return Container(
                                 decoration: BoxDecoration(
@@ -145,12 +170,15 @@ class _SourceMixAdditionalSettingsState extends State<SourceMixAdditionalSetting
                                   child: Container(
                                     decoration: BoxDecoration(
                                       color: context.colorScheme.elevation2,
-                                      border: Border.all(color: context.colorScheme.strokeLight),
+                                      border: Border.all(
+                                        color: context.colorScheme.strokeLight,
+                                      ),
                                       borderRadius: BorderRadius.circular(16),
                                     ),
                                     child: Row(
                                       mainAxisSize: MainAxisSize.min,
-                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
                                       children: <Widget>[
                                         Flexible(
                                           flex: 2,
@@ -160,10 +188,15 @@ class _SourceMixAdditionalSettingsState extends State<SourceMixAdditionalSetting
                                           ),
                                         ),
 
-                                        VerticalDivider(width: 1, color: context.colorScheme.strokeLight),
+                                        VerticalDivider(
+                                          width: 1,
+                                          color:
+                                              context.colorScheme.strokeLight,
+                                        ),
                                         Flexible(
                                           child: _MixSceneSetting(
-                                            allowController: vm.isAssignToControllersEnabled,
+                                            allowController:
+                                                vm.isAssignToControllersEnabled,
                                             zoneId: widget.zoneID,
                                             onAllowControllerChanged: () {
                                               vm.toggleAssignToControllers();
@@ -171,31 +204,59 @@ class _SourceMixAdditionalSettingsState extends State<SourceMixAdditionalSetting
                                           ),
                                         ),
 
-                                        VerticalDivider(width: 1, color: context.colorScheme.strokeLight),
+                                        VerticalDivider(
+                                          width: 1,
+                                          color:
+                                              context.colorScheme.strokeLight,
+                                        ),
 
                                         // RIGHT COLUMN (Static)
                                         Flexible(
                                           flex: 2,
                                           child: ZoneSubZoneBuilderWidget(
                                             zoneID: widget.zoneID,
-                                            getLowerGain: (String zoneOrSubzoneID) => vm.getLowerGain(zoneOrSubzoneID),
-                                            getUpperGain: (String zoneOrSubzoneID) => vm.getUpperGain(zoneOrSubzoneID),
-                                            isAllowMute: (String zoneOrSubzoneID) => vm.isAllowMute(zoneOrSubzoneID),
-                                            onLowerRangeChanged: (String zoneOrSubzoneID, num value) {
+                                            getLowerGain:
+                                                (String zoneOrSubzoneID) =>
+                                                    vm.getLowerGain(
+                                                      zoneOrSubzoneID,
+                                                    ),
+                                            getUpperGain:
+                                                (String zoneOrSubzoneID) =>
+                                                    vm.getUpperGain(
+                                                      zoneOrSubzoneID,
+                                                    ),
+                                            isAllowMute:
+                                                (String zoneOrSubzoneID) =>
+                                                    vm.isAllowMute(
+                                                      zoneOrSubzoneID,
+                                                    ),
+                                            onLowerRangeChanged: (
+                                              String zoneOrSubzoneID,
+                                              num value,
+                                            ) {
                                               vm.updateZoneProperties(
-                                                zoneOrSubzoneId: zoneOrSubzoneID,
+                                                zoneOrSubzoneId:
+                                                    zoneOrSubzoneID,
                                                 lowerLimit: value.toDouble(),
                                               );
                                             },
-                                            onUpperRangeChanged: (String zoneOrSubzoneID, num value) {
+                                            onUpperRangeChanged: (
+                                              String zoneOrSubzoneID,
+                                              num value,
+                                            ) {
                                               vm.updateZoneProperties(
-                                                zoneOrSubzoneId: zoneOrSubzoneID,
+                                                zoneOrSubzoneId:
+                                                    zoneOrSubzoneID,
                                                 upperLimit: value.toDouble(),
                                               );
                                             },
-                                            onAllowMuteChanged: (String zoneOrSubzoneID, bool newValue) {
+                                            onAllowMuteChanged: (
+                                              String zoneOrSubzoneID,
+                                              bool newValue,
+                                            ) {
                                               vm.updateZoneProperties(
-                                                zoneOrSubzoneId: zoneOrSubzoneID,
+                                                zoneOrSubzoneId:
+                                                    zoneOrSubzoneID,
                                                 allowMuteUnmute: newValue,
                                               );
                                             },
@@ -240,7 +301,8 @@ class __SourcesSettingState extends State<_SourcesSetting> {
   @override
   void initState() {
     super.initState();
-    final ProjectViewModel projectViewModel = serviceLocator<ProjectViewModel>();
+    final ProjectViewModel projectViewModel =
+        serviceLocator<ProjectViewModel>();
     sources = projectViewModel.getSourcesInZone(zoneId: widget.zoneID);
   }
 
@@ -256,8 +318,14 @@ class __SourcesSettingState extends State<_SourcesSetting> {
 
     return BlocProvider<SourceMixAdditionalSettingsViewmodel>.value(
       value: widget.vm,
-      child: BlocBuilder<SourceMixAdditionalSettingsViewmodel, SourceMixAdditionalSettingsVmState>(
-        builder: (BuildContext context, SourceMixAdditionalSettingsVmState state) {
+      child: BlocBuilder<
+        SourceMixAdditionalSettingsViewmodel,
+        SourceMixAdditionalSettingsVmState
+      >(
+        builder: (
+          BuildContext context,
+          SourceMixAdditionalSettingsVmState state,
+        ) {
           return Column(
             children: <Widget>[
               Padding(
@@ -297,10 +365,13 @@ class __SourcesSettingState extends State<_SourcesSetting> {
                       controller: _scrollController,
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
-                        children: List<Widget>.generate(sources.length, (int index) {
+                        children: List<Widget>.generate(sources.length, (
+                          int index,
+                        ) {
                           final Source source = sources[index];
 
-                          final SourceVolumneRangeModel sourceRange = widget.vm.getSourceRange(source.id);
+                          final SourceVolumneRangeModel sourceRange = widget.vm
+                              .getSourceRange(source.id);
 
                           return Container(
                             width: 150,
@@ -323,18 +394,27 @@ class __SourcesSettingState extends State<_SourcesSetting> {
                                       text: source.name,
                                       textAlign: TextAlign.center,
                                       maxLine: 1,
-                                      style: Theme.of(context).textTheme.labelMedium,
+                                      style:
+                                          Theme.of(
+                                            context,
+                                          ).textTheme.labelMedium,
                                     ),
                                   ),
                                 ),
-                                Divider(color: context.colorScheme.strokeLight, height: 0),
+                                Divider(
+                                  color: context.colorScheme.strokeLight,
+                                  height: 0,
+                                ),
                                 const SizedBox(height: 10),
                                 Expanded(
                                   child: Column(
                                     children: <Widget>[
                                       Expanded(
                                         child: SemanticHelper.button(
-                                          testId: SemanticHelper.createTestId(SemanticTypes.button, "source_mix_gain_slider"),
+                                          testId: SemanticHelper.createTestId(
+                                            SemanticTypes.button,
+                                            "source_mix_gain_slider",
+                                          ),
                                           child: VerticalRangeSelectionSlider(
                                             lowerValue: sourceRange.lowerGain,
                                             upperValue: sourceRange.upperGain,
@@ -356,28 +436,46 @@ class __SourcesSettingState extends State<_SourcesSetting> {
                                         ),
                                       ),
                                       Padding(
-                                        padding: const EdgeInsets.symmetric(vertical: 10),
-                                        child: Divider(color: context.colorScheme.strokeLight, height: 0),
+                                        padding: const EdgeInsets.symmetric(
+                                          vertical: 10,
+                                        ),
+                                        child: Divider(
+                                          color:
+                                              context.colorScheme.strokeLight,
+                                          height: 0,
+                                        ),
                                       ),
                                       Padding(
-                                        padding: const EdgeInsets.symmetric(vertical: 10),
+                                        padding: const EdgeInsets.symmetric(
+                                          vertical: 10,
+                                        ),
                                         child: Row(
-                                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                                          mainAxisAlignment:
+                                              MainAxisAlignment.spaceEvenly,
                                           children: <Widget>[
                                             Flexible(
                                               child: FusionAppText(
                                                 text: "Allow mute",
-                                                style: context.textTheme.labelMedium?.copyWith(
-                                                  color: context.colorScheme.textSecondary,
-                                                ),
+                                                style: context
+                                                    .textTheme
+                                                    .labelMedium
+                                                    ?.copyWith(
+                                                      color:
+                                                          context
+                                                              .colorScheme
+                                                              .textSecondary,
+                                                    ),
                                               ),
                                             ),
                                             FusionCheckbox(
+                                              semanticId:
+                                                  'mix_settings_allow_mute',
                                               value: sourceRange.allowMute,
                                               onChanged: () {
                                                 widget.vm.updateSource(
                                                   sourceId: source.id,
-                                                  alloMute: !sourceRange.allowMute,
+                                                  alloMute:
+                                                      !sourceRange.allowMute,
                                                 );
                                               },
                                             ),
@@ -445,6 +543,7 @@ class _MixSceneSetting extends StatelessWidget {
                 ),
               ),
               FusionCheckbox(
+                semanticId: 'mix_setting_assign_controller',
                 value: allowController,
                 onChanged: onAllowControllerChanged,
               ),
