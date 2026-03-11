@@ -120,7 +120,6 @@ type DeviceInfo struct {
 	Name            string `json:"name"`
 	ModelName       string `json:"model_name"`
 	MacAddress      string `json:"mac_address"`
-	IsClaimed       bool   `json:"is_claimed"`
 	SerialNumber    string `json:"serial_number"`
 	IsPrimaryNode   bool   `json:"is_primary"`
 	FirmwareVersion string `json:"firmware_version"`

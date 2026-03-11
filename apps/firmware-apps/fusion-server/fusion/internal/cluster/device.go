@@ -151,7 +151,6 @@ func (c *Cluster) RebootSystemLocal(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusAccepted)
 }
 
-
 func (c *Cluster) rebootSystem() error {
 	if err := c.restartSystem(); err != nil {
 		return err
@@ -319,9 +318,6 @@ func (c *Cluster) applyPatch(patch *persistence.DevicePatch, info *persistence.D
 		info.ModelName = *patch.ModelName
 	}
 
-	if patch.IsClaimed != nil {
-		info.IsClaimed = *patch.IsClaimed
-	}
 }
 
 // validateNoDuplication returns an error if any of the non‐nil fields in patch

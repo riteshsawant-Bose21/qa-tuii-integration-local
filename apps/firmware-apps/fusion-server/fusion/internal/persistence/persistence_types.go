@@ -13,7 +13,6 @@ type DevicePatch struct {
 	Location  *string `json:"location,omitempty"`
 	Name      *string `json:"name,omitempty"`
 	ModelName *string `json:"model_name,omitempty"`
-	IsClaimed *bool   `json:"is_claimed,omitempty"`
 }
 
 // PersistentState represents the saved state structure.
