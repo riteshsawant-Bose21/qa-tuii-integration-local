@@ -108,9 +108,9 @@ func main() {
 		}
 	}()
 
-	appConfig := parseFlags()
+	config := parseFlags()
 
-	if appConfig.Profile {
+	if config.Profile {
 		// Create profile dump
 		timestamp := time.Now().Format("20060102_150405")
 		profilePath := filepath.Join("/tmp", fmt.Sprintf("fusion_server_cpu_%s.prof", timestamp))
@@ -131,7 +131,7 @@ func main() {
 		defer pprof.StopCPUProfile()
 	}
 
-	app := app.NewApp(appConfig)
+	app := app.NewApp(config)
 	defer app.Close()
 
 	ctx, cancel := context.WithCancel(context.Background())
