@@ -97,7 +97,8 @@ CREATE TABLE project_user (
     user_id UUID NOT NULL REFERENCES app_user(id) ON DELETE CASCADE,
     is_starred BOOLEAN DEFAULT false NOT NULL,
     created_at TIMESTAMP WITHOUT TIME ZONE DEFAULT now() NOT NULL,
-    updated_at TIMESTAMP WITHOUT TIME ZONE DEFAULT now() NOT NULL
+    updated_at TIMESTAMP WITHOUT TIME ZONE DEFAULT now() NOT NULL,
+    CONSTRAINT UC_ProjectIDUserID UNIQUE (project_id, user_id)
 );
 
 -- Create ENUM type for product types
