@@ -8,6 +8,7 @@ export 'fusion_expandable_tile_widget.dart';
 export 'fusion_horizontal_resizable_widget.dart';
 export 'fusion_image.dart';
 export 'fusion_keyboard_wrapper.dart';
+export 'fusion_multi_select_popup_menu.dart';
 export 'fusion_popup_menu.dart';
 export 'fusion_profile_image.dart';
 export 'fusion_radio.dart';

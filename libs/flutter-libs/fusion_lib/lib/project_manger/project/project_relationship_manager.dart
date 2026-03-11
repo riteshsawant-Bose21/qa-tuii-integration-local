@@ -28,6 +28,7 @@ enum RelationshipType {
   messageZones,
   playerMessages,
   sourceMessages,
+  messageMediaMapping,
 }
 
 class RelationshipManager {

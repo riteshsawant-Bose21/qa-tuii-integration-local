@@ -13,6 +13,7 @@ class FusionFlatContainer extends StatelessWidget {
     this.height,
     this.alignment,
     this.padding,
+    this.margin,
   });
   final double? width;
   final double? height;
@@ -22,7 +23,9 @@ class FusionFlatContainer extends StatelessWidget {
   final Color? borderColor;
   final AlignmentGeometry? alignment;
   final EdgeInsetsGeometry? padding;
+  final EdgeInsetsGeometry? margin;
   final String? semanticId;
+
   @override
   Widget build(BuildContext context) {
     return SemanticHelper.container(
@@ -35,7 +38,7 @@ class FusionFlatContainer extends StatelessWidget {
         width: width,
         height: height,
         alignment: alignment,
-        margin: const EdgeInsets.all(2),
+        margin: margin ?? const EdgeInsets.all(2),
         padding: padding ?? EdgeInsets.all(16),
         decoration: BoxDecoration(
           color: color ?? context.colorScheme.elevation1,

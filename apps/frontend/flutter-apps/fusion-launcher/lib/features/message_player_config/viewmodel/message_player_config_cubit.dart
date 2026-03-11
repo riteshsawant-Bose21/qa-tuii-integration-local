@@ -316,6 +316,37 @@ class MessagePlayerConfigCubit extends Cubit<MessagePlayerConfigState> {
     return _projectViewModel.getZonesForMessage(loaded.selectedMessageId!);
   }
 
+  /// Get assigned zones as Zone objects for the selected message
+  Set<Zone> getAssignedZonesAsSet() {
+    final MessagePlayerLoaded? loaded = _loadedState;
+    if (loaded == null || loaded.selectedMessageId == null) return <Zone>{};
+
+    final Set<String> assignedZoneIds = getAssignedZonesForSelectedMessage();
+    return loaded.availableZones.where((Zone z) => assignedZoneIds.contains(z.id)).toSet();
+  }
+
+  /// Update zone assignments for selected message
+  /// Compares the new selection with current assignments and toggles accordingly
+  Future<void> updateZoneAssignments(Set<Zone> selectedZones) async {
+    final MessagePlayerLoaded? loaded = _loadedState;
+    if (loaded == null || loaded.selectedMessageId == null) return;
+
+    final Set<String> currentAssignedIds = getAssignedZonesForSelectedMessage();
+    final Set<String> selectedIds = selectedZones.map((Zone z) => z.id).toSet();
+
+    // Find zones to add
+    final Set<String> zonesToAdd = selectedIds.difference(currentAssignedIds);
+    // Find zones to remove
+    final Set<String> zonesToRemove = currentAssignedIds.difference(selectedIds);
+
+    for (final String zoneId in zonesToAdd) {
+      await toggleZoneAssignment(zoneId);
+    }
+    for (final String zoneId in zonesToRemove) {
+      await toggleZoneAssignment(zoneId);
+    }
+  }
+
   /// Check if a zone is assigned to selected message
   bool isZoneAssignedToSelectedMessage(String zoneId) {
     final MessagePlayerLoaded? loaded = _loadedState;

@@ -61,29 +61,50 @@ class _ZoneList extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final MessagePlayerConfigCubit cubit = context.read<MessagePlayerConfigCubit>();
-
-    /// Get assigned zone IDs from RelationshipManager
-    final Set<String> assignedZoneIds = cubit.getAssignedZonesForSelectedMessage();
-
-    /// Separate assigned and unassigned zones
-    final List<Zone> assignedZones = availableZones.where((Zone z) => assignedZoneIds.contains(z.id)).toList();
+    final Set<Zone> selectedZones = cubit.getAssignedZonesAsSet();
 
     return Column(
       children: <Widget>[
-        // Assigned zones at the top
-        ...assignedZones.map(
-          (Zone zone) => _ZoneItem(
-            zone: zone,
-            isAssigned: true,
-            onToggle: () => cubit.toggleZoneAssignment(zone.id),
+        /// Add zone dropdown using FusionMultiSelectPopupMenu
+        FusionMultiSelectPopupMenu<Zone>(
+          items: availableZones,
+          selectedItems: selectedZones,
+          semanticsId: 'zone_assignment_dropdown',
+          tooltip: 'Select zones',
+          itemLabelBuilder: (Zone zone) => zone.name,
+          onSave: cubit.updateZoneAssignments,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            alignment: Alignment.centerLeft,
+            decoration: BoxDecoration(
+              color: context.colorScheme.elevation2,
+              borderRadius:
+                  selectedZones.isEmpty
+                      ? BorderRadius.circular(8)
+                      : const BorderRadius.only(
+                        topLeft: Radius.circular(8),
+                        topRight: Radius.circular(8),
+                      ),
+              border: Border.all(color: context.colorScheme.strokeLight),
+            ),
+            child: Row(
+              children: <Widget>[
+                Icon(Icons.add, size: 16, color: context.colorScheme.textPrimary),
+                const SizedBox(width: 8),
+                FusionAppText(text: availableZones.isEmpty ? 'No zones available' : 'Select zone', style: context.textTheme.l1Regular),
+              ],
+            ),
           ),
         ),
 
-        // Add zone button/dropdown
-        _AddZoneDropdown(
-          availableZones: availableZones,
-          assignedZoneIds: assignedZoneIds.toList(),
-          onZoneSelected: (String zoneId) => cubit.toggleZoneAssignment(zoneId),
+        // Assigned zones list
+        ...selectedZones.toList().asMap().entries.map(
+          (MapEntry<int, Zone> entry) => _ZoneItem(
+            zone: entry.value,
+            isAssigned: true,
+            isLast: entry.key == selectedZones.length - 1,
+            onToggle: () => cubit.toggleZoneAssignment(entry.value.id),
+          ),
         ),
       ],
     );
@@ -93,160 +114,63 @@ class _ZoneList extends StatelessWidget {
 class _ZoneItem extends StatelessWidget {
   final Zone zone;
   final bool isAssigned;
+  final bool isLast;
   final VoidCallback onToggle;
 
   const _ZoneItem({
     required this.zone,
     required this.isAssigned,
+    required this.isLast,
     required this.onToggle,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: SemanticHelper.button(
-        testId: SemanticHelper.createTestId(
-          SemanticTypes.button,
-          'zone_item_${zone.id}',
+    return InkWell(
+      onTap: onToggle,
+      borderRadius:
+          isLast
+              ? const BorderRadius.only(
+                bottomLeft: Radius.circular(8),
+                bottomRight: Radius.circular(8),
+              )
+              : null,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        decoration: BoxDecoration(
+          color: context.colorScheme.elevation2,
+          borderRadius:
+              isLast
+                  ? const BorderRadius.only(
+                    bottomLeft: Radius.circular(8),
+                    bottomRight: Radius.circular(8),
+                  )
+                  : null,
+          border: Border(
+            bottom: BorderSide(color: context.colorScheme.strokeLight, width: 1),
+            left: BorderSide(color: context.colorScheme.strokeLight, width: 1),
+            right: BorderSide(color: context.colorScheme.strokeLight, width: 1),
+          ),
         ),
-        child: Material(
-          color: Colors.transparent,
-          child: InkWell(
-            onTap: onToggle,
-            borderRadius: BorderRadius.circular(8),
-            child: FusionContainer(
-              raised: false,
-              borderRadius: 8,
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                decoration: BoxDecoration(
-                  color: context.colorScheme.elevation2,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Row(
-                  children: <Widget>[
-                    FusionCheckbox(
-                      value: isAssigned,
-                      semanticId: 'zone_checkbox_${zone.id}',
-                      onChanged: onToggle,
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: FusionAppText(
-                        text: zone.name,
-                        style: context.textTheme.bodyMedium?.copyWith(
-                          color: context.colorScheme.textPrimary,
-                        ),
-                        maxLine: 1,
-                        textOverflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                  ],
-                ),
+        child: Row(
+          children: <Widget>[
+            FusionCheckbox(
+              value: isAssigned,
+              semanticId: 'zone_checkbox_${zone.id}',
+              onChanged: onToggle,
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: FusionAppText(
+                text: zone.name,
+                style: context.textTheme.bodyMedium,
+                maxLine: 1,
+                textOverflow: TextOverflow.ellipsis,
               ),
             ),
-          ),
+          ],
         ),
       ),
-    );
-  }
-}
-
-class _AddZoneDropdown extends StatelessWidget {
-  final List<Zone> availableZones;
-  final List<String> assignedZoneIds;
-  final Function(String zoneId) onZoneSelected;
-
-  const _AddZoneDropdown({
-    required this.availableZones,
-    required this.assignedZoneIds,
-    required this.onZoneSelected,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    // Get unassigned zones for the dropdown
-    final List<Zone> unassignedZones = availableZones.where((Zone z) => !assignedZoneIds.contains(z.id)).toList();
-
-    if (unassignedZones.isEmpty && assignedZoneIds.isEmpty) {
-      return FusionContainer(
-        raised: false,
-        borderRadius: 8,
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-          decoration: BoxDecoration(
-            color: context.colorScheme.elevation2,
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: <Widget>[
-              Icon(
-                Icons.add,
-                size: 16,
-                color: context.colorScheme.textSecondary,
-              ),
-              const SizedBox(width: 8),
-              FusionAppText(
-                text: 'No zones available',
-                style: context.textTheme.bodyMedium?.copyWith(
-                  color: context.colorScheme.textSecondary,
-                ),
-              ),
-            ],
-          ),
-        ),
-      );
-    }
-
-    return FusionDropDown<Zone>(
-      semanticId: 'add_zone_dropdown',
-      items: unassignedZones,
-      selectedIndex: null,
-      backgroundColor: context.colorScheme.elevation2,
-      offset: const Offset(0, 50),
-      trigger: FusionContainer(
-        raised: false,
-        borderRadius: 8,
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-          decoration: BoxDecoration(
-            color: context.colorScheme.elevation2,
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: <Widget>[
-              Icon(
-                Icons.add,
-                size: 16,
-                color: context.colorScheme.textPrimary,
-              ),
-              const SizedBox(width: 8),
-              FusionAppText(
-                text: 'Select zone',
-                style: context.textTheme.bodyMedium?.copyWith(
-                  color: context.colorScheme.textPrimary,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-      itemBuilder: (BuildContext context, Zone zone, bool isSelected) {
-        return FusionAppText(
-          text: zone.name,
-          style: context.textTheme.bodyMedium?.copyWith(
-            color: context.colorScheme.textPrimary,
-          ),
-        );
-      },
-      onSelected: (int index) {
-        if (index >= 0 && index < unassignedZones.length) {
-          onZoneSelected(unassignedZones[index].id);
-        }
-      },
     );
   }
 }
