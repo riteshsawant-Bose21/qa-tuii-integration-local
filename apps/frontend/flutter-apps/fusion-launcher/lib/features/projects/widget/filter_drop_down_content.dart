@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:fusion_lib/constants/test_keys.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/fusion_theme/app_theme.dart';
 
@@ -62,31 +61,57 @@ class _FilterDropdownContentState extends State<FilterDropdownContent> {
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
               decoration: BoxDecoration(
                 color: Theme.of(context).colorScheme.primaryWhite,
-                border: Border(bottom: BorderSide(color: Theme.of(context).colorScheme.primaryBlack, width: 1)),
+                border: Border(
+                  bottom: BorderSide(
+                    color: Theme.of(context).colorScheme.primaryBlack,
+                    width: 1,
+                  ),
+                ),
               ),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: <Widget>[
                   Expanded(
-                    child: FusionAppText(text: "Filter", style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontSize: 11)),
+                    child: FusionAppText(
+                      text: "Filter",
+                      style: Theme.of(
+                        context,
+                      ).textTheme.bodyMedium?.copyWith(fontSize: 11),
+                    ),
                   ),
                   SemanticHelper.button(
-                    testId: SemanticHelper.createTestId(SemanticTypes.button, FusionTestKeys.applyProductQueryFilters),
+                    testId: SemanticHelper.createTestId(
+                      SemanticTypes.button,
+                      FusionTestKeys.applyProductQueryFilters,
+                    ),
                     child: TextButton(
                       onPressed: () {
                         // Apply filters and close the dropdown
                         // _applyFilters();
                         Navigator.of(context).pop();
                       },
-                      child: FusionAppText(text: 'Apply', style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontSize: 11)),
+                      child: FusionAppText(
+                        text: 'Apply',
+                        style: Theme.of(
+                          context,
+                        ).textTheme.bodyMedium?.copyWith(fontSize: 11),
+                      ),
                     ),
                   ),
                   if (_hasAnyFilters())
                     SemanticHelper.button(
-                      testId: SemanticHelper.createTestId(SemanticTypes.button, FusionTestKeys.clearProductQueryFilters),
+                      testId: SemanticHelper.createTestId(
+                        SemanticTypes.button,
+                        FusionTestKeys.clearProductQueryFilters,
+                      ),
                       child: TextButton(
                         onPressed: _clearAllFilters,
-                        child: FusionAppText(text: 'Clear', style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontSize: 11)),
+                        child: FusionAppText(
+                          text: 'Clear',
+                          style: Theme.of(
+                            context,
+                          ).textTheme.bodyMedium?.copyWith(fontSize: 11),
+                        ),
                       ),
                     ),
                 ],
@@ -98,18 +123,35 @@ class _FilterDropdownContentState extends State<FilterDropdownContent> {
               index: 0,
               title: 'Product Type',
               image: "assets/images/coverage.png",
-              initiallyExpanded: _localProductTypes.length == 1 && _localProductTypes.contains(ProductType.speaker) ? false : true,
+              initiallyExpanded:
+                  _localProductTypes.length == 1 &&
+                          _localProductTypes.contains(ProductType.speaker)
+                      ? false
+                      : true,
               options:
                   ProductType.values
-                      .where((ProductType type) => (type != ProductType.sources) && (type != ProductType.racks))
-                      .map((ProductType type) => _getProductTypeDisplayName(type))
+                      .where(
+                        (ProductType type) =>
+                            (type != ProductType.sources) &&
+                            (type != ProductType.racks),
+                      )
+                      .map(
+                        (ProductType type) => _getProductTypeDisplayName(type),
+                      )
                       .toList(),
-              selectedOptions: _localProductTypes.map((ProductType type) => _getProductTypeDisplayName(type)).toSet(),
+              selectedOptions:
+                  _localProductTypes
+                      .map(
+                        (ProductType type) => _getProductTypeDisplayName(type),
+                      )
+                      .toSet(),
               onChanged: (Set<String> selected) {
                 setState(() {
                   _localProductTypes.clear();
                   for (String displayName in selected) {
-                    final ProductType? type = _getProductTypeFromDisplayName(displayName);
+                    final ProductType? type = _getProductTypeFromDisplayName(
+                      displayName,
+                    );
                     if (type != null) _localProductTypes.add(type);
                   }
                 });
@@ -118,7 +160,8 @@ class _FilterDropdownContentState extends State<FilterDropdownContent> {
             ),
 
             /// Mount Type Filter (only for speakers when it's the only selected type)
-            if (_localProductTypes.length == 1 && _localProductTypes.contains(ProductType.speaker))
+            if (_localProductTypes.length == 1 &&
+                _localProductTypes.contains(ProductType.speaker))
               _buildFilterSection(
                 index: 1,
                 title: 'Mount Type',
@@ -134,7 +177,8 @@ class _FilterDropdownContentState extends State<FilterDropdownContent> {
               ),
 
             /// Venue Type Filter (only for speakers when it's the only selected type)
-            if (_localProductTypes.length == 1 && _localProductTypes.contains(ProductType.speaker))
+            if (_localProductTypes.length == 1 &&
+                _localProductTypes.contains(ProductType.speaker))
               _buildFilterSection(
                 index: 2,
                 title: 'Venue Type',
@@ -150,7 +194,8 @@ class _FilterDropdownContentState extends State<FilterDropdownContent> {
               ),
 
             /// Color Filter (only for speakers when it's the only selected type)
-            if (_localProductTypes.length == 1 && _localProductTypes.contains(ProductType.speaker))
+            if (_localProductTypes.length == 1 &&
+                _localProductTypes.contains(ProductType.speaker))
               _buildFilterSection(
                 index: 3,
                 title: 'Color',
@@ -166,7 +211,8 @@ class _FilterDropdownContentState extends State<FilterDropdownContent> {
               ),
 
             /// Coverage Filter (only for speakers when it's the only selected type)
-            if (_localProductTypes.length == 1 && _localProductTypes.contains(ProductType.speaker))
+            if (_localProductTypes.length == 1 &&
+                _localProductTypes.contains(ProductType.speaker))
               _buildFilterSection(
                 index: 4,
                 title: 'Coverage',
@@ -182,7 +228,8 @@ class _FilterDropdownContentState extends State<FilterDropdownContent> {
               ),
 
             /// Impedance Filter (only for speakers when it's the only selected type)
-            if (_localProductTypes.length == 1 && _localProductTypes.contains(ProductType.speaker))
+            if (_localProductTypes.length == 1 &&
+                _localProductTypes.contains(ProductType.speaker))
               _buildFilterSection(
                 index: 5,
                 title: 'Impedance',
@@ -213,7 +260,10 @@ class _FilterDropdownContentState extends State<FilterDropdownContent> {
     required ValueChanged<Set<String>> onChanged,
   }) {
     return SemanticHelper.toggle(
-      testId: SemanticHelper.createTestId(SemanticTypes.toggle, "filter_section_${title}_item_$index"),
+      testId: SemanticHelper.createTestId(
+        SemanticTypes.toggle,
+        "filter_section_${title}_item_$index",
+      ),
       value: initiallyExpanded,
       child: ExpansionTile(
         minTileHeight: 24,
@@ -247,7 +297,10 @@ class _FilterDropdownContentState extends State<FilterDropdownContent> {
               final bool isSelected = selectedOptions.contains(option);
 
               return SemanticHelper.toggle(
-                testId: SemanticHelper.createTestId(SemanticTypes.toggle, "${title}_option_item_index_$optionIndex"),
+                testId: SemanticHelper.createTestId(
+                  SemanticTypes.toggle,
+                  "${title}_option_item_index_$optionIndex",
+                ),
                 value: isSelected,
                 child: RadioListTile<String>(
                   dense: true,
@@ -260,7 +313,8 @@ class _FilterDropdownContentState extends State<FilterDropdownContent> {
                     ),
                   ),
                   value: option,
-                  groupValue: selectedOptions.isNotEmpty ? selectedOptions.first : null,
+                  groupValue:
+                      selectedOptions.isNotEmpty ? selectedOptions.first : null,
                   activeColor: context.colorScheme.primaryBlack,
                   onChanged: (String? value) {
                     print("$title radio changed: $value");
@@ -278,7 +332,10 @@ class _FilterDropdownContentState extends State<FilterDropdownContent> {
               final String option = options[optionIndex];
               final bool isSelected = selectedOptions.contains(option);
               return SemanticHelper.toggle(
-                testId: SemanticHelper.createTestId(SemanticTypes.toggle, "${title}_option_item_index_$optionIndex"),
+                testId: SemanticHelper.createTestId(
+                  SemanticTypes.toggle,
+                  "${title}_option_item_index_$optionIndex",
+                ),
                 value: isSelected,
                 child: CheckboxListTile(
                   dense: true,
@@ -293,7 +350,9 @@ class _FilterDropdownContentState extends State<FilterDropdownContent> {
                   value: isSelected,
                   activeColor: context.colorScheme.primaryBlack,
                   onChanged: (bool? checked) {
-                    final Set<String> newSelected = Set<String>.from(selectedOptions);
+                    final Set<String> newSelected = Set<String>.from(
+                      selectedOptions,
+                    );
                     if (checked == true) {
                       newSelected.add(option);
                     } else {

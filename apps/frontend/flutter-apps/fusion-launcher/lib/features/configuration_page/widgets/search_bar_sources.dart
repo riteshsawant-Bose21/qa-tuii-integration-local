@@ -34,7 +34,10 @@ class SearchBarSources extends StatelessWidget {
               isFromActionList
                   ? null
                   : Border(
-                    bottom: BorderSide(color: Theme.of(context).colorScheme.outlineVariant, width: 1),
+                    bottom: BorderSide(
+                      color: Theme.of(context).colorScheme.outlineVariant,
+                      width: 1,
+                    ),
                   ),
         ),
         child: Column(
@@ -49,12 +52,20 @@ class SearchBarSources extends StatelessWidget {
                   /// Search box
                   Expanded(
                     child: SemanticHelper.formControl(
-                      testId: SemanticHelper.createTestId(SemanticTypes.textInput, "search_bar_sources"),
+                      testId: SemanticHelper.createTestId(
+                        SemanticTypes.textInput,
+                        "search_bar_sources",
+                      ),
                       child: FusionTextField(
+                        semanticFieldId: 'search_bar_sources',
                         controller: searchController,
                         hintText: 'Search sources',
 
-                        prefixIcon: Icon(Icons.search, color: Colors.grey[400], size: 16),
+                        prefixIcon: Icon(
+                          Icons.search,
+                          color: Colors.grey[400],
+                          size: 16,
+                        ),
                         onChanged: (String value) {
                           if (value.isEmpty) {
                             onClearSearch?.call();
@@ -64,7 +75,11 @@ class SearchBarSources extends StatelessWidget {
                         suffixIcon:
                             searchController.text.isNotEmpty
                                 ? IconButton(
-                                  icon: Icon(Icons.clear, color: Colors.grey[400], size: 16),
+                                  icon: Icon(
+                                    Icons.clear,
+                                    color: Colors.grey[400],
+                                    size: 16,
+                                  ),
                                   onPressed: onClearSearch,
                                   padding: EdgeInsets.zero,
                                   constraints: const BoxConstraints(),

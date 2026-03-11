@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
-
-import '../../processing_block/view/widgets/pb_meter.dart';
-import '../../processing_block/view/widgets/pb_slider.dart';
+import 'package:fusion_lib/fusion_widgets/others/fusion_vertical_meter.dart';
+import 'package:fusion_lib/fusion_widgets/others/fusion_vertical_slider.dart';
 
 class SliderAndMeterWidget extends StatelessWidget {
   final double sliderValue;
@@ -25,6 +24,7 @@ class SliderAndMeterWidget extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: <Widget>[
           VerticalSlider(
+            semanticId: 'slider_and_meter_widget',
             onChanged: onSliderChanged,
             value: sliderValue,
             min: sliderMin,
