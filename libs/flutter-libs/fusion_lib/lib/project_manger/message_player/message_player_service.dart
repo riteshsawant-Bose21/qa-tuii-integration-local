@@ -93,4 +93,61 @@ extension MessagePlayerService on ProjectService {
       assignZoneToMessage(messageId: messageId, zoneId: zoneId);
     }
   }
+
+  // ==================== Media Mapping Methods ====================
+
+  /// Assign a media file to a message
+  void assignMediaToMessage({
+    required String messageId,
+    required String mediaId,
+  }) {
+    // First, remove any existing media mapping for this message
+    final String? existingMediaId = getMediaIdForMessage(messageId);
+    if (existingMediaId != null) {
+      relationships.unlink(
+        RelationshipType.messageMediaMapping,
+        messageId,
+        existingMediaId,
+      );
+    }
+    // Then link the new media
+    relationships.link(
+      RelationshipType.messageMediaMapping,
+      messageId,
+      mediaId,
+    );
+  }
+
+  /// Remove media file from a message
+  void removeMediaFromMessage({required String messageId}) {
+    final String? mediaId = getMediaIdForMessage(messageId);
+    if (mediaId != null) {
+      relationships.unlink(
+        RelationshipType.messageMediaMapping,
+        messageId,
+        mediaId,
+      );
+    }
+  }
+
+  /// Get media file ID for a message
+  String? getMediaIdForMessage(String messageId) {
+    final Set<String> mediaIds = relationships.getChildren(
+      RelationshipType.messageMediaMapping,
+      messageId,
+    );
+    return mediaIds.isNotEmpty ? mediaIds.first : null;
+  }
+
+  /// Get media file model for a message
+  MediaFileModel? getMediaFileForMessage(String messageId) {
+    final String? mediaId = getMediaIdForMessage(messageId);
+    if (mediaId == null) return null;
+    return mediaFiles.get(mediaId);
+  }
+
+  /// Check if a message has a media file assigned
+  bool hasMediaAssigned(String messageId) {
+    return getMediaIdForMessage(messageId) != null;
+  }
 }

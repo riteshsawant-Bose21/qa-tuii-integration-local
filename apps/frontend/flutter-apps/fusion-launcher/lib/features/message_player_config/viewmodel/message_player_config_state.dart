@@ -82,6 +82,9 @@ class MessagePlayerLoaded extends MessagePlayerConfigState {
   /// Version counter to force UI rebuild when zone assignments change
   final int zoneAssignmentVersion;
 
+  /// Version counter to force UI rebuild when media assignments change
+  final int mediaAssignmentVersion;
+
   const MessagePlayerLoaded({
     this.sourceId,
     this.messages = const <MessageModel>[],
@@ -92,6 +95,7 @@ class MessagePlayerLoaded extends MessagePlayerConfigState {
     this.totalDuration,
     this.availableZones = const <Zone>[],
     this.zoneAssignmentVersion = 0,
+    this.mediaAssignmentVersion = 0,
   });
 
   /// Create a copy with updated values
@@ -105,6 +109,7 @@ class MessagePlayerLoaded extends MessagePlayerConfigState {
     Duration? totalDuration,
     List<Zone>? availableZones,
     int? zoneAssignmentVersion,
+    int? mediaAssignmentVersion,
     bool clearSelectedMessage = false,
     bool clearError = false,
     bool clearTotalDuration = false,
@@ -119,6 +124,7 @@ class MessagePlayerLoaded extends MessagePlayerConfigState {
       totalDuration: clearTotalDuration ? null : (totalDuration ?? this.totalDuration),
       availableZones: availableZones ?? this.availableZones,
       zoneAssignmentVersion: zoneAssignmentVersion ?? this.zoneAssignmentVersion,
+      mediaAssignmentVersion: mediaAssignmentVersion ?? this.mediaAssignmentVersion,
     );
   }
 
@@ -133,6 +139,7 @@ class MessagePlayerLoaded extends MessagePlayerConfigState {
     totalDuration,
     availableZones,
     zoneAssignmentVersion,
+    mediaAssignmentVersion,
   ];
 }
 

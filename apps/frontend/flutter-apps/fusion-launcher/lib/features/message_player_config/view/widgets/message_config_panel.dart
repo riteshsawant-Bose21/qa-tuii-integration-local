@@ -50,7 +50,7 @@ class MessageConfigPanel extends StatelessWidget {
               ),
 
               // Audio Player (only show if audio file is selected)
-              if (selectedMessage.audioFileId != null) ...<Widget>[
+              if (context.read<MessagePlayerConfigCubit>().hasMediaAssignedToSelectedMessage()) ...<Widget>[
                 const SizedBox(height: 16),
                 _AudioPlayerWidget(state: state),
 
@@ -180,6 +180,8 @@ class _AudioFileDropdown extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final MessagePlayerConfigCubit cubit = context.read<MessagePlayerConfigCubit>();
+    final MediaFileModel? mediaFile = cubit.getMediaFileForSelectedMessage();
+    final String? audioFileName = mediaFile?.name;
 
     return FusionDropDown<_AudioFileOption>(
       semanticId: 'audio_file_options_dropdown',
@@ -204,9 +206,9 @@ class _AudioFileDropdown extends StatelessWidget {
             children: <Widget>[
               Expanded(
                 child: FusionAppText(
-                  text: selectedMessage.audioFileName ?? 'Select Audio File',
+                  text: audioFileName ?? 'Select Audio File',
                   style: context.textTheme.bodyMedium?.copyWith(
-                    color: selectedMessage.audioFileName != null ? context.colorScheme.textPrimary : context.colorScheme.textPlaceholder,
+                    color: audioFileName != null ? context.colorScheme.textPrimary : context.colorScheme.textPlaceholder,
                   ),
                   maxLine: 1,
                   textOverflow: TextOverflow.ellipsis,
@@ -256,6 +258,7 @@ class _AudioFileDropdown extends StatelessWidget {
 
   void _showSelectAudioFileDialog(BuildContext context, MessagePlayerConfigCubit cubit) {
     final List<MediaFileModel> audioFiles = cubit.getAvailableAudioFiles();
+    final MediaFileModel? currentMediaFile = cubit.getMediaFileForSelectedMessage();
 
     if (audioFiles.isEmpty) {
       FusionToast.error(context, message: 'No audio files available. Please upload an audio file first.');
@@ -267,9 +270,9 @@ class _AudioFileDropdown extends StatelessWidget {
       builder: (BuildContext dialogContext) {
         return _SelectAudioFileDialog(
           audioFiles: audioFiles,
-          selectedAudioFileId: selectedMessage.audioFileId,
+          selectedAudioFileId: currentMediaFile?.id,
           onSelect: (MediaFileModel file) {
-            cubit.assignAudioFile(file.id, file.name);
+            cubit.assignAudioFile(file.id);
             Navigator.of(dialogContext).pop();
           },
         );
@@ -294,7 +297,7 @@ class _AudioFileDropdown extends StatelessWidget {
           final List<MediaFileModel> audioFiles = cubit.getAvailableAudioFiles();
           if (audioFiles.isNotEmpty) {
             final MediaFileModel newFile = audioFiles.last;
-            cubit.assignAudioFile(newFile.id, newFile.name);
+            cubit.assignAudioFile(newFile.id);
           }
 
           if (context.mounted) {
@@ -419,9 +422,9 @@ class _AudioPlayerWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final MessagePlayerConfigCubit cubit = context.read<MessagePlayerConfigCubit>();
-    final MessageModel? selectedMessage = state.selectedMessage;
+    final MediaFileModel? mediaFile = cubit.getMediaFileForSelectedMessage();
 
-    if (selectedMessage?.audioFileName == null) return const SizedBox.shrink();
+    if (mediaFile == null) return const SizedBox.shrink();
 
     return FusionContainer(
       raised: false,
@@ -453,7 +456,7 @@ class _AudioPlayerWidget extends StatelessWidget {
                 const SizedBox(width: 12),
                 Expanded(
                   child: FusionAppText(
-                    text: selectedMessage!.audioFileName!,
+                    text: mediaFile.name,
                     style: context.textTheme.bodyMedium?.copyWith(
                       color: context.colorScheme.textPrimary,
                     ),

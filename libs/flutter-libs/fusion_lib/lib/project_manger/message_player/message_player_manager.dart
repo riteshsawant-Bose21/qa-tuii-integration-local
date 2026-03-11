@@ -122,4 +122,52 @@ extension MessagePlayerManager on ProjectManager {
       zoneId: zoneId,
     );
   }
+
+  // ==================== Media Mapping Methods ====================
+
+  /// Assign a media file to a message
+  void assignMediaToMessage({
+    required String messageId,
+    required String mediaId,
+  }) {
+    if (projectService == null) {
+      throw Exception("ProjectService is not initialized.");
+    }
+    projectService!.assignMediaToMessage(
+      messageId: messageId,
+      mediaId: mediaId,
+    );
+  }
+
+  /// Remove media file from a message
+  void removeMediaFromMessage({required String messageId}) {
+    if (projectService == null) {
+      throw Exception("ProjectService is not initialized.");
+    }
+    projectService!.removeMediaFromMessage(messageId: messageId);
+  }
+
+  /// Get media file ID for a message
+  String? getMediaIdForMessage(String messageId) {
+    if (projectService == null) {
+      throw Exception("ProjectService is not initialized.");
+    }
+    return projectService!.getMediaIdForMessage(messageId);
+  }
+
+  /// Get media file model for a message
+  MediaFileModel? getMediaFileForMessage(String messageId) {
+    if (projectService == null) {
+      throw Exception("ProjectService is not initialized.");
+    }
+    return projectService!.getMediaFileForMessage(messageId);
+  }
+
+  /// Check if a message has a media file assigned
+  bool hasMediaAssigned(String messageId) {
+    if (projectService == null) {
+      throw Exception("ProjectService is not initialized.");
+    }
+    return projectService!.hasMediaAssigned(messageId);
+  }
 }

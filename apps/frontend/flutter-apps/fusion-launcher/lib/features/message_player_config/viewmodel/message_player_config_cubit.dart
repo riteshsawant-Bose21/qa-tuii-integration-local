@@ -149,34 +149,35 @@ class MessagePlayerConfigCubit extends Cubit<MessagePlayerConfigState> {
   }
 
   /// Assign audio file to selected message
-  Future<void> assignAudioFile(String audioFileId, String audioFileName) async {
+  Future<void> assignAudioFile(String mediaId) async {
     final MessagePlayerLoaded? loaded = _loadedState;
     if (loaded == null || loaded.selectedMessageId == null) return;
 
-    final MessageModel? currentMessage = loaded.selectedMessage;
-    if (currentMessage == null) return;
-
-    final MessageModel updatedMessage = currentMessage.copyWith(
-      audioFileId: audioFileId,
-      audioFileName: audioFileName,
-    );
-
-    await _projectViewModel.updateMessage(
-      message: updatedMessage,
+    await _projectViewModel.assignMediaToMessage(
+      messageId: loaded.selectedMessageId!,
+      mediaId: mediaId,
       autoSave: true,
     );
 
-    // Refresh messages from source
-    final List<MessageModel> updatedMessages = _projectViewModel.getMessagesForSource(_sourceId!);
-
-    emit(
-      loaded.copyWith(
-        messages: updatedMessages,
-      ),
-    );
+    // Increment mediaAssignmentVersion to force UI rebuild
+    emit(loaded.copyWith(mediaAssignmentVersion: loaded.mediaAssignmentVersion + 1));
 
     // Load the audio file for preview
-    _loadAudioFile(audioFileId);
+    _loadAudioFile(mediaId);
+  }
+
+  /// Get media file for selected message
+  MediaFileModel? getMediaFileForSelectedMessage() {
+    final MessagePlayerLoaded? loaded = _loadedState;
+    if (loaded == null || loaded.selectedMessageId == null) return null;
+    return _projectViewModel.getMediaFileForMessage(loaded.selectedMessageId!);
+  }
+
+  /// Check if selected message has media assigned
+  bool hasMediaAssignedToSelectedMessage() {
+    final MessagePlayerLoaded? loaded = _loadedState;
+    if (loaded == null || loaded.selectedMessageId == null) return false;
+    return _projectViewModel.hasMediaAssigned(loaded.selectedMessageId!);
   }
 
   Future<void> _loadAudioFile(String audioFileId) async {
@@ -389,14 +390,17 @@ class MessagePlayerConfigCubit extends Cubit<MessagePlayerConfigState> {
   /// Play/pause audio
   Future<void> togglePlayPause() async {
     final MessagePlayerLoaded? loaded = _loadedState;
-    if (loaded == null || loaded.selectedMessage?.audioFileId == null) return;
+    if (loaded == null || !hasMediaAssignedToSelectedMessage()) return;
+
+    final MediaFileModel? mediaFile = getMediaFileForSelectedMessage();
+    if (mediaFile == null) return;
 
     if (loaded.isPlaying) {
       await _audioPlayer.pause();
     } else {
       // Load audio if not already loaded
       if (loaded.totalDuration == null) {
-        await _loadAudioFile(loaded.selectedMessage!.audioFileId!);
+        await _loadAudioFile(mediaFile.id);
       }
       await _audioPlayer.resume();
     }

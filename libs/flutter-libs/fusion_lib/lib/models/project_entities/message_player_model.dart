@@ -4,8 +4,6 @@ import 'package:fusion_lib/fusion_lib.dart';
 class MessageModel {
   final String id;
   final String name;
-  final String? audioFileId;
-  final String? audioFileName;
   final double gain;
   final bool repeat;
   final int repeatCount;
@@ -14,8 +12,6 @@ class MessageModel {
   const MessageModel({
     required this.id,
     required this.name,
-    this.audioFileId,
-    this.audioFileName,
     this.gain = 0.0,
     this.repeat = false,
     this.repeatCount = 1,
@@ -32,19 +28,14 @@ class MessageModel {
   MessageModel copyWith({
     String? id,
     String? name,
-    String? audioFileId,
-    String? audioFileName,
     double? gain,
     bool? repeat,
     int? repeatCount,
     int? repeatIntervalSeconds,
-    bool clearAudioFile = false,
   }) {
     return MessageModel(
       id: id ?? this.id,
       name: name ?? this.name,
-      audioFileId: clearAudioFile ? null : (audioFileId ?? this.audioFileId),
-      audioFileName: clearAudioFile ? null : (audioFileName ?? this.audioFileName),
       gain: gain ?? this.gain,
       repeat: repeat ?? this.repeat,
       repeatCount: repeatCount ?? this.repeatCount,
@@ -55,8 +46,6 @@ class MessageModel {
   Map<String, dynamic> toJson() => <String, dynamic>{
     'id': id,
     'name': name,
-    'audioFileId': audioFileId,
-    'audioFileName': audioFileName,
     'gain': gain,
     'repeat': repeat,
     'repeatCount': repeatCount,
@@ -66,8 +55,6 @@ class MessageModel {
   factory MessageModel.fromJson(Map<String, dynamic> json) => MessageModel(
     id: json['id'] as String,
     name: json['name'] as String,
-    audioFileId: json['audioFileId'] as String?,
-    audioFileName: json['audioFileName'] as String?,
     gain: (json['gain'] as num?)?.toDouble() ?? 0.0,
     repeat: json['repeat'] as bool? ?? false,
     repeatCount: json['repeatCount'] as int? ?? 1,

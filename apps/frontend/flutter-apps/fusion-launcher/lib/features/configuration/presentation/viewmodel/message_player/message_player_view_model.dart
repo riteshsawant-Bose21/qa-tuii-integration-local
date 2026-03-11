@@ -152,4 +152,59 @@ extension MessagePlayerViewModels on ProjectViewModel {
     }
     updateProject();
   }
+
+  // ==================== Media Mapping Methods ====================
+
+  /// Assign a media file to a message
+  Future<void> assignMediaToMessage({
+    required String messageId,
+    required String mediaId,
+    bool autoSave = true,
+  }) async {
+    if (autoSave) {
+      recordSnapshot();
+    }
+
+    projectManager.assignMediaToMessage(
+      messageId: messageId,
+      mediaId: mediaId,
+    );
+
+    if (autoSave) {
+      await saveProject();
+    }
+    updateProject();
+  }
+
+  /// Remove media file from a message
+  Future<void> removeMediaFromMessage({
+    required String messageId,
+    bool autoSave = true,
+  }) async {
+    if (autoSave) {
+      recordSnapshot();
+    }
+
+    projectManager.removeMediaFromMessage(messageId: messageId);
+
+    if (autoSave) {
+      await saveProject();
+    }
+    updateProject();
+  }
+
+  /// Get media file ID for a message
+  String? getMediaIdForMessage(String messageId) {
+    return projectManager.getMediaIdForMessage(messageId);
+  }
+
+  /// Get media file model for a message
+  MediaFileModel? getMediaFileForMessage(String messageId) {
+    return projectManager.getMediaFileForMessage(messageId);
+  }
+
+  /// Check if a message has a media file assigned
+  bool hasMediaAssigned(String messageId) {
+    return projectManager.hasMediaAssigned(messageId);
+  }
 }
