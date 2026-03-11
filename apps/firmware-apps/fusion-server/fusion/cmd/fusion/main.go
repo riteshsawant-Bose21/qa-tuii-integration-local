@@ -42,10 +42,10 @@ func parseFlags() *api.AppConfig {
 	profile := flag.Bool("profile", false, "Enable profile dump")
 
 	// IoT Core flags
-	iotEnabled := flag.Bool("iot-enabled", true, "Enable AWS IoT Core metrics publishing")
-	iotEndpoint := flag.String("iot-endpoint", "a1a77o9cigolk4-ats.iot.us-east-2.amazonaws.com", "AWS IoT Core endpoint (e.g., xxx-ats.iot.us-east-2.amazonaws.com)")
+	iotEnabled := flag.Bool("iot-enabled", false, "Enable AWS IoT Core metrics publishing")
+	iotEndpoint := flag.String("iot-endpoint", "", "AWS IoT Core endpoint (e.g., xxx-ats.iot.us-east-2.amazonaws.com)")
 	iotTopicPrefix := flag.String("iot-topic-prefix", "cluster/", "Topic prefix for IoT messages")
-	projectID := flag.String("project-id", "6f93aa8e-b0b2-40e5-a426-1a70540cad2f", "Project ID to include in IoT topic")
+	projectID := flag.String("project-id", "", "Project ID to include in IoT topic")
 	flag.Parse()
 
 	// Read environment overrides
