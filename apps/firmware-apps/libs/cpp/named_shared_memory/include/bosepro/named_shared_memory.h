@@ -7,20 +7,21 @@
 #include <string>
 #include <vector>
 #include <functional>
-#include "named_shared_memory_utility.h"
+#include <atomic>
+#include <bosepro/named_shared_memory_utility.h>
 
 namespace bosepro {
 
 /**
  * @class NamedSharedMemory
- * Provides an interface for creating, writing to, reading from, and managing named shared memory.
- * Handles synchronization between processes using a process-shared mutex.
+ * Provides an interface for creating, writing to, reading from, and managing
+ * named shared memory. Handles synchronization between processes using a
+ * process-shared mutex.
  */
 class NamedSharedMemory {
 
 public:
-
-    static constexpr std::size_t META_DATA_SHM_LENGTH = Metadata::META_DATA_MAX_SIZE + sizeof(pthread_mutex_t*);
+    static constexpr std::size_t META_DATA_SHM_LENGTH = Metadata::META_DATA_MAX_SIZE + sizeof(pthread_mutex_t);
 
 
     NamedSharedMemory(const char* name, std::size_t size, bool create = true);
@@ -110,12 +111,8 @@ public:
      */
     void printWriteBlocksValues() const;
 
-   // Friend function  to access sharedMutex_ for synchronization
-    friend void accessSharedMemoryWithMutex(NamedSharedMemory& sharedMemory, const std::function<void()>& action);
-
 private:
     Metadata metaData;
-    std::size_t totalBytesPresentInSHM_;           // Total bytes written to the shared memory by external producer
     boost::interprocess::shared_memory_object shm_; // Boost shared memory object
     boost::interprocess::mapped_region region_;     // Boost mapped region for accessing memory
 
@@ -124,13 +121,10 @@ private:
                                                             //
     pthread_mutex_t* sharedMutex_; // Process-shared mutex
                                    //
-    bool isReaderObject; //NamedSharedMemory can have personality of producer or consumer at a given time, not both
-
-
+    std::atomic<bool> isReaderObject; // NamedSharedMemory can have personality of producer or consumer at a given time, not both
+    bool ownsSharedResources_;
 };
 
 }
-
-
 
 #endif // NAMED_SHARED_MEMORY_H

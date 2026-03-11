@@ -1,4 +1,4 @@
-#include "named_shared_memory_manager_factory.h"
+#include <bosepro/named_shared_memory_manager_factory.h>
 
 // Static member definitions
 //NamedSharedMemoryManager* NamedSharedMemoryManagerFactory::instance_ = nullptr;
@@ -6,12 +6,9 @@ std::unique_ptr<bosepro::NamedSharedMemoryManager> bosepro::NamedSharedMemoryMan
 std::mutex bosepro::NamedSharedMemoryManagerFactory::mutex_;
 
 bosepro::NamedSharedMemoryManager& bosepro::NamedSharedMemoryManagerFactory::getInstance() {
+    std::lock_guard<std::mutex> lock(mutex_);
     if (!instance_) {
-        std::lock_guard<std::mutex> lock(mutex_);
-        if (!instance_) {
-            //instance_ = new NamedSharedMemoryManager();
-            instance_ = std::make_unique<bosepro::NamedSharedMemoryManager>();
-        }
+        instance_ = std::make_unique<bosepro::NamedSharedMemoryManager>();
     }
     return *instance_;
 }

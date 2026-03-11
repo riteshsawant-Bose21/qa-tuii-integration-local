@@ -111,7 +111,15 @@ def configure(conf):
     conf.env.append_value('LIBPATH', [onnx_path+'/lib'])
 
 def build(bld):
-    bld(export_includes=['./external/doctest', './include'], name='common-include')
+    shared_include = '../libs/cpp/named_shared_memory/include'
+    shared_sources = [
+        '../libs/cpp/named_shared_memory/src/named_shared_memory.cc',
+        '../libs/cpp/named_shared_memory/src/named_shared_memory_utility.cc',
+        '../libs/cpp/named_shared_memory/src/named_shared_memory_manager.cc',
+        '../libs/cpp/named_shared_memory/src/named_shared_memory_manager_factory.cc',
+    ]
+
+    bld(export_includes=['./external/doctest', './include', shared_include], name='common-include')
 
     excludes = []
     libs = ['jack', 'fmt', 'sndfile', 'boost_program_options', 'onnxruntime', 'jsoncpp', 'samplerate', 'curl']
@@ -123,7 +131,12 @@ def build(bld):
 
     bld.program(target='fusion_dsp',
                 source=bld.path.ant_glob(['src/*.cpp', 'src/*.c'],
-                                         excl=excludes),
+                                         excl=excludes + [
+                                             'src/named_shared_memory.cpp',
+                                             'src/named_shared_memory_utility.cpp',
+                                             'src/named_shared_memory_manager.cpp',
+                                             'src/named_shared_memory_manager_factory.cpp',
+                                         ]) + shared_sources,
                 use=['common-include'],
                 lib=libs)
 
@@ -131,7 +144,11 @@ def build(bld):
 
     bld.program(target='test_dsp',
                 source=bld.path.ant_glob(['src/*.cpp', 'src/*.c', 'test/*.cpp'],
-                                         excl=excludes),
+                                         excl=excludes + [
+                                             'src/named_shared_memory.cpp',
+                                             'src/named_shared_memory_utility.cpp',
+                                             'src/named_shared_memory_manager.cpp',
+                                             'src/named_shared_memory_manager_factory.cpp',
+                                         ]) + shared_sources,
                 use=['common-include'],
                 lib=libs)
-

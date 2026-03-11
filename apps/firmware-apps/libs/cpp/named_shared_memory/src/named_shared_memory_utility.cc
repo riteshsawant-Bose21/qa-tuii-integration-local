@@ -1,12 +1,10 @@
 #include <bosepro/named_shared_memory_utility.h>
 #include <stdexcept>
 
-using namespace bosepro;
-
 /**
  * Deserialize data from a contiguous serialized buffer.
  */
-void Metadata::deserialize(const char* buffer, std::size_t bufferSize) {
+void bosepro::Metadata::deserialize(const char* buffer, std::size_t bufferSize) {
     // Calculate the expected size
     std::size_t expectedSize = sizeof(name) + sizeof(size) + sizeof(totalBytesWritten) +
                                sizeof(numberOfWriteBlocks) + sizeof(WriteBlock) * MAX_WRITE_BLOCKS;
@@ -44,6 +42,7 @@ void Metadata::deserialize(const char* buffer, std::size_t bufferSize) {
     // Deserialize writeBlocks
     // Read the writeBlocks from memory
     writeBlocks.clear();
+    writeBlocks.reserve(numberOfWriteBlocks);
     for (std::size_t i = 0; i < numberOfWriteBlocks; ++i) {
         WriteBlock block;
         std::memcpy(&block, bufferPtr, sizeof(WriteBlock));
@@ -55,7 +54,7 @@ void Metadata::deserialize(const char* buffer, std::size_t bufferSize) {
 /**
  * Serialize the Metadata structure into a contiguous buffer.
  */
-void Metadata::serialize(char* buffer, std::size_t bufferSize) const {
+void bosepro::Metadata::serialize(char* buffer, std::size_t bufferSize) const {
     // Calculate the expected size
     std::size_t expectedSize = sizeof(name) + sizeof(size) + sizeof(totalBytesWritten) +
                                sizeof(numberOfWriteBlocks) + sizeof(WriteBlock) * MAX_WRITE_BLOCKS;
@@ -63,6 +62,9 @@ void Metadata::serialize(char* buffer, std::size_t bufferSize) const {
     // Check if the buffer size is sufficient
     if (bufferSize < expectedSize) {
         throw std::runtime_error("Buffer size is smaller than the expected metadata size");
+    }
+    if (writeBlocks.size() > MAX_WRITE_BLOCKS) {
+        throw std::runtime_error("Number of WriteBlocks exceeds MAX_WRITE_BLOCKS");
     }
 
     // Pointer to traverse the buffer
@@ -95,7 +97,7 @@ void Metadata::serialize(char* buffer, std::size_t bufferSize) const {
 /**
  * Updates the totalBytesWritten field in the serialized metadata buffer.
  */
-void Metadata::updateTotalBytesWrittenInBuffer(char* buffer, std::size_t bufferSize) const {
+void bosepro::Metadata::updateTotalBytesWrittenInBuffer(char* buffer, std::size_t bufferSize) const {
     // Calculate the expected offset for totalBytesWritten
     std::size_t offset = sizeof(name) + sizeof(size);
 
@@ -116,7 +118,7 @@ void Metadata::updateTotalBytesWrittenInBuffer(char* buffer, std::size_t bufferS
 /**
  * Deserializes only the totalBytesWritten field from a serialized metadata buffer.
  */
-void Metadata::deserializeTotalBytesWritten(const char* buffer, std::size_t bufferSize)  {
+void bosepro::Metadata::deserializeTotalBytesWritten(const char* buffer, std::size_t bufferSize)  {
     // Calculate the expected offset for totalBytesWritten
     std::size_t offset = sizeof(name) + sizeof(size);
 
