@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/api/types"
+	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/config"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/model"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/model/models"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/utils/errorutil"
@@ -41,6 +42,7 @@ const (
 	testCertID         = "cert-123"
 	testCertArn        = "arn:aws:iot:us-east-1:123456789:cert/abc"
 	testDeviceUUID     = "uuid-device-123"
+	testCommandID      = "cmd-uuid-123"
 )
 
 // ---------------------------------------------------------------------------
@@ -92,6 +94,24 @@ func (m *mockDBService) UpdateCertificate(ctx context.Context, device models.Dev
 func (m *mockDBService) Reset(ctx context.Context, device models.Device, tx model.DBTxExecutor, logger *zap.Logger) error {
 	args := m.Called(ctx, device, tx, logger)
 	return args.Error(0)
+}
+
+func (m *mockDBService) InsertCommand(ctx context.Context, projectID string, request *types.CommandRequest, logger *zap.Logger) (string, error) {
+	args := m.Called(ctx, projectID, request, logger)
+	return args.String(0), args.Error(1)
+}
+
+func (m *mockDBService) UpdateCommandStatus(ctx context.Context, commandID, status string, logger *zap.Logger) error {
+	args := m.Called(ctx, commandID, status, logger)
+	return args.Error(0)
+}
+
+func (m *mockDBService) GetCommandStatus(ctx context.Context, commandID string, logger *zap.Logger) (*models.DeviceCommandHistory, error) {
+	args := m.Called(ctx, commandID, logger)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*models.DeviceCommandHistory), args.Error(1)
 }
 
 // ---------------------------------------------------------------------------
@@ -158,6 +178,11 @@ func (m *mockIoTService) DetatchPolicyFromCertificate(ctx context.Context, polic
 
 func (m *mockIoTService) DeleteThing(ctx context.Context, thingName string, logger *zap.Logger) error {
 	args := m.Called(ctx, thingName, logger)
+	return args.Error(0)
+}
+
+func (m *mockIoTService) Publish(ctx context.Context, topic string, payload []byte, logger *zap.Logger) error {
+	args := m.Called(ctx, topic, payload, logger)
 	return args.Error(0)
 }
 
@@ -270,7 +295,8 @@ func TestCreateDevice(t *testing.T) {
 		mockDB := new(mockDBService)
 		mockProject := new(mockProjectService)
 		mockIoT := new(mockIoTService)
-		service := NewService(mockDB, mockProject, mockIoT)
+		cfg := config.CloudConfig{}
+		service := NewService(mockDB, mockProject, mockIoT, cfg)
 
 		logger := createTestLogger(t)
 		user := createTestUserAuth()
@@ -313,7 +339,8 @@ func TestCreateDevice(t *testing.T) {
 		mockDB := new(mockDBService)
 		mockProject := new(mockProjectService)
 		mockIoT := new(mockIoTService)
-		service := NewService(mockDB, mockProject, mockIoT)
+		cfg := config.CloudConfig{}
+		service := NewService(mockDB, mockProject, mockIoT, cfg)
 
 		logger := createTestLogger(t)
 		user := createTestUserAuth()
@@ -356,7 +383,8 @@ func TestCreateDevice(t *testing.T) {
 		mockDB := new(mockDBService)
 		mockProject := new(mockProjectService)
 		mockIoT := new(mockIoTService)
-		service := NewService(mockDB, mockProject, mockIoT)
+		cfg := config.CloudConfig{}
+		service := NewService(mockDB, mockProject, mockIoT, cfg)
 
 		logger := createTestLogger(t)
 		user := createTestUserAuth()
@@ -380,7 +408,8 @@ func TestCreateDevice(t *testing.T) {
 		mockDB := new(mockDBService)
 		mockProject := new(mockProjectService)
 		mockIoT := new(mockIoTService)
-		service := NewService(mockDB, mockProject, mockIoT)
+		cfg := config.CloudConfig{}
+		service := NewService(mockDB, mockProject, mockIoT, cfg)
 
 		logger := createTestLogger(t)
 		user := createTestUserAuth()
@@ -401,7 +430,8 @@ func TestCreateDevice(t *testing.T) {
 		mockDB := new(mockDBService)
 		mockProject := new(mockProjectService)
 		mockIoT := new(mockIoTService)
-		service := NewService(mockDB, mockProject, mockIoT)
+		cfg := config.CloudConfig{}
+		service := NewService(mockDB, mockProject, mockIoT, cfg)
 
 		logger := createTestLogger(t)
 		user := createTestUserAuth()
@@ -429,7 +459,8 @@ func TestCreateDevice(t *testing.T) {
 		mockDB := new(mockDBService)
 		mockProject := new(mockProjectService)
 		mockIoT := new(mockIoTService)
-		service := NewService(mockDB, mockProject, mockIoT)
+		cfg := config.CloudConfig{}
+		service := NewService(mockDB, mockProject, mockIoT, cfg)
 
 		logger := createTestLogger(t)
 		user := createTestUserAuth()
@@ -448,7 +479,8 @@ func TestCreateDevice(t *testing.T) {
 		mockDB := new(mockDBService)
 		mockProject := new(mockProjectService)
 		mockIoT := new(mockIoTService)
-		service := NewService(mockDB, mockProject, mockIoT)
+		cfg := config.CloudConfig{}
+		service := NewService(mockDB, mockProject, mockIoT, cfg)
 
 		logger := createTestLogger(t)
 		user := createTestUserAuth()
@@ -468,7 +500,8 @@ func TestCreateDevice(t *testing.T) {
 		mockDB := new(mockDBService)
 		mockProject := new(mockProjectService)
 		mockIoT := new(mockIoTService)
-		service := NewService(mockDB, mockProject, mockIoT)
+		cfg := config.CloudConfig{}
+		service := NewService(mockDB, mockProject, mockIoT, cfg)
 
 		logger := createTestLogger(t)
 		user := createTestUserAuth()
@@ -495,7 +528,8 @@ func TestCreateDevice(t *testing.T) {
 		mockDB := new(mockDBService)
 		mockProject := new(mockProjectService)
 		mockIoT := new(mockIoTService)
-		service := NewService(mockDB, mockProject, mockIoT)
+		cfg := config.CloudConfig{}
+		service := NewService(mockDB, mockProject, mockIoT, cfg)
 
 		logger := createTestLogger(t)
 		user := createTestUserAuth()
@@ -519,7 +553,8 @@ func TestCreateDevice(t *testing.T) {
 		mockDB := new(mockDBService)
 		mockProject := new(mockProjectService)
 		mockIoT := new(mockIoTService)
-		service := NewService(mockDB, mockProject, mockIoT)
+		cfg := config.CloudConfig{}
+		service := NewService(mockDB, mockProject, mockIoT, cfg)
 
 		logger := createTestLogger(t)
 		user := createTestUserAuth()
@@ -553,7 +588,8 @@ func TestCreateDevice(t *testing.T) {
 		mockDB := new(mockDBService)
 		mockProject := new(mockProjectService)
 		mockIoT := new(mockIoTService)
-		service := NewService(mockDB, mockProject, mockIoT)
+		cfg := config.CloudConfig{}
+		service := NewService(mockDB, mockProject, mockIoT, cfg)
 
 		logger := createTestLogger(t)
 		user := createTestUserAuth()
@@ -590,7 +626,8 @@ func TestCreateDevice(t *testing.T) {
 		mockDB := new(mockDBService)
 		mockProject := new(mockProjectService)
 		mockIoT := new(mockIoTService)
-		service := NewService(mockDB, mockProject, mockIoT)
+		cfg := config.CloudConfig{}
+		service := NewService(mockDB, mockProject, mockIoT, cfg)
 
 		logger := createTestLogger(t)
 		user := createTestUserAuth()
@@ -635,7 +672,8 @@ func TestCreateDevice(t *testing.T) {
 		mockDB := new(mockDBService)
 		mockProject := new(mockProjectService)
 		mockIoT := new(mockIoTService)
-		service := NewService(mockDB, mockProject, mockIoT)
+		cfg := config.CloudConfig{}
+		service := NewService(mockDB, mockProject, mockIoT, cfg)
 
 		logger := createTestLogger(t)
 		user := createTestUserAuth()
@@ -681,7 +719,8 @@ func TestCreateDevice(t *testing.T) {
 		mockDB := new(mockDBService)
 		mockProject := new(mockProjectService)
 		mockIoT := new(mockIoTService)
-		service := NewService(mockDB, mockProject, mockIoT)
+		cfg := config.CloudConfig{}
+		service := NewService(mockDB, mockProject, mockIoT, cfg)
 
 		logger := createTestLogger(t)
 		user := createTestUserAuth()
@@ -735,7 +774,8 @@ func TestUpdateDevice(t *testing.T) {
 		mockDB := new(mockDBService)
 		mockProject := new(mockProjectService)
 		mockIoT := new(mockIoTService)
-		service := NewService(mockDB, mockProject, mockIoT)
+		cfg := config.CloudConfig{}
+		service := NewService(mockDB, mockProject, mockIoT, cfg)
 
 		logger := createTestLogger(t)
 		user := createTestUserAuth()
@@ -765,7 +805,8 @@ func TestUpdateDevice(t *testing.T) {
 		mockDB := new(mockDBService)
 		mockProject := new(mockProjectService)
 		mockIoT := new(mockIoTService)
-		service := NewService(mockDB, mockProject, mockIoT)
+		cfg := config.CloudConfig{}
+		service := NewService(mockDB, mockProject, mockIoT, cfg)
 
 		logger := createTestLogger(t)
 		user := createTestUserAuth()
@@ -787,7 +828,8 @@ func TestUpdateDevice(t *testing.T) {
 		mockDB := new(mockDBService)
 		mockProject := new(mockProjectService)
 		mockIoT := new(mockIoTService)
-		service := NewService(mockDB, mockProject, mockIoT)
+		cfg := config.CloudConfig{}
+		service := NewService(mockDB, mockProject, mockIoT, cfg)
 
 		logger := createTestLogger(t)
 		user := createTestUserAuth()
@@ -808,7 +850,8 @@ func TestUpdateDevice(t *testing.T) {
 		mockDB := new(mockDBService)
 		mockProject := new(mockProjectService)
 		mockIoT := new(mockIoTService)
-		service := NewService(mockDB, mockProject, mockIoT)
+		cfg := config.CloudConfig{}
+		service := NewService(mockDB, mockProject, mockIoT, cfg)
 
 		logger := createTestLogger(t)
 		user := createTestUserAuth()
@@ -838,7 +881,8 @@ func TestUpdateDevice(t *testing.T) {
 		mockDB := new(mockDBService)
 		mockProject := new(mockProjectService)
 		mockIoT := new(mockIoTService)
-		service := NewService(mockDB, mockProject, mockIoT)
+		cfg := config.CloudConfig{}
+		service := NewService(mockDB, mockProject, mockIoT, cfg)
 
 		logger := createTestLogger(t)
 		user := createTestUserAuth()
@@ -867,7 +911,8 @@ func TestUpdateDevice(t *testing.T) {
 		mockDB := new(mockDBService)
 		mockProject := new(mockProjectService)
 		mockIoT := new(mockIoTService)
-		service := NewService(mockDB, mockProject, mockIoT)
+		cfg := config.CloudConfig{}
+		service := NewService(mockDB, mockProject, mockIoT, cfg)
 
 		logger := createTestLogger(t)
 		user := createTestUserAuth()
@@ -898,7 +943,8 @@ func TestUpdateDevice(t *testing.T) {
 		mockDB := new(mockDBService)
 		mockProject := new(mockProjectService)
 		mockIoT := new(mockIoTService)
-		service := NewService(mockDB, mockProject, mockIoT)
+		cfg := config.CloudConfig{}
+		service := NewService(mockDB, mockProject, mockIoT, cfg)
 
 		logger := createTestLogger(t)
 		user := createTestUserAuth()
@@ -937,7 +983,8 @@ func TestClaimDevice(t *testing.T) {
 		mockDB := new(mockDBService)
 		mockProject := new(mockProjectService)
 		mockIoT := new(mockIoTService)
-		service := NewService(mockDB, mockProject, mockIoT)
+		cfg := config.CloudConfig{}
+		service := NewService(mockDB, mockProject, mockIoT, cfg)
 
 		logger := createTestLogger(t)
 		user := createTestUserAuth()
@@ -983,7 +1030,8 @@ func TestClaimDevice(t *testing.T) {
 		mockDB := new(mockDBService)
 		mockProject := new(mockProjectService)
 		mockIoT := new(mockIoTService)
-		service := NewService(mockDB, mockProject, mockIoT)
+		cfg := config.CloudConfig{}
+		service := NewService(mockDB, mockProject, mockIoT, cfg)
 
 		logger := createTestLogger(t)
 		user := createTestUserAuth()
@@ -1007,7 +1055,8 @@ func TestClaimDevice(t *testing.T) {
 		mockDB := new(mockDBService)
 		mockProject := new(mockProjectService)
 		mockIoT := new(mockIoTService)
-		service := NewService(mockDB, mockProject, mockIoT)
+		cfg := config.CloudConfig{}
+		service := NewService(mockDB, mockProject, mockIoT, cfg)
 
 		logger := createTestLogger(t)
 		user := createTestUserAuth()
@@ -1032,7 +1081,8 @@ func TestClaimDevice(t *testing.T) {
 		mockDB := new(mockDBService)
 		mockProject := new(mockProjectService)
 		mockIoT := new(mockIoTService)
-		service := NewService(mockDB, mockProject, mockIoT)
+		cfg := config.CloudConfig{}
+		service := NewService(mockDB, mockProject, mockIoT, cfg)
 
 		logger := createTestLogger(t)
 		user := createTestUserAuth()
@@ -1059,7 +1109,8 @@ func TestClaimDevice(t *testing.T) {
 		mockDB := new(mockDBService)
 		mockProject := new(mockProjectService)
 		mockIoT := new(mockIoTService)
-		service := NewService(mockDB, mockProject, mockIoT)
+		cfg := config.CloudConfig{}
+		service := NewService(mockDB, mockProject, mockIoT, cfg)
 
 		logger := createTestLogger(t)
 		user := createTestUserAuth()
@@ -1095,7 +1146,8 @@ func TestClaimDevice(t *testing.T) {
 		mockDB := new(mockDBService)
 		mockProject := new(mockProjectService)
 		mockIoT := new(mockIoTService)
-		service := NewService(mockDB, mockProject, mockIoT)
+		cfg := config.CloudConfig{}
+		service := NewService(mockDB, mockProject, mockIoT, cfg)
 
 		logger := createTestLogger(t)
 		user := createTestUserAuth()
@@ -1133,7 +1185,8 @@ func TestRotateCertificate(t *testing.T) {
 		mockDB := new(mockDBService)
 		mockProject := new(mockProjectService)
 		mockIoT := new(mockIoTService)
-		service := NewService(mockDB, mockProject, mockIoT)
+		cfg := config.CloudConfig{}
+		service := NewService(mockDB, mockProject, mockIoT, cfg)
 
 		logger := createTestLogger(t)
 		user := createTestUserAuth()
@@ -1180,7 +1233,8 @@ func TestRotateCertificate(t *testing.T) {
 		mockDB := new(mockDBService)
 		mockProject := new(mockProjectService)
 		mockIoT := new(mockIoTService)
-		service := NewService(mockDB, mockProject, mockIoT)
+		cfg := config.CloudConfig{}
+		service := NewService(mockDB, mockProject, mockIoT, cfg)
 
 		logger := createTestLogger(t)
 		user := createTestUserAuth()
@@ -1203,7 +1257,8 @@ func TestRotateCertificate(t *testing.T) {
 		mockDB := new(mockDBService)
 		mockProject := new(mockProjectService)
 		mockIoT := new(mockIoTService)
-		service := NewService(mockDB, mockProject, mockIoT)
+		cfg := config.CloudConfig{}
+		service := NewService(mockDB, mockProject, mockIoT, cfg)
 
 		logger := createTestLogger(t)
 		user := createTestUserAuth()
@@ -1227,7 +1282,8 @@ func TestRotateCertificate(t *testing.T) {
 		mockDB := new(mockDBService)
 		mockProject := new(mockProjectService)
 		mockIoT := new(mockIoTService)
-		service := NewService(mockDB, mockProject, mockIoT)
+		cfg := config.CloudConfig{}
+		service := NewService(mockDB, mockProject, mockIoT, cfg)
 
 		logger := createTestLogger(t)
 		user := createTestUserAuth()
@@ -1266,7 +1322,8 @@ func TestRotateCertificate(t *testing.T) {
 		mockDB := new(mockDBService)
 		mockProject := new(mockProjectService)
 		mockIoT := new(mockIoTService)
-		service := NewService(mockDB, mockProject, mockIoT)
+		cfg := config.CloudConfig{}
+		service := NewService(mockDB, mockProject, mockIoT, cfg)
 
 		logger := createTestLogger(t)
 		user := createTestUserAuth()
@@ -1300,7 +1357,8 @@ func TestResetDevice(t *testing.T) {
 		mockDB := new(mockDBService)
 		mockProject := new(mockProjectService)
 		mockIoT := new(mockIoTService)
-		service := NewService(mockDB, mockProject, mockIoT)
+		cfg := config.CloudConfig{}
+		service := NewService(mockDB, mockProject, mockIoT, cfg)
 
 		logger := createTestLogger(t)
 		user := createTestUserAuth()
@@ -1333,7 +1391,8 @@ func TestResetDevice(t *testing.T) {
 		mockDB := new(mockDBService)
 		mockProject := new(mockProjectService)
 		mockIoT := new(mockIoTService)
-		service := NewService(mockDB, mockProject, mockIoT)
+		cfg := config.CloudConfig{}
+		service := NewService(mockDB, mockProject, mockIoT, cfg)
 
 		logger := createTestLogger(t)
 		user := createTestUserAuth()
@@ -1353,7 +1412,8 @@ func TestResetDevice(t *testing.T) {
 		mockDB := new(mockDBService)
 		mockProject := new(mockProjectService)
 		mockIoT := new(mockIoTService)
-		service := NewService(mockDB, mockProject, mockIoT)
+		cfg := config.CloudConfig{}
+		service := NewService(mockDB, mockProject, mockIoT, cfg)
 
 		logger := createTestLogger(t)
 		user := createTestUserAuth()
@@ -1371,7 +1431,8 @@ func TestResetDevice(t *testing.T) {
 		mockDB := new(mockDBService)
 		mockProject := new(mockProjectService)
 		mockIoT := new(mockIoTService)
-		service := NewService(mockDB, mockProject, mockIoT)
+		cfg := config.CloudConfig{}
+		service := NewService(mockDB, mockProject, mockIoT, cfg)
 
 		logger := createTestLogger(t)
 		user := createTestUserAuth()
@@ -1388,7 +1449,8 @@ func TestResetDevice(t *testing.T) {
 		mockDB := new(mockDBService)
 		mockProject := new(mockProjectService)
 		mockIoT := new(mockIoTService)
-		service := NewService(mockDB, mockProject, mockIoT)
+		cfg := config.CloudConfig{}
+		service := NewService(mockDB, mockProject, mockIoT, cfg)
 
 		logger := createTestLogger(t)
 		user := createTestUserAuth()
@@ -1408,7 +1470,8 @@ func TestResetDevice(t *testing.T) {
 		mockDB := new(mockDBService)
 		mockProject := new(mockProjectService)
 		mockIoT := new(mockIoTService)
-		service := NewService(mockDB, mockProject, mockIoT)
+		cfg := config.CloudConfig{}
+		service := NewService(mockDB, mockProject, mockIoT, cfg)
 
 		logger := createTestLogger(t)
 		user := createTestUserAuth()
@@ -1430,7 +1493,8 @@ func TestResetDevice(t *testing.T) {
 		mockDB := new(mockDBService)
 		mockProject := new(mockProjectService)
 		mockIoT := new(mockIoTService)
-		service := NewService(mockDB, mockProject, mockIoT)
+		cfg := config.CloudConfig{}
+		service := NewService(mockDB, mockProject, mockIoT, cfg)
 
 		logger := createTestLogger(t)
 		user := createTestUserAuth()
@@ -1453,7 +1517,8 @@ func TestResetDevice(t *testing.T) {
 		mockDB := new(mockDBService)
 		mockProject := new(mockProjectService)
 		mockIoT := new(mockIoTService)
-		service := NewService(mockDB, mockProject, mockIoT)
+		cfg := config.CloudConfig{}
+		service := NewService(mockDB, mockProject, mockIoT, cfg)
 
 		logger := createTestLogger(t)
 		user := createTestUserAuth()
@@ -1482,7 +1547,8 @@ func TestResetDevice(t *testing.T) {
 		mockDB := new(mockDBService)
 		mockProject := new(mockProjectService)
 		mockIoT := new(mockIoTService)
-		service := NewService(mockDB, mockProject, mockIoT)
+		cfg := config.CloudConfig{}
+		service := NewService(mockDB, mockProject, mockIoT, cfg)
 
 		logger := createTestLogger(t)
 		user := createTestUserAuth()
@@ -1513,7 +1579,8 @@ func TestResetDevice(t *testing.T) {
 		mockDB := new(mockDBService)
 		mockProject := new(mockProjectService)
 		mockIoT := new(mockIoTService)
-		service := NewService(mockDB, mockProject, mockIoT)
+		cfg := config.CloudConfig{}
+		service := NewService(mockDB, mockProject, mockIoT, cfg)
 
 		logger := createTestLogger(t)
 		user := createTestUserAuth()
@@ -1550,12 +1617,249 @@ func TestNewService(t *testing.T) {
 		mockDB := new(mockDBService)
 		mockProject := new(mockProjectService)
 		mockIoT := new(mockIoTService)
+		cfg := config.CloudConfig{
+			Region:          "us-east-1",
+			IoTEndpoint:     "test-endpoint.iot.us-east-1.amazonaws.com",
+			IoTCommandTopic: "cluster/%s/command",
+		}
 
-		service := NewService(mockDB, mockProject, mockIoT)
+		service := NewService(mockDB, mockProject, mockIoT, cfg)
 
 		assert.NotNil(t, service)
 		assert.Equal(t, mockDB, service.dbService)
 		assert.Equal(t, mockProject, service.projectService)
 		assert.Equal(t, mockIoT, service.iotService)
+	})
+}
+
+// ---------------------------------------------------------------------------
+// Command Tests
+// ---------------------------------------------------------------------------
+
+func TestCommand(t *testing.T) {
+	ctx := context.Background()
+
+	createTestConfig := func() config.CloudConfig {
+		return config.CloudConfig{
+			Region:          "us-east-1",
+			IoTEndpoint:     "test-endpoint.iot.us-east-1.amazonaws.com",
+			IoTCommandTopic: "cluster/%s/command",
+		}
+	}
+
+	t.Run("successfully sends command", func(t *testing.T) {
+		mockDB := new(mockDBService)
+		mockProject := new(mockProjectService)
+		mockIoT := new(mockIoTService)
+		logger := zaptest.NewLogger(t)
+		user := createTestUserAuth()
+
+		service := NewService(mockDB, mockProject, mockIoT, createTestConfig())
+
+		req := &types.CommandRequest{
+			Command:   types.CommandRestart,
+			ProjectID: testProjectID,
+			DeviceIDs: []string{testDeviceID},
+		}
+
+		mockProject.On("GetProjectByID", ctx, testProjectID, mock.AnythingOfType("*zap.Logger")).
+			Return(createTestProject(), nil)
+		mockDB.On("InsertCommand", ctx, testProjectID, req, mock.AnythingOfType("*zap.Logger")).
+			Return(testCommandID, nil)
+		mockIoT.On("Publish", ctx, "cluster/"+testProjectID+"/command", mock.Anything, mock.AnythingOfType("*zap.Logger")).
+			Return(nil)
+		mockDB.On("UpdateCommandStatus", ctx, testCommandID, "PUBLISHED", mock.AnythingOfType("*zap.Logger")).
+			Return(nil)
+
+		commandID, err := service.Command(ctx, req, user, logger)
+		assert.NoError(t, err)
+		assert.Equal(t, testCommandID, commandID)
+		mockProject.AssertExpectations(t)
+		mockDB.AssertExpectations(t)
+		mockIoT.AssertExpectations(t)
+	})
+
+	t.Run("returns error when project not found", func(t *testing.T) {
+		mockDB := new(mockDBService)
+		mockProject := new(mockProjectService)
+		mockIoT := new(mockIoTService)
+		logger := zaptest.NewLogger(t)
+		user := createTestUserAuth()
+
+		service := NewService(mockDB, mockProject, mockIoT, createTestConfig())
+
+		req := &types.CommandRequest{
+			Command:   types.CommandRestart,
+			ProjectID: testProjectID,
+		}
+
+		mockProject.On("GetProjectByID", ctx, testProjectID, mock.AnythingOfType("*zap.Logger")).
+			Return(nil, nil)
+
+		commandID, err := service.Command(ctx, req, user, logger)
+		assert.Error(t, err)
+		assert.Empty(t, commandID)
+		assert.Contains(t, err.Error(), errorutil.ErrMsgProjectNotFound)
+		mockProject.AssertExpectations(t)
+	})
+
+	t.Run("returns error when user unauthorized for project", func(t *testing.T) {
+		mockDB := new(mockDBService)
+		mockProject := new(mockProjectService)
+		mockIoT := new(mockIoTService)
+		logger := zaptest.NewLogger(t)
+		user := createTestUserAuth()
+		user.Account.ID = "different-account"
+
+		service := NewService(mockDB, mockProject, mockIoT, createTestConfig())
+
+		req := &types.CommandRequest{
+			Command:   types.CommandRestart,
+			ProjectID: testProjectID,
+		}
+
+		mockProject.On("GetProjectByID", ctx, testProjectID, mock.AnythingOfType("*zap.Logger")).
+			Return(createTestProject(), nil)
+
+		commandID, err := service.Command(ctx, req, user, logger)
+		assert.Error(t, err)
+		assert.Empty(t, commandID)
+		assert.Contains(t, err.Error(), errorutil.MsgUnauthorized)
+		mockProject.AssertExpectations(t)
+	})
+
+	t.Run("returns error when db insert fails", func(t *testing.T) {
+		mockDB := new(mockDBService)
+		mockProject := new(mockProjectService)
+		mockIoT := new(mockIoTService)
+		logger := zaptest.NewLogger(t)
+		user := createTestUserAuth()
+
+		service := NewService(mockDB, mockProject, mockIoT, createTestConfig())
+
+		req := &types.CommandRequest{
+			Command:   types.CommandRestart,
+			ProjectID: testProjectID,
+		}
+
+		mockProject.On("GetProjectByID", ctx, testProjectID, mock.AnythingOfType("*zap.Logger")).
+			Return(createTestProject(), nil)
+		mockDB.On("InsertCommand", ctx, testProjectID, req, mock.AnythingOfType("*zap.Logger")).
+			Return("", errors.New("database error"))
+
+		commandID, err := service.Command(ctx, req, user, logger)
+		assert.Error(t, err)
+		assert.Empty(t, commandID)
+		mockProject.AssertExpectations(t)
+		mockDB.AssertExpectations(t)
+	})
+
+	t.Run("returns error when publish fails", func(t *testing.T) {
+		mockDB := new(mockDBService)
+		mockProject := new(mockProjectService)
+		mockIoT := new(mockIoTService)
+		logger := zaptest.NewLogger(t)
+		user := createTestUserAuth()
+
+		service := NewService(mockDB, mockProject, mockIoT, createTestConfig())
+
+		req := &types.CommandRequest{
+			Command:   types.CommandRestart,
+			ProjectID: testProjectID,
+		}
+
+		mockProject.On("GetProjectByID", ctx, testProjectID, mock.AnythingOfType("*zap.Logger")).
+			Return(createTestProject(), nil)
+		mockDB.On("InsertCommand", ctx, testProjectID, req, mock.AnythingOfType("*zap.Logger")).
+			Return(testCommandID, nil)
+		mockIoT.On("Publish", ctx, "cluster/"+testProjectID+"/command", mock.Anything, mock.AnythingOfType("*zap.Logger")).
+			Return(errors.New("publish error"))
+
+		commandID, err := service.Command(ctx, req, user, logger)
+		assert.Error(t, err)
+		assert.Empty(t, commandID)
+		mockProject.AssertExpectations(t)
+		mockDB.AssertExpectations(t)
+		mockIoT.AssertExpectations(t)
+	})
+}
+
+// ---------------------------------------------------------------------------
+// GetCommandStatus Tests
+// ---------------------------------------------------------------------------
+
+func TestGetCommandStatus(t *testing.T) {
+	ctx := context.Background()
+
+	createTestConfig := func() config.CloudConfig {
+		return config.CloudConfig{
+			Region:          "us-east-1",
+			IoTEndpoint:     "test-endpoint.iot.us-east-1.amazonaws.com",
+			IoTCommandTopic: "cluster/%s/command",
+		}
+	}
+
+	t.Run("successfully retrieves command status", func(t *testing.T) {
+		mockDB := new(mockDBService)
+		mockProject := new(mockProjectService)
+		mockIoT := new(mockIoTService)
+		logger := zaptest.NewLogger(t)
+
+		service := NewService(mockDB, mockProject, mockIoT, createTestConfig())
+
+		issuedAt := time.Now()
+		command := &models.DeviceCommandHistory{
+			ID:          testCommandID,
+			ProjectID:   testProjectID,
+			CommandName: "REBOOT",
+			Status:      "COMPLETED",
+			IssuedAt:    issuedAt,
+		}
+
+		mockDB.On("GetCommandStatus", ctx, testCommandID, mock.AnythingOfType("*zap.Logger")).
+			Return(command, nil)
+
+		result, err := service.GetCommandStatus(ctx, testCommandID, logger)
+		assert.NoError(t, err)
+		assert.NotNil(t, result)
+		assert.Equal(t, testCommandID, result.CommandID)
+		assert.Equal(t, "REBOOT", result.CommandName)
+		assert.Equal(t, "COMPLETED", result.Status)
+		mockDB.AssertExpectations(t)
+	})
+
+	t.Run("returns error when command not found", func(t *testing.T) {
+		mockDB := new(mockDBService)
+		mockProject := new(mockProjectService)
+		mockIoT := new(mockIoTService)
+		logger := zaptest.NewLogger(t)
+
+		service := NewService(mockDB, mockProject, mockIoT, createTestConfig())
+
+		mockDB.On("GetCommandStatus", ctx, testCommandID, mock.AnythingOfType("*zap.Logger")).
+			Return(nil, nil)
+
+		result, err := service.GetCommandStatus(ctx, testCommandID, logger)
+		assert.Error(t, err)
+		assert.Nil(t, result)
+		assert.Contains(t, err.Error(), errorutil.ErrMsgCommandNotFound)
+		mockDB.AssertExpectations(t)
+	})
+
+	t.Run("returns error on database error", func(t *testing.T) {
+		mockDB := new(mockDBService)
+		mockProject := new(mockProjectService)
+		mockIoT := new(mockIoTService)
+		logger := zaptest.NewLogger(t)
+
+		service := NewService(mockDB, mockProject, mockIoT, createTestConfig())
+
+		mockDB.On("GetCommandStatus", ctx, testCommandID, mock.AnythingOfType("*zap.Logger")).
+			Return(nil, errors.New("database error"))
+
+		result, err := service.GetCommandStatus(ctx, testCommandID, logger)
+		assert.Error(t, err)
+		assert.Nil(t, result)
+		mockDB.AssertExpectations(t)
 	})
 }

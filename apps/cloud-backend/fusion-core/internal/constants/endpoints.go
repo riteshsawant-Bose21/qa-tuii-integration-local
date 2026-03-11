@@ -79,8 +79,6 @@ const (
 	// EndpointDeviceCommand is the endpoint for sending a command to a device.
 	EndpointDeviceCommand = "/commands/"
 
-	// EndpointCommands is the base endpoint for command operations.
-	EndpointCommands = "/commands"
 	// EndpointCommandStatus is the endpoint for getting the status of a command.
-	EndpointCommandStatus = "/command/:command_id/status"
+	EndpointCommandStatus = "/commands/:command_id/status"
 )

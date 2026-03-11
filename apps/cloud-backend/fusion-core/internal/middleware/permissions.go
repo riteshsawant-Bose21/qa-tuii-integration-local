@@ -106,10 +106,8 @@ func SetupDevicePermissions(acc *AccessControlConfig) {
 	// Device ROTATE-CERT endpoint - require write permission
 	acc.RegisterPermission("POST", fmt.Sprintf("%s%s", basePath, constants.EndpointDeviceRotateCert), DeviceUpdate, PermissionWrite, "Rotate device certificate")
 
-	// Command endpoints (under /commands)
-	commandsPath := fmt.Sprintf("%s%s", constants.APIV1Path, constants.EndpointCommands)
-	acc.RegisterPermission("POST", fmt.Sprintf("%s%s", commandsPath, constants.EndpointDeviceCommand), DeviceUpdate, PermissionWrite, "Send command to device")
-	acc.RegisterPermission("GET", fmt.Sprintf("%s%s", commandsPath, constants.EndpointCommandStatus), DeviceUpdate, PermissionRead, "Get command status")
+	acc.RegisterPermission("POST", fmt.Sprintf("%s%s", basePath, constants.EndpointDeviceCommand), DeviceUpdate, PermissionWrite, "Send command to device")
+	acc.RegisterPermission("GET", fmt.Sprintf("%s%s", basePath, constants.EndpointCommandStatus), DeviceUpdate, PermissionRead, "Get command status")
 }
 
 // SetupCommonPermissions configures common permission patterns

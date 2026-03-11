@@ -67,8 +67,8 @@ func (m *MockDeviceService) RotateCertificate(ctx context.Context, deviceID stri
 }
 
 // Command mocks sending a command to device cluster.
-func (m *MockDeviceService) Command(ctx context.Context, projectID string, request *types.CommandRequest, user types.UserAuthorizationResponse, logger *zap.Logger) (string, error) {
-	args := m.Called(ctx, projectID, request, user, logger)
+func (m *MockDeviceService) Command(ctx context.Context, request *types.CommandRequest, user types.UserAuthorizationResponse, logger *zap.Logger) (string, error) {
+	args := m.Called(ctx, request, user, logger)
 	return args.String(0), args.Error(1)
 }
 
@@ -144,6 +144,8 @@ func (suite *DeviceIntegrationTestSuite) setupRouter() {
 		devices.DELETE("/:device_id/reset", deviceHandler.ResetDevice)
 		devices.POST("/:device_id/claim", deviceHandler.ClaimDevice)
 		devices.POST("/:device_id/rotate-cert", deviceHandler.RotateCertificate)
+		devices.POST("/commands", deviceHandler.Command)
+		devices.GET("/commands/:command_id/status", deviceHandler.GetCommandStatus)
 	}
 
 	suite.GinRouter = router
@@ -495,6 +497,117 @@ func (suite *DeviceIntegrationTestSuite) TestRotateCertificate() {
 		require.NoError(t, err)
 
 		assert.Equal(t, http.StatusUnauthorized, w.Code)
+		suite.mockDeviceSVC.AssertExpectations(t)
+	})
+}
+
+// TestCommand tests the POST /api/v1/devices/commands endpoint.
+func (suite *DeviceIntegrationTestSuite) TestCommand() {
+	suite.T().Run("should send command successfully", func(t *testing.T) {
+		req := types.CommandRequest{
+			Command:   types.CommandRestart,
+			ProjectID: suite.testProjectID,
+			DeviceIDs: []string{uuid.New().String()},
+		}
+		expectedCommandID := uuid.New().String()
+
+		suite.mockDeviceSVC.On("Command", mock.Anything, mock.MatchedBy(func(r *types.CommandRequest) bool {
+			return r.Command == types.CommandRestart && r.ProjectID == suite.testProjectID
+		}), mock.Anything, mock.Anything).Return(expectedCommandID, nil).Once()
+
+		w, err := suite.MakeRequest("POST", "/api/v1/devices/commands", req)
+		require.NoError(t, err)
+
+		assert.Equal(t, http.StatusOK, w.Code)
+
+		var response types.CommandResponse
+		err = json.Unmarshal(w.Body.Bytes(), &response)
+		require.NoError(t, err)
+
+		assert.Equal(t, expectedCommandID, response.CommandID)
+		suite.mockDeviceSVC.AssertExpectations(t)
+	})
+
+	suite.T().Run("should fail with invalid request payload", func(t *testing.T) {
+		w, err := suite.MakeRequest("POST", "/api/v1/devices/commands", "invalid json")
+		require.NoError(t, err)
+
+		assert.Equal(t, http.StatusBadRequest, w.Code)
+	})
+
+	suite.T().Run("should fail when project not found", func(t *testing.T) {
+		req := types.CommandRequest{
+			Command:   types.CommandRestart,
+			ProjectID: uuid.New().String(), // Non-existent project
+		}
+
+		suite.mockDeviceSVC.On("Command", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+			Return("", errors.New(errorutil.ErrMsgProjectNotFound)).Once()
+
+		w, err := suite.MakeRequest("POST", "/api/v1/devices/commands", req)
+		require.NoError(t, err)
+
+		assert.Equal(t, http.StatusNotFound, w.Code)
+		suite.mockDeviceSVC.AssertExpectations(t)
+	})
+
+	suite.T().Run("should fail when unauthorized", func(t *testing.T) {
+		req := types.CommandRequest{
+			Command:   types.CommandRestart,
+			ProjectID: suite.testProjectID,
+		}
+
+		suite.mockDeviceSVC.On("Command", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+			Return("", errors.New(errorutil.MsgUnauthorized)).Once()
+
+		w, err := suite.MakeRequest("POST", "/api/v1/devices/commands", req)
+		require.NoError(t, err)
+
+		assert.Equal(t, http.StatusUnauthorized, w.Code)
+		suite.mockDeviceSVC.AssertExpectations(t)
+	})
+}
+
+// TestGetCommandStatus tests the GET /api/v1/devices/commands/{command_id}/status endpoint.
+func (suite *DeviceIntegrationTestSuite) TestGetCommandStatus() {
+	commandID := uuid.New().String()
+
+	suite.T().Run("should get command status successfully", func(t *testing.T) {
+		expectedResponse := &types.CommandStatusResponse{
+			CommandID:   commandID,
+			CommandName: "REBOOT",
+			Status:      "COMPLETED",
+			IssuedAt:    "2024-01-15T10:00:00Z",
+		}
+
+		suite.mockDeviceSVC.On("GetCommandStatus", mock.Anything, commandID, mock.Anything).
+			Return(expectedResponse, nil).Once()
+
+		w, err := suite.MakeRequest("GET", "/api/v1/devices/commands/"+commandID+"/status", nil)
+		require.NoError(t, err)
+
+		assert.Equal(t, http.StatusOK, w.Code)
+
+		var response types.CommandStatusResponse
+		err = json.Unmarshal(w.Body.Bytes(), &response)
+		require.NoError(t, err)
+
+		assert.Equal(t, commandID, response.CommandID)
+		assert.Equal(t, "REBOOT", response.CommandName)
+		assert.Equal(t, "COMPLETED", response.Status)
+		suite.mockDeviceSVC.AssertExpectations(t)
+	})
+
+	suite.T().Run("should fail when command not found", func(t *testing.T) {
+		nonExistentID := uuid.New().String()
+
+		suite.mockDeviceSVC.On("GetCommandStatus", mock.Anything, nonExistentID, mock.Anything).
+			Return(nil, errors.New(errorutil.ErrMsgCommandNotFound)).Once()
+
+		w, err := suite.MakeRequest("GET", "/api/v1/devices/commands/"+nonExistentID+"/status", nil)
+		require.NoError(t, err)
+
+		assert.Equal(t, http.StatusNotFound, w.Code)
 		suite.mockDeviceSVC.AssertExpectations(t)
 	})
 }

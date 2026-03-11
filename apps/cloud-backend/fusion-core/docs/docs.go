@@ -132,7 +132,70 @@ const docTemplate = `{
                 }
             }
         },
-        "/devices/command/{command_id}/status": {
+        "/devices/commands/": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Send a command to the device cluster",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "devices"
+                ],
+                "summary": "Send command to device cluster",
+                "parameters": [
+                    {
+                        "description": "Command details",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/types.CommandRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successfully sent command",
+                        "schema": {
+                            "$ref": "#/definitions/types.CommandResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad request - Invalid payload",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized - User not authorized",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Project not found",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/types.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/devices/commands/{command_id}/status": {
             "get": {
                 "security": [
                     {
@@ -174,76 +237,6 @@ const docTemplate = `{
                     },
                     "404": {
                         "description": "Command not found",
-                        "schema": {
-                            "$ref": "#/definitions/types.ErrorResponse"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal server error",
-                        "schema": {
-                            "$ref": "#/definitions/types.ErrorResponse"
-                        }
-                    }
-                }
-            }
-        },
-        "/devices/command/{project_id}/": {
-            "post": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Send a command to the device cluster",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "devices"
-                ],
-                "summary": "Send command to device cluster",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Project ID",
-                        "name": "project_id",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "description": "Command details",
-                        "name": "body",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/types.CommandRequest"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Successfully sent command",
-                        "schema": {
-                            "$ref": "#/definitions/types.CommandResponse"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad request - Invalid payload",
-                        "schema": {
-                            "$ref": "#/definitions/types.ErrorResponse"
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized - User not authorized",
-                        "schema": {
-                            "$ref": "#/definitions/types.ErrorResponse"
-                        }
-                    },
-                    "404": {
-                        "description": "Project not found",
                         "schema": {
                             "$ref": "#/definitions/types.ErrorResponse"
                         }
@@ -2155,7 +2148,8 @@ const docTemplate = `{
         "types.CommandRequest": {
             "type": "object",
             "required": [
-                "command"
+                "command",
+                "project_id"
             ],
             "properties": {
                 "command": {
@@ -2166,6 +2160,9 @@ const docTemplate = `{
                     "items": {
                         "type": "string"
                     }
+                },
+                "project_id": {
+                    "type": "string"
                 }
             }
         },

@@ -20,7 +20,9 @@ CREATE TABLE device (
     certificate_id VARCHAR(255) UNIQUE, -- The certificate ID associated with the device for AWS IoT authentication
     certificate_arn VARCHAR(500) UNIQUE, -- The ARN of the certificate in AWS IoT
     claim_status claim_status_enum NOT NULL DEFAULT 'UNCLAIMED', -- UNCLAIMED / CLAIMED / COMMISSIONED
-    claimed_by UUID REFERENCES account(id), -- Customer account id
+
+    claimed_by UUID REFERENCES account(id), -- Org id
+
     project_id UUID REFERENCES project(id), -- Associated project
 
     firmware_version VARCHAR(50) NOT NULL, -- Current firmware version

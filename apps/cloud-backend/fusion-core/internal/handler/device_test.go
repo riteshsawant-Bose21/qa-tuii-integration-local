@@ -38,6 +38,7 @@ const (
 	testMacAddressConst     = "00:11:22:33:44:55"
 	testDeviceZoneConst     = "Zone-A"
 	testDeviceLocationConst = "Location-1"
+	testCommandIDConst      = "cmd-123"
 )
 
 // ---------------------------------------------------------------------------
@@ -82,8 +83,8 @@ func (m *MockDeviceService) RotateCertificate(ctx context.Context, deviceID stri
 	return args.Get(0).(*types.DeviceRotateCertResponse), args.Error(1)
 }
 
-func (m *MockDeviceService) Command(ctx context.Context, projectID string, request *types.CommandRequest, user types.UserAuthorizationResponse, logger *zap.Logger) (string, error) {
-	args := m.Called(ctx, projectID, request, user, logger)
+func (m *MockDeviceService) Command(ctx context.Context, request *types.CommandRequest, user types.UserAuthorizationResponse, logger *zap.Logger) (string, error) {
+	args := m.Called(ctx, request, user, logger)
 	return args.String(0), args.Error(1)
 }
 
@@ -121,6 +122,8 @@ func setupDeviceTest() (*gin.Engine, *MockDeviceService) {
 	r.DELETE(devicesEndpoint+"/:device_id/reset", handler.ResetDevice)
 	r.POST(devicesEndpoint+"/:device_id/claim", handler.ClaimDevice)
 	r.POST(devicesEndpoint+"/:device_id/rotate-cert", handler.RotateCertificate)
+	r.POST(devicesEndpoint+"/commands", handler.Command)
+	r.GET(devicesEndpoint+"/commands/:command_id/status", handler.GetCommandStatus)
 
 	return r, mockSvc
 }
@@ -145,6 +148,8 @@ func setupDeviceTestWithoutLogger() *gin.Engine {
 	r.DELETE(devicesEndpoint+"/:device_id/reset", handler.ResetDevice)
 	r.POST(devicesEndpoint+"/:device_id/claim", handler.ClaimDevice)
 	r.POST(devicesEndpoint+"/:device_id/rotate-cert", handler.RotateCertificate)
+	r.POST(devicesEndpoint+"/commands", handler.Command)
+	r.GET(devicesEndpoint+"/commands/:command_id/status", handler.GetCommandStatus)
 
 	return r
 }
@@ -167,6 +172,8 @@ func setupDeviceTestWithoutUserAuth() *gin.Engine {
 	r.DELETE(devicesEndpoint+"/:device_id/reset", handler.ResetDevice)
 	r.POST(devicesEndpoint+"/:device_id/claim", handler.ClaimDevice)
 	r.POST(devicesEndpoint+"/:device_id/rotate-cert", handler.RotateCertificate)
+	r.POST(devicesEndpoint+"/commands", handler.Command)
+	r.GET(devicesEndpoint+"/commands/:command_id/status", handler.GetCommandStatus)
 
 	return r
 }
@@ -973,6 +980,264 @@ func TestRotateCertificate(t *testing.T) {
 		r.ServeHTTP(w, httpReq)
 
 		assert.Equal(t, http.StatusUnauthorized, w.Code)
+	})
+}
+
+// ---------------------------------------------------------------------------
+// Command Tests
+// ---------------------------------------------------------------------------
+
+func TestCommand(t *testing.T) {
+	t.Run("successfully sends command", func(t *testing.T) {
+		r, mockSvc := setupDeviceTest()
+
+		req := &types.CommandRequest{
+			Command:   types.CommandRestart,
+			ProjectID: testProjectIDConst,
+			DeviceIDs: []string{testDeviceIDConst},
+		}
+
+		mockSvc.On("Command", mock.Anything, req, mock.AnythingOfType("types.UserAuthorizationResponse"), mock.AnythingOfType("*zap.Logger")).
+			Return(testCommandIDConst, nil)
+
+		body, _ := json.Marshal(req)
+		httpReq := httptest.NewRequest(http.MethodPost, devicesEndpoint+"/commands", bytes.NewBuffer(body))
+		httpReq.Header.Set("Content-Type", "application/json")
+		w := httptest.NewRecorder()
+
+		r.ServeHTTP(w, httpReq)
+
+		assert.Equal(t, http.StatusOK, w.Code)
+
+		var response types.CommandResponse
+		err := json.Unmarshal(w.Body.Bytes(), &response)
+		assert.NoError(t, err)
+		assert.Equal(t, testCommandIDConst, response.CommandID)
+		mockSvc.AssertExpectations(t)
+	})
+
+	t.Run("returns bad request on invalid JSON", func(t *testing.T) {
+		r, _ := setupDeviceTest()
+
+		httpReq := httptest.NewRequest(http.MethodPost, devicesEndpoint+"/commands", bytes.NewBufferString("invalid json"))
+		httpReq.Header.Set("Content-Type", "application/json")
+		w := httptest.NewRecorder()
+
+		r.ServeHTTP(w, httpReq)
+
+		assert.Equal(t, http.StatusBadRequest, w.Code)
+	})
+
+	t.Run("returns bad request when command missing", func(t *testing.T) {
+		r, _ := setupDeviceTest()
+
+		req := &types.CommandRequest{
+			ProjectID: testProjectIDConst,
+			// Command is required but missing
+		}
+
+		body, _ := json.Marshal(req)
+		httpReq := httptest.NewRequest(http.MethodPost, devicesEndpoint+"/commands", bytes.NewBuffer(body))
+		httpReq.Header.Set("Content-Type", "application/json")
+		w := httptest.NewRecorder()
+
+		r.ServeHTTP(w, httpReq)
+
+		assert.Equal(t, http.StatusBadRequest, w.Code)
+	})
+
+	t.Run("returns bad request when project_id missing", func(t *testing.T) {
+		r, _ := setupDeviceTest()
+
+		req := &types.CommandRequest{
+			Command: types.CommandRestart,
+			// ProjectID is required but missing
+		}
+
+		body, _ := json.Marshal(req)
+		httpReq := httptest.NewRequest(http.MethodPost, devicesEndpoint+"/commands", bytes.NewBuffer(body))
+		httpReq.Header.Set("Content-Type", "application/json")
+		w := httptest.NewRecorder()
+
+		r.ServeHTTP(w, httpReq)
+
+		assert.Equal(t, http.StatusBadRequest, w.Code)
+	})
+
+	t.Run("returns not found when project not found", func(t *testing.T) {
+		r, mockSvc := setupDeviceTest()
+
+		req := &types.CommandRequest{
+			Command:   types.CommandRestart,
+			ProjectID: testProjectIDConst,
+		}
+
+		mockSvc.On("Command", mock.Anything, req, mock.AnythingOfType("types.UserAuthorizationResponse"), mock.AnythingOfType("*zap.Logger")).
+			Return("", errors.New(errorutil.ErrMsgProjectNotFound))
+
+		body, _ := json.Marshal(req)
+		httpReq := httptest.NewRequest(http.MethodPost, devicesEndpoint+"/commands", bytes.NewBuffer(body))
+		httpReq.Header.Set("Content-Type", "application/json")
+		w := httptest.NewRecorder()
+
+		r.ServeHTTP(w, httpReq)
+
+		assert.Equal(t, http.StatusNotFound, w.Code)
+		mockSvc.AssertExpectations(t)
+	})
+
+	t.Run("returns unauthorized when user unauthorized", func(t *testing.T) {
+		r, mockSvc := setupDeviceTest()
+
+		req := &types.CommandRequest{
+			Command:   types.CommandRestart,
+			ProjectID: testProjectIDConst,
+		}
+
+		mockSvc.On("Command", mock.Anything, req, mock.AnythingOfType("types.UserAuthorizationResponse"), mock.AnythingOfType("*zap.Logger")).
+			Return("", errors.New(errorutil.MsgUnauthorized))
+
+		body, _ := json.Marshal(req)
+		httpReq := httptest.NewRequest(http.MethodPost, devicesEndpoint+"/commands", bytes.NewBuffer(body))
+		httpReq.Header.Set("Content-Type", "application/json")
+		w := httptest.NewRecorder()
+
+		r.ServeHTTP(w, httpReq)
+
+		assert.Equal(t, http.StatusUnauthorized, w.Code)
+		mockSvc.AssertExpectations(t)
+	})
+
+	t.Run("returns internal error on service failure", func(t *testing.T) {
+		r, mockSvc := setupDeviceTest()
+
+		req := &types.CommandRequest{
+			Command:   types.CommandRestart,
+			ProjectID: testProjectIDConst,
+		}
+
+		mockSvc.On("Command", mock.Anything, req, mock.AnythingOfType("types.UserAuthorizationResponse"), mock.AnythingOfType("*zap.Logger")).
+			Return("", errors.New("unexpected error"))
+
+		body, _ := json.Marshal(req)
+		httpReq := httptest.NewRequest(http.MethodPost, devicesEndpoint+"/commands", bytes.NewBuffer(body))
+		httpReq.Header.Set("Content-Type", "application/json")
+		w := httptest.NewRecorder()
+
+		r.ServeHTTP(w, httpReq)
+
+		assert.Equal(t, http.StatusInternalServerError, w.Code)
+		mockSvc.AssertExpectations(t)
+	})
+
+	t.Run("returns internal error when logger missing", func(t *testing.T) {
+		r := setupDeviceTestWithoutLogger()
+
+		req := &types.CommandRequest{
+			Command:   types.CommandRestart,
+			ProjectID: testProjectIDConst,
+		}
+		body, _ := json.Marshal(req)
+		httpReq := httptest.NewRequest(http.MethodPost, devicesEndpoint+"/commands", bytes.NewBuffer(body))
+		httpReq.Header.Set("Content-Type", "application/json")
+		w := httptest.NewRecorder()
+
+		r.ServeHTTP(w, httpReq)
+
+		assert.Equal(t, http.StatusInternalServerError, w.Code)
+	})
+
+	t.Run("returns unauthorized when user auth missing", func(t *testing.T) {
+		r := setupDeviceTestWithoutUserAuth()
+
+		req := &types.CommandRequest{
+			Command:   types.CommandRestart,
+			ProjectID: testProjectIDConst,
+		}
+		body, _ := json.Marshal(req)
+		httpReq := httptest.NewRequest(http.MethodPost, devicesEndpoint+"/commands", bytes.NewBuffer(body))
+		httpReq.Header.Set("Content-Type", "application/json")
+		w := httptest.NewRecorder()
+
+		r.ServeHTTP(w, httpReq)
+
+		assert.Equal(t, http.StatusUnauthorized, w.Code)
+	})
+}
+
+// ---------------------------------------------------------------------------
+// GetCommandStatus Tests
+// ---------------------------------------------------------------------------
+
+func TestGetCommandStatus(t *testing.T) {
+	t.Run("successfully gets command status", func(t *testing.T) {
+		r, mockSvc := setupDeviceTest()
+
+		expectedResponse := &types.CommandStatusResponse{
+			CommandID:   testCommandIDConst,
+			CommandName: "REBOOT",
+			Status:      "COMPLETED",
+			IssuedAt:    "2024-01-15T10:00:00Z",
+		}
+
+		mockSvc.On("GetCommandStatus", mock.Anything, testCommandIDConst, mock.AnythingOfType("*zap.Logger")).
+			Return(expectedResponse, nil)
+
+		httpReq := httptest.NewRequest(http.MethodGet, devicesEndpoint+"/commands/"+testCommandIDConst+"/status", nil)
+		w := httptest.NewRecorder()
+
+		r.ServeHTTP(w, httpReq)
+
+		assert.Equal(t, http.StatusOK, w.Code)
+
+		var response types.CommandStatusResponse
+		err := json.Unmarshal(w.Body.Bytes(), &response)
+		assert.NoError(t, err)
+		assert.Equal(t, testCommandIDConst, response.CommandID)
+		assert.Equal(t, "REBOOT", response.CommandName)
+		assert.Equal(t, "COMPLETED", response.Status)
+		mockSvc.AssertExpectations(t)
+	})
+
+	t.Run("returns not found when command not found", func(t *testing.T) {
+		r, mockSvc := setupDeviceTest()
+
+		mockSvc.On("GetCommandStatus", mock.Anything, testCommandIDConst, mock.AnythingOfType("*zap.Logger")).
+			Return(nil, errors.New(errorutil.ErrMsgCommandNotFound))
+
+		httpReq := httptest.NewRequest(http.MethodGet, devicesEndpoint+"/commands/"+testCommandIDConst+"/status", nil)
+		w := httptest.NewRecorder()
+
+		r.ServeHTTP(w, httpReq)
+
+		assert.Equal(t, http.StatusNotFound, w.Code)
+		mockSvc.AssertExpectations(t)
+	})
+
+	t.Run("returns internal error on service failure", func(t *testing.T) {
+		r, mockSvc := setupDeviceTest()
+
+		mockSvc.On("GetCommandStatus", mock.Anything, testCommandIDConst, mock.AnythingOfType("*zap.Logger")).
+			Return(nil, errors.New("unexpected error"))
+
+		httpReq := httptest.NewRequest(http.MethodGet, devicesEndpoint+"/commands/"+testCommandIDConst+"/status", nil)
+		w := httptest.NewRecorder()
+
+		r.ServeHTTP(w, httpReq)
+
+		assert.Equal(t, http.StatusInternalServerError, w.Code)
+		mockSvc.AssertExpectations(t)
+	})
+
+	t.Run("returns internal error when logger missing", func(t *testing.T) {
+		r := setupDeviceTestWithoutLogger()
+
+		httpReq := httptest.NewRequest(http.MethodGet, devicesEndpoint+"/commands/"+testCommandIDConst+"/status", nil)
+		w := httptest.NewRecorder()
+
+		r.ServeHTTP(w, httpReq)
+
+		assert.Equal(t, http.StatusInternalServerError, w.Code)
 	})
 }
 
