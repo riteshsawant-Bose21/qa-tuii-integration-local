@@ -323,6 +323,7 @@ func (c *Cluster) restartSystem() error {
 		return nil
 	}
 
+	// Linux: use systemd-run for non-blocking delayed reboot
 	return exec.Command("systemd-run", "--on-active=5s", "/usr/bin/systemctl", "reboot").Run()
 }
 
