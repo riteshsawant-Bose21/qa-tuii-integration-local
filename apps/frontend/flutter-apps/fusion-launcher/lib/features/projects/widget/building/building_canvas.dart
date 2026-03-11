@@ -14,6 +14,8 @@ import 'package:fusion_lib/fusion_building_view/floor_plan_calibrator.dart';
 import 'package:fusion_lib/fusion_building_view/spl_range_controller.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/fusion_utils/image_loader_service.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:pdfrx/pdfrx.dart';
 
 import '../../../configuration/presentation/viewmodel/project_view_model.dart';
 import '../../../fusion_canvas/state/fusion_canvas_input_state.dart';
@@ -1057,116 +1059,98 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
 
     await showDialog(
       context: context,
-      builder:
-          (BuildContext ctx) => Dialog(
-            backgroundColor: Theme.of(context).colorScheme.elevation1,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Container(
-              width: 720,
-              height: 600,
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: <Widget>[
-                  // Header
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: <Widget>[
-                      Expanded(
-                        child: FusionAppText(
-                          text: 'Upload Floor Plan',
-                          style: Theme.of(
-                            context,
-                          ).textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.w600,
-                            color: context.colorScheme.textPrimary,
-                          ),
+      builder: (BuildContext ctx) {
+        return Dialog(
+          backgroundColor: Theme.of(context).colorScheme.elevation1,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+          child: Container(
+            width: 720,
+            height: 500,
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8).copyWith(right: 8),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                // Header
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: <Widget>[
+                    Expanded(
+                      child: FusionAppText(
+                        text: 'Upload Floor Plan',
+                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.w600,
+                          color: context.colorScheme.textPrimary,
                         ),
                       ),
-                      SemanticHelper.button(
-                        testId: SemanticHelper.createTestId(
-                          SemanticTypes.button,
-                          FusionTestKeys.closeX,
-                        ),
-                        child: IconButton(
-                          onPressed: () => Navigator.of(ctx).pop(),
-                          icon: Icon(
-                            Icons.close,
-                            color: context.colorScheme.primaryWhite,
-                            size: 20,
-                          ),
-                          splashRadius: 16,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 24),
-
-                  // Import Section (Primary)
-                  Expanded(
-                    flex: 3,
-                    child: _buildImportSection(ctx),
-                  ),
-
-                  const SizedBox(height: 24),
-
-                  // Divider
-                  Row(
-                    children: <Widget>[
-                      Expanded(
-                        child: Divider(color: context.colorScheme.elevation2),
-                      ),
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 16),
-                        child: FusionAppText(
-                          text: 'or choose from samples',
-                          style: Theme.of(
-                            context,
-                          ).textTheme.bodySmall?.copyWith(
-                            color: context.colorScheme.primaryWhite,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      ),
-                      Expanded(
-                        child: Divider(color: context.colorScheme.elevation2),
-                      ),
-                    ],
-                  ),
-
-                  const SizedBox(height: 16),
-
-                  Row(
-                    children: List<Widget>.generate(
-                      plans.length,
-                      (int index) {
-                        final String planPath = plans[index];
-                        return Expanded(
-                          child: _buildSamplePlanCard(index, planPath),
-                        );
-                      },
                     ),
+                    SemanticHelper.button(
+                      testId: SemanticHelper.createTestId(SemanticTypes.button, FusionTestKeys.closeX),
+                      child: IconButton(
+                        onPressed: () => Navigator.of(ctx).pop(),
+                        icon: Icon(
+                          Icons.close,
+                          color: context.colorScheme.primaryWhite,
+                          size: 20,
+                        ),
+                        splashRadius: 16,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+
+                // Import Section (Primary)
+                Expanded(
+                  flex: 2,
+                  child: _buildImportSection(ctx),
+                ),
+
+                const SizedBox(height: 16),
+
+                // Divider
+                Row(
+                  children: <Widget>[
+                    Expanded(child: Divider(color: context.colorScheme.elevation2)),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: FusionAppText(
+                        text: 'or choose from samples',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: context.colorScheme.primaryWhite,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                    Expanded(child: Divider(color: context.colorScheme.elevation2)),
+                  ],
+                ),
+
+                const SizedBox(height: 16),
+
+                Row(
+                  children: List<Widget>.generate(
+                    plans.length,
+                    (int index) {
+                      final String planPath = plans[index];
+                      return Expanded(
+                        child: _buildSamplePlanCard(index, planPath),
+                      );
+                    },
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
+        );
+      },
     );
   }
 
   Widget _buildImportSection(BuildContext ctx) {
     return DragTarget<String>(
       onWillAcceptWithDetails: (DragTargetDetails<String> details) => true,
-      onAcceptWithDetails: (DragTargetDetails<String> details) {
-        _importFloorPlan();
-      },
-      builder: (
-        BuildContext context,
-        List<String?> candidateData,
-        List<dynamic> rejectedData,
-      ) {
+      onAcceptWithDetails: (DragTargetDetails<String> details) => _importFloorPlan(),
+      builder: (BuildContext context, List<String?> candidateData, List<dynamic> rejectedData) {
         final bool isDragActive = candidateData.isNotEmpty;
 
         return GestureDetector(
@@ -1174,12 +1158,8 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
           child: Container(
             width: double.infinity,
             decoration: BoxDecoration(
-              color:
-                  isDragActive
-                      ? Theme.of(
-                        context,
-                      ).colorScheme.primaryColor.withValues(alpha: 0.05)
-                      : context.colorScheme.elevation1,
+              color: isDragActive ? Theme.of(context).colorScheme.primaryColor.withValues(alpha: 0.05) : context.colorScheme.elevation1,
+              borderRadius: BorderRadius.circular(16),
               border: Border.all(
                 width: isDragActive ? 2 : 1,
                 color: isDragActive ? Theme.of(context).colorScheme.primaryWhite : context.colorScheme.elevation2,
@@ -1189,55 +1169,33 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: <Widget>[
-                AnimatedContainer(
-                  duration: const Duration(milliseconds: 200),
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color:
-                        isDragActive
-                            ? context.colorScheme.primaryWhite.withValues(
-                              alpha: 0.15,
-                            )
-                            : context.colorScheme.primaryWhite.withValues(
-                              alpha: 0.1,
-                            ),
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(
-                    isDragActive ? Icons.file_download : Icons.cloud_upload_outlined,
-                    size: 48,
-                    color: context.colorScheme.primaryWhite,
-                  ),
+                Icon(
+                  isDragActive ? LucideIcons.download200 : LucideIcons.cloudUpload200,
+                  size: 48,
+                  color: context.colorScheme.primaryWhite,
                 ),
                 const SizedBox(height: 16),
                 FusionAppText(
                   text: isDragActive ? 'Drop your file here!' : 'Click here to upload',
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w600,
+                  style: context.textTheme.titleMedium?.copyWith(
                     color: isDragActive ? context.colorScheme.primaryWhite : context.colorScheme.textPrimary,
                   ),
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: 4),
                 FusionAppText(
-                  text: 'Upload .JPEG and .PNG files',
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  text: 'Upload .PDF, .JPEG or .PNG\nfiles (max file size- 5MB)',
+                  textAlign: TextAlign.center,
+                  style: context.textTheme.bodyMedium?.copyWith(
                     color: isDragActive ? context.colorScheme.primaryWhite : context.colorScheme.elevation4,
                   ),
                 ),
-                const SizedBox(height: 16),
-                FusionOutlinedButton(
-                  accessLabel: 'building_canvas_browse_files',
+                const SizedBox(height: 8),
+                FusionNeumorphicButton(
+                  semanticId: "import_floor_plan",
                   height: 36,
                   width: 140,
-                  label: 'Browse Files',
-                  textStyle: Theme.of(
-                    context,
-                  ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w500),
-                  foregroundColor: Theme.of(context).colorScheme.textPrimary,
-                  activeBorderColor: Theme.of(context).colorScheme.primaryWhite,
-                  backgroundColor: Theme.of(
-                    context,
-                  ).colorScheme.primaryColor.withValues(alpha: 0.05),
+                  text: 'Browse Files',
+                  textStyle: Theme.of(context).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w500),
                   onTap: () => _importFloorPlan(),
                 ),
               ],
@@ -1343,29 +1301,45 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
       final FilePickerResult? result = await FilePicker.platform.pickFiles(
         type: FileType.custom,
         allowMultiple: false,
-        allowedExtensions: <String>['png', 'jpg', 'jpeg'],
+        allowedExtensions: <String>['png', 'jpg', 'jpeg', 'pdf'],
       );
 
       if (result != null && result.files.single.path != null) {
         final String sourcePath = result.files.single.path!;
         final String fileName = result.files.single.name;
 
-        // Close the dialog first
-        // if (mounted) Navigator.of(context).pop();
+        // Enforce 5 MB maximum file size
+        const int maxBytes = 5 * 1024 * 1024; // 5 MB
+        final int fileSize = result.files.single.size;
+        if (fileSize > maxBytes) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('File is too large. Maximum allowed size is 5 MB.'),
+              ),
+            );
+          }
+          return;
+        }
+
+        // Handle PDF files: convert selected page to image first
+        String imagePath = sourcePath;
+        if (fileName.toLowerCase().endsWith('.pdf')) {
+          final String? convertedPath = await _handlePdfImport(sourcePath);
+          if (convertedPath == null) return; // User cancelled page selection
+          imagePath = convertedPath;
+        }
 
         // Show loading indicator
         if (mounted) {
           showDialog(
             context: context,
             barrierDismissible: false,
-            builder:
-                (BuildContext context) => const Center(
-                  child: CircularProgressIndicator(),
-                ),
+            builder: (BuildContext context) => const Center(child: CircularProgressIndicator()),
           );
 
           final ResponseCallback<String?> responseCallback = await serviceLocator<ProjectViewModel>().addImageToProject(
-            imagePath: sourcePath,
+            imagePath: imagePath,
           );
 
           if (mounted) Navigator.of(context).pop();
@@ -1407,6 +1381,53 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
     }
   }
 
+  /// Opens a PDF, and if it has multiple pages shows a page selection dialog.
+  /// Returns the path to a temporary PNG image of the selected page, or null if cancelled.
+  Future<String?> _handlePdfImport(String pdfPath) async {
+    final PdfDocument document = await PdfDocument.openFile(pdfPath);
+    try {
+      final int pageCount = document.pages.length;
+
+      if (pageCount == 1) {
+        return _renderPdfPageToFile(document.pages[0]);
+      }
+
+      // Multi-page: show selection dialog
+      if (!mounted) return null;
+      final int? selectedIndex = await showDialog<int>(
+        context: context,
+        builder: (BuildContext ctx) => _PdfPageSelectionDialog(document: document),
+      );
+
+      if (selectedIndex == null) return null;
+      return _renderPdfPageToFile(document.pages[selectedIndex]);
+    } finally {
+      document.dispose();
+    }
+  }
+
+  /// Renders a single PDF page at 4x resolution (288 dpi) and saves as a temp PNG file.
+  Future<String> _renderPdfPageToFile(PdfPage page) async {
+    const double scale = 4.0; // 72 dpi * 4 = 288 dpi
+    final PdfImage? pdfImage = await page.render(
+      fullWidth: page.width * scale,
+      fullHeight: page.height * scale,
+      backgroundColor: Colors.white,
+    );
+    if (pdfImage == null) throw Exception('Failed to render PDF page');
+
+    final ui.Image uiImage = await pdfImage.createImage();
+    pdfImage.dispose();
+
+    final ByteData? byteData = await uiImage.toByteData(format: ui.ImageByteFormat.png);
+    uiImage.dispose();
+    if (byteData == null) throw Exception('Failed to encode PDF page as PNG');
+
+    final String tempPath = '${Directory.systemTemp.path}/pdf_page_${DateTime.now().millisecondsSinceEpoch}.png';
+    await File(tempPath).writeAsBytes(byteData.buffer.asUint8List());
+    return tempPath;
+  }
+
   Future<void> _calibrateFloorPlan(String savedImagePath) async {
     try {
       final ui.Image image = await serviceLocator<ImageLoaderService>().loadImage(savedImagePath);
@@ -1428,25 +1449,23 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
       final CalibrationData? calibrationData = await showDialog<CalibrationData>(
         context: context,
         barrierDismissible: true,
-        builder:
-            (_) => Dialog(
-              child: FloorPlanCalibrationDialog(
-                floorPlanImage: image,
-                onCalibrationComplete: (CalibrationData data) {
-                  serviceLocator<GuideShowCaseController>().completeStep(
-                    GuideShowCaseSteps.confirmFloorCalibrated,
-                  );
-                  if (context.mounted) {
-                    Navigator.of(context).pop(data);
-                  }
-                },
-                onCancel: () {
-                  if (context.mounted) {
-                    Navigator.of(context).pop();
-                  }
-                },
-              ),
+        builder: (_) {
+          return Dialog(
+            insetPadding: const EdgeInsets.all(100),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            backgroundColor: context.colorScheme.elevation1,
+            child: FloorPlanCalibrationDialog(
+              floorPlanImage: image,
+              onCalibrationComplete: (CalibrationData data) {
+                serviceLocator<GuideShowCaseController>().completeStep(GuideShowCaseSteps.confirmFloorCalibrated);
+                if (context.mounted) Navigator.of(context).pop(data);
+              },
+              onCancel: () {
+                if (context.mounted) Navigator.of(context).pop();
+              },
             ),
+          );
+        },
       );
 
       if (calibrationData != null) {
@@ -1593,6 +1612,159 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
     } else {
       throw Exception('Failed to save cropped image to project storage');
     }
+  }
+}
+
+/// Dialog that displays PDF page thumbnails and lets the user select one.
+class _PdfPageSelectionDialog extends StatefulWidget {
+  final PdfDocument document;
+
+  const _PdfPageSelectionDialog({required this.document});
+
+  @override
+  State<_PdfPageSelectionDialog> createState() => _PdfPageSelectionDialogState();
+}
+
+class _PdfPageSelectionDialogState extends State<_PdfPageSelectionDialog> {
+  int? _selectedIndex;
+  final Map<int, ui.Image?> _thumbnails = <int, ui.Image?>{};
+
+  @override
+  void initState() {
+    super.initState();
+    _loadThumbnails();
+  }
+
+  Future<void> _loadThumbnails() async {
+    for (int i = 0; i < widget.document.pages.length; i++) {
+      final PdfPage page = widget.document.pages[i];
+      // Render at 1x (72 dpi) for thumbnails
+      final PdfImage? pdfImage = await page.render(fullWidth: page.width, fullHeight: page.height, backgroundColor: Colors.white);
+      if (pdfImage != null) {
+        final ui.Image image = await pdfImage.createImage();
+        pdfImage.dispose();
+        if (mounted) {
+          setState(() => _thumbnails[i] = image);
+        }
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    for (final ui.Image? image in _thumbnails.values) {
+      image?.dispose();
+    }
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final int pageCount = widget.document.pages.length;
+
+    return Dialog(
+      backgroundColor: Theme.of(context).colorScheme.elevation1,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+      insetPadding: const EdgeInsets.all(100),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            // Header
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: <Widget>[
+                FusionAppText(
+                  text: 'Select a Page ($pageCount pages)',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w600,
+                    color: context.colorScheme.textPrimary,
+                  ),
+                ),
+                IconButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  icon: Icon(Icons.close, color: context.colorScheme.primaryWhite, size: 20),
+                  splashRadius: 16,
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+
+            // Page grid
+            Flexible(
+              child: Container(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: context.colorScheme.strokeLight,
+                    width: 1,
+                  ),
+                ),
+                child: GridView.builder(
+                  itemCount: pageCount,
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 6,
+                    crossAxisSpacing: 12,
+                    mainAxisSpacing: 12,
+                    childAspectRatio: 0.75,
+                  ),
+                  padding: const EdgeInsets.all(8),
+                  itemBuilder: (BuildContext context, int index) {
+                    final bool isSelected = _selectedIndex == index;
+                    final ui.Image? thumbnail = _thumbnails[index];
+
+                    return GestureDetector(
+                      onTap: () => setState(() => _selectedIndex = index),
+                      child: Container(
+                        decoration: BoxDecoration(
+                          border: Border.all(
+                            color: isSelected ? Theme.of(context).colorScheme.primaryColor : context.colorScheme.strokeLight,
+                            width: isSelected ? 2 : 1,
+                          ),
+                          color: context.colorScheme.elevation1,
+                        ),
+                        child: Builder(
+                          builder: (BuildContext context) {
+                            if (thumbnail != null) {
+                              return RawImage(image: thumbnail, fit: BoxFit.contain);
+                            } else {
+                              return const Center(
+                                child: SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child: CircularProgressIndicator(strokeWidth: 2),
+                                ),
+                              );
+                            }
+                          },
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 12),
+
+            // Confirm button
+            Align(
+              alignment: Alignment.centerRight,
+              child: FusionNeumorphicButton(
+                semanticId: 'pdf_page_import',
+                height: 36,
+                width: 120,
+                text: 'Import',
+                enabled: _selectedIndex != null,
+                textStyle: Theme.of(context).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w500),
+                onTap: () => Navigator.of(context).pop(_selectedIndex),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
 

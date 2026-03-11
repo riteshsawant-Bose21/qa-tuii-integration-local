@@ -512,29 +512,33 @@ class FloorCanvasPainter extends CustomPainter {
     required Color background,
     required double zoomScale,
   }) {
-    final double zs = (zoomScale <= 0.35) ? 0.35 : zoomScale;
+    // UI sizing with minimum screen-space constraints for readability
+    // Labels scale with zoom but maintain minimum size when zoomed out
+    const double baseFontSize = 16.0;
+    const double minScreenFontSize = 11.0; // Minimum readable size
+    const double basePadH = 8.0;
+    const double basePadV = 4.0;
+    const double baseRadius = 4.0;
+    const double baseMargin = 6.0;
+    const double minScreenPad = 4.0;
+    const double minScreenMargin = 3.0;
 
-    // UI sizing (zoom-invariant)
-    late double fontSize;
-    if (zoomScale <= 0.2) {
-      fontSize = 24.0 / zs;
-    } else if (zoomScale <= 0.4) {
-      fontSize = 24.0 / zs;
-    } else if (zoomScale <= 0.6) {
-      fontSize = 20.0 / zs;
-    } else {
-      fontSize = 16.0 / zs;
-    }
-
-    final double padH = 8.0 / zs;
-    final double padV = 4.0 / zs;
-    final double radius = 4.0 / zs;
-    final double margin = 6.0 / zs;
+    // Use base size in world space, but enforce minimum screen-space size
+    final double fontSize = (baseFontSize * zoomScale) < minScreenFontSize ? minScreenFontSize / zoomScale : baseFontSize;
+    final double padH = (basePadH * zoomScale) < minScreenPad ? minScreenPad / zoomScale : basePadH;
+    final double padV = (basePadV * zoomScale) < minScreenPad ? minScreenPad / zoomScale : basePadV;
+    final double radius = baseRadius / zoomScale; // Always screen-consistent
+    final double margin = (baseMargin * zoomScale) < minScreenMargin ? minScreenMargin / zoomScale : baseMargin;
 
     final Rect bounds = path.getBounds();
 
     // Width capped by space to the RIGHT of the left-most vertex
-    final double maxBadgeWidth = (bounds.right - anchor.dx - 2 * margin).clamp(40.0 / zs, 350.0 / zs);
+    // Minimum readable width even when zoomed out
+    const double minScreenWidth = 40.0;
+    const double maxScreenWidth = 300.0;
+    final double minWidth = minScreenWidth / zoomScale;
+    final double maxWidth = maxScreenWidth / zoomScale;
+    final double maxBadgeWidth = (bounds.right - anchor.dx - 2 * margin).clamp(minWidth, maxWidth);
 
     final TextPainter tp = TextPainter(
       text: TextSpan(
@@ -560,11 +564,12 @@ class FloorCanvasPainter extends CustomPainter {
 
     // Compute vertical span of the shape at badge center X
     final double sampleX = rectLeft + badgeSize.width / 2;
+    final double stepY = (2.0 * zoomScale).clamp(1.0, 4.0) / zoomScale;
     final Offset? span = _verticalSpanAtX(
       path: path,
       x: sampleX,
       bounds: bounds,
-      stepY: (2.0 / zs).clamp(0.5, 6.0),
+      stepY: stepY,
     );
 
     // Start centered on anchor; then clamp inside the span (auto top/bottom)

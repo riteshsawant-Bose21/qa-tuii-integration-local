@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:fusion_launcher/core/assets/asset_svg.dart';
-import 'package:fusion_launcher/features/projects/widget/building/side_panel_widgets/schematic_properties.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
 import '../../../../core/service_locator.dart';

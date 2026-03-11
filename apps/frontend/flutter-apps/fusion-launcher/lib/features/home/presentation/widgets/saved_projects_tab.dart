@@ -1,5 +1,3 @@
-import 'dart:math' as math;
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -67,9 +65,7 @@ class SavedProjectsTabContent extends StatelessWidget {
                         onTap: () {
                           showDialog(
                             context: context,
-                            builder:
-                                (BuildContext context) =>
-                                    const ZipImportDialog(),
+                            builder: (BuildContext context) => const ZipImportDialog(),
                           );
                         },
                         height: 50,
@@ -212,22 +208,19 @@ class _SavedProjectListState extends State<_SavedProjectList> {
   void _listenToSearchChanges() {
     final String query = _searchController.text.trim();
     setState(
-      () =>
-          _isSearching = query.isNotEmpty && query.length >= MIN_SEARCH_LENGTH,
+      () => _isSearching = query.isNotEmpty && query.length >= MIN_SEARCH_LENGTH,
     );
   }
 
   List<ProjectData> get getProjects {
     late List<ProjectData> projects;
 
-    final List<ProjectData> allProjects =
-        serviceLocator<ProjectViewModel>().allProjects;
+    final List<ProjectData> allProjects = serviceLocator<ProjectViewModel>().allProjects;
 
     // ================ SEARCH PROJECTS IF QUERY IS NOT EMPTY ==========================
     final String searchQuery = _searchController.text.trim().toLowerCase();
     if (searchQuery.isNotEmpty && searchQuery.length >= MIN_SEARCH_LENGTH) {
-      final List<ProjectData> allProjects =
-          serviceLocator<ProjectViewModel>().allProjects;
+      final List<ProjectData> allProjects = serviceLocator<ProjectViewModel>().allProjects;
       projects =
           allProjects
               .where(
@@ -244,8 +237,7 @@ class _SavedProjectListState extends State<_SavedProjectList> {
     // ======= SORT LOGIN AT THE END =======
     if (selectedSortOption == _SavedProjectsSortOption.name) {
       projects.sort(
-        (ProjectData a, ProjectData b) =>
-            a.name.toLowerCase().compareTo(b.name.toLowerCase()),
+        (ProjectData a, ProjectData b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()),
       );
     }
 
@@ -304,10 +296,9 @@ class _SavedProjectListState extends State<_SavedProjectList> {
                                   children: <Widget>[
                                     FusionAppText(
                                       text: 'Projects',
-                                      style: context.textTheme.titleMedium
-                                          ?.copyWith(
-                                            fontWeight: FontWeight.w600,
-                                          ),
+                                      style: context.textTheme.titleMedium?.copyWith(
+                                        fontWeight: FontWeight.w600,
+                                      ),
                                     ),
                                     const Spacer(),
                                     //cloud sync icon button
@@ -319,18 +310,13 @@ class _SavedProjectListState extends State<_SavedProjectList> {
                                         ),
                                         child: IconButton(
                                           onPressed: () {
-                                            serviceLocator<
-                                                  ProjectSyncViewModel
-                                                >()
-                                                .uploadAllProjects();
+                                            serviceLocator<ProjectSyncViewModel>().uploadAllProjects();
                                           },
-                                          tooltip:
-                                              "Upload All Projects to Cloud",
+                                          tooltip: "Upload All Projects to Cloud",
                                           icon: Icon(
                                             LucideIcons.cloudUpload,
                                             size: 18,
-                                            color: context.colorScheme.onSurface
-                                                .withValues(alpha: 0.6),
+                                            color: context.colorScheme.onSurface.withValues(alpha: 0.6),
                                           ),
                                         ),
                                       ),
@@ -343,20 +329,15 @@ class _SavedProjectListState extends State<_SavedProjectList> {
                                         ),
                                         child: IconButton(
                                           onPressed: () {
-                                            serviceLocator<
-                                                  ProjectSyncViewModel
-                                                >()
-                                                .getAllProjects(
-                                                  forceFetch: true,
-                                                );
+                                            serviceLocator<ProjectSyncViewModel>().getAllProjects(
+                                              forceFetch: true,
+                                            );
                                           },
-                                          tooltip:
-                                              "Download All Projects from Cloud",
+                                          tooltip: "Download All Projects from Cloud",
                                           icon: Icon(
                                             LucideIcons.cloudDownload,
                                             size: 18,
-                                            color: context.colorScheme.onSurface
-                                                .withValues(alpha: 0.6),
+                                            color: context.colorScheme.onSurface.withValues(alpha: 0.6),
                                           ),
                                         ),
                                       ),
@@ -378,11 +359,7 @@ class _SavedProjectListState extends State<_SavedProjectList> {
                                       horizontal: 8,
                                     ),
                                     decoration: BoxDecoration(
-                                      color:
-                                          showSearchBar
-                                              ? context.colorScheme.onSurface
-                                                  .withValues(alpha: 0.1)
-                                              : Colors.transparent,
+                                      color: showSearchBar ? context.colorScheme.onSurface.withValues(alpha: 0.1) : Colors.transparent,
                                       borderRadius: BorderRadius.circular(60),
                                     ),
                                     child: Row(
@@ -400,10 +377,8 @@ class _SavedProjectListState extends State<_SavedProjectList> {
                                             child: TextFormField(
                                               focusNode: _searchFocusNode,
                                               controller: _searchController,
-                                              style:
-                                                  context.textTheme.labelLarge,
-                                              cursorColor:
-                                                  context.colorScheme.onSurface,
+                                              style: context.textTheme.labelLarge,
+                                              cursorColor: context.colorScheme.onSurface,
                                               cursorWidth: 1,
                                               cursorHeight: 15,
                                               decoration: InputDecoration(
@@ -416,30 +391,21 @@ class _SavedProjectListState extends State<_SavedProjectList> {
                                                 hintText: "Search projects",
                                                 hoverColor: Colors.transparent,
                                                 contentPadding: EdgeInsets.zero,
-                                                hintStyle: context
-                                                    .textTheme
-                                                    .labelMedium
-                                                    ?.copyWith(
-                                                      color: Colors.grey,
-                                                    ),
+                                                hintStyle: context.textTheme.labelMedium?.copyWith(
+                                                  color: Colors.grey,
+                                                ),
                                               ),
                                             ),
                                           ),
                                         ),
                                         InkWell(
                                           onTap: () {
-                                            showSearchBarNotifier.value =
-                                                !showSearchBarNotifier.value;
+                                            showSearchBarNotifier.value = !showSearchBarNotifier.value;
 
-                                            WidgetsBinding.instance
-                                                .addPostFrameCallback((_) {
-                                                  showSearchBar
-                                                      ? _searchFocusNode
-                                                          .unfocus()
-                                                      : _searchFocusNode
-                                                          .requestFocus();
-                                                  _searchController.clear();
-                                                });
+                                            WidgetsBinding.instance.addPostFrameCallback((_) {
+                                              showSearchBar ? _searchFocusNode.unfocus() : _searchFocusNode.requestFocus();
+                                              _searchController.clear();
+                                            });
                                           },
                                           child: AnimatedSwitcher(
                                             duration: const Duration(
@@ -463,9 +429,7 @@ class _SavedProjectListState extends State<_SavedProjectList> {
                                                 key: ValueKey<bool>(
                                                   showSearchBar,
                                                 ),
-                                                showSearchBar
-                                                    ? LucideIcons.x
-                                                    : LucideIcons.search,
+                                                showSearchBar ? LucideIcons.x : LucideIcons.search,
                                                 size: 18,
                                               ),
                                             ),
@@ -484,10 +448,7 @@ class _SavedProjectListState extends State<_SavedProjectList> {
                                 selectedSortOption: selectedSortOption,
                                 onSelect: (_SavedProjectsSortOption value) {
                                   setState(() {
-                                    selectedSortOption =
-                                        value == selectedSortOption
-                                            ? null
-                                            : value;
+                                    selectedSortOption = value == selectedSortOption ? null : value;
                                   });
                                 },
                               ),
@@ -520,46 +481,36 @@ class _SavedProjectListState extends State<_SavedProjectList> {
                               if (_isSearching && projects.isEmpty) {
                                 return Center(
                                   child: FusionAppText(
-                                    text:
-                                        "No Projects Found for \"${_searchController.text}\"",
-                                    style: context.textTheme.labelLarge
-                                        ?.copyWith(
-                                          fontSize: 16,
-                                          color: context.colorScheme.onSurface
-                                              .withValues(alpha: 0.4),
-                                        ),
+                                    text: "No Projects Found for \"${_searchController.text}\"",
+                                    style: context.textTheme.labelLarge?.copyWith(
+                                      fontSize: 16,
+                                      color: context.colorScheme.onSurface.withValues(alpha: 0.4),
+                                    ),
                                   ),
                                 );
-                              } else if (state is! ProjectLoading &&
-                                  !serviceLocator<ProjectViewModel>()
-                                      .hasProjects) {
+                              } else if (state is! ProjectLoading && !serviceLocator<ProjectViewModel>().hasProjects) {
                                 return Center(
                                   child: FusionAppText(
                                     text: "No Projects Saved Yet",
-                                    style: context.textTheme.labelLarge
-                                        ?.copyWith(
-                                          fontSize: 16,
-                                          color: context.colorScheme.onSurface
-                                              .withValues(alpha: 0.4),
-                                        ),
+                                    style: context.textTheme.labelLarge?.copyWith(
+                                      fontSize: 16,
+                                      color: context.colorScheme.onSurface.withValues(alpha: 0.4),
+                                    ),
                                   ),
                                 );
                               } else {
-                                int crossAxisCount =
-                                    constraints.maxWidth > 900 ? 4 : 3;
-                                if (constraints.maxWidth > 1200)
-                                  crossAxisCount = 5;
+                                int crossAxisCount = constraints.maxWidth > 900 ? 4 : 3;
+                                if (constraints.maxWidth > 1200) crossAxisCount = 5;
 
                                 return GridView.builder(
                                   itemCount: projects.length,
                                   padding: const EdgeInsets.all(16),
-                                  gridDelegate:
-                                      SliverGridDelegateWithFixedCrossAxisCount(
-                                        crossAxisCount: crossAxisCount,
-                                        childAspectRatio: 16 / 12,
-                                        crossAxisSpacing: 16,
-                                        mainAxisSpacing: 16,
-                                      ),
+                                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                                    crossAxisCount: crossAxisCount,
+                                    childAspectRatio: 16 / 12,
+                                    crossAxisSpacing: 16,
+                                    mainAxisSpacing: 16,
+                                  ),
                                   itemBuilder: (
                                     BuildContext context,
                                     int index,
@@ -584,12 +535,9 @@ class _SavedProjectListState extends State<_SavedProjectList> {
                                           index: index,
                                           projectData: project,
                                           onDelete:
-                                              () => serviceLocator<
-                                                    ProjectSyncViewModel
-                                                  >()
-                                                  .deleteProject(
-                                                    projectId: project.id,
-                                                  ),
+                                              () => serviceLocator<ProjectSyncViewModel>().deleteProject(
+                                                projectId: project.id,
+                                              ),
                                         ),
                                       ),
                                     );
@@ -1001,163 +949,6 @@ class _BorderedTextfieldState extends State<BorderedTextfield> {
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(borderRadius),
                 borderSide: BorderSide(color: context.colorScheme.primaryWhite),
-              ),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class FusionDarkDropdown<T> extends StatefulWidget {
-  final String? title;
-  final T? selectedValue;
-  final List<T> items;
-  final String Function(T item) labelBuilder;
-  final ValueChanged<T>? onChanged;
-  final String placeholder;
-
-  const FusionDarkDropdown({
-    super.key,
-    this.title,
-    required this.items,
-    required this.labelBuilder,
-    this.selectedValue,
-    this.onChanged,
-    this.placeholder = "Select",
-  });
-
-  @override
-  State<FusionDarkDropdown<T>> createState() => _FusionDarkDropdownState<T>();
-}
-
-class _FusionDarkDropdownState<T> extends State<FusionDarkDropdown<T>> {
-  bool isMenuOpen = false;
-
-  @override
-  Widget build(BuildContext context) {
-    const double borderRadius = 12.0;
-
-    final GlobalKey childKey = GlobalKey();
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: <Widget>[
-        if (widget.title != null) ...<Widget>[
-          FusionAppText(
-            text: widget.title!,
-            style: context.textTheme.bodySmall?.copyWith(
-              fontWeight: FontWeight.w600,
-              color: context.colorScheme.onSurface.withValues(alpha: 0.6),
-            ),
-          ),
-          const SizedBox(height: 8),
-        ],
-        SizedBox(
-          key: childKey,
-          child: GestureDetector(
-            behavior: HitTestBehavior.opaque,
-            onTap: () async {
-              final RenderBox box =
-                  childKey.currentContext!.findRenderObject() as RenderBox;
-
-              final Offset pos = box.localToGlobal(Offset.zero);
-              final double width = box.size.width;
-
-              setState(() => isMenuOpen = true);
-
-              final T? result = await showMenu<T>(
-                context: context,
-                color: context.colorScheme.surface,
-                elevation: 0,
-                constraints: BoxConstraints.tightFor(width: width),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(9),
-                  side: BorderSide(
-                    color: context.colorScheme.onSurface.withValues(alpha: 0.3),
-                  ),
-                ),
-                position: RelativeRect.fromLTRB(
-                  pos.dx,
-                  pos.dy + box.size.height + 4,
-                  pos.dx + width,
-                  0,
-                ),
-                items: <PopupMenuEntry<T>>[
-                  ...widget.items.map(
-                    (T item) {
-                      return PopupMenuItem<T>(
-                        value: item,
-                        padding: EdgeInsets.zero,
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 10,
-                          ),
-                          child: Row(
-                            children: <Widget>[
-                              Expanded(
-                                child: FusionAppText(
-                                  text: widget.labelBuilder(item),
-                                  style: context.textTheme.labelMedium,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-                ],
-              );
-
-              setState(() => isMenuOpen = false);
-
-              if (result != null) widget.onChanged?.call(result);
-            },
-            child: SemanticHelper.button(
-              testId: SemanticHelper.createTestId(
-                SemanticTypes.button,
-                "${widget.title ?? 'dropdown'}_dropdown_button",
-              ),
-              child: Container(
-                padding: const EdgeInsets.all(9),
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(borderRadius),
-                  border: Border.all(
-                    color:
-                        isMenuOpen
-                            ? context.colorScheme.primaryWhite
-                            : context.colorScheme.strokeLight,
-                  ),
-                ),
-                child: Row(
-                  children: <Widget>[
-                    Expanded(
-                      child: FusionAppText(
-                        text:
-                            widget.selectedValue != null
-                                ? widget.labelBuilder(widget.selectedValue as T)
-                                : widget.placeholder,
-                        style: context.textTheme.labelLarge?.copyWith(
-                          color: context.colorScheme.textPrimary.withValues(
-                            alpha: widget.selectedValue != null ? 1.0 : 0.4,
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 4),
-                    Transform.rotate(
-                      angle: isMenuOpen ? math.pi : 0,
-                      child: Icon(
-                        LucideIcons.chevronDown,
-                        size: 16,
-                        color: context.colorScheme.iconDefault,
-                      ),
-                    ),
-                  ],
-                ),
               ),
             ),
           ),

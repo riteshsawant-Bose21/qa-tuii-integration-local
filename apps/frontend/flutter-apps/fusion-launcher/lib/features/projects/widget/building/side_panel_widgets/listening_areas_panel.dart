@@ -19,21 +19,8 @@ class ListeningAreasPanel extends StatefulWidget {
 
 class ListeningAreasPanelState extends State<ListeningAreasPanel> with TickerProviderStateMixin {
   final Set<String> _expandedListeningAreas = <String>{};
+  final Set<String> _expandedSpeakers = <String>{};
   final ProjectViewModel _projectViewModel = serviceLocator<ProjectViewModel>();
-
-  @override
-  void initState() {
-    super.initState();
-    _initializeExpandedStates();
-  }
-
-  void _initializeExpandedStates() {
-    // Expand all listening areas by default
-    final List<ListeningArea> listeningAreas = serviceLocator<ProjectViewModel>().getAllListeningAreas();
-    for (final ListeningArea area in listeningAreas) {
-      _expandedListeningAreas.add(area.id);
-    }
-  }
 
   void _toggleListeningAreaExpansion(String listeningAreaId) {
     setState(() {
@@ -49,17 +36,7 @@ class ListeningAreasPanelState extends State<ListeningAreasPanel> with TickerPro
   Widget build(BuildContext context) {
     return BlocBuilder<ProjectViewModel, ProjectViewModelState>(
       builder: (BuildContext context, ProjectViewModelState state) {
-        return SizedBox(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            mainAxisSize: MainAxisSize.min,
-            children: <Widget>[
-              // Listening Areas List
-              _buildListeningAreasList(),
-              const SizedBox(height: 8),
-            ],
-          ),
-        );
+        return _buildListeningAreasList();
       },
     );
   }
@@ -67,14 +44,12 @@ class ListeningAreasPanelState extends State<ListeningAreasPanel> with TickerPro
   Widget _buildListeningAreasList() {
     final List<ListeningArea> listeningAreas = serviceLocator<ProjectViewModel>().getListeningAreasForCurrentFloor();
 
-    if (listeningAreas.isEmpty) {
-      return _buildEmptyState();
-    }
+    if (listeningAreas.isEmpty) return _buildEmptyState();
 
     return SemanticHelper.container(
       testId: SemanticHelper.createTestId(SemanticTypes.container, "listening_area_lists"),
-      child: Container(
-        constraints: const BoxConstraints(),
+      child: SingleChildScrollView(
+        physics: const ClampingScrollPhysics(),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: <Widget>[
@@ -93,40 +68,44 @@ class ListeningAreasPanelState extends State<ListeningAreasPanel> with TickerPro
   }
 
   Widget _buildEmptyState() {
-    return Container(
-      constraints: const BoxConstraints(),
+    return SingleChildScrollView(
+      physics: const ClampingScrollPhysics(),
       padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: <Widget>[
-          Icon(
-            Icons.layers_outlined,
-            size: 48,
-            color: Colors.grey[400],
-          ),
-          const SizedBox(height: 16),
-          FusionAppText(
-            text: 'No listening areas yet',
-            style: TextStyle(
-              color: Colors.grey[600],
-              fontSize: 11,
-              fontWeight: FontWeight.w500,
+      child: Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: <Widget>[
+            Icon(
+              Icons.layers_outlined,
+              size: 48,
+              color: Colors.grey[400],
             ),
-          ),
-        ],
+            const SizedBox(height: 16),
+            FusionAppText(
+              text: 'No listening areas yet',
+              style: TextStyle(
+                color: Colors.grey[600],
+                fontSize: 11,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
 
   Widget _buildListeningAreaCard(ListeningArea area, int index) {
     final bool isSelected = serviceLocator<ProjectViewModel>().currentSelectedListeningAreaId == area.id;
-    final bool isExpanded = _expandedListeningAreas.contains(area.id);
-    final String floorName = serviceLocator<ProjectViewModel>().getFloorForListeningArea(areaId: area.id)?.name ?? '';
+    final bool isListeningAreaExpanded = _expandedListeningAreas.contains(area.id);
+    // final String floorName = serviceLocator<ProjectViewModel>().getFloorForListeningArea(areaId: area.id)?.name ?? '';
 
     // Get speakers for this listening area
     final List<HardwareComponent> allHardware = serviceLocator<ProjectViewModel>().getHardwareForListeningArea(listeningAreaId: area.id);
     final List<Speaker> speakers = allHardware.whereType<Speaker>().where((Speaker element) => element.pos != null).toList();
+
+    final bool isSpeakerExpanded = _expandedSpeakers.contains(area.id);
 
     return SemanticHelper.container(
       testId: SemanticHelper.createTestId(SemanticTypes.container, "listening_area_card_$index"),
@@ -162,10 +141,10 @@ class ListeningAreasPanelState extends State<ListeningAreasPanel> with TickerPro
                           onTap: () => _toggleListeningAreaExpansion(area.id),
                           child: AnimatedRotation(
                             duration: const Duration(milliseconds: 200),
-                            turns: isExpanded ? 0.5 : 0.25,
+                            turns: isListeningAreaExpanded ? 0.5 : 0.25,
                             child: SemanticHelper.toggle(
                               testId: SemanticHelper.createTestId(SemanticTypes.toggle, "listening_area_expand_collapse_$index"),
-                              value: isExpanded,
+                              value: isListeningAreaExpanded,
                               child: FusionSvgIcon(
                                 icon: AssetSvg.expandUp,
                                 color: context.colorScheme.elevation5,
@@ -185,14 +164,14 @@ class ListeningAreasPanelState extends State<ListeningAreasPanel> with TickerPro
                         Expanded(
                           child: Row(
                             children: <Widget>[
-                              FusionAppText(
-                                text: "$floorName /",
-                                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                  fontSize: 11,
-                                  fontWeight: isSelected ? FontWeight.w500 : FontWeight.w400,
-                                  color: (!area.isDrawn) ? context.colorScheme.error : null,
-                                ),
-                              ),
+                              // FusionAppText(
+                              //   text: "$floorName /",
+                              //   style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              //     fontSize: 11,
+                              //     fontWeight: isSelected ? FontWeight.w500 : FontWeight.w400,
+                              //     color: (!area.isDrawn) ? context.colorScheme.error : null,
+                              //   ),
+                              // ),
                               Expanded(
                                 child: SemanticHelper.formControl(
                                   testId: SemanticHelper.createTestId(SemanticTypes.textInput, "listening_area_name_input_$index"),
@@ -249,20 +228,12 @@ class ListeningAreasPanelState extends State<ListeningAreasPanel> with TickerPro
           // Expandable Speakers Section
           AnimatedCrossFade(
             duration: const Duration(milliseconds: 250),
-            crossFadeState: isExpanded ? CrossFadeState.showFirst : CrossFadeState.showSecond,
+            crossFadeState: isListeningAreaExpanded ? CrossFadeState.showFirst : CrossFadeState.showSecond,
             firstChild: Column(
               mainAxisSize: MainAxisSize.min,
               children: <Widget>[
                 if (speakers.isNotEmpty) ...<Widget>[
-                  ...speakers.map(
-                    (Speaker speaker) {
-                      final int index = speakers.indexOf(speaker);
-                      return SemanticHelper.container(
-                        testId: SemanticHelper.createTestId(SemanticTypes.container, "listening_area_speaker_$index"),
-                        child: _buildSpeakerItem(speaker),
-                      );
-                    },
-                  ),
+                  _buildSpeakerGroup(speakers),
                 ] else
                   SemanticHelper.staticText(
                     testId: SemanticHelper.createTestId(SemanticTypes.text, "no_speakers_message"),
@@ -277,13 +248,117 @@ class ListeningAreasPanelState extends State<ListeningAreasPanel> with TickerPro
     );
   }
 
+  Widget _buildSpeakerGroup(List<Speaker> speakers) {
+    final Map<int, List<Speaker>> groupedSpeakers = <int, List<Speaker>>{};
+    for (Speaker speaker in speakers) {
+      if (groupedSpeakers.containsKey(speaker.productId)) {
+        groupedSpeakers[speaker.productId]!.add(speaker);
+      } else if (speaker.productId != null) {
+        groupedSpeakers[speaker.productId!] = <Speaker>[speaker];
+      }
+    }
+
+    if (groupedSpeakers.isEmpty) return _buildNoSpeakersMessage();
+
+    final bool isSpeakerExpanded = _expandedSpeakers.contains(speakers.first.id);
+
+    return Column(
+      children: <Widget>[
+        ...List<Widget>.generate(groupedSpeakers.length, (int index) {
+          final List<Speaker> speakerList = groupedSpeakers.values.toList()[index];
+
+          final bool isSelected = _expandedSpeakers.contains(speakerList.first.id);
+
+          return Container(
+            margin: const EdgeInsets.only(left: 24, top: 2),
+            child: GestureDetector(
+              onTap: () {
+                _expandedSpeakers.add(speakerList.first.id);
+                setState(() {});
+              },
+              // borderRadius: BorderRadius.circular(4),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    Row(
+                      spacing: 6,
+                      children: <Widget>[
+                        GestureDetector(
+                          onTap: () {
+                            if (isSelected) {
+                              _expandedSpeakers.remove(speakerList.first.id);
+                            } else {
+                              _expandedSpeakers.add(speakerList.first.id);
+                            }
+                            setState(() {});
+                          },
+                          child: Icon(
+                            isSelected ? LucideIcons.chevronDown200 : LucideIcons.chevronRight200,
+                            size: 12,
+                            color: context.colorScheme.onSurface,
+                          ),
+                        ),
+                        FusionImage.asset(
+                          serviceLocator<ProjectViewModel>().getHardwareImage(
+                            productId: speakerList.first.productId ?? 0,
+                            currentImagePath: speakerList.first.assetImagePath,
+                          ),
+                          width: 14,
+                          height: 14,
+                        ),
+
+                        Expanded(
+                          child: FusionAppText(
+                            text: "${speakerList.first.speakerSKU} (x${speakerList.length})",
+                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              fontSize: 11,
+                              fontWeight: isSelected ? FontWeight.w500 : FontWeight.w400,
+                              color: context.colorScheme.textPrimary,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+
+                    AnimatedCrossFade(
+                      duration: const Duration(milliseconds: 250),
+                      crossFadeState: isSelected ? CrossFadeState.showFirst : CrossFadeState.showSecond,
+                      firstChild: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: <Widget>[
+                          ...speakers.map(
+                            (Speaker speaker) {
+                              final int index = speakers.indexOf(speaker);
+                              return SemanticHelper.container(
+                                testId: SemanticHelper.createTestId(SemanticTypes.container, "listening_area_speaker_$index"),
+                                child: _buildSpeakerItem(speaker),
+                              );
+                            },
+                          ),
+                        ],
+                      ),
+                      secondChild: const SizedBox.shrink(),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          );
+        }),
+      ],
+    );
+  }
+
   Widget _buildSpeakerItem(Speaker speaker) {
     return BlocBuilder<ProjectViewModel, ProjectViewModelState>(
       builder: (BuildContext context, ProjectViewModelState state) {
         final bool isSelected = serviceLocator<ProjectViewModel>().currentSelectedHardwareId == speaker.id;
 
         return Container(
-          margin: const EdgeInsets.only(left: 24, top: 2),
+          margin: const EdgeInsets.only(left: 10, top: 2),
           decoration: BoxDecoration(
             color: isSelected ? context.colorScheme.elevation4 : Colors.transparent,
             borderRadius: BorderRadius.circular(4),

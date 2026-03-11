@@ -1,9 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:fusion_lib/fusion_theme/app_theme.dart';
-import 'package:fusion_lib/fusion_widgets/text_views/fusion_app_text.dart';
-
-import '../side_panel_widgets/schematic_properties.dart';
+import 'package:fusion_lib/fusion_lib.dart';
 
 class BuildingPageTextField extends StatelessWidget {
   final String label;
