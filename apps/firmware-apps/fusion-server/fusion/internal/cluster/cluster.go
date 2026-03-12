@@ -7,6 +7,8 @@ import (
 
 	"fusion-services-core/logging"
 	"fusion/internal/api"
+	"fusion/internal/routes"
+	"fusion/internal/utils"
 	"net"
 	"net/http"
 	"runtime"
@@ -85,7 +87,7 @@ func NewCluster(appConfig *api.AppConfig, delegate *ClusterDelegate, memberlist 
 		logger.Error("initial JoinMemberlist: %v", err)
 	}
 
-	cluster.updateDeviceInfo()
+	cluster.refreshDeviceDefaultsIfRequired()
 
 	go cluster.initialAudioSync()
 	go cluster.startStateMonitor()
@@ -151,6 +153,47 @@ func (c *Cluster) getCurrentVIP() string {
 		return c.vipMonitor.GetCurrentVIP()
 	}
 	return ""
+}
+
+func (c *Cluster) RebootSystem(w http.ResponseWriter, r *http.Request) {
+	if !utils.RequirePost(w, r) {
+		return
+	}
+	defer r.Body.Close()
+
+	go func() {
+		// Reboot system outside of request after updating all the nodes
+		if err := postGenericToAdminLast(c, routes.ClusterRebootEndpoint, c.rebootSystem); err != nil {
+			// Log the error. Don't respond to client because it's async
+			logging.GetLogger().Error("Failed to reboot system: %v", err)
+		}
+	}()
+
+	w.WriteHeader(http.StatusNoContent)
+
+}
+
+func (c *Cluster) RebootSystemLocal(w http.ResponseWriter, r *http.Request) {
+	if !utils.RequirePost(w, r) {
+		return
+	}
+	defer r.Body.Close()
+
+	if err := c.rebootSystem(); err != nil {
+		logging.GetLogger().Error("Failed to reboot local system: %v", err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusAccepted)
+}
+
+func (c *Cluster) rebootSystem() error {
+	if err := c.restartSystem(); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 // reboot the system...
@@ -441,6 +484,16 @@ func (c *Cluster) hostIsLocal(addr string) bool {
 		}
 	}
 	return host == c.LocalNode().Addr.String()
+}
+
+// isLocalNodePrimary checks if this node is the primary (VIP holder)
+func (c *Cluster) isLocalNodePrimary() bool {
+
+	if c.vipMonitor != nil {
+		return c.vipMonitor.IsLocalVIPHolder()
+	}
+
+	return false
 }
 
 // getLocalURL builds a full API URL to the endpoint

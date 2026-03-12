@@ -6,9 +6,7 @@ import (
 	"fusion-services-core/logging"
 	"fusion/internal/api"
 	"fusion/internal/network"
-	"fusion/internal/persistence"
 	"fusion/internal/routes"
-	"fusion/internal/utils"
 	"io"
 	"net"
 	"net/http"
@@ -17,223 +15,118 @@ import (
 	json "github.com/goccy/go-json"
 )
 
-func (c *Cluster) GetDevicesInfo(w http.ResponseWriter, r *http.Request) {
-	if !utils.RequireGet(w, r) {
-		return
-	}
-
-	w.Header().Set(api.ContentType, api.JsonMIMEType)
-	json.NewEncoder(w).Encode(c.fetchAllDeviceInfos())
-}
-
-func (c *Cluster) GetDeviceInfo(w http.ResponseWriter, r *http.Request) {
-	if !utils.RequireGet(w, r) {
-		return
-	}
-
-	info, err := c.delegate.persistence.GetDeviceInfo()
-	if err != nil {
-		http.Error(w, fmt.Sprintf("Error getting device info: %v", err), http.StatusInternalServerError)
-		return
-	}
-
-	w.Header().Set(api.ContentType, api.JsonMIMEType)
-	if err := json.NewEncoder(w).Encode(info); err != nil {
-		logging.GetLogger().Error("Error encoding device info: %v", err)
-	}
-}
-
-func (c *Cluster) SetDeviceInfo(w http.ResponseWriter, r *http.Request) {
-	if !utils.RequirePost(w, r) {
-		return
-	}
-	defer r.Body.Close()
-
-	var info persistence.DeviceInfo
-	if err := json.NewDecoder(r.Body).Decode(&info); err != nil {
-		http.Error(w, fmt.Sprintf("Invalid JSON: %v", err), http.StatusBadRequest)
-		return
-	}
-
-	if err := c.delegate.persistence.SetDeviceInfo(&info); err != nil {
-		http.Error(w, fmt.Sprintf("Failed to set device info: %v", err), http.StatusInternalServerError)
-		return
-	}
-
-	w.WriteHeader(http.StatusNoContent)
-}
-
-func (c *Cluster) UpdateDeviceInfo(w http.ResponseWriter, r *http.Request) {
-	if !utils.RequirePatch(w, r) {
-		return
-	}
-	defer r.Body.Close()
-
-	deviceId, err := utils.ExtractId(r)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-
-	var patch persistence.DevicePatch
-	if err := json.NewDecoder(r.Body).Decode(&patch); err != nil {
-		http.Error(w, fmt.Sprintf("Invalid JSON: %v", err), http.StatusBadRequest)
-		return
-	}
-
-	if err, statusCode := c.updateDeviceInfoCore(deviceId, &patch, false); err != nil {
-		http.Error(w, err.Error(), statusCode)
-		return
-	}
-
-	w.WriteHeader(http.StatusNoContent)
-}
-
-func (c *Cluster) UpdateDeviceInfoLocal(w http.ResponseWriter, r *http.Request) {
-	if !utils.RequirePatch(w, r) {
-		return
-	}
-	defer r.Body.Close()
-
-	var patch persistence.DevicePatch
-	if err := json.NewDecoder(r.Body).Decode(&patch); err != nil {
-		http.Error(w, fmt.Sprintf("Invalid JSON: %v", err), http.StatusBadRequest)
-		return
-	}
-
-	info, err := c.delegate.persistence.GetDeviceInfo()
-	if err != nil {
-		http.Error(w, fmt.Sprintf("Error loading device info: %v", err), http.StatusInternalServerError)
-		return
-	}
-
-	c.applyPatch(&patch, info)
-
-	if err := c.delegate.persistence.SetDeviceInfo(info); err != nil {
-		http.Error(w, fmt.Sprintf("Failed to set device info: %v", err), http.StatusInternalServerError)
-		return
-	}
-
-	// Broadcast device update through Hub
-	c.broadcastDeviceUpdate(info.Id, info)
-
-	w.WriteHeader(http.StatusNoContent)
-}
-
-func (c *Cluster) RebootSystem(w http.ResponseWriter, r *http.Request) {
-	if !utils.RequirePost(w, r) {
-		return
-	}
-	defer r.Body.Close()
-
-	go func() {
-		// Reboot system outside of request after updating all the nodes
-		if err := postGenericToAdminLast(c, routes.ClusterRebootEndpoint, c.rebootSystem); err != nil {
-			// Log the error. Don't respond to client because it's async
-			logging.GetLogger().Error("Failed to reboot system: %v", err)
-		}
-	}()
-
-	w.WriteHeader(http.StatusNoContent)
-
-}
-
-func (c *Cluster) RebootSystemLocal(w http.ResponseWriter, r *http.Request) {
-	if !utils.RequirePost(w, r) {
-		return
-	}
-	defer r.Body.Close()
-
-	if err := c.rebootSystem(); err != nil {
-		logging.GetLogger().Error("Failed to reboot local system: %v", err)
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	w.WriteHeader(http.StatusAccepted)
-}
-
-func (c *Cluster) rebootSystem() error {
-	if err := c.restartSystem(); err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func (c *Cluster) fetchAllDeviceInfos() []persistence.DeviceInfo {
-	return fetchFromAdmin(
-		c,
-		c.getLocalDeviceInfo,
-		routes.DeviceEndpoint,
-	)
-}
-
-// GetAllDeviceInfos is the public interface for fetching all cluster device info
-func (c *Cluster) GetAllDeviceInfos() []persistence.DeviceInfo {
+func (c *Cluster) GetAllDevicesInfo() []api.DeviceInfo {
 	return c.fetchAllDeviceInfos()
 }
 
-// UpdateDeviceInfoForWebSocket updates device information cluster-wide
-func (c *Cluster) UpdateDeviceInfoForWebSocket(deviceID string, patch *persistence.DevicePatch) error {
-	err, _ := c.updateDeviceInfoCore(deviceID, patch, false)
-	return err
+func (c *Cluster) GetDeviceInfoLocal() api.DeviceInfo {
+	return c.getDeviceInfoLocal()
 }
 
-// updateDeviceInfoCore contains the common logic for updating device information
-func (c *Cluster) updateDeviceInfoCore(deviceID string, patch *persistence.DevicePatch, alwaysBroadcast bool) (error, int) {
-	localInfo, err, statusCode := c.findAndValidateDevice(deviceID, patch)
-	if err != nil {
-		return err, statusCode
-	}
+func (c *Cluster) UpdateDeviceInfo(device_id string, patch *api.DevicePatch) error {
 
-	c.applyPatch(patch, localInfo)
+	localInfo, err := c.findAndValidateDevice(device_id, patch)
+	if err != nil {
+		return err
+	}
 
 	if c.hostIsLocal(localInfo.Address) {
-		return c.updateLocalDevice(deviceID, localInfo)
+		return c.UpdateDeviceInfoLocal(patch)
 	}
-	return c.updateRemoteDevice(deviceID, localInfo, patch, alwaysBroadcast)
+	return c.updateRemoteDevice(device_id, localInfo, patch)
+
+}
+
+func (c *Cluster) UpdateDeviceInfoLocal(patch *api.DevicePatch) error {
+
+	stored, err := c.delegate.persistence.GetStoredDeviceInfo()
+	if err != nil {
+		return err
+	}
+
+	c.applyPatch(patch, stored)
+
+	if err := c.delegate.persistence.SetDeviceInfo(stored); err != nil {
+		return fmt.Errorf("Failed to set device info: %v", err)
+	}
+	info := c.getDeviceInfoLocal()
+	c.broadcastDeviceUpdate(&info)
+	return nil
 }
 
 // findAndValidateDevice finds the device and validates the patch
-func (c *Cluster) findAndValidateDevice(deviceID string, patch *persistence.DevicePatch) (*persistence.DeviceInfo, error, int) {
+func (c *Cluster) findAndValidateDevice(device_id string, patch *api.DevicePatch) (*api.DeviceInfo, error) {
 	deviceInfos := c.fetchAllDeviceInfos()
 
-	var localInfo *persistence.DeviceInfo
-	for _, info := range deviceInfos {
-		if info.Id == deviceID {
-			localInfo = &info
+	var localInfo *api.DeviceInfo
+	for i := range deviceInfos {
+		if deviceInfos[i].Id == device_id {
+			localInfo = &deviceInfos[i]
 			break
 		}
 	}
 
 	if localInfo == nil {
-		return nil, fmt.Errorf("Device %s not found", deviceID), http.StatusNotFound
+		return nil, fmt.Errorf("Device %s not found", device_id)
 	}
 
 	if err := validateNoDuplication(deviceInfos, *patch, localInfo.Id); err != nil {
-		return nil, err, http.StatusConflict
+		return nil, err
 	}
 
-	return localInfo, nil, http.StatusOK
+	return localInfo, nil
 }
 
-// updateLocalDevice updates a device that is hosted locally
-func (c *Cluster) updateLocalDevice(deviceID string, localInfo *persistence.DeviceInfo) (error, int) {
-	if err := c.delegate.persistence.SetDeviceInfo(localInfo); err != nil {
-		return fmt.Errorf("Failed to set device info: %v", err), http.StatusInternalServerError
+func (c *Cluster) fetchAllDeviceInfos() []api.DeviceInfo {
+	return fetchFromAdmin(
+		c,
+		c.getDeviceInfoLocal,
+		routes.DeviceEndpoint,
+	)
+}
+
+func (c *Cluster) getDeviceInfoLocal() api.DeviceInfo {
+
+	savedInfo, err := c.delegate.persistence.GetStoredDeviceInfo()
+	if err != nil {
+		//This doesnt return error as this fuction is called from fetchGenericFromAdmin which cant return partial errors
+		logging.GetLogger().Error("Failed to get local device info: %v", err)
+		return api.DeviceInfo{}
 	}
 
-	// Always broadcast for local devices
-	c.broadcastDeviceUpdate(deviceID, localInfo)
-	return nil, http.StatusOK
+	id := ""
+	if savedInfo.Id != nil {
+		id = *savedInfo.Id
+	}
+	name := ""
+	if savedInfo.Name != nil {
+		name = *savedInfo.Name
+	}
+	location := ""
+	if savedInfo.Location != nil {
+		location = *savedInfo.Location
+	}
+
+	deviceInfo := api.DeviceInfo{
+		Id:              id,
+		Name:            name,
+		Location:        location,
+		Address:         c.appConfig.BindAddr,
+		ModelName:       c.getModelName(),
+		SerialNumber:    c.getSerialNumber(),
+		FirmwareVersion: c.getFirmwareVersion(),
+		MacAddress:      c.getMacAddress(),
+		IsPrimaryNode:   c.isLocalNodePrimary(),
+	}
+
+	return deviceInfo
 }
 
 // updateRemoteDevice updates a device that is hosted on a remote node
-func (c *Cluster) updateRemoteDevice(deviceID string, localInfo *persistence.DeviceInfo, patch *persistence.DevicePatch, alwaysBroadcast bool) (error, int) {
+func (c *Cluster) updateRemoteDevice(deviceID string, localInfo *api.DeviceInfo, patch *api.DevicePatch) error {
 	jsonBody, err := json.Marshal(patch)
 	if err != nil {
-		return fmt.Errorf("Failed to encode patch: %v", err), http.StatusInternalServerError
+		return fmt.Errorf("Failed to encode patch: %v", err)
 	}
 
 	localPatchAddress := net.JoinHostPort(localInfo.Address, api.AdminPort)
@@ -241,32 +134,27 @@ func (c *Cluster) updateRemoteDevice(deviceID string, localInfo *persistence.Dev
 
 	req, err := http.NewRequest(http.MethodPatch, url, bytes.NewReader(jsonBody))
 	if err != nil {
-		return fmt.Errorf("Failed to create PATCH request: %v", err), http.StatusInternalServerError
+		return fmt.Errorf("Failed to create PATCH request: %v", err)
 	}
 	req.Header.Set(api.ContentType, api.JsonMIMEType)
 
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
-		return fmt.Errorf("PATCH request failed: %v", err), http.StatusBadGateway
+		return fmt.Errorf("PATCH request failed: %v", err)
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusNoContent {
 		body, _ := io.ReadAll(resp.Body)
 		logging.GetLogger().Error("Remote patch to %s failed with body=%s", url, string(body))
-		return fmt.Errorf("PATCH failed: %s", string(body)), resp.StatusCode
+		return fmt.Errorf("PATCH failed: %s", string(body))
 	}
 
-	// Broadcast for WebSocket updates only
-	if alwaysBroadcast {
-		c.broadcastDeviceUpdate(deviceID, localInfo)
-	}
-
-	return nil, http.StatusOK
+	return nil
 }
 
 // broadcastDeviceUpdate sends device updates via gossip protocol
-func (c *Cluster) broadcastDeviceUpdate(deviceID string, deviceData *persistence.DeviceInfo) {
+func (c *Cluster) broadcastDeviceUpdate(deviceData *api.DeviceInfo) {
 	if c.delegate.hub == nil {
 		return
 	}
@@ -276,48 +164,24 @@ func (c *Cluster) broadcastDeviceUpdate(deviceID string, deviceData *persistence
 	})
 
 	if err := c.delegate.hub.BroadcastToNodes(notifyMsg); err != nil {
-		logging.GetLogger().Error("Failed to broadcast device update for device %s: %v", deviceID, err)
+		logging.GetLogger().Error("Failed to broadcast device update for device %s: %v", deviceData.Id, err)
 	} else {
-		logging.GetLogger().Info("[DeviceUpdate] Broadcasted device update for device %s via gossip", deviceID)
+		logging.GetLogger().Info("[DeviceUpdate] Broadcasted device update for device %s via gossip", deviceData.Id)
 	}
 }
 
-func (c *Cluster) getLocalDeviceInfo() persistence.DeviceInfo {
-	info, err := c.delegate.persistence.GetDeviceInfo()
-	if err != nil {
-		return persistence.DeviceInfo{}
-	}
-	info.IsPrimaryNode = c.isLocalNodePrimary()
-
-	return *info
-}
-
-// isLocalNodePrimary checks if this node is the primary (VIP holder)
-func (c *Cluster) isLocalNodePrimary() bool {
-
-	if c.vipMonitor != nil {
-		return c.vipMonitor.IsLocalVIPHolder()
-	}
-
-	return false
-}
-
-func (c *Cluster) applyPatch(patch *persistence.DevicePatch, info *persistence.DeviceInfo) {
+func (c *Cluster) applyPatch(patch *api.DevicePatch, storedInfo *api.DevicePatch) {
 
 	if patch.Location != nil {
-		info.Location = *patch.Location
+		storedInfo.Location = patch.Location
 	}
 
 	if patch.Name != nil {
-		info.Name = *patch.Name
+		storedInfo.Name = patch.Name
 	}
 
 	if patch.Id != nil {
-		info.Id = *patch.Id
-	}
-
-	if patch.ModelName != nil {
-		info.ModelName = *patch.ModelName
+		storedInfo.Id = patch.Id
 	}
 
 }
@@ -325,8 +189,8 @@ func (c *Cluster) applyPatch(patch *persistence.DevicePatch, info *persistence.D
 // validateNoDuplication returns an error if any of the non‐nil fields in patch
 // would collide with another DeviceInfo other than the one with ID == currentID.
 func validateNoDuplication(
-	allInfos []persistence.DeviceInfo,
-	patch persistence.DevicePatch,
+	allInfos []api.DeviceInfo,
+	patch api.DevicePatch,
 	currentID string,
 ) error {
 	for _, info := range allInfos {
@@ -336,79 +200,78 @@ func validateNoDuplication(
 		}
 
 		// Check ID uniqueness (only if patch.Id was provided)
-		if patch.Id != nil {
-			// if they’re trying to set the ID to an empty string, you can decide
-			// whether that’s “allowed” or counts as a collision with other empty IDs.
-			newID := *patch.Id
-			if newID == info.Id {
-				return fmt.Errorf("duplicate id: %q is already in use", newID)
-			}
+		if patch.Id != nil && *patch.Id == info.Id {
+			return fmt.Errorf("duplicate id: %q is already in use", *patch.Id)
 		}
 
 		// Check Name uniqueness (only if patch.Name was provided)
-		if patch.Name != nil {
-			newName := *patch.Name
-			if newName == info.Name {
-				return fmt.Errorf("duplicate name: %q is already in use", newName)
-			}
+		if patch.Name != nil && *patch.Name == info.Name {
+			return fmt.Errorf("duplicate name: %q is already in use", *patch.Name)
 		}
-
 		// Location is not required to be unique
 	}
 
 	return nil
 }
 
-// updateDeviceInfo updates the persisted device info
-func (c *Cluster) updateDeviceInfo() {
+func (c *Cluster) getModelName() string {
+	return modelUnknown
+}
 
-	var info persistence.DeviceInfo
-	savedInfo, err := c.delegate.persistence.GetDeviceInfo()
-	if err == nil {
-		info = *savedInfo
+func (c *Cluster) getFirmwareVersion() string {
+	data, err := os.ReadFile(firmwarePath)
+	if err != nil {
+		logging.GetLogger().Warn("%s not found.", firmwarePath)
+		return firmwareUnknown
+	} else {
+		return string(bytes.TrimRight(data, "\x00\n"))
+	}
+}
+
+func (c *Cluster) getSerialNumber() string {
+	data, err := os.ReadFile(serialPath)
+	if err != nil {
+		logging.GetLogger().Warn("%s not found.", serialPath)
+		return serialUnknown
+	} else {
+		return string(bytes.TrimRight(data, "\x00\n"))
+	}
+}
+
+func (c *Cluster) getMacAddress() string {
+	macAddr, err := network.GetMacAddress()
+	if err != nil {
+		logging.GetLogger().Warn("Unable to read MAC address: %v", err)
+		return macUnknown
+	}
+	return macAddr
+}
+
+// refreshDeviceDefaults seeds default Id and Name into persistence on startup if not already set.
+// Called by NewCluster and JoinMemberlist
+func (c *Cluster) refreshDeviceDefaultsIfRequired() {
+	stored, err := c.delegate.persistence.GetStoredDeviceInfo()
+	if err != nil {
+		stored = &api.DevicePatch{}
 	}
 
-	info.Address = c.appConfig.BindAddr
-	if info.Id == "" {
-		info.Id = c.appConfig.NodeName + "_instance"
+	changed := false
+	if stored.Id == nil || *stored.Id == "" {
+		id := c.appConfig.NodeName + "_instance"
+		stored.Id = &id
+		changed = true
+	}
+	if stored.Name == nil || *stored.Name == "" {
+		name := c.appConfig.NodeName
+		stored.Name = &name
+		changed = true
 	}
 
-	if info.Name == "" {
-		info.Name = c.appConfig.NodeName
-	}
-
-	if info.SerialNumber == "" {
-		data, err := os.ReadFile(serialPath)
-		if err != nil {
-			logging.GetLogger().Warn("%s not found.", serialPath)
-			info.SerialNumber = serialUnknown
-		} else {
-			info.SerialNumber = string(bytes.TrimRight(data, "\x00\n"))
-		}
-	}
-
-	if info.FirmwareVersion == "" {
-		data, err := os.ReadFile(firmwarePath)
-		if err != nil {
-			logging.GetLogger().Warn("%s not found.", firmwarePath)
-			info.FirmwareVersion = firmwareUnknown
-		} else {
-			info.FirmwareVersion = string(bytes.TrimRight(data, "\x00\n"))
-		}
-	}
-
-	if info.MacAddress == "" {
-		macAddr, err := network.GetMacAddress()
-		if err != nil {
-			logging.GetLogger().Warn("Unable to read MAC address: %v", err)
-			info.MacAddress = macUnknown
-		} else {
-			info.MacAddress = macAddr
-		}
-	}
-
-	if err := c.delegate.persistence.SetDeviceInfo(&info); err != nil {
-		logging.GetLogger().Error("Unable to update device info: %v", err)
+	if !changed {
 		return
+	}
+
+	if err := c.delegate.persistence.SetDeviceInfo(stored); err != nil {
+		logging.GetLogger().Error("Unable to save device defaults: %v", err)
 	}
 }

@@ -31,6 +31,7 @@ const (
 	retryTimes          = 5
 	serialPath          = "/sys/firmware/devicetree/base/serial-number"
 	firmwarePath        = "/etc/buildinfo"
+	modelUnknown        = "Unknown"
 	serialUnknown       = "Unknown"
 	firmwareUnknown     = "Unknown"
 	macUnknown          = "Unknown"
@@ -124,8 +125,6 @@ func (c *Cluster) JoinMemberlist() error {
 		if err == nil {
 			members := c.memberlist.Members()
 			logger.Debug("[MEMBERLIST] Successfully joined cluster of size %d", len(members))
-
-			c.updateDeviceInfo()
 
 			if c.appConfig.Verbose {
 				for _, member := range members {

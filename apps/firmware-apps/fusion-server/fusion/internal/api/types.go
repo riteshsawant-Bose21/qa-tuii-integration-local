@@ -125,6 +125,14 @@ type DeviceInfo struct {
 	FirmwareVersion string `json:"firmware_version"`
 }
 
+// DevicePatch represents patchable device configuration data.
+// When modifying this struct, please ensure to update validateNoDuplication, applyPatch
+type DevicePatch struct {
+	Id       *string `json:"id,omitempty"`
+	Location *string `json:"location,omitempty"`
+	Name     *string `json:"name,omitempty"`
+}
+
 // ControllerInfo represents a generic hardware controller
 type ControllerInfo struct {
 	ID      string `json:"id"`
