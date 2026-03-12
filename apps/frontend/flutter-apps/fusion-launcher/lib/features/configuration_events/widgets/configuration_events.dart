@@ -47,12 +47,30 @@ class _ConfigurationEventsBody extends StatefulWidget {
 class _ConfigurationEventsBodyState extends State<_ConfigurationEventsBody> {
   @override
   Widget build(BuildContext context) {
-    return BlocListener<ConfigEventsViewmodel, ConfigEventsState>(
-      listenWhen: (ConfigEventsState previous, ConfigEventsState current) => previous.selectedEventId != current.selectedEventId,
-      listener: (BuildContext context, ConfigEventsState state) {
-        // When selected event changes, load actions for the new event
-        context.read<ConfigEventActionsViewmodel>().loadActionsForEvent(state.selectedEventId);
-      },
+    return MultiBlocListener(
+      listeners: <BlocListener<dynamic, dynamic>>[
+        // Listener 1: selected event changed → load its actions from scratch.
+        BlocListener<ConfigEventsViewmodel, ConfigEventsState>(
+          listenWhen: (ConfigEventsState previous, ConfigEventsState current) => previous.selectedEventId != current.selectedEventId,
+          listener: (BuildContext context, ConfigEventsState state) {
+            context.read<ConfigEventActionsViewmodel>().loadActionsForEvent(state.selectedEventId);
+          },
+        ),
+
+        // Listener 2: same event selected but its configuration changed
+        // (e.g. trigger type switched Schedule→GPI).
+        // Refresh ConfigEventActionsViewmodel so it discards any stale scene
+        // actions that were removed from the project model by updateEventTrigger
+        // / updateEventTriggerItem / updateEventAction / updateEventConditionType.
+        BlocListener<ConfigEventsViewmodel, ConfigEventsState>(
+          listenWhen:
+              (ConfigEventsState previous, ConfigEventsState current) =>
+                  current.selectedEventId != null && previous.selectedEventId == current.selectedEventId && !identical(previous.events, current.events),
+          listener: (BuildContext context, ConfigEventsState state) {
+            context.read<ConfigEventActionsViewmodel>().refresh();
+          },
+        ),
+      ],
       child: Scaffold(
         backgroundColor: context.colorScheme.primaryBlack,
         body: LayoutBuilder(
