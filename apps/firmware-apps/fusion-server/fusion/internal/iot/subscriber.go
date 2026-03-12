@@ -1,7 +1,9 @@
 package fusioniot
 
 import (
+	"bytes"
 	"fmt"
+	"net/http"
 	"sync"
 	"time"
 
@@ -12,6 +14,7 @@ import (
 	"fusion/internal/api"
 	"fusion/internal/cluster"
 	"fusion/internal/persistence"
+	"fusion/internal/routes"
 )
 
 const (
@@ -57,18 +60,17 @@ type CommandResponsePayload struct {
 
 // Subscriber handles subscribing to commands from AWS IoT Core
 type Subscriber struct {
-	config                   *api.IoTConfig
-	client                   *Client
-	cluster                  *cluster.Cluster
-	persistence              *persistence.Persistence
-	publisher                *Publisher
-	logger                   *logging.Logger
-	stopCh                   chan struct{}
-	wg                       sync.WaitGroup
-	mu                       sync.RWMutex
-	commandHandlers          map[CommandType]CommandHandler
-	subscribed               bool
-	pendingCommandsProcessed bool
+	config          *api.IoTConfig
+	client          *Client
+	cluster         *cluster.Cluster
+	persistence     *persistence.Persistence
+	publisher       *Publisher
+	logger          *logging.Logger
+	stopCh          chan struct{}
+	wg              sync.WaitGroup
+	mu              sync.RWMutex
+	commandHandlers map[CommandType]CommandHandler
+	subscribed      bool
 }
 
 // NewSubscriber creates a new IoT subscriber that uses a shared client
@@ -115,17 +117,9 @@ func (s *Subscriber) onConnect() {
 
 		s.mu.Lock()
 		s.subscribed = true
-		shouldProcessPending := !s.pendingCommandsProcessed
-		s.pendingCommandsProcessed = true
 		s.mu.Unlock()
 
 		s.logger.Info("IoT subscriber subscribed to command topic")
-
-		// Process any pending commands from before reboot (only on first connection)
-		if shouldProcessPending {
-			time.Sleep(5 * time.Second)
-			s.ProcessPendingCommands()
-		}
 	}()
 }
 
@@ -273,149 +267,55 @@ func (s *Subscriber) handleMessage(client mqtt.Client, msg mqtt.Message) {
 func (s *Subscriber) handleReboot(cmd DeviceCommand) error {
 	s.logger.Info("Executing system reboot (command ID: %s)", cmd.ID)
 
-	// Store the pending command before rebooting
-	if s.persistence != nil {
-		deviceInfo := s.cluster.GetInfo()
-		pendingCmd := &persistence.PendingCommand{
-			ID:          cmd.ID,
-			CommandType: string(CommandReboot),
-			Status:      persistence.PendingCommandStatusPending,
-			Source:      persistence.RebootSourceRemoteCommand,
-			ProjectID:   s.config.ProjectID,
-			DeviceID:    deviceInfo.LocalNode,
-			CreatedAt:   time.Now().UTC(),
-		}
-		if err := s.persistence.SavePendingCommand(pendingCmd); err != nil {
-			s.logger.Error("Failed to save pending command before reboot: %v", err)
-			// Continue with reboot even if we can't save the pending command
-		} else {
-			s.logger.Info("Saved pending command %s before reboot", cmd.ID)
-		}
+	// Build the command payload — RebootSystem will persist it on each node
+	persistCmd := persistence.Command{
+		ID:            cmd.ID,
+		CommandType:   string(CommandReboot),
+		Source:        persistence.CommandSourceRemoteCommand,
+		DeviceIDArray: cmd.Command.DeviceIDs,
 	}
 
-	// Only the primary node should coordinate the cluster reboot
-	// Each node receiving the command will reboot itself
-	if s.cluster.IsLocalNodePrimary() {
-		s.logger.Info("Primary node initiating cluster reboot sequence")
-	}
-
-	// Use the cluster's reboot functionality which handles OS-specific logic
-	if err := s.cluster.TriggerReboot(); err != nil {
-		s.logger.Error("Failed to trigger reboot: %v", err)
-		// Mark command as failed if we couldn't reboot
-		if s.persistence != nil {
-			s.persistence.UpdatePendingCommandStatus(cmd.ID, persistence.PendingCommandStatusFailed, err.Error())
-		}
+	body, err := json.Marshal(persistCmd)
+	if err != nil {
+		s.logger.Error("Failed to marshal reboot command: %v", err)
+		s.failRebootCommand(cmd, err.Error())
 		return err
+	}
+
+	// Call the reboot API endpoint, which persists the command and fans out to all cluster nodes
+	rebootURL := fmt.Sprintf("%slocalhost:%s%s", api.Protocol, api.HTTPPort, routes.ClusterRebootEndpoint)
+	s.logger.Info("Calling reboot API: %s", rebootURL)
+
+	resp, err := http.Post(rebootURL, api.JsonMIMEType, bytes.NewReader(body))
+	if err != nil {
+		s.logger.Error("Failed to call reboot API: %v", err)
+		s.failRebootCommand(cmd, err.Error())
+		return err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusNoContent {
+		errMsg := fmt.Sprintf("reboot API returned unexpected status: %d", resp.StatusCode)
+		s.logger.Error(errMsg)
+		s.failRebootCommand(cmd, errMsg)
+		return fmt.Errorf("%s", errMsg)
 	}
 
 	return nil
 }
 
-// ProcessPendingCommands checks for pending commands after startup and sends responses.
-// This should be called after the system has booted and IoT connection is established.
-func (s *Subscriber) ProcessPendingCommands() {
-	if s.persistence == nil {
-		s.logger.Debug("Persistence not available, skipping pending command check")
-		return
-	}
-
-	// Get all pending commands
-	pendingCmds, err := s.persistence.GetPendingCommandsByStatus(persistence.PendingCommandStatusPending)
-	if err != nil {
-		s.logger.Error("Failed to get pending commands: %v", err)
-		return
-	}
-
-	if len(pendingCmds) == 0 {
-		s.logger.Debug("No pending commands to process")
-		return
-	}
-
-	s.logger.Info("Found %d pending commands to process", len(pendingCmds))
-
-	for _, cmd := range pendingCmds {
-		// Check if this was a remote command that needs a response
-		if cmd.Source == persistence.RebootSourceRemoteCommand {
-			// Mark as completed
-			if err := s.persistence.UpdatePendingCommandStatus(cmd.ID, persistence.PendingCommandStatusCompleted, ""); err != nil {
-				s.logger.Error("Failed to update pending command status: %v", err)
-				continue
-			}
-
-			// Send response
-			s.sendCommandResponse(cmd.ID, cmd.CommandType, "COMPLETED", cmd.DeviceID, "")
-		}
-	}
-
-	// Clean up completed commands
-	if err := s.persistence.ClearCompletedCommands(); err != nil {
-		s.logger.Error("Failed to clear completed commands: %v", err)
+// failRebootCommand sends a FAILED response over MQTT via the publisher.
+func (s *Subscriber) failRebootCommand(cmd DeviceCommand, errMsg string) {
+	deviceInfo := s.cluster.GetInfo()
+	s.mu.RLock()
+	publisher := s.publisher
+	s.mu.RUnlock()
+	if publisher != nil {
+		publisher.SendCommandResponse(cmd.ID, string(CommandReboot), "FAILED", deviceInfo.LocalNode, errMsg)
 	}
 }
 
-// sendCommandResponse publishes a command response to the response topic.
-func (s *Subscriber) sendCommandResponse(commandID, commandType, status, deviceID, errorMsg string) {
-	if !s.client.IsConnected() {
-		s.logger.Warn("Client not connected, cannot send command response for %s", commandID)
-		return
-	}
-
-	response := CommandResponsePayload{
-		CommandID:   commandID,
-		CommandType: commandType,
-		Status:      status,
-		DeviceID:    deviceID,
-		Timestamp:   time.Now().UTC().Format(time.RFC3339),
-		ErrorMsg:    errorMsg,
-	}
-
-	// Publish to the command_response topic
-	topic := s.getCommandResponseTopic()
-	s.logger.Info("Sending command response to topic: %s", topic)
-
-	data, err := json.Marshal(response)
-	if err != nil {
-		s.logger.Error("Failed to marshal command response: %v", err)
-		return
-	}
-
-	if err := s.client.Publish(topic, byte(DefaultSubscribeQoS), false, data); err != nil {
-		s.logger.Error("Failed to publish command response: %v", err)
-		return
-	}
-
-	s.logger.Info("Successfully sent command response for command %s", commandID)
-}
-
-// getCommandResponseTopic returns the topic for command responses.
-func (s *Subscriber) getCommandResponseTopic() string {
-	return fmt.Sprintf("%s%s/command_response", s.config.TopicPrefix, s.config.ProjectID)
-}
-
-// IsConnected returns true if the subscriber is connected
+// IsConnected returns true if the subscriber is connected.
 func (s *Subscriber) IsConnected() bool {
 	return s.client.IsConnected()
-}
-
-// GetRebootSource returns the source of the last reboot if it was triggered by a remote command.
-// Returns the command ID if it was a remote command, empty string otherwise.
-func (s *Subscriber) GetRebootSource() (persistence.RebootSource, string) {
-	if s.persistence == nil {
-		return persistence.RebootSourceLocal, ""
-	}
-
-	pendingCmds, err := s.persistence.GetPendingCommandsByStatus(persistence.PendingCommandStatusPending)
-	if err != nil || len(pendingCmds) == 0 {
-		return persistence.RebootSourceLocal, ""
-	}
-
-	// Return the first pending reboot command
-	for _, cmd := range pendingCmds {
-		if cmd.CommandType == string(CommandReboot) && cmd.Source == persistence.RebootSourceRemoteCommand {
-			return persistence.RebootSourceRemoteCommand, cmd.ID
-		}
-	}
-
-	return persistence.RebootSourceLocal, ""
 }

@@ -24,37 +24,36 @@ type PersistentState struct {
 	State     map[string]*api.StateEntry `json:"state"`
 }
 
-// RebootSource indicates how a reboot was initiated.
-type RebootSource string
+// CommandSource indicates how a command was initiated.
+type CommandSource string
 
 const (
-	// RebootSourceLocal indicates reboot was triggered locally (e.g., via API or manual).
-	RebootSourceLocal RebootSource = "LOCAL"
-	// RebootSourceRemoteCommand indicates reboot was triggered via MQTT command.
-	RebootSourceRemoteCommand RebootSource = "REMOTE_COMMAND"
+	// CommandSourceLocal indicates command was triggered locally (e.g., via API locally or manual).
+	CommandSourceLocal CommandSource = "LOCAL"
+	// CommandSourceRemoteCommand indicates command was triggered via MQTT command.
+	CommandSourceRemoteCommand CommandSource = "REMOTE_COMMAND"
 )
 
-// PendingCommandStatus represents the status of a pending command.
-type PendingCommandStatus string
+// CommandStatus represents the status of a command.
+type CommandStatus string
 
 const (
-	// PendingCommandStatusPending indicates the command is pending execution.
-	PendingCommandStatusPending PendingCommandStatus = "PENDING"
-	// PendingCommandStatusCompleted indicates the command has been completed.
-	PendingCommandStatusCompleted PendingCommandStatus = "COMPLETED"
-	// PendingCommandStatusFailed indicates the command failed.
-	PendingCommandStatusFailed PendingCommandStatus = "FAILED"
+	// CommandStatusPending indicates the command is pending execution.
+	CommandStatusPending CommandStatus = "PENDING"
+	// CommandStatusCompleted indicates the command has been completed.
+	CommandStatusCompleted CommandStatus = "COMPLETED"
+	// CommandStatusFailed indicates the command failed.
+	CommandStatusFailed CommandStatus = "FAILED"
 )
 
-// PendingCommand represents a command that is pending completion (e.g., after reboot).
-type PendingCommand struct {
-	ID          string               `json:"id"`
-	CommandType string               `json:"command_type"`
-	Status      PendingCommandStatus `json:"status"`
-	Source      RebootSource         `json:"source"`
-	ProjectID   string               `json:"project_id"`
-	DeviceID    string               `json:"device_id"`
-	CreatedAt   time.Time            `json:"created_at"`
-	CompletedAt *time.Time           `json:"completed_at,omitempty"`
-	ErrorMsg    string               `json:"error_msg,omitempty"`
+// Command represents a command that can be executed on devices
+type Command struct {
+	ID            string        `json:"id"`
+	CommandType   string        `json:"command_type"`
+	Status        CommandStatus `json:"status"`
+	Source        CommandSource `json:"source"`
+	DeviceIDArray []string      `json:"device_id_array"`
+	CreatedAt     time.Time     `json:"created_at"`
+	CompletedAt   *time.Time    `json:"completed_at,omitempty"`
+	ErrorMsg      string        `json:"error_msg,omitempty"`
 }

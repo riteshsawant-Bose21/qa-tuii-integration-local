@@ -10,19 +10,19 @@ import (
 
 const errPendingCommandsBucketNotFound = "pending_commands bucket not found"
 
-// SavePendingCommand stores a pending command in the database.
-func (p *Persistence) SavePendingCommand(cmd *PendingCommand) error {
+// SaveCommand stores a command in the database.
+func (p *Persistence) SaveCommand(cmd *Command) error {
 	if cmd == nil {
-		return fmt.Errorf("pending command cannot be nil")
+		return fmt.Errorf("command cannot be nil")
 	}
 
 	data, err := json.Marshal(cmd)
 	if err != nil {
-		return fmt.Errorf("failed to marshal pending command: %w", err)
+		return fmt.Errorf("failed to marshal command: %w", err)
 	}
 
 	return p.db.Update(func(tx *bbolt.Tx) error {
-		bucket := tx.Bucket([]byte(bucketPendingCommands))
+		bucket := tx.Bucket([]byte(bucketCommands))
 		if bucket == nil {
 			return fmt.Errorf(errPendingCommandsBucketNotFound)
 		}
@@ -30,11 +30,11 @@ func (p *Persistence) SavePendingCommand(cmd *PendingCommand) error {
 	})
 }
 
-// GetPendingCommand retrieves a pending command by ID.
-func (p *Persistence) GetPendingCommand(id string) (*PendingCommand, error) {
-	var cmd PendingCommand
+// GetCommand retrieves a command by ID.
+func (p *Persistence) GetCommand(id string) (*Command, error) {
+	var cmd Command
 	err := p.db.View(func(tx *bbolt.Tx) error {
-		bucket := tx.Bucket([]byte(bucketPendingCommands))
+		bucket := tx.Bucket([]byte(bucketCommands))
 		if bucket == nil {
 			return fmt.Errorf(errPendingCommandsBucketNotFound)
 		}
@@ -51,17 +51,17 @@ func (p *Persistence) GetPendingCommand(id string) (*PendingCommand, error) {
 }
 
 // GetAllPendingCommands retrieves all pending commands.
-func (p *Persistence) GetAllPendingCommands() ([]PendingCommand, error) {
-	var commands []PendingCommand
+func (p *Persistence) GetAllPendingCommands() ([]Command, error) {
+	var commands []Command
 	err := p.db.View(func(tx *bbolt.Tx) error {
-		bucket := tx.Bucket([]byte(bucketPendingCommands))
+		bucket := tx.Bucket([]byte(bucketCommands))
 		if bucket == nil {
 			return fmt.Errorf(errPendingCommandsBucketNotFound)
 		}
 		return bucket.ForEach(func(k, v []byte) error {
-			var cmd PendingCommand
+			var cmd Command
 			if err := json.Unmarshal(v, &cmd); err != nil {
-				return fmt.Errorf("failed to unmarshal pending command %s: %w", string(k), err)
+				return fmt.Errorf("failed to unmarshal command %s: %w", string(k), err)
 			}
 			commands = append(commands, cmd)
 			return nil
@@ -73,14 +73,14 @@ func (p *Persistence) GetAllPendingCommands() ([]PendingCommand, error) {
 	return commands, nil
 }
 
-// GetPendingCommandsByStatus retrieves all commands with a specific status.
-func (p *Persistence) GetPendingCommandsByStatus(status PendingCommandStatus) ([]PendingCommand, error) {
+// GetCommandsByStatus retrieves all commands with a specific status.
+func (p *Persistence) GetCommandsByStatus(status CommandStatus) ([]Command, error) {
 	all, err := p.GetAllPendingCommands()
 	if err != nil {
 		return nil, err
 	}
 
-	var filtered []PendingCommand
+	var filtered []Command
 	for _, cmd := range all {
 		if cmd.Status == status {
 			filtered = append(filtered, cmd)
@@ -89,15 +89,15 @@ func (p *Persistence) GetPendingCommandsByStatus(status PendingCommandStatus) ([
 	return filtered, nil
 }
 
-// UpdatePendingCommandStatus updates the status of a pending command.
-func (p *Persistence) UpdatePendingCommandStatus(id string, status PendingCommandStatus, errorMsg string) error {
-	cmd, err := p.GetPendingCommand(id)
+// UpdateCommandStatus updates the status of a command.
+func (p *Persistence) UpdateCommandStatus(id string, status CommandStatus, errorMsg string) error {
+	cmd, err := p.GetCommand(id)
 	if err != nil {
 		return err
 	}
 
 	cmd.Status = status
-	if status == PendingCommandStatusCompleted || status == PendingCommandStatusFailed {
+	if status == CommandStatusCompleted || status == CommandStatusFailed {
 		now := time.Now().UTC()
 		cmd.CompletedAt = &now
 	}
@@ -105,18 +105,33 @@ func (p *Persistence) UpdatePendingCommandStatus(id string, status PendingComman
 		cmd.ErrorMsg = errorMsg
 	}
 
-	return p.SavePendingCommand(cmd)
+	return p.SaveCommand(cmd)
 }
 
-// DeletePendingCommand removes a pending command from the database.
-func (p *Persistence) DeletePendingCommand(id string) error {
+// DeleteCommand removes a command from the database.
+func (p *Persistence) DeleteCommand(id string) error {
 	return p.db.Update(func(tx *bbolt.Tx) error {
-		bucket := tx.Bucket([]byte(bucketPendingCommands))
+		bucket := tx.Bucket([]byte(bucketCommands))
 		if bucket == nil {
 			return fmt.Errorf(errPendingCommandsBucketNotFound)
 		}
 		return bucket.Delete([]byte(id))
 	})
+}
+
+// MarkPendingRebootCommandsCompleted marks all pending commands as completed.
+// Called at startup on each node to indicate it has successfully (re)booted.
+func (p *Persistence) MarkPendingRebootCommandsCompleted() error {
+	cmds, err := p.GetCommandsByStatus(CommandStatusPending)
+	if err != nil {
+		return err
+	}
+	for _, cmd := range cmds {
+		if err := p.UpdateCommandStatus(cmd.ID, CommandStatusCompleted, ""); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // ClearCompletedCommands removes all completed/failed commands from the database.
@@ -127,12 +142,12 @@ func (p *Persistence) ClearCompletedCommands() error {
 	}
 
 	return p.db.Update(func(tx *bbolt.Tx) error {
-		bucket := tx.Bucket([]byte(bucketPendingCommands))
+		bucket := tx.Bucket([]byte(bucketCommands))
 		if bucket == nil {
 			return fmt.Errorf(errPendingCommandsBucketNotFound)
 		}
 		for _, cmd := range commands {
-			if cmd.Status == PendingCommandStatusCompleted || cmd.Status == PendingCommandStatusFailed {
+			if cmd.Status == CommandStatusCompleted || cmd.Status == CommandStatusFailed {
 				if err := bucket.Delete([]byte(cmd.ID)); err != nil {
 					return err
 				}

@@ -301,6 +301,8 @@ func (app *App) setupPrivateRoutes() {
 	app.registerPrivatePOST(routes.DevicesSetVIPEndpoint, app.Cluster.UpdateVIPLocal)
 	app.registerPrivatePOST(routes.DeviceReloadVIPEndpoint, app.Cluster.ReloadVIPLocal)
 
+	app.registerPrivateGET(routes.CommandsIDEndpoint, app.Server.GetCommandStatus)
+
 	app.registerPrivateGET(routes.DataEndpoint, app.Server.ExportData)
 	app.registerPrivatePOST(routes.DataEndpoint, app.Server.ImportData)
 
@@ -412,6 +414,11 @@ func (app *App) Start(ctx context.Context) {
 	// Start the Controller Manager for TCP wall controllers
 	if err := app.ControllerManager.Start(); err != nil {
 		app.Logger.Error("Failed to start ControllerManager: %v", err)
+	}
+
+	// Mark any pending commands as completed — this node has successfully (re)started
+	if err := app.Persistence.MarkPendingRebootCommandsCompleted(); err != nil {
+		app.Logger.Error("Failed to mark pending reboot commands as completed: %v", err)
 	}
 
 	// Start the IoT manager (handles client, publisher, and subscriber)

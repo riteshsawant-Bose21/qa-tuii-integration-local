@@ -23,13 +23,13 @@ import (
 )
 
 const (
-	bucketActive          = "active"
-	bucketAudio           = "audio"
-	bucketDevice          = "device"
-	bucketFusion          = "fusion"
-	bucketPendingCommands = "pending_commands"
-	bucketSnapshots       = "snapshots"
-	bucketTasks           = "tasks"
+	bucketActive    = "active"
+	bucketAudio     = "audio"
+	bucketDevice    = "device"
+	bucketFusion    = "fusion"
+	bucketCommands  = "commands"
+	bucketSnapshots = "snapshots"
+	bucketTasks     = "tasks"
 
 	keyActiveState     = "state"
 	keyDefaultSnapshot = "default"
@@ -404,7 +404,7 @@ func (p *Persistence) initializeDatabase() error {
 			tx.Bucket([]byte(bucketFusion)) != nil &&
 			tx.Bucket([]byte(bucketDevice)) != nil &&
 			tx.Bucket([]byte(bucketTasks)) != nil &&
-			tx.Bucket([]byte(bucketPendingCommands)) != nil &&
+			tx.Bucket([]byte(bucketCommands)) != nil &&
 			tx.Bucket([]byte(bucketSnapshots)) != nil {
 			return nil
 		}
@@ -415,7 +415,7 @@ func (p *Persistence) initializeDatabase() error {
 			bucketAudio,
 			bucketDevice,
 			bucketFusion,
-			bucketPendingCommands,
+			bucketCommands,
 			bucketTasks,
 			bucketSnapshots} {
 			if err := createBucketIfNotExists(tx, bucket); err != nil {

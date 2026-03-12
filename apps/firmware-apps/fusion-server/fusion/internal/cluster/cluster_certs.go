@@ -363,16 +363,8 @@ func (c *Cluster) ResetDevice(w http.ResponseWriter, r *http.Request) {
 		}
 		w.WriteHeader(http.StatusNoContent)
 	}
-	go func() {
-		// Reboot system outside of request after updating all the nodes
-		if err := postGenericToAdminLast(c, routes.ClusterRebootEndpoint, c.rebootSystem); err != nil {
-			// Log the error. Don't respond to client because it's async
-			logging.GetLogger().Error("Failed to reboot system: %v", err)
-		}
-	}()
 
 	w.WriteHeader(http.StatusNoContent)
-
 }
 
 // resetLocalDevice performs the necessary steps to reset the local device, such as removing certificates and updating device info.

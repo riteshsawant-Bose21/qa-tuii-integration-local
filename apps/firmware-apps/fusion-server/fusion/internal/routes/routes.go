@@ -110,6 +110,9 @@ const (
 	// Private
 	//
 
+	CommandsEndpoint   = "/commands"
+	CommandsIDEndpoint = CommandsEndpoint + "/{id}"
+
 	DataEndpoint  = "/data"
 	StateEndpoint = "/state"
 )

@@ -26,6 +26,10 @@ type Client struct {
 	mu        sync.RWMutex
 	connected bool
 
+	// shouldConnect is an optional predicate; when set, the client will only
+	// connect (or stay connected) while it returns true.
+	shouldConnect func() bool
+
 	// Callbacks for connection events
 	onConnect    func()
 	onDisconnect func(error)
@@ -56,6 +60,15 @@ func NewClient(config *api.IoTConfig) (*Client, error) {
 		logger: logging.GetLogger(),
 		stopCh: make(chan struct{}),
 	}, nil
+}
+
+// SetShouldConnectFunc sets a predicate that controls whether the client
+// should establish or maintain its MQTT connection. The client disconnects
+// when the predicate returns false and reconnects when it returns true.
+func (c *Client) SetShouldConnectFunc(fn func() bool) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.shouldConnect = fn
 }
 
 // SetOnConnectCallback sets the callback to be called when the client connects/reconnects
@@ -126,7 +139,20 @@ func (c *Client) connectionManager() {
 		case <-ticker.C:
 			c.mu.RLock()
 			isConnected := c.connected && c.client != nil && c.client.IsConnected()
+			shouldConnect := c.shouldConnect
 			c.mu.RUnlock()
+
+			// Disconnect if we are connected but no longer eligible (e.g. lost primary)
+			if isConnected && shouldConnect != nil && !shouldConnect() {
+				c.logger.Info("Node is no longer primary, disconnecting from MQTT")
+				c.mu.Lock()
+				c.connected = false
+				if c.client != nil {
+					c.client.Disconnect(250)
+				}
+				c.mu.Unlock()
+				continue
+			}
 
 			if !isConnected {
 				if err := c.attemptConnection(); err != nil {
@@ -145,6 +171,15 @@ func (c *Client) connectionManager() {
 
 // attemptConnection tries to establish a connection to AWS IoT Core
 func (c *Client) attemptConnection() error {
+	// Check if this node is eligible to connect
+	c.mu.RLock()
+	shouldConnect := c.shouldConnect
+	c.mu.RUnlock()
+
+	if shouldConnect != nil && !shouldConnect() {
+		return fmt.Errorf("node is not primary, skipping MQTT connection")
+	}
+
 	// Check if certificates exist
 	if !c.certificatesExist() {
 		return fmt.Errorf("certificates not available")

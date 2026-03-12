@@ -15,6 +15,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"time"
 
 	json "github.com/goccy/go-json"
 )
@@ -270,11 +271,34 @@ func (c *Cluster) RebootSystem(w http.ResponseWriter, r *http.Request) {
 	}
 	defer r.Body.Close()
 
+	logger := logging.GetLogger()
+
+	var cmd persistence.Command
+	if err := json.NewDecoder(r.Body).Decode(&cmd); err != nil {
+		http.Error(w, fmt.Sprintf("Invalid JSON: %v", err), http.StatusBadRequest)
+		return
+	}
+
+	cmd.Status = persistence.CommandStatusPending
+	cmd.CreatedAt = time.Now().UTC()
+
+	if err := c.delegate.persistence.SaveCommand(&cmd); err != nil {
+		logger.Error("Failed to save pending command before reboot: %v", err)
+		// Continue with reboot even if we can't save the pending command
+	} else {
+		logger.Info("Saved pending command %s before reboot", cmd.ID)
+	}
+
 	go func() {
 		// Reboot system outside of request after updating all the nodes
-		if err := postGenericToAdminLast(c, routes.ClusterRebootEndpoint, c.rebootSystem); err != nil {
+		body, err := json.Marshal(cmd)
+		if err != nil {
+			logger.Error("Failed to encode command for reboot: %v", err)
+			return
+		}
+		if err := postGenericToAdminLast(c, routes.ClusterRebootEndpoint, &body, c.rebootSystem); err != nil {
 			// Log the error. Don't respond to client because it's async
-			logging.GetLogger().Error("Failed to reboot system: %v", err)
+			logger.Error("Failed to reboot system: %v", err)
 		}
 	}()
 
@@ -288,8 +312,26 @@ func (c *Cluster) RebootSystemLocal(w http.ResponseWriter, r *http.Request) {
 	}
 	defer r.Body.Close()
 
+	logger := logging.GetLogger()
+
+	var cmd persistence.Command
+	if err := json.NewDecoder(r.Body).Decode(&cmd); err != nil {
+		http.Error(w, fmt.Sprintf("Invalid JSON: %v", err), http.StatusBadRequest)
+		return
+	}
+
+	cmd.Status = persistence.CommandStatusPending
+	cmd.CreatedAt = time.Now().UTC()
+
+	if err := c.delegate.persistence.SaveCommand(&cmd); err != nil {
+		logger.Error("Failed to save pending command before reboot: %v", err)
+		// Continue with reboot even if we can't save the pending command
+	} else {
+		logger.Info("Saved pending command %s before reboot", cmd.ID)
+	}
+
 	if err := c.rebootSystem(); err != nil {
-		logging.GetLogger().Error("Failed to reboot local system: %v", err)
+		logger.Error("Failed to reboot local system: %v", err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}

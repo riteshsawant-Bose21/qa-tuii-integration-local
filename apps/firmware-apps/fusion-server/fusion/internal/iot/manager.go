@@ -37,10 +37,14 @@ func NewManager(config *api.IoTConfig, metrics *cluster.MetricsCollector, cluste
 		logger.Error("Failed to create IoT client: %v", err)
 		return nil
 	}
+
+	// Only the primary node (VIP holder) should connect to MQTT
+	client.SetShouldConnectFunc(clusterInstance.IsLocalNodePrimary)
+
 	logger.Info("IoT client initialized for endpoint: %s", config.Endpoint)
 
 	// Create publisher
-	publisher, err := NewPublisher(client, metrics, clusterInstance)
+	publisher, err := NewPublisher(client, metrics, clusterInstance, persistence)
 	if err != nil {
 		logger.Error("Failed to create IoT publisher: %v", err)
 		return nil
