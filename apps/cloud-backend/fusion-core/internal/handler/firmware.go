@@ -65,7 +65,7 @@ func (h *FirmwareUpdateHandler) NotifyBundleUpload(c *gin.Context) {
 	if err != nil {
 		logger.Error("Failed to notify bundle upload", zap.Error(err))
 		if errors.Is(err, errorutil.ErrVersionExists) {
-			response.BadRequest(c, fmt.Sprintf("version already exists: %s", err.Error()))
+			response.BadRequest(c, err.Error())
 			return
 		}
 		response.InternalError(c)

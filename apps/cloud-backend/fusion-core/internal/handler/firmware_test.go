@@ -742,7 +742,7 @@ func TestGetBundleDownloadURL(t *testing.T) {
 	}
 }
 
-func TestInsertBundleUpdateStatus(t *testing.T) {
+func TestInsertBundleUpdateS1tatus(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
 	installedAt := time.Now().UTC()
