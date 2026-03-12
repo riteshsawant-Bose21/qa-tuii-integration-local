@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:audioplayers/audioplayers.dart';
@@ -12,6 +13,10 @@ part 'message_player_config_state.dart';
 /// Cubit for managing Message Player Configuration state and business logic
 class MessagePlayerConfigCubit extends Cubit<MessagePlayerConfigState> {
   final AudioPlayer _audioPlayer = AudioPlayer();
+
+  StreamSubscription<PlayerState>? _playerStateSubscription;
+  StreamSubscription<Duration>? _positionSubscription;
+  StreamSubscription<Duration>? _durationSubscription;
 
   MessagePlayerConfigCubit() : super(const MessagePlayerInitial()) {
     _initializeAudioPlayer();
@@ -32,7 +37,7 @@ class MessagePlayerConfigCubit extends Cubit<MessagePlayerConfigState> {
   }
 
   void _initializeAudioPlayer() {
-    _audioPlayer.onPlayerStateChanged.listen((PlayerState playerState) {
+    _playerStateSubscription = _audioPlayer.onPlayerStateChanged.listen((PlayerState playerState) {
       final MessagePlayerLoaded? loaded = _loadedState;
       if (loaded == null) return;
 
@@ -43,13 +48,13 @@ class MessagePlayerConfigCubit extends Cubit<MessagePlayerConfigState> {
       }
     });
 
-    _audioPlayer.onPositionChanged.listen((Duration position) {
+    _positionSubscription = _audioPlayer.onPositionChanged.listen((Duration position) {
       final MessagePlayerLoaded? loaded = _loadedState;
       if (loaded == null) return;
       emit(loaded.copyWith(currentPosition: position));
     });
 
-    _audioPlayer.onDurationChanged.listen((Duration duration) {
+    _durationSubscription = _audioPlayer.onDurationChanged.listen((Duration duration) {
       final MessagePlayerLoaded? loaded = _loadedState;
       if (loaded == null) return;
       emit(loaded.copyWith(totalDuration: duration));
@@ -108,11 +113,11 @@ class MessagePlayerConfigCubit extends Cubit<MessagePlayerConfigState> {
   }
 
   /// Select a message for editing
-  void selectMessage(String messageId) {
+  Future<void> selectMessage(String messageId) async {
     final MessagePlayerLoaded? loaded = _loadedState;
     if (loaded == null) return;
 
-    _stopPlayback();
+    await _stopPlayback();
     emit(
       loaded.copyWith(
         selectedMessageId: messageId,
@@ -227,7 +232,11 @@ class MessagePlayerConfigCubit extends Cubit<MessagePlayerConfigState> {
     final MessageModel? currentMessage = loaded.selectedMessage;
     if (currentMessage == null) return;
 
-    final MessageModel updatedMessage = currentMessage.copyWith(repeat: repeat);
+    final MessageModel updatedMessage = currentMessage.copyWith(
+      repeat: repeat,
+      repeatCount: repeat ? null : 1,
+      repeatIntervalSeconds: repeat ? null : 5,
+    );
 
     await _projectViewModel.updateMessage(
       message: updatedMessage,
@@ -364,7 +373,7 @@ class MessagePlayerConfigCubit extends Cubit<MessagePlayerConfigState> {
     final MessagePlayerLoaded? loaded = _loadedState;
     if (loaded == null || loaded.selectedMessageId == null || _sourceId == null) return;
 
-    _stopPlayback();
+    await _stopPlayback();
 
     await _projectViewModel.removeMessageFromSource(
       sourceId: _sourceId!,
@@ -411,14 +420,16 @@ class MessagePlayerConfigCubit extends Cubit<MessagePlayerConfigState> {
     await _audioPlayer.seek(position);
   }
 
-  void _stopPlayback() {
-    _audioPlayer.stop();
+  Future<void> _stopPlayback() async {
+    await _audioPlayer.stop();
+    await _audioPlayer.release();
     final MessagePlayerLoaded? loaded = _loadedState;
     if (loaded != null) {
       emit(
         loaded.copyWith(
           isPlaying: false,
           currentPosition: Duration.zero,
+          clearTotalDuration: true,
         ),
       );
     }
@@ -459,8 +470,11 @@ class MessagePlayerConfigCubit extends Cubit<MessagePlayerConfigState> {
   }
 
   @override
-  Future<void> close() {
-    _audioPlayer.dispose();
+  Future<void> close() async {
+    await _playerStateSubscription?.cancel();
+    await _positionSubscription?.cancel();
+    await _durationSubscription?.cancel();
+    await _audioPlayer.dispose();
     return super.close();
   }
 }

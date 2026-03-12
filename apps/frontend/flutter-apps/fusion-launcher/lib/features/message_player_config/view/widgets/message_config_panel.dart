@@ -626,13 +626,8 @@ class _RepeatSettingsSection extends StatelessWidget {
               semanticId: 'repeat_checkbox',
               onChanged: () => cubit.toggleRepeat(!repeat),
             ),
-            const SizedBox(width: 12),
-            FusionAppText(
-              text: 'Repeat',
-              style: context.textTheme.bodyMedium?.copyWith(
-                color: context.colorScheme.textPrimary,
-              ),
-            ),
+            const SizedBox(width: 8),
+            FusionAppText(text: 'Repeat', style: context.textTheme.l1Regular.withColor(context.colorScheme.textSecondary)),
           ],
         ),
 
@@ -640,24 +635,20 @@ class _RepeatSettingsSection extends StatelessWidget {
           const SizedBox(height: 16),
 
           // Times and Interval dropdowns
-          Row(
+          Column(
             children: <Widget>[
-              Expanded(
-                child: _DropdownField(
-                  label: 'Times (No.)',
-                  value: repeatCount,
-                  items: List<int>.generate(10, (int i) => i + 1),
-                  onChanged: (int value) => cubit.updateRepeatCount(value),
-                ),
+              _DropdownField(
+                label: 'Times (No.)',
+                value: repeatCount,
+                items: List<int>.generate(10, (int i) => i + 1),
+                onChanged: (int value) => cubit.updateRepeatCount(value),
               ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: _DropdownField(
-                  label: 'Interval (sec.)',
-                  value: intervalSeconds,
-                  items: <int>[1, 2, 3, 5, 10, 15, 30, 60],
-                  onChanged: (int value) => cubit.updateRepeatInterval(value),
-                ),
+              const SizedBox(height: 20),
+              _DropdownField(
+                label: 'Interval (sec.)',
+                value: intervalSeconds,
+                items: <int>[1, 2, 3, 5, 10, 15, 30, 60],
+                onChanged: (int value) => cubit.updateRepeatInterval(value),
               ),
             ],
           ),
@@ -682,42 +673,45 @@ class _DropdownField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final int selectedIndex = items.indexOf(value);
-
-    return Column(
+    return Row(
+      mainAxisSize: MainAxisSize.max,
       crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisAlignment: MainAxisAlignment.start,
       children: <Widget>[
-        FusionAppText(
-          text: label,
-          style: context.textTheme.labelMedium?.copyWith(
-            color: context.colorScheme.textSecondary,
+        SizedBox(
+          width: 100,
+          child: FusionAppText(
+            text: label,
+            style: context.textTheme.l1Medium,
           ),
         ),
-        const SizedBox(height: 8),
-        FusionDropDown<int>(
-          semanticId: '${label}_dropdown',
+        FusionPopupMenu<int>(
+          semanticsId: '${label}_dropdown',
           items: items,
-          selectedIndex: selectedIndex >= 0 ? selectedIndex : 0,
-          backgroundColor: context.colorScheme.elevation2,
-          offset: const Offset(0, 50),
-          trigger: FusionContainer(
-            raised: false,
-            borderRadius: 8,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              decoration: BoxDecoration(
-                color: context.colorScheme.elevation2,
-                borderRadius: BorderRadius.circular(8),
+          popupOffset: const Offset(0, 6),
+          onSelected: onChanged,
+          matchChildWidth: true,
+          itemBuilder: (BuildContext context, int item) {
+            final bool isSelected = item == value;
+            return FusionAppText(
+              text: item.toString(),
+              style: context.textTheme.bodyMedium?.copyWith(
+                color: isSelected ? context.colorScheme.textPrimary : context.colorScheme.textPrimary,
               ),
+            );
+          },
+          child: FusionContainer(
+            color: context.colorScheme.elevation1,
+            width: 53,
+            height: 24,
+            raised: true,
+            borderRadius: 5,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: <Widget>[
-                  FusionAppText(
-                    text: value.toString(),
-                    style: context.textTheme.bodyMedium?.copyWith(
-                      color: context.colorScheme.textPrimary,
-                    ),
-                  ),
+                  FusionAppText(text: value.toString(), style: context.textTheme.b3Regular),
                   Icon(
                     Icons.keyboard_arrow_down,
                     color: context.colorScheme.iconDefault,
@@ -727,17 +721,6 @@ class _DropdownField extends StatelessWidget {
               ),
             ),
           ),
-          itemBuilder: (BuildContext context, int item, bool isSelected) {
-            return FusionAppText(
-              text: item.toString(),
-              style: context.textTheme.bodyMedium?.copyWith(
-                color: isSelected ? context.colorScheme.primary : context.colorScheme.textPrimary,
-              ),
-            );
-          },
-          onSelected: (int index) {
-            onChanged(items[index]);
-          },
         ),
       ],
     );

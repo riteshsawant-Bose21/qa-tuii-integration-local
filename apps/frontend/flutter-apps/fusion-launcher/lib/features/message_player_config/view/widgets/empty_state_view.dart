@@ -22,7 +22,7 @@ class EmptyStateView extends StatelessWidget {
             width: 48,
             height: 48,
             colorFilter: ColorFilter.mode(
-              context.colorScheme.iconDefault,
+              context.colorScheme.iconWhite,
               BlendMode.srcIn,
             ),
           ),

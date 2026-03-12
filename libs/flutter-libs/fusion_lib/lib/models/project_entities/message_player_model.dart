@@ -15,7 +15,7 @@ class MessageModel {
     this.gain = 0.0,
     this.repeat = false,
     this.repeatCount = 1,
-    this.repeatIntervalSeconds = 2,
+    this.repeatIntervalSeconds = 5,
   });
 
   factory MessageModel.create({String? name}) {
