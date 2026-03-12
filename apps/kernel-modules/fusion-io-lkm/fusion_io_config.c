@@ -26,7 +26,6 @@
     { .reg_addr = 0x16, .data = 0x80 }, \
     { .reg_addr = 0x17, .data = 0x80 }, \
     { .reg_addr = 0x02, .data = 0x33 }, \
-    { .reg_addr = 0x03, .data = 0x00 }, \
     { .reg_addr = 0x04, .data = 0x10 }, \
     { .reg_addr = 0x07, .data = 0x01 }, \
     { .reg_addr = 0x0F, .data = 0x00 }, \
@@ -80,7 +79,7 @@
     { .reg_addr = 0x9A, .data = 0x00 }, \
     { .reg_addr = 0x9B, .data = 0x00 }, \
     { .reg_addr = 0xA2, .data = 0x40 }, \
-    { .reg_addr = 0xA3, .data = 0x9c }, \
+    { .reg_addr = 0xA3, .data = 0x9C }, \
     { .reg_addr = 0xA4, .data = 0x00 }, \
     { .reg_addr = 0xA6, .data = 0xE3 }, \
     { .reg_addr = 0xA7, .data = 0xE3 }, \
@@ -190,7 +189,7 @@ const struct base_device bd_fusion_powersmart = {
             {
                 .name = "si5351b_config",
                 .parent_ep_name = "ep_clk_si5351b",
-                .num_msgs = 72,
+                .num_msgs = 71,
                 .msgs = (struct endpoint_cmd_msg[]) {
                     SI5351B_CONFIG_MSGS
                 },
