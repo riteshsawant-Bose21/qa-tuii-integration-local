@@ -66,8 +66,8 @@ CREATE TYPE command_status_enum AS ENUM (
 CREATE TABLE device_command_history (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     project_id UUID REFERENCES project(id) NOT NULL,
+    device_id VARCHAR(100) NOT NULL,
     command_name VARCHAR(255) NOT NULL,
-    command_payload JSONB, -- Store the command payload as JSON for flexibility
     status command_status_enum NOT NULL DEFAULT 'PUBLISHED',
     issued_at TIMESTAMP NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL
