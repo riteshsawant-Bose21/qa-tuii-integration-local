@@ -96,23 +96,44 @@ class _MessageNameField extends StatefulWidget {
 
 class _MessageNameFieldState extends State<_MessageNameField> {
   late TextEditingController _controller;
+  late FocusNode _focusNode;
 
   @override
   void initState() {
     super.initState();
     _controller = TextEditingController(text: widget.initialValue);
+    _focusNode = FocusNode();
+    _focusNode.addListener(_onFocusChange);
   }
 
   @override
   void didUpdateWidget(covariant _MessageNameField oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (widget.initialValue != oldWidget.initialValue) {
+    // Only update if the value changed externally (e.g., selecting different message)
+    // and the field is not currently focused
+    if (widget.initialValue != oldWidget.initialValue && !_focusNode.hasFocus) {
       _controller.text = widget.initialValue;
     }
   }
 
+  void _onFocusChange() {
+    // When focus is lost, update the name if it changed
+    if (!_focusNode.hasFocus && _controller.text != widget.initialValue) {
+      widget.onChanged(_controller.text);
+    }
+  }
+
+  void _onSubmitted(String value) {
+    if (value != widget.initialValue) {
+      widget.onChanged(value);
+    }
+    _focusNode.unfocus();
+  }
+
   @override
   void dispose() {
+    _focusNode.removeListener(_onFocusChange);
+    _focusNode.dispose();
     _controller.dispose();
     super.dispose();
   }
@@ -129,13 +150,36 @@ class _MessageNameFieldState extends State<_MessageNameField> {
           ),
         ),
         const SizedBox(height: 8),
-        FusionTextField(
-          controller: _controller,
-          hintText: 'Message Name',
-          semanticFieldId: 'message_name_field',
-          color: context.colorScheme.elevation2,
-          onChanged: widget.onChanged,
+        SizedBox(
           height: 48,
+          width: 400,
+          child: TextField(
+            controller: _controller,
+            focusNode: _focusNode,
+            style: context.textTheme.b3Regular,
+            onSubmitted: _onSubmitted,
+            decoration: InputDecoration(
+              hintText: 'Message Name',
+              hintStyle: context.textTheme.bodySmall?.copyWith(
+                color: context.colorScheme.textPlaceholder,
+              ),
+              fillColor: context.colorScheme.elevation1,
+              filled: true,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: BorderSide(color: context.colorScheme.strokeLight),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: BorderSide(color: context.colorScheme.textLabel),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: BorderSide(color: context.colorScheme.textLabel),
+              ),
+              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+            ),
+          ),
         ),
       ],
     );
@@ -172,10 +216,17 @@ class _AudioFileSection extends StatelessWidget {
 /// Enum for audio file dropdown options
 enum _AudioFileOption { selectAudioFile, uploadAudioFile }
 
-class _AudioFileDropdown extends StatelessWidget {
+class _AudioFileDropdown extends StatefulWidget {
   final MessageModel selectedMessage;
 
   const _AudioFileDropdown({required this.selectedMessage});
+
+  @override
+  State<_AudioFileDropdown> createState() => _AudioFileDropdownState();
+}
+
+class _AudioFileDropdownState extends State<_AudioFileDropdown> {
+  final GlobalKey _audioFilesPopupKey = GlobalKey();
 
   @override
   Widget build(BuildContext context) {
@@ -183,50 +234,59 @@ class _AudioFileDropdown extends StatelessWidget {
     final MediaFileModel? mediaFile = cubit.getMediaFileForSelectedMessage();
     final String? audioFileName = mediaFile?.name;
 
-    return FusionDropDown<_AudioFileOption>(
-      semanticId: 'audio_file_options_dropdown',
+    return Stack(
+      children: <Widget>[
+        // Main popup menu (always visible as trigger)
+        _buildMainPopup(context, cubit, audioFileName),
+        // Hidden audio files popup - we'll trigger it programmatically
+        Positioned(
+          left: 0,
+          right: 0,
+          child: Opacity(
+            opacity: 0,
+            child: IgnorePointer(
+              child: SizedBox(
+                height: 0,
+                child: _buildAudioFilesListPopup(context, cubit, audioFileName),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildMainPopup(BuildContext context, MessagePlayerConfigCubit cubit, String? audioFileName) {
+    return FusionPopupMenu<_AudioFileOption>(
       items: const <_AudioFileOption>[
         _AudioFileOption.selectAudioFile,
         _AudioFileOption.uploadAudioFile,
       ],
-      selectedIndex: null,
-      backgroundColor: context.colorScheme.elevation2,
-      offset: const Offset(0, 50),
-      trigger: FusionContainer(
-        raised: false,
-        borderRadius: 8,
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-          decoration: BoxDecoration(
-            color: context.colorScheme.elevation2,
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: <Widget>[
-              Expanded(
-                child: FusionAppText(
-                  text: audioFileName ?? 'Select Audio File',
-                  style: context.textTheme.bodyMedium?.copyWith(
-                    color: audioFileName != null ? context.colorScheme.textPrimary : context.colorScheme.textPlaceholder,
-                  ),
-                  maxLine: 1,
-                  textOverflow: TextOverflow.ellipsis,
-                ),
-              ),
-              Icon(
-                Icons.keyboard_arrow_down,
-                color: context.colorScheme.iconDefault,
-              ),
-            ],
-          ),
-        ),
-      ),
-      itemBuilder: (BuildContext context, _AudioFileOption item, bool isSelected) {
+      tooltip: 'Audio file options',
+      semanticsId: 'audio_file_options_popup',
+      popupOffset: const Offset(0, 8),
+      onSelected: (_AudioFileOption option) {
+        if (option == _AudioFileOption.selectAudioFile) {
+          final List<MediaFileModel> audioFiles = cubit.getAvailableAudioFiles();
+          if (audioFiles.isEmpty) {
+            FusionToast.error(context, message: 'No audio files available. Please upload an audio file first.');
+            return;
+          }
+          // Show the audio files dialog after a short delay to let the main popup close
+          Future<void>.delayed(const Duration(milliseconds: 100), () {
+            if (mounted) {
+              _showAudioFilesDialog(context, cubit);
+            }
+          });
+        } else {
+          _uploadAudioFile(context, cubit);
+        }
+      },
+      itemBuilder: (BuildContext context, _AudioFileOption item) {
         return Row(
           children: <Widget>[
             Icon(
-              item == _AudioFileOption.selectAudioFile ? LucideIcons.upload : LucideIcons.upload,
+              item == _AudioFileOption.selectAudioFile ? LucideIcons.music : LucideIcons.upload,
               size: 18,
               color: context.colorScheme.textPrimary,
             ),
@@ -240,43 +300,150 @@ class _AudioFileDropdown extends StatelessWidget {
           ],
         );
       },
-      onSelected: (int index) {
-        final _AudioFileOption option =
-            <_AudioFileOption>[
-              _AudioFileOption.selectAudioFile,
-              _AudioFileOption.uploadAudioFile,
-            ][index];
-
-        if (option == _AudioFileOption.selectAudioFile) {
-          _showSelectAudioFileDialog(context, cubit);
-        } else {
-          _uploadAudioFile(context, cubit);
-        }
-      },
+      child: _buildTrigger(context, audioFileName),
     );
   }
 
-  void _showSelectAudioFileDialog(BuildContext context, MessagePlayerConfigCubit cubit) {
+  void _showAudioFilesDialog(BuildContext context, MessagePlayerConfigCubit cubit) {
+    final List<MediaFileModel> audioFiles = cubit.getAvailableAudioFiles();
+    final MediaFileModel? currentMediaFile = cubit.getMediaFileForSelectedMessage();
+    final RenderBox? renderBox = context.findRenderObject() as RenderBox?;
+    final Offset offset = renderBox?.localToGlobal(Offset.zero) ?? Offset.zero;
+    final Size size = renderBox?.size ?? Size.zero;
+
+    showMenu<MediaFileModel>(
+      context: context,
+      position: RelativeRect.fromLTRB(
+        offset.dx,
+        offset.dy + size.height + 8,
+        offset.dx + size.width,
+        offset.dy + size.height + 8,
+      ),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(color: context.colorScheme.strokeLight, width: 1),
+      ),
+      color: context.colorScheme.elevation2,
+      items:
+          audioFiles.map((MediaFileModel file) {
+            final bool isSelected = file.id == currentMediaFile?.id;
+            return PopupMenuItem<MediaFileModel>(
+              value: file,
+              child: SizedBox(
+                width: size.width - 32,
+                child: Row(
+                  children: <Widget>[
+                    Icon(
+                      LucideIcons.music,
+                      size: 18,
+                      color: isSelected ? context.colorScheme.primary : context.colorScheme.iconDefault,
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: FusionAppText(
+                        text: file.name,
+                        style: context.textTheme.bodyMedium?.copyWith(
+                          color: isSelected ? context.colorScheme.primary : context.colorScheme.textPrimary,
+                        ),
+                        maxLine: 1,
+                        textOverflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    if (isSelected)
+                      Icon(
+                        LucideIcons.check,
+                        size: 18,
+                        color: context.colorScheme.primary,
+                      ),
+                  ],
+                ),
+              ),
+            );
+          }).toList(),
+    ).then((MediaFileModel? selectedFile) {
+      if (selectedFile != null) {
+        cubit.assignAudioFile(selectedFile.id);
+      }
+    });
+  }
+
+  Widget _buildAudioFilesListPopup(BuildContext context, MessagePlayerConfigCubit cubit, String? audioFileName) {
     final List<MediaFileModel> audioFiles = cubit.getAvailableAudioFiles();
     final MediaFileModel? currentMediaFile = cubit.getMediaFileForSelectedMessage();
 
-    if (audioFiles.isEmpty) {
-      FusionToast.error(context, message: 'No audio files available. Please upload an audio file first.');
-      return;
-    }
-
-    showDialog(
-      context: context,
-      builder: (BuildContext dialogContext) {
-        return _SelectAudioFileDialog(
-          audioFiles: audioFiles,
-          selectedAudioFileId: currentMediaFile?.id,
-          onSelect: (MediaFileModel file) {
-            cubit.assignAudioFile(file.id);
-            Navigator.of(dialogContext).pop();
-          },
+    return FusionPopupMenu<MediaFileModel>(
+      key: _audioFilesPopupKey,
+      items: audioFiles,
+      tooltip: 'Select audio file',
+      semanticsId: 'audio_files_list_popup',
+      popupOffset: const Offset(0, 8),
+      onSelected: (MediaFileModel file) {
+        cubit.assignAudioFile(file.id);
+      },
+      itemBuilder: (BuildContext context, MediaFileModel file) {
+        final bool isSelected = file.id == currentMediaFile?.id;
+        return Row(
+          children: <Widget>[
+            Icon(
+              LucideIcons.music,
+              size: 18,
+              color: isSelected ? context.colorScheme.primary : context.colorScheme.iconDefault,
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: FusionAppText(
+                text: file.name,
+                style: context.textTheme.bodyMedium?.copyWith(
+                  color: isSelected ? context.colorScheme.primary : context.colorScheme.textPrimary,
+                ),
+                maxLine: 1,
+                textOverflow: TextOverflow.ellipsis,
+              ),
+            ),
+            if (isSelected)
+              Icon(
+                LucideIcons.check,
+                size: 18,
+                color: context.colorScheme.primary,
+              ),
+          ],
         );
       },
+      child: const SizedBox.shrink(),
+    );
+  }
+
+  Widget _buildTrigger(BuildContext context, String? audioFileName) {
+    return Container(
+      width: 400,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      decoration: BoxDecoration(
+        color: context.colorScheme.elevation1,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(
+          color: context.colorScheme.textLabel,
+          width: 1,
+        ),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: <Widget>[
+          Expanded(
+            child: FusionAppText(
+              text: audioFileName ?? 'Select Audio File',
+              style: context.textTheme.bodyMedium?.copyWith(
+                color: audioFileName != null ? context.colorScheme.textPrimary : context.colorScheme.textPlaceholder,
+              ),
+              maxLine: 1,
+              textOverflow: TextOverflow.ellipsis,
+            ),
+          ),
+          Icon(
+            Icons.keyboard_arrow_down,
+            color: context.colorScheme.iconDefault,
+          ),
+        ],
+      ),
     );
   }
 
@@ -313,107 +480,6 @@ class _AudioFileDropdown extends StatelessWidget {
   }
 }
 
-class _SelectAudioFileDialog extends StatelessWidget {
-  final List<MediaFileModel> audioFiles;
-  final String? selectedAudioFileId;
-  final Function(MediaFileModel) onSelect;
-
-  const _SelectAudioFileDialog({
-    required this.audioFiles,
-    required this.selectedAudioFileId,
-    required this.onSelect,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Dialog(
-      backgroundColor: context.colorScheme.elevation1,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: Container(
-        width: 400,
-        constraints: const BoxConstraints(maxHeight: 400),
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: <Widget>[
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: <Widget>[
-                FusionAppText(
-                  text: 'Select Audio File',
-                  style: context.textTheme.titleSmall?.copyWith(
-                    fontWeight: FontWeight.w600,
-                    color: context.colorScheme.textPrimary,
-                  ),
-                ),
-                IconButton(
-                  icon: Icon(LucideIcons.x, color: context.colorScheme.iconDefault),
-                  onPressed: () => Navigator.of(context).pop(),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            Flexible(
-              child: ListView.separated(
-                shrinkWrap: true,
-                itemCount: audioFiles.length,
-                separatorBuilder: (_, __) => const SizedBox(height: 8),
-                itemBuilder: (BuildContext context, int index) {
-                  final MediaFileModel file = audioFiles[index];
-                  final bool isSelected = file.id == selectedAudioFileId;
-
-                  return Material(
-                    color: Colors.transparent,
-                    child: InkWell(
-                      onTap: () => onSelect(file),
-                      borderRadius: BorderRadius.circular(8),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                        decoration: BoxDecoration(
-                          color: isSelected ? context.colorScheme.primary.withAlpha(25) : context.colorScheme.elevation2,
-                          borderRadius: BorderRadius.circular(8),
-                          border: isSelected ? Border.all(color: context.colorScheme.primary, width: 1) : null,
-                        ),
-                        child: Row(
-                          children: <Widget>[
-                            Icon(
-                              LucideIcons.upload,
-                              size: 18,
-                              color: isSelected ? context.colorScheme.primary : context.colorScheme.iconDefault,
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: FusionAppText(
-                                text: file.name,
-                                style: context.textTheme.bodyMedium?.copyWith(
-                                  color: isSelected ? context.colorScheme.primary : context.colorScheme.textPrimary,
-                                ),
-                                maxLine: 1,
-                                textOverflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                            if (isSelected)
-                              Icon(
-                                LucideIcons.check,
-                                size: 18,
-                                color: context.colorScheme.primary,
-                              ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  );
-                },
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
 class _AudioPlayerWidget extends StatelessWidget {
   final MessagePlayerConfigState state;
 
@@ -426,95 +492,56 @@ class _AudioPlayerWidget extends StatelessWidget {
 
     if (mediaFile == null) return const SizedBox.shrink();
 
-    return FusionContainer(
-      raised: false,
-      borderRadius: 12,
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: context.colorScheme.elevation2,
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: <Widget>[
-            // File name with play button
-            Row(
-              children: <Widget>[
-                InkWell(
-                  onTap: () => cubit.togglePlayPause(),
-                  borderRadius: BorderRadius.circular(20),
-                  child: Container(
-                    padding: const EdgeInsets.all(4),
-                    child: Icon(
-                      state.isPlaying ? Icons.pause : Icons.play_arrow,
-                      color: context.colorScheme.iconWhite,
-                      size: 20,
-                    ),
-                  ),
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: context.colorScheme.elevation2,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          /// File name with play button
+          Row(
+            children: <Widget>[
+              InkWell(
+                onTap: () => cubit.togglePlayPause(),
+                borderRadius: BorderRadius.circular(20),
+                child: Icon(
+                  state.isPlaying ? Icons.pause : Icons.play_arrow,
+                  color: context.colorScheme.iconWhite,
+                  size: 20,
                 ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: FusionAppText(
-                    text: mediaFile.name,
-                    style: context.textTheme.bodyMedium?.copyWith(
-                      color: context.colorScheme.textPrimary,
-                    ),
-                    maxLine: 1,
-                    textOverflow: TextOverflow.ellipsis,
-                  ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: FusionAppText(
+                  text: mediaFile.name,
+                  style: context.textTheme.l1Regular.withColor(context.colorScheme.textSecondary),
+                  maxLine: 1,
+                  textOverflow: TextOverflow.ellipsis,
                 ),
-              ],
-            ),
+              ),
+            ],
+          ),
 
-            const SizedBox(height: 12),
+          const SizedBox(height: 12),
 
-            // Progress bar
-            Row(
-              children: <Widget>[
-                FusionAppText(
-                  text: _formatDuration(state.currentPosition),
-                  style: context.textTheme.labelSmall?.copyWith(
-                    color: context.colorScheme.textSecondary,
-                  ),
-                ),
-                Expanded(
-                  child: SliderTheme(
-                    data: SliderTheme.of(context).copyWith(
-                      thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6),
-                      overlayShape: const RoundSliderOverlayShape(overlayRadius: 12),
-                      trackHeight: 4,
-                    ),
-                    child: Slider(
-                      value: state.currentPosition.inSeconds.toDouble(),
-                      min: 0,
-                      max: (state.totalDuration?.inSeconds ?? 1).toDouble(),
-                      activeColor: context.colorScheme.primary,
-                      inactiveColor: context.colorScheme.elevation4,
-                      onChanged: (double value) {
-                        cubit.seekTo(Duration(seconds: value.toInt()));
-                      },
-                    ),
-                  ),
-                ),
-                FusionAppText(
-                  text: _formatDuration(state.totalDuration ?? Duration.zero),
-                  style: context.textTheme.labelSmall?.copyWith(
-                    color: context.colorScheme.textSecondary,
-                  ),
-                ),
-              ],
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 10),
+            child: FusionAudioSlider(
+              currentPosition: state.currentPosition,
+              totalDuration: state.totalDuration,
+              onSeek: (Duration duration) => cubit.seekTo(duration),
+              activeColor: context.colorScheme.primary,
+              inactiveColor: context.colorScheme.elevation4,
+              textColor: context.colorScheme.textSecondary,
+              timeTextStyle: context.textTheme.labelSmall,
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
-  }
-
-  String _formatDuration(Duration duration) {
-    final int minutes = duration.inMinutes;
-    final int seconds = duration.inSeconds % 60;
-    return '${minutes.toString().padLeft(1, '0')}:${seconds.toString().padLeft(2, '0')}';
   }
 }
 
@@ -529,115 +556,46 @@ class _GainControlSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return FusionContainer(
-      raised: false,
-      borderRadius: 12,
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: context.colorScheme.elevation2,
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: <Widget>[
-            Row(
-              children: <Widget>[
-                Icon(
-                  LucideIcons.volume2,
-                  size: 18,
-                  color: context.colorScheme.iconDefault,
-                ),
-                const SizedBox(width: 8),
-                FusionAppText(
-                  text: 'Audio Gain Control',
-                  style: context.textTheme.labelMedium?.copyWith(
-                    color: context.colorScheme.textPrimary,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            _GainSlider(
-              value: gain,
-              onChanged: onChanged,
-            ),
-          ],
-        ),
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: context.colorScheme.elevation2,
+        borderRadius: BorderRadius.circular(8),
       ),
-    );
-  }
-}
-
-class _GainSlider extends StatelessWidget {
-  final double value;
-  final ValueChanged<double> onChanged;
-
-  const _GainSlider({
-    required this.value,
-    required this.onChanged,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: <Widget>[
-        SliderTheme(
-          data: SliderTheme.of(context).copyWith(
-            thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 8),
-            overlayShape: const RoundSliderOverlayShape(overlayRadius: 14),
-            trackHeight: 6,
-          ),
-          child: Slider(
-            value: value,
-            min: -6,
-            max: 6,
-            divisions: 24,
-            activeColor: context.colorScheme.primary,
-            inactiveColor: context.colorScheme.elevation4,
-            onChanged: onChanged,
-          ),
-        ),
-        // Labels
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Row(
             children: <Widget>[
+              // Icon(
+              //   LucideIcons.volume2,
+              //   size: 18,
+              //   color: context.colorScheme.iconDefault,
+              // ),
+              // const SizedBox(width: 8),
               FusionAppText(
-                text: '-6',
-                style: context.textTheme.labelSmall?.copyWith(
-                  color: context.colorScheme.textSecondary,
-                ),
-              ),
-              FusionAppText(
-                text: '-3',
-                style: context.textTheme.labelSmall?.copyWith(
-                  color: context.colorScheme.textSecondary,
-                ),
-              ),
-              FusionAppText(
-                text: '0',
-                style: context.textTheme.labelSmall?.copyWith(
-                  color: context.colorScheme.textSecondary,
-                ),
-              ),
-              FusionAppText(
-                text: '+3',
-                style: context.textTheme.labelSmall?.copyWith(
-                  color: context.colorScheme.textSecondary,
-                ),
-              ),
-              FusionAppText(
-                text: '+6',
-                style: context.textTheme.labelSmall?.copyWith(
-                  color: context.colorScheme.textSecondary,
-                ),
+                text: 'Audio Gain Control',
+                style: context.textTheme.l1Regular.withColor(context.colorScheme.textSecondary),
               ),
             ],
           ),
-        ),
-      ],
+          const SizedBox(height: 16),
+          FusionAudioGainSlider(
+            value: gain,
+            onChanged: (double value) {
+              context.read<MessagePlayerConfigCubit>().updateGain(value);
+            },
+            activeColor: context.colorScheme.primary,
+            inactiveColor: context.colorScheme.elevation4,
+            textColor: context.colorScheme.textSecondary,
+          ),
+
+          // _GainSlider(
+          //   value: gain,
+          //   onChanged: onChanged,
+          // ),
+        ],
+      ),
     );
   }
 }
