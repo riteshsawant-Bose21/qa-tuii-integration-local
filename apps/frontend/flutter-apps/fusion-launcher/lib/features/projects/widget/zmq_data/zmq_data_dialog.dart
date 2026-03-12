@@ -1,269 +1,29 @@
 import 'dart:async';
-import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:fusion_lib/fusion_lib.dart';
 
-import '../../../../core/service_locator.dart';
-import '../../../configuration/presentation/viewmodel/project_view_model.dart';
+import '../../models/meter_data.dart';
+import '../../view_model/meter_data/meter_data_view_model.dart';
 
-// ─────────────────────────────────────────────
-// DATA MODELS
-// ─────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────────────────
+// POPUP  —  now just reads the global cubit, never creates its own
+// ─────────────────────────────────────────────────────────────────────────────
 
-class MeterBlock {
-  final String blockName;
-  final String meterName;
-  final String valueType;
-  final List<int> dimensions;
-  final List<double> value;
-
-  const MeterBlock({
-    required this.blockName,
-    required this.meterName,
-    required this.valueType,
-    required this.dimensions,
-    required this.value,
-  });
-
-  static List<double> _parseDynamicList(dynamic value) {
-    if (value == null) return <double>[];
-
-    if (value is String) {
-      if (value.trim().startsWith('[') && value.trim().endsWith(']')) {
-        try {
-          final dynamic parsed = jsonDecode(value);
-          if (parsed is List) return _parseDynamicList(parsed);
-        } catch (_) {}
-      }
-      final double? parsedNum = double.tryParse(value);
-      if (parsedNum != null) return <double>[parsedNum];
-      return <double>[];
-    }
-
-    if (value is List) {
-      return value.map((dynamic e) {
-        if (e is num) return e.toDouble();
-        if (e is bool) return e ? 1.0 : 0.0;
-        if (e is String) return double.tryParse(e) ?? 0.0;
-        return 0.0;
-      }).toList();
-    } else if (value is num) {
-      return <double>[value.toDouble()];
-    } else if (value is bool) {
-      return <double>[value ? 1.0 : 0.0];
-    }
-
-    return <double>[];
-  }
-
-  static List<int> _parseDimensions(dynamic value) {
-    if (value == null) return <int>[];
-
-    if (value is String) {
-      if (value.trim().startsWith('[') && value.trim().endsWith(']')) {
-        try {
-          final dynamic parsed = jsonDecode(value);
-          if (parsed is List) return _parseDimensions(parsed);
-        } catch (_) {}
-      }
-      final int? parsedNum = int.tryParse(value);
-      if (parsedNum != null) return <int>[parsedNum];
-      return <int>[];
-    }
-
-    if (value is List) {
-      return value.map((dynamic e) {
-        if (e is num) return e.toInt();
-        if (e is String) return int.tryParse(e) ?? 0;
-        return 0;
-      }).toList();
-    } else if (value is num) {
-      return <int>[value.toInt()];
-    }
-
-    return <int>[];
-  }
-
-  factory MeterBlock.fromMap(Map<String, dynamic> map) {
-    return MeterBlock(
-      blockName: map['block_name']?.toString() ?? '',
-      meterName: map['meter_name']?.toString() ?? '',
-      valueType: map['value_type']?.toString() ?? '',
-      dimensions: _parseDimensions(map['dimensions']),
-      value: _parseDynamicList(map['value']),
-    );
-  }
-
-  /// Display label: block name stripped of trailing numeric ID suffix
-  String get displayName {
-    // e.g. "GAIN1772532371599915492" → "GAIN"
-    final RegExpMatch? match = RegExp(r'^([A-Za-z_]+)').firstMatch(blockName);
-    return match?.group(1) ?? blockName;
-  }
-
-  /// Compact value string, rounded to 1 decimal
-  String get valueLabel {
-    if (value.length == 1) {
-      return '${value[0].toStringAsFixed(1)} dB';
-    }
-    return '${value.map((double v) => v.toStringAsFixed(1)).join(' / ')} dB';
-  }
-
-  /// Colour-code by signal level
-  Color get levelColor {
-    final double peak = value.reduce((double a, double b) => a > b ? a : b);
-    if (peak <= -100) return const Color(0xFF4A5568); // silent / no signal
-    if (peak <= -60) return const Color(0xFF48BB78); // nominal green
-    if (peak <= -20) return const Color(0xFFECC94B); // warning yellow
-    return const Color(0xFFFC8181); // hot / red
-  }
-}
-
-class MeterPacket {
-  final String name;
-  final String type;
-  final int length;
-  final List<MeterBlock> blocks;
-
-  const MeterPacket({
-    required this.name,
-    required this.type,
-    required this.length,
-    required this.blocks,
-  });
-
-  factory MeterPacket.fromMap(Map<String, dynamic> map) {
-    final Map<String, dynamic>? params = map['parameters'] as Map<String, dynamic>?;
-    if (params == null) {
-      return const MeterPacket(name: '', type: '', length: 0, blocks: <MeterBlock>[]);
-    }
-
-    return MeterPacket(
-      name: params['name']?.toString() ?? '',
-      type: params['type']?.toString() ?? '',
-      length: (params['length'] is num) ? (params['length'] as num).toInt() : int.tryParse(params['length']?.toString() ?? '') ?? 0,
-      blocks: _parseBlocks(params['value']),
-    );
-  }
-
-  static List<MeterBlock> _parseBlocks(dynamic value) {
-    if (value == null) return <MeterBlock>[];
-
-    if (value is String) {
-      if (value.trim().startsWith('[') && value.trim().endsWith(']')) {
-        try {
-          final dynamic parsed = jsonDecode(value);
-          if (parsed is List) return _parseBlocks(parsed);
-        } catch (_) {}
-      }
-      return <MeterBlock>[];
-    }
-
-    if (value is List) {
-      return value
-          .map((dynamic e) {
-            if (e is Map<String, dynamic>) {
-              return MeterBlock.fromMap(e);
-            }
-            if (e is String) {
-              try {
-                final dynamic mapped = jsonDecode(e);
-                if (mapped is Map<String, dynamic>) {
-                  return MeterBlock.fromMap(mapped);
-                }
-              } catch (_) {}
-            }
-            return null;
-          })
-          .whereType<MeterBlock>()
-          .toList();
-    }
-    return <MeterBlock>[];
-  }
-}
-
-// ─────────────────────────────────────────────
-// CUBIT
-// ─────────────────────────────────────────────
-
-class MeterDataState {
-  final Map<String, MeterPacket> packets;
-  final bool hasData;
-
-  const MeterDataState({this.packets = const <String, MeterPacket>{}, this.hasData = false});
-
-  MeterDataState copyWith({Map<String, MeterPacket>? packets}) => MeterDataState(
-    packets: packets ?? this.packets,
-    hasData: true,
-  );
-}
-
-class MeterDataCubit extends Cubit<MeterDataState> {
-  MeterDataCubit() : super(const MeterDataState());
-
-  StreamSubscription<ResponseCallback<dynamic>>? _telemetrySubscription;
-
-  @override
-  Future<void> close() {
-    disposeTelemetry();
-    return super.close();
-  }
-
-  Future<void> initializeTelemetryData() async {
-    final FusionNetworkClient client = serviceLocator<FusionNetworkClient>();
-    final String vip = serviceLocator<ProjectViewModel>().virtualIP ?? "";
-    await client.connect(vip: vip);
-    //stream telemetry data for testing
-    _telemetrySubscription = client.responseMessages.listen(
-      (ResponseCallback<dynamic> message) {
-        debugPrint("######### Received telemetry message ############: ${message.data}");
-        try {
-          final MeterPacket packet = MeterPacket.fromMap(message.data);
-          final Map<String, MeterPacket> newPackets = Map<String, MeterPacket>.from(state.packets);
-          newPackets[packet.name] = packet;
-          emit(state.copyWith(packets: newPackets));
-        } catch (e) {
-          debugPrint("######### Error parsing telemetry message ############: $e");
-        }
-      },
-      onError: (dynamic error) {
-        debugPrint("######### Telemetry error ############: $error");
-      },
-      onDone: () {
-        debugPrint("######### Telemetry stream closed ############");
-      },
-    );
-  }
-
-  void disposeTelemetry() {
-    _telemetrySubscription?.cancel();
-    _telemetrySubscription = null;
-  }
-}
-
-// ─────────────────────────────────────────────
-// POPUP WIDGET
-// ─────────────────────────────────────────────
-
-/// Show the popup over any existing UI.
-///
-/// Usage:
-///   showMeterDataPopup(context, cubit: context.read<MeterDataCubit>());
-Future<void> showMeterDataPopup(
-  BuildContext context,
-) {
-  return showDialog(
+/// Show the meter-data overlay.
+/// The global [MeterDataViewModel] singleton must already be provided above
+/// [MaterialApp] in the widget tree.
+Future<void> showMeterDataPopup(BuildContext context) {
+  return showDialog<void>(
     context: context,
     barrierColor: Colors.black54,
-    builder:
-        (_) => BlocProvider<MeterDataCubit>.value(
-          value: MeterDataCubit()..initializeTelemetryData(),
-          child: const _MeterDataDialog(),
-        ),
+    builder: (_) => const _MeterDataDialog(),
   );
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// WIDGETS  (layout unchanged, only wiring updated)
+// ─────────────────────────────────────────────────────────────────────────────
 
 class _MeterDataDialog extends StatelessWidget {
   const _MeterDataDialog();
@@ -273,10 +33,8 @@ class _MeterDataDialog extends StatelessWidget {
     return Dialog(
       backgroundColor: Colors.transparent,
       insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 32),
-      child: BlocBuilder<MeterDataCubit, MeterDataState>(
-        builder: (BuildContext context, MeterDataState state) {
-          return _DialogShell(state: state);
-        },
+      child: BlocBuilder<MeterDataViewModel, MeterDataState>(
+        builder: (BuildContext context, MeterDataState state) => _DialogShell(state: state),
       ),
     );
   }
@@ -296,7 +54,7 @@ class _DialogShell extends StatelessWidget {
       decoration: BoxDecoration(
         color: const Color(0xFF0F1117),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFF2D3748), width: 1),
+        border: Border.all(color: const Color(0xFF2D3748)),
         boxShadow: <BoxShadow>[
           BoxShadow(
             color: Colors.black.withOpacity(0.6),
@@ -311,7 +69,7 @@ class _DialogShell extends StatelessWidget {
           Expanded(
             child: Container(
               decoration: const BoxDecoration(
-                border: Border(right: BorderSide(color: Color(0xFF2D3748), width: 1)),
+                border: Border(right: BorderSide(color: Color(0xFF2D3748))),
               ),
               child: _PacketView(
                 packet: state.packets['fusion_dsp'],
@@ -358,18 +116,14 @@ class _PacketView extends StatelessWidget {
   }
 }
 
-// ── Header ──────────────────────────────────
+// ── Header ───────────────────────────────────────────────────────────────────
 
 class _Header extends StatelessWidget {
   final MeterPacket? packet;
   final String expectedName;
   final bool showClose;
 
-  const _Header({
-    this.packet,
-    required this.expectedName,
-    required this.showClose,
-  });
+  const _Header({this.packet, required this.expectedName, required this.showClose});
 
   @override
   Widget build(BuildContext context) {
@@ -430,7 +184,7 @@ class _Header extends StatelessWidget {
   }
 }
 
-// ── Block list ───────────────────────────────
+// ── Block list ────────────────────────────────────────────────────────────────
 
 class _BlockList extends StatelessWidget {
   final List<MeterBlock> blocks;
@@ -454,23 +208,16 @@ class _BlockTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final bool isSilent = block.value.every((double v) => v <= -100);
-
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Row(
         children: <Widget>[
-          // Level indicator dot
           Container(
             width: 6,
             height: 6,
-            decoration: BoxDecoration(
-              color: block.levelColor,
-              shape: BoxShape.circle,
-            ),
+            decoration: BoxDecoration(color: block.levelColor, shape: BoxShape.circle),
           ),
           const SizedBox(width: 12),
-
-          // Block / meter name
           Expanded(
             flex: 3,
             child: Column(
@@ -478,11 +225,7 @@ class _BlockTile extends StatelessWidget {
               children: <Widget>[
                 Text(
                   block.blockName,
-                  style: const TextStyle(
-                    fontFamily: 'monospace',
-                    fontSize: 11,
-                    color: Color(0xFF718096),
-                  ),
+                  style: const TextStyle(fontFamily: 'monospace', fontSize: 11, color: Color(0xFF718096)),
                   overflow: TextOverflow.ellipsis,
                 ),
                 const SizedBox(height: 2),
@@ -497,7 +240,7 @@ class _BlockTile extends StatelessWidget {
                         fontWeight: FontWeight.w600,
                       ),
                     ),
-                    if (block.dimensions.first > 1) ...<Widget>[
+                    if (block.dimensions.isNotEmpty && block.dimensions.first > 1) ...<Widget>[
                       const SizedBox(width: 6),
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
@@ -507,11 +250,7 @@ class _BlockTile extends StatelessWidget {
                         ),
                         child: Text(
                           '${block.dimensions.first}ch',
-                          style: const TextStyle(
-                            fontSize: 9,
-                            color: Color(0xFF90CDF4),
-                            fontFamily: 'monospace',
-                          ),
+                          style: const TextStyle(fontSize: 9, color: Color(0xFF90CDF4), fontFamily: 'monospace'),
                         ),
                       ),
                     ],
@@ -520,16 +259,12 @@ class _BlockTile extends StatelessWidget {
               ],
             ),
           ),
-
-          // Value badge
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
             decoration: BoxDecoration(
               color: block.levelColor.withOpacity(isSilent ? 0.08 : 0.15),
               borderRadius: BorderRadius.circular(6),
-              border: Border.all(
-                color: block.levelColor.withOpacity(isSilent ? 0.2 : 0.4),
-              ),
+              border: Border.all(color: block.levelColor.withOpacity(isSilent ? 0.2 : 0.4)),
             ),
             child: Text(
               block.valueLabel,
@@ -547,28 +282,33 @@ class _BlockTile extends StatelessWidget {
   }
 }
 
-// ── Empty state ──────────────────────────────
+// ── Empty state ───────────────────────────────────────────────────────────────
 
 class _EmptyState extends StatelessWidget {
   const _EmptyState();
 
   @override
   Widget build(BuildContext context) {
-    return const Center(
+    // Show a context-aware message depending on why there is no data.
+    final MeterInactiveReason? reason = context.select<MeterDataViewModel, MeterInactiveReason?>((MeterDataViewModel c) => c.state.inactiveReason);
+
+    final String message = switch (reason) {
+      MeterInactiveReason.controlModeOff => 'Enable Control Mode to receive data.',
+      MeterInactiveReason.projectClosed => 'No active project.',
+      _ => 'Waiting for ZMQ data…',
+    };
+
+    return Center(
       child: Padding(
-        padding: EdgeInsets.symmetric(vertical: 48),
+        padding: const EdgeInsets.symmetric(vertical: 48),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: <Widget>[
-            Icon(Icons.cable_outlined, size: 36, color: Color(0xFF4A5568)),
-            SizedBox(height: 12),
+            const Icon(Icons.cable_outlined, size: 36, color: Color(0xFF4A5568)),
+            const SizedBox(height: 12),
             Text(
-              'Waiting for ZMQ data…',
-              style: TextStyle(
-                fontSize: 13,
-                color: Color(0xFF718096),
-                fontFamily: 'monospace',
-              ),
+              message,
+              style: const TextStyle(fontSize: 13, color: Color(0xFF718096), fontFamily: 'monospace'),
             ),
           ],
         ),
@@ -577,12 +317,11 @@ class _EmptyState extends StatelessWidget {
   }
 }
 
-// ── Footer ───────────────────────────────────
+// ── Footer ────────────────────────────────────────────────────────────────────
 
 class _Footer extends StatelessWidget {
   final MeterPacket? packet;
   final String expectedName;
-
   const _Footer({this.packet, required this.expectedName});
 
   @override
@@ -593,21 +332,12 @@ class _Footer extends StatelessWidget {
         children: <Widget>[
           Text(
             packet != null ? '${packet!.blocks.length} blocks · length ${packet!.length}' : 'No packet',
-            style: const TextStyle(
-              fontSize: 11,
-              color: Color(0xFF4A5568),
-              fontFamily: 'monospace',
-            ),
+            style: const TextStyle(fontSize: 11, color: Color(0xFF4A5568), fontFamily: 'monospace'),
           ),
           const Spacer(),
           Text(
             expectedName,
-            style: const TextStyle(
-              fontSize: 11,
-              color: Color(0xFF4A5568),
-              fontFamily: 'monospace',
-              letterSpacing: 1,
-            ),
+            style: const TextStyle(fontSize: 11, color: Color(0xFF4A5568), fontFamily: 'monospace', letterSpacing: 1),
           ),
         ],
       ),

@@ -97,6 +97,15 @@ class ProcessingBlockModel {
     gain,
   ];
 
+  static final List<ProcessingBlockModel> functionBlocks = <ProcessingBlockModel>[
+    toneControl,
+    gain,
+  ];
+
+  static final List<ProcessingBlockModel> userZoneBlocks = <ProcessingBlockModel>[
+    gain,
+  ];
+
   static final List<ProcessingBlockModel> mixBlocks = <ProcessingBlockModel>[
     ProcessingBlockModel(
       name: 'AGC',
@@ -161,10 +170,12 @@ class ProcessingBlockModel {
   final String id;
   final String algorithmId;
   List<PropertySetting> properties;
+  final bool isforUser;
 
   ProcessingBlockModel({
     required this.name,
     String? id,
+    this.isforUser = false,
     required this.algorithmId,
     List<PropertySetting>? properties,
   }) : properties = properties ?? <PropertySetting>[],
@@ -178,10 +189,17 @@ class ProcessingBlockModel {
     return "packages/fusion_lib/lib/${_algoIconMap[algorithmId] ?? 'assets/icons/processing_blocks/pb_1.png'}";
   }
 
-  ProcessingBlockModel copyWith({String? name, String? id, String? algorithmId, List<PropertySetting>? properties}) {
+  ProcessingBlockModel copyWith({
+    String? name,
+    String? id,
+    bool? isForUser,
+    String? algorithmId,
+    List<PropertySetting>? properties,
+  }) {
     return ProcessingBlockModel(
       name: name ?? this.name,
       id: id ?? this.id,
+      isforUser: isForUser ?? this.isforUser,
       algorithmId: algorithmId ?? this.algorithmId,
       properties: properties ?? this.properties,
     );
@@ -217,6 +235,7 @@ class ProcessingBlockModel {
     return ProcessingBlockModel(
       name: name,
       algorithmId: algorithmId,
+      isforUser: isforUser,
       properties: properties.map((val) => val.copyWith()).toList(),
     );
   }
@@ -225,6 +244,7 @@ class ProcessingBlockModel {
     return ProcessingBlockModel(
       id: id,
       name: name,
+      isforUser: isforUser,
       algorithmId: algorithmId,
       properties: model.properties,
     );
@@ -235,6 +255,7 @@ class ProcessingBlockModel {
       name: json['name'] as String,
       id: json['id'] as String,
       algorithmId: json['algorithmId'] as String,
+      isforUser: json['isForUser'] as bool? ?? false,
       properties: (json['properties'] != null && json['properties'] is List<dynamic>)
           ? (json['properties'] as List<dynamic>).map((dynamic e) => PropertySetting.fromJson(e as Map<String, dynamic>)).toList()
           : <PropertySetting>[],
@@ -242,7 +263,13 @@ class ProcessingBlockModel {
   }
 
   Map<String, dynamic> toJson() {
-    return <String, dynamic>{'name': name, 'id': id, 'algorithmId': algorithmId, 'properties': properties.map((PropertySetting e) => e.toJson()).toList()};
+    return <String, dynamic>{
+      'name': name,
+      'id': id,
+      'algorithmId': algorithmId,
+      'isForUser': isforUser,
+      'properties': properties.map((PropertySetting e) => e.toJson()).toList(),
+    };
   }
 
   /// Lookup table for JSON “iconName” (e.g. algorithmId) → const IconData

@@ -16,6 +16,7 @@ class ToneControlBlock extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final AlgorithmDataViewmodel watch = context.watch<AlgorithmDataViewmodel>();
+    final String targetBlockId = watch.processingBlock.id;
     return ProxyProvider<AlgorithmDataViewmodel, ToneController>(
       key: ValueKey<String>(watch.processingBlock.id),
       create: (BuildContext context) {
@@ -71,7 +72,9 @@ class ToneControlBlock extends StatelessWidget {
                     context.read<ToneController>().updateHighBypass(value);
                   },
                 ),
-                const OutMeter(),
+                OutMeter(
+                  blockId: targetBlockId,
+                ),
               ],
             ),
             // children: <Widget>[

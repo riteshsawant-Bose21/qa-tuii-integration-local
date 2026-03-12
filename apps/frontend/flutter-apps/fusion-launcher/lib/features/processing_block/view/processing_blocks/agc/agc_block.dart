@@ -8,6 +8,7 @@ import 'package:provider/provider.dart';
 
 import '../../../../add_source_popup/view_model/add_source_viewmodel.dart';
 import '../../../viewmodel/algorithm_data_viewmodel.dart';
+import '../../widgets/pb_out_meter.dart';
 import '../widgets/pb_block_layout.dart';
 
 part '_agc_controller.dart';
@@ -20,6 +21,7 @@ class AgcBlock extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final AlgorithmDataViewmodel watch = context.watch<AlgorithmDataViewmodel>();
+    final String targetBlockId = watch.processingBlock.id;
 
     return ProxyProvider<AlgorithmDataViewmodel, AgcController>(
       key: ValueKey<String>(watch.processingBlock.id),
@@ -172,14 +174,12 @@ class AgcBlock extends StatelessWidget {
                             ),
                           ),
                         ),
-                        const Flexible(
+                         Flexible(
                           child: Padding(
-                            padding: EdgeInsets.all(16.0),
-                            child: VerticalMeter(
-                              min: -60,
-                              max: 0,
-                              value: -10,
-                            ),
+                            padding: const EdgeInsets.all(16.0),
+                            child: PbOutMeter(
+                              blockId: targetBlockId,
+                            )
                           ),
                         ),
                       ],

@@ -11,7 +11,9 @@ import 'package:fusion_launcher/core/router/routes.dart';
 import 'package:fusion_launcher/core/service_locator.dart';
 import 'package:fusion_launcher/features/authentication/viewmodel/auth_view_model.dart';
 import 'package:fusion_launcher/features/authentication/viewmodel/session_view_model.dart';
+import 'package:fusion_launcher/features/projects/view_model/block_data/block_data_viewmodel.dart';
 import 'package:fusion_launcher/features/projects/view_model/dsp_sync/config_sync_view_model.dart';
+import 'package:fusion_launcher/features/projects/view_model/meter_data/meter_data_view_model.dart';
 import 'package:fusion_launcher/features/projects/view_model/project_sync_view_model.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/fusion_theme/fusion_theme_notifier.dart';
@@ -125,6 +127,12 @@ class MyApp extends StatelessWidget {
         ),
         BlocProvider<ConfigSyncViewModel>(
           create: (BuildContext context) => serviceLocator<ConfigSyncViewModel>(),
+        ),
+        BlocProvider<MeterDataViewModel>(
+          create: (BuildContext context) => serviceLocator<MeterDataViewModel>(),
+        ),
+        BlocProvider<BlockDataViewmodel>(
+          create: (BuildContext context) => serviceLocator<BlockDataViewmodel>(),
         ),
       ],
       child: FusionThemeBuilder(

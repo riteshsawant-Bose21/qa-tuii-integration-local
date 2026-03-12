@@ -45,7 +45,8 @@ class FusionNetworkDevice {
       id: json['id'] as String? ?? '',
       location: json['location'] as String? ?? '',
       name: json['name'] as String? ?? '',
-      modelName: json['model_name'] as String? ?? 'FM8Y',
+      // modelName: json['model_name'] as String? ?? 'FM8Y',
+      modelName: 'FM8Y', //using this as we dont have model name in the api currently
       xyteCloudId: json['xyte_cloud_id'] as String? ?? '',
       isClaimed: json['is_claimed'] as bool? ?? false,
       serialNumber: json['serial_number'] as String? ?? '',

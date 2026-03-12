@@ -3,6 +3,7 @@ import 'dart:typed_data';
 
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
+import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/fusion_logger/logger.dart';
 import 'package:fusion_lib/fusion_networking/network/rest_client/dio_client.dart';
 import 'package:fusion_lib/fusion_storage/fusion_secure_storage.dart';
@@ -24,6 +25,7 @@ class FusionNetworkClient {
   final FusionSecureStorage secureStorageService;
   final FusionAuthService fusionAuthService;
   final String apiBaseUrl;
+  final WebSocketService webSocketService;
 
   FusionNetworkClient({
     required this.httpClient,
@@ -32,6 +34,7 @@ class FusionNetworkClient {
     required this.secureStorageService,
     required this.fusionAuthService,
     required this.apiBaseUrl,
+    required this.webSocketService,
   });
 
   ZSocket? subscriberSocket;
@@ -316,6 +319,73 @@ class FusionNetworkClient {
         yield ResponseCallback<dynamic>(success: true, message: "New data received", data: jsonDecode(message));
       } catch (ex) {
         yield ResponseCallback<dynamic>(success: false, message: 'Exception in FusionNetworkClient.responseMessages - $ex ');
+      }
+    }
+  }
+
+  /// Connects to a WebSocket URL using the injected WebSocketService
+  Future<ResponseCallback<T>> connectWebSocket<T>({required String url}) async {
+    try {
+      webSocketService.connect(url);
+      FusionLogger.log(tag: LogTag.network, message: "WebSocket connecting to $url");
+
+      return ResponseCallback<T>(success: true, message: "WebSocket connection initiated");
+    } catch (ex) {
+      FusionLogger.log(tag: LogTag.exceptions, message: "Exception in FusionNetworkClient.connectWebSocket() - $ex", logLevel: LogLevel.error);
+      return ResponseCallback<T>(success: false, message: "Exception in FusionNetworkClient.connectWebSocket() - $ex");
+    }
+  }
+
+  /// Sends a message through the active WebSocket connection
+  Future<ResponseCallback<T>> sendWebSocketMessage<T>(dynamic message) async {
+    try {
+      if (!webSocketService.isConnected) {
+        return ResponseCallback<T>(success: false, message: "WebSocket is not connected");
+      }
+
+      // If the message isn't a string (e.g., a Map), JSON encode it
+      final dynamic payload = message is String ? message : jsonEncode(message);
+      webSocketService.sendMessage(payload);
+
+      return ResponseCallback<T>(success: true, message: "Message sent successfully");
+    } catch (ex) {
+      FusionLogger.log(tag: LogTag.exceptions, message: "Exception in FusionNetworkClient.sendWebSocketMessage() - $ex", logLevel: LogLevel.error);
+      return ResponseCallback<T>(success: false, message: "Exception in FusionNetworkClient.sendWebSocketMessage() - $ex");
+    }
+  }
+
+  /// Disconnects the active WebSocket connection
+  Future<ResponseCallback<T>> disconnectWebSocket<T>() async {
+    try {
+      webSocketService.disconnect();
+      FusionLogger.log(tag: LogTag.network, message: "WebSocket Disconnected!!!");
+
+      return ResponseCallback<T>(success: true, message: "WebSocket Disconnected");
+    } catch (ex) {
+      FusionLogger.log(tag: LogTag.exceptions, message: "Exception in FusionNetworkClient.disconnectWebSocket() - $ex", logLevel: LogLevel.error);
+      return ResponseCallback<T>(success: false, message: "Exception in FusionNetworkClient.disconnectWebSocket() - $ex");
+    }
+  }
+
+  /// Async* stream to listen to incoming WebSocket messages mapped to ResponseCallback
+  Stream<ResponseCallback<dynamic>> get webSocketMessages async* {
+    if (!webSocketService.isConnected) {
+      yield ResponseCallback<dynamic>(success: false, message: 'No active WebSocket connection');
+    }
+
+    await for (final dynamic message in webSocketService.stream) {
+      try {
+        // Attempt to decode JSON if applicable, otherwise return raw string
+        dynamic decodedData;
+        try {
+          decodedData = jsonDecode(message.toString());
+        } catch (_) {
+          decodedData = message; // Fallback to raw message
+        }
+
+        yield ResponseCallback<dynamic>(success: true, message: "New WebSocket data received", data: decodedData);
+      } catch (ex) {
+        yield ResponseCallback<dynamic>(success: false, message: 'Exception in FusionNetworkClient.webSocketMessages - $ex ');
       }
     }
   }

@@ -7,6 +7,8 @@ import 'package:fusion_launcher/features/processing_block/data/algorithm_layout_
 import 'package:fusion_launcher/features/processing_block/dto/pb_item.dart';
 import 'package:fusion_launcher/features/processing_block/dto/pb_item_param.dart';
 import 'package:fusion_launcher/features/processing_block/dto/pb_layout.dart';
+import 'package:fusion_launcher/features/projects/view_model/block_data/block_data_viewmodel.dart';
+import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/models/algorithm/property_settings.dart';
 import 'package:fusion_lib/models/project_entities/processing_block_model.dart';
 
@@ -20,7 +22,10 @@ class AlgorithmDataViewmodel extends PBWidgetValueHandler with ChangeNotifier {
     final String algorithmId = processingBlock.algorithmId;
     algorithm = config.algorithms.firstWhereOrNull((Algorithm element) => element.name == algorithmId);
     _loadLayout();
+    getParameterValueFromServer();
+    //initlize websocket
   }
+
   final ScrollController scrollController = ScrollController();
   Algorithm? algorithm;
   PBLayout? _layout;
@@ -52,11 +57,33 @@ class AlgorithmDataViewmodel extends PBWidgetValueHandler with ChangeNotifier {
     updateValue(field: item.field, dimension: item.dimension, value: value);
   }
 
+  void getParameterValueFromServer() async {
+    final Map<String, dynamic>? responseCallback = await serviceLocator<BlockDataViewmodel>().getBlockData(blockId: processingBlock.id);
+    if (responseCallback != null) {
+      responseCallback.forEach((String key, dynamic value) {
+        if (value is List<dynamic>) {
+          for (int i = 0; i < value.length; i++) {
+            if (value[i] != null) {
+              processingBlock.updateProperty(PropertySetting(name: key, value: value[i], dimension: i));
+            }
+          }
+        } else {
+          processingBlock.updateProperty(PropertySetting(name: key, value: value));
+        }
+      });
+      notifyListeners();
+    }
+  }
+
   void updateValue({required String field, int? dimension, required dynamic value}) {
     processingBlock.updateProperty(PropertySetting(name: field, value: value, dimension: dimension));
-    serviceLocator<ProjectViewModel>().updateProcessingBlock(
-      processingBlock: processingBlock,
-    );
+    if (serviceLocator<ProjectViewModel>().isInControlMode) {
+      serviceLocator<BlockDataViewmodel>().updateBlockParameter(blockId: processingBlock.id, parameter: field, value: value, dimension: dimension);
+    } else {
+      serviceLocator<ProjectViewModel>().updateProcessingBlock(
+        processingBlock: processingBlock,
+      );
+    }
     notifyListeners();
   }
 

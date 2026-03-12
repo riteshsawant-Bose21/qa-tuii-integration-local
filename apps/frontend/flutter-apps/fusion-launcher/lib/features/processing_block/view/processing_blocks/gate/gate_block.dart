@@ -6,7 +6,7 @@ import 'package:fusion_launcher/features/processing_block/viewmodel/algorithm_da
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:provider/provider.dart';
 
-import '../../widgets/pb_meter.dart';
+import '../../widgets/pb_out_meter.dart';
 import '../widgets/pb_block_layout.dart';
 import '../widgets/pb_content_section.dart';
 
@@ -19,6 +19,7 @@ class GateBlock extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final AlgorithmDataViewmodel watch = context.watch<AlgorithmDataViewmodel>();
+    final String targetBlockId = watch.processingBlock.id;
     return ProxyProvider<AlgorithmDataViewmodel, GateController>(
       key: ValueKey<String>(watch.processingBlock.id),
       create: (BuildContext context) {
@@ -182,18 +183,16 @@ class GateBlock extends StatelessWidget {
                     ),
                   ),
                 ),
-                const PBSection(
+                 PBSection(
                   type: PBSectionType.right,
                   child: SizedBox(
                     width: 100,
                     child: PbContentSection(
                       title: "OUTPUT",
                       child: Padding(
-                        padding: EdgeInsets.all(12.0),
-                        child: VerticalMeter(
-                          value: -60,
-                          min: -60,
-                          max: 0,
+                        padding: const EdgeInsets.all(12.0),
+                        child: PbOutMeter(
+                          blockId: targetBlockId,
                         ),
                       ),
                     ),

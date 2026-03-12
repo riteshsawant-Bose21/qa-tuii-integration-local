@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:fusion_launcher/features/add_source_popup/view_model/add_source_viewmodel.dart';
+import 'package:fusion_launcher/features/processing_block/view/widgets/pb_out_meter.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:provider/provider.dart';
 
@@ -16,6 +17,7 @@ class LimiterBlock extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final AlgorithmDataViewmodel watch = context.watch<AlgorithmDataViewmodel>();
+    final String targetBlockId = watch.processingBlock.id;
     return ProxyProvider<AlgorithmDataViewmodel, LimiterController>(
       key: ValueKey<String>(watch.processingBlock.id),
       create: (BuildContext context) {
@@ -389,13 +391,11 @@ class LimiterBlock extends StatelessWidget {
                         ),
                         child: FusionAppText(text: "OUTPUT", style: context.textTheme.bodyMedium),
                       ),
-                      const Expanded(
+                      Expanded(
                         child: Padding(
-                          padding: EdgeInsets.all(12.0),
-                          child: VerticalMeter(
-                            value: -60,
-                            min: -60,
-                            max: 0,
+                          padding: const EdgeInsets.all(12.0),
+                          child: PbOutMeter(
+                            blockId: targetBlockId,
                           ),
                         ),
                       ),

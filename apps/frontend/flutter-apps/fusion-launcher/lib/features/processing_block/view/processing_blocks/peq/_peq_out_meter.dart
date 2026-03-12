@@ -1,7 +1,9 @@
 part of 'peq_block.dart';
 
 class _PeqOutMeter extends StatelessWidget {
-  const _PeqOutMeter({super.key});
+  final String blocId;
+
+  const _PeqOutMeter({super.key, required this.blocId});
 
   @override
   Widget build(BuildContext context) {
@@ -26,11 +28,9 @@ class _PeqOutMeter extends StatelessWidget {
               ),
             ),
           ),
-          const Expanded(
-            child: VerticalMeter(
-              value: -60,
-              min: -60,
-              max: 0,
+          Expanded(
+            child: PbOutMeter(
+              blockId: blocId,
             ),
           ),
         ],

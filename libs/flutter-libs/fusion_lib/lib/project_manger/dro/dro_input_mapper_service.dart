@@ -22,10 +22,7 @@ extension DroInputMapperService on ProjectService {
     //update zone functions
     droInputModel = updateZoneFunctionsData(droInputModel);
 
-    //update zone Controls
-    droInputModel = updateZoneControlsData(droInputModel);
-
-    //Update subzones data
+    //Update Zone & subzones data
     droInputModel = updateSubZonesData(droInputModel);
 
     //Update Outputs data
@@ -73,7 +70,9 @@ extension DroInputMapperService on ProjectService {
     List<DroSource> droSources = [];
 
     for (Source source in getAllHardware().whereType<Source>()) {
-      String locationName = source.locationEntity.listeningAreaId != null ? getListeningAreaById(source.locationEntity.listeningAreaId!)?.name ?? "" : "";
+      //ignore this location for now
+      String locationName = "";
+      // String locationName = source.locationEntity.listeningAreaId != null ? getListeningAreaById(source.locationEntity.listeningAreaId!)?.name ?? "" : "";
 
       droSources.add(
         DroSource(
@@ -96,10 +95,15 @@ extension DroInputMapperService on ProjectService {
     return droInputModel;
   }
 
-  List<DroProcessingBlock> getProcessingBlocksData(String parent) {
+  List<DroProcessingBlock> getProcessingBlocksData(String parent, {bool isUserFacing = false}) {
     List<DroProcessingBlock> processingBlocks = [];
 
-    List<ProcessingBlockModel> processingBlockModels = getProcessingBlockFor(parent);
+    List<ProcessingBlockModel> processingBlockModels = getProcessingBlockFor(parentId: parent, includeUserBlocks: isUserFacing);
+
+    if (isUserFacing) {
+      processingBlockModels = processingBlockModels.where((block) => block.isforUser).toList();
+    }
+
     for (ProcessingBlockModel block in processingBlockModels) {
       Map<String, dynamic> algorithmProperties = {};
       // for (PropertySetting property in block.properties) {
@@ -190,7 +194,7 @@ extension DroInputMapperService on ProjectService {
 
       droZoneFunctions.add(
         DroZoneFunction(
-          id: zone.id,
+          id: zoneFunction.id,
           name: zoneFunction.name,
           algorithm: zoneFunction.algorithmName,
           algorithmProperties: {"source_channels": 1},
@@ -209,12 +213,82 @@ extension DroInputMapperService on ProjectService {
     return droInputModel;
   }
 
-  //Update the zone controls data
-  DroInputModel updateZoneControlsData(DroInputModel droInputModel) {
-    List<DroZoneControl> droZoneControls = [];
+  //Update subzones data
+  DroInputModel updateSubZonesData(DroInputModel droInputModel) {
+    List<DroSubzone> droSubZones = [];
 
-    for (Zone zone in zones.getAll()) {
+    final List<Zone> allZones = zones.getAll();
+    for (int i = 0; i < allZones.length; i++) {
+      Zone zone = allZones[i];
       final ZoneFunctions? zoneFunction = getZoneFunction(zoneOrSubZoneId: zone.id);
+
+      List<DroSourceConnection> droSourceConnections = [];
+
+      droSourceConnections.add(
+        DroSourceConnection(
+          sourceChainId: zoneFunction?.id,
+          sourceTerminal: "out",
+          sourceChannel: 1,
+          destinationTerminal: "in",
+          destinationChannel: i + 1,
+        ),
+      );
+
+      //if there aare composite blocks add it here
+
+      //zone function is a mandatory now
+      List<DroProcessingBlock> userFacingBlocks = getProcessingBlocksData(zoneFunction!.id ?? "", isUserFacing: true);
+
+      final DroSubzoneControl droZoneControl = DroSubzoneControl(
+        id: zone.id,
+        name: zone.name,
+        sourceChannels: 1,
+        algorithm: "source_selector",
+        algorithmProperties: {
+          "source_channels": 1,
+        },
+        algorithmTerminals: DroAlgorithmTerminals(
+          inTerminal: droSourceConnections.length,
+          outTerminal: 1,
+        ),
+        sourceConnections: droSourceConnections,
+        processingBlocks: userFacingBlocks,
+      );
+
+      DroSubzoneProcessing? droZoneProcessing;
+      //blocks which are added by tapping on the processing block icon
+      List<DroProcessingBlock> integratorBlocks = getProcessingBlocksData(zone.id);
+
+      if (integratorBlocks.isNotEmpty) {
+        droZoneProcessing = DroSubzoneProcessing(
+          id: getZoneProcessingId(zone.id),
+          name: zone.name,
+          algorithm: "",
+          algorithmProperties: {},
+          sourceChannels: 1,
+          sourceConnections: [
+            DroSourceConnection(
+              sourceChainId: droZoneControl.id,
+              sourceTerminal: "out",
+              sourceChannel: 1,
+              destinationTerminal: "in",
+              destinationChannel: 1,
+            ),
+          ],
+          processingBlocks: integratorBlocks,
+        );
+      }
+
+      droSubZones.add(
+        DroSubzone(
+          subzoneControl: droZoneControl,
+          subzoneProcessing: droZoneProcessing,
+        ),
+      );
+    }
+
+    for (SubZone subZone in subZones.getAll()) {
+      Zone zone = getZoneForSubZone(subZoneId: subZone.id);
 
       List<DroSourceConnection> droSourceConnections = [];
 
@@ -228,142 +302,57 @@ extension DroInputMapperService on ProjectService {
         ),
       );
 
-      List<DroProcessingBlock> processingBlocks = getProcessingBlocksData(zone.id);
-
-      final DroZoneControl droZoneControl = DroZoneControl(
-        id: getControlId(zone.id),
-        name: zone.name,
-        sourceChannels: 1,
-        algorithm: zoneFunction?.algorithmName ?? "",
-        algorithmProperties: {"source_channels": 1},
-        algorithmTerminals: DroAlgorithmTerminals(
-          inTerminal: 1,
-          outTerminal: 1,
-        ),
-        sourceConnections: droSourceConnections,
-        processingBlocks: processingBlocks,
-      );
-
-      droZoneControls.add(
-        droZoneControl,
-      );
-    }
-
-    droInputModel = droInputModel.copyWith(
-      zoneControls: droZoneControls,
-    );
-    return droInputModel;
-  }
-
-  //Update subzones data
-  DroInputModel updateSubZonesData(DroInputModel droInputModel) {
-    List<DroSubzone> droSubZones = [];
-
-    // final List<Zone> zones = getZonesWithoutSubzones();
-    // for (Zone zone in zones) {
-    //   //if the zone does not have subzone, we will create a subzone with the same name as the zone and connect it to the zone control, this is because the integrator needs to have a subzone to connect the circuit to even if there is no subzone in the user interface
-    //   droSubZones.add(
-    //     DroSubzone(
-    //       id: zone.id,
-    //       subzoneControl: DroSubzoneControl(
-    //         id: getControlId(zone.id),
-    //         name: zone.name,
-    //         algorithm: "",
-    //         algorithmProperties: {"source_channels": 1},
-    //         algorithmTerminals: DroAlgorithmTerminals(
-    //           inTerminal: 1,
-    //           outTerminal: 1,
-    //         ),
-    //         sourceConnections: [
-    //           DroSourceConnection(
-    //             sourceChainId: getControlId(zone.id), //get parent zone control id to connect to
-    //             sourceTerminal: "out",
-    //             sourceChannel: 1,
-    //             destinationTerminal: "in",
-    //             destinationChannel: 1,
-    //           ),
-    //         ],
-    //         processingBlocks: getProcessingBlocksData(zone.id), //User facing processing blocks, eg: gain
-    //       ),
-    //       subzoneProcessing: DroSubzoneProcessing(
-    //         id: getZoneProcessingId(zone.id),
-    //         name: zone.name,
-    //         algorithmProperties: {},
-    //         sourceChannels: 1, //need to update this when stereo is implemented
-    //         algorithm: "",
-    //         sourceConnections: [
-    //           DroSourceConnection(
-    //             sourceChainId: getControlId(zone.id), //get parent zone control id to connect to
-    //             sourceTerminal: "out",
-    //             sourceChannel: 1,
-    //             destinationTerminal: "in",
-    //             destinationChannel: 1,
-    //           ),
-    //         ],
-    //         processingBlocks: [], //Need to add processing block used by only integrator ex PEQ  //getProcessingBlocksData(zone.id),
-    //       ),
-    //     ),
-    //   );
-    // }
-
-    for (SubZone subZone in subZones.getAll()) {
-      Zone zone = getZoneForSubZone(subZoneId: subZone.id);
-
-      ZoneFunctions? zoneFunction = getZoneFunction(zoneOrSubZoneId: zone.id);
-
-      List<DroSourceConnection> droSourceConnections = [];
-
-      droSourceConnections.add(
-        DroSourceConnection(
-          sourceChainId: getControlId(zone.id), //get parent zone control id to connect to
-          sourceTerminal: "out",
-          sourceChannel: 1,
-          destinationTerminal: "in",
-          destinationChannel: 1,
-        ),
-      );
+      //get user facing processing blocks for subzone control
+      List<DroProcessingBlock> userFacingBlocks = getProcessingBlocksData(subZone.id, isUserFacing: true);
 
       DroSubzoneControl droSubzoneControl = DroSubzoneControl(
-        id: getControlId(subZone.id),
+        id: subZone.id,
         name: subZone.name,
         sourceChannels: 1,
-        algorithm: zoneFunction?.algorithmName ?? "",
+        algorithm: "source_selector",
         algorithmProperties: {"source_channels": 1},
         algorithmTerminals: DroAlgorithmTerminals(
-          inTerminal: 1,
+          inTerminal: droSourceConnections.length,
           outTerminal: 1,
         ),
         sourceConnections: droSourceConnections,
-        processingBlocks: getProcessingBlocksData(subZone.id), //User facing processing blocks, eg: gain
+        processingBlocks: userFacingBlocks,
       );
 
-      // List<DroSourceConnection> droSourceControlConnections = [];
-      //
-      // droSourceControlConnections.add(
-      //   DroSourceConnection(
-      //     sourceChainId: getControlId(subZone.id), //get parent zone control id to connect to
-      //     sourceTerminal: "out",
-      //     sourceChannel: 1,
-      //     destinationTerminal: "in",
-      //     destinationChannel: 1,
-      //   ),
-      // );
-      //
-      // DroSubzoneProcessing droSubzoneProcessing = DroSubzoneProcessing(
-      //   id: getZoneProcessingId(subZone.id),
-      //   name: subZone.name,
-      //   algorithmProperties: {},
-      //   sourceChannels: 1, //need to update this when stereo is implemented
-      //   algorithm: "",
-      //   sourceConnections: droSourceControlConnections,
-      //   processingBlocks: [], //Need to add processing block used by only integrator ex PEQ  //getProcessingBlocksData(subZone.id),
-      // );
+      //integrator blocks for subzone processing
+      List<DroProcessingBlock> integratorBlocks = getProcessingBlocksData(subZone.id);
+
+      DroSubzoneProcessing? droSubzoneProcessing;
+
+      if (integratorBlocks.isNotEmpty) {
+        List<DroSourceConnection> droSourceControlConnections = [];
+
+        droSourceControlConnections.add(
+          DroSourceConnection(
+            sourceChainId: droSubzoneControl.id,
+            sourceTerminal: "out",
+            sourceChannel: 1,
+            destinationTerminal: "in",
+            destinationChannel: 1,
+          ),
+        );
+
+        droSubzoneProcessing = DroSubzoneProcessing(
+          id: getZoneProcessingId(subZone.id),
+          name: subZone.name,
+          algorithmProperties: {},
+          sourceChannels: 1,
+          //need to update this when stereo is implemented
+          algorithm: "",
+          sourceConnections: droSourceControlConnections,
+          processingBlocks: integratorBlocks,
+        );
+      }
 
       droSubZones.add(
         DroSubzone(
-          id: subZone.id,
           subzoneControl: droSubzoneControl,
-          subzoneProcessing: null, //droSubzoneProcessing,
+          subzoneProcessing: droSubzoneProcessing, //droSubzoneProcessing,
         ),
       );
     }
@@ -385,24 +374,27 @@ extension DroInputMapperService on ProjectService {
 
       final SubZone? subZone = getSubZoneForCircuit(circuit.id);
 
-      ZoneFunctions? circuitZoneFunction;
-      if (zone != null || subZone != null) {
-        String parentId = zone != null ? zone.id : subZone!.id;
-        circuitZoneFunction = getZoneFunction(zoneOrSubZoneId: parentId);
-      }
+      // final List<Speaker> circuitSpeaker = getHardwareForCircuit(circuit.id).whereType<Speaker>().toList();
 
-      final List<Speaker> circuitSpeaker = getHardwareForCircuit(circuit.id).whereType<Speaker>().toList();
+      // ignore this location for now
+      // String locationName = circuitSpeaker.first.locationEntity.listeningAreaId != null
+      //     ? getListeningAreaById(circuitSpeaker.first.locationEntity.listeningAreaId!)?.name ?? ""
+      //     : "";
 
-      String locationName = circuitSpeaker.first.locationEntity.listeningAreaId != null
-          ? getListeningAreaById(circuitSpeaker.first.locationEntity.listeningAreaId!)?.name ?? ""
-          : "";
+      String locationName = "";
 
       List<DroSourceConnection> droSourceConnections = [];
 
       if (zone != null) {
+        //check if integrator blocks are there for zone, if yes then connect circuit to zone processing block instead of zone control
+
+        List<DroProcessingBlock> integratorBlocks = getProcessingBlocksData(zone.id);
+
+        String circuitChainId = integratorBlocks.isEmpty ? zone.id : getZoneProcessingId(zone.id);
+
         droSourceConnections.add(
           DroSourceConnection(
-            sourceChainId: getControlId(zone.id),
+            sourceChainId: circuitChainId,
             sourceTerminal: "out",
             sourceChannel: 1,
             destinationTerminal: "in",
@@ -410,9 +402,13 @@ extension DroInputMapperService on ProjectService {
           ),
         );
       } else if (subZone != null) {
+        //check if integrator blocks are there for subzone, if yes then connect circuit to subzone processing block instead of subzone control
+        List<DroProcessingBlock> integratorBlocks = getProcessingBlocksData(subZone.id);
+        String circuitChainId = integratorBlocks.isEmpty ? subZone.id : getZoneProcessingId(subZone.id);
+
         droSourceConnections.add(
           DroSourceConnection(
-            sourceChainId: getControlId(subZone.id), // if we have processing block in subzone processing then do getZoneProcessingId(subZone.id),
+            sourceChainId: circuitChainId,
             sourceTerminal: "out",
             sourceChannel: 1,
             destinationTerminal: "in",
@@ -432,12 +428,12 @@ extension DroInputMapperService on ProjectService {
             channels: 1,
           ),
           sourceChannels: 1,
-          algorithm: circuitZoneFunction != null ? circuitZoneFunction.algorithmName : "",
+          algorithm: "source_selector",
           algorithmProperties: {
             "source_channels": 1,
           },
           algorithmTerminals: DroAlgorithmTerminals(
-            inTerminal: 1,
+            inTerminal: droSourceConnections.length,
             outTerminal: 1,
           ),
           sourceConnections: droSourceConnections,
@@ -553,11 +549,11 @@ extension DroInputMapperService on ProjectService {
     return droInputModel;
   }
 
-  String getControlId(String parentId) {
-    return "control_$parentId";
-  }
+  // String getControlId(String parentId) {
+  //   return "$parentId";
+  // }
 
   String getZoneProcessingId(String parentId) {
-    return "processing_$parentId";
+    return "p$parentId";
   }
 }

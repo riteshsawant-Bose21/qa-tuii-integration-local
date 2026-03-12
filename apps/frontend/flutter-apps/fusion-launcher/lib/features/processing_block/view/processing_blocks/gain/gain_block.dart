@@ -1,12 +1,13 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:fusion_launcher/features/add_source_popup/view_model/add_source_viewmodel.dart';
+import 'package:fusion_launcher/features/processing_block/view/widgets/pb_out_meter.dart';
 import 'package:fusion_launcher/features/processing_block/view/widgets/pb_textfield.dart';
 import 'package:fusion_launcher/features/processing_block/viewmodel/algorithm_data_viewmodel.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:provider/provider.dart';
-
 import '../../../../zone_functions/widgets/neumorphic_audio_toggle_button.dart';
-import '../../widgets/pb_meter.dart';
 import '../../widgets/pb_slider.dart';
 import '../widgets/pb_block_layout.dart';
 
@@ -18,8 +19,11 @@ class GainBlock extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final AlgorithmDataViewmodel watch = context.watch<AlgorithmDataViewmodel>();
+    final String targetBlockId = watch.processingBlock.id;
+    Timer? _debounce;
+    // NO MORE BlocBuilder AT THE TOP!
     return ProxyProvider<AlgorithmDataViewmodel, GainController>(
-      key: ValueKey<String>(watch.processingBlock.id),
+      key: ValueKey<String>(targetBlockId),
       create: (BuildContext context) {
         return GainController(watch);
       },
@@ -47,7 +51,6 @@ class GainBlock extends StatelessWidget {
                       Container(
                         width: double.infinity,
                         alignment: Alignment.center,
-
                         padding: const EdgeInsets.symmetric(vertical: 8.0),
                         decoration: BoxDecoration(
                           border: Border(
@@ -59,9 +62,7 @@ class GainBlock extends StatelessWidget {
                           children: <Widget>[
                             SizedBox(
                               width: 80,
-                              // height: 25,
                               child: PBNumberTextField(
-                                // value: context.watch<LimiterController>().currentThreshold ?? 0,
                                 value: (context.watch<GainController>().currentGainValue ?? 0).toDouble(),
                                 onChanged: (num value) {
                                   context.read<GainController>().updateGainValue(value);
@@ -70,7 +71,6 @@ class GainBlock extends StatelessWidget {
                                 max: 96000,
                               ),
                             ),
-
                             const SizedBox(width: 4),
                             FusionAppText(text: "dB", capitalize: false, style: context.textTheme.bodySmall),
                           ],
@@ -84,11 +84,17 @@ class GainBlock extends StatelessWidget {
                           child: VerticalSlider(
                             value: context.watch<GainController>().currentGainSliderValue ?? 0,
                             min: -60.0,
-                            max: 24.0,
+                            max: 12.0,
                             showIntervals: true,
                             activeColor: context.colorScheme.primary,
                             onChanged: (num value) {
-                              context.read<GainController>().updateGainSliderValue(value);
+                              if (_debounce?.isActive ?? false) {
+                                _debounce!.cancel();
+                              }
+
+                              _debounce = Timer(const Duration(milliseconds: 50), () {
+                                context.read<GainController>().updateGainSliderValue(value);
+                              });
                             },
                           ),
                         ),
@@ -134,7 +140,6 @@ class GainBlock extends StatelessWidget {
                         width: double.infinity,
                         alignment: Alignment.center,
                         padding: const EdgeInsets.symmetric(vertical: 12.0),
-
                         decoration: BoxDecoration(
                           border: Border(
                             bottom: BorderSide(color: context.colorScheme.strokeLight),
@@ -142,13 +147,11 @@ class GainBlock extends StatelessWidget {
                         ),
                         child: FusionAppText(text: "OUTPUT", style: context.textTheme.bodyMedium),
                       ),
-                      const Expanded(
+                      Expanded(
                         child: Padding(
-                          padding: EdgeInsets.all(12.0),
-                          child: VerticalMeter(
-                            value: -60,
-                            min: -60,
-                            max: 0,
+                          padding: const EdgeInsets.all(12.0),
+                          child: PbOutMeter(
+                            blockId: targetBlockId,
                           ),
                         ),
                       ),
@@ -157,35 +160,6 @@ class GainBlock extends StatelessWidget {
                 ),
               ],
             ),
-            // children: <Widget>[
-            //   /// Header with block name and actions
-            //   ...getBlockHeader(
-            //     context,
-            //     context.watch<AlgorithmDataViewmodel>().processingBlock,
-            //     actions: <Widget>[
-            //       const FusionAppText(text: "BYPASS"),
-            //       const SizedBox(width: 10),
-            //       FusionSwitch(
-            //         inactiveTrackColor: context.colorScheme.elevation1,
-            //         value: context.watch<GainController>().isGloballyBypassed,
-            //         onChanged: (bool value) {
-            //           context.read<GainController>().bypassGlobally(value);
-            //         },
-            //         height: 30,
-            //         width: 50,
-            //       ),
-            //     ],
-            //   ),
-
-            //   /// Main content area
-            //   Padding(
-            //     padding: const EdgeInsets.only(top: 50),
-            //     child: DisabledWidgetWrapper(
-            //       isDisabled: context.watch<GainController>().isGloballyBypassed,
-            //       child:
-            //     ),
-            //   ),
-            // ],
           );
         },
       ),

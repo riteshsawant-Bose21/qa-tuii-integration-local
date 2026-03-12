@@ -44,7 +44,7 @@ class VerticalMeter extends StatelessWidget {
     this.intervalSpacing = 50.0,
     this.intervalTickWidth = 10.0,
     this.intervalGap,
-    this.animationDuration = const Duration(milliseconds: 300),
+    this.animationDuration = const Duration(milliseconds: 100),
   });
 
   final num value;

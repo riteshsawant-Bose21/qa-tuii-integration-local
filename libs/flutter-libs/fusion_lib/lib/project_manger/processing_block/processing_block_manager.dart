@@ -62,7 +62,7 @@ extension ProcessingBlockManager on ProjectManager {
     if (projectService == null) {
       throw Exception('No project is currently open');
     }
-    return projectService!.getProcessingBlockFor(parentId);
+    return projectService!.getProcessingBlockFor(parentId: parentId);
   }
 
   void reOrderProcessingBlocks(String parentId, int oldIndex, int newIndex) {

@@ -1,16 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:fusion_launcher/features/add_source_popup/view_model/add_source_viewmodel.dart';
 import 'package:fusion_launcher/features/processing_block/view/processing_blocks/widgets/pb_section.dart';
+import 'package:fusion_launcher/features/processing_block/view/widgets/pb_out_meter.dart';
 import 'package:fusion_launcher/features/processing_block/view/widgets/widgets.dart';
 import 'package:fusion_launcher/features/processing_block/viewmodel/algorithm_data_viewmodel.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:provider/provider.dart';
 
-import '../../widgets/pb_meter.dart';
 import '../widgets/pb_block_layout.dart';
 import '../widgets/pb_content_section.dart';
 
 part '_compressor_controller.dart';
+
 part '_compressor_graph.dart';
 
 class CompressorBlock extends StatelessWidget {
@@ -19,6 +20,7 @@ class CompressorBlock extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final AlgorithmDataViewmodel watch = context.watch<AlgorithmDataViewmodel>();
+    final String targetBlockId = watch.processingBlock.id;
     return ProxyProvider<AlgorithmDataViewmodel, CompressorController>(
       key: ValueKey<String>(watch.processingBlock.id),
       create: (BuildContext context) {
@@ -224,18 +226,16 @@ class CompressorBlock extends StatelessWidget {
                 ),
 
                 /// Output Meter Section
-                const PBSection(
+                PBSection(
                   type: PBSectionType.right,
                   child: SizedBox(
                     width: 100,
                     child: PbContentSection(
                       title: "OUTPUT",
                       child: Padding(
-                        padding: EdgeInsets.all(12.0),
-                        child: VerticalMeter(
-                          value: -60,
-                          min: -60,
-                          max: 0,
+                        padding: const EdgeInsets.all(12.0),
+                        child: PbOutMeter(
+                          blockId: targetBlockId,
                         ),
                       ),
                     ),
@@ -259,11 +259,13 @@ class _GateTextField extends StatelessWidget {
     required this.onChanged,
     required this.title,
   });
+
   final num value;
   final num? min;
   final num? max;
   final ValueChanged<num> onChanged;
   final String title;
+
   @override
   Widget build(BuildContext context) {
     return Row(

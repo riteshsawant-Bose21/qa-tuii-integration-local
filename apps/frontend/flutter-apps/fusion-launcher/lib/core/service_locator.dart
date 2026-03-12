@@ -40,6 +40,8 @@ import '../features/dynamic_config/domain/usecases/reset_fusion_data_usecase.dar
 import '../features/dynamic_config/domain/usecases/send_widget_data_usecase.dart';
 import '../features/dynamic_config/presentation/bloc/panel_bloc.dart';
 import '../features/product_query/presentation/viewModel/product_query_view_model_cubit.dart';
+import '../features/projects/view_model/block_data/block_data_viewmodel.dart';
+import '../features/projects/view_model/meter_data/meter_data_view_model.dart';
 import 'constants/algorithms_data.dart';
 import 'models/user_profile_model.dart';
 import 'router/navigation_observer.dart';
@@ -61,6 +63,8 @@ Future<void> setupServiceLocator() async {
       aOptions: AndroidOptions(encryptedSharedPreferences: true),
     ),
   );
+
+  serviceLocator.registerSingleton<WebSocketService>(WebSocketService());
 
   serviceLocator.registerLazySingleton<FusionSecureStorage>(
     () => FusionSecureStorageImpl(serviceLocator<FlutterSecureStorage>()),
@@ -92,6 +96,7 @@ Future<void> setupServiceLocator() async {
       fusionAuthService: serviceLocator<FusionAuthService>(),
       secureStorageService: serviceLocator<FusionSecureStorage>(),
       apiBaseUrl: AppConfig.awsApiBaseUrl,
+      webSocketService: serviceLocator<WebSocketService>(),
     ),
   );
 
@@ -231,12 +236,17 @@ Future<void> setupServiceLocator() async {
 
   serviceLocator.registerLazySingleton<ProductQueryCubit>(() => ProductQueryCubit());
 
+  serviceLocator.registerLazySingleton<MeterDataViewModel>(() => MeterDataViewModel());
+
+  serviceLocator.registerLazySingleton<BlockDataViewmodel>(() => BlockDataViewmodel());
+
   serviceLocator.registerLazySingleton<ConfigSyncViewModel>(
     () => ConfigSyncViewModel(
       droConfigService: serviceLocator<DroConfigService>(),
       fusionConfigSyncService: serviceLocator<FusionConfigSyncService>(),
     ),
   );
+
   serviceLocator.registerLazySingleton<GuideShowCaseController>(() => GuideShowCaseController(globalNavigatorKey.currentContext!));
 
   // TODO: ALWAYS KEEP THIS AT THE END OF THE FILE

@@ -6,7 +6,6 @@ class DroInputModel {
   final List<DroSource>? sources;
   final List<DroSourceSet>? sourceSets;
   final List<DroZoneFunction>? zoneFunctions;
-  final List<DroZoneControl>? zoneControls;
   final List<DroSubzone>? subzones;
   final List<DroOutput>? outputs;
   final List<DroCompositeChain>? compositeChains;
@@ -21,7 +20,6 @@ class DroInputModel {
     this.sources,
     this.sourceSets,
     this.zoneFunctions,
-    this.zoneControls,
     this.subzones,
     this.outputs,
     this.compositeChains,
@@ -39,7 +37,6 @@ class DroInputModel {
       sources: (json['sources'] as List<dynamic>?)?.map((e) => DroSource.fromJson(e as Map<String, dynamic>?)).toList(),
       sourceSets: (json['source_sets'] as List<dynamic>?)?.map((e) => DroSourceSet.fromJson(e as Map<String, dynamic>?)).toList(),
       zoneFunctions: (json['zone_functions'] as List<dynamic>?)?.map((e) => DroZoneFunction.fromJson(e as Map<String, dynamic>?)).toList(),
-      zoneControls: (json['zone_controls'] as List<dynamic>?)?.map((e) => DroZoneControl.fromJson(e as Map<String, dynamic>?)).toList(),
       subzones: (json['subzones'] as List<dynamic>?)?.map((e) => DroSubzone.fromJson(e as Map<String, dynamic>?)).toList(),
       outputs: (json['outputs'] as List<dynamic>?)?.map((e) => DroOutput.fromJson(e as Map<String, dynamic>?)).toList(),
       compositeChains: (json['composite_chains'] as List<dynamic>?)?.map((e) => DroCompositeChain.fromJson(e as Map<String, dynamic>?)).toList(),
@@ -56,7 +53,6 @@ class DroInputModel {
     'sources': sources?.map((e) => e.toJson()).toList(),
     'source_sets': sourceSets?.map((e) => e.toJson()).toList(),
     'zone_functions': zoneFunctions?.map((e) => e.toJson()).toList(),
-    'zone_controls': zoneControls?.map((e) => e.toJson()).toList(),
     'subzones': subzones?.map((e) => e.toJson()).toList(),
     'outputs': outputs?.map((e) => e.toJson()).toList(),
     'composite_chains': compositeChains?.map((e) => e.toJson()).toList(),
@@ -72,7 +68,6 @@ class DroInputModel {
     List<DroSource>? sources,
     List<DroSourceSet>? sourceSets,
     List<DroZoneFunction>? zoneFunctions,
-    List<DroZoneControl>? zoneControls,
     List<DroSubzone>? subzones,
     List<DroOutput>? outputs,
     List<DroCompositeChain>? compositeChains,
@@ -87,7 +82,6 @@ class DroInputModel {
       sources: sources ?? this.sources,
       sourceSets: sourceSets ?? this.sourceSets,
       zoneFunctions: zoneFunctions ?? this.zoneFunctions,
-      zoneControls: zoneControls ?? this.zoneControls,
       subzones: subzones ?? this.subzones,
       outputs: outputs ?? this.outputs,
       compositeChains: compositeChains ?? this.compositeChains,
@@ -537,82 +531,11 @@ class DroZoneFunction {
   }
 }
 
-class DroZoneControl {
-  final String? id;
-  final String? name;
-  final int? sourceChannels;
-  final String? algorithm;
-  final Map<String, dynamic>? algorithmProperties;
-  final DroAlgorithmTerminals? algorithmTerminals;
-  final List<DroSourceConnection>? sourceConnections;
-  final List<DroProcessingBlock>? processingBlocks;
-
-  DroZoneControl({
-    this.id,
-    this.name,
-    this.sourceChannels,
-    this.algorithm,
-    this.algorithmProperties,
-    this.algorithmTerminals,
-    this.sourceConnections,
-    this.processingBlocks,
-  });
-
-  factory DroZoneControl.fromJson(Map<String, dynamic>? json) {
-    if (json == null) return DroZoneControl();
-    return DroZoneControl(
-      id: json['id'] as String?,
-      name: json['name'] as String?,
-      sourceChannels: json['source_channels'] as int?,
-      algorithm: json['algorithm'] as String?,
-      algorithmProperties: json['algorithm_properties'] as Map<String, dynamic>?,
-      algorithmTerminals: json['algorithm_terminals'] != null ? DroAlgorithmTerminals.fromJson(json['algorithm_terminals'] as Map<String, dynamic>?) : null,
-      sourceConnections: (json['source_connections'] as List<dynamic>?)?.map((e) => DroSourceConnection.fromJson(e as Map<String, dynamic>?)).toList(),
-      processingBlocks: (json['processing_blocks'] as List<dynamic>?)?.map((e) => DroProcessingBlock.fromJson(e as Map<String, dynamic>?)).toList(),
-    );
-  }
-
-  Map<String, dynamic> toJson() => {
-    'id': id,
-    'name': name,
-    'source_channels': sourceChannels,
-    'algorithm': algorithm,
-    'algorithm_properties': algorithmProperties,
-    'algorithm_terminals': algorithmTerminals?.toJson(),
-    'source_connections': sourceConnections?.map((e) => e.toJson()).toList(),
-    'processing_blocks': processingBlocks?.map((e) => e.toJson()).toList(),
-  };
-
-  DroZoneControl copyWith({
-    String? id,
-    String? name,
-    int? sourceChannels,
-    String? algorithm,
-    Map<String, dynamic>? algorithmProperties,
-    DroAlgorithmTerminals? algorithmTerminals,
-    List<DroSourceConnection>? sourceConnections,
-    List<DroProcessingBlock>? processingBlocks,
-  }) {
-    return DroZoneControl(
-      id: id ?? this.id,
-      name: name ?? this.name,
-      sourceChannels: sourceChannels ?? this.sourceChannels,
-      algorithm: algorithm ?? this.algorithm,
-      algorithmProperties: algorithmProperties ?? this.algorithmProperties,
-      algorithmTerminals: algorithmTerminals ?? this.algorithmTerminals,
-      sourceConnections: sourceConnections ?? this.sourceConnections,
-      processingBlocks: processingBlocks ?? this.processingBlocks,
-    );
-  }
-}
-
 class DroSubzone {
-  final String? id;
   final DroSubzoneControl? subzoneControl;
   final DroSubzoneProcessing? subzoneProcessing;
 
   DroSubzone({
-    this.id,
     this.subzoneControl,
     this.subzoneProcessing,
   });
@@ -620,7 +543,6 @@ class DroSubzone {
   factory DroSubzone.fromJson(Map<String, dynamic>? json) {
     if (json == null) return DroSubzone();
     return DroSubzone(
-      id: json['id'] as String?,
       subzoneControl: json['subzone_control'] != null && (json['subzone_control'] as Map).isNotEmpty
           ? DroSubzoneControl.fromJson(json['subzone_control'] as Map<String, dynamic>?)
           : null,
@@ -629,18 +551,15 @@ class DroSubzone {
   }
 
   Map<String, dynamic> toJson() => {
-    'id': id,
     'subzone_control': subzoneControl?.toJson() ?? {},
     'subzone_processing': subzoneProcessing?.toJson() ?? {},
   };
 
   DroSubzone copyWith({
-    String? id,
     DroSubzoneControl? subzoneControl,
     DroSubzoneProcessing? subzoneProcessing,
   }) {
     return DroSubzone(
-      id: id ?? this.id,
       subzoneControl: subzoneControl ?? this.subzoneControl,
       subzoneProcessing: subzoneProcessing ?? this.subzoneProcessing,
     );
