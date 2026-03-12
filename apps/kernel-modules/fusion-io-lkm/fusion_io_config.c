@@ -6,7 +6,7 @@
 #include "fusion-io.h"
 
 #define SI5351B_I2C_BUS 0
-#define SI5351B_SEQ_DELAY_MS 1400
+#define SI5351B_SEQ_DELAY_MS 2000
 
 #define SI5351B_ENDPOINT_INIT {                 \
     .name = "ep_clk_si5351b",                  \
