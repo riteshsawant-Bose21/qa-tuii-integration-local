@@ -155,7 +155,7 @@ class _SchedulerSection extends StatelessWidget {
                     }
 
                     /// Navigate to Configuration tab (index 3)
-                    projectTabBroadcastController.add(3);
+                    // projectTabBroadcastController.add(3);
 
                     /// Switch to Events sub-tab within Configuration
                     serviceLocator<ProjectViewModel>().setConfigurationMenuMode(

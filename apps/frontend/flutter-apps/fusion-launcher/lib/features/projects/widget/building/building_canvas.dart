@@ -32,8 +32,6 @@ class BuildingCanvas extends StatefulWidget {
   final FloorCanvasController floorCanvasController;
   final Future<void> Function() onCalculateSpl;
   final SplPanelData splPanelData;
-  final Function() onProductSelected;
-  final Function() onProductDeselected;
 
   const BuildingCanvas({
     super.key,
@@ -42,9 +40,11 @@ class BuildingCanvas extends StatefulWidget {
     required this.floorCanvasController,
     required this.onCalculateSpl,
     required this.splPanelData,
-    required this.onProductSelected,
-    required this.onProductDeselected,
+    required this.leftPanel,
+    required this.rightPanel,
   });
+  final Widget leftPanel;
+  final Widget rightPanel;
 
   @override
   State<BuildingCanvas> createState() => _BuildingCanvasState();
@@ -337,9 +337,11 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
                                                     ),
                                                   ),
                                                   builder:
-                                                      (BuildContext context) => const Stack(
+                                                      (BuildContext context) => Stack(
                                                         children: <Widget>[
-                                                          Positioned(
+                                                          Positioned(left: 0, child: widget.leftPanel),
+                                                          Positioned(right: 0, child: widget.rightPanel),
+                                                          const Positioned(
                                                             bottom: 20,
                                                             child: CanvasToolBar(),
                                                           ),
@@ -914,8 +916,8 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
                                               6,
                                             ); // DeviceType.rack
                                           },
-                                          onProductSelected: widget.onProductSelected,
-                                          onProductDeselected: widget.onProductDeselected,
+                                          onProductSelected: () {},
+                                          onProductDeselected: () {},
                                           isDrawSelected: isDrawing,
                                           isSplSelected: isShowingSpl,
                                         );
