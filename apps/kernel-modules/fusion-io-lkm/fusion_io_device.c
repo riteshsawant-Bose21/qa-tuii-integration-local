@@ -16,8 +16,52 @@
 
 static struct fusion_io_base_drvdata *bd_drvdata;
 
+static int endpoint_get_root_i2c_adapter(struct endpoint *ep,
+                                         struct i2c_adapter **i2c_adapter,
+                                         bool *put_adapter)
+{
+    if (!ep || !i2c_adapter || !put_adapter)
+        return -EINVAL;
+
+    *put_adapter = false;
+
+    if (!ep->use_i2c_bus_override || ep->i2c_bus == I2C_ADAPTER) {
+        *i2c_adapter = bd_drvdata->i2c_adapter;
+        return *i2c_adapter ? 0 : -EPROBE_DEFER;
+    }
+
+    if (bd_drvdata->mux_parent_adapter &&
+        bd_drvdata->mux_parent_adapter->nr == ep->i2c_bus) {
+        *i2c_adapter = bd_drvdata->mux_parent_adapter;
+        return 0;
+    }
+
+    *i2c_adapter = i2c_get_adapter(ep->i2c_bus);
+    if (!*i2c_adapter)
+        return -EPROBE_DEFER;
+
+    *put_adapter = true;
+    return 0;
+}
+
+static int endpoint_resolve_i2c_adapter(struct endpoint *ep,
+                                        struct i2c_adapter **i2c_adapter,
+                                        bool *put_adapter)
+{
+    if (bd_drvdata->muxc != NULL && ep->parent_io_card && ep->parent_io_card->sw_port != 0) {
+        if (ep->parent_io_card->sw_port > bd_drvdata->muxc->num_adapters)
+            return -EINVAL;
+
+        *i2c_adapter = bd_drvdata->muxc->adapter[ep->parent_io_card->sw_port - 1];
+        *put_adapter = false;
+        return 0;
+    }
+
+    return endpoint_get_root_i2c_adapter(ep, i2c_adapter, put_adapter);
+}
+
 // need x_select_chan for all i2c switches
-static int tca9544_select_chan(struct i2c_mux_core *muxc, u32 chan_id) 
+static int tca9544_select_chan(struct i2c_mux_core *muxc, u32 chan_id)
 {
     struct endpoint *ep = muxc->priv;
     int ret;
@@ -41,10 +85,11 @@ static int tca9544_select_chan(struct i2c_mux_core *muxc, u32 chan_id)
 }
 
 // for i2c switches, we create sub-adapters for each switch channel
-static int configure_i2c_mux_adapters(struct endpoint *ep) 
-{    
+static int configure_i2c_mux_adapters(struct endpoint *ep)
+{
     int (*select)(struct i2c_mux_core *, u32);
-    
+    struct i2c_adapter *i2c_adapter;
+    bool put_adapter;
     int num_adapters = 0;
     int ret;
 
@@ -58,11 +103,24 @@ static int configure_i2c_mux_adapters(struct endpoint *ep)
             return -EINVAL;
     }
 
-    bd_drvdata->muxc = i2c_mux_alloc(bd_drvdata->i2c_adapter, &bd_drvdata->pdev->dev,          
+    ret = endpoint_get_root_i2c_adapter(ep, &i2c_adapter, &put_adapter);
+    if (ret)
+        return ret;
+
+    bd_drvdata->muxc = i2c_mux_alloc(i2c_adapter, &bd_drvdata->pdev->dev,
                                      num_adapters, 0, I2C_MUX_LOCKED, select, NULL);
 
-    if (!bd_drvdata->muxc)
+    if (!bd_drvdata->muxc) {
+        if (put_adapter)
+            i2c_put_adapter(i2c_adapter);
         return -ENOMEM;
+    }
+
+    if (put_adapter) {
+        if (bd_drvdata->mux_parent_adapter)
+            i2c_put_adapter(bd_drvdata->mux_parent_adapter);
+        bd_drvdata->mux_parent_adapter = i2c_adapter;
+    }
 
     bd_drvdata->muxc->priv = ep;
 
@@ -83,20 +141,19 @@ static int endpoint_get_i2c_client(struct endpoint *ep)
     struct i2c_board_info i2c_info;
     struct i2c_client *client;
     struct i2c_adapter *i2c_adapter;
+    bool put_adapter;
     int ret, tries, delay_ms;
     int id = -ENXIO;
-    u8 probe_reg = 0x00; 
+    u8 probe_reg = 0x00;
 
     if (!ep->i2c_addr) {
         dev_err(&bd_drvdata->pdev->dev, "Endpoint %s missing i2c addr\n", ep->name);
         return -EINVAL;
     }
 
-    if (bd_drvdata->muxc != NULL && ep->parent_io_card && ep->parent_io_card->sw_port != 0) {
-        i2c_adapter = bd_drvdata->muxc->adapter[ep->parent_io_card->sw_port - 1];
-    } else {
-        i2c_adapter = bd_drvdata->i2c_adapter;
-    }
+    ret = endpoint_resolve_i2c_adapter(ep, &i2c_adapter, &put_adapter);
+    if (ret)
+        return ret;
 
     memset(&i2c_info, 0, sizeof(i2c_info));
     strscpy(i2c_info.type, ep->name, sizeof(i2c_info.type));
@@ -106,10 +163,15 @@ static int endpoint_get_i2c_client(struct endpoint *ep)
     client = i2c_new_client_device(i2c_adapter, &i2c_info);
     if (IS_ERR(client)) {
         ret = PTR_ERR(client);
+        if (put_adapter)
+            i2c_put_adapter(i2c_adapter);
         dev_err(&bd_drvdata->pdev->dev, "Failed new_client %s@0x%02x: %d\n",
                 ep->name, ep->i2c_addr, ret);
         return ret;
     }
+
+    if (put_adapter)
+        i2c_put_adapter(i2c_adapter);
 
     // add any EPs that don't have register addressing here...
     switch (ep->type) {
@@ -1388,6 +1450,9 @@ static void fusion_io_remove(struct platform_device *pdev)
     
     if(bd_drvdata->muxc) {
         i2c_mux_del_adapters(bd_drvdata->muxc);
+    }
+    if (bd_drvdata->mux_parent_adapter) {
+        i2c_put_adapter(bd_drvdata->mux_parent_adapter);
     }
     if(bd_drvdata->i2c_adapter) {
         i2c_put_adapter(bd_drvdata->i2c_adapter);
