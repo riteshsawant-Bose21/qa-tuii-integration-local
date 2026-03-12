@@ -28,7 +28,7 @@ enum MountingType {
   pendant,
   ceiling;
 
-  String get name {
+  String get displayName {
     switch (this) {
       case MountingType.ceiling:
         return 'Ceiling';
@@ -503,7 +503,7 @@ class ListeningArea {
       name: json['name'] as String,
       environmentType: SpeakerEnvironmentType.fromJson(json['environmentType']),
       listeningHeight: (json['listeningHeight'] as num?)?.toDouble() ?? 3.0,
-      ceilingHeight: json['ceilingHeight'] as String? ?? '',
+      ceilingHeight: json['ceilingHeight'],
       customListeningAreaHeight: (json['customListeningAreaHeight'] as num?)?.toDouble() ?? 0.0,
       minSPL: (json['minSPL'] as num?)?.toDouble() ?? 60.0,
       maxSPL: (json['maxSPL'] as num?)?.toDouble() ?? 70.0,

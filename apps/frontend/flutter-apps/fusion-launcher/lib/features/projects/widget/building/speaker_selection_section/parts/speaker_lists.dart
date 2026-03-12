@@ -72,23 +72,13 @@ class ProductQuerySpeakerList extends StatelessWidget {
             const SizedBox(width: 8),
 
             BlocBuilder<ProductQueryViewModel, ProductQueryViewModelState>(
-              buildWhen:
-                  (
-                    ProductQueryViewModelState previous,
-                    ProductQueryViewModelState current,
-                  ) => previous.isRefreshing != current.isRefreshing,
-              builder: (
-                BuildContext context,
-                ProductQueryViewModelState productQueryViewModelState,
-              ) {
+              buildWhen: (ProductQueryViewModelState previous, ProductQueryViewModelState current) => previous.isRefreshing != current.isRefreshing,
+              builder: (BuildContext context, ProductQueryViewModelState productQueryViewModelState) {
                 if (productQueryViewModelState.isRefreshing) {
                   return const CupertinoActivityIndicator(radius: 8);
                 } else {
                   return SemanticHelper.button(
-                    testId: SemanticHelper.createTestId(
-                      SemanticTypes.button,
-                      "refresh_products_button",
-                    ),
+                    testId: SemanticHelper.createTestId(SemanticTypes.button, "refresh_products_button"),
                     child: GestureDetector(
                       onTap: context.read<ProductQueryViewModel>().refresh,
                       child: const Tooltip(
@@ -115,17 +105,11 @@ class ProductQuerySpeakerList extends StatelessWidget {
               content: StatefulBuilder(
                 builder: (BuildContext context, StateSetter menuSetState) {
                   return BlocBuilder<ProjectViewModel, ProjectViewModelState>(
-                    builder: (
-                      BuildContext context,
-                      ProjectViewModelState projectViewModelState,
-                    ) {
+                    builder: (BuildContext context, ProjectViewModelState projectViewModelState) {
                       return BlocProvider<SpeakerSelectionViewModel>.value(
                         value: speakerSelectionViewModel,
                         child: BlocBuilder<SpeakerSelectionViewModel, SpeakerSelectionViewModelState>(
-                          builder: (
-                            BuildContext context,
-                            SpeakerSelectionViewModelState vmState,
-                          ) {
+                          builder: (BuildContext context, SpeakerSelectionViewModelState vmState) {
                             return SizedBox(
                               width: 220,
                               child: Padding(
@@ -141,9 +125,7 @@ class ProductQuerySpeakerList extends StatelessWidget {
                                       ),
                                     ),
                                     const SizedBox(height: 8),
-                                    ...SpeakerSortOption.values.map((
-                                      SpeakerSortOption entry,
-                                    ) {
+                                    ...SpeakerSortOption.values.map((SpeakerSortOption entry) {
                                       final bool selected = vmState.sortOption == entry;
 
                                       return SemanticHelper.container(
@@ -435,10 +417,7 @@ class _SpeakerCardState extends State<SpeakerCard> {
         final double productPrice = context.read<ProductQueryViewModel>().getPrice(widget.product.productId);
 
         return SemanticHelper.container(
-          testId: SemanticHelper.createTestId(
-            SemanticTypes.container,
-            "speaker_card_${widget.index}",
-          ),
+          testId: SemanticHelper.createTestId(SemanticTypes.container, "speaker_card_${widget.index}"),
           child: Container(
             padding: const EdgeInsets.symmetric(vertical: 4),
             decoration: BoxDecoration(borderRadius: BorderRadius.circular(8)),
@@ -532,28 +511,16 @@ class _SpeakerCardState extends State<SpeakerCard> {
                                         ),
                                         Builder(
                                           builder: (BuildContext context) {
-                                            final String frequencyResponse = SpeakerSelectionViewModel.formatFrequencyRange(
-                                              widget.product.frequencyRange,
-                                            );
+                                            final String frequencyResponse = SpeakerSelectionViewModel.formatFrequencyRange(widget.product.frequencyRange);
                                             final String environment = SpeakerSelectionViewModel.computeEnvironment(
                                               widget.product.environment,
                                               isWeatherRated: widget.product.isWeatherRated,
                                             );
-                                            final String sensitivity = SpeakerSelectionViewModel.formatSensitivity(
-                                              widget.product.sensitivity,
-                                            );
-                                            final String maxSpl = SpeakerSelectionViewModel.formatMaxSpl(
-                                              widget.product.maxSpl,
-                                            );
+                                            final String sensitivity = SpeakerSelectionViewModel.formatSensitivity(widget.product.sensitivity);
+                                            final String maxSpl = SpeakerSelectionViewModel.formatMaxSpl(widget.product.maxSpl);
                                             final PowerHandling? p = widget.product.powerHandling;
-                                            final String peakPower = SpeakerSelectionViewModel.formatPowerValue(
-                                              value: p?.peak,
-                                              unit: p?.unit,
-                                            );
-                                            final String longTermPower = SpeakerSelectionViewModel.formatPowerValue(
-                                              value: p?.longTermRms,
-                                              unit: p?.unit,
-                                            );
+                                            final String peakPower = SpeakerSelectionViewModel.formatPowerValue(value: p?.peak, unit: p?.unit);
+                                            final String longTermPower = SpeakerSelectionViewModel.formatPowerValue(value: p?.longTermRms, unit: p?.unit);
                                             final String powerHandlingSummary = SpeakerSelectionViewModel.formatPowerSummary(
                                               longTermRms: p?.longTermRms,
                                               peak: p?.peak,
@@ -574,9 +541,7 @@ class _SpeakerCardState extends State<SpeakerCard> {
                                             };
 
                                             final List<Widget> children = <Widget>[
-                                              ...details.entries.map((
-                                                MapEntry<String, String> entry,
-                                              ) {
+                                              ...details.entries.map((MapEntry<String, String> entry) {
                                                 final String key = entry.key;
                                                 final String value = entry.value;
 

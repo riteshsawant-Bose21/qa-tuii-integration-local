@@ -4,8 +4,10 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
 import 'package:fusion_launcher/features/projects/widget/building/speaker_selection_section/parts/constant_enums.dart';
 import 'package:fusion_launcher/features/projects/widget/building/speaker_selection_section/parts/select_listening_area.dart';
+import 'package:fusion_launcher/features/projects/widget/building/speaker_selection_section/view_model/product_query_view_model.dart';
 import 'package:fusion_launcher/features/projects/widget/building/widgets/text_field.dart';
 import 'package:fusion_lib/fusion_lib.dart';
+import 'package:fusion_lib/product_data/models/speaker_product.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../view_model/add_speaker_view_model.dart';
@@ -115,7 +117,7 @@ class SpeakerListeningAreaPropertiesState extends State<SpeakerListeningAreaProp
                             );
                           }
 
-                          ceilingHeightController.text = selectedListeningArea.ceilingHeight;
+                          ceilingHeightController.text = selectedListeningArea.ceilingHeight.toString() ?? '';
                           listeningAreaController.text = selectedListeningArea.name;
 
                           final ListeningHeightOption listeningHeightOption = ListeningHeightOption.getOptionByValue(
@@ -251,7 +253,9 @@ class SpeakerListeningAreaPropertiesState extends State<SpeakerListeningAreaProp
                                       FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
                                     ],
                                     onFieldSubmitted: (String newValue) {
-                                      final ListeningArea updatedLA = selectedListeningArea.copyWith(ceilingHeight: newValue);
+                                      final double? parsed = double.tryParse(newValue);
+                                      if (parsed == null) return;
+                                      final ListeningArea updatedLA = selectedListeningArea.copyWith(ceilingHeight: parsed.toString());
                                       projectViewModel.updateListeningArea(area: updatedLA);
                                     },
                                   ),
@@ -325,7 +329,10 @@ class SpeakerListeningAreaPropertiesState extends State<SpeakerListeningAreaProp
                                             final bool isSelected = selectedListeningArea?.speakerSelectionMode == mode;
 
                                             return GestureDetector(
-                                              onTap: () => speakerSelectionViewModel.setSpeakerSelectionMode(mode),
+                                              onTap: () {
+                                                final List<SpeakerProduct> speakers = context.read<ProductQueryViewModel>().speakers;
+                                                speakerSelectionViewModel.setSpeakerSelectionMode(context, mode, speakers);
+                                              },
                                               child: SemanticHelper.container(
                                                 testId: SemanticHelper.createTestId(SemanticTypes.container, "speaker_selection_mode_${mode.name}"),
                                                 child: Container(
@@ -420,7 +427,7 @@ class SpeakerListeningAreaPropertiesState extends State<SpeakerListeningAreaProp
                                     labelBuilder: (MountingType option) {
                                       return FusionAppText(
                                         semanticId: "speaker_selection_section_mounting_type_${option.name}",
-                                        text: option.name,
+                                        text: option.displayName,
                                         style: context.textTheme.bodySmall?.copyWith(
                                           color: context.colorScheme.onSurface,
                                         ),
