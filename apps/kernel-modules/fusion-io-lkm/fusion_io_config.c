@@ -16,6 +16,8 @@
     .i2c_addr = 0x60,                          \
 }
 
+#define SI5351B_NUM_MSGS 71
+
 #define SI5351B_CONFIG_MSGS { .reg_addr = 0x03, .data = 0xFF }, \
     { .reg_addr = 0x10, .data = 0x80 }, \
     { .reg_addr = 0x11, .data = 0x80 }, \
@@ -189,7 +191,7 @@ const struct base_device bd_fusion_powersmart = {
             {
                 .name = "si5351b_config",
                 .parent_ep_name = "ep_clk_si5351b",
-                .num_msgs = 71,
+                .num_msgs = SI5351B_NUM_MSGS,
                 .msgs = (struct endpoint_cmd_msg[]) {
                     SI5351B_CONFIG_MSGS
                 },
@@ -268,7 +270,7 @@ const struct base_device bd_fusion_c1_evk = {
             {
                 .name = "si5351b_config",
                 .parent_ep_name = "ep_clk_si5351b",
-                .num_msgs = 72,
+                .num_msgs = SI5351B_NUM_MSGS,
                 .msgs = (struct endpoint_cmd_msg[]) {
                     SI5351B_CONFIG_MSGS
                 },
@@ -1071,7 +1073,7 @@ const struct base_device bd_fusion_fm6 = {
             {
                 .name = "si5351b_config",
                 .parent_ep_name = "ep_clk_si5351b",
-                .num_msgs = 72,
+                .num_msgs = SI5351B_NUM_MSGS,
                 .msgs = (struct endpoint_cmd_msg[]) {
                     SI5351B_CONFIG_MSGS
                 },
@@ -1980,7 +1982,7 @@ const struct base_device bd_fusion_fm8y = {
             {
                 .name = "si5351b_config",
                 .parent_ep_name = "ep_clk_si5351b",
-                .num_msgs = 72,
+                .num_msgs = SI5351B_NUM_MSGS,
                 .msgs = (struct endpoint_cmd_msg[]) {
                     SI5351B_CONFIG_MSGS
                 },
@@ -2136,7 +2138,7 @@ const struct base_device bd_fusion_xlr_pal = {
             {
                 .name = "si5351b_config",
                 .parent_ep_name = "ep_clk_si5351b",
-                .num_msgs = 72,
+                .num_msgs = SI5351B_NUM_MSGS,
                 .msgs = (struct endpoint_cmd_msg[]) {
                     SI5351B_CONFIG_MSGS
                 },
@@ -2172,7 +2174,7 @@ const struct base_device bd_fusion_blue_pal = {
             {
                 .name = "si5351b_config",
                 .parent_ep_name = "ep_clk_si5351b",
-                .num_msgs = 72,
+                .num_msgs = SI5351B_NUM_MSGS,
                 .msgs = (struct endpoint_cmd_msg[]) {
                     SI5351B_CONFIG_MSGS
                 },
