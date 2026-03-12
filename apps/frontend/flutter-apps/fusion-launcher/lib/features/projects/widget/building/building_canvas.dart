@@ -221,13 +221,15 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
                                                   ],
                                                   toolbarEvents: FusionCanvasEvents(
                                                     onLayerSelected: (FusionBasePainter? value) {
-                                                      print(" Selected layer ${value?.id}. ${value.runtimeType}");
                                                       if (value is ListeningAreaPainter) {
                                                         serviceLocator<ProjectViewModel>().setCurrentSelectedListeningArea(value.listeningArea.id);
                                                         serviceLocator<ProjectViewModel>().setCurrentSelectedHardware(null);
                                                       } else if (value is HardwareComponentPainter) {
                                                         serviceLocator<ProjectViewModel>().setCurrentSelectedListeningArea(null);
                                                         serviceLocator<ProjectViewModel>().setCurrentSelectedHardware(value.hardware.id);
+                                                      } else if (value == null) {
+                                                        serviceLocator<ProjectViewModel>().setCurrentSelectedListeningArea(null);
+                                                        serviceLocator<ProjectViewModel>().setCurrentSelectedHardware(null);
                                                       }
                                                     },
                                                     onAddPoints: (FusionBasePainter painter, List<FusionCanvasPoint> points, FusionCanvasLine line) {

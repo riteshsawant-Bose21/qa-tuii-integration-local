@@ -180,9 +180,9 @@ class FusionCanvasListenersWrapper extends StatelessWidget {
         ),
 
         BlocListener<FusionCanvasToolViewModel, FusionToolState>(
-          listenWhen: (FusionToolState previous, FusionToolState current) {
-            return current is DragToolState || previous is DragToolState;
-          },
+          // listenWhen: (FusionToolState previous, FusionToolState current) {
+          //   return current is DragToolState || previous is DragToolState;
+          // },
           listener: (BuildContext context, FusionToolState state) {
             if (state is LayerDragEndState) {
               toolbarEvents?.onMoveLayer?.call(
