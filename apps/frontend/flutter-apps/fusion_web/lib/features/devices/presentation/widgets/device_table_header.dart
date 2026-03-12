@@ -29,6 +29,7 @@ class DeviceTableHeader extends StatelessWidget {
               ],
             ),
           ),
+      
 
           SizedBox(width: 12),
 
@@ -43,7 +44,7 @@ class DeviceTableHeader extends StatelessWidget {
 
           SizedBox(width: 12),
 
-          /// LOCATION
+          // /// LOCATION
           Expanded(
             flex: 2,
             child: Text(
@@ -66,7 +67,7 @@ class DeviceTableHeader extends StatelessWidget {
           SizedBox(width: 12),
 
           /// ACTION COLUMN SPACE
-          SizedBox(width: 24), // matches icon width area
+          SizedBox(width: 48), // matches icon width area
         ],
       ),
     );

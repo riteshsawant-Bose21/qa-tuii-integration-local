@@ -88,7 +88,7 @@ class DeviceRow extends StatelessWidget {
 
               const SizedBox(width: 12),
 
-              /// LOCATION
+              // /// LOCATION
               Expanded(
                 flex: 2,
                 child: Column(
@@ -136,33 +136,33 @@ class DeviceRow extends StatelessWidget {
               ),
               const SizedBox(width: 12),
 
-              PopupMenuButton<String>(
-                icon: const Icon(Icons.more_vert),
-                onSelected: (value) {
-                  switch (value) {
-                    case "view":
-                      DeviceActionsHandler.viewDetails(
-                        context: context,
-                        device: device,
-                      );
-                      break;
-
-
-                  }
-                },
-                itemBuilder: (context) => const [
-                  PopupMenuItem(
-                    value: "view",
-                    child: Row(
-                      children: [
-                        Icon(Icons.visibility_outlined),
-                        SizedBox(width: 8),
-                        Text("View Details"),
-                      ],
+              SizedBox(
+                width: 48,
+                child: PopupMenuButton<String>(
+                  icon: const Icon(Icons.more_vert),
+                  onSelected: (value) {
+                    switch (value) {
+                      case "view":
+                        DeviceActionsHandler.viewDetails(
+                          context: context,
+                          device: device,
+                        );
+                        break;
+                    }
+                  },
+                  itemBuilder: (context) => const [
+                    PopupMenuItem(
+                      value: "view",
+                      child: Row(
+                        children: [
+                          Icon(Icons.visibility_outlined),
+                          SizedBox(width: 8),
+                          Text("View Details"),
+                        ],
+                      ),
                     ),
-                  ),
-
-                ],
+                  ],
+                ),
               ),
             ],
           ),
