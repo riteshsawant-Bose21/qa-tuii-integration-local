@@ -15,7 +15,7 @@ import (
 	coreNetwork "fusion-services-core/network"
 	"fusion-services-core/vip"
 	"fusion/internal/api"
-	"fusion/internal/cluster"
+	"fusion/internal/cluster/transport"
 	"fusion/internal/routes"
 	"fusion/internal/utils"
 
@@ -80,9 +80,9 @@ type VIPEvent struct {
 
 // VIPMonitor is the single source of truth for VIP state and monitoring
 type VIPMonitor struct {
-	netIface string
-	isLocal  bool // True for local dev mode (no VRRP/keepalived)
-	cluster  *cluster.Cluster
+	netIface         string
+	isLocal          bool // True for local dev mode (no VRRP/keepalived)
+	clusterInterface transport.ClusterInterface
 
 	// VIP state (protected by stateMu)
 	stateMu       sync.RWMutex
@@ -107,14 +107,14 @@ type VIPMonitor struct {
 }
 
 // NewVIPMonitor creates a new VIP monitor instance
-func NewVIPMonitor(netIface string, isLocal bool, cluster *cluster.Cluster) *VIPMonitor {
+func NewVIPMonitor(netIface string, isLocal bool, cluster transport.ClusterInterface) *VIPMonitor {
 	return &VIPMonitor{
-		netIface:   netIface,
-		isLocal:    isLocal,
-		cluster:    cluster,
-		configPath: configPath,
-		vipWatcher: coreNetwork.NewVIPWatcher(logging.GetLogger(), netIface),
-		stopCh:     make(chan struct{}),
+		netIface:         netIface,
+		isLocal:          isLocal,
+		clusterInterface: cluster,
+		configPath:       configPath,
+		vipWatcher:       coreNetwork.NewVIPWatcher(logging.GetLogger(), netIface),
+		stopCh:           make(chan struct{}),
 	}
 }
 
@@ -155,13 +155,6 @@ func (m *VIPMonitor) IsLocalVIPHolder() bool {
 		return false
 	}
 	return isLocal
-}
-
-// SetClusterInstance updates the cluster instance reference (used for cluster operations)
-func (m *VIPMonitor) SetClusterInstance(cluster *cluster.Cluster) {
-	m.stateMu.Lock()
-	defer m.stateMu.Unlock()
-	m.cluster = cluster
 }
 
 // Start begins VIP monitoring (VRRP listener + netlink watcher)
@@ -755,7 +748,7 @@ func (m *VIPMonitor) HandleSetVIP(w http.ResponseWriter, r *http.Request) {
 		return nil
 	}
 
-	if err := cluster.PostGenericToAdmin(m.cluster, endpoint, localFn); err != nil {
+	if err := m.clusterInterface.PostGenericToAdmin(endpoint, localFn); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -771,7 +764,7 @@ func (m *VIPMonitor) HandleReloadVIP(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 
 	go func() {
-		if err := cluster.PostGenericToAdmin(m.cluster, routes.DeviceReloadVIPEndpoint, m.reloadKeepalived); err != nil {
+		if err := m.clusterInterface.PostGenericToAdmin(routes.DeviceReloadVIPEndpoint, m.reloadKeepalived); err != nil {
 			logging.GetLogger().Error("Failed to reload VIP: %v", err)
 		}
 	}()

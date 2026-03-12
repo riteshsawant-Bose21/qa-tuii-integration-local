@@ -5,12 +5,14 @@ import (
 	"fmt"
 	"fusion-services-core/logging"
 	"fusion/internal/api"
+	"fusion/internal/network"
 	"fusion/internal/persistence"
 	"fusion/internal/routes"
 	"fusion/internal/utils"
 	"io"
 	"net"
 	"net/http"
+	"os"
 
 	json "github.com/goccy/go-json"
 )
@@ -355,4 +357,58 @@ func validateNoDuplication(
 	}
 
 	return nil
+}
+
+// updateDeviceInfo updates the persisted device info
+func (c *Cluster) updateDeviceInfo() {
+
+	var info persistence.DeviceInfo
+	savedInfo, err := c.delegate.persistence.GetDeviceInfo()
+	if err == nil {
+		info = *savedInfo
+	}
+
+	info.Address = c.appConfig.BindAddr
+	if info.Id == "" {
+		info.Id = c.appConfig.NodeName + "_instance"
+	}
+
+	if info.Name == "" {
+		info.Name = c.appConfig.NodeName
+	}
+
+	if info.SerialNumber == "" {
+		data, err := os.ReadFile(serialPath)
+		if err != nil {
+			logging.GetLogger().Warn("%s not found.", serialPath)
+			info.SerialNumber = serialUnknown
+		} else {
+			info.SerialNumber = string(bytes.TrimRight(data, "\x00\n"))
+		}
+	}
+
+	if info.FirmwareVersion == "" {
+		data, err := os.ReadFile(firmwarePath)
+		if err != nil {
+			logging.GetLogger().Warn("%s not found.", firmwarePath)
+			info.FirmwareVersion = firmwareUnknown
+		} else {
+			info.FirmwareVersion = string(bytes.TrimRight(data, "\x00\n"))
+		}
+	}
+
+	if info.MacAddress == "" {
+		macAddr, err := network.GetMacAddress()
+		if err != nil {
+			logging.GetLogger().Warn("Unable to read MAC address: %v", err)
+			info.MacAddress = macUnknown
+		} else {
+			info.MacAddress = macAddr
+		}
+	}
+
+	if err := c.delegate.persistence.SetDeviceInfo(&info); err != nil {
+		logging.GetLogger().Error("Unable to update device info: %v", err)
+		return
+	}
 }

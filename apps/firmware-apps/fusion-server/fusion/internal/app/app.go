@@ -9,7 +9,6 @@ import (
 	"fusion-services-core/vip"
 	"fusion/internal/api"
 	"fusion/internal/cluster"
-	clustertransport "fusion/internal/cluster/transport"
 	"fusion/internal/controllers"
 	"fusion/internal/network"
 	"fusion/internal/persistence"
@@ -80,12 +79,12 @@ func NewApp(config *api.AppConfig) *App {
 	taskManager := initTaskManager(config, persistence, hub)
 	controllerManager := controllers.NewControllerManager(hub, api.ControllerPort)
 	delegate := cluster.NewClusterDelegate(config, persistence, stateManager, taskManager, hub)
+
 	memberlist := cluster.CreateMemberlist(config, delegate)
-	transport := clustertransport.NewMemberlistTransport(memberlist)
-	hub.SetClusterTransport(transport)
-	connectionHandler := handler.NewHandler(config, transport, persistence, stateManager, hub, controllerManager)
-	mdnsManager := initMDNSManager()
 	clusterInstance := cluster.NewCluster(config, delegate, memberlist)
+	hub.SetClusterTransport(clusterInstance)
+	connectionHandler := handler.NewHandler(config, clusterInstance, persistence, stateManager, hub, controllerManager)
+	mdnsManager := initMDNSManager()
 	bleServer := initBLEServer()
 	sapServer := initSAPServer(config, api.SAPPort, connectionHandler, hub)
 	udpServer := initUDPServer(api.UDPPort, connectionHandler, hub)
@@ -476,12 +475,11 @@ func (app *App) leaveCluster() {
 func (app *App) joinCluster(ip string) {
 	app.config.BindAddr = ip
 	memberlist := cluster.CreateMemberlist(app.config, app.Delegate)
-	clusterTransport := clustertransport.NewMemberlistTransport(memberlist)
 	app.memberlist = memberlist
 	app.Cluster.SetMemberlist(memberlist)
 	app.StateManager.SetMemberlist(memberlist)
-	app.ConnectionHandler.SetClusterTransport(clusterTransport)
-	app.Hub.SetClusterTransport(clusterTransport)
+	app.ConnectionHandler.SetClusterTransport(app.Cluster)
+	app.Hub.SetClusterTransport(app.Cluster)
 
 }
 

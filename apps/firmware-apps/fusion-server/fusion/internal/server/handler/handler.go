@@ -24,7 +24,7 @@ type DeviceInfoProvider interface {
 // Handler is the container for server implementations.
 type Handler struct {
 	appConfig        *api.AppConfig
-	clusterTransport transport.ClusterTransport
+	clusterTransport transport.ClusterInterface
 
 	persistence    *persistence.Persistence
 	StateManager   *persistence.StateManager
@@ -50,7 +50,7 @@ type serverInfoResponse struct {
 
 func NewHandler(
 	appConfig *api.AppConfig,
-	clusterTransport transport.ClusterTransport,
+	clusterTransport transport.ClusterInterface,
 	persistence *persistence.Persistence,
 	stateManager *persistence.StateManager,
 	hub *pubsub.Hub,
@@ -76,7 +76,7 @@ func (h *Handler) GetInitialState() (map[string]any, error) {
 	return data, nil
 }
 
-func (h *Handler) SetClusterTransport(clusterTransport transport.ClusterTransport) {
+func (h *Handler) SetClusterTransport(clusterTransport transport.ClusterInterface) {
 	h.clusterTransport = clusterTransport
 }
 
@@ -169,7 +169,7 @@ func (h *Handler) HandleClearAllData() error {
 }
 
 func (h *Handler) GetMembers() []*memberlist.Node {
-	return h.clusterTransport.Members()
+	return h.clusterTransport.MemberListMembers()
 }
 
 func (h *Handler) GetServerInfo() (any, error) {
@@ -180,7 +180,7 @@ func (h *Handler) GetServerInfo() (any, error) {
 		BuildTime:   version.BuildTime,
 		NodeID:      h.clusterTransport.LocalNode().Name,
 		Endpoints:   h.endpoints,
-		ClusterSize: len(h.clusterTransport.Members()),
+		ClusterSize: len(h.clusterTransport.MemberListMembers()),
 	}
 
 	return info, nil
