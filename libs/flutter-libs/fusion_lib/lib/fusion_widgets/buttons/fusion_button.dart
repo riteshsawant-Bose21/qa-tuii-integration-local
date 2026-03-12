@@ -125,12 +125,8 @@ class FusionButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SemanticHelper.button(
-      testId: SemanticHelper.createTestId(
-        SemanticTypes.button,
-        accessLabel ?? label,
-      ),
-      isActive: isActive,
-      label: label,
+      testId: SemanticHelper.createTestId(SemanticTypes.button, accessLabel ?? label),
+      isEnabled: isActive,
       // Semantics(
       // button: true,
       // label: accessLabel ?? label,

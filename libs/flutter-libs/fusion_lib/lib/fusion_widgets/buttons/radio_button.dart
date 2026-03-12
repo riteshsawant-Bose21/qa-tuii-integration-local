@@ -131,9 +131,7 @@ class _RadioButtonState extends State<RadioButton> {
   }
 
   // 🔹 Two-state variants
-  bool get _isTwoStateVariant =>
-      widget.variant == FusionSelectionVariant.radioBox ||
-      widget.variant == FusionSelectionVariant.radioOption;
+  bool get _isTwoStateVariant => widget.variant == FusionSelectionVariant.radioBox || widget.variant == FusionSelectionVariant.radioOption;
 
   // ================= BUILD =================
 
@@ -144,14 +142,13 @@ class _RadioButtonState extends State<RadioButton> {
     }
 
     return SemanticHelper.button(
-      isActive: _isEnabled,
-      selected: _isChecked,
+      isEnabled: _isEnabled,
+      isSelected: _isChecked,
       testId: SemanticHelper.createTestId(
         SemanticTypes.button,
         "radio_button${widget.semanticId}",
       ),
       label: widget.label,
-      state: toSemanticsChecked(),
       child: GestureDetector(
         onTap: _isEnabled
             ? () {
@@ -174,9 +171,7 @@ class _RadioButtonState extends State<RadioButton> {
 
   FusionSelectionState _nextState(FusionSelectionState current) {
     if (_isTwoStateVariant) {
-      return current == FusionSelectionState.checked
-          ? FusionSelectionState.unchecked
-          : FusionSelectionState.checked;
+      return current == FusionSelectionState.checked ? FusionSelectionState.unchecked : FusionSelectionState.checked;
     }
     switch (current) {
       case FusionSelectionState.unchecked:
@@ -288,21 +283,15 @@ class _RadioButtonState extends State<RadioButton> {
         width: 20,
         height: 20,
         decoration: BoxDecoration(
-          color: widget.variant == FusionSelectionVariant.radioOption
-              ? context.colorScheme.green
-              : context.colorScheme.white,
+          color: widget.variant == FusionSelectionVariant.radioOption ? context.colorScheme.green : context.colorScheme.white,
           shape: BoxShape.circle,
         ),
         child: Center(
           child: Icon(
             size: 12,
-            widget.variant == FusionSelectionVariant.radio
-                ? Icons.circle
-                : Icons.check,
+            widget.variant == FusionSelectionVariant.radio ? Icons.circle : Icons.check,
             fontWeight: FontWeight.bold,
-            color: widget.variant == FusionSelectionVariant.radio
-                ? context.colorScheme.iconWhite
-                : context.colorScheme.black,
+            color: widget.variant == FusionSelectionVariant.radio ? context.colorScheme.iconWhite : context.colorScheme.black,
           ),
         ),
       );
@@ -387,9 +376,7 @@ class _RadioButtonState extends State<RadioButton> {
                 Icon(
                   Icons.lightbulb_outline_rounded,
                   size: 20,
-                  color: active
-                      ? context.colorScheme.iconWhite
-                      : context.colorScheme.iconDisabled,
+                  color: active ? context.colorScheme.iconWhite : context.colorScheme.iconDisabled,
                 ),
               ] else ...[
                 _buildRadio(),
@@ -414,9 +401,7 @@ class _RadioButtonState extends State<RadioButton> {
             Icon(
               Icons.lightbulb_outline_rounded,
               size: 20,
-              color: active
-                  ? context.colorScheme.iconWhite
-                  : context.colorScheme.iconDisabled,
+              color: active ? context.colorScheme.iconWhite : context.colorScheme.iconDisabled,
             ),
           ],
         ],
@@ -429,9 +414,7 @@ class _RadioButtonState extends State<RadioButton> {
   TextStyle _labelStyle(bool active) {
     return TextStyle(
       fontSize: 14,
-      color: widget.disabled
-          ? context.colorScheme.textDisabled
-          : context.colorScheme.white,
+      color: widget.disabled ? context.colorScheme.textDisabled : context.colorScheme.white,
     );
   }
 }

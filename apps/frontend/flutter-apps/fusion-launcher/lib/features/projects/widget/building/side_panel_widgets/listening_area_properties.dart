@@ -603,6 +603,7 @@ class _PropertyListWidgetState extends State<PropertyListWidget> {
               },
               child: FusionAppText(
                 text: _showAll ? "Show Less" : "Show More",
+                semanticId: SemanticHelper.createTestId(SemanticTypes.button, _showAll ? "show_less" : "show_more"),
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
                   fontSize: 11,
                   color: Theme.of(context).primaryColor,
