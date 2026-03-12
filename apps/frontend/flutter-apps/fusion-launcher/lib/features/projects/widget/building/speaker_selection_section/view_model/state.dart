@@ -2,28 +2,23 @@ part of 'add_speaker_view_model.dart';
 
 class SpeakerSelectionViewModelState extends Equatable {
   const SpeakerSelectionViewModelState({
-    this.mode = SpeakerSelectionMode.select,
-    this.selectedColors = const <SpeakerColor>{},
+    this.selectedColor = SpeakerColor.black,
     this.sortOption = SpeakerSortOption.nameAsc,
     this.searchQuery = '',
     this.isLoading = false,
-    this.selectedSignalType = SignalType.mono,
     this.selectedListeningAreaForDropDown,
   });
 
-  final SpeakerSelectionMode mode;
-  final Set<SpeakerColor> selectedColors;
+  final SpeakerColor selectedColor;
   final SpeakerSortOption sortOption;
   final String searchQuery;
   final bool isLoading;
-  final SignalType selectedSignalType;
 
   /// THIS WILL BE USED ONLY FOR SCHEMATIC PAGE WHEN THIS POPUP IS OPENED FROM THERE
   final ListeningArea? selectedListeningAreaForDropDown;
 
   SpeakerSelectionViewModelState copyWith({
-    SpeakerSelectionMode? mode,
-    Set<SpeakerColor>? selectedColors,
+    SpeakerColor? selectedColor,
     SpeakerSortOption? sortOption,
     String? searchQuery,
     bool? isLoading,
@@ -31,8 +26,7 @@ class SpeakerSelectionViewModelState extends Equatable {
     ListeningArea? selectedListeningAreaForDropDown,
   }) {
     return SpeakerSelectionViewModelState(
-      mode: mode ?? this.mode,
-      selectedColors: selectedColors ?? this.selectedColors,
+      selectedColor: selectedColor ?? this.selectedColor,
       sortOption: sortOption ?? this.sortOption,
       searchQuery: searchQuery ?? this.searchQuery,
       isLoading: isLoading ?? this.isLoading,
@@ -42,8 +36,7 @@ class SpeakerSelectionViewModelState extends Equatable {
 
   @override
   List<Object?> get props => <Object?>[
-    mode,
-    selectedColors,
+    selectedColor,
     sortOption,
     searchQuery,
     isLoading,

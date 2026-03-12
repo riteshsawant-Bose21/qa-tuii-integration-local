@@ -1,7 +1,6 @@
 import 'dart:math';
 
 import 'package:flutter/material.dart';
-import 'package:fusion_launcher/features/add_source_popup/view_model/add_source_viewmodel.dart';
 import 'package:fusion_launcher/features/processing_block/view/processing_blocks/widgets/pb_block_layout.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
@@ -23,8 +22,7 @@ class PeqBlock extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final AlgorithmDataViewmodel watch =
-        context.watch<AlgorithmDataViewmodel>();
+    final AlgorithmDataViewmodel watch = context.watch<AlgorithmDataViewmodel>();
     return SemanticHelper.container(
       testId: SemanticHelper.createTestId(
         SemanticTypes.container,

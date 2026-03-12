@@ -1,13 +1,5 @@
 import 'package:flutter/material.dart';
 
-enum SpeakerSelectionMode {
-  select("Select"),
-  suggest("Suggest");
-
-  const SpeakerSelectionMode(this.displayName);
-  final String displayName;
-}
-
 enum SpeakerColor {
   black("Black", Colors.black),
   white("White", Colors.white);
@@ -38,8 +30,8 @@ enum SpeakerSortOption {
 }
 
 enum ListeningHeightOption {
-  sitting("Sitting"),
-  standing("Standing"),
+  sitting("Seated (1.1m)"),
+  standing("Standing (1.7m)"),
   custom("Custom");
 
   const ListeningHeightOption(this.displayName);

@@ -62,20 +62,21 @@ class SpeakerSelectionViewModel extends Cubit<SpeakerSelectionViewModelState> {
 
   void setListeningAreaForDropDown(ListeningArea? listeningArea) => emit(state.copyWith(selectedListeningAreaForDropDown: listeningArea));
 
-  // State updates
-  void setMode(SpeakerSelectionMode mode) => emit(state.copyWith(mode: mode));
-
-  void setMountingTypes(List<MountingType> types) {
+  void setMountingType(MountingType? type) {
     if (selectedListeningArea == null) return;
-    final Set<MountingType> updated = Set<MountingType>.from(types);
-    final ListeningArea updatedLA = selectedListeningArea!.copyWith(mountingTypes: updated);
+    final ListeningArea updatedLA = selectedListeningArea!.copyWith(mountingType: type);
     projectViewModel.updateListeningArea(area: updatedLA);
   }
 
-  void setLowFrequencies(List<LowFrequency> lfs) {
+  void setSignalType(SignalType? signalType) {
     if (selectedListeningArea == null) return;
-    final Set<LowFrequency> updated = Set<LowFrequency>.from(lfs);
-    final ListeningArea updatedLA = selectedListeningArea!.copyWith(lowFrequencies: updated);
+    final ListeningArea updatedLA = selectedListeningArea!.copyWith(signalType: signalType);
+    projectViewModel.updateListeningArea(area: updatedLA);
+  }
+
+  void setLowFrequency(LowFrequency? lf) {
+    if (selectedListeningArea == null) return;
+    final ListeningArea updatedLA = selectedListeningArea!.copyWith(lowFrequency: lf);
     projectViewModel.updateListeningArea(area: updatedLA);
   }
 
@@ -85,10 +86,16 @@ class SpeakerSelectionViewModel extends Cubit<SpeakerSelectionViewModelState> {
     projectViewModel.updateListeningArea(area: updatedLA);
   }
 
+  void setSpeakerSelectionMode(SpeakerSelectionMode mode) {
+    if (selectedListeningArea == null) return;
+    final ListeningArea updatedLA = selectedListeningArea!.copyWith(speakerSelectionMode: mode);
+    projectViewModel.updateListeningArea(area: updatedLA);
+  }
+
   void setSortOption(SpeakerSortOption option) => emit(state.copyWith(sortOption: option));
   void setSearchQuery(String query) => emit(state.copyWith(searchQuery: query));
 
-  void setColors(Iterable<SpeakerColor> colors) => emit(state.copyWith(selectedColors: Set<SpeakerColor>.from(colors)));
+  void setColor(SpeakerColor? color) => emit(state.copyWith(selectedColor: color));
 
   List<Speaker> getAllPlacedNonPlacedSpeakers() {
     if (selectedListeningArea == null) return <Speaker>[];
@@ -159,107 +166,105 @@ class SpeakerSelectionViewModel extends Cubit<SpeakerSelectionViewModelState> {
   }
 
   List<SpeakerProduct> applyFilters(List<SpeakerProduct> speakers) {
-    Iterable<SpeakerProduct> filtered = <SpeakerProduct>[...speakers];
+    final Iterable<SpeakerProduct> filtered = <SpeakerProduct>[...speakers];
 
-    final String query = state.searchQuery.trim().toLowerCase();
-    if (query.isNotEmpty) {
-      filtered = filtered.where((SpeakerProduct p) {
-        final String hay = '${p.modelName} ${p.modelName} ${p.description} ${p.shortDescription ?? ''}'.toLowerCase();
-        return hay.contains(query);
-      });
-    }
+    // final String query = state.searchQuery.trim().toLowerCase();
+    // if (query.isNotEmpty) {
+    //   filtered = filtered.where((SpeakerProduct p) {
+    //     final String hay = '${p.modelName} ${p.modelName} ${p.description} ${p.shortDescription ?? ''}'.toLowerCase();
+    //     return hay.contains(query);
+    //   });
+    // }
 
-    final Set<MountingType> mountingTypes = selectedListeningArea?.mountingTypes ?? <MountingType>{};
-    final Set<LowFrequency> lowFrequencies = selectedListeningArea?.lowFrequencies ?? <LowFrequency>{};
+    // final Set<MountingType> mountingTypes = selectedListeningArea?.mountingTypes ?? <MountingType>{};
+    // final Set<LowFrequency> lowFrequencies = selectedListeningArea?.lowFrequencies ?? <LowFrequency>{};
 
-    if (mountingTypes.isNotEmpty) {
-      final List<String> keys = mountingTypes.map((MountingType e) => e.name.toLowerCase()).toList();
-      filtered = filtered.where((SpeakerProduct p) {
-        final String mt = (p.mountType ?? '').toLowerCase();
-        return keys.any((String k) => mt.contains(k));
-      });
-    }
+    // if (mountingTypes.isNotEmpty) {
+    //   final List<String> keys = mountingTypes.map((MountingType e) => e.name.toLowerCase()).toList();
+    //   filtered = filtered.where((SpeakerProduct p) {
+    //     final String mt = (p.mountType ?? '').toLowerCase();
+    //     return keys.any((String k) => mt.contains(k));
+    //   });
+    // }
 
-    final WiringType? wiringType = selectedListeningArea?.wiringType;
+    // final WiringType? wiringType = selectedListeningArea?.wiringType;
 
-    if (wiringType != null) {
-      final bool wantHiZ = wiringType == WiringType.highImpedance;
-      filtered = filtered.where((SpeakerProduct p) {
-        final bool hasHiZ =
-            p.isHighImpedanceRated ||
-            (p.availableTaps?.taps70V.isNotEmpty == true) ||
-            (p.availableTaps?.taps100V.isNotEmpty == true) ||
-            p.highImpedanceTaps.isNotEmpty;
-        final bool hasLoZ = (p.nominalImpedance != null) || (p.impedance != null);
-        return wantHiZ ? hasHiZ : hasLoZ;
-      });
-    }
+    // if (wiringType != null) {
+    //   final bool wantHiZ = wiringType == WiringType.highImpedance;
+    //   filtered = filtered.where((SpeakerProduct p) {
+    //     final bool hasHiZ =
+    //         p.isHighImpedanceRated ||
+    //         (p.availableTaps?.taps70V.isNotEmpty == true) ||
+    //         (p.availableTaps?.taps100V.isNotEmpty == true) ||
+    //         p.highImpedanceTaps.isNotEmpty;
+    //     final bool hasLoZ = (p.nominalImpedance != null) || (p.impedance != null);
+    //     return wantHiZ ? hasHiZ : hasLoZ;
+    //   });
+    // }
 
-    if (lowFrequencies.isNotEmpty) {
-      filtered = filtered.where((SpeakerProduct p) {
-        final FrequencyRange? fr = p.frequencyRange;
-        final bool isSub =
-            p.isSubwoofer || (p.description.toLowerCase().contains('subwoofer') || (p.shortDescription?.toLowerCase().contains('subwoofer') ?? false));
+    // if (lowFrequencies.isNotEmpty) {
+    //   filtered = filtered.where((SpeakerProduct p) {
+    //     final FrequencyRange? fr = p.frequencyRange;
+    //     final bool isSub =
+    //         p.isSubwoofer || (p.description.toLowerCase().contains('subwoofer') || (p.shortDescription?.toLowerCase().contains('subwoofer') ?? false));
 
-        bool matches = false;
-        for (final LowFrequency sel in lowFrequencies) {
-          switch (sel) {
-            case LowFrequency.subwoofer:
-              if (isSub) matches = true;
-              break;
-            case LowFrequency.extended:
-              if (!isSub && fr != null && fr.low > 0 && fr.low <= 40) matches = true;
-              break;
-            case LowFrequency.fullRange:
-              if (!isSub && fr != null && fr.low > 40 && fr.low <= 80) matches = true;
-              break;
-            case LowFrequency.vocal:
-              if (!isSub && fr != null && fr.low > 80) matches = true;
-              break;
-          }
-          if (matches) break;
-        }
-        return matches;
-      });
-    }
+    //     bool matches = false;
+    //     for (final LowFrequency sel in lowFrequencies) {
+    //       switch (sel) {
+    //         case LowFrequency.withSubwoofer:
+    //           if (isSub) matches = true;
+    //           break;
+    //         case LowFrequency.extended:
+    //           if (!isSub && fr != null && fr.low > 0 && fr.low <= 40) matches = true;
+    //           break;
+    //         case LowFrequency.fullRange:
+    //           if (!isSub && fr != null && fr.low > 40 && fr.low <= 80) matches = true;
+    //           break;
+    //         case LowFrequency.vocal:
+    //           if (!isSub && fr != null && fr.low > 80) matches = true;
+    //           break;
+    //       }
+    //       if (matches) break;
+    //     }
+    //     return matches;
+    //   });
+    // }
 
-    // Color filter: include product if it declares any requested color key
-    if (state.selectedColors.isNotEmpty) {
-      final Set<String> wantedColors = state.selectedColors.map((SpeakerColor c) => c.name.toLowerCase()).toSet();
+    // // Color filter: include product if it declares any requested color key
+    // if (state.selectedColors.isNotEmpty) {
+    //   final Set<String> wantedColors = state.selectedColors.map((SpeakerColor c) => c.name.toLowerCase()).toSet();
 
-      filtered = filtered.where((SpeakerProduct p) {
-        final Map<String, List<String>> assetMap = p.assets.assets;
-        if (assetMap.isEmpty) return false;
-        // Only include if the product has a matching color key AND it has at least one asset for that color
-        final bool declaresSelectedColor = assetMap.entries.any((MapEntry<String, List<String>> entry) {
-          final String key = entry.key.toLowerCase();
-          final List<String> urls = entry.value;
-          return wantedColors.contains(key) && urls.isNotEmpty;
-        });
-        return declaresSelectedColor;
-      });
-    }
+    //   filtered = filtered.where((SpeakerProduct p) {
+    //     final Map<String, List<String>> assetMap = p.assets.assets;
+    //     if (assetMap.isEmpty) return false;
+    //     // Only include if the product has a matching color key AND it has at least one asset for that color
+    //     final bool declaresSelectedColor = assetMap.entries.any((MapEntry<String, List<String>> entry) {
+    //       final String key = entry.key.toLowerCase();
+    //       final List<String> urls = entry.value;
+    //       return wantedColors.contains(key) && urls.isNotEmpty;
+    //     });
+    //     return declaresSelectedColor;
+    //   });
+    // }
 
-    final ListeningArea? currentSelectedListeningArea = serviceLocator<ProjectViewModel>().getCurrentSelectedListeningArea();
+    // final ListeningArea? currentSelectedListeningArea = serviceLocator<ProjectViewModel>().getCurrentSelectedListeningArea();
 
-    if (currentSelectedListeningArea?.venuType != null) {
-      final VenueType vt = currentSelectedListeningArea!.venuType!;
-      if (vt == VenueType.indoor) {
-        filtered = filtered.where((SpeakerProduct p) {
-          final String env = (p.environment ?? '').toLowerCase();
-          final bool isIndoorEnv = env.contains('indoor');
-          return !p.isWeatherRated || isIndoorEnv;
-        });
-      } else if (vt == VenueType.outdoor) {
-        filtered = filtered.where((SpeakerProduct p) {
-          final String env = (p.environment ?? '').toLowerCase();
-          final bool isOutdoorEnv = env.contains('outdoor');
-          return p.isWeatherRated || isOutdoorEnv;
-        });
-      } else if (vt == VenueType.mixed) {
-        // Mixed venue: include both indoor and outdoor options (no environment filter)
-      }
-    }
+    // if (currentSelectedListeningArea?.environmentType != null) {
+    //   final SpeakerEnvironmentType et = currentSelectedListeningArea!.environmentType!;
+    //   if (et == SpeakerEnvironmentType.indoor) {
+    //     filtered = filtered.where((SpeakerProduct p) {
+    //       final String env = (p.environment ?? '').toLowerCase();
+    //       final bool isIndoorEnv = env.contains('indoor');
+    //       return !p.isWeatherRated || isIndoorEnv;
+    //     });
+    //   } else if (et == SpeakerEnvironmentType.outdoor) {
+    //     filtered = filtered.where((SpeakerProduct p) {
+    //       final String env = (p.environment ?? '').toLowerCase();
+    //       final bool isOutdoorEnv = env.contains('outdoor');
+    //       return p.isWeatherRated || isOutdoorEnv;
+    //     });
+    //   }
+    // }
 
     return _sortProducts(filtered.toList());
   }

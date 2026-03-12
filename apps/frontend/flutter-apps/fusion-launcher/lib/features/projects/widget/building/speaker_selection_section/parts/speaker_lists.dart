@@ -19,8 +19,7 @@ class ProductQuerySpeakerList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final SpeakerSelectionViewModel speakerSelectionViewModel =
-        context.watch<SpeakerSelectionViewModel>();
+    final SpeakerSelectionViewModel speakerSelectionViewModel = context.watch<SpeakerSelectionViewModel>();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -46,9 +45,7 @@ class ProductQuerySpeakerList extends StatelessWidget {
             hintStyle: context.textTheme.labelSmall?.copyWith(
               fontWeight: FontWeight.normal,
             ),
-            onChanged:
-                (String value) =>
-                    speakerSelectionViewModel.setSearchQuery(value),
+            onChanged: (String value) => speakerSelectionViewModel.setSearchQuery(value),
           ),
         ),
         const SizedBox(height: 10),
@@ -57,10 +54,7 @@ class ProductQuerySpeakerList extends StatelessWidget {
         Row(
           children: <Widget>[
             Expanded(
-              child: BlocBuilder<
-                SpeakerSelectionViewModel,
-                SpeakerSelectionViewModelState
-              >(
+              child: BlocBuilder<SpeakerSelectionViewModel, SpeakerSelectionViewModelState>(
                 builder: (
                   BuildContext context,
                   SpeakerSelectionViewModelState vmState,
@@ -127,10 +121,7 @@ class ProductQuerySpeakerList extends StatelessWidget {
                     ) {
                       return BlocProvider<SpeakerSelectionViewModel>.value(
                         value: speakerSelectionViewModel,
-                        child: BlocBuilder<
-                          SpeakerSelectionViewModel,
-                          SpeakerSelectionViewModelState
-                        >(
+                        child: BlocBuilder<SpeakerSelectionViewModel, SpeakerSelectionViewModelState>(
                           builder: (
                             BuildContext context,
                             SpeakerSelectionViewModelState vmState,
@@ -145,18 +136,15 @@ class ProductQuerySpeakerList extends StatelessWidget {
                                   children: <Widget>[
                                     FusionAppText(
                                       text: 'Sort by',
-                                      style: context.textTheme.bodySmall
-                                          ?.copyWith(
-                                            color:
-                                                context.colorScheme.onSurface,
-                                          ),
+                                      style: context.textTheme.bodySmall?.copyWith(
+                                        color: context.colorScheme.onSurface,
+                                      ),
                                     ),
                                     const SizedBox(height: 8),
                                     ...SpeakerSortOption.values.map((
                                       SpeakerSortOption entry,
                                     ) {
-                                      final bool selected =
-                                          vmState.sortOption == entry;
+                                      final bool selected = vmState.sortOption == entry;
 
                                       return SemanticHelper.container(
                                         testId: SemanticHelper.createTestId(
@@ -166,8 +154,7 @@ class ProductQuerySpeakerList extends StatelessWidget {
                                         child: GestureDetector(
                                           behavior: HitTestBehavior.translucent,
                                           onTap: () {
-                                            speakerSelectionViewModel
-                                                .setSortOption(entry);
+                                            speakerSelectionViewModel.setSortOption(entry);
                                             menuSetState(() {});
                                           },
                                           child: Padding(
@@ -183,37 +170,23 @@ class ProductQuerySpeakerList extends StatelessWidget {
                                                   ),
                                                   value: selected,
                                                   child: Icon(
-                                                    selected
-                                                        ? Icons.circle
-                                                        : Icons
-                                                            .radio_button_unchecked,
+                                                    selected ? Icons.circle : Icons.radio_button_unchecked,
                                                     size: 14,
                                                     color:
                                                         selected
-                                                            ? context
-                                                                .colorScheme
-                                                                .primary
-                                                            : context
-                                                                .colorScheme
-                                                                .onSurface
-                                                                .withValues(
-                                                                  alpha: 0.5,
-                                                                ),
+                                                            ? context.colorScheme.primary
+                                                            : context.colorScheme.onSurface.withValues(
+                                                              alpha: 0.5,
+                                                            ),
                                                   ),
                                                 ),
                                                 const SizedBox(width: 8),
                                                 Expanded(
                                                   child: FusionAppText(
                                                     text: entry.displayName,
-                                                    style: context
-                                                        .textTheme
-                                                        .bodySmall
-                                                        ?.copyWith(
-                                                          color:
-                                                              context
-                                                                  .colorScheme
-                                                                  .onSurface,
-                                                        ),
+                                                    style: context.textTheme.bodySmall?.copyWith(
+                                                      color: context.colorScheme.onSurface,
+                                                    ),
                                                   ),
                                                 ),
                                               ],
@@ -265,22 +238,16 @@ class ProductQuerySpeakerList extends StatelessWidget {
             BuildContext context,
             ProjectViewModelState projectViewModelState,
           ) {
-            final List<Speaker> listeningAreaSpeakers =
-                speakerSelectionViewModel.getAllPlacedNonPlacedSpeakers();
+            final List<Speaker> listeningAreaSpeakers = speakerSelectionViewModel.getAllPlacedNonPlacedSpeakers();
 
-            return BlocBuilder<
-              SpeakerSelectionViewModel,
-              SpeakerSelectionViewModelState
-            >(
+            return BlocBuilder<SpeakerSelectionViewModel, SpeakerSelectionViewModelState>(
               builder: (
                 BuildContext context,
                 SpeakerSelectionViewModelState vmState,
               ) {
-                final ProductQueryViewModel productQueryViewModel =
-                    context.watch<ProductQueryViewModel>();
+                final ProductQueryViewModel productQueryViewModel = context.watch<ProductQueryViewModel>();
                 final bool isProductsLoading = productQueryViewModel.isLoading;
-                final List<SpeakerProduct> speakers =
-                    productQueryViewModel.speakers;
+                final List<SpeakerProduct> speakers = productQueryViewModel.speakers;
 
                 if (isProductsLoading) {
                   return Expanded(
@@ -313,21 +280,16 @@ class ProductQuerySpeakerList extends StatelessWidget {
                     ),
                   );
                 } else {
-                  final List<SpeakerProduct> items = speakerSelectionViewModel
-                      .applyFilters(speakers);
+                  final List<SpeakerProduct> items = speakerSelectionViewModel.applyFilters(speakers);
 
                   if (items.isEmpty) {
-                    final bool isSearchActive =
-                        vmState.searchQuery.trim().isNotEmpty;
+                    final bool isSearchActive = vmState.searchQuery.trim().isNotEmpty;
                     return Expanded(
                       child: Center(
                         child: Padding(
                           padding: const EdgeInsets.all(16.0),
                           child: FusionAppText(
-                            text:
-                                isSearchActive
-                                    ? 'No speakers match your search.'
-                                    : 'No products match the selected filters',
+                            text: isSearchActive ? 'No speakers match your search.' : 'No products match the selected filters',
                             style: context.textTheme.bodySmall?.copyWith(
                               color: context.colorScheme.onSurface.withValues(
                                 alpha: 0.5,
@@ -350,15 +312,12 @@ class ProductQuerySpeakerList extends StatelessWidget {
                             itemCount: items.length,
                             padding: const EdgeInsets.symmetric(vertical: 10),
                             physics: const ClampingScrollPhysics(),
-                            separatorBuilder:
-                                (BuildContext context, int index) =>
-                                    const Divider(thickness: 0.5),
+                            separatorBuilder: (BuildContext context, int index) => const Divider(thickness: 0.5),
                             itemBuilder: (BuildContext context, int index) {
                               final SpeakerProduct product = items[index];
 
                               final bool isSelected = listeningAreaSpeakers.any(
-                                (Speaker sp) =>
-                                    sp.productId == product.productId,
+                                (Speaker sp) => sp.productId == product.productId,
                               );
 
                               return SpeakerCard(
@@ -414,27 +373,21 @@ class _SpeakerCardState extends State<SpeakerCard> {
   _SpeakerColorVarient? selectedVarient;
 
   List<_SpeakerColorVarient> get productVarients {
-    final SpeakerSelectionViewModel addSpeakerViewModel =
-        context.read<SpeakerSelectionViewModel>();
-    final Set<SpeakerColor> filterColors =
-        addSpeakerViewModel.state.selectedColors;
+    final SpeakerSelectionViewModel addSpeakerViewModel = context.read<SpeakerSelectionViewModel>();
+    final SpeakerColor filterColor = addSpeakerViewModel.state.selectedColor;
     final List<_SpeakerColorVarient> varients = <_SpeakerColorVarient>[];
 
     widget.product.assets.assets.forEach(
       (String key, List<String> values) {
         if (values.isNotEmpty) {
-          final String assetImagePath = context
-              .read<ProductQueryViewModel>()
-              .getImagePath(values.first);
+          final String assetImagePath = context.read<ProductQueryViewModel>().getImagePath(values.first);
           // log("key: $key : ${values.first}");
           // final String? assetImagePath = context.read<ProductQueryViewModel>().getImagePath(widget.product.productId, key);
           // final String assetImagePath = context.read<ProductQueryViewModel>().cachedImages[widget.product.productId]?[key] ?? '';
           // final String assetImageName = context.read<ProductQueryViewModel>().getImageName(values.first);
 
-          final SpeakerColor speakerColor = SpeakerColor.getValueBasedOnKey(
-            key,
-          );
-          if (filterColors.isEmpty || filterColors.contains(speakerColor)) {
+          final SpeakerColor speakerColor = SpeakerColor.getValueBasedOnKey(key);
+          if (filterColor == speakerColor) {
             varients.add(
               _SpeakerColorVarient(
                 productId: widget.product.productId,
@@ -461,10 +414,8 @@ class _SpeakerCardState extends State<SpeakerCard> {
       }
     }
 
-    if (nextSelection == null && filterColors.isNotEmpty) {
-      final int filteredIdx = varients.indexWhere(
-        (_SpeakerColorVarient v) => filterColors.contains(v.color),
-      );
+    if (nextSelection == null) {
+      final int filteredIdx = varients.indexWhere((_SpeakerColorVarient v) => v.color == filterColor);
       if (filteredIdx != -1) {
         nextSelection = varients[filteredIdx];
       }
@@ -479,14 +430,9 @@ class _SpeakerCardState extends State<SpeakerCard> {
 
   @override
   Widget build(BuildContext context) {
-    return BlocBuilder<
-      SpeakerSelectionViewModel,
-      SpeakerSelectionViewModelState
-    >(
+    return BlocBuilder<SpeakerSelectionViewModel, SpeakerSelectionViewModelState>(
       builder: (BuildContext context, SpeakerSelectionViewModelState state) {
-        final double productPrice = context
-            .read<ProductQueryViewModel>()
-            .getPrice(widget.product.productId);
+        final double productPrice = context.read<ProductQueryViewModel>().getPrice(widget.product.productId);
 
         return SemanticHelper.container(
           testId: SemanticHelper.createTestId(
@@ -518,8 +464,7 @@ class _SpeakerCardState extends State<SpeakerCard> {
                         ),
                         child: Builder(
                           builder: (BuildContext context) {
-                            if (selectedVarient?.cachedImagePath == null)
-                              return const SizedBox();
+                            if (selectedVarient?.cachedImagePath == null) return const SizedBox();
                             return Image.asset(
                               selectedVarient!.cachedImagePath!,
                               fit: BoxFit.cover,
@@ -553,21 +498,16 @@ class _SpeakerCardState extends State<SpeakerCard> {
                                   child: SingleChildScrollView(
                                     padding: const EdgeInsets.all(16),
                                     child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
+                                      crossAxisAlignment: CrossAxisAlignment.start,
                                       children: <Widget>[
                                         Row(
                                           children: <Widget>[
-                                            if (selectedVarient
-                                                    ?.cachedImagePath !=
-                                                null) ...<Widget>[
+                                            if (selectedVarient?.cachedImagePath != null) ...<Widget>[
                                               Center(
                                                 child: ClipRRect(
-                                                  borderRadius:
-                                                      BorderRadius.circular(4),
+                                                  borderRadius: BorderRadius.circular(4),
                                                   child: Image.asset(
-                                                    selectedVarient!
-                                                        .cachedImagePath!,
+                                                    selectedVarient!.cachedImagePath!,
                                                     width: 36,
                                                     height: 36,
                                                     fit: BoxFit.cover,
@@ -578,78 +518,54 @@ class _SpeakerCardState extends State<SpeakerCard> {
                                             ],
                                             Expanded(
                                               child: FusionAppText(
-                                                text:
-                                                    "L 22.4cm | W 14.7cm | H 8.3cm | 9kg",
-                                                style: context
-                                                    .textTheme
-                                                    .bodySmall
-                                                    ?.copyWith(
-                                                      color:
-                                                          context
-                                                              .colorScheme
-                                                              .onSurface,
-                                                    ),
+                                                text: "L 22.4cm | W 14.7cm | H 8.3cm | 9kg",
+                                                style: context.textTheme.bodySmall?.copyWith(
+                                                  color: context.colorScheme.onSurface,
+                                                ),
                                               ),
                                             ),
                                           ],
                                         ),
 
                                         Divider(
-                                          color: context.colorScheme.onSurface
-                                              .withValues(alpha: 0.2),
+                                          color: context.colorScheme.onSurface.withValues(alpha: 0.2),
                                         ),
                                         Builder(
                                           builder: (BuildContext context) {
-                                            final String frequencyResponse =
-                                                SpeakerSelectionViewModel.formatFrequencyRange(
-                                                  widget.product.frequencyRange,
-                                                );
-                                            final String environment =
-                                                SpeakerSelectionViewModel.computeEnvironment(
-                                                  widget.product.environment,
-                                                  isWeatherRated:
-                                                      widget
-                                                          .product
-                                                          .isWeatherRated,
-                                                );
-                                            final String sensitivity =
-                                                SpeakerSelectionViewModel.formatSensitivity(
-                                                  widget.product.sensitivity,
-                                                );
-                                            final String maxSpl =
-                                                SpeakerSelectionViewModel.formatMaxSpl(
-                                                  widget.product.maxSpl,
-                                                );
-                                            final PowerHandling? p =
-                                                widget.product.powerHandling;
-                                            final String peakPower =
-                                                SpeakerSelectionViewModel.formatPowerValue(
-                                                  value: p?.peak,
-                                                  unit: p?.unit,
-                                                );
-                                            final String longTermPower =
-                                                SpeakerSelectionViewModel.formatPowerValue(
-                                                  value: p?.longTermRms,
-                                                  unit: p?.unit,
-                                                );
-                                            final String powerHandlingSummary =
-                                                SpeakerSelectionViewModel.formatPowerSummary(
-                                                  longTermRms: p?.longTermRms,
-                                                  peak: p?.peak,
-                                                  unit: p?.unit,
-                                                );
+                                            final String frequencyResponse = SpeakerSelectionViewModel.formatFrequencyRange(
+                                              widget.product.frequencyRange,
+                                            );
+                                            final String environment = SpeakerSelectionViewModel.computeEnvironment(
+                                              widget.product.environment,
+                                              isWeatherRated: widget.product.isWeatherRated,
+                                            );
+                                            final String sensitivity = SpeakerSelectionViewModel.formatSensitivity(
+                                              widget.product.sensitivity,
+                                            );
+                                            final String maxSpl = SpeakerSelectionViewModel.formatMaxSpl(
+                                              widget.product.maxSpl,
+                                            );
+                                            final PowerHandling? p = widget.product.powerHandling;
+                                            final String peakPower = SpeakerSelectionViewModel.formatPowerValue(
+                                              value: p?.peak,
+                                              unit: p?.unit,
+                                            );
+                                            final String longTermPower = SpeakerSelectionViewModel.formatPowerValue(
+                                              value: p?.longTermRms,
+                                              unit: p?.unit,
+                                            );
+                                            final String powerHandlingSummary = SpeakerSelectionViewModel.formatPowerSummary(
+                                              longTermRms: p?.longTermRms,
+                                              peak: p?.peak,
+                                              unit: p?.unit,
+                                            );
 
-                                            final Map<String, String>
-                                            details = <String, String>{
-                                              'Mounting':
-                                                  widget.product.mountType ??
-                                                  'N/A',
-                                              'Frequency Response':
-                                                  frequencyResponse,
+                                            final Map<String, String> details = <String, String>{
+                                              'Mounting': widget.product.mountType ?? 'N/A',
+                                              'Frequency Response': frequencyResponse,
                                               'Environment': environment,
                                               'HF Size': 'N/A',
-                                              'Power Handling':
-                                                  powerHandlingSummary,
+                                              'Power Handling': powerHandlingSummary,
                                               'LF Size': 'N/A',
                                               'Sensitivity': sensitivity,
                                               'Max. SPL': maxSpl,
@@ -657,44 +573,28 @@ class _SpeakerCardState extends State<SpeakerCard> {
                                               'Long Term Power': longTermPower,
                                             };
 
-                                            final List<Widget>
-                                            children = <Widget>[
+                                            final List<Widget> children = <Widget>[
                                               ...details.entries.map((
                                                 MapEntry<String, String> entry,
                                               ) {
                                                 final String key = entry.key;
-                                                final String value =
-                                                    entry.value;
+                                                final String value = entry.value;
 
                                                 return Column(
-                                                  crossAxisAlignment:
-                                                      CrossAxisAlignment.start,
+                                                  crossAxisAlignment: CrossAxisAlignment.start,
                                                   children: <Widget>[
                                                     FusionAppText(
                                                       text: key,
-                                                      style: context
-                                                          .textTheme
-                                                          .bodySmall
-                                                          ?.copyWith(
-                                                            fontWeight:
-                                                                FontWeight
-                                                                    .normal,
-                                                          ),
+                                                      style: context.textTheme.bodySmall?.copyWith(
+                                                        fontWeight: FontWeight.normal,
+                                                      ),
                                                     ),
                                                     FusionAppText(
                                                       text: value,
-                                                      style: context
-                                                          .textTheme
-                                                          .bodySmall
-                                                          ?.copyWith(
-                                                            fontWeight:
-                                                                FontWeight
-                                                                    .normal,
-                                                            color: context
-                                                                .colorScheme
-                                                                .onSurface
-                                                                .withAlpha(128),
-                                                          ),
+                                                      style: context.textTheme.bodySmall?.copyWith(
+                                                        fontWeight: FontWeight.normal,
+                                                        color: context.colorScheme.onSurface.withAlpha(128),
+                                                      ),
                                                     ),
                                                   ],
                                                 );
@@ -748,9 +648,7 @@ class _SpeakerCardState extends State<SpeakerCard> {
                               ...productVarients.map((
                                 _SpeakerColorVarient colorVarient,
                               ) {
-                                final bool isSelected =
-                                    selectedVarient?.color ==
-                                    colorVarient.color;
+                                final bool isSelected = selectedVarient?.color == colorVarient.color;
 
                                 return SemanticHelper.container(
                                   testId: SemanticHelper.createTestId(
@@ -776,25 +674,17 @@ class _SpeakerCardState extends State<SpeakerCard> {
                                         mainAxisSize: MainAxisSize.min,
                                         children: <Widget>[
                                           FusionAppText(
-                                            text:
-                                                colorVarient.color.displayName,
-                                            style: context.textTheme.labelSmall
-                                                ?.copyWith(
-                                                  color:
-                                                      context
-                                                          .colorScheme
-                                                          .textPrimary,
-                                                  fontSize: 7,
-                                                ),
+                                            text: colorVarient.color.displayName,
+                                            style: context.textTheme.labelSmall?.copyWith(
+                                              color: context.colorScheme.textPrimary,
+                                              fontSize: 7,
+                                            ),
                                           ),
                                           if (isSelected)
                                             Icon(
                                               Icons.check,
                                               size: 12,
-                                              color:
-                                                  context
-                                                      .colorScheme
-                                                      .textPrimary,
+                                              color: context.colorScheme.textPrimary,
                                             ),
                                         ],
                                       ),
@@ -817,28 +707,19 @@ class _SpeakerCardState extends State<SpeakerCard> {
                         height: 24,
                         width: 24,
                         borderRadius: 6,
-                        color:
-                            widget.isSelected
-                                ? FusionDarkColorPallette.green20
-                                : context.colorScheme.elevation2,
+                        color: widget.isSelected ? FusionDarkColorPallette.green20 : context.colorScheme.elevation2,
                         child: Icon(
                           LucideIcons.plus,
                           size: 12,
-                          color:
-                              widget.isSelected
-                                  ? Colors.white
-                                  : context.colorScheme.textPrimary,
+                          color: widget.isSelected ? Colors.white : context.colorScheme.textPrimary,
                         ),
                         // text: "Add Speaker",
                         onTap: () {
-                          context
-                              .read<SpeakerSelectionViewModel>()
-                              .addOrReplaceSpeaker(
-                                context: context,
-                                cachedImagePath:
-                                    selectedVarient?.cachedImagePath,
-                                product: widget.product,
-                              );
+                          context.read<SpeakerSelectionViewModel>().addOrReplaceSpeaker(
+                            context: context,
+                            cachedImagePath: selectedVarient?.cachedImagePath,
+                            product: widget.product,
+                          );
                         },
                       ),
                     ),

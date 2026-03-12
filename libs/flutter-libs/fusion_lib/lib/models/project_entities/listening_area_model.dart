@@ -4,21 +4,21 @@ import 'dart:ui';
 import 'package:flutter/foundation.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
-enum VenueType {
-  indoor,
-  outdoor,
-  mixed,
-}
+enum SpeakerEnvironmentType {
+  indoor("Indoor"),
+  outdoor("Outdoor");
 
-extension VenueTypeExtension on VenueType {
-  String get name {
-    switch (this) {
-      case VenueType.indoor:
-        return 'Indoor';
-      case VenueType.outdoor:
-        return 'Outdoor';
-      case VenueType.mixed:
-        return 'Indoor+Outdoor';
+  final String displayName;
+  const SpeakerEnvironmentType(this.displayName);
+
+  static SpeakerEnvironmentType? fromJson(String? value) {
+    switch (value?.toLowerCase()) {
+      case 'indoor':
+        return SpeakerEnvironmentType.indoor;
+      case 'outdoor':
+        return SpeakerEnvironmentType.outdoor;
+      default:
+        return null;
     }
   }
 }
@@ -57,36 +57,66 @@ enum LowFrequency {
   vocal,
   fullRange,
   extended,
-  subwoofer,
-}
+  withSubwoofer,
+  mono;
 
-extension LowFrequencyExtension on LowFrequency {
-  String get name {
+  String get displayName {
     switch (this) {
       case LowFrequency.vocal:
-        return 'Vocal ';
+        return 'Vocal';
       case LowFrequency.fullRange:
         return 'Full Range';
       case LowFrequency.extended:
         return 'Extended';
-      case LowFrequency.subwoofer:
-        return 'Subwoofer';
+      case LowFrequency.withSubwoofer:
+        return 'With Subwoofer';
+      case LowFrequency.mono:
+        return 'Mono';
+    }
+  }
+
+  static LowFrequency? fromJson(String? value) {
+    switch (value?.toLowerCase()) {
+      case 'vocal':
+        return LowFrequency.vocal;
+      case 'fullrange':
+      case 'full_range':
+        return LowFrequency.fullRange;
+      case 'extended':
+        return LowFrequency.extended;
+      case 'subwoofer':
+        return LowFrequency.withSubwoofer;
+      case 'mono':
+        return LowFrequency.mono;
+      default:
+        return null;
     }
   }
 }
 
 enum WiringType {
   highImpedance,
-  lowImpedance,
-}
+  lowImpedance;
 
-extension WiringTypeExtension on WiringType {
   String get name {
     switch (this) {
-      case WiringType.highImpedance:
+      case highImpedance:
         return 'Hi-Z';
-      case WiringType.lowImpedance:
+      case lowImpedance:
         return 'Lo-Z';
+    }
+  }
+
+  static WiringType? fromJson(String? value) {
+    switch (value?.toLowerCase()) {
+      case 'highimpedance':
+      case 'hi-z':
+        return WiringType.highImpedance;
+      case 'lowimpedance':
+      case 'lo-z':
+        return WiringType.lowImpedance;
+      default:
+        return null;
     }
   }
 }
@@ -96,10 +126,8 @@ enum SplRange {
   paging,
   foregroundMusic,
   moderateLiveSound,
-  highSplLiveSound,
-}
+  highSplLiveSound;
 
-extension SplRangeExtension on SplRange {
   String get name {
     switch (this) {
       case SplRange.backgroundMusic:
@@ -145,14 +173,33 @@ extension SplRangeExtension on SplRange {
       return SplRange.backgroundMusic;
     }
   }
+
+  static SplRange? fromJson(String? value) {
+    switch (value?.toLowerCase()) {
+      case 'backgroundmusic':
+      case 'background_music':
+        return SplRange.backgroundMusic;
+      case 'paging':
+        return SplRange.paging;
+      case 'foregroundmusic':
+      case 'foreground_music':
+        return SplRange.foregroundMusic;
+      case 'moderatelivesound':
+      case 'moderate_live_sound':
+        return SplRange.moderateLiveSound;
+      case 'highspllivesound':
+      case 'high_spl_live_sound':
+        return SplRange.highSplLiveSound;
+      default:
+        return null;
+    }
+  }
 }
 
 enum ListeningPreference {
   mono,
-  stereo,
-}
+  stereo;
 
-extension ListeningPreferenceExtension on ListeningPreference {
   String get name {
     switch (this) {
       case ListeningPreference.mono:
@@ -161,6 +208,72 @@ extension ListeningPreferenceExtension on ListeningPreference {
         return 'Stereo';
     }
   }
+
+  static ListeningPreference? fromJson(String? value) {
+    switch (value?.toLowerCase()) {
+      case 'mono':
+        return ListeningPreference.mono;
+      case 'stereo':
+        return ListeningPreference.stereo;
+      default:
+        return null;
+    }
+  }
+}
+
+enum BackgroundNoise {
+  quiet("Quiet"),
+  typical("Typical"),
+  loud("Loud");
+
+  const BackgroundNoise(this.displayName);
+  final String displayName;
+
+  static BackgroundNoise? fromJson(String? value) {
+    switch (value?.toLowerCase()) {
+      case 'quiet':
+        return BackgroundNoise.quiet;
+      case 'typical':
+        return BackgroundNoise.typical;
+      case 'loud':
+        return BackgroundNoise.loud;
+      default:
+        return null;
+    }
+  }
+}
+
+enum SpeakerSelectionMode {
+  select("Select"),
+  suggest("Suggest");
+
+  const SpeakerSelectionMode(this.displayName);
+  final String displayName;
+
+  static SpeakerSelectionMode? fromJson(String? value) {
+    switch (value?.toLowerCase()) {
+      case 'select':
+        return SpeakerSelectionMode.select;
+      case 'suggest':
+        return SpeakerSelectionMode.suggest;
+      default:
+        return null;
+    }
+  }
+}
+
+extension ListExtension<T> on List<T> {
+  T? firstWhereOrNull(bool Function(T element) test) {
+    for (final T element in this) {
+      if (test(element)) return element;
+    }
+    return null;
+  }
+
+  T? elementAtOrNull(int index) {
+    if (index < 0 || index >= length) return null;
+    return this[index];
+  }
 }
 
 class ListeningArea {
@@ -168,7 +281,7 @@ class ListeningArea {
   final List<FusionCanvasPoint> vertices;
   SplData? splData;
   final String name;
-  final VenueType? venuType;
+  final SpeakerEnvironmentType? environmentType;
   final double listeningHeight;
   final String ceilingHeight;
   final double minSPL;
@@ -181,24 +294,31 @@ class ListeningArea {
   final ListeningPreference? listeningPreference;
 
   /// THESE ARE FILTER OPTIONS
-  final Set<MountingType> mountingTypes;
-  final Set<LowFrequency> lowFrequencies;
+  final SignalType signalType;
+  final MountingType? mountingType;
+  final LowFrequency? lowFrequency;
   final WiringType? wiringType;
+  final BackgroundNoise? backgroundNoise;
+  final SpeakerSelectionMode speakerSelectionMode;
+
 
   ListeningArea({
     String? id,
     required this.vertices,
     this.splData,
     this.name = '',
-    this.venuType,
+    this.environmentType,
     this.listeningHeight = 3.0, // Default to sitting height (3 ft)
     this.ceilingHeight = '',
     this.minSPL = 60.0,
     this.maxSPL = 70.0,
     this.customListeningAreaHeight = 0.0,
-    this.mountingTypes = const <MountingType>{},
-    this.lowFrequencies = const <LowFrequency>{},
+    this.signalType = SignalType.mono,
+    this.mountingType,
+    this.lowFrequency,
     this.wiringType,
+    this.backgroundNoise,
+    this.speakerSelectionMode = SpeakerSelectionMode.select,
     this.preferredSpeakerColor,
     this.splRange,
     this.listeningPreference,
@@ -292,34 +412,40 @@ class ListeningArea {
     SplData? splData,
     String? name,
     List<String>? hardwareComponentIds,
-    VenueType? venuType,
+    SpeakerEnvironmentType? environmentType,
     double? listeningHeight,
     String? ceilingHeight,
     double? customListeningAreaHeight,
     double? minSPL,
     double? maxSPL,
-    Set<MountingType>? mountingTypes,
-    Set<LowFrequency>? lowFrequencies,
+    SignalType? signalType,
+    MountingType? mountingType,
+    LowFrequency? lowFrequency,
     WiringType? wiringType,
+    BackgroundNoise? backgroundNoise,
     Color? preferredSpeakerColor,
     SplRange? splRange,
     ListeningPreference? listeningPreference,
     bool? isDrawn,
+    SpeakerSelectionMode? speakerSelectionMode,
   }) {
     return ListeningArea(
       vertices: vertices ?? this.vertices,
       id: id ?? this.id,
       splData: splData ?? this.splData,
       name: name ?? this.name,
-      venuType: venuType ?? this.venuType,
+      environmentType: environmentType ?? this.environmentType,
       listeningHeight: listeningHeight ?? this.listeningHeight,
       ceilingHeight: ceilingHeight ?? this.ceilingHeight,
       minSPL: minSPL ?? this.minSPL,
       maxSPL: maxSPL ?? this.maxSPL,
       customListeningAreaHeight: customListeningAreaHeight ?? this.customListeningAreaHeight,
-      mountingTypes: mountingTypes ?? this.mountingTypes,
-      lowFrequencies: lowFrequencies ?? this.lowFrequencies,
+      signalType: signalType ?? this.signalType,
+      mountingType: mountingType ?? this.mountingType,
+      lowFrequency: lowFrequency ?? this.lowFrequency,
       wiringType: wiringType ?? this.wiringType,
+      backgroundNoise: backgroundNoise ?? this.backgroundNoise,
+      speakerSelectionMode: speakerSelectionMode ?? this.speakerSelectionMode,
       preferredSpeakerColor: preferredSpeakerColor ?? this.preferredSpeakerColor,
       splRange: splRange ?? this.splRange,
       listeningPreference: listeningPreference ?? this.listeningPreference,
@@ -341,7 +467,7 @@ class ListeningArea {
     'name': name,
     'vertices': vertices.map((FusionCanvasPoint v) => v.toMap()).toList(),
     'splData': null,
-    'venuType': venuType?.name,
+    'environmentType': environmentType?.name,
     'listeningHeight': listeningHeight,
     'ceilingHeight': ceilingHeight,
     'minSPL': minSPL,
@@ -351,7 +477,14 @@ class ListeningArea {
     'preferredSpeakerColor': preferredSpeakerColor,
     'splRange': splRange?.name,
     'listeningPreference': listeningPreference?.name,
+    'signalType': signalType.name,
+    'backgroundNoise': backgroundNoise?.name,
+    'mountingType': mountingType?.name,
+    'lowFrequency': lowFrequency?.name,
+    'wiringType': wiringType?.name,
+    'speakerSelectionMode': speakerSelectionMode.name,
   };
+
 
   /// Parses back from JSON, turning the dynamic list into List<Offset>
   factory ListeningArea.fromJson(Map<String, dynamic> json) {
@@ -368,12 +501,7 @@ class ListeningArea {
       vertices: verts,
       splData: null,
       name: json['name'] as String,
-      venuType: json['venuType'] != null
-          ? VenueType.values.firstWhere(
-              (VenueType vt) => vt.name == (json['venuType'] as String),
-              orElse: () => VenueType.indoor,
-            )
-          : null,
+      environmentType: SpeakerEnvironmentType.fromJson(json['environmentType']),
       listeningHeight: (json['listeningHeight'] as num?)?.toDouble() ?? 3.0,
       ceilingHeight: json['ceilingHeight'] as String? ?? '',
       customListeningAreaHeight: (json['customListeningAreaHeight'] as num?)?.toDouble() ?? 0.0,
@@ -381,18 +509,14 @@ class ListeningArea {
       maxSPL: (json['maxSPL'] as num?)?.toDouble() ?? 70.0,
       isDrawn: json['isDrawn'] as bool? ?? (verts.isNotEmpty),
       preferredSpeakerColor: json['preferredSpeakerColor'] != null ? Color(json['preferredSpeakerColor'] as int) : null,
-      splRange: json['splRange'] != null
-          ? SplRange.values.firstWhere(
-              (SplRange sr) => sr.name == (json['splRange'] as String),
-              orElse: () => SplRange.backgroundMusic,
-            )
-          : null,
-      listeningPreference: json['listeningPreference'] != null
-          ? ListeningPreference.values.firstWhere(
-              (ListeningPreference lp) => lp.name == (json['listeningPreference'] as String),
-              orElse: () => ListeningPreference.mono,
-            )
-          : null,
+      splRange: SplRange.fromJson(json['splRange'] as String?),
+      listeningPreference: ListeningPreference.fromJson(json['listeningPreference']),
+      signalType: SignalType.fromJson(json['signalType']) ?? SignalType.mono,
+      mountingType: MountingType.fromJson(json['mountingType']),
+      lowFrequency: LowFrequency.fromJson(json['lowFrequency']),
+      wiringType: WiringType.fromJson(json['wiringType']),
+      backgroundNoise: BackgroundNoise.fromJson(json['backgroundNoise']),
+      speakerSelectionMode:  SpeakerSelectionMode.fromJson(json['speakerSelectionMode'] as String?) ?? SpeakerSelectionMode.select,
     );
   }
 
