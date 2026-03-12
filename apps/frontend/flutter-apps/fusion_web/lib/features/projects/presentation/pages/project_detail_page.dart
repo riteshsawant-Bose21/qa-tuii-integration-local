@@ -161,27 +161,28 @@ class _ProjectDetailPageState extends State<ProjectDetailPage> {
                       ProjectActionsMenu(
                         onInvite: () => ProjectActionsHandler.invite(
                           context: context,
-                          project: p, viewModel: viewModel,
+                          project: p,
+                          viewModel: viewModel,
                         ),
                         onArchive: () async {
-                          await ProjectActionsHandler.archive(
+                          final archived = await ProjectActionsHandler.archive(
                             context: context,
                             project: p,
                             viewModel: viewModel,
                           );
 
-                          if (mounted) {
+                          if (archived && mounted) {
                             context.go(AppConstants.projectsRoute);
                           }
                         },
                         onDelete: () async {
-                          await ProjectActionsHandler.delete(
+                          final deleted = await ProjectActionsHandler.delete(
                             context: context,
                             project: p,
                             viewModel: viewModel,
                           );
 
-                          if (mounted) {
+                          if (deleted && mounted) {
                             context.go(AppConstants.projectsRoute);
                           }
                         },

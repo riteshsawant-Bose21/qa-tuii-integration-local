@@ -24,14 +24,16 @@ class ProjectActionsHandler {
   }
 
   //  ================= DELETE =================
-  static Future<void> delete({
+  static Future<bool> delete({
     required BuildContext context,
     required ProjectModel project,
     required ProjectsViewModel viewModel,
-  }) {
-    return showDialog(
+  }) async {
+    bool confirmed = false;
+
+    await showDialog(
       context: context,
-      builder: (dialogContext) {
+      builder: (_) {
         return ConfirmationDialog(
           title: "Delete Project?",
           description:
@@ -39,40 +41,40 @@ class ProjectActionsHandler {
           confirmText: "Delete",
           isDestructive: true,
           onConfirm: () async {
+            confirmed = true;
             await viewModel.deleteProject(project.id);
-
-            if (dialogContext.mounted) {
-              Navigator.of(dialogContext).pop();
-            }
           },
         );
       },
     );
+
+    return confirmed;
   }
 
   // ================= ARCHIVE =================
-  static Future<void> archive({
+  static Future<bool> archive({
     required BuildContext context,
     required ProjectModel project,
     required ProjectsViewModel viewModel,
-  }) {
-    return showDialog(
+  }) async {
+    bool confirmed = false;
+
+    await showDialog(
       context: context,
-      builder: (dialogContext) {
+      builder: (_) {
         return ConfirmationDialog(
           title: "Archive Project?",
           description:
               "The project will be removed from active projects but can be restored later.",
           confirmText: "Archive",
           onConfirm: () async {
+            confirmed = true;
             await viewModel.archiveProject(project.id);
-
-            if (dialogContext.mounted) {
-              Navigator.of(dialogContext).pop();
-            }
           },
         );
       },
     );
+
+    return confirmed;
   }
 }
