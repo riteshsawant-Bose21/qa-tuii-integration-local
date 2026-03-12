@@ -99,28 +99,17 @@ def configure(conf):
         if conf.env.LIB_GTEST:
             conf.env.HAVE_GTEST = True
 
+    conf.env.append_value('LIBPATH', [conf.path.abspath() + '/../../../libs/firmware-libs/fusion-embedded-interface/build'])
+
 def build(bld):
-    shared_include = '../libs/cpp/named_shared_memory/include'
-    shared_sources = [
-        '../libs/cpp/named_shared_memory/src/named_shared_memory.cc',
-        '../libs/cpp/named_shared_memory/src/named_shared_memory_utility.cc',
-        '../libs/cpp/named_shared_memory/src/named_shared_memory_manager.cc',
-        '../libs/cpp/named_shared_memory/src/named_shared_memory_manager_factory.cc',
-    ]
+    bld(export_includes=['../../../libs/firmware-libs/fusion-embedded-interface/include', './include', './include/bosepro'], name='default-include')
 
-    bld(export_includes=['./include', './include/bosepro', shared_include], name='default-include')
-
-    libs = ['boost_program_options', 'fmt', 'jsoncpp', 'zmq']
+    libs = ['boost_program_options', 'fmt', 'jsoncpp', 'zmq', 'fusion_embedded_interface']
     if not bld.env['IS_MACOS']:
         libs.append('spdlog')
 
     bld.program(target=APPNAME,
-                source=bld.path.ant_glob(['src/*.cc'], excl=[
-                    'src/named_shared_memory.cc',
-                    'src/named_shared_memory_utility.cc',
-                    'src/named_shared_memory_manager.cc',
-                    'src/named_shared_memory_manager_factory.cc',
-                ]) + shared_sources,
+                source=bld.path.ant_glob(['src/*.cc']),
                 use=['default-include'],
                 # Note: pthread or mac-threads is determined above.
                 lib=libs)
@@ -132,9 +121,9 @@ def build(bld):
                 'tests/main.cc',
                 'tests/named_shared_memory_test.cc',
                 'tests/named_shared_memory_manager_test.cc',
-            ] + shared_sources,
+            ],
             use=['default-include'],
-            uselib=['GTEST'],
+            uselib=['GTEST', 'fusion_embedded_interface'],
         )
 
 def test(ctx):

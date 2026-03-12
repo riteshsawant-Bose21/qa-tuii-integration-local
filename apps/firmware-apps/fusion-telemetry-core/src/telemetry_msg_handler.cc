@@ -8,6 +8,7 @@
 #include <algorithm>
 #include <boost/program_options.hpp>
 #include <boost/json/src.hpp>
+#include <boost/property_tree/json_parser.hpp>
 #include "telemetry_core.h"
 #include "telemetry_utils.h"
 #include "telemetry_msg_handler.h"
@@ -22,7 +23,7 @@ int process_pub_register_req(bosepro::telemetryManager& telm_mgr,
                              uint64_t& pkt_id, std::string& req_name,
                              bosepro::HandlerContext& /*unused*/)
 {
-    std::vector<uint32_t> shm_size;
+    std::vector<int_fast32_t> shm_size;
     int ret_val = 0;
 
     // Get Sub name
@@ -34,9 +35,9 @@ int process_pub_register_req(bosepro::telemetryManager& telm_mgr,
                       shm_size[0], shm_size[1], shm_size[2]);
 
         std::vector<bosepro::shared_mem_config> shm_config = {
-            {NULL, ("telm_"+req_name+"_hi"), shm_size[0]},
-            {NULL, ("telm_"+req_name+"_med"), shm_size[1]},
-            {NULL, ("telm_"+req_name+"_lo"), shm_size[2]}
+            {NULL, ("telm_"+req_name+"_hi"), static_cast<uint32_t>(shm_size[0])},
+            {NULL, ("telm_"+req_name+"_med"), static_cast<uint32_t>(shm_size[1])},
+            {NULL, ("telm_"+req_name+"_lo"), static_cast<uint32_t>(shm_size[2])}
         };
 
         // Register Publisher
@@ -539,7 +540,7 @@ int process_update_report_period_req(bosepro::telemetryManager& telm_mgr,
                              uint64_t& pkt_id, std::string& req_name,
                              bosepro::HandlerContext& /*unused*/)
 {
-    std::vector<uint32_t> periods;
+    std::vector<int_fast32_t> periods;
     int ret_val = 0;
 
     // Get Req name

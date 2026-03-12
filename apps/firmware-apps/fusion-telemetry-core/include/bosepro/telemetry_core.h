@@ -1,5 +1,5 @@
 #include <bosepro/named_shared_memory_manager_factory.h>
-#include "navigator.h"
+#include <bosepro/navigator.h>
 #include "telemetry_configuration.h"
 #include <arpa/inet.h>
 #include <iostream>
@@ -286,8 +286,8 @@ public:
   ///                        periods for the system.
   /// @return Success(0)/Failure (-1)
   int init(std::string &core_ip, std::string &core_path,
-           std::string &pub_sock_address, std::vector<uint32_t> &update_periods,
-           std::vector<uint32_t> &report_periods) {
+           std::string &pub_sock_address, std::vector<int_fast32_t> &update_periods,
+           std::vector<int_fast32_t> &report_periods) {
     int ret_val = 0;
 
     meter_update_frame_count = 0;
@@ -433,7 +433,7 @@ public:
   ///
   /// @param   periods  Vector with the 3 period values
   /// @return Success(0)/Failure (-1)
-  int set_meter_report_periods(std::vector<uint32_t> &periods) {
+  int set_meter_report_periods(std::vector<int_fast32_t> &periods) {
     int ret_val = 0;
 
     // Validate periods
@@ -478,7 +478,7 @@ public:
   ///
   /// @param   periods  Vector with the 3 period values
   /// @return Success(0)/Failure (-1)
-  int set_meter_update_periods(std::vector<uint32_t> &periods) {
+  int set_meter_update_periods(std::vector<int_fast32_t> &periods) {
     int ret_val = 0;
 
     // Validate periods

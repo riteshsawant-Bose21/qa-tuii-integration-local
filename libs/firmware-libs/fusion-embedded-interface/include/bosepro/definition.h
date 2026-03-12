@@ -2,6 +2,7 @@
 
 #include <bosepro/navigator.h>
 
+#include <set>
 #include <string>
 
 
@@ -22,37 +23,27 @@ public:
     /// Build the interface definitions for the system from the given JSON file.
     ///
     /// @param  filename  A JSON file containing the interface definitions.
-    Definition(const std::string &filename)
-        : Navigator(filename)
-    {
-    }
+    Definition(const std::string &filename);
 
 
     /// Get the name of the interface.
     ///
     /// @return  The name of the interface.
-    const std::string &get_name() const
-    {
-        return get_string("name");
-    }
+    const std::string &get_name() const;
 
 
     /// Get the name of the type of the interface's value (for Property,
     /// Parameter, and Telemetry interfaces).
     ///
     /// @return  The name of the type of the interface's value.
-    const std::string &get_value_type() const
-    {
-        return get_string("value_type");
-    }
+    const std::string &get_value_type() const;
 
 
     /// Get the number of dimensions for a parameter or telemetry (0 for scalar,
     /// 1 for vector, 2 for matrix).
-    int get_num_dimensions() const
-    {
-        return list_size("dimensions");
-    }
+    ///
+    /// @return  The number of dimensions for the parameter or telemetry.
+    int get_num_dimensions() const;
 
 
     /// Get the sizes of each dimension for a parameters or telemetry.  These may
@@ -74,33 +65,7 @@ public:
     ///                       number of columns is inherited from, or an empty
     ///                       string if the number of columns is fixed.
     void get_dimensions(int &num_rows, int &num_columns,
-                        std::string &rows_name, std::string &columns_name) const
-    {
-        if (get_num_dimensions() == 0)
-        {
-            rows_name = "";
-            columns_name = "";
-            return;
-        }
-
-        if (!try_list_value("dimensions", 0, rows_name))
-        {
-            rows_name = "";
-            try_list_value("dimensions", 0, num_rows);
-        }
-
-        if (get_num_dimensions() == 1)
-        {
-            columns_name = "";
-            return;
-        }
-
-        if (!try_list_value("dimensions", 1, columns_name))
-        {
-            columns_name = "";
-            try_list_value("dimensions", 1, num_columns);
-        }
-    }
+                        std::string &rows_name, std::string &columns_name) const;
 
 
     /// Test whether a definition can be found for the algorithm of the given
@@ -109,10 +74,7 @@ public:
     /// @param  name  The name of the algorithm.
     /// @return  True if a definition can be found for the algorithm, false
     ///          otherwise.
-    bool has_algorithm(const std::string &name) const
-    {
-        return list_has_member("algorithms", "name", name);
-    }
+    bool has_algorithm(const std::string &name) const;
 
 
     /// Get the definition for the algorithm of the given name.  The algorithm
@@ -121,11 +83,7 @@ public:
     ///
     /// @param  name  The name of the algorithm.
     /// @return  The definition for the algorithm.
-    const AlgorithmDefinition &get_algorithm(const std::string &name) const
-    {
-        return (const AlgorithmDefinition &)list_get_member("algorithms",
-                                                            "name", name);
-    }
+    const AlgorithmDefinition &get_algorithm(const std::string &name) const;
 
 
     /// Test whether a definition can be found for the module of the given
@@ -134,10 +92,7 @@ public:
     /// @param  name  The name of the module.
     /// @return  True if a definition can be found for the module, false
     ///          otherwise.
-    bool has_module(const std::string &name) const
-    {
-        return list_has_member("modules", "name", name);
-    }
+    bool has_module(const std::string &name) const;
 
 
     /// Get the definition for the module of the given name.  The module
@@ -146,21 +101,14 @@ public:
     ///
     /// @param  name  The name of the module.
     /// @return  The definition for the module.
-    const ModuleDefinition &get_module(const std::string &name) const
-    {
-        return (const ModuleDefinition &)list_get_member("modules",
-                                                            "name", name);
-    }
+    const ModuleDefinition &get_module(const std::string &name) const;
 
 
     /// Test whether a property definition of the given name exists.
     ///
     /// @param  name  The name of the property.
     /// @return  True if the property definition exists, false otherwise.
-    bool has_property(const std::string &name) const
-    {
-        return list_has_member("properties", "name", name);
-    }
+    bool has_property(const std::string &name) const;
 
 
     /// Get the property definition of the given name.  The property definition
@@ -169,11 +117,7 @@ public:
     ///
     /// @param  name  The name of the property.
     /// @return  The property definition.
-    const PropertyDefinition &get_property(const std::string &name) const
-    {
-        return (const PropertyDefinition &)list_get_member("properties", "name",
-                                                           name);
-    }
+    const PropertyDefinition &get_property(const std::string &name) const;
 
 
     /// Get the default value for the interface (for Property, Parameter,
@@ -181,10 +125,13 @@ public:
     ///
     /// @param  value  The default value for the interface.
     template <typename T>
-    void get_default_value(T &value) const
-    {
-        get_member_value<T>("default_value", value);
-    }
+    void get_default_value(T &value) const;
+
+
+    /// Test whether the interface has a minimum value.
+    ///
+    /// @return  True if the interface has a minimum value, false otherwise.
+    bool has_minimum_value() const;
 
 
     /// Get the minimum value for the interface (for Property, Parameter,
@@ -193,10 +140,13 @@ public:
     ///
     /// @param  value  The minimum value for the interface.
     template <typename T>
-    void get_minimum_value(T &value) const
-    {   
-        get_member_value<T>("minimum_value", value);
-    }
+    void get_minimum_value(T &value) const;
+
+
+    /// Test whether the interface has a maximum value.
+    ///
+    /// @return  True if the interface has a maximum value, false otherwise.
+    bool has_maximum_value() const;
 
 
     /// Get the maximum value for the interface (for Property, Parameter,
@@ -205,10 +155,56 @@ public:
     ///
     /// @param  value  The maximum value for the interface.
     template <typename T>
-    void get_maximum_value(T &value) const
-    {
-        get_member_value<T>("maximum_value", value);
-    }
+    void get_maximum_value(T &value) const;
+
+
+    /// Get the maximum value for the interface (for Property, Parameter,
+    /// and Telemetry interfaces).  The maximum value must exist for this
+    /// definition.
+    ///
+    /// @param  value  The maximum value for the interface.
+    /// @param  maximum_name  The name of the property or terminal that
+    ///                       determines the maximum value for the interface.
+    template <typename T>
+    void get_maximum_value(T &value, std::string &maximum_name) const;
+
+
+    /// Test whether the interface has a maximum length.
+    ///
+    /// @return  True if the interface has a maximum length, false otherwise.
+    bool has_maximum_length() const;
+
+
+    /// Get the maximum length for the interface (for Property, Parameter,
+    /// and Telemetry interfaces).  The maximum length must exist for this
+    /// definition.
+    ///
+    /// @return  length  The maximum length for a string-valued interface.
+    size_t get_maximum_length() const;
+
+
+    /// Test whether the interface has allowed values.
+    ///
+    /// @return  True if the interface has allowed values, false otherwise.
+    bool has_allowed_values() const;
+
+
+    /// Get the allowed values for the interface (for Property, Parameter,
+    /// and Telemetry interfaces).  The allowed values must exist for this
+    /// definition.
+    ///
+    /// @param  values  A set that will be populated with the allowed values
+    ///                 for the interface.
+    template <typename T>
+    void get_allowed_values(std::set<T> &values) const;
+
+
+    /// Test whether the provided value is allowed for the interface.  The
+    /// allowed values must exist for this definition.
+    ///
+    /// @param  value  The value to test.
+    template <typename T>
+    bool is_allowed_value(const T &value) const;
 };
 
 
@@ -218,10 +214,7 @@ public:
     ///
     /// @return  True if the algorithm has terminal definitions, false
     ///          otherwise.
-    bool has_terminals() const
-    {
-        return has_member("terminals");
-    }
+    bool has_terminals() const;
 
 
     /// Get the terminal definitions for the algorithm.  The terminal
@@ -229,20 +222,14 @@ public:
     /// existence before calling this method.
     ///
     /// @return  The terminal definitions for the algorithm.
-    const TerminalDefinition &get_terminals() const
-    {
-        return (const TerminalDefinition &)get_member("terminals");
-    }
+    const TerminalDefinition &get_terminals() const;
 
 
     /// Test whether a terminal definition of the given name exists.
     ///
     /// @param  name  The name of the terminal.
     /// @return  True if the terminal definition exists, false otherwise.
-    bool has_terminal(const std::string &name) const
-    {
-        return list_has_member("terminals", "name", name);
-    }
+    bool has_terminal(const std::string &name) const;
 
 
     /// Get the terminal definition of the given name.  The terminal definition
@@ -251,21 +238,14 @@ public:
     ///
     /// @param  name  The name of the terminal.
     /// @return  The terminal definition.
-    const TerminalDefinition &get_terminal(const std::string &name) const
-    {
-        return (const TerminalDefinition &)list_get_member("terminals", "name",
-                                                           name);
-    }
+    const TerminalDefinition &get_terminal(const std::string &name) const;
 
 
     /// Test whether the processor has parameter definitions.
     ///
     /// @return  True if the processor has parameter definitions, false
     ///          otherwise.
-    bool has_parameters() const
-    {
-        return has_member("parameters");
-    }
+    bool has_parameters() const;
 
 
     /// Get the parameter definitions for the algorithm.  The parameter
@@ -273,20 +253,14 @@ public:
     /// existence before calling this method.
     ///
     /// @return  The parameter definitions for the processor.
-    const ParameterDefinition &get_parameters() const
-    {
-        return (const ParameterDefinition &)get_member("parameters");
-    }
+    const ParameterDefinition &get_parameters() const;
 
 
     /// Test whether the processor has telemetry definitions.
     ///
     /// @return  True if the processor has telemetry definitions, false
     ///          otherwise.
-    bool has_telemetry() const
-    {
-        return has_member("telemetry");
-    }
+    bool has_telemetry() const;
 
 
     /// Get the meter definitions for the algorithm.  The meter definitions
@@ -294,10 +268,7 @@ public:
     /// calling this method.
     ///
     /// @return  The meter definitions for the algorithm.
-    const TelemetryDefinition &get_telemetry() const
-    {
-        return (const TelemetryDefinition &)get_member("telemetry");
-    }
+    const TelemetryDefinition &get_telemetry() const;
 };
 
 
@@ -307,7 +278,7 @@ class AlgorithmDefinition : public ProcessorDefinition {
 };
 
 
-/// The interface definitions for an module.
+/// The interface definitions for a module.
 class ModuleDefinition : public ProcessorDefinition {
 
 };
@@ -323,19 +294,13 @@ class PropertyDefinition : public Definition {
 class TerminalDefinition : public Definition {
 public:
     /// Test whether the terminal is an output terminal.
-    bool is_output() const
-    {
-        return get_string("direction") == "output";
-    }
+    bool is_output() const;
 
 
     /// Test whether this terminal has its channels explicitly defined, either
     /// as an integer, or a string indicating a property that defines the
     /// number of channels for this terminal.
-    bool has_channels() const
-    {
-        return has_member("channels");
-    }
+    bool has_channels() const;
 
 
     /// Get the number of channels for the terminal, or the name of the property
@@ -345,52 +310,21 @@ public:
     ///     of channels, or an empty string if the number of channels is fixed.
     /// @return  The number of channels for the terminal, if the number
     ///     of channels is fixed, or 0 otherwise.
-    int get_channels(std::string &property_name) const
-    {
-        int channels = 0;
-
-        if (try_member_value<int>("channels", channels))
-        {
-            SPDLOG_DEBUG("Got channels from definition: {}.", channels);
-        }
-        else if (try_member_value<std::string>("channels", property_name))
-        {
-            SPDLOG_DEBUG("Got channels from definition: {}.", property_name);
-        }
-        else
-        {
-            SPDLOG_CRITICAL("Failed to get channels from definition.");
-        }
-
-        return channels;
-    }
+    int get_channels(std::string &property_name) const;
 
 
     /// Return the minimum number of channels that can be specified in a
     /// configuration for this terminal.
-    int get_minimum_channels() const
-    {
-        int minimum_channels = 0;
-        get_member_value("minimum_channels", minimum_channels);
-        return minimum_channels;
-    }
+    int get_minimum_channels() const;
 
 
     /// Return the maximum number of channels that can be specified in a
     /// configuration for this terminal.
-    int get_maximum_channels() const
-    {
-        int maximum_channels = 0;
-        get_member_value("maximum_channels", maximum_channels);
-        return maximum_channels;
-    }
+    int get_maximum_channels() const;
 
 
     /// Test whether this terminal has a bypass source.
-    bool has_bypass_source() const
-    {
-        return has_member("bypass_source");
-    }
+    bool has_bypass_source() const;
 
 
     /// Get the name of the bypass source for the terminal.  This is an input
@@ -399,10 +333,7 @@ public:
     /// string is returned.
     ///
     /// @return  The name of an input terminal.
-    const std::string &get_bypass_source() const
-    {
-        return get_string("bypass_source");
-    }
+    const std::string &get_bypass_source() const;
 };
 
 
@@ -417,19 +348,13 @@ public:
     /// Get the telemetry reate
     ///
     /// @return  The telemetry type.
-    const std::string &get_period_type() const
-    {
-        return get_string("period_type");
-    }
+    const std::string &get_period_type() const;
 
 
     /// Get the telemetry type
     ///
     /// @return  The telemetry type.
-    const std::string &get_telemetry_type() const
-    {
-        return get_string("telemetry_type");
-    }
+    const std::string &get_telemetry_type() const;
 };
 
 

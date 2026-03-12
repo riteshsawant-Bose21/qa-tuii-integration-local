@@ -58,10 +58,15 @@ def configure(conf):
 
     print('Checking compiler flags...')
     if compiler_has_flag(conf, '-Wtemplate-id-cdtor'):
-        # GCC 14.2.0 was giving c++20 warnings about templated ctor/dtor even
-        # when we have -std=c++17. So disable the warning.
+        # GCC 14 gives a warning for templated ctor/dtor that are not valid in
+        # C++20. We have -std=c++17. So disable the warning. With -Werror
+        # compilation would fail.
         if not conf.env['IS_MACOS']:
             conf.env.append_value('CXXFLAGS', ['-Wno-template-id-cdtor'])
+
+    if compiler_has_flag(conf, '-Wcalloc-transposed-args'):
+        if not conf.env['IS_MACOS']:
+            conf.env.append_value('CXXFLAGS', '-Wno-calloc-transposed-args')
 
     conf.env.append_value('CXXFLAGS', ['-std=c++17'])
     conf.env.append_value('CXXFLAGS', ['-Wall', '-Wextra', '-Werror'])
@@ -69,39 +74,40 @@ def configure(conf):
 
     # spdlog from the Yocto SDK is configured for an external 'fmt' lib.
     conf.env.append_value('CXXFLAGS', ['-DSPDLOG_FMT_EXTERNAL'])
+    # by default we compile out all TRACE logs as they may affect performance
     conf.env.append_value('CXXFLAGS',
                           ['-DSPDLOG_ACTIVE_LEVEL=SPDLOG_LEVEL_DEBUG'])
+
+    # #to define USE_WEIGHTS_FILE
+    # conf.env.append_value('CXXFLAGS', ['-DUSE_WEIGHTS_FILE'])
 
     if conf.env['IS_MACOS']:
         conf.env.append_value('INCLUDES', ['/opt/homebrew/include'])
         conf.env.append_value('LIBPATH', ['/opt/homebrew/lib'])
-        conf.env.append_value('FRAMEWORK',
-                              ['AudioUnit', 'CoreAudio', 'CoreServices'])
         conf.env.append_value('CXXFLAGS', '-DUSE_MAC_THREADS')
 
         # This is needed because of warnings in Boost property trees.
         conf.env.append_value('CXXFLAGS',
                            ['-Wno-deprecated-copy-with-user-provided-copy'])
-        conf.env.append_value('CXXFLAGS',
-                           ['-Wno-vla-cxx-extension'])
 
     else:
-        conf.env.append_value('LDFLAGS', '-lpthread')
+        if conf.env['IS_LINUX']:
+            # NOTE: Doing the old way of boost::bind for now.
+            # /usr/include/boost/bind.hpp:36:1: note: ‘#pragma message: The practice of declaring the Bind placeholders (_1, _2, ...) in the 
+            # global namespace is deprecated. Please use <boost/bind/bind.hpp> + using namespace boost::placeholders, 
+            # or define BOOST_BIND_GLOBAL_PLACEHOLDERS to retain the current behavior.’
+            conf.env.append_value('CXXFLAGS', '-DBOOST_BIND_GLOBAL_PLACEHOLDERS')
 
-    if conf.env['IS_LINUX']:
-        # NOTE: Doing the old way of boost::bind for now.
-        # /usr/include/boost/bind.hpp:36:1: note: ‘#pragma message: The practice of declaring the Bind placeholders (_1, _2, ...) in the 
-        # global namespace is deprecated. Please use <boost/bind/bind.hpp> + using namespace boost::placeholders, 
-        # or define BOOST_BIND_GLOBAL_PLACEHOLDERS to retain the current behavior.’
-        conf.env.append_value('CXXFLAGS', '-DBOOST_BIND_GLOBAL_PLACEHOLDERS')
-
-    conf.env.append_value('LIBPATH', [conf.path.abspath() + '/../../../libs/firmware-libs/fusion-embedded-interface/build'])
-    conf.check_cfg(package='dbus-1', uselib_store='DBUS', args='--cflags --libs', mandatory=True)
 
 def build(bld):
-    bld(export_includes=['../../../libs/firmware-libs/fusion-embedded-interface/include', './external/doctest', './include'], name='common-include')
+    bld(export_includes=['./include'], name='common-include')
 
-    bld.program(target='fusion_system_monitor',
-                source=bld.path.ant_glob(['src/*.cpp', 'src/*.c']),
-                use=['common-include', 'DBUS'],
-                lib=['jack', 'fmt', 'sndfile', 'boost_program_options', 'jsoncpp', 'curl', 'fusion_embedded_interface'])
+    libs = ['fmt']
+
+    bld.shlib(target='fusion_embedded_interface',
+              source=bld.path.ant_glob(['src/*.cpp', 'src/*.c']),
+              use=['common-include', 'fmt'],
+              lib=libs,
+              export_includes=['./include'])
+
+

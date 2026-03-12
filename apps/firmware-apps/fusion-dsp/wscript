@@ -70,7 +70,7 @@ def configure(conf):
 
     conf.env.append_value('CXXFLAGS', ['-std=c++17'])
     conf.env.append_value('CXXFLAGS', ['-Wall', '-Wextra', '-Werror'])
-    conf.env.append_value('CXXFLAGS', ['-Ofast'])
+    conf.env.append_value('CXXFLAGS', ['-O3', '-ffast-math', '-fno-finite-math-only'])
 
     # spdlog from the Yocto SDK is configured for an external 'fmt' lib.
     conf.env.append_value('CXXFLAGS', ['-DSPDLOG_FMT_EXTERNAL'])
@@ -91,6 +91,8 @@ def configure(conf):
         # This is needed because of warnings in Boost property trees.
         conf.env.append_value('CXXFLAGS',
                            ['-Wno-deprecated-copy-with-user-provided-copy'])
+        conf.env.append_value('CXXFLAGS',
+                           ['-Wno-vla-cxx-extension'])
 
         onnx_path = conf.path.abspath() + '/libs/onnxruntime-osx-universal2-1.17.0'
     else:
@@ -109,20 +111,13 @@ def configure(conf):
     # add onnxruntime library
     conf.env.append_value('INCLUDES', [onnx_path+'/include'])
     conf.env.append_value('LIBPATH', [onnx_path+'/lib'])
+    conf.env.append_value('LIBPATH', [conf.path.abspath() + '/../../../libs/firmware-libs/fusion-embedded-interface/build'])
 
 def build(bld):
-    shared_include = '../libs/cpp/named_shared_memory/include'
-    shared_sources = [
-        '../libs/cpp/named_shared_memory/src/named_shared_memory.cc',
-        '../libs/cpp/named_shared_memory/src/named_shared_memory_utility.cc',
-        '../libs/cpp/named_shared_memory/src/named_shared_memory_manager.cc',
-        '../libs/cpp/named_shared_memory/src/named_shared_memory_manager_factory.cc',
-    ]
-
-    bld(export_includes=['./external/doctest', './include', shared_include], name='common-include')
+    bld(export_includes=['../../../libs/firmware-libs/fusion-embedded-interface/include', './external/doctest', './include'], name='common-include')
 
     excludes = []
-    libs = ['jack', 'fmt', 'sndfile', 'boost_program_options', 'onnxruntime', 'jsoncpp', 'samplerate', 'curl']
+    libs = ['jack', 'fmt', 'sndfile', 'boost_program_options', 'onnxruntime', 'jsoncpp', 'samplerate', 'curl', 'fusion_embedded_interface']
 
     if bld.env['IS_MACOS']:
         excludes.append('src/alsa.cpp')
@@ -131,12 +126,7 @@ def build(bld):
 
     bld.program(target='fusion_dsp',
                 source=bld.path.ant_glob(['src/*.cpp', 'src/*.c'],
-                                         excl=excludes + [
-                                             'src/named_shared_memory.cpp',
-                                             'src/named_shared_memory_utility.cpp',
-                                             'src/named_shared_memory_manager.cpp',
-                                             'src/named_shared_memory_manager_factory.cpp',
-                                         ]) + shared_sources,
+                                         excl=excludes),
                 use=['common-include'],
                 lib=libs)
 
@@ -144,11 +134,7 @@ def build(bld):
 
     bld.program(target='test_dsp',
                 source=bld.path.ant_glob(['src/*.cpp', 'src/*.c', 'test/*.cpp'],
-                                         excl=excludes + [
-                                             'src/named_shared_memory.cpp',
-                                             'src/named_shared_memory_utility.cpp',
-                                             'src/named_shared_memory_manager.cpp',
-                                             'src/named_shared_memory_manager_factory.cpp',
-                                         ]) + shared_sources,
+                                         excl=excludes),
                 use=['common-include'],
                 lib=libs)
+

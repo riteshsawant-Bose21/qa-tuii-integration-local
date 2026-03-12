@@ -194,7 +194,7 @@ void bosepro::NamedSharedMemory::write(const void* data, std::size_t size, const
  * Writes data to shared memory but does not update Meta Data except for numBytesWritten
  * No validations - just mem copy
  */
-void bosepro::NamedSharedMemory::lightWeightWrite(const void* data, std::size_t size, const std::string& /*type*/) {
+void bosepro::NamedSharedMemory::lightWeightWrite(const void* data, std::size_t size) {
     lockOrThrow(sharedMutex_, "lightWeightWrite");
     try {
         if (isReaderObject.load(std::memory_order_acquire)) {

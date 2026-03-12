@@ -1,6 +1,7 @@
 #include <bosepro/module.h>
 #include <bosepro/periodic_task.h>
 #include <cstdint>
+#include <fstream>
 #include <sstream>
 #include <string>
 #include <vector>

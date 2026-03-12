@@ -176,13 +176,13 @@ void handle_update(const std::string &update_setting)
 
 int main(int argc, char* argv[])
 {
-    std::vector<uint32_t> update_periods = {0, 0, 0};
-    std::vector<uint32_t> report_periods = {0, 0, 0};
+    std::vector<int_fast32_t> update_periods = {0, 0, 0};
+    std::vector<int_fast32_t> report_periods = {0, 0, 0};
     std::string core_path;
     std::string core_ip;
     std::string core_pub_addr;
     uint64_t start_tstamp_ns;
-    uint32_t fus_serv_port = FUSION_SERVER_PORT_DEFAULT;
+    int_fast32_t fus_serv_port = FUSION_SERVER_PORT_DEFAULT;
 
     signal(SIGINT, &sig_handler);
     signal(SIGTERM, &sig_handler);
@@ -200,8 +200,8 @@ int main(int argc, char* argv[])
         ("configuration,c", boost::program_options::value<std::string>()->default_value(config_path + "/telemetry-configuration.json"), "configuration file")
         ("socket-path,p", boost::program_options::value<std::string>(&core_path), "Core UNIX Domain Socket Path")
         ("system-ip,i", boost::program_options::value<std::string>(&core_ip)->required(), "System IP Address")
-        ("update-period,u", boost::program_options::value<std::vector<uint32_t>>(&update_periods)->multitoken(), "HI Freq., MED Freq. & LO Freq. update periods (Frames)")
-        ("report-period,r", boost::program_options::value<std::vector<uint32_t>>(&report_periods)->multitoken(), "HI Freq., MED Freq. & LO Freq. report periods (Frames)")
+        ("update-period,u", boost::program_options::value<std::vector<int_fast32_t>>(&update_periods)->multitoken(), "HI Freq., MED Freq. & LO Freq. update periods (Frames)")
+        ("report-period,r", boost::program_options::value<std::vector<int_fast32_t>>(&report_periods)->multitoken(), "HI Freq., MED Freq. & LO Freq. report periods (Frames)")
         ("debug-log-enable,d", boost::program_options::bool_switch(), "Set logging level to DEBUG")
         ("help,h", "print this message and exit")
     ;

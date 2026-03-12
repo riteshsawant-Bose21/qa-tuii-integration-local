@@ -29,7 +29,7 @@ public:
     ~NamedSharedMemory();
 
     void write(const void* data, std::size_t size, const std::string& type);
-    void lightWeightWrite(const void* data, std::size_t size, const std::string& type);
+    void lightWeightWrite(const void* data, std::size_t size);
 
     std::size_t read(void* buffer, std::size_t bufferSize);
 
