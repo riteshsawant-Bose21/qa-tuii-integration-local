@@ -80,12 +80,12 @@ func (a *API) registerRoutes() {
 	}
 
 	// Auth endpoints
-	auth := v1.Group("/auth")
+	auth := v1.Group(constants.EndpointAuth)
 
 	// Auth automation route (no authentication required)
 	if a.auth != nil {
 		authHandler := handler.NewAuthHandler(a.auth)
-		auth.GET("/automation/tokens", authHandler.GetAuthTokensByResourceOwnerPassword)
+		auth.GET(constants.EndpointAuthTokens, authHandler.GetAuthTokensByResourceOwnerPassword)
 	}
 
 	// Role Management routes for organization admins (auth handled by lambda-authorizer)
