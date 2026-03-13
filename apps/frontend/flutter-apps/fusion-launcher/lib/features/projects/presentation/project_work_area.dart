@@ -79,7 +79,7 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with TickerProviderSt
 
     /// Todo: Need to handle this in a better way
     serviceLocator<ProjectViewModel>().changeDeviceTypeIndex(-1);
-    serviceLocator<ProjectViewModel>().currentToolbarMode = ToolbarMode.acoustics;
+    // serviceLocator<ProjectViewModel>().currentToolbarMode = ToolbarMode.acoustics;
 
     // _initSplRangeDefaults();
   }

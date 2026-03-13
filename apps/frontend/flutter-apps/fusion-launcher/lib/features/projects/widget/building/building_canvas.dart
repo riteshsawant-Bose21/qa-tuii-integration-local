@@ -24,6 +24,7 @@ import '../../../fusion_canvas/view/painters/elements/derived/floor_plan_painter
 import '../../../fusion_canvas/view/painters/elements/derived/hardware_component_painter.dart';
 import '../../../fusion_canvas/view/painters/elements/derived/listening_area_painter.dart';
 import '../../../fusion_canvas/view/painters/elements/derived/spl_painter.dart';
+import '../../viewmodel/building_page_viewmodel.dart';
 import 'toolbar/building_toolbar.dart';
 
 class BuildingCanvas extends StatefulWidget {
@@ -575,7 +576,7 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
                                               listeningAreaToZoneMap: serviceLocator<ProjectViewModel>().getListeningAreaToZoneMap(),
                                               subZoneToZoneMap: serviceLocator<ProjectViewModel>().getSubZoneToZoneMap(),
                                               listeningAreaToSubZoneMap: serviceLocator<ProjectViewModel>().getListeningAreaToSubZoneMap(),
-                                              isAcousticsMode: serviceLocator<ProjectViewModel>().currentToolbarMode == ToolbarMode.acoustics,
+                                              isAcousticsMode: context.watch<BuildingPageViewModel>().state.toolbarMode == ToolbarMode.acoustics,
                                               isInSpeakerPlacementMode: projectViewModel.shouldPlaceNonPlacedSpeakers,
                                               showLiveSpl: showLiveSpl,
                                             ),
@@ -692,7 +693,7 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
                       widget.floorCanvasController.setDraw(true);
                     }
 
-                    if (serviceLocator<ProjectViewModel>().currentToolbarMode == ToolbarMode.system &&
+                    if (context.read<BuildingPageViewModel>().state.toolbarMode == ToolbarMode.system &&
                         !serviceLocator<ProjectViewModel>().isInListeningAreaMode &&
                         widget.floorCanvasController.isDrawing.value) {
                       widget.floorCanvasController.toggleDraw();

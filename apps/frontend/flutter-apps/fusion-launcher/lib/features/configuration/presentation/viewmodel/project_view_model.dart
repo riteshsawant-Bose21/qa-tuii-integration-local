@@ -105,7 +105,7 @@ class ProjectViewModel extends Cubit<ProjectViewModelState> {
 
   ProjectMode currentProjectMode = ProjectMode.systemListingMode;
 
-  ToolbarMode currentToolbarMode = ToolbarMode.acoustics;
+  // ToolbarMode currentToolbarMode = ToolbarMode.acoustics;
   ConfigurationMenuMode currentConfigurationMenuMode = ConfigurationMenuMode.processing;
 
   ProductQueryModel? selectedProductToAdd;
@@ -435,16 +435,16 @@ class ProjectViewModel extends Cubit<ProjectViewModelState> {
     currentDeviceTypeIndex = -1;
   }
 
-  void setToolbarMode(ToolbarMode mode) {
-    if (currentToolbarMode != mode) {
-      currentToolbarMode = mode;
-      // Reset selections when switching modes
-      changeDeviceTypeIndex(-1);
-      setSelectedProductToAdd(null);
-      setShouldPlaceNonPlacedSpeakers(false);
-      emit(ToolbarModeChanged(mode));
-    }
-  }
+  // void setToolbarMode(ToolbarMode mode) {
+  //   if (currentToolbarMode != mode) {
+  //     currentToolbarMode = mode;
+  //     // Reset selections when switching modes
+  //     changeDeviceTypeIndex(-1);
+  //     setSelectedProductToAdd(null);
+  //     setShouldPlaceNonPlacedSpeakers(false);
+  //     emit(ToolbarModeChanged(mode));
+  //   }
+  // }
 
   void setConfigurationMenuMode(ConfigurationMenuMode mode) {
     if (currentConfigurationMenuMode != mode) {

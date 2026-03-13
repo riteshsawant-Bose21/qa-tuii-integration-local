@@ -100,7 +100,7 @@ class _FloorsSectionState extends State<FloorsSection> {
     _clearFields();
 
     // Set toolbar mode to acoustics mode for new floor.
-    viewModel.setToolbarMode(ToolbarMode.acoustics);
+    // viewModel.setToolbarMode(ToolbarMode.acoustics);
   }
 
   /// Delete the selected floor

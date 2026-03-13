@@ -6,6 +6,7 @@ import 'package:fusion_lib/fusion_lib.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../../../core/service_locator.dart';
+import '../../../viewmodel/building_page_viewmodel.dart';
 import 'parts/select_speaker_popup.dart';
 
 class SpeakerSelectionWidget extends StatefulWidget {
@@ -27,7 +28,7 @@ class _SpeakerSelectionWidgetState extends State<SpeakerSelectionWidget> {
             final ProjectViewModel projectViewModel = serviceLocator<ProjectViewModel>();
             final ListeningArea? currentSelectedListeningAreaId = projectViewModel.getCurrentSelectedListeningArea();
 
-            if (currentSelectedListeningAreaId == null || projectViewModel.currentToolbarMode == ToolbarMode.system) {
+            if (currentSelectedListeningAreaId == null || context.watch<BuildingPageViewModel>().state.toolbarMode == ToolbarMode.system) {
               return const SizedBox.shrink();
             }
 

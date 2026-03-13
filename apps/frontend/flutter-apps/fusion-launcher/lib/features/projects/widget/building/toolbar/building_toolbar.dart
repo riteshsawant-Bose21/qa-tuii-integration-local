@@ -10,6 +10,7 @@ import 'package:fusion_launcher/features/projects/models/device_item_model.dart'
 import 'package:fusion_lib/fusion_lib.dart';
 
 import '../../../../../core/models/products_data.dart';
+import '../../../viewmodel/building_page_viewmodel.dart';
 
 enum _AcousticsToolType {
   draw,
@@ -179,7 +180,7 @@ class _BuildingToolbarState extends State<BuildingToolbar> {
 
   Widget _buildModeSwitch() {
     final ToolbarMode currentMode =
-        serviceLocator<ProjectViewModel>().currentToolbarMode;
+        context.watch<BuildingPageViewModel>().state.toolbarMode;
 
     return Container(
       decoration: BoxDecoration(
@@ -338,7 +339,7 @@ class _BuildingToolbarState extends State<BuildingToolbar> {
 
   Widget _buildModeSpecificTools() {
     final ToolbarMode currentMode =
-        serviceLocator<ProjectViewModel>().currentToolbarMode;
+       context.read<BuildingPageViewModel>().state.toolbarMode;
 
     return Row(
       key: ValueKey<ToolbarMode>(currentMode),
@@ -680,7 +681,7 @@ class _BuildingToolbarState extends State<BuildingToolbar> {
 
   void _switchMode(ToolbarMode newMode) {
     final ToolbarMode currentMode =
-        serviceLocator<ProjectViewModel>().currentToolbarMode;
+        context.read<BuildingPageViewModel>().state.toolbarMode;
 
     if (currentMode != newMode) {
       // Deselect any currently selected hardware component or listening area when switching modes
@@ -693,7 +694,7 @@ class _BuildingToolbarState extends State<BuildingToolbar> {
         widget.onSplDisabled();
       }
 
-      serviceLocator<ProjectViewModel>().setToolbarMode(newMode);
+      context.read<BuildingPageViewModel>().toggleMode(newMode);
     }
   }
 
