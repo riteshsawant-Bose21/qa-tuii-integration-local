@@ -181,7 +181,7 @@ const struct base_device bd_fusion_powersmart = {
             .name = "gpio_uv_warn",
             .type = EP_GPIO_TYPE_PHYS,
             .export = true,
-            .num = 129, // GPIO5_IO5
+            .num = 133, // GPIO5_IO5
             .dir = EP_GPIO_DIR_I
         }
     },
@@ -260,7 +260,7 @@ const struct base_device bd_fusion_c1_evk = {
             .name = "gpio_uv_warn",
             .type = EP_GPIO_TYPE_PHYS,
             .export = true,
-            .num = 129, // GPIO5_IO5
+            .num = 133, // GPIO5_IO5
             .dir = EP_GPIO_DIR_I
         }
     },
@@ -323,7 +323,7 @@ const struct base_device bd_fusion_fm6 = {
             .name = "gpio_uv_warn",
             .type = EP_GPIO_TYPE_PHYS,
             .export = true,
-            .num = 129, // GPIO5_IO5
+            .num = 133, // GPIO5_IO5
             .dir = EP_GPIO_DIR_I,
             .is_irq = true,
             .trigger_type = IRQ_TYPE_EDGE_FALLING
@@ -1239,7 +1239,7 @@ const struct base_device bd_fusion_fm8y = {
             .name = "gpio_uv_warn",
             .type = EP_GPIO_TYPE_PHYS,
             .export = true,
-            .num = 129, // GPIO5_IO5
+            .num = 133, // GPIO5_IO5
             .dir = EP_GPIO_DIR_I,
             .is_irq = true,
             .trigger_type = IRQ_TYPE_EDGE_FALLING
