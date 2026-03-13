@@ -6,10 +6,14 @@ import '../../configuration/presentation/viewmodel/project_view_model.dart';
 class BuildingPageViewModel extends Cubit<BuildingPageState> {
   BuildingPageViewModel()
     : super(
-        BuildingPageState(toolbarMode: ToolbarMode.acoustics, splState: SplState.hidden),
+        BuildingPageState.defaultAcousticsState(),
       );
 
   void toggleMode(ToolbarMode mode) {
-    emit(BuildingPageState(toolbarMode: mode, splState: state.splState));
+    if (mode == ToolbarMode.acoustics) {
+      emit(BuildingPageState.defaultAcousticsState());
+    } else {
+      emit(BuildingPageState.defaultSystemState());
+    }
   }
 }
