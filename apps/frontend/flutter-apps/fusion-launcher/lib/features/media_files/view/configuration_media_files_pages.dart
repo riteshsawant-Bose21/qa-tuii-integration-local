@@ -77,6 +77,7 @@ class _MediaTable extends StatelessWidget {
             return Column(
               children: <Widget>[
                 SectionHeader(
+                  semanticLabel: 'media_files',
                   title: 'Media Files',
                   trailing: SemanticHelper.button(
                     testId: SemanticHelper.createTestId(SemanticTypes.button, "upload_media_files"),

@@ -477,8 +477,8 @@ class ProductQuerySpeakerList extends StatelessWidget {
                         cursor: SystemMouseCursors.click,
                         child: Tooltip(
                           message: "Sort products",
-                          child: FusionSvgIcon(
-                            icon: "assets/svg/sort.svg",
+                          child: FusionIcon.svg(
+                            "assets/svg/sort.svg",
                             color: context.colorScheme.onSurface,
                           ),
                         ),

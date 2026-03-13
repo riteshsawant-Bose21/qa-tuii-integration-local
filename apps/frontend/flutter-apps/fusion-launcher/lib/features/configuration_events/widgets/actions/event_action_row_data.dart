@@ -8,6 +8,7 @@ import 'package:fusion_lib/fusion_theme/app_theme.dart';
 
 import '../../../../core/constants/assets_constants.dart';
 import '../../../../core/widgets/configuration_widgets/action_drop_down.dart' show FusionDropdown;
+import '../../viewModel/events_viewmodel/config_events_state.dart';
 import '../../viewModel/events_viewmodel/config_events_viewmodel.dart';
 
 class EventActionRowData extends StatelessWidget {
@@ -24,18 +25,25 @@ class EventActionRowData extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return BlocBuilder<ConfigEventActionsViewmodel, ConfigEventActionsState>(
-      builder: (BuildContext context, ConfigEventActionsState state) {
-        // Get the latest action data from state
-        final SceneActionModel? currentAction = state.getActionById(action.id);
-        if (currentAction == null) {
-          return const SizedBox.shrink();
-        }
+    // Outer BlocBuilder listens to ConfigEventsViewmodel so that toggling
+    // above / below (which emits a new ConfigEventsState) triggers a rebuild
+    // of the entire row — including the value widget's stateType.
+    return BlocBuilder<ConfigEventsViewmodel, ConfigEventsState>(
+      builder: (BuildContext context, ConfigEventsState eventsState) {
+        return BlocBuilder<ConfigEventActionsViewmodel, ConfigEventActionsState>(
+          builder: (BuildContext context, ConfigEventActionsState actionsState) {
+            // Get the latest action data from state
+            final SceneActionModel? currentAction = actionsState.getActionById(action.id);
+            if (currentAction == null) {
+              return const SizedBox.shrink();
+            }
 
-        return _EventActionRowContent(
-          action: currentAction,
-          index: index,
-          eventId: eventId,
+            return _EventActionRowContent(
+              action: currentAction,
+              index: index,
+              eventId: eventId,
+            );
+          },
         );
       },
     );
@@ -59,10 +67,16 @@ class _EventActionRowContent extends StatelessWidget {
     final ConfigEventsViewmodel configEventsViewmodel = context.read<ConfigEventsViewmodel>();
     final ColorScheme colorScheme = Theme.of(context).colorScheme;
 
+    FusionEvent event;
+    try {
+      event = configEventsViewmodel.getEventById(eventId);
+    } catch (_) {
+      return const SizedBox.shrink();
+    }
+
     final List<SceneItemDropdown> itemList = _getItemList(cubit);
     final List<SceneParam> paramList = _getParamList(cubit);
     final bool isItemEnabled = action.actionType == null || itemList.isNotEmpty;
-    final FusionEvent event = configEventsViewmodel.getEventById(eventId);
 
     return SemanticHelper.button(
       testId: SemanticHelper.createTestId(SemanticTypes.button, "event_action_row_data_$index"),
@@ -80,7 +94,7 @@ class _EventActionRowContent extends StatelessWidget {
             _buildItemDropdown(context, cubit, itemList, isItemEnabled),
             _buildParamDropdown(context, cubit, paramList),
             (event.condition is! ValueChangeCondition)
-                ? _buildValueWidget(context, cubit, configEventsViewmodel)
+                ? _buildValueWidget(context, cubit, event)
                 : const Expanded(
                   child: Center(
                     child: FusionAppText(text: "--"),
@@ -219,14 +233,17 @@ class _EventActionRowContent extends StatelessWidget {
     );
   }
 
-  Widget _buildValueWidget(BuildContext context, ConfigEventActionsViewmodel cubit, ConfigEventsViewmodel configEventsViewmodel) {
+  Widget _buildValueWidget(BuildContext context, ConfigEventActionsViewmodel cubit, FusionEvent event) {
     if (action.param == null) return const Expanded(child: SizedBox.shrink());
-    final FusionEvent event = configEventsViewmodel.getEventById(eventId);
+    // event is already fetched and guarded in build() — no second getEventById call.
     final EventStateTypes stateType = event.selectedState?.stateType ?? EventStateTypes.off;
 
     return Expanded(
       child: EventValueWidget(
-        key: ValueKey<String>(action.id),
+        // Include stateType in the key so the StatefulWidget (and its internal
+        // TextFormField / slider state) is fully recreated when switching
+        // between above / below.
+        key: ValueKey<String>('${action.id}_${stateType.name}'),
         actionId: action.id,
         stateType: stateType,
         value:

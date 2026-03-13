@@ -702,8 +702,8 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with TickerProviderSt
                               borderRadius: BorderRadius.circular(2),
                               color: isListingViewMode ? context.colorScheme.elevation3 : Colors.transparent,
                             ),
-                            child: FusionSvgIcon(
-                              icon: AssetSvg.listingViewIcon,
+                            child: FusionIcon.svg(
+                              AssetSvg.listingViewIcon,
                               size: 40,
                               color: context.colorScheme.primaryWhite,
                             ),
@@ -724,8 +724,8 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with TickerProviderSt
                               borderRadius: BorderRadius.circular(2),
                               color: isListingViewMode ? Colors.transparent : context.colorScheme.elevation3,
                             ),
-                            child: FusionSvgIcon(
-                              icon: AssetSvg.wiringViewIcon,
+                            child: FusionIcon.svg(
+                              AssetSvg.wiringViewIcon,
                               size: 40,
                               color: context.colorScheme.primaryWhite,
                             ),

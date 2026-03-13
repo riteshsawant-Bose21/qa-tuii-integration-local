@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/features/configuration_page/widgets/sub_zone_card.dart';
 import 'package:fusion_launcher/features/zone_functions/source_select.dart';
+import 'package:fusion_lib/constants/semantics/features/configuration/processing/config_zones_keys.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
 import '../../../core/constants/assets_constants.dart';
@@ -20,8 +21,10 @@ class ZoneCard extends StatefulWidget {
   final Color bgColor;
   final Zone zoneData;
   final Function(bool)? onExpansionChanged;
+  final int? index;
 
   const ZoneCard({
+    this.index,
     super.key,
     required this.zoneId,
     required this.zoneName,
@@ -62,6 +65,10 @@ class _ZoneCardState extends State<ZoneCard> {
     super.dispose();
   }
 
+  String _prioritySemanticId({required int priorityIndex, required String element}) {
+    return 'priority_${priorityIndex}_$element';
+  }
+
   /// Default proxy decorator for reorderable list view
   Widget _defaultProxyDecorator(Widget child, int index, Animation<double> animation) {
     return FadeTransition(
@@ -90,22 +97,28 @@ class _ZoneCardState extends State<ZoneCard> {
         builder: (BuildContext context, bool zoneExpanded, Widget? child) {
           return BlocBuilder<ConfigZonesViewmodel, ConfigZonesState>(
             builder: (BuildContext context, ConfigZonesState state) {
-              return Column(
-                children: <Widget>[
-                  MouseRegion(
-                    onEnter: (_) => setState(() => isHovered = true),
-                    onExit: (_) => setState(() => isHovered = false),
-                    child: _buildZoneHeader(
-                      context: context,
-                      expanded: zoneExpanded,
-                      isHovered: isHovered,
-                      isSelected: false,
+              return SemanticHelper.container(
+                testId: SemanticHelper.createTestId(SemanticTypes.container, "${FusionTestKeys.instance.zoneitem}_${widget.index}"),
+                child: Column(
+                  children: <Widget>[
+                    SemanticHelper.container(
+                      testId: SemanticHelper.createTestId(SemanticTypes.container, FusionTestKeys.instance.zoneitmheader),
+                      child: MouseRegion(
+                        onEnter: (_) => setState(() => isHovered = true),
+                        onExit: (_) => setState(() => isHovered = false),
+                        child: _buildZoneHeader(
+                          context: context,
+                          expanded: zoneExpanded,
+                          isHovered: isHovered,
+                          isSelected: false,
+                        ),
+                      ),
                     ),
-                  ),
-
-                  /// Zone Content - shows subzones when expanded
-                  if (zoneExpanded) _buildZoneContent(),
-                ],
+                
+                    /// Zone Content - shows subzones when expanded
+                    if (zoneExpanded) _buildZoneContent(),
+                  ],
+                ),
               );
             },
           );
@@ -141,15 +154,18 @@ class _ZoneCardState extends State<ZoneCard> {
         child: Row(
           children: <Widget>[
             /// Expand/collapse icon
-            Icon(
+            FusionIcon.icon(
+              semanticId: FusionTestKeys.instance.zonelisticonexpandcollapse,
               expanded ? Icons.arrow_drop_up_rounded : Icons.arrow_drop_down_rounded,
               color: Theme.of(context).colorScheme.primaryWhite,
             ),
+
             const SizedBox(width: 4),
 
             /// Zone name
             Expanded(
               child: FusionAppText(
+                semanticId: FusionTestKeys.instance.zonelistname,
                 text: widget.zoneName,
                 maxLine: 1,
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
@@ -162,7 +178,8 @@ class _ZoneCardState extends State<ZoneCard> {
               onTap: () {
                 ProcessingChainView.showForZone(context, widget.zoneData);
               },
-              child: const FusionImage.asset(
+              child: FusionImage.asset(
+                semanticId: FusionTestKeys.instance.zonelistprocessingbutton,
                 Assets.processingBlocksFilledWhiteIcon,
                 width: 24,
                 height: 24,
@@ -186,43 +203,54 @@ class _ZoneCardState extends State<ZoneCard> {
             final double calculatedHeight = subZoneCount * 100.0;
             final double constrainedHeight = calculatedHeight.clamp(200.0, 400.0);
 
-            return Container(
-              height: constrainedHeight,
-              margin: const EdgeInsets.symmetric(horizontal: 12),
-              color: context.colorScheme.elevation2.withAlpha(100),
+            return SemanticHelper.container(
+              testId: SemanticHelper.createTestId(
+                SemanticTypes.container,
+                FusionTestKeys.instance.zonelistcontent,
+              ),
+              child: Container(
+                height: constrainedHeight,
+                margin: const EdgeInsets.symmetric(horizontal: 12),
+                color: context.colorScheme.elevation2.withAlpha(100),
 
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: <Widget>[
-                  /// Functions Panel
-                  Container(
-                    width: constraints.maxWidth * 0.34,
-                    height: constrainedHeight,
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    /// Functions Panel
+                    SemanticHelper.container(
+                      testId: SemanticHelper.createTestId(SemanticTypes.container, FusionTestKeys.instance.zonelistfunctionspanel),
+                      child: Container(
+                        width: constraints.maxWidth * 0.34,
+                        height: constrainedHeight,
 
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      border: Border(
-                        bottom: BorderSide(color: context.colorScheme.elevation2),
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          border: Border(
+                            bottom: BorderSide(
+                              color: context.colorScheme.elevation2,
+                            ),
+                          ),
+                        ),
+                        child: _buildZoneFunctionsPanel(),
                       ),
                     ),
-                    child: _buildZoneFunctionsPanel(),
-                  ),
 
-                  /// Full height divider
-                  Container(
-                    width: 1,
-                    height: constrainedHeight,
-                    color: context.colorScheme.elevation2,
-                  ),
-
-                  /// Subzone Panel
-                  Expanded(
-                    child: SizedBox(
+                    /// Full height divider
+                    Container(
+                      width: 1,
                       height: constrainedHeight,
-                      child: _buildSubZonePanel(subZonesForZone),
+                      color: context.colorScheme.elevation2,
                     ),
-                  ),
-                ],
+
+                    /// Subzone Panel
+                    Expanded(
+                      child: SizedBox(
+                        height: constrainedHeight,
+                        child: _buildSubZonePanel(subZonesForZone),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             );
           },
@@ -247,19 +275,25 @@ class _ZoneCardState extends State<ZoneCard> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: <Widget>[
-            FusionAppText(
-              text: 'FUNCTIONS',
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                fontSize: 10,
-                fontWeight: FontWeight.w600,
+        SemanticHelper.container(
+          testId: SemanticHelper.createTestId(SemanticTypes.container, "${FusionTestKeys.instance.zonelistfunctionspanelheader}_${widget.index}"),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: <Widget>[
+              SemanticHelper.staticText(
+                testId: SemanticHelper.createTestId(SemanticTypes.text, "${FusionTestKeys.instance.zonelistfunctionspanelheaderlabel}_${widget.index}"),
+                child: FusionAppText(
+                  text: 'FUNCTIONS',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
               ),
-            ),
 
-            if (_hasSelectedFunction) buildAddFunctionButton(isEdit: true),
-          ],
+              if (_hasSelectedFunction) buildAddFunctionButton(isEdit: true),
+            ],
+          ),
         ),
         const SizedBox(height: 12),
         buildFunctionWidget(),
@@ -338,7 +372,10 @@ class _ZoneCardState extends State<ZoneCard> {
 
   /// Function selection widget
   Widget buildFunctionWidget() {
-    return _hasSelectedFunction ? buildSelectedFunctionButton() : buildAddFunctionButton();
+    return SemanticHelper.container(
+      testId: SemanticHelper.createTestId(SemanticTypes.container, "${FusionTestKeys.instance.functionselect}_${widget.index}"),
+      child: _hasSelectedFunction ? buildSelectedFunctionButton() : buildAddFunctionButton(),
+    );
   }
 
   /// Priority Override function button (Popup Menu) - supports independent P1 / P2
@@ -444,6 +481,7 @@ class _ZoneCardState extends State<ZoneCard> {
                         enabled: false,
                         height: 20,
                         child: FusionAppText(
+                          semanticId: "${FusionTestKeys.instance.sorcprioitypopupheader}_${widget.index}",
                           text: 'SOURCES',
                           maxLine: 1,
                           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
@@ -464,6 +502,7 @@ class _ZoneCardState extends State<ZoneCard> {
                           height: 20,
                           child: Center(
                             child: FusionAppText(
+                              semanticId: "${FusionTestKeys.instance.sorcprioitypopuptext}_${widget.index}",
                               text: 'No available sources',
                               maxLine: 1,
                               style: context.textTheme.bodyMedium?.copyWith(
@@ -666,6 +705,10 @@ class _ZoneCardState extends State<ZoneCard> {
                         Expanded(
                           child: FusionAppText(
                             text: selectedSource ?? 'Select priority',
+                            semanticId: _prioritySemanticId(
+                              priorityIndex: priorityIndex,
+                              element: 'source_name',
+                            ),
                             maxLine: 1,
                             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                               fontSize: 11,
@@ -684,6 +727,10 @@ class _ZoneCardState extends State<ZoneCard> {
                             borderRadius: BorderRadius.circular(3),
                           ),
                           child: FusionAppText(
+                            semanticId: _prioritySemanticId(
+                              priorityIndex: priorityIndex,
+                              element: 'status_patch',
+                            ),
                             text: 'P$priorityIndex',
                             style: Theme.of(context).textTheme.bodySmall?.copyWith(
                               fontSize: 8,
@@ -714,6 +761,10 @@ class _ZoneCardState extends State<ZoneCard> {
                 setState(() {});
               },
               child: FusionImage.asset(
+                semanticId: _prioritySemanticId(
+                  priorityIndex: priorityIndex,
+                  element: 'delete_button',
+                ),
                 Assets.deleteIcon,
                 width: 17,
                 height: 17,
@@ -728,75 +779,78 @@ class _ZoneCardState extends State<ZoneCard> {
 
   /// Add Function button (Popup Menu)
   Widget buildAddFunctionButton({bool isEdit = false}) {
-    return PopupMenuButton<ZoneFunctionsType>(
-      shadowColor: Colors.transparent,
-      position: PopupMenuPosition.under,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(9),
-        side: BorderSide(
-          color: context.colorScheme.strokeLight,
+    return SemanticHelper.button(
+      testId: SemanticHelper.createTestId(SemanticTypes.button, FusionTestKeys.instance.zonelistfunctionspaneleditbutton),
+      child: PopupMenuButton<ZoneFunctionsType>(
+        shadowColor: Colors.transparent,
+        position: PopupMenuPosition.under,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(9),
+          side: BorderSide(
+            color: context.colorScheme.strokeLight,
+          ),
         ),
-      ),
-      padding: EdgeInsets.zero,
-      menuPadding: EdgeInsets.zero,
-      clipBehavior: Clip.none,
-      onSelected: (ZoneFunctionsType value) {
-        setState(() => selectedFunction = value);
-        _zonesViewmodel.addFunctionToZone(
-          zoneId: widget.zoneId,
-          function: getNewZoneFunction(type: value),
-        );
-      },
-      offset: const Offset(0, 10),
-      tooltip: isEdit ? "Edit Function" : "Add Function",
-      color: context.colorScheme.elevation1,
-      itemBuilder: (BuildContext context) {
-        return ZoneFunctionsType.values.map((ZoneFunctionsType function) {
-          return PopupMenuItem<ZoneFunctionsType>(
-            height: 32,
-            value: function,
-            child: SizedBox(
-              width: 169,
-              child: FusionAppText(
-                text: function.displayName,
-                maxLine: 1,
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  fontSize: 10,
-                ),
-              ),
-            ),
+        padding: EdgeInsets.zero,
+        menuPadding: EdgeInsets.zero,
+        clipBehavior: Clip.none,
+        onSelected: (ZoneFunctionsType value) {
+          setState(() => selectedFunction = value);
+          _zonesViewmodel.addFunctionToZone(
+            zoneId: widget.zoneId,
+            function: getNewZoneFunction(type: value),
           );
-        }).toList();
-      },
-      child:
-          isEdit
-              ? Icon(Icons.edit, size: 14, color: context.colorScheme.textPrimary)
-              : Container(
-                height: 22,
-                width: 170,
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                decoration: BoxDecoration(
-                  border: Border.all(
-                    color: context.colorScheme.elevation5,
+        },
+        offset: const Offset(0, 10),
+        tooltip: isEdit ? "Edit Function" : "Add Function",
+        color: context.colorScheme.elevation1,
+        itemBuilder: (BuildContext context) {
+          return ZoneFunctionsType.values.map((ZoneFunctionsType function) {
+            return PopupMenuItem<ZoneFunctionsType>(
+              height: 32,
+              value: function,
+              child: SizedBox(
+                width: 169,
+                child: FusionAppText(
+                  text: function.displayName,
+                  maxLine: 1,
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    fontSize: 10,
                   ),
-                  borderRadius: BorderRadius.circular(3),
-                ),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  mainAxisAlignment: MainAxisAlignment.start,
-                  children: <Widget>[
-                    Icon(Icons.add, color: context.colorScheme.iconWhite, size: 12),
-                    const SizedBox(width: 4),
-                    FusionAppText(
-                      text: 'Add Function',
-                      maxLine: 1,
-                      style: context.textTheme.bodyMedium?.copyWith(
-                        fontSize: 10,
-                      ),
-                    ),
-                  ],
                 ),
               ),
+            );
+          }).toList();
+        },
+        child:
+            isEdit
+                ? FusionIcon.icon(Icons.edit, size: 14, color: context.colorScheme.textPrimary)
+                : Container(
+                  height: 22,
+                  width: 170,
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  decoration: BoxDecoration(
+                    border: Border.all(
+                      color: context.colorScheme.elevation5,
+                    ),
+                    borderRadius: BorderRadius.circular(3),
+                  ),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    mainAxisAlignment: MainAxisAlignment.start,
+                    children: <Widget>[
+                      FusionIcon.icon(Icons.add, color: context.colorScheme.iconWhite, size: 12),
+                      const SizedBox(width: 4),
+                      FusionAppText(
+                        text: 'Add Function',
+                        maxLine: 1,
+                        style: context.textTheme.bodyMedium?.copyWith(
+                          fontSize: 10,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+      ),
     );
   }
 
@@ -835,16 +889,20 @@ class _ZoneCardState extends State<ZoneCard> {
           mainAxisSize: MainAxisSize.min,
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: <Widget>[
-            FusionAppText(
-              text: selectedFunction?.displayName ?? '',
-              maxLine: 1,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                fontSize: 11,
-                fontWeight: FontWeight.w400,
+            Expanded(
+              child: FusionAppText(
+                semanticId: FusionTestKeys.instance.functionselecttext,
+                text: selectedFunction?.displayName ?? '',
+                maxLine: 1,
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w400,
+                ),
               ),
             ),
             const SizedBox(width: 8),
             FusionImage.asset(
+              semanticId: FusionTestKeys.instance.functionselecticon,
               Assets.configurationFilledIcon,
               width: 14,
               height: 14,
@@ -878,345 +936,376 @@ class _ZoneCardState extends State<ZoneCard> {
           textStyle: context.textTheme.bodySmall,
         ),
       ),
-      child: PopupMenuButton<String>(
-        onSelected: (String? value) {
-          if (value == 'add') {
-            setState(() {});
+      child: SemanticHelper.container(
+        testId: SemanticHelper.createTestId(SemanticTypes.container, "${FusionTestKeys.instance.selectsrc}_${widget.index}"),
+        child: PopupMenuButton<String>(
+          key: const Key('zone_sources_selection_popup'),
+          onSelected: (String? value) {
+            if (value == 'add') {
+              setState(() {});
 
-            /// refresh zone tile UI
-          }
-        },
-        offset: const Offset(0, 25),
-        tooltip: "Select Sources",
-        padding: EdgeInsets.zero,
-        color: context.colorScheme.elevation1,
-        itemBuilder: (BuildContext context) {
-          /// Temporary selections mirror existing selections
-          final List<String> tempSelectedSources = currentZoneSources.map((Source e) => e.id).toList();
+              /// refresh zone tile UI
+            }
+          },
+          offset: const Offset(0, 25),
+          tooltip: "Select Sources",
+          padding: EdgeInsets.zero,
+          color: context.colorScheme.elevation1,
+          itemBuilder: (BuildContext context) {
+            /// Temporary selections mirror existing selections
+            final List<String> tempSelectedSources = currentZoneSources.map((Source e) => e.id).toList();
 
-          final List<String> tempSelectedSourceSets = currentZoneSourceSets.map((SourceSet e) => e.id).toList();
+            final List<String> tempSelectedSourceSets = currentZoneSourceSets.map((SourceSet e) => e.id).toList();
 
-          /// Get priority sources to disable them in source list
-          final List<String> prioritySources = _zonesViewmodel.getPrioritySourcesInZone(zoneId: widget.zoneId);
+            /// Get priority sources to disable them in source list
+            final List<String> prioritySources = _zonesViewmodel.getPrioritySourcesInZone(zoneId: widget.zoneId);
 
-          final List<PopupMenuEntry<String>> entries = <PopupMenuEntry<String>>[];
+            final List<PopupMenuEntry<String>> entries = <PopupMenuEntry<String>>[];
 
-          // ----------------------------------------------------------
-          // SOURCES HEADER
-          // ----------------------------------------------------------
-          entries.add(
-            PopupMenuItem<String>(
-              enabled: false,
-              height: 24,
-              child: FusionAppText(
-                text: 'SOURCES',
-                maxLine: 1,
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ),
-          );
-
-          // ----------------------------------------------------------
-          // SOURCES LIST
-          // ----------------------------------------------------------
-          if (availableSources.isEmpty) {
+            // ----------------------------------------------------------
+            // SOURCES HEADER
+            // ----------------------------------------------------------
             entries.add(
               PopupMenuItem<String>(
+                key: const Key('sources_header'),
                 enabled: false,
-                height: 20,
-                child: Center(
-                  child: FusionAppText(
-                    text: 'No available sources',
-                    maxLine: 1,
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontSize: 10),
-                  ),
-                ),
-              ),
-            );
-          } else {
-            for (final Source src in availableSources) {
-              final String id = src.id;
-
-              /// Check if this source is already a priority source
-              final bool isPrioritySource = prioritySources.contains(id);
-
-              entries.add(
-                PopupMenuItem<String>(
-                  enabled: false,
-                  height: 20,
-                  child: StatefulBuilder(
-                    builder: (BuildContext c, StateSetter setPopupState) {
-                      return GestureDetector(
-                        onTap:
-                            isPrioritySource
-                                ? null
-                                : () {
-                                  if (tempSelectedSources.contains(id)) {
-                                    tempSelectedSources.remove(id);
-                                  } else {
-                                    tempSelectedSources.add(id);
-                                  }
-                                  setPopupState(() {});
-                                },
-                        child: Row(
-                          children: <Widget>[
-                            Transform.scale(
-                              scale: 0.7,
-                              child: Checkbox(
-                                value: tempSelectedSources.contains(id),
-                                activeColor: isPrioritySource ? context.colorScheme.elevation5 : context.colorScheme.primaryBlack,
-                                onChanged:
-                                    isPrioritySource
-                                        ? null
-                                        : (bool? _) {
-                                          if (tempSelectedSources.contains(id)) {
-                                            tempSelectedSources.remove(id);
-                                          } else {
-                                            tempSelectedSources.add(id);
-                                          }
-                                          setPopupState(() {});
-                                        },
-                                materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                                visualDensity: const VisualDensity(horizontal: -4, vertical: -4),
-                                checkColor: context.colorScheme.primaryWhite,
-                                side: BorderSide(
-                                  width: 1,
-                                  color: isPrioritySource ? context.colorScheme.elevation5 : context.colorScheme.primaryWhite,
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 4),
-                            Expanded(
-                              child: Row(
-                                children: <Widget>[
-                                  Expanded(
-                                    child: FusionAppText(
-                                      text: src.name,
-                                      capitalize: true,
-                                      maxLine: 1,
-                                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                        fontSize: 10,
-                                        color: isPrioritySource ? context.colorScheme.elevation5 : null,
-                                      ),
-                                    ),
-                                  ),
-                                  if (isPrioritySource) const SizedBox(width: 4),
-                                  if (isPrioritySource)
-                                    FusionAppText(
-                                      text: '(Priority source)',
-                                      maxLine: 1,
-                                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                        fontSize: 9,
-                                        fontStyle: FontStyle.italic,
-                                        color: context.colorScheme.elevation5,
-                                      ),
-                                    ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                      );
-                    },
-                  ),
-                ),
-              );
-            }
-          }
-
-          entries.add(const PopupMenuDivider(height: 12));
-
-          // ----------------------------------------------------------
-          // SOURCE SETS HEADER
-          // ----------------------------------------------------------
-          entries.add(
-            PopupMenuItem<String>(
-              enabled: false,
-              height: 24,
-              child: FusionAppText(
-                text: 'SOURCE SETS',
-                maxLine: 1,
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ),
-          );
-
-          // ----------------------------------------------------------
-          // SOURCE SETS LIST
-          // ----------------------------------------------------------
-          if (sourceSetList.isEmpty) {
-            entries.add(
-              PopupMenuItem<String>(
-                enabled: false,
-                height: 20,
-                child: Center(
-                  child: FusionAppText(
-                    text: 'No available source sets',
-                    maxLine: 1,
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontSize: 10),
-                  ),
-                ),
-              ),
-            );
-          } else {
-            for (final SourceSet s in sourceSetList) {
-              final String id = s.id;
-              final List<Source> sourcesInSet = _sourceSetsViewmodel.getSourcesInSourceSet(sourceSetId: s.id);
-
-              entries.add(
-                PopupMenuItem<String>(
-                  enabled: false,
-                  height: 20,
-                  child: StatefulBuilder(
-                    builder: (BuildContext c, StateSetter setPopupState) {
-                      return GestureDetector(
-                        onTap: () {
-                          if (tempSelectedSourceSets.contains(id)) {
-                            tempSelectedSourceSets.remove(id);
-                          } else {
-                            tempSelectedSourceSets.add(id);
-                          }
-                          setPopupState(() {});
-                        },
-                        child: Row(
-                          children: <Widget>[
-                            Transform.scale(
-                              scale: 0.7,
-                              child: Checkbox(
-                                value: tempSelectedSourceSets.contains(id),
-                                activeColor: context.colorScheme.primaryBlack,
-                                onChanged: (bool? _) {
-                                  if (tempSelectedSourceSets.contains(id)) {
-                                    tempSelectedSourceSets.remove(id);
-                                  } else {
-                                    tempSelectedSourceSets.add(id);
-                                  }
-                                  setPopupState(() {});
-                                },
-                                materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                                visualDensity: const VisualDensity(horizontal: -4, vertical: -4),
-                                checkColor: context.colorScheme.primaryWhite,
-                                side: BorderSide(
-                                  width: 1,
-                                  color: context.colorScheme.primaryWhite,
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 4),
-                            Expanded(
-                              child: FusionAppText(
-                                text: '${s.name} (${sourcesInSet.length} sources)',
-                                maxLine: 1,
-                                capitalize: true,
-                                style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontSize: 10),
-                              ),
-                            ),
-                          ],
-                        ),
-                      );
-                    },
-                  ),
-                ),
-              );
-            }
-          }
-
-          entries.add(
-            const PopupMenuDivider(height: 14, color: Colors.transparent),
-          );
-
-          // ----------------------------------------------------------
-          // ADD BUTTON – FINAL SAVE
-          // ----------------------------------------------------------
-          entries.add(
-            PopupMenuItem<String>(
-              enabled: true,
-              height: 28,
-              value: 'add',
-              child: Center(
-                child: FusionButton(
-                  label: 'Add',
-                  height: 28,
-                  width: double.infinity,
-                  onTap: () {
-                    /// Save full final selected lists
-                    _zonesViewmodel.updateSourcesInZone(
-                      zoneId: widget.zoneId,
-                      sourceIds: tempSelectedSources,
-                    );
-
-                    _zonesViewmodel.updateSourceSets(
-                      zoneId: widget.zoneId,
-                      sourceSetIds: tempSelectedSourceSets,
-                    );
-
-                    Navigator.pop(context, 'add');
-                    setState(() {});
-
-                    /// rebuild UI
-                  },
-                  accessLabel: '',
-                ),
-              ),
-            ),
-          );
-
-          return entries;
-        },
-
-        // ----------------------------------------------------------
-        // BUTTON VIEW (with count)
-        // ----------------------------------------------------------
-        child: Container(
-          height: 22,
-          width: 170,
-          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-          decoration: BoxDecoration(
-            border: Border.all(
-              color: hasSelection ? context.colorScheme.elevation5 : context.colorScheme.elevation5.withAlpha(150),
-            ),
-            borderRadius: BorderRadius.circular(3),
-          ),
-          child: Row(
-            children: <Widget>[
-              Expanded(
+                height: 24,
                 child: FusionAppText(
-                  text: hasSelection ? 'Sources selected' : 'Select sources',
+                  semanticId: "${FusionTestKeys.instance.selectsrcpopupupheader}_${widget.index}",
+                  text: 'SOURCES',
                   maxLine: 1,
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                     fontSize: 11,
-                    color: hasSelection ? context.colorScheme.primaryWhite : context.colorScheme.primaryWhite.withAlpha(150),
+                    fontWeight: FontWeight.w600,
                   ),
                 ),
               ),
-              hasSelection
-                  ? IntrinsicWidth(
-                    child: Container(
-                      height: 14,
-                      padding: const EdgeInsets.symmetric(horizontal: 4),
-                      alignment: Alignment.center,
-                      decoration: BoxDecoration(
-                        color: context.colorScheme.primaryWhite,
-                        borderRadius: BorderRadius.circular(3),
-                      ),
-                      child: FusionAppText(
-                        text: _zonesViewmodel.getSourceCountInZone(zoneId: widget.zoneId).toString(),
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          fontSize: 8,
-                          color: context.colorScheme.primaryBlack,
-                          fontWeight: FontWeight.w600,
+            );
+
+            // ----------------------------------------------------------
+            // SOURCES LIST
+            // ----------------------------------------------------------
+            if (availableSources.isEmpty) {
+              entries.add(
+                PopupMenuItem<String>(
+                  enabled: false,
+                  height: 20,
+                  child: Center(
+                    child: FusionAppText(
+                      semanticId: "${FusionTestKeys.instance.selectsrcpopupupempty}_${widget.index}",
+                      text: 'No available sources',
+                      maxLine: 1,
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontSize: 10),
+                    ),
+                  ),
+                ),
+              );
+            } else {
+              for (final Source src in availableSources) {
+                final String id = src.id;
+
+                /// Check if this source is already a priority source
+                final bool isPrioritySource = prioritySources.contains(id);
+
+                entries.add(
+                  PopupMenuItem<String>(
+                    enabled: false,
+                    height: 20,
+                    child: StatefulBuilder(
+                      builder: (BuildContext c, StateSetter setPopupState) {
+                        return GestureDetector(
+                          onTap:
+                              isPrioritySource
+                                  ? null
+                                  : () {
+                                    if (tempSelectedSources.contains(id)) {
+                                      tempSelectedSources.remove(id);
+                                    } else {
+                                      tempSelectedSources.add(id);
+                                    }
+                                    setPopupState(() {});
+                                  },
+                          child: Row(
+                            children: <Widget>[
+                              Transform.scale(
+                                scale: 0.7,
+                                child: Checkbox(
+                                  value: tempSelectedSources.contains(id),
+                                  activeColor: isPrioritySource ? context.colorScheme.elevation5 : context.colorScheme.primaryBlack,
+                                  onChanged:
+                                      isPrioritySource
+                                          ? null
+                                          : (bool? _) {
+                                            if (tempSelectedSources.contains(id)) {
+                                              tempSelectedSources.remove(id);
+                                            } else {
+                                              tempSelectedSources.add(id);
+                                            }
+                                            setPopupState(() {});
+                                          },
+                                  materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                  visualDensity: const VisualDensity(horizontal: -4, vertical: -4),
+                                  checkColor: context.colorScheme.primaryWhite,
+                                  side: BorderSide(
+                                    width: 1,
+                                    color: isPrioritySource ? context.colorScheme.elevation5 : context.colorScheme.primaryWhite,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 4),
+                              Expanded(
+                                child: Row(
+                                  children: <Widget>[
+                                    Expanded(
+                                      child: FusionAppText(
+                                        semanticId: "${FusionTestKeys.instance.selectsrcpopupuptext}_${widget.index}",
+                                        text: src.name,
+                                        capitalize: true,
+                                        maxLine: 1,
+                                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                          fontSize: 10,
+                                          color: isPrioritySource ? context.colorScheme.elevation5 : null,
+                                        ),
+                                      ),
+                                    ),
+                                    if (isPrioritySource) const SizedBox(width: 4),
+                                    if (isPrioritySource)
+                                      FusionAppText(
+                                        text: '(Priority source)',
+                                        maxLine: 1,
+                                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                          fontSize: 9,
+                                          fontStyle: FontStyle.italic,
+                                          color: context.colorScheme.elevation5,
+                                        ),
+                                      ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                );
+              }
+            }
+
+            entries.add(const PopupMenuDivider(height: 12));
+
+            // ----------------------------------------------------------
+            // SOURCE SETS HEADER
+            // ----------------------------------------------------------
+            entries.add(
+              PopupMenuItem<String>(
+                enabled: false,
+                height: 24,
+                child: FusionAppText(
+                  semanticId: "${FusionTestKeys.instance.selectsrcpopupupsetsheader}_${widget.index}",
+                  text: 'SOURCE SETS',
+                  maxLine: 1,
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            );
+
+            // ----------------------------------------------------------
+            // SOURCE SETS LIST
+            // ----------------------------------------------------------
+            if (sourceSetList.isEmpty) {
+              entries.add(
+                PopupMenuItem<String>(
+                  enabled: false,
+                  height: 20,
+                  child: Center(
+                    child: FusionAppText(
+                      semanticId: "${FusionTestKeys.instance.selectsrcpopupupsetsempty}_${widget.index}",
+                      text: 'No available source sets',
+                      maxLine: 1,
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontSize: 10),
+                    ),
+                  ),
+                ),
+              );
+            } else {
+              for (final SourceSet s in sourceSetList) {
+                final String id = s.id;
+                final List<Source> sourcesInSet = _sourceSetsViewmodel.getSourcesInSourceSet(sourceSetId: s.id);
+
+                entries.add(
+                  PopupMenuItem<String>(
+                    enabled: false,
+                    height: 20,
+                    child: StatefulBuilder(
+                      builder: (BuildContext c, StateSetter setPopupState) {
+                        return GestureDetector(
+                          onTap: () {
+                            if (tempSelectedSourceSets.contains(id)) {
+                              tempSelectedSourceSets.remove(id);
+                            } else {
+                              tempSelectedSourceSets.add(id);
+                            }
+                            setPopupState(() {});
+                          },
+                          child: Row(
+                            children: <Widget>[
+                              Transform.scale(
+                                scale: 0.7,
+                                child: Checkbox(
+                                  value: tempSelectedSourceSets.contains(id),
+                                  activeColor: context.colorScheme.primaryBlack,
+                                  onChanged: (bool? _) {
+                                    if (tempSelectedSourceSets.contains(id)) {
+                                      tempSelectedSourceSets.remove(id);
+                                    } else {
+                                      tempSelectedSourceSets.add(id);
+                                    }
+                                    setPopupState(() {});
+                                  },
+                                  materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                  visualDensity: const VisualDensity(horizontal: -4, vertical: -4),
+                                  checkColor: context.colorScheme.primaryWhite,
+                                  side: BorderSide(
+                                    width: 1,
+                                    color: context.colorScheme.primaryWhite,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 4),
+                              Expanded(
+                                child: FusionAppText(
+                                  semanticId: "${FusionTestKeys.instance.selectsrcpopupupsettext}_${widget.index}",
+                                  text: '${s.name} (${sourcesInSet.length} sources)',
+                                  maxLine: 1,
+                                  capitalize: true,
+                                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontSize: 10),
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                );
+              }
+            }
+
+            entries.add(
+              const PopupMenuDivider(height: 14, color: Colors.transparent),
+            );
+
+            // ----------------------------------------------------------
+            // ADD BUTTON – FINAL SAVE
+            // ----------------------------------------------------------
+            entries.add(
+              PopupMenuItem<String>(
+                enabled: true,
+                height: 28,
+                value: 'add',
+                child: Center(
+                  child: SemanticHelper.button(
+                    testId: SemanticHelper.createTestId(SemanticTypes.button, "${FusionTestKeys.instance.selectsrcpopupupaddbutton}_${widget.index}"),
+                    child: FusionButton(
+                      label: 'Add',
+                      height: 28,
+                      width: double.infinity,
+                      onTap: () {
+                        /// Save full final selected lists
+                        _zonesViewmodel.updateSourcesInZone(
+                          zoneId: widget.zoneId,
+                          sourceIds: tempSelectedSources,
+                        );
+
+                        _zonesViewmodel.updateSourceSets(
+                          zoneId: widget.zoneId,
+                          sourceSetIds: tempSelectedSourceSets,
+                        );
+
+                        Navigator.pop(context, 'add');
+                        setState(() {});
+
+                        /// rebuild UI
+                      },
+                      accessLabel: 'zone_add_button',
+                    ),
+                  ),
+                ),
+              ),
+            );
+
+            return entries;
+          },
+
+          // ----------------------------------------------------------
+          // BUTTON VIEW (with count)
+          // ----------------------------------------------------------
+          child: Container(
+            height: 22,
+            width: 170,
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+            decoration: BoxDecoration(
+              border: Border.all(
+                color: hasSelection ? context.colorScheme.elevation5 : context.colorScheme.elevation5.withAlpha(150),
+              ),
+              borderRadius: BorderRadius.circular(3),
+            ),
+            child: Row(
+              children: <Widget>[
+                Expanded(
+                  child: FusionAppText(
+                    semanticId: FusionTestKeys.instance.selectsrctxt,
+                    text: hasSelection ? 'Sources selected' : 'Select sources',
+                    maxLine: 1,
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      fontSize: 11,
+                      color:
+                          hasSelection
+                              ? context.colorScheme.primaryWhite
+                              : context.colorScheme.primaryWhite.withAlpha(
+                                150,
+                              ),
+                    ),
+                  ),
+                ),
+                hasSelection
+                    ? IntrinsicWidth(
+                      child: Container(
+                        height: 14,
+                        padding: const EdgeInsets.symmetric(horizontal: 4),
+                        alignment: Alignment.center,
+                        decoration: BoxDecoration(
+                          color: context.colorScheme.primaryWhite,
+                          borderRadius: BorderRadius.circular(3),
+                        ),
+                        child: FusionAppText(
+                          semanticId: FusionTestKeys.instance.selectsrccountbtn,
+                          text: _zonesViewmodel.getSourceCountInZone(zoneId: widget.zoneId).toString(),
+                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            fontSize: 8,
+                            color: context.colorScheme.primaryBlack,
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
                       ),
+                    )
+                    : SemanticHelper.button(
+                      testId: SemanticHelper.createTestId(
+                        SemanticTypes.button,
+                        FusionTestKeys.instance.selectsrcbtn,
+                      ),
+                      child: Icon(
+                        Icons.add,
+                        color: context.colorScheme.primaryWhite.withAlpha(150),
+                        size: 16,
+                      ),
                     ),
-                  )
-                  : Icon(Icons.add, color: context.colorScheme.primaryWhite.withAlpha(150), size: 16),
-            ],
+              ],
+            ),
           ),
         ),
       ),
@@ -1227,93 +1316,112 @@ class _ZoneCardState extends State<ZoneCard> {
   Widget _buildSubZonePanel(List<SubZone> subZonesForZone) {
     final List<CircuitModel> zoneCircuit = _zonesViewmodel.getCircuitsInZone(widget.zoneId);
 
-    return Container(
-      decoration: BoxDecoration(
-        border: Border(
-          bottom: BorderSide(color: context.colorScheme.elevation2),
-        ),
+    return SemanticHelper.container(
+      testId: SemanticHelper.createTestId(
+        SemanticTypes.container,
+        FusionTestKeys.instance.zonecircuit,
       ),
-      child:
-          /// circuit and subzone list
-          (subZonesForZone.isEmpty && zoneCircuit.isEmpty)
-              ? Center(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 50.0),
-                  child: FusionAppText(
-                    text: 'No sub zones / circuits added yet',
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w500,
+      child: Container(
+        decoration: BoxDecoration(
+          border: Border(
+            bottom: BorderSide(color: context.colorScheme.elevation2),
+          ),
+        ),
+        child:
+            /// circuit and subzone list
+            (subZonesForZone.isEmpty && zoneCircuit.isEmpty)
+                ? Center(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 50.0),
+                    child: SemanticHelper.staticText(
+                      testId: SemanticHelper.createTestId(
+                        SemanticTypes.text,
+                        FusionTestKeys.instance.zonenocircuit,
+                      ),
+                      child: FusionAppText(
+                        semanticId: "${FusionTestKeys.instance.zonenocircuit}_${widget.index}",
+                        text: 'No sub zones / circuits added yet',
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
                     ),
                   ),
-                ),
-              )
-              : SingleChildScrollView(
-                physics: const ClampingScrollPhysics(),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: <Widget>[
-                    /// if no subzones then show available circuits
-                    if (zoneCircuit.isNotEmpty)
-                      ListView.builder(
-                        scrollDirection: Axis.vertical,
+                )
+                : SingleChildScrollView(
+                  physics: const ClampingScrollPhysics(),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      /// if no subzones then show available circuits
+                      if (zoneCircuit.isNotEmpty)
+                        ListView.builder(
+                          scrollDirection: Axis.vertical,
+                          shrinkWrap: true,
+                          physics: const NeverScrollableScrollPhysics(),
+                          itemCount: zoneCircuit.length,
+                          itemBuilder: (BuildContext context, int index) {
+                            final CircuitModel circuitData = zoneCircuit[index];
+                            final List<Speaker> speakersList = _zonesViewmodel.getHardwareForCircuit(circuitId: circuitData.id).whereType<Speaker>().toList();
+                            return MouseRegion(
+                              onEnter: (_) => setState(() => _hoveredCircuitIndex = index),
+                              onExit: (_) => setState(() => _hoveredCircuitIndex = null),
+                              child: _buildCircuitCard(
+                                index: index,
+                                circuitData: circuitData,
+                                speakersList: speakersList,
+                              ),
+                            );
+                          },
+                        ),
+
+                      /// else show subzones in reorderable list
+                      ReorderableListView.builder(
+                        proxyDecorator: _defaultProxyDecorator,
+
                         shrinkWrap: true,
                         physics: const NeverScrollableScrollPhysics(),
-                        itemCount: zoneCircuit.length,
+                        buildDefaultDragHandles: false,
+                        itemCount: subZonesForZone.length,
+                        onReorder: (int oldIndex, int newIndex) {
+                          if (oldIndex < newIndex) newIndex -= 1;
+                          _zonesViewmodel.reOrderSubZoneInZone(
+                            parentId: widget.zoneId,
+                            oldIndex: oldIndex,
+                            newIndex: newIndex,
+                          );
+                        },
                         itemBuilder: (BuildContext context, int index) {
-                          final CircuitModel circuitData = zoneCircuit[index];
-                          final List<Speaker> speakersList = _zonesViewmodel.getHardwareForCircuit(circuitId: circuitData.id).whereType<Speaker>().toList();
-                          return MouseRegion(
-                            onEnter: (_) => setState(() => _hoveredCircuitIndex = index),
-                            onExit: (_) => setState(() => _hoveredCircuitIndex = null),
-                            child: _buildCircuitCard(
-                              index: index,
-                              circuitData: circuitData,
-                              speakersList: speakersList,
+                          final SubZone subZone = subZonesForZone[index];
+                          return ReorderableDragStartListener(
+                            key: ValueKey<String>(subZone.id),
+                            index: index,
+                            child: SemanticHelper.container(
+                              testId: SemanticHelper.createTestId(
+                                SemanticTypes.container,
+                                "${FusionTestKeys.instance.subzoneitem}_$index",
+                              ),
+                              child: SubZoneCard(
+                                subZoneId: subZone.id,
+                                subZoneName: subZone.name,
+                                subZoneData: subZone,
+                                onExpansionChanged: (bool isExpanded) {
+                                  if (isExpanded) {
+                                    /// Trigger the zone's expansion callback to scroll the zone into view
+                                    /// when a subzone expands
+                                    widget.onExpansionChanged?.call(true);
+                                  }
+                                },
+                              ),
                             ),
                           );
                         },
                       ),
-
-                    /// else show subzones in reorderable list
-                    ReorderableListView.builder(
-                      proxyDecorator: _defaultProxyDecorator,
-
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      buildDefaultDragHandles: false,
-                      itemCount: subZonesForZone.length,
-                      onReorder: (int oldIndex, int newIndex) {
-                        if (oldIndex < newIndex) newIndex -= 1;
-                        _zonesViewmodel.reOrderSubZoneInZone(
-                          parentId: widget.zoneId,
-                          oldIndex: oldIndex,
-                          newIndex: newIndex,
-                        );
-                      },
-                      itemBuilder: (BuildContext context, int index) {
-                        final SubZone subZone = subZonesForZone[index];
-                        return ReorderableDragStartListener(
-                          key: ValueKey<String>(subZone.id),
-                          index: index,
-                          child: SubZoneCard(
-                            subZoneId: subZone.id,
-                            subZoneName: subZone.name,
-                            subZoneData: subZone,
-                            onExpansionChanged: (bool isExpanded) {
-                              if (isExpanded) {
-                                /// Trigger the zone's expansion callback to scroll the zone into view
-                                /// when a subzone expands
-                                widget.onExpansionChanged?.call(true);
-                              }
-                            },
-                          ),
-                        );
-                      },
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
+      ),
     );
   }
 
@@ -1321,42 +1429,51 @@ class _ZoneCardState extends State<ZoneCard> {
   Widget _buildCircuitCard({required int index, required CircuitModel circuitData, required List<Speaker> speakersList}) {
     final bool isThisCircuitHovered = _hoveredCircuitIndex == index;
 
-    return Container(
-      decoration: BoxDecoration(
-        color: isThisCircuitHovered ? context.colorScheme.elevation2 : null,
-        borderRadius: BorderRadius.circular(8),
+    return SemanticHelper.container(
+      testId: SemanticHelper.createTestId(
+        SemanticTypes.container,
+        "${FusionTestKeys.instance.zonecircuititm}_${widget.index}",
       ),
-      padding: const EdgeInsets.only(top: 4, bottom: 4, left: 10, right: 13),
-      margin: const EdgeInsets.only(bottom: 4, top: 4, left: 10),
-      child: Row(
-        children: <Widget>[
-          FusionImage.asset(
-            speakersList.isNotEmpty ? speakersList.first.assetImagePath : "",
-            width: 24,
-            height: 24,
-            fit: BoxFit.contain,
-          ),
-          const SizedBox(width: 6),
-          Expanded(
-            child: FusionAppText(
-              text: circuitData.name,
-              maxLine: 1,
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(fontSize: 11),
-            ),
-          ),
-          InkWell(
-            onTap: () {
-              ProcessingChainView.showForCircuit(context, circuitData);
-            },
-            child: FusionImage.asset(
-              Assets.processingBlocksFilledIcon,
+      child: Container(
+        decoration: BoxDecoration(
+          color: isThisCircuitHovered ? context.colorScheme.elevation2 : null,
+          borderRadius: BorderRadius.circular(8),
+        ),
+        padding: const EdgeInsets.only(top: 4, bottom: 4, left: 10, right: 13),
+        margin: const EdgeInsets.only(bottom: 4, top: 4, left: 10),
+        child: Row(
+          children: <Widget>[
+            FusionImage.asset(
+              semanticId: "${FusionTestKeys.instance.zonecircuititmimg}_${widget.index}",
+              speakersList.isNotEmpty ? speakersList.first.assetImagePath : "",
               width: 24,
               height: 24,
-              assetColor: context.colorScheme.primaryWhite,
               fit: BoxFit.contain,
             ),
-          ),
-        ],
+            const SizedBox(width: 6),
+            Expanded(
+              child: FusionAppText(
+                semanticId: FusionTestKeys.instance.zonecircuititmtxt,
+                text: circuitData.name,
+                maxLine: 1,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(fontSize: 11),
+              ),
+            ),
+            InkWell(
+              onTap: () {
+                ProcessingChainView.showForCircuit(context, circuitData);
+              },
+              child: FusionImage.asset(
+                semanticId: FusionTestKeys.instance.zonecircuititmimg2,
+                Assets.processingBlocksFilledIcon,
+                width: 24,
+                height: 24,
+                assetColor: context.colorScheme.primaryWhite,
+                fit: BoxFit.contain,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

@@ -61,7 +61,8 @@ enum SourceSelectionOption {
 
 enum SourceSectionType {
   microPhone("Microphones"),
-  mediaSources("Media Sources");
+  mediaSources("Media Sources"),
+  paging("Paging");
 
   const SourceSectionType(this.displayName);
   final String displayName;
@@ -72,6 +73,8 @@ enum SourceSectionType {
         return SourceData.microphoneItems;
       case SourceSectionType.mediaSources:
         return SourceData.mediaSourceItems;
+      case SourceSectionType.paging:
+        return SourceData.pagingItems;
     }
   }
 
@@ -93,6 +96,9 @@ enum SourceSectionType {
           // SourceConnectionType.wired,
           // SourceConnectionType.rca,
         ];
+
+      case SourceSectionType.paging:
+        return <SourceConnectionType>[];
     }
   }
 }

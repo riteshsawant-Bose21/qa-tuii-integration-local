@@ -1738,8 +1738,8 @@ class _ToolbarIcon extends StatelessWidget {
                 child: Builder(
                   builder: (context) {
                     if (svgIcon != null) {
-                      return FusionSvgIcon(
-                        icon: svgIcon!,
+                      return FusionIcon.svg(
+                        svgIcon!,
                         color: enabled ? (active ? context.colorScheme.primaryWhite : context.colorScheme.iconDefault) : context.colorScheme.elevation5,
                       );
                     }

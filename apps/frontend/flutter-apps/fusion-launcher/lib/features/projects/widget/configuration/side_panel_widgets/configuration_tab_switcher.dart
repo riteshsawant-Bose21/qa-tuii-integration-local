@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:fusion_lib/constants/semantics/features/configuration/config_tab_switcher.dart';
+import 'package:fusion_lib/constants/semantics/features/configuration/processing/config_tab_switcher.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/fusion_theme/app_theme.dart';
 import 'package:fusion_lib/fusion_theme/color_scheme.dart';
@@ -66,6 +66,7 @@ class _ConfigurationTabSwitcherState extends State<ConfigurationTabSwitcher> {
         SemanticTypes.container,
         FusionTestKeys.instance.configurationTabSwitcher,
       ),
+      label: tabConfigs[widget.selectedMode]?.semantic ?? '',
       child: Container(
         margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
 

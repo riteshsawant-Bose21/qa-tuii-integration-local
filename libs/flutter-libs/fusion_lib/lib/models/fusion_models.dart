@@ -44,3 +44,5 @@ export 'project_entities/zone_functions.dart';
 export 'project_entities/zone_model.dart';
 export 'response_callback.dart';
 export 'timezones/time_zone.dart';
+export 'project_entities/message_player_model.dart';
+
