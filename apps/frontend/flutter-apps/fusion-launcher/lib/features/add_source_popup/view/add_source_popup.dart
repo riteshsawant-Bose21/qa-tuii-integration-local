@@ -88,21 +88,15 @@ class AddSourcePopup extends StatelessWidget {
                 ),
                 const Divider(thickness: 0.5, height: 0),
                 Flexible(
-                  child: BlocBuilder<
-                    AddSourceViewModel,
-                    AddSourceViewModelState
-                  >(
+                  child: BlocBuilder<AddSourceViewModel, AddSourceViewModelState>(
                     builder: (
                       BuildContext context,
                       AddSourceViewModelState state,
                     ) {
-                      final AddSourceViewModel addSourceViewModel =
-                          context.read<AddSourceViewModel>();
-                      final ProjectViewModel projectViewModel =
-                          context.watch<ProjectViewModel>();
+                      final AddSourceViewModel addSourceViewModel = context.read<AddSourceViewModel>();
+                      final ProjectViewModel projectViewModel = context.watch<ProjectViewModel>();
 
-                      final List<ListeningArea> listeningAreas =
-                          projectViewModel.getAllListeningAreas();
+                      final List<ListeningArea> listeningAreas = projectViewModel.getAllListeningAreas();
 
                       return SingleChildScrollView(
                         padding: const EdgeInsetsGeometry.all(16),
@@ -137,8 +131,7 @@ class AddSourcePopup extends StatelessWidget {
                                 labelBuilder: (SourceSectionType option) {
                                   return FusionAppText(
                                     text: option.displayName,
-                                    style:
-                                        Theme.of(context).textTheme.labelMedium,
+                                    style: Theme.of(context).textTheme.labelMedium,
                                   );
                                 },
                                 onOptionSelected: (
@@ -161,14 +154,10 @@ class AddSourcePopup extends StatelessWidget {
                                 Expanded(
                                   child: Column(
                                     children: <Widget>[
-                                      ...List<
-                                        Widget
-                                      >.generate(state.selectedSources.length, (
+                                      ...List<Widget>.generate(state.selectedSources.length, (
                                         int index,
                                       ) {
-                                        final SourceData? selectedItem = state
-                                            .selectedSources
-                                            .elementAtOrNull(index);
+                                        final SourceData? selectedItem = state.selectedSources.elementAtOrNull(index);
 
                                         return SemanticHelper.container(
                                           testId: SemanticHelper.createTestId(
@@ -179,15 +168,10 @@ class AddSourcePopup extends StatelessWidget {
                                             padding: const EdgeInsets.only(
                                               bottom: 8.0,
                                             ),
-                                            child: BuildingPageDronDown<
-                                              SourceData
-                                            >(
+                                            child: BuildingPageDronDown<SourceData>(
                                               value: selectedItem,
                                               hintText: "Select source",
-                                              items:
-                                                  state
-                                                      .selectedSourceSectionType
-                                                      .items,
+                                              items: state.selectedSourceSectionType.items,
                                               onSelect: (SourceData newValue) {
                                                 addSourceViewModel.updateSource(
                                                   index,
@@ -203,10 +187,9 @@ class AddSourcePopup extends StatelessWidget {
                                                     "add_source_section_item_label_$index",
                                                   ),
                                                   child: Padding(
-                                                    padding:
-                                                        const EdgeInsets.symmetric(
-                                                          horizontal: 8,
-                                                        ),
+                                                    padding: const EdgeInsets.symmetric(
+                                                      horizontal: 8,
+                                                    ),
                                                     child: Row(
                                                       children: <Widget>[
                                                         // image
@@ -223,10 +206,8 @@ class AddSourcePopup extends StatelessWidget {
                                                             text: option.name,
                                                             style:
                                                                 Theme.of(
-                                                                      context,
-                                                                    )
-                                                                    .textTheme
-                                                                    .labelMedium,
+                                                                  context,
+                                                                ).textTheme.labelMedium,
                                                           ),
                                                         ),
                                                       ],
@@ -244,9 +225,7 @@ class AddSourcePopup extends StatelessWidget {
                               ],
                             ),
 
-                            if (state.selectedSourceOption ==
-                                SourceSelectionOption
-                                    .multipleSources) ...<Widget>[
+                            if (state.selectedSourceOption == SourceSelectionOption.multipleSources) ...<Widget>[
                               Align(
                                 alignment: Alignment.centerRight,
                                 child: SemanticHelper.formControl(
@@ -256,8 +235,7 @@ class AddSourcePopup extends StatelessWidget {
                                   ),
                                   child: NeumorphicDarkButton(
                                     onTap: addSourceViewModel.addEmptySource,
-                                    backgroundColor:
-                                        context.colorScheme.surface,
+                                    backgroundColor: context.colorScheme.surface,
                                     width: 28,
                                     height: 28,
                                     borderRadius: 8,
@@ -276,10 +254,7 @@ class AddSourcePopup extends StatelessWidget {
                             const SizedBox(height: 20),
 
                             MouseRegion(
-                              cursor:
-                                  isFromBuildingPage
-                                      ? SystemMouseCursors.forbidden
-                                      : SystemMouseCursors.click,
+                              cursor: isFromBuildingPage ? SystemMouseCursors.forbidden : SystemMouseCursors.click,
                               child: IgnorePointer(
                                 ignoring: isFromBuildingPage,
                                 child: SemanticHelper.container(
@@ -297,10 +272,7 @@ class AddSourcePopup extends StatelessWidget {
                                         style: Theme.of(
                                           context,
                                         ).textTheme.labelSmall?.copyWith(
-                                          color: Theme.of(context)
-                                              .colorScheme
-                                              .onSurface
-                                              .withAlpha(100),
+                                          color: Theme.of(context).colorScheme.onSurface.withAlpha(100),
                                         ),
                                       );
                                     },
@@ -335,8 +307,7 @@ class AddSourcePopup extends StatelessWidget {
                                           children: <Widget>[
                                             Expanded(
                                               child: FusionAppText(
-                                                text:
-                                                    "$floorName / ${option.name}",
+                                                text: "$floorName / ${option.name}",
                                                 style:
                                                     Theme.of(
                                                       context,
@@ -350,10 +321,7 @@ class AddSourcePopup extends StatelessWidget {
                                               style: Theme.of(
                                                 context,
                                               ).textTheme.labelSmall?.copyWith(
-                                                color: Theme.of(context)
-                                                    .colorScheme
-                                                    .onSurface
-                                                    .withAlpha(100),
+                                                color: Theme.of(context).colorScheme.onSurface.withAlpha(100),
                                               ),
                                             ),
                                           ],
@@ -364,10 +332,9 @@ class AddSourcePopup extends StatelessWidget {
                                       int value,
                                       ListeningArea option,
                                     ) {
-                                      addSourceViewModel
-                                          .setSelectedListeningArea(
-                                            option,
-                                          );
+                                      addSourceViewModel.setSelectedListeningArea(
+                                        option,
+                                      );
                                     },
                                   ),
                                 ),
@@ -376,8 +343,7 @@ class AddSourcePopup extends StatelessWidget {
 
                             Builder(
                               builder: (BuildContext context) {
-                                final (String? zoneName, String? subZoneName) =
-                                    addSourceViewModel.getZonesForListeningArea;
+                                final (String? zoneName, String? subZoneName) = addSourceViewModel.getZonesForListeningArea;
 
                                 return SemanticHelper.container(
                                   testId: SemanticHelper.createTestId(
@@ -385,8 +351,7 @@ class AddSourcePopup extends StatelessWidget {
                                     "add_source_section_zone_info",
                                   ),
                                   child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
+                                    crossAxisAlignment: CrossAxisAlignment.start,
                                     mainAxisSize: MainAxisSize.min,
                                     children: <Widget>[
                                       if (zoneName != null) ...<Widget>[
@@ -396,17 +361,10 @@ class AddSourcePopup extends StatelessWidget {
                                             Expanded(
                                               child: FusionAppText(
                                                 text: "",
-                                                style: context
-                                                    .textTheme
-                                                    .bodyMedium
-                                                    ?.copyWith(
-                                                      color:
-                                                          context
-                                                              .colorScheme
-                                                              .onSurface,
-                                                      fontWeight:
-                                                          FontWeight.normal,
-                                                    ),
+                                                style: context.textTheme.bodyMedium?.copyWith(
+                                                  color: context.colorScheme.onSurface,
+                                                  fontWeight: FontWeight.normal,
+                                                ),
                                               ),
                                             ),
                                             const SizedBox(width: 8),
@@ -414,17 +372,12 @@ class AddSourcePopup extends StatelessWidget {
                                               child: Container(
                                                 height: 32,
                                                 alignment: Alignment.centerLeft,
-                                                padding:
-                                                    const EdgeInsets.symmetric(
-                                                      horizontal: 8,
-                                                    ),
+                                                padding: const EdgeInsets.symmetric(
+                                                  horizontal: 8,
+                                                ),
                                                 decoration: BoxDecoration(
-                                                  color:
-                                                      context
-                                                          .colorScheme
-                                                          .surface,
-                                                  borderRadius:
-                                                      BorderRadius.circular(8),
+                                                  color: context.colorScheme.surface,
+                                                  borderRadius: BorderRadius.circular(8),
                                                 ),
                                                 child: FusionAppText(
                                                   text: zoneName,
@@ -450,17 +403,12 @@ class AddSourcePopup extends StatelessWidget {
                                               child: Container(
                                                 height: 32,
                                                 alignment: Alignment.centerLeft,
-                                                padding:
-                                                    const EdgeInsets.symmetric(
-                                                      horizontal: 8,
-                                                    ),
+                                                padding: const EdgeInsets.symmetric(
+                                                  horizontal: 8,
+                                                ),
                                                 decoration: BoxDecoration(
-                                                  color:
-                                                      context
-                                                          .colorScheme
-                                                          .surface,
-                                                  borderRadius:
-                                                      BorderRadius.circular(8),
+                                                  color: context.colorScheme.surface,
+                                                  borderRadius: BorderRadius.circular(8),
                                                 ),
                                                 child: FusionAppText(
                                                   text: subZoneName,
@@ -499,12 +447,10 @@ class AddSourcePopup extends StatelessWidget {
                                     labelBuilder: (SignalType option) {
                                       return FusionAppText(
                                         text: option.displayName,
-                                        style: context.textTheme.bodyMedium
-                                            ?.copyWith(
-                                              color:
-                                                  context.colorScheme.onSurface,
-                                              fontWeight: FontWeight.w400,
-                                            ),
+                                        style: context.textTheme.bodyMedium?.copyWith(
+                                          color: context.colorScheme.onSurface,
+                                          fontWeight: FontWeight.w400,
+                                        ),
                                       );
                                     },
                                     onChanged: (SignalType value) {
@@ -519,15 +465,11 @@ class AddSourcePopup extends StatelessWidget {
                             BuildRowPropertyWidget<SourceConnectionType>(
                               label: "Connection",
                               value: state.selectedConnectionType,
-                              options:
-                                  state
-                                      .selectedSourceSectionType
-                                      .connectionTypes,
+                              options: state.selectedSourceSectionType.connectionTypes,
                               labelBuilder: (SourceConnectionType option) {
                                 return FusionAppText(
                                   text: option.displayName,
-                                  style:
-                                      Theme.of(context).textTheme.labelMedium,
+                                  style: Theme.of(context).textTheme.labelMedium,
                                 );
                               },
                               onOptionSelected: (
@@ -547,11 +489,10 @@ class AddSourcePopup extends StatelessWidget {
                                 Expanded(
                                   child: FusionAppText(
                                     text: "Name",
-                                    style: context.textTheme.bodyMedium
-                                        ?.copyWith(
-                                          color: context.colorScheme.onSurface,
-                                          fontWeight: FontWeight.normal,
-                                        ),
+                                    style: context.textTheme.bodyMedium?.copyWith(
+                                      color: context.colorScheme.onSurface,
+                                      fontWeight: FontWeight.normal,
+                                    ),
                                   ),
                                 ),
                                 const SizedBox(width: 8),
@@ -562,15 +503,12 @@ class AddSourcePopup extends StatelessWidget {
                                       "add_source_section_name_input",
                                     ),
                                     child: PropertyTextField(
-                                      onChanged:
-                                          (String value) => addSourceViewModel
-                                              .setSelectedSourceName(value),
+                                      onChanged: (String value) => addSourceViewModel.setSelectedSourceName(value),
                                       maxLength: 24,
-                                      contentPadding:
-                                          const EdgeInsets.symmetric(
-                                            vertical: 12,
-                                            horizontal: 10,
-                                          ),
+                                      contentPadding: const EdgeInsets.symmetric(
+                                        vertical: 12,
+                                        horizontal: 10,
+                                      ),
                                       hintText: 'Enter name',
                                     ),
                                   ),
@@ -592,12 +530,10 @@ class AddSourcePopup extends StatelessWidget {
                                     ),
                                     child: FusionAppText(
                                       text: "Cancel",
-                                      style: context.textTheme.bodyMedium
-                                          ?.copyWith(
-                                            color:
-                                                context.colorScheme.onSurface,
-                                            fontWeight: FontWeight.w400,
-                                          ),
+                                      style: context.textTheme.bodyMedium?.copyWith(
+                                        color: context.colorScheme.onSurface,
+                                        fontWeight: FontWeight.w400,
+                                      ),
                                     ),
                                   ),
                                 ),
@@ -610,9 +546,7 @@ class AddSourcePopup extends StatelessWidget {
                                   child: FusionNeumorphicButton(
                                     semanticId: 'add_source_save_button',
                                     onTap: () {
-                                      context
-                                          .read<AddSourceViewModel>()
-                                          .onSaveTap(context);
+                                      context.read<AddSourceViewModel>().onSaveTap(context);
                                     },
                                     color: context.colorScheme.surface,
                                     text: "Save",

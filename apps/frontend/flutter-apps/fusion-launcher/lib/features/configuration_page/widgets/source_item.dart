@@ -4,6 +4,7 @@ import 'package:fusion_lib/constants/semantics/features/configuration/config_sou
 import 'package:fusion_lib/fusion_lib.dart';
 
 import '../../../core/constants/assets_constants.dart';
+import '../../message_player_config/view/message_player_config_dialog.dart';
 
 class SourceItem extends StatefulWidget {
   final Source source;
@@ -41,16 +42,10 @@ class _SourceItemState extends State<SourceItem> {
       },
       child: Container(
         decoration: BoxDecoration(
-          color:
-              widget.isDragging
-                  ? context.colorScheme.primary.withAlpha(150)
-                  : (_isHovered ? context.colorScheme.elevation2 : null),
+          color: widget.isDragging ? context.colorScheme.primary.withAlpha(150) : (_isHovered ? context.colorScheme.elevation2 : null),
           borderRadius: BorderRadius.circular(8),
           border: Border.all(
-            color:
-                widget.isDragging
-                    ? context.colorScheme.primary
-                    : Colors.transparent,
+            color: widget.isDragging ? context.colorScheme.primary : Colors.transparent,
             width: 1.0,
           ),
         ),
@@ -97,13 +92,27 @@ class _SourceItemState extends State<SourceItem> {
                 ),
               ),
             ),
-            // todo : add configuration icon back in when source configuration is supported (ex:media player)
-            // const FusionImage.asset(
-            //   Assets.configurationFilledIcon,
-            //   width: 24,
-            //   height: 24,
-            //   fit: BoxFit.contain,
-            // ),
+            // todo : based on the pagingSourceType show different popup with different configuration options
+            /// Show configuration icon only if source has a paging source type
+            Visibility(
+              visible: widget.source.pagingSourceType != null,
+              child: InkWell(
+                onTap: () {
+                  MessagePlayerConfigDialog.show(
+                    context,
+                    sourceId: widget.source.id,
+                  );
+                },
+                child: FusionImage.asset(
+                  Assets.configurationFilledIcon,
+                  width: 24,
+                  height: 24,
+                  assetColor: context.colorScheme.primaryWhite,
+
+                  fit: BoxFit.contain,
+                ),
+              ),
+            ),
             const SizedBox(width: 8),
             if (!widget.isDragging)
               SemanticHelper.button(

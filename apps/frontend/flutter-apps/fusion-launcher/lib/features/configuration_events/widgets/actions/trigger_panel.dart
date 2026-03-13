@@ -8,6 +8,7 @@ import 'package:fusion_lib/fusion_widgets/text_views/fusion_app_text.dart';
 import 'package:fusion_lib/models/project_entities/non_processing/fusion_event.dart';
 import 'package:fusion_lib/models/project_entities/non_processing/snapshot_model.dart';
 
+import '../../viewModel/events_viewmodel/config_events_state.dart';
 import '../../viewModel/events_viewmodel/config_events_viewmodel.dart';
 import 'event_action_row_header.dart';
 import '../events/event_header_widget.dart';
@@ -112,78 +113,85 @@ class TriggerPanel extends StatelessWidget {
   }
 
   Widget _buildLoaded(BuildContext context, EventActionsLoaded state) {
-    final ConfigEventsViewmodel configEventsViewmodel = context.read<ConfigEventsViewmodel>();
     final ConfigEventActionsViewmodel actionsCubit = context.read<ConfigEventActionsViewmodel>();
     final String selectedEventId = state.selectedEventId!;
-
-    final FusionEvent selectedEvent = configEventsViewmodel.getEventById(selectedEventId);
     final List<SceneActionModel> eventActionsList = state.actions;
 
     return Expanded(
-      child: Column(
-        children: <Widget>[
-          /// Events Header Widget
-          EventHeaderWidget(
-            eventName: selectedEvent.name,
-            onNameChanged: (String newName) {
-              final FusionEvent event = selectedEvent.copyWith(name: newName);
-              configEventsViewmodel.updateEvent(event);
-            },
-          ),
+      child: BlocBuilder<ConfigEventsViewmodel, ConfigEventsState>(
+        builder: (BuildContext context, ConfigEventsState eventsState) {
+          final bool eventExists = eventsState.events.any((FusionEvent e) => e.id == selectedEventId);
+          if (!eventExists) return const SizedBox.shrink();
 
-          /// trigger Row Header
-          EventTriggerRowHeader(eventId: selectedEventId),
+          final ConfigEventsViewmodel configEventsViewmodel = context.read<ConfigEventsViewmodel>();
+          final FusionEvent selectedEvent = configEventsViewmodel.getEventById(selectedEventId);
 
-          /// show actions only if the event trigger is complete
-          if (selectedEvent.isComplete) ...<Widget>[
-            const SizedBox(height: 24),
+          return Column(
+            children: <Widget>[
+              /// Events Header Widget
+              EventHeaderWidget(
+                eventName: selectedEvent.name,
+                onNameChanged: (String newName) {
+                  final FusionEvent event = selectedEvent.copyWith(name: newName);
+                  configEventsViewmodel.updateEvent(event);
+                },
+              ),
 
-            /// Action Row Header
-            const EventActionRowHeader(),
+              /// Trigger Row Header
+              EventTriggerRowHeader(eventId: selectedEventId),
 
-            /// show list of actions for the selected event
-            Expanded(
-              child:
-                  eventActionsList.isEmpty
-                      ? Center(
-                        child: Container(
-                          width: MediaQuery.of(context).size.width * 0.4,
-                          padding: const EdgeInsets.all(100.0),
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            crossAxisAlignment: CrossAxisAlignment.center,
-                            children: <Widget>[
-                              FusionAppText(
-                                text: "No actions added to this event yet.",
-                                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w500,
-                                ),
+              /// Show actions only if the event trigger is complete
+              if (selectedEvent.isComplete) ...<Widget>[
+                const SizedBox(height: 24),
+
+                /// Action Row Header
+                const EventActionRowHeader(),
+
+                /// Show list of actions for the selected event
+                Expanded(
+                  child:
+                      eventActionsList.isEmpty
+                          ? Center(
+                            child: Container(
+                              width: MediaQuery.of(context).size.width * 0.4,
+                              padding: const EdgeInsets.all(100.0),
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                crossAxisAlignment: CrossAxisAlignment.center,
+                                children: <Widget>[
+                                  FusionAppText(
+                                    text: "No actions added to this event yet.",
+                                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ],
                               ),
-                            ],
+                            ),
+                          )
+                          : ReorderableListView.builder(
+                            buildDefaultDragHandles: false,
+                            physics: const ClampingScrollPhysics(),
+                            itemCount: eventActionsList.length,
+                            onReorder: (int oldIndex, int newIndex) {
+                              actionsCubit.reorderActions(oldIndex, newIndex);
+                            },
+                            itemBuilder: (BuildContext context, int index) {
+                              final SceneActionModel action = eventActionsList[index];
+                              return EventActionRowData(
+                                key: ValueKey<String>(action.id),
+                                action: action,
+                                eventId: selectedEventId,
+                                index: index,
+                              );
+                            },
                           ),
-                        ),
-                      )
-                      : ReorderableListView.builder(
-                        buildDefaultDragHandles: false,
-                        physics: const ClampingScrollPhysics(),
-                        itemCount: eventActionsList.length,
-                        onReorder: (int oldIndex, int newIndex) {
-                          actionsCubit.reorderActions(oldIndex, newIndex);
-                        },
-                        itemBuilder: (BuildContext context, int index) {
-                          final SceneActionModel action = eventActionsList[index];
-                          return EventActionRowData(
-                            key: ValueKey<String>(action.id),
-                            action: action,
-                            eventId: selectedEventId,
-                            index: index,
-                          );
-                        },
-                      ),
-            ),
-          ],
-        ],
+                ),
+              ],
+            ],
+          );
+        },
       ),
     );
   }
