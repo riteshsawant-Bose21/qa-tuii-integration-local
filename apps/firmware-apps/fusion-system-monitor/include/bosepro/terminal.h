@@ -152,6 +152,7 @@ public:
     /// @param  configuration  The configuration to use for the terminal.
     /// @param  frame_size  The number of elements in the signal per frame.
     Terminal(const TerminalDefinition &definition,
+             const ProcessorDefinition &processor,
              const BlockConfiguration *configuration,
              int_fast32_t frame_size)
         : buffer(nullptr), top(nullptr), data_size(0), frame_size(frame_size),
@@ -159,8 +160,15 @@ public:
     {
         if (definition.has_channels())
         {
+            if (configuration->has_terminal(definition.get_name()))
+            {
+                throw std::runtime_error("Unexpected terminal_channels specification for '"
+                                         + definition.get_name()
+                                         + "' in configuration.");
+            }
+
             std::string property_name;
-            int channels;
+            int_fast32_t channels;
             channels = definition.get_channels(property_name);
 
             if (!property_name.empty())
@@ -170,11 +178,27 @@ public:
                     const PropertyConfiguration &pc =
                         configuration->get_property(property_name);
                     pc.get_value(channels);
+
+                    const PropertyDefinition &pd =
+                        processor.get_property(property_name);
+
+                    int_fast32_t minimum_channels;
+                    int_fast32_t maximum_channels;
+
+                    pd.get_minimum_value(minimum_channels);
+                    pd.get_maximum_value(maximum_channels);
+
+                    if (channels < minimum_channels
+                        || channels > maximum_channels)
+                    {
+                        throw std::runtime_error("Invalid number of channels for terminal '"
+                                                 + definition.get_name() + "'.");
+                    }
                 }
                 else
                 {
                     const PropertyDefinition &pd =
-                        definition.get_property(property_name);
+                        processor.get_property(property_name);
                     pd.get_default_value(channels);
                 }
             }
@@ -186,10 +210,20 @@ public:
             const TerminalConfiguration &tc =
                 configuration->get_terminal(definition.get_name());
             num_channels = tc.get_num_channels();
+
+            if (num_channels < definition.get_minimum_channels()
+                || num_channels > definition.get_maximum_channels())
+            {
+                throw std::runtime_error("Invalid number of channels for terminal '"
+                                         + definition.get_name() + "'.");
+            }
         }
         else
         {
-            definition.get_minimum_channels();
+            SPDLOG_DEBUG("No channel count specified for terminal '{}', using {}.",
+                         definition.get_name(),
+                         definition.get_minimum_channels());
+            num_channels = definition.get_minimum_channels();
         }
 
         SPDLOG_TRACE("Created {} terminal '{}' with {} channels.",
@@ -362,37 +396,35 @@ public:
     {
         if (is_output_terminal || !output_terminal.is_output())
         {
-            SPDLOG_CRITICAL("A connection must be made from an input terminal "
-                            "to an output terminal.");
-            return;
+            throw std::runtime_error("A connection must be made from an input "
+                                     "terminal to an output terminal.");
         }
 
         if (channel < 0 || channel >= num_channels)
         {
-            SPDLOG_CRITICAL("Input channel index ({}) out of range ({}).",
-                            channel, num_channels);
-            return;
+            throw std::runtime_error("Input channel index out of range.");
         }
 
         if (output_channel < 0 || output_channel >= output_terminal.num_channels)
         {
-            SPDLOG_CRITICAL("Output channel index ({}) out of range ({}).",
-                            output_channel, output_terminal.num_channels);
-            return;
+            throw std::runtime_error("Output channel index out of range.");
         }
 
         if (frame_size != output_terminal.frame_size)
         {
-            SPDLOG_CRITICAL("Cannot connect terminals with different frame "
-                            "sizes.");
-            return;
+            throw std::runtime_error("Cannot connect terminals with different "
+                                     "frame sizes.");
         }
 
         if (data_size != output_terminal.data_size)
         {
-            SPDLOG_CRITICAL("Cannot connect terminals with different data "
-                            "types.");
-            return;
+            throw std::runtime_error("Cannot connect terminals with different "
+                                     "data types.");
+        }
+
+        if (buffer[channel] != nullptr)
+        {
+            throw std::runtime_error("Input channel already connected.");
         }
 
         buffer[channel] = output_terminal.get_buffer(output_channel);
@@ -403,6 +435,26 @@ public:
     bool is_output() const
     {
         return is_output_terminal;
+    }
+
+
+    /// Return true if this is an input terminal and has unconnected channels.
+    bool is_unconnected() const
+    {
+        if (is_output_terminal)
+        {
+            return false;
+        }
+
+        for (int i = 0; i < num_channels; i++)
+        {
+            if (buffer[i] == nullptr)
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
 
@@ -418,6 +470,26 @@ public:
     TerminalOutputProcessor *get_output_processor()
     {
         return top;
+    }
+
+
+    /// Connect unconnected input channels to the provided buffer.
+    void set_empty_signal(const void *empty_buffer)
+    {
+        if (is_output_terminal)
+        {
+            SPDLOG_ERROR("Cannot assign empty signal to output terminal.");
+            return;
+        }
+
+        for (int i = 0; i < num_channels; i++)
+        {
+            if (buffer[i] == nullptr)
+            {
+                SPDLOG_DEBUG("Assigning empty signal to input channel {}.", i);
+                buffer[i] = (void *)empty_buffer;
+            }
+        }
     }
 
 

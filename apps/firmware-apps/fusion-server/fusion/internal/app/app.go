@@ -323,9 +323,8 @@ func (app *App) handleVIPStateChange(event vipmonitor.VIPEvent) {
 	logger.Debug("[VIP] State change: type=%s vip=%s holder=%s isLocal=%v",
 		event.EventType, event.VIP, event.Holder, event.IsLocalOwner)
 
-	// Handle explicit VIP removal ??
 	if event.VIP == "" {
-		logger.Warn("VIP event has VIP empty")
+		logger.Fatal("VIP event has VIP empty")
 
 		// // Stop mDNS service
 		// if err := app.MDNSManager.Close(); err != nil {
