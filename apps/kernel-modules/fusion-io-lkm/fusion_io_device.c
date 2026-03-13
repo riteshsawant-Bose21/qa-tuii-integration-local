@@ -397,6 +397,18 @@ static int endpoint_get_i2c_client(struct endpoint *ep)
     return (id < 0) ? id : -EIO;
 }
 
+static void maybe_release_endpoint_i2c_client(struct endpoint *ep)
+{
+    if (!ep || !ep->i2c_client)
+        return;
+
+    if (!ep->use_i2c_bus_override)
+        return;
+
+    i2c_unregister_device(ep->i2c_client);
+    ep->i2c_client = NULL;
+}
+
 // custom configuration callbacks (only for those who need one)
 int ads7128_configure(struct endpoint *ep, struct config_sequence_cmd *cmd)
 {
@@ -585,6 +597,7 @@ static int run_config_sequence(struct config_sequence_cmd *cmds, u8 num_cmds)
 
 delay:
         msleep(cmd->seq_delay_ms);
+        maybe_release_endpoint_i2c_client(ep);
     }
 
     return 0;
