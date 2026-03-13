@@ -80,6 +80,8 @@ class _ScenesExpandableCardState extends State<ScenesExpandableCard> {
   void _addNewSceneToSceneSet() {
     _configSceneSetsViewmodel.addSnapshotToSceneSet(widget.sceneSetData.id);
 
+    _configSnapshotsViewmodel.syncWithProjectViewModel();
+
     /// expand the scene set to show the new item
     _isScenesExpanded.value = true;
   }
@@ -117,6 +119,8 @@ class _ScenesExpandableCardState extends State<ScenesExpandableCard> {
                 isDraggingFromScenes: widget.draggingFromSection == 'scenes',
               );
               _configSnapshotsViewmodel.endDrag();
+
+              _configSnapshotsViewmodel.syncWithProjectViewModel();
             },
             builder: (BuildContext context, List<SnapshotsModel?> candidateData, List<dynamic> rejectedData) {
               final bool isHovered =

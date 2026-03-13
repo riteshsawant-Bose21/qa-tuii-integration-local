@@ -9,6 +9,7 @@ import 'package:fusion_lib/fusion_widgets/semantics/semantic_type.dart';
 import 'package:fusion_lib/fusion_widgets/text_views/fusion_app_text.dart';
 import 'package:fusion_lib/models/project_entities/non_processing/fusion_event.dart';
 
+import '../../viewModel/events_viewmodel/config_events_state.dart';
 import '../../viewModel/events_viewmodel/config_events_viewmodel.dart';
 
 /// Event Trigger Row Header Widget
@@ -29,39 +30,48 @@ class EventTriggerRowHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final ConfigEventsViewmodel cubit = context.read<ConfigEventsViewmodel>();
+    // Wrap in BlocBuilder so all sub-widgets rebuild whenever the events state
+    // changes (e.g. after selecting a trigger type / item / action).
+    return BlocBuilder<ConfigEventsViewmodel, ConfigEventsState>(
+      builder: (BuildContext context, ConfigEventsState state) {
+        // Guard against the eventId becoming stale (event deleted / switched)
+        // in the timing window before ConfigEventActionsViewmodel transitions away.
+        final bool eventExists = state.events.any((FusionEvent e) => e.id == eventId);
+        if (!eventExists) return const SizedBox.shrink();
 
-    return SemanticHelper.container(
-      testId: SemanticHelper.createTestId(SemanticTypes.container, FusionTestKeys.instance.eventtriggerrowheader),
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
-        color: context.colorScheme.elevation2.withAlpha(120),
-        child: Row(
-          children: <Widget>[
-            /// Trigger Type Dropdown
-            _TriggerTypeDropdown(eventId: eventId, cubit: cubit),
-            const SizedBox(width: 16),
+        final ConfigEventsViewmodel cubit = context.read<ConfigEventsViewmodel>();
 
-            /// Trigger Item Dropdown
-            _TriggerItemDropdown(eventId: eventId, configEventsViewmodel: cubit),
-            const SizedBox(width: 16),
 
-            /// Trigger Action Dropdown
-            _ActionTypeDropdown(eventId: eventId, cubit: cubit),
-            const SizedBox(width: 16),
+        return SemanticHelper.container(
+          testId: SemanticHelper.createTestId(SemanticTypes.container, FusionTestKeys.instance.eventtriggerrowheader),
+          child: Container(
+            padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+            color: context.colorScheme.elevation2.withAlpha(120),
+            child: Row(
+              children: <Widget>[
+                /// Trigger Type Dropdown
+                _TriggerTypeDropdown(eventId: eventId, cubit: cubit),
+                const SizedBox(width: 16),
 
-            /// Trigger Condition Dropdown
-            _ConditionDropdown(eventId: eventId, cubit: cubit),
-            const SizedBox(width: 16),
+                /// Trigger Item Dropdown
+                _TriggerItemDropdown(eventId: eventId, configEventsViewmodel: cubit),
+                const SizedBox(width: 16),
 
-            /// Value Column
-            _ValueColumn(eventId: eventId, cubit: cubit),
-          ],
-        ),
-      ),
-    );
+                /// Trigger Action Dropdown
+                _ActionTypeDropdown(eventId: eventId, cubit: cubit),
+                const SizedBox(width: 16),
+
+                /// Trigger Condition Dropdown
+                _ConditionDropdown(eventId: eventId, cubit: cubit),
+                const SizedBox(width: 16),
+
+                /// Value Column
+                _ValueColumn(eventId: eventId, cubit: cubit),
+              ],
+            ),
+          ),
+        );
   }
-}
 
 class _TriggerTypeDropdown extends StatelessWidget {
   final String eventId;
