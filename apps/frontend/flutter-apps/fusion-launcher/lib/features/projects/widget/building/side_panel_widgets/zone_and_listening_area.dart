@@ -971,7 +971,7 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
                             duration: const Duration(milliseconds: 200),
                             turns: _expandedCircuitSections.contains(circuit.id) ? 0.5 : 0.25,
                             child: FusionIcon.svg(
-                               AssetSvg.expandUp,
+                              AssetSvg.expandUp,
                               color: context.colorScheme.elevation5,
                             ),
                           ),
