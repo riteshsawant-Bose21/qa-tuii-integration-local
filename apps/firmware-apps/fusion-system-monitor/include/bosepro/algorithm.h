@@ -49,6 +49,40 @@ public:
 
         // There is no need to create property data, because we just look it
         // up from the algorithm's property definitions and the configuration.
+        if (meta->configuration->has_properties())
+        {
+            for (auto &p : meta->configuration->get_properties())
+            {
+                const PropertyConfiguration &pc = static_cast<const PropertyConfiguration &>(p.second);
+                const std::string &name = pc.get_name();
+
+                if (!meta->definition->has_property(name)
+                    && name != "sample_rate" && name != "frame_size")
+                {
+                    throw std::runtime_error("Unknown property '" + name
+                                             + "' in '"
+                                             + meta->configuration->get_name()
+                                             + "'.");
+                }
+            }
+        }
+
+        if (meta->configuration->has_terminals())
+        {
+            for (auto &t : meta->configuration->get_terminals())
+            {
+                const TerminalConfiguration &tc = static_cast<const TerminalConfiguration &>(t.second);
+                const std::string &name = tc.get_name();
+
+                if (!meta->definition->has_terminal(name))
+                {
+                    throw std::runtime_error("Unknown terminal '" + name
+                                             + "' in '"
+                                             + meta->configuration->get_name()
+                                             + "'.");
+                }
+            }
+        }
 
         // Create the terminal data for all of the terminals in the algorithm.
         // We use the definition rather than the configuration, because the
@@ -61,7 +95,10 @@ public:
                     reinterpret_cast<const TerminalDefinition &>(t.second);
             const std::string &name = td.get_name();
             meta->terminals[name] =
-                std::make_unique<Terminal>(Terminal(td, meta->configuration, get_frame_size()));
+                std::make_unique<Terminal>(Terminal(td,
+                                                    static_cast<const ProcessorDefinition&>(*meta->definition),
+                                                    meta->configuration,
+                                                    get_frame_size()));
         }
 
         // Create the parameter data for all of the parameters in the algorithm.
@@ -250,8 +287,8 @@ public:
     {
         if (meta->terminals.count(name) == 0)
         {
-            SPDLOG_CRITICAL("Unknown terminal '{}' in '{}'.",
-                            name, meta->configuration->get_name());
+            throw std::runtime_error("Unknown terminal '" + name + "' in '"
+                                     + meta->configuration->get_name() + "'.");
         }
 
         return *meta->terminals[name];
@@ -268,8 +305,47 @@ public:
     void connect_terminal(const std::string &name, int input_channel,
                           Terminal &output_terminal, int output_channel)
     {
+        if (meta->terminals.count(name) == 0)
+        {
+            throw std::runtime_error("Unknown terminal '" + name + "' in '"
+                                     + meta->configuration->get_name() + "'.");
+        }
+
         meta->terminals[name]->connect(input_channel, output_terminal,
                                        output_channel);
+    }
+
+
+    /// Get the largest frame size of any empty (unconnected) input terminal in
+    /// this block.  This is called by the framework, not by the algorithm.
+    int get_empty_frame_size() const
+    {
+        int largest_frame_size = 0;
+
+        for (auto &t : meta->terminals)
+        {
+            if (!t.second->is_output() && t.second->is_unconnected())
+            {
+                largest_frame_size = std::max(largest_frame_size,
+                                              t.second->get_frame_size());
+            }
+        }
+
+        return largest_frame_size;
+    }
+
+
+    /// Connect any unconnected input terminals to the provided signal memory.
+    /// This is called by the framework, not by the algorithm.
+    void set_empty_signal(DspSignalMemory<const float[]> &signal_memory)
+    {
+        for (auto &t : meta->terminals)
+        {
+            if (!t.second->is_output())
+            {
+                t.second->set_empty_signal(signal_memory.get());
+            }
+        }
     }
 
 
@@ -316,8 +392,8 @@ public:
     {
         if (meta->parameters.count(setting.get_name()) == 0)
         {
-            SPDLOG_WARN("Unknown parameter '{}' in '{}'.", setting.get_name(),
-                        meta->configuration->get_name());
+            throw std::runtime_error("Unknown parameter '" + setting.get_name()
+                                     + "' in '" + meta->block_name + "'.");
             return false;
         }
 
@@ -348,19 +424,57 @@ protected:
     template <typename T>
     void get_property(const std::string &name, T &value)
     {
+        const PropertyDefinition &pd = meta->definition->get_property(name);
+
         if (meta->configuration->has_property(name))
         {
             meta->configuration->get_property(name).get_value(value);
         }
         else if (meta->definition->has_property(name))
         {
-
-            meta->definition->get_property(name).get_default_value(value);
+            pd.get_default_value(value);
+            SPDLOG_DEBUG("No value specified for property '{}', using {}.",
+                         name, value);
         }
         else
         {
-            SPDLOG_CRITICAL("Unknown property '{}' in '{}'.",
-                            name, meta->configuration->get_name());
+            throw std::runtime_error("Unknown property '" + name + "' in '"
+                                     + meta->configuration->get_name() + "'.");
+        }
+
+        if (pd.has_allowed_values())
+        {
+            if (!pd.is_allowed_value(value))
+            {
+                throw std::runtime_error("Property '" + name + "' in '"
+                                         + meta->configuration->get_name()
+                                         + "' has an invalid value.");
+            }
+        }
+        else if constexpr(std::is_same_v<T, int_fast32_t>
+                     || std::is_same_v<T, float>)
+        {
+            T minimum_value;
+            T maximum_value;
+            pd.get_minimum_value(minimum_value);
+            pd.get_maximum_value(maximum_value);
+
+            if (value < minimum_value
+                || value > maximum_value)
+            {
+                throw std::runtime_error("Property '" + name + "' in '"
+                                         + meta->configuration->get_name()
+                                         + "' is out of range.");
+            }
+        }
+        else if constexpr(std::is_same_v<T, std::string>)
+        {
+            if (value.length() > pd.get_maximum_length())
+            {
+                throw std::runtime_error("Property '" + name + "' in '"
+                                         + meta->configuration->get_name()
+                                         + "' is too long.");
+            }
         }
     }
 
