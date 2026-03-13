@@ -496,6 +496,14 @@ struct base_device {
 
     struct config_sequence  cfg_seq;
 
+    struct {
+        bool                enabled;
+        char                uv_warn_gpio_name[MAX_STRING];
+        char                dac_mute_gpio_name[MAX_STRING];
+        struct endpoint_gpio *uv_warn_gpio;
+        struct endpoint_gpio *dac_mute_gpio;
+    } uv_mute_sw;
+
     size_t                  num_eps;
     struct endpoint         *endpoints;
     size_t                  num_gpios;
