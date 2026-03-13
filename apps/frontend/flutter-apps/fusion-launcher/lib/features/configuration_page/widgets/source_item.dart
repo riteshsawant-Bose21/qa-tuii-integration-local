@@ -83,46 +83,46 @@ class _SourceItemState extends State<SourceItem> {
                   ).textTheme.bodySmall?.copyWith(fontSize: 11),
                 ),
               ),
-            ),
-            // todo : based on the pagingSourceType show different popup with different configuration options
-            /// Show configuration icon only if source has a paging source type
-            Visibility(
-              visible: widget.source.pagingSourceType != null,
-              child: InkWell(
-                onTap: () {
-                  MessagePlayerConfigDialog.show(
-                    context,
-                    sourceId: widget.source.id,
-                  );
-                },
-                child: FusionImage.asset(
-                  Assets.configurationFilledIcon,
-                  width: 24,
-                  height: 24,
-                  assetColor: context.colorScheme.primaryWhite,
-
-                  fit: BoxFit.contain,
-                ),
-              ),
-            ),
-            const SizedBox(width: 8),
-            if (!widget.isDragging)
-              SemanticHelper.button(
-                testId: SemanticHelper.createTestId(
-                  SemanticTypes.button,
-                  "${FusionTestKeys.instance.sourceitemprocessing}_${widget.index}",
-                ),
+              // todo : based on the pagingSourceType show different popup with different configuration options
+              /// Show configuration icon only if source has a paging source type
+              Visibility(
+                visible: widget.source.pagingSourceType != null,
                 child: InkWell(
                   onTap: () {
-                    ProcessingChainView.showForSource(context, widget.source);
+                    MessagePlayerConfigDialog.show(
+                      context,
+                      sourceId: widget.source.id,
+                    );
                   },
                   child: FusionImage.asset(
-                    semanticId: FusionTestKeys.instance.sourceitemprocessing,
-                    Assets.processingBlocksFilledIcon,
+                    Assets.configurationFilledIcon,
                     width: 24,
                     height: 24,
                     assetColor: context.colorScheme.primaryWhite,
+
                     fit: BoxFit.contain,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              if (!widget.isDragging)
+                SemanticHelper.button(
+                  testId: SemanticHelper.createTestId(
+                    SemanticTypes.button,
+                    "${FusionTestKeys.instance.sourceitemprocessing}_${widget.index}",
+                  ),
+                  child: InkWell(
+                    onTap: () {
+                      ProcessingChainView.showForSource(context, widget.source);
+                    },
+                    child: FusionImage.asset(
+                      semanticId: FusionTestKeys.instance.sourceitemprocessing,
+                      Assets.processingBlocksFilledIcon,
+                      width: 24,
+                      height: 24,
+                      assetColor: context.colorScheme.primaryWhite,
+                      fit: BoxFit.contain,
+                    ),
                   ),
                 ),
             ],

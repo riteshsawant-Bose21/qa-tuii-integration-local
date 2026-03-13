@@ -41,7 +41,6 @@ class EventTriggerRowHeader extends StatelessWidget {
 
         final ConfigEventsViewmodel cubit = context.read<ConfigEventsViewmodel>();
 
-
         return SemanticHelper.container(
           testId: SemanticHelper.createTestId(SemanticTypes.container, FusionTestKeys.instance.eventtriggerrowheader),
           child: Container(
@@ -71,7 +70,10 @@ class EventTriggerRowHeader extends StatelessWidget {
             ),
           ),
         );
+      },
+    );
   }
+}
 
 class _TriggerTypeDropdown extends StatelessWidget {
   final String eventId;
