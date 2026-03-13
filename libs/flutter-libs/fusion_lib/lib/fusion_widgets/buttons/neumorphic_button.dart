@@ -117,20 +117,16 @@ class _NeumorphicButtonState extends State<NeumorphicButton> {
     assert(widget.text != null || widget.child != null);
 
     return SemanticHelper.button(
-      isActive: widget.isActive,
+      isEnabled: widget.isActive,
       testId: SemanticHelper.createTestId(
         SemanticTypes.button,
         "neumorphic_button_${widget.text}",
       ),
       child: GestureDetector(
         // Disable gestures
-        onTapDown: _isDisabled
-            ? null
-            : (_) => setState(() => _isPressed = true),
+        onTapDown: _isDisabled ? null : (_) => setState(() => _isPressed = true),
 
-        onTapCancel: _isDisabled
-            ? null
-            : () => setState(() => _isPressed = false),
+        onTapCancel: _isDisabled ? null : () => setState(() => _isPressed = false),
 
         onTapUp: _isDisabled
             ? null
@@ -164,9 +160,7 @@ class _NeumorphicButtonState extends State<NeumorphicButton> {
                   widget.child ??
                   FusionAppText(
                     text: widget.text!,
-                    style:
-                        widget.textStyle ??
-                        Theme.of(context).textTheme.bodyMedium,
+                    style: widget.textStyle ?? Theme.of(context).textTheme.bodyMedium,
                   ),
             ),
           ),

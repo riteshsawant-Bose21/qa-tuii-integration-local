@@ -956,135 +956,159 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
             mainAxisSize: MainAxisSize.min,
             children: <Widget>[
               // Circuit Header
-              Container(
-                padding: const EdgeInsets.fromLTRB(6, 6, 8, 6),
-                child: InkWell(
-                  onTap: () => _toggleCircuitSectionExpansion(circuit.id),
-                  child: Row(
-                    children: <Widget>[
-                      // Expand/Collapse icon
-                      InkWell(
-                        onTap: () => _toggleCircuitSectionExpansion(circuit.id),
-                        child: AnimatedRotation(
-                          duration: const Duration(milliseconds: 200),
-                          turns: _expandedCircuitSections.contains(circuit.id) ? 0.5 : 0.25,
-                          child: FusionSvgIcon(
-                            icon: AssetSvg.expandUp,
-                            color: context.colorScheme.elevation5,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 4),
-                      // Circuit icon - show actual speaker image if circuit has speakers
-                      if (circuitSpeakers.isNotEmpty)
-                        FusionImage.asset(
-                          serviceLocator<ProjectViewModel>().getHardwareImage(
-                            productId: circuitSpeakers.first.productId ?? 0,
-                            currentImagePath: circuitSpeakers.first.assetImagePath,
-                          ),
-                          width: 16,
-                          height: 16,
-                        )
-                      else
-                        Icon(
-                          Icons.speaker_group,
-                          size: 14,
-                          color: Colors.grey[600],
-                        ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: FusionAppText(
-                          text: circuitSpeakers.isNotEmpty ? '${circuitSpeakers.first.speakerSKU} (${circuitSpeakers.length}x)' : 'Empty circuit',
-                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w500,
-                            color: circuitSpeakers.isNotEmpty ? context.colorScheme.textPrimary : context.colorScheme.elevation5,
-                            fontStyle: circuitSpeakers.isEmpty ? FontStyle.italic : null,
-                          ),
-                        ),
-                      ),
-                      // Circuit actions menu
-                      SizedBox(
-                        height: 24,
-                        width: 24,
-                        child: PopupMenuButton<String>(
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(
-                              FusionSizes.borderRadius12,
-                            ),
-                            side: BorderSide(
-                              color: context.colorScheme.elevation4,
+              SemanticHelper.container(
+                testId: SemanticHelper.createTestId(SemanticTypes.container, "speakers"),
+                child: Container(
+                  padding: const EdgeInsets.fromLTRB(6, 6, 8, 6),
+                  child: InkWell(
+                    onTap: () => _toggleCircuitSectionExpansion(circuit.id),
+                    child: Row(
+                      children: <Widget>[
+                        // Expand/Collapse icon
+                        InkWell(
+                          onTap: () => _toggleCircuitSectionExpansion(circuit.id),
+                          child: AnimatedRotation(
+                            duration: const Duration(milliseconds: 200),
+                            turns:
+                                _expandedCircuitSections.contains(circuit.id)
+                                    ? 0.5
+                                    : 0.25,
+                            child: FusionSvgIcon(
+                              icon: AssetSvg.expandUp,
+                              color: context.colorScheme.elevation5,
                             ),
                           ),
-                          padding: EdgeInsets.zero,
-                          color: context.colorScheme.elevation1,
-                          menuPadding: EdgeInsets.zero,
-                          shadowColor: Colors.transparent,
-                          iconSize: 12,
-                          position: PopupMenuPosition.under,
-                          icon: const Icon(
-                            Icons.more_vert,
-                            size: 12,
-                            color: Colors.grey,
+                        ),
+                        const SizedBox(width: 4),
+                        // Circuit icon - show actual speaker image if circuit has speakers
+                        if (circuitSpeakers.isNotEmpty)
+                          FusionImage.asset(
+                            serviceLocator<ProjectViewModel>().getHardwareImage(
+                              productId: circuitSpeakers.first.productId ?? 0,
+                              currentImagePath:
+                                  circuitSpeakers.first.assetImagePath,
+                            ),
+                            width: 16,
+                            height: 16,
+                          )
+                        else
+                          Icon(
+                            Icons.speaker_group,
+                            size: 14,
+                            color: Colors.grey[600],
                           ),
-                          tooltip: 'Circuit actions',
-                          onSelected: (String value) {
-                            switch (value) {
-                              case 'rename':
-                                _showRenameCircuitDialog(circuit);
-                                break;
-                              case 'delete':
-                                _showDeleteCircuitConfirmation(circuit);
-                                break;
-                            }
-                          },
-                          itemBuilder:
-                              (
-                                BuildContext context,
-                              ) => <PopupMenuEntry<String>>[
-                                PopupMenuItem<String>(
-                                  value: 'rename',
-                                  child: Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: <Widget>[
-                                      Icon(
-                                        Icons.edit,
-                                        size: 14,
-                                        color: context.colorScheme.textPrimary,
-                                      ),
-                                      const SizedBox(width: 6),
-                                      FusionAppText(
-                                        text: 'Rename',
-                                        style: context.textTheme.bodySmall?.copyWith(
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: FusionAppText(
+                            semanticId: "circuit_speaker_name",
+                            text:
+                                circuitSpeakers.isNotEmpty
+                                    ? '${circuitSpeakers.first.name} (${circuitSpeakers.length}x)'
+                                    : 'Empty circuit',
+                            style: Theme.of(
+                              context,
+                            ).textTheme.bodySmall?.copyWith(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w500,
+                              color:
+                                  circuitSpeakers.isNotEmpty
+                                      ? context.colorScheme.textPrimary
+                                      : context.colorScheme.elevation5,
+                              fontStyle:
+                                  circuitSpeakers.isEmpty
+                                      ? FontStyle.italic
+                                      : null,
+                            ),
+                          ),
+                        ),
+                        // Circuit actions menu
+                        SizedBox(
+                          height: 24,
+                          width: 24,
+                          child: PopupMenuButton<String>(
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(
+                                FusionSizes.borderRadius12,
+                              ),
+                              side: BorderSide(
+                                color: context.colorScheme.elevation4,
+                              ),
+                            ),
+                            padding: EdgeInsets.zero,
+                            color: context.colorScheme.elevation1,
+                            menuPadding: EdgeInsets.zero,
+                            shadowColor: Colors.transparent,
+                            iconSize: 12,
+                            position: PopupMenuPosition.under,
+                            icon: const Icon(
+                              Icons.more_vert,
+                              size: 12,
+                              color: Colors.grey,
+                            ),
+                            tooltip: 'Circuit actions',
+                            onSelected: (String value) {
+                              switch (value) {
+                                case 'rename':
+                                  _showRenameCircuitDialog(circuit);
+                                  break;
+                                case 'delete':
+                                  _showDeleteCircuitConfirmation(circuit);
+                                  break;
+                              }
+                            },
+                            itemBuilder:
+                                (
+                                  BuildContext context,
+                                ) => <PopupMenuEntry<String>>[
+                                  PopupMenuItem<String>(
+                                    value: 'rename',
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: <Widget>[
+                                        Icon(
+                                          Icons.edit,
+                                          size: 14,
                                           color: context.colorScheme.textPrimary,
                                         ),
-                                      ),
-                                    ],
+                                        const SizedBox(width: 6),
+                                        FusionAppText(
+                                          text: 'Rename',
+                                          style: context.textTheme.bodySmall
+                                              ?.copyWith(
+                                                color:
+                                                    context
+                                                        .colorScheme
+                                                        .textPrimary,
+                                              ),
+                                        ),
+                                      ],
+                                    ),
                                   ),
-                                ),
-                                const PopupMenuDivider(height: 0),
-                                PopupMenuItem<String>(
-                                  value: 'delete',
-                                  child: Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: <Widget>[
-                                      const Icon(
-                                        LucideIcons.trash200,
-                                        size: 14,
-                                        color: Colors.red,
-                                      ),
-                                      const SizedBox(width: 6),
-                                      FusionAppText(
-                                        text: 'Delete',
-                                        style: context.textTheme.bodySmall?.copyWith(color: Colors.red),
-                                      ),
-                                    ],
+                                  const PopupMenuDivider(height: 0),
+                                  PopupMenuItem<String>(
+                                    value: 'delete',
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: <Widget>[
+                                        const Icon(
+                                          LucideIcons.trash200,
+                                          size: 14,
+                                          color: Colors.red,
+                                        ),
+                                        const SizedBox(width: 6),
+                                        FusionAppText(
+                                          text: 'Delete',
+                                          style: context.textTheme.bodySmall
+                                              ?.copyWith(color: Colors.red),
+                                        ),
+                                      ],
+                                    ),
                                   ),
-                                ),
-                              ],
+                                ],
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
               ),
