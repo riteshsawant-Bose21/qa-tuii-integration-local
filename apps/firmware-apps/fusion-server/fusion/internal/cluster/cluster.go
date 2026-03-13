@@ -2,26 +2,23 @@ package cluster
 
 import (
 	"fmt"
-	coreNetwork "fusion-services-core/network"
 	"fusion-services-core/vip"
+	"os/exec"
 
 	"fusion-services-core/logging"
 	"fusion/internal/api"
-	"fusion/internal/network"
 	"fusion/internal/routes"
 	"io"
 	"net"
 	"net/http"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"runtime"
 	"strings"
-	"sync"
 	"time"
 
 	json "github.com/goccy/go-json"
-	"github.com/hashicorp/memberlist"
+	hashicorpMemberlist "github.com/hashicorp/memberlist"
 )
 
 const (
@@ -65,49 +62,29 @@ type Cluster struct {
 	appConfig        *api.AppConfig
 	delegate         *ClusterDelegate
 	httpClient       *http.Client
-	Memberlist       *memberlist.Memberlist
-	vip              string
-	vipHolder        string
-	vipLock          sync.RWMutex
-	configPath       string
+	memberlist       *hashicorpMemberlist.Memberlist
+	vipMonitor       VIPMonitorInterface
 	Metrics          *MetricsCollector
 	networkLatencies *NetworkLatencyStore
-	vipMu            sync.Mutex
-	mdnsManager      *network.MDNSManager
 }
 
-func NewCluster(appConfig *api.AppConfig, delegate *ClusterDelegate, memberlist *memberlist.Memberlist, mdnsManager *network.MDNSManager) *Cluster {
+type VIPMonitorInterface interface {
+	GetCurrentVIP() string
+	IsLocalVIPHolder() bool
+}
+
+func NewCluster(appConfig *api.AppConfig, delegate *ClusterDelegate, memberlist *hashicorpMemberlist.Memberlist) *Cluster {
 
 	cluster := &Cluster{
 		appConfig:        appConfig,
 		delegate:         delegate,
 		httpClient:       &http.Client{Timeout: api.HTTPTimeout},
-		Memberlist:       memberlist,
-		configPath:       configPath,
+		memberlist:       memberlist,
 		Metrics:          NewMetricsCollector(memberlist, delegate.stateManager),
 		networkLatencies: NewNetworkLatencyStore(maxLatencyCount, latencyPruneTime),
-		mdnsManager:      mdnsManager,
 	}
 
 	logger := logging.GetLogger()
-
-	if !cluster.appConfig.Local {
-
-		if err := cluster.startVRRPListener(appConfig.NetIface); err != nil {
-			logger.Fatal("startVRRPListener: %v", err)
-		}
-
-		vipValue, multiple, err := vip.ReadFromKeepalivedConfig(cluster.configPath)
-		if err != nil {
-			logger.Fatal("read keepalived config: %v", err)
-		}
-		if multiple {
-			logger.Warn("More than one VIP found.")
-		}
-
-		canonical := vip.Canonicalize(vipValue)
-		cluster.vip = canonical
-	}
 
 	if err := cluster.JoinMemberlist(); err != nil {
 		logger.Error("initial JoinMemberlist: %v", err)
@@ -127,12 +104,12 @@ func (c *Cluster) Stop() {
 
 // GetInfo returns detailed information about the cluster
 func (c *Cluster) GetInfo() ClusterInfo {
-	members := c.Memberlist.Members()
+	members := c.memberlist.Members()
 	clusterMembers := c.getMembers()
 
 	aliveCount := 0
 	for _, member := range members {
-		if member.State == memberlist.StateAlive {
+		if member.State == hashicorpMemberlist.StateAlive {
 			aliveCount++
 		}
 	}
@@ -140,14 +117,22 @@ func (c *Cluster) GetInfo() ClusterInfo {
 	return ClusterInfo{
 		MemberCount:    len(members),
 		AliveCount:     aliveCount,
-		LocalNode:      c.Memberlist.LocalNode().Name,
+		LocalNode:      c.memberlist.LocalNode().Name,
 		Members:        clusterMembers,
 		LastUpdateTime: time.Now().UTC(),
 	}
 }
 
-func (c *Cluster) SetMemberlist(memberlist *memberlist.Memberlist) {
-	c.Memberlist = memberlist
+func (c *Cluster) LocalNode() *hashicorpMemberlist.Node {
+	return c.memberlist.LocalNode()
+}
+
+func (c *Cluster) GetMembers() []*hashicorpMemberlist.Node {
+	return c.memberlist.Members()
+}
+
+func (c *Cluster) SetMemberlist(memberlist *hashicorpMemberlist.Memberlist) {
+	c.memberlist = memberlist
 	if err := c.JoinMemberlist(); err != nil {
 		logging.GetLogger().Error("Unable to join after setting memberlist: %v", err)
 	}
@@ -157,149 +142,24 @@ func (c *Cluster) SetMemberlist(memberlist *memberlist.Memberlist) {
 // getClusterIPs retrieves the list of IP addresses of all nodes in the cluster
 func (c *Cluster) getClusterIPs() []string {
 	var ips []string
-	for _, member := range c.Memberlist.Members() {
+	for _, member := range c.memberlist.Members() {
 		// Extract IP address of each member
 		ips = append(ips, member.Addr.String())
 	}
 	return ips
 }
 
-// listenerUpdated is called when VRRP state changes
-func (c *Cluster) listenerUpdated(vipAddr, srcIP string) {
-
-	logger := logging.GetLogger()
-
-	newVIP := vip.Canonicalize(vipAddr)
-
-	c.vipLock.Lock()
-	defer c.vipLock.Unlock()
-
-	oldVIP := c.vip
-	oldHolder := c.vipHolder
-	logger.Debug("[CLUSTER] listenerUpdated called: oldVIP=%s oldHolder=%s vip=%s srcIP=%s",
-		oldVIP, oldHolder, c.vip, srcIP,
-	)
-
-	// VIP has been removed entirely
-	if newVIP == "" {
-		if oldVIP == "" {
-			// no change
-			logger.Warn("[CLUSTER] Both oldVIP and newVIP are empty - no change.")
-			return
-		}
-
-		logger.Debug("[CLUSTER] VIP %s removed (old holder %s)", oldVIP, oldHolder)
-
-		c.vip = ""
-		c.vipHolder = ""
-
-		c.notifyLocalVIPChange(false)
-		if err := c.mdnsManager.Close(); err != nil {
-			logger.Error("[Discovery] Failed to stop mDNS service: %v", err)
-		} else {
-			logger.Debug("[Discovery] mDNS service stopped successfully via manager")
-		}
-		return
-	}
-
-	if newVIP == oldVIP && srcIP == oldHolder {
-		logger.Warn("listenerUpdated called but VIP state is unchanged.")
-		return
-	}
-
-	// Determine ownership
-
-	oldLocal, err := vip.IsLocalVIP(oldHolder)
-	if err != nil {
-		logger.Error("isLocalVIP(oldHolder): %v", err)
-	}
-
-	newLocal, err := vip.IsLocalVIP(srcIP)
-	if err != nil {
-		logger.Error("isLocalVIP(srcIP): %v", err)
-	}
-
-	// VIP address changed
-	if newVIP != oldVIP {
-		logger.Info("VIP changed: oldVIP=%s newVIP=%s", oldVIP, newVIP)
-		if err := c.updateVIP(newVIP); err != nil {
-			logger.Error("updateVIP(%q): %v", newVIP, err)
-			return
-		}
-
-		if err := c.reloadVIP(); err != nil {
-			logger.Error("reloadVIP: %v", err)
-			return
-		}
-
-		// Parse the VIP string into net.IP before passing to mDNS manager
-		if ip := net.ParseIP(newVIP); ip == nil {
-			logger.Error("[Discovery] Invalid VIP %s for mDNS", newVIP)
-		} else {
-			if err := c.mdnsManager.StartWithVIP(ip); err != nil {
-				logger.Error("[Discovery] Failed to start mDNS service: %v", err)
-			}
-		}
-	}
-
-	c.vip = newVIP
-	c.vipHolder = srcIP
-
-	logger.Debug("VIP update: oldVIP=%s newVIP=%s oldHolder=%s newHolder=%s oldLocal=%v newLocal=%v",
-		oldVIP, newVIP, oldHolder, srcIP, oldLocal, newLocal)
-
-	// Handle ownership transition
-	switch {
-	case oldLocal && !newLocal:
-		logger.Info("VIP %s moved (was %s, now %s)", newVIP, oldHolder, srcIP)
-		c.notifyLocalVIPChange(false)
-
-		if err := c.mdnsManager.Close(); err != nil {
-			logger.Error("[Discovery] Failed to stop mDNS service: %v", err)
-		} else {
-			logger.Debug("[Discovery] mDNS service stopped successfully via manager")
-		}
-
-	case !oldLocal && newLocal:
-		logger.Debug("VIP %s gained locally (holder %s)", newVIP, srcIP)
-
-		// Ensure we’re in the memberlist
-		if member, err := c.isMember(); err != nil {
-			logger.Error("isMember: %v", err)
-		} else if !member {
-			if err := c.JoinMemberlist(); err != nil {
-				logger.Error("JoinMemberlist: %v", err)
-			} else {
-				logger.Info("Joined memberlist with VIP %s", newVIP)
-			}
-		}
-		c.notifyLocalVIPChange(true)
-
-		// Parse the VIP string into net.IP before passing to mDNS manager
-		if ip := net.ParseIP(newVIP); ip == nil {
-			logger.Error("[Discovery] Invalid VIP %s for mDNS", newVIP)
-		} else {
-			if err := c.mdnsManager.StartWithVIP(ip); err != nil {
-				logger.Error("[Discovery] Failed to start mDNS service: %v", err)
-			}
-		}
-	}
+// SetVIPMonitor sets the VIPMonitor reference for this cluster
+func (c *Cluster) SetVIPMonitor(vm VIPMonitorInterface) {
+	c.vipMonitor = vm
 }
 
-func (c *Cluster) startVRRPListener(iface string) error {
-
-	if err := coreNetwork.StartVRRPListener(logging.GetLogger(), c.listenerUpdated); err != nil {
-		return fmt.Errorf("unable to start keepalived listener: %v", err)
+// getCurrentVIP returns the current VIP from VIPMonitor
+func (c *Cluster) getCurrentVIP() string {
+	if c.vipMonitor != nil {
+		return c.vipMonitor.GetCurrentVIP()
 	}
-
-	go c.watchLocalVIP(iface)
-
-	return nil
-}
-
-// restartKeepalived reloads the keepalived process
-func (c *Cluster) restartKeepalived() error {
-	return exec.Command("systemctl", "reload", "keepalived").Run()
+	return ""
 }
 
 // reboot the system...
@@ -332,7 +192,7 @@ func (c *Cluster) restartSystem() error {
 func (c *Cluster) startStateMonitor() {
 	go func() {
 		for {
-			members := c.Memberlist.Members()
+			members := c.memberlist.Members()
 			logger := logging.GetLogger()
 
 			logger.Debug("[CLUSTER] Current cluster state:")
@@ -341,11 +201,11 @@ func (c *Cluster) startStateMonitor() {
 			for _, member := range members {
 				status := "ALIVE"
 				switch member.State {
-				case memberlist.StateAlive:
+				case hashicorpMemberlist.StateAlive:
 					status = "ALIVE"
-				case memberlist.StateSuspect:
+				case hashicorpMemberlist.StateSuspect:
 					status = "SUSPECT"
-				case memberlist.StateDead:
+				case hashicorpMemberlist.StateDead:
 					status = "DEAD"
 				default:
 					status = "UNKNOWN"
@@ -365,13 +225,13 @@ func (c *Cluster) startStateMonitor() {
 }
 
 // getStateString converts memberlist state to human-readable string
-func getStateString(state memberlist.NodeStateType) string {
+func getStateString(state hashicorpMemberlist.NodeStateType) string {
 	switch state {
-	case memberlist.StateAlive:
+	case hashicorpMemberlist.StateAlive:
 		return "ALIVE"
-	case memberlist.StateSuspect:
+	case hashicorpMemberlist.StateSuspect:
 		return "SUSPECT"
-	case memberlist.StateDead:
+	case hashicorpMemberlist.StateDead:
 		return "DEAD"
 	default:
 		return "UNKNOWN"
@@ -380,7 +240,7 @@ func getStateString(state memberlist.NodeStateType) string {
 
 // getClusterMembers returns the current list of cluster members
 func (c *Cluster) getMembers() []ClusterMember {
-	members := c.Memberlist.Members()
+	members := c.memberlist.Members()
 	result := make([]ClusterMember, len(members))
 
 	for i, member := range members {
@@ -499,8 +359,8 @@ func fetchAndDecode[T any](
 	return decodeSlice(resp.Body, dest)
 }
 
-// postGenericToAdmin POSTs to an admin route on all nodes
-func postGenericToAdmin(
+// PostGenericToAdmin POSTs to an admin route on all nodes
+func PostGenericToAdmin(
 	c *Cluster,
 	endpoint string,
 	localFn func() error,
@@ -590,42 +450,24 @@ func (c *Cluster) hostIsLocal(addr string) bool {
 			return false
 		}
 	}
-	return host == c.Memberlist.LocalNode().Addr.String()
+	return host == c.LocalNode().Addr.String()
 }
 
 // getLocalURL builds a full API URL to the endpoint
+// fixme: need to move it to utils
 func getLocalURL(addr, endpoint string) string {
 	return fmt.Sprintf("%s%s%s", api.Protocol, addr, endpoint)
 }
 
-func (c *Cluster) notifyLocalVIPChange(gained bool) {
-	logger := logging.GetLogger()
-	event := ternary(gained, vip.EventGained, vip.EventLost)
-
-	if err := vip.SendLocalStatus(c.vip, c.appConfig.BindAddr, gained); err != nil {
-		logger.Error("SendUDPMessage failed: %v", err)
-		return
-	}
-
-	logger.Debug("Local VIP changed %s: %s. Notified localhost:%d", event, c.vip, vip.Port)
-}
-
-func ternary(cond bool, a, b string) string {
-	if cond {
-		return a
-	}
-	return b
-}
-
 func (c *Cluster) initialAudioSync() {
-	peers := c.Memberlist.Members()
+	peers := c.memberlist.Members()
 	if len(peers) <= 1 {
 		return
 	}
 
-	var peer *memberlist.Node
+	var peer *hashicorpMemberlist.Node
 	for _, p := range peers {
-		if p.Name != c.Memberlist.LocalNode().Name {
+		if p.Name != c.memberlist.LocalNode().Name {
 			peer = p
 			break
 		}
@@ -638,7 +480,7 @@ func (c *Cluster) initialAudioSync() {
 	c.reconcileLocalAudioState()
 }
 
-func (c *Cluster) initialAudioSyncFromPeer(peer *memberlist.Node) error {
+func (c *Cluster) initialAudioSyncFromPeer(peer *hashicorpMemberlist.Node) error {
 	logger := logging.GetLogger()
 
 	url := fmt.Sprintf("http://%s:%s%s", peer.Addr, api.HTTPPort, routes.PAVAMessagesEndpoint)

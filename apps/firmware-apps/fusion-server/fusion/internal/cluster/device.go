@@ -2,10 +2,8 @@ package cluster
 
 import (
 	"bytes"
-	"errors"
 	"fmt"
 	"fusion-services-core/logging"
-	"fusion-services-core/vip"
 	"fusion/internal/api"
 	"fusion/internal/persistence"
 	"fusion/internal/routes"
@@ -13,14 +11,8 @@ import (
 	"io"
 	"net"
 	"net/http"
-	"net/url"
-	"os"
 
 	json "github.com/goccy/go-json"
-)
-
-const (
-	serverPrefix = "fusion"
 )
 
 func (c *Cluster) GetDevicesInfo(w http.ResponseWriter, r *http.Request) {
@@ -126,144 +118,6 @@ func (c *Cluster) UpdateDeviceInfoLocal(w http.ResponseWriter, r *http.Request) 
 	w.WriteHeader(http.StatusNoContent)
 }
 
-func (c *Cluster) GetVIP(w http.ResponseWriter, r *http.Request) {
-	if !utils.RequireGet(w, r) {
-		return
-	}
-
-	if c.appConfig.Local {
-		c.getVIPInLocalConfig(w)
-		return
-	}
-
-	vipValue, multiple, err := vip.ReadFromKeepalivedConfig(c.configPath)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	if multiple {
-		logging.GetLogger().Warn("More than one VIP found.")
-	}
-
-	w.Header().Set(api.ContentType, api.JsonMIMEType)
-
-	isVip, err := vip.IsLocalVIP(vipValue)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	if isVip {
-
-		local, vipAddr, ok := vip.LocalForVIP(vipValue)
-		if !ok {
-			w.WriteHeader(http.StatusNotFound)
-			return
-		}
-
-		json.NewEncoder(w).Encode(map[string]string{
-			"local": local.String(),
-			"vip":   vipAddr.String(),
-		})
-		return
-	}
-
-	w.WriteHeader(http.StatusNotFound)
-}
-
-func (c *Cluster) SetVIP(w http.ResponseWriter, r *http.Request) {
-	if !utils.RequirePost(w, r) {
-		return
-	}
-	defer r.Body.Close()
-
-	vipValue, err := utils.ExtractValue(r, "vip")
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-
-	if err := vip.Validate(vipValue); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-
-	endpoint := routes.DevicesVIPEndpoint + "/" + url.QueryEscape(vipValue)
-
-	// Wrap c.updateVIP(vip) in a zero argument func() returning an error
-	// so we can use it with postGenericToAdmin
-	localFn := func() error {
-		return c.updateVIP(vipValue)
-	}
-
-	if err := postGenericToAdmin(c, endpoint, localFn); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	if !c.appConfig.Local {
-		go func() {
-			// Reload keepalived outside of request after updating all the nodes
-			if err := postGenericToAdmin(c, routes.DeviceReloadVIPEndpoint, c.reloadVIP); err != nil {
-				// Log the error — don't respond to client because it's async
-				logging.GetLogger().Error("Failed to reload VIP: %v", err)
-			}
-		}()
-	}
-
-	w.WriteHeader(http.StatusAccepted)
-}
-
-func (c *Cluster) UpdateVIPLocal(w http.ResponseWriter, r *http.Request) {
-	if !utils.RequirePost(w, r) {
-		return
-	}
-	defer r.Body.Close()
-
-	vipValue, err := utils.ExtractValue(r, "vip")
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-
-	if err := c.updateVIP(vipValue); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-
-	w.WriteHeader(http.StatusNoContent)
-}
-
-func (c *Cluster) ReloadVIP(w http.ResponseWriter, r *http.Request) {
-	if !utils.RequirePost(w, r) {
-		return
-	}
-	defer r.Body.Close()
-
-	go func() {
-		// Reload keepalived outside of request after updating all the nodes
-		if err := postGenericToAdmin(c, routes.DeviceReloadVIPEndpoint, c.reloadVIP); err != nil {
-			// Log the error. Don't respond to client because it's async
-			logging.GetLogger().Error("Failed to reload VIP: %v", err)
-		}
-	}()
-
-	w.WriteHeader(http.StatusAccepted)
-}
-
-func (c *Cluster) ReloadVIPLocal(w http.ResponseWriter, r *http.Request) {
-	if !utils.RequirePost(w, r) {
-		return
-	}
-	defer r.Body.Close()
-
-	if err := c.reloadVIP(); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	w.WriteHeader(http.StatusNoContent)
-}
-
 func (c *Cluster) RebootSystem(w http.ResponseWriter, r *http.Request) {
 	if !utils.RequirePost(w, r) {
 		return
@@ -297,31 +151,6 @@ func (c *Cluster) RebootSystemLocal(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusAccepted)
 }
 
-// updateVIP updates keepalived configuration with the new VIP but DOES NOT restart keepalived.
-func (c *Cluster) updateVIP(vipValue string) error {
-
-	if err := vip.Validate(vipValue); err != nil {
-		return err
-	}
-
-	if err := c.setVIPInConfig(vipValue); err != nil {
-		return err
-	}
-
-	logging.GetLogger().Debug("Updated VIP: %s", vipValue)
-
-	return nil
-}
-
-// reloadVIP reloads the keepalived configuration
-func (c *Cluster) reloadVIP() error {
-
-	if err := c.restartKeepalived(); err != nil {
-		return err
-	}
-
-	return nil
-}
 
 func (c *Cluster) rebootSystem() error {
 	if err := c.restartSystem(); err != nil {
@@ -462,19 +291,14 @@ func (c *Cluster) getLocalDeviceInfo() persistence.DeviceInfo {
 	return *info
 }
 
+// isLocalNodePrimary checks if this node is the primary (VIP holder)
 func (c *Cluster) isLocalNodePrimary() bool {
 
-	vipValue, multiple, err := vip.ReadFromKeepalivedConfig(c.configPath)
-	if err != nil {
-		logging.GetLogger().Error("Failed to get VIP from config: %v", err)
-		return false
-	}
-	if multiple {
-		logging.GetLogger().Warn("More than one VIP found.")
+	if c.vipMonitor != nil {
+		return c.vipMonitor.IsLocalVIPHolder()
 	}
 
-	_, _, isLocal := vip.LocalForVIP(vipValue)
-	return isLocal
+	return false
 }
 
 func (c *Cluster) applyPatch(patch *persistence.DevicePatch, info *persistence.DeviceInfo) {
@@ -535,47 +359,4 @@ func validateNoDuplication(
 	}
 
 	return nil
-}
-
-// setVIPInConfig update the VIP value in keepalived.conf
-func (c *Cluster) setVIPInConfig(newVIP string) error {
-	logger := logging.GetLogger()
-
-	if c.appConfig.Local {
-		return vip.WriteToLocalConfig(serverPrefix, vip.DefaultConfFile, newVIP)
-	}
-
-	newVIP = vip.Canonicalize(newVIP)
-	logger.Debug("Updating virtual_ipaddress in %s → %s", c.configPath, newVIP)
-
-	// Ensure only one goroutine updates keepalived.conf at a time
-	c.vipMu.Lock()
-	defer c.vipMu.Unlock()
-
-	if err := vip.WriteToKeepalivedConfig(c.configPath, newVIP); err != nil {
-		return err
-	}
-
-	logger.Debug("VIP updated successfully: %s", newVIP)
-	return nil
-}
-
-// getVIPInLocalConfig is for use in "local" development mode only
-func (c *Cluster) getVIPInLocalConfig(w http.ResponseWriter) {
-	vipValue, err := vip.ReadFromLocalConfig(serverPrefix, vip.DefaultConfFile)
-	if err != nil {
-		if os.IsNotExist(err) || errors.Is(err, vip.ErrLocalConfigEmpty) {
-			http.Error(w, err.Error(), http.StatusNotFound)
-			return
-		}
-		http.Error(w, fmt.Sprintf("error reading local config: %v", err),
-			http.StatusInternalServerError)
-		return
-	}
-
-	w.Header().Set(api.ContentType, api.JsonMIMEType)
-	json.NewEncoder(w).Encode(map[string]string{
-		"local": vipValue,
-		"vip":   vipValue,
-	})
 }

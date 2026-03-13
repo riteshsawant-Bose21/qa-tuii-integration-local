@@ -41,11 +41,14 @@ public:
             {
                 if (processor.has_property(rows_name))
                 {
+                    int_fast32_t rows_value;
+
                     if (configuration->has_property(rows_name))
                     {
                         const PropertyConfiguration &pc =
                             configuration->get_property(rows_name);
-                        pc.get_value(num_rows);
+                        pc.get_value(rows_value);
+                        num_rows = static_cast<int>(rows_value);
 
                         const PropertyDefinition &pd =
                             processor.get_property(rows_name);
@@ -64,8 +67,10 @@ public:
                     {
                         const PropertyDefinition &pd =
                             processor.get_property(rows_name);
-                        pd.get_default_value(num_rows);
+                        pd.get_default_value(rows_value);
+                        num_rows = static_cast<int>(rows_value);
                     }
+
                 }
                 else if (processor.has_terminal(rows_name))
                 {
@@ -82,11 +87,14 @@ public:
             {
                 if (processor.has_property(columns_name))
                 {
+                    int_fast32_t columns_value;
+
                     if (configuration->has_property(columns_name))
                     {
                         const PropertyConfiguration &pc =
                             configuration->get_property(columns_name);
-                        pc.get_value(num_columns);
+                        pc.get_value(columns_value);
+                        num_columns = static_cast<int>(columns_value);
 
                         const PropertyDefinition &pd =
                             processor.get_property(columns_name);
@@ -106,7 +114,8 @@ public:
                     {
                         const PropertyDefinition &pd =
                             processor.get_property(columns_name);
-                        pd.get_default_value(num_columns);
+                        pd.get_default_value(columns_value);
+                        num_columns = static_cast<int>(columns_value);
                     }
                 }
                 else if (processor.has_terminal(columns_name))
