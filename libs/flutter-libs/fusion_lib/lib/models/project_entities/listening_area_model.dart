@@ -57,8 +57,7 @@ enum LowFrequency {
   vocal,
   fullRange,
   extended,
-  withSubwoofer,
-  mono;
+  withSubwoofer;
 
   String get displayName {
     switch (this) {
@@ -70,8 +69,6 @@ enum LowFrequency {
         return 'Extended';
       case LowFrequency.withSubwoofer:
         return 'With Subwoofer';
-      case LowFrequency.mono:
-        return 'Mono';
     }
   }
 
@@ -81,13 +78,12 @@ enum LowFrequency {
         return LowFrequency.vocal;
       case 'fullrange':
       case 'full_range':
+      case 'full-range':
         return LowFrequency.fullRange;
       case 'extended':
         return LowFrequency.extended;
       case 'subwoofer':
         return LowFrequency.withSubwoofer;
-      case 'mono':
-        return LowFrequency.mono;
       default:
         return null;
     }
@@ -301,7 +297,6 @@ class ListeningArea {
   final BackgroundNoise? backgroundNoise;
   final SpeakerSelectionMode speakerSelectionMode;
 
-
   ListeningArea({
     String? id,
     required this.vertices,
@@ -485,7 +480,6 @@ class ListeningArea {
     'speakerSelectionMode': speakerSelectionMode.name,
   };
 
-
   /// Parses back from JSON, turning the dynamic list into List<Offset>
   factory ListeningArea.fromJson(Map<String, dynamic> json) {
     // 1) get the raw list
@@ -516,7 +510,7 @@ class ListeningArea {
       lowFrequency: LowFrequency.fromJson(json['lowFrequency']),
       wiringType: WiringType.fromJson(json['wiringType']),
       backgroundNoise: BackgroundNoise.fromJson(json['backgroundNoise']),
-      speakerSelectionMode:  SpeakerSelectionMode.fromJson(json['speakerSelectionMode'] as String?) ?? SpeakerSelectionMode.select,
+      speakerSelectionMode: SpeakerSelectionMode.fromJson(json['speakerSelectionMode'] as String?) ?? SpeakerSelectionMode.select,
     );
   }
 

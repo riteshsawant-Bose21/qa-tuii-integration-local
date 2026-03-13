@@ -7,6 +7,9 @@ class SpeakerSelectionViewModelState extends Equatable {
     this.searchQuery = '',
     this.isLoading = false,
     this.selectedListeningAreaForDropDown,
+    this.splResult,
+    this.suggestedProductId,
+    this.selectedTab = 0,
   });
 
   final SpeakerColor selectedColor;
@@ -17,6 +20,15 @@ class SpeakerSelectionViewModelState extends Equatable {
   /// THIS WILL BE USED ONLY FOR SCHEMATIC PAGE WHEN THIS POPUP IS OPENED FROM THERE
   final ListeningArea? selectedListeningAreaForDropDown;
 
+  /// SPL calculation result for suggest mode
+  final SplMultiMountResult? splResult;
+
+  /// The product ID the user picked in suggest mode
+  final int? suggestedProductId;
+
+  /// Active tab index for the frequency category tab bar
+  final int selectedTab;
+
   SpeakerSelectionViewModelState copyWith({
     SpeakerColor? selectedColor,
     SpeakerSortOption? sortOption,
@@ -24,6 +36,11 @@ class SpeakerSelectionViewModelState extends Equatable {
     bool? isLoading,
     List<SpeakerProduct>? speakers,
     ListeningArea? selectedListeningAreaForDropDown,
+    SplMultiMountResult? splResult,
+    int? suggestedProductId,
+    int? selectedTab,
+    bool clearSplResult = false,
+    bool clearSuggestedProductId = false,
   }) {
     return SpeakerSelectionViewModelState(
       selectedColor: selectedColor ?? this.selectedColor,
@@ -31,6 +48,9 @@ class SpeakerSelectionViewModelState extends Equatable {
       searchQuery: searchQuery ?? this.searchQuery,
       isLoading: isLoading ?? this.isLoading,
       selectedListeningAreaForDropDown: selectedListeningAreaForDropDown ?? this.selectedListeningAreaForDropDown,
+      splResult: clearSplResult ? null : (splResult ?? this.splResult),
+      suggestedProductId: clearSuggestedProductId ? null : (suggestedProductId ?? this.suggestedProductId),
+      selectedTab: selectedTab ?? this.selectedTab,
     );
   }
 
@@ -41,5 +61,8 @@ class SpeakerSelectionViewModelState extends Equatable {
     searchQuery,
     isLoading,
     selectedListeningAreaForDropDown,
+    splResult,
+    suggestedProductId,
+    selectedTab,
   ];
 }

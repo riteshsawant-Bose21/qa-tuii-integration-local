@@ -1,10 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:fusion_lib/fusion_lib.dart';
-import 'package:fusion_lib/fusion_widgets/buttons/fusion_gradient_button.dart';
-import 'package:fusion_lib/fusion_widgets/form_fields/fusion_drop_down_button_form_field.dart';
-import 'package:fusion_lib/fusion_widgets/form_fields/fusion_text_form_field.dart';
-import 'package:fusion_lib/fusion_widgets/text_views/fusion_gradient_text.dart';
-import 'package:fusion_lib/fusion_algorithms/fusion_algorithms.dart';
+import 'package:fusion_lib/product_data/models/speaker_product.dart';
 
 class SplCalculationWidget extends StatefulWidget {
   const SplCalculationWidget({super.key});
@@ -229,12 +225,10 @@ class _SplCalculationWidgetState extends State<SplCalculationWidget> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: <Widget>[
                               FusionAppText(
-                                text:
-                                    'Distance: ${result.distance.toStringAsFixed(2)}m',
+                                text: 'Distance: ${result.distance.toStringAsFixed(2)}m',
                               ),
                               FusionAppText(
-                                text:
-                                    'SPL Loss: ${result.splLoss.toStringAsFixed(2)}dB',
+                                text: 'SPL Loss: ${result.splLoss.toStringAsFixed(2)}dB',
                               ),
                             ],
                           ),
@@ -259,16 +253,13 @@ class _SplCalculationWidgetState extends State<SplCalculationWidget> {
                           ),
                           const SizedBox(height: 4),
                           FusionAppText(
-                            text:
-                                'Minimum: ${result.splRequiredMin.toStringAsFixed(1)}dB',
+                            text: 'Minimum: ${result.splRequiredMin.toStringAsFixed(1)}dB',
                           ),
                           FusionAppText(
-                            text:
-                                'Target: ${result.splRequiredMid.toStringAsFixed(1)}dB',
+                            text: 'Target: ${result.splRequiredMid.toStringAsFixed(1)}dB',
                           ),
                           FusionAppText(
-                            text:
-                                'Maximum: ${result.splRequiredMax.toStringAsFixed(1)}dB',
+                            text: 'Maximum: ${result.splRequiredMax.toStringAsFixed(1)}dB',
                           ),
                         ],
                       ),
@@ -375,9 +366,7 @@ class _SplCalculationWidgetState extends State<SplCalculationWidget> {
                       ),
                     ],
 
-                    if (result.recommendedModelsMin.isEmpty &&
-                        result.recommendedModelsMid.isEmpty &&
-                        result.recommendedModelsMax.isEmpty) ...<Widget>[
+                    if (result.recommendedModelsMin.isEmpty && result.recommendedModelsMid.isEmpty && result.recommendedModelsMax.isEmpty) ...<Widget>[
                       Container(
                         width: double.infinity,
                         padding: const EdgeInsets.all(8.0),
@@ -389,8 +378,7 @@ class _SplCalculationWidgetState extends State<SplCalculationWidget> {
                           ),
                         ),
                         child: const FusionAppText(
-                          text:
-                              'No suitable speakers found for this configuration',
+                          text: 'No suitable speakers found for this configuration',
                           style: TextStyle(
                             color: Colors.red,
                             fontStyle: FontStyle.italic,
@@ -431,7 +419,7 @@ class _SplCalculationWidgetState extends State<SplCalculationWidget> {
         ],
       );
 
-      final SplMultiMountResult result = calculateSpl(input);
+      final SplMultiMountResult result = calculateSpl(input, <SpeakerProduct>[]);
       setState(() {
         splResult = result;
       });
