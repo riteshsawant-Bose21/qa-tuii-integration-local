@@ -39,12 +39,31 @@ class MeterDataViewModel extends Cubit<MeterDataState> {
   /// [isInControlMode] flipping on/off.
   StreamSubscription<dynamic>? _controlModeSubscription;
 
+  /// Timer used for auto-reconnect with exponential backoff.
+  Timer? _reconnectTimer;
+
+  /// Current reconnect delay — doubles after each failed attempt, resets on
+  /// a successful connection.
+  Duration _reconnectDelay = const Duration(seconds: 1);
+
+  /// Hard ceiling so the backoff doesn't grow without bound.
+  static const Duration _maxReconnectDelay = Duration(seconds: 30);
+
+  /// Whether the last disconnection was intentional (user/control-mode off).
+  /// Prevents auto-reconnect from firing after a deliberate stop.
+  bool _intentionallyStopped = false;
+
+  /// Number of mounted UI widgets currently observing meter data.
+  /// Auto-reconnect only runs while this is > 0.
+  int _uiObserverCount = 0;
+
   // ── lifecycle ──────────────────────────────────────────────────────────────
 
   @override
   Future<void> close() {
     _controlModeSubscription?.cancel();
     _cancelTelemetry();
+    _reconnectTimer?.cancel();
     return super.close();
   }
 
@@ -78,9 +97,6 @@ class MeterDataViewModel extends Cubit<MeterDataState> {
   /// The control-mode stream listener handles connecting automatically,
   /// but call this so the cubit can also re-read the current VIP if needed.
   void onProjectOpened() {
-    // The _attachControlModeListener seed call already handles the initial
-    // isInControlMode value, so nothing extra is needed here unless you
-    // need to refresh the VIP / reinitialise the network client.
     final ProjectViewModel vm = serviceLocator<ProjectViewModel>();
     if (vm.isInControlMode) {
       startTelemetry();
@@ -93,20 +109,63 @@ class MeterDataViewModel extends Cubit<MeterDataState> {
     _stopTelemetry(reason: MeterInactiveReason.projectClosed);
   }
 
+  /// Call from a meter widget's [initState] (or equivalent mount point).
+  /// While at least one observer is registered, the cubit will auto-reconnect
+  /// if the stream drops unexpectedly.
+  void registerObserver() {
+    _uiObserverCount++;
+    debugPrint('[MeterDataCubit] registerObserver — count: $_uiObserverCount');
+    if (_uiObserverCount == 1) {
+      // First observer just mounted — ensure we are connected.
+      final ProjectViewModel vm = serviceLocator<ProjectViewModel>();
+      if (vm.isInControlMode && _telemetrySubscription == null) {
+        debugPrint('[MeterDataCubit] UI appeared, reconnecting…');
+        startTelemetry();
+      }
+    }
+  }
+
+  /// Call from a meter widget's [dispose].
+  /// When the count drops to 0 the auto-reconnect timer is cancelled so we
+  /// don't waste resources reconnecting when no UI needs the data.
+  void unregisterObserver() {
+    _uiObserverCount = (_uiObserverCount - 1).clamp(0, _uiObserverCount);
+    debugPrint('[MeterDataCubit] unregisterObserver — count: $_uiObserverCount');
+    if (_uiObserverCount == 0) {
+      // No UI is watching — cancel any pending reconnect.
+      _reconnectTimer?.cancel();
+      _reconnectTimer = null;
+    }
+  }
+
+  /// Whether at least one meter widget is currently mounted.
+  bool get hasActiveObservers => _uiObserverCount > 0;
+
   // ── private helpers ────────────────────────────────────────────────────────
 
   Future<void> startTelemetry() async {
     // Guard: do not double-subscribe.
     if (_telemetrySubscription != null) return;
-    final String? vip = serviceLocator<ProjectViewModel>().virtualIP;
 
+    // Cancel any pending reconnect timer — we are connecting now.
+    _reconnectTimer?.cancel();
+    _reconnectTimer = null;
+    _intentionallyStopped = false;
+
+    final String? vip = serviceLocator<ProjectViewModel>().virtualIP;
     if (vip == null) return;
 
     debugPrint('[MeterDataCubit] Starting telemetry…');
 
     final FusionNetworkClient client = serviceLocator<FusionNetworkClient>();
 
-    await client.connect(vip: vip);
+    try {
+      await client.connect(vip: vip);
+    } catch (e) {
+      debugPrint('[MeterDataCubit] Connect failed: $e');
+      _scheduleReconnect();
+      return;
+    }
 
     _telemetrySubscription = client.responseMessages.listen(
       (ResponseCallback<dynamic> message) {
@@ -116,7 +175,6 @@ class MeterDataViewModel extends Cubit<MeterDataState> {
 
           // Flatten all meter values into a single map for easy access.
           final Map<String, MeterBlock> updatedMeterValues = <String, MeterBlock>{};
-          //convert packet.values from List<MeterBlock> to Map<String, MeterBlock> and merge into updatedMeterValues
           for (final MeterBlock block in packet.blocks) {
             updatedMeterValues[block.blockName] = block;
           }
@@ -124,7 +182,7 @@ class MeterDataViewModel extends Cubit<MeterDataState> {
           emit(
             state.copyWith(
               packets: updatedPackets,
-              meterValues: updatedMeterValues, // Pass the flat map to state
+              meterValues: updatedMeterValues,
               isConnected: true,
               clearInactiveReason: true,
             ),
@@ -135,24 +193,71 @@ class MeterDataViewModel extends Cubit<MeterDataState> {
       },
       onError: (dynamic error) {
         debugPrint('[MeterDataCubit] Stream error: $error');
-        // Reconnect or surface error state here if needed.
+        _handleUnexpectedDisconnect();
       },
       onDone: () {
         debugPrint('[MeterDataCubit] Stream closed by server.');
-        _cancelTelemetry();
+        _handleUnexpectedDisconnect();
       },
       cancelOnError: false,
     );
 
+    // Connection succeeded — reset the backoff delay.
+    _reconnectDelay = const Duration(seconds: 1);
     emit(state.copyWith(isConnected: true, clearInactiveReason: true));
   }
 
+  /// Called when the stream ends unexpectedly (server closed / error).
+  /// Cleans up and schedules an auto-reconnect if control-mode is still on.
+  void _handleUnexpectedDisconnect() {
+    _cancelTelemetry();
+    emit(state.copyWith(isConnected: false));
+
+    if (!_intentionallyStopped) {
+      _scheduleReconnect();
+    }
+  }
+
+  /// Schedules a reconnect attempt with exponential backoff, only if
+  /// control-mode is still active.
+  void _scheduleReconnect() {
+    // Don't stack multiple timers.
+    if (_reconnectTimer?.isActive ?? false) return;
+    if (isClosed) return;
+
+    // Only reconnect if there is UI actively observing meter data.
+    if (!hasActiveObservers) {
+      debugPrint('[MeterDataCubit] No active observers — skipping reconnect.');
+      return;
+    }
+
+    final ProjectViewModel vm = serviceLocator<ProjectViewModel>();
+    if (!vm.isInControlMode) return;
+
+    debugPrint('[MeterDataCubit] Scheduling reconnect in ${_reconnectDelay.inSeconds}s…');
+
+    _reconnectTimer = Timer(_reconnectDelay, () {
+      if (isClosed) return;
+      // Exponential backoff: double the delay for the next attempt, capped.
+      _reconnectDelay = _reconnectDelay * 2;
+      if (_reconnectDelay > _maxReconnectDelay) {
+        _reconnectDelay = _maxReconnectDelay;
+      }
+      startTelemetry();
+    });
+  }
+
+  /// Intentionally tears down telemetry (user action / control-mode off).
   void _stopTelemetry({required MeterInactiveReason reason}) {
     debugPrint('[MeterDataCubit] Stopping telemetry — reason: $reason');
+    _intentionallyStopped = true;
+    _reconnectTimer?.cancel();
+    _reconnectTimer = null;
+    _reconnectDelay = const Duration(seconds: 1);
     _cancelTelemetry();
     emit(
       MeterDataState(
-        packets: const <String, MeterPacket>{}, // clear stale data
+        packets: const <String, MeterPacket>{},
         isConnected: false,
         inactiveReason: reason,
       ),
@@ -162,66 +267,5 @@ class MeterDataViewModel extends Cubit<MeterDataState> {
   void _cancelTelemetry() {
     _telemetrySubscription?.cancel();
     _telemetrySubscription = null;
-  }
-
-  Future<Map<String, dynamic>?> getBlockData({required String blockId}) async {
-    try {
-      final ResponseCallback<Map<String, dynamic>?> response = await serviceLocator<FusionNetworkClient>().get(
-        api: FusionApiEndpoint.fusionValue,
-        isSecure: false,
-        baseUrlToOverride: serviceLocator<ProjectViewModel>().virtualIP,
-        urlParameters: <String, dynamic>{
-          "key": "settings.audio.$blockId",
-        },
-      );
-      if (response.success && response.data != null) {
-        try {
-          final Map<String, dynamic> blockData = response.data!;
-          if (blockData["exists"]) {
-            return blockData["value"]["audio"] as Map<String, dynamic>;
-          }
-        } catch (ex) {
-          FusionLogger.log(tag: LogTag.dspConfig, message: "Error parsing block data for $blockId: $ex");
-        }
-      }
-      return null;
-    } catch (ex) {
-      FusionLogger.log(tag: LogTag.dspConfig, message: "Error fetching block data for $blockId: $ex");
-      return null;
-    }
-  }
-
-  Future<void> updateBlockParameter({required String blockId, required String parameter, required dynamic value, int? dimension}) async {
-    try {
-      final Map<String, dynamic> payload =
-          dimension == null
-              ? <String, dynamic>{
-                "settings": <String, dynamic>{
-                  "audio": <String, dynamic>{
-                    blockId: <String, dynamic>{parameter: value},
-                  },
-                },
-              }
-              : <String, dynamic>{
-                "value": value,
-              };
-      final ResponseCallback<dynamic> response = await serviceLocator<FusionNetworkClient>().patch(
-        api: FusionApiEndpoint.fusionValue,
-        isSecure: false,
-        urlParameters:
-            dimension != null
-                ? <String, dynamic>{
-                  "key": "settings.audio.$blockId.$parameter[$dimension]",
-                }
-                : null,
-        baseUrlToOverride: serviceLocator<ProjectViewModel>().virtualIP,
-        data: payload,
-      );
-      if (!response.success) {
-        FusionLogger.log(tag: LogTag.dspConfig, message: "Failed to update block parameter for $blockId.$parameter: ${response.message}");
-      }
-    } catch (ex) {
-      FusionLogger.log(tag: LogTag.dspConfig, message: "Error updating block parameter for $blockId.$parameter: $ex");
-    }
   }
 }

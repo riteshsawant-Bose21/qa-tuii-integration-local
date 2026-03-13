@@ -8,7 +8,7 @@ extension FucntionsViewModel on ProjectViewModel {
         recordSnapshot();
       }
       projectManager.addFunctionToZone(function: function, zoneId: zoneId);
-      for (ProcessingBlockModel block in ProcessingBlockModel.functionBlocks) {
+      for (ProcessingBlockModel block in ProcessingBlockModel.zoneUserBlocks) {
         final ProcessingBlockModel newBlock = block.clone().copyWith(isForUser: true);
         addProcessingBlockToParent(
           processingBlock: newBlock,

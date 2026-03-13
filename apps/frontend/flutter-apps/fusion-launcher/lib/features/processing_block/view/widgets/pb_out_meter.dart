@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:fusion_launcher/core/service_locator.dart';
 import 'package:fusion_launcher/features/processing_block/view/widgets/pb_meter.dart';
 
 import '../../../projects/view_model/meter_data/meter_data_view_model.dart';
 
-class PbOutMeter extends StatelessWidget {
+class PbOutMeter extends StatefulWidget {
   final String blockId;
   final int? dimension;
 
@@ -14,14 +15,31 @@ class PbOutMeter extends StatelessWidget {
     this.dimension,
   });
 
-  int get dimensionOrDefault => dimension ?? 0;
+  @override
+  State<PbOutMeter> createState() => _PbOutMeterState();
+}
+
+class _PbOutMeterState extends State<PbOutMeter> {
+  int get dimensionOrDefault => widget.dimension ?? 0;
+
+  @override
+  void initState() {
+    super.initState();
+    serviceLocator<MeterDataViewModel>().registerObserver();
+  }
+
+  @override
+  void dispose() {
+    serviceLocator<MeterDataViewModel>().unregisterObserver();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     return BlocSelector<MeterDataViewModel, MeterDataState, double>(
       selector: (MeterDataState state) {
         // Fast dictionary lookup. Defaults to -60.0 if not found.
-        return state.meterValues?[blockId]?.value[dimensionOrDefault] ?? -60.0;
+        return state.meterValues?[widget.blockId]?.value[dimensionOrDefault] ?? -60.0;
       },
       builder: (BuildContext context, double meterValue) {
         return VerticalMeter(

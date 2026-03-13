@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
 import 'package:fusion_launcher/core/models/algorithm/algorithm_metadata.dart';
@@ -30,6 +32,18 @@ class AlgorithmDataViewmodel extends PBWidgetValueHandler with ChangeNotifier {
   Algorithm? algorithm;
   PBLayout? _layout;
   PBLayout? get layout => _layout;
+
+  /// Throttle timer for updateValue calls
+  Timer? _updateThrottleTimer;
+
+  /// Trailing timer to flush the last pending update after a burst ends
+  Timer? _updateTrailingTimer;
+
+  /// The latest pending update request (top of stack)
+  ({String field, int? dimension, dynamic value})? _pendingUpdate;
+
+  /// Whether a throttle window is currently active
+  bool _isThrottling = false;
 
   Future<void> _loadLayout() async {
     _layout = await AlgorithmLayoutData.getForAlgorithm(algorithm?.name ?? "");
@@ -76,15 +90,52 @@ class AlgorithmDataViewmodel extends PBWidgetValueHandler with ChangeNotifier {
   }
 
   void updateValue({required String field, int? dimension, required dynamic value}) {
+    // Always update the local model immediately for responsive UI
     processingBlock.updateProperty(PropertySetting(name: field, value: value, dimension: dimension));
+    notifyListeners();
+
+    // Store the latest request (discards any older pending one)
+    _pendingUpdate = (field: field, dimension: dimension, value: value);
+
+    if (!_isThrottling) {
+      // No throttle window active — send immediately and start the window
+      _flushPendingUpdate();
+      _isThrottling = true;
+      _updateThrottleTimer = Timer(const Duration(milliseconds: 150), () {
+        // Throttle window ended — if another update arrived during the window, send it now
+        _isThrottling = false;
+        if (_pendingUpdate != null) {
+          _flushPendingUpdate();
+        }
+      });
+    }
+
+    // Reset trailing timer so the very last update in a burst is never lost
+    _updateTrailingTimer?.cancel();
+    _updateTrailingTimer = Timer(const Duration(milliseconds: 80), () {
+      if (_pendingUpdate != null) {
+        _flushPendingUpdate();
+      }
+    });
+  }
+
+  void _flushPendingUpdate() {
+    final ({String field, int? dimension, dynamic value})? pending = _pendingUpdate;
+    if (pending == null) return;
+    _pendingUpdate = null;
+
     if (serviceLocator<ProjectViewModel>().isInControlMode) {
-      serviceLocator<BlockDataViewmodel>().updateBlockParameter(blockId: processingBlock.id, parameter: field, value: value, dimension: dimension);
+      serviceLocator<BlockDataViewmodel>().updateBlockParameter(
+        blockId: processingBlock.id,
+        parameter: pending.field,
+        value: pending.value,
+        dimension: pending.dimension,
+      );
     } else {
       serviceLocator<ProjectViewModel>().updateProcessingBlock(
         processingBlock: processingBlock,
       );
     }
-    notifyListeners();
   }
 
   @override

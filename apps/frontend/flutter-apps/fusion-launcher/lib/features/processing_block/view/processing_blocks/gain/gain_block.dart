@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:fusion_launcher/features/add_source_popup/view_model/add_source_viewmodel.dart';
 import 'package:fusion_launcher/features/processing_block/view/widgets/pb_out_meter.dart';
@@ -20,7 +18,6 @@ class GainBlock extends StatelessWidget {
   Widget build(BuildContext context) {
     final AlgorithmDataViewmodel watch = context.watch<AlgorithmDataViewmodel>();
     final String targetBlockId = watch.processingBlock.id;
-    Timer? _debounce;
     // NO MORE BlocBuilder AT THE TOP!
     return ProxyProvider<AlgorithmDataViewmodel, GainController>(
       key: ValueKey<String>(targetBlockId),
@@ -88,13 +85,7 @@ class GainBlock extends StatelessWidget {
                             showIntervals: true,
                             activeColor: context.colorScheme.primary,
                             onChanged: (num value) {
-                              if (_debounce?.isActive ?? false) {
-                                _debounce!.cancel();
-                              }
-
-                              _debounce = Timer(const Duration(milliseconds: 50), () {
-                                context.read<GainController>().updateGainSliderValue(value);
-                              });
+                              context.read<GainController>().updateGainSliderValue(value);
                             },
                           ),
                         ),

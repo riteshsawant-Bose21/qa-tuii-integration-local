@@ -97,7 +97,7 @@ class ProcessingBlockModel {
     gain,
   ];
 
-  static final List<ProcessingBlockModel> functionBlocks = <ProcessingBlockModel>[
+  static final List<ProcessingBlockModel> zoneUserBlocks = <ProcessingBlockModel>[
     toneControl,
     gain,
   ];
