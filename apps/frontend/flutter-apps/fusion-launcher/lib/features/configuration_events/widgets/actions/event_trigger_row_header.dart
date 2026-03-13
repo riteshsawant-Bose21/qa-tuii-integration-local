@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/core/widgets/configuration_widgets/action_drop_down.dart';
+import 'package:fusion_lib/constants/fusion_constants.dart';
+import 'package:fusion_lib/constants/semantics/features/configuration/events/configation_events_keys.dart';
 import 'package:fusion_lib/fusion_theme/app_theme.dart';
 import 'package:fusion_lib/fusion_widgets/semantics/semantic_helper.dart';
 import 'package:fusion_lib/fusion_widgets/semantics/semantic_type.dart';
@@ -39,30 +41,33 @@ class EventTriggerRowHeader extends StatelessWidget {
 
         final ConfigEventsViewmodel cubit = context.read<ConfigEventsViewmodel>();
 
-        return Container(
-          padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
-          color: context.colorScheme.elevation2.withAlpha(120),
-          child: Row(
-            children: <Widget>[
-              /// Trigger Type Dropdown
-              _TriggerTypeDropdown(eventId: eventId, cubit: cubit),
-              const SizedBox(width: 16),
+        return SemanticHelper.container(
+          testId: SemanticHelper.createTestId(SemanticTypes.container, FusionTestKeys.instance.eventtriggerrowheader),
+          child: Container(
+            padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+            color: context.colorScheme.elevation2.withAlpha(120),
+            child: Row(
+              children: <Widget>[
+                /// Trigger Type Dropdown
+                _TriggerTypeDropdown(eventId: eventId, cubit: cubit),
+                const SizedBox(width: 16),
 
-              /// Trigger Item Dropdown
-              _TriggerItemDropdown(eventId: eventId, configEventsViewmodel: cubit),
-              const SizedBox(width: 16),
+                /// Trigger Item Dropdown
+                _TriggerItemDropdown(eventId: eventId, configEventsViewmodel: cubit),
+                const SizedBox(width: 16),
 
-              /// Trigger Action Dropdown
-              _ActionTypeDropdown(eventId: eventId, cubit: cubit),
-              const SizedBox(width: 16),
+                /// Trigger Action Dropdown
+                _ActionTypeDropdown(eventId: eventId, cubit: cubit),
+                const SizedBox(width: 16),
 
-              /// Trigger Condition Dropdown
-              _ConditionDropdown(eventId: eventId, cubit: cubit),
-              const SizedBox(width: 16),
+                /// Trigger Condition Dropdown
+                _ConditionDropdown(eventId: eventId, cubit: cubit),
+                const SizedBox(width: 16),
 
-              /// Value Column
-              _ValueColumn(eventId: eventId, cubit: cubit),
-            ],
+                /// Value Column
+                _ValueColumn(eventId: eventId, cubit: cubit),
+              ],
+            ),
           ),
         );
       },
@@ -84,6 +89,7 @@ class _TriggerTypeDropdown extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
           FusionAppText(
+            semanticId: FusionTestKeys.instance.eventtriggerrowheadertype,
             text: "Trigger Type",
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
               fontWeight: FontWeight.w600,
@@ -142,6 +148,7 @@ class _TriggerItemDropdown extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
           FusionAppText(
+            semanticId: FusionTestKeys.instance.eventtriggerrowheaderitem,
             text: "Item",
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
               fontWeight: FontWeight.w600,
@@ -188,6 +195,7 @@ class _ActionTypeDropdown extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
           FusionAppText(
+            semanticId: FusionTestKeys.instance.eventtriggerrowheaderparmandaction,
             text: "Parameter/Action",
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
               fontWeight: FontWeight.w600,
@@ -238,6 +246,7 @@ class _ConditionDropdown extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
           FusionAppText(
+            semanticId: FusionTestKeys.instance.eventtriggerrowheadercondition,
             text: "Condition",
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
               fontWeight: FontWeight.w600,
@@ -288,6 +297,7 @@ class _ValueColumn extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
           FusionAppText(
+            semanticId: FusionTestKeys.instance.eventtriggerrowheadervalue,
             text: "Value",
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
               fontWeight: FontWeight.w600,

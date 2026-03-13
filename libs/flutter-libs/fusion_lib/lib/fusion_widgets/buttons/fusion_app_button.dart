@@ -134,7 +134,7 @@ class _FusionAppButtonState extends State<FusionAppButton> {
       label: widget.text,
       testId: SemanticHelper.createTestId(
         SemanticTypes.button,
-        "fusion_app_button${widget.semanticId ?? ""}",
+        "fusion_app_button_${widget.semanticId ?? ""}",
       ),
 
       child: MouseRegion(

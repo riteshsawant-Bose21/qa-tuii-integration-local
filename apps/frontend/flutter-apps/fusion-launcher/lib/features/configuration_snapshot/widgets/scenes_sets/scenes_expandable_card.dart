@@ -3,6 +3,8 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/core/widgets/title_text_field_switcher.dart';
 import 'package:fusion_launcher/features/configuration_snapshot/viewModel/snapshot_viewmodel/config_snapshots_viewmodel.dart';
 import 'package:fusion_launcher/features/configuration_snapshot/widgets/snapshots/snapshot_list.dart';
+import 'package:fusion_lib/constants/semantics/features/configuration/snapshots/SnapshotsKeys.dart';
+import 'package:fusion_lib/constants/semantics/test_keys.dart';
 import 'package:fusion_lib/fusion_theme/app_theme.dart';
 import 'package:fusion_lib/fusion_widgets/others/fusion_dialog.dart';
 import 'package:fusion_lib/fusion_widgets/others/fusion_image.dart';
@@ -30,8 +32,10 @@ class ScenesExpandableCard extends StatefulWidget {
   final String? draggingSnapshotId;
   final String? draggingFromSection;
   final Function(String sceneSetId, int oldIndex, int newIndex)? onReorderScenes;
+  final int? index;
 
   const ScenesExpandableCard({
+    this.index,
     this.isDragHovered = false,
     super.key,
     required this.sceneSetData,
@@ -134,172 +138,187 @@ class _ScenesExpandableCardState extends State<ScenesExpandableCard> {
                         /// Toggle expand/collapse
                         _isScenesExpanded.value = !_isScenesExpanded.value;
                       },
-                      child: Container(
-                        margin: const EdgeInsets.only(top: 8, left: 8, right: 8),
-                        padding: const EdgeInsets.only(left: 12, right: 12),
-                        height: 36,
-                        decoration: BoxDecoration(
-                          border: Border.all(
-                            color: isHovered ? Theme.of(context).colorScheme.primary : Colors.transparent,
-                            width: 1.0,
+                      child: SemanticHelper.container(
+                        testId: SemanticHelper.createTestId(SemanticTypes.container, '${FusionTestKeys.instance.scenesetssectiondataheader}_${widget.index}'),
+                        child: Container(
+                          margin: const EdgeInsets.only(top: 8, left: 8, right: 8),
+                          padding: const EdgeInsets.only(left: 12, right: 12),
+                          height: 36,
+                          decoration: BoxDecoration(
+                            border: Border.all(
+                              color: isHovered ? Theme.of(context).colorScheme.primary : Colors.transparent,
+                              width: 1.0,
+                            ),
+                            borderRadius: BorderRadius.circular(6),
+                            color:
+                                isHovered
+                                    ? Theme.of(context).colorScheme.primary.withAlpha(50)
+                                    : (_isHovered ? context.colorScheme.elevation3 : context.colorScheme.elevation2),
                           ),
-                          borderRadius: BorderRadius.circular(6),
-                          color:
-                              isHovered
-                                  ? Theme.of(context).colorScheme.primary.withAlpha(50)
-                                  : (_isHovered ? context.colorScheme.elevation3 : context.colorScheme.elevation2),
-                        ),
-                        child: Row(
-                          children: <Widget>[
-                            /// Expand/collapse icon
-                            Icon(
-                              _isScenesExpanded.value ? Icons.arrow_drop_up_rounded : Icons.arrow_drop_down_rounded,
-                              color: Theme.of(context).colorScheme.iconWhite,
-                            ),
-                            const SizedBox(width: 4),
-
-                            /// Source set name
-                            Expanded(
-                              child: TitleTextFieldSwitcher(
-                                value: widget.sceneSetData.name,
-                                hintText: "Enter scenes set name",
-                                style: Theme.of(context).textTheme.bodyMedium!.copyWith(
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                                save: (String value) {
-                                  if (value.isNotEmpty) {
-                                    final SceneSetModel newScenesSet = widget.sceneSetData.copyWith(name: value);
-                                    _configSceneSetsViewmodel.updateSceneSet(newScenesSet);
-                                  }
-                                },
+                          child: Row(
+                            children: <Widget>[
+                              /// Expand/collapse icon
+                              Icon(
+                                semanticLabel: '${FusionTestKeys.instance.scenesetssectiondataheaderdpdown}_${widget.index}',
+                                _isScenesExpanded.value ? Icons.arrow_drop_up_rounded : Icons.arrow_drop_down_rounded,
+                                color: Theme.of(context).colorScheme.iconWhite,
                               ),
-                            ),
-                            const SizedBox(width: 8),
+                              const SizedBox(width: 4),
 
-                            /// Add new scene button
-                            SemanticHelper.button(
-                              testId: SemanticHelper.createTestId(SemanticTypes.button, "add_scene_to_scene_set"),
-                              child: GestureDetector(
-                                onTap: () {
-                                  _addNewSceneToSceneSet();
-                                },
-                                child: Icon(Icons.add_sharp, size: 16, color: context.colorScheme.iconWhite),
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-
-                            Tooltip(
-                              message: 'Delete Scene Set',
-                              child: SemanticHelper.button(
-                                testId: SemanticHelper.createTestId(SemanticTypes.button, "delete_scene_set"),
-                                child: GestureDetector(
-                                  onTap: () {
-                                    showDialog(
-                                      context: context,
-                                      builder:
-                                          (_) => FusionDialog(
-                                            title: 'Delete Scenes?',
-                                            description:
-                                                "This will remove '${widget.sceneSetData.name}' from the Scenes. and all its associated snapshots will be deleted.",
-                                            primaryButtonLabel: 'Delete',
-                                            secondaryButtonLabel: 'Cancel',
-                                            onSecondaryPressed: () {
-                                              Navigator.of(context).pop();
-                                            },
-                                            onPrimaryPressed: () {
-                                              widget.onSceneSetDelete(widget.sceneSetData.id);
-                                              Navigator.of(context).pop();
-                                            },
-                                          ),
-                                    );
-                                  },
-                                  child: FusionImage.asset(
-                                    Assets.deleteIcon,
-                                    width: 17,
-                                    height: 17,
-                                    assetColor: context.colorScheme.iconWhite,
-                                    fit: BoxFit.contain,
+                              /// Source set name
+                              Expanded(
+                                child: TitleTextFieldSwitcher(
+                                  value: widget.sceneSetData.name,
+                                  hintText: "Enter scenes set name",
+                                  style: Theme.of(context).textTheme.bodyMedium!.copyWith(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w600,
                                   ),
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 4),
-                            Tooltip(
-                              message: 'Duplicate Scene Set',
-                              child: SemanticHelper.button(
-                                testId: SemanticHelper.createTestId(SemanticTypes.button, "duplicate_scene_set"),
-                                child: GestureDetector(
-                                  onTap: () {
-                                    if (widget.onSceneSetDuplicate != null) {
-                                      widget.onSceneSetDuplicate!(widget.sceneSetData.id);
+                                  save: (String value) {
+                                    if (value.isNotEmpty) {
+                                      final SceneSetModel newScenesSet = widget.sceneSetData.copyWith(name: value);
+                                      _configSceneSetsViewmodel.updateSceneSet(newScenesSet);
                                     }
                                   },
-                                  child: FusionImage.asset(
-                                    Assets.duplicateIcon,
-                                    width: 16,
-                                    height: 16,
-                                    assetColor: context.colorScheme.iconWhite,
-                                    fit: BoxFit.contain,
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+
+                              /// Add new scene button
+                              SemanticHelper.button(
+                                testId: SemanticHelper.createTestId(
+                                  SemanticTypes.button,
+                                  '${FusionTestKeys.instance.scenesetsectiondataheaderaddicn}_${widget.index}',
+                                ),
+                                child: GestureDetector(
+                                  onTap: () {
+                                    _addNewSceneToSceneSet();
+                                  },
+                                  child: Icon(Icons.add_sharp, size: 16, color: context.colorScheme.iconWhite),
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+
+                              Tooltip(
+                                message: 'Delete Scene Set',
+                                child: SemanticHelper.button(
+                                  testId: SemanticHelper.createTestId(SemanticTypes.button, "delete_scene_set"),
+                                  child: GestureDetector(
+                                    onTap: () {
+                                      showDialog(
+                                        context: context,
+                                        builder:
+                                            (_) => FusionDialog(
+                                              title: 'Delete Scenes?',
+                                              description:
+                                                  "This will remove '${widget.sceneSetData.name}' from the Scenes. and all its associated snapshots will be deleted.",
+                                              primaryButtonLabel: 'Delete',
+                                              secondaryButtonLabel: 'Cancel',
+                                              onSecondaryPressed: () {
+                                                Navigator.of(context).pop();
+                                              },
+                                              onPrimaryPressed: () {
+                                                widget.onSceneSetDelete(widget.sceneSetData.id);
+                                                Navigator.of(context).pop();
+                                              },
+                                            ),
+                                      );
+                                    },
+                                    child: FusionImage.asset(
+                                      semanticId: "${FusionTestKeys.instance.scenesetsectiondataheaderdeleteicn}_${widget.index}",
+                                      Assets.deleteIcon,
+                                      width: 17,
+                                      height: 17,
+                                      assetColor: context.colorScheme.iconWhite,
+                                      fit: BoxFit.contain,
+                                    ),
                                   ),
                                 ),
                               ),
-                            ),
-                          ],
+                              const SizedBox(width: 4),
+                              Tooltip(
+                                message: 'Duplicate Scene Set',
+                                child: SemanticHelper.button(
+                                  testId: SemanticHelper.createTestId(SemanticTypes.button, "duplicate_scene_set"),
+                                  child: GestureDetector(
+                                    onTap: () {
+                                      if (widget.onSceneSetDuplicate != null) {
+                                        widget.onSceneSetDuplicate!(widget.sceneSetData.id);
+                                      }
+                                    },
+                                    child: FusionImage.asset(
+                                      semanticId: "${FusionTestKeys.instance.scenesetsectiondataheaderduplicateicon}_${widget.index}",
+                                      Assets.duplicateIcon,
+                                      width: 16,
+                                      height: 16,
+                                      assetColor: context.colorScheme.iconWhite,
+                                      fit: BoxFit.contain,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
                     ),
                   ),
                   if (isExpanded)
                     // expanded container
-                    Container(
-                      alignment: Alignment.center,
-                      width: double.infinity,
-                      padding: const EdgeInsets.only(top: 12, bottom: 12),
-                      margin: const EdgeInsets.only(left: 12, right: 12),
-                      color: isHovered ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.05) : context.colorScheme.elevation2.withAlpha(100),
-                      child:
-                          widget.snapShotList.isEmpty
-                              ? Padding(
-                                padding: const EdgeInsets.all(22.0),
-                                child: FusionAppText(
-                                  text: "No Snapshots Available",
-                                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                    fontSize: 12,
+                    SemanticHelper.container(
+                      testId: SemanticHelper.createTestId(SemanticTypes.container, '${FusionTestKeys.instance.scenesetsectiondataitm}_${widget.index}'),
+                      child: Container(
+                        alignment: Alignment.center,
+                        width: double.infinity,
+                        padding: const EdgeInsets.only(top: 12, bottom: 12),
+                        margin: const EdgeInsets.only(left: 12, right: 12),
+                        color: isHovered ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.05) : context.colorScheme.elevation2.withAlpha(100),
+                        child:
+                            widget.snapShotList.isEmpty
+                                ? SemanticHelper.container(
+                                  testId: '${FusionTestKeys.instance.scenesetsectiondataitmlistemty}_${widget.index}',
+                                  child: Padding(
+                                    padding: const EdgeInsets.all(22.0),
+                                    child: FusionAppText(
+                                      text: "No Snapshots Available",
+                                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                        fontSize: 12,
+                                      ),
+                                    ),
                                   ),
+                                )
+                                : BlocBuilder<ConfigSnapshotsViewmodel, ConfigSnapshotsState>(
+                                  builder: (BuildContext context, ConfigSnapshotsState state) {
+                                    return SnapshotList(
+                                      snapShotList: widget.snapShotList,
+                                      selectedSnapshotId: state.selectedSnapshotId,
+                                      onSelect: widget.onSelect,
+                                      onDelete: (String sceneId) {
+                                        widget.onScenesSnapshotDelete(sceneId);
+                                      },
+                                      onDuplicate: (String sceneId) {
+                                        if (widget.onScenesSnapshotDuplicate != null) {
+                                          widget.onScenesSnapshotDuplicate!(sceneId);
+                                        }
+                                      },
+                                      onReorder: (int oldIndex, int newIndex) {
+                                        _configSceneSetsViewmodel.reorderSnapshotsInSceneSet(
+                                          sceneSetId: widget.sceneSetData.id,
+                                          oldIndex: oldIndex,
+                                          newIndex: newIndex,
+                                          draggingSnapshotId: state.draggingSnapshotId,
+                                        );
+                                      },
+                                      onDragStarted: widget.onDragStarted,
+                                      onDragEnd: widget.onDragEnd,
+                                      draggingSnapshotId: widget.draggingSnapshotId,
+                                      onRenameSave: (String value, SnapshotsModel newSnapshot) {
+                                        _configSnapshotsViewmodel.updateSnapshot(newSnapshot);
+                                      },
+                                    );
+                                  },
                                 ),
-                              )
-                              : BlocBuilder<ConfigSnapshotsViewmodel, ConfigSnapshotsState>(
-                                builder: (BuildContext context, ConfigSnapshotsState state) {
-                                  return SnapshotList(
-                                    snapShotList: widget.snapShotList,
-                                    selectedSnapshotId: state.selectedSnapshotId,
-                                    onSelect: widget.onSelect,
-                                    onDelete: (String sceneId) {
-                                      widget.onScenesSnapshotDelete(sceneId);
-                                    },
-                                    onDuplicate: (String sceneId) {
-                                      if (widget.onScenesSnapshotDuplicate != null) {
-                                        widget.onScenesSnapshotDuplicate!(sceneId);
-                                      }
-                                    },
-                                    onReorder: (int oldIndex, int newIndex) {
-                                      _configSceneSetsViewmodel.reorderSnapshotsInSceneSet(
-                                        sceneSetId: widget.sceneSetData.id,
-                                        oldIndex: oldIndex,
-                                        newIndex: newIndex,
-                                        draggingSnapshotId: state.draggingSnapshotId,
-                                      );
-                                    },
-                                    onDragStarted: widget.onDragStarted,
-                                    onDragEnd: widget.onDragEnd,
-                                    draggingSnapshotId: widget.draggingSnapshotId,
-                                    onRenameSave: (String value, SnapshotsModel newSnapshot) {
-                                      _configSnapshotsViewmodel.updateSnapshot(newSnapshot);
-                                    },
-                                  );
-                                },
-                              ),
+                      ),
                     ),
                 ],
               );

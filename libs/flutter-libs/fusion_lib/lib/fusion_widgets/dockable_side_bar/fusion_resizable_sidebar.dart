@@ -506,8 +506,8 @@ class FusionSidebarSectionHeader extends StatelessWidget {
                 AnimatedRotation(
                   turns: isExpanded ? 0.5 : 0.25,
                   duration: const Duration(milliseconds: 180),
-                  child: FusionSvgIcon(
-                    icon: "packages/fusion_lib/lib/assets/svgs/expand_up.svg",
+                  child: FusionIcon.svg(
+                    "packages/fusion_lib/lib/assets/svgs/expand_up.svg",
                     size: 10,
                     color: context.colorScheme.iconDefault,
                   ),

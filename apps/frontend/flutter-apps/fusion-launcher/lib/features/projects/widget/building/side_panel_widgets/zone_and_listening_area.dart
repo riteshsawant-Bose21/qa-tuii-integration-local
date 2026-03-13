@@ -382,8 +382,8 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
                               "zone_expand_collapse_$index",
                             ),
                             value: isCollapsed,
-                            child: FusionSvgIcon(
-                              icon: AssetSvg.expandUp,
+                            child: FusionIcon.svg(
+                              AssetSvg.expandUp,
                               color: context.colorScheme.elevation5,
                             ),
                           ),
@@ -970,8 +970,8 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
                           child: AnimatedRotation(
                             duration: const Duration(milliseconds: 200),
                             turns: _expandedCircuitSections.contains(circuit.id) ? 0.5 : 0.25,
-                            child: FusionSvgIcon(
-                              icon: AssetSvg.expandUp,
+                            child: FusionIcon.svg(
+                              AssetSvg.expandUp,
                               color: context.colorScheme.elevation5,
                             ),
                           ),
