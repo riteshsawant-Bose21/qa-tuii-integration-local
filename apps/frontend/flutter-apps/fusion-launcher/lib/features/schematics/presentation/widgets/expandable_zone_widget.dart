@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:fusion_launcher/features/projects/widget/building/side_panel_widgets/schematic_properties.dart';
 import 'package:fusion_launcher/features/projects/widget/building/speaker_selection_section/parts/select_speaker_popup.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
@@ -1153,7 +1152,7 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
                     if (locationName.trim().isNotEmpty && floorId.isNotEmpty) {
                       final ListeningArea newListeningArea = ListeningArea(
                         name: locationName.trim(),
-                        vertices: <Offset>[],
+                        vertices: <FusionCanvasPoint>[],
                         isDrawn: false,
                       );
 

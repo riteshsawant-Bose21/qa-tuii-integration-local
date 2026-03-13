@@ -27,5 +27,6 @@ export 'fusion_simple_vertical_meter.dart';
 export 'fusion_vertical_meter.dart';
 export 'fusion_flat_container.dart';
 export 'fusion_comma_seperated_tag_textfield.dart';
+export 'property_textfield.dart';
 export 'fusion_audio_progressbar.dart';
 export 'fusion_audio_gain_slider.dart';

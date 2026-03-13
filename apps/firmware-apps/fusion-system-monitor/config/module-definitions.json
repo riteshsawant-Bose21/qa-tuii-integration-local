@@ -206,6 +206,9 @@
                     "default_value": ""
                 }
             ]
+        },
+        {
+            "name": "bt_control"
         }
     ]
 }

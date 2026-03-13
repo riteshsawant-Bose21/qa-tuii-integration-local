@@ -997,7 +997,7 @@ class _AddDeviceExpandablePopupMenuWidgetState
                                         final ListeningArea
                                         newListeningArea = ListeningArea(
                                           name: areaNameController.text.trim(),
-                                          vertices: <Offset>[],
+                                          vertices: <FusionCanvasPoint>[],
                                           isDrawn: false,
                                         );
 
