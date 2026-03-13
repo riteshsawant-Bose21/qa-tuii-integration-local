@@ -1,0 +1,8 @@
+project:
+  name: 'Fusion DSP'
+  description: 'Fusion DSP application moon tasks'
+
+tasks:
+
+  build-embedded-interface-shared-library:
+    command: "./moon-build.sh"
