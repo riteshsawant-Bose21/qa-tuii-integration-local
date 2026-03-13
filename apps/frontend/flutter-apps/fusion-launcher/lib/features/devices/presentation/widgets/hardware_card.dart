@@ -69,7 +69,7 @@ class HardwareCard extends StatelessWidget {
                       // 2. FLEXIBLE: Ensures text doesn't force width issues
                       Flexible(
                         child: FusionAppText(
-                          text: hardware.modelName,
+                          text: hardware.deviceName,
                           style: context.textTheme.bodyMedium,
                           textOverflow: TextOverflow.ellipsis,
                           maxLine: 1,

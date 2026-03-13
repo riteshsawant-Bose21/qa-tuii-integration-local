@@ -11,7 +11,6 @@ import 'package:fusion_launcher/core/assets/asset_icons.dart';
 import 'package:fusion_launcher/core/assets/asset_svg.dart';
 import 'package:fusion_launcher/core/spl_calculation/isolate_mace_calculation_manager.dart';
 import 'package:fusion_launcher/core/utils/fusion_utils.dart';
-import 'package:fusion_launcher/features/configuration_events/widgets/configuration_events.dart';
 import 'package:fusion_launcher/features/create_new_project/views/create_new_project_dialog.dart';
 import 'package:fusion_launcher/features/media_files/view/configuration_media_files_pages.dart';
 import 'package:fusion_launcher/features/media_files/viewModel/media_files_view_model.dart';
@@ -38,6 +37,7 @@ import '../../../core/widgets/clean_widgets.dart';
 import '../../authentication/viewmodel/session_view_model.dart';
 import '../../commission/presentation/pages/network_config_trigger_page.dart';
 import '../../configuration/presentation/viewmodel/project_view_model.dart';
+import '../../configuration_events/widgets/configuration_events.dart';
 import '../../configuration_page/pages/configuration_processing_page.dart';
 import '../../configuration_snapshot/widgets/configuration_snapshots.dart';
 import '../../control_dashboard/presentation/pages/fusion_control_dashboard.dart';
@@ -63,7 +63,8 @@ class ProjectWorkArea extends StatefulWidget {
   State<ProjectWorkArea> createState() => _ProjectWorkAreaState();
 }
 
-class _ProjectWorkAreaState extends State<ProjectWorkArea> with TickerProviderStateMixin, AutomaticKeepAliveClientMixin {
+class _ProjectWorkAreaState extends State<ProjectWorkArea>
+    with TickerProviderStateMixin, AutomaticKeepAliveClientMixin {
   late TabController _tabController;
   StreamSubscription<int>? subscription;
   late TextEditingController _projectNameController;
@@ -189,14 +190,8 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with TickerProviderSt
   void _initSplRangeDefaults() {
     final SplPanelData currentPanelData = _splRangeController.getPanelData();
     _lastPanelData = currentPanelData;
-    serviceLocator<ProjectViewModel>().setMinSPL(
-      minSPL: currentPanelData.splLowerDb,
-      autoSave: false,
-    );
-    serviceLocator<ProjectViewModel>().setMaxSPL(
-      maxSPL: currentPanelData.splUpperDb,
-      autoSave: false,
-    );
+    serviceLocator<ProjectViewModel>().setMinSPL(minSPL: currentPanelData.splLowerDb, autoSave: false);
+    serviceLocator<ProjectViewModel>().setMaxSPL(maxSPL: currentPanelData.splUpperDb, autoSave: false);
   }
 
   Future<void> _initAppVersion() async {
@@ -223,19 +218,11 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with TickerProviderSt
         return;
       }
       _lastPanelData = currentPanelData;
-      final Bandwidth maceBandwidth = _mapToMaceBandwidth(
-        currentPanelData.bandwidth,
-      );
+      final Bandwidth maceBandwidth = _mapToMaceBandwidth(currentPanelData.bandwidth);
       final double frequency = currentPanelData.frequency.frequencyValue.toDouble();
-      final Weighting weighting = _mapToMaceWeighting(
-        currentPanelData.weighting,
-      );
-      serviceLocator<ProjectViewModel>().setMinSPL(
-        minSPL: currentPanelData.splLowerDb,
-      );
-      serviceLocator<ProjectViewModel>().setMaxSPL(
-        maxSPL: currentPanelData.splUpperDb,
-      );
+      final Weighting weighting = _mapToMaceWeighting(currentPanelData.weighting);
+      serviceLocator<ProjectViewModel>().setMinSPL(minSPL: currentPanelData.splLowerDb);
+      serviceLocator<ProjectViewModel>().setMaxSPL(maxSPL: currentPanelData.splUpperDb);
       updateSpl(maceBandwidth, frequency, weighting, currentPanelData.relative);
 
       setState(() {}); // <-- Trigger rebuild
@@ -347,10 +334,7 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with TickerProviderSt
         useIsolateEngine ? await IsolatedMaceCalculationManager.instance.currentCalculations() : SPLCalculationManager.currentCalculations();
 
     for (final SPLCalculation sc in currentCalcs) {
-      if (!floorListeningAreas.any(
-        (ListeningArea area) => area.id == sc.surface.id,
-      ))
-        continue;
+      if (!floorListeningAreas.any((ListeningArea area) => area.id == sc.surface.id)) continue;
       final List<SPLCalculation> updated =
           useIsolateEngine
               ? await IsolatedMaceCalculationManager.instance.getSplAt(
@@ -371,9 +355,7 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with TickerProviderSt
                 _lastPanelData?.getResolutionSpacing() ?? 20.0,
               );
 
-      print(
-        "[isolate] updateSpl: updated length ${updated.map((SPLCalculation e) => e.spl.length)}",
-      );
+      print("[isolate] updateSpl: updated length ${updated.map((SPLCalculation e) => e.spl.length)}");
       toApply.addAll(updated);
     }
 
@@ -402,9 +384,7 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with TickerProviderSt
     _floorCanvasController.dispose();
 
     /// Reset configuration menu mode to processing on dispose
-    _projectViewModel.setConfigurationMenuMode(
-      ConfigurationMenuMode.processing,
-    );
+    _projectViewModel.setConfigurationMenuMode(ConfigurationMenuMode.processing);
 
     super.dispose();
   }
@@ -420,19 +400,16 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with TickerProviderSt
   final ExpansibleController splController = ExpansibleController();
   final ExpansibleController zoneAreaController = ExpansibleController();
 
-  List<DockItemConfig> _createBuildingDockItems(
-    ToolbarMode toolbarMode,
-    FloorCanvasController floorCanvasController,
-  ) {
+  List<DockItemConfig> _createBuildingDockItems(ToolbarMode toolbarMode, FloorCanvasController floorCanvasController) {
     return <DockItemConfig>[
-      const DockItemConfig(
-        id: "1",
-        title: "FLOORS",
-        side: "left",
-        allowUndock: true,
-        isCollapsibleSection: false,
-        dockItemWidget: BuildingPlan(),
-      ),
+      // const DockItemConfig(
+      //   id: "1",
+      //   title: "FLOORS",
+      //   side: "left",
+      //   allowUndock: true,
+      //   isCollapsibleSection: false,
+      //   dockItemWidget: BuildingPlan(),
+      // ),
       DockItemConfig(
         id: "5",
         title: "PROPERTIES",
@@ -472,22 +449,22 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with TickerProviderSt
                   .toList(),
         ),
       ),
-      DockItemConfig(
-        id: "7",
-        title: toolbarMode == ToolbarMode.acoustics ? "LISTENING AREAS" : "ZONES",
-        side: "left",
-        controller: zoneAreaController,
-        allowUndock: false,
-        initiallyExpanded: true,
-        dockItemWidget:
-            toolbarMode == ToolbarMode.acoustics
-                ? ListeningAreasPanel(
-                  floorCanvasController: floorCanvasController,
-                )
-                : ZoneAndListeningAreaPanel(
-                  floorCanvasController: floorCanvasController,
-                ),
-      ),
+      // DockItemConfig(
+      //   id: "7",
+      //   title: toolbarMode == ToolbarMode.acoustics ? "LISTENING AREAS" : "ZONES",
+      //   side: "left",
+      //   controller: zoneAreaController,
+      //   allowUndock: false,
+      //   initiallyExpanded: true,
+      //   dockItemWidget:
+      //       toolbarMode == ToolbarMode.acoustics
+      //           ? ListeningAreasPanel(
+      //             floorCanvasController: floorCanvasController,
+      //           )
+      //           : ZoneAndListeningAreaPanel(
+      //             floorCanvasController: floorCanvasController,
+      //           ),
+      // ),
       // DockItemConfig(
       //   id: "8",
       //   title: "PRODUCT QUERY",
@@ -511,23 +488,23 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with TickerProviderSt
           },
         ),
       ),
-      const DockItemConfig(
-        id: "20",
-        title: "SPEAKERS",
-        side: "left",
-        allowUndock: false,
-        isCollapsibleSection: false,
-        dockItemWidget: SpeakerSelectionWidget(),
-      ),
+      // const DockItemConfig(
+      //   id: "20",
+      //   title: "SPEAKERS",
+      //   side: "left",
+      //   allowUndock: false,
+      //   isCollapsibleSection: false,
+      //   dockItemWidget: SpeakerSelectionWidget(),
+      // ),
       // if (toolbarMode == ToolbarMode.system)
-      DockItemConfig(
-        id: "21",
-        title: "EQUIPMENT LOCATIONS",
-        side: "left",
-        allowUndock: false,
-        isCollapsibleSection: false,
-        dockItemWidget: toolbarMode == ToolbarMode.system ? const EquipmentLocationSection() : const SizedBox(),
-      ),
+      // DockItemConfig(
+      //   id: "21",
+      //   title: "EQUIPMENT LOCATIONS",
+      //   side: "left",
+      //   allowUndock: false,
+      //   isCollapsibleSection: false,
+      //   dockItemWidget: toolbarMode == ToolbarMode.system ? const EquipmentLocationSection() : const SizedBox(),
+      // ),
     ];
   }
 
@@ -535,44 +512,113 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with TickerProviderSt
     /// Building tab
     final Widget buildingPage = BlocBuilder<ProjectViewModel, ProjectViewModelState>(
       builder: (BuildContext context, ProjectViewModelState state) {
+        final ToolbarMode toolbarMode = context.watch<ProjectViewModel>().currentToolbarMode;
+        final String? currentSelectedListeningAreaId = context.watch<ProjectViewModel>().currentSelectedListeningAreaId;
+
         return FusionDockableArea(
           tabKey: "building_tab",
-          showLeft: true,
+          showLeft: false,
           showRight: true,
           mainArea: BlocBuilder<ProjectViewModel, ProjectViewModelState>(
             builder: (BuildContext context, ProjectViewModelState state) {
-              return SemanticHelper.container(
-                testId: SemanticHelper.createTestId(
-                  SemanticTypes.container,
-                  FusionTestKeys.buildingCanvas,
-                ),
-                child: BuildingCanvas(
-                  splRangeController: _splRangeController,
-                  onSplStateChanged: (bool value) {
-                    if (value) {
-                      productsController.collapse();
-                      splController.expand();
-                    } else {
-                      splController.collapse();
-                    }
-                  },
-                  floorCanvasController: _floorCanvasController,
-                  onCalculateSpl: calculateSPL,
-                  splPanelData: _lastPanelData!,
-                  onProductSelected: () {
-                    productsController.expand();
-                  },
-                  onProductDeselected: () {
-                    productsController.collapse();
-                  },
-                ),
+              return Row(
+                children: <Widget>[
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    child: Container(
+                      height: double.infinity,
+                      color: context.colorScheme.elevation1,
+                      child: FusionResizableSidebar(
+                        sections: <FusionResizableSidebarSection>[
+                          FusionResizableSidebarSection(
+                            sementicId: 'building_plan_floors_list',
+                            enableExpandCollapse: false,
+                            stickToTop: true,
+                            builder: (BuildContext context, bool isExpanded, VoidCallback toggleExpand, Animation<double> expandAnimation) {
+                              return const BuildingPlan();
+                            },
+                          ),
+                          FusionResizableSidebarSection(
+                            sementicId: 'building_plan_listening_areas_zones_lists',
+                            builder: (BuildContext context, bool isExpanded, VoidCallback toggleExpand, Animation<double> expandAnimation) {
+                              return Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: <Widget>[
+                                  FusionSidebarSectionHeader(
+                                    title: toolbarMode == ToolbarMode.acoustics ? "LISTENING AREAS" : "ZONES",
+                                    isExpanded: isExpanded,
+                                    onTap: toggleExpand,
+                                  ),
+                                  Flexible(
+                                    child: SizeTransition(
+                                      sizeFactor: expandAnimation,
+                                      child: switch (toolbarMode) {
+                                        ToolbarMode.acoustics => ListeningAreasPanel(floorCanvasController: _floorCanvasController),
+                                        ToolbarMode.system => ZoneAndListeningAreaPanel(floorCanvasController: _floorCanvasController),
+                                      },
+                                    ),
+                                  ),
+                                ],
+                              );
+                            },
+                          ),
+
+                          if (toolbarMode == ToolbarMode.system)
+                            FusionResizableSidebarSection(
+                              sementicId: 'building_plan_equipment_location',
+                              enableExpandCollapse: false,
+                              stickToBottom: true,
+                              builder: (BuildContext context, bool isExpanded, VoidCallback toggleExpand, Animation<double> expandAnimation) {
+                                return const EquipmentLocationSection();
+                              },
+                            ),
+
+                          if (toolbarMode == ToolbarMode.acoustics && currentSelectedListeningAreaId != null)
+                            FusionResizableSidebarSection(
+                              sementicId: 'building_plan_equipment_location',
+                              enableExpandCollapse: false,
+                              stickToBottom: true,
+                              builder: (BuildContext context, bool isExpanded, VoidCallback toggleExpand, Animation<double> expandAnimation) {
+                                return const SpeakerSelectionWidget();
+                              },
+                            ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  Expanded(
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(12),
+                      child: SemanticHelper.container(
+                        testId: SemanticHelper.createTestId(SemanticTypes.container, FusionTestKeys.buildingCanvas),
+                        child: BuildingCanvas(
+                          splRangeController: _splRangeController,
+                          onSplStateChanged: (bool value) {
+                            if (value) {
+                              productsController.collapse();
+                              splController.expand();
+                            } else {
+                              splController.collapse();
+                            }
+                          },
+                          floorCanvasController: _floorCanvasController,
+                          onCalculateSpl: calculateSPL,
+                          splPanelData: _lastPanelData!,
+                          onProductSelected: () {
+                            productsController.expand();
+                          },
+                          onProductDeselected: () {
+                            productsController.collapse();
+                          },
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               );
             },
           ),
-          dockItemList: _createBuildingDockItems(
-            serviceLocator<ProjectViewModel>().currentToolbarMode,
-            _floorCanvasController,
-          ),
+          dockItemList: _createBuildingDockItems(toolbarMode, _floorCanvasController),
         );
       },
     );
@@ -646,15 +692,10 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with TickerProviderSt
                     children: <Widget>[
                       GestureDetector(
                         onTap: () {
-                          _projectViewModel.setProjectMode(
-                            ProjectMode.systemListingMode,
-                          );
+                          _projectViewModel.setProjectMode(ProjectMode.systemListingMode);
                         },
                         child: SemanticHelper.button(
-                          testId: SemanticHelper.createTestId(
-                            SemanticTypes.button,
-                            FusionTestKeys.listingViewIcon,
-                          ),
+                          testId: SemanticHelper.createTestId(SemanticTypes.button, FusionTestKeys.listingViewIcon),
                           child: Container(
                             width: 40,
                             height: 40,
@@ -662,9 +703,8 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with TickerProviderSt
                               borderRadius: BorderRadius.circular(2),
                               color: isListingViewMode ? context.colorScheme.elevation3 : Colors.transparent,
                             ),
-                            child: FusionIcon.svg(
-                              semanticId: 'project_work_area_listingViewIcon',
-                              AssetSvg.listingViewIcon,
+                            child: FusionSvgIcon(
+                              icon: AssetSvg.listingViewIcon,
                               size: 40,
                               color: context.colorScheme.primaryWhite,
                             ),
@@ -674,15 +714,10 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with TickerProviderSt
                       const SizedBox(width: 8),
                       GestureDetector(
                         onTap: () {
-                          _projectViewModel.setProjectMode(
-                            ProjectMode.systemWiringMode,
-                          );
+                          _projectViewModel.setProjectMode(ProjectMode.systemWiringMode);
                         },
                         child: SemanticHelper.button(
-                          testId: SemanticHelper.createTestId(
-                            SemanticTypes.button,
-                            FusionTestKeys.wiringViewIcon,
-                          ),
+                          testId: SemanticHelper.createTestId(SemanticTypes.button, FusionTestKeys.wiringViewIcon),
                           child: Container(
                             width: 40,
                             height: 40,
@@ -690,9 +725,8 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with TickerProviderSt
                               borderRadius: BorderRadius.circular(2),
                               color: isListingViewMode ? Colors.transparent : context.colorScheme.elevation3,
                             ),
-                            child: FusionIcon.svg(
-                              semanticId: 'project_work_area_wiringViewIcon',
-                              AssetSvg.wiringViewIcon,
+                            child: FusionSvgIcon(
+                              icon: AssetSvg.wiringViewIcon,
                               size: 40,
                               color: context.colorScheme.primaryWhite,
                             ),
@@ -806,18 +840,9 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with TickerProviderSt
                               bottomLeft: Radius.circular(12),
                             ),
                             border: Border(
-                              left: BorderSide(
-                                width: 1,
-                                color: context.colorScheme.elevation2,
-                              ),
-                              top: BorderSide(
-                                width: 1,
-                                color: context.colorScheme.elevation2,
-                              ),
-                              bottom: BorderSide(
-                                width: 1,
-                                color: context.colorScheme.elevation2,
-                              ),
+                              left: BorderSide(width: 1, color: context.colorScheme.elevation2),
+                              top: BorderSide(width: 1, color: context.colorScheme.elevation2),
+                              bottom: BorderSide(width: 1, color: context.colorScheme.elevation2),
                             ),
                           ),
                           child: TabBar(
@@ -828,12 +853,7 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with TickerProviderSt
                             isScrollable: true,
                             tabAlignment: TabAlignment.center,
 
-                            indicator: BoxDecoration(
-                              color: context.colorScheme.elevation2,
-                              borderRadius: const BorderRadius.all(
-                                Radius.circular(8),
-                              ),
-                            ),
+                            indicator: BoxDecoration(color: context.colorScheme.elevation2, borderRadius: const BorderRadius.all(Radius.circular(8))),
                             indicatorPadding: const EdgeInsets.only(
                               top: 6,
                               bottom: 6,
@@ -926,14 +946,8 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with TickerProviderSt
                               decoration: BoxDecoration(
                                 color: context.colorScheme.elevation1,
                                 border: Border(
-                                  top: BorderSide(
-                                    width: 1,
-                                    color: context.colorScheme.elevation2,
-                                  ),
-                                  bottom: BorderSide(
-                                    width: 1,
-                                    color: context.colorScheme.elevation2,
-                                  ),
+                                  top: BorderSide(width: 1, color: context.colorScheme.elevation2),
+                                  bottom: BorderSide(width: 1, color: context.colorScheme.elevation2),
                                 ),
                               ),
 
@@ -941,14 +955,11 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with TickerProviderSt
                               child: SizedBox(
                                 height: 35,
                                 child: FusionNeumorphicButton(
-                                  semanticId: 'push_configuration',
+                                  semanticId: "push_configuration",
                                   onTap: () {},
                                   height: 20,
                                   borderRadius: 6,
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 10,
-                                    vertical: 4,
-                                  ),
+                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                                   text: "Push Configuration",
                                   textStyle: context.textTheme.labelMedium,
                                 ),
@@ -957,24 +968,15 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with TickerProviderSt
 
                           if (!isInDesignMode && serviceLocator<ProjectViewModel>().virtualIP != null)
                             SemanticHelper.button(
-                              testId: SemanticHelper.createTestId(
-                                SemanticTypes.button,
-                                "device_mapping_icon",
-                              ),
+                              testId: SemanticHelper.createTestId(SemanticTypes.button, "device_mapping_icon"),
                               child: Container(
                                 width: 56,
                                 height: 48,
                                 decoration: BoxDecoration(
                                   color: context.colorScheme.elevation1,
                                   border: Border(
-                                    top: BorderSide(
-                                      width: 1,
-                                      color: context.colorScheme.elevation2,
-                                    ),
-                                    bottom: BorderSide(
-                                      width: 1,
-                                      color: context.colorScheme.elevation2,
-                                    ),
+                                    top: BorderSide(width: 1, color: context.colorScheme.elevation2),
+                                    bottom: BorderSide(width: 1, color: context.colorScheme.elevation2),
                                   ),
                                 ),
                                 alignment: Alignment.center,
@@ -992,10 +994,7 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with TickerProviderSt
                                     },
                                     child: FusionImage.asset(
                                       AssetIcons.networkIcon,
-                                      assetColor:
-                                          Theme.of(
-                                            context,
-                                          ).colorScheme.iconWhite,
+                                      assetColor: Theme.of(context).colorScheme.iconWhite,
                                     ),
                                   ),
                                 ),
@@ -1010,31 +1009,18 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with TickerProviderSt
                               decoration: BoxDecoration(
                                 color: context.colorScheme.elevation1,
                                 border: Border(
-                                  top: BorderSide(
-                                    width: 1,
-                                    color: context.colorScheme.elevation2,
-                                  ),
-                                  bottom: BorderSide(
-                                    width: 1,
-                                    color: context.colorScheme.elevation2,
-                                  ),
+                                  top: BorderSide(width: 1, color: context.colorScheme.elevation2),
+                                  bottom: BorderSide(width: 1, color: context.colorScheme.elevation2),
                                 ),
                               ),
                               child: ValueListenableBuilder<ThemeMode>(
                                 valueListenable: FusionThemeController.themeModeNotifier,
-                                builder: (
-                                  BuildContext context,
-                                  ThemeMode themeMode,
-                                  Widget? child,
-                                ) {
+                                builder: (BuildContext context, ThemeMode themeMode, Widget? child) {
                                   return IconButton(
                                     icon: Icon(
                                       themeMode == ThemeMode.dark ? Icons.light_mode : Icons.dark_mode,
                                       size: 24,
-                                      color:
-                                          Theme.of(
-                                            context,
-                                          ).colorScheme.primaryWhite,
+                                      color: Theme.of(context).colorScheme.primaryWhite,
                                     ),
                                     tooltip: themeMode == ThemeMode.dark ? 'Switch to Light Mode' : 'Switch to Dark Mode',
                                     onPressed: () {
@@ -1050,34 +1036,22 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with TickerProviderSt
 
                           /// Save Icon Section
                           SemanticHelper.button(
-                            testId: SemanticHelper.createTestId(
-                              SemanticTypes.button,
-                              FusionTestKeys.saveProject,
-                            ),
+                            testId: SemanticHelper.createTestId(SemanticTypes.button, FusionTestKeys.saveProject),
                             child: Container(
                               width: 56,
                               height: 48,
                               decoration: BoxDecoration(
                                 color: context.colorScheme.elevation1,
                                 border: Border(
-                                  top: BorderSide(
-                                    width: 1,
-                                    color: context.colorScheme.elevation2,
-                                  ),
-                                  bottom: BorderSide(
-                                    width: 1,
-                                    color: context.colorScheme.elevation2,
-                                  ),
+                                  top: BorderSide(width: 1, color: context.colorScheme.elevation2),
+                                  bottom: BorderSide(width: 1, color: context.colorScheme.elevation2),
                                 ),
                               ),
                               child: IconButton(
                                 icon: Icon(
                                   Icons.save,
                                   size: 24,
-                                  color:
-                                      Theme.of(
-                                        context,
-                                      ).colorScheme.primaryWhite,
+                                  color: Theme.of(context).colorScheme.primaryWhite,
                                 ),
                                 tooltip: 'Save project',
                                 onPressed: () => _showProjectJsonDialog(context),
@@ -1094,24 +1068,15 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with TickerProviderSt
                               decoration: BoxDecoration(
                                 color: context.colorScheme.elevation1,
                                 border: Border(
-                                  top: BorderSide(
-                                    width: 1,
-                                    color: context.colorScheme.elevation2,
-                                  ),
-                                  bottom: BorderSide(
-                                    width: 1,
-                                    color: context.colorScheme.elevation2,
-                                  ),
+                                  top: BorderSide(width: 1, color: context.colorScheme.elevation2),
+                                  bottom: BorderSide(width: 1, color: context.colorScheme.elevation2),
                                 ),
                               ),
                               child: IconButton(
                                 icon: Icon(
                                   LucideIcons.cloudUpload,
                                   size: 24,
-                                  color:
-                                      Theme.of(
-                                        context,
-                                      ).colorScheme.primaryWhite,
+                                  color: Theme.of(context).colorScheme.primaryWhite,
                                 ),
                                 tooltip: 'Upload project',
                                 onPressed: () async {
@@ -1173,21 +1138,12 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with TickerProviderSt
                           Container(
                             width: 56,
                             height: 48,
-                            padding: const EdgeInsets.symmetric(
-                              vertical: 12,
-                              horizontal: 16,
-                            ),
+                            padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
                             decoration: BoxDecoration(
                               color: context.colorScheme.elevation1,
                               border: Border(
-                                top: BorderSide(
-                                  width: 1,
-                                  color: context.colorScheme.elevation2,
-                                ),
-                                bottom: BorderSide(
-                                  width: 1,
-                                  color: context.colorScheme.elevation2,
-                                ),
+                                top: BorderSide(width: 1, color: context.colorScheme.elevation2),
+                                bottom: BorderSide(width: 1, color: context.colorScheme.elevation2),
                               ),
                             ),
                             child: Tooltip(
@@ -1196,10 +1152,7 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with TickerProviderSt
                                 child: Icon(
                                   Icons.feedback_outlined,
                                   size: 24,
-                                  color:
-                                      Theme.of(
-                                        context,
-                                      ).colorScheme.primaryWhite,
+                                  color: Theme.of(context).colorScheme.primaryWhite,
                                 ),
                                 onTap: () async {
                                   handleExportLogs(context);
@@ -1231,18 +1184,9 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with TickerProviderSt
                                 bottomRight: Radius.circular(12),
                               ),
                               border: Border(
-                                right: BorderSide(
-                                  width: 1,
-                                  color: context.colorScheme.elevation2,
-                                ),
-                                top: BorderSide(
-                                  width: 1,
-                                  color: context.colorScheme.elevation2,
-                                ),
-                                bottom: BorderSide(
-                                  width: 1,
-                                  color: context.colorScheme.elevation2,
-                                ),
+                                right: BorderSide(width: 1, color: context.colorScheme.elevation2),
+                                top: BorderSide(width: 1, color: context.colorScheme.elevation2),
+                                bottom: BorderSide(width: 1, color: context.colorScheme.elevation2),
                               ),
                             ),
                             child: FusionAppText(
@@ -1259,10 +1203,7 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with TickerProviderSt
                   child:
                       _currentWidgets.isNotEmpty
                           ? IndexedStack(
-                            index: _tabController.index.clamp(
-                              0,
-                              _currentWidgets.length - 1,
-                            ),
+                            index: _tabController.index.clamp(0, _currentWidgets.length - 1),
                             children: _currentWidgets,
                           )
                           : const Center(child: CircularProgressIndicator()),
@@ -1292,7 +1233,7 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with TickerProviderSt
 
             child: IconButton(
               icon: Icon(
-                Icons.home,
+                Icons.arrow_back_ios,
                 color: Theme.of(context).colorScheme.primaryWhite,
                 size: 20,
               ),
@@ -1331,9 +1272,7 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with TickerProviderSt
                               semanticId: FusionTestKeys.projectName,
                               textOverflow: TextOverflow.ellipsis,
                               maxLine: 1,
-                              style: Theme.of(
-                                context,
-                              ).textTheme.bodyMedium?.copyWith(
+                              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                                 fontWeight: FontWeight.w900,
                               ),
                             );
@@ -1342,9 +1281,7 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with TickerProviderSt
                         const SizedBox(height: 2),
                         FusionAppText(
                           text: "1.0.0",
-                          style: Theme.of(
-                            context,
-                          ).textTheme.bodyMedium?.copyWith(fontSize: 10),
+                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontSize: 10),
                         ),
                       ],
                     ),
@@ -1377,10 +1314,7 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with TickerProviderSt
             title: 'Project Saved!',
             actions: <Widget>[
               SemanticHelper.button(
-                testId: SemanticHelper.createTestId(
-                  SemanticTypes.button,
-                  FusionTestKeys.close,
-                ),
+                testId: SemanticHelper.createTestId(SemanticTypes.button, FusionTestKeys.close),
                 child: ElevatedButton(
                   onPressed: () => Navigator.of(ctx).pop(),
                   style: ElevatedButton.styleFrom(
@@ -1437,11 +1371,7 @@ class __FeedbackWebViewState extends State<_FeedbackWebView> {
         javaScriptEnabled: true,
         javaScriptCanOpenWindowsAutomatically: true,
       ),
-      onReceivedError: (
-        InAppWebViewController controller,
-        WebResourceRequest request,
-        WebResourceError error,
-      ) {
+      onReceivedError: (InAppWebViewController controller, WebResourceRequest request, WebResourceError error) {
         print("Error loading feedback form: ${error.description}");
       },
       initialData: InAppWebViewInitialData(

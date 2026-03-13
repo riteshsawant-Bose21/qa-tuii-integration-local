@@ -39,6 +39,9 @@ class FusionTextField extends StatelessWidget {
   /// Callback for when the text changes.
   final ValueChanged<String>? onChanged;
 
+  // Callback for when the field is submitted (e.g., pressing "Enter").
+  final ValueChanged<String>? onSubmitted;
+
   /// Whether the field is enabled or read-only.
   final bool enabled;
 
@@ -87,6 +90,7 @@ class FusionTextField extends StatelessWidget {
     this.obscureText = false,
     this.keyboardType = TextInputType.text,
     this.onChanged,
+    this.onSubmitted,
     this.enabled = true,
     this.prefixIcon,
     this.suffixIcon,
@@ -146,6 +150,7 @@ class FusionTextField extends StatelessWidget {
           obscureText: obscureText,
           keyboardType: keyboardType,
           onChanged: onChanged,
+          onSubmitted: onSubmitted,
           enabled: enabled,
           autofocus: autofocus,
           style: style ?? theme.textTheme.bodySmall,

@@ -2021,7 +2021,7 @@ FusionVerticalResizableWidget(
           preview: const FusionFlatContainer(
             width: 150,
             height: 50,
-            semanticId: "default_Container",
+            semanticsId: "default_Container",
             child: Text("Hello Fusion"),
           ),
 
@@ -2040,7 +2040,7 @@ const FusionFlatContainer(
           preview: FusionFlatContainer(
             width: 150,
             height: 50,
-            semanticId: "coloured",
+            semanticsId: "coloured",
             color: context.colorScheme.elevation5,
             child: const Center(
               child: Text("Coloured"),
@@ -2067,7 +2067,7 @@ FusionFlatContainer(
           preview: FusionFlatContainer(
             width: 150,
             height: 50,
-            semanticId: "coloured",
+            semanticsId: "coloured",
             borderColor: context.colorScheme.elevation6,
             child: const Center(
               child: Text("Border"),

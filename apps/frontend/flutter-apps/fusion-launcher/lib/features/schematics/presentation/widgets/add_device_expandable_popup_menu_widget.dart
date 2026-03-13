@@ -913,7 +913,7 @@ class _AddDeviceExpandablePopupMenuWidgetState extends State<AddDeviceExpandable
                                         // todo: Replace with actual area creation logic (e.g., user-defined vertices)
                                         final ListeningArea newListeningArea = ListeningArea(
                                           name: areaNameController.text.trim(),
-                                          vertices: <Offset>[],
+                                          vertices: <FusionCanvasPoint>[],
                                           isDrawn: false,
                                         );
 

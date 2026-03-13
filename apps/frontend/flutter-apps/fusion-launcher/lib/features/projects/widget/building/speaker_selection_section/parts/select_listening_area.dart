@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:fusion_launcher/features/projects/widget/building/side_panel_widgets/schematic_properties.dart';
 import 'package:fusion_launcher/features/projects/widget/building/speaker_selection_section/view_model/add_speaker_view_model.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
@@ -182,11 +181,11 @@ class __CreateNewListeningAreaWidgetState
 
     final ListeningArea newListeningArea = ListeningArea(
       name: locationName,
-      vertices: <Offset>[
-        const Offset(0, 0),
-        const Offset(100, 0),
-        const Offset(100, 100),
-        const Offset(0, 100),
+      vertices: <FusionCanvasPoint>[
+        FusionCanvasPoint(position: const Offset(0, 0)),
+        FusionCanvasPoint(position: const Offset(100, 0)),
+        FusionCanvasPoint(position: const Offset(100, 100)),
+        FusionCanvasPoint(position: const Offset(0, 100)),
       ],
     );
 

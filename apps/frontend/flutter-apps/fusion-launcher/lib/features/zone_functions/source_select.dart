@@ -211,6 +211,15 @@ class _SourceSelectZoneControlPanelState extends State<SourceSelectZoneControlPa
                                                     );
                                                   }
 
+                                                  final bool anyOneSelected = sources.any((Source source) => source.id == zoneFunction?.selectedSourceId);
+                                                  if (!anyOneSelected && zoneFunction != null) {
+                                                    // If nothing is selected, select the first one by default.
+                                                    projectViewModel.selectSourceForFunction(
+                                                      functionId: zoneFunction!.id,
+                                                      sourceId: sources.first.id,
+                                                    );
+                                                  }
+
                                                   return ListView.separated(
                                                     padding: const EdgeInsets.symmetric(horizontal: 8),
                                                     physics: const ClampingScrollPhysics(),

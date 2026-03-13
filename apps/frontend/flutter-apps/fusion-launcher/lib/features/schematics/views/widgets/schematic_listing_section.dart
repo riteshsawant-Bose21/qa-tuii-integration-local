@@ -40,7 +40,7 @@ class _SchematicListingSectionState extends State<SchematicListingSection> {
         ),
       ],
       child: FusionFlatContainer(
-        semanticId: SemanticHelper.createTestId(
+        semanticsId: SemanticHelper.createTestId(
           SemanticTypes.container,
           "expandable_section_container_${widget.sectionTitle.toLowerCase()}",
         ),
