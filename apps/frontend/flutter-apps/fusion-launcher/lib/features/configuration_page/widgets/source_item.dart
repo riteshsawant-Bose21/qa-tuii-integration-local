@@ -92,7 +92,8 @@ class _SourceItemState extends State<SourceItem> {
                 ),
               ),
             ),
-            // todo : add configuration icon back in when source configuration is supported (ex:media player)
+            // todo : based on the pagingSourceType show different popup with different configuration options
+            /// Show configuration icon only if source has a paging source type
             Visibility(
               visible: widget.source.pagingSourceType != null,
               child: InkWell(
