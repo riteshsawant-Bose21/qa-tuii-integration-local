@@ -78,11 +78,7 @@ extension EventsService on ProjectService {
         if (event.triggerType == EventTriggerType.gpi) {
           break;
         }
-        // Use updateTriggerType (same as Schedule) so that item / action /
-        // condition / states are cleared when switching TO GPI from any other
-        // trigger.  Using copyWith here preserved the old Schedule item and
-        // action, which kept isComplete = true and left stale scene actions
-        // visible after the switch.
+        // When switching to GPI trigger, we clear the action because GPI doesn't have a default action (unlike Schedule which defaults to TimedEvent).
         final updatedEventGpi = event.updateTriggerType(
           triggerType: newTrigger,
           action: null, // GPI has no auto-selected action (unlike Schedule → TimedEvent)
