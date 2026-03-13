@@ -27,6 +27,7 @@
 namespace {
 
 constexpr char kUartDevice[] = "/dev/ttymxc3";
+constexpr char kBdifProtocolVersion[] = "2.0.0";
 
 constexpr uint8_t kPreambleMsb = 0xB0;
 constexpr uint8_t kPreambleLsb = 0x5E;
@@ -63,6 +64,8 @@ constexpr uint16_t kPropertyPlatformBootComplete =
     static_cast<uint16_t>((kBlockPlatform << 8) | 0x010D);
 constexpr uint16_t kPropertyPlatformPMCUStatus =
     static_cast<uint16_t>((kBlockPlatform << 8) | 0x010E);
+constexpr uint16_t kPropertyPlatformSMPSNumber =
+    static_cast<uint16_t>((kBlockPlatform << 8) | 0x010F);
 
 /* Audio Function IDs */
 constexpr uint16_t kPropertyAudioAmpNumber =
@@ -75,8 +78,33 @@ constexpr uint8_t kIndexAmpB = 0x02;
 constexpr uint8_t kIndexAmpC = 0x04;
 constexpr uint8_t kIndexAmpD = 0x08;
 
+enum class ArgKind { kNone, kIndex, kBool, kIndexBool };
+
+struct Spec {
+    const char *name;
+    uint16_t property;
+    ArgKind get_args;
+    ArgKind set_args;
+    ArgKind setget_args;
+};
+
+static const Spec kSpecs[] = {
+    {"protocolversion", kPropertyProtocolVersion, ArgKind::kNone, ArgKind::kNone, ArgKind::kNone},
+    {"platformfwversion", kPropertyPlatformFirmwareVersion, ArgKind::kNone, ArgKind::kNone, ArgKind::kNone},
+    {"platformhwversion", kPropertyPlatformHardwareVersion, ArgKind::kNone, ArgKind::kNone, ArgKind::kNone},
+    {"platformampstatus", kPropertyPlatformAmpStatus, ArgKind::kIndex, ArgKind::kIndex, ArgKind::kIndex},
+    {"platformamptemp", kPropertyPlatformAmpTemp, ArgKind::kIndex, ArgKind::kIndex, ArgKind::kIndex},
+    {"platformsmcustatus", kPropertyPlatformSMCUStatus, ArgKind::kIndex, ArgKind::kIndex, ArgKind::kIndex},
+    {"platformpmcustatus", kPropertyPlatformPMCUStatus, ArgKind::kIndex, ArgKind::kIndex, ArgKind::kIndex},
+    {"platformsmpsnumber", kPropertyPlatformSMPSNumber, ArgKind::kNone, ArgKind::kNone, ArgKind::kNone},
+    {"platformreset", kPropertyPlatformReset, ArgKind::kNone, ArgKind::kBool, ArgKind::kBool},
+    {"audioampnumber", kPropertyAudioAmpNumber, ArgKind::kNone, ArgKind::kNone, ArgKind::kNone},
+    {"audioampmute", kPropertyAudioAmpMute, ArgKind::kIndex, ArgKind::kIndexBool, ArgKind::kIndexBool},
+};
+
 constexpr std::chrono::milliseconds kHeartbeatPeriod{2000};
 constexpr std::chrono::milliseconds kHeartbeatTimeout{6000};
+constexpr std::chrono::milliseconds kBootCompleteRetry{1000};
 
 constexpr size_t kMinFrameLength = 6;   // total bytes including preamble
 constexpr size_t kMaxFrameLength = 257; // 255 byte payload + preamble
@@ -475,7 +503,9 @@ private:
     bool enqueue_tx(Operator op, uint16_t property_id, const std::vector<uint8_t> &value);
     void drain_tx_queue();
 
+    void maybe_send_boot_complete();
     void maybe_send_heartbeat();
+    void check_heartbeat_timeout();
 
     void handle_set_post_func();
     void handle_get_post_func();
@@ -508,8 +538,9 @@ private:
     int_fast32_t platform_hw_ver;
     std::vector<int_fast32_t> platform_amp_temp;
     std::vector<int_fast32_t> platform_amp_status;
-    int_fast32_t platform_smcu_status;
-    int_fast32_t platform_get_pmcu_status;
+    std::vector<int_fast32_t> platform_smcu_status;
+    std::vector<int_fast32_t> platform_smps_number;
+    std::vector<int_fast32_t> platform_pmcu_status;
 
     // Audio parameters
     int_fast32_t audio_amp_number;
@@ -540,6 +571,8 @@ private:
     uint32_t heartbeat_counter_{0};
     bool link_ready_{false};
     bool boot_complete_acked_{false};
+    bool boot_complete_inflight_{false};
+    Clock::time_point last_boot_complete_sent_{Clock::now()};
 
     struct TxRequest {
         Operator op;
@@ -581,6 +614,9 @@ BDIFClient::BDIFClient(const bosepro::BlockConfiguration &configuration)
 
     platform_amp_temp.resize(static_cast<size_t>(std::max(0, num_amps)));
     platform_amp_status.resize(static_cast<size_t>(std::max(0, num_amps)));
+    platform_smcu_status.resize(static_cast<size_t>(std::max(0, num_amps)));
+    platform_smps_number.resize(static_cast<size_t>(std::max(0, num_amps)));
+    platform_pmcu_status.resize(static_cast<size_t>(std::max(0, num_amps)));
     audio_amp_mute.resize(static_cast<size_t>(std::max(0, num_amps)));
 
     assign_parameter("set", &set_cmd_, POST_FUNCTION_SCALAR(handle_set_post_func));
@@ -601,6 +637,7 @@ bool BDIFClient::ensure_port()
     last_heartbeat_sent_ = Clock::now();
     last_heartbeat_ack_ = Clock::time_point{};
     boot_complete_acked_ = false;
+    boot_complete_inflight_ = false;
 
     return port_.open();
 }
@@ -690,8 +727,7 @@ void BDIFClient::handle_rx_frame(const std::vector<uint8_t> &frame)
     const uint16_t property = static_cast<uint16_t>((frame[6] << 8) | frame[7]);
     const uint8_t *value_ptr = frame.data() + 8;
     const size_t value_len = frame.size() - 10;
-    
-    uint32_t heartbeat_ack = 0; 
+    uint32_t heartbeat_ack = 0;
 
     if (version != kProtocolVersion) {
         SPDLOG_WARN("BDIF: version mismatch {} != {}", version, kProtocolVersion);
@@ -738,6 +774,9 @@ void BDIFClient::handle_rx_frame(const std::vector<uint8_t> &frame)
         if (value_valid) {
             protocol_ver = std::string(reinterpret_cast<const char*>(value_ptr), value_len);
             SPDLOG_DEBUG("BDIF: ack protocol version '{}'", protocol_ver);
+            if (protocol_ver != kBdifProtocolVersion) {
+                SPDLOG_WARN("BDIF: protocol version mismatch (expected '{}')", kBdifProtocolVersion);
+            }
         } else {
             SPDLOG_DEBUG("BDIF: ack protocol version");
         }
@@ -781,14 +820,26 @@ void BDIFClient::handle_rx_frame(const std::vector<uint8_t> &frame)
         }
         break;
     case kPropertyPlatformSMCUStatus:
-        if (value_valid) {
-            platform_smcu_status = read_u32(0, value_len);
-            SPDLOG_DEBUG("BDIF: ack smcu status 0x{:08x}", platform_smcu_status);
+        if (value_valid && value_len >= 2) {
+            const int idx = static_cast<int>(value_ptr[0]) - 1;
+            const auto status = static_cast<int_fast32_t>(read_u32(1, value_len - 1));
+            if (idx >= 0) {
+                if (static_cast<size_t>(idx) >= platform_smcu_status.size()) {
+                    platform_smcu_status.resize(static_cast<size_t>(idx) + 1);
+                }
+                platform_smcu_status[idx] = status;
+            }
+            SPDLOG_DEBUG("BDIF: ack smcu status[{}] 0x{:08x}", idx, status);
+        } else if (value_valid) {
+            const auto status = static_cast<int_fast32_t>(read_u32(0, value_len));
+            platform_smcu_status.assign(1, status);
+            SPDLOG_DEBUG("BDIF: ack smcu status 0x{:08x}", status);
         } else {
             SPDLOG_DEBUG("BDIF: ack smcu status");
         }
         break;
     case kPropertyPlatformBootComplete:
+        boot_complete_inflight_ = false;
         if (value_valid) {
             boot_complete_acked_ = value_len > 0 ? value_ptr[0] != 0 : false;
             SPDLOG_DEBUG("BDIF: ack boot complete {}", boot_complete_acked_);
@@ -798,11 +849,45 @@ void BDIFClient::handle_rx_frame(const std::vector<uint8_t> &frame)
         }
         break;
     case kPropertyPlatformPMCUStatus:
-        if (value_valid) {
-            platform_get_pmcu_status = read_u32(0, value_len);
-            SPDLOG_DEBUG("BDIF: ack pmcu status 0x{:08x}", platform_get_pmcu_status);
+        if (value_valid && value_len >= 2) {
+            const int idx = static_cast<int>(value_ptr[0]) - 1;
+            const auto status = static_cast<int_fast32_t>(read_u32(1, value_len - 1));
+            if (idx >= 0) {
+                if (static_cast<size_t>(idx) >= platform_pmcu_status.size()) {
+                    platform_pmcu_status.resize(static_cast<size_t>(idx) + 1);
+                }
+                platform_pmcu_status[idx] = status;
+            }
+            SPDLOG_DEBUG("BDIF: ack pmcu status[{}] 0x{:08x}", idx, status);
+        } else if (value_valid) {
+            const auto status = static_cast<int_fast32_t>(read_u32(0, value_len));
+            platform_pmcu_status.assign(1, status);
+            SPDLOG_DEBUG("BDIF: ack pmcu status 0x{:08x}", status);
         } else {
             SPDLOG_DEBUG("BDIF: ack pmcu status");
+        }
+        break;
+    case kPropertyPlatformSMPSNumber:
+        if (value_valid && value_len >= 2) {
+            const int idx = static_cast<int>(value_ptr[0]) - 1;
+            const auto count = static_cast<int_fast32_t>(read_u32(1, value_len - 1));
+            if (idx >= 0) {
+                if (static_cast<size_t>(idx) >= platform_smps_number.size()) {
+                    platform_smps_number.resize(static_cast<size_t>(idx) + 1);
+                }
+                platform_smps_number[idx] = count;
+            }
+            SPDLOG_DEBUG("BDIF: ack smps number[{}]={}", idx, count);
+        } else if (value_valid) {
+            const auto count = static_cast<int_fast32_t>(read_u32(0, value_len));
+            if (platform_smps_number.empty()) {
+                platform_smps_number.push_back(count);
+            } else {
+                platform_smps_number[0] = count;
+            }
+            SPDLOG_DEBUG("BDIF: ack smps number={}", count);
+        } else {
+            SPDLOG_DEBUG("BDIF: ack smps number");
         }
         break;
     case kPropertyAudioAmpNumber:
@@ -845,6 +930,9 @@ void BDIFClient::drain_tx_queue()
     size_t sent = 0;
     while (!tx_queue_.empty() && sent < kDrainBatch) {
         const auto &req = tx_queue_.front();
+        if (!boot_complete_acked_ && req.property_id != kPropertyPlatformBootComplete) {
+            break;
+        }
         if (!send_frame(req.op, req.property_id, req.value)) {
             SPDLOG_WARN("BDIF: failed to send property 0x{:04x}; will retry", req.property_id);
             break;
@@ -868,9 +956,6 @@ bool BDIFClient::parse_command(const std::string &cmd, uint16_t &property_id, st
         tokens.push_back(token);
     }
 
-    // If first token is alphabetic, delegate to named command builder (caller will resend with op).
-    // The caller (send_command_from_param) will re-tokenize and call build_named_command.
-    // Fallback to numeric form here.
     try {
         property_id = static_cast<uint16_t>(std::stoul(tokens[0], nullptr, 0));
     } catch (const std::exception &) {
@@ -888,8 +973,13 @@ bool BDIFClient::parse_command(const std::string &cmd, uint16_t &property_id, st
             }
             value.push_back(static_cast<uint8_t>(byte));
         } catch (const std::exception &) {
-            SPDLOG_WARN("BDIF: failed to parse payload byte '{}'", tokens[i]);
-            return false;
+            bool b = false;
+            if (parse_bool_token(tokens[i], b)) {
+                value.push_back(static_cast<uint8_t>(b ? 1 : 0));
+            } else {
+                SPDLOG_WARN("BDIF: failed to parse payload byte '{}'", tokens[i]);
+                return false;
+            }
         }
     }
 
@@ -953,29 +1043,6 @@ bool BDIFClient::parse_bool_token(const std::string &token, bool &out)
 bool BDIFClient::build_named_command(const std::string &name, const std::vector<std::string> &args,
                                      Operator op, uint16_t &property_id, std::vector<uint8_t> &value)
 {
-    enum class ArgKind { kNone, kIndex, kBool, kIndexBool };
-
-    struct Spec {
-        const char *name;
-        uint16_t property;
-        ArgKind get_args;
-        ArgKind set_args;
-        ArgKind setget_args;
-    };
-
-    static const Spec kSpecs[] = {
-        {"protocolversion", kPropertyProtocolVersion, ArgKind::kNone, ArgKind::kNone, ArgKind::kNone},
-        {"platformfwversion", kPropertyPlatformFirmwareVersion, ArgKind::kNone, ArgKind::kNone, ArgKind::kNone},
-        {"platformhwversion", kPropertyPlatformHardwareVersion, ArgKind::kNone, ArgKind::kNone, ArgKind::kNone},
-        {"platformampstatus", kPropertyPlatformAmpStatus, ArgKind::kIndex, ArgKind::kIndex, ArgKind::kIndex},
-        {"platformamptemp", kPropertyPlatformAmpTemp, ArgKind::kIndex, ArgKind::kIndex, ArgKind::kIndex},
-        {"platformsmcustatus", kPropertyPlatformSMCUStatus, ArgKind::kNone, ArgKind::kNone, ArgKind::kNone},
-        {"platformpmcustatus", kPropertyPlatformPMCUStatus, ArgKind::kNone, ArgKind::kNone, ArgKind::kNone},
-        {"platformreset", kPropertyPlatformReset, ArgKind::kNone, ArgKind::kBool, ArgKind::kBool},
-        {"audioampnumber", kPropertyAudioAmpNumber, ArgKind::kNone, ArgKind::kNone, ArgKind::kNone},
-        {"audioampmute", kPropertyAudioAmpMute, ArgKind::kIndex, ArgKind::kIndexBool, ArgKind::kIndexBool},
-    };
-
     const auto name_lc = to_lower(name);
     const Spec *spec = nullptr;
     for (const auto &s : kSpecs) {
@@ -1125,6 +1192,9 @@ void BDIFClient::maybe_send_heartbeat()
     if (!port_.is_open()) {
         return;
     }
+    if (!boot_complete_acked_) {
+        return;
+    }
 
     if (now - last_heartbeat_sent_ < kHeartbeatPeriod) {
         return;
@@ -1136,6 +1206,44 @@ void BDIFClient::maybe_send_heartbeat()
     auto payload = to_big_endian<uint32_t>(heartbeat_counter_);
     if (!send_frame(Operator::kSetGet, kPropertyProtocolHeartbeat, payload)) {
         SPDLOG_WARN("BDIF: failed to send heartbeat");
+    }
+}
+
+void BDIFClient::maybe_send_boot_complete()
+{
+    if (boot_complete_acked_) {
+        return;
+    }
+
+    const auto now = Clock::now();
+    if (boot_complete_inflight_ && now - last_boot_complete_sent_ < kBootCompleteRetry) {
+        return;
+    }
+
+    const std::vector<uint8_t> payload = {1};
+    if (enqueue_tx(Operator::kSet, kPropertyPlatformBootComplete, payload)) {
+        boot_complete_inflight_ = true;
+        last_boot_complete_sent_ = now;
+        SPDLOG_DEBUG("BDIF: sending boot_complete");
+    }
+}
+
+void BDIFClient::check_heartbeat_timeout()
+{
+    if (!boot_complete_acked_) {
+        return;
+    }
+
+    const auto now = Clock::now();
+    const bool ack_missing = (last_heartbeat_sent_ > last_heartbeat_ack_) &&
+                             (now - last_heartbeat_sent_ > kHeartbeatTimeout);
+    if (ack_missing || (link_ready_ && last_heartbeat_ack_.time_since_epoch().count() > 0 &&
+                        now - last_heartbeat_ack_ > kHeartbeatTimeout)) {
+        SPDLOG_ERROR("BDIF: heartbeat timeout");
+        tx_queue_.clear();
+        last_heartbeat_sent_ = Clock::now();
+        last_heartbeat_ack_ = Clock::time_point{};
+        link_ready_ = false;
     }
 }
 
@@ -1167,28 +1275,12 @@ void BDIFClient::process()
     }
 
     poll_rx_port();
-
-    if (!boot_complete_acked_) {
-        std::vector<uint8_t> payload = {1};
-        send_frame(Operator::kSet, kPropertyPlatformBootComplete, payload);
-    }
-
+    maybe_send_boot_complete();
     maybe_send_heartbeat();
-
-    const auto now = Clock::now();
-    // Detect missing heartbeat ACK even if we haven't yet marked link_ready_.
-    const bool ack_missing = (last_heartbeat_sent_ > last_heartbeat_ack_) &&
-                             (now - last_heartbeat_sent_ > kHeartbeatTimeout);
-    if (ack_missing || (link_ready_ && last_heartbeat_ack_.time_since_epoch().count() > 0 &&
-                        now - last_heartbeat_ack_ > kHeartbeatTimeout)) {
-        SPDLOG_ERROR("BDIF: heartbeat timeout");
-        tx_queue_.clear();
-        last_heartbeat_sent_ = Clock::now();
-        last_heartbeat_ack_ = Clock::time_point{};
-        link_ready_ = false;
-    }
+    check_heartbeat_timeout();
 
     if (!boot_complete_acked_ || !link_ready_) {
+        drain_tx_queue();
         return;
     }
 
