@@ -14,6 +14,7 @@ class FusionFlatContainer extends StatelessWidget {
     this.alignment,
     this.padding,
     this.toolTip,
+    this.margin,
   });
   final double? width;
   final double? height;
