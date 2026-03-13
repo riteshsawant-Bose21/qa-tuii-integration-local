@@ -3,6 +3,7 @@ package handler
 import (
 	"fmt"
 	"fusion/internal/api"
+	"fusion/internal/cluster/transport"
 	"fusion/internal/controllers"
 	"fusion/internal/persistence"
 	"fusion/internal/pubsub"
@@ -20,10 +21,11 @@ type DeviceInfoProvider interface {
 	UpdateDeviceInfoForWebSocket(deviceID string, patch *persistence.DevicePatch) error
 }
 
-// Handler is the container for server implimentations.
+// Handler is the container for server implementations.
 type Handler struct {
-	appConfig      *api.AppConfig
-	memberlist     *memberlist.Memberlist
+	appConfig        *api.AppConfig
+	clusterTransport transport.ClusterTransport
+
 	persistence    *persistence.Persistence
 	StateManager   *persistence.StateManager
 	hub            *pubsub.Hub
@@ -48,7 +50,7 @@ type serverInfoResponse struct {
 
 func NewHandler(
 	appConfig *api.AppConfig,
-	memberlist *memberlist.Memberlist,
+	clusterTransport transport.ClusterTransport,
 	persistence *persistence.Persistence,
 	stateManager *persistence.StateManager,
 	hub *pubsub.Hub,
@@ -56,7 +58,7 @@ func NewHandler(
 ) *Handler {
 	return &Handler{
 		appConfig:         appConfig,
-		memberlist:        memberlist,
+		clusterTransport:  clusterTransport,
 		persistence:       persistence,
 		StateManager:      stateManager,
 		hub:               hub,
@@ -69,13 +71,13 @@ func (h *Handler) SetEndpoints(endpoints []string) {
 	h.endpoints = endpoints
 }
 
-func (h *Handler) SetMemberlist(memberlist *memberlist.Memberlist) {
-	h.memberlist = memberlist
-}
-
 func (h *Handler) GetInitialState() (map[string]any, error) {
 	data := h.StateManager.GetStateMap()
 	return data, nil
+}
+
+func (h *Handler) SetClusterTransport(clusterTransport transport.ClusterTransport) {
+	h.clusterTransport = clusterTransport
 }
 
 func (h *Handler) HandleHTTPGet(key string) (any, error) {
@@ -167,7 +169,7 @@ func (h *Handler) HandleClearAllData() error {
 }
 
 func (h *Handler) GetMembers() []*memberlist.Node {
-	return h.memberlist.Members()
+	return h.clusterTransport.Members()
 }
 
 func (h *Handler) GetServerInfo() (any, error) {
@@ -176,9 +178,9 @@ func (h *Handler) GetServerInfo() (any, error) {
 		Version:     version.Version,
 		Commit:      version.Commit,
 		BuildTime:   version.BuildTime,
-		NodeID:      h.memberlist.LocalNode().Name,
+		NodeID:      h.clusterTransport.LocalNode().Name,
 		Endpoints:   h.endpoints,
-		ClusterSize: len(h.memberlist.Members()),
+		ClusterSize: len(h.clusterTransport.Members()),
 	}
 
 	return info, nil
@@ -211,7 +213,7 @@ func (h *Handler) handleConfigUpdate(data map[string]any, clear bool) error {
 
 	message := api.NewNotifyMessage(
 		api.NotifyOpConfigUpdate,
-		h.memberlist.LocalNode().Name,
+		h.clusterTransport.LocalNode().Name,
 		api.WithConfigUpdate(configUpdate),
 	)
 
