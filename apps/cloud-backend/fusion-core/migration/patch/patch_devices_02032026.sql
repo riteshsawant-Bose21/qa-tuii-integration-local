@@ -12,7 +12,7 @@ CREATE TABLE device (
 
     serial_number VARCHAR(100) UNIQUE NOT NULL, -- Manufacturer serial number
     model_name VARCHAR(100) NOT NULL, -- Model identifier
-    thing_name VARCHAR(255) NOT NULL, -- AWS Thing name
+    thing_name VARCHAR(255) UNIQUE NOT NULL, -- AWS Thing name
     mac_address VARCHAR(20) UNIQUE, -- MAC address for network identification
 
     is_primary BOOLEAN DEFAULT FALSE, -- Flag to indicate if this is the primary device in a project

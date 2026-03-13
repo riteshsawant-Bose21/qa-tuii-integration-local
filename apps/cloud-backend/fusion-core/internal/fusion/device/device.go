@@ -119,12 +119,12 @@ func (s *Service) revokeOldCertificate(ctx context.Context, deviceID, certID, ce
 
 // setupDeviceCertificate creates and attaches a certificate for a device.
 // Returns the certificate info, or cleans up and returns an error.
-// If thingRegistered is true, the thing will be deleted on cleanup.
-func (s *Service) setupDeviceCertificate(ctx context.Context, deviceID string, csr *string, thingRegistered bool, logger *zap.Logger) (*string, types.CertificateInfo, error) {
+// If deleteThingOnFailure is true, the thing will be deleted on cleanup.
+func (s *Service) setupDeviceCertificate(ctx context.Context, deviceID string, csr *string, deleteThingOnFailure bool, logger *zap.Logger) (*string, types.CertificateInfo, error) {
 	certPem, certID, certArn, err := s.iotService.CreateCertificateFromCsr(ctx, csr, logger)
 	if err != nil {
 		logger.Error("Failed to create certificate from CSR", zap.Error(err))
-		if thingRegistered {
+		if deleteThingOnFailure {
 			if cleanupErr := s.iotService.DeleteThing(ctx, deviceID, logger); cleanupErr != nil {
 				logger.Warn("Failed to cleanup thing after certificate creation failure",
 					zap.String("deviceID", deviceID),
@@ -144,7 +144,7 @@ func (s *Service) setupDeviceCertificate(ctx context.Context, deviceID string, c
 				zap.String("certificateID", *certID),
 				zap.Error(err))
 		}
-		if thingRegistered {
+		if deleteThingOnFailure {
 			if err := s.iotService.DeleteThing(ctx, deviceID, logger); err != nil {
 				logger.Warn("Failed to cleanup thing after certificate attach failure",
 					zap.String("deviceID", deviceID),
@@ -157,7 +157,7 @@ func (s *Service) setupDeviceCertificate(ctx context.Context, deviceID string, c
 	if err := s.iotService.AttachPolicyToCertificate(ctx, iotPolicyName, *certArn, logger); err != nil {
 		logger.Error("Failed to attach policy to certificate", zap.Error(err))
 		// Cert is attached to thing - full cleanup needed
-		s.cleanupIoTResources(ctx, deviceID, *certID, *certArn, thingRegistered, logger)
+		s.cleanupIoTResources(ctx, deviceID, *certID, *certArn, deleteThingOnFailure, logger)
 		return nil, types.CertificateInfo{}, err
 	}
 
@@ -189,17 +189,17 @@ func (s *Service) CreateDevice(ctx context.Context, request *types.DeviceCreateR
 	}
 
 	// Register new thing in IoT if device doesn't exist
-	thingRegistered := false
+	deleteThingOnFailure := false
 	if device == nil {
 		if err := s.iotService.RegisterThing(ctx, request.DeviceID, logger); err != nil {
 			logger.Error("Failed to register thing", zap.Error(err))
 			return nil, err
 		}
-		thingRegistered = true
+		deleteThingOnFailure = true
 	}
 
 	// Setup certificate (creates, attaches to thing, attaches policy)
-	certPem, cert, err := s.setupDeviceCertificate(ctx, request.DeviceID, &request.CSR, thingRegistered, logger)
+	certPem, cert, err := s.setupDeviceCertificate(ctx, request.DeviceID, &request.CSR, deleteThingOnFailure, logger)
 	if err != nil {
 		return nil, err
 	}
@@ -214,7 +214,7 @@ func (s *Service) CreateDevice(ctx context.Context, request *types.DeviceCreateR
 	if err != nil {
 		logger.Warn("Database transaction failed, cleaning up IoT resources",
 			zap.String("deviceID", request.DeviceID))
-		s.cleanupIoTResources(ctx, request.DeviceID, cert.ID, cert.Arn, thingRegistered, logger)
+		s.cleanupIoTResources(ctx, request.DeviceID, cert.ID, cert.Arn, deleteThingOnFailure, logger)
 		return nil, err
 	}
 
