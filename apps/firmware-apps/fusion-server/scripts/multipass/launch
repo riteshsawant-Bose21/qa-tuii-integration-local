@@ -301,6 +301,21 @@ setup_instance() {
     fi
     print_success "bbolt installed successfully"
 
+    print_step "Setting up device identity..."
+    local device_id="$instance_name"
+    if ! multipass exec "$instance_name" -- sudo bash -c "
+        mkdir -p /var/lib/device-identity
+        cd /var/lib/device-identity
+        openssl genrsa -out device.key 2048
+        openssl req -new -key device.key -out device.csr -subj '/CN=$device_id/O=BoseProfessional'
+        chmod 600 device.key
+        curl -s https://www.amazontrust.com/repository/AmazonRootCA1.pem -o AmazonRootCA1.pem
+    "; then
+        print_error "Failed to setup device identity"
+        return 1
+    fi
+    print_success "Device identity created (device-id: $device_id)"
+
     print_step "Configuring keepalived priority..."
     local priority=$((100 - instance_number))
     multipass exec "$instance_name" -- sudo sed -i "s/priority 100/priority ${priority}/" /etc/keepalived/keepalived.conf
