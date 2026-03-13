@@ -1,5 +1,3 @@
-import 'dart:developer';
-
 import 'package:dio/dio.dart';
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -57,7 +55,7 @@ class ProductQueryViewModel extends Cubit<ProductQueryViewModelState> {
   ProductQueryViewModel() : super(ProductQueryViewModelState.initial());
 
   static const int _maxRetries = 1;
-  final Products _productsApi = Products(baseUrl: AppConfig.awsApiBaseUrl, fusionOnly: false);
+  final Products _productsApi = Products(baseUrl: AppConfig.awsApiBaseUrl, fusionOnly: true);
 
   late String localProductDirPath;
 
@@ -73,7 +71,6 @@ class ProductQueryViewModel extends Cubit<ProductQueryViewModelState> {
 
       if (hasCloudAccess) {
         for (SpeakerProduct element in speakers) {
-          log("Fetching price for productId: ${element.productId} - ${element.isSubwoofer}");
           _fetchProductPrices(element.productId);
         }
         for (AmplifierProduct element in amplifiers) {
