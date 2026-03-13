@@ -87,7 +87,7 @@ func NewApp(config *api.AppConfig) *App {
 	sapServer := initSAPServer(config, api.SAPPort, connectionHandler, hub)
 	udpServer := initUDPServer(api.UDPPort, connectionHandler, hub)
 	fusionServer := server.NewFusionServer(config.NodeName, connectionHandler, hub)
-
+	connectionHandler.SetDeviceProvider(clusterInstance)
 	// Initialize IoT manager (consolidates client, publisher, subscriber)
 	iotManager := fusioniot.NewManager(config.IoT, clusterInstance.Metrics, clusterInstance, persistence)
 
