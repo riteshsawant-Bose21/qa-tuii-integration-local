@@ -145,34 +145,37 @@ class _SourceSetSectionState extends State<SourceSetSection> {
                   return SingleChildScrollView(
                     child: Padding(
                       padding: const EdgeInsets.all(16),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: <Widget>[
-                          FusionAppText(
-                            text: 'Create Source Sets',
-                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w500,
+                      child: SemanticHelper.staticText(
+                        testId: SemanticHelper.createTestId(SemanticTypes.text, FusionTestKeys.instance.sourcesetsdescription),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: <Widget>[
+                            FusionAppText(
+                              text: 'Create Source Sets',
+                              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w500,
+                              ),
                             ),
-                          ),
-                          const SizedBox(height: 8),
-                          FusionAppText(
-                            text: 'Combine multiple audio sources into a single source set for simplified routing and control.',
-                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              fontSize: 10,
-                              fontWeight: FontWeight.w400,
+                            const SizedBox(height: 8),
+                            FusionAppText(
+                              text: 'Combine multiple audio sources into a single source set for simplified routing and control.',
+                              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                fontSize: 10,
+                                fontWeight: FontWeight.w400,
+                              ),
                             ),
-                          ),
-                          const SizedBox(height: 8),
-                          FusionAppText(
-                            text:
-                                'Select from available sources, group them as needed, and assign a clear name to the set. Source sets help streamline system configuration and enable flexible audio distribution.',
-                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              fontSize: 10,
-                              fontWeight: FontWeight.w400,
+                            const SizedBox(height: 8),
+                            FusionAppText(
+                              text:
+                                  'Select from available sources, group them as needed, and assign a clear name to the set. Source sets help streamline system configuration and enable flexible audio distribution.',
+                              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                fontSize: 10,
+                                fontWeight: FontWeight.w400,
+                              ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
                     ),
                   );

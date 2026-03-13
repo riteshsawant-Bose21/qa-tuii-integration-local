@@ -18,6 +18,7 @@ extension ConfigurationSources on FusionTestKeys {
   String get sourcesetsec => "source_set_section";
   String get sourcesetheadicon => "sources_set_header_icon";
   String get sourcesetheader => "source_set_header";
+  String get sourcesetsdescription => 'source_sets_description';
   String get sourcesetdata => "source_set_data_item";
   String get sourcesetdataitmheader => "source_set_data_item_header";
   String get sourcesetdataitmheaderexpandcollapse => "source_set_data_item_header_expand_collapse";
