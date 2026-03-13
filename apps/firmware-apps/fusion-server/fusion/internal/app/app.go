@@ -175,6 +175,10 @@ func (app *App) registerPrivatePOST(route string, handler http.HandlerFunc) {
 	routes.RegisterPrivatePOST(app.privateRouter, route, handler)
 }
 
+func (app *App) registerPrivateDELETE(route string, handler http.HandlerFunc) {
+	routes.RegisterPrivateDELETE(app.privateRouter, route, handler)
+}
+
 func (app *App) setupPublicRoutes() {
 
 	// Cluster
@@ -199,6 +203,10 @@ func (app *App) setupPublicRoutes() {
 	app.registerPublicPOST(routes.DevicesSetVIPEndpoint, app.Cluster.SetVIP)
 	app.registerPublicPOST(routes.DeviceReloadVIPEndpoint, app.Cluster.ReloadVIP)
 	app.registerPublicPATCH(routes.DevicesIDEndpoint, app.Cluster.UpdateDeviceInfo)
+
+	app.registerPublicGET(routes.DevicesGetCSREndpoint, app.Cluster.GetDeviceCSR)
+	app.registerPublicPOST(routes.DevicesIDCertificateEndpoint, app.Cluster.SetDeviceCertificate)
+	app.registerPublicDELETE(routes.DevicesIDResetEndpoint, app.Cluster.ResetDevice)
 
 	// Endpoints
 	app.registerPublicGET(routes.EndpointsEndpoint, routes.ListRegisteredEndpoints)
@@ -282,6 +290,9 @@ func (app *App) setupPrivateRoutes() {
 	app.registerPrivatePATCH(routes.DeviceEndpoint, app.Cluster.UpdateDeviceInfoLocal)
 	app.registerPrivatePOST(routes.DevicesSetVIPEndpoint, app.Cluster.UpdateVIPLocal)
 	app.registerPrivatePOST(routes.DeviceReloadVIPEndpoint, app.Cluster.ReloadVIPLocal)
+	app.registerPrivateGET(routes.DevicesGetCSREndpoint, app.Cluster.GetCSR)
+	app.registerPrivateDELETE(routes.DevicesIDResetEndpoint, app.Cluster.ResetDevice)
+	app.registerPrivatePOST(routes.DevicesIDCertificateEndpoint, app.Cluster.SetDeviceCertificate)
 
 	app.registerPrivateGET(routes.DataEndpoint, app.Server.ExportData)
 	app.registerPrivatePOST(routes.DataEndpoint, app.Server.ImportData)

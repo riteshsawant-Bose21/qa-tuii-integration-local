@@ -19,6 +19,15 @@ import (
 	"github.com/gorilla/mux"
 )
 
+// IoT device identity constants
+const (
+	DefaultIdentityFilePath = "/var/lib/device-identity/"
+	DefaultCAFileName       = "AmazonRootCA1.pem"
+	DefaultCSRFileName      = "device.csr"
+	DefaultCertFileName     = "device.x509.cert"
+	DefaultKeyFileName      = "device.key"
+)
+
 // FileExists returns true if the given path exists and is not a directory.
 func FileExists(path string) (bool, error) {
 	info, err := os.Stat(path)
