@@ -66,6 +66,7 @@ class _ConfigurationTabSwitcherState extends State<ConfigurationTabSwitcher> {
         SemanticTypes.container,
         FusionTestKeys.instance.configurationTabSwitcher,
       ),
+      label: tabConfigs[widget.selectedMode]?.semantic ?? '',
       child: Container(
         margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
 

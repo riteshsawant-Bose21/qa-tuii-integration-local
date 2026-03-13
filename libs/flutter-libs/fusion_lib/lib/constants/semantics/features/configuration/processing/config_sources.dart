@@ -2,7 +2,7 @@ import 'package:fusion_lib/constants/fusion_constants.dart';
 
 extension ConfigurationSources on FusionTestKeys {
   String get processingsec => "processing_panel";
-  String get sourcespan => "sources_panel";
+  String get inputspan => "inputs_panel";
   String get sourcesec => "sources_section";
   String get sourcehead => "sources_header";
   String get sourcesethead => "sources_set_header";
@@ -10,16 +10,19 @@ extension ConfigurationSources on FusionTestKeys {
   String get sourcedata => "sources_data";
   String get sourcedataitems => "sources_data_item";
   String get sourceempty => "sources_empty";
+  String get sourcedescription => "sources_description";
   String get sourcelistitemimage => "sources_list_item_image";
-  String get sourcelistitemtext => "sources_list_item_text";
-  String get sourceitemprocessing => "source_item_processing";
+  String get sourcelistitemname => "sources_list_item_name";
+  String get sourceitemprocessing => "sources_list_item_processing";
 
+  String get sourcesetsec => "source_set_section";
   String get sourcesetheadicon => "sources_set_header_icon";
   String get sourcesetheader => "source_set_header";
   String get sourcesetdata => "source_set_data_item";
   String get sourcesetdataitmheader => "source_set_data_item_header";
-  String get sourcesetdataitmheadericon => "source_set_data_item_header_icon";
+  String get sourcesetdataitmheaderexpandcollapse => "source_set_data_item_header_expand_collapse";
   String get sourcesetdataitmheadername => "source_set_data_item_header_name";
+  String get sourcesetdataitmheaderlink => "source_set_data_item_header_link";
   String get sourcesetdataitmheaderprocessingblock => "source_set_item_header_processing_block_button";
   String get sourcesetdataitmheadereditsource => "source_set_item_header_edit_source_button";
   String get sourcesetdataitmheaderdeletesource => "source_set_item_header_delete_button";

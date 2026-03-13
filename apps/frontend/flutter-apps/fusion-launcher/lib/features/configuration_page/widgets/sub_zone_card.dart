@@ -119,7 +119,7 @@ class _SubZoneCardState extends State<SubZoneCard> {
               /// Expand/collapse icon
               SemanticHelper.container(
                 testId: SemanticHelper.createTestId(
-                  SemanticTypes.container,
+                  SemanticTypes.button,
                   FusionTestKeys.instance.zoneitmheadericon,
                 ),
                 child: Icon(
@@ -157,7 +157,7 @@ class _SubZoneCardState extends State<SubZoneCard> {
 
               SemanticHelper.container(
                 testId: SemanticHelper.createTestId(
-                  SemanticTypes.container,
+                  SemanticTypes.button,
                   FusionTestKeys.instance.zoneheaderprocessingbutton,
                 ),
                 child: InkWell(
@@ -244,7 +244,7 @@ class _SubZoneCardState extends State<SubZoneCard> {
     return SemanticHelper.container(
       testId: SemanticHelper.createTestId(
         SemanticTypes.container,
-        FusionTestKeys.instance.circuitcard,
+        '${FusionTestKeys.instance.circuitcard}_$index',
       ),
       child: Container(
         decoration: BoxDecoration(

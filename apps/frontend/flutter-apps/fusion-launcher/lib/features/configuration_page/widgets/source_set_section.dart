@@ -35,216 +35,219 @@ class _SourceSetSectionState extends State<SourceSetSection> {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: <Widget>[
-        SectionHeader(
-          semanticLabel: FusionTestKeys.instance.sourcesetheader,
-          title: 'Source Sets',
-          isRounded: false,
-          assetPath: 'assets/images/source_set_icon.png',
-          trailing: PopupMenuButton<dynamic>(
-            onCanceled: () {
-              _clearSourceSetDialog();
-              setState(() {});
-            },
-            tooltip: "Add Source Set",
-            padding: EdgeInsets.zero,
-            constraints: const BoxConstraints(
-              maxHeight: 500,
-              maxWidth: 250,
-            ),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(8),
-            ),
-            color: context.colorScheme.elevation1,
-            menuPadding: EdgeInsets.zero,
-
-            itemBuilder: (BuildContext context) {
-              return <PopupMenuItem<dynamic>>[
-                PopupMenuItem<dynamic>(
-                  enabled: false,
-                  padding: EdgeInsets.zero,
-                  child: SizedBox(
-                    width: 250,
-                    child: StatefulBuilder(
-                      builder: (BuildContext context, StateSetter setMenuState) {
-                        final List<Source> sourcesWithoutSourceSet = _sourceSetsViewmodel.getAvailableSources();
-
-                        return SingleChildScrollView(
-                          child: _SourceSetCreationWidget(
-                            sourceSetNameController: _sourceSetNameController,
-                            availableSources: sourcesWithoutSourceSet,
-                            selectedSources: _selectedSources,
-                            onAddSourceSet: () {
-                              /// Pass popup context so only the menu closes.
-                              _addSourceSet(context);
-                            },
-                            onCancel: () {
-                              /// Cancel inside popup: close only popup.
-                              _clearSourceSetDialog(pop: true, popContext: context);
-                            },
-                            onSourceChanged: (Source source, bool isSelected) {
-                              setState(() {
-                                if (isSelected) {
-                                  _selectedSources.add(SelectedSource(id: source.id, name: source.name));
-                                } else {
-                                  _selectedSources.removeWhere((SelectedSource s) => s.id == source.id);
-                                }
-                              });
-                              setMenuState(() {});
-                            },
-                          ),
-                        );
-                      },
+    return SemanticHelper.container(
+      testId: SemanticHelper.createTestId(SemanticTypes.container, FusionTestKeys.instance.sourcesetsec),
+      child: Column(
+        children: <Widget>[
+          SectionHeader(
+            semanticLabel: FusionTestKeys.instance.sourcesetheader,
+            title: 'Source Sets',
+            isRounded: false,
+            assetPath: 'assets/images/source_set_icon.png',
+            trailing: PopupMenuButton<dynamic>(
+              onCanceled: () {
+                _clearSourceSetDialog();
+                setState(() {});
+              },
+              tooltip: "Add Source Set",
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(
+                maxHeight: 500,
+                maxWidth: 250,
+              ),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+              color: context.colorScheme.elevation1,
+              menuPadding: EdgeInsets.zero,
+      
+              itemBuilder: (BuildContext context) {
+                return <PopupMenuItem<dynamic>>[
+                  PopupMenuItem<dynamic>(
+                    enabled: false,
+                    padding: EdgeInsets.zero,
+                    child: SizedBox(
+                      width: 250,
+                      child: StatefulBuilder(
+                        builder: (BuildContext context, StateSetter setMenuState) {
+                          final List<Source> sourcesWithoutSourceSet = _sourceSetsViewmodel.getAvailableSources();
+      
+                          return SingleChildScrollView(
+                            child: _SourceSetCreationWidget(
+                              sourceSetNameController: _sourceSetNameController,
+                              availableSources: sourcesWithoutSourceSet,
+                              selectedSources: _selectedSources,
+                              onAddSourceSet: () {
+                                /// Pass popup context so only the menu closes.
+                                _addSourceSet(context);
+                              },
+                              onCancel: () {
+                                /// Cancel inside popup: close only popup.
+                                _clearSourceSetDialog(pop: true, popContext: context);
+                              },
+                              onSourceChanged: (Source source, bool isSelected) {
+                                setState(() {
+                                  if (isSelected) {
+                                    _selectedSources.add(SelectedSource(id: source.id, name: source.name));
+                                  } else {
+                                    _selectedSources.removeWhere((SelectedSource s) => s.id == source.id);
+                                  }
+                                });
+                                setMenuState(() {});
+                              },
+                            ),
+                          );
+                        },
+                      ),
                     ),
                   ),
+                ];
+              },
+              child: SemanticHelper.button(
+                testId: SemanticHelper.createTestId(SemanticTypes.button, "add_source_button"),
+                child: IconButton(
+                  icon: FusionIcon.icon(
+                    semanticId: FusionTestKeys.instance.sourcesetheadicon,
+                    Icons.add_sharp,
+                    size: 16,
+                    color: context.colorScheme.primaryWhite,
+                  ),
+                  onPressed: null,
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
                 ),
-              ];
-            },
-            child: SemanticHelper.button(
-              testId: SemanticHelper.createTestId(SemanticTypes.button, "add_source_button"),
-              child: IconButton(
-                icon: FusionIcon.icon(
-                  semanticId: FusionTestKeys.instance.sourcesetheadicon,
-                  Icons.add_sharp,
-                  size: 16,
-                  color: context.colorScheme.primaryWhite,
-                ),
-                onPressed: null,
-                padding: EdgeInsets.zero,
-                constraints: const BoxConstraints(),
               ),
             ),
           ),
-        ),
-
-        Container(
-          decoration: BoxDecoration(
-            borderRadius: const BorderRadius.only(
-              bottomLeft: Radius.circular(12),
-              bottomRight: Radius.circular(12),
+      
+          Container(
+            decoration: BoxDecoration(
+              borderRadius: const BorderRadius.only(
+                bottomLeft: Radius.circular(12),
+                bottomRight: Radius.circular(12),
+              ),
+              border: Border(
+                bottom: BorderSide(
+                  color: context.colorScheme.elevation2,
+                ),
+                left: BorderSide(
+                  color: context.colorScheme.elevation2,
+                ),
+                right: BorderSide(
+                  color: context.colorScheme.elevation2,
+                ),
+              ),
             ),
-            border: Border(
-              bottom: BorderSide(
-                color: context.colorScheme.elevation2,
-              ),
-              left: BorderSide(
-                color: context.colorScheme.elevation2,
-              ),
-              right: BorderSide(
-                color: context.colorScheme.elevation2,
-              ),
-            ),
-          ),
-          child: BlocBuilder<ConfigSourceSetsViewmodel, ConfigSourceSetsState>(
-            builder: (BuildContext context, ConfigSourceSetsState state) {
-              if (state.sourceSets.isEmpty) {
-                /// Show informational text when no source sets exist
-                return SingleChildScrollView(
-                  child: Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: <Widget>[
-                        FusionAppText(
-                          text: 'Create Source Sets',
-                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w500,
+            child: BlocBuilder<ConfigSourceSetsViewmodel, ConfigSourceSetsState>(
+              builder: (BuildContext context, ConfigSourceSetsState state) {
+                if (state.sourceSets.isEmpty) {
+                  /// Show informational text when no source sets exist
+                  return SingleChildScrollView(
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: <Widget>[
+                          FusionAppText(
+                            text: 'Create Source Sets',
+                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w500,
+                            ),
                           ),
-                        ),
-                        const SizedBox(height: 8),
-                        FusionAppText(
-                          text: 'Combine multiple audio sources into a single source set for simplified routing and control.',
-                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            fontSize: 10,
-                            fontWeight: FontWeight.w400,
+                          const SizedBox(height: 8),
+                          FusionAppText(
+                            text: 'Combine multiple audio sources into a single source set for simplified routing and control.',
+                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w400,
+                            ),
                           ),
-                        ),
-                        const SizedBox(height: 8),
-                        FusionAppText(
-                          text:
-                              'Select from available sources, group them as needed, and assign a clear name to the set. Source sets help streamline system configuration and enable flexible audio distribution.',
-                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            fontSize: 10,
-                            fontWeight: FontWeight.w400,
+                          const SizedBox(height: 8),
+                          FusionAppText(
+                            text:
+                                'Select from available sources, group them as needed, and assign a clear name to the set. Source sets help streamline system configuration and enable flexible audio distribution.',
+                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w400,
+                            ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
+                  );
+                }
+                return Container(
+                  clipBehavior: Clip.none,
+                  child: ReorderableListView.builder(
+                    shrinkWrap: true,
+                    proxyDecorator: (Widget child, int index, Animation<double> animation) {
+                      return Material(
+                        color: context.colorScheme.elevation1,
+                        child: SizedBox(
+                          width: 220,
+                          // child: child,
+                          child: BlocProvider<ConfigSourceSetsViewmodel>.value(value: _sourceSetsViewmodel, child: child),
+                        ),
+                      );
+                    },
+                    physics: const ClampingScrollPhysics(),
+                    buildDefaultDragHandles: false,
+                    itemCount: state.sourceSets.length,
+                    onReorder: (int oldIndex, int newIndex) {
+                      _sourceSetsViewmodel.reorderSourceSets(oldIndex, newIndex);
+                    },
+                    itemBuilder: (BuildContext context, int index) {
+                      final SourceSet sourceSet = state.sourceSets[index];
+      
+                      /// Create or get the GlobalKey for this source set
+                      _sourceSetKeys.putIfAbsent(sourceSet.id, () => GlobalKey());
+                      final GlobalKey<State<StatefulWidget>> sourceSetKey = _sourceSetKeys[sourceSet.id]!;
+      
+                      return DragTarget<Source>(
+                        key: ValueKey<String>(sourceSet.id),
+                        onWillAcceptWithDetails: (DragTargetDetails<Source> details) {
+                          /// Check if source is not already in this source set
+                          return !_sourceSetsViewmodel.isSourceInSourceSet(
+                            sourceId: details.data.id,
+                            sourceSetId: sourceSet.id,
+                          );
+                        },
+                        onLeave: (Source? data) {},
+                        onAcceptWithDetails: (DragTargetDetails<Source> details) {
+                          _sourceSetsViewmodel.addSourceToSourceSet(
+                            sourceId: details.data.id,
+                            sourceSetId: sourceSet.id,
+                          );
+                          _sourcesViewmodel.syncWithProjectViewModel();
+      
+                          /// Expand the source set after dropping
+                          final dynamic sourceSetState = sourceSetKey.currentState as dynamic;
+                          sourceSetState?.expandSourceSet();
+      
+                          _sourcesViewmodel.endDrag();
+                        },
+                        builder: (BuildContext context, List<Source?> candidateData, List<dynamic> rejectedData) {
+                          final bool isHovered = candidateData.isNotEmpty;
+                          return ReorderableDragStartListener(
+                            index: index,
+                            child: SourceSetItem(
+                              index: index,
+                              key: sourceSetKey,
+                              sourceSet: sourceSet,
+                              isDragHovered: isHovered,
+                            ),
+                          );
+                        },
+                      );
+                    },
                   ),
                 );
-              }
-              return Container(
-                clipBehavior: Clip.none,
-                child: ReorderableListView.builder(
-                  shrinkWrap: true,
-                  proxyDecorator: (Widget child, int index, Animation<double> animation) {
-                    return Material(
-                      color: context.colorScheme.elevation1,
-                      child: SizedBox(
-                        width: 220,
-                        // child: child,
-                        child: BlocProvider<ConfigSourceSetsViewmodel>.value(value: _sourceSetsViewmodel, child: child),
-                      ),
-                    );
-                  },
-                  physics: const ClampingScrollPhysics(),
-                  buildDefaultDragHandles: false,
-                  itemCount: state.sourceSets.length,
-                  onReorder: (int oldIndex, int newIndex) {
-                    _sourceSetsViewmodel.reorderSourceSets(oldIndex, newIndex);
-                  },
-                  itemBuilder: (BuildContext context, int index) {
-                    final SourceSet sourceSet = state.sourceSets[index];
-
-                    /// Create or get the GlobalKey for this source set
-                    _sourceSetKeys.putIfAbsent(sourceSet.id, () => GlobalKey());
-                    final GlobalKey<State<StatefulWidget>> sourceSetKey = _sourceSetKeys[sourceSet.id]!;
-
-                    return DragTarget<Source>(
-                      key: ValueKey<String>(sourceSet.id),
-                      onWillAcceptWithDetails: (DragTargetDetails<Source> details) {
-                        /// Check if source is not already in this source set
-                        return !_sourceSetsViewmodel.isSourceInSourceSet(
-                          sourceId: details.data.id,
-                          sourceSetId: sourceSet.id,
-                        );
-                      },
-                      onLeave: (Source? data) {},
-                      onAcceptWithDetails: (DragTargetDetails<Source> details) {
-                        _sourceSetsViewmodel.addSourceToSourceSet(
-                          sourceId: details.data.id,
-                          sourceSetId: sourceSet.id,
-                        );
-                        _sourcesViewmodel.syncWithProjectViewModel();
-
-                        /// Expand the source set after dropping
-                        final dynamic sourceSetState = sourceSetKey.currentState as dynamic;
-                        sourceSetState?.expandSourceSet();
-
-                        _sourcesViewmodel.endDrag();
-                      },
-                      builder: (BuildContext context, List<Source?> candidateData, List<dynamic> rejectedData) {
-                        final bool isHovered = candidateData.isNotEmpty;
-                        return ReorderableDragStartListener(
-                          index: index,
-                          child: SourceSetItem(
-                            index: index,
-                            key: sourceSetKey,
-                            sourceSet: sourceSet,
-                            isDragHovered: isHovered,
-                          ),
-                        );
-                      },
-                    );
-                  },
-                ),
-              );
-            },
+              },
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 
@@ -605,6 +608,7 @@ class _SourceSetCreationWidgetState extends State<_SourceSetCreationWidget> {
               children: <Widget>[
                 Flexible(
                   child: FusionOutlinedButton(
+                    semanticsId: 'cancel',
                     width: double.infinity,
                     label: "Cancel",
                     textStyle: Theme.of(context).textTheme.labelLarge?.copyWith(fontSize: 10),
@@ -627,7 +631,7 @@ class _SourceSetCreationWidgetState extends State<_SourceSetCreationWidget> {
                     onTap: () {
                       widget.onAddSourceSet.call();
                     },
-                    accessLabel: '',
+                    accessLabel: 'create',
                   ),
                 ),
               ],

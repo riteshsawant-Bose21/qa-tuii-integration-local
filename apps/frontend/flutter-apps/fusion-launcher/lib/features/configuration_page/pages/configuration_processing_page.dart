@@ -220,7 +220,7 @@ class _ConfigurationProcessingPageBodyState extends State<_ConfigurationProcessi
   /// Build Input Panel
   Widget _buildInputPanel(BuildContext context) {
     return SemanticHelper.container(
-      testId: SemanticHelper.createTestId(SemanticTypes.container, FusionTestKeys.instance.sourcespan),
+      testId: SemanticHelper.createTestId(SemanticTypes.container, FusionTestKeys.instance.inputspan),
       child: Container(
         decoration: BoxDecoration(
           color: context.colorScheme.elevation1,

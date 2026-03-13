@@ -148,14 +148,14 @@ class _SourceSetItemState extends State<SourceSetItem> {
                                 : (_isHovered ? context.colorScheme.elevation3 : context.colorScheme.elevation2),
                       ),
                       child: SemanticHelper.container(
-                        testId: SemanticHelper.createTestId(SemanticTypes.container, '${FusionTestKeys.instance.sourcesetdataitmheader}_${widget.index}'),
+                        testId: SemanticHelper.createTestId(SemanticTypes.container, FusionTestKeys.instance.sourcesetdataitmheader),
                         child: Row(
                           children: <Widget>[
                             /// Expand/collapse icon
                             SemanticHelper.button(
                               testId: SemanticHelper.createTestId(
                                 SemanticTypes.button,
-                                '${FusionTestKeys.instance.sourcesetdataitmheadericon}_${widget.index}',
+                                FusionTestKeys.instance.sourcesetdataitmheaderexpandcollapse,
                               ),
                               child: Icon(
                                 _isSourcesSetExpanded.value ? Icons.arrow_drop_up_rounded : Icons.arrow_drop_down_rounded,
@@ -169,7 +169,7 @@ class _SourceSetItemState extends State<SourceSetItem> {
                               child: SemanticHelper.staticText(
                                 testId: SemanticHelper.createTestId(
                                   SemanticTypes.text,
-                                  '${FusionTestKeys.instance.sourcesetdataitmheadername}_${widget.index}',
+                                  FusionTestKeys.instance.sourcesetdataitmheadername,
                                 ),
                                 child: FusionAppText(
                                   text: widget.sourceSet.name,
@@ -223,6 +223,7 @@ class _SourceSetItemState extends State<SourceSetItem> {
                                         );
                                       },
                                       child: FusionImage.asset(
+                                        semanticId: FusionTestKeys.instance.sourcesetdataitmheaderlink,
                                         widget.sourceSet.isLinked ? Assets.unLinkIcon : Assets.linkIcon,
                                         width: 22,
                                         height: 22,
@@ -244,7 +245,7 @@ class _SourceSetItemState extends State<SourceSetItem> {
                                 },
 
                                 child: FusionImage.asset(
-                                  semanticId: '${FusionTestKeys.instance.sourcesetdataitmheaderprocessingblock}_${widget.index}',
+                                  semanticId: FusionTestKeys.instance.sourcesetdataitmheaderprocessingblock,
                                   Assets.processingBlocksIcon,
                                   width: 18,
                                   height: 12,
@@ -260,7 +261,7 @@ class _SourceSetItemState extends State<SourceSetItem> {
                                 key: _addSourceIconKey,
                                 onTap: _showEditSourceSetPopup,
                                 child: FusionImage.asset(
-                                  semanticId: '${FusionTestKeys.instance.sourcesetdataitmheadereditsource}_${widget.index}',
+                                  semanticId: FusionTestKeys.instance.sourcesetdataitmheadereditsource,
                                   Assets.addSourceIcon,
                                   width: 22,
                                   height: 22,
@@ -276,7 +277,7 @@ class _SourceSetItemState extends State<SourceSetItem> {
                               child: GestureDetector(
                                 onTap: _confirmDeleteSourceSet,
                                 child: FusionImage.asset(
-                                  semanticId: '${FusionTestKeys.instance.sourcesetdataitmheaderdeletesource}_${widget.index}',
+                                  semanticId: FusionTestKeys.instance.sourcesetdataitmheaderdeletesource,
                                   Assets.deleteIcon,
                                   width: 17,
                                   height: 17,
@@ -432,6 +433,7 @@ class _SourceSetItemState extends State<SourceSetItem> {
                     FusionTestKeys.instance.srcsetlistitem,
                   ),
                   child: SourceItem(
+                    semanticId: FusionTestKeys.instance.srcsetlistitem,
                     index: index,
                     sourceSet: widget.sourceSet,
                     source: sourceData,

@@ -64,7 +64,7 @@ class _SourceItemState extends State<SourceItem> {
 
               if (widget.sourceSet != null) const SizedBox(width: 8),
               FusionImage.asset(
-                semanticId: '${FusionTestKeys.instance.sourcelistitemimage}_${widget.index}',
+                semanticId: FusionTestKeys.instance.sourcelistitemimage,
                 widget.source.assetImagePath,
                 width: 24,
                 height: 24,
@@ -74,7 +74,7 @@ class _SourceItemState extends State<SourceItem> {
 
               Expanded(
                 child: FusionAppText(
-                  semanticId: '${FusionTestKeys.instance.sourcelistitemtext}_${widget.index}',
+                  semanticId: FusionTestKeys.instance.sourcelistitemname,
                   text: widget.source.name,
                   maxLine: 1,
                   style: Theme.of(
@@ -96,7 +96,7 @@ class _SourceItemState extends State<SourceItem> {
                     ProcessingChainView.showForSource(context, widget.source);
                   },
                   child: FusionImage.asset(
-                    semanticId: "${FusionTestKeys.instance.sourceitemprocessing}_${widget.index}",
+                    semanticId: FusionTestKeys.instance.sourceitemprocessing,
                     Assets.processingBlocksFilledIcon,
                     width: 24,
                     height: 24,

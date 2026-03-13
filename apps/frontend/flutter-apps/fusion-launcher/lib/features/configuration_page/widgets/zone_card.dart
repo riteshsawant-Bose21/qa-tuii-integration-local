@@ -65,6 +65,10 @@ class _ZoneCardState extends State<ZoneCard> {
     super.dispose();
   }
 
+  String _prioritySemanticId({required int priorityIndex, required String element}) {
+    return 'priority_${priorityIndex}_$element';
+  }
+
   /// Default proxy decorator for reorderable list view
   Widget _defaultProxyDecorator(Widget child, int index, Animation<double> animation) {
     return FadeTransition(
@@ -93,25 +97,28 @@ class _ZoneCardState extends State<ZoneCard> {
         builder: (BuildContext context, bool zoneExpanded, Widget? child) {
           return BlocBuilder<ConfigZonesViewmodel, ConfigZonesState>(
             builder: (BuildContext context, ConfigZonesState state) {
-              return Column(
-                children: <Widget>[
-                  SemanticHelper.container(
-                    testId: SemanticHelper.createTestId(SemanticTypes.container, "${FusionTestKeys.instance.zoneitmheader}_${widget.index}"),
-                    child: MouseRegion(
-                      onEnter: (_) => setState(() => isHovered = true),
-                      onExit: (_) => setState(() => isHovered = false),
-                      child: _buildZoneHeader(
-                        context: context,
-                        expanded: zoneExpanded,
-                        isHovered: isHovered,
-                        isSelected: false,
+              return SemanticHelper.container(
+                testId: SemanticHelper.createTestId(SemanticTypes.container, "${FusionTestKeys.instance.zoneitem}_${widget.index}"),
+                child: Column(
+                  children: <Widget>[
+                    SemanticHelper.container(
+                      testId: SemanticHelper.createTestId(SemanticTypes.container, FusionTestKeys.instance.zoneitmheader),
+                      child: MouseRegion(
+                        onEnter: (_) => setState(() => isHovered = true),
+                        onExit: (_) => setState(() => isHovered = false),
+                        child: _buildZoneHeader(
+                          context: context,
+                          expanded: zoneExpanded,
+                          isHovered: isHovered,
+                          isSelected: false,
+                        ),
                       ),
                     ),
-                  ),
-
-                  /// Zone Content - shows subzones when expanded
-                  if (zoneExpanded) _buildZoneContent(),
-                ],
+                
+                    /// Zone Content - shows subzones when expanded
+                    if (zoneExpanded) _buildZoneContent(),
+                  ],
+                ),
               );
             },
           );
@@ -148,7 +155,7 @@ class _ZoneCardState extends State<ZoneCard> {
           children: <Widget>[
             /// Expand/collapse icon
             FusionIcon.icon(
-              semanticId: "${FusionTestKeys.instance.zonelisticon}_${widget.index}",
+              semanticId: FusionTestKeys.instance.zonelisticonexpandcollapse,
               expanded ? Icons.arrow_drop_up_rounded : Icons.arrow_drop_down_rounded,
               color: Theme.of(context).colorScheme.primaryWhite,
             ),
@@ -158,7 +165,7 @@ class _ZoneCardState extends State<ZoneCard> {
             /// Zone name
             Expanded(
               child: FusionAppText(
-                semanticId: "${FusionTestKeys.instance.zonelistlabel}_${widget.index}",
+                semanticId: FusionTestKeys.instance.zonelistname,
                 text: widget.zoneName,
                 maxLine: 1,
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
@@ -172,7 +179,7 @@ class _ZoneCardState extends State<ZoneCard> {
                 ProcessingChainView.showForZone(context, widget.zoneData);
               },
               child: FusionImage.asset(
-                semanticId: "${FusionTestKeys.instance.zonelistprocessingbutton}_${widget.index}",
+                semanticId: FusionTestKeys.instance.zonelistprocessingbutton,
                 Assets.processingBlocksFilledWhiteIcon,
                 width: 24,
                 height: 24,
@@ -211,7 +218,7 @@ class _ZoneCardState extends State<ZoneCard> {
                   children: <Widget>[
                     /// Functions Panel
                     SemanticHelper.container(
-                      testId: SemanticHelper.createTestId(SemanticTypes.container, "${FusionTestKeys.instance.zonelistfunctionspanel}_${widget.index}"),
+                      testId: SemanticHelper.createTestId(SemanticTypes.container, FusionTestKeys.instance.zonelistfunctionspanel),
                       child: Container(
                         width: constraints.maxWidth * 0.34,
                         height: constrainedHeight,
@@ -698,7 +705,10 @@ class _ZoneCardState extends State<ZoneCard> {
                         Expanded(
                           child: FusionAppText(
                             text: selectedSource ?? 'Select priority',
-                            semanticId: "${FusionTestKeys.instance.sorcprioity}_${widget.index}",
+                            semanticId: _prioritySemanticId(
+                              priorityIndex: priorityIndex,
+                              element: 'source_name',
+                            ),
                             maxLine: 1,
                             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                               fontSize: 11,
@@ -717,7 +727,10 @@ class _ZoneCardState extends State<ZoneCard> {
                             borderRadius: BorderRadius.circular(3),
                           ),
                           child: FusionAppText(
-                            semanticId: "${FusionTestKeys.instance.sorcprioityindex}_${widget.index}",
+                            semanticId: _prioritySemanticId(
+                              priorityIndex: priorityIndex,
+                              element: 'status_patch',
+                            ),
                             text: 'P$priorityIndex',
                             style: Theme.of(context).textTheme.bodySmall?.copyWith(
                               fontSize: 8,
@@ -748,7 +761,10 @@ class _ZoneCardState extends State<ZoneCard> {
                 setState(() {});
               },
               child: FusionImage.asset(
-                semanticId: "${FusionTestKeys.instance.sorcprioitydeletebutton}_${widget.index}",
+                semanticId: _prioritySemanticId(
+                  priorityIndex: priorityIndex,
+                  element: 'delete_button',
+                ),
                 Assets.deleteIcon,
                 width: 17,
                 height: 17,
@@ -764,7 +780,7 @@ class _ZoneCardState extends State<ZoneCard> {
   /// Add Function button (Popup Menu)
   Widget buildAddFunctionButton({bool isEdit = false}) {
     return SemanticHelper.button(
-      testId: SemanticHelper.createTestId(SemanticTypes.button, "${FusionTestKeys.instance.zonelistfunctionspaneleditbutton}_${widget.index}"),
+      testId: SemanticHelper.createTestId(SemanticTypes.button, FusionTestKeys.instance.zonelistfunctionspaneleditbutton),
       child: PopupMenuButton<ZoneFunctionsType>(
         shadowColor: Colors.transparent,
         position: PopupMenuPosition.under,
@@ -875,7 +891,7 @@ class _ZoneCardState extends State<ZoneCard> {
           children: <Widget>[
             Expanded(
               child: FusionAppText(
-                semanticId: "${FusionTestKeys.instance.functionselecttext}_${widget.index}",
+                semanticId: FusionTestKeys.instance.functionselecttext,
                 text: selectedFunction?.displayName ?? '',
                 maxLine: 1,
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
@@ -886,7 +902,7 @@ class _ZoneCardState extends State<ZoneCard> {
             ),
             const SizedBox(width: 8),
             FusionImage.asset(
-              semanticId: "${FusionTestKeys.instance.functionselecticon}_${widget.index}",
+              semanticId: FusionTestKeys.instance.functionselecticon,
               Assets.configurationFilledIcon,
               width: 14,
               height: 14,
@@ -923,6 +939,7 @@ class _ZoneCardState extends State<ZoneCard> {
       child: SemanticHelper.container(
         testId: SemanticHelper.createTestId(SemanticTypes.container, "${FusionTestKeys.instance.selectsrc}_${widget.index}"),
         child: PopupMenuButton<String>(
+          key: const Key('zone_sources_selection_popup'),
           onSelected: (String? value) {
             if (value == 'add') {
               setState(() {});
@@ -950,6 +967,7 @@ class _ZoneCardState extends State<ZoneCard> {
             // ----------------------------------------------------------
             entries.add(
               PopupMenuItem<String>(
+                key: const Key('sources_header'),
                 enabled: false,
                 height: 24,
                 child: FusionAppText(
@@ -1240,7 +1258,7 @@ class _ZoneCardState extends State<ZoneCard> {
               children: <Widget>[
                 Expanded(
                   child: FusionAppText(
-                    semanticId: "${FusionTestKeys.instance.selectsrctxt}_${widget.index}",
+                    semanticId: FusionTestKeys.instance.selectsrctxt,
                     text: hasSelection ? 'Sources selected' : 'Select sources',
                     maxLine: 1,
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
@@ -1265,6 +1283,7 @@ class _ZoneCardState extends State<ZoneCard> {
                           borderRadius: BorderRadius.circular(3),
                         ),
                         child: FusionAppText(
+                          semanticId: FusionTestKeys.instance.selectsrccountbtn,
                           text: _zonesViewmodel.getSourceCountInZone(zoneId: widget.zoneId).toString(),
                           style: Theme.of(context).textTheme.bodySmall?.copyWith(
                             fontSize: 8,
@@ -1300,7 +1319,7 @@ class _ZoneCardState extends State<ZoneCard> {
     return SemanticHelper.container(
       testId: SemanticHelper.createTestId(
         SemanticTypes.container,
-        "${FusionTestKeys.instance.zonecircuit}_${widget.index}",
+        FusionTestKeys.instance.zonecircuit,
       ),
       child: Container(
         decoration: BoxDecoration(
@@ -1378,17 +1397,23 @@ class _ZoneCardState extends State<ZoneCard> {
                           return ReorderableDragStartListener(
                             key: ValueKey<String>(subZone.id),
                             index: index,
-                            child: SubZoneCard(
-                              subZoneId: subZone.id,
-                              subZoneName: subZone.name,
-                              subZoneData: subZone,
-                              onExpansionChanged: (bool isExpanded) {
-                                if (isExpanded) {
-                                  /// Trigger the zone's expansion callback to scroll the zone into view
-                                  /// when a subzone expands
-                                  widget.onExpansionChanged?.call(true);
-                                }
-                              },
+                            child: SemanticHelper.container(
+                              testId: SemanticHelper.createTestId(
+                                SemanticTypes.container,
+                                "${FusionTestKeys.instance.subzoneitem}_$index",
+                              ),
+                              child: SubZoneCard(
+                                subZoneId: subZone.id,
+                                subZoneName: subZone.name,
+                                subZoneData: subZone,
+                                onExpansionChanged: (bool isExpanded) {
+                                  if (isExpanded) {
+                                    /// Trigger the zone's expansion callback to scroll the zone into view
+                                    /// when a subzone expands
+                                    widget.onExpansionChanged?.call(true);
+                                  }
+                                },
+                              ),
                             ),
                           );
                         },
@@ -1428,7 +1453,7 @@ class _ZoneCardState extends State<ZoneCard> {
             const SizedBox(width: 6),
             Expanded(
               child: FusionAppText(
-                semanticId: "${FusionTestKeys.instance.zonecircuititmtxt}_${widget.index}",
+                semanticId: FusionTestKeys.instance.zonecircuititmtxt,
                 text: circuitData.name,
                 maxLine: 1,
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(fontSize: 11),
@@ -1439,7 +1464,7 @@ class _ZoneCardState extends State<ZoneCard> {
                 ProcessingChainView.showForCircuit(context, circuitData);
               },
               child: FusionImage.asset(
-                semanticId: "${FusionTestKeys.instance.zonecircuititmimg2}_${widget.index}",
+                semanticId: FusionTestKeys.instance.zonecircuititmimg2,
                 Assets.processingBlocksFilledIcon,
                 width: 24,
                 height: 24,

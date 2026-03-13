@@ -94,6 +94,7 @@ class _SourcesSectionState extends State<SourcesSection> {
                               testId: SemanticHelper.createTestId(SemanticTypes.container, FusionTestKeys.instance.sourceempty),
                               child: Center(
                                 child: FusionAppText(
+                                  semanticId: FusionTestKeys.instance.sourcedescription,
                                   text: state.searchQuery.isNotEmpty ? 'No search data for "${state.searchQuery}"' : 'No sources added yet',
                                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                                     fontSize: 12,
