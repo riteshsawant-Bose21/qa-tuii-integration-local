@@ -969,10 +969,7 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
                           onTap: () => _toggleCircuitSectionExpansion(circuit.id),
                           child: AnimatedRotation(
                             duration: const Duration(milliseconds: 200),
-                            turns:
-                                _expandedCircuitSections.contains(circuit.id)
-                                    ? 0.5
-                                    : 0.25,
+                            turns: _expandedCircuitSections.contains(circuit.id) ? 0.5 : 0.25,
                             child: FusionSvgIcon(
                               icon: AssetSvg.expandUp,
                               color: context.colorScheme.elevation5,
@@ -985,8 +982,7 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
                           FusionImage.asset(
                             serviceLocator<ProjectViewModel>().getHardwareImage(
                               productId: circuitSpeakers.first.productId ?? 0,
-                              currentImagePath:
-                                  circuitSpeakers.first.assetImagePath,
+                              currentImagePath: circuitSpeakers.first.assetImagePath,
                             ),
                             width: 16,
                             height: 16,
@@ -1001,23 +997,14 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
                         Expanded(
                           child: FusionAppText(
                             semanticId: "circuit_speaker_name",
-                            text:
-                                circuitSpeakers.isNotEmpty
-                                    ? '${circuitSpeakers.first.name} (${circuitSpeakers.length}x)'
-                                    : 'Empty circuit',
+                            text: circuitSpeakers.isNotEmpty ? '${circuitSpeakers.first.name} (${circuitSpeakers.length}x)' : 'Empty circuit',
                             style: Theme.of(
                               context,
                             ).textTheme.bodySmall?.copyWith(
                               fontSize: 11,
                               fontWeight: FontWeight.w500,
-                              color:
-                                  circuitSpeakers.isNotEmpty
-                                      ? context.colorScheme.textPrimary
-                                      : context.colorScheme.elevation5,
-                              fontStyle:
-                                  circuitSpeakers.isEmpty
-                                      ? FontStyle.italic
-                                      : null,
+                              color: circuitSpeakers.isNotEmpty ? context.colorScheme.textPrimary : context.colorScheme.elevation5,
+                              fontStyle: circuitSpeakers.isEmpty ? FontStyle.italic : null,
                             ),
                           ),
                         ),
@@ -1073,13 +1060,9 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
                                         const SizedBox(width: 6),
                                         FusionAppText(
                                           text: 'Rename',
-                                          style: context.textTheme.bodySmall
-                                              ?.copyWith(
-                                                color:
-                                                    context
-                                                        .colorScheme
-                                                        .textPrimary,
-                                              ),
+                                          style: context.textTheme.bodySmall?.copyWith(
+                                            color: context.colorScheme.textPrimary,
+                                          ),
                                         ),
                                       ],
                                     ),
@@ -1098,8 +1081,7 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
                                         const SizedBox(width: 6),
                                         FusionAppText(
                                           text: 'Delete',
-                                          style: context.textTheme.bodySmall
-                                              ?.copyWith(color: Colors.red),
+                                          style: context.textTheme.bodySmall?.copyWith(color: Colors.red),
                                         ),
                                       ],
                                     ),
