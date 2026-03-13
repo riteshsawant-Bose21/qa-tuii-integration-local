@@ -1,5 +1,6 @@
 class Device {
   final String name;
+  final String serialNumber;
   final String deviceId;
   final String project;
   final String location;
@@ -9,9 +10,20 @@ class Device {
   final int incidents;
   final String image;
   final String lastSeen;
+  final String zone;
+  final String equipmentLocation;
+  final String firmware;
+  final String macAddress;
+  final bool online;
+  final int temperature;
+  final int cpuUsage;
+  final int memoryUsage;
+  final String deviceType;
+
 
   Device({
     required this.name,
+    required this.serialNumber,
     required this.deviceId,
     required this.project,
     required this.model,
@@ -21,20 +33,39 @@ class Device {
     required this.incidents,
     required this.image,
     required this.lastSeen,
+    required this.zone,
+    required this.equipmentLocation,
+    required this.firmware,
+    required this.macAddress,
+    required this.online,
+    required this.temperature,
+    required this.cpuUsage,
+    required this.memoryUsage,
+    required this.deviceType,
   });
 
   factory Device.fromJson(Map<String, dynamic> json) {
     return Device(
       name: json['name']?.toString() ?? '',
       deviceId: json['deviceId']?.toString() ?? '',
+      serialNumber: json['serialNumber']?.toString() ?? '',
       model: json['model']?.toString() ?? '',
+      type: json['deviceType']?.toString() ?? '',
       project: json['projectName']?.toString() ?? '',
       location: json['location']?.toString() ?? '',
-      type: json['deviceType']?.toString() ?? '',
+      zone: json['zone']?.toString() ?? '',
+      equipmentLocation: json['equipmentLocation']?.toString() ?? '',
       status: json['status']?.toString() ?? '',
-      incidents: json['incidents'] ?? 0,
       image: json['image']?.toString() ?? '',
       lastSeen: json['lastSeen']?.toString() ?? '',
+      firmware: json['firmware']?.toString() ?? '',
+      macAddress: json['macAddress']?.toString() ?? '',
+      incidents: json['incidents'] ?? 0,
+      online: json['online'] ?? "öffline",
+      temperature: json['temperature'] ?? 0,
+      cpuUsage: json['cpuUsage'] ?? 0,
+      memoryUsage: json['storageUsage'] ?? 0,
+      deviceType: json['macAddress']?.toString() ?? '',
     );
   }
 }

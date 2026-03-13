@@ -9,6 +9,8 @@ class DeviceActionsHandler {
     required Device device,
   }) {
     print("View details clicked");
-    context.go("/devices/${device.deviceId}");
+    context.go("/devices/${device.deviceId}",
+    extra: device,
+    );
   }
 }

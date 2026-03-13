@@ -1,3 +1,4 @@
+import 'package:fusion_web/features/devices/data/models/devices_model.dart';
 import 'package:fusion_web/features/devices/presentation/pages/device_detail_page.dart';
 import 'package:fusion_web/features/devices/presentation/pages/devices_page.dart';
 import 'package:fusion_web/features/projects/presentation/pages/project_detail_page.dart';
@@ -85,8 +86,9 @@ final GoRouter appRouter = GoRouter(
         GoRoute(
           path: '${AppConstants.devicesRoute}/:deviceId',
           builder: (context, state) {
-            final deviceId = state.pathParameters['deviceId']!;
-            return DeviceDetailPage(id: deviceId);
+            final device = state.extra as Device;
+
+            return DeviceDetailPage(device: device);
           },
         ),
 

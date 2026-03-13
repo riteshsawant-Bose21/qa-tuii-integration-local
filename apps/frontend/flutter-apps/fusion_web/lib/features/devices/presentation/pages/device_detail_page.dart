@@ -1,19 +1,21 @@
 import 'package:flutter/material.dart';
+import 'package:fusion_web/features/devices/presentation/widgets/status_indicator.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:go_router/go_router.dart';
 import 'package:fusion_web/core/constants/app_constants.dart';
+import 'package:fusion_web/features/devices/data/models/devices_model.dart';
 
 enum DeviceDetailTab { overview, incidents, activity, telemetry }
 
-class DeviceDetailPage extends StatefulWidget {
-  final String id;
 
-  const DeviceDetailPage({super.key, required this.id});
+class DeviceDetailPage extends StatefulWidget {
+  final Device device;
+
+  const DeviceDetailPage({super.key, required this.device});
 
   @override
   State<DeviceDetailPage> createState() => _DeviceDetailPageState();
 }
-
 class _DeviceDetailPageState extends State<DeviceDetailPage> {
   DeviceDetailTab _selectedTab = DeviceDetailTab.overview;
 
@@ -57,7 +59,7 @@ class _DeviceDetailPageState extends State<DeviceDetailPage> {
                     children: [
 
                       Text(
-                        "Auditorium - Line Array L",
+                        widget.device.name,
                         style: GoogleFonts.montserrat(
                           fontSize: 28,
                           fontWeight: FontWeight.w700,
@@ -67,7 +69,7 @@ class _DeviceDetailPageState extends State<DeviceDetailPage> {
                       const SizedBox(height: 8),
 
                       Text(
-                        "Serial: SM10-20001  •  ID: ${widget.id}",
+                        "Serial: ${widget.device.serialNumber}  •  ID: ${widget.device.deviceId}",
                         style: GoogleFonts.montserrat(
                           fontSize: 15,
                           color: Colors.grey[600],
@@ -77,29 +79,7 @@ class _DeviceDetailPageState extends State<DeviceDetailPage> {
                   ),
                 ),
 
-                /// STATUS PILL
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: Colors.green.withOpacity(.1),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Row(
-                    children: [
-                      const Icon(Icons.check_circle,
-                          color: Colors.green, size: 16),
-                      const SizedBox(width: 6),
-                      Text(
-                        "healthy",
-                        style: GoogleFonts.montserrat(
-                          color: Colors.green,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      )
-                    ],
-                  ),
-                )
+                StatusIndicator(status: widget.device.status),
               ],
             ),
 
@@ -108,13 +88,13 @@ class _DeviceDetailPageState extends State<DeviceDetailPage> {
             /// TOP SUMMARY CARDS
             Row(
               children: [
-                _statCard("Model", "ShowMatch SM10", "Speaker"),
+                _statCard("Model", widget.device.model, widget.device.deviceType),
                 const SizedBox(width: 16),
-                _statCard("Firmware Version", "2.1.0", "Up to date"),
+                _statCard("Firmware Version", widget.device.firmware, "Up to date"),
                 const SizedBox(width: 16),
-                _statCard("Last Seen", "Feb 6, 2026, 02:45 PM", "Online"),
+                _statCard("Last Seen", widget.device.lastSeen, "${widget.device.online}"),
                 const SizedBox(width: 16),
-                _statCard("Open Incidents", "0", "0 total"),
+                _statCard("Open Incidents", "${widget.device.incidents}", "${widget.device.incidents} total"),
               ],
             ),
 
@@ -149,23 +129,23 @@ class _DeviceDetailPageState extends State<DeviceDetailPage> {
                           _cardTitle("Device Identity"),
                           const SizedBox(height: 20),
 
-                          _detail("Name", "Auditorium - Line Array L"),
+                          _detail("Name", widget.device.name),
                           const SizedBox(height: 16),
-                          _detail("Model Name", "ShowMatch SM10"),
+                          _detail("Model Name", widget.device.model),
                           const SizedBox(height: 16),
 
                           Row(
                             children: [
                               Expanded(
                                   child:
-                                      _detail("Serial Number", "SM10-20001")),
-                              Expanded(child: _detail("Device ID", widget.id)),
+                                      _detail("Serial Number", widget.device.serialNumber)),
+                              Expanded(child: _detail("Device ID", widget.device.deviceId)),
                             ],
                           ),
 
                           const SizedBox(height: 16),
 
-                          _detail("Last Seen", "Feb 6, 2026, 02:45 PM"),
+                          _detail("Last Seen", widget.device.lastSeen),
                         ],
                       ),
                     ),
@@ -204,11 +184,11 @@ class _DeviceDetailPageState extends State<DeviceDetailPage> {
 
                           const SizedBox(height: 20),
 
-                          _telemetryRow("Temperature", "N/A"),
+                          _telemetryRow("Temperature", "${widget.device.temperature}°C"),
                           const SizedBox(height: 16),
-                          _telemetryRow("CPU Usage", "N/A"),
+                          _telemetryRow("CPU Usage", "${widget.device.cpuUsage}"),
                           const SizedBox(height: 16),
-                          _telemetryRow("RAM Usage", "N/A"),
+                          _telemetryRow("RAM Usage", "${widget.device.memoryUsage}"),
                         ],
                       ),
                     ),
