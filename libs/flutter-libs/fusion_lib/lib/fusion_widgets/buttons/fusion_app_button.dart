@@ -130,13 +130,12 @@ class _FusionAppButtonState extends State<FusionAppButton> {
   @override
   Widget build(BuildContext context) {
     return SemanticHelper.button(
-      isActive: _isDisabled,
+      isEnabled: _isDisabled,
       label: widget.text,
       testId: SemanticHelper.createTestId(
         SemanticTypes.button,
         "fusion_app_button_${widget.semanticId ?? ""}",
       ),
-      ontap: widget.onPressed,
 
       child: MouseRegion(
         onEnter: (_) {
@@ -154,9 +153,7 @@ class _FusionAppButtonState extends State<FusionAppButton> {
           }
         },
         child: GestureDetector(
-          onTapDown: _isDisabled
-              ? null
-              : (_) => setState(() => _isPressed = true),
+          onTapDown: _isDisabled ? null : (_) => setState(() => _isPressed = true),
 
           onTap: _isDisabled
               ? null
@@ -179,9 +176,7 @@ class _FusionAppButtonState extends State<FusionAppButton> {
                 : widget.child != null
                 ? 40
                 : widget.width,
-            height:
-                widget.style == FusionAppButtonStyle.tertiary ||
-                    widget.style == FusionAppButtonStyle.link
+            height: widget.style == FusionAppButtonStyle.tertiary || widget.style == FusionAppButtonStyle.link
                 ? 24
                 : widget.child != null
                 ? 40
@@ -231,9 +226,7 @@ class _FusionAppButtonState extends State<FusionAppButton> {
                         Icon(
                           widget.prefixIcon,
                           size: 16,
-                          color: !widget.enabled
-                              ? context.colorScheme.iconDisabled
-                              : context.colorScheme.textPrimary,
+                          color: !widget.enabled ? context.colorScheme.iconDisabled : context.colorScheme.textPrimary,
                         ),
                         const SizedBox(width: 8),
                       ],
@@ -253,9 +246,7 @@ class _FusionAppButtonState extends State<FusionAppButton> {
                         Icon(
                           widget.suffixIcon,
                           size: 16,
-                          color: !widget.enabled
-                              ? context.colorScheme.iconDisabled
-                              : context.colorScheme.textPrimary,
+                          color: !widget.enabled ? context.colorScheme.iconDisabled : context.colorScheme.textPrimary,
                         ),
                       ],
                       if (widget.IconButton) ...[
@@ -276,9 +267,7 @@ class _FusionAppButtonState extends State<FusionAppButton> {
                         Container(
                           decoration: BoxDecoration(
                             borderRadius: BorderRadius.circular(6),
-                            color: _isDisabled
-                                ? context.colorScheme.elevation6
-                                : context.colorScheme.primaryWhite,
+                            color: _isDisabled ? context.colorScheme.elevation6 : context.colorScheme.primaryWhite,
                           ),
                           width: 24,
                           height: 24,
@@ -344,9 +333,7 @@ class _FusionAppButtonState extends State<FusionAppButton> {
                   Container(
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(6),
-                      color: _isDisabled
-                          ? context.colorScheme.elevation6
-                          : context.colorScheme.primaryWhite,
+                      color: _isDisabled ? context.colorScheme.elevation6 : context.colorScheme.primaryWhite,
                     ),
                     width: 24,
                     height: 24,
@@ -393,8 +380,7 @@ class _FusionAppButtonState extends State<FusionAppButton> {
     }
 
     // Tertiary or Link
-    if (widget.style == FusionAppButtonStyle.tertiary ||
-        widget.style == FusionAppButtonStyle.link) {
+    if (widget.style == FusionAppButtonStyle.tertiary || widget.style == FusionAppButtonStyle.link) {
       if (_isDisabled) {
         return colorScheme.iconDisabled;
       }
@@ -617,9 +603,7 @@ class _FusionAppButtonState extends State<FusionAppButton> {
     if (widget.style == FusionAppButtonStyle.brand) {
       return TextStyle(
         fontWeight: FontWeight.w600,
-        color: _isDisabled
-            ? context.colorScheme.GreenThemeDisabledText
-            : context.colorScheme.primaryWhite,
+        color: _isDisabled ? context.colorScheme.GreenThemeDisabledText : context.colorScheme.primaryWhite,
       );
     }
 

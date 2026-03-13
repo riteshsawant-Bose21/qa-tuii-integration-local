@@ -88,7 +88,7 @@ class _ConfigurationTabSwitcherState extends State<ConfigurationTabSwitcher> {
                         '${FusionTestKeys.instance.configurationTabSwitcherItem}_${config.semantic}_option',
                       ),
                       label: widget.selectedMode.name.toString(),
-                      selected: isSelected,
+                      isSelected: isSelected,
 
                       child: Container(
                         height: 32,
