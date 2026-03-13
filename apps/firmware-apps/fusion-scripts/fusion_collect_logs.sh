@@ -125,14 +125,14 @@ collect_service_logs() {
 
   failures=0
 
-  for service in fusion-dsp fusion-system-monitor fusion-server jackd.service ptp4l@lan3 phc2sys@lan3; do
+  for service in fusion-dsp fusion-system-monitor fusion-server jackd.service ptp4l@lan1 phc2sys@lan1; do
     case "$service" in
       fusion-dsp) outfile="$outdir/fusion-dsp.log" ;;
       fusion-system-monitor) outfile="$outdir/fusion-system-monitor.log" ;;
       fusion-server) outfile="$outdir/fusion-server.log" ;;
       jackd.service) outfile="$outdir/jackd.log" ;;
-      ptp4l@lan3) outfile="$outdir/ptp4l.log" ;;
-      phc2sys@lan3) outfile="$outdir/phc2sys.log" ;;
+      ptp4l@lan1) outfile="$outdir/ptp4l.log" ;;
+      phc2sys@lan1) outfile="$outdir/phc2sys.log" ;;
       *) outfile="$outdir/${service//[@.]/_}.log" ;;
     esac
 
@@ -160,6 +160,16 @@ collect_full_journal_log() {
   local outdir="$2"
   if ! remote_to_file "$device" "journalctl --no-pager -l" "$outdir/journalctl-full.log"; then
     print_warn "[$device] Failed to collect full journalctl logs"
+    return 1
+  fi
+  return 0
+}
+
+collect_ptp_status() {
+  local device="$1"
+  local outdir="$2"
+  if ! remote_to_file "$device" "/usr/sbin/pmc -u -b 0 -f /etc/linuxptp/ptp4l.conf 'GET TIME_STATUS_NP'" "$outdir/ptp4l_time_status.txt"; then
+    print_warn "[$device] Failed to collect ptp4l TIME_STATUS_NP"
     return 1
   fi
   return 0
@@ -247,6 +257,10 @@ process_device() {
     if ! collect_full_journal_log "$device" "$outdir"; then
       local_failures=$((local_failures + 1))
     fi
+  fi
+
+  if ! collect_ptp_status "$device" "$outdir"; then
+    local_failures=$((local_failures + 1))
   fi
 
   if $CAPTURE_KERNEL; then

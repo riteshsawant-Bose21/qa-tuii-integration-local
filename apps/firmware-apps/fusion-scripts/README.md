@@ -53,6 +53,7 @@ debug_logs/
     jackd.log
     ptp4l.log
     phc2sys.log
+    ptp4l_time_status.txt
     dmesg.log
     journalctl-full.log
     devices.json
