@@ -21,18 +21,16 @@ type DeviceInfoProvider interface {
 	UpdateDeviceInfoForWebSocket(deviceID string, patch *persistence.DevicePatch) error
 }
 
-// Handler is the container for server implimentations.
+// Handler is the container for server implementations.
 type Handler struct {
-
-	appConfig      *api.AppConfig
-	memberlist     *memberlist.Memberlist //check
-	clusterTransport transport.ClusterTransport //check
+	appConfig        *api.AppConfig
+	clusterTransport transport.ClusterTransport
 
 	persistence    *persistence.Persistence
 	StateManager   *persistence.StateManager
 	hub            *pubsub.Hub
 	endpoints      []string
-	deviceProvider DeviceInfoProvider // Provides device info using same logic as REST API //check
+	deviceProvider DeviceInfoProvider // Provides device info using same logic as REST API
 
 	sessions     map[string]*SAPSession
 	sessionsLock sync.RWMutex
@@ -72,7 +70,6 @@ func NewHandler(
 func (h *Handler) SetEndpoints(endpoints []string) {
 	h.endpoints = endpoints
 }
-
 
 func (h *Handler) GetInitialState() (map[string]any, error) {
 	data := h.StateManager.GetStateMap()
@@ -181,9 +178,9 @@ func (h *Handler) GetServerInfo() (any, error) {
 		Version:     version.Version,
 		Commit:      version.Commit,
 		BuildTime:   version.BuildTime,
-		NodeID:      h.memberlist.LocalNode().Name, //h.clusterTransport.LocalNode().Name
+		NodeID:      h.clusterTransport.LocalNode().Name,
 		Endpoints:   h.endpoints,
-		ClusterSize: len(h.memberlist.Members()),
+		ClusterSize: len(h.clusterTransport.Members()),
 	}
 
 	return info, nil

@@ -175,6 +175,10 @@ func (m *VIPMonitor) Start() error {
 		return fmt.Errorf("VIP monitoring already active")
 	}
 
+	// Always use a fresh stop channel for each monitoring session.
+	// Stop() closes this channel, so reusing it across Start() calls is unsafe.
+	m.stopCh = make(chan struct{})
+
 	// // Start VRRP listener (non-local mode only)
 	// NOTE: In a case where the VIP is not set, the VRRP listener will still
 	// be started but the vip_watcher will only start when the vip is set
@@ -208,7 +212,8 @@ func (m *VIPMonitor) Start() error {
 
 	// Parse expected VIP - handle both CIDR format (192.168.2.100/24) and plain IP (192.168.2.100)
 	var expectedVIPNet *net.IPNet
-	_, expectedVIPNet, err = net.ParseCIDR(expectedVIPStr)
+	var expectedVIPIP net.IP
+	expectedVIPIP, expectedVIPNet, err = net.ParseCIDR(expectedVIPStr)
 	if err != nil {
 		// Not a CIDR, try parsing as plain IP
 		ip := net.ParseIP(expectedVIPStr)
@@ -216,6 +221,7 @@ func (m *VIPMonitor) Start() error {
 			logger.Error("Invalid VIP address %s: not a valid IP or CIDR", expectedVIPStr)
 			return fmt.Errorf("invalid VIP address: %s", expectedVIPStr)
 		}
+		expectedVIPIP = ip
 		// Create IPNet with /32 for IPv4 or /128 for IPv6
 		if ip.To4() != nil {
 			expectedVIPNet = &net.IPNet{IP: ip, Mask: net.CIDRMask(32, 32)}
@@ -223,6 +229,9 @@ func (m *VIPMonitor) Start() error {
 			expectedVIPNet = &net.IPNet{IP: ip, Mask: net.CIDRMask(128, 128)}
 		}
 		logger.Debug("Parsed plain IP %s as %s", expectedVIPStr, expectedVIPNet.String())
+	} else {
+		// Preserve the host IP from the CIDR string (ParseCIDR normalizes IPNet.IP to network address)
+		expectedVIPNet.IP = expectedVIPIP
 	}
 
 	m.stateMu.Lock()
@@ -273,11 +282,6 @@ func (m *VIPMonitor) restart() error {
 
 	// Stop current monitoring
 	m.Stop()
-
-	// Reinitialize stop channel for new monitoring session
-	m.stopMu.Lock()
-	m.stopCh = make(chan struct{})
-	m.stopMu.Unlock()
 
 	// Start monitoring with fresh config
 	if err := m.Start(); err != nil {

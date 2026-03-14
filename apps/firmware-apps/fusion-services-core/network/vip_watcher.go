@@ -131,7 +131,15 @@ func (w *VIPWatcher) watch(linkIndex int) {
 			onUpdate := w.onUpdate
 			w.mu.Unlock()
 
-			if !expectedVIP.Contains(ip) {
+			expectedIP := expectedVIP.IP
+			if expectedIP == nil {
+				w.logger.Error("[VIP watcher] expected VIP IP is not set: expected=%s", expectedVIP.String())
+				continue
+			}
+			if expectedIP.To4() != nil {
+				expectedIP = expectedIP.To4()
+			}
+			if !ip.Equal(expectedIP) {
 				w.logger.Debug("[VIP watcher] ignoring IP not in expected VIP: ip=%s expected=%s", ip, expectedVIP.String())
 				continue
 			}

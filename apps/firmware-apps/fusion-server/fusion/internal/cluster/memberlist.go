@@ -209,15 +209,15 @@ func (c *Cluster) getClusterMembersFromVip() ([]*memberlist.Node, error) {
 	for {
 		attempt++
 
-		resp, err := http.Get(url)
+		resp, err := c.httpClient.Get(url)
 		if err == nil {
-			defer resp.Body.Close()
-
 			if resp.StatusCode == http.StatusOK {
 				var members []*memberlist.Node
 				if err := json.NewDecoder(resp.Body).Decode(&members); err != nil {
 					logger.Warn("getClusterMembersFromVip: invalid JSON from %s: %v", url, err)
+					resp.Body.Close()
 				} else {
+					resp.Body.Close()
 					if attempt > 1 {
 						logger.Info("getClusterMembersFromVip: succeeded after %d attempts", attempt)
 					}
@@ -225,6 +225,7 @@ func (c *Cluster) getClusterMembersFromVip() ([]*memberlist.Node, error) {
 				}
 			} else {
 				logger.Debug("getClusterMembersFromVip: Admin API returned status %d", resp.StatusCode)
+				resp.Body.Close()
 			}
 		} else {
 			if errors.Is(err, syscall.ECONNREFUSED) {

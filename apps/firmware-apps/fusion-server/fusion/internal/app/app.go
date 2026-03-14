@@ -64,6 +64,7 @@ type App struct {
 	privateRouter     *mux.Router
 	MDNSManager       *network.MDNSManager
 	VIPMonitor        *vipmonitor.VIPMonitor
+	Hub               *pubsub.Hub
 }
 
 // NewApp is a factory function to set up the application
@@ -126,8 +127,8 @@ func NewApp(config *api.AppConfig) *App {
 		privateRouter:     privateRouter,
 		MDNSManager:       mdnsManager,
 		VIPMonitor:        vipMonitor,
+		Hub:               hub,
 	}
-
 	vipMonitor.SetCallback(app.handleVIPStateChange)
 	return app
 }
@@ -325,9 +326,8 @@ func (app *App) handleVIPStateChange(event vipmonitor.VIPEvent) {
 	logger.Debug("[VIP] State change: type=%s vip=%s holder=%s isLocal=%v",
 		event.EventType, event.VIP, event.Holder, event.IsLocalOwner)
 
-	// Handle explicit VIP removal ??
 	if event.VIP == "" {
-		logger.Warn("VIP event has VIP empty")
+		logger.Fatal("VIP event has VIP empty")
 
 		// // Stop mDNS service
 		// if err := app.MDNSManager.Close(); err != nil {
@@ -480,6 +480,7 @@ func (app *App) joinCluster(ip string) {
 	app.Cluster.SetMemberlist(memberlist)
 	app.StateManager.SetMemberlist(memberlist)
 	app.ConnectionHandler.SetClusterTransport(clusterTransport)
+	app.Hub.SetClusterTransport(clusterTransport)
 
 }
 

@@ -45,7 +45,6 @@ type VRRPPacket struct {
 
 // StartVRRPListener starts a goroutine that listens for VRRP advertisements.
 // onUpdate(vip, src) is called when the VIP ownership changes.
-// implement debouncing / cooldown
 func StartVRRPListener(logger Logger, onUpdate func(vip string, srcIP string)) error {
 	if logger == nil {
 		logger = noopLogger{}
