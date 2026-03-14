@@ -89,17 +89,17 @@ struct Spec {
 };
 
 static const Spec kSpecs[] = {
-    {"protocolversion", kPropertyProtocolVersion, ArgKind::kNone, ArgKind::kNone, ArgKind::kNone},
-    {"platformfwversion", kPropertyPlatformFirmwareVersion, ArgKind::kNone, ArgKind::kNone, ArgKind::kNone},
-    {"platformhwversion", kPropertyPlatformHardwareVersion, ArgKind::kNone, ArgKind::kNone, ArgKind::kNone},
-    {"platformampstatus", kPropertyPlatformAmpStatus, ArgKind::kIndex, ArgKind::kIndex, ArgKind::kIndex},
-    {"platformamptemp", kPropertyPlatformAmpTemp, ArgKind::kIndex, ArgKind::kIndex, ArgKind::kIndex},
-    {"platformsmcustatus", kPropertyPlatformSMCUStatus, ArgKind::kIndex, ArgKind::kIndex, ArgKind::kIndex},
-    {"platformpmcustatus", kPropertyPlatformPMCUStatus, ArgKind::kIndex, ArgKind::kIndex, ArgKind::kIndex},
-    {"platformsmpsnumber", kPropertyPlatformSMPSNumber, ArgKind::kNone, ArgKind::kNone, ArgKind::kNone},
-    {"platformreset", kPropertyPlatformReset, ArgKind::kNone, ArgKind::kBool, ArgKind::kBool},
-    {"audioampnumber", kPropertyAudioAmpNumber, ArgKind::kNone, ArgKind::kNone, ArgKind::kNone},
-    {"audioampmute", kPropertyAudioAmpMute, ArgKind::kIndex, ArgKind::kIndexBool, ArgKind::kIndexBool},
+    {"protocolversion",     kPropertyProtocolVersion,           ArgKind::kNone,  ArgKind::kNone,      ArgKind::kNone},
+    {"platformfwversion",   kPropertyPlatformFirmwareVersion,   ArgKind::kNone,  ArgKind::kNone,      ArgKind::kNone},
+    {"platformhwversion",   kPropertyPlatformHardwareVersion,   ArgKind::kNone,  ArgKind::kNone,      ArgKind::kNone},
+    {"platformampstatus",   kPropertyPlatformAmpStatus,         ArgKind::kIndex, ArgKind::kIndex,     ArgKind::kIndex},
+    {"platformamptemp",     kPropertyPlatformAmpTemp,           ArgKind::kIndex, ArgKind::kIndex,     ArgKind::kIndex},
+    {"platformsmcustatus",  kPropertyPlatformSMCUStatus,        ArgKind::kIndex, ArgKind::kIndex,     ArgKind::kIndex},
+    {"platformpmcustatus",  kPropertyPlatformPMCUStatus,        ArgKind::kIndex, ArgKind::kIndex,     ArgKind::kIndex},
+    {"platformsmpsnumber",  kPropertyPlatformSMPSNumber,        ArgKind::kNone,  ArgKind::kNone,      ArgKind::kNone},
+    {"platformreset",       kPropertyPlatformReset,             ArgKind::kNone,  ArgKind::kBool,      ArgKind::kBool},
+    {"audioampnumber",      kPropertyAudioAmpNumber,            ArgKind::kNone,  ArgKind::kNone,      ArgKind::kNone},
+    {"audioampmute",        kPropertyAudioAmpMute,              ArgKind::kIndex, ArgKind::kIndexBool, ArgKind::kIndexBool},
 };
 
 constexpr std::chrono::milliseconds kHeartbeatPeriod{2000};
@@ -124,6 +124,20 @@ constexpr bool is_response(Operator op)
     return op == Operator::kSetResponse ||
            op == Operator::kGetResponse ||
            op == Operator::kSetGetResponse;
+}
+
+const char *operator_name(Operator op)
+{
+    switch (op) {
+    case Operator::kSet: return "SET";
+    case Operator::kGet: return "GET";
+    case Operator::kSetGet: return "SETGET";
+    case Operator::kEvent: return "EVENT";
+    case Operator::kSetResponse: return "SET_RESPONSE";
+    case Operator::kGetResponse: return "GET_RESPONSE";
+    case Operator::kSetGetResponse: return "SETGET_RESPONSE";
+    default: return "UNKNOWN";
+    }
 }
 
 uint16_t crc16_ccitt(const uint8_t *data, size_t length)
@@ -502,6 +516,7 @@ private:
 
     bool enqueue_tx(Operator op, uint16_t property_id, const std::vector<uint8_t> &value);
     void drain_tx_queue();
+    bool has_queued_property(uint16_t property_id) const;
 
     void maybe_send_boot_complete();
     void maybe_send_heartbeat();
@@ -734,18 +749,23 @@ void BDIFClient::handle_rx_frame(const std::vector<uint8_t> &frame)
     }
 
     if (is_response(op) && result != 0) {
-        SPDLOG_WARN("BDIF: response error {} for property 0x{:04x}", result, property);
+        SPDLOG_ERROR("BDIF: RX {} property 0x{:04x} result={} payload={}",
+                     operator_name(op), property, result, hex_string(value_ptr, value_len));
         return;
     }
 
     if (op == Operator::kEvent) {
-        SPDLOG_INFO("BDIF: event property 0x{:04x} payload {}", property,
-                    hex_string(value_ptr, value_len));
+        SPDLOG_INFO("BDIF: RX EVENT property 0x{:04x} payload={}",
+                    property, hex_string(value_ptr, value_len));
         return;
     }
-
-    SPDLOG_TRACE("BDIF: op {} property 0x{:04x} payload {}", static_cast<int>(op),
-                 property, hex_string(value_ptr, value_len));
+    if (is_response(op)) {
+        SPDLOG_INFO("BDIF: RX {} property 0x{:04x} result={} payload={}",
+                    operator_name(op), property, result, hex_string(value_ptr, value_len));
+    } else {
+        SPDLOG_INFO("BDIF: RX {} property 0x{:04x} payload={}",
+                    operator_name(op), property, hex_string(value_ptr, value_len));
+    }
 
     auto read_u32 = [&](size_t offset, size_t count) -> uint32_t {
         uint32_t v = 0;
@@ -917,12 +937,40 @@ void BDIFClient::handle_rx_frame(const std::vector<uint8_t> &frame)
 
 bool BDIFClient::enqueue_tx(Operator op, uint16_t property_id, const std::vector<uint8_t> &value)
 {
+    if (property_id == kPropertyPlatformBootComplete) {
+        if (has_queued_property(property_id)) {
+            return true;
+        }
+
+        if (tx_queue_.size() >= kMaxTxQueue) {
+            const auto &dropped = tx_queue_.back();
+            SPDLOG_WARN("BDIF: tx queue full ({}), dropping queued property 0x{:04x} to prioritize boot_complete",
+                        tx_queue_.size(), dropped.property_id);
+            tx_queue_.pop_back();
+        }
+
+        tx_queue_.push_front(TxRequest{op, property_id, value});
+        return true;
+    }
+
+    if (!boot_complete_acked_ && tx_queue_.size() >= (kMaxTxQueue - 1)) {
+        SPDLOG_WARN("BDIF: reserving tx queue space for boot_complete, dropping property 0x{:04x}",
+                    property_id);
+        return false;
+    }
+
     if (tx_queue_.size() >= kMaxTxQueue) {
         SPDLOG_WARN("BDIF: tx queue full ({}), dropping property 0x{:04x}", tx_queue_.size(), property_id);
         return false;
     }
     tx_queue_.push_back(TxRequest{op, property_id, value});
     return true;
+}
+
+bool BDIFClient::has_queued_property(uint16_t property_id) const
+{
+    return std::any_of(tx_queue_.begin(), tx_queue_.end(),
+                       [&](const TxRequest &req) { return req.property_id == property_id; });
 }
 
 void BDIFClient::drain_tx_queue()
@@ -947,6 +995,7 @@ bool BDIFClient::parse_command(const std::string &cmd, uint16_t &property_id, st
     std::istringstream iss(cmd);
     std::string token;
     if (!(iss >> token)) {
+        SPDLOG_WARN("BDIF: empty numeric command");
         return false;
     }
 
@@ -991,6 +1040,7 @@ bool BDIFClient::send_command_from_param(const std::string &cmd, Operator op)
     uint16_t property_id = 0;
     std::vector<uint8_t> payload;
     if (cmd.empty()) {
+        SPDLOG_WARN("BDIF: empty command parameter for {}", operator_name(op));
         return false;
     }
     std::istringstream iss(cmd);
@@ -1000,6 +1050,7 @@ bool BDIFClient::send_command_from_param(const std::string &cmd, Operator op)
         tokens.push_back(token);
     }
     if (tokens.empty()) {
+        SPDLOG_WARN("BDIF: command parameter for {} contained no tokens", operator_name(op));
         return false;
     }
 
@@ -1147,6 +1198,8 @@ bool BDIFClient::send_frame(Operator op, uint16_t property_id,
                             const std::vector<uint8_t> &value)
 {
     if (!ensure_port()) {
+        SPDLOG_ERROR("BDIF: unable to send {} property 0x{:04x}; UART not ready",
+                     operator_name(op), property_id);
         return false;
     }
 
@@ -1180,8 +1233,13 @@ bool BDIFClient::send_frame(Operator op, uint16_t property_id,
 
     std::lock_guard<std::mutex> lock(tx_mutex_);
     if (!port_.write_all(frame.data(), frame.size())) {
+        SPDLOG_ERROR("BDIF: TX {} property 0x{:04x} failed payload={}",
+                     operator_name(op), property_id, hex_string(value.data(), value.size()));
         return false;
     }
+
+    SPDLOG_INFO("BDIF: TX {} property 0x{:04x} payload={}",
+                operator_name(op), property_id, hex_string(value.data(), value.size()));
 
     return true;
 }
@@ -1250,21 +1308,21 @@ void BDIFClient::check_heartbeat_timeout()
 void BDIFClient::handle_set_post_func()
 {
     if (!send_command_from_param(set_cmd_, Operator::kSet)) {
-        SPDLOG_WARN("BDIF: failed to enqueue set command '{}'", set_cmd_);
+        SPDLOG_ERROR("BDIF: failed to enqueue set command '{}'", set_cmd_);
     }
 }
 
 void BDIFClient::handle_get_post_func()
 {
     if (!send_command_from_param(get_cmd_, Operator::kGet)) {
-        SPDLOG_WARN("BDIF: failed to enqueue get command '{}'", get_cmd_);
+        SPDLOG_ERROR("BDIF: failed to enqueue get command '{}'", get_cmd_);
     }
 }
 
 void BDIFClient::handle_setget_post_func()
 {
     if (!send_command_from_param(setget_cmd_, Operator::kSetGet)) {
-        SPDLOG_WARN("BDIF: failed to enqueue setget command '{}'", setget_cmd_);
+        SPDLOG_ERROR("BDIF: failed to enqueue setget command '{}'", setget_cmd_);
     }
 }
 
