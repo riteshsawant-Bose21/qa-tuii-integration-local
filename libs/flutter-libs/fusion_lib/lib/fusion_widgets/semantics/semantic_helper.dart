@@ -35,6 +35,7 @@ class SemanticHelper {
     bool explicitChildNodes = false,
     String? label,
     String? value,
+    bool? isChecked,
   }) {
     return Semantics(
       value: value,
@@ -43,6 +44,7 @@ class SemanticHelper {
       explicitChildNodes: explicitChildNodes,
       label: label,
       child: child,
+      checked: isChecked,
     );
   }
 
