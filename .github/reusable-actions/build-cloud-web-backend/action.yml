@@ -82,6 +82,16 @@ runs:
         password: ${{ inputs.AWS_SECRET_ACCESS_KEY_DEV }}
     
     - name: Push docker image
+      if: >-
+        ${{
+          (
+            github.event_name == 'push' &&
+            (
+              github.ref_name == 'develop' ||
+              startsWith(github.ref_name, 'release/')
+            )
+          )
+        }}
       shell: bash
       working-directory: apps/cloud-backend/fusion-core
       run: |
@@ -93,6 +103,16 @@ runs:
         docker push ${{ inputs.DOCKER_REGISTRY_DEV }}/go-image-product-data:latest
         
     - name: Trigger new ECS deployment
+      if: >-
+        ${{
+          (
+            github.event_name == 'push' &&
+            (
+              github.ref_name == 'develop' ||
+              startsWith(github.ref_name, 'release/')
+            )
+          )
+        }}
       shell: bash
       working-directory: apps/cloud-backend/fusion-core
       env:
