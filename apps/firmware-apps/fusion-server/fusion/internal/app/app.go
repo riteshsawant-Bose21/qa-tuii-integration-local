@@ -9,7 +9,6 @@ import (
 	"fusion-services-core/vip"
 	"fusion/internal/api"
 	"fusion/internal/cluster"
-	clustertransport "fusion/internal/cluster/transport"
 	"fusion/internal/controllers"
 	"fusion/internal/network"
 	"fusion/internal/persistence"
@@ -80,12 +79,12 @@ func NewApp(config *api.AppConfig) *App {
 	taskManager := initTaskManager(config, persistence, hub)
 	controllerManager := controllers.NewControllerManager(hub, api.ControllerPort)
 	delegate := cluster.NewClusterDelegate(config, persistence, stateManager, taskManager, hub)
+
 	memberlist := cluster.CreateMemberlist(config, delegate)
-	transport := clustertransport.NewMemberlistTransport(memberlist)
-	hub.SetClusterTransport(transport)
-	connectionHandler := handler.NewHandler(config, transport, persistence, stateManager, hub, controllerManager)
-	mdnsManager := initMDNSManager()
 	clusterInstance := cluster.NewCluster(config, delegate, memberlist)
+	hub.SetClusterTransport(clusterInstance)
+	connectionHandler := handler.NewHandler(config, clusterInstance, persistence, stateManager, hub, controllerManager)
+	mdnsManager := initMDNSManager()
 	bleServer := initBLEServer()
 	sapServer := initSAPServer(config, api.SAPPort, connectionHandler, hub)
 	udpServer := initUDPServer(api.UDPPort, connectionHandler, hub)
@@ -94,7 +93,6 @@ func NewApp(config *api.AppConfig) *App {
 	// Initialize VIPMonitor
 	vipMonitor := vipmonitor.NewVIPMonitor(config.NetIface, config.Local, clusterInstance)
 	clusterInstance.SetVIPMonitor(vipMonitor)
-	connectionHandler.SetDeviceProvider(clusterInstance) //Check
 
 	// Setup the public routes
 	publicRouter := mux.NewRouter()
@@ -207,11 +205,11 @@ func (app *App) setupPublicRoutes() {
 	app.registerPublicGET(routes.ControllersIDWinkEndpoint, app.Server.TriggerWinkById)
 
 	// Device
-	app.registerPublicGET(routes.DevicesEndpoint, app.Cluster.GetDevicesInfo)
+	app.registerPublicGET(routes.DevicesEndpoint, app.Server.GetDevicesInfo)
 	app.registerPublicGET(routes.DevicesVIPEndpoint, app.VIPMonitor.HandleGetVIP)
 	app.registerPublicPOST(routes.DevicesSetVIPEndpoint, app.VIPMonitor.HandleSetVIP)
 	app.registerPublicPOST(routes.DeviceReloadVIPEndpoint, app.VIPMonitor.HandleReloadVIP)
-	app.registerPublicPATCH(routes.DevicesIDEndpoint, app.Cluster.UpdateDeviceInfo)
+	app.registerPublicPATCH(routes.DevicesIDEndpoint, app.Server.UpdateDeviceInfo)
 
 	// Endpoints
 	app.registerPublicGET(routes.EndpointsEndpoint, routes.ListRegisteredEndpoints)
@@ -290,9 +288,8 @@ func (app *App) setupPrivateRoutes() {
 	app.registerPrivateGET(routes.ClusterLatencyStatusLocalEndpoint, app.Cluster.GetLatencyStatusLocal)
 	app.registerPrivatePOST(routes.ClusterRebootLocalEndpoint, app.Cluster.RebootSystemLocal)
 
-	app.registerPrivateGET(routes.DeviceEndpoint, app.Cluster.GetDeviceInfo)
-	app.registerPrivatePOST(routes.DeviceEndpoint, app.Cluster.SetDeviceInfo)
-	app.registerPrivatePATCH(routes.DeviceEndpoint, app.Cluster.UpdateDeviceInfoLocal)
+	app.registerPrivateGET(routes.DeviceEndpoint, app.Server.GetDeviceInfoLocal)
+	app.registerPrivatePATCH(routes.DeviceEndpoint, app.Server.UpdateDeviceInfoLocal)
 	app.registerPrivateGET(routes.DevicesVIPEndpoint, app.VIPMonitor.HandleGetVIP)
 	app.registerPrivatePOST(routes.DevicesSetVIPEndpoint, app.VIPMonitor.HandleUpdateVIPLocal)
 	app.registerPrivatePOST(routes.DeviceReloadVIPEndpoint, app.VIPMonitor.HandleReloadVIPLocal)
@@ -475,12 +472,11 @@ func (app *App) leaveCluster() {
 func (app *App) joinCluster(ip string) {
 	app.config.BindAddr = ip
 	memberlist := cluster.CreateMemberlist(app.config, app.Delegate)
-	clusterTransport := clustertransport.NewMemberlistTransport(memberlist)
 	app.memberlist = memberlist
 	app.Cluster.SetMemberlist(memberlist)
 	app.StateManager.SetMemberlist(memberlist)
-	app.ConnectionHandler.SetClusterTransport(clusterTransport)
-	app.Hub.SetClusterTransport(clusterTransport)
+	app.ConnectionHandler.SetClusterTransport(app.Cluster)
+	app.Hub.SetClusterTransport(app.Cluster)
 
 }
 

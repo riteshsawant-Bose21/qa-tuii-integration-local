@@ -1,13 +1,10 @@
 package cluster
 
 import (
-	"bytes"
 	"errors"
 	"fmt"
 	"fusion-services-core/logging"
 	"fusion/internal/api"
-	"fusion/internal/network"
-	"fusion/internal/persistence"
 	"fusion/internal/routes"
 	"fusion/internal/utils"
 	"io"
@@ -19,6 +16,7 @@ import (
 	"time"
 
 	json "github.com/goccy/go-json"
+	hashicorpMemberlist "github.com/hashicorp/memberlist"
 
 	"github.com/hashicorp/memberlist"
 )
@@ -33,6 +31,7 @@ const (
 	retryTimes          = 5
 	serialPath          = "/sys/firmware/devicetree/base/serial-number"
 	firmwarePath        = "/etc/buildinfo"
+	modelUnknown        = "Unknown"
 	serialUnknown       = "Unknown"
 	firmwareUnknown     = "Unknown"
 	macUnknown          = "Unknown"
@@ -48,20 +47,16 @@ const (
 	vipMembersMaxDuration    = 5 * time.Minute
 )
 
-type MemberlistTransport struct {
-	ml *memberlist.Memberlist
+func (c *Cluster) LocalNode() *hashicorpMemberlist.Node {
+	return c.memberlist.LocalNode()
 }
 
-func (t *MemberlistTransport) LocalNode() *memberlist.Node {
-	return t.ml.LocalNode()
+func (c *Cluster) MemberListMembers() []*hashicorpMemberlist.Node {
+	return c.memberlist.Members()
 }
 
-func (t *MemberlistTransport) Members() []*memberlist.Node {
-	return t.ml.Members()
-}
-
-func (t *MemberlistTransport) SendReliable(n *memberlist.Node, msg []byte) error {
-	return t.ml.SendReliable(n, msg)
+func (c *Cluster) SendReliable(node *hashicorpMemberlist.Node, msg []byte) error {
+	return c.memberlist.SendReliable(node, msg)
 }
 
 // CreateMemberlist creates and configures a new memberlist instance
@@ -130,8 +125,6 @@ func (c *Cluster) JoinMemberlist() error {
 		if err == nil {
 			members := c.memberlist.Members()
 			logger.Debug("[MEMBERLIST] Successfully joined cluster of size %d", len(members))
-
-			c.updateDeviceInfo()
 
 			if c.appConfig.Verbose {
 				for _, member := range members {
@@ -271,58 +264,4 @@ func (c *Cluster) getJoinAddresses(bindAddr string) ([]string, error) {
 	}
 
 	return filteredAddrs, nil
-}
-
-// updateDeviceInfo updates the persisted device info
-func (c *Cluster) updateDeviceInfo() {
-
-	var info persistence.DeviceInfo
-	savedInfo, err := c.delegate.persistence.GetDeviceInfo()
-	if err == nil {
-		info = *savedInfo
-	}
-
-	info.Address = c.appConfig.BindAddr
-	if info.Id == "" {
-		info.Id = c.appConfig.NodeName + "_instance"
-	}
-
-	if info.Name == "" {
-		info.Name = c.appConfig.NodeName
-	}
-
-	if info.SerialNumber == "" {
-		data, err := os.ReadFile(serialPath)
-		if err != nil {
-			logging.GetLogger().Warn("%s not found.", serialPath)
-			info.SerialNumber = serialUnknown
-		} else {
-			info.SerialNumber = string(bytes.TrimRight(data, "\x00\n"))
-		}
-	}
-
-	if info.FirmwareVersion == "" {
-		data, err := os.ReadFile(firmwarePath)
-		if err != nil {
-			logging.GetLogger().Warn("%s not found.", firmwarePath)
-			info.FirmwareVersion = firmwareUnknown
-		} else {
-			info.FirmwareVersion = string(bytes.TrimRight(data, "\x00\n"))
-		}
-	}
-
-	if info.MacAddress == "" {
-		macAddr, err := network.GetMacAddress()
-		if err != nil {
-			logging.GetLogger().Warn("Unable to read MAC address: %v", err)
-			info.MacAddress = macUnknown
-		} else {
-			info.MacAddress = macAddr
-		}
-	}
-
-	if err := c.delegate.persistence.SetDeviceInfo(&info); err != nil {
-		logging.GetLogger().Error("Unable to update device info: %v", err)
-		return
-	}
 }
