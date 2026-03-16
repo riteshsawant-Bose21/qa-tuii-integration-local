@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/api/types"
+	constants "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/constants"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/model/models"
 	errorutils "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/utils/errorutil"
 	"go.uber.org/zap"
@@ -217,7 +218,18 @@ func (s *Service) GetAllProjects(ctx context.Context, queryParams *types.GetAllP
 // GetProjectById retrieves a project by its ID with metadata.
 func (s *Service) GetProjectById(ctx context.Context, projectID string, userAuth types.UserAuthorizationResponse, logger *zap.Logger) (*types.Project, error) {
 	// SelectByID handles user assignment validation via JOIN and returns full project with metadata
-	project, err := s.dbService.SelectByID(ctx, projectID, userAuth, logger)
+	var project *types.Project
+	var err error
+
+	switch userAuth.Role.RoleName {
+	case constants.SuperAdminRoleName:
+		project, err = s.dbService.SuperAdminProjectByID(ctx, projectID, userAuth, logger)
+	case constants.AdminRoleName:
+		project, err = s.dbService.AdminProjectByID(ctx, projectID, userAuth, logger)
+	default:
+		project, err = s.dbService.UserProjectByID(ctx, projectID, userAuth, logger)
+	}
+
 	if err != nil {
 		return nil, err
 	}

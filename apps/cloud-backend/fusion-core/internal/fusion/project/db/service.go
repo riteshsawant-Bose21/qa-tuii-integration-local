@@ -244,49 +244,174 @@ func (s *Service) SelectAll(ctx context.Context, queryParams *types.GetAllProjec
 	return projectsArray, nil
 }
 
-// SelectByID retrieves a single project by ID with user-specific metadata.
-func (s *Service) SelectByID(ctx context.Context, projectID string, userAuth types.UserAuthorizationResponse, logger *zap.Logger) (*types.Project, error) {
+// SuperAdminProjectByID retrieves a single project by ID with user-specific metadata for Super Admins.
+func (s *Service) SuperAdminProjectByID(ctx context.Context, projectID string, userAuth types.UserAuthorizationResponse, logger *zap.Logger) (*types.Project, error) {
 	var rows *sql.Rows
 	var err error
 
-	switch userAuth.Role.RoleName {
-		case constants.SuperAdminRoleName:
-			query := `
-				SELECT p.id, p.name, p.description, p.venue, 
-					p.environment_type, p.project_phase, p.application, p.budget_amount, 
-					p.currency, p.is_archived, p.is_deleted, p.locked_by_user_id, 
-					p.created_at, p.updated_at, COALESCE(pu.is_starred, false) as is_starred, u.email as locked_by_user_email
-				FROM project p
-				LEFT JOIN project_user pu ON p.id = pu.project_id AND pu.user_id = $2
-				LEFT JOIN app_user u ON p.locked_by_user_id = u.id
-				WHERE p.id = $1 AND p.is_deleted = $3
-			`
-			rows, err = s.db.QueryContext(ctx, query, projectID, userAuth.User.ID, false)
-		case constants.AdminRoleName:
-			query := `
-				SELECT p.id, p.name, p.description, p.venue, 
-					p.environment_type, p.project_phase, p.application, p.budget_amount, 
-					p.currency, p.is_archived, p.is_deleted, p.locked_by_user_id, 
-					p.created_at, p.updated_at, COALESCE(pu.is_starred, false) as is_starred, u.email as locked_by_user_email
-				FROM project p
-				LEFT JOIN project_user pu ON p.id = pu.project_id AND pu.user_id = $2
-				LEFT JOIN app_user u ON p.locked_by_user_id = u.id
-				WHERE p.id = $1 AND p.primary_owner_account_id = $3 AND p.is_deleted = $4
-			`
-			rows, err = s.db.QueryContext(ctx, query, projectID, userAuth.User.ID, userAuth.Account.ID, false)
-		default:
-			query := `
-				SELECT p.id, p.name, p.description, p.venue, 
-					p.environment_type, p.project_phase, p.application, p.budget_amount, 
-					p.currency, p.is_archived, p.is_deleted, p.locked_by_user_id, 
-					p.created_at, p.updated_at, pu.is_starred, u.email as locked_by_user_email
-				FROM project p
-				INNER JOIN project_user pu ON p.id = pu.project_id
-				LEFT JOIN app_user u ON p.locked_by_user_id = u.id
-				WHERE p.id = $1 AND pu.user_id = $2 AND p.is_deleted = $3
-			`
-			rows, err = s.db.QueryContext(ctx, query, projectID, userAuth.User.ID, false)
+	query := `
+		SELECT p.id, p.name, p.description, p.venue, 
+			p.environment_type, p.project_phase, p.application, p.budget_amount, 
+			p.currency, p.is_archived, p.is_deleted, p.locked_by_user_id, 
+			p.created_at, p.updated_at, COALESCE(pu.is_starred, false) as is_starred, u.email as locked_by_user_email
+		FROM project p
+		LEFT JOIN project_user pu ON p.id = pu.project_id AND pu.user_id = $2
+		LEFT JOIN app_user u ON p.locked_by_user_id = u.id
+		WHERE p.id = $1 AND p.is_deleted = $3
+	`
+	rows, err = s.db.QueryContext(ctx, query, projectID, userAuth.User.ID, false)
+
+	var projectRow model.Project
+	var isStarred bool
+	var lockedByUserEmail sql.NullString
+
+	if err != nil {
+		logger.Error(errorutils.ErrMsgFailedToGetProject,
+			zap.Error(err),
+			zap.String("project_id", projectID),
+			zap.String("user_id", userAuth.User.ID))
+		return nil, errors.New(errorutils.ErrMsgFailedToGetProject)
 	}
+
+	if !rows.Next() {
+		return nil, errors.New(errorutils.ErrMsgProjectNotFound)
+	}
+
+	err = rows.Scan(
+		&projectRow.ID,
+		&projectRow.Name,
+		&projectRow.Description,
+		&projectRow.Venue,
+		&projectRow.EnvironmentType,
+		&projectRow.ProjectPhase,
+		&projectRow.Application,
+		&projectRow.BudgetAmount,
+		&projectRow.Currency,
+		&projectRow.IsArchived,
+		&projectRow.IsDeleted,
+		&projectRow.LockedByUserID,
+		&projectRow.CreatedAt,
+		&projectRow.UpdatedAt,
+		&isStarred,
+		&lockedByUserEmail,
+	)
+
+	if err != nil {
+		logger.Error(errorutils.ErrMsgFailedToParseRow,
+			zap.Error(err),
+			zap.String("project_id", projectID))
+		return nil, errors.New(errorutils.ErrMsgFailedToParseRow)
+	}
+
+	projectWithMetadata := customModel.GetProjectModel{
+		Project:           projectRow,
+		IsStarred:         isStarred,
+		LockedByUserEmail: lockedByUserEmail.String,
+	}
+
+	project, err := newProject(&projectWithMetadata)
+	if err != nil {
+		logger.Error(errorutils.ErrMsgFailedToParseRow,
+			zap.Error(err),
+			zap.String("project_id", projectID))
+		return nil, errors.New(errorutils.ErrMsgFailedToParseRow)
+	}
+
+	return project, nil
+}
+
+// AdminProjectByID retrieves a single project by ID with user-specific metadata for Admins.
+func (s *Service) AdminProjectByID(ctx context.Context, projectID string, userAuth types.UserAuthorizationResponse, logger *zap.Logger) (*types.Project, error) {
+	var rows *sql.Rows
+	var err error
+
+	query := `
+		SELECT p.id, p.name, p.description, p.venue, 
+			p.environment_type, p.project_phase, p.application, p.budget_amount, 
+			p.currency, p.is_archived, p.is_deleted, p.locked_by_user_id, 
+			p.created_at, p.updated_at, COALESCE(pu.is_starred, false) as is_starred, u.email as locked_by_user_email
+		FROM project p
+		LEFT JOIN project_user pu ON p.id = pu.project_id AND pu.user_id = $2
+		LEFT JOIN app_user u ON p.locked_by_user_id = u.id
+		WHERE p.id = $1 AND p.primary_owner_account_id = $3 AND p.is_deleted = $4
+	`
+	rows, err = s.db.QueryContext(ctx, query, projectID, userAuth.User.ID, userAuth.Account.ID, false)
+
+	var projectRow model.Project
+	var isStarred bool
+	var lockedByUserEmail sql.NullString
+
+	if err != nil {
+		logger.Error(errorutils.ErrMsgFailedToGetProject,
+			zap.Error(err),
+			zap.String("project_id", projectID),
+			zap.String("user_id", userAuth.User.ID))
+		return nil, errors.New(errorutils.ErrMsgFailedToGetProject)
+	}
+
+	if !rows.Next() {
+		return nil, errors.New(errorutils.ErrMsgProjectNotFound)
+	}
+
+	err = rows.Scan(
+		&projectRow.ID,
+		&projectRow.Name,
+		&projectRow.Description,
+		&projectRow.Venue,
+		&projectRow.EnvironmentType,
+		&projectRow.ProjectPhase,
+		&projectRow.Application,
+		&projectRow.BudgetAmount,
+		&projectRow.Currency,
+		&projectRow.IsArchived,
+		&projectRow.IsDeleted,
+		&projectRow.LockedByUserID,
+		&projectRow.CreatedAt,
+		&projectRow.UpdatedAt,
+		&isStarred,
+		&lockedByUserEmail,
+	)
+
+	if err != nil {
+		logger.Error(errorutils.ErrMsgFailedToParseRow,
+			zap.Error(err),
+			zap.String("project_id", projectID))
+		return nil, errors.New(errorutils.ErrMsgFailedToParseRow)
+	}
+
+	projectWithMetadata := customModel.GetProjectModel{
+		Project:           projectRow,
+		IsStarred:         isStarred,
+		LockedByUserEmail: lockedByUserEmail.String,
+	}
+
+	project, err := newProject(&projectWithMetadata)
+	if err != nil {
+		logger.Error(errorutils.ErrMsgFailedToParseRow,
+			zap.Error(err),
+			zap.String("project_id", projectID))
+		return nil, errors.New(errorutils.ErrMsgFailedToParseRow)
+	}
+
+	return project, nil
+}
+
+// UserProjectByID retrieves a single project by ID with user-specific metadata.
+func (s *Service) UserProjectByID(ctx context.Context, projectID string, userAuth types.UserAuthorizationResponse, logger *zap.Logger) (*types.Project, error) {
+	var rows *sql.Rows
+	var err error
+
+	query := `
+		SELECT p.id, p.name, p.description, p.venue, 
+			p.environment_type, p.project_phase, p.application, p.budget_amount, 
+			p.currency, p.is_archived, p.is_deleted, p.locked_by_user_id, 
+			p.created_at, p.updated_at, pu.is_starred, u.email as locked_by_user_email
+		FROM project p
+		INNER JOIN project_user pu ON p.id = pu.project_id
+		LEFT JOIN app_user u ON p.locked_by_user_id = u.id
+		WHERE p.id = $1 AND pu.user_id = $2 AND p.is_deleted = $3
+	`
+	rows, err = s.db.QueryContext(ctx, query, projectID, userAuth.User.ID, false)
 
 	var projectRow model.Project
 	var isStarred bool
