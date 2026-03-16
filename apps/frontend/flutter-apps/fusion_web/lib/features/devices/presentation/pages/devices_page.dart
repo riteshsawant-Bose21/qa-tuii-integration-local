@@ -3,11 +3,11 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_web/features/devices/presentation/viewmodels/devices_viewmodel.dart';
 import 'package:fusion_web/features/devices/data/repositories/devices_repository_impl.dart';
 import 'package:fusion_web/features/devices/data/datasources/device_datasource.dart';
-import 'package:fusion_web/features/devices/presentation/widgets/device_grid_view.dart';
-import 'package:fusion_web/features/devices/presentation/widgets/device_overview.dart';
-import 'package:fusion_web/features/devices/presentation/widgets/devices_header.dart';
-import 'package:fusion_web/features/devices/presentation/widgets/device_filters.dart';
-import 'package:fusion_web/features/devices/presentation/widgets/devices_list_view.dart';
+import 'package:fusion_web/features/devices/presentation/widgets/device_page_widgets/device_grid_view.dart';
+import 'package:fusion_web/features/devices/presentation/widgets/device_page_widgets/device_overview.dart';
+import 'package:fusion_web/features/devices/presentation/widgets/device_page_widgets/devices_header.dart';
+import 'package:fusion_web/features/devices/presentation/widgets/device_page_widgets/device_filters.dart';
+import 'package:fusion_web/features/devices/presentation/widgets/device_page_widgets/devices_list_view.dart';
 import 'package:fusion_web/core/presentation/base_viewmodel.dart';
 import 'package:fusion_web/features/devices/data/models/devices_model.dart';
 

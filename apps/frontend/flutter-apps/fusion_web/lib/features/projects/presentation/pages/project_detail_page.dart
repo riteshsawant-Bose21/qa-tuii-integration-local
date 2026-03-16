@@ -102,20 +102,38 @@ class _ProjectDetailPageState extends State<ProjectDetailPage> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   /// BACK
-                  InkWell(
-                    onTap: () => context.go(AppConstants.projectsRoute),
-                    child: Row(
-                      children: [
-                        const Icon(Icons.arrow_back, size: 18),
-                        const SizedBox(width: 8),
-                        Text(
-                          "Back to Projects",
-                          style: GoogleFonts.montserrat(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w500,
-                          ),
+                  TextButton.icon(
+                    onPressed: () => context.go(AppConstants.projectsRoute),
+                    icon: const Icon(
+                      Icons.arrow_back,
+                      size: 18,
+                      color: Colors.black,
+                    ),
+                    label: Text(
+                      "Back to Projects",
+                      style: GoogleFonts.montserrat(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                        color: Colors.black,
+                      ),
+                    ),
+                    style: ButtonStyle(
+                      backgroundColor: WidgetStateProperty.resolveWith((
+                        states,
+                      ) {
+                        if (states.contains(WidgetState.hovered)) {
+                          return Colors.grey[200]; // hover background
+                        }
+                        return Colors.transparent;
+                      }),
+                      padding: WidgetStateProperty.all(
+                        const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                      ),
+                      shape: WidgetStateProperty.all(
+                        RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(6),
                         ),
-                      ],
+                      ),
                     ),
                   ),
 

@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:fusion_web/features/devices/presentation/handlers/devices_action_handler.dart';
-import 'package:fusion_web/features/devices/presentation/widgets/status_indicator.dart';
+import 'package:fusion_web/features/devices/presentation/widgets/common_widgets/status_indicator.dart';
 import 'package:google_fonts/google_fonts.dart';
-import '../../data/models/devices_model.dart';
+import '../../../data/models/devices_model.dart';
 
 class DeviceRow extends StatelessWidget {
   final Device device;

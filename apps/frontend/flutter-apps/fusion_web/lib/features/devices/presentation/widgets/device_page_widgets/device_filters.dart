@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:fusion_web/features/devices/presentation/widgets/filter_dropdown.dart';
-import 'package:fusion_web/features/devices/presentation/widgets/view_toggle_button.dart';
+import 'package:fusion_web/features/devices/presentation/widgets/common_widgets/filter_dropdown.dart';
+import 'package:fusion_web/features/devices/presentation/widgets/device_page_widgets/view_toggle_button.dart';
 
 class DeviceFilters extends StatelessWidget {
   final TextEditingController searchController;

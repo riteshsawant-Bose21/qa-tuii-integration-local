@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../data/models/devices_model.dart';
+import '../../../data/models/devices_model.dart';
 import 'device_row.dart';
 import 'device_table_header.dart';
 

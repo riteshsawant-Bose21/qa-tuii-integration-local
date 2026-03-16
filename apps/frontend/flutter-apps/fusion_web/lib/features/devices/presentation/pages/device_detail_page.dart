@@ -1,12 +1,15 @@
 import 'package:flutter/material.dart';
-import 'package:fusion_web/features/devices/presentation/widgets/status_indicator.dart';
+import 'package:fusion_web/features/devices/presentation/widgets/common_widgets/status_indicator.dart';
+import 'package:fusion_web/features/devices/presentation/widgets/device_detail_page_widgets/device_activity_tab.dart';
+import 'package:fusion_web/features/devices/presentation/widgets/device_detail_page_widgets/device_incidents_tab.dart';
+import 'package:fusion_web/features/devices/presentation/widgets/device_detail_page_widgets/device_overview_tab.dart';
+import 'package:fusion_web/features/devices/presentation/widgets/device_detail_page_widgets/device_telemetry_tab.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:go_router/go_router.dart';
 import 'package:fusion_web/core/constants/app_constants.dart';
 import 'package:fusion_web/features/devices/data/models/devices_model.dart';
 
 enum DeviceDetailTab { overview, incidents, activity, telemetry }
-
 
 class DeviceDetailPage extends StatefulWidget {
   final Device device;
@@ -16,6 +19,7 @@ class DeviceDetailPage extends StatefulWidget {
   @override
   State<DeviceDetailPage> createState() => _DeviceDetailPageState();
 }
+
 class _DeviceDetailPageState extends State<DeviceDetailPage> {
   DeviceDetailTab _selectedTab = DeviceDetailTab.overview;
 
@@ -28,22 +32,25 @@ class _DeviceDetailPageState extends State<DeviceDetailPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-
             /// BACK BUTTON
-            InkWell(
-              onTap: () => context.go(AppConstants.devicesRoute),
-              child: Row(
-                children: [
-                  const Icon(Icons.arrow_back, size: 18),
-                  const SizedBox(width: 8),
-                  Text(
-                    "Back to Devices",
-                    style: GoogleFonts.montserrat(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ],
+            TextButton.icon(
+              onPressed: () => context.go(AppConstants.devicesRoute),
+              icon: const Icon(Icons.arrow_back, size: 18, color: Colors.black),
+              label: Text(
+                "Back to Devices",
+                style: GoogleFonts.montserrat(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                  color: Colors.black,
+                ),
+              ),
+              style: ButtonStyle(
+                backgroundColor: WidgetStateProperty.resolveWith((states) {
+                  if (states.contains(WidgetState.hovered)) {
+                    return Colors.grey[200];
+                  }
+                  return Colors.transparent;
+                }),
               ),
             ),
 
@@ -57,7 +64,6 @@ class _DeviceDetailPageState extends State<DeviceDetailPage> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-
                       Text(
                         widget.device.name,
                         style: GoogleFonts.montserrat(
@@ -65,20 +71,14 @@ class _DeviceDetailPageState extends State<DeviceDetailPage> {
                           fontWeight: FontWeight.w700,
                         ),
                       ),
-
                       const SizedBox(height: 8),
-
                       Text(
                         "Serial: ${widget.device.serialNumber}  •  ID: ${widget.device.deviceId}",
-                        style: GoogleFonts.montserrat(
-                          fontSize: 15,
-                          color: Colors.grey[600],
-                        ),
+                        style: GoogleFonts.montserrat(fontSize: 15),
                       ),
                     ],
                   ),
                 ),
-
                 StatusIndicator(status: widget.device.status),
               ],
             ),
@@ -86,122 +86,114 @@ class _DeviceDetailPageState extends State<DeviceDetailPage> {
             const SizedBox(height: 28),
 
             /// TOP SUMMARY CARDS
-            Row(
-              children: [
-                _statCard("Model", widget.device.model, widget.device.deviceType),
-                const SizedBox(width: 16),
-                _statCard("Firmware Version", widget.device.firmware, "Up to date"),
-                const SizedBox(width: 16),
-                _statCard("Last Seen", widget.device.lastSeen, "${widget.device.online}"),
-                const SizedBox(width: 16),
-                _statCard("Open Incidents", "${widget.device.incidents}", "${widget.device.incidents} total"),
-              ],
+            IntrinsicHeight(
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Expanded(
+                    child: _statCard(
+                      "Model",
+                      widget.device.model,
+                      widget.device.deviceType,
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+
+                  Expanded(
+                    child: _statCard(
+                      "Firmware Version",
+                      widget.device.firmware,
+                      "Up to date",
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+
+                  Expanded(
+                    child: _statCard(
+                      "Last Seen",
+                      widget.device.lastSeen,
+                      "${widget.device.online}",
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+
+                  Expanded(
+                    child: _statCard(
+                      "Open Incidents",
+                      "${widget.device.incidents}",
+                      "${widget.device.incidents} total",
+                    ),
+                  ),
+                ],
+              ),
             ),
 
             const SizedBox(height: 32),
 
             /// TABS
-            Row(
-              children: [
-                _tabButton("Overview", DeviceDetailTab.overview),
-                const SizedBox(width: 8),
-                _tabButton("Incidents", DeviceDetailTab.incidents),
-                const SizedBox(width: 8),
-                _tabButton("Activity", DeviceDetailTab.activity),
-                const SizedBox(width: 8),
-                _tabButton("Telemetry", DeviceDetailTab.telemetry),
-              ],
-            ),
+            _tabs(),
 
             const SizedBox(height: 24),
 
             if (_selectedTab == DeviceDetailTab.overview)
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
+              DeviceOverviewTab(device: widget.device),
 
-                  /// DEVICE IDENTITY CARD
-                  Expanded(
-                    child: _card(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          _cardTitle("Device Identity"),
-                          const SizedBox(height: 20),
+            if (_selectedTab == DeviceDetailTab.incidents)
+              DeviceIncidentsTab(incidents: widget.device.incidents,),
 
-                          _detail("Name", widget.device.name),
-                          const SizedBox(height: 16),
-                          _detail("Model Name", widget.device.model),
-                          const SizedBox(height: 16),
+            if (_selectedTab == DeviceDetailTab.activity)
+              const DeviceActivityTab(),
 
-                          Row(
-                            children: [
-                              Expanded(
-                                  child:
-                                      _detail("Serial Number", widget.device.serialNumber)),
-                              Expanded(child: _detail("Device ID", widget.device.deviceId)),
-                            ],
-                          ),
-
-                          const SizedBox(height: 16),
-
-                          _detail("Last Seen", widget.device.lastSeen),
-                        ],
-                      ),
-                    ),
-                  ),
-
-                  const SizedBox(width: 24),
-
-                  /// TELEMETRY CARD
-                  Expanded(
-                    child: _card(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          _cardTitle("Device Status / Telemetry"),
-                          const SizedBox(height: 20),
-
-                          Row(
-                            children: [
-                              const Icon(Icons.wifi, color: Colors.green),
-                              const SizedBox(width: 8),
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 12, vertical: 4),
-                                decoration: BoxDecoration(
-                                  color: Colors.black,
-                                  borderRadius: BorderRadius.circular(20),
-                                ),
-                                child: Text(
-                                  "Online",
-                                  style: GoogleFonts.montserrat(
-                                      color: Colors.white, fontSize: 12),
-                                ),
-                              ),
-                            ],
-                          ),
-
-                          const SizedBox(height: 20),
-
-                          _telemetryRow("Temperature", "${widget.device.temperature}°C"),
-                          const SizedBox(height: 16),
-                          _telemetryRow("CPU Usage", "${widget.device.cpuUsage}"),
-                          const SizedBox(height: 16),
-                          _telemetryRow("RAM Usage", "${widget.device.memoryUsage}"),
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
-              ),
+            if (_selectedTab == DeviceDetailTab.telemetry)
+              const DeviceTelemetryTab(),
           ],
         ),
       ),
     );
   }
 
-  /// COMPONENTS
+  /// TABS CONTAINER
+  Widget _tabs() {
+    return Container(
+      padding: const EdgeInsets.all(6),
+      decoration: BoxDecoration(
+        color: const Color(0xFFE9E9E9),
+        borderRadius: BorderRadius.circular(24),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          _tabButton("Overview", DeviceDetailTab.overview),
+          _tabButton("Incidents", DeviceDetailTab.incidents),
+          _tabButton("Activity", DeviceDetailTab.activity),
+          _tabButton("Telemetry", DeviceDetailTab.telemetry),
+        ],
+      ),
+    );
+  }
+
+  Widget _tabButton(String text, DeviceDetailTab tab) {
+    final selected = _selectedTab == tab;
+
+    return GestureDetector(
+      onTap: () => setState(() => _selectedTab = tab),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        margin: const EdgeInsets.symmetric(horizontal: 4),
+        decoration: BoxDecoration(
+          color: selected ? Colors.white : Colors.transparent,
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Text(
+          text,
+          style: GoogleFonts.montserrat(
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ),
+    );
+  }
 
   Widget _card({required Widget child}) {
     return Container(
@@ -209,6 +201,7 @@ class _DeviceDetailPageState extends State<DeviceDetailPage> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFE5E5E5)),
       ),
       child: child,
     );
@@ -217,8 +210,7 @@ class _DeviceDetailPageState extends State<DeviceDetailPage> {
   Widget _cardTitle(String text) {
     return Text(
       text,
-      style:
-          GoogleFonts.montserrat(fontSize: 18, fontWeight: FontWeight.w600),
+      style: GoogleFonts.montserrat(fontSize: 18, fontWeight: FontWeight.w600),
     );
   }
 
@@ -228,10 +220,7 @@ class _DeviceDetailPageState extends State<DeviceDetailPage> {
       children: [
         Text(
           label,
-          style: GoogleFonts.montserrat(
-            fontSize: 13,
-            color: Colors.grey[500],
-          ),
+          style: GoogleFonts.montserrat(fontSize: 13, color: Colors.grey[500]),
         ),
         const SizedBox(height: 4),
         Text(
@@ -245,83 +234,90 @@ class _DeviceDetailPageState extends State<DeviceDetailPage> {
     );
   }
 
-  Widget _telemetryRow(String label, String value) {
+  Widget _telemetryRow(String label, dynamic value) {
     return Row(
       children: [
-        const Icon(Icons.thermostat_outlined, size: 18),
-        const SizedBox(width: 8),
-        Text(
-          label,
-          style: GoogleFonts.montserrat(fontSize: 14),
+        Expanded(
+          child: Text(
+            label,
+            style: GoogleFonts.montserrat(
+              fontSize: 14,
+              color: Colors.grey[700],
+            ),
+          ),
         ),
-        const Spacer(),
-        Text(
-          value,
-          style: GoogleFonts.montserrat(fontSize: 14),
-        )
+        value is Widget
+            ? value
+            : Text(
+                value.toString(),
+                style: GoogleFonts.montserrat(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
       ],
     );
   }
 
   Widget _statCard(String title, String value, String subtitle) {
-    return Expanded(
-      child: Container(
-        padding: const EdgeInsets.all(20),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              title,
-              style: GoogleFonts.montserrat(
-                fontSize: 13,
-                color: Colors.grey[600],
-              ),
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFE5E5E5)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: GoogleFonts.montserrat(
+              fontSize: 13,
+              color: Colors.grey[600],
             ),
-            const SizedBox(height: 8),
-            Text(
-              value,
-              style: GoogleFonts.montserrat(
-                fontSize: 20,
-                fontWeight: FontWeight.w700,
-              ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            value,
+            style: GoogleFonts.montserrat(
+              fontSize: 20,
+              fontWeight: FontWeight.w700,
             ),
-            const SizedBox(height: 4),
-            Text(
-              subtitle,
-              style: GoogleFonts.montserrat(
-                fontSize: 12,
-                color: Colors.grey[500],
-              ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            subtitle,
+            style: GoogleFonts.montserrat(
+              fontSize: 12,
+              color: Colors.grey[500],
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
+}
 
-  Widget _tabButton(String text, DeviceDetailTab tab) {
-    final selected = _selectedTab == tab;
-
-    return InkWell(
-      onTap: () => setState(() => _selectedTab = tab),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-        decoration: BoxDecoration(
-          color: selected ? Colors.grey[300] : Colors.transparent,
-          borderRadius: BorderRadius.circular(20),
-        ),
-        child: Text(
+Widget _actionButton({required IconData icon, required String text}) {
+  return Container(
+    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+    decoration: BoxDecoration(
+      borderRadius: BorderRadius.circular(12),
+      border: Border.all(color: const Color(0xFFE5E5E5)),
+    ),
+    child: Row(
+      children: [
+        Icon(icon, size: 20),
+        const SizedBox(width: 12),
+        Text(
           text,
           style: GoogleFonts.montserrat(
-            fontSize: 13,
-            fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
+            fontSize: 14,
+            fontWeight: FontWeight.w500,
           ),
         ),
-      ),
-    );
-  }
+      ],
+    ),
+  );
 }
