@@ -5,12 +5,10 @@ import (
 	"fmt"
 	"fusion-services-core/logging"
 	"fusion/internal/api"
-	"fusion/internal/network"
 	"fusion/internal/routes"
 	"io"
 	"net"
 	"net/http"
-	"os"
 
 	json "github.com/goccy/go-json"
 )
@@ -108,15 +106,16 @@ func (c *Cluster) getDeviceInfoLocal() api.DeviceInfo {
 	}
 
 	deviceInfo := api.DeviceInfo{
-		Id:              id,
-		Name:            name,
-		Location:        location,
-		Address:         c.appConfig.BindAddr,
-		ModelName:       c.getModelName(),
-		SerialNumber:    c.getSerialNumber(),
-		FirmwareVersion: c.getFirmwareVersion(),
-		MacAddress:      c.getMacAddress(),
-		IsPrimaryNode:   c.isLocalNodePrimary(),
+		Id:                       id,
+		Name:                     name,
+		Location:                 location,
+		Address:                  c.appConfig.BindAddr,
+		ModelName:                c.getModelName(),
+		SerialNumber:             c.getSerialNumber(),
+		FirmwareVersion:          c.getFirmwareVersion(),
+		MacAddress:               c.getMacAddress(),
+		IsPrimaryNode:            c.isLocalNodePrimary(),
+		IsDeviceCertificateValid: c.isCertificateValid(),
 	}
 
 	return deviceInfo
@@ -212,39 +211,6 @@ func validateNoDuplication(
 	}
 
 	return nil
-}
-
-func (c *Cluster) getModelName() string {
-	return modelUnknown
-}
-
-func (c *Cluster) getFirmwareVersion() string {
-	data, err := os.ReadFile(firmwarePath)
-	if err != nil {
-		logging.GetLogger().Warn("%s not found.", firmwarePath)
-		return firmwareUnknown
-	} else {
-		return string(bytes.TrimRight(data, "\x00\n"))
-	}
-}
-
-func (c *Cluster) getSerialNumber() string {
-	data, err := os.ReadFile(serialPath)
-	if err != nil {
-		logging.GetLogger().Warn("%s not found.", serialPath)
-		return serialUnknown
-	} else {
-		return string(bytes.TrimRight(data, "\x00\n"))
-	}
-}
-
-func (c *Cluster) getMacAddress() string {
-	macAddr, err := network.GetMacAddress()
-	if err != nil {
-		logging.GetLogger().Warn("Unable to read MAC address: %v", err)
-		return macUnknown
-	}
-	return macAddr
 }
 
 // refreshDeviceDefaults seeds default Id and Name into persistence on startup if not already set.

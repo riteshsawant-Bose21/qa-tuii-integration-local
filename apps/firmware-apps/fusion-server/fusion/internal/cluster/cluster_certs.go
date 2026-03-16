@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"fusion-services-core/logging"
 	"fusion/internal/api"
-	"fusion/internal/persistence"
 	"fusion/internal/routes"
 	"fusion/internal/utils"
 	"io"
@@ -16,192 +15,197 @@ import (
 	"os"
 	"strings"
 	"time"
-
-	json "github.com/goccy/go-json"
 )
 
-// GetCSR returns the local device's CSR content.
-func (c *Cluster) GetCSR(w http.ResponseWriter, r *http.Request) {
-	if !utils.RequireGet(w, r) {
-		return
-	}
-
+// GetLocalCSR returns the local device's CSR content.
+func (c *Cluster) GetLocalCSR() ([]byte, error) {
 	csrContent, err := os.ReadFile(fmt.Sprintf("%s%s", utils.DefaultIdentityFilePath, utils.DefaultCSRFileName))
 	if err != nil {
 		if os.IsNotExist(err) {
-			http.Error(w, "CSR file not found", http.StatusNotFound)
-			return
+			return nil, fmt.Errorf("CSR file not found")
 		}
 		logging.GetLogger().Error("Error reading CSR file: %v", err)
-		http.Error(w, fmt.Sprintf("Error reading CSR file: %v", err), http.StatusInternalServerError)
-		return
+		return nil, fmt.Errorf("Error reading CSR file: %v", err)
 	}
-
-	w.Header().Set(api.ContentType, "text/plain")
-	w.Write(csrContent)
+	return csrContent, nil
 }
 
 // SetDeviceCertificate sets or updates the certificate for a device.
-func (c *Cluster) SetDeviceCertificate(w http.ResponseWriter, r *http.Request) {
-	if !utils.RequirePost(w, r) {
-		return
-	}
-	defer r.Body.Close()
-
-	deviceId, err := utils.ExtractId(r)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
+func (c *Cluster) SetDeviceCertificate(deviceID string, certPEM []byte) error {
 
 	deviceInfos := c.fetchAllDeviceInfos()
 
-	var targetDevice *persistence.DeviceInfo
+	var targetDevice *api.DeviceInfo
 	for _, info := range deviceInfos {
-		if info.Id == deviceId {
+		if info.Id == deviceID {
 			targetDevice = &info
 			break
 		}
 	}
 
 	if targetDevice == nil {
-		http.Error(w, fmt.Sprintf("Device %s not found", deviceId), http.StatusNotFound)
-		return
+		return fmt.Errorf("Device %s not found", deviceID)
 	}
 
-	certContent, err := io.ReadAll(r.Body)
-	if err != nil {
-		http.Error(w, fmt.Sprintf("Error reading certificate data: %v", err), http.StatusBadRequest)
-		return
+	if certPEM == nil {
+		return fmt.Errorf("Certificate data is empty")
 	}
 
 	if c.hostIsLocal(targetDevice.Address) {
 
 		// Check if we should replace the certificate
-		shouldReplace, err := c.shouldReplaceCertificate(fmt.Sprintf("%s%s", utils.DefaultIdentityFilePath, utils.DefaultCertFileName), certContent)
+		shouldReplace, err := c.shouldReplaceCertificate(fmt.Sprintf("%s%s", utils.DefaultIdentityFilePath, utils.DefaultCertFileName), certPEM)
 		if err != nil {
 			logging.GetLogger().Error("Error checking certificate replacement: %v", err)
-			http.Error(w, fmt.Sprintf("Error checking certificate: %v", err), http.StatusInternalServerError)
-			return
+			return err
 		}
 
 		if !shouldReplace {
 			logging.GetLogger().Info("Certificate is still valid and not near expiry, skipping replacement")
-			w.Header().Set(api.ContentType, api.JsonMIMEType)
-			w.WriteHeader(http.StatusOK)
-			if err := json.NewEncoder(w).Encode(map[string]string{
-				"message": "Certificate not updated - existing certificate is still valid",
-				"action":  "skipped",
-				"reason":  "certificate_still_valid",
-			}); err != nil {
-				logging.GetLogger().Error("Error encoding certificate response: %v", err)
-			}
-			return
+			return nil
 		}
 
 		// If this is the local device, write certificate locally
-		if err := os.WriteFile(fmt.Sprintf("%s%s", utils.DefaultIdentityFilePath, utils.DefaultCertFileName), certContent, 0644); err != nil {
+		if err := os.WriteFile(fmt.Sprintf("%s%s", utils.DefaultIdentityFilePath, utils.DefaultCertFileName), certPEM, 0644); err != nil {
 			logging.GetLogger().Error("Error writing certificate file: %v", err)
-			http.Error(w, fmt.Sprintf("Error writing certificate file: %v", err), http.StatusInternalServerError)
-			return
-		}
-
-		info, err := c.delegate.persistence.GetDeviceInfo()
-
-		info.IsClaimed = true
-
-		if err := c.delegate.persistence.SetDeviceInfo(info); err != nil {
-			http.Error(w, fmt.Sprintf("Failed to set device info: %v", err), http.StatusInternalServerError)
-			return
+			return err
 		}
 
 		logging.GetLogger().Info("Certificate replaced successfully")
-		w.WriteHeader(http.StatusNoContent)
+
 	} else {
 		// Make HTTP POST request to the remote device's admin certificate endpoint
 		deviceAddress := net.JoinHostPort(targetDevice.Address, api.AdminPort)
-		endpoint := strings.Replace(routes.DevicesIDCertificateEndpoint, "{id}", deviceId, 1)
+		endpoint := strings.Replace(routes.DevicesIDCertificateEndpoint, "{id}", deviceID, 1)
 		url := getLocalURL(deviceAddress, endpoint)
 
-		req, err := http.NewRequest(http.MethodPost, url, bytes.NewReader(certContent))
+		req, err := http.NewRequest(http.MethodPost, url, bytes.NewReader(certPEM))
 		if err != nil {
-			http.Error(w, fmt.Sprintf("Failed to create POST request: %v", err), http.StatusInternalServerError)
-			return
+			logging.GetLogger().Error("Error creating certificate request: %v", err)
+			return err
 		}
 		req.Header.Set(api.ContentType, "text/plain")
 
 		resp, err := c.httpClient.Do(req)
 		if err != nil {
-			http.Error(w, fmt.Sprintf("Failed to send certificate to device: %v", err), http.StatusBadGateway)
-			return
+			logging.GetLogger().Error("Error sending certificate request: %v", err)
+			return err
 		}
 		defer resp.Body.Close()
 
+		body, _ := io.ReadAll(resp.Body)
 		if resp.StatusCode != http.StatusNoContent {
-			body, _ := io.ReadAll(resp.Body)
+
 			logging.GetLogger().Error("Remote certificate request to %s failed with status %d: %s", url, resp.StatusCode, string(body))
-			http.Error(w, fmt.Sprintf("Device returned error: %s", string(body)), resp.StatusCode)
-			return
+			return fmt.Errorf("remote certificate request failed with status %d: %s", resp.StatusCode, string(body))
 		}
 
-		w.WriteHeader(http.StatusNoContent)
+		logging.GetLogger().Info("Certificate replaced successfully on remote device")
 	}
+
+	return nil
 }
 
 // GetDeviceCSR retrieves the CSR for a specific device by ID.
-func (c *Cluster) GetDeviceCSR(w http.ResponseWriter, r *http.Request) {
-	if !utils.RequireGet(w, r) {
-		return
-	}
-
-	deviceId, err := utils.ExtractId(r)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
+func (c *Cluster) GetDeviceCSR(deviceID string) ([]byte, error) {
 
 	deviceInfos := c.fetchAllDeviceInfos()
 
-	var targetDevice *persistence.DeviceInfo
+	var targetDevice *api.DeviceInfo
 	for _, info := range deviceInfos {
-		if info.Id == deviceId {
+		if info.Id == deviceID {
 			targetDevice = &info
 			break
 		}
 	}
 
 	if targetDevice == nil {
-		http.Error(w, fmt.Sprintf("Device %s not found", deviceId), http.StatusNotFound)
-		return
+		return nil, fmt.Errorf("Device %s not found", deviceID)
 	}
 
 	if c.hostIsLocal(targetDevice.Address) {
 		// If this is the local device, call the local GetCSR function
-		c.GetCSR(w, r)
-		return
+		return c.GetLocalCSR()
 	} else {
 		// Make HTTP request to the remote device's admin CSR endpoint
 		deviceAddress := net.JoinHostPort(targetDevice.Address, api.AdminPort)
-		url := getLocalURL(deviceAddress, routes.DevicesGetCSREndpoint)
+		endpoint := strings.Replace(routes.DevicesGetCSREndpoint, "{id}", deviceID, 1)
+		url := getLocalURL(deviceAddress, endpoint)
 
 		resp, err := c.httpClient.Get(url)
 		if err != nil {
-			http.Error(w, fmt.Sprintf("Failed to get CSR from device: %v", err), http.StatusBadGateway)
-			return
+			return nil, fmt.Errorf("failed to get CSR from device: %v", err)
+		}
+		defer resp.Body.Close()
+		body, _ := io.ReadAll(resp.Body)
+
+		if resp.StatusCode != http.StatusOK {
+			logging.GetLogger().Error("Remote CSR request to %s failed with status %d: %s", url, resp.StatusCode, string(body))
+			return nil, fmt.Errorf("device returned error: %s", string(body))
+		}
+
+		return body, nil
+	}
+}
+
+// ResetDevice performs a reset on the specified device. If the device is local, it resets the local system. If the device is remote, it sends a reset request to that device.
+func (c *Cluster) ResetDeviceCertificate(deviceID string) error {
+
+	deviceInfos := c.fetchAllDeviceInfos()
+
+	var targetDevice *api.DeviceInfo
+	for _, info := range deviceInfos {
+		if info.Id == deviceID {
+			targetDevice = &info
+			break
+		}
+	}
+
+	if targetDevice == nil {
+		return fmt.Errorf("device %s not found", deviceID)
+	}
+
+	if c.hostIsLocal(targetDevice.Address) {
+		// If this is the local device, perform reset locally
+		if err := c.resetLocalDevice(); err != nil {
+			return fmt.Errorf("failed to reset device: %v", err)
+		}
+		return nil
+	} else {
+		// Make HTTP DELETE request to the remote device's admin reset endpoint
+		deviceAddress := net.JoinHostPort(targetDevice.Address, api.AdminPort)
+		endpoint := strings.Replace(routes.DevicesIDResetEndpoint, "{id}", deviceID, 1)
+		url := getLocalURL(deviceAddress, endpoint)
+
+		req, err := http.NewRequest(http.MethodDelete, url, nil)
+		if err != nil {
+			return fmt.Errorf("failed to create DELETE request: %v", err)
+		}
+
+		resp, err := c.httpClient.Do(req)
+		if err != nil {
+			return fmt.Errorf("failed to send reset request to device: %v", err)
 		}
 		defer resp.Body.Close()
 
-		if resp.StatusCode != http.StatusOK {
+		if resp.StatusCode != http.StatusNoContent {
 			body, _ := io.ReadAll(resp.Body)
-			logging.GetLogger().Error("Remote CSR request to %s failed with status %d: %s", url, resp.StatusCode, string(body))
-			http.Error(w, fmt.Sprintf("Device returned error: %s", string(body)), resp.StatusCode)
-			return
+			logging.GetLogger().Error("Remote reset request to %s failed with status %d: %s", url, resp.StatusCode, string(body))
+			return fmt.Errorf("device returned error: %s", string(body))
 		}
-
-		// Copy the response headers and body
-		w.Header().Set(api.ContentType, "text/plain")
-		io.Copy(w, resp.Body)
 	}
+
+	return nil
+}
+
+// resetLocalDevice performs the necessary steps to reset the local device, such as removing certificates
+func (c *Cluster) resetLocalDevice() error {
+	err := os.Remove(fmt.Sprintf("%s%s", utils.DefaultIdentityFilePath, utils.DefaultCertFileName))
+	if err != nil && !os.IsNotExist(err) {
+		return fmt.Errorf("error removing certificate file: %v", err)
+	}
+
+	return nil
 }
 
 // shouldReplaceCertificate determines if a certificate should be replaced
@@ -230,7 +234,7 @@ func (c *Cluster) shouldReplaceCertificate(certPath string, newCertContent []byt
 	}
 
 	// Check if existing certificate is expired or near expiry
-	isExpiredOrNear, err := c.isCertificateExpiredOrNearExpiry(certPath, 3) // 3 months threshold
+	isExpiredOrNear, err := c.isCertificateContentExpiredOrNearExpiry(existingContent, 3) // 3 months threshold
 	if err != nil {
 		logging.GetLogger().Warn("Failed to check certificate expiry, will replace: %v", err)
 		return true, nil
@@ -256,28 +260,18 @@ func (c *Cluster) shouldReplaceCertificate(certPath string, newCertContent []byt
 	return true, nil
 }
 
-// isCertificateExpiredOrNearExpiry checks if a certificate file is expired or near expiry
-func (c *Cluster) isCertificateExpiredOrNearExpiry(certPath string, monthsThreshold int) (bool, error) {
-	certContent, err := os.ReadFile(certPath)
-	if err != nil {
-		return false, fmt.Errorf("failed to read certificate file: %v", err)
-	}
-
-	return c.isCertificateContentExpiredOrNearExpiry(certContent, monthsThreshold)
-}
-
 // isCertificateContentExpiredOrNearExpiry checks if certificate content is expired or near expiry
 func (c *Cluster) isCertificateContentExpiredOrNearExpiry(certContent []byte, monthsThreshold int) (bool, error) {
 	// Decode PEM block
 	block, _ := pem.Decode(certContent)
 	if block == nil {
-		return false, fmt.Errorf("failed to decode PEM block")
+		return true, fmt.Errorf("failed to decode PEM block")
 	}
 
 	// Parse certificate
 	cert, err := x509.ParseCertificate(block.Bytes)
 	if err != nil {
-		return false, fmt.Errorf("failed to parse certificate: %v", err)
+		return true, fmt.Errorf("failed to parse certificate: %v", err)
 	}
 
 	now := time.Now()
@@ -299,90 +293,4 @@ func (c *Cluster) isCertificateContentExpiredOrNearExpiry(certContent []byte, mo
 
 	logging.GetLogger().Debug("Certificate is valid until %v", cert.NotAfter)
 	return false, nil
-}
-
-// ResetDevice performs a reset on the specified device. If the device is local, it resets the local system. If the device is remote, it sends a reset request to that device.
-func (c *Cluster) ResetDevice(w http.ResponseWriter, r *http.Request) {
-	if !utils.RequireDelete(w, r) {
-		return
-	}
-
-	deviceId, err := utils.ExtractId(r)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-
-	deviceInfos := c.fetchAllDeviceInfos()
-
-	var targetDevice *persistence.DeviceInfo
-	for _, info := range deviceInfos {
-		if info.Id == deviceId {
-			targetDevice = &info
-			break
-		}
-	}
-
-	if targetDevice == nil {
-		http.Error(w, fmt.Sprintf("Device %s not found", deviceId), http.StatusNotFound)
-		return
-	}
-
-	if c.hostIsLocal(targetDevice.Address) {
-		// If this is the local device, perform reset locally
-		if err := c.resetLocalDevice(); err != nil {
-			http.Error(w, fmt.Sprintf("Failed to reset device: %v", err), http.StatusInternalServerError)
-			return
-		}
-		w.WriteHeader(http.StatusNoContent)
-		return
-	} else {
-		// Make HTTP DELETE request to the remote device's admin reset endpoint
-		deviceAddress := net.JoinHostPort(targetDevice.Address, api.AdminPort)
-		endpoint := strings.Replace(routes.DevicesIDResetEndpoint, "{id}", deviceId, 1)
-		url := getLocalURL(deviceAddress, endpoint)
-
-		req, err := http.NewRequest(http.MethodDelete, url, nil)
-		if err != nil {
-			http.Error(w, fmt.Sprintf("Failed to create DELETE request: %v", err), http.StatusInternalServerError)
-			return
-		}
-
-		resp, err := c.httpClient.Do(req)
-		if err != nil {
-			http.Error(w, fmt.Sprintf("Failed to send reset request to device: %v", err), http.StatusBadGateway)
-			return
-		}
-		defer resp.Body.Close()
-
-		if resp.StatusCode != http.StatusNoContent {
-			body, _ := io.ReadAll(resp.Body)
-			logging.GetLogger().Error("Remote reset request to %s failed with status %d: %s", url, resp.StatusCode, string(body))
-			http.Error(w, fmt.Sprintf("Device returned error: %s", string(body)), resp.StatusCode)
-			return
-		}
-		w.WriteHeader(http.StatusNoContent)
-	}
-
-	w.WriteHeader(http.StatusNoContent)
-}
-
-// resetLocalDevice performs the necessary steps to reset the local device, such as removing certificates and updating device info.
-func (c *Cluster) resetLocalDevice() error {
-	info, err := c.delegate.persistence.GetDeviceInfo()
-	if err != nil {
-		return fmt.Errorf("error loading device info: %v", err)
-	}
-	err = os.Remove(fmt.Sprintf("%s%s", utils.DefaultIdentityFilePath, utils.DefaultCertFileName))
-	if err != nil && !os.IsNotExist(err) {
-		return fmt.Errorf("error removing certificate file: %v", err)
-	}
-
-	info.IsClaimed = false
-
-	if err := c.delegate.persistence.SetDeviceInfo(info); err != nil {
-		return fmt.Errorf("failed to set device info: %v", err)
-	}
-
-	return nil
 }

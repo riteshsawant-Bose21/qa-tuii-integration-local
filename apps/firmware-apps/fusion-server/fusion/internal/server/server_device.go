@@ -5,6 +5,7 @@ import (
 	"fusion-services-core/logging"
 	"fusion/internal/api"
 	"fusion/internal/utils"
+	"io"
 	"net/http"
 
 	json "github.com/goccy/go-json"
@@ -82,3 +83,71 @@ func (c *FusionServer) UpdateDeviceInfoLocal(w http.ResponseWriter, r *http.Requ
 
 	w.WriteHeader(http.StatusNoContent)
 }
+
+func (c *FusionServer) GetCSR(w http.ResponseWriter, r *http.Request) {
+	if !utils.RequireGet(w, r) {
+		return
+	}
+	deviceID, err := utils.ExtractId(r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	csr, err := c.handler.HandleGetCSR(deviceID)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("Error getting CSR: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set(api.ContentType, api.TextMIMEType)
+	w.Write(csr)
+}
+
+func (c *FusionServer) SetDeviceCertificate(w http.ResponseWriter, r *http.Request) {
+	if !utils.RequirePost(w, r) {
+		return
+	}
+	defer r.Body.Close()
+
+	deviceId, err := utils.ExtractId(r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	certBytes, err := io.ReadAll(r.Body)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("Error reading certificate: %v", err), http.StatusBadRequest)
+		return
+	}
+
+	err = c.handler.HandleSetDeviceCertificate(deviceId, certBytes)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("Error setting device certificate: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func (c *FusionServer) ResetDeviceCertificate(w http.ResponseWriter, r *http.Request) {
+	if !utils.RequireDelete(w, r) {
+		return
+	}
+
+	deviceId, err := utils.ExtractId(r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	err = c.handler.ResetDeviceCertificate(deviceId)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("Error resetting device certificate: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
+}
+

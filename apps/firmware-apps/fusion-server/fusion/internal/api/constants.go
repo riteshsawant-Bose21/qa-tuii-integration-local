@@ -14,6 +14,7 @@ const (
 
 	ContentType  = "Content-Type"
 	JsonMIMEType = "application/json"
+	TextMIMEType = "text/plain"
 	Protocol     = "http://"
 
 	FusionEpoch     = "_fusion_epoch"
