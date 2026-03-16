@@ -394,11 +394,7 @@ public:
     updateInternalState(path, new_state);
     Json::Value newData = data_;
 
-    // Allow forced notifications for specific paths even if the value didn't change.
-    const bool force_notify =
-        (path.rfind("settings.fw.amp_control", 0) == 0);
-
-    if (!force_notify && oldData == newData) {
+    if (oldData == newData) {
       if (verbose_) {
         log("No change detected for path: " + path);
       }
@@ -758,7 +754,7 @@ private:
     std::string message;
 
     if (path_parts[0].key == "settings") {
-      if ((old_val != new_val) || (path_parts[2].key == "amp_control")) {
+      if ((old_val != new_val)) {
         message = "{ \"target\": \"" + path_parts[2].key + "\""
             + ", \"name\": \"" + path_parts[3].key + "\""
             + ((path_parts.size() > 4 && path_parts[4].isArrayAccess)
