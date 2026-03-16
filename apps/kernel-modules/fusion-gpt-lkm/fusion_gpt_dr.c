@@ -14,6 +14,7 @@
 #include <linux/seqlock.h>
 #include <linux/clk.h>
 #include <linux/rcupdate.h>
+#include <linux/string.h>
 #include "fusion_gpt_client.h"
 
 /* VCXO disciplining */
@@ -60,6 +61,62 @@
 #define DEFAULT_DAC_I2C_BUS      0
 #define DEFAULT_DAC_I2C_ADDR     0x62
 #define DEFAULT_SI5351B_I2C_ADDR 0x60
+
+enum cal_state {
+	CAL_IDLE = 0,
+	CAL_APPLY_POINT,
+	CAL_SETTLE,
+	CAL_MEASURE,
+	CAL_FIT,
+	CAL_APPLY_JUMP,
+	CAL_DONE,
+	CAL_FAIL,
+};
+
+/* Startup local-surface identification + one-shot jump */
+static bool cal_enable = true;
+module_param(cal_enable, bool, 0644);
+MODULE_PARM_DESC(cal_enable, "Enable startup gain/dac surface calibration");
+
+static u32 cal_gain_delta = 10000;
+module_param(cal_gain_delta, uint, 0644);
+MODULE_PARM_DESC(cal_gain_delta, "Gain perturbation for startup probes");
+
+static u32 cal_dac_delta = 8;
+module_param(cal_dac_delta, uint, 0644);
+MODULE_PARM_DESC(cal_dac_delta, "DAC perturbation for startup probes");
+
+static u32 cal_settle_pps = 3;
+module_param(cal_settle_pps, uint, 0644);
+MODULE_PARM_DESC(cal_settle_pps, "PPS samples to settle after each probe write");
+
+static u32 cal_measure_pps = 4;
+module_param(cal_measure_pps, uint, 0644);
+MODULE_PARM_DESC(cal_measure_pps, "PPS samples to average per probe point");
+
+static u32 cal_fit_residual_thresh = 30;
+module_param(cal_fit_residual_thresh, uint, 0644);
+MODULE_PARM_DESC(cal_fit_residual_thresh, "Maximum mean residual (ticks) accepted for model fit");
+
+static u32 cal_lambda_gain = 4;
+module_param(cal_lambda_gain, uint, 0644);
+MODULE_PARM_DESC(cal_lambda_gain, "Gain move penalty for one-shot optimization");
+
+static u32 cal_lambda_dac = 4;
+module_param(cal_lambda_dac, uint, 0644);
+MODULE_PARM_DESC(cal_lambda_dac, "DAC move penalty for one-shot optimization");
+
+static u32 cal_max_gain_step = 60000;
+module_param(cal_max_gain_step, uint, 0644);
+MODULE_PARM_DESC(cal_max_gain_step, "Maximum absolute gain jump from startup center");
+
+static u32 cal_max_dac_step = 64;
+module_param(cal_max_dac_step, uint, 0644);
+MODULE_PARM_DESC(cal_max_dac_step, "Maximum absolute DAC jump from startup center");
+
+static u32 cal_gain_search_step = 1000;
+module_param(cal_gain_search_step, uint, 0644);
+MODULE_PARM_DESC(cal_gain_search_step, "Gain step used in bounded one-shot target search");
 
 struct fusion_gpt
 {
@@ -119,6 +176,22 @@ struct fusion_gpt
   u32 si_gain_min;
   u32 si_gain_max;
   bool si_gain_pending;
+
+  /* Startup calibration state */
+  enum cal_state cal_state;
+  int cal_probe_idx;
+  u32 cal_settle_left;
+  u32 cal_measure_left;
+  s64 cal_err_accum;
+  u32 cal_err_samples;
+  u32 cal_center_gain;
+  int cal_center_dac;
+  u32 cal_probe_gain[5];
+  int cal_probe_dac[5];
+  long cal_probe_mean[5];
+  s32 cal_k1_q16;
+  s32 cal_k2_q16;
+  s32 cal_k3_q16;
 };
 
 
@@ -345,6 +418,131 @@ static void gpt_program_next_compare(struct fusion_gpt *g)
 	wrl(g, g->next_ocr1, GPT_OCR1);
 }
 
+static inline bool cal_active(const struct fusion_gpt *g)
+{
+	return g->cal_state != CAL_IDLE &&
+	       g->cal_state != CAL_DONE &&
+	       g->cal_state != CAL_FAIL;
+}
+
+static void cal_prepare_points(struct fusion_gpt *g)
+{
+	u32 g0 = g->si_gain_current;
+	int d0 = clamp(g->dac_target, 0, 255);
+	u32 dg = max_t(u32, 1, cal_gain_delta);
+	int dd = max_t(int, 1, (int)cal_dac_delta);
+
+	g->cal_center_gain = g0;
+	g->cal_center_dac = d0;
+
+	g->cal_probe_gain[0] = g0;
+	g->cal_probe_dac[0] = d0;
+	g->cal_probe_gain[1] = clamp(g0 + dg, g->si_gain_min, g->si_gain_max);
+	g->cal_probe_dac[1] = d0;
+	g->cal_probe_gain[2] = clamp(g0 - dg, g->si_gain_min, g->si_gain_max);
+	g->cal_probe_dac[2] = d0;
+	g->cal_probe_gain[3] = g0;
+	g->cal_probe_dac[3] = clamp(d0 + dd, 0, 255);
+	g->cal_probe_gain[4] = clamp(g0 + dg, g->si_gain_min, g->si_gain_max);
+	g->cal_probe_dac[4] = clamp(d0 + dd, 0, 255);
+
+	g->cal_probe_idx = 0;
+	g->cal_settle_left = 0;
+	g->cal_measure_left = 0;
+	g->cal_err_accum = 0;
+	g->cal_err_samples = 0;
+}
+
+static bool cal_fit_model(struct fusion_gpt *g, u32 *mean_residual_out)
+{
+	s64 e0 = g->cal_probe_mean[0];
+	s64 e1 = g->cal_probe_mean[1];
+	s64 e2 = g->cal_probe_mean[2];
+	s64 e3 = g->cal_probe_mean[3];
+	s64 e4 = g->cal_probe_mean[4];
+	s64 dg1 = (s64)g->cal_probe_gain[1] - (s64)g->cal_center_gain;
+	s64 dg2 = (s64)g->cal_probe_gain[2] - (s64)g->cal_center_gain;
+	s64 dd3 = (s64)g->cal_probe_dac[3] - (s64)g->cal_center_dac;
+	s64 dg4 = (s64)g->cal_probe_gain[4] - (s64)g->cal_center_gain;
+	s64 dd4 = (s64)g->cal_probe_dac[4] - (s64)g->cal_center_dac;
+	s64 denom_g = dg1 - dg2;
+	s64 k1_q16, k2_q16, k3_q16;
+	s64 pred_q16, residual_sum = 0;
+	int i;
+
+	if (denom_g == 0 || dd3 == 0 || dg4 == 0 || dd4 == 0)
+		return false;
+
+	k1_q16 = div_s64((e1 - e2) << 16, denom_g);
+	k2_q16 = div_s64((e3 - e0) << 16, dd3);
+	k3_q16 = div_s64(((e4 - e0) << 16) - k1_q16 * dg4 - k2_q16 * dd4, dg4 * dd4);
+
+	for (i = 0; i < 5; i++) {
+		s64 dg = (s64)g->cal_probe_gain[i] - (s64)g->cal_center_gain;
+		s64 dd = (s64)g->cal_probe_dac[i] - (s64)g->cal_center_dac;
+		s64 pred = (e0 << 16) + k1_q16 * dg + k2_q16 * dd + k3_q16 * dg * dd;
+		s64 err = g->cal_probe_mean[i] - (pred >> 16);
+
+		residual_sum += (err < 0) ? -err : err;
+	}
+
+	pred_q16 = (e0 << 16) + k1_q16 * dg4 + k2_q16 * dd4 + k3_q16 * dg4 * dd4;
+	pr_info("fusion_gpt: cal fit k1_q16=%lld k2_q16=%lld k3_q16=%lld p4_meas=%lld p4_pred=%lld\n",
+		(long long)k1_q16, (long long)k2_q16, (long long)k3_q16,
+		(long long)e4, (long long)(pred_q16 >> 16));
+
+	g->cal_k1_q16 = (s32)k1_q16;
+	g->cal_k2_q16 = (s32)k2_q16;
+	g->cal_k3_q16 = (s32)k3_q16;
+
+	*mean_residual_out = (u32)div_s64(residual_sum, 5);
+	return true;
+}
+
+static void cal_find_best_target(struct fusion_gpt *g, u32 *best_gain, int *best_dac)
+{
+	s64 best_cost = S64_MAX;
+	s64 e0 = g->cal_probe_mean[0];
+	u32 g_step = max_t(u32, 1, cal_gain_search_step);
+	u32 gain_span_down = min(cal_max_gain_step, g->cal_center_gain - g->si_gain_min);
+	u32 gain_span_up = min(cal_max_gain_step, g->si_gain_max - g->cal_center_gain);
+	u32 g_min = g->cal_center_gain - gain_span_down;
+	u32 g_max = g->cal_center_gain + gain_span_up;
+	int d_min = max(0, g->cal_center_dac - (int)cal_max_dac_step);
+	int d_max = min(255, g->cal_center_dac + (int)cal_max_dac_step);
+	s64 gain_norm = (s64)max_t(u32, 1, cal_gain_delta) * (s64)max_t(u32, 1, cal_gain_delta);
+	s64 dac_norm = (s64)max_t(u32, 1, cal_dac_delta) * (s64)max_t(u32, 1, cal_dac_delta);
+	u32 gv;
+	int dv;
+
+	*best_gain = g->cal_center_gain;
+	*best_dac = g->cal_center_dac;
+
+	for (gv = g_min; gv <= g_max; gv += g_step) {
+		for (dv = d_min; dv <= d_max; dv++) {
+			s64 dg = (s64)gv - (s64)g->cal_center_gain;
+			s64 dd = (s64)dv - (s64)g->cal_center_dac;
+			s64 pred_q16 = (e0 << 16) +
+				       (s64)g->cal_k1_q16 * dg +
+				       (s64)g->cal_k2_q16 * dd +
+				       (s64)g->cal_k3_q16 * dg * dd;
+			s64 pred = pred_q16 >> 16;
+			s64 move_cost = (s64)cal_lambda_gain * div_s64(dg * dg, gain_norm) +
+					(s64)cal_lambda_dac * div_s64(dd * dd, dac_norm);
+			s64 cost = pred * pred + move_cost;
+
+			if (cost < best_cost) {
+				best_cost = cost;
+				*best_gain = gv;
+				*best_dac = dv;
+			}
+		}
+
+		if (gv > g_max - g_step)
+			break;
+	}
+}
+
 static irqreturn_t gpt_irq(int irq, void *dev_id)
 {
 	struct fusion_gpt *g = dev_id;
@@ -414,76 +612,134 @@ static irqreturn_t gpt_irq(int irq, void *dev_id)
           g->sq_err_sum += (s64)freq_error * (s64)freq_error;
           g->err_count++;
 
-          /* Accumulate error into the integrator */
-          g->error_integrator += freq_error;
-
-          /* Threshold in ticks for dithering */
-          const int INTEGRATOR_LIMIT = 5;
-          const int P_THRESHOLD = 20;
-          const int P_DIV = 10;
-          const int P_MAX_STEP = 10;
-
-          /* Proportional term: only act when error exceeds threshold */
-          {
-              long abs_err = (freq_error < 0) ? -freq_error : freq_error;
-              int p_step = 0;
-
-              if (abs_err > P_THRESHOLD) {
-                  p_step = (int)(abs_err / P_DIV);
-                  p_step = clamp(p_step, 1, P_MAX_STEP);
-
-                  if (freq_error > 0)
-                      g->dac_target -= p_step; /* too fast: slow down */
-                  else
-                      g->dac_target += p_step; /* too slow: speed up */
-              }
-          }
-
-          if (g->error_integrator > INTEGRATOR_LIMIT) {
-              /* Positive error (too fast): slow down */
-              g->dac_target--;
+          if (cal_enable && g->cal_state == CAL_IDLE &&
+              g->dac_client && g->si5351b_client) {
+              cal_prepare_points(g);
+              g->cal_state = CAL_APPLY_POINT;
               g->error_integrator = 0;
+              WRITE_ONCE(g->si_gain_pending, false);
+              pr_info("fusion_gpt: cal start center gain=%u dac=%d\n",
+                      g->cal_center_gain, g->cal_center_dac);
+              schedule_work(&g->dac_work);
+          } else if (cal_enable && g->cal_state == CAL_IDLE &&
+                     (!g->dac_client || !g->si5351b_client)) {
+              g->cal_state = CAL_DONE;
+              pr_warn_ratelimited("fusion_gpt: cal skipped (missing DAC or Si5351 client)\n");
           }
-          else if (g->error_integrator < -INTEGRATOR_LIMIT) {
-              /* Negative error (too slow): speed up */
-              g->dac_target++;
-              g->error_integrator = 0;
-          }
-          {
-              const u32 SI_GAIN_STEP = 10000;
-              bool sat_high = (g->dac_target > 255);
-              bool sat_low = (g->dac_target < 0);
 
-              if (sat_high || sat_low) {
-                  if (sat_high) {
-                      g->dac_target = 255;
-                      pr_warn_ratelimited("fusion_gpt: DAC saturated high (freq_err=%ld tick, integ=%ld)\n",
-                                          freq_error, g->error_integrator);
-                  } else {
-                      g->dac_target = 0;
-                      pr_warn_ratelimited("fusion_gpt: DAC saturated low (freq_err=%ld tick, integ=%ld)\n",
-                                          freq_error, g->error_integrator);
+          if (cal_active(g)) {
+              if (g->cal_state == CAL_SETTLE) {
+                  if (g->cal_settle_left > 0)
+                      g->cal_settle_left--;
+                  if (g->cal_settle_left == 0) {
+                      g->cal_err_accum = 0;
+                      g->cal_err_samples = 0;
+                      g->cal_measure_left = max_t(u32, 1, cal_measure_pps);
+                      g->cal_state = CAL_MEASURE;
                   }
+              } else if (g->cal_state == CAL_MEASURE) {
+                  g->cal_err_accum += freq_error;
+                  g->cal_err_samples++;
+                  if (g->cal_measure_left > 0)
+                      g->cal_measure_left--;
+                  if (g->cal_measure_left == 0) {
+                      long mean = (long)div_s64(g->cal_err_accum,
+                                                max_t(u32, 1, g->cal_err_samples));
+                      int idx = g->cal_probe_idx;
 
-                  if (g->si5351b_client) {
-                      if (!READ_ONCE(g->si_gain_pending)) {
-                          u32 next_gain = g->si_gain_current + SI_GAIN_STEP;
+                      if (idx >= 0 && idx < 5)
+                          g->cal_probe_mean[idx] = mean;
+                      else
+                          idx = 0;
 
-                          if (next_gain > g->si_gain_max)
-                              next_gain = g->si_gain_max;
+                      pr_info("fusion_gpt: cal probe[%d] gain=%u dac=%d mean_err=%ld\n",
+                              idx,
+                              g->cal_probe_gain[idx],
+                              g->cal_probe_dac[idx],
+                              mean);
 
-                          if (next_gain > g->si_gain_current) {
-                              WRITE_ONCE(g->si_gain_target, next_gain);
-                              WRITE_ONCE(g->si_gain_pending, true);
-                              pr_info_ratelimited("fusion_gpt: Queued Si5351b gain increase to %u\n",
-                                                  next_gain);
-                          } else {
-                              pr_debug_ratelimited("fusion_gpt: DAC saturated at max Si5351b gain (%u)\n",
-                                                   g->si_gain_current);
-                          }
+                      if (idx < 4) {
+                          g->cal_probe_idx++;
+                          g->cal_state = CAL_APPLY_POINT;
+                          schedule_work(&g->dac_work);
+                      } else {
+                          g->cal_state = CAL_FIT;
+                          schedule_work(&g->dac_work);
                       }
-                  } else {
-                      pr_debug_ratelimited("fusion_gpt: Si5351b client missing, cannot adjust gain\n");
+                  }
+              }
+          } else {
+              /* Accumulate error into the integrator */
+              g->error_integrator += freq_error;
+
+              /* Threshold in ticks for dithering */
+              const int INTEGRATOR_LIMIT = 5;
+              const int P_THRESHOLD = 20;
+              const int P_DIV = 10;
+              const int P_MAX_STEP = 10;
+
+              /* Proportional term: only act when error exceeds threshold */
+              {
+                  long abs_err = (freq_error < 0) ? -freq_error : freq_error;
+                  int p_step = 0;
+
+                  if (abs_err > P_THRESHOLD) {
+                      p_step = (int)(abs_err / P_DIV);
+                      p_step = clamp(p_step, 1, P_MAX_STEP);
+
+                      if (freq_error > 0)
+                          g->dac_target -= p_step; /* too fast: slow down */
+                      else
+                          g->dac_target += p_step; /* too slow: speed up */
+                  }
+              }
+
+              if (g->error_integrator > INTEGRATOR_LIMIT) {
+                  /* Positive error (too fast): slow down */
+                  g->dac_target--;
+                  g->error_integrator = 0;
+              }
+              else if (g->error_integrator < -INTEGRATOR_LIMIT) {
+                  /* Negative error (too slow): speed up */
+                  g->dac_target++;
+                  g->error_integrator = 0;
+              }
+              {
+                  const u32 SI_GAIN_STEP = 10000;
+                  bool sat_high = (g->dac_target > 255);
+                  bool sat_low = (g->dac_target < 0);
+
+                  if (sat_high || sat_low) {
+                      if (sat_high) {
+                          g->dac_target = 255;
+                          pr_warn_ratelimited("fusion_gpt: DAC saturated high (freq_err=%ld tick, integ=%ld)\n",
+                                              freq_error, g->error_integrator);
+                      } else {
+                          g->dac_target = 0;
+                          pr_warn_ratelimited("fusion_gpt: DAC saturated low (freq_err=%ld tick, integ=%ld)\n",
+                                              freq_error, g->error_integrator);
+                      }
+
+                      if (g->si5351b_client) {
+                          if (!READ_ONCE(g->si_gain_pending)) {
+                              u32 next_gain = g->si_gain_current + SI_GAIN_STEP;
+
+                              if (next_gain > g->si_gain_max)
+                                  next_gain = g->si_gain_max;
+
+                              if (next_gain > g->si_gain_current) {
+                                  WRITE_ONCE(g->si_gain_target, next_gain);
+                                  WRITE_ONCE(g->si_gain_pending, true);
+                                  pr_info_ratelimited("fusion_gpt: Queued Si5351b gain increase to %u\n",
+                                                      next_gain);
+                              } else {
+                                  pr_debug_ratelimited("fusion_gpt: DAC saturated at max Si5351b gain (%u)\n",
+                                                       g->si_gain_current);
+                              }
+                          }
+                      } else {
+                          pr_debug_ratelimited("fusion_gpt: Si5351b client missing, cannot adjust gain\n");
+                      }
                   }
               }
           }
@@ -561,7 +817,10 @@ static irqreturn_t gpt_irq(int irq, void *dev_id)
 		}
 
 		if (READ_ONCE(g->dac_target) != READ_ONCE(g->current_dac_value) ||
-		    READ_ONCE(g->si_gain_pending))
+		    READ_ONCE(g->si_gain_pending) ||
+		    cal_active(g) ||
+		    READ_ONCE(g->cal_state) == CAL_FIT ||
+		    READ_ONCE(g->cal_state) == CAL_APPLY_JUMP)
 			schedule_work(&g->dac_work);
 		clr |= SR_IF1;
 
@@ -637,35 +896,136 @@ static irqreturn_t gpt_irq(int irq, void *dev_id)
 	return IRQ_HANDLED;
 }
 
+static int fusion_write_dac(struct fusion_gpt *g, int target, bool ratelimited_log)
+{
+	int ret;
+	u8 buf[3];
+
+	target = clamp(target, 0, 255);
+	if (target == g->current_dac_value)
+		return 0;
+
+	buf[0] = 0x00; /* Register/Command Byte (device specific) */
+	buf[1] = 0x00; /* Often MSB or Control */
+	buf[2] = (u8)(target & 0xFF);
+
+	if (!g->dac_client)
+		return -ENODEV;
+
+	ret = i2c_master_send(g->dac_client, buf, 3);
+	if (ret < 0)
+		return ret;
+
+	g->current_dac_value = target;
+	if (ratelimited_log)
+		pr_info_ratelimited("fusion_gpt: Updated DAC to %u (Integrator Move)\n", target);
+
+	return 0;
+}
+
 static void fusion_dac_work_handler(struct work_struct *work)
 {
     struct fusion_gpt *g = container_of(work, struct fusion_gpt, dac_work);
-    int ret;
-    u8 buf[3];
+    int ret = 0;
     int target = READ_ONCE(g->dac_target);
     bool gain_pending = READ_ONCE(g->si_gain_pending);
     u32 gain_target = READ_ONCE(g->si_gain_target);
 
+    if (g->cal_state == CAL_APPLY_POINT) {
+        u32 probe_gain = g->cal_probe_gain[g->cal_probe_idx];
+        int probe_dac = g->cal_probe_dac[g->cal_probe_idx];
+
+        if (probe_gain != g->si_gain_current) {
+            ret = si5351b_write_gain(g, probe_gain);
+            if (ret < 0) {
+                pr_err("fusion_gpt: cal failed applying probe gain idx=%d ret=%d\n",
+                       g->cal_probe_idx, ret);
+                g->cal_state = CAL_FAIL;
+                return;
+            }
+            g->si_gain_current = probe_gain;
+        }
+
+        ret = fusion_write_dac(g, probe_dac, false);
+        if (ret < 0) {
+            pr_err("fusion_gpt: cal failed applying probe dac idx=%d ret=%d\n",
+                   g->cal_probe_idx, ret);
+            g->cal_state = CAL_FAIL;
+            return;
+        }
+
+        g->dac_target = probe_dac;
+        g->error_integrator = 0;
+        g->cal_settle_left = max_t(u32, 1, cal_settle_pps);
+        g->cal_state = CAL_SETTLE;
+        return;
+    }
+
+    if (g->cal_state == CAL_FIT) {
+        u32 residual = 0;
+
+        if (!cal_fit_model(g, &residual)) {
+            pr_warn("fusion_gpt: cal fit failed (degenerate probe geometry)\n");
+            g->cal_state = CAL_FAIL;
+            return;
+        }
+
+        if (residual > cal_fit_residual_thresh) {
+            pr_warn("fusion_gpt: cal fit residual too high (%u > %u), skipping jump\n",
+                    residual, cal_fit_residual_thresh);
+            g->cal_state = CAL_FAIL;
+            return;
+        }
+
+        cal_find_best_target(g, &g->si_gain_target, &g->dac_target);
+        g->cal_state = CAL_APPLY_JUMP;
+        schedule_work(&g->dac_work);
+        return;
+    }
+
+    if (g->cal_state == CAL_APPLY_JUMP) {
+        u32 jump_gain = clamp(g->si_gain_target, g->si_gain_min, g->si_gain_max);
+        int jump_dac = clamp(g->dac_target, 0, 255);
+
+        if (jump_gain != g->si_gain_current) {
+            ret = si5351b_write_gain(g, jump_gain);
+            if (ret < 0) {
+                pr_warn("fusion_gpt: cal jump gain write failed ret=%d, fallback to PI\n", ret);
+                g->cal_state = CAL_FAIL;
+                return;
+            }
+            g->si_gain_current = jump_gain;
+        }
+
+        ret = fusion_write_dac(g, jump_dac, false);
+        if (ret < 0) {
+            pr_warn("fusion_gpt: cal jump dac write failed ret=%d, fallback to PI\n", ret);
+            g->cal_state = CAL_FAIL;
+            return;
+        }
+
+        g->error_integrator = 0;
+        g->cal_state = CAL_DONE;
+        pr_info("fusion_gpt: cal jump applied gain=%u dac=%d (center gain=%u dac=%d)\n",
+                g->si_gain_current, g->current_dac_value,
+                g->cal_center_gain, g->cal_center_dac);
+        return;
+    }
+
+    if (g->cal_state == CAL_FAIL) {
+        g->cal_state = CAL_DONE;
+        g->error_integrator = 0;
+        pr_info("fusion_gpt: cal fallback to PI loop\n");
+        return;
+    }
+
     target = clamp(target, 0, 255);
 
-    if (target != g->current_dac_value) {
-        buf[0] = 0x00; /* Register/Command Byte (device specific) */
-        buf[1] = 0x00; /* Often MSB or Control */
-        buf[2] = (u8)(target & 0xFF);
-
-        if (g->dac_client) {
-            ret = i2c_master_send(g->dac_client, buf, 3);
-
-            if (ret < 0) {
-                pr_err_ratelimited("fusion_gpt: I2C DAC write failed: %d\n", ret);
-            } else {
-                g->current_dac_value = target;
-
-                pr_info_ratelimited("fusion_gpt: Updated DAC to %u (Integrator Move)\n", target);
-            }
-        } else {
-            pr_info_ratelimited("fusion_gpt: DAC client missing\n");
-        }
+    ret = fusion_write_dac(g, target, true);
+    if (ret == -ENODEV) {
+        pr_info_ratelimited("fusion_gpt: DAC client missing\n");
+    } else if (ret < 0) {
+        pr_err_ratelimited("fusion_gpt: I2C DAC write failed: %d\n", ret);
     }
 
     if (gain_pending) {
@@ -732,6 +1092,20 @@ static int gpt_start(struct fusion_gpt *g)
 	g->phc_aligned = false;
 	g->pending_future_anchor = false;
 	g->pending_future_phc_ns = 0;
+	g->cal_state = cal_enable ? CAL_IDLE : CAL_DONE;
+	g->cal_probe_idx = 0;
+	g->cal_settle_left = 0;
+	g->cal_measure_left = 0;
+	g->cal_err_accum = 0;
+	g->cal_err_samples = 0;
+	g->cal_center_gain = g->si_gain_current;
+	g->cal_center_dac = clamp(g->dac_target, 0, 255);
+	memset(g->cal_probe_gain, 0, sizeof(g->cal_probe_gain));
+	memset(g->cal_probe_dac, 0, sizeof(g->cal_probe_dac));
+	memset(g->cal_probe_mean, 0, sizeof(g->cal_probe_mean));
+	g->cal_k1_q16 = 0;
+	g->cal_k2_q16 = 0;
+	g->cal_k3_q16 = 0;
 
 	g->next_ocr1 = g->last32 + PERIOD_TICKS_BASE;
 	wrl(g, g->next_ocr1, GPT_OCR1);
