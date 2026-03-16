@@ -78,7 +78,7 @@ static bool cal_enable = true;
 module_param(cal_enable, bool, 0644);
 MODULE_PARM_DESC(cal_enable, "Enable startup gain/dac surface calibration");
 
-static u32 cal_gain_delta = 10000;
+static u32 cal_gain_delta = 20000;
 module_param(cal_gain_delta, uint, 0644);
 MODULE_PARM_DESC(cal_gain_delta, "Gain perturbation for startup probes");
 
@@ -86,11 +86,11 @@ static u32 cal_dac_delta = 8;
 module_param(cal_dac_delta, uint, 0644);
 MODULE_PARM_DESC(cal_dac_delta, "DAC perturbation for startup probes");
 
-static u32 cal_settle_pps = 3;
+static u32 cal_settle_pps = 1;
 module_param(cal_settle_pps, uint, 0644);
 MODULE_PARM_DESC(cal_settle_pps, "PPS samples to settle after each probe write");
 
-static u32 cal_measure_pps = 4;
+static u32 cal_measure_pps = 2;
 module_param(cal_measure_pps, uint, 0644);
 MODULE_PARM_DESC(cal_measure_pps, "PPS samples to average per probe point");
 
@@ -431,19 +431,40 @@ static void cal_prepare_points(struct fusion_gpt *g)
 	int d0 = clamp(g->dac_target, 0, 255);
 	u32 dg = max_t(u32, 1, cal_gain_delta);
 	int dd = max_t(int, 1, (int)cal_dac_delta);
+	u32 g1, g2, g4;
 
 	g->cal_center_gain = g0;
 	g->cal_center_dac = d0;
 
+	/*
+	 * Boundary-aware gain stencil:
+	 * - near min gain: use +dg / +2dg (never probe below min)
+	 * - near max gain: use -dg / -2dg
+	 * - otherwise: use +/-dg around center
+	 */
+	if (g0 <= g->si_gain_min + dg) {
+		g1 = clamp(g0 + dg, g->si_gain_min, g->si_gain_max);
+		g2 = clamp(g0 + 2 * dg, g->si_gain_min, g->si_gain_max);
+		g4 = g1;
+	} else if (g0 >= g->si_gain_max - dg) {
+		g1 = clamp(g0 - dg, g->si_gain_min, g->si_gain_max);
+		g2 = clamp(g0 - 2 * dg, g->si_gain_min, g->si_gain_max);
+		g4 = g1;
+	} else {
+		g1 = clamp(g0 + dg, g->si_gain_min, g->si_gain_max);
+		g2 = clamp(g0 - dg, g->si_gain_min, g->si_gain_max);
+		g4 = g1;
+	}
+
 	g->cal_probe_gain[0] = g0;
 	g->cal_probe_dac[0] = d0;
-	g->cal_probe_gain[1] = clamp(g0 + dg, g->si_gain_min, g->si_gain_max);
+	g->cal_probe_gain[1] = g1;
 	g->cal_probe_dac[1] = d0;
-	g->cal_probe_gain[2] = clamp(g0 - dg, g->si_gain_min, g->si_gain_max);
+	g->cal_probe_gain[2] = g2;
 	g->cal_probe_dac[2] = d0;
 	g->cal_probe_gain[3] = g0;
 	g->cal_probe_dac[3] = clamp(d0 + dd, 0, 255);
-	g->cal_probe_gain[4] = clamp(g0 + dg, g->si_gain_min, g->si_gain_max);
+	g->cal_probe_gain[4] = g4;
 	g->cal_probe_dac[4] = clamp(d0 + dd, 0, 255);
 
 	g->cal_probe_idx = 0;
@@ -618,8 +639,10 @@ static irqreturn_t gpt_irq(int irq, void *dev_id)
               g->cal_state = CAL_APPLY_POINT;
               g->error_integrator = 0;
               WRITE_ONCE(g->si_gain_pending, false);
-              pr_info("fusion_gpt: cal start center gain=%u dac=%d\n",
-                      g->cal_center_gain, g->cal_center_dac);
+              pr_info("fusion_gpt: cal start center gain=%u dac=%d settle=%u measure=%u\n",
+                      g->cal_center_gain, g->cal_center_dac,
+                      max_t(u32, 1, cal_settle_pps),
+                      max_t(u32, 1, cal_measure_pps));
               schedule_work(&g->dac_work);
           } else if (cal_enable && g->cal_state == CAL_IDLE &&
                      (!g->dac_client || !g->si5351b_client)) {
@@ -1282,4 +1305,4 @@ module_platform_driver(drv);
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR("Bose Pro");
 MODULE_DESCRIPTION("GPT1 SHIM EXPORTING 1/3MS TICKS");
-MODULE_VERSION("1.0.5");
+MODULE_VERSION("1.0.1-surface-calc");
