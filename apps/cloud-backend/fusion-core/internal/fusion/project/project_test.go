@@ -128,7 +128,7 @@ func (m *mockDBService) GetProjectByID(ctx context.Context, projectID string, lo
 	return args.Get(0).(*models.Project), args.Error(1)
 }
 
-func (m *mockDBService) SuperAdminProjectByID(ctx context.Context, projectID string, userAuth types.UserAuthorizationResponse, logger *zap.Logger) (*types.Project, error) {
+func (m *mockDBService) SelectByID(ctx context.Context, projectID string, userAuth types.UserAuthorizationResponse, logger *zap.Logger) (*types.Project, error) {
 	args := m.Called(ctx, projectID, userAuth, logger)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
@@ -136,7 +136,7 @@ func (m *mockDBService) SuperAdminProjectByID(ctx context.Context, projectID str
 	return args.Get(0).(*types.Project), args.Error(1)
 }
 
-func (m *mockDBService) AdminProjectByID(ctx context.Context, projectID string, userAuth types.UserAuthorizationResponse, logger *zap.Logger) (*types.Project, error) {
+func (m *mockDBService) GetProjectByIDForAccount(ctx context.Context, projectID string, userAuth types.UserAuthorizationResponse, logger *zap.Logger) (*types.Project, error) {
 	args := m.Called(ctx, projectID, userAuth, logger)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
@@ -144,7 +144,7 @@ func (m *mockDBService) AdminProjectByID(ctx context.Context, projectID string, 
 	return args.Get(0).(*types.Project), args.Error(1)
 }
 
-func (m *mockDBService) UserProjectByID(ctx context.Context, projectID string, userAuth types.UserAuthorizationResponse, logger *zap.Logger) (*types.Project, error) {
+func (m *mockDBService) GetProjectByIDForUser(ctx context.Context, projectID string, userAuth types.UserAuthorizationResponse, logger *zap.Logger) (*types.Project, error) {
 	args := m.Called(ctx, projectID, userAuth, logger)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)

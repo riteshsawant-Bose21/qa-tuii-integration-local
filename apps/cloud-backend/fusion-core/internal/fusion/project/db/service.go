@@ -244,8 +244,8 @@ func (s *Service) SelectAll(ctx context.Context, queryParams *types.GetAllProjec
 	return projectsArray, nil
 }
 
-// SuperAdminProjectByID retrieves a single project by ID with user-specific metadata for Super Admins.
-func (s *Service) SuperAdminProjectByID(ctx context.Context, projectID string, userAuth types.UserAuthorizationResponse, logger *zap.Logger) (*types.Project, error) {
+// SelectByID retrieves a single project by ID with user-specific metadata for Super Admins.
+func (s *Service) SelectByID(ctx context.Context, projectID string, userAuth types.UserAuthorizationResponse, logger *zap.Logger) (*types.Project, error) {
 	var rows *sql.Rows
 	var err error
 
@@ -320,8 +320,8 @@ func (s *Service) SuperAdminProjectByID(ctx context.Context, projectID string, u
 	return project, nil
 }
 
-// AdminProjectByID retrieves a single project by ID with user-specific metadata for Admins.
-func (s *Service) AdminProjectByID(ctx context.Context, projectID string, userAuth types.UserAuthorizationResponse, logger *zap.Logger) (*types.Project, error) {
+// GetProjectByIDForAccount retrieves a single project by ID with user-specific metadata for Admins.
+func (s *Service) GetProjectByIDForAccount(ctx context.Context, projectID string, userAuth types.UserAuthorizationResponse, logger *zap.Logger) (*types.Project, error) {
 	var rows *sql.Rows
 	var err error
 
@@ -396,8 +396,8 @@ func (s *Service) AdminProjectByID(ctx context.Context, projectID string, userAu
 	return project, nil
 }
 
-// UserProjectByID retrieves a single project by ID with user-specific metadata.
-func (s *Service) UserProjectByID(ctx context.Context, projectID string, userAuth types.UserAuthorizationResponse, logger *zap.Logger) (*types.Project, error) {
+// GetProjectByIDForUser retrieves a single project by ID with user-specific metadata.
+func (s *Service) GetProjectByIDForUser(ctx context.Context, projectID string, userAuth types.UserAuthorizationResponse, logger *zap.Logger) (*types.Project, error) {
 	var rows *sql.Rows
 	var err error
 

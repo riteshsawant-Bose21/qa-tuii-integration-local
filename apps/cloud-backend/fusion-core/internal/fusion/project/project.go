@@ -223,11 +223,11 @@ func (s *Service) GetProjectById(ctx context.Context, projectID string, userAuth
 
 	switch userAuth.Role.RoleName {
 	case constants.SuperAdminRoleName:
-		project, err = s.dbService.SuperAdminProjectByID(ctx, projectID, userAuth, logger)
+		project, err = s.dbService.SelectByID(ctx, projectID, userAuth, logger)
 	case constants.AdminRoleName:
-		project, err = s.dbService.AdminProjectByID(ctx, projectID, userAuth, logger)
+		project, err = s.dbService.GetProjectByIDForAccount(ctx, projectID, userAuth, logger)
 	default:
-		project, err = s.dbService.UserProjectByID(ctx, projectID, userAuth, logger)
+		project, err = s.dbService.GetProjectByIDForUser(ctx, projectID, userAuth, logger)
 	}
 
 	if err != nil {
