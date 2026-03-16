@@ -348,16 +348,6 @@ namespace {
 
 constexpr int kInvalidGpioNum = 255;
 
-std::string trim(const std::string &s)
-{
-    const auto begin = s.find_first_not_of(" \t\r\n");
-    if (begin == std::string::npos) {
-        return {};
-    }
-    const auto end = s.find_last_not_of(" \t\r\n");
-    return s.substr(begin, end - begin + 1);
-}
-
 std::string gpio_sysfs_dir(int gpio_num)
 {
     return "/sys/class/gpio/gpio" + std::to_string(gpio_num);
@@ -911,8 +901,7 @@ void BDIFClient::handle_rx_frame(const std::vector<uint8_t> &frame)
             const int idx = static_cast<int>(value_ptr[0]) - 1;
             if (idx >= 0 && idx < num_amps) {
                 audio_amp_mute[idx] = value_ptr[1] != 0;
-                const bool mute = static_cast<bool>(audio_amp_mute[idx]);
-                SPDLOG_DEBUG("BDIF: ack amp mute[{}]={}", idx, mute);
+                SPDLOG_DEBUG("BDIF: ack amp mute[{}]={}", idx, static_cast<bool>(audio_amp_mute[idx]));
             }
         } else {
             SPDLOG_DEBUG("BDIF: ack amp mute");
