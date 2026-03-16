@@ -5,6 +5,8 @@ import 'package:fusion_launcher/core/models/products_data.dart';
 import 'package:fusion_launcher/core/service_locator.dart';
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
 import 'package:fusion_launcher/features/projects/widget/building/speaker_selection_section/view_model/product_query_view_model.dart';
+import 'package:fusion_lib/fusion_algorithms/ceiling_pendant_speakers_autolayout/ceiling_pendant_speakers_autolayout.dart' as ceiling_algo;
+import 'package:fusion_lib/fusion_algorithms/surface_speakers_autolayout/surface_speakers_autolayout.dart' as surface_algo;
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/models/project_entities/controller.dart';
 import 'package:fusion_lib/models/project_entities/endpoints.dart';
@@ -259,6 +261,224 @@ extension HardwareViewModel on ProjectViewModel {
         message: "Failed to get unplaced hardware for listening area: $e",
       );
       return <Speaker>[];
+    }
+  }
+
+  ResponseCallback<bool> runAutoPlacementForCurrentListeningArea({required AutoPlacementResult autoPlacementResult}) {
+    try {
+      final String? listeningAreaId = currentSelectedListeningAreaId;
+      if (listeningAreaId == null) {
+        return ResponseCallback<bool>.failure('Select a listening area first.');
+      }
+
+      final ListeningArea listeningArea = getListeningArea(areaId: listeningAreaId);
+      if (!listeningArea.autoPlacement) {
+        return ResponseCallback<bool>.failure('Enable Auto-Placement and try again.');
+      }
+
+      if (listeningArea.vertices.length < 3) {
+        return ResponseCallback<bool>.failure('Listening area shape is invalid. Redraw the area and try again.');
+      }
+
+      final ProductQueryViewModel productQueryViewModel = serviceLocator<ProductQueryViewModel>();
+      final List<SpeakerProduct> catalogSpeakers = productQueryViewModel.speakers;
+
+      final List<Speaker> nonPlacedSpeakers = getNonPlacedSpeakersForCurrentListeningArea();
+      final List<Speaker> placedSpeakers = getPlacedSpeakersForCurrentListeningArea();
+      final List<Speaker> allSpeakers = <Speaker>[...placedSpeakers, ...nonPlacedSpeakers];
+
+      final List<Speaker> targetSpeakers =
+          allSpeakers.where((Speaker speaker) {
+            final int? productId = speaker.productId;
+            if (productId == null) return true;
+            final SpeakerProduct? product = catalogSpeakers.where((SpeakerProduct p) => p.productId == productId).firstOrNull;
+            return !(product?.isSubwoofer ?? false);
+          }).toList();
+
+      if (targetSpeakers.isEmpty) {
+        return ResponseCallback<bool>.failure('Add at least one non-subwoofer speaker to auto-place.');
+      }
+
+      final List<Offset> candidatePoints = _calculateAutoPlacedPositions(
+        listeningArea: listeningArea,
+        catalogSpeakers: catalogSpeakers,
+        targetSpeakers: targetSpeakers,
+        autoPlacementResult: autoPlacementResult,
+      );
+
+      if (candidatePoints.isEmpty) {
+        return ResponseCallback<bool>.failure(
+          'No valid speaker positions found. Check ceiling/listener heights and try reducing spacing or boundary threshold.',
+        );
+      }
+
+      final Offset center = listeningArea.getCenterPositionOfVertices() ?? candidatePoints.first;
+      final List<Offset> sortedPoints = List<Offset>.from(candidatePoints)
+        ..sort((Offset a, Offset b) => (a - center).distance.compareTo((b - center).distance));
+
+      final int algorithmCount = sortedPoints.length;
+
+      recordSnapshot();
+
+      final ListeningArea updatedListeningArea = listeningArea.copyWith(autoPlacementResult: autoPlacementResult);
+      updateListeningArea(area: updatedListeningArea, autoSave: false);
+
+      // Expand speaker list to match algorithm quantity so placed count reflects algorithm output.
+      if (targetSpeakers.length < algorithmCount) {
+        final Speaker templateSpeaker = targetSpeakers.first;
+        for (int i = targetSpeakers.length; i < algorithmCount; i++) {
+          final Speaker clonedSpeaker = templateSpeaker.getClone();
+          clonedSpeaker.pos = null;
+          addHardware(hardware: clonedSpeaker, autoSave: false);
+          targetSpeakers.add(clonedSpeaker);
+        }
+      }
+
+      final int placeCount = algorithmCount;
+
+      for (int i = 0; i < targetSpeakers.length; i++) {
+        final Offset? nextPos = i < placeCount ? sortedPoints[i] : null;
+        updateHardware(hardware: targetSpeakers[i].copyWith(pos: nextPos), autoSave: false);
+      }
+
+      saveProject();
+      updateProject();
+
+      if (placeCount < targetSpeakers.length) {
+        return ResponseCallback<bool>.success(
+          true,
+          message: 'Placed $placeCount speakers from algorithm output. ${targetSpeakers.length - placeCount} speakers were left unplaced.',
+        );
+      }
+
+      return ResponseCallback<bool>.success(true);
+    } catch (e) {
+      FusionLogger.log(tag: LogTag.project, message: 'Auto-placement failed: $e');
+      return ResponseCallback<bool>.failure('Auto-placement failed. Check ceiling/listener values and try again.');
+    }
+  }
+
+  List<Offset> _calculateAutoPlacedPositions({
+    required ListeningArea listeningArea,
+    required List<SpeakerProduct> catalogSpeakers,
+    required List<Speaker> targetSpeakers,
+    required AutoPlacementResult autoPlacementResult,
+  }) {
+    final MountingType mountingType = listeningArea.mountingType ?? targetSpeakers.first.mountingType ?? MountingType.surface;
+
+    final Speaker referenceSpeaker = targetSpeakers.first;
+    final SpeakerProduct? speakerProduct = catalogSpeakers.where((SpeakerProduct p) => p.productId == referenceSpeaker.productId).firstOrNull;
+
+    final double coverageAngle = _resolveCoverageAngle(speakerProduct);
+
+    double minX = listeningArea.vertices.first.position.dx;
+    double maxX = minX;
+    double minY = listeningArea.vertices.first.position.dy;
+    double maxY = minY;
+    for (final FusionCanvasPoint vertex in listeningArea.vertices) {
+      if (vertex.position.dx < minX) minX = vertex.position.dx;
+      if (vertex.position.dx > maxX) maxX = vertex.position.dx;
+      if (vertex.position.dy < minY) minY = vertex.position.dy;
+      if (vertex.position.dy > maxY) maxY = vertex.position.dy;
+    }
+
+    final double roomLength = (maxX - minX).abs();
+    final double roomWidth = (maxY - minY).abs();
+    if (roomLength <= 0 || roomWidth <= 0) return <Offset>[];
+
+    final double listenerHeight = listeningArea.listeningHeight > 0 ? listeningArea.listeningHeight : 1.2;
+    final double? parsedCeilingHeight = double.tryParse(listeningArea.ceilingHeight);
+    if (parsedCeilingHeight == null || parsedCeilingHeight <= listenerHeight) {
+      return <Offset>[];
+    }
+    final double ceilingHeight = parsedCeilingHeight;
+
+    if (mountingType == MountingType.ceiling || mountingType == MountingType.pendant) {
+      final List<ceiling_algo.Point2D> geometry =
+          listeningArea.vertices.map((FusionCanvasPoint point) => ceiling_algo.Point2D(point.position.dx - minX, point.position.dy - minY)).toList();
+
+      final ceiling_algo.Room room = ceiling_algo.Room.asymmetrical(
+        geometry: geometry,
+        ceilingHeight: ceilingHeight,
+        listenerHeight: listenerHeight,
+      );
+
+      final ceiling_algo.SpeakerType speakerType = mountingType == MountingType.pendant ? ceiling_algo.SpeakerType.pendant : ceiling_algo.SpeakerType.ceiling;
+      final double pendantHeight = (ceilingHeight - 0.15).clamp(listenerHeight + 0.05, ceilingHeight - 0.01);
+
+      final ceiling_algo.PlacementResult result = ceiling_algo.AutoSpeakerPlacement.calculatePlacement(
+        room: room,
+        speakerSpec: ceiling_algo.SpeakerSpec(
+          coverageAngle: coverageAngle,
+          type: speakerType,
+          pendantHeight: speakerType == ceiling_algo.SpeakerType.pendant ? pendantHeight : null,
+        ),
+        coveragePreference: _mapCeilingCoveragePreference(autoPlacementResult.autoPlaceSpacingPreset),
+        layoutPattern:
+            autoPlacementResult.autoPlaceLayoutPreset == AutoPlaceLayoutPreset.hexagonal
+                ? ceiling_algo.LayoutPattern.hexagonal
+                : ceiling_algo.LayoutPattern.square,
+        customOriginOffset: ceiling_algo.Point2D(autoPlacementResult.autoPlaceGridX, autoPlacementResult.autoPlaceOffsetY),
+        boundaryOverlapThreshold: autoPlacementResult.autoPlaceBoundaryThreshold.clamp(0.01, 0.9),
+      );
+
+      return result.speakerPositions.map((ceiling_algo.Point2D p) => Offset(p.x + minX, p.y + minY)).toList();
+    }
+
+    final surface_algo.SurfacePlacementResult result = surface_algo.SurfaceSpeakerPlacer.calculatePlacement(
+      room: surface_algo.SurfaceRoom(
+        length: roomLength,
+        width: roomWidth,
+        ceilingHeight: ceilingHeight,
+        listenerHeight: listenerHeight,
+      ),
+      speaker: surface_algo.Loudspeaker(
+        horizontalCoverageAngle: coverageAngle,
+        type: referenceSpeaker.speakerSKU,
+      ),
+      config: surface_algo.PlacementConfig(
+        coveragePreference: _mapSurfaceCoveragePreference(autoPlacementResult.autoPlaceSpacingPreset),
+        enableDebugOutput: false,
+      ),
+    );
+
+    return result.positions
+        .map(
+          (surface_algo.SpeakerPosition p) => Offset(
+            minX + p.x + autoPlacementResult.autoPlaceGridX,
+            minY + p.y + autoPlacementResult.autoPlaceOffsetY,
+          ),
+        )
+        .toList();
+  }
+
+  double _resolveCoverageAngle(SpeakerProduct? product) {
+    if (product == null || product.coverage.isEmpty) return 90.0;
+    final int angle = product.coverage.first.horizontalDeg;
+    return angle <= 0 ? 90.0 : angle.toDouble();
+  }
+
+  ceiling_algo.CoveragePreference _mapCeilingCoveragePreference(AutoPlaceSpacingPreset spacingPreset) {
+    switch (spacingPreset) {
+      case AutoPlaceSpacingPreset.edgeToEdge:
+        return ceiling_algo.CoveragePreference.edgeToEdge;
+      case AutoPlaceSpacingPreset.centerToCenter:
+        return ceiling_algo.CoveragePreference.centerToCenter;
+      case AutoPlaceSpacingPreset.minimumOverlap:
+      case AutoPlaceSpacingPreset.customize:
+        return ceiling_algo.CoveragePreference.minimumOverlap;
+    }
+  }
+
+  surface_algo.CoveragePreference _mapSurfaceCoveragePreference(AutoPlaceSpacingPreset spacingPreset) {
+    switch (spacingPreset) {
+      case AutoPlaceSpacingPreset.edgeToEdge:
+        return surface_algo.CoveragePreference.edgeToEdge;
+      case AutoPlaceSpacingPreset.centerToCenter:
+        return surface_algo.CoveragePreference.centerToCenter;
+      case AutoPlaceSpacingPreset.minimumOverlap:
+      case AutoPlaceSpacingPreset.customize:
+        return surface_algo.CoveragePreference.minimumOverlap;
     }
   }
 

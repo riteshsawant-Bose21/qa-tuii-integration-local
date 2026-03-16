@@ -26,6 +26,47 @@ class SpeakerSelectionViewModel extends Cubit<SpeakerSelectionViewModelState> {
     isFromBuildingPage = isFromBuilding;
     this.zoneId = zoneId;
     this.subZoneId = subZoneId;
+
+    // Hydrate suggest-mode state when reopening the dialog so previously configured
+    // values immediately show recommended lists and top-card selections.
+    _recalculateIfSuggestMode();
+    _restoreSuggestedSelectionFromExistingSpeakers();
+  }
+
+  void _restoreSuggestedSelectionFromExistingSpeakers() {
+    final ListeningArea? la = selectedListeningArea;
+    if (la == null || la.speakerSelectionMode != SpeakerSelectionMode.suggest) return;
+
+    final List<Speaker> currentSpeakers = getAllPlacedNonPlacedSpeakers();
+    if (currentSpeakers.isEmpty) return;
+
+    final ProductQueryViewModel pq = serviceLocator<ProductQueryViewModel>();
+    int? midHighProductId;
+    int? subwooferProductId;
+
+    for (final Speaker sp in currentSpeakers) {
+      final int? productId = sp.productId;
+      if (productId == null) continue;
+
+      final SpeakerProduct? product = pq.speakers.where((SpeakerProduct s) => s.productId == productId).firstOrNull;
+      if (la.lowFrequency == LowFrequency.withSubwoofer) {
+        if (product?.isSubwoofer == true) {
+          subwooferProductId ??= productId;
+        } else {
+          midHighProductId ??= productId;
+        }
+      } else {
+        // In full-range modes, keep only one suggested selection.
+        midHighProductId ??= productId;
+      }
+    }
+
+    emit(
+      state.copyWith(
+        suggestedProductId: midHighProductId,
+        suggestedSubwooferProductId: la.lowFrequency == LowFrequency.withSubwoofer ? subwooferProductId : null,
+      ),
+    );
   }
 
   List<ListeningArea> getListeningAreas() {
@@ -131,8 +172,30 @@ class SpeakerSelectionViewModel extends Cubit<SpeakerSelectionViewModelState> {
           la.splRange!.splRangeValues["max"]!,
         ],
       );
-      final SplMultiMountResult result = calculateSpl(input, speakers);
-      emit(state.copyWith(splResult: result, clearSuggestedProductId: true));
+
+      if (la.lowFrequency == LowFrequency.withSubwoofer) {
+        final List<SpeakerProduct> nonSubs = speakers.where((SpeakerProduct s) => !s.isSubwoofer).toList();
+        final List<SpeakerProduct> subs = speakers.where((SpeakerProduct s) => s.isSubwoofer).toList();
+        final SplMultiMountResult midHighResult = calculateSpl(input, nonSubs);
+        SplMultiMountResult? subResult;
+        if (subs.isNotEmpty) {
+          try {
+            subResult = calculateSpl(input, subs);
+          } catch (_) {}
+        }
+        emit(
+          state.copyWith(
+            splResult: midHighResult,
+            splResultSubwoofer: subResult,
+            clearSuggestedProductId: true,
+            clearSuggestedSubwooferProductId: true,
+          ),
+        );
+      } else {
+        final List<SpeakerProduct> nonSubs = speakers.where((SpeakerProduct s) => !s.isSubwoofer).toList();
+        final SplMultiMountResult result = calculateSpl(input, nonSubs);
+        emit(state.copyWith(splResult: result, clearSuggestedProductId: true, clearSuggestedSubwooferProductId: true, clearSplResultSubwoofer: true));
+      }
     } catch (_) {
       // Silently ignore — incomplete config or calculation error
     }
@@ -170,25 +233,59 @@ class SpeakerSelectionViewModel extends Cubit<SpeakerSelectionViewModelState> {
           ],
         );
 
-        final SplMultiMountResult result = calculateSpl(input, speakers);
-        emit(state.copyWith(splResult: result, clearSuggestedProductId: true));
+        if (selectedListeningArea!.lowFrequency == LowFrequency.withSubwoofer) {
+          final List<SpeakerProduct> nonSubs = speakers.where((SpeakerProduct s) => !s.isSubwoofer).toList();
+          final List<SpeakerProduct> subs = speakers.where((SpeakerProduct s) => s.isSubwoofer).toList();
+          final SplMultiMountResult midHighResult = calculateSpl(input, nonSubs);
+          SplMultiMountResult? subResult;
+          if (subs.isNotEmpty) {
+            try {
+              subResult = calculateSpl(input, subs);
+            } catch (_) {}
+          }
+          emit(
+            state.copyWith(
+              splResult: midHighResult,
+              splResultSubwoofer: subResult,
+              clearSuggestedProductId: true,
+              clearSuggestedSubwooferProductId: true,
+            ),
+          );
+        } else {
+          final List<SpeakerProduct> nonSubs = speakers.where((SpeakerProduct s) => !s.isSubwoofer).toList();
+          final SplMultiMountResult result = calculateSpl(input, nonSubs);
+          emit(state.copyWith(splResult: result, clearSuggestedProductId: true, clearSuggestedSubwooferProductId: true, clearSplResultSubwoofer: true));
+        }
       } catch (e) {
         return FusionToast.error(context, message: 'Failed to calculate speaker suggestion. Please try again.');
       }
     } else {
-      emit(state.copyWith(clearSplResult: true, clearSuggestedProductId: true));
+      emit(state.copyWith(clearSplResult: true, clearSplResultSubwoofer: true, clearSuggestedProductId: true, clearSuggestedSubwooferProductId: true));
     }
 
     final ListeningArea updatedLA = selectedListeningArea!.copyWith(speakerSelectionMode: mode);
     projectViewModel.updateListeningArea(area: updatedLA);
   }
 
-  void selectSuggestedSpeaker(int? productId) => emit(state.copyWith(suggestedProductId: productId));
+  Future<void> selectSuggestedSpeaker({required BuildContext context, required SpeakerProduct product, String? cachedImagePath}) async {
+    final bool didApply = await addOrReplaceSpeaker(context: context, cachedImagePath: cachedImagePath, product: product);
+    if (!didApply) return;
+
+    final LowFrequency? lf = selectedListeningArea?.lowFrequency;
+    if (lf == LowFrequency.withSubwoofer && state.selectedTab == 1) {
+      emit(state.copyWith(suggestedSubwooferProductId: product.productId));
+    } else {
+      emit(state.copyWith(suggestedProductId: product.productId));
+    }
+  }
 
   /// Returns suggested speakers grouped by category from the SPL calculation result.
   /// Keys: "Maximum SPL", "Balanced", "Lowest Cost"
+  /// In withSubwoofer mode, uses the appropriate result based on active tab.
   Map<String, List<SpeakerProduct>> getSuggestedSpeakersByCategory(List<SpeakerProduct> allSpeakers) {
-    final SplMultiMountResult? result = state.splResult;
+    final LowFrequency? lf = selectedListeningArea?.lowFrequency;
+    final bool isSubwooferTab = lf == LowFrequency.withSubwoofer && state.selectedTab == 1;
+    final SplMultiMountResult? result = isSubwooferTab ? state.splResultSubwoofer : state.splResult;
     if (result == null || result.results.isEmpty) return <String, List<SpeakerProduct>>{};
 
     final SplPerMountResult mountResult = result.results.first;
@@ -300,7 +397,7 @@ class SpeakerSelectionViewModel extends Cubit<SpeakerSelectionViewModelState> {
   /// Returns tab labels for the frequency category tab bar.
   List<String> getTabLabels() {
     final LowFrequency? lf = selectedListeningArea?.lowFrequency;
-    if (lf == LowFrequency.withSubwoofer && !isSuggestMode) {
+    if (lf == LowFrequency.withSubwoofer) {
       return <String>['Mid-High', 'Subwoofer'];
     }
     return <String>[frequencyCategoryLabel];
@@ -356,8 +453,7 @@ class SpeakerSelectionViewModel extends Cubit<SpeakerSelectionViewModelState> {
       case LowFrequency.withSubwoofer:
         return 'Mid-High';
       case LowFrequency.fullRange:
-      case LowFrequency.extended:
-      case LowFrequency.vocal:
+      case LowFrequency.extendedBass:
         return 'Full Range';
     }
   }
@@ -504,13 +600,16 @@ class SpeakerSelectionViewModel extends Cubit<SpeakerSelectionViewModelState> {
 
         switch (lowFrequency) {
           case LowFrequency.withSubwoofer:
+            // In withSubwoofer mode, don't filter mid-high speakers by frequency range at all
             return true;
-          case LowFrequency.extended:
-            return fr != null && fr.low > 0 && fr.low <= 40;
           case LowFrequency.fullRange:
-            return fr != null && fr.low > 40 && fr.low <= 80;
-          case LowFrequency.vocal:
-            return fr != null && fr.low > 80;
+            // Full-range: must have a reasonably wide frequency response that extends to at least 20Hz
+            if (fr == null) return false;
+            return fr.low <= 20 && fr.high >= 15000;
+          case LowFrequency.extendedBass:
+            // Extended bass: must extend to at least 30Hz on the low end (no requirement on high end)
+            if (fr == null) return false;
+            return fr.low <= 30;
         }
       });
     }
@@ -615,7 +714,7 @@ class SpeakerSelectionViewModel extends Cubit<SpeakerSelectionViewModelState> {
     return copy;
   }
 
-  Future<void> addOrReplaceSpeaker({required BuildContext context, String? cachedImagePath, required SpeakerProduct product}) async {
+  Future<bool> addOrReplaceSpeaker({required BuildContext context, String? cachedImagePath, required SpeakerProduct product}) async {
     final ProjectViewModel projectViewModel = serviceLocator<ProjectViewModel>();
     final String? listeningAreaId = context.read<SpeakerSelectionViewModel>().selectedListeningArea?.id;
     final FloorModel currentFloor = projectViewModel.currentFloor;
@@ -623,7 +722,7 @@ class SpeakerSelectionViewModel extends Cubit<SpeakerSelectionViewModelState> {
     final LocationModel location = LocationModel(floorId: currentFloor.id, listeningAreaId: listeningAreaId);
     final Speaker speaker = projectViewModel.fromSpeakerProductModel(cachedImagePath ?? '', product, location, isFromBuildingPage);
 
-    if (selectedListeningArea == null) return;
+    if (selectedListeningArea == null) return false;
 
     final bool isWithSubwooferMode = selectedListeningArea!.lowFrequency == LowFrequency.withSubwoofer;
 
@@ -648,7 +747,7 @@ class SpeakerSelectionViewModel extends Cubit<SpeakerSelectionViewModelState> {
       if (sameTypeSpeakers.isEmpty || sameTypeSpeakers.first.speakerSKU == speaker.speakerSKU) {
         // No speaker of this type yet, or same model — add another instance.
         projectViewModel.addHardware(hardware: speaker);
-        return;
+        return true;
       }
 
       // Different model of the same type — ask to replace only that type.
@@ -658,18 +757,19 @@ class SpeakerSelectionViewModel extends Cubit<SpeakerSelectionViewModelState> {
         existingSpeakerName: sameTypeSpeakers.first.name,
         currentSpeakerName: product.modelName,
       );
-      if (isConfirmed != true) return;
+      if (isConfirmed != true) return false;
 
       for (final Speaker sp in sameTypeSpeakers) {
         projectViewModel.removeHardware(hardwareId: sp.id);
       }
       projectViewModel.addHardware(hardware: speaker);
+      return true;
     } else {
       // Full-range mode: LA holds one speaker model with multiple qty.
       // Same model → add another instance. Different model → replace all.
       if (speakerList.isEmpty || speakerList.first.speakerSKU == speaker.speakerSKU) {
         projectViewModel.addHardware(hardware: speaker);
-        return;
+        return true;
       }
 
       final bool? isConfirmed = await ReplaceSpeakersWarningDialog.show(
@@ -678,9 +778,10 @@ class SpeakerSelectionViewModel extends Cubit<SpeakerSelectionViewModelState> {
         existingSpeakerName: speakerList.first.name,
         currentSpeakerName: product.modelName,
       );
-      if (isConfirmed != true) return;
+      if (isConfirmed != true) return false;
 
       projectViewModel.migrateAllSpeakersTo(speaker: speaker, targetListeningAreaId: selectedListeningArea!.id);
+      return true;
     }
   }
 }

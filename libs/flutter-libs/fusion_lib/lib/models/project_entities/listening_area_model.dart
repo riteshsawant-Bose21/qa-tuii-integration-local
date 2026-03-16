@@ -54,35 +54,35 @@ enum MountingType {
 }
 
 enum LowFrequency {
-  vocal,
   fullRange,
-  extended,
+  extendedBass,
   withSubwoofer;
 
   String get displayName {
     switch (this) {
-      case LowFrequency.vocal:
-        return 'Vocal';
       case LowFrequency.fullRange:
         return 'Full Range';
-      case LowFrequency.extended:
-        return 'Extended';
+      case LowFrequency.extendedBass:
+        return 'Extended Bass';
       case LowFrequency.withSubwoofer:
-        return 'With Subwoofer';
+        return 'Subwoofers';
     }
   }
 
   static LowFrequency? fromJson(String? value) {
     switch (value?.toLowerCase()) {
-      case 'vocal':
-        return LowFrequency.vocal;
       case 'fullrange':
       case 'full_range':
       case 'full-range':
         return LowFrequency.fullRange;
-      case 'extended':
-        return LowFrequency.extended;
+      case 'extendedbass':
+      case 'extended_bass':
+      case 'extended-bass':
+        return LowFrequency.extendedBass;
+      case 'withsubwoofer':
+      case 'with_subwoofer':
       case 'subwoofer':
+      case 'subwoofers':
         return LowFrequency.withSubwoofer;
       default:
         return null;
@@ -272,6 +272,113 @@ extension ListExtension<T> on List<T> {
   }
 }
 
+enum AutoPlaceSpacingPreset {
+  edgeToEdge("Edge-to-edge"),
+  minimumOverlap("Minimum Overlap"),
+  centerToCenter("Center-to-center"),
+  customize("Customize");
+
+  const AutoPlaceSpacingPreset(this.displayName);
+  final String displayName;
+
+  static AutoPlaceSpacingPreset? fromJson(String? value) {
+    switch (value?.toLowerCase()) {
+      case 'minimumoverlap':
+      case 'minimum_overlap':
+        return AutoPlaceSpacingPreset.minimumOverlap;
+      case 'edge_to_edge':
+        return AutoPlaceSpacingPreset.edgeToEdge;
+      case 'center_to_center':
+        return AutoPlaceSpacingPreset.centerToCenter;
+      case 'customize':
+        return AutoPlaceSpacingPreset.customize;
+      default:
+        return null;
+    }
+  }
+}
+
+enum AutoPlaceLayoutPreset {
+  square("Square"),
+  hexagonal("Hexagonal");
+
+  const AutoPlaceLayoutPreset(this.displayName);
+  final String displayName;
+
+  static AutoPlaceLayoutPreset? fromJson(String? value) {
+    switch (value?.toLowerCase()) {
+      case 'square':
+        return AutoPlaceLayoutPreset.square;
+      case 'hexagonal':
+        return AutoPlaceLayoutPreset.hexagonal;
+      default:
+        return null;
+    }
+  }
+}
+
+class AutoPlacementResult {
+  final AutoPlaceSpacingPreset autoPlaceSpacingPreset;
+  final AutoPlaceLayoutPreset autoPlaceLayoutPreset;
+  final double autoPlaceCustomSpacing;
+  final double autoPlaceGridX;
+  final double autoPlaceOffsetY;
+  final bool autoPlaceMatchGrid;
+  final double autoPlaceBoundaryThreshold;
+
+  const AutoPlacementResult({
+    this.autoPlaceSpacingPreset = AutoPlaceSpacingPreset.minimumOverlap,
+    this.autoPlaceLayoutPreset = AutoPlaceLayoutPreset.hexagonal,
+    this.autoPlaceCustomSpacing = 0.0,
+    this.autoPlaceGridX = 0.0,
+    this.autoPlaceOffsetY = 0.0,
+    this.autoPlaceMatchGrid = false,
+    this.autoPlaceBoundaryThreshold = 0.3, // min 30%.
+  });
+
+  Map<String, dynamic> toJson() => <String, dynamic>{
+    'autoPlaceSpacingPreset': autoPlaceSpacingPreset.name,
+    'autoPlaceLayoutPreset': autoPlaceLayoutPreset.name,
+    'autoPlaceCustomSpacing': autoPlaceCustomSpacing,
+    'autoPlaceGridX': autoPlaceGridX,
+    'autoPlaceOffsetY': autoPlaceOffsetY,
+    'autoPlaceMatchGrid': autoPlaceMatchGrid,
+    'autoPlaceBoundaryThreshold': autoPlaceBoundaryThreshold,
+  };
+
+  factory AutoPlacementResult.fromJson(Map<String, dynamic> json) {
+    return AutoPlacementResult(
+      autoPlaceSpacingPreset: AutoPlaceSpacingPreset.fromJson(json['autoPlaceSpacingPreset'] as String?) ?? AutoPlaceSpacingPreset.minimumOverlap,
+      autoPlaceLayoutPreset: AutoPlaceLayoutPreset.fromJson(json['autoPlaceLayoutPreset'] as String?) ?? AutoPlaceLayoutPreset.hexagonal,
+      autoPlaceCustomSpacing: (json['autoPlaceCustomSpacing'] as num?)?.toDouble() ?? 0.0,
+      autoPlaceGridX: (json['autoPlaceGridX'] as num?)?.toDouble() ?? 0.0,
+      autoPlaceOffsetY: (json['autoPlaceOffsetY'] as num?)?.toDouble() ?? 0.0,
+      autoPlaceMatchGrid: json['autoPlaceMatchGrid'] as bool? ?? false,
+      autoPlaceBoundaryThreshold: (json['autoPlaceBoundaryThreshold'] as num?)?.toDouble() ?? 0.0,
+    );
+  }
+
+  AutoPlacementResult copyWith({
+    AutoPlaceSpacingPreset? autoPlaceSpacingPreset,
+    AutoPlaceLayoutPreset? autoPlaceLayoutPreset,
+    double? autoPlaceCustomSpacing,
+    double? autoPlaceGridX,
+    double? autoPlaceOffsetY,
+    bool? autoPlaceMatchGrid,
+    double? autoPlaceBoundaryThreshold,
+  }) {
+    return AutoPlacementResult(
+      autoPlaceSpacingPreset: autoPlaceSpacingPreset ?? this.autoPlaceSpacingPreset,
+      autoPlaceLayoutPreset: autoPlaceLayoutPreset ?? this.autoPlaceLayoutPreset,
+      autoPlaceCustomSpacing: autoPlaceCustomSpacing ?? this.autoPlaceCustomSpacing,
+      autoPlaceGridX: autoPlaceGridX ?? this.autoPlaceGridX,
+      autoPlaceOffsetY: autoPlaceOffsetY ?? this.autoPlaceOffsetY,
+      autoPlaceMatchGrid: autoPlaceMatchGrid ?? this.autoPlaceMatchGrid,
+      autoPlaceBoundaryThreshold: autoPlaceBoundaryThreshold ?? this.autoPlaceBoundaryThreshold,
+    );
+  }
+}
+
 class ListeningArea {
   final String id;
   final List<FusionCanvasPoint> vertices;
@@ -296,6 +403,8 @@ class ListeningArea {
   final WiringType? wiringType;
   final BackgroundNoise? backgroundNoise;
   final SpeakerSelectionMode speakerSelectionMode;
+  final bool autoPlacement;
+  final AutoPlacementResult? autoPlacementResult;
 
   ListeningArea({
     String? id,
@@ -314,6 +423,8 @@ class ListeningArea {
     this.wiringType,
     this.backgroundNoise,
     this.speakerSelectionMode = SpeakerSelectionMode.select,
+    this.autoPlacement = false,
+    this.autoPlacementResult,
     this.preferredSpeakerColor,
     this.splRange,
     this.listeningPreference,
@@ -423,6 +534,8 @@ class ListeningArea {
     ListeningPreference? listeningPreference,
     bool? isDrawn,
     SpeakerSelectionMode? speakerSelectionMode,
+    bool? autoPlacement,
+    AutoPlacementResult? autoPlacementResult,
   }) {
     return ListeningArea(
       vertices: vertices ?? this.vertices,
@@ -441,6 +554,8 @@ class ListeningArea {
       wiringType: wiringType ?? this.wiringType,
       backgroundNoise: backgroundNoise ?? this.backgroundNoise,
       speakerSelectionMode: speakerSelectionMode ?? this.speakerSelectionMode,
+      autoPlacement: autoPlacement ?? this.autoPlacement,
+      autoPlacementResult: autoPlacementResult ?? this.autoPlacementResult,
       preferredSpeakerColor: preferredSpeakerColor ?? this.preferredSpeakerColor,
       splRange: splRange ?? this.splRange,
       listeningPreference: listeningPreference ?? this.listeningPreference,
@@ -478,6 +593,8 @@ class ListeningArea {
     'lowFrequency': lowFrequency?.name,
     'wiringType': wiringType?.name,
     'speakerSelectionMode': speakerSelectionMode.name,
+    'autoPlacement': autoPlacement,
+    'autoPlacementResult': autoPlacementResult?.toJson(),
   };
 
   /// Parses back from JSON, turning the dynamic list into List<Offset>
@@ -511,6 +628,8 @@ class ListeningArea {
       wiringType: WiringType.fromJson(json['wiringType']),
       backgroundNoise: BackgroundNoise.fromJson(json['backgroundNoise']),
       speakerSelectionMode: SpeakerSelectionMode.fromJson(json['speakerSelectionMode'] as String?) ?? SpeakerSelectionMode.select,
+      autoPlacement: json['autoPlacement'] as bool? ?? false,
+      autoPlacementResult: json['autoPlacementResult'] != null ? AutoPlacementResult.fromJson(json['autoPlacementResult'] as Map<String, dynamic>) : null,
     );
   }
 

@@ -346,6 +346,17 @@ class SpeakerListeningAreaPropertiesState extends State<SpeakerListeningAreaProp
 
                             if (selectedListeningArea != null) ...<Widget>[
                               const SizedBox(height: 10),
+                              // Target SPL
+                              BuildRowPropertyWidget<String>(
+                                label: "Target SPL",
+                                value: selectedListeningArea.splRange?.name,
+                                options: SplRange.values.map((SplRange option) => option.name).toList(),
+                                labelBuilder: (String option) => option,
+                                onOptionSelected: (int selectedIndex, String newValue) {
+                                  speakerSelectionViewModel.setSplRange(selectedIndex);
+                                },
+                              ),
+                              const SizedBox(height: 20),
 
                               // ── SUGGEST MODE ──
                               if (speakerSelectionViewModel.isSuggestMode) ...<Widget>[
@@ -410,33 +421,9 @@ class SpeakerListeningAreaPropertiesState extends State<SpeakerListeningAreaProp
                                     );
                                   },
                                 ),
-
-                                // Target SPL
-                                const SizedBox(height: 20),
-                                BuildRowPropertyWidget<String>(
-                                  label: "Target SPL",
-                                  value: selectedListeningArea.splRange?.name,
-                                  options: SplRange.values.map((SplRange option) => option.name).toList(),
-                                  labelBuilder: (String option) => option,
-                                  onOptionSelected: (int selectedIndex, String newValue) {
-                                    speakerSelectionViewModel.setSplRange(selectedIndex);
-                                  },
-                                ),
                               ]
                               // ── SELECT MODE ──
                               else ...<Widget>[
-                                // Target SPL
-                                BuildRowPropertyWidget<String>(
-                                  label: "Target SPL",
-                                  value: selectedListeningArea.splRange?.name,
-                                  options: SplRange.values.map((SplRange option) => option.name).toList(),
-                                  labelBuilder: (String option) => option,
-                                  onOptionSelected: (int selectedIndex, String newValue) {
-                                    speakerSelectionViewModel.setSplRange(selectedIndex);
-                                  },
-                                ),
-                                const SizedBox(height: 20),
-
                                 // Signal Type (Mono / Stereo)
                                 MouseRegion(
                                   cursor: SystemMouseCursors.forbidden,

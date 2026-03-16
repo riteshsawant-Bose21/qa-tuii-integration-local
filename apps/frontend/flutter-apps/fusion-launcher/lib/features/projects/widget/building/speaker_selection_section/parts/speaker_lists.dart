@@ -52,32 +52,140 @@ class ProductQuerySpeakerList extends StatelessWidget {
 
         // ── SELECTED SPEAKER SUMMARY CARD ──
         Expanded(
-          child: BlocBuilder<ProjectViewModel, ProjectViewModelState>(
-            builder: (BuildContext context, ProjectViewModelState projectViewModelState) {
-              return BlocBuilder<SpeakerSelectionViewModel, SpeakerSelectionViewModelState>(
-                builder: (BuildContext context, SpeakerSelectionViewModelState vmState) {
-                  final ProductQueryViewModel pq = context.read<ProductQueryViewModel>();
-                  final bool isSuggestMode = speakerSelectionViewModel.isSuggestMode;
+          child: Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              border: Border.all(color: context.colorScheme.strokeLight),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: BlocBuilder<ProjectViewModel, ProjectViewModelState>(
+              builder: (BuildContext context, ProjectViewModelState projectViewModelState) {
+                return BlocBuilder<SpeakerSelectionViewModel, SpeakerSelectionViewModelState>(
+                  builder: (BuildContext context, SpeakerSelectionViewModelState vmState) {
+                    final ProductQueryViewModel pq = context.read<ProductQueryViewModel>();
+                    final bool isSuggestMode = speakerSelectionViewModel.isSuggestMode;
 
-                  // In suggest mode: show the selected suggested speaker
-                  if (isSuggestMode) {
-                    final int? suggestedId = vmState.suggestedProductId;
-                    if (suggestedId == null) return const SizedBox.shrink();
+                    // In suggest mode: show the selected suggested speaker(s)
+                    if (isSuggestMode) {
+                      final bool isWithSubwoofer = speakerSelectionViewModel.selectedListeningArea?.lowFrequency == LowFrequency.withSubwoofer;
 
-                    final SpeakerProduct? suggestedProduct = pq.speakers.where((SpeakerProduct s) => s.productId == suggestedId).firstOrNull;
-                    if (suggestedProduct == null) return const SizedBox.shrink();
+                      if (isWithSubwoofer) {
+                        // Show two sections: Mid-High and Subwoofer
+                        final int? midHighId = vmState.suggestedProductId;
+                        final int? subwooferId = vmState.suggestedSubwooferProductId;
 
-                    final double price = pq.getPrice(suggestedId);
-                    final String categoryLabel = speakerSelectionViewModel.frequencyCategoryLabel;
+                        if (midHighId == null && subwooferId == null) return const SizedBox.shrink();
 
-                    return Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        border: Border.all(color: context.colorScheme.strokeLight),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Column(
+                        final SpeakerProduct? midHighProduct =
+                            midHighId != null ? pq.speakers.where((SpeakerProduct s) => s.productId == midHighId).firstOrNull : null;
+                        final SpeakerProduct? subwooferProduct =
+                            subwooferId != null ? pq.speakers.where((SpeakerProduct s) => s.productId == subwooferId).firstOrNull : null;
+
+                        Widget buildSuggestedSection(String label, SpeakerProduct? product, int? productId) {
+                          return Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: <Widget>[
+                              Padding(
+                                padding: const EdgeInsets.only(bottom: 6),
+                                child: FusionAppText(
+                                  text: label,
+                                  style: context.textTheme.bodySmall?.copyWith(
+                                    color: context.colorScheme.onSurface.withValues(alpha: 0.6),
+                                  ),
+                                ),
+                              ),
+                              if (product == null)
+                                Padding(
+                                  padding: const EdgeInsets.only(bottom: 8),
+                                  child: FusionAppText(
+                                    text: 'None selected',
+                                    style: context.textTheme.labelSmall?.copyWith(
+                                      color: context.colorScheme.onSurface.withValues(alpha: 0.35),
+                                      fontStyle: FontStyle.italic,
+                                    ),
+                                  ),
+                                )
+                              else
+                                Padding(
+                                  padding: const EdgeInsets.only(bottom: 8),
+                                  child: Row(
+                                    children: <Widget>[
+                                      Container(
+                                        width: 36,
+                                        height: 36,
+                                        padding: const EdgeInsets.all(4),
+                                        decoration: BoxDecoration(
+                                          color: Colors.white,
+                                          borderRadius: BorderRadius.circular(6),
+                                        ),
+                                        child: Builder(
+                                          builder: (BuildContext ctx) {
+                                            final String? firstAsset = product.assets.assets.values.expand((List<String> v) => v).firstOrNull;
+                                            if (firstAsset == null) return const SizedBox();
+                                            final String path = pq.getImagePath(firstAsset);
+                                            return Image.asset(path, fit: BoxFit.cover);
+                                          },
+                                        ),
+                                      ),
+                                      const SizedBox(width: 10),
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: <Widget>[
+                                            Row(
+                                              children: <Widget>[
+                                                Flexible(
+                                                  child: FusionAppText(
+                                                    text: product.modelName,
+                                                    style: context.textTheme.labelSmall?.copyWith(
+                                                      fontWeight: FontWeight.bold,
+                                                      color: context.colorScheme.onSurface,
+                                                    ),
+                                                  ),
+                                                ),
+                                                const SizedBox(width: 4),
+                                                Icon(LucideIcons.info200, size: 12, color: context.colorScheme.onSurface),
+                                              ],
+                                            ),
+                                            FusionAppText(
+                                              text: '\$${pq.getPrice(productId!)}',
+                                              style: context.textTheme.bodySmall?.copyWith(
+                                                fontWeight: FontWeight.normal,
+                                                color: context.colorScheme.onSurface.withValues(alpha: 0.5),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                            ],
+                          );
+                        }
+
+                        return Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: <Widget>[
+                            buildSuggestedSection('Mid-High', midHighProduct, midHighId),
+                            buildSuggestedSection('Subwoofer', subwooferProduct, subwooferId),
+                          ],
+                        );
+                      }
+
+                      // Non-withSubwoofer suggest mode: single speaker
+                      final int? suggestedId = vmState.suggestedProductId;
+                      if (suggestedId == null) return const SizedBox.shrink();
+
+                      final SpeakerProduct? suggestedProduct = pq.speakers.where((SpeakerProduct s) => s.productId == suggestedId).firstOrNull;
+                      if (suggestedProduct == null) return const SizedBox.shrink();
+
+                      final double price = pq.getPrice(suggestedId);
+                      final String categoryLabel = speakerSelectionViewModel.frequencyCategoryLabel;
+
+                      return Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         mainAxisSize: MainAxisSize.min,
                         children: <Widget>[
@@ -142,25 +250,17 @@ class ProductQuerySpeakerList extends StatelessWidget {
                             ],
                           ),
                         ],
-                      ),
-                    );
-                  }
+                      );
+                    }
 
-                  // In select mode: show placed speakers grouped by category
-                  final Map<String, List<Speaker>> categorizedSpeakers = speakerSelectionViewModel.getPlacedSpeakersByCategory();
+                    // In select mode: show placed speakers grouped by category
+                    final Map<String, List<Speaker>> categorizedSpeakers = speakerSelectionViewModel.getPlacedSpeakersByCategory();
 
-                  // In non-withSubwoofer mode, hide the card entirely when nothing is placed
-                  final bool isWithSubwooferMode = speakerSelectionViewModel.selectedListeningArea?.lowFrequency == LowFrequency.withSubwoofer;
-                  if (!isWithSubwooferMode && categorizedSpeakers.isEmpty) return const SizedBox.shrink();
+                    // In non-withSubwoofer mode, hide the card entirely when nothing is placed
+                    final bool isWithSubwooferMode = speakerSelectionViewModel.selectedListeningArea?.lowFrequency == LowFrequency.withSubwoofer;
+                    if (!isWithSubwooferMode && categorizedSpeakers.isEmpty) return const SizedBox.shrink();
 
-                  return Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      border: Border.all(color: context.colorScheme.strokeLight),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Column(
+                    return Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       mainAxisSize: MainAxisSize.min,
                       children: <Widget>[
@@ -260,11 +360,11 @@ class ProductQuerySpeakerList extends StatelessWidget {
                           );
                         }),
                       ],
-                    ),
-                  );
-                },
-              );
-            },
+                    );
+                  },
+                );
+              },
+            ),
           ),
         ),
 
@@ -544,6 +644,8 @@ class ProductQuerySpeakerList extends StatelessWidget {
                         // ── SUGGEST MODE ──
                         if (isSuggestMode) {
                           final Map<String, List<SpeakerProduct>> categories = speakerSelectionViewModel.getSuggestedSpeakersByCategory(speakers);
+                          final bool isWithSubwoofer = speakerSelectionViewModel.selectedListeningArea?.lowFrequency == LowFrequency.withSubwoofer;
+                          final bool isSubwooferTab = isWithSubwoofer && vmState.selectedTab == 1;
 
                           if (categories.values.every((List<SpeakerProduct> list) => list.isEmpty)) {
                             return Expanded(
@@ -561,6 +663,9 @@ class ProductQuerySpeakerList extends StatelessWidget {
                               ),
                             );
                           }
+
+                          // Determine which suggestedProductId to use based on tab
+                          final int? activeSuggestedId = isSubwooferTab ? vmState.suggestedSubwooferProductId : vmState.suggestedProductId;
 
                           return Flexible(
                             child: ScrollConfiguration(
@@ -587,7 +692,7 @@ class ProductQuerySpeakerList extends StatelessWidget {
                                           ),
                                         ),
                                         ...products.map((SpeakerProduct product) {
-                                          final bool isSelected = vmState.suggestedProductId == product.productId;
+                                          final bool isSelected = activeSuggestedId == product.productId;
                                           final double productPrice = productQueryViewModel.getPrice(product.productId);
                                           final PowerHandling? ph = product.powerHandling;
                                           final String spiText =
@@ -680,7 +785,17 @@ class ProductQuerySpeakerList extends StatelessWidget {
                                                     ),
                                                     // Radio button
                                                     GestureDetector(
-                                                      onTap: () => speakerSelectionViewModel.selectSuggestedSpeaker(product.productId),
+                                                      onTap: () async {
+                                                        final String? firstAsset = product.assets.assets.values.expand((List<String> v) => v).firstOrNull;
+                                                        final String? cachedImagePath =
+                                                            firstAsset != null ? productQueryViewModel.getImagePath(firstAsset) : null;
+
+                                                        await speakerSelectionViewModel.selectSuggestedSpeaker(
+                                                          context: context,
+                                                          product: product,
+                                                          cachedImagePath: cachedImagePath,
+                                                        );
+                                                      },
                                                       child: MouseRegion(
                                                         cursor: SystemMouseCursors.click,
                                                         child: Padding(
@@ -1142,8 +1257,8 @@ class _SpeakerCardState extends State<SpeakerCard> {
                           color: widget.isSelected ? Colors.white : context.colorScheme.textPrimary,
                         ),
                         // text: "Add Speaker",
-                        onTap: () {
-                          context.read<SpeakerSelectionViewModel>().addOrReplaceSpeaker(
+                        onTap: () async {
+                          await context.read<SpeakerSelectionViewModel>().addOrReplaceSpeaker(
                             context: context,
                             cachedImagePath: selectedVarient?.cachedImagePath,
                             product: widget.product,

@@ -8,7 +8,9 @@ class SpeakerSelectionViewModelState extends Equatable {
     this.isLoading = false,
     this.selectedListeningAreaForDropDown,
     this.splResult,
+    this.splResultSubwoofer,
     this.suggestedProductId,
+    this.suggestedSubwooferProductId,
     this.selectedTab = 0,
   });
 
@@ -23,8 +25,14 @@ class SpeakerSelectionViewModelState extends Equatable {
   /// SPL calculation result for suggest mode
   final SplMultiMountResult? splResult;
 
-  /// The product ID the user picked in suggest mode
+  /// SPL calculation result for subwoofers only (withSubwoofer mode)
+  final SplMultiMountResult? splResultSubwoofer;
+
+  /// The product ID the user picked in suggest mode (mid-high or full-range)
   final int? suggestedProductId;
+
+  /// The subwoofer product ID the user picked in suggest mode (withSubwoofer only)
+  final int? suggestedSubwooferProductId;
 
   /// Active tab index for the frequency category tab bar
   final int selectedTab;
@@ -37,10 +45,14 @@ class SpeakerSelectionViewModelState extends Equatable {
     List<SpeakerProduct>? speakers,
     ListeningArea? selectedListeningAreaForDropDown,
     SplMultiMountResult? splResult,
+    SplMultiMountResult? splResultSubwoofer,
     int? suggestedProductId,
+    int? suggestedSubwooferProductId,
     int? selectedTab,
     bool clearSplResult = false,
+    bool clearSplResultSubwoofer = false,
     bool clearSuggestedProductId = false,
+    bool clearSuggestedSubwooferProductId = false,
   }) {
     return SpeakerSelectionViewModelState(
       selectedColor: selectedColor ?? this.selectedColor,
@@ -49,7 +61,9 @@ class SpeakerSelectionViewModelState extends Equatable {
       isLoading: isLoading ?? this.isLoading,
       selectedListeningAreaForDropDown: selectedListeningAreaForDropDown ?? this.selectedListeningAreaForDropDown,
       splResult: clearSplResult ? null : (splResult ?? this.splResult),
+      splResultSubwoofer: clearSplResultSubwoofer ? null : (splResultSubwoofer ?? this.splResultSubwoofer),
       suggestedProductId: clearSuggestedProductId ? null : (suggestedProductId ?? this.suggestedProductId),
+      suggestedSubwooferProductId: clearSuggestedSubwooferProductId ? null : (suggestedSubwooferProductId ?? this.suggestedSubwooferProductId),
       selectedTab: selectedTab ?? this.selectedTab,
     );
   }
@@ -62,7 +76,9 @@ class SpeakerSelectionViewModelState extends Equatable {
     isLoading,
     selectedListeningAreaForDropDown,
     splResult,
+    splResultSubwoofer,
     suggestedProductId,
+    suggestedSubwooferProductId,
     selectedTab,
   ];
 }
