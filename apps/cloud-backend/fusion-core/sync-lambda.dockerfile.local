@@ -9,13 +9,15 @@ COPY . .
 
 RUN go mod download
 
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build \
+# Detect host architecture: use arm64 for Apple Silicon, amd64 for Intel
+ARG TARGETARCH=arm64
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=${TARGETARCH} go build \
     -tags lambda.norpc -ldflags="-s -w" -trimpath \
     -o bootstrap ./cmd/sync/main.go
 
 # Stage 2: Runtime
-# assumed the x86_64 image for local testing with RIE, change based on local arch
-FROM --platform=linux/amd64 public.ecr.aws/lambda/provided:al2023-x86_64
+# Uses arm64 by default for Apple Silicon Macs; change to amd64/x86_64 for Intel
+FROM --platform=linux/arm64 public.ecr.aws/lambda/provided:al2023-arm64
 
 COPY --from=builder /app/bootstrap /var/task/bootstrap
 COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
