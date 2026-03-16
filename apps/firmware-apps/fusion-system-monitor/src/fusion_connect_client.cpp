@@ -737,7 +737,7 @@ private:
     std::map<std::string, fusion_cn_stream_config> aes67_stream_map;
     std::map<std::string, struct fc_stream_state> pending_streams;
     std::string enet_iface;
-    int period_ms;
+    int_fast32_t period_ms;
     bool debug_enabled;
     bool debug_sent;
     bool iface_sent;
@@ -745,6 +745,8 @@ private:
     SAPAnnouncer sap_announcer;
 
     std::string audio_streams_update;
+    bool audio_update_pending;
+    std::chrono::steady_clock::time_point audio_update_last_retry;
     bool ptp_sync_good;
     bool ptp_anchor_pending;
     int ptp_good_streak;
@@ -767,6 +769,8 @@ private:
     int remove_stream(uint64_t stream_handle);
     void join_multicast_group(uint32_t multicast_ip);
     void audio_streams_update_func();
+    bool process_audio_streams_update(bool is_retry);
+    void maybe_retry_audio_streams_update();
     void maybe_start_manager();
     void maybe_set_debug();
     void update_ptp_state();
@@ -781,6 +785,7 @@ FusionConnectClient::FusionConnectClient(const bosepro::BlockConfiguration &conf
     : bosepro::Module(configuration), mgr_started(false), device_id(""),
       enet_iface("lan1"), period_ms(1000), debug_enabled(false),
       debug_sent(false), iface_sent(false), phc_anchor_logged(false), sap_announcer(""),
+      audio_update_pending(false),
       ptp_sync_good(false), ptp_anchor_pending(true), ptp_good_streak(0),
       ptp_bad_streak(0), ptp_role_flag(-1), ptp_false_streak(0), mgr_start_failures(0),
       ptp_state(PtpState::RESET) {
@@ -811,6 +816,7 @@ FusionConnectClient::FusionConnectClient(const bosepro::BlockConfiguration &conf
     ptp_last_anchor = ptp_last_poll - std::chrono::seconds(60);
     ptp_last_status_poll = ptp_last_poll - std::chrono::seconds(1);
     mgr_last_start_attempt = ptp_last_poll - std::chrono::seconds(2);
+    audio_update_last_retry = ptp_last_poll - std::chrono::seconds(1);
 }
 
 static bool is_source_stream_by_name(const char *name) {
@@ -943,24 +949,26 @@ void FusionConnectClient::join_multicast_group(uint32_t multicast_ip) {
     SPDLOG_INFO("Successfully joined multicast group {} on interface {}", ip_to_string(multicast_ip), enet_iface);
 }
 
-void FusionConnectClient::audio_streams_update_func() {
+bool FusionConnectClient::process_audio_streams_update(bool is_retry) {
     if (audio_streams_update.empty()) {
         SPDLOG_DEBUG("audio_streams_update is empty, exiting");
-        return;
+        return true;
     }
 
-    SPDLOG_DEBUG("Received audio_streams_update: {}", audio_streams_update);
+    if (!is_retry) {
+        SPDLOG_DEBUG("Received audio_streams_update: {}", audio_streams_update);
+    }
 
     // --- Crucial pre-reqs -----------------------------------------------------
     if (system_ip.empty()) {
-        SPDLOG_ERROR("Cannot process audio_streams_update: no system IP yet");
-        return;
+        if (!is_retry) SPDLOG_ERROR("Cannot process audio_streams_update: no system IP yet");
+        return false;
     }
     if (device_id.empty()) {
         device_id = get_device_id(system_ip);
         if (device_id.empty()) {
-            SPDLOG_ERROR("Failed to get device_id after audio_streams update!");
-            return;
+            if (!is_retry) SPDLOG_ERROR("Failed to get device_id after audio_streams update!");
+            return false;
         }
         SPDLOG_INFO("Initialized device_id: {}, system_ip: {}", device_id, system_ip);
     }
@@ -969,7 +977,7 @@ void FusionConnectClient::audio_streams_update_func() {
     Json::Reader reader;
     if (!reader.parse(audio_streams_update, root) || !root.isArray()) {
         SPDLOG_ERROR("Failed to parse audio_streams_update JSON or not an array: {}", audio_streams_update);
-        return;
+        return true;
     }
 
     auto ip_to_be32 = [](const std::string& s) -> uint32_t {
@@ -980,7 +988,7 @@ void FusionConnectClient::audio_streams_update_func() {
     auto local_ip_be = ip_to_be32(system_ip);
     if (local_ip_be == INADDR_NONE || local_ip_be == 0) {
         SPDLOG_ERROR("Invalid system_ip '{}'", system_ip);
-        return;
+        return true;
     }
 
     std::set<std::string> json_stream_names;
@@ -1232,6 +1240,7 @@ void FusionConnectClient::audio_streams_update_func() {
             ++it;
         }
     }
+    return true;
 }
 
 void FusionConnectClient::maybe_start_manager()
@@ -1265,6 +1274,28 @@ void FusionConnectClient::maybe_start_manager()
     }
 
     if (reply.data) free(reply.data);
+    return;
+}
+
+void FusionConnectClient::audio_streams_update_func() {
+    audio_update_pending = true;
+    if (process_audio_streams_update(false)) {
+        audio_update_pending = false;
+    }
+}
+
+void FusionConnectClient::maybe_retry_audio_streams_update() {
+    if (!audio_update_pending) return;
+    if (!device_id.empty()) {
+        audio_update_pending = false;
+        return;
+    }
+    const auto now = std::chrono::steady_clock::now();
+    if (now - audio_update_last_retry < std::chrono::seconds(1)) return;
+    audio_update_last_retry = now;
+    if (process_audio_streams_update(true)) {
+        audio_update_pending = false;
+    }
 }
 
 void FusionConnectClient::maybe_set_debug()
@@ -1524,6 +1555,7 @@ void FusionConnectClient::process() {
     }
 
     maybe_set_debug();
+    maybe_retry_audio_streams_update();
     update_ptp_state();
     maybe_set_phc_anchor();
     

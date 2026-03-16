@@ -1,5 +1,5 @@
 {
-    "version": "0.1.13",
+    "version": "0.1.14",
     "algorithms": [
         {
             "name": "alsa_in",
@@ -9,6 +9,13 @@
                     "value_type": "string",
                     "default_value": "",
                     "maximum_length": 256
+                },
+                {
+                    "name": "device_sample_rate",
+                    "value_type": "integer",
+                    "default_value": 0,
+                    "minimum_value": 0,
+                    "maximum_value": 96000
                 },
                 {
                     "name": "period_size",

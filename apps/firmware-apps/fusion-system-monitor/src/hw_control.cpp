@@ -25,11 +25,11 @@ private:
     std::map<int, std::string> php_path_map;
     std::map<int, std::string> gpio_ctrl_path_map;
 
-    int num_gain_chs;
+    int_fast32_t num_gain_chs;
     std::vector<std::string> gain_paths;
-    int num_php_chs;
+    int_fast32_t num_php_chs;
     std::vector<std::string> php_paths;
-    int num_user_gpio;
+    int_fast32_t num_user_gpio;
     std::vector<std::string> user_gpio_ctrl_paths;
 
     void change_gain_post_func(int index);
@@ -80,8 +80,10 @@ void HWControl::change_gain_post_func(int index)
 
     const std::string &path = SYSFS_ROOT + it->second;
     int value = gain[index];
-    if (value > 3) value = 3;
     if (value < 0) value = 0;
+    if (value > 4) value = 4;
+    // We want values of 0, 1, 2, 4, and 8.  This remaps 3->4 and 4->8.
+    if (value > 2) value = 1 << (value - 1);
 
     std::ofstream gain_out(path);
     if (!gain_out.is_open()) {

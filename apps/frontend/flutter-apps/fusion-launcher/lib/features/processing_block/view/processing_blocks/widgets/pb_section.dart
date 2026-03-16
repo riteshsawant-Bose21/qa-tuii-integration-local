@@ -9,27 +9,35 @@ class PBSection extends StatelessWidget {
     required this.child,
     required this.type,
     this.padding = const EdgeInsets.all(8),
+    this.semanticId,
   });
   final PBSectionType type;
+  final String? semanticId;
   final Widget child;
   final EdgeInsetsGeometry padding;
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: padding,
-      decoration: BoxDecoration(
-        color: context.colorScheme.elevation2,
-        borderRadius: switch (type) {
-          PBSectionType.left => BorderRadius.horizontal(
-            left: Radius.circular(context.mediumRadius),
-          ),
-          PBSectionType.middle => null,
-          PBSectionType.right => BorderRadius.horizontal(
-            right: Radius.circular(context.mediumRadius),
-          ),
-        },
+    return SemanticHelper.container(
+      testId: SemanticHelper.createTestId(
+        SemanticTypes.section,
+        "pb_section_${semanticId}",
       ),
-      child: child,
+      child: Container(
+        padding: padding,
+        decoration: BoxDecoration(
+          color: context.colorScheme.elevation2,
+          borderRadius: switch (type) {
+            PBSectionType.left => BorderRadius.horizontal(
+              left: Radius.circular(context.mediumRadius),
+            ),
+            PBSectionType.middle => null,
+            PBSectionType.right => BorderRadius.horizontal(
+              right: Radius.circular(context.mediumRadius),
+            ),
+          },
+        ),
+        child: child,
+      ),
     );
   }
 }

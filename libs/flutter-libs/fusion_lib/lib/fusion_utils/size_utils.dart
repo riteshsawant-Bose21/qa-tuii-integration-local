@@ -16,3 +16,9 @@ extension RadiusUtils on BuildContext {
   BorderRadius get borderRadiusMedium => BorderRadius.circular(mediumRadius);
   BorderRadius get borderRadiusLarge => BorderRadius.circular(largeRadius);
 }
+
+extension PaddingUtils on BuildContext {
+  double get smallGap => 4;
+  double get mediumGap => 16;
+  double get largeGap => 24;
+}
