@@ -20,6 +20,7 @@ import (
 
 	types "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/api/types"
 	errorutils "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/utils/errorutil"
+	constants "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/constants"
 )
 
 // Service is a service for managing projects in the database.
@@ -144,7 +145,7 @@ func (s *Service) SelectAll(ctx context.Context, queryParams *types.GetAllProjec
 	query := ""
 	var rows *sql.Rows
 	var err error
-	if userAuth.Role.RoleName == "Admin" {
+	if userAuth.Role.RoleName == constants.AdminRoleName {
 		query = fmt.Sprintf(`
 			SELECT p.id, p.name, p.description, p.venue, 
 		       p.environment_type, p.project_phase, p.application, p.budget_amount, 
@@ -249,7 +250,7 @@ func (s *Service) SelectByID(ctx context.Context, projectID string, userAuth typ
 	var err error
 
 	switch userAuth.Role.RoleName {
-		case "Super Admin":
+		case constants.SuperAdminRoleName:
 			query := `
 				SELECT p.id, p.name, p.description, p.venue, 
 					p.environment_type, p.project_phase, p.application, p.budget_amount, 
@@ -261,7 +262,7 @@ func (s *Service) SelectByID(ctx context.Context, projectID string, userAuth typ
 				WHERE p.id = $1 AND p.is_deleted = $3
 			`
 			rows, err = s.db.QueryContext(ctx, query, projectID, userAuth.User.ID, false)
-		case "Admin":
+		case constants.AdminRoleName:
 			query := `
 				SELECT p.id, p.name, p.description, p.venue, 
 					p.environment_type, p.project_phase, p.application, p.budget_amount, 
