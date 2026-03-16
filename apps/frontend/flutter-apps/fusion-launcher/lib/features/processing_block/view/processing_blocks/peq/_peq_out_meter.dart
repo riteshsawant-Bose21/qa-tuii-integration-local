@@ -6,6 +6,7 @@ class _PeqOutMeter extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return PBSection(
+      semanticId: 'peq_out_meter',
       type: PBSectionType.right,
       child: Column(
         spacing: 10,
@@ -28,6 +29,7 @@ class _PeqOutMeter extends StatelessWidget {
           ),
           const Expanded(
             child: VerticalMeter(
+              semanticId: 'peq_out_meter_vertical_meter',
               value: -60,
               min: -60,
               max: 0,

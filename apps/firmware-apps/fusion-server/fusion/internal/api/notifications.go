@@ -15,6 +15,7 @@ const (
 	NotifyOpAudioRemove  NotifyOp = "audio_remove"
 	NotifyOpAudioSync    NotifyOp = "audio_sync"
 	NotifyOpConfigUpdate NotifyOp = "config_update"
+	NotifyOpDeviceUpdate NotifyOp = "device_update"
 	NotifyOpNoop         NotifyOp = "no_op"
 	NotifyOpSnapActivate NotifyOp = "snapshot_activate"
 	NotifyOpSnapCreate   NotifyOp = "snapshot_create"
@@ -38,6 +39,7 @@ type NotifyMessage struct {
 	AudioSync         *AudioSyncUpdate
 	ConfigUpdate      *ConfigUpdate
 	ConfigValue       *ConfigValue
+	DeviceInfo        *DeviceInfo
 	SnapshotOperation *SnapshotOperation
 	Task              *Task
 	VersionUpdate     *VersionUpdate

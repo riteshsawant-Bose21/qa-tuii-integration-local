@@ -10,6 +10,7 @@ import (
 	response "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/api/response"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/api/types"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion"
+	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/middleware"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/utils/errorutil"
 )
 
@@ -38,24 +39,15 @@ func NewUserHandler(userSvc fusion.User) *UserHandler {
 // @Failure 500 {object} types.ErrorResponse "Internal server error"
 // @Router /users/authorization [get]
 func (h *UserHandler) GetUserAuthorization(ctx *gin.Context) {
-	// Get user email from JWT token (set by Auth0 middleware)
-	email, exists := ctx.Get("user_email")
-	if !exists {
-		email, exists = ctx.Get("email")
-	}
-	if !exists {
-		response.Unauthorized(ctx, errorutil.MsgUserEmailNotFoundInToken)
-		return
-	}
-
-	emailStr, ok := email.(string)
-	if !ok {
-		response.Unauthorized(ctx, errorutil.MsgInvalidToken)
+	// Get user auth from context (populated by ExtractUserFromHeaders middleware)
+	user, err := middleware.GetUserAuth(ctx)
+	if err != nil {
+		response.Unauthorized(ctx, err.Error())
 		return
 	}
 
 	// Get authorization details from service using email
-	authDetails, err := h.user.GetUserAuthorization(ctx, emailStr)
+	authDetails, err := h.user.GetUserAuthorization(ctx, user.User.Email)
 	if err != nil {
 		// Check if it's a "user not found" error
 		if strings.Contains(err.Error(), "user not found") {
@@ -135,6 +127,7 @@ func (h *UserHandler) CreateUser(ctx *gin.Context) {
 	}
 
 	user, err := h.user.CreateUser(ctx, &req)
+
 	if err != nil {
 		response.InternalError(ctx)
 		return
@@ -289,6 +282,7 @@ func (h *UserHandler) CreateUserSettings(ctx *gin.Context) {
 	}
 
 	userSettingsID, err := h.user.CreateUserSettings(ctx, &settings)
+
 	if err != nil {
 		response.InternalError(ctx)
 		return

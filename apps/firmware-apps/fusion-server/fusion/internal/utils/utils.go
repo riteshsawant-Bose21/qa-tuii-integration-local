@@ -325,10 +325,7 @@ func CalculateDiff(before, after any) map[string]any {
 
 		diff := map[string]any{}
 
-		max := len(barr)
-		if len(aarr) < max {
-			max = len(aarr)
-		}
+		max := min(len(aarr), len(barr))
 
 		for i := 0; i < max; i++ {
 			sub := CalculateDiff(barr[i], aarr[i])
@@ -362,6 +359,10 @@ func CalculateDiff(before, after any) map[string]any {
 		return nil
 	}
 	return map[string]any{"": after}
+}
+
+func BuildInternalURL(address, port, endpoint string) string {
+	return fmt.Sprintf("%s%s:%s%s", api.Protocol, address, port, endpoint)
 }
 
 // GetLocalIP returns the primary IP address used for outbound communication

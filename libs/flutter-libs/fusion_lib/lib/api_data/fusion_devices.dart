@@ -3,8 +3,6 @@
 /// This module provides a unified interface to access all device catalogs
 /// through a single FusionDevices class with convenient getter methods.
 
-library fusion_devices;
-
 import 'dart:convert';
 import 'speakers/speaker_catalog.dart';
 import 'amplifiers/amplifier_catalog.dart';
@@ -37,7 +35,7 @@ class FusionDevices {
   
   /// Get all amplifiers as JSON string
   String getAmplifiers() {
-    final amps = AmpCatalog.models.map((a) => a.toJson()).toList();
+    final amps = AmplifierCatalog.getAllAmplifiers().map((a) => a.toJson()).toList();
     return jsonEncode(amps);
   }
   
