@@ -12,8 +12,17 @@ class SourceItem extends StatefulWidget {
   final bool isDragging;
   final int index;
   final String? semanticId;
+  final bool? isInControlMode;
 
-  const SourceItem({required this.source, this.sourceSet, this.isDragging = false, required this.index, super.key, this.semanticId});
+  const SourceItem({
+    required this.source,
+    this.sourceSet,
+    this.isDragging = false,
+    required this.index,
+    super.key,
+    this.semanticId,
+    this.isInControlMode,
+  });
 
   @override
   State<SourceItem> createState() => _SourceItemState();
@@ -72,6 +81,22 @@ class _SourceItemState extends State<SourceItem> {
                 fit: BoxFit.contain,
               ),
               const SizedBox(width: 12),
+              if (widget.isInControlMode != null && widget.isInControlMode!) ...<Widget>[
+                SizedBox(
+                  width: 4,
+                  height: 16,
+                  child: VerticalMeter(
+                    showIntervals: false,
+                    meterWidth: 4,
+                    semanticId: 'out_meter_vertical_meter',
+                    value: widget.index.isEven ? -0 : -40,
+                    min: -60,
+                    max: 0,
+                  ),
+                ),
+
+                const SizedBox(width: 12),
+              ],
 
               Expanded(
                 child: FusionAppText(
@@ -86,7 +111,7 @@ class _SourceItemState extends State<SourceItem> {
               // todo : based on the pagingSourceType show different popup with different configuration options
               /// Show configuration icon only if source has a paging source type
               Visibility(
-                visible: widget.source.pagingSourceType != null,
+                visible: widget.source.pagingSourceType != null && !widget.isDragging,
                 child: InkWell(
                   onTap: () {
                     MessagePlayerConfigDialog.show(

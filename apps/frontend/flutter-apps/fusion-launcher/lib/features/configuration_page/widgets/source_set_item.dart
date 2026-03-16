@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
 import 'package:fusion_launcher/features/configuration_page/widgets/source_item.dart';
 import 'package:fusion_launcher/features/processing_block/view/processing_chain_view.dart';
 import 'package:fusion_lib/constants/semantics/features/configuration/processing/config_sources.dart';
@@ -46,6 +47,7 @@ class _SourceSetItemState extends State<SourceSetItem> {
 
   ConfigSourceSetsViewmodel get _sourceSetsViewmodel => context.read<ConfigSourceSetsViewmodel>();
   ConfigSourcesViewmodel get _sourcesViewmodel => context.read<ConfigSourcesViewmodel>();
+  ProjectViewModel get _projectViewModel => context.read<ProjectViewModel>();
   final TextEditingController _sourceSetNameController = TextEditingController();
   final List<SelectedSource> _selectedSources = <SelectedSource>[];
   bool _isHovered = false;
@@ -419,13 +421,19 @@ class _SourceSetItemState extends State<SourceSetItem> {
                         index: index,
                         source: sourceData,
                         isDragging: true,
+                        isInControlMode: _projectViewModel.isInControlMode,
                       ),
                     ),
                   ),
                 ),
                 childWhenDragging: Opacity(
                   opacity: 0.5,
-                  child: SourceItem(index: index, source: sourceData, isDragging: true),
+                  child: SourceItem(
+                    index: index,
+                    source: sourceData,
+                    isDragging: true,
+                    isInControlMode: _projectViewModel.isInControlMode,
+                  ),
                 ),
                 child: SemanticHelper.container(
                   testId: SemanticHelper.createTestId(
@@ -437,6 +445,7 @@ class _SourceSetItemState extends State<SourceSetItem> {
                     index: index,
                     sourceSet: widget.sourceSet,
                     source: sourceData,
+                    isInControlMode: _projectViewModel.isInControlMode,
                     isDragging: _draggingSourceId == sourceData.id,
                   ),
                 ),

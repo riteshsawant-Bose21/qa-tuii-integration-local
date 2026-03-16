@@ -1,12 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/features/configuration_page/widgets/sub_zone_card.dart';
+import 'package:fusion_launcher/features/configuration_page/widgets/zoneControlmode/config_zone_control_mode_panel.dart';
 import 'package:fusion_launcher/features/zone_functions/source_select.dart';
 import 'package:fusion_lib/constants/semantics/features/configuration/processing/config_zones_keys.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
 import '../../../core/constants/assets_constants.dart';
-import '../../configuration/presentation/viewmodel/project_view_model.dart' show SelectedItemType;
+import '../../../core/service_locator.dart';
+import '../../configuration/presentation/viewmodel/project_view_model.dart'
+    show SelectedItemType, ProjectViewModel, ProjectPropertiesViewModel, HardwareViewModel;
 import '../viewModel/source_sets_viewmodel/config_source_sets_viewmodel.dart';
 import '../viewModel/sources_viewmodel/config_sources_viewmodel.dart';
 import '../viewModel/zones_viewmodel/config_zones_state.dart';
@@ -52,6 +55,7 @@ class _ZoneCardState extends State<ZoneCard> {
   ConfigZonesViewmodel get _zonesViewmodel => context.read<ConfigZonesViewmodel>();
   ConfigSourcesViewmodel get _sourcesViewmodel => context.read<ConfigSourcesViewmodel>();
   ConfigSourceSetsViewmodel get _sourceSetsViewmodel => context.read<ConfigSourceSetsViewmodel>();
+  bool get isInControlMode => serviceLocator<ProjectViewModel>().isInControlMode;
 
   @override
   void initState() {
@@ -114,7 +118,7 @@ class _ZoneCardState extends State<ZoneCard> {
                         ),
                       ),
                     ),
-                
+
                     /// Zone Content - shows subzones when expanded
                     if (zoneExpanded) _buildZoneContent(),
                   ],
@@ -246,7 +250,12 @@ class _ZoneCardState extends State<ZoneCard> {
                     Expanded(
                       child: SizedBox(
                         height: constrainedHeight,
-                        child: _buildSubZonePanel(subZonesForZone),
+                        child:
+                            isInControlMode
+                                ? ConfigZoneControlModePanel(
+                                  zone: widget.zoneData,
+                                )
+                                : _buildSubZonePanel(subZonesForZone),
                       ),
                     ),
                   ],
@@ -677,7 +686,7 @@ class _ZoneCardState extends State<ZoneCard> {
                   },
                   child: Container(
                     height: 22,
-                    width: 170,
+                    width: 160,
                     padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                     decoration: BoxDecoration(
                       color:
@@ -1246,7 +1255,7 @@ class _ZoneCardState extends State<ZoneCard> {
           // ----------------------------------------------------------
           child: Container(
             height: 22,
-            width: 170,
+            width: 160,
             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
             decoration: BoxDecoration(
               border: Border.all(
@@ -1429,6 +1438,13 @@ class _ZoneCardState extends State<ZoneCard> {
   Widget _buildCircuitCard({required int index, required CircuitModel circuitData, required List<Speaker> speakersList}) {
     final bool isThisCircuitHovered = _hoveredCircuitIndex == index;
 
+    final String assetImagePath =
+        serviceLocator<ProjectViewModel>().getHardwareImage(
+          productId: speakersList.isNotEmpty ? speakersList.first.productId ?? 0 : 0,
+          currentImagePath: speakersList.isNotEmpty ? speakersList.first.assetImagePath : '',
+        ) ??
+        "";
+
     return SemanticHelper.container(
       testId: SemanticHelper.createTestId(
         SemanticTypes.container,
@@ -1445,7 +1461,8 @@ class _ZoneCardState extends State<ZoneCard> {
           children: <Widget>[
             FusionImage.asset(
               semanticId: "${FusionTestKeys.instance.zonecircuititmimg}_${widget.index}",
-              speakersList.isNotEmpty ? speakersList.first.assetImagePath : "",
+              // speakersList.isNotEmpty ? speakersList.first.assetImagePath : "",
+              assetImagePath,
               width: 24,
               height: 24,
               fit: BoxFit.contain,
