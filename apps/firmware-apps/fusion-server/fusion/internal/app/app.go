@@ -5,9 +5,10 @@ import (
 	"context"
 	"fmt"
 	"fusion-services-core/logging"
+
+	"fusion-services-core/vip"
 	"fusion/internal/api"
 	"fusion/internal/cluster"
-	clustertransport "fusion/internal/cluster/transport"
 	"fusion/internal/controllers"
 	"fusion/internal/network"
 	"fusion/internal/persistence"
@@ -17,6 +18,7 @@ import (
 	"fusion/internal/server/handler"
 	"fusion/internal/tasks"
 	"fusion/internal/version"
+	vipmonitor "fusion/internal/vip_monitor"
 	"net"
 	"net/http"
 	"os"
@@ -60,6 +62,8 @@ type App struct {
 	publicRouter      *mux.Router
 	privateRouter     *mux.Router
 	MDNSManager       *network.MDNSManager
+	VIPMonitor        *vipmonitor.VIPMonitor
+	Hub               *pubsub.Hub
 }
 
 // NewApp is a factory function to set up the application
@@ -75,18 +79,20 @@ func NewApp(config *api.AppConfig) *App {
 	taskManager := initTaskManager(config, persistence, hub)
 	controllerManager := controllers.NewControllerManager(hub, api.ControllerPort)
 	delegate := cluster.NewClusterDelegate(config, persistence, stateManager, taskManager, hub)
+
 	memberlist := cluster.CreateMemberlist(config, delegate)
-	transport := clustertransport.NewMemberlistTransport(memberlist)
-	hub.SetClusterTransport(transport)
-	connectionHandler := handler.NewHandler(config, memberlist, persistence, stateManager, hub, controllerManager)
+	clusterInstance := cluster.NewCluster(config, delegate, memberlist)
+	hub.SetClusterTransport(clusterInstance)
+	connectionHandler := handler.NewHandler(config, clusterInstance, persistence, stateManager, hub, controllerManager)
 	mdnsManager := initMDNSManager()
-	clusterInstance := cluster.NewCluster(config, delegate, memberlist, mdnsManager)
 	bleServer := initBLEServer()
 	sapServer := initSAPServer(config, api.SAPPort, connectionHandler, hub)
 	udpServer := initUDPServer(api.UDPPort, connectionHandler, hub)
 	fusionServer := server.NewFusionServer(config.NodeName, connectionHandler, hub)
 
-	connectionHandler.SetDeviceProvider(clusterInstance)
+	// Initialize VIPMonitor
+	vipMonitor := vipmonitor.NewVIPMonitor(config.NetIface, config.Local, clusterInstance)
+	clusterInstance.SetVIPMonitor(vipMonitor)
 
 	// Setup the public routes
 	publicRouter := mux.NewRouter()
@@ -118,8 +124,10 @@ func NewApp(config *api.AppConfig) *App {
 		publicRouter:      publicRouter,
 		privateRouter:     privateRouter,
 		MDNSManager:       mdnsManager,
+		VIPMonitor:        vipMonitor,
+		Hub:               hub,
 	}
-
+	vipMonitor.SetCallback(app.handleVIPStateChange)
 	return app
 }
 
@@ -136,6 +144,9 @@ func (app *App) Close() {
 		if err := app.MDNSManager.Close(); err != nil {
 			app.Logger.Error("Failed to close mDNS manager: %v", err)
 		}
+	}
+	if app.VIPMonitor != nil {
+		app.VIPMonitor.Stop()
 	}
 	app.Cluster.Stop()
 	app.UDPServer.Stop()
@@ -198,11 +209,11 @@ func (app *App) setupPublicRoutes() {
 	app.registerPublicGET(routes.ControllersIDWinkEndpoint, app.Server.TriggerWinkById)
 
 	// Device
-	app.registerPublicGET(routes.DevicesEndpoint, app.Cluster.GetDevicesInfo)
-	app.registerPublicGET(routes.DevicesVIPEndpoint, app.Cluster.GetVIP)
-	app.registerPublicPOST(routes.DevicesSetVIPEndpoint, app.Cluster.SetVIP)
-	app.registerPublicPOST(routes.DeviceReloadVIPEndpoint, app.Cluster.ReloadVIP)
-	app.registerPublicPATCH(routes.DevicesIDEndpoint, app.Cluster.UpdateDeviceInfo)
+	app.registerPublicGET(routes.DevicesEndpoint, app.Server.GetDevicesInfo)
+	app.registerPublicGET(routes.DevicesVIPEndpoint, app.VIPMonitor.HandleGetVIP)
+	app.registerPublicPOST(routes.DevicesSetVIPEndpoint, app.VIPMonitor.HandleSetVIP)
+	app.registerPublicPOST(routes.DeviceReloadVIPEndpoint, app.VIPMonitor.HandleReloadVIP)
+	app.registerPublicPATCH(routes.DevicesIDEndpoint, app.Server.UpdateDeviceInfo)
 
 	app.registerPublicGET(routes.DevicesGetCSREndpoint, app.Cluster.GetDeviceCSR)
 	app.registerPublicPOST(routes.DevicesIDCertificateEndpoint, app.Cluster.SetDeviceCertificate)
@@ -285,11 +296,11 @@ func (app *App) setupPrivateRoutes() {
 	app.registerPrivateGET(routes.ClusterLatencyStatusLocalEndpoint, app.Cluster.GetLatencyStatusLocal)
 	app.registerPrivatePOST(routes.ClusterRebootLocalEndpoint, app.Cluster.RebootSystemLocal)
 
-	app.registerPrivateGET(routes.DeviceEndpoint, app.Cluster.GetDeviceInfo)
-	app.registerPrivatePOST(routes.DeviceEndpoint, app.Cluster.SetDeviceInfo)
-	app.registerPrivatePATCH(routes.DeviceEndpoint, app.Cluster.UpdateDeviceInfoLocal)
-	app.registerPrivatePOST(routes.DevicesSetVIPEndpoint, app.Cluster.UpdateVIPLocal)
-	app.registerPrivatePOST(routes.DeviceReloadVIPEndpoint, app.Cluster.ReloadVIPLocal)
+	app.registerPrivateGET(routes.DeviceEndpoint, app.Server.GetDeviceInfoLocal)
+	app.registerPrivatePATCH(routes.DeviceEndpoint, app.Server.UpdateDeviceInfoLocal)
+	app.registerPrivateGET(routes.DevicesVIPEndpoint, app.VIPMonitor.HandleGetVIP)
+	app.registerPrivatePOST(routes.DevicesSetVIPEndpoint, app.VIPMonitor.HandleUpdateVIPLocal)
+	app.registerPrivatePOST(routes.DeviceReloadVIPEndpoint, app.VIPMonitor.HandleReloadVIPLocal)
 	app.registerPrivateGET(routes.DevicesGetCSREndpoint, app.Cluster.GetCSR)
 	app.registerPrivateDELETE(routes.DevicesIDResetEndpoint, app.Cluster.ResetDevice)
 	app.registerPrivatePOST(routes.DevicesIDCertificateEndpoint, app.Cluster.SetDeviceCertificate)
@@ -315,6 +326,153 @@ func (app *App) startNetworkMonitor() {
 	app.monitor.Start()
 }
 
+// handleVIPStateChange is called when VIP state changes (gained/lost/moved)
+func (app *App) handleVIPStateChange(event vipmonitor.VIPEvent) {
+
+	logger := logging.GetLogger()
+
+	logger.Debug("[VIP] State change: type=%s vip=%s holder=%s isLocal=%v",
+		event.EventType, event.VIP, event.Holder, event.IsLocalOwner)
+
+	if event.VIP == "" {
+		logger.Fatal("VIP event has VIP empty")
+
+		// // Stop mDNS service
+		// if err := app.MDNSManager.Close(); err != nil {
+		// 	logger.Error("[Discovery] Failed to stop mDNS service: %v", err)
+		// } else {
+		// 	logger.Debug("[Discovery] mDNS service stopped")
+		// }
+
+		// // Send local status notification
+		// if err := vip.SendLocalStatus("", "", false); err != nil {
+		// 	logger.Error("Failed to send UDP status: %v", err)
+		// }
+		return
+	}
+
+	// Ensure we’re in the memberlist irrespective of the event type
+	// This adds a safety check for split clusters.
+	if member, err := app.Cluster.IsMember(); err != nil {
+		logger.Error("isMember: %v", err)
+	} else if !member {
+		if err := app.Cluster.JoinMemberlist(); err != nil {
+			logger.Error("JoinMemberlist: %v", err)
+		} else {
+			logger.Info("Joined memberlist with VIP %s", event.VIP)
+		}
+	}
+
+	switch event.EventType {
+
+	case vipmonitor.EventGainedOnLocalInterface:
+		// VIP gained locally
+		logger.Info("VIP %s gained locally", event.VIP)
+
+		// Send local status notification
+		if err := vip.SendLocalStatus(event.VIP, app.config.BindAddr, true); err != nil {
+			logger.Error("Failed to send UDP status: %v", err)
+		}
+
+		// Start mDNS service
+		if ip := net.ParseIP(event.VIP); ip == nil {
+			logger.Error("[Discovery] Invalid VIP %s for mDNS", event.VIP)
+		} else {
+			if err := app.MDNSManager.StartWithVIP(ip); err != nil {
+				logger.Error("[Discovery] Failed to start mDNS service: %v", err)
+			} else {
+				logger.Info("[Discovery] mDNS service started with VIP %s", event.VIP)
+			}
+		}
+
+	case vipmonitor.EventLostOnLocalInterface:
+		// VIP lost locally
+		logger.Info("VIP %s lost", event.VIP)
+
+		// Send local status notification
+		if err := vip.SendLocalStatus(event.VIP, event.Holder, false); err != nil {
+			logger.Error("Failed to send UDP status: %v", err)
+		}
+
+		// Stop mDNS service
+		if err := app.MDNSManager.Close(); err != nil {
+			logger.Error("[Discovery] Failed to stop mDNS service: %v", err)
+		} else {
+			logger.Debug("[Discovery] mDNS service stopped")
+		}
+
+	case vipmonitor.EventGainedOnVRRPUpdate:
+		// VIP gained locally (detected via VRRP update - rare case)
+		logger.Info("VIP %s gained (VRRP update), holder=%s", event.VIP, event.Holder)
+
+		// Send local status notification
+		if err := vip.SendLocalStatus(event.VIP, app.config.BindAddr, true); err != nil {
+			logger.Error("Failed to send UDP status: %v", err)
+		}
+
+		// Start mDNS service
+		if ip := net.ParseIP(event.VIP); ip == nil {
+			logger.Error("[Discovery] Invalid VIP %s for mDNS", event.VIP)
+		} else {
+			if err := app.MDNSManager.StartWithVIP(ip); err != nil {
+				logger.Error("[Discovery] Failed to start mDNS service: %v", err)
+			} else {
+				logger.Info("[Discovery] mDNS service started with VIP %s", event.VIP)
+			}
+		}
+
+	case vipmonitor.EventLostOnVRRPUpdate:
+		// VIP lost locally (detected via VRRP update)
+		logger.Info("VIP %s lost (VRRP update), holder=%s", event.VIP, event.Holder)
+
+		// Send local status notification
+		if err := vip.SendLocalStatus(event.VIP, event.Holder, false); err != nil {
+			logger.Error("Failed to send UDP status: %v", err)
+		}
+
+		// Stop mDNS service
+		if err := app.MDNSManager.Close(); err != nil {
+			logger.Error("[Discovery] Failed to stop mDNS service: %v", err)
+		} else {
+			logger.Debug("[Discovery] mDNS service stopped")
+		}
+	case vipmonitor.EventMovedOnVRRPUpdate:
+		// VIP moved to different remote node
+		logger.Info("VIP %s moved from %s to %s", event.VIP, event.OldHolder, event.Holder)
+
+		// Send status notification
+		if err := vip.SendLocalStatus(event.VIP, event.Holder, false); err != nil {
+			logger.Error("Failed to send UDP status: %v", err)
+		}
+
+		// Stop mDNS service if it was running
+		if err := app.MDNSManager.Close(); err != nil {
+			logger.Error("[Discovery] Failed to stop mDNS service: %v", err)
+		} else {
+			logger.Debug("[Discovery] mDNS service stopped")
+		}
+
+	case vipmonitor.EventAddressChanged:
+		// VIP address changed (config already updated, need to restart monitoring)
+		logger.Info("VIP address changed from %s to %s", event.OldVIP, event.VIP)
+
+		// Update mDNS with new VIP
+		if ip := net.ParseIP(event.VIP); ip == nil {
+			logger.Error("[Discovery] Invalid VIP %s for mDNS", event.VIP)
+		} else {
+			if err := app.MDNSManager.StartWithVIP(ip); err != nil {
+				logger.Error("[Discovery] Failed to update mDNS service: %v", err)
+			} else {
+				logger.Info("[Discovery] mDNS service updated with new VIP %s", event.VIP)
+			}
+		}
+	case vipmonitor.EventVIPHolderChanged:
+		// VIP holder changed but same VIP (detected via VRRP update)
+		logger.Info("VIP %s holder changed from %s to %s", event.VIP, event.OldHolder, event.Holder)
+
+	}
+}
+
 // leaveCluster leaves the cluster
 func (app *App) leaveCluster() {
 	app.memberlist.Leave(clusterLeaveTime)
@@ -326,9 +484,11 @@ func (app *App) joinCluster(ip string) {
 	app.config.BindAddr = ip
 	memberlist := cluster.CreateMemberlist(app.config, app.Delegate)
 	app.memberlist = memberlist
-	app.ConnectionHandler.SetMemberlist(memberlist)
 	app.Cluster.SetMemberlist(memberlist)
 	app.StateManager.SetMemberlist(memberlist)
+	app.ConnectionHandler.SetClusterTransport(app.Cluster)
+	app.Hub.SetClusterTransport(app.Cluster)
+
 }
 
 // startAPIServer starts the main HTTP API server
@@ -383,6 +543,10 @@ func (app *App) Start(ctx context.Context) {
 	app.ConnectionHandler.SetEndpoints(routes.Endpoints)
 
 	app.startNetworkMonitor()
+	if err := app.VIPMonitor.Start(); err != nil {
+		app.Logger.Error("Failed to start VIP monitoring: %v", err)
+	}
+
 	defer app.monitor.Stop()
 
 	var wg sync.WaitGroup

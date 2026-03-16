@@ -20,8 +20,22 @@ Follow the steps bellow to install and use the SDK.
 3. Use the SDK (Do this every time you have a new terminal and need to build using the SDK)
     >*source $SDK_DIR/environment-setup-cortexa53-crypto-poky-linux*
 
-## Building the appliation
+## Building the application
 The application uses *make*. To build the application run *make* from the application root folder. *make clean* will remove all the generated files.
+
+With waf:
+
+>*./waf configure && ./waf*
+
+## Running unit tests
+
+GoogleTest-based unit tests are built when `gtest` is available via `pkg-config`.
+
+Build and run:
+
+>*./waf configure && ./waf*
+
+>*./build/telemetry_core_tests*
 
 ## Running the application
 The application accepts the following arguments
