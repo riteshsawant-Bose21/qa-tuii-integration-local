@@ -61,8 +61,8 @@
                     "module": "bdif_client",
                     "property_settings": [
                         { "name": "uart_device", "value": "/dev/ttymxc2" },
-                        { "name": "num_amps", "value": 4 },
-                        { "name": "boot_pin", "value": "gpiod:gpiochip5:5" }
+                        { "name": "boot0_gpio_num", "value": 133 },
+                        { "name": "nrst_gpio_num", "value": 8 }
                     ]
                 }
             ]

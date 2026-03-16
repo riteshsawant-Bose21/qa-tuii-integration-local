@@ -394,7 +394,11 @@ public:
     updateInternalState(path, new_state);
     Json::Value newData = data_;
 
-    if (oldData == newData) {
+    // Allow forced notifications for specific paths even if the value didn't change.
+    const bool force_notify =
+        (path.rfind("settings.fw.amp_control", 0) == 0);
+
+    if (!force_notify && oldData == newData) {
       if (verbose_) {
         log("No change detected for path: " + path);
       }

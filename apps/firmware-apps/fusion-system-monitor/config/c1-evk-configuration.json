@@ -49,23 +49,6 @@
                     ]
                 }
             ]
-        },
-        {
-            "name": "amp_control",
-            "property_settings": [
-                { "name": "period_ms", "value": 100 }
-            ],
-            "blocks": [
-                {
-                    "name": "amp_control",
-                    "module": "bdif_client",
-                    "property_settings": [
-                        { "name": "uart_device", "value": "/dev/ttymxc2" },
-                        { "name": "num_amps", "value": 4 },
-                        { "name": "boot_pin", "value": "gpiod:gpiochip5:5" }
-                    ]
-                }
-            ]
         }
     ]
 }

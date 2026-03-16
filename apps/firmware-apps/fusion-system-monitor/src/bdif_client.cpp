@@ -27,7 +27,22 @@
 namespace {
 
 constexpr char kUartDevice[] = "/dev/ttymxc3";
-constexpr char kBdifProtocolVersion[] = "2.0.0";
+constexpr char kBdifProtocolVersion[] = "2.0.1";
+
+constexpr char kPureModels[][16] = {
+    "1990-4150",
+    "1990-8300",
+    "1990-41500"
+};
+
+constexpr char kSmartModels[][16] = {
+    "2100-4150",
+    "2100-4300",
+    "2100-8300",
+    "2100-4600",
+    "2100-8600",
+    "2100-41500",
+};
 
 constexpr uint8_t kPreambleMsb = 0xB0;
 constexpr uint8_t kPreambleLsb = 0x5E;
@@ -50,6 +65,8 @@ constexpr uint16_t kPropertyProtocolHeartbeat =
 /* Platform Function IDs */
 constexpr uint16_t kPropertyPlatformFirmwareVersion =
     static_cast<uint16_t>((kBlockPlatform << 8) | 0x0100);
+constexpr uint16_t kPropertyPlatformHardwareVariant =
+    static_cast<uint16_t>((kBlockPlatform << 8) | 0x0101);
 constexpr uint16_t kPropertyPlatformHardwareVersion =
     static_cast<uint16_t>((kBlockPlatform << 8) | 0x0102);
 constexpr uint16_t kPropertyPlatformReset =
@@ -66,19 +83,27 @@ constexpr uint16_t kPropertyPlatformPMCUStatus =
     static_cast<uint16_t>((kBlockPlatform << 8) | 0x010E);
 constexpr uint16_t kPropertyPlatformSMPSNumber =
     static_cast<uint16_t>((kBlockPlatform << 8) | 0x010F);
+constexpr uint16_t kPropertyPlatformSMPSTemp =
+    static_cast<uint16_t>((kBlockPlatform << 8) | 0x0110);
 
 /* Audio Function IDs */
+constexpr uint16_t kPropertyAudioVolume =
+    static_cast<uint16_t>((kBlockAudio << 8) | 0x200);
+constexpr uint16_t kPropertyAudioPhantomPower =
+    static_cast<uint16_t>((kBlockAudio << 8) | 0x206);
 constexpr uint16_t kPropertyAudioAmpNumber =
     static_cast<uint16_t>((kBlockAudio << 8) | 0x209);
 constexpr uint16_t kPropertyAudioAmpMute =
     static_cast<uint16_t>((kBlockAudio << 8) | 0x20A);
+constexpr uint16_t kPropertyAudioAnalogGain =
+    static_cast<uint16_t>((kBlockAudio << 8) | 0x214);
 
 constexpr uint8_t kIndexAmpA = 0x01;
 constexpr uint8_t kIndexAmpB = 0x02;
 constexpr uint8_t kIndexAmpC = 0x04;
 constexpr uint8_t kIndexAmpD = 0x08;
 
-enum class ArgKind { kNone, kIndex, kBool, kIndexBool };
+enum class ArgKind { kNone, kIndex, kBool, kIndexBool, kIndexByte };
 
 struct Spec {
     const char *name;
@@ -91,6 +116,7 @@ struct Spec {
 static const Spec kSpecs[] = {
     {"protocolversion",     kPropertyProtocolVersion,           ArgKind::kNone,  ArgKind::kNone,      ArgKind::kNone},
     {"platformfwversion",   kPropertyPlatformFirmwareVersion,   ArgKind::kNone,  ArgKind::kNone,      ArgKind::kNone},
+    {"platformhwvariant",   kPropertyPlatformHardwareVariant,   ArgKind::kNone,  ArgKind::kNone,      ArgKind::kNone},
     {"platformhwversion",   kPropertyPlatformHardwareVersion,   ArgKind::kNone,  ArgKind::kNone,      ArgKind::kNone},
     {"platformampstatus",   kPropertyPlatformAmpStatus,         ArgKind::kIndex, ArgKind::kIndex,     ArgKind::kIndex},
     {"platformamptemp",     kPropertyPlatformAmpTemp,           ArgKind::kIndex, ArgKind::kIndex,     ArgKind::kIndex},
@@ -98,8 +124,11 @@ static const Spec kSpecs[] = {
     {"platformpmcustatus",  kPropertyPlatformPMCUStatus,        ArgKind::kIndex, ArgKind::kIndex,     ArgKind::kIndex},
     {"platformsmpsnumber",  kPropertyPlatformSMPSNumber,        ArgKind::kNone,  ArgKind::kNone,      ArgKind::kNone},
     {"platformreset",       kPropertyPlatformReset,             ArgKind::kNone,  ArgKind::kBool,      ArgKind::kBool},
+    {"audiovolume",         kPropertyAudioVolume,               ArgKind::kIndex, ArgKind::kIndexByte, ArgKind::kIndexByte},
+    {"audiophantompower",   kPropertyAudioPhantomPower,         ArgKind::kIndex, ArgKind::kIndexBool, ArgKind::kIndexBool},
     {"audioampnumber",      kPropertyAudioAmpNumber,            ArgKind::kNone,  ArgKind::kNone,      ArgKind::kNone},
     {"audioampmute",        kPropertyAudioAmpMute,              ArgKind::kIndex, ArgKind::kIndexBool, ArgKind::kIndexBool},
+    {"audioanaloggain",     kPropertyAudioAnalogGain,           ArgKind::kIndex, ArgKind::kIndexByte, ArgKind::kIndexByte},
 };
 
 constexpr std::chrono::milliseconds kHeartbeatPeriod{2000};
@@ -317,14 +346,7 @@ private:
 
 namespace {
 
-enum class GpioType { kNone, kSysfs, kGpiod };
-
-struct GpioPin {
-    GpioType type{GpioType::kNone};
-    std::string label;
-    std::string path;   // sysfs path or gpiod chip
-    int offset{0};      // gpiod line offset
-};
+constexpr int kInvalidGpioNum = 255;
 
 std::string trim(const std::string &s)
 {
@@ -336,162 +358,69 @@ std::string trim(const std::string &s)
     return s.substr(begin, end - begin + 1);
 }
 
-GpioPin parse_gpio_pin(const std::string &spec, const std::string &label)
+std::string gpio_sysfs_dir(int gpio_num)
 {
-    GpioPin pin;
-    pin.label = label;
-
-    if (spec.empty()) {
-        return pin;
-    }
-
-    const std::string prefix = "gpiod:";
-    if (spec.compare(0, prefix.size(), prefix) == 0) {
-        const auto rest = spec.substr(prefix.size());
-        const auto sep = rest.rfind(':');
-        if (sep == std::string::npos) {
-            SPDLOG_WARN("BDIF: invalid gpiod spec '{}' for {}", spec, label);
-            return pin;
-        }
-        const auto offset_str = rest.substr(sep + 1);
-        try {
-            const auto off = std::stol(offset_str, nullptr, 0);
-            if (off < 0 || off > 0xFFFF) {
-                SPDLOG_WARN("BDIF: gpiod offset '{}' out of range for {}", offset_str, label);
-                return pin;
-            }
-            pin.offset = static_cast<int>(off);
-            pin.type = GpioType::kGpiod;
-            pin.path = rest.substr(0, sep);
-        } catch (const std::exception &) {
-            SPDLOG_WARN("BDIF: invalid gpiod offset '{}' for {}", offset_str, label);
-        }
-        return pin;
-    }
-
-    pin.type = GpioType::kSysfs;
-    pin.path = spec;
-    return pin;
+    return "/sys/class/gpio/gpio" + std::to_string(gpio_num);
 }
 
-bool run_command(const std::string &cmd, std::string *output)
+std::string gpio_sysfs_value_path(int gpio_num)
 {
-    std::array<char, 128> buffer{};
-    if (output) {
-        output->clear();
-    }
-
-    FILE *pipe = ::popen(cmd.c_str(), "r");
-    if (pipe == nullptr) {
-        SPDLOG_ERROR("BDIF: failed to run '{}': {}", cmd, strerror(errno));
-        return false;
-    }
-
-    while (fgets(buffer.data(), static_cast<int>(buffer.size()), pipe) != nullptr) {
-        if (output) {
-            output->append(buffer.data());
-        }
-    }
-    const int status = ::pclose(pipe);
-    if (status != 0) {
-        SPDLOG_ERROR("BDIF: command '{}' exited with {}", cmd, status);
-        return false;
-    }
-
-    return true;
+    return gpio_sysfs_dir(gpio_num) + "/value";
 }
 
-bool read_sysfs_gpio(const std::string &path, bool &value)
+std::string gpio_sysfs_direction_path(int gpio_num)
 {
-    std::ifstream in(path);
-    if (!in.is_open()) {
-        SPDLOG_ERROR("BDIF: failed to open GPIO sysfs path '{}'", path);
-        return false;
-    }
-    int v = 0;
-    in >> v;
-    if (in.fail()) {
-        SPDLOG_ERROR("BDIF: failed to read GPIO sysfs value from '{}'", path);
-        return false;
-    }
-    value = v != 0;
-    return true;
+    return gpio_sysfs_dir(gpio_num) + "/direction";
 }
 
-bool write_sysfs_gpio(const std::string &path, bool value)
+bool write_text_file(const std::string &path, const std::string &value)
 {
     std::ofstream out(path);
     if (!out.is_open()) {
-        SPDLOG_ERROR("BDIF: failed to open GPIO sysfs path '{}'", path);
+        SPDLOG_ERROR("BDIF: failed to open '{}'", path);
         return false;
     }
-    out << (value ? 1 : 0) << std::endl;
+    out << value << std::endl;
     if (out.fail()) {
-        SPDLOG_ERROR("BDIF: failed to write GPIO sysfs value to '{}'", path);
+        SPDLOG_ERROR("BDIF: failed to write '{}' to '{}'", value, path);
         return false;
     }
     return true;
 }
 
-bool read_gpiod_gpio(const GpioPin &pin, bool &value)
+bool export_gpio_sysfs(int gpio_num)
 {
-    const std::string &chip = pin.path;
-    std::ostringstream cmd;
-    cmd << "gpioget --chip " << chip << ' ' << pin.offset;
+    if (gpio_num == kInvalidGpioNum) {
+        return true;
+    }
 
-    std::string output;
-    if (!run_command(cmd.str(), &output)) {
+    const std::string gpio_dir = gpio_sysfs_dir(gpio_num);
+    if (::access(gpio_dir.c_str(), F_OK) == 0) {
+        return true;
+    }
+
+    if (!write_text_file("/sys/class/gpio/export", std::to_string(gpio_num))) {
         return false;
     }
 
-    const auto cleaned = trim(output);
-    if (cleaned == "1") {
-        value = true;
-        return true;
-    }
-    if (cleaned == "0") {
-        value = false;
-        return true;
+    for (int retry = 0; retry < 10; ++retry) {
+        if (::access(gpio_sysfs_direction_path(gpio_num).c_str(), W_OK) == 0 &&
+            ::access(gpio_sysfs_value_path(gpio_num).c_str(), W_OK) == 0) {
+            return true;
+        }
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
     }
 
-    SPDLOG_ERROR("BDIF: unexpected gpioget output '{}' for {}", cleaned, pin.label);
+    SPDLOG_ERROR("BDIF: sysfs gpio{} paths did not become ready after export", gpio_num);
     return false;
 }
 
-bool write_gpiod_gpio(const GpioPin &pin, bool value)
+bool set_gpio_direction(int gpio_num, const std::string &direction)
 {
-    const std::string &chip = pin.path;
-    std::ostringstream cmd;
-    cmd << "gpioset --mode=exit --chip " << chip << ' ' << pin.offset << '=' << (value ? 1 : 0);
-    return run_command(cmd.str(), nullptr);
-}
-
-[[maybe_unused]] bool get_gpio_value(const GpioPin &pin, bool &value)
-{
-    switch (pin.type) {
-    case GpioType::kSysfs:
-        return read_sysfs_gpio(pin.path, value);
-    case GpioType::kGpiod:
-        return read_gpiod_gpio(pin, value);
-    case GpioType::kNone:
-    default:
-        SPDLOG_DEBUG("BDIF: GPIO '{}' not configured", pin.label);
-        return false;
+    if (gpio_num == kInvalidGpioNum) {
+        return true;
     }
-}
-
-[[maybe_unused]] bool set_gpio_value(const GpioPin &pin, bool value)
-{
-    switch (pin.type) {
-    case GpioType::kSysfs:
-        return write_sysfs_gpio(pin.path, value);
-    case GpioType::kGpiod:
-        return write_gpiod_gpio(pin, value);
-    case GpioType::kNone:
-    default:
-        SPDLOG_DEBUG("BDIF: GPIO '{}' not configured", pin.label);
-        return false;
-    }
+    return write_text_file(gpio_sysfs_direction_path(gpio_num), direction);
 }
 
 class BDIFClient : public bosepro::Module
@@ -525,6 +454,7 @@ private:
     void handle_set_post_func();
     void handle_get_post_func();
     void handle_setget_post_func();
+    bool prepare_update_gpios();
 
     bool parse_command(const std::string &cmd, uint16_t &property_id, std::vector<uint8_t> &value);
     bool send_command_from_param(const std::string &cmd, Operator op);
@@ -550,6 +480,7 @@ private:
 
     // Platform parameters
     std::string platform_fw_ver;
+    std::string platform_hw_variant;
     int_fast32_t platform_hw_ver;
     std::vector<int_fast32_t> platform_amp_temp;
     std::vector<int_fast32_t> platform_amp_status;
@@ -558,13 +489,11 @@ private:
     std::vector<int_fast32_t> platform_pmcu_status;
 
     // Audio parameters
+    std::vector<int_fast32_t> audio_volume;
+    std::vector<bool> audio_phantom_power;
     int_fast32_t audio_amp_number;
     std::vector<bool> audio_amp_mute;
-
-    // GPIO controls
-    GpioPin reset_pin_;
-    GpioPin mute_pin_;
-    GpioPin boot_pin_;
+    std::vector<int_fast32_t> audio_analog_gain;
 
     // Command parameters (observer-driven)
     std::string set_cmd_;
@@ -573,6 +502,9 @@ private:
 
     int num_amps{0};
     std::string uart_device_;
+    std::string fw_file_;
+    int nrst_gpio_num_{kInvalidGpioNum};
+    int boot0_gpio_num_{kInvalidGpioNum};
 
     SerialPort port_;
     std::mutex tx_mutex_;
@@ -607,32 +539,32 @@ MODULE_REGISTER(BDIFClient, "bdif_client");
 BDIFClient::BDIFClient(const bosepro::BlockConfiguration &configuration)
     : bosepro::Module(configuration)
 {
-    std::string reset_pin_spec;
-    std::string mute_pin_spec;
-    std::string boot_pin_spec;
-
     get_property("uart_device", uart_device_);
-    int_fast32_t num_amps_value;
-    get_property("num_amps", num_amps_value);
-    num_amps = static_cast<int>(num_amps_value);
-    get_property("reset_pin", reset_pin_spec);
-    get_property("mute_pin", mute_pin_spec);
-    get_property("boot_pin", boot_pin_spec);
-
-    reset_pin_ = parse_gpio_pin(reset_pin_spec, "reset_pin");
-    mute_pin_ = parse_gpio_pin(mute_pin_spec, "mute_pin");
-    boot_pin_ = parse_gpio_pin(boot_pin_spec, "boot_pin");
+    get_property("fw_file", fw_file_);
+    int_fast32_t nrst_gpio_num_value = kInvalidGpioNum;
+    int_fast32_t boot0_gpio_num_value = kInvalidGpioNum;
+    get_property("nrst_gpio_num", nrst_gpio_num_value);
+    get_property("boot0_gpio_num", boot0_gpio_num_value);
+    nrst_gpio_num_ = static_cast<int>(nrst_gpio_num_value);
+    boot0_gpio_num_ = static_cast<int>(boot0_gpio_num_value);
 
     port_.set_device(uart_device_);
-    SPDLOG_INFO("BDIF: configured uart_device='{}' num_amps={} reset_pin='{}' mute_pin='{}' boot_pin='{}'",
-                uart_device_, num_amps, reset_pin_spec, mute_pin_spec, boot_pin_spec);
+    SPDLOG_INFO("BDIF: configured uart_device='{}' fw_file='{}' nrst_gpio_num={} boot0_gpio_num={}",
+                uart_device_, fw_file_, nrst_gpio_num_, boot0_gpio_num_);
 
-    platform_amp_temp.resize(static_cast<size_t>(std::max(0, num_amps)));
-    platform_amp_status.resize(static_cast<size_t>(std::max(0, num_amps)));
-    platform_smcu_status.resize(static_cast<size_t>(std::max(0, num_amps)));
-    platform_smps_number.resize(static_cast<size_t>(std::max(0, num_amps)));
-    platform_pmcu_status.resize(static_cast<size_t>(std::max(0, num_amps)));
-    audio_amp_mute.resize(static_cast<size_t>(std::max(0, num_amps)));
+    prepare_update_gpios();
+
+    const size_t amp_slots = 4;
+    num_amps = static_cast<int>(amp_slots);
+    platform_amp_temp.resize(amp_slots);
+    platform_amp_status.resize(amp_slots);
+    platform_smcu_status.resize(amp_slots);
+    platform_smps_number.resize(amp_slots);
+    platform_pmcu_status.resize(amp_slots);
+    audio_volume.resize(amp_slots);
+    audio_phantom_power.resize(amp_slots);
+    audio_amp_mute.resize(amp_slots);
+    audio_analog_gain.resize(amp_slots);
 
     assign_parameter("set", &set_cmd_, POST_FUNCTION_SCALAR(handle_set_post_func));
     assign_parameter("get", &get_cmd_, POST_FUNCTION_SCALAR(handle_get_post_func));
@@ -655,6 +587,30 @@ bool BDIFClient::ensure_port()
     boot_complete_inflight_ = false;
 
     return port_.open();
+}
+
+bool BDIFClient::prepare_update_gpios()
+{
+    if (!export_gpio_sysfs(boot0_gpio_num_)) {
+        SPDLOG_ERROR("BDIF: failed to export BOOT0 gpio {}", boot0_gpio_num_);
+        return false;
+    }
+
+    if (!export_gpio_sysfs(nrst_gpio_num_)) {
+        SPDLOG_ERROR("BDIF: failed to export NRST gpio {}", nrst_gpio_num_);
+        return false;
+    }
+
+    // Keep NRST released using open-drain style semantics: input releases the line,
+    // while firmware update code can later drive low when it needs to assert reset.
+    if (!set_gpio_direction(nrst_gpio_num_, "in")) {
+        SPDLOG_ERROR("BDIF: failed to set NRST gpio {} direction to input", nrst_gpio_num_);
+        return false;
+    }
+
+    SPDLOG_INFO("BDIF: prepared update gpios boot0={} nrst={} (nrst released as input/open-drain style)",
+                boot0_gpio_num_, nrst_gpio_num_);
+    return true;
 }
 
 void BDIFClient::poll_rx_port()
@@ -809,6 +765,14 @@ void BDIFClient::handle_rx_frame(const std::vector<uint8_t> &frame)
             SPDLOG_DEBUG("BDIF: ack platform fw");
         }
         break;
+    case kPropertyPlatformHardwareVariant:
+        if (value_valid) {
+            platform_hw_variant = std::string(reinterpret_cast<const char*>(value_ptr), value_len);
+            SPDLOG_DEBUG("BDIF: ack platform hw variant '{}'", platform_hw_variant);
+        } else {
+            SPDLOG_DEBUG("BDIF: ack platform hw variant");
+        }
+        break;
     case kPropertyPlatformHardwareVersion:
         if (value_valid) {
             platform_hw_ver = read_u32(0, value_len);
@@ -910,6 +874,30 @@ void BDIFClient::handle_rx_frame(const std::vector<uint8_t> &frame)
             SPDLOG_DEBUG("BDIF: ack smps number");
         }
         break;
+    case kPropertyAudioVolume:
+        if (value_valid && value_len >= 2) {
+            const int idx = static_cast<int>(value_ptr[0]) - 1;
+            if (idx >= 0 && idx < num_amps) {
+                audio_volume[idx] = static_cast<int_fast32_t>(value_ptr[1]);
+                SPDLOG_DEBUG("BDIF: ack volume[{}]={}", idx, audio_volume[idx]);
+            }
+        } else if (value_valid) {
+            SPDLOG_DEBUG("BDIF: ack volume payload={}", hex_string(value_ptr, value_len));
+        } else {
+            SPDLOG_DEBUG("BDIF: ack volume");
+        }
+        break;
+    case kPropertyAudioPhantomPower:
+        if (value_valid && value_len >= 2) {
+            const int idx = static_cast<int>(value_ptr[0]) - 1;
+            if (idx >= 0 && idx < num_amps) {
+                audio_phantom_power[idx] = value_ptr[1] != 0;
+                SPDLOG_DEBUG("BDIF: ack phantom power[{}]={}", idx, static_cast<bool>(audio_phantom_power[idx]));
+            }
+        } else {
+            SPDLOG_DEBUG("BDIF: ack phantom power");
+        }
+        break;
     case kPropertyAudioAmpNumber:
         if (value_valid) {
             audio_amp_number = read_u32(0, value_len);
@@ -928,6 +916,19 @@ void BDIFClient::handle_rx_frame(const std::vector<uint8_t> &frame)
             }
         } else {
             SPDLOG_DEBUG("BDIF: ack amp mute");
+        }
+        break;
+    case kPropertyAudioAnalogGain:
+        if (value_valid && value_len >= 2) {
+            const int idx = static_cast<int>(value_ptr[0]) - 1;
+            if (idx >= 0 && idx < num_amps) {
+                audio_analog_gain[idx] = static_cast<int_fast32_t>(value_ptr[1]);
+                SPDLOG_DEBUG("BDIF: ack analog gain[{}]={}", idx, audio_analog_gain[idx]);
+            }
+        } else if (value_valid) {
+            SPDLOG_DEBUG("BDIF: ack analog gain payload={}", hex_string(value_ptr, value_len));
+        } else {
+            SPDLOG_DEBUG("BDIF: ack analog gain");
         }
         break;
     default:
@@ -1184,6 +1185,31 @@ bool BDIFClient::build_named_command(const std::string &name, const std::vector<
         }
         value.push_back(idx);
         value.push_back(static_cast<uint8_t>(b ? 1 : 0));
+        break;
+    }
+    case ArgKind::kIndexByte: {
+        if (args.size() != 2) {
+            SPDLOG_WARN("BDIF: command '{}' expects <index> <byte>", name);
+            return false;
+        }
+        uint8_t idx = 0;
+        if (!parse_index(args[0], idx)) {
+            return false;
+        }
+        uint8_t byte = 0;
+        try {
+            const auto parsed = std::stoul(args[1], nullptr, 0);
+            if (parsed > 0xFF) {
+                SPDLOG_WARN("BDIF: command '{}' byte arg '{}' out of range", name, args[1]);
+                return false;
+            }
+            byte = static_cast<uint8_t>(parsed);
+        } catch (const std::exception &) {
+            SPDLOG_WARN("BDIF: command '{}' expects byte arg, got '{}'", name, args[1]);
+            return false;
+        }
+        value.push_back(idx);
+        value.push_back(byte);
         break;
     }
     default:
