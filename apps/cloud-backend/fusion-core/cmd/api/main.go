@@ -38,6 +38,8 @@ import (
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/product"
 	productdb "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/product/db"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/project"
+	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/source"
+	sourcedb "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/source/db"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/storage/cloudfs"
 	sql "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/storage/sql"
 
@@ -146,8 +148,16 @@ func main() {
 	}
 	loggers.AppLogger.Info("Initialized S3 client")
 
+	// Initialize Source DB Service
+	sourceDBSvc := sourcedb.NewService(pgs, loggers.AppLogger)
+	loggers.AppLogger.Info("Initialized Source DB Service.")
+
+	// Initialize Source Service
+	sourceSVC := source.NewService(sourceDBSvc, loggers.AppLogger)
+	loggers.AppLogger.Info("Initialized Source Service.")
+
 	//Initialize Product Service (now includes sync functionality)
-	productSVC := product.NewService(productDBSvc, validationCfg.DefaultVersion, validationCfg, processingCfg, s3Handler, loggers.AppLogger)
+	productSVC := product.NewService(productDBSvc, sourceSVC, validationCfg.DefaultVersion, validationCfg, processingCfg, s3Handler, loggers.AppLogger)
 	if productSVC == nil {
 		loggers.AppLogger.Fatal("Failed to initialize product service")
 	}

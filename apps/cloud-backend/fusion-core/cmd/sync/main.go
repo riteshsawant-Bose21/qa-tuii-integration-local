@@ -18,6 +18,8 @@ import (
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/environment"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/product"
 	productdb "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/product/db"
+	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/source"
+	sourcedb "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/source/db"
 	serverSync "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/server/sync"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/storage/cloudfs"
 	sql "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/storage/sql"
@@ -100,8 +102,12 @@ func init() {
 		logger.Fatal("Failed to initialize product database service")
 	}
 
+	sourceDBSvc := sourcedb.NewService(pgs, logger.JobSyncLog())
+	sourceSVC := source.NewService(sourceDBSvc, logger.JobSyncLog())
+
 	productSVC = product.NewService(
 		productDBSvc,
+		sourceSVC,
 		validationCfg.DefaultVersion,
 		validationCfg,
 		processingCfg,

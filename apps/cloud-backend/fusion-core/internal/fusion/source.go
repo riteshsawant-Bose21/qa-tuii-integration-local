@@ -7,7 +7,6 @@ import (
 	"go.uber.org/zap"
 )
 
-type Source interface{
-	GetAllSources(ctx context.Context, logger *zap.Logger) (*types.SourceResponse, error)
+type Source interface {
+	GetAllSources(ctx context.Context, logger *zap.Logger) ([]types.SourceItem, error)
 }
-
