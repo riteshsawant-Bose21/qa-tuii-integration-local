@@ -11,6 +11,7 @@ import 'package:fusion_lib/fusion_theme/app_theme.dart';
 import 'package:fusion_lib/fusion_widgets/text_views/fusion_app_text.dart';
 import 'package:fusion_lib/models/project_entities/source_model.dart';
 
+import '../../configuration/presentation/viewmodel/project_view_model.dart';
 import '../viewModel/source_sets_viewmodel/config_source_sets_viewmodel.dart';
 import '../viewModel/sources_viewmodel/config_sources_state.dart';
 import '../viewModel/sources_viewmodel/config_sources_viewmodel.dart';
@@ -26,6 +27,7 @@ class _SourcesSectionState extends State<SourcesSection> {
   final TextEditingController searchController = TextEditingController();
   ConfigSourcesViewmodel get _sourcesViewmodel => context.read<ConfigSourcesViewmodel>();
   ConfigSourceSetsViewmodel get _sourceSetsViewmodel => context.read<ConfigSourceSetsViewmodel>();
+  ProjectViewModel get _projectViewModel => context.read<ProjectViewModel>();
 
   @override
   Widget build(BuildContext context) {
@@ -135,18 +137,25 @@ class _SourcesSectionState extends State<SourcesSection> {
                                         index: index,
                                         source: source,
                                         isDragging: true,
+                                        isInControlMode: _projectViewModel.isInControlMode,
                                       ),
                                     ),
                                   ),
                                 ),
                                 childWhenDragging: Opacity(
                                   opacity: 0.5,
-                                  child: SourceItem(index: index, source: source, isDragging: true),
+                                  child: SourceItem(
+                                    index: index,
+                                    source: source,
+                                    isDragging: true,
+                                    isInControlMode: _projectViewModel.isInControlMode,
+                                  ),
                                 ),
                                 child: SourceItem(
                                   semanticId: 'sources_section',
                                   index: index,
                                   source: source,
+                                  isInControlMode: _projectViewModel.isInControlMode,
                                   isDragging: state.draggingSourceId == source.id,
                                 ),
                               );

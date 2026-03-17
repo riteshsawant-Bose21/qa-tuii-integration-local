@@ -11,7 +11,10 @@ class MessageListPanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      color: context.colorScheme.elevation1,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(16),
+        color: context.colorScheme.elevation1,
+      ),
       child: Column(
         children: <Widget>[
           /// Add Message button at top
@@ -89,7 +92,7 @@ class _MessageListItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 4),
+      padding: const EdgeInsets.only(bottom: 8),
       child: SemanticHelper.button(
         testId: SemanticHelper.createTestId(
           SemanticTypes.button,
@@ -113,6 +116,7 @@ class _MessageListItem extends StatelessWidget {
                     child: FusionAppText(
                       text: message.name,
                       style: context.textTheme.l1Regular,
+                      capitalize: false,
                       maxLine: 1,
                       textOverflow: TextOverflow.ellipsis,
                     ),

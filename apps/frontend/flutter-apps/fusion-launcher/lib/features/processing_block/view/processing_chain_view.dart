@@ -20,8 +20,7 @@ class ProcessingChainView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     /// get parent entity information based on params.type
-    final ProjectViewModel projectViewModel =
-        serviceLocator<ProjectViewModel>();
+    final ProjectViewModel projectViewModel = serviceLocator<ProjectViewModel>();
     String zoneName = '';
     String subZoneName = '';
     String paramName = '';
@@ -120,16 +119,11 @@ class ProcessingChainView extends StatelessWidget {
                               FusionAppText(
                                 semanticId: FusionTestKeys.instance.processingdialogtitle,
                                 text: switch (params.type) {
-                                  ProcessingChainDeviceType.source =>
-                                    "SOURCE PROCESSING ",
-                                  ProcessingChainDeviceType.sourceSet =>
-                                    "SOURCE SET PROCESSING ",
-                                  ProcessingChainDeviceType.zone =>
-                                    "ZONE PROCESSING ",
-                                  ProcessingChainDeviceType.subzone =>
-                                    "SUBZONE PROCESSING ",
-                                  ProcessingChainDeviceType.circuit =>
-                                    "CIRCUIT PROCESSING ",
+                                  ProcessingChainDeviceType.source => "SOURCE PROCESSING ",
+                                  ProcessingChainDeviceType.sourceSet => "SOURCE SET PROCESSING ",
+                                  ProcessingChainDeviceType.zone => "ZONE PROCESSING ",
+                                  ProcessingChainDeviceType.subzone => "SUBZONE PROCESSING ",
+                                  ProcessingChainDeviceType.circuit => "CIRCUIT PROCESSING ",
                                 },
                                 style: context.textTheme.titleSmall,
                                 maxLine: 1,
@@ -151,7 +145,7 @@ class ProcessingChainView extends StatelessWidget {
                           ),
                         ),
                       ),
-                  
+
                       // CLOSE BUTTON
                       Positioned(
                         top: 0,
@@ -167,17 +161,17 @@ class ProcessingChainView extends StatelessWidget {
                                 padding: const EdgeInsets.all(8.0),
                                 child: SemanticHelper.button(
                                   testId : SemanticHelper.createTestId(SemanticTypes.button, FusionTestKeys.instance.processingdialogclose),
-                                  child: Icon(
-                                    LucideIcons.x200,
-                                    color: context.colorScheme.iconDefault,
-                                  ),
+                                child: Icon(
+                                  LucideIcons.x200,
+                                  color: context.colorScheme.iconDefault,
                                 ),
                               ),
                             ),
                           ),
                         ),
                       ),
-                  
+                      ),
+
                       /// --------------------------------------------------------------------------------
                       ///                             MAIN CONTENT
                       /// --------------------------------------------------------------------------------
@@ -209,56 +203,48 @@ class ProcessingChainView extends StatelessWidget {
                                   ProcessingChainCubit viewModel,
                                   Widget? child,
                                 ) {
-                                  return BlocBuilder<
-                                    ProcessingChainCubit,
-                                    ProcessingChainState
-                                  >(
+                                  return BlocBuilder<ProcessingChainCubit, ProcessingChainState>(
                                     bloc: viewModel,
                                     builder: (
                                       BuildContext context,
                                       ProcessingChainState state,
                                     ) {
                                       if (state is EmptyProcessingChainState) {
-                                        return Padding(
-                                          padding: const EdgeInsets.all(250.0),
+                                        return Center(
                                           child: Column(
-                                            mainAxisAlignment:
-                                                MainAxisAlignment.center,
+                                            mainAxisAlignment: MainAxisAlignment.center,
                                             children: <Widget>[
                                               FusionAppText(
-                                                text:
-                                                    "No Processing Blocks Added yet.",
-                                                style:
-                                                    context.textTheme.bodyLarge,
+                                                text: "No Processing Blocks Added yet.",
+                                                style: context.textTheme.bodyLarge,
                                               ),
                                               const SizedBox(height: 10),
-                                              AddProcessingBlockButton(
-                                                params: params,
-                                                viewModel: viewModel,
-                                                child: AbsorbPointer(
-                                                  absorbing: true,
-                                                  child: FusionButton(
-                                                    accessLabel: 'Add_Processing_Block',
-                                                    onTap: () {},
-                                                    label: "+ Add",
+                                              if (!serviceLocator<ProjectViewModel>().isInControlMode)
+                                                AddProcessingBlockButton(
+                                                  params: params,
+                                                  viewModel: viewModel,
+                                                  child: AbsorbPointer(
+                                                    absorbing: true,
+                                                    child: FusionButton(
+                                                      accessLabel: 'Add_Processing_Block',
+                                                      onTap: () {},
+                                                      label: "+ Add",
+                                                    ),
+                                                    // child: FusionButton(
+                                                    //   onTap: () {},
+                                                    //   label: "+ Add",
+                                                    // ),
                                                   ),
-                                                  // child: FusionButton(
-                                                  //   onTap: () {},
-                                                  //   label: "+ Add",
-                                                  // ),
                                                 ),
-                                              ),
                                             ],
                                           ),
                                         );
                                       }
-                  
-                                      if (state is! UpdatedProcessingChainState)
-                                        return const SizedBox();
-                  
+
+                                      if (state is! UpdatedProcessingChainState) return const SizedBox();
+
                                       return Row(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
+                                        crossAxisAlignment: CrossAxisAlignment.start,
                                         mainAxisSize: MainAxisSize.min,
                                         children: <Widget>[
                                           /// --------------------------------------------------------------------------------
@@ -271,157 +257,111 @@ class ProcessingChainView extends StatelessWidget {
                                             ) {
                                               return Column(
                                                 mainAxisSize: MainAxisSize.min,
-                                                mainAxisAlignment:
-                                                    MainAxisAlignment.start,
+                                                mainAxisAlignment: MainAxisAlignment.start,
                                                 children: <Widget>[
                                                   Padding(
-                                                    padding:
-                                                        const EdgeInsets.symmetric(
-                                                          horizontal: 10,
-                                                        ),
+                                                    padding: const EdgeInsets.symmetric(
+                                                      horizontal: 10,
+                                                    ),
                                                     child: Row(
                                                       children: <Widget>[
-                                                        AddProcessingBlockButton(
-                                                          params: params,
-                                                          viewModel: viewModel,
-                                                          child: Container(
-                                                            decoration: BoxDecoration(
-                                                              color:
-                                                                  context
-                                                                      .colorScheme
-                                                                      .elevation2,
-                                                              borderRadius:
-                                                                  BorderRadius.circular(
-                                                                    10,
-                                                                  ),
-                                                            ),
-                                                            padding:
-                                                                const EdgeInsets.all(
+                                                        if (!serviceLocator<ProjectViewModel>().isInControlMode)
+                                                          AddProcessingBlockButton(
+                                                            params: params,
+                                                            viewModel: viewModel,
+                                                            child: Container(
+                                                              decoration: BoxDecoration(
+                                                                color: context.colorScheme.elevation2,
+                                                                borderRadius: BorderRadius.circular(
                                                                   10,
                                                                 ),
-                                                            child: Icon(
-                                                              Icons.add,
-                                                              color:
-                                                                  context
-                                                                      .colorScheme
-                                                                      .iconDefault,
-                                                              size: 18,
+                                                              ),
+                                                              padding: const EdgeInsets.all(
+                                                                10,
+                                                              ),
+                                                              child: Icon(Icons.add, color: context.colorScheme.iconDefault, size: 18),
                                                             ),
                                                           ),
-                                                        ),
                                                       ],
                                                     ),
                                                   ),
-                  
+
                                                   const SizedBox(height: 10),
                                                   Expanded(
                                                     child: SingleChildScrollView(
-                                                      physics:
-                                                          const ClampingScrollPhysics(),
-                                                      padding:
-                                                          const EdgeInsets.symmetric(
-                                                            horizontal: 10,
-                                                          ).copyWith(bottom: 10),
+                                                      physics: const ClampingScrollPhysics(),
+                                                      padding: const EdgeInsets.symmetric(
+                                                        horizontal: 10,
+                                                      ).copyWith(bottom: 10),
                                                       child: Stack(
-                                                        alignment:
-                                                            Alignment.centerLeft,
+                                                        alignment: Alignment.centerLeft,
                                                         children: <Widget>[
                                                           Padding(
-                                                            padding:
-                                                                const EdgeInsets.only(
-                                                                  left: 23,
-                                                                ),
+                                                            padding: const EdgeInsets.only(
+                                                              left: 23,
+                                                            ),
                                                             child: SizedBox(
-                                                              height:
-                                                                  state
-                                                                      .blocks
-                                                                      .length *
-                                                                  40.0,
+                                                              height: state.blocks.length * 40.0,
                                                               child: DottedLine(
-                                                                semanticId:
-                                                                    'processing_chain_view',
-                                                                direction:
-                                                                    Axis.vertical,
-                                                                color:
-                                                                    context
-                                                                        .colorScheme
-                                                                        .strokeLight,
+                                                                semanticId: 'processing_chain_view',
+                                                                direction: Axis.vertical,
+                                                                color: context.colorScheme.strokeLight,
                                                                 dotSize: 4,
                                                                 spacing: 2,
                                                               ),
                                                             ),
                                                           ),
-                                                          CommonReorderableListView<
-                                                            ProcessingBlockModel
-                                                          >(
+                                                          CommonReorderableListView<ProcessingBlockModel>(
                                                             onReorder:
                                                                 (
                                                                   int oldIndex,
                                                                   int newIndex,
-                                                                ) => viewModel
-                                                                    .reorderProcessingBlocks(
-                                                                      oldIndex,
-                                                                      newIndex,
-                                                                    ),
+                                                                ) => viewModel.reorderProcessingBlocks(oldIndex, newIndex),
                                                             emptyMessage: '',
                                                             items: state.blocks,
                                                             keyExtractor:
                                                                 (
-                                                                  ProcessingBlockModel
-                                                                  item,
+                                                                  ProcessingBlockModel item,
                                                                 ) => item.id,
                                                             itemBuilder: (
-                                                              BuildContext
-                                                              context,
-                                                              ProcessingBlockModel
-                                                              block,
+                                                              BuildContext context,
+                                                              ProcessingBlockModel block,
                                                               int index,
                                                             ) {
                                                               return InkWell(
                                                                 onTap: () {
-                                                                  viewModel
-                                                                      .selectProcessingBlock(
-                                                                        block,
-                                                                      );
+                                                                  viewModel.selectProcessingBlock(
+                                                                    block,
+                                                                  );
                                                                 },
                                                                 child: Tooltip(
-                                                                  message:
-                                                                      block.name,
+                                                                  message: block.name,
                                                                   child: Padding(
-                                                                    padding:
-                                                                        const EdgeInsets.symmetric(
-                                                                          vertical:
-                                                                              4,
-                                                                        ),
+                                                                    padding: const EdgeInsets.symmetric(
+                                                                      vertical: 4,
+                                                                    ),
                                                                     child: SemanticHelper.container(
                                                                       testId: SemanticHelper.createTestId(SemanticTypes.container, 'processing_block_$index'),
                                                                       label: block.name,
                                                                       isChecked: block.id == state.selectedBlock.id,
-                                                                      child: Row(
-                                                                        spacing: 12,
-                                                                        children: <
-                                                                          Widget
-                                                                        >[
-                                                                          _PBIcon(
-                                                                            icon:
-                                                                                block.iconAsset,
-                                                                            isActive:
-                                                                                block.id ==
-                                                                                state.selectedBlock.id,
-                                                                          ),
-                                                                          if (isOpen)
-                                                                            FusionAppText(
-                                                                              text:
-                                                                                  block.name,
-                                                                              style: context.textTheme.bodySmall?.copyWith(
-                                                                                color:
-                                                                                    context.colorScheme.textPrimary,
-                                                                              ),
+                                                                    child: Row(
+                                                                      spacing: 12,
+                                                                      children: <Widget>[
+                                                                        _PBIcon(
+                                                                          icon: block.iconAsset,
+                                                                          isActive: block.id == state.selectedBlock.id,
+                                                                        ),
+                                                                        if (isOpen)
+                                                                          FusionAppText(
+                                                                            text: block.name,
+                                                                            style: context.textTheme.bodySmall?.copyWith(
+                                                                              color: context.colorScheme.textPrimary,
                                                                             ),
-                                                                        ],
-                                                                      ),
+                                                                          ),
+                                                                      ],
                                                                     ),
                                                                   ),
+                                                                ),
                                                                 ),
                                                               );
                                                             },
@@ -434,13 +374,12 @@ class ProcessingChainView extends StatelessWidget {
                                               );
                                             },
                                           ),
-                  
+
                                           Flexible(
                                             child: SemanticHelper.container(
                                               testId: SemanticHelper.createTestId(SemanticTypes.container, FusionTestKeys.instance.processingdialogblockspanel),
                                               child: ProcessingBlockPage(
-                                                processingBlock:
-                                                    state.selectedBlock,
+                                                processingBlock: state.selectedBlock,
                                               ),
                                             ),
                                           ),
@@ -555,10 +494,7 @@ class _PBIcon extends StatelessWidget {
     return AnimatedContainer(
       duration: const Duration(milliseconds: 200),
       decoration: BoxDecoration(
-        color:
-            isActive
-                ? context.colorScheme.primary
-                : context.colorScheme.elevation3,
+        color: isActive ? context.colorScheme.primary : context.colorScheme.elevation3,
         borderRadius: BorderRadius.circular(10),
       ),
       padding: const EdgeInsets.all(10),
@@ -589,11 +525,8 @@ class AddProcessingBlockButton extends StatelessWidget {
       tooltip: "Add Processing Block",
       matchChildWidth: false,
       items: switch (params.type) {
-        ProcessingChainDeviceType.source ||
-        ProcessingChainDeviceType
-            .sourceSet => ProcessingBlockModel.sourceBlocks,
-        ProcessingChainDeviceType.zone ||
-        ProcessingChainDeviceType.subzone => ProcessingBlockModel.zoneBlocks,
+        ProcessingChainDeviceType.source || ProcessingChainDeviceType.sourceSet => ProcessingBlockModel.sourceBlocks,
+        ProcessingChainDeviceType.zone || ProcessingChainDeviceType.subzone => ProcessingBlockModel.zoneBlocks,
         ProcessingChainDeviceType.circuit => ProcessingBlockModel.circuitBlocks,
       },
       itemBuilder:
