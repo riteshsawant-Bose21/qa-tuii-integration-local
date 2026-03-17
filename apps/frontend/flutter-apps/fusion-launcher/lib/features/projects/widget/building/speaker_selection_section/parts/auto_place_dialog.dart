@@ -1,13 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/src/services/text_formatter.dart';
 import 'package:fusion_launcher/core/service_locator.dart';
 import 'package:fusion_lib/fusion_algorithms/surface_speakers_autolayout/surface_speakers_autolayout.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
 import '../../../../../../core/assets/asset_svg.dart';
 import '../../../../../configuration/presentation/viewmodel/project_view_model.dart';
-import '../../widgets/text_field.dart';
-import 'constant_enums.dart';
 
 class AutoPlaceDialog extends StatefulWidget {
   const AutoPlaceDialog({super.key, this.result});
@@ -182,16 +179,16 @@ class _AutoPlaceDialogState extends State<AutoPlaceDialog> {
                     ),
                   ),
                   const SizedBox(width: 8),
-                  Expanded(
-                    child: _presetTile(
-                      context,
-                      label: 'Customize',
-                      icon: AssetSvg.customise,
-                      // selected: _result.autoPlaceCoveragePreference == CoveragePreference.customize,
-                      selected: false,
-                      // onTap: () => setState(() => _result = _result.copyWith(autoPlaceCoveragePreference: CoveragePreference.customize)),
-                      onTap: () {},
-                    ),
+                  const Expanded(
+                    child: SizedBox(),
+                    // _presetTile(
+                    //   context,
+                    //   label: 'Customize',
+                    //   icon: AssetSvg.customise,
+                    //   selected: _result.autoPlaceCoveragePreference == CoveragePreference.customize,
+                    //   // onTap: () => setState(() => _result = _result.copyWith(autoPlaceCoveragePreference: CoveragePreference.customize)),
+                    //   onTap: () {},
+                    // ),
                   ),
                 ],
               ),
@@ -208,87 +205,87 @@ class _AutoPlaceDialogState extends State<AutoPlaceDialog> {
                 // onChanged: (double v) => setState(() => _result = _result.copyWith(autoPlaceCustomSpacing: v)),
                 onChanged: (double v) {},
               ),
-              const SizedBox(height: 8),
-              _labeledCheckboxNumber(
-                context,
-                label: 'Match Grid',
-                // selected: _result.autoPlaceMatchGrid,
-                selected: false,
-                value: 0.6,
-                // onChanged: (bool v) => setState(() => _result = _result.copyWith(autoPlaceMatchGrid: v)),
-                onChanged: (bool v) {},
-              ),
+              // const SizedBox(height: 8),
+              // _labeledCheckboxNumber(
+              //   context,
+              //   label: 'Match Grid',
+              //   // selected: _result.autoPlaceMatchGrid,
+              //   selected: false,
+              //   value: 0.6,
+              //   // onChanged: (bool v) => setState(() => _result = _result.copyWith(autoPlaceMatchGrid: v)),
+              //   onChanged: (bool v) {},
+              // ),
 
-              const SizedBox(height: 10),
-              Row(
-                spacing: 5,
-                children: <Widget>[
-                  Expanded(child: FusionAppText(text: "Coverage Angle", style: context.textTheme.bodySmall)),
-                  Expanded(
-                    child: PropertyTextField(
-                      initialValue: _result.autoPlaceCoverageAngle.toStringAsFixed(0),
-                      onSubmitted: (String raw) {
-                        final double? parsed = double.tryParse(raw);
-                        if (parsed != null) {
-                          setState(() => _result = _result.copyWith(autoPlaceCoverageAngle: parsed.clamp(0.0, 180.0)));
-                        }
-                      },
-                      inputFormatters: <TextInputFormatter>[FilteringTextInputFormatter.allow(RegExp(r'^\d{0,3}$'))],
-                    ),
-                  ),
-                  FusionAppText(
-                    text: "deg",
-                    capitalize: false,
-                    style: context.textTheme.bodySmall,
-                  ),
-                ],
-              ),
-              const SizedBox(height: 10),
+              // const SizedBox(height: 10),
+              // Row(
+              //   spacing: 5,
+              //   children: <Widget>[
+              //     Expanded(child: FusionAppText(text: "Coverage Angle", style: context.textTheme.bodySmall)),
+              //     Expanded(
+              //       child: PropertyTextField(
+              //         initialValue: _result.autoPlaceCoverageAngle.toStringAsFixed(0),
+              //         onSubmitted: (String raw) {
+              //           final double? parsed = double.tryParse(raw);
+              //           if (parsed != null) {
+              //             setState(() => _result = _result.copyWith(autoPlaceCoverageAngle: parsed.clamp(0.0, 180.0)));
+              //           }
+              //         },
+              //         inputFormatters: <TextInputFormatter>[FilteringTextInputFormatter.allow(RegExp(r'^\d{0,3}$'))],
+              //       ),
+              //     ),
+              //     FusionAppText(
+              //       text: "deg",
+              //       capitalize: false,
+              //       style: context.textTheme.bodySmall,
+              //     ),
+              //   ],
+              // ),
+              // const SizedBox(height: 10),
 
-              BuildingPageTextField(
-                label: "Ceiling Height (m)",
-                controller: ceilingHeightController,
-                hintText: "e.g. ${ListeningHeightOption.maxListeningHeight}",
-                fillColor: context.colorScheme.elevation1,
-                inputFormatters: <TextInputFormatter>[
-                  FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
-                ],
-                onFieldSubmitted: (String newValue) {
-                  if (selectedListeningArea == null) return;
-                  final double? parsed = double.tryParse(newValue);
-                  if (parsed == null) return;
-                  final ListeningArea updatedLA = selectedListeningArea.copyWith(ceilingHeight: parsed.toString());
-                  projectViewModel.updateListeningArea(area: updatedLA);
-                },
-              ),
-              const SizedBox(height: 10),
-              FusionAppText(
-                text: 'Boundary Threshold',
-                style: context.textTheme.bodySmall?.copyWith(color: cs.onSurface.withValues(alpha: 0.85)),
-              ),
-              const SizedBox(height: 8),
-              FusionSlider(
-                value: _result.autoPlaceBoundaryThreshold,
-                min: 0.3,
-                max: 1,
-                onChanged: (double value) {
-                  setState(() => _result = _result.copyWith(autoPlaceBoundaryThreshold: value.clamp(0.0, 1.0)));
-                },
-              ),
+              // BuildingPageTextField(
+              //   label: "Ceiling Height (m)",
+              //   controller: ceilingHeightController,
+              //   hintText: "e.g. ${ListeningHeightOption.maxListeningHeight}",
+              //   fillColor: context.colorScheme.elevation1,
+              //   inputFormatters: <TextInputFormatter>[
+              //     FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
+              //   ],
+              //   onFieldSubmitted: (String newValue) {
+              //     if (selectedListeningArea == null) return;
+              //     final double? parsed = double.tryParse(newValue);
+              //     if (parsed == null) return;
+              //     final ListeningArea updatedLA = selectedListeningArea.copyWith(ceilingHeight: parsed.toString());
+              //     projectViewModel.updateListeningArea(area: updatedLA);
+              //   },
+              // ),
+              // const SizedBox(height: 10),
 
-              Row(
-                children: <Widget>[
-                  FusionAppText(
-                    text: '30%',
-                    style: context.textTheme.labelSmall?.copyWith(color: cs.onSurface.withValues(alpha: 0.5), fontSize: 9),
-                  ),
-                  const Spacer(),
-                  FusionAppText(
-                    text: '100%',
-                    style: context.textTheme.labelSmall?.copyWith(color: cs.onSurface.withValues(alpha: 0.5), fontSize: 9),
-                  ),
-                ],
-              ),
+              // FusionAppText(
+              //   text: 'Boundary Threshold',
+              //   style: context.textTheme.bodySmall?.copyWith(color: cs.onSurface.withValues(alpha: 0.85)),
+              // ),
+              // const SizedBox(height: 8),
+              // FusionSlider(
+              //   value: _result.autoPlaceBoundaryThreshold,
+              //   min: 0.3,
+              //   max: 1,
+              //   onChanged: (double value) {
+              //     setState(() => _result = _result.copyWith(autoPlaceBoundaryThreshold: value.clamp(0.0, 1.0)));
+              //   },
+              // ),
+              // Row(
+              //   children: <Widget>[
+              //     FusionAppText(
+              //       text: '30%',
+              //       style: context.textTheme.labelSmall?.copyWith(color: cs.onSurface.withValues(alpha: 0.5), fontSize: 9),
+              //     ),
+              //     const Spacer(),
+              //     FusionAppText(
+              //       text: '100%',
+              //       style: context.textTheme.labelSmall?.copyWith(color: cs.onSurface.withValues(alpha: 0.5), fontSize: 9),
+              //     ),
+              //   ],
+              // ),
             ],
           ),
         ],
@@ -334,26 +331,26 @@ class _AutoPlaceDialogState extends State<AutoPlaceDialog> {
                   ),
                 ],
               ),
-              const SizedBox(height: 12),
-              _xyField(
-                context,
-                axis: 'X',
-                label: 'Grid Offset',
-                // value: _result.autoPlaceGridX,
-                value: 0.0,
-                // onChanged: (double v) => setState(() => _result = _result.copyWith(autoPlaceGridX: v)),
-                onChanged: (double v) {},
-              ),
-              const SizedBox(height: 8),
-              _xyField(
-                context,
-                axis: 'Y',
-                label: '',
-                // value: _result.autoPlaceOffsetY,
-                value: 0.0,
-                // onChanged: (double v) => setState(() => _result = _result.copyWith(autoPlaceOffsetY: v)),
-                onChanged: (double v) {},
-              ),
+              // const SizedBox(height: 12),
+              // _xyField(
+              //   context,
+              //   axis: 'X',
+              //   label: 'Grid Offset',
+              //   // value: _result.autoPlaceGridX,
+              //   value: 0.0,
+              //   // onChanged: (double v) => setState(() => _result = _result.copyWith(autoPlaceGridX: v)),
+              //   onChanged: (double v) {},
+              // ),
+              // const SizedBox(height: 8),
+              // _xyField(
+              //   context,
+              //   axis: 'Y',
+              //   label: '',
+              //   // value: _result.autoPlaceOffsetY,
+              //   value: 0.0,
+              //   // onChanged: (double v) => setState(() => _result = _result.copyWith(autoPlaceOffsetY: v)),
+              //   onChanged: (double v) {},
+              // ),
             ],
           ),
         ],

@@ -276,34 +276,31 @@ extension ListExtension<T> on List<T> {
 
 class AutoPlacementResult {
   final CoveragePreference autoPlaceCoveragePreference;
-  final double autoPlaceCoverageAngle;
   final LayoutPattern autoPlaceLayoutPattern;
   // final double autoPlaceCustomSpacing;
-  // final double autoPlaceGridX;
-  // final double autoPlaceOffsetY;
+  // final double autoPlaceGridOffsetX;
+  // final double autoPlaceGridOffsetY;
   // final bool autoPlaceMatchGrid;
-  final double autoPlaceBoundaryThreshold;
+  // final double autoPlaceBoundaryThreshold;
 
   const AutoPlacementResult({
     this.autoPlaceCoveragePreference = CoveragePreference.minimumOverlap,
     this.autoPlaceLayoutPattern = LayoutPattern.hexagonal,
-    this.autoPlaceCoverageAngle = 90.0,
     // this.autoPlaceCustomSpacing = 0.0,
-    // this.autoPlaceGridX = 0.0,
-    // this.autoPlaceOffsetY = 0.0,
     // this.autoPlaceMatchGrid = false,
-    this.autoPlaceBoundaryThreshold = 0.3, // min 30%.
+    // this.autoPlaceGridOffsetX = 0.0,
+    // this.autoPlaceGridOffsetY = 0.0,
+    // this.autoPlaceBoundaryThreshold = 0.3, // min 30%.
   });
 
   Map<String, dynamic> toJson() => <String, dynamic>{
     'autoPlaceCoveragePreference': autoPlaceCoveragePreference.name,
     'autoPlaceLayoutPattern': autoPlaceLayoutPattern.name,
-    'autoPlaceCoverageAngle': autoPlaceCoverageAngle,
+    // 'autoPlaceGridOffsetX': autoPlaceGridOffsetX,
+    // 'autoPlaceGridOffsetY': autoPlaceGridOffsetY,
     // 'autoPlaceCustomSpacing': autoPlaceCustomSpacing,
-    // 'autoPlaceGridX': autoPlaceGridX,
-    // 'autoPlaceOffsetY': autoPlaceOffsetY,
     // 'autoPlaceMatchGrid': autoPlaceMatchGrid,
-    'autoPlaceBoundaryThreshold': autoPlaceBoundaryThreshold,
+    // 'autoPlaceBoundaryThreshold': autoPlaceBoundaryThreshold,
   };
 
   factory AutoPlacementResult.fromJson(Map<String, dynamic> json) {
@@ -323,34 +320,31 @@ class AutoPlacementResult {
     return AutoPlacementResult(
       autoPlaceCoveragePreference: autoPlaceCoveragePreference,
       autoPlaceLayoutPattern: autoPlaceLayoutPattern,
-      autoPlaceCoverageAngle: (json['autoPlaceCoverageAngle'] as num?)?.toDouble() ?? 90.0,
+      // autoPlaceGridOffsetX: (json['autoPlaceGridOffsetX'] as num?)?.toDouble() ?? 0.0,
+      // autoPlaceGridOffsetY: (json['autoPlaceGridOffsetY'] as num?)?.toDouble() ?? 0.0,
       // autoPlaceCustomSpacing: (json['autoPlaceCustomSpacing'] as num?)?.toDouble() ?? 0.0,
-      // autoPlaceGridX: (json['autoPlaceGridX'] as num?)?.toDouble() ?? 0.0,
-      // autoPlaceOffsetY: (json['autoPlaceOffsetY'] as num?)?.toDouble() ?? 0.0,
       // autoPlaceMatchGrid: json['autoPlaceMatchGrid'] as bool? ?? false,
-      autoPlaceBoundaryThreshold: (json['autoPlaceBoundaryThreshold'] as num?)?.toDouble() ?? 0.0,
+      // autoPlaceBoundaryThreshold: (json['autoPlaceBoundaryThreshold'] as num?)?.toDouble() ?? 0.0,
     );
   }
 
   AutoPlacementResult copyWith({
     CoveragePreference? autoPlaceCoveragePreference,
     LayoutPattern? autoPlaceLayoutPattern,
-    double? autoPlaceCoverageAngle,
+    // double? autoPlaceGridOffsetX,
+    // double? autoPlaceGridOffsetY,
     // double? autoPlaceCustomSpacing,
-    // double? autoPlaceGridX,
-    // double? autoPlaceOffsetY,
     // bool? autoPlaceMatchGrid,
-    double? autoPlaceBoundaryThreshold,
+    // double? autoPlaceBoundaryThreshold,
   }) {
     return AutoPlacementResult(
       autoPlaceCoveragePreference: autoPlaceCoveragePreference ?? this.autoPlaceCoveragePreference,
       autoPlaceLayoutPattern: autoPlaceLayoutPattern ?? this.autoPlaceLayoutPattern,
-      autoPlaceCoverageAngle: autoPlaceCoverageAngle ?? this.autoPlaceCoverageAngle,
+      // autoPlaceGridOffsetX: autoPlaceGridOffsetX ?? this.autoPlaceGridOffsetX,
+      // autoPlaceGridOffsetY: autoPlaceGridOffsetY ?? this.autoPlaceGridOffsetY,
       // autoPlaceCustomSpacing: autoPlaceCustomSpacing ?? this.autoPlaceCustomSpacing,
-      // autoPlaceGridX: autoPlaceGridX ?? this.autoPlaceGridX,
-      // autoPlaceOffsetY: autoPlaceOffsetY ?? this.autoPlaceOffsetY,
       // autoPlaceMatchGrid: autoPlaceMatchGrid ?? this.autoPlaceMatchGrid,
-      autoPlaceBoundaryThreshold: autoPlaceBoundaryThreshold ?? this.autoPlaceBoundaryThreshold,
+      // autoPlaceBoundaryThreshold: autoPlaceBoundaryThreshold ?? this.autoPlaceBoundaryThreshold,
     );
   }
 }

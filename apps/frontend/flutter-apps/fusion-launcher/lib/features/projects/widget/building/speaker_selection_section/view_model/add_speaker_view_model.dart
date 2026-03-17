@@ -212,10 +212,10 @@ class SpeakerSelectionViewModel extends Cubit<SpeakerSelectionViewModelState> {
       try {
         if (selectedListeningArea?.mountingType == null) {
           return FusionToast.error(context, message: 'Please select at least one mounting type');
-        } else if (selectedListeningArea?.listeningHeight == null) {
+        } else if ((selectedListeningArea?.listeningHeight ?? 0) <= 0) {
           return FusionToast.error(context, message: 'Please enter listening height');
-        } else if (selectedListeningArea?.ceilingHeight == null) {
-          return FusionToast.error(context, message: 'Please enter ceilling height');
+        } else if (selectedListeningArea?.ceilingHeight.isEmpty != false || double.tryParse(selectedListeningArea?.ceilingHeight ?? '') == null) {
+          return FusionToast.error(context, message: 'Please enter ceiling height');
         } else if (selectedListeningArea?.environmentType == null) {
           return FusionToast.error(context, message: 'Please select a environment type');
         } else if (selectedListeningArea?.splRange == null) {
@@ -704,10 +704,29 @@ class SpeakerSelectionViewModel extends Cubit<SpeakerSelectionViewModelState> {
     final String? listeningAreaId = context.read<SpeakerSelectionViewModel>().selectedListeningArea?.id;
     final FloorModel currentFloor = projectViewModel.currentFloor;
 
+    if (selectedListeningArea == null) return false;
+
+    // Validate required LA properties before allowing speaker addition.
+    final ListeningArea la = selectedListeningArea!;
+    if (la.listeningHeight <= 0) {
+      FusionToast.error(context, message: 'Please enter a valid listening height for this area.');
+      return false;
+    }
+    if (la.ceilingHeight.isEmpty || double.tryParse(la.ceilingHeight) == null) {
+      FusionToast.error(context, message: 'Please enter a valid ceiling height for this area.');
+      return false;
+    }
+    if (la.environmentType == null) {
+      FusionToast.error(context, message: 'Please select an environment type for this area.');
+      return false;
+    }
+    if (la.splRange == null) {
+      FusionToast.error(context, message: 'Please select a target SPL range for this area.');
+      return false;
+    }
+
     final LocationModel location = LocationModel(floorId: currentFloor.id, listeningAreaId: listeningAreaId);
     final Speaker speaker = projectViewModel.fromSpeakerProductModel(cachedImagePath ?? '', product, location, isFromBuildingPage);
-
-    if (selectedListeningArea == null) return false;
 
     final bool isWithSubwooferMode = selectedListeningArea!.lowFrequency == LowFrequency.withSubwoofer;
 
@@ -766,6 +785,7 @@ class SpeakerSelectionViewModel extends Cubit<SpeakerSelectionViewModelState> {
       if (isConfirmed != true) return false;
 
       projectViewModel.migrateAllSpeakersTo(speaker: speaker, targetListeningAreaId: selectedListeningArea!.id);
+      projectViewModel.updateListeningArea(area: selectedListeningArea!.copyWith(autoPlacement: false));
       return true;
     }
   }
