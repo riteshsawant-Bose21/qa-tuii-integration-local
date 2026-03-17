@@ -68,7 +68,6 @@ class _AudioMeterContainerState extends State<AudioMeterContainer> {
             return _lastMeterValue;
           },
           builder: (BuildContext context, double meterValue) {
-            print("Meter value for ${widget.meterId}: $meterValue dB");
             return TweenAnimationBuilder<double>(
               tween: Tween<double>(begin: -60, end: meterValue),
               // Duration slightly longer than timer tick (150ms vs 120ms) creates a

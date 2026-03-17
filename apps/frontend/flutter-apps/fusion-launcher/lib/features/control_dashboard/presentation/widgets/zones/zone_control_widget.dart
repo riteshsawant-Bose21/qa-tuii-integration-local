@@ -1,8 +1,7 @@
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:fusion_launcher/core/service_locator.dart';
-import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/features/control_dashboard/presentation/widgets/zones/exandable_section.dart';
+import 'package:fusion_launcher/features/control_dashboard/view_models/zone_control_view_model.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
 import 'audio_meter_widget.dart';
@@ -18,64 +17,61 @@ class ZoneControlCard extends StatelessWidget {
     required this.zone,
   });
 
-  List<SubZone> get subZones {
-    return serviceLocator<ProjectViewModel>().getSubZonesForZone(parentZoneId: zone.id);
-  }
-
-  List<CircuitModel> get circuits {
-    return serviceLocator<ProjectViewModel>().getCircuitsInZone(zone.id);
-  }
-
-  ProcessingBlockModel? get processingBlock {
-    return serviceLocator<ProjectViewModel>().getUserFacingGainBlockForZone(zoneId: zone.id);
-  }
-
   @override
   Widget build(BuildContext context) {
-    print("Zone ${zone.name} has  muted state: ${zone.muted}");
-    return ClipRect(
-      clipBehavior: Clip.antiAlias,
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 10.0),
-        decoration: ShapeDecoration(
-          color: context.colorScheme.primaryBlack,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(8),
-            side: BorderSide(
-              width: 1,
-              color: context.colorScheme.strokeDark,
-            ),
-          ),
-        ),
-        child: Column(
-          children: <Widget>[
-            ZoneControlHeader(zone: zone),
+    return BlocProvider<ZoneControlViewModel>(
+      key: ValueKey<String>('zone_ctrl_${zone.id}'),
+      create: (_) => ZoneControlViewModel(zoneId: zone.id),
+      child: Builder(
+        builder: (BuildContext context) {
+          final ZoneControlViewModel vm = context.read<ZoneControlViewModel>();
 
-            AudioMeterContainer(
-              meterId: processingBlock?.id,
-            ),
-
-            if (subZones.isEmpty) ...<Widget>[
-              if (circuits.isNotEmpty) ...<Widget>[
-                CircuitExpandableSection(
-                  title: 'Circuits',
-                  children:
-                      circuits
-                          .map(
-                            (CircuitModel circuit) => DashboardCircuitWidget(
-                              circuit: circuit,
-                            ),
-                          )
-                          .toList(),
+          return ClipRect(
+            clipBehavior: Clip.antiAlias,
+            child: Container(
+              margin: const EdgeInsets.only(bottom: 10.0),
+              decoration: ShapeDecoration(
+                color: context.colorScheme.primaryBlack,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  side: BorderSide(
+                    width: 1,
+                    color: context.colorScheme.strokeDark,
+                  ),
                 ),
-              ],
-            ] else ...<Widget>[
-              SubZonesListing(
-                subZones: subZones,
               ),
-            ],
-          ],
-        ),
+              child: Column(
+                children: <Widget>[
+                  ZoneControlHeader(zone: zone),
+
+                  AudioMeterContainer(
+                    meterId: vm.processingBlock?.id,
+                  ),
+
+                  if (vm.subZones.isEmpty) ...<Widget>[
+                    if (vm.circuits.isNotEmpty) ...<Widget>[
+                      CircuitExpandableSection(
+                        title: 'Circuits',
+                        children:
+                            vm.circuits
+                                .map(
+                                  (CircuitModel circuit) => DashboardCircuitWidget(
+                                    circuit: circuit,
+                                  ),
+                                )
+                                .toList(),
+                      ),
+                    ],
+                  ] else ...<Widget>[
+                    SubZonesListing(
+                      subZones: vm.subZones,
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          );
+        },
       ),
     );
   }
