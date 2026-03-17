@@ -203,9 +203,6 @@ class _ZoneCardState extends State<ZoneCard> {
         return BlocBuilder<ConfigZonesViewmodel, ConfigZonesState>(
           builder: (BuildContext context, ConfigZonesState state) {
             final List<SubZone> subZonesForZone = _zonesViewmodel.getSubZonesForZone(parentZoneId: widget.zoneId);
-            final int subZoneCount = subZonesForZone.length;
-            final double calculatedHeight = subZoneCount * 100.0;
-            final double constrainedHeight = calculatedHeight.clamp(200.0, 400.0);
 
             return SemanticHelper.container(
               testId: SemanticHelper.createTestId(
@@ -213,7 +210,6 @@ class _ZoneCardState extends State<ZoneCard> {
                 FusionTestKeys.instance.zonelistcontent,
               ),
               child: Container(
-                height: constrainedHeight,
                 margin: const EdgeInsets.symmetric(horizontal: 12),
                 color: context.colorScheme.elevation2.withAlpha(100),
 
@@ -224,32 +220,31 @@ class _ZoneCardState extends State<ZoneCard> {
                     SemanticHelper.container(
                       testId: SemanticHelper.createTestId(SemanticTypes.container, FusionTestKeys.instance.zonelistfunctionspanel),
                       child: Container(
-                        width: constraints.maxWidth * 0.34,
-                        height: constrainedHeight,
-
-                        padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
+                          //left border
                           border: Border(
-                            bottom: BorderSide(
+                            right: BorderSide(
                               color: context.colorScheme.elevation2,
                             ),
                           ),
                         ),
+                        width: constraints.maxWidth * 0.34,
+                        padding: const EdgeInsets.all(12),
                         child: _buildZoneFunctionsPanel(),
                       ),
                     ),
 
-                    /// Full height divider
-                    Container(
-                      width: 1,
-                      height: constrainedHeight,
-                      color: context.colorScheme.elevation2,
-                    ),
-
                     /// Subzone Panel
                     Expanded(
-                      child: SizedBox(
-                        height: constrainedHeight,
+                      child: Container(
+                        decoration: BoxDecoration(
+                          //left border
+                          border: Border(
+                            left: BorderSide(
+                              color: context.colorScheme.elevation2,
+                            ),
+                          ),
+                        ),
                         child:
                             isInControlMode
                                 ? ConfigZoneControlModePanel(
@@ -306,9 +301,9 @@ class _ZoneCardState extends State<ZoneCard> {
         ),
         const SizedBox(height: 12),
         buildFunctionWidget(),
+        const SizedBox(height: 24),
 
-        const Spacer(),
-
+        // const Spacer(),
         _buildReorderablePriorityWidgets(),
         const SizedBox(height: 8),
         buildSourceSelectionForZone(),
@@ -1331,11 +1326,6 @@ class _ZoneCardState extends State<ZoneCard> {
         FusionTestKeys.instance.zonecircuit,
       ),
       child: Container(
-        decoration: BoxDecoration(
-          border: Border(
-            bottom: BorderSide(color: context.colorScheme.elevation2),
-          ),
-        ),
         child:
             /// circuit and subzone list
             (subZonesForZone.isEmpty && zoneCircuit.isEmpty)
