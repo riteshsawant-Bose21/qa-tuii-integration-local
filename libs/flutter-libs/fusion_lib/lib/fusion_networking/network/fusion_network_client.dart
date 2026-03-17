@@ -3,6 +3,7 @@ import 'dart:typed_data';
 
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
+import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/fusion_logger/logger.dart';
 import 'package:fusion_lib/fusion_networking/network/rest_client/dio_client.dart';
 import 'package:fusion_lib/fusion_storage/fusion_secure_storage.dart';
@@ -24,6 +25,7 @@ class FusionNetworkClient {
   final FusionSecureStorage secureStorageService;
   final FusionAuthService fusionAuthService;
   final String apiBaseUrl;
+  final WebSocketService webSocketService;
 
   FusionNetworkClient({
     required this.httpClient,
@@ -32,17 +34,18 @@ class FusionNetworkClient {
     required this.secureStorageService,
     required this.fusionAuthService,
     required this.apiBaseUrl,
+    required this.webSocketService,
   });
 
   ZSocket? subscriberSocket;
   final ZContext _context = ZContext();
 
-  String geApiUrl(FusionApiEndpoint api, {String? baseUrlToOverride}) {
+  String geApiUrl(FusionApiEndpoint api, {String? baseUrlToOverride, bool isSecure = true}) {
     if (baseUrlToOverride != null) {
-      return "http://$baseUrlToOverride${api.path}";
+      return isSecure ? "https://$baseUrlToOverride${api.path}" : "http://$baseUrlToOverride${api.path}";
     }
     if (api.type == FusionApiType.droServer) {
-      return "http://TODO${api.path}";
+      return "http://localhost:8080${api.path}";
     } else if (api.type == FusionApiType.fusionServer) {
       return "http://TODO:8080${api.path}";
     } else if (api.type == FusionApiType.backendServer) {
@@ -66,12 +69,13 @@ class FusionNetworkClient {
     Map<String, dynamic>? urlParameters,
     String? additionalPath,
     String? baseUrlToOverride,
-    T Function(Map<String, dynamic>)? fromJson,
+    bool isSecure = true,
+    T Function(dynamic)? fromJson,
   }) async {
     try {
       final String url = additionalPath != null
           ? "${geApiUrl(api, baseUrlToOverride: baseUrlToOverride)}/$additionalPath"
-          : geApiUrl(api, baseUrlToOverride: baseUrlToOverride);
+          : geApiUrl(api, baseUrlToOverride: baseUrlToOverride, isSecure: isSecure);
 
       final Map<String, dynamic> headers = httpClient.dioInstance.options.headers;
       final String? token = await getAccessTokenForApi(api);
@@ -107,12 +111,13 @@ class FusionNetworkClient {
     dynamic data,
     String? additionalPath,
     String? baseUrlToOverride,
-    T Function(Map<String, dynamic>)? fromJson,
+    bool isSecure = true,
+    T Function(dynamic)? fromJson,
   }) async {
     try {
       final String url = additionalPath != null
-          ? "${geApiUrl(api, baseUrlToOverride: baseUrlToOverride)}/$additionalPath"
-          : geApiUrl(api, baseUrlToOverride: baseUrlToOverride);
+          ? "${geApiUrl(api, baseUrlToOverride: baseUrlToOverride, isSecure: isSecure)}/$additionalPath"
+          : geApiUrl(api, baseUrlToOverride: baseUrlToOverride, isSecure: isSecure);
 
       final Map<String, dynamic> headers = httpClient.dioInstance.options.headers;
       final String? token = await getAccessTokenForApi(api);
@@ -141,12 +146,13 @@ class FusionNetworkClient {
     dynamic data,
     String? additionalPath,
     String? baseUrlToOverride,
-    T Function(Map<String, dynamic>)? fromJson,
+    bool isSecure = true,
+    T Function(dynamic)? fromJson,
   }) async {
     try {
       final String url = additionalPath != null
-          ? "${geApiUrl(api, baseUrlToOverride: baseUrlToOverride)}/$additionalPath"
-          : geApiUrl(api, baseUrlToOverride: baseUrlToOverride);
+          ? "${geApiUrl(api, baseUrlToOverride: baseUrlToOverride, isSecure: isSecure)}/$additionalPath"
+          : geApiUrl(api, baseUrlToOverride: baseUrlToOverride, isSecure: isSecure);
 
       final Map<String, dynamic> headers = httpClient.dioInstance.options.headers;
       final String? token = await getAccessTokenForApi(api);
@@ -181,7 +187,8 @@ class FusionNetworkClient {
     Map<String, dynamic>? urlParameters,
     String? additionalPath,
     String? baseUrlToOverride,
-    T Function(Map<String, dynamic>)? fromJson,
+    bool isSecure = true,
+    T Function(dynamic)? fromJson,
   }) async {
     try {
       final Map<String, dynamic> headers = httpClient.dioInstance.options.headers;
@@ -196,7 +203,17 @@ class FusionNetworkClient {
       );
 
       final Response<dynamic> response = await httpClient.dioInstance.patch(
-        additionalPath != null ? "${geApiUrl(api, baseUrlToOverride: baseUrlToOverride)}/$additionalPath" : geApiUrl(api, baseUrlToOverride: baseUrlToOverride),
+        additionalPath != null
+            ? "${geApiUrl(
+                api,
+                baseUrlToOverride: baseUrlToOverride,
+                isSecure: isSecure,
+              )}/$additionalPath"
+            : geApiUrl(
+                api,
+                baseUrlToOverride: baseUrlToOverride,
+                isSecure: isSecure,
+              ),
         options: options,
         data: data,
         queryParameters: urlParameters,
@@ -217,14 +234,23 @@ class FusionNetworkClient {
   Future<ResponseCallback<T>> delete<T>({
     required FusionApiEndpoint api,
     Map<String, dynamic>? urlParameters,
-    T Function(Map<String, dynamic>)? fromJson,
+    T Function(dynamic)? fromJson,
     String? additionalPath,
+    bool isSecure = true,
     String? baseUrlToOverride,
   }) async {
     try {
       final String url = additionalPath != null
-          ? "${geApiUrl(api, baseUrlToOverride: baseUrlToOverride)}/$additionalPath"
-          : geApiUrl(api, baseUrlToOverride: baseUrlToOverride);
+          ? "${geApiUrl(
+              api,
+              baseUrlToOverride: baseUrlToOverride,
+              isSecure: isSecure,
+            )}/$additionalPath"
+          : geApiUrl(
+              api,
+              baseUrlToOverride: baseUrlToOverride,
+              isSecure: isSecure,
+            );
 
       final Map<String, dynamic> headers = httpClient.dioInstance.options.headers;
       final String? token = await getAccessTokenForApi(api);
@@ -252,9 +278,9 @@ class FusionNetworkClient {
     }
   }
 
-  Future<ResponseCallback<T>> connect<T>() async {
+  Future<ResponseCallback<T>> connect<T>({required String vip}) async {
     try {
-      await telemetryData.initializeTelemetryAddresses(this);
+      await telemetryData.initializeTelemetryAddresses(this, vip);
       subscriberSocket = _context.createSocket(SocketType.sub);
       for (String url in TelemetryData.telemetryAddresses) {
         subscriberSocket!.connect(url);
@@ -296,18 +322,81 @@ class FusionNetworkClient {
       }
     }
   }
+
+  /// Connects to a WebSocket URL using the injected WebSocketService
+  Future<ResponseCallback<T>> connectWebSocket<T>({required String url}) async {
+    try {
+      webSocketService.connect(url);
+      FusionLogger.log(tag: LogTag.network, message: "WebSocket connecting to $url");
+
+      return ResponseCallback<T>(success: true, message: "WebSocket connection initiated");
+    } catch (ex) {
+      FusionLogger.log(tag: LogTag.exceptions, message: "Exception in FusionNetworkClient.connectWebSocket() - $ex", logLevel: LogLevel.error);
+      return ResponseCallback<T>(success: false, message: "Exception in FusionNetworkClient.connectWebSocket() - $ex");
+    }
+  }
+
+  /// Sends a message through the active WebSocket connection
+  Future<ResponseCallback<T>> sendWebSocketMessage<T>(dynamic message) async {
+    try {
+      if (!webSocketService.isConnected) {
+        return ResponseCallback<T>(success: false, message: "WebSocket is not connected");
+      }
+
+      // If the message isn't a string (e.g., a Map), JSON encode it
+      final dynamic payload = message is String ? message : jsonEncode(message);
+      webSocketService.sendMessage(payload);
+
+      return ResponseCallback<T>(success: true, message: "Message sent successfully");
+    } catch (ex) {
+      FusionLogger.log(tag: LogTag.exceptions, message: "Exception in FusionNetworkClient.sendWebSocketMessage() - $ex", logLevel: LogLevel.error);
+      return ResponseCallback<T>(success: false, message: "Exception in FusionNetworkClient.sendWebSocketMessage() - $ex");
+    }
+  }
+
+  /// Disconnects the active WebSocket connection
+  Future<ResponseCallback<T>> disconnectWebSocket<T>() async {
+    try {
+      webSocketService.disconnect();
+      FusionLogger.log(tag: LogTag.network, message: "WebSocket Disconnected!!!");
+
+      return ResponseCallback<T>(success: true, message: "WebSocket Disconnected");
+    } catch (ex) {
+      FusionLogger.log(tag: LogTag.exceptions, message: "Exception in FusionNetworkClient.disconnectWebSocket() - $ex", logLevel: LogLevel.error);
+      return ResponseCallback<T>(success: false, message: "Exception in FusionNetworkClient.disconnectWebSocket() - $ex");
+    }
+  }
+
+  /// Async* stream to listen to incoming WebSocket messages mapped to ResponseCallback
+  Stream<ResponseCallback<dynamic>> get webSocketMessages async* {
+    if (!webSocketService.isConnected) {
+      yield ResponseCallback<dynamic>(success: false, message: 'No active WebSocket connection');
+    }
+
+    await for (final dynamic message in webSocketService.stream) {
+      try {
+        // Attempt to decode JSON if applicable, otherwise return raw string
+        dynamic decodedData;
+        try {
+          decodedData = jsonDecode(message.toString());
+        } catch (_) {
+          decodedData = message; // Fallback to raw message
+        }
+
+        yield ResponseCallback<dynamic>(success: true, message: "New WebSocket data received", data: decodedData);
+      } catch (ex) {
+        yield ResponseCallback<dynamic>(success: false, message: 'Exception in FusionNetworkClient.webSocketMessages - $ex ');
+      }
+    }
+  }
 }
 
 enum FusionApiType { fusionServer, droServer, backendServer }
 
 enum FusionApiEndpoint {
   //Fusion Backend endpoints
-  dro('/dro-endpoint', FusionApiType.fusionServer),
-  dsp('/dsp-endpoint', FusionApiType.fusionServer),
   process('/process', FusionApiType.droServer), //DRO endpoint
-  fusionGetValue('/value', FusionApiType.fusionServer),
-  fusionSetValue('/value', FusionApiType.fusionServer),
-  fusionUpdateValue('/value', FusionApiType.fusionServer),
+  fusionValue('/value', FusionApiType.fusionServer),
   fusionGetEndPoints('/endpoints', FusionApiType.fusionServer),
   fusionDelete('/clear', FusionApiType.fusionServer),
 
@@ -328,9 +417,7 @@ enum FusionApiEndpoint {
 
 extension ApiEndpointTypeCheckExtension on String {
   bool isFusionServerEndpoint() {
-    return contains(FusionApiEndpoint.fusionGetValue.path) ||
-        contains(FusionApiEndpoint.fusionSetValue.path) ||
-        contains(FusionApiEndpoint.fusionUpdateValue.path) ||
+    return contains(FusionApiEndpoint.fusionValue.path) ||
         contains(FusionApiEndpoint.fusionGetEndPoints.path) ||
         contains(FusionApiEndpoint.fusionDelete.path) ||
         contains(FusionApiEndpoint.fusionDevice.path) ||

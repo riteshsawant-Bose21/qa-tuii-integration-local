@@ -168,7 +168,7 @@ public:
             }
 
             std::string property_name;
-            int channels;
+            int_fast32_t channels;
             channels = definition.get_channels(property_name);
 
             if (!property_name.empty())

@@ -165,12 +165,7 @@ class __CreateNewListeningAreaWidgetState extends State<_CreateNewListeningAreaW
 
     final ListeningArea newListeningArea = ListeningArea(
       name: locationName,
-      vertices: <FusionCanvasPoint>[
-        FusionCanvasPoint(position: const Offset(0, 0)),
-        FusionCanvasPoint(position: const Offset(100, 0)),
-        FusionCanvasPoint(position: const Offset(100, 100)),
-        FusionCanvasPoint(position: const Offset(0, 100)),
-      ],
+      vertices: <FusionCanvasPoint>[],
     );
 
     final String? zoneId = context.read<SpeakerSelectionViewModel>().zoneId;

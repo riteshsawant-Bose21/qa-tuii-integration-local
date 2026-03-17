@@ -30,6 +30,10 @@ class _SubzoneDashboardContentState extends State<SubzoneDashboardContent> {
     return serviceLocator<ProjectViewModel>().getCircuitsInSubZone(subZoneId: widget.subZone.id);
   }
 
+  ProcessingBlockModel? get processingBlock {
+    return serviceLocator<ProjectViewModel>().getUserFacingGainBlockForZone(zoneId: widget.subZone.id);
+  }
+
   late final TextEditingController volumeController;
 
   @override
@@ -79,10 +83,10 @@ class _SubzoneDashboardContentState extends State<SubzoneDashboardContent> {
                 VolumeControlButtons(
                   volumeController: volumeController,
                   onVolumeChanged: (double newVolume) {
-                    if (newVolume < 0.0) {
-                      newVolume = 0.0;
-                    } else if (newVolume > 100.0) {
-                      newVolume = 100.0;
+                    if (newVolume < -60) {
+                      newVolume = -60.0;
+                    } else if (newVolume > 12) {
+                      newVolume = 12.0;
                     }
                     volumeController.text = newVolume.toStringAsFixed(1);
                   },
@@ -90,8 +94,8 @@ class _SubzoneDashboardContentState extends State<SubzoneDashboardContent> {
                     double currentVolume = double.tryParse(volumeController.text) ?? 0.0;
 
                     currentVolume += 1.0;
-                    if (currentVolume > 100.0) {
-                      currentVolume = 100.0;
+                    if (currentVolume > 12.0) {
+                      currentVolume = 12.0;
                     }
                     volumeController.text = currentVolume.toStringAsFixed(1);
                   },
@@ -99,8 +103,8 @@ class _SubzoneDashboardContentState extends State<SubzoneDashboardContent> {
                     double currentVolume = double.tryParse(volumeController.text) ?? 0.0;
 
                     currentVolume -= 1.0;
-                    if (currentVolume < 0.0) {
-                      currentVolume = 0.0;
+                    if (currentVolume < -60.0) {
+                      currentVolume = -60.0;
                     }
 
                     volumeController.text = currentVolume.toStringAsFixed(1);
@@ -151,7 +155,7 @@ class _SubzoneDashboardContentState extends State<SubzoneDashboardContent> {
           ),
 
           AudioMeterContainer(
-            muted: widget.subZone.muted,
+            meterId: processingBlock?.id,
           ),
 
           if (circuits.isNotEmpty) ...<Widget>[
@@ -163,7 +167,6 @@ class _SubzoneDashboardContentState extends State<SubzoneDashboardContent> {
                       .map(
                         (CircuitModel circuit) => DashboardCircuitWidget(
                           circuit: circuit,
-                          isZoneMuted: widget.subZone.muted,
                         ),
                       )
                       .toList(),

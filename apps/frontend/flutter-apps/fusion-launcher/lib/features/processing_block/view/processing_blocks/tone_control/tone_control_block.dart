@@ -14,8 +14,8 @@ class ToneControlBlock extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final AlgorithmDataViewmodel watch =
-        context.watch<AlgorithmDataViewmodel>();
+    final AlgorithmDataViewmodel watch = context.watch<AlgorithmDataViewmodel>();
+    final String targetBlockId = watch.processingBlock.id;
     return SemanticHelper.container(
       testId: SemanticHelper.createTestId(
         SemanticTypes.container,
@@ -26,12 +26,7 @@ class ToneControlBlock extends StatelessWidget {
         create: (BuildContext context) {
           return ToneController(watch);
         },
-        update:
-            (
-              BuildContext context,
-              AlgorithmDataViewmodel valueHandler,
-              ToneController? previous,
-            ) => ToneController(valueHandler),
+        update: (BuildContext context, AlgorithmDataViewmodel valueHandler, ToneController? previous) => ToneController(valueHandler),
         child: Builder(
           builder: (BuildContext context) {
             final ToneController controller = context.watch<ToneController>();
@@ -84,7 +79,9 @@ class ToneControlBlock extends StatelessWidget {
                       context.read<ToneController>().updateHighBypass(value);
                     },
                   ),
-                  const OutMeter(),
+                  OutMeter(
+                    blockId: targetBlockId,
+                  ),
                 ],
               ),
               // children: <Widget>[

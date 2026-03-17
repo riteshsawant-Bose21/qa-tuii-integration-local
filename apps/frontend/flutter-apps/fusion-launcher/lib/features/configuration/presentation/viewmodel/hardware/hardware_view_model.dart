@@ -83,9 +83,12 @@ extension HardwareViewModel on ProjectViewModel {
         };
         for (final String algo in chain) {
           addProcessingBlockToSource(
-            processingBlock: ProcessingBlockModel.sourceBlocks.firstWhere(
-              (ProcessingBlockModel element) => element.algorithmId == algo,
-            ),
+            processingBlock:
+                ProcessingBlockModel.sourceBlocks
+                    .firstWhere(
+                      (ProcessingBlockModel element) => element.algorithmId == algo,
+                    )
+                    .clone(),
             sourceId: hardware.id,
             autoSave: false,
           );

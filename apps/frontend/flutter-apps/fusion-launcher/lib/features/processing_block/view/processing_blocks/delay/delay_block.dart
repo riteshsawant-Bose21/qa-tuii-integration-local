@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:fusion_launcher/features/processing_block/view/widgets/pb_out_meter.dart';
 import 'package:fusion_launcher/features/processing_block/viewmodel/algorithm_data_viewmodel.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:provider/provider.dart';
@@ -14,8 +15,9 @@ class DelayBlock extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final AlgorithmDataViewmodel watch =
-        context.watch<AlgorithmDataViewmodel>();
+    final AlgorithmDataViewmodel watch = context.watch<AlgorithmDataViewmodel>();
+
+    final String targetBlockId = watch.processingBlock.id;
     return SemanticHelper.container(
       testId: SemanticHelper.createTestId(
         SemanticTypes.container,
@@ -26,12 +28,7 @@ class DelayBlock extends StatelessWidget {
         create: (BuildContext context) {
           return DelayController(watch);
         },
-        update:
-            (
-              BuildContext context,
-              AlgorithmDataViewmodel valueHandler,
-              DelayController? previous,
-            ) => DelayController(valueHandler),
+        update: (BuildContext context, AlgorithmDataViewmodel valueHandler, DelayController? previous) => DelayController(valueHandler),
         child: Builder(
           builder: (BuildContext context) {
             final DelayController controller = context.watch<DelayController>();
@@ -57,10 +54,7 @@ class DelayBlock extends StatelessWidget {
                         Row(
                           mainAxisSize: MainAxisSize.min,
                           children: <Widget>[
-                            FusionAppText(
-                              text: "Units",
-                              style: context.textTheme.bodySmall,
-                            ),
+                            FusionAppText(text: "Units", style: context.textTheme.bodySmall),
                             const SizedBox(width: 44),
                             SizedBox(
                               width: 200,
@@ -69,21 +63,12 @@ class DelayBlock extends StatelessWidget {
 
                                 hintText: "Units",
                                 onChanged: (_UnitsType value) {
-                                  context.read<DelayController>().updateUnits(
-                                    value.value,
-                                  );
+                                  context.read<DelayController>().updateUnits(value.value);
                                 },
                                 items: _UnitsType.values,
-                                value:
-                                    context
-                                        .watch<DelayController>()
-                                        .currentUnits
-                                        ?.value,
+                                value: context.watch<DelayController>().currentUnits?.value,
 
-                                itemBuilder: (
-                                  BuildContext context,
-                                  _UnitsType option,
-                                ) {
+                                itemBuilder: (BuildContext context, _UnitsType option) {
                                   return Text(
                                     option.label,
                                     style: context.textTheme.bodySmall,
@@ -103,30 +88,16 @@ class DelayBlock extends StatelessWidget {
                               width: 80,
                               child: PBNumberTextField(
                                 semanticId: 'delay_text_field',
-                                value:
-                                    context
-                                        .watch<DelayController>()
-                                        .currentDelay ??
-                                    0,
+                                value: context.watch<DelayController>().currentDelay ?? 0,
                                 onChanged: (num value) {
-                                  context.read<DelayController>().updateDelay(
-                                    value,
-                                  );
+                                  context.read<DelayController>().updateDelay(value);
                                 },
                                 min: 1,
                                 max: 96000,
                               ),
                             ),
                             const SizedBox(width: 4),
-                            FusionAppText(
-                              text:
-                                  context
-                                      .watch<DelayController>()
-                                      .currentUnits
-                                      ?.shortLabel ??
-                                  "",
-                              style: context.textTheme.bodySmall,
-                            ),
+                            FusionAppText(text: context.watch<DelayController>().currentUnits?.shortLabel ?? "", style: context.textTheme.bodySmall),
                           ],
                         ),
                       ],
@@ -149,24 +120,17 @@ class DelayBlock extends StatelessWidget {
 
                           decoration: BoxDecoration(
                             border: Border(
-                              bottom: BorderSide(
-                                color: context.colorScheme.elevation5,
-                              ),
+                              bottom: BorderSide(color: context.colorScheme.elevation5),
                             ),
                           ),
-                          child: FusionAppText(
-                            text: "OUTPUT",
-                            style: context.textTheme.bodyMedium,
-                          ),
+                          child: FusionAppText(text: "OUTPUT", style: context.textTheme.bodyMedium),
                         ),
-                        const Expanded(
+                        Expanded(
                           child: Padding(
-                            padding: EdgeInsets.all(12.0),
-                            child: VerticalMeter(
+                            padding: const EdgeInsets.all(12.0),
+                            child: PbOutMeter(
                               semanticId: 'delay_output_meter',
-                              value: -60,
-                              min: -60,
-                              max: 0,
+                              blockId: targetBlockId,
                             ),
                           ),
                         ),

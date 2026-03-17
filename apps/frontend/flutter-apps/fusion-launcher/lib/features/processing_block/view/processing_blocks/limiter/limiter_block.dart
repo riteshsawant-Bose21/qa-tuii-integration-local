@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:fusion_launcher/features/processing_block/view/widgets/pb_out_meter.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:provider/provider.dart';
 
@@ -13,8 +14,8 @@ class LimiterBlock extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final AlgorithmDataViewmodel watch =
-        context.watch<AlgorithmDataViewmodel>();
+    final AlgorithmDataViewmodel watch = context.watch<AlgorithmDataViewmodel>();
+    final String targetBlockId = watch.processingBlock.id;
     return SemanticHelper.container(
       testId: SemanticHelper.createTestId(
         SemanticTypes.container,
@@ -25,16 +26,10 @@ class LimiterBlock extends StatelessWidget {
         create: (BuildContext context) {
           return LimiterController(watch);
         },
-        update:
-            (
-              BuildContext context,
-              AlgorithmDataViewmodel valueHandler,
-              LimiterController? previous,
-            ) => LimiterController(valueHandler),
+        update: (BuildContext context, AlgorithmDataViewmodel valueHandler, LimiterController? previous) => LimiterController(valueHandler),
         child: Builder(
           builder: (BuildContext context) {
-            final LimiterController controller =
-                context.watch<LimiterController>();
+            final LimiterController controller = context.watch<LimiterController>();
             return PBBlockLayout(
               pb: context.watch<AlgorithmDataViewmodel>().processingBlock,
               onBypassChanged: context.read<LimiterController>().bypassGlobally,
@@ -61,15 +56,10 @@ class LimiterBlock extends StatelessWidget {
 
                           decoration: BoxDecoration(
                             border: Border(
-                              bottom: BorderSide(
-                                color: context.colorScheme.strokeLight,
-                              ),
+                              bottom: BorderSide(color: context.colorScheme.strokeLight),
                             ),
                           ),
-                          child: FusionAppText(
-                            text: "Limiter setup",
-                            style: context.textTheme.bodyMedium,
-                          ),
+                          child: FusionAppText(text: "Limiter setup", style: context.textTheme.bodyMedium),
                         ),
 
                         /// V Peak section
@@ -77,35 +67,20 @@ class LimiterBlock extends StatelessWidget {
                         Container(
                           decoration: BoxDecoration(
                             border: Border(
-                              bottom: BorderSide(
-                                color: context.colorScheme.strokeLight,
-                              ),
+                              bottom: BorderSide(color: context.colorScheme.strokeLight),
                             ),
                           ),
-                          padding: const EdgeInsets.symmetric(
-                            vertical: 20,
-                            horizontal: 16,
-                          ),
+                          padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
                           child: Column(
                             children: <Widget>[
-                              Align(
-                                alignment: Alignment.topLeft,
-                                child: FusionAppText(
-                                  text: "V PEAK",
-                                  style: context.textTheme.bodyMedium,
-                                ),
-                              ),
+                              Align(alignment: Alignment.topLeft, child: FusionAppText(text: "V PEAK", style: context.textTheme.bodyMedium)),
                               const SizedBox(height: 18),
 
                               /// V Peak input
                               Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                 children: <Widget>[
-                                  FusionAppText(
-                                    text: "THRESHOLD",
-                                    style: context.textTheme.bodySmall,
-                                  ),
+                                  FusionAppText(text: "THRESHOLD", style: context.textTheme.bodySmall),
                                   const SizedBox(width: 24),
                                   Row(
                                     mainAxisSize: MainAxisSize.min,
@@ -117,26 +92,16 @@ class LimiterBlock extends StatelessWidget {
                                         color: context.colorScheme.elevation2,
                                         child: PBNumberTextField(
                                           semanticId: 'limiter_vpeak_threshold',
-                                          value:
-                                              context
-                                                  .watch<LimiterController>()
-                                                  .currentThreshold ??
-                                              0,
+                                          value: context.watch<LimiterController>().currentThreshold ?? 0,
                                           onChanged: (num value) {
-                                            context
-                                                .read<LimiterController>()
-                                                .updateThreshold(value);
+                                            context.read<LimiterController>().updateThreshold(value);
                                           },
                                           min: 1,
                                           max: 96000,
                                         ),
                                       ),
                                       const SizedBox(width: 4),
-                                      FusionAppText(
-                                        text: "dbfs",
-                                        capitalize: false,
-                                        style: context.textTheme.bodySmall,
-                                      ),
+                                      FusionAppText(text: "dbfs", capitalize: false, style: context.textTheme.bodySmall),
                                     ],
                                   ),
                                 ],
@@ -150,35 +115,20 @@ class LimiterBlock extends StatelessWidget {
                         Container(
                           decoration: BoxDecoration(
                             border: Border(
-                              bottom: BorderSide(
-                                color: context.colorScheme.strokeLight,
-                              ),
+                              bottom: BorderSide(color: context.colorScheme.strokeLight),
                             ),
                           ),
-                          padding: const EdgeInsets.symmetric(
-                            vertical: 20,
-                            horizontal: 16,
-                          ),
+                          padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
                           child: Column(
                             spacing: 14,
                             children: <Widget>[
-                              Align(
-                                alignment: Alignment.topLeft,
-                                child: FusionAppText(
-                                  text: "V RMS",
-                                  style: context.textTheme.bodyMedium,
-                                ),
-                              ),
+                              Align(alignment: Alignment.topLeft, child: FusionAppText(text: "V RMS", style: context.textTheme.bodyMedium)),
 
                               /// V RMS input
                               Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                 children: <Widget>[
-                                  FusionAppText(
-                                    text: "THRESHOLD",
-                                    style: context.textTheme.bodySmall,
-                                  ),
+                                  FusionAppText(text: "THRESHOLD", style: context.textTheme.bodySmall),
                                   const SizedBox(width: 24),
                                   Row(
                                     mainAxisSize: MainAxisSize.min,
@@ -190,26 +140,16 @@ class LimiterBlock extends StatelessWidget {
                                         color: context.colorScheme.elevation2,
                                         child: PBNumberTextField(
                                           semanticId: 'limiter_vrms_threshold',
-                                          value:
-                                              context
-                                                  .watch<LimiterController>()
-                                                  .currentRMSThreshold ??
-                                              0,
+                                          value: context.watch<LimiterController>().currentRMSThreshold ?? 0,
                                           onChanged: (num value) {
-                                            context
-                                                .read<LimiterController>()
-                                                .updateRMSThreshold(value);
+                                            context.read<LimiterController>().updateRMSThreshold(value);
                                           },
                                           min: 1,
                                           max: 96000,
                                         ),
                                       ),
                                       const SizedBox(width: 4),
-                                      FusionAppText(
-                                        text: "dBFS",
-                                        capitalize: false,
-                                        style: context.textTheme.bodySmall,
-                                      ),
+                                      FusionAppText(text: "dBFS", capitalize: false, style: context.textTheme.bodySmall),
                                     ],
                                   ),
                                 ],
@@ -219,14 +159,10 @@ class LimiterBlock extends StatelessWidget {
                                 color: context.colorScheme.strokeLight,
                               ),
                               Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
 
                                 children: <Widget>[
-                                  FusionAppText(
-                                    text: "ATTACK",
-                                    style: context.textTheme.bodySmall,
-                                  ),
+                                  FusionAppText(text: "ATTACK", style: context.textTheme.bodySmall),
                                   const SizedBox(width: 24),
                                   Row(
                                     mainAxisSize: MainAxisSize.min,
@@ -235,27 +171,16 @@ class LimiterBlock extends StatelessWidget {
                                       SizedBox(
                                         width: 58,
                                         child: PBNumberTextField(
-                                          semanticId: 'limiter_attack',
-                                          value:
-                                              context
-                                                  .watch<LimiterController>()
-                                                  .currentRMSAttackTime ??
-                                              0,
+                                          value: context.watch<LimiterController>().currentRMSAttackTime ?? 0,
                                           onChanged: (num value) {
-                                            context
-                                                .read<LimiterController>()
-                                                .updateRMSAttackTime(value);
+                                            context.read<LimiterController>().updateRMSAttackTime(value);
                                           },
                                           min: 1,
                                           max: 96000,
                                         ),
                                       ),
                                       const SizedBox(width: 4),
-                                      FusionAppText(
-                                        text: "msec",
-                                        capitalize: false,
-                                        style: context.textTheme.bodySmall,
-                                      ),
+                                      FusionAppText(text: "msec", capitalize: false, style: context.textTheme.bodySmall),
                                     ],
                                   ),
                                 ],
@@ -265,13 +190,9 @@ class LimiterBlock extends StatelessWidget {
                                 color: context.colorScheme.strokeLight,
                               ),
                               Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                 children: <Widget>[
-                                  FusionAppText(
-                                    text: "RELEASE",
-                                    style: context.textTheme.bodySmall,
-                                  ),
+                                  FusionAppText(text: "RELEASE", style: context.textTheme.bodySmall),
                                   const SizedBox(width: 24),
                                   Row(
                                     mainAxisSize: MainAxisSize.min,
@@ -283,26 +204,16 @@ class LimiterBlock extends StatelessWidget {
                                         color: context.colorScheme.elevation2,
                                         child: PBNumberTextField(
                                           semanticId: 'limiter_release',
-                                          value:
-                                              context
-                                                  .watch<LimiterController>()
-                                                  .currentRMSReleaseTime ??
-                                              0,
+                                          value: context.watch<LimiterController>().currentRMSReleaseTime ?? 0,
                                           onChanged: (num value) {
-                                            context
-                                                .read<LimiterController>()
-                                                .updateRMSReleaseTime(value);
+                                            context.read<LimiterController>().updateRMSReleaseTime(value);
                                           },
                                           min: 1,
                                           max: 96000,
                                         ),
                                       ),
                                       const SizedBox(width: 4),
-                                      FusionAppText(
-                                        text: "msec",
-                                        capitalize: false,
-                                        style: context.textTheme.bodySmall,
-                                      ),
+                                      FusionAppText(text: "msec", capitalize: false, style: context.textTheme.bodySmall),
                                     ],
                                   ),
                                 ],
@@ -330,15 +241,10 @@ class LimiterBlock extends StatelessWidget {
 
                           decoration: BoxDecoration(
                             border: Border(
-                              bottom: BorderSide(
-                                color: context.colorScheme.strokeLight,
-                              ),
+                              bottom: BorderSide(color: context.colorScheme.strokeLight),
                             ),
                           ),
-                          child: FusionAppText(
-                            text: "GAIN REDUCTION (dB)",
-                            style: context.textTheme.bodyMedium,
-                          ),
+                          child: FusionAppText(text: "GAIN REDUCTION (dB)", style: context.textTheme.bodyMedium),
                         ),
 
                         /// input meter
@@ -352,9 +258,7 @@ class LimiterBlock extends StatelessWidget {
                                     Expanded(
                                       child: Container(
                                         alignment: Alignment.center,
-                                        padding: const EdgeInsets.symmetric(
-                                          vertical: 16,
-                                        ),
+                                        padding: const EdgeInsets.symmetric(vertical: 16),
                                         child: const SimpleVerticalMeter(
                                           semanticId: 'limiter_peak',
                                           value: -10,
@@ -370,21 +274,14 @@ class LimiterBlock extends StatelessWidget {
                                       decoration: BoxDecoration(
                                         color: context.colorScheme.elevation2,
                                         border: Border(
-                                          top: BorderSide(
-                                            color:
-                                                context.colorScheme.strokeLight,
-                                          ),
+                                          top: BorderSide(color: context.colorScheme.strokeLight),
                                         ),
                                       ),
                                       child: FusionAppText(
                                         text: "PEAK",
-                                        style: context.textTheme.labelMedium
-                                            ?.copyWith(
-                                              color:
-                                                  context
-                                                      .colorScheme
-                                                      .textSecondary,
-                                            ),
+                                        style: context.textTheme.labelMedium?.copyWith(
+                                          color: context.colorScheme.textSecondary,
+                                        ),
                                       ),
                                     ),
                                   ],
@@ -398,24 +295,12 @@ class LimiterBlock extends StatelessWidget {
                                     Expanded(
                                       child: Container(
                                         alignment: Alignment.center,
-                                        padding: const EdgeInsets.symmetric(
-                                          vertical: 16,
-                                        ),
+                                        padding: const EdgeInsets.symmetric(vertical: 16),
                                         decoration: BoxDecoration(
                                           color: context.colorScheme.elevation2,
                                           border: Border(
-                                            right: BorderSide(
-                                              color:
-                                                  context
-                                                      .colorScheme
-                                                      .strokeLight,
-                                            ),
-                                            left: BorderSide(
-                                              color:
-                                                  context
-                                                      .colorScheme
-                                                      .strokeLight,
-                                            ),
+                                            right: BorderSide(color: context.colorScheme.strokeLight),
+                                            left: BorderSide(color: context.colorScheme.strokeLight),
                                           ),
                                         ),
                                         child: const SimpleVerticalMeter(
@@ -433,29 +318,16 @@ class LimiterBlock extends StatelessWidget {
                                       decoration: BoxDecoration(
                                         color: context.colorScheme.elevation2,
                                         border: Border(
-                                          top: BorderSide(
-                                            color:
-                                                context.colorScheme.strokeLight,
-                                          ),
-                                          right: BorderSide(
-                                            color:
-                                                context.colorScheme.strokeLight,
-                                          ),
-                                          left: BorderSide(
-                                            color:
-                                                context.colorScheme.strokeLight,
-                                          ),
+                                          top: BorderSide(color: context.colorScheme.strokeLight),
+                                          right: BorderSide(color: context.colorScheme.strokeLight),
+                                          left: BorderSide(color: context.colorScheme.strokeLight),
                                         ),
                                       ),
                                       child: FusionAppText(
                                         text: "RMS",
-                                        style: context.textTheme.labelMedium
-                                            ?.copyWith(
-                                              color:
-                                                  context
-                                                      .colorScheme
-                                                      .textSecondary,
-                                            ),
+                                        style: context.textTheme.labelMedium?.copyWith(
+                                          color: context.colorScheme.textSecondary,
+                                        ),
                                       ),
                                     ),
                                   ],
@@ -469,9 +341,7 @@ class LimiterBlock extends StatelessWidget {
                                     Expanded(
                                       child: Container(
                                         alignment: Alignment.center,
-                                        padding: const EdgeInsets.symmetric(
-                                          vertical: 16,
-                                        ),
+                                        padding: const EdgeInsets.symmetric(vertical: 16),
                                         child: const SimpleVerticalMeter(
                                           semanticId: 'limiter_total',
                                           value: -10,
@@ -487,21 +357,14 @@ class LimiterBlock extends StatelessWidget {
                                       decoration: BoxDecoration(
                                         color: context.colorScheme.elevation2,
                                         border: Border(
-                                          top: BorderSide(
-                                            color:
-                                                context.colorScheme.strokeLight,
-                                          ),
+                                          top: BorderSide(color: context.colorScheme.strokeLight),
                                         ),
                                       ),
                                       child: FusionAppText(
                                         text: "TOTAL",
-                                        style: context.textTheme.labelMedium
-                                            ?.copyWith(
-                                              color:
-                                                  context
-                                                      .colorScheme
-                                                      .textSecondary,
-                                            ),
+                                        style: context.textTheme.labelMedium?.copyWith(
+                                          color: context.colorScheme.textSecondary,
+                                        ),
                                       ),
                                     ),
                                   ],
@@ -532,24 +395,17 @@ class LimiterBlock extends StatelessWidget {
 
                           decoration: BoxDecoration(
                             border: Border(
-                              bottom: BorderSide(
-                                color: context.colorScheme.strokeLight,
-                              ),
+                              bottom: BorderSide(color: context.colorScheme.strokeLight),
                             ),
                           ),
-                          child: FusionAppText(
-                            text: "OUTPUT",
-                            style: context.textTheme.bodyMedium,
-                          ),
+                          child: FusionAppText(text: "OUTPUT", style: context.textTheme.bodyMedium),
                         ),
-                        const Expanded(
+                        Expanded(
                           child: Padding(
-                            padding: EdgeInsets.all(12.0),
-                            child: VerticalMeter(
+                            padding: const EdgeInsets.all(12.0),
+                            child: PbOutMeter(
                               semanticId: 'limiter_output',
-                              value: -60,
-                              min: -60,
-                              max: 0,
+                              blockId: targetBlockId,
                             ),
                           ),
                         ),

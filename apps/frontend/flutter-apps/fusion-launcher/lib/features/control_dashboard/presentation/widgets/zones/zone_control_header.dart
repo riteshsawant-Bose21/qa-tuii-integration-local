@@ -70,10 +70,10 @@ class _ZoneControlHeaderState extends State<ZoneControlHeader> {
             VolumeControlButtons(
               volumeController: volumeController,
               onVolumeChanged: (double newVolume) {
-                if (newVolume < 0.0) {
-                  newVolume = 0.0;
-                } else if (newVolume > 100.0) {
-                  newVolume = 100.0;
+                if (newVolume < -60) {
+                  newVolume = -60.0;
+                } else if (newVolume > 12) {
+                  newVolume = 12.0;
                 }
                 volumeController.text = newVolume.toStringAsFixed(1);
               },
@@ -81,8 +81,8 @@ class _ZoneControlHeaderState extends State<ZoneControlHeader> {
                 double currentVolume = double.tryParse(volumeController.text) ?? 0.0;
 
                 currentVolume += 1.0;
-                if (currentVolume > 100.0) {
-                  currentVolume = 100.0;
+                if (currentVolume > 12.0) {
+                  currentVolume = 12.0;
                 }
                 volumeController.text = currentVolume.toStringAsFixed(1);
               },
@@ -90,8 +90,8 @@ class _ZoneControlHeaderState extends State<ZoneControlHeader> {
                 double currentVolume = double.tryParse(volumeController.text) ?? 0.0;
 
                 currentVolume -= 1.0;
-                if (currentVolume < 0.0) {
-                  currentVolume = 0.0;
+                if (currentVolume < -60.0) {
+                  currentVolume = -60.0;
                 }
 
                 volumeController.text = currentVolume.toStringAsFixed(1);
