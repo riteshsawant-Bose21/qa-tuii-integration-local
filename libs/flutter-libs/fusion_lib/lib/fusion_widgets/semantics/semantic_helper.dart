@@ -24,7 +24,7 @@ class SemanticHelper {
       label: label,
       selected: isSelected,
       child: child,
-      checked: isSelected,
+      checked: isEnabled,
     );
   }
 
@@ -136,6 +136,7 @@ class SemanticHelper {
     String? hint,
   }) {
     return Semantics(
+      container: true,
       identifier: testId,
       textField: true,
       label: label,
@@ -203,6 +204,7 @@ class SemanticHelper {
     bool? blur,
   }) {
     return Semantics(
+      container: true,
       button: true,
       identifier: testId,
       enabled: enabled,

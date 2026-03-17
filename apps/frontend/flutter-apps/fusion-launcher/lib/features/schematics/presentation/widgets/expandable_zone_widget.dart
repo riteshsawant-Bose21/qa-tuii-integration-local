@@ -1279,6 +1279,7 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
               /// Location name and zone
               Expanded(
                 child: FusionAppText(
+                  semanticId: "floor_name",
                   text:
                       area.name.isNotEmpty
                           ? "${floorName ?? floorData?.name ?? ''}/${area.name}"
@@ -1294,6 +1295,7 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
                 ),
               ),
               FusionAppText(
+                semanticId: "zone_name",
                 text: zoneData?.name ?? "No zone",
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
                   fontSize: 9,

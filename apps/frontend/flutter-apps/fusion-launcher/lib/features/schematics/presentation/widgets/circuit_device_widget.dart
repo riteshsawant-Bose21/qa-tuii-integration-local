@@ -114,6 +114,7 @@ class _CircuitDeviceWidgetState extends State<CircuitDeviceWidget> {
                               const SizedBox(width: 6),
                               Expanded(
                                 child: FusionAppText(
+                                  semanticId: "circuit_device_name",
                                   text: widget.circuitDeviceName,
                                   maxLine: 1,
                                   style: Theme.of(context).textTheme.bodySmall?.copyWith(fontSize: 10),
@@ -263,6 +264,7 @@ class _CircuitDeviceWidgetState extends State<CircuitDeviceWidget> {
               borderRadius: BorderRadius.circular(2),
             ),
             child: FusionAppText(
+              semanticId: "speaker_count",
               text: widget.circuitDeviceCount.toString(),
               maxLine: 1,
               style: Theme.of(context).textTheme.bodySmall?.copyWith(fontSize: 8),

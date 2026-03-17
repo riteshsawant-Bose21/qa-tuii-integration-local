@@ -537,6 +537,7 @@ class _SpeakerCardState extends State<SpeakerCard> {
                             children: <Widget>[
                               Flexible(
                                 child: FusionAppText(
+                                  semanticId: "speaker_name_${widget.index}",
                                   text: widget.product.modelName,
                                   style: context.textTheme.labelSmall?.copyWith(
                                     fontWeight: FontWeight.bold,
