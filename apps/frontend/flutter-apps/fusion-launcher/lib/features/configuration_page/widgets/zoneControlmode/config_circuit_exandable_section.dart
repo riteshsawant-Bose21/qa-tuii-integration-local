@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
-class CircuitExpandableSection extends StatefulWidget {
+class ConfigCircuitExpandableSection extends StatefulWidget {
   final String title;
   final List<Widget> children;
   final bool initiallyExpanded;
   final EdgeInsetsGeometry? padding;
 
-  const CircuitExpandableSection({
+  const ConfigCircuitExpandableSection({
     super.key,
     required this.title,
     required this.children,
@@ -16,10 +16,10 @@ class CircuitExpandableSection extends StatefulWidget {
   });
 
   @override
-  State<CircuitExpandableSection> createState() => _CircuitExpandableSectionState();
+  State<ConfigCircuitExpandableSection> createState() => _ConfigCircuitExpandableSectionState();
 }
 
-class _CircuitExpandableSectionState extends State<CircuitExpandableSection> with SingleTickerProviderStateMixin {
+class _ConfigCircuitExpandableSectionState extends State<ConfigCircuitExpandableSection> with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _iconTurns;
   late bool _isExpanded;

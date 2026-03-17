@@ -32,7 +32,7 @@ class MessagePlayerConfigDialog extends StatelessWidget {
   }) async {
     await showGeneralDialog(
       context: context,
-      barrierDismissible: true,
+      barrierDismissible: false,
       barrierLabel: MaterialLocalizations.of(context).modalBarrierDismissLabel,
       barrierColor: Colors.black54,
       transitionDuration: const Duration(milliseconds: 200),
@@ -78,6 +78,7 @@ class _MessagePlayerConfigDialogContent extends StatelessWidget {
           /// Dialog content
           Center(
             child: Container(
+              clipBehavior: Clip.hardEdge,
               margin: const EdgeInsets.all(24.0),
               constraints: BoxConstraints(
                 maxWidth: MediaQuery.of(context).size.width * 0.7,
