@@ -85,6 +85,8 @@ constexpr uint16_t kPropertyPlatformSMPSNumber =
     static_cast<uint16_t>((kBlockPlatform << 8) | 0x010F);
 constexpr uint16_t kPropertyPlatformSMPSTemp =
     static_cast<uint16_t>((kBlockPlatform << 8) | 0x0110);
+constexpr uint16_t kPropertyPlatformModelType =
+    static_cast<uint16_t>((kBlockPlatform << 8) | 0x0111);
 
 /* Audio Function IDs */
 constexpr uint16_t kPropertyAudioVolume =
@@ -117,12 +119,14 @@ static const Spec kSpecs[] = {
     {"protocolversion",     kPropertyProtocolVersion,           ArgKind::kNone,  ArgKind::kNone,      ArgKind::kNone},
     {"platformfwversion",   kPropertyPlatformFirmwareVersion,   ArgKind::kNone,  ArgKind::kNone,      ArgKind::kNone},
     {"platformhwvariant",   kPropertyPlatformHardwareVariant,   ArgKind::kNone,  ArgKind::kNone,      ArgKind::kNone},
+    {"platformmodeltype",   kPropertyPlatformModelType,         ArgKind::kNone,  ArgKind::kNone,      ArgKind::kNone},
     {"platformhwversion",   kPropertyPlatformHardwareVersion,   ArgKind::kNone,  ArgKind::kNone,      ArgKind::kNone},
     {"platformampstatus",   kPropertyPlatformAmpStatus,         ArgKind::kIndex, ArgKind::kIndex,     ArgKind::kIndex},
     {"platformamptemp",     kPropertyPlatformAmpTemp,           ArgKind::kIndex, ArgKind::kIndex,     ArgKind::kIndex},
     {"platformsmcustatus",  kPropertyPlatformSMCUStatus,        ArgKind::kIndex, ArgKind::kIndex,     ArgKind::kIndex},
     {"platformpmcustatus",  kPropertyPlatformPMCUStatus,        ArgKind::kIndex, ArgKind::kIndex,     ArgKind::kIndex},
     {"platformsmpsnumber",  kPropertyPlatformSMPSNumber,        ArgKind::kNone,  ArgKind::kNone,      ArgKind::kNone},
+    {"platformsmpstemp",    kPropertyPlatformSMPSTemp,          ArgKind::kIndex, ArgKind::kIndex,     ArgKind::kIndex},
     {"platformreset",       kPropertyPlatformReset,             ArgKind::kNone,  ArgKind::kBool,      ArgKind::kBool},
     {"audiovolume",         kPropertyAudioVolume,               ArgKind::kIndex, ArgKind::kIndexByte, ArgKind::kIndexByte},
     {"audiophantompower",   kPropertyAudioPhantomPower,         ArgKind::kIndex, ArgKind::kIndexBool, ArgKind::kIndexBool},
@@ -471,11 +475,14 @@ private:
     // Platform parameters
     std::string platform_fw_ver;
     std::string platform_hw_variant;
+    std::string platform_model_type;
     int_fast32_t platform_hw_ver;
+    bool platform_reset{false};
     std::vector<int_fast32_t> platform_amp_temp;
     std::vector<int_fast32_t> platform_amp_status;
     std::vector<int_fast32_t> platform_smcu_status;
     std::vector<int_fast32_t> platform_smps_number;
+    std::vector<int_fast32_t> platform_smps_temp;
     std::vector<int_fast32_t> platform_pmcu_status;
 
     // Audio parameters
@@ -550,6 +557,7 @@ BDIFClient::BDIFClient(const bosepro::BlockConfiguration &configuration)
     platform_amp_status.resize(amp_slots);
     platform_smcu_status.resize(amp_slots);
     platform_smps_number.resize(amp_slots);
+    platform_smps_temp.resize(amp_slots);
     platform_pmcu_status.resize(amp_slots);
     audio_volume.resize(amp_slots);
     audio_phantom_power.resize(amp_slots);
@@ -763,12 +771,28 @@ void BDIFClient::handle_rx_frame(const std::vector<uint8_t> &frame)
             SPDLOG_DEBUG("BDIF: ack platform hw variant");
         }
         break;
+    case kPropertyPlatformModelType:
+        if (value_valid) {
+            platform_model_type = std::string(reinterpret_cast<const char*>(value_ptr), value_len);
+            SPDLOG_DEBUG("BDIF: ack platform model type '{}'", platform_model_type);
+        } else {
+            SPDLOG_DEBUG("BDIF: ack platform model type");
+        }
+        break;
     case kPropertyPlatformHardwareVersion:
         if (value_valid) {
             platform_hw_ver = read_u32(0, value_len);
             SPDLOG_DEBUG("BDIF: ack platform hw 0x{:08x}", platform_hw_ver);
         } else {
             SPDLOG_DEBUG("BDIF: ack platform hw");
+        }
+        break;
+    case kPropertyPlatformReset:
+        if (value_valid) {
+            platform_reset = value_len > 0 ? value_ptr[0] != 0 : false;
+            SPDLOG_DEBUG("BDIF: ack platform reset {}", platform_reset);
+        } else {
+            SPDLOG_DEBUG("BDIF: ack platform reset");
         }
         break;
     case kPropertyPlatformAmpTemp:
@@ -862,6 +886,29 @@ void BDIFClient::handle_rx_frame(const std::vector<uint8_t> &frame)
             SPDLOG_DEBUG("BDIF: ack smps number={}", count);
         } else {
             SPDLOG_DEBUG("BDIF: ack smps number");
+        }
+        break;
+    case kPropertyPlatformSMPSTemp:
+        if (value_valid && value_len >= 2) {
+            const int idx = static_cast<int>(value_ptr[0]) - 1;
+            const auto temp = static_cast<int_fast32_t>(read_u32(1, value_len - 1));
+            if (idx >= 0) {
+                if (static_cast<size_t>(idx) >= platform_smps_temp.size()) {
+                    platform_smps_temp.resize(static_cast<size_t>(idx) + 1);
+                }
+                platform_smps_temp[idx] = temp;
+            }
+            SPDLOG_DEBUG("BDIF: ack smps temp[{}]={}", idx, temp);
+        } else if (value_valid) {
+            const auto temp = static_cast<int_fast32_t>(read_u32(0, value_len));
+            if (platform_smps_temp.empty()) {
+                platform_smps_temp.push_back(temp);
+            } else {
+                platform_smps_temp[0] = temp;
+            }
+            SPDLOG_DEBUG("BDIF: ack smps temp={}", temp);
+        } else {
+            SPDLOG_DEBUG("BDIF: ack smps temp");
         }
         break;
     case kPropertyAudioVolume:
