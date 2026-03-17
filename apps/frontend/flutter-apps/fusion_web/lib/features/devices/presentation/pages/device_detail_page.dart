@@ -195,70 +195,6 @@ class _DeviceDetailPageState extends State<DeviceDetailPage> {
     );
   }
 
-  Widget _card({required Widget child}) {
-    return Container(
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFE5E5E5)),
-      ),
-      child: child,
-    );
-  }
-
-  Widget _cardTitle(String text) {
-    return Text(
-      text,
-      style: GoogleFonts.montserrat(fontSize: 18, fontWeight: FontWeight.w600),
-    );
-  }
-
-  Widget _detail(String label, String value) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: GoogleFonts.montserrat(fontSize: 13, color: Colors.grey[500]),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          value,
-          style: GoogleFonts.montserrat(
-            fontSize: 14,
-            fontWeight: FontWeight.w500,
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _telemetryRow(String label, dynamic value) {
-    return Row(
-      children: [
-        Expanded(
-          child: Text(
-            label,
-            style: GoogleFonts.montserrat(
-              fontSize: 14,
-              color: Colors.grey[700],
-            ),
-          ),
-        ),
-        value is Widget
-            ? value
-            : Text(
-                value.toString(),
-                style: GoogleFonts.montserrat(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-      ],
-    );
-  }
-
   Widget _statCard(String title, String value, String subtitle) {
     return Container(
       padding: const EdgeInsets.all(20),
@@ -299,25 +235,3 @@ class _DeviceDetailPageState extends State<DeviceDetailPage> {
   }
 }
 
-Widget _actionButton({required IconData icon, required String text}) {
-  return Container(
-    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-    decoration: BoxDecoration(
-      borderRadius: BorderRadius.circular(12),
-      border: Border.all(color: const Color(0xFFE5E5E5)),
-    ),
-    child: Row(
-      children: [
-        Icon(icon, size: 20),
-        const SizedBox(width: 12),
-        Text(
-          text,
-          style: GoogleFonts.montserrat(
-            fontSize: 14,
-            fontWeight: FontWeight.w500,
-          ),
-        ),
-      ],
-    ),
-  );
-}

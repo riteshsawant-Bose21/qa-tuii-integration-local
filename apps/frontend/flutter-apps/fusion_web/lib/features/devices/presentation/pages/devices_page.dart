@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_web/features/devices/presentation/viewmodels/devices_viewmodel.dart';
 import 'package:fusion_web/features/devices/data/repositories/devices_repository_impl.dart';
 import 'package:fusion_web/features/devices/data/datasources/device_datasource.dart';
+import 'package:fusion_web/features/devices/presentation/widgets/device_page_widgets/common_device_section.dart';
 import 'package:fusion_web/features/devices/presentation/widgets/device_page_widgets/device_grid_view.dart';
 import 'package:fusion_web/features/devices/presentation/widgets/device_page_widgets/device_overview.dart';
 import 'package:fusion_web/features/devices/presentation/widgets/device_page_widgets/devices_header.dart';
@@ -69,100 +70,74 @@ class _DevicesView extends StatelessWidget {
 
                   const SizedBox(height: 24),
 
-                  Container(
-                    padding: const EdgeInsets.all(24),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: Colors.grey[200]!),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          "All Devices (${stats.devices.length})",
-                          style: const TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
+                  CommonDeviceSection(
+                    title: "All Devices",
+                    count: stats.devices.length,
 
-                        const SizedBox(height: 16),
+                    filters: DeviceFilters(
+                      searchController: searchController,
+                      onSearchChanged: (v) => viewModel.updateSearch(v),
+                      onClearFilters: () {
+                        viewModel.clearFilters();
+                        searchController.clear();
+                      },
+                      showClearFilters: viewModel.hasActiveFilters,
+                      selectedStatus: viewModel.selectedStatus,
+                      selectedProjects: viewModel.selectedProject,
+                      selectedModels: viewModel.selectedModel,
+                      selectedCategory: viewModel.selectedCategory,
+                      selectedTypes: viewModel.selectedType,
+                      isGridView: viewModel.isGridView,
 
-                        DeviceFilters(
-                          searchController: searchController,
-                          onSearchChanged: (v) => viewModel.updateSearch(v),
-                          onClearFilters: () {
-                            viewModel.clearFilters();
-                            searchController.clear();
-                          },
-                          showClearFilters: viewModel.hasActiveFilters,
-                          selectedStatus: viewModel.selectedStatus,
-                          selectedProjects: viewModel.selectedProject,
-                          selectedModels: viewModel.selectedModel,
-                          selectedCategory: viewModel.selectedCategory,
-                          selectedTypes: viewModel.selectedType,
-                          isGridView: viewModel.isGridView,
-
-                          statusItems: const [
-                            "All Status",
-                            "Healthy",
-                            "Critical",
-                            "Inactive",
-                          ],
-
-                          modelItems: const [
-                            "All Models",
-                            "EdgeMax EM90",
-                            "PowerMatch PM8500N",
-                            "ControlSpace EX-1280C",
-                            "FreeSpace FS4SE",
-                            "ControlSpace EX-440C",
-                          ],
-
-                          typeItems: const [
-                            "All Types",
-                            "Speaker",
-                            "Amplifier",
-                            "Controller",
-                            "Processor",
-                          ],
-
-                          projectItems: const [
-                            "All Projects",
-                            "Metro University Campus Audio",
-                            "Skyline Downtown Conference Center",
-                            "Skyline Resort & Spa",
-                            "Grand Plaza Convention Hall",
-                            "TechHub Innovation Center",
-                          ],
-
-                          categoryItems: const [
-                            "Name",
-                            "Model",
-                            "Status",
-                            "Last Seen",
-                          ],
-
-                          onStatusChanged: (v) => viewModel.updateStatus(v!),
-                          onProjectChanged: (v) => viewModel.updateProject(v!),
-                          onModelChanged: (v) => viewModel.updateModel(v!),
-                          onTypeChanged: (v) => viewModel.updateType(v!),
-                          onCategoryChanged: (v) =>
-                              viewModel.updateCategory(v!),
-                          onGridTap: () => viewModel.toggleGrid(true),
-                          onListTap: () => viewModel.toggleGrid(false),
-                        ),
-
-                        const SizedBox(height: 24),
-
-                        viewModel.isGridView
-                            ? DevicesGridView(devices: stats.devices)
-                            : DevicesListView(devices: stats.devices),
+                      statusItems: const [
+                        "All Status",
+                        "Healthy",
+                        "Critical",
+                        "Inactive",
                       ],
-                    ),
-                  ),
+                      modelItems: const [
+                        "All Models",
+                        "EdgeMax EM90",
+                        "PowerMatch PM8500N",
+                        "ControlSpace EX-1280C",
+                        "FreeSpace FS4SE",
+                        "ControlSpace EX-440C",
+                      ],
+                      typeItems: const [
+                        "All Types",
+                        "Speaker",
+                        "Amplifier",
+                        "Controller",
+                        "Processor",
+                      ],
+                      projectItems: const [
+                        "All Projects",
+                        "Metro University Campus Audio",
+                        "Skyline Downtown Conference Center",
+                        "Skyline Resort & Spa",
+                        "Grand Plaza Convention Hall",
+                        "TechHub Innovation Center",
+                      ],
+                      categoryItems: const [
+                        "Name",
+                        "Model",
+                        "Status",
+                        "Last Seen",
+                      ],
 
+                      onStatusChanged: (v) => viewModel.updateStatus(v!),
+                      onProjectChanged: (v) => viewModel.updateProject(v!),
+                      onModelChanged: (v) => viewModel.updateModel(v!),
+                      onTypeChanged: (v) => viewModel.updateType(v!),
+                      onCategoryChanged: (v) => viewModel.updateCategory(v!),
+                      onGridTap: () => viewModel.toggleGrid(true),
+                      onListTap: () => viewModel.toggleGrid(false),
+                    ),
+
+                    content: viewModel.isGridView
+                        ? DevicesGridView(devices: stats.devices)
+                        : DevicesListView(devices: stats.devices),
+                  ),
                   // const SizedBox(height: 24),
                 ],
               ),

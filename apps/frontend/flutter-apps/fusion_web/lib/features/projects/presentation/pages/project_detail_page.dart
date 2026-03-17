@@ -3,12 +3,22 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_web/core/constants/app_constants.dart';
 import 'package:fusion_web/core/presentation/base_viewmodel.dart';
 import 'package:fusion_web/core/services/service_locator.dart';
+
 import 'package:fusion_web/features/projects/data/models/project_model.dart';
 import 'package:fusion_web/features/projects/presentation/widgets/empty_state_widget.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:fusion_web/features/projects/presentation/handlers/project_actions_handler.dart';
 import 'package:fusion_web/features/projects/presentation/widgets/project_actions_menu.dart';
 import 'package:go_router/go_router.dart';
+//devices
+import 'package:fusion_web/features/devices/data/datasources/device_datasource.dart';
+import 'package:fusion_web/features/devices/data/models/devices_model.dart';
+import 'package:fusion_web/features/devices/data/repositories/devices_repository_impl.dart';
+import 'package:fusion_web/features/devices/presentation/viewmodels/devices_viewmodel.dart';
+import 'package:fusion_web/features/devices/presentation/widgets/device_page_widgets/common_device_section.dart';
+import 'package:fusion_web/features/devices/presentation/widgets/device_page_widgets/device_filters.dart';
+import 'package:fusion_web/features/devices/presentation/widgets/device_page_widgets/device_grid_view.dart';
+import 'package:fusion_web/features/devices/presentation/widgets/device_page_widgets/devices_list_view.dart';
 
 import '../viewmodels/project_detail_viewmodel.dart';
 
@@ -16,6 +26,7 @@ enum DetailTab { incidents, devices, activity }
 
 class ProjectDetailPage extends StatefulWidget {
   final String projectId;
+  
 
   const ProjectDetailPage({super.key, required this.projectId});
 
@@ -25,6 +36,7 @@ class ProjectDetailPage extends StatefulWidget {
 
 class _ProjectDetailPageState extends State<ProjectDetailPage> {
   DetailTab _selectedTab = DetailTab.incidents;
+  //devices
 
   @override
   void initState() {
@@ -65,6 +77,7 @@ class _ProjectDetailPageState extends State<ProjectDetailPage> {
               body: Center(child: CircularProgressIndicator()),
             );
           }
+          
           if (state is ErrorState) {
             return Scaffold(
               body: Center(
@@ -216,7 +229,7 @@ class _ProjectDetailPageState extends State<ProjectDetailPage> {
                     children: [
                       /// LEFT CARD
                       Expanded(
-                        flex: 4,
+                        flex: 3,
                         child: _card(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
@@ -240,7 +253,7 @@ class _ProjectDetailPageState extends State<ProjectDetailPage> {
 
                       /// RIGHT CARD
                       Expanded(
-                        flex: 6,
+                        flex: 7,
                         child: _card(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
@@ -328,15 +341,112 @@ class _ProjectDetailPageState extends State<ProjectDetailPage> {
                         : const SizedBox(),
 
                   if (_selectedTab == DetailTab.devices)
-                    EmptyStateWidget(
-                      title: "No Devices Found",
-                      description:
-                          "Devices will appear here once added to this project.",
-                      icon: Icons.devices_outlined,
-                      buttonText: "Add Device",
-                      onButtonPressed: () {
-                        // open modal here later
-                      },
+                    BlocProvider(
+                      create: (_) =>
+                          DevicesViewModel(
+                              DevicesRepositoryImpl(DeviceDatasource()),
+                            )
+                            ..selectedProjectId = p.id
+                            ..loadDevices(),
+
+                      child: Builder(
+                        builder: (context) {
+                          final viewModel = context.watch<DevicesViewModel>();
+
+                          return BlocBuilder<
+                            DevicesViewModel,
+                            BaseState<DevicesModel>
+                          >(
+                            builder: (context, state) {
+                              if (state is LoadingState) {
+                                return const Center(
+                                  child: CircularProgressIndicator(),
+                                );
+                              }
+
+                              if (state is LoadedState<DevicesModel>) {
+                                final devices = state.data.devices;
+
+                                /// 0 devices case
+                                if (devices.isEmpty) {
+                                  return EmptyStateWidget(
+                                    title: "No Devices Found",
+                                    description:
+                                        "Devices will appear here once added to this project.",
+                                    icon: Icons.devices_outlined,
+                                    buttonText: "Add Device",
+                                    onButtonPressed: () {
+                                      // open modal later
+                                    },
+                                  );
+                                }
+
+                                /// Devices Ui - Header, list and grid view
+                                return CommonDeviceSection(
+                                
+                                  filters: DeviceFilters(
+                                    searchController: TextEditingController(),
+
+                                    onSearchChanged: viewModel.updateSearch,
+                                    onClearFilters: viewModel.clearFilters,
+                                    showClearFilters:
+                                        viewModel.hasActiveFilters,
+
+                                    selectedStatus: viewModel.selectedStatus,
+                                    selectedProjects: viewModel.selectedProject,
+                                    selectedModels: viewModel.selectedModel,
+                                    selectedCategory:
+                                        viewModel.selectedCategory,
+                                    selectedTypes: viewModel.selectedType,
+                                    isGridView: viewModel.isGridView,
+
+                                    onStatusChanged: (v) =>
+                                        viewModel.updateStatus(v!),
+                                    onProjectChanged: (v) =>
+                                        viewModel.updateProject(v!),
+                                    onModelChanged: (v) =>
+                                        viewModel.updateModel(v!),
+                                    onTypeChanged: (v) =>
+                                        viewModel.updateType(v!),
+                                    onCategoryChanged: (v) =>
+                                        viewModel.updateCategory(v!),
+
+                                    onGridTap: () => viewModel.toggleGrid(true),
+                                    onListTap: () =>
+                                        viewModel.toggleGrid(false),
+
+                                    statusItems: const [
+                                      "All Status",
+                                      "Healthy",
+                                      "Critical",
+                                      "Inactive",
+                                    ],
+                                    modelItems: const ["All Models"],
+                                    typeItems: const ["All Types"],
+                                    projectItems: const ["All Projects"],
+                                    categoryItems: const [
+                                      "Name",
+                                      "Model",
+                                      "Status",
+                                      "Last Seen",
+                                    ],
+                                  ),
+
+                                  content: viewModel.isGridView
+                                      ? DevicesGridView(devices: devices)
+                                      : DevicesListView(devices: devices),
+                                );
+                              }
+
+                              if (state is ErrorState<DevicesModel>) {
+                                return Center(child: Text(state.message));
+                              }
+
+                              return const SizedBox();
+                            },
+                          );
+                        },
+                      ),
                     ),
 
                   if (_selectedTab == DetailTab.activity)

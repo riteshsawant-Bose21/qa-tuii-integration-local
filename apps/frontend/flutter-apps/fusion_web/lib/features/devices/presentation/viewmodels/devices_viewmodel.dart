@@ -9,6 +9,9 @@ class DevicesViewModel extends BaseViewModel<DevicesModel> {
 
   DevicesModel? _originalData;
 
+  //project based filter
+  String? selectedProjectId;
+
   /// FILTER STATE
   String searchQuery = '';
   String selectedProject = 'All Projects';
@@ -38,7 +41,7 @@ class DevicesViewModel extends BaseViewModel<DevicesModel> {
     try {
       final result = await repository.getDeviceStats();
       _originalData = result;
-      setLoaded(result);
+      _applyFilters();
     } catch (e) {
       setError(e.toString());
     }
@@ -135,6 +138,15 @@ class DevicesViewModel extends BaseViewModel<DevicesModel> {
     if (_originalData == null) return;
 
     List<Device> devices = List.from(_originalData!.devices);
+print("Selected Project ID: $selectedProjectId");
+
+for (var d in _originalData!.devices) {
+  print("Device projectId: ${d.projectId}");
+}
+    //project id filter for project details page
+    if (selectedProjectId != null) {
+      devices = devices.where((d) => d.projectId == selectedProjectId).toList();
+    }
 
     /// SEARCH
     if (searchQuery.isNotEmpty) {
@@ -142,9 +154,9 @@ class DevicesViewModel extends BaseViewModel<DevicesModel> {
         final query = searchQuery.toLowerCase();
 
         return device.name.toLowerCase().contains(query) ||
-            device.model.toLowerCase().contains(query) ||
-            device.project.toLowerCase().contains(query) ||
-            device.deviceId.toLowerCase().contains(query);
+            device.model.toLowerCase().contains(query);
+        // device.project.toLowerCase().contains(query);
+        // device.deviceId.toLowerCase().contains(query);
       }).toList();
     }
 

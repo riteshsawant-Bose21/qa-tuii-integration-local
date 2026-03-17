@@ -19,7 +19,7 @@ class Device {
   final int cpuUsage;
   final int memoryUsage;
   final String deviceType;
-
+  final String projectId;
 
   Device({
     required this.name,
@@ -42,6 +42,7 @@ class Device {
     required this.cpuUsage,
     required this.memoryUsage,
     required this.deviceType,
+    required this.projectId,
   });
 
   factory Device.fromJson(Map<String, dynamic> json) {
@@ -66,6 +67,7 @@ class Device {
       cpuUsage: json['cpuUsage'] ?? 0,
       memoryUsage: json['storageUsage'] ?? 0,
       deviceType: json['macAddress']?.toString() ?? '',
+      projectId: json['projectId']?.toString() ?? '',
     );
   }
 }

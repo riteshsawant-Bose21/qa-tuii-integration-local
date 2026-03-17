@@ -6,22 +6,17 @@ import 'package:fusion_web/features/devices/presentation/widgets/common_widgets/
 class DeviceOverviewTab extends StatelessWidget {
   final Device device;
 
-  const DeviceOverviewTab({
-    super.key,
-    required this.device,
-  });
+  const DeviceOverviewTab({super.key, required this.device});
 
   @override
   Widget build(BuildContext context) {
     return Column(
       children: [
-
         /// TOP ROW
         IntrinsicHeight(
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-
               /// DEVICE IDENTITY
               Expanded(
                 child: _card(
@@ -46,10 +41,7 @@ class DeviceOverviewTab extends StatelessWidget {
                             ),
                           ),
                           Expanded(
-                            child: _detail(
-                              "Device ID",
-                              device.deviceId,
-                            ),
+                            child: _detail("Device ID", device.deviceId),
                           ),
                         ],
                       ),
@@ -100,24 +92,15 @@ class DeviceOverviewTab extends StatelessWidget {
 
                       const SizedBox(height: 20),
 
-                      _telemetryRow(
-                        "Temperature",
-                        "${device.temperature}°C",
-                      ),
+                      _telemetryRow("Temperature", "${device.temperature}°C"),
 
                       const SizedBox(height: 16),
 
-                      _telemetryRow(
-                        "CPU Usage",
-                        "${device.cpuUsage}",
-                      ),
+                      _telemetryRow("CPU Usage", "${device.cpuUsage}"),
 
                       const SizedBox(height: 16),
 
-                      _telemetryRow(
-                        "RAM Usage",
-                        "${device.memoryUsage}",
-                      ),
+                      _telemetryRow("RAM Usage", "${device.memoryUsage}"),
 
                       const SizedBox(height: 16),
 
@@ -129,17 +112,8 @@ class DeviceOverviewTab extends StatelessWidget {
                   ),
                 ),
               ),
-            ],
-          ),
-        ),
 
-        const SizedBox(height: 24),
-
-        /// SECOND ROW
-        IntrinsicHeight(
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
+              const SizedBox(width: 24),
 
               /// LOCATION
               Expanded(
@@ -164,46 +138,11 @@ class DeviceOverviewTab extends StatelessWidget {
                   ),
                 ),
               ),
-
-              const SizedBox(width: 24),
-
-              /// ACTIONS
-              Expanded(
-                child: _card(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      _cardTitle("Device Actions"),
-                      const SizedBox(height: 20),
-
-                      _actionButton(
-                        icon: Icons.restart_alt,
-                        text: "Reboot Device",
-                      ),
-
-                      const SizedBox(height: 12),
-
-                      _actionButton(
-                        icon: Icons.power_settings_new,
-                        text: "Enter Standby Mode",
-                      ),
-
-                      const SizedBox(height: 16),
-
-                      Text(
-                        "Actions may cause temporary service interruption",
-                        style: GoogleFonts.montserrat(
-                          fontSize: 12,
-                          color: Colors.grey[600],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
             ],
           ),
         ),
+
+        const SizedBox(height: 24),
       ],
     );
   }
@@ -225,10 +164,7 @@ class DeviceOverviewTab extends StatelessWidget {
   Widget _cardTitle(String text) {
     return Text(
       text,
-      style: GoogleFonts.montserrat(
-        fontSize: 18,
-        fontWeight: FontWeight.w600,
-      ),
+      style: GoogleFonts.montserrat(fontSize: 18, fontWeight: FontWeight.w600),
     );
   }
 
@@ -239,10 +175,7 @@ class DeviceOverviewTab extends StatelessWidget {
       children: [
         Text(
           label,
-          style: GoogleFonts.montserrat(
-            fontSize: 13,
-            color: Colors.grey[500],
-          ),
+          style: GoogleFonts.montserrat(fontSize: 13, color: Colors.grey[500]),
         ),
         const SizedBox(height: 4),
         Text(

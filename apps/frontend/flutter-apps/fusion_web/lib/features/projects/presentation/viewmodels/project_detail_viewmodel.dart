@@ -8,6 +8,7 @@ class ProjectDetailViewmodel extends BaseViewModel<ProjectModel> {
   ProjectDetailViewmodel({required this.projectId, required this.repository}) {
     load();
   }
+  
   Future<void> load() async {
     setLoading();
     try {
