@@ -2,17 +2,21 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/core/service_locator.dart';
 import 'package:fusion_launcher/features/processing_block/view/widgets/pb_meter.dart';
+import 'package:fusion_lib/fusion_widgets/semantics/semantic_helper.dart';
+import 'package:fusion_lib/fusion_widgets/semantics/semantic_type.dart';
 
 import '../../../projects/view_model/meter_data/meter_data_view_model.dart';
 
 class PbOutMeter extends StatefulWidget {
   final String blockId;
   final int? dimension;
+  final String semanticId;
 
   const PbOutMeter({
     super.key,
     required this.blockId,
     this.dimension,
+    required this.semanticId,
   });
 
   @override
@@ -46,10 +50,17 @@ class _PbOutMeterState extends State<PbOutMeter> {
         return _lastMeterValue;
       },
       builder: (BuildContext context, double meterValue) {
-        return VerticalMeter(
-          value: meterValue,
-          min: -60,
-          max: 0,
+        return SemanticHelper.container(
+          testId: SemanticHelper.createTestId(
+            SemanticTypes.container,
+            "PBMeter_${widget.semanticId ?? ''}",
+          ),
+          value: meterValue.toStringAsFixed(1),
+          child: VerticalMeter(
+            value: meterValue,
+            min: -60,
+            max: 0,
+          ),
         );
       },
     );

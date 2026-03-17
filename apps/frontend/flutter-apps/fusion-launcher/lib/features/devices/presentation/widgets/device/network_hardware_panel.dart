@@ -85,6 +85,7 @@ class NetworkHardwarePanel extends StatelessWidget {
         ),
         const SizedBox(height: 16),
         FusionNeumorphicButton(
+          semanticId: "recommission_network_btn",
           text: "Recommission Network",
           height: 48,
           onTap: onRecommission,

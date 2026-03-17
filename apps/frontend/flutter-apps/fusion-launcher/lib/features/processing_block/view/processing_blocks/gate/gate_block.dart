@@ -21,206 +21,206 @@ class GateBlock extends StatelessWidget {
     final AlgorithmDataViewmodel watch = context.watch<AlgorithmDataViewmodel>();
     final String targetBlockId = watch.processingBlock.id;
     return SemanticHelper.container(
-        testId: SemanticHelper.createTestId(
-          SemanticTypes.container,
-          'gate_block',
-        ),
-        child: ProxyProvider<AlgorithmDataViewmodel, GateController>(
-      key: ValueKey<String>(watch.processingBlock.id),
-      create: (BuildContext context) {
-        return GateController(watch);
-      },
-      update: (BuildContext context, AlgorithmDataViewmodel valueHandler, GateController? previous) => GateController(valueHandler),
-      child: Builder(
-        builder: (BuildContext context) {
-          final GateController controller = context.watch<GateController>();
-          return PBBlockLayout(
-            pb: context.watch<AlgorithmDataViewmodel>().processingBlock,
-            onBypassChanged: context.read<GateController>().bypassGlobally,
-            bypassed: controller.isGloballyBypassed,
-            body: Row(
-              spacing: 3,
-              mainAxisSize: MainAxisSize.min,
-              children: <Widget>[
-                PBSection(
+      testId: SemanticHelper.createTestId(
+        SemanticTypes.container,
+        'gate_block',
+      ),
+      child: ProxyProvider<AlgorithmDataViewmodel, GateController>(
+        key: ValueKey<String>(watch.processingBlock.id),
+        create: (BuildContext context) {
+          return GateController(watch);
+        },
+        update: (BuildContext context, AlgorithmDataViewmodel valueHandler, GateController? previous) => GateController(valueHandler),
+        child: Builder(
+          builder: (BuildContext context) {
+            final GateController controller = context.watch<GateController>();
+            return PBBlockLayout(
+              pb: context.watch<AlgorithmDataViewmodel>().processingBlock,
+              onBypassChanged: context.read<GateController>().bypassGlobally,
+              bypassed: controller.isGloballyBypassed,
+              body: Row(
+                spacing: 3,
+                mainAxisSize: MainAxisSize.min,
+                children: <Widget>[
+                  PBSection(
                     semanticId: 'gate_threshold',
-                  type: PBSectionType.left,
-                  child: SizedBox(
-                    width: 120,
-                    child: PbContentSection(
+                    type: PBSectionType.left,
+                    child: SizedBox(
+                      width: 120,
+                      child: PbContentSection(
                         semanticId: 'gate_threshold',
-                      title: "THRESHOLD",
-                      footer: SizedBox(
-                        width: 100,
-                        child: Column(
-                          spacing: 10,
-                          children: <Widget>[
-                            PBNumberTextField(
+                        title: "THRESHOLD",
+                        footer: SizedBox(
+                          width: 100,
+                          child: Column(
+                            spacing: 10,
+                            children: <Widget>[
+                              PBNumberTextField(
                                 semanticId: 'gate_threshold_text_field',
-                              value: controller.threshold ?? 0,
-                              max: 0,
-                              min: -60,
-                              onChanged: (num value) {
-                                controller.updateThreshold(value);
-                              },
-                            ),
-                            FusionAppText(
-                              text: "dBFS",
-                              capitalize: false,
-                              style: context.textTheme.labelMedium?.copyWith(
-                                color: context.colorScheme.textSecondary,
+                                value: controller.threshold ?? 0,
+                                max: 0,
+                                min: -60,
+                                onChanged: (num value) {
+                                  controller.updateThreshold(value);
+                                },
                               ),
-                            ),
-                          ],
+                              FusionAppText(
+                                text: "dBFS",
+                                capitalize: false,
+                                style: context.textTheme.labelMedium?.copyWith(
+                                  color: context.colorScheme.textSecondary,
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
-                      ),
-                      child: VerticalSlider(
+                        child: VerticalSlider(
                           semanticId: 'gate_threshold_slider',
-                        value: controller.threshold ?? 0,
-                        max: 0,
-                        min: -60,
-                        onChanged: (num value) {
-                          controller.updateThreshold(value);
-                        },
+                          value: controller.threshold ?? 0,
+                          max: 0,
+                          min: -60,
+                          onChanged: (num value) {
+                            controller.updateThreshold(value);
+                          },
+                        ),
                       ),
                     ),
                   ),
-                ),
-                PBSection(
-                  type: PBSectionType.middle,
-                  child: SizedBox(
-                    width: 120,
+                  PBSection(
+                    type: PBSectionType.middle,
+                    child: SizedBox(
+                      width: 120,
 
-                    child: PbContentSection(
+                      child: PbContentSection(
                         semanticId: 'gate_range',
-                      title: "RANGE",
-                      footer: SizedBox(
-                        width: 100,
-                        child: Column(
-                          spacing: 10,
-                          children: <Widget>[
-                            PBNumberTextField(
+                        title: "RANGE",
+                        footer: SizedBox(
+                          width: 100,
+                          child: Column(
+                            spacing: 10,
+                            children: <Widget>[
+                              PBNumberTextField(
                                 semanticId: 'gate_range_text_field',
-                              value: controller.range ?? 0,
-                              max: 0.0,
-                              min: -70,
+                                value: controller.range ?? 0,
+                                max: 0.0,
+                                min: -70,
+                                onChanged: (num value) {
+                                  controller.updateRange(value);
+                                },
+                              ),
+                              FusionAppText(
+                                capitalize: false,
+                                text: "dB",
+                                style: context.textTheme.labelMedium?.copyWith(
+                                  color: context.colorScheme.textSecondary,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        child: VerticalSlider(
+                          semanticId: 'gate_range_slider',
+                          value: controller.range ?? 0,
+                          max: 0.0,
+                          min: -70,
+                          onChanged: (num value) {
+                            controller.updateRange(value);
+                          },
+                        ),
+                      ),
+                    ),
+                  ),
+                  PBSection(
+                    type: PBSectionType.middle,
+                    child: SizedBox(
+                      width: 200,
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                        child: Column(
+                          children: <Widget>[
+                            /// Top header Space
+                            const SizedBox(
+                              height: 50,
+                            ),
+                            _GateTextField(
+                              semanticId: 'gate_attack',
+                              title: "ATTACK",
+                              value: controller.attack ?? 0.5,
+                              min: 0.5,
+                              max: 100.0,
                               onChanged: (num value) {
-                                controller.updateRange(value);
+                                controller.updateAttack(value);
                               },
                             ),
-                            FusionAppText(
-                              capitalize: false,
-                              text: "dB",
-                              style: context.textTheme.labelMedium?.copyWith(
-                                color: context.colorScheme.textSecondary,
-                              ),
+                            Divider(
+                              color: context.colorScheme.strokeLight,
+                              height: 30,
+                            ),
+                            _GateTextField(
+                              semanticId: 'gate_hold',
+                              title: "HOLD",
+                              value: controller.hold ?? 0.1,
+                              min: 0.1,
+                              max: 1000.0,
+                              onChanged: (num value) {
+                                controller.updateHold(value);
+                              },
+                            ),
+                            Divider(
+                              color: context.colorScheme.strokeLight,
+                              height: 30,
+                            ),
+                            _GateTextField(
+                              semanticId: 'gate_decay',
+                              title: "DECAY",
+                              value: controller.decay ?? 5.0,
+                              min: 5.0,
+                              max: 50000.0,
+                              onChanged: (num value) {
+                                controller.updateDecay(value);
+                              },
                             ),
                           ],
                         ),
                       ),
-                      child: VerticalSlider(
-                          semanticId: 'gate_range_slider',
-                        value: controller.range ?? 0,
-                        max: 0.0,
-                        min: -70,
-                        onChanged: (num value) {
-                          controller.updateRange(value);
-                        },
-                      ),
                     ),
                   ),
-                ),
-                PBSection(
-                  type: PBSectionType.middle,
-                  child: SizedBox(
-                    width: 200,
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                  const Expanded(
+                    child: PBSection(
+                      semanticId: 'gate_graph',
+                      type: PBSectionType.middle,
                       child: Column(
                         children: <Widget>[
-                          /// Top header Space
-                          const SizedBox(
+                          SizedBox(
                             height: 50,
                           ),
-                          _GateTextField(
-                              semanticId: 'gate_attack',
-                            title: "ATTACK",
-                            value: controller.attack ?? 0.5,
-                            min: 0.5,
-                            max: 100.0,
-                            onChanged: (num value) {
-                              controller.updateAttack(value);
-                            },
-                          ),
-                          Divider(
-                            color: context.colorScheme.strokeLight,
-                            height: 30,
-                          ),
-                          _GateTextField(
-                              semanticId: 'gate_hold',
-                            title: "HOLD",
-                            value: controller.hold ?? 0.1,
-                            min: 0.1,
-                            max: 1000.0,
-                            onChanged: (num value) {
-                              controller.updateHold(value);
-                            },
-                          ),
-                          Divider(
-                            color: context.colorScheme.strokeLight,
-                            height: 30,
-                          ),
-                          _GateTextField(
-                              semanticId: 'gate_decay',
-                            title: "DECAY",
-                            value: controller.decay ?? 5.0,
-                            min: 5.0,
-                            max: 50000.0,
-                            onChanged: (num value) {
-                              controller.updateDecay(value);
-                            },
-                          ),
+                          Expanded(child: _GateGraph()),
                         ],
                       ),
                     ),
                   ),
-                ),
-                const Expanded(
-                  child: PBSection(
-                      semanticId: 'gate_graph',
-                    type: PBSectionType.middle,
-                    child: Column(
-                      children: <Widget>[
-                        SizedBox(
-                          height: 50,
-                        ),
-                        Expanded(child: _GateGraph()),
-                      ],
-                    ),
-                  ),
-                ),
-                 PBSection(
-                   semanticId: 'gate_output',
-                  type: PBSectionType.right,
-                  child: SizedBox(
-                    width: 100,
-                    child: PbContentSection(
-                      title: "OUTPUT",
-                      child: Padding(
-                        padding: const EdgeInsets.all(12.0),
-                        child: PbOutMeter(
-                          semanticId: 'gate_output',
-                          blockId: targetBlockId,
+                  PBSection(
+                    semanticId: 'gate_output',
+                    type: PBSectionType.right,
+                    child: SizedBox(
+                      width: 100,
+                      child: PbContentSection(
+                        title: "OUTPUT",
+                        child: Padding(
+                          padding: const EdgeInsets.all(12.0),
+                          child: PbOutMeter(
+                            semanticId: 'gate_output',
+                            blockId: targetBlockId,
+                          ),
                         ),
                       ),
                     ),
                   ),
-                ),
-              ],
-            ),
-          );
-        },
-      ),
+                ],
+              ),
+            );
+          },
+        ),
       ),
     );
   }

@@ -201,13 +201,13 @@ class AgcBlock extends StatelessWidget {
                             ),
                           ),
                         ),
-                         Flexible(
+                        Flexible(
                           child: Padding(
                             padding: const EdgeInsets.all(16.0),
                             child: PbOutMeter(
                               semanticId: 'agc_output_meter',
                               blockId: targetBlockId,
-                            )
+                            ),
                           ),
                         ),
                       ],
