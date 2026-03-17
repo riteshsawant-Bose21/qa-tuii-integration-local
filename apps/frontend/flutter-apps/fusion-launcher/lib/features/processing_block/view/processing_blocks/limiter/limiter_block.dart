@@ -5,7 +5,6 @@ import 'package:fusion_lib/fusion_lib.dart';
 import 'package:provider/provider.dart';
 
 import '../../../viewmodel/algorithm_data_viewmodel.dart';
-import '../../widgets/pb_meter.dart' hide SimpleVerticalMeter;
 import '../../widgets/pb_textfield.dart';
 import '../widgets/pb_block_layout.dart';
 
