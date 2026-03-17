@@ -217,7 +217,7 @@ extension ProjectPropertiesViewModel on ProjectViewModel {
       currentSelectedListeningAreaId = null;
       currentSelectedZoneId = null;
       currentSelectedSubZoneId = null;
-      setShouldPlaceNonPlacedSpeakers(false);
+      // setShouldPlaceNonPlacedSpeakers(false);
 
       projectManager.setCurrentFloorIndex(index);
       updateProject();
@@ -234,7 +234,7 @@ extension ProjectPropertiesViewModel on ProjectViewModel {
 
   void setCurrentSelectedListeningArea(String? area) {
     currentSelectedListeningAreaId = area;
-    if (area == null) setShouldPlaceNonPlacedSpeakers(false);
+    // if (area == null) setShouldPlaceNonPlacedSpeakers(false);
     updateProject();
   }
 

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
+import 'package:fusion_launcher/features/projects/viewmodel/building_page_state.dart';
 import 'package:fusion_launcher/features/projects/widget/building/speaker_selection_section/view_model/product_query_view_model.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/product_data/models/models.dart';
@@ -29,7 +30,7 @@ class _SpeakerSelectionWidgetState extends State<SpeakerSelectionWidget> {
             final ProjectViewModel projectViewModel = serviceLocator<ProjectViewModel>();
             final ListeningArea? currentSelectedListeningAreaId = projectViewModel.getCurrentSelectedListeningArea();
 
-            if (currentSelectedListeningAreaId == null || projectViewModel.currentToolbarMode == ToolbarMode.system) {
+            if (currentSelectedListeningAreaId == null || context.watch<BuildingPageViewModel>().state.toolbarMode == ToolbarMode.system) {
               return const SizedBox.shrink();
             }
 

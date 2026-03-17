@@ -2,14 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_svg/svg.dart';
 import 'package:fusion_launcher/core/service_locator.dart';
-import 'package:fusion_launcher/core/utils/broadcast_controllers.dart';
 import 'package:fusion_launcher/core/widgets/title_text_field_switcher.dart';
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/gpio/gpio_view_model.dart';
 import 'package:fusion_launcher/features/scheduling/view/scheduling_page.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
-import '../../configuration/presentation/viewmodel/project_view_model.dart';
 import '../../../core/widgets/configuration_widgets/action_drop_down.dart';
+import '../../configuration/presentation/viewmodel/project_view_model.dart';
 import '../state/gpio_state.dart';
 import '../viewmodel/gpio_viewmodel.dart';
 
@@ -328,7 +327,7 @@ class GpioPage extends StatelessWidget {
                                       ),
                                     )
                                   else
-                                    FusionButton(label: "Test",accessLabel: 'gpio_page_test_button', onTap: () {}),
+                                    FusionButton(label: "Test", accessLabel: 'gpio_page_test_button', onTap: () {}),
 
                                   if (gpio.direction == GpioDirection.input)
                                     SemanticHelper.button(
@@ -352,7 +351,7 @@ class GpioPage extends StatelessWidget {
                                           }
 
                                           /// Navigate to Configuration tab (index 3)
-                                          projectTabBroadcastController.add(3);
+                                          // projectTabBroadcastController.add(3);
 
                                           /// Switch to Events sub-tab within Configuration
                                           serviceLocator<ProjectViewModel>().setConfigurationMenuMode(

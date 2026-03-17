@@ -62,6 +62,7 @@ class _DeviceListSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return FusionExpansionPanel(
+      semanticsId: "wiring_${label.toLowerCase()}_section",
       initiallyExpanded: true,
       titleBuilder:
           (BuildContext context, bool isExpanded) => Padding(
