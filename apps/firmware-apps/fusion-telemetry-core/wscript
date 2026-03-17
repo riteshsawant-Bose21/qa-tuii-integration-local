@@ -74,7 +74,7 @@ def configure(conf):
             conf.env.append_value('CXXFLAGS', '-DBOOST_BIND_GLOBAL_PLACEHOLDERS')
 
 def build(bld):
-    bld(export_includes=['./include', './include/bosepro'], name='default-include')
+    bld(export_includes=['../fusion-server/tools', './include', './include/bosepro'], name='default-include')
 
     bld.program(target=APPNAME,
                 source=bld.path.ant_glob(['src/*.cc']),

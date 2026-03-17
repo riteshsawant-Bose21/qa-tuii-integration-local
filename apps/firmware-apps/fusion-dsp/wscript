@@ -111,7 +111,7 @@ def configure(conf):
     conf.env.append_value('LIBPATH', [onnx_path+'/lib'])
 
 def build(bld):
-    bld(export_includes=['./external/doctest', './include'], name='common-include')
+    bld(export_includes=['../fusion-server/tools', './external/doctest', './include'], name='common-include')
 
     excludes = []
     libs = ['jack', 'fmt', 'sndfile', 'boost_program_options', 'onnxruntime', 'jsoncpp', 'samplerate', 'curl']

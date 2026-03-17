@@ -19,7 +19,7 @@
 #include <poll.h>
 #include <spdlog/spdlog.h>
 #include <spdlog/fmt/ostr.h>
-#include "observer.h"
+#include <observer/observer.h>
 #include "telemetry_core.h"
 #include "telemetry_msg_handler.h"
 #include "telemetry_utils.h"
@@ -142,6 +142,49 @@ void handle_update(const std::string &update_setting)
 
     SPDLOG_DEBUG("server update: {}", update_setting);
 }
+
+
+static void handle_parameter(const std::string &path,
+                             const Json::Value &old_value,
+                             const Json::Value &new_value)
+{
+    if (old_value == new_value)
+    {
+        return;
+    }
+
+    std::vector<PathComponent> path_parts = JsonMonitor::splitPath(path);
+    std::string rx_message = "{\"message_name\":\"" +
+                    path_parts[2].key +
+                    "\",\"packet_id\":12345678,\"parameters\":{\"name\":\"observer\",\"" +
+                    path_parts[3].key +
+                    "\":";
+
+    if (new_value.isArray())
+    {
+        rx_message += "[";
+        for (uint32_t idx=0; idx < new_value.size()-1; idx++)
+        {
+            rx_message += new_value[idx].asString();
+            rx_message += ",";
+        }
+        rx_message += new_value[new_value.size()-1].asString();
+        rx_message += "]";
+    }
+    else if (new_value.isInt())
+    {
+        rx_message += new_value.asString();
+    }
+    else
+    {
+        // String
+        rx_message += "\"" + new_value.asString() + "\"";
+    }
+    rx_message += "}}";
+
+    handle_update(rx_message);
+}
+
 
 #define HI_METERS_UPDATE_PERIOD_NS  600000.0  // 2/3 ms (approx. )
 
@@ -355,12 +398,10 @@ int main(int argc, char* argv[])
 
     // Initialize Observer framework
     UDPValueMonitor *client = nullptr;
-    std::vector<std::string> target_paths;
 
-    target_paths.push_back("settings.telemetry.*.*");
+    client = new UDPValueMonitor("127.0.0.1", fus_serv_port);
 
-    client = new UDPValueMonitor("127.0.0.1", fus_serv_port,
-                                 target_paths, handle_update);
+    client->watchPattern("settings.telemetry.*.*", handle_parameter);
 
     // Initialize manager
     if (telmMgr->init(core_ip, core_path, core_pub_addr,

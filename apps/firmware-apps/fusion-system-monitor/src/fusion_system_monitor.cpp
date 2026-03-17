@@ -1,4 +1,4 @@
-#include <bosepro/observer.h>
+#include <observer/observer.h>
 
 #include <bosepro/configuration.h>
 #include <bosepro/definition.h>
@@ -23,6 +23,8 @@
 
 std::atomic<bool> g_running{true};
 
+std::string server_device_id = "";
+
 void signal_handler(int signum)
 {
     if (signum == SIGINT || signum == SIGTERM) {
@@ -40,6 +42,63 @@ void handle_update(const std::string &update_setting)
     bosepro::ParameterSetting ps = bosepro::ParameterSetting(ss);
     psession->process_parameter_setting(ps);
     SPDLOG_INFO("server update: {}", update_setting);
+}
+
+
+static void handle_device_id(const std::string &new_device_id)
+{
+    server_device_id = new_device_id;
+}
+
+
+static void handle_streams(const std::string & /*path*/,
+                           const Json::Value & /*old_value*/,
+                           const Json::Value &new_value)
+{
+    Json::Value message_json;
+    message_json["target"] = "fusion_connect_client";
+    message_json["name"] = "audio_streams_update";
+
+    // Serialize new_val to a string and remove the trailing newline
+    Json::FastWriter writer;
+    std::string value_str = writer.write(new_value);
+    if (!value_str.empty() && value_str.back() == '\n') {
+        value_str.pop_back(); // Remove trailing newline
+    }
+    message_json["value"] = value_str;
+
+    // Convert the message to a string
+    std::string message = writer.write(message_json);
+    if (!message.empty() && message.back() == '\n') {
+        message.pop_back(); // Remove trailing newline from message
+    }
+
+    handle_update(message);
+}
+
+
+static void handle_parameter(const std::string &path,
+                             const Json::Value &old_value,
+                             const Json::Value &new_value)
+{
+    if (old_value == new_value)
+    {
+        return;
+    }
+
+    std::vector<PathComponent> path_parts = JsonMonitor::splitPath(path);
+
+
+    std::string message = "{ \"target\": \"" + path_parts[2].key + "\""
+        + ", \"name\": \"" + path_parts[3].key + "\""
+        + ((path_parts.size() > 4 && path_parts[4].isArrayAccess)
+                ? ", \"index\": ["
+                + std::to_string(path_parts[4].arrayIndex + 1) + "]"
+                : "")
+        + ", \"value\": " + (new_value.isString() ? "\"" : "")
+        + new_value.asString() + (new_value.isString() ? "\"" : "") + " }";
+
+    handle_update(message);
 }
 
 
@@ -193,19 +252,15 @@ int main(int argc, char *argv[])
     UDPValueMonitor *client = nullptr;
     psession = &session;
 
-    std::vector<std::string> target_paths;
-
-    // Path for networked audio streams
-    target_paths.push_back("audio_streams");
-    // Path for dynamic parameter setttings
-    target_paths.push_back("settings.fw.*.*[*]");
-    target_paths.push_back("settings.fw.*.*");
-
     if (vm.count("serverip"))
     {
         SPDLOG_INFO("server ip {}", vm["serverip"].as<std::string>());
-        client = new UDPValueMonitor(vm["serverip"].as<std::string>(), 7947,
-                                        target_paths, handle_update);
+        client = new UDPValueMonitor(vm["serverip"].as<std::string>(), 7947);
+
+        client->watchDeviceID(handle_device_id);
+        client->watch("audio_streams", handle_streams);
+        client->watchPattern("settings.fw.*.*[*]", handle_parameter);
+        client->watchPattern("settings.fw.*.*", handle_parameter);
     }
 
     // if we boot up on empty config, no need to start up telemetry

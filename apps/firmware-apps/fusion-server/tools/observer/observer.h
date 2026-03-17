@@ -507,7 +507,7 @@ public:
    * @param path The JSON path string.
    * @return A vector of PathComponent representing the path.
    */
-  std::vector<PathComponent> splitPath(const std::string &path) const
+  static std::vector<PathComponent> splitPath(const std::string &path)
   {
     std::vector<PathComponent> parts;
     if (path.empty())

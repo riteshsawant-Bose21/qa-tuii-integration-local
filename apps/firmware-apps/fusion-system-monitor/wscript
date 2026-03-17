@@ -93,7 +93,7 @@ def configure(conf):
             conf.env.append_value('CXXFLAGS', '-DBOOST_BIND_GLOBAL_PLACEHOLDERS')
 
 def build(bld):
-    bld(export_includes=['./external/doctest', './include'], name='common-include')
+    bld(export_includes=['../fusion-server/tools', './external/doctest', './include'], name='common-include')
 
     bld.program(target='fusion_system_monitor',
                 source=bld.path.ant_glob(['src/*.cpp', 'src/*.c']),
