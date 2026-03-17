@@ -74,8 +74,8 @@ class _DeviceListSection extends StatelessWidget {
                 AnimatedRotation(
                   duration: const Duration(milliseconds: 250),
                   turns: isExpanded ? 0.5 : 0.25,
-                  child: FusionSvgIcon(
-                    icon: AssetSvg.expandUp,
+                  child: FusionIcon.svg(
+                    AssetSvg.expandUp,
                     size: 12,
                     color: context.colorScheme.iconWhite,
                   ),

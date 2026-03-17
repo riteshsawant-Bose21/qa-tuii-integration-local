@@ -58,7 +58,7 @@ class FusionCheckboxGroup<T> extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SemanticHelper.button(
-      isActive: enabled,
+      isEnabled: enabled,
       testId: SemanticHelper.createTestId(
         SemanticTypes.button,
         "fusion_arrow_popup_${semanticId ?? ""}",
@@ -71,9 +71,7 @@ class FusionCheckboxGroup<T> extends StatelessWidget {
         children: options.map((T option) {
           final bool isSelected = selected.contains(option);
           return MouseRegion(
-            cursor: enabled
-                ? SystemMouseCursors.click
-                : SystemMouseCursors.basic,
+            cursor: enabled ? SystemMouseCursors.click : SystemMouseCursors.basic,
             child: GestureDetector(
               behavior: HitTestBehavior.translucent,
               onTap: enabled ? () => onClick(isSelected, option) : null,
@@ -82,9 +80,7 @@ class FusionCheckboxGroup<T> extends StatelessWidget {
                 spacing: 6,
                 children: <Widget>[
                   Icon(
-                    isSelected
-                        ? Icons.check_box
-                        : Icons.check_box_outline_blank,
+                    isSelected ? Icons.check_box : Icons.check_box_outline_blank,
                     size: iconSize,
                     color: context.colorScheme.onSurface,
                   ),

@@ -12,21 +12,19 @@ class SemanticHelper {
   static Widget button({
     required String testId,
     required Widget child,
-    bool isActive = true,
     String? label,
-    bool? state,
-    VoidCallback? ontap,
-    bool? selected,
+    bool isEnabled = true,
+    bool isSelected = false,
   }) {
     return Semantics(
       identifier: testId,
       button: true,
-      onTap: ontap,
       container: true,
-      enabled: isActive,
+      enabled: isEnabled,
       label: label,
+      selected: isSelected,
       child: child,
-      checked: selected,
+      checked: isSelected,
     );
   }
 
@@ -37,6 +35,7 @@ class SemanticHelper {
     bool explicitChildNodes = false,
     String? label,
     String? value,
+    bool? isChecked,
   }) {
     return Semantics(
       value: value,
@@ -45,6 +44,7 @@ class SemanticHelper {
       explicitChildNodes: explicitChildNodes,
       label: label,
       child: child,
+      checked: isChecked,
     );
   }
 

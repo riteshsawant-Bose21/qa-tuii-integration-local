@@ -192,6 +192,8 @@ class _NewWidgetState extends State<NewWidget> {
                                           SemanticTypes.container,
                                           "zone_color_option_$index",
                                         ),
+                                        value: hexCode,
+                                        isChecked: isSelected,
                                         child: Container(
                                           decoration: BoxDecoration(
                                             color: color,

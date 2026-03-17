@@ -287,6 +287,7 @@ class _BuildingToolbarState extends State<BuildingToolbar> {
     final Color color = selectedColor ?? Colors.green;
 
     return SemanticHelper.button(
+      isSelected: isSelected,
       testId: SemanticHelper.createTestId(SemanticTypes.button, tooltip),
       child: Tooltip(
         message: tooltip,

@@ -112,7 +112,7 @@ class TertiaryLinkButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SemanticHelper.button(
-      isActive: isActive,
+      isEnabled: isActive,
       testId: SemanticHelper.createTestId(
         SemanticTypes.button,
         accessLabel ?? label,
@@ -149,9 +149,7 @@ class TertiaryLinkButton extends StatelessWidget {
                         Icon(
                           prefixIcon,
                           size: 16,
-                          color: isActive
-                              ? foregroundColor
-                              : foregroundColor.withValues(alpha: 0.5),
+                          color: isActive ? foregroundColor : foregroundColor.withValues(alpha: 0.5),
                         ),
                         const SizedBox(width: 8),
                       ],
@@ -181,9 +179,7 @@ class TertiaryLinkButton extends StatelessWidget {
                         Icon(
                           suffixIcon,
                           size: 16,
-                          color: isActive
-                              ? foregroundColor
-                              : foregroundColor.withValues(alpha: 0.5),
+                          color: isActive ? foregroundColor : foregroundColor.withValues(alpha: 0.5),
                         ),
                       ],
                     ],

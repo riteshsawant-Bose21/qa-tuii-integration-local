@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:fusion_lib/constants/semantics/features/configuration/snapshots/SnapshotsKeys.dart';
+import 'package:fusion_lib/constants/semantics/test_keys.dart';
 import 'package:fusion_lib/fusion_theme/app_theme.dart';
+import 'package:fusion_lib/fusion_widgets/others/fusion_svg_icon.dart';
 import 'package:fusion_lib/fusion_widgets/others/fusion_toast.dart';
 import 'package:fusion_lib/fusion_widgets/semantics/semantic_helper.dart';
 import 'package:fusion_lib/fusion_widgets/semantics/semantic_type.dart';
@@ -84,8 +87,9 @@ class _SnapshotHeaderWidgetState extends State<SnapshotHeaderWidget> {
 
   @override
   Widget build(BuildContext context) {
-    return SemanticHelper.button(
-      testId: SemanticHelper.createTestId(SemanticTypes.button, "snapshot_header"),
+    return SemanticHelper.container(
+      testId: SemanticHelper.createTestId(SemanticTypes.container, FusionTestKeys.instance.actionlistpanelheader),
+      label: _textController.text,
       child: Container(
         height: 44,
         padding: const EdgeInsets.symmetric(
@@ -104,44 +108,47 @@ class _SnapshotHeaderWidgetState extends State<SnapshotHeaderWidget> {
         ),
         child: Row(
           children: <Widget>[
-            const Icon(Icons.layers, size: 16),
+            FusionIcon.icon(semanticId: FusionTestKeys.instance.actionlistpanelheaderlayers, Icons.layers, size: 16),
             const SizedBox(width: 10),
             Expanded(
-              child:
-                  _isEditing
-                      ? TextField(
-                        controller: _textController,
-                        focusNode: _focusNode,
-                        style: context.textTheme.bodyMedium?.copyWith(fontSize: 14, fontWeight: FontWeight.w700),
-                        decoration: const InputDecoration(
-                          border: InputBorder.none,
-                          filled: false,
-                          focusedBorder: InputBorder.none,
-                          errorBorder: InputBorder.none,
-                          enabledBorder: InputBorder.none,
-                          contentPadding: EdgeInsets.zero,
-                          isDense: true,
-                        ),
-                        onSubmitted: (_) => _stopEditing(),
-                        onTapOutside: (_) => _stopEditing(),
-                      )
-                      : GestureDetector(
-                        onTap: _startEditing,
-                        child: FusionAppText(
-                          text: widget.snapshotName,
+              child: SemanticHelper.textInput(
+                testId: SemanticHelper.createTestId(SemanticTypes.textInput, FusionTestKeys.instance.actionlistpanelheaderlabel),
+                child:
+                    _isEditing
+                        ? TextField(
+                          controller: _textController,
+                          focusNode: _focusNode,
                           style: context.textTheme.bodyMedium?.copyWith(fontSize: 14, fontWeight: FontWeight.w700),
-                          maxLine: 1,
+                          decoration: const InputDecoration(
+                            border: InputBorder.none,
+                            filled: false,
+                            focusedBorder: InputBorder.none,
+                            errorBorder: InputBorder.none,
+                            enabledBorder: InputBorder.none,
+                            contentPadding: EdgeInsets.zero,
+                            isDense: true,
+                          ),
+                          onSubmitted: (_) => _stopEditing(),
+                          onTapOutside: (_) => _stopEditing(),
+                        )
+                        : GestureDetector(
+                          onTap: _startEditing,
+                          child: FusionAppText(
+                            text: widget.snapshotName,
+                            style: context.textTheme.bodyMedium?.copyWith(fontSize: 14, fontWeight: FontWeight.w700),
+                            maxLine: 1,
+                          ),
                         ),
-                      ),
+              ),
             ),
             GestureDetector(
               onTap: widget.onAdd,
-              child: const Icon(Icons.add, size: 16),
+              child: FusionIcon.icon(semanticId: FusionTestKeys.instance.actionlistpanelheaderadd, Icons.add, size: 16),
             ),
             const SizedBox(width: 12),
             GestureDetector(
               onTap: widget.onReorder,
-              child: const Icon(Icons.more_vert, size: 16),
+              child: FusionIcon.icon(semanticId: FusionTestKeys.instance.actionlistpanelheadermore, Icons.more_vert, size: 16),
             ),
           ],
         ),

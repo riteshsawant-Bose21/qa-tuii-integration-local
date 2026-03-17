@@ -124,7 +124,7 @@ class FusionOutlinedButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SemanticHelper.button(
-      isActive: isActive,
+      isEnabled: isActive,
       testId: SemanticHelper.createTestId(
         SemanticTypes.button,
         semanticsId ?? label,
@@ -146,10 +146,8 @@ class FusionOutlinedButton extends StatelessWidget {
                 borderRadius: BorderRadius.circular(borderRadius),
                 border: Border.all(
                   color: isActive
-                      ? activeBorderColor ??
-                            Theme.of(context).colorScheme.elevation4
-                      : activeBorderColor?.withOpacity(0.5) ??
-                            Theme.of(context).colorScheme.elevation2,
+                      ? activeBorderColor ?? Theme.of(context).colorScheme.elevation4
+                      : activeBorderColor?.withOpacity(0.5) ?? Theme.of(context).colorScheme.elevation2,
                 ),
               ),
               child: isLoading
@@ -171,9 +169,7 @@ class FusionOutlinedButton extends StatelessWidget {
                           Icon(
                             prefixIcon,
                             size: 16,
-                            color: isActive
-                                ? foregroundColor
-                                : foregroundColor.withOpacity(0.5),
+                            color: isActive ? foregroundColor : foregroundColor.withOpacity(0.5),
                           ),
                           const SizedBox(width: 8),
                         ],
@@ -181,9 +177,7 @@ class FusionOutlinedButton extends StatelessWidget {
                           child: FusionAppText(
                             text: label,
                             textAlign: TextAlign.center,
-                            style:
-                                textStyle ??
-                                Theme.of(context).textTheme.labelLarge,
+                            style: textStyle ?? Theme.of(context).textTheme.labelLarge,
                             maxLine: 1,
                             textOverflow: TextOverflow.ellipsis,
                           ),
@@ -193,9 +187,7 @@ class FusionOutlinedButton extends StatelessWidget {
                           Icon(
                             suffixIcon,
                             size: 16,
-                            color: isActive
-                                ? foregroundColor
-                                : foregroundColor.withOpacity(0.5),
+                            color: isActive ? foregroundColor : foregroundColor.withOpacity(0.5),
                           ),
                         ],
                       ],

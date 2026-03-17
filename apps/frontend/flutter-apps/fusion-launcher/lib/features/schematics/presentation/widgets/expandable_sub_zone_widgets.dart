@@ -30,8 +30,7 @@ class ExpandableSubZoneWidget extends StatefulWidget {
   });
 
   @override
-  State<ExpandableSubZoneWidget> createState() =>
-      _ExpandableSubZoneWidgetState();
+  State<ExpandableSubZoneWidget> createState() => _ExpandableSubZoneWidgetState();
 }
 
 class _ExpandableSubZoneWidgetState extends State<ExpandableSubZoneWidget> {
@@ -59,21 +58,15 @@ class _ExpandableSubZoneWidgetState extends State<ExpandableSubZoneWidget> {
       builder: (BuildContext context, bool subZoneExpanded, Widget? child) {
         return BlocBuilder<ProjectViewModel, ProjectViewModelState>(
           builder: (BuildContext context, ProjectViewModelState state) {
-            final SelectedItem? selectedDevice =
-                _projectViewModel.selectedDevice;
+            final SelectedItem? selectedDevice = _projectViewModel.selectedDevice;
 
-            final bool isSelected =
-                selectedDevice?.id == widget.subZoneId &&
-                selectedDevice?.type == SelectedItemType.subzone;
+            final bool isSelected = selectedDevice?.id == widget.subZoneId && selectedDevice?.type == SelectedItemType.subzone;
 
             return Container(
               margin: const EdgeInsets.only(bottom: 4),
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(FusionSizes.borderRadius12),
-                border:
-                    isSelected
-                        ? Border.all(color: context.colorScheme.strokeLight)
-                        : null,
+                border: isSelected ? Border.all(color: context.colorScheme.strokeLight) : null,
               ),
               child: SemanticHelper.container(
                 testId: SemanticHelper.createTestId(
@@ -93,10 +86,7 @@ class _ExpandableSubZoneWidgetState extends State<ExpandableSubZoneWidget> {
                             _buildDragHandle(),
                             const SizedBox(width: 4),
                             GestureDetector(
-                              onTap:
-                                  () =>
-                                      _isSubZoneExpanded.value =
-                                          !_isSubZoneExpanded.value,
+                              onTap: () => _isSubZoneExpanded.value = !_isSubZoneExpanded.value,
                               child: _buildExpandIcon(context, subZoneExpanded),
                             ),
                             const SizedBox(width: 4),
@@ -215,13 +205,8 @@ class _ExpandableSubZoneWidgetState extends State<ExpandableSubZoneWidget> {
             itemBuilder: (BuildContext context, int index) {
               final CircuitModel circuitData = widget.subZoneCircuit[index];
               final String deviceId = circuitData.id;
-              final List<Speaker> speakers =
-                  _projectViewModel
-                      .getHardwareForCircuit(circuitId: circuitData.id)
-                      .whereType<Speaker>()
-                      .toList();
-              final List<ListeningArea> location = _projectViewModel
-                  .getListeningAreasForCircuit(circuitId: circuitData.id);
+              final List<Speaker> speakers = _projectViewModel.getHardwareForCircuit(circuitId: circuitData.id).whereType<Speaker>().toList();
+              final List<ListeningArea> location = _projectViewModel.getListeningAreasForCircuit(circuitId: circuitData.id);
               return DragTarget<CircuitModel>(
                 key: ValueKey<String>(deviceId),
                 onWillAcceptWithDetails: (
@@ -233,40 +218,24 @@ class _ExpandableSubZoneWidgetState extends State<ExpandableSubZoneWidget> {
                   ///
                   if (incoming == null) return false;
 
-                  if (circuitData.addedInBuildingPage ||
-                      incoming.addedInBuildingPage) {
+                  if (circuitData.addedInBuildingPage || incoming.addedInBuildingPage) {
                     return false;
                   }
 
                   // return incoming != null && incoming.name == circuitData.name && incoming.id != circuitData.id;
-                  final List<Speaker> incomingSpeakers =
-                      _projectViewModel
-                          .getHardwareForCircuit(circuitId: incoming.id)
-                          .whereType<Speaker>()
-                          .toList();
-                  final List<Speaker> currentData =
-                      _projectViewModel
-                          .getHardwareForCircuit(circuitId: circuitData.id)
-                          .whereType<Speaker>()
-                          .toList();
-                  final SubZone? circuitSubZone = _projectViewModel
-                      .getSubZoneForCircuit(circuitId: incoming.id);
+                  final List<Speaker> incomingSpeakers = _projectViewModel.getHardwareForCircuit(circuitId: incoming.id).whereType<Speaker>().toList();
+                  final List<Speaker> currentData = _projectViewModel.getHardwareForCircuit(circuitId: circuitData.id).whereType<Speaker>().toList();
+                  final SubZone? circuitSubZone = _projectViewModel.getSubZoneForCircuit(circuitId: incoming.id);
 
-                  return incomingSpeakers.first.speakerSKU ==
-                          currentData.first.speakerSKU &&
+                  return incomingSpeakers.first.speakerSKU == currentData.first.speakerSKU &&
                       incoming.id != circuitData.id &&
-                      (circuitSubZone != null &&
-                          circuitSubZone.id == widget.subZoneId);
+                      (circuitSubZone != null && circuitSubZone.id == widget.subZoneId);
                 },
                 onAcceptWithDetails: (DragTargetDetails<CircuitModel> param) {
                   final CircuitModel incoming = param.data;
 
                   /// Add speaker to target circuit
-                  final List<Speaker> incomingSpeakers =
-                      _projectViewModel
-                          .getHardwareForCircuit(circuitId: incoming.id)
-                          .whereType<Speaker>()
-                          .toList();
+                  final List<Speaker> incomingSpeakers = _projectViewModel.getHardwareForCircuit(circuitId: incoming.id).whereType<Speaker>().toList();
 
                   if (incomingSpeakers.isNotEmpty) {
                     for (final Speaker speaker in incomingSpeakers) {
@@ -307,12 +276,10 @@ class _ExpandableSubZoneWidgetState extends State<ExpandableSubZoneWidget> {
                             speakers: speakers,
                             circuitDeviceName: circuitData.name,
                             assetImagePath:
-                                serviceLocator<ProjectViewModel>()
-                                    .getHardwareImage(
-                                      productId: speakers.first.productId ?? 0,
-                                      currentImagePath:
-                                          speakers.first.assetImagePath,
-                                    ) ??
+                                serviceLocator<ProjectViewModel>().getHardwareImage(
+                                  productId: speakers.first.productId ?? 0,
+                                  currentImagePath: speakers.first.assetImagePath,
+                                ) ??
                                 "",
                             circuitDeviceCount: speakers.length,
                             onDecrementHardwareInCircuit: () {
@@ -327,11 +294,10 @@ class _ExpandableSubZoneWidgetState extends State<ExpandableSubZoneWidget> {
                                 hardware: speaker,
                                 autoSave: false,
                               );
-                              serviceLocator<ProjectViewModel>()
-                                  .addHardwareToCircuit(
-                                    hwId: speaker.id,
-                                    circuitId: circuitData.id,
-                                  );
+                              serviceLocator<ProjectViewModel>().addHardwareToCircuit(
+                                hwId: speaker.id,
+                                circuitId: circuitData.id,
+                              );
                             },
 
                             projectViewModel: _projectViewModel,
@@ -362,17 +328,10 @@ class _ExpandableSubZoneWidgetState extends State<ExpandableSubZoneWidget> {
                             speakers: speakers,
                             circuitDeviceName: circuitData.name,
                             assetImagePath:
-                                serviceLocator<ProjectViewModel>()
-                                    .getHardwareImage(
-                                      productId:
-                                          speakers.isNotEmpty
-                                              ? speakers.first.productId ?? 0
-                                              : 0,
-                                      currentImagePath:
-                                          speakers.isNotEmpty
-                                              ? speakers.first.assetImagePath
-                                              : '',
-                                    ) ??
+                                serviceLocator<ProjectViewModel>().getHardwareImage(
+                                  productId: speakers.isNotEmpty ? speakers.first.productId ?? 0 : 0,
+                                  currentImagePath: speakers.isNotEmpty ? speakers.first.assetImagePath : '',
+                                ) ??
                                 "",
                             circuitDeviceCount: speakers.length,
                             onDecrementHardwareInCircuit: () {},
@@ -395,14 +354,8 @@ class _ExpandableSubZoneWidgetState extends State<ExpandableSubZoneWidget> {
                       circuitDeviceName: circuitData.name,
                       assetImagePath:
                           serviceLocator<ProjectViewModel>().getHardwareImage(
-                            productId:
-                                speakers.isNotEmpty
-                                    ? speakers.first.productId ?? 0
-                                    : 0,
-                            currentImagePath:
-                                speakers.isNotEmpty
-                                    ? speakers.first.assetImagePath
-                                    : '',
+                            productId: speakers.isNotEmpty ? speakers.first.productId ?? 0 : 0,
+                            currentImagePath: speakers.isNotEmpty ? speakers.first.assetImagePath : '',
                           ) ??
                           "",
                       circuitDeviceCount: speakers.length,
@@ -456,8 +409,8 @@ class _ExpandableSubZoneWidgetState extends State<ExpandableSubZoneWidget> {
   Widget _buildExpandIcon(BuildContext context, bool expanded) {
     return RotatedBox(
       quarterTurns: expanded ? 0 : 2,
-      child: FusionSvgIcon(
-        icon: AssetSvg.expandUp,
+      child: FusionIcon.svg(
+        AssetSvg.expandUp,
         size: FusionSizes.iconSize12,
         color: context.colorScheme.iconWhite,
       ),

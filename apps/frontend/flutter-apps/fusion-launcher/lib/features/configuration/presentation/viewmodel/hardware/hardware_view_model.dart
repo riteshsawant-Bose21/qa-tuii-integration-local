@@ -76,6 +76,7 @@ extension HardwareViewModel on ProjectViewModel {
           SourceType.mic => <String>['peq', 'gate', 'compressor', 'agc'],
           SourceType.media => <String>['peq', 'compressor', 'agc'],
           SourceType.generic => <String>['peq', 'compressor'],
+          SourceType.paging => <String>['peq', 'compressor'],
         };
         for (final String algo in chain) {
           addProcessingBlockToSource(
