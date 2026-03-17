@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:fusion_launcher/features/configuration_page/widgets/source_meter.dart';
 import 'package:fusion_launcher/features/processing_block/view/processing_chain_view.dart';
 import 'package:fusion_lib/constants/semantics/features/configuration/processing/config_sources.dart';
 import 'package:fusion_lib/fusion_lib.dart';
@@ -82,18 +83,7 @@ class _SourceItemState extends State<SourceItem> {
               ),
               const SizedBox(width: 12),
               if (widget.isInControlMode != null && widget.isInControlMode!) ...<Widget>[
-                SizedBox(
-                  width: 4,
-                  height: 16,
-                  child: VerticalMeter(
-                    showIntervals: false,
-                    meterWidth: 4,
-                    semanticId: 'out_meter_vertical_meter',
-                    value: widget.index.isEven ? -0 : -40,
-                    min: -60,
-                    max: 0,
-                  ),
-                ),
+                SourceMeter(sourceId: widget.source.id),
 
                 const SizedBox(width: 12),
               ],
