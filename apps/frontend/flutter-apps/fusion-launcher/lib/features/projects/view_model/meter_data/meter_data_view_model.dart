@@ -11,7 +11,7 @@ import '../../models/meter_data.dart';
 part 'meter_data_vm_state.dart';
 
 /// Describes why telemetry is currently inactive.
-enum MeterInactiveReason { notStarted, controlModeOff, projectClosed }
+enum MeterInactiveReason { notStarted, controlModeOff, projectClosed, refreshing }
 
 // ─────────────────────────────────────────────────────────────────────────────
 // CUBIT  —  register as a singleton in service_locator.dart
@@ -30,6 +30,8 @@ class MeterDataViewModel extends Cubit<MeterDataState> {
   MeterDataViewModel() : super(const MeterDataState()) {
     _attachControlModeListener();
   }
+
+  final FusionNetworkClient networkClient = serviceLocator<FusionNetworkClient>();
 
   // ── internals ──────────────────────────────────────────────────────────────
 
@@ -88,6 +90,15 @@ class MeterDataViewModel extends Cubit<MeterDataState> {
       startTelemetry();
     } else {
       _stopTelemetry(reason: MeterInactiveReason.controlModeOff);
+    }
+  }
+
+  void refreshSubscriber() {
+    //disconnect and reconnect to refresh all subscribers with the latest VIP and control mode state
+    _stopTelemetry(reason: MeterInactiveReason.refreshing);
+    final ProjectViewModel vm = serviceLocator<ProjectViewModel>();
+    if (vm.isInControlMode) {
+      startTelemetry();
     }
   }
 
@@ -157,17 +168,15 @@ class MeterDataViewModel extends Cubit<MeterDataState> {
 
     debugPrint('[MeterDataCubit] Starting telemetry…');
 
-    final FusionNetworkClient client = serviceLocator<FusionNetworkClient>();
-
     try {
-      await client.connect(vip: vip);
+      await networkClient.connect(vip: vip);
     } catch (e) {
       debugPrint('[MeterDataCubit] Connect failed: $e');
       _scheduleReconnect();
       return;
     }
 
-    _telemetrySubscription = client.responseMessages.listen(
+    _telemetrySubscription = networkClient.responseMessages.listen(
       (ResponseCallback<dynamic> message) {
         try {
           final MeterPacket packet = MeterPacket.fromMap(message.data as Map<String, dynamic>);
@@ -264,7 +273,8 @@ class MeterDataViewModel extends Cubit<MeterDataState> {
     );
   }
 
-  void _cancelTelemetry() {
+  void _cancelTelemetry() async {
+    await networkClient.disconnect();
     _telemetrySubscription?.cancel();
     _telemetrySubscription = null;
   }
